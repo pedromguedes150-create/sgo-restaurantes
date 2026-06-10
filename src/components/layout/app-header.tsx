@@ -1,0 +1,50 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { LogOut, Bell } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+export function AppHeader({ userName, roleLabel }: { userName: string; roleLabel: string }) {
+  const router = useRouter();
+
+  async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.replace('/login');
+    router.refresh();
+  }
+
+  const initials = userName
+    .split(' ')
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  return (
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-brand px-4 text-white">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-sm font-black text-brand-dark">
+          {initials}
+        </div>
+        <div className="leading-tight">
+          <p className="text-sm font-semibold">{userName}</p>
+          <p className="text-xs text-white/70">{roleLabel}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" aria-label="Notificações">
+          <Bell className="h-5 w-5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white hover:bg-white/10"
+          aria-label="Sair"
+          onClick={logout}
+        >
+          <LogOut className="h-5 w-5" />
+        </Button>
+      </div>
+    </header>
+  );
+}

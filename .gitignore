@@ -1,0 +1,44 @@
+# Dependências
+/node_modules
+/.pnp
+.pnp.js
+
+# Next.js
+/.next/
+/out/
+/build
+next-env.d.ts
+
+# Produção / Docker
+/dist
+
+# Segredos (regra inegociável nº 10 — nunca commitar)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Uploads (volume Docker em produção)
+/uploads/*
+!/uploads/.gitkeep
+
+# Backups locais
+/backups/*
+!/backups/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testes / cobertura
+/coverage
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Prisma
+/prisma/*.db

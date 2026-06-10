@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tema claro (regra inegociável nº 2 — sempre tema claro, PT-BR).
+   Variáveis em HSL para o shadcn/ui mapear sobre a marca Beija Flor. */
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* #FFFFFF */
+    --foreground: 158 38% 12%; /* texto verde-escuro suave */
+
+    --card: 0 0% 100%;
+    --card-foreground: 158 38% 12%;
+
+    --primary: 158 44% 18%; /* #1B4332 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%; /* #F5F5F5 */
+    --secondary-foreground: 158 44% 18%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 215 16% 40%;
+
+    --accent: 43 53% 54%; /* dourado #C9A84C */
+    --accent-foreground: 158 44% 12%;
+
+    --destructive: 0 72% 51%; /* #DC2626 */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 158 44% 18%;
+
+    --radius: 0.75rem;
+
+    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-surface text-foreground antialiased;
+    /* mobile-first: evita zoom acidental e melhora toque */
+    touch-action: manipulation;
+  }
+  /* Alvos de toque grandes (usuários com baixo letramento digital) */
+  button,
+  [role='button'] {
+    @apply select-none;
+  }
+}

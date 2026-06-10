@@ -1,0 +1,121 @@
+// SGO Beija Flor — Schema (Fase 1: Auth + Estrutura base)
+// Base única; escopo por unidade (unit_id) aplicado SEMPRE no servidor.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Perfis de acesso (ver docs/especificacao.md — Perfis)
+enum Role {
+  CEO // Diretoria — todas as unidades, leitura total + auditoria
+  ADMIN // Configurações globais, cadastros, metas, POPs, importações
+  SUPERVISOR // Unidades sob gestão — aprovações, encerramentos
+  COORDINATOR // Sua(s) unidade(s) — acompanhamento, sem aprovação
+  MANAGER // Gerente — operação diária, lançamentos
+  FINANCE // Financeiro — sem acesso operacional; recebe notificações
+}
+
+/// Unidade (restaurante). Toda lógica diária usa a data operacional desta unidade.
+model Unit {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique // sigla curta p/ exibição
+  address   String?
+  cnpj      String?
+  /// Fuso da unidade (exibição). Banco grava em UTC. Padrão America/Sao_Paulo.
+  timezone  String   @default("America/Sao_Paulo")
+  /// Hora de corte da data operacional (0-23). Padrão 04:00 (regra nº 4).
+  cutoffHour Int     @default(4)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships UnitMembership[]
+  auditLogs   AuditLog[]
+
+  @@map("units")
+}
+
+/// Usuário do sistema.
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  passwordHash   String
+  role           Role
+  active         Boolean  @default(true)
+  /// Aceite do termo LGPD no 1º login (regra LGPD nº 1)
+  termsAcceptedAt DateTime?
+  termsVersion    String?
+  lastLoginAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  memberships   UnitMembership[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+/// Vínculo usuário↔unidade (multi-unidade respeitado). CEO/ADMIN ignoram isto (veem tudo).
+model UnitMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  unitId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, unitId])
+  @@index([unitId])
+  @@map("unit_memberships")
+}
+
+/// Refresh tokens (rotação). Guardamos apenas o hash do token.
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ip        String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+/// Log de Auditoria — imutável (sem update/delete pela aplicação). Módulo 12.
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  unitId    String?
+  action    String // ex: LOGIN, LOGOUT, CREATE, UPDATE, DELETE, APPROVE...
+  module    String? // ex: AUTH, USERS, OCCURRENCES...
+  entity    String? // tabela/entidade afetada
+  entityId  String?
+  /// Detalhes/diff e contexto (inclui acessos a dados sensíveis — LGPD nº 6)
+  metadata  Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  unit Unit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([unitId])
+  @@index([module])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

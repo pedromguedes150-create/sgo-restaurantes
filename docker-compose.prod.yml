@@ -1,0 +1,62 @@
+# =============================================================================
+# SGO Beija Flor — PRODUÇÃO (no servidor próprio do cliente)
+# app + db isolados. NENHUMA porta publicada na internet (regra nº 9):
+# quem expõe 80/443 é o reverse proxy / Cloudflare Tunnel já existente,
+# apontando o subdomínio sgo.* para http://localhost:3100 (mapeado abaixo
+# apenas no loopback do host para o túnel alcançar).
+#
+# Homologação: copiar este arquivo, trocar "sgo" -> "sgo-homolog",
+# usar volume/rede próprios e mapear 127.0.0.1:3101.
+# =============================================================================
+name: sgo
+
+services:
+  sgo-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sgo_app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      # dentro da rede docker o banco é alcançado pelo nome do serviço:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sgo-db:5432/${POSTGRES_DB}?schema=public
+    ports:
+      # só no loopback do host — o túnel/proxy publica; a internet não vê direto
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - sgo_uploads:/app/uploads
+    depends_on:
+      sgo-db:
+        condition: service_healthy
+    networks: [sgo]
+
+  sgo-db:
+    image: postgres:16-alpine
+    container_name: sgo_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: ${TZ}
+    # SEM "ports": banco nunca exposto fora da rede docker (regra nº 9)
+    volumes:
+      - sgo_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [sgo]
+
+volumes:
+  sgo_db_data:
+    name: sgo_db_data
+  sgo_uploads:
+    name: sgo_uploads
+
+networks:
+  sgo:
+    name: sgo

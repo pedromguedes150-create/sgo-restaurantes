@@ -1,0 +1,47 @@
+# =============================================================================
+# SGO Beija Flor — imagem de produção (Next.js standalone)
+# Multi-stage: deps -> build -> runner (imagem final enxuta, non-root)
+# =============================================================================
+
+FROM node:20-alpine AS base
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# ---- Dependências ----
+FROM base AS deps
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# ---- Build ----
+FROM base AS build
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npx prisma generate
+RUN npm run build
+
+# ---- Runner ----
+FROM base AS runner
+ENV NODE_ENV=production
+ENV PORT=3100
+RUN addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 nextjs
+
+# Artefatos do build standalone do Next.js
+COPY --from=build /app/public ./public
+COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Prisma (client + schema) para migrações em runtime
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/prisma ./prisma
+
+# Volume de uploads (regra: storage local em volume Docker)
+RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
+
+USER nextjs
+EXPOSE 3100
+
+# Health check da própria imagem
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3100/api/health || exit 1
+
+CMD ["node", "server.js"]

@@ -1,0 +1,39 @@
+# =============================================================================
+# SGO Beija Flor — DESENVOLVIMENTO
+# Sobe APENAS o PostgreSQL dedicado do SGO. O app roda no host (npm run dev).
+#
+# ISOLAMENTO (regra inegociável nº 1 e Fase 0.2):
+#  - rede própria "sgo" · volume próprio · nomes "sgo_*"
+#  - porta host 5433 (a 5432 pertence ao bjf_postgres do CEO — NÃO tocar)
+#  - nada aqui conflita com a plataforma do CEO já em produção
+# =============================================================================
+name: sgo
+
+services:
+  sgo-db:
+    image: postgres:16-alpine
+    container_name: sgo_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: ${TZ}
+    ports:
+      - "${POSTGRES_PORT_HOST:-5433}:5432" # apenas DEV; em prod não se publica
+    volumes:
+      - sgo_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [sgo]
+
+volumes:
+  sgo_db_data:
+    name: sgo_db_data
+
+networks:
+  sgo:
+    name: sgo
