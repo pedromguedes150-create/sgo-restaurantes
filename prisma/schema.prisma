@@ -39,6 +39,7 @@ model Unit {
   auditLogs     AuditLog[]
   taskTemplates TaskTemplate[]
   taskInstances TaskInstance[]
+  wasteEntries  WasteEntry[]
 
   @@map("units")
 }
@@ -62,6 +63,7 @@ model User {
   refreshTokens  RefreshToken[]
   auditLogs      AuditLog[]
   completedTasks TaskInstance[] @relation("CompletedBy")
+  wasteEntries   WasteEntry[]   @relation("WasteCreatedBy")
 
   @@map("users")
 }
@@ -192,4 +194,55 @@ model TaskInstance {
   @@index([unitId, operationalDate])
   @@index([status])
   @@map("task_instances")
+}
+
+/// Categoria de desperdício (Módulo 2). Global e expansível sem quebrar histórico.
+model WasteCategory {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  items WasteEntryItem[]
+
+  @@map("waste_categories")
+}
+
+/// Lançamento de desperdício — UM por unidade por dia operacional (Módulo 2).
+model WasteEntry {
+  id              String   @id @default(cuid())
+  unitId          String
+  operationalDate String
+  observation     String?
+  /// Foto do visor da balança, quando a tarefa exigir evidência
+  evidencePath    String?
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  unit      Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User?            @relation("WasteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  items     WasteEntryItem[]
+
+  // Regra: 1 lançamento por unidade/dia operacional (conflito offline aplicado)
+  @@unique([unitId, operationalDate])
+  @@index([unitId, operationalDate])
+  @@map("waste_entries")
+}
+
+/// Peso (KG) por categoria dentro de um lançamento.
+model WasteEntryItem {
+  id         String  @id @default(cuid())
+  entryId    String
+  categoryId String
+  kg         Decimal @db.Decimal(10, 3)
+
+  entry    WasteEntry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  category WasteCategory @relation(fields: [categoryId], references: [id])
+
+  @@unique([entryId, categoryId])
+  @@index([categoryId])
+  @@map("waste_entry_items")
 }

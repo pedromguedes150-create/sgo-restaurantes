@@ -5,6 +5,11 @@ import { AutoRefresh } from '@/components/layout/auto-refresh';
 
 export const dynamic = 'force-dynamic';
 
+// Módulos já implementados: a tarefa abre o módulo em vez de concluir inline.
+const MODULE_HREFS: Partial<Record<string, string>> = {
+  WASTE: '/modulos/desperdicios',
+};
+
 export default async function TarefasPage() {
   const user = (await getSessionUser())!;
   const now = new Date();
@@ -54,6 +59,7 @@ export default async function TarefasPage() {
                 requiresEvidence: t.template.requiresEvidence,
                 status: t.status,
                 isOverdue: t.status === 'PENDING' && t.dueAt < now,
+                moduleHref: MODULE_HREFS[t.template.module] ?? null,
               };
               return <TaskItem key={t.id} task={data} />;
             })}

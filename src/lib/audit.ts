@@ -12,7 +12,8 @@ export interface AuditEntry {
   module?: string; // AUTH, USERS, OCCURRENCES, ...
   entity?: string;
   entityId?: string;
-  metadata?: Prisma.InputJsonValue;
+  // aceita qualquer estrutura serializável; convertida para JSON ao gravar
+  metadata?: unknown;
   ip?: string | null;
   userAgent?: string | null;
 }
@@ -27,7 +28,7 @@ export async function audit(entry: AuditEntry): Promise<void> {
         module: entry.module,
         entity: entry.entity,
         entityId: entry.entityId,
-        metadata: entry.metadata,
+        metadata: (entry.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
         ip: entry.ip ?? null,
         userAgent: entry.userAgent ?? null,
       },

@@ -179,6 +179,47 @@ async function main() {
   }
   console.log(`  ✔ ${templateCount} modelos de tarefa · ${instanceCount} instâncias (30 dias)`);
 
+  // --- Desperdícios: categorias + histórico ---
+  await prisma.wasteEntry.deleteMany({});
+  await prisma.wasteCategory.deleteMany({});
+  const catData = [
+    { code: 'SELF', name: 'Self-Service', order: 1, base: 12 },
+    { code: 'CLIENT', name: 'Clientes', order: 2, base: 6 },
+    { code: 'SNACK', name: 'Lanchonete', order: 3, base: 3 },
+    { code: 'KITCHEN', name: 'Cozinha', order: 4, base: 8 },
+  ];
+  const cats = [];
+  for (const c of catData) {
+    cats.push(await prisma.wasteCategory.create({ data: { code: c.code, name: c.name, order: c.order } }));
+  }
+
+  let wasteCount = 0;
+  for (const unit of units) {
+    const todayOp = opDateFor(now, unit.timezone, unit.cutoffHour);
+    // histórico: dias 1..29 (deixa HOJE sem lançamento p/ o gerente registrar)
+    for (let d = 1; d < 30; d++) {
+      const opDate = format(subDays(new Date(`${todayOp}T12:00:00`), d), 'yyyy-MM-dd');
+      const entry = await prisma.wasteEntry.create({
+        data: {
+          unitId: unit.id,
+          operationalDate: opDate,
+          createdById: completerByUnit[unit.id] ?? null,
+          evidencePath: `uploads/${unit.id}/seed-waste.jpg`,
+          items: {
+            create: cats.map((c, idx) => {
+              const base = catData[idx].base;
+              const kg = Math.round((base * (0.6 + Math.random() * 0.8)) * 1000) / 1000;
+              return { categoryId: c.id, kg };
+            }),
+          },
+        },
+      });
+      void entry;
+      wasteCount++;
+    }
+  }
+  console.log(`  ✔ ${cats.length} categorias de desperdício · ${wasteCount} lançamentos (histórico)`);
+
   await prisma.auditLog.create({
     data: {
       action: 'SEED',

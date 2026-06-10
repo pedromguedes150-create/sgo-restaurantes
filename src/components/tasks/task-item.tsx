@@ -1,8 +1,9 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Camera, Check, Clock, AlertTriangle } from 'lucide-react';
+import { Camera, Check, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,8 @@ export interface TaskItemData {
   requiresEvidence: boolean;
   status: 'PENDING' | 'DONE' | 'MISSED';
   isOverdue: boolean;
+  /** Se a tarefa pertence a um módulo já implementado, "Realizar" abre o módulo. */
+  moduleHref?: string | null;
 }
 
 export function TaskItem({ task }: { task: TaskItemData }) {
@@ -99,7 +102,17 @@ export function TaskItem({ task }: { task: TaskItemData }) {
 
       {error && <p className="mt-2 text-sm font-medium text-critical">{error}</p>}
 
-      {!done && !missed && (
+      {!done && !missed && task.moduleHref && (
+        <div className="mt-3">
+          <Link href={task.moduleHref}>
+            <Button className="w-full" variant="default">
+              Realizar <ArrowRight className="h-5 w-5" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {!done && !missed && !task.moduleHref && (
         <div className="mt-3">
           <Button onClick={onRealizar} disabled={loading} className="w-full" variant={task.requiresEvidence ? 'gold' : 'default'}>
             {loading ? (
