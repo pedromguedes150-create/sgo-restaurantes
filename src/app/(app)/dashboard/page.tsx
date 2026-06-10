@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { getUnitsOverview, aggregateDay } from '@/lib/tasks/overview';
+import { getOccurrenceSummary } from '@/lib/occurrences/query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ProgressRing } from '@/components/dashboard/progress-ring';
@@ -28,8 +29,12 @@ export default async function DashboardPage() {
     );
   }
 
-  const overviews = await getUnitsOverview(user, now);
+  const [overviews, occ] = await Promise.all([
+    getUnitsOverview(user, now),
+    getOccurrenceSummary(user),
+  ]);
   const isManagerView = user.role === 'MANAGER' || user.role === 'COORDINATOR';
+  const occAlert = occ.criticalOpen > 0 || occ.openOver48h > 0;
 
   return (
     <div className="space-y-5">
@@ -42,6 +47,18 @@ export default async function DashboardPage() {
             : `${overviews.length} unidade(s) sob sua gestão.`}
         </p>
       </section>
+
+      {occAlert && (
+        <Link href="/modulos/ocorrencias?status=OPEN">
+          <Card className="border-critical/50 bg-critical/5">
+            <CardContent className="flex items-center gap-3 py-3 text-sm font-semibold text-critical">
+              <AlertTriangle className="h-5 w-5" />
+              {occ.criticalOpen > 0 && `${occ.criticalOpen} ocorrência(s) ⚫ crítica(s) aberta(s). `}
+              {occ.openOver48h > 0 && `${occ.openOver48h} aberta(s) há +48h.`}
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {isManagerView ? (
         <ManagerDashboard overviews={overviews} />

@@ -40,6 +40,7 @@ model Unit {
   taskTemplates TaskTemplate[]
   taskInstances TaskInstance[]
   wasteEntries  WasteEntry[]
+  occurrences   Occurrence[]
 
   @@map("units")
 }
@@ -64,6 +65,8 @@ model User {
   auditLogs      AuditLog[]
   completedTasks TaskInstance[] @relation("CompletedBy")
   wasteEntries   WasteEntry[]   @relation("WasteCreatedBy")
+  reportedOccurrences Occurrence[] @relation("OccReportedBy")
+  closedOccurrences   Occurrence[] @relation("OccClosedBy")
 
   @@map("users")
 }
@@ -245,4 +248,103 @@ model WasteEntryItem {
   @@unique([entryId, categoryId])
   @@index([categoryId])
   @@map("waste_entry_items")
+}
+
+/// Gravidade da ocorrência (🟢🟡🔴⚫) — Módulo 6.
+enum OccurrenceGravity {
+  LOW // 🟢
+  MEDIUM // 🟡
+  HIGH // 🔴 → alerta imediato ao Supervisor
+  CRITICAL // ⚫ → Supervisor + CEO + destaque no consolidado
+}
+
+enum OccurrenceStatus {
+  OPEN // Aberta
+  IN_PROGRESS // Em andamento
+  CLOSED // Encerrada (registro imutável)
+}
+
+/// Tipo de ocorrência (configurável/expansível).
+model OccurrenceType {
+  id         String                @id @default(cuid())
+  code       String                @unique
+  name       String
+  order      Int                   @default(0)
+  active     Boolean               @default(true)
+  categories OccurrenceCategory[]
+  occurrences Occurrence[]
+
+  @@map("occurrence_types")
+}
+
+/// Categoria dependente do tipo (configurável/expansível).
+model OccurrenceCategory {
+  id     String @id @default(cuid())
+  typeId String
+  name   String
+  order  Int    @default(0)
+  active Boolean @default(true)
+
+  type        OccurrenceType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  occurrences Occurrence[]
+
+  @@index([typeId])
+  @@map("occurrence_categories")
+}
+
+/// Ocorrência (Módulo 6). Nº sequencial por unidade; encerramento imutável.
+model Occurrence {
+  id              String           @id @default(cuid())
+  unitId          String
+  /// Nº sequencial por unidade (exibição: #unidade-000123)
+  number          Int
+  occurredAt      DateTime         @default(now())
+  operationalDate String
+  reportedById    String?
+  typeId          String?
+  categoryId      String?
+  /// snapshots para preservar histórico mesmo se tipo/categoria mudarem
+  typeName        String
+  categoryName    String
+  gravity         OccurrenceGravity
+  customerName    String?
+  description     String
+  status          OccurrenceStatus @default(OPEN)
+  /// reincidência: mesmo tipo+categoria na mesma unidade em < 30 dias
+  isRecurrence    Boolean          @default(false)
+  // Encerramento (somente Supervisor/Admin)
+  closedById          String?
+  closedAt            DateTime?
+  closureJustification String?
+  correctiveAction     String?
+  reviewDate           DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  unit        Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  reportedBy  User?                @relation("OccReportedBy", fields: [reportedById], references: [id], onDelete: SetNull)
+  closedBy    User?                @relation("OccClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  type        OccurrenceType?      @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  category    OccurrenceCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  attachments OccurrenceAttachment[]
+
+  @@unique([unitId, number])
+  @@index([unitId, status])
+  @@index([unitId, operationalDate])
+  @@index([gravity])
+  @@map("occurrences")
+}
+
+/// Anexo (foto/vídeo) de uma ocorrência. Acesso a anexos sensíveis é auditado (LGPD).
+model OccurrenceAttachment {
+  id           String   @id @default(cuid())
+  occurrenceId String
+  path         String
+  mimeType     String
+  createdAt    DateTime @default(now())
+
+  occurrence Occurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+
+  @@index([occurrenceId])
+  @@map("occurrence_attachments")
 }

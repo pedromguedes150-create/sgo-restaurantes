@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 // Módulos já implementados: a tarefa abre o módulo em vez de concluir inline.
 const MODULE_HREFS: Partial<Record<string, string>> = {
   WASTE: '/modulos/desperdicios',
+  OCCURRENCES: '/modulos/ocorrencias/nova',
 };
 
 export default async function TarefasPage() {

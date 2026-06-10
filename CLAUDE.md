@@ -48,7 +48,7 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 | 3 — Comandas | Não iniciado |
 | 4 — Cancelamento de Cupons | Não iniciado |
 | 5 — Inventário | Não iniciado |
-| 6 — Ocorrências | Não iniciado |
+| 6 — Ocorrências | ✅ Concluído (nº sequencial/unidade, tipo→categoria, gravidade 🟢🟡🔴⚫, anexos foto/vídeo, reincidência <30d, encerramento Supervisor/Admin com ação corretiva, alertas e badge no dashboard) |
 | 7 — Pagamentos (com delegação) | Não iniciado |
 | 8 — Notas (QR + IA) | Não iniciado |
 | 9 — Pessoas (API RH) | Não iniciado |

@@ -220,6 +220,75 @@ async function main() {
   }
   console.log(`  ✔ ${cats.length} categorias de desperdício · ${wasteCount} lançamentos (histórico)`);
 
+  // --- Ocorrências: tipos/categorias + exemplos ---
+  await prisma.occurrence.deleteMany({});
+  await prisma.occurrenceCategory.deleteMany({});
+  await prisma.occurrenceType.deleteMany({});
+  const TYPES = [
+    { code: 'CLIENTE', name: 'Reclamação de Cliente', cats: ['Atendimento', 'Qualidade', 'Tempo de espera', 'Higiene', 'Preço', 'Outros'] },
+    { code: 'COLABORADOR', name: 'Incidente com Colaborador', cats: ['Acidente de trabalho', 'Conflito', 'Descumprimento de norma', 'Outros'] },
+    { code: 'EQUIPAMENTO', name: 'Problema de Equipamento', cats: ['Câmara fria', 'Fogão-forno', 'Sistema de caixa', 'Outros'] },
+    { code: 'SEGURANCA', name: 'Segurança / Fraude', cats: ['Furto de cliente', 'Desvio interno', 'Comanda sumida', 'Outros'] },
+    { code: 'OPERACIONAL', name: 'Irregularidade Operacional', cats: ['Descumprimento de POP', 'Produto fora do padrão', 'Falta de insumo', 'Outros'] },
+    { code: 'EMERGENCIA', name: 'Acidente / Emergência', cats: ['Incêndio', 'Acidente com cliente', 'Outros'] },
+  ];
+  const catLookup: Record<string, { id: string; name: string; typeId: string; typeName: string }> = {};
+  for (const [ti, t] of TYPES.entries()) {
+    const type = await prisma.occurrenceType.create({ data: { code: t.code, name: t.name, order: ti + 1 } });
+    for (const [ci, name] of t.cats.entries()) {
+      const cat = await prisma.occurrenceCategory.create({ data: { typeId: type.id, name, order: ci + 1 } });
+      catLookup[`${t.code}|${name}`] = { id: cat.id, name, typeId: type.id, typeName: type.name };
+    }
+  }
+
+  let occCount = 0;
+  for (const unit of units) {
+    const reporter = completerByUnit[unit.id] ?? null;
+    const supervisor = userByEmail['supervisor@beijaflor.com.br'];
+    const samples = [
+      { key: 'CLIENTE|Atendimento', gravity: 'MEDIUM' as const, status: 'OPEN' as const, daysAgo: 5, desc: 'Cliente reclamou da demora no atendimento.' },
+      { key: 'EQUIPAMENTO|Câmara fria', gravity: 'HIGH' as const, status: 'IN_PROGRESS' as const, daysAgo: 3, desc: 'Câmara fria oscilando temperatura.' },
+      { key: 'CLIENTE|Atendimento', gravity: 'MEDIUM' as const, status: 'OPEN' as const, daysAgo: 1, desc: 'Nova reclamação de atendimento (reincidência).' },
+      { key: 'SEGURANCA|Furto de cliente', gravity: 'CRITICAL' as const, status: 'CLOSED' as const, daysAgo: 10, desc: 'Suspeita de furto registrada por câmeras.' },
+    ];
+    let n = 0;
+    for (const s of samples) {
+      n++;
+      const cat = catLookup[s.key];
+      const occurredAt = subDays(now, s.daysAgo);
+      const opDate = opDateFor(occurredAt, unit.timezone, unit.cutoffHour);
+      const isRecurrence = s.key === 'CLIENTE|Atendimento' && n > 1; // a 3ª é reincidência
+      await prisma.occurrence.create({
+        data: {
+          unitId: unit.id,
+          number: n,
+          occurredAt,
+          operationalDate: opDate,
+          reportedById: reporter,
+          typeId: cat.typeId,
+          categoryId: cat.id,
+          typeName: cat.typeName,
+          categoryName: cat.name,
+          gravity: s.gravity,
+          description: s.desc,
+          status: s.status,
+          isRecurrence,
+          ...(s.status === 'CLOSED'
+            ? {
+                closedById: supervisor,
+                closedAt: subDays(now, s.daysAgo - 2),
+                closureJustification: 'Apurado com a equipe e câmeras.',
+                correctiveAction: 'Reforço de treinamento e monitoramento.',
+                reviewDate: addDays(now, 20),
+              }
+            : {}),
+        },
+      });
+      occCount++;
+    }
+  }
+  console.log(`  ✔ ${TYPES.length} tipos de ocorrência · ${occCount} ocorrências de exemplo`);
+
   await prisma.auditLog.create({
     data: {
       action: 'SEED',
