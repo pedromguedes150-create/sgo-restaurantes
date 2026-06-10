@@ -42,8 +42,8 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 |---|---|
 | Fase 0 — Infraestrutura | ✅ Concluído (compose dev/prod, Dockerfile, backups, /api/health) |
 | 1 — Auth + Estrutura base | ✅ Concluído (JWT+refresh+bcrypt, perfis, multi-unidade, escopo no servidor, data operacional, 10 testes verdes) |
-| 0 (UI) — Dashboard | 🟡 Placeholder |
-| 1 — Checklists | Não iniciado |
+| 0 (UI) — Dashboard | ✅ Concluído (gerente: anel+meta+atalhos; CEO/Admin/Supervisor: semáforo+ranking+alertas; refresh 60s, skeletons) |
+| 1 — Checklists | ✅ Concluído (geração por dia operacional, conclusão transacional, evidência fotográfica, "não realizada" automática, 17 testes) |
 | 2 — Desperdícios | Não iniciado |
 | 3 — Comandas | Não iniciado |
 | 4 — Cancelamento de Cupons | Não iniciado |

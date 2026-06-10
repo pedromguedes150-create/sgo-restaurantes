@@ -1,0 +1,36 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+
+const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
+const MAX_BYTES = 5 * 1024 * 1024; // 5MB (requisito: imagens ≤1MB ideal; teto de segurança)
+const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
+
+export class UploadError extends Error {}
+
+/**
+ * Salva uma evidência fotográfica no volume de uploads e retorna o caminho
+ * relativo (a ser guardado em TaskInstance.evidencePath).
+ * Valida tipo e tamanho (requisito de segurança — uploads validados).
+ */
+export async function saveEvidence(
+  file: File,
+  unitId: string,
+  instanceId: string,
+): Promise<string> {
+  if (!ALLOWED.includes(file.type)) {
+    throw new UploadError('Formato de imagem não suportado');
+  }
+  const buf = Buffer.from(await file.arrayBuffer());
+  if (buf.byteLength > MAX_BYTES) {
+    throw new UploadError('Imagem muito grande (máx. 5MB)');
+  }
+
+  const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+  const dir = path.join(UPLOAD_ROOT, unitId);
+  await mkdir(dir, { recursive: true });
+
+  const filename = `${instanceId}-${buf.byteLength}.${ext}`;
+  await writeFile(path.join(dir, filename), buf);
+
+  return path.posix.join('uploads', unitId, filename);
+}

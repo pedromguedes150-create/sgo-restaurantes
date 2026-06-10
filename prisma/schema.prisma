@@ -35,8 +35,10 @@ model Unit {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships UnitMembership[]
-  auditLogs   AuditLog[]
+  memberships   UnitMembership[]
+  auditLogs     AuditLog[]
+  taskTemplates TaskTemplate[]
+  taskInstances TaskInstance[]
 
   @@map("units")
 }
@@ -56,9 +58,10 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  memberships   UnitMembership[]
-  refreshTokens RefreshToken[]
-  auditLogs     AuditLog[]
+  memberships    UnitMembership[]
+  refreshTokens  RefreshToken[]
+  auditLogs      AuditLog[]
+  completedTasks TaskInstance[] @relation("CompletedBy")
 
   @@map("users")
 }
@@ -118,4 +121,75 @@ model AuditLog {
   @@index([module])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+/// Módulo associado a uma tarefa — permite o atalho "Realizar" abrir o módulo certo.
+enum TaskModule {
+  GENERAL // tarefa avulsa / operacional
+  WASTE // Desperdícios (Módulo 2)
+  COMMANDS // Comandas (Módulo 3)
+  CANCELLATIONS // Cancelamento de cupons (Módulo 4)
+  INVENTORY // Inventário (Módulo 5)
+  OCCURRENCES // Ocorrências (Módulo 6)
+}
+
+enum TaskStatus {
+  PENDING // a fazer
+  DONE // concluída
+  MISSED // "Não realizada" (passou da hora de corte) — entra na meta
+}
+
+/// Modelo (catálogo) de tarefa configurável por unidade (Módulo 1 / Config).
+model TaskTemplate {
+  id              String     @id @default(cuid())
+  unitId          String
+  name            String
+  description     String?
+  /// Horário limite no formato "HH:mm" (dentro do dia operacional)
+  limitTime       String     @default("23:59")
+  /// Peso na meta (Módulo 11). Só conta se entersMeta = true.
+  weight          Int        @default(1)
+  module          TaskModule @default(GENERAL)
+  /// Exige evidência fotográfica ao concluir (conceito transversal nº 6)
+  requiresEvidence Boolean   @default(false)
+  /// "Entra na Meta" (Módulo 11)
+  entersMeta      Boolean    @default(true)
+  active          Boolean    @default(true)
+  order           Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  unit      Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  instances TaskInstance[]
+
+  @@index([unitId, active])
+  @@map("task_templates")
+}
+
+/// Instância diária de uma tarefa, amarrada à DATA OPERACIONAL (regra nº 4).
+model TaskInstance {
+  id              String     @id @default(cuid())
+  templateId      String
+  unitId          String
+  /// Data operacional 'YYYY-MM-DD' à qual a tarefa pertence
+  operationalDate String
+  status          TaskStatus @default(PENDING)
+  /// Limite efetivo (UTC) calculado a partir do dia operacional + limitTime
+  dueAt           DateTime
+  completedById   String?
+  completedAt     DateTime?
+  /// Caminho da evidência fotográfica no volume de uploads (se exigida)
+  evidencePath    String?
+  createdAt       DateTime   @default(now())
+
+  template    TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  unit        Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  completedBy User?        @relation("CompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+
+  // Uma tarefa por modelo por dia operacional → geração idempotente +
+  // conclusão transacional (dois gerentes concluindo = um único registro).
+  @@unique([templateId, operationalDate])
+  @@index([unitId, operationalDate])
+  @@index([status])
+  @@map("task_instances")
 }
