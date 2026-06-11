@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { getUnitsOverview, aggregateDay } from '@/lib/tasks/overview';
 import { getOccurrenceSummary } from '@/lib/occurrences/query';
 import { getOpenDivergenceCount } from '@/lib/commands/query';
+import { getPendingCancellationCount } from '@/lib/cancellations/query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ProgressRing } from '@/components/dashboard/progress-ring';
@@ -30,10 +31,11 @@ export default async function DashboardPage() {
     );
   }
 
-  const [overviews, occ, openDiv] = await Promise.all([
+  const [overviews, occ, openDiv, pendingCanc] = await Promise.all([
     getUnitsOverview(user, now),
     getOccurrenceSummary(user),
     getOpenDivergenceCount(user),
+    getPendingCancellationCount(user),
   ]);
   const isManagerView = user.role === 'MANAGER' || user.role === 'COORDINATOR';
   const occAlert = occ.criticalOpen > 0 || occ.openOver48h > 0;
@@ -57,6 +59,17 @@ export default async function DashboardPage() {
               <AlertTriangle className="h-5 w-5" />
               {occ.criticalOpen > 0 && `${occ.criticalOpen} ocorrência(s) ⚫ crítica(s) aberta(s). `}
               {occ.openOver48h > 0 && `${occ.openOver48h} aberta(s) há +48h.`}
+            </CardContent>
+          </Card>
+        </Link>
+      )}
+
+      {pendingCanc > 0 && (
+        <Link href="/modulos/cancelamentos">
+          <Card className="border-medium/50 bg-medium/5">
+            <CardContent className="flex items-center gap-3 py-3 text-sm font-semibold text-[#92600A]">
+              <AlertTriangle className="h-5 w-5" />
+              {pendingCanc} cancelamento(s) aguardando justificativa.
             </CardContent>
           </Card>
         </Link>

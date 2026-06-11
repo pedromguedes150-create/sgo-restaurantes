@@ -310,6 +310,38 @@ async function main() {
   });
   console.log('  ✔ comandas: sequência 1–150 por unidade + 2 divergências (Centro)');
 
+  // --- Cancelamento de cupons: motivos + exemplos ---
+  await prisma.cancellation.deleteMany({});
+  await prisma.cancellationImport.deleteMany({});
+  await prisma.cancellationReason.deleteMany({});
+  const reasonNames = ['Erro do operador', 'Solicitação do cliente', 'Problema técnico', 'Outros'];
+  const reasons = [];
+  for (const [i, name] of reasonNames.entries()) {
+    reasons.push(await prisma.cancellationReason.create({ data: { name, order: i + 1 } }));
+  }
+  const todayOpCentro = opDateFor(now, centro.timezone, centro.cutoffHour);
+  const imp = await prisma.cancellationImport.create({
+    data: { unitId: centro.id, operationalDate: todayOpCentro, fileName: 'teknisa_seed.csv', rowCount: 5, importedById: userByEmail['admin@beijaflor.com.br'] },
+  });
+  const cancRows = [
+    { coupon: '100245', operator: 'Caixa 01', value: 47.9, justified: false },
+    { coupon: '100247', operator: 'Caixa 02', value: 12.5, justified: false },
+    { coupon: '100251', operator: 'Caixa 01', value: 89.0, justified: false },
+    { coupon: '100260', operator: 'Caixa 03', value: 25.0, justified: true },
+    { coupon: '100262', operator: 'Caixa 01', value: 8.9, justified: true },
+  ];
+  for (const c of cancRows) {
+    await prisma.cancellation.create({
+      data: {
+        unitId: centro.id, operationalDate: todayOpCentro, importId: imp.id,
+        couponNumber: c.coupon, cashOperator: c.operator, value: c.value,
+        status: c.justified ? 'JUSTIFIED' : 'PENDING',
+        ...(c.justified ? { reasonId: reasons[0].id, justificationNote: 'Erro de digitação', justifiedById: completerByUnit[centro.id], justifiedAt: now } : {}),
+      },
+    });
+  }
+  console.log(`  ✔ ${reasons.length} motivos de cancelamento + 5 cancelamentos (Centro)`);
+
   await prisma.auditLog.create({
     data: {
       action: 'SEED',

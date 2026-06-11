@@ -46,7 +46,7 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 | 1 — Checklists | ✅ Concluído (geração por dia operacional, conclusão transacional, evidência fotográfica, "não realizada" automática, 17 testes) |
 | 2 — Desperdícios | ✅ Concluído (1 lançamento/dia, conclui tarefa WASTE c/ foto da balança, alerta >20% vs média 7d, mini-dashboard barras/% e comparativo entre unidades) |
 | 3 — Comandas | ✅ Concluído (sequência por unidade, contagem diária "todas presentes"/ausentes, divergência+alerta supervisor, ciclo OPEN→apuração→encerrada recuperada/perdida, baixa sai da ativa, reposição admin) |
-| 4 — Cancelamento de Cupons | Não iniciado |
+| 4 — Cancelamento de Cupons | ✅ Concluído (import CSV Teknisa genérico, pendência de justificativa, motivos configuráveis, mês/% justificados/ranking operador, badge dashboard; PDF/Excel a refinar) |
 | 5 — Inventário | Não iniciado |
 | 6 — Ocorrências | ✅ Concluído (nº sequencial/unidade, tipo→categoria, gravidade 🟢🟡🔴⚫, anexos foto/vídeo, reincidência <30d, encerramento Supervisor/Admin com ação corretiva, alertas e badge no dashboard) |
 | 7 — Pagamentos (com delegação) | Não iniciado |

@@ -45,6 +45,8 @@ model Unit {
   commandCounts       CommandCount[]
   commandDivergences  CommandDivergence[]
   commandReplacements CommandReplacement[]
+  cancellations       Cancellation[]
+  cancellationImports CancellationImport[]
 
   @@map("units")
 }
@@ -75,6 +77,8 @@ model User {
   divReported         CommandDivergence[]  @relation("CmdDivReportedBy")
   divResolved         CommandDivergence[]  @relation("CmdDivResolvedBy")
   commandReplacements CommandReplacement[] @relation("CmdReplBy")
+  cancellationsJustified Cancellation[]       @relation("CancJustifiedBy")
+  cancellationImports    CancellationImport[] @relation("CancImportedBy")
 
   @@map("users")
 }
@@ -438,4 +442,64 @@ model CommandReplacement {
 
   @@unique([unitId, number])
   @@map("command_replacements")
+}
+
+enum CancellationStatus {
+  PENDING // aguardando justificativa
+  JUSTIFIED // justificado
+}
+
+/// Motivo de cancelamento (configurável — Módulo 4).
+model CancellationReason {
+  id            String         @id @default(cuid())
+  name          String
+  order         Int            @default(0)
+  active        Boolean        @default(true)
+  cancellations Cancellation[]
+
+  @@map("cancellation_reasons")
+}
+
+/// Importação de relatório do Teknisa (CSV) — Módulo 4.
+model CancellationImport {
+  id              String   @id @default(cuid())
+  unitId          String
+  operationalDate String
+  fileName        String
+  rowCount        Int      @default(0)
+  importedById    String?
+  createdAt       DateTime @default(now())
+
+  unit          Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  importedBy    User?          @relation("CancImportedBy", fields: [importedById], references: [id], onDelete: SetNull)
+  cancellations Cancellation[]
+
+  @@index([unitId, operationalDate])
+  @@map("cancellation_imports")
+}
+
+/// Cancelamento de cupom fiscal → pendência de justificativa do gerente.
+model Cancellation {
+  id                String             @id @default(cuid())
+  unitId            String
+  operationalDate   String
+  importId          String?
+  couponNumber      String
+  cashOperator      String?
+  value             Decimal            @db.Decimal(10, 2)
+  status            CancellationStatus @default(PENDING)
+  reasonId          String?
+  justificationNote String?
+  justifiedById     String?
+  justifiedAt       DateTime?
+  createdAt         DateTime           @default(now())
+
+  unit        Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  import      CancellationImport? @relation(fields: [importId], references: [id], onDelete: SetNull)
+  reason      CancellationReason? @relation(fields: [reasonId], references: [id], onDelete: SetNull)
+  justifiedBy User?               @relation("CancJustifiedBy", fields: [justifiedById], references: [id], onDelete: SetNull)
+
+  @@index([unitId, status])
+  @@index([unitId, operationalDate])
+  @@map("cancellations")
 }

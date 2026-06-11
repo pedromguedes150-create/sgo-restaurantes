@@ -10,6 +10,7 @@ const MODULE_HREFS: Partial<Record<string, string>> = {
   WASTE: '/modulos/desperdicios',
   OCCURRENCES: '/modulos/ocorrencias/nova',
   COMMANDS: '/modulos/comandas',
+  CANCELLATIONS: '/modulos/cancelamentos',
 };
 
 export default async function TarefasPage() {
