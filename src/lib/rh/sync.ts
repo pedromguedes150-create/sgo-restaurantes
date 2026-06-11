@@ -68,3 +68,20 @@ export async function syncCollaboratorsForUnit(user: SessionUser, unitId: string
 
   return { ok: true, created, updated, total: lista.length };
 }
+
+/**
+ * Sincroniza TODAS as unidades do SGO que têm "Nome no RH" definido.
+ * Garante que só entram colaboradores das unidades cadastradas no SGO
+ * (segmentos não-restaurante do RH nunca aparecem).
+ */
+export async function syncAllRegisteredUnits(user: SessionUser): Promise<SyncResult & { units?: number }> {
+  if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
+  if (!rhConfigured()) return { ok: false, reason: 'NOT_CONFIGURED' };
+  const units = await prisma.unit.findMany({ where: { active: true, rhUnitName: { not: null } }, select: { id: true } });
+  let created = 0, updated = 0, total = 0;
+  for (const u of units) {
+    const r = await syncCollaboratorsForUnit(user, u.id);
+    if (r.ok) { created += r.created; updated += r.updated; total += r.total; }
+  }
+  return { ok: true, created, updated, total, units: units.length };
+}

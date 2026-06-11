@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
-import { syncCollaboratorsForUnit } from '@/lib/rh/sync';
+import { syncCollaboratorsForUnit, syncAllRegisteredUnits } from '@/lib/rh/sync';
 
 const MSG: Record<string, { msg: string; status: number }> = {
   FORBIDDEN: { msg: 'Apenas o Administrador', status: 403 },
@@ -14,6 +14,12 @@ export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const b = await req.json().catch(() => null);
+
+  if (b?.all) {
+    const ra = await syncAllRegisteredUnits(user);
+    if (!ra.ok) { const m = MSG[ra.reason]; return NextResponse.json({ error: m.msg, reason: ra.reason }, { status: m.status }); }
+    return NextResponse.json({ ok: true, created: ra.created, updated: ra.updated, total: ra.total, units: ra.units });
+  }
   if (!b?.unitId) return NextResponse.json({ error: 'unitId obrigatório' }, { status: 400 });
 
   const r = await syncCollaboratorsForUnit(user, b.unitId);

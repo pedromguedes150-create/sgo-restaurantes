@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
+import { notifyAdmins } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
@@ -67,14 +68,40 @@ export async function allocate(user: SessionUser, input: { unitId: string; secto
   if (!input.sectorId || !input.shift?.trim() || !input.collaboratorId) return { ok: false, reason: 'INVALID' };
   const a = await prisma.workforceAllocation.create({ data: { unitId: input.unitId, sectorId: input.sectorId, shift: input.shift.trim(), collaboratorId: input.collaboratorId, source: 'MANUAL' } });
   await audit({ userId: user.id, unitId: input.unitId, action: 'ALLOCATE', module: 'PEOPLE', entity: 'workforce_allocation', entityId: a.id, ...ctx });
+  await notifyWorkforceChange(user, input.unitId, input.sectorId, input.collaboratorId, input.shift.trim(), 'alocou', `/modulos/pessoas/mapa?unit=${input.unitId}`);
   return { ok: true, id: a.id };
 }
 
 export async function removeAllocation(user: SessionUser, id: string, ctx: Ctx = {}): Promise<WfResult> {
-  const a = await prisma.workforceAllocation.findUnique({ where: { id }, select: { unitId: true } });
+  const a = await prisma.workforceAllocation.findUnique({
+    where: { id },
+    include: { sector: { select: { name: true } }, collaborator: { select: { name: true } }, unit: { select: { name: true } } },
+  });
   if (!a) return { ok: false, reason: 'NOT_FOUND' };
   if (!canAccessUnit(user, a.unitId)) return { ok: false, reason: 'FORBIDDEN' };
   await prisma.workforceAllocation.delete({ where: { id } });
   await audit({ userId: user.id, unitId: a.unitId, action: 'DEALLOCATE', module: 'PEOPLE', entity: 'workforce_allocation', entityId: id, ...ctx });
+  const who = a.collaborator?.name ?? a.collaboratorName ?? 'colaborador';
+  await notifyAdmins({
+    title: 'Mapa de Funções alterado',
+    body: `${user.name} removeu ${who} de ${a.sector?.name ?? 'setor'} / ${a.shift} (${a.unit?.name ?? ''}). Avise o RH.`,
+    link: `/modulos/pessoas/mapa?unit=${a.unitId}`,
+    module: 'PEOPLE',
+  });
   return { ok: true };
+}
+
+/** Notifica os administradores sobre uma alteração de alocação (avisar o RH). */
+async function notifyWorkforceChange(user: SessionUser, unitId: string, sectorId: string, collaboratorId: string, shift: string, verbo: string, link: string) {
+  const [unit, sector, collab] = await Promise.all([
+    prisma.unit.findUnique({ where: { id: unitId }, select: { name: true } }),
+    prisma.sector.findUnique({ where: { id: sectorId }, select: { name: true } }),
+    prisma.collaborator.findUnique({ where: { id: collaboratorId }, select: { name: true } }),
+  ]);
+  await notifyAdmins({
+    title: 'Mapa de Funções alterado',
+    body: `${user.name} ${verbo} ${collab?.name ?? 'colaborador'} em ${sector?.name ?? 'setor'} / ${shift} (${unit?.name ?? ''}). Avise o RH.`,
+    link,
+    module: 'PEOPLE',
+  });
 }

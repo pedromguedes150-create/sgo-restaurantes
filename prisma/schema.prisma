@@ -100,6 +100,7 @@ model User {
   inventoryResponsible InventorySchedule[] @relation("InvResp")
   inventoryConfirmed   InventorySchedule[] @relation("InvConf")
   popReads             PopRead[]
+  notifications        Notification[]
 
   @@map("users")
 }
@@ -886,4 +887,25 @@ model WorkforceAllocation {
 
   @@index([unitId, sectorId])
   @@map("workforce_allocations")
+}
+
+/// Central de Notificações in-app (conceito transversal nº 4). Fonte garantida
+/// mesmo se o push (FCM) falhar.
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String?
+  link      String?
+  module    String?
+  /// CRITICAL não pode ser desativada; usada p/ destaque
+  critical  Boolean  @default(false)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
