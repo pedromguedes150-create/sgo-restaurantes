@@ -51,7 +51,7 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 | 6 — Ocorrências | ✅ Concluído (nº sequencial/unidade, tipo→categoria, gravidade 🟢🟡🔴⚫, anexos foto/vídeo, reincidência <30d, encerramento Supervisor/Admin com ação corretiva, alertas e badge no dashboard) |
 | 7 — Pagamentos (com delegação) | ✅ Concluído (freelancers/HE/avulsos, fluxo solicitar→aprovar→pagar, delegação de aprovador por período, abas Minhas/Aprovar/Pagar/Histórico, badges dashboard) |
 | 8 — Notas (QR + IA) | ✅ Concluído (leitura da chave 44 dígitos com pré-preenchimento, confirmação obrigatória, fallback manual/foto, status Recebida/Paga/Problema; IA Claude é ponto via env) |
-| 9 — Pessoas (API RH) | ✅ Parcial (colaboradores, férias c/ solicitação de alteração, escala planejado×realizado com variações; 9.3 Mapa de Funções / 9.4 Comissões / 9.5 Mobilidade pendentes; API RH = ponto via env, fallback manual) |
+| 9 — Pessoas (API RH) | 🟡 Em integração: colaboradores/férias/escala (manual) + **Mapa de Funções 9.3** (Setor×Horário×Colaborador, cobertura) ✅. Integração RH real: cliente x-api-key + `/api/rh/test` prontos; aguardando JSON real p/ normalizar campos. Decisões: Mapa híbrido, férias via API (rota a confirmar), comissões/mobilidade misto, unidades por nome. 9.4/9.5 pendentes |
 | 10 — POPs | ✅ Concluído (blocos texto/checklist/imagem/vídeo, publicação, confirmação de leitura por versão, versionamento; editor rico avançado a refinar) |
 | 11 — Metas | ✅ Concluído (ranking mensal, Minha Meta do Mês, detalhamento por tarefa/peso; export PDF a refinar) |
 | 12 — Auditoria | ✅ Concluído (tela com filtros por módulo, timeline imutável; export PDF/CSV a refinar) |

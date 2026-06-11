@@ -443,6 +443,22 @@ async function main() {
   });
   console.log('  ✔ pops: 2 POPs publicados');
 
+  // --- Mapa de Funções: setores + alocações (Centro) ---
+  await prisma.workforceAllocation.deleteMany({});
+  await prisma.sector.deleteMany({});
+  const secSalao = await prisma.sector.create({ data: { unitId: centro.id, name: 'Salão', minHeadcount: 2, order: 1 } });
+  const secCozinha = await prisma.sector.create({ data: { unitId: centro.id, name: 'Cozinha', minHeadcount: 2, order: 2 } });
+  const secCaixa = await prisma.sector.create({ data: { unitId: centro.id, name: 'Caixa', minHeadcount: 1, order: 3 } });
+  // collabs[0]=Pedro(Centro), collabs[1]=Lucia(Centro+Orla)
+  await prisma.workforceAllocation.createMany({
+    data: [
+      { unitId: centro.id, sectorId: secSalao.id, shift: 'Noite 18-23', collaboratorId: collabs[0].id, source: 'MANUAL' },
+      { unitId: centro.id, sectorId: secCaixa.id, shift: 'Noite 18-23', collaboratorId: collabs[1].id, source: 'MANUAL' },
+      // Cozinha noite fica sem cobertura (demonstra 🔴)
+    ],
+  });
+  console.log('  ✔ mapa de funções: 3 setores + 2 alocações (Centro)');
+
   await prisma.auditLog.create({
     data: {
       action: 'SEED',

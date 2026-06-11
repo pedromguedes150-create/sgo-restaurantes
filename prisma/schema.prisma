@@ -55,6 +55,8 @@ model Unit {
   vacations           Vacation[]
   scheduleEntries     ScheduleEntry[]
   popUnits            PopUnit[]
+  sectors             Sector[]
+  allocations         WorkforceAllocation[]
 
   @@map("units")
 }
@@ -725,6 +727,7 @@ model Collaborator {
   units     CollaboratorUnit[]
   vacations Vacation[]
   schedule  ScheduleEntry[]
+  allocations WorkforceAllocation[]
 
   @@map("collaborators")
 }
@@ -840,4 +843,45 @@ model PopRead {
 
   @@unique([popId, userId, version])
   @@map("pop_reads")
+}
+
+/// Setor de uma unidade (Mapa de Funções — Módulo 9.3). Definido pelo Admin.
+model Sector {
+  id        String   @id @default(cuid())
+  unitId    String
+  name      String
+  /// meta de pessoas por turno (para cobertura ✅/⚠️/🔴); 0 = sem meta
+  minHeadcount Int   @default(1)
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  unit        Unit                  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  allocations WorkforceAllocation[]
+
+  @@index([unitId])
+  @@map("sectors")
+}
+
+/// Alocação de colaborador em Setor × Turno/Horário (grade do Mapa de Funções).
+/// Origem híbrida: pode vir da escala do RH (collaboratorName) ou alocação manual.
+model WorkforceAllocation {
+  id             String   @id @default(cuid())
+  unitId         String
+  sectorId       String
+  /// rótulo do turno/horário (ex: "Manhã 06-14", "Noite 18-23")
+  shift          String
+  collaboratorId String?
+  /// nome quando vier do RH sem vínculo local (fallback)
+  collaboratorName String?
+  /// 'RH' (escala) ou 'MANUAL' (alocação do gerente/admin)
+  source         String   @default("MANUAL")
+  createdAt      DateTime @default(now())
+
+  unit         Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  sector       Sector        @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+  collaborator Collaborator? @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
+
+  @@index([unitId, sectorId])
+  @@map("workforce_allocations")
 }
