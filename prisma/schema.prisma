@@ -27,6 +27,8 @@ model Unit {
   code      String   @unique // sigla curta p/ exibição
   address   String?
   cnpj      String?
+  /// Razão social correspondente na API do RH (para casar/sincronizar colaboradores)
+  rhUnitName String?
   /// Fuso da unidade (exibição). Banco grava em UTC. Padrão America/Sao_Paulo.
   timezone  String   @default("America/Sao_Paulo")
   /// Hora de corte da data operacional (0-23). Padrão 04:00 (regra nº 4).

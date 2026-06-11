@@ -25,7 +25,7 @@ export async function createUnit(user: SessionUser, input: { name: string; code:
   return { ok: true, id: u.id };
 }
 
-export async function updateUnit(user: SessionUser, id: string, input: { name?: string; address?: string; cutoffHour?: number; timezone?: string; active?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateUnit(user: SessionUser, id: string, input: { name?: string; address?: string; cutoffHour?: number; timezone?: string; active?: boolean; rhUnitName?: string }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   const u = await prisma.unit.update({
     where: { id },
@@ -35,6 +35,7 @@ export async function updateUnit(user: SessionUser, id: string, input: { name?: 
       ...(input.cutoffHour !== undefined ? { cutoffHour: clampHour(input.cutoffHour) } : {}),
       ...(input.timezone !== undefined ? { timezone: input.timezone.trim() } : {}),
       ...(input.active !== undefined ? { active: input.active } : {}),
+      ...(input.rhUnitName !== undefined ? { rhUnitName: input.rhUnitName.trim() || null } : {}),
     },
   });
   await audit({ userId: user.id, unitId: id, action: 'UNIT_UPDATE', module: 'CONFIG', entity: 'unit', entityId: id, ...ctx });
