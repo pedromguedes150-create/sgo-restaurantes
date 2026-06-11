@@ -1,11 +1,13 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { LogOut, Bell } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { LogOut, Bell, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function AppHeader({ userName, roleLabel }: { userName: string; roleLabel: string }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const showBack = pathname !== '/dashboard';
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -22,7 +24,18 @@ export function AppHeader({ userName, roleLabel }: { userName: string; roleLabel
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-brand px-4 text-white">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        {showBack && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="-ml-2 text-white hover:bg-white/10"
+            aria-label="Voltar"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-sm font-black text-brand-dark">
           {initials}
         </div>
