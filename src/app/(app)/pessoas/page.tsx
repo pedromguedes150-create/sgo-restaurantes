@@ -1,5 +1,6 @@
-import { ComingSoon } from '@/components/layout/coming-soon';
+import { redirect } from 'next/navigation';
 
-export default function PessoasPage() {
-  return <ComingSoon title="Pessoas" phase="Módulo 9 — Gestão de Pessoas (API RH)" />;
+// A aba "Pessoas" do bottom-nav leva ao módulo de Gestão de Pessoas.
+export default function PessoasRedirect() {
+  redirect('/modulos/pessoas');
 }

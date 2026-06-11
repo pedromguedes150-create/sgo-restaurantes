@@ -50,6 +50,11 @@ model Unit {
   paymentRequests     PaymentRequest[]
   freelancerUnits     FreelancerUnit[]
   receivedNotes       ReceivedNote[]
+  inventorySchedules  InventorySchedule[]
+  collaboratorUnits   CollaboratorUnit[]
+  vacations           Vacation[]
+  scheduleEntries     ScheduleEntry[]
+  popUnits            PopUnit[]
 
   @@map("units")
 }
@@ -88,6 +93,9 @@ model User {
   delegationsFrom  ApprovalDelegation[] @relation("DelegFrom")
   delegationsTo    ApprovalDelegation[] @relation("DelegTo")
   receivedNotes    ReceivedNote[]       @relation("NoteCreatedBy")
+  inventoryResponsible InventorySchedule[] @relation("InvResp")
+  inventoryConfirmed   InventorySchedule[] @relation("InvConf")
+  popReads             PopRead[]
 
   @@map("users")
 }
@@ -670,4 +678,166 @@ model ReceivedNote {
   @@index([unitId, status])
   @@index([accessKey])
   @@map("received_notes")
+}
+
+enum InventoryStatus {
+  PENDING // agendado
+  DONE // realizado
+  MISSED // não realizado
+}
+
+/// Inventário (Módulo 5) — registro de EXECUÇÃO (feito/não feito).
+model InventorySchedule {
+  id            String          @id @default(cuid())
+  unitId        String
+  categoryName  String
+  scheduledDate String // data operacional 'YYYY-MM-DD'
+  responsibleId String?
+  status        InventoryStatus @default(PENDING)
+  confirmedById String?
+  confirmedAt   DateTime?
+  observation   String?
+  createdAt     DateTime        @default(now())
+
+  unit        Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  responsible User? @relation("InvResp", fields: [responsibleId], references: [id], onDelete: SetNull)
+  confirmedBy User? @relation("InvConf", fields: [confirmedById], references: [id], onDelete: SetNull)
+
+  @@index([unitId, scheduledDate])
+  @@map("inventory_schedules")
+}
+
+enum CollaboratorSource {
+  RH // via API do RH
+  MANUAL // cadastro manual (fallback do Admin)
+}
+
+/// Colaborador (Módulo 9). Fonte primária: API RH; fallback manual.
+model Collaborator {
+  id        String             @id @default(cuid())
+  name      String
+  jobTitle  String?
+  active    Boolean            @default(true)
+  source    CollaboratorSource @default(MANUAL)
+  externalId String? // id no RH
+  createdAt DateTime           @default(now())
+
+  units     CollaboratorUnit[]
+  vacations Vacation[]
+  schedule  ScheduleEntry[]
+
+  @@map("collaborators")
+}
+
+model CollaboratorUnit {
+  id             String @id @default(cuid())
+  collaboratorId String
+  unitId         String
+
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([collaboratorId, unitId])
+  @@map("collaborator_units")
+}
+
+enum VacationStatus {
+  CONFIRMED // confirmada (via RH)
+  CHANGE_REQUESTED // alteração solicitada pelo gerente
+  APPROVED // aprovada
+}
+
+/// Férias (Módulo 9.1). Programação via RH; gerente solicita alteração.
+model Vacation {
+  id             String         @id @default(cuid())
+  collaboratorId String
+  unitId         String
+  startDate      DateTime
+  endDate        DateTime
+  status         VacationStatus @default(CONFIRMED)
+  changeNote     String?
+  createdAt      DateTime       @default(now())
+
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId])
+  @@map("vacations")
+}
+
+enum ScheduleVariation {
+  NONE
+  ABSENCE // falta
+  LATE // atraso
+  SWAP // troca
+}
+
+/// Escala (Módulo 9.2) — importada (somente leitura); gerente registra variações.
+model ScheduleEntry {
+  id             String            @id @default(cuid())
+  collaboratorId String
+  unitId         String
+  date           DateTime
+  planned        String // ex: "18:00-23:00" (planejado, não sobrescrito)
+  variation      ScheduleVariation @default(NONE)
+  variationNote  String?
+  createdAt      DateTime          @default(now())
+
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId, date])
+  @@map("schedule_entries")
+}
+
+enum PopStatus {
+  DRAFT // Rascunho
+  PUBLISHED // Publicado
+  ARCHIVED // Arquivado
+}
+
+/// POP (Módulo 10) — blocos em JSON, versionamento e confirmação de leitura.
+model Pop {
+  id        String    @id @default(cuid())
+  title     String
+  category  String?
+  sector    String?
+  version   Int       @default(1)
+  status    PopStatus @default(DRAFT)
+  /// blocos: [{type:'text'|'image'|'video'|'checklist', ...}]
+  content   Json
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  units PopUnit[]
+  reads PopRead[]
+
+  @@map("pops")
+}
+
+model PopUnit {
+  id     String @id @default(cuid())
+  popId  String
+  unitId String
+
+  pop  Pop  @relation(fields: [popId], references: [id], onDelete: Cascade)
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([popId, unitId])
+  @@map("pop_units")
+}
+
+/// Confirmação de leitura de POP (quem, quando, qual versão).
+model PopRead {
+  id      String   @id @default(cuid())
+  popId   String
+  userId  String
+  version Int
+  readAt  DateTime @default(now())
+
+  pop  Pop  @relation(fields: [popId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([popId, userId, version])
+  @@map("pop_reads")
 }

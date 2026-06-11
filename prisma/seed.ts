@@ -389,6 +389,60 @@ async function main() {
   });
   console.log('  ✔ notas: 3 notas de exemplo');
 
+  // --- Inventário ---
+  await prisma.inventorySchedule.deleteMany({});
+  await prisma.inventorySchedule.createMany({
+    data: [
+      { unitId: centro.id, categoryName: 'Bebidas', scheduledDate: todayOpCentro, responsibleId: completerByUnit[centro.id], status: 'PENDING' },
+      { unitId: centro.id, categoryName: 'Carnes', scheduledDate: format(subDays(new Date(`${todayOpCentro}T12:00:00`), 7), 'yyyy-MM-dd'), responsibleId: completerByUnit[centro.id], status: 'DONE', confirmedById: completerByUnit[centro.id], confirmedAt: subDays(now, 7) },
+      { unitId: orla.id, categoryName: 'Descartáveis', scheduledDate: opDateFor(now, orla.timezone, orla.cutoffHour), responsibleId: completerByUnit[orla.id], status: 'PENDING' },
+    ],
+  });
+  console.log('  ✔ inventário: 3 agendamentos');
+
+  // --- Pessoas: colaboradores, férias, escala ---
+  await prisma.scheduleEntry.deleteMany({});
+  await prisma.vacation.deleteMany({});
+  await prisma.collaboratorUnit.deleteMany({});
+  await prisma.collaborator.deleteMany({});
+  const collabData = [
+    { name: 'Pedro Atendente', jobTitle: 'Garçom', unitIds: [centro.id] },
+    { name: 'Lucia Caixa', jobTitle: 'Operadora de Caixa', unitIds: [centro.id, orla.id] },
+    { name: 'Rafael Cozinheiro', jobTitle: 'Cozinheiro', unitIds: [orla.id] },
+  ];
+  const collabs = [];
+  for (const c of collabData) {
+    collabs.push(await prisma.collaborator.create({ data: { name: c.name, jobTitle: c.jobTitle, source: 'RH', units: { create: c.unitIds.map((unitId) => ({ unitId })) } } }));
+  }
+  await prisma.vacation.create({ data: { collaboratorId: collabs[0].id, unitId: centro.id, startDate: addDays(now, 10), endDate: addDays(now, 25), status: 'CONFIRMED' } });
+  await prisma.vacation.create({ data: { collaboratorId: collabs[1].id, unitId: centro.id, startDate: addDays(now, 30), endDate: addDays(now, 44), status: 'CONFIRMED' } });
+  await prisma.scheduleEntry.createMany({
+    data: [
+      { collaboratorId: collabs[0].id, unitId: centro.id, date: now, planned: '18:00-23:00', variation: 'NONE' },
+      { collaboratorId: collabs[1].id, unitId: centro.id, date: now, planned: '11:00-15:00', variation: 'LATE', variationNote: 'Chegou 20min atrasada' },
+      { collaboratorId: collabs[2].id, unitId: orla.id, date: now, planned: '17:00-23:00', variation: 'NONE' },
+    ],
+  });
+  console.log(`  ✔ pessoas: ${collabs.length} colaboradores, 2 férias, 3 entradas de escala`);
+
+  // --- POPs ---
+  await prisma.pop.deleteMany({});
+  await prisma.pop.create({
+    data: {
+      title: 'Abertura do Salão', category: 'Setor', sector: 'Salão', status: 'PUBLISHED', version: 1,
+      content: [{ type: 'text', text: 'Conferir limpeza, montar mesas, ligar equipamentos e checar temperaturas.' }, { type: 'checklist', items: ['Mesas montadas', 'Piso limpo', 'Equipamentos ligados'] }],
+      units: { create: [{ unitId: centro.id }, { unitId: orla.id }, { unitId: shopping.id }] },
+    },
+  });
+  await prisma.pop.create({
+    data: {
+      title: 'Higienização do Balcão (Lanchonete)', category: 'Setor', sector: 'Lanchonete', status: 'PUBLISHED', version: 1,
+      content: [{ type: 'text', text: 'Higienizar o balcão a cada troca de turno com produto adequado.' }],
+      units: { create: [{ unitId: centro.id }] },
+    },
+  });
+  console.log('  ✔ pops: 2 POPs publicados');
+
   await prisma.auditLog.create({
     data: {
       action: 'SEED',

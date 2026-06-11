@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Trash2, ClipboardList, Ticket, Boxes, AlertOctagon, Wallet, Receipt } from 'lucide-react';
+import { Trash2, ClipboardList, Ticket, Boxes, AlertOctagon, Wallet, Receipt, Target, Users, BookOpen } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const MODULES = [
@@ -9,7 +9,10 @@ const MODULES = [
   { href: '/modulos/cancelamentos', label: 'Cancelamentos', icon: Ticket, ready: true },
   { href: '/modulos/pagamentos', label: 'Pagamentos', icon: Wallet, ready: true },
   { href: '/modulos/notas', label: 'Notas', icon: Receipt, ready: true },
-  { href: '#', label: 'Inventário', icon: Boxes, ready: false },
+  { href: '/modulos/metas', label: 'Metas', icon: Target, ready: true },
+  { href: '/modulos/inventario', label: 'Inventário', icon: Boxes, ready: true },
+  { href: '/modulos/pessoas', label: 'Pessoas', icon: Users, ready: true },
+  { href: '/modulos/pops', label: 'POPs', icon: BookOpen, ready: true },
 ];
 
 export default function ModulosPage() {

@@ -253,12 +253,14 @@ function ConsolidatedDashboard({
       </Card>
 
       {canSeeAudit && (
-        <Link
-          href="/configuracoes"
-          className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand"
-        >
-          <ScrollText className="h-5 w-5 text-accent" /> Log de Auditoria
-        </Link>
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/auditoria" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand">
+            <ScrollText className="h-5 w-5 text-accent" /> Auditoria
+          </Link>
+          <Link href="/modulos/metas" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand">
+            <Trophy className="h-5 w-5 text-accent" /> Metas
+          </Link>
+        </div>
       )}
     </>
   );
