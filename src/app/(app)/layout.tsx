@@ -7,6 +7,7 @@ import { BottomNav } from '@/components/layout/bottom-nav';
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getSessionUser();
   if (!user) redirect('/login');
+  if (user.needsTerms) redirect('/termo'); // LGPD: aceite no 1º login
 
   return (
     <div className="min-h-dvh bg-surface">

@@ -6,6 +6,7 @@ import type { Role } from '@prisma/client';
 // Constantes/opções de cookie (definidas em módulo puro p/ edge); importadas
 // para uso local e reexportadas por conveniência.
 import { ACCESS_COOKIE, REFRESH_COOKIE, authCookieOptions } from '@/lib/auth/cookies';
+import { TERMS_VERSION } from '@/lib/lgpd';
 export { ACCESS_COOKIE, REFRESH_COOKIE, authCookieOptions };
 
 /** Usuário autenticado resolvido a partir do access token (cookie httpOnly). */
@@ -17,6 +18,8 @@ export interface SessionUser {
   unitIds: string[];
   /** true para CEO/ADMIN — enxergam todas as unidades */
   seesAllUnits: boolean;
+  /** precisa aceitar o termo LGPD (1º login ou nova versão) */
+  needsTerms: boolean;
 }
 
 function seesAll(role: Role): boolean {
@@ -49,6 +52,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       name: true,
       role: true,
       active: true,
+      termsAcceptedAt: true,
+      termsVersion: true,
       memberships: { select: { unitId: true } },
     },
   });
@@ -61,5 +66,6 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     role: user.role,
     unitIds: user.memberships.map((m) => m.unitId),
     seesAllUnits: seesAll(user.role),
+    needsTerms: !user.termsAcceptedAt || user.termsVersion !== TERMS_VERSION,
   };
 }
