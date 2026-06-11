@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import { roleLabel } from '@/lib/roles';
 import { RETENTION_MONTHS_DEFAULT, TERMS_VERSION } from '@/lib/lgpd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollText, Building2, Users, ShieldCheck } from 'lucide-react';
+import { ScrollText, Building2, Users, ShieldCheck, ListChecks, Wallet } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,9 +30,20 @@ export default async function ConfiguracoesPage() {
     <div className="space-y-5">
       <h1 className="text-xl font-bold text-brand">Configurações</h1>
 
-      <Link href="/auditoria" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand">
-        <ScrollText className="h-5 w-5 text-accent" /> Log de Auditoria
-      </Link>
+      {/* Cadastros */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { href: '/configuracoes/unidades', label: 'Unidades', icon: Building2 },
+          { href: '/configuracoes/usuarios', label: 'Usuários', icon: Users },
+          { href: '/configuracoes/checklists', label: 'Checklists', icon: ListChecks },
+          { href: '/configuracoes/pagamentos', label: 'Pagamentos', icon: Wallet },
+          { href: '/auditoria', label: 'Auditoria', icon: ScrollText },
+        ].map(({ href, label, icon: Icon }) => (
+          <Link key={href} href={href} className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
+            <Icon className="h-5 w-5 text-accent" /> {label}
+          </Link>
+        ))}
+      </div>
 
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5 text-accent" /> Unidades ({units.length})</CardTitle></CardHeader>

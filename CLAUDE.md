@@ -55,7 +55,7 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 | 10 — POPs | ✅ Concluído (blocos texto/checklist/imagem/vídeo, publicação, confirmação de leitura por versão, versionamento; editor rico avançado a refinar) |
 | 11 — Metas | ✅ Concluído (ranking mensal, Minha Meta do Mês, detalhamento por tarefa/peso; export PDF a refinar) |
 | 12 — Auditoria | ✅ Concluído (tela com filtros por módulo, timeline imutável; export PDF/CSV a refinar) |
-| 13 — Configurações + LGPD | ✅ Concluído (painel Admin de unidades/usuários, aceite de termo no 1º login, retenção/visibilidade LGPD, export de dados do titular; CRUD completo de cadastros a evoluir) |
+| 13 — Configurações + LGPD | ✅ Concluído (cadastros Admin: Unidades, Usuários, Checklists, Pagamentos [freelancers/tipos avulso/delegações] via /api/admin; aceite de termo no 1º login, LGPD retenção/visibilidade/export do titular) |
 
 ## Como trabalhar
 1. Leia a seção em `docs/especificacao.md`.
