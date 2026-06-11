@@ -49,7 +49,7 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 | 4 — Cancelamento de Cupons | ✅ Concluído (import CSV Teknisa genérico, pendência de justificativa, motivos configuráveis, mês/% justificados/ranking operador, badge dashboard; PDF/Excel a refinar) |
 | 5 — Inventário | Não iniciado |
 | 6 — Ocorrências | ✅ Concluído (nº sequencial/unidade, tipo→categoria, gravidade 🟢🟡🔴⚫, anexos foto/vídeo, reincidência <30d, encerramento Supervisor/Admin com ação corretiva, alertas e badge no dashboard) |
-| 7 — Pagamentos (com delegação) | Não iniciado |
+| 7 — Pagamentos (com delegação) | ✅ Concluído (freelancers/HE/avulsos, fluxo solicitar→aprovar→pagar, delegação de aprovador por período, abas Minhas/Aprovar/Pagar/Histórico, badges dashboard) |
 | 8 — Notas (QR + IA) | Não iniciado |
 | 9 — Pessoas (API RH) | Não iniciado |
 | 10 — POPs | Não iniciado |

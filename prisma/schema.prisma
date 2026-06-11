@@ -47,6 +47,8 @@ model Unit {
   commandReplacements CommandReplacement[]
   cancellations       Cancellation[]
   cancellationImports CancellationImport[]
+  paymentRequests     PaymentRequest[]
+  freelancerUnits     FreelancerUnit[]
 
   @@map("units")
 }
@@ -79,6 +81,11 @@ model User {
   commandReplacements CommandReplacement[] @relation("CmdReplBy")
   cancellationsJustified Cancellation[]       @relation("CancJustifiedBy")
   cancellationImports    CancellationImport[] @relation("CancImportedBy")
+  paymentRequested PaymentRequest[]     @relation("PayRequestedBy")
+  paymentApproved  PaymentRequest[]     @relation("PayApprovedBy")
+  paymentPaid      PaymentRequest[]     @relation("PayPaidBy")
+  delegationsFrom  ApprovalDelegation[] @relation("DelegFrom")
+  delegationsTo    ApprovalDelegation[] @relation("DelegTo")
 
   @@map("users")
 }
@@ -502,4 +509,122 @@ model Cancellation {
   @@index([unitId, status])
   @@index([unitId, operationalDate])
   @@map("cancellations")
+}
+
+enum PaymentType {
+  FREELANCER // 7.1
+  OVERTIME // 7.2 (horas extras)
+  MISC // 7.3 (pagamento avulso)
+}
+
+enum PaymentStatus {
+  PENDING // Pendente
+  APPROVED // Aprovada
+  REJECTED // Rejeitada
+  PAID // Paga
+}
+
+/// Cadastro de freelancer (multi-unidade, valor padrão) — Módulo 7.1.
+model Freelancer {
+  id           String           @id @default(cuid())
+  name         String
+  defaultValue Decimal          @db.Decimal(10, 2)
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  units        FreelancerUnit[]
+  requests     PaymentRequest[]
+
+  @@map("freelancers")
+}
+
+model FreelancerUnit {
+  id           String @id @default(cuid())
+  freelancerId String
+  unitId       String
+
+  freelancer Freelancer @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  unit       Unit       @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([freelancerId, unitId])
+  @@map("freelancer_units")
+}
+
+/// Tipo de pagamento avulso + aprovador por tipo — Módulo 7.3.
+model MiscPaymentType {
+  id           String           @id @default(cuid())
+  name         String
+  approverRole Role             @default(SUPERVISOR)
+  active       Boolean          @default(true)
+  order        Int              @default(0)
+  requests     PaymentRequest[]
+
+  @@map("misc_payment_types")
+}
+
+/// Delegação de aprovação por período (NOVO) — Módulo 7.
+model ApprovalDelegation {
+  id          String   @id @default(cuid())
+  fromUserId  String
+  toUserId    String
+  startsAt    DateTime
+  endsAt      DateTime
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  fromUser User @relation("DelegFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("DelegTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([toUserId])
+  @@index([fromUserId])
+  @@map("approval_delegations")
+}
+
+/// Solicitação de pagamento (freelancer / hora extra / avulso) — Módulo 7.
+model PaymentRequest {
+  id            String        @id @default(cuid())
+  type          PaymentType
+  unitId        String
+  requestedById String?
+  status        PaymentStatus @default(PENDING)
+  /// Perfil que deve aprovar (SUPERVISOR p/ freela/HE; do tipo p/ avulso)
+  approverRole  Role          @default(SUPERVISOR)
+  amount        Decimal       @db.Decimal(10, 2)
+  description   String?
+
+  // Freelancer
+  freelancerId String?
+  workDate     DateTime?
+  shift        String?
+  hours        Float?
+
+  // Hora extra
+  collaboratorName String?
+  reason           String?
+
+  // Avulso
+  miscTypeId     String?
+  beneficiary    String?
+  attachmentPath String?
+
+  // Workflow
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  paidById        String?
+  paidAt          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unit        Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  requestedBy User?            @relation("PayRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+  approvedBy  User?            @relation("PayApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  paidBy      User?            @relation("PayPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  freelancer  Freelancer?      @relation(fields: [freelancerId], references: [id], onDelete: SetNull)
+  miscType    MiscPaymentType? @relation(fields: [miscTypeId], references: [id], onDelete: SetNull)
+
+  @@index([unitId, status])
+  @@index([status])
+  @@index([requestedById])
+  @@map("payment_requests")
 }

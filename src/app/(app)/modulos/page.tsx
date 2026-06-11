@@ -7,8 +7,8 @@ const MODULES = [
   { href: '/modulos/ocorrencias', label: 'Ocorrências', icon: AlertOctagon, ready: true },
   { href: '/modulos/comandas', label: 'Comandas', icon: ClipboardList, ready: true },
   { href: '/modulos/cancelamentos', label: 'Cancelamentos', icon: Ticket, ready: true },
+  { href: '/modulos/pagamentos', label: 'Pagamentos', icon: Wallet, ready: true },
   { href: '#', label: 'Inventário', icon: Boxes, ready: false },
-  { href: '#', label: 'Pagamentos', icon: Wallet, ready: false },
   { href: '#', label: 'Notas', icon: Receipt, ready: false },
 ];
 

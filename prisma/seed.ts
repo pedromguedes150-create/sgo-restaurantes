@@ -342,6 +342,42 @@ async function main() {
   }
   console.log(`  ✔ ${reasons.length} motivos de cancelamento + 5 cancelamentos (Centro)`);
 
+  // --- Pagamentos: freelancers, tipos avulsos, delegação e solicitações ---
+  await prisma.paymentRequest.deleteMany({});
+  await prisma.approvalDelegation.deleteMany({});
+  await prisma.freelancerUnit.deleteMany({});
+  await prisma.freelancer.deleteMany({});
+  await prisma.miscPaymentType.deleteMany({});
+
+  const fl1 = await prisma.freelancer.create({ data: { name: 'João Garçom (freela)', defaultValue: 150, units: { create: [{ unitId: centro.id }, { unitId: orla.id }] } } });
+  const fl2 = await prisma.freelancer.create({ data: { name: 'Maria Cozinha (freela)', defaultValue: 180, units: { create: [{ unitId: centro.id }] } } });
+  const mt1 = await prisma.miscPaymentType.create({ data: { name: 'Reembolso de despesa', approverRole: 'SUPERVISOR', order: 1 } });
+  const mt2 = await prisma.miscPaymentType.create({ data: { name: 'Adiantamento', approverRole: 'ADMIN', order: 2 } });
+
+  // Delegação: supervisor delega aprovação à coordenadora por 15 dias
+  await prisma.approvalDelegation.create({
+    data: {
+      fromUserId: userByEmail['supervisor@beijaflor.com.br'],
+      toUserId: userByEmail['coordenador@beijaflor.com.br'],
+      startsAt: subDays(now, 2),
+      endsAt: addDays(now, 13),
+      createdById: userByEmail['admin@beijaflor.com.br'],
+    },
+  });
+
+  // Solicitações de exemplo
+  await prisma.paymentRequest.create({
+    data: { type: 'FREELANCER', unitId: centro.id, requestedById: completerByUnit[centro.id], approverRole: 'SUPERVISOR', amount: 150, freelancerId: fl1.id, workDate: subDays(now, 1), shift: 'noite', hours: 8, status: 'PENDING' },
+  });
+  await prisma.paymentRequest.create({
+    data: { type: 'OVERTIME', unitId: centro.id, requestedById: completerByUnit[centro.id], approverRole: 'SUPERVISOR', amount: 95.5, collaboratorName: 'Carlos Auxiliar', workDate: subDays(now, 3), hours: 3, reason: 'Fechamento de inventário', status: 'APPROVED', approvedById: userByEmail['supervisor@beijaflor.com.br'], approvedAt: subDays(now, 2) },
+  });
+  await prisma.paymentRequest.create({
+    data: { type: 'MISC', unitId: orla.id, requestedById: completerByUnit[orla.id], approverRole: 'ADMIN', amount: 60, miscTypeId: mt2.id, beneficiary: 'Fornecedor X', description: 'Adiantamento combustível', status: 'PAID', approvedById: userByEmail['admin@beijaflor.com.br'], approvedAt: subDays(now, 4), paidById: userByEmail['financeiro@beijaflor.com.br'], paidAt: subDays(now, 3) },
+  });
+  void fl2; void mt1;
+  console.log('  ✔ pagamentos: 2 freelancers, 2 tipos avulsos, 1 delegação, 3 solicitações');
+
   await prisma.auditLog.create({
     data: {
       action: 'SEED',

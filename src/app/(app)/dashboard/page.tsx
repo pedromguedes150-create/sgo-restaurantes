@@ -4,6 +4,7 @@ import { getUnitsOverview, aggregateDay } from '@/lib/tasks/overview';
 import { getOccurrenceSummary } from '@/lib/occurrences/query';
 import { getOpenDivergenceCount } from '@/lib/commands/query';
 import { getPendingCancellationCount } from '@/lib/cancellations/query';
+import { getToApproveCount } from '@/lib/payments/query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ProgressRing } from '@/components/dashboard/progress-ring';
@@ -23,19 +24,25 @@ export default async function DashboardPage() {
         <h1 className="text-xl font-bold text-brand">Olá, {user.name.split(' ')[0]} 👋</h1>
         <Card>
           <CardContent className="py-6 text-sm text-muted-foreground">
-            Seu perfil (Financeiro) recebe notificações de demandas aprovadas. Sem painel
-            operacional.
+            Seu perfil (Financeiro) recebe demandas aprovadas para pagamento.
           </CardContent>
         </Card>
+        <Link
+          href="/modulos/pagamentos"
+          className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand"
+        >
+          <ScrollText className="h-5 w-5 text-accent" /> Pagamentos a processar
+        </Link>
       </div>
     );
   }
 
-  const [overviews, occ, openDiv, pendingCanc] = await Promise.all([
+  const [overviews, occ, openDiv, pendingCanc, toApprove] = await Promise.all([
     getUnitsOverview(user, now),
     getOccurrenceSummary(user),
     getOpenDivergenceCount(user),
     getPendingCancellationCount(user),
+    getToApproveCount(user),
   ]);
   const isManagerView = user.role === 'MANAGER' || user.role === 'COORDINATOR';
   const occAlert = occ.criticalOpen > 0 || occ.openOver48h > 0;
@@ -81,6 +88,17 @@ export default async function DashboardPage() {
             <CardContent className="flex items-center gap-3 py-3 text-sm font-semibold text-[#92600A]">
               <AlertTriangle className="h-5 w-5" />
               {openDiv} divergência(s) de comanda em aberto.
+            </CardContent>
+          </Card>
+        </Link>
+      )}
+
+      {toApprove > 0 && (
+        <Link href="/modulos/pagamentos">
+          <Card className="border-accent/50 bg-accent/5">
+            <CardContent className="flex items-center gap-3 py-3 text-sm font-semibold text-gold-dark">
+              <AlertTriangle className="h-5 w-5" />
+              {toApprove} pagamento(s) aguardando sua aprovação.
             </CardContent>
           </Card>
         </Link>
