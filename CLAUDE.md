@@ -50,7 +50,7 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 | 5 — Inventário | Não iniciado |
 | 6 — Ocorrências | ✅ Concluído (nº sequencial/unidade, tipo→categoria, gravidade 🟢🟡🔴⚫, anexos foto/vídeo, reincidência <30d, encerramento Supervisor/Admin com ação corretiva, alertas e badge no dashboard) |
 | 7 — Pagamentos (com delegação) | ✅ Concluído (freelancers/HE/avulsos, fluxo solicitar→aprovar→pagar, delegação de aprovador por período, abas Minhas/Aprovar/Pagar/Histórico, badges dashboard) |
-| 8 — Notas (QR + IA) | Não iniciado |
+| 8 — Notas (QR + IA) | ✅ Concluído (leitura da chave 44 dígitos com pré-preenchimento, confirmação obrigatória, fallback manual/foto, status Recebida/Paga/Problema; IA Claude é ponto via env) |
 | 9 — Pessoas (API RH) | Não iniciado |
 | 10 — POPs | Não iniciado |
 | 11 — Metas | Não iniciado |

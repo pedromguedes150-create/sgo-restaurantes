@@ -378,6 +378,17 @@ async function main() {
   void fl2; void mt1;
   console.log('  ✔ pagamentos: 2 freelancers, 2 tipos avulsos, 1 delegação, 3 solicitações');
 
+  // --- Notas recebidas ---
+  await prisma.receivedNote.deleteMany({});
+  await prisma.receivedNote.createMany({
+    data: [
+      { unitId: centro.id, source: 'QRCODE', accessKey: '35240312345678000199550010000001231000000000', supplierName: 'Distribuidora Bebidas LTDA', supplierCnpj: '12.345.678/0001-99', number: '123', totalValue: 1840.5, status: 'RECEIVED', createdById: completerByUnit[centro.id] },
+      { unitId: centro.id, source: 'MANUAL', supplierName: 'Hortifruti Central', totalValue: 620.0, status: 'PAID', createdById: completerByUnit[centro.id] },
+      { unitId: orla.id, source: 'PHOTO', supplierName: 'Gás e Cia', totalValue: 410.0, status: 'PROBLEM', problemNote: 'Valor divergente do pedido', createdById: completerByUnit[orla.id] },
+    ],
+  });
+  console.log('  ✔ notas: 3 notas de exemplo');
+
   await prisma.auditLog.create({
     data: {
       action: 'SEED',

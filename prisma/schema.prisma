@@ -49,6 +49,7 @@ model Unit {
   cancellationImports CancellationImport[]
   paymentRequests     PaymentRequest[]
   freelancerUnits     FreelancerUnit[]
+  receivedNotes       ReceivedNote[]
 
   @@map("units")
 }
@@ -86,6 +87,7 @@ model User {
   paymentPaid      PaymentRequest[]     @relation("PayPaidBy")
   delegationsFrom  ApprovalDelegation[] @relation("DelegFrom")
   delegationsTo    ApprovalDelegation[] @relation("DelegTo")
+  receivedNotes    ReceivedNote[]       @relation("NoteCreatedBy")
 
   @@map("users")
 }
@@ -627,4 +629,45 @@ model PaymentRequest {
   @@index([status])
   @@index([requestedById])
   @@map("payment_requests")
+}
+
+enum NoteStatus {
+  RECEIVED // Recebida
+  PAID // Paga
+  PROBLEM // Com problema
+}
+
+enum NoteSource {
+  QRCODE // QR/chave 44 dígitos (NFC-e/NF-e)
+  PHOTO // foto + IA (fallback)
+  MANUAL // digitação manual
+}
+
+/// Nota fiscal recebida (Módulo 8). Confirmação obrigatória antes de salvar.
+model ReceivedNote {
+  id           String     @id @default(cuid())
+  unitId       String
+  source       NoteSource @default(MANUAL)
+  accessKey    String? // chave de acesso (44 dígitos)
+  supplierName String
+  supplierCnpj String?
+  number       String?
+  issueDate    DateTime?
+  dueDate      DateTime?
+  totalValue   Decimal    @db.Decimal(12, 2)
+  productType  String?
+  observation  String?
+  imagePath    String?
+  status       NoteStatus @default(RECEIVED)
+  problemNote  String?
+  createdById  String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  unit      Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([unitId, status])
+  @@index([accessKey])
+  @@map("received_notes")
 }
