@@ -14,6 +14,7 @@ export function PopCreate({ units }: { units: { id: string; name: string }[] }) 
   const [category, setCategory] = useState('');
   const [sector, setSector] = useState('');
   const [text, setText] = useState('');
+  const [videos, setVideos] = useState('');
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -27,10 +28,11 @@ export function PopCreate({ units }: { units: { id: string; name: string }[] }) 
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch('/api/pops', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, category, sector, text, unitIds }) });
+      const videoList = videos.split(/[\n,]+/).map((v) => v.trim()).filter(Boolean);
+      const res = await fetch('/api/pops', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, category, sector, text, videos: videoList, unitIds }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setMsg(data.error ?? 'Falha'); return; }
-      setTitle(''); setCategory(''); setSector(''); setText(''); setUnitIds([]); setOpen(false);
+      setTitle(''); setCategory(''); setSector(''); setText(''); setVideos(''); setUnitIds([]); setOpen(false);
       router.refresh();
     } finally { setBusy(false); }
   }
@@ -51,6 +53,11 @@ export function PopCreate({ units }: { units: { id: string; name: string }[] }) 
         <div>
           <Label>Conteúdo</Label>
           <textarea rows={4} className="w-full rounded-lg border-2 border-input bg-background p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={text} onChange={(e) => setText(e.target.value)} />
+        </div>
+        <div>
+          <Label>Vídeos do YouTube (treinamento) — um link por linha</Label>
+          <textarea rows={2} className="w-full rounded-lg border-2 border-input bg-background p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={videos} onChange={(e) => setVideos(e.target.value)} placeholder="https://youtu.be/...  ou  https://www.youtube.com/watch?v=..." />
+          <p className="mt-1 text-xs text-muted-foreground">O gerente assiste ao vídeo direto no POP.</p>
         </div>
         <div>
           <Label>Unidades</Label>

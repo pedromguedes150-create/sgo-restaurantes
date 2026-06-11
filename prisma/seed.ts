@@ -430,7 +430,11 @@ async function main() {
   await prisma.pop.create({
     data: {
       title: 'Abertura do Salão', category: 'Setor', sector: 'Salão', status: 'PUBLISHED', version: 1,
-      content: [{ type: 'text', text: 'Conferir limpeza, montar mesas, ligar equipamentos e checar temperaturas.' }, { type: 'checklist', items: ['Mesas montadas', 'Piso limpo', 'Equipamentos ligados'] }],
+      content: [
+        { type: 'text', text: 'Conferir limpeza, montar mesas, ligar equipamentos e checar temperaturas.' },
+        { type: 'checklist', items: ['Mesas montadas', 'Piso limpo', 'Equipamentos ligados'] },
+        { type: 'video', url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ' },
+      ],
       units: { create: [{ unitId: centro.id }, { unitId: orla.id }, { unitId: shopping.id }] },
     },
   });

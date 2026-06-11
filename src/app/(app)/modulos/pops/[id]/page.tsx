@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { getPop, type PopBlock } from '@/lib/pops';
+import { youtubeEmbedUrl } from '@/lib/youtube';
 import { Card, CardContent } from '@/components/ui/card';
 import { ConfirmRead } from '@/components/pops/confirm-read';
 import { ArrowLeft } from 'lucide-react';
@@ -32,7 +33,23 @@ export default async function PopDetailPage({ params }: { params: { id: string }
               <ul key={i} className="list-disc pl-5">{(b.items ?? []).map((it, j) => <li key={j}>{it}</li>)}</ul>
             );
             if (b.type === 'image' && b.url) return <img key={i} src={b.url} alt="" className="rounded-lg" />;
-            if (b.type === 'video' && b.url) return <a key={i} href={b.url} className="text-accent underline">Vídeo</a>;
+            if (b.type === 'video' && b.url) {
+              const embed = youtubeEmbedUrl(b.url);
+              if (embed) {
+                return (
+                  <div key={i} className="aspect-video w-full overflow-hidden rounded-lg border">
+                    <iframe
+                      src={embed}
+                      title="Vídeo de treinamento"
+                      className="h-full w-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                );
+              }
+              return <a key={i} href={b.url} className="text-accent underline">Abrir vídeo</a>;
+            }
             return null;
           })}
         </CardContent>
