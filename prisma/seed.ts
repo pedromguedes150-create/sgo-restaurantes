@@ -289,6 +289,27 @@ async function main() {
   }
   console.log(`  ✔ ${TYPES.length} tipos de ocorrência · ${occCount} ocorrências de exemplo`);
 
+  // --- Comandas: configuração de sequência + divergências de exemplo ---
+  await prisma.commandReplacement.deleteMany({});
+  await prisma.commandDivergence.deleteMany({});
+  await prisma.commandCount.deleteMany({});
+  await prisma.unitCommandConfig.deleteMany({});
+  for (const unit of units) {
+    await prisma.unitCommandConfig.create({ data: { unitId: unit.id, rangeStart: 1, rangeEnd: 150 } });
+  }
+  // Centro: 1 divergência aberta (37) e 1 baixa definitiva (88, perdida)
+  await prisma.commandDivergence.create({
+    data: { unitId: centro.id, number: 37, status: 'OPEN', observation: 'Não localizada no fechamento.', createdById: completerByUnit[centro.id] },
+  });
+  await prisma.commandDivergence.create({
+    data: {
+      unitId: centro.id, number: 88, status: 'CLOSED', outcome: 'LOST',
+      observation: 'Extraviada; baixa definitiva.', createdById: completerByUnit[centro.id],
+      resolvedById: userByEmail['supervisor@beijaflor.com.br'], resolvedAt: subDays(now, 2),
+    },
+  });
+  console.log('  ✔ comandas: sequência 1–150 por unidade + 2 divergências (Centro)');
+
   await prisma.auditLog.create({
     data: {
       action: 'SEED',

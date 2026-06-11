@@ -41,6 +41,10 @@ model Unit {
   taskInstances TaskInstance[]
   wasteEntries  WasteEntry[]
   occurrences   Occurrence[]
+  commandConfig       UnitCommandConfig?
+  commandCounts       CommandCount[]
+  commandDivergences  CommandDivergence[]
+  commandReplacements CommandReplacement[]
 
   @@map("units")
 }
@@ -67,6 +71,10 @@ model User {
   wasteEntries   WasteEntry[]   @relation("WasteCreatedBy")
   reportedOccurrences Occurrence[] @relation("OccReportedBy")
   closedOccurrences   Occurrence[] @relation("OccClosedBy")
+  commandCounts       CommandCount[]       @relation("CmdCountBy")
+  divReported         CommandDivergence[]  @relation("CmdDivReportedBy")
+  divResolved         CommandDivergence[]  @relation("CmdDivResolvedBy")
+  commandReplacements CommandReplacement[] @relation("CmdReplBy")
 
   @@map("users")
 }
@@ -347,4 +355,87 @@ model OccurrenceAttachment {
 
   @@index([occurrenceId])
   @@map("occurrence_attachments")
+}
+
+/// Ciclo de vida de uma divergência de comanda (Módulo 3).
+enum DivergenceStatus {
+  OPEN // 🔴 Aberta
+  INVESTIGATING // 🟡 Em apuração
+  CLOSED // 🟢 Encerrada
+}
+
+enum DivergenceOutcome {
+  RECOVERED // recuperada → volta à sequência ativa
+  LOST // perdida → baixa definitiva (sai da sequência ativa)
+}
+
+/// Sequência de numeração de comandas por unidade (base do saldo esperado).
+model UnitCommandConfig {
+  id         String   @id @default(cuid())
+  unitId     String   @unique
+  rangeStart Int
+  rangeEnd   Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@map("unit_command_configs")
+}
+
+/// Registro diário da contagem de comandas (Módulo 3).
+model CommandCount {
+  id              String   @id @default(cuid())
+  unitId          String
+  operationalDate String
+  allPresent      Boolean  @default(false)
+  absentCount     Int      @default(0)
+  createdById     String?
+  createdAt       DateTime @default(now())
+
+  unit      Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("CmdCountBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([unitId, operationalDate])
+  @@index([unitId, operationalDate])
+  @@map("command_counts")
+}
+
+/// Divergência (comanda ausente) e seu ciclo de vida.
+model CommandDivergence {
+  id           String             @id @default(cuid())
+  unitId       String
+  number       Int
+  status       DivergenceStatus   @default(OPEN)
+  outcome      DivergenceOutcome?
+  observation  String?
+  createdById  String?
+  resolvedById String?
+  resolvedAt   DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  unit     Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  reporter User? @relation("CmdDivReportedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  resolver User? @relation("CmdDivResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([unitId, status])
+  @@index([unitId, number])
+  @@map("command_divergences")
+}
+
+/// Reposição de comandas registrada pelo Admin (entra na sequência ativa).
+model CommandReplacement {
+  id          String   @id @default(cuid())
+  unitId      String
+  number      Int
+  note        String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  unit      Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("CmdReplBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([unitId, number])
+  @@map("command_replacements")
 }

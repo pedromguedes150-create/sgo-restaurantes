@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 const MODULE_HREFS: Partial<Record<string, string>> = {
   WASTE: '/modulos/desperdicios',
   OCCURRENCES: '/modulos/ocorrencias/nova',
+  COMMANDS: '/modulos/comandas',
 };
 
 export default async function TarefasPage() {

@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 const MODULES = [
   { href: '/modulos/desperdicios', label: 'Desperdícios', icon: Trash2, ready: true },
   { href: '/modulos/ocorrencias', label: 'Ocorrências', icon: AlertOctagon, ready: true },
-  { href: '#', label: 'Comandas', icon: ClipboardList, ready: false },
+  { href: '/modulos/comandas', label: 'Comandas', icon: ClipboardList, ready: true },
   { href: '#', label: 'Cancelamentos', icon: Ticket, ready: false },
   { href: '#', label: 'Inventário', icon: Boxes, ready: false },
   { href: '#', label: 'Pagamentos', icon: Wallet, ready: false },
