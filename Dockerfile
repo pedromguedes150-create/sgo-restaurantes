@@ -17,6 +17,11 @@ FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
+# Envs dummy APENAS para o build (env.ts valida no import; os reais vêm do
+# compose em runtime). Nenhum segredo é gravado na imagem final (multi-stage).
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public" \
+    JWT_ACCESS_SECRET="build-time-dummy-secret-not-used" \
+    JWT_REFRESH_SECRET="build-time-dummy-secret-not-used"
 RUN npm run build
 
 # ---- Runner ----

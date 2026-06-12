@@ -1,11 +1,13 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * Design System SGO Beija Flor.
- * Cores institucionais (regra inegociável nº 2):
- *  - Primária: verde escuro #1B4332 · Acento: dourado #C9A84C
+ * Design System SGO Beija Flor (churrascarias).
+ * Cores institucionais (atualizado 2026-06-11 a pedido do usuário):
+ *  - Primária: BORDÔ #6E1423 · Acento/secundária: CINZA ESCURO #3F3F46
  *  - Fundo: #FFFFFF · Superfície: #F5F5F5
- *  - Crítico #DC2626 · Médio #F59E0B · Sucesso #16A34A
+ *  - Semáforos (status, não-marca): Crítico #DC2626 · Médio #F59E0B · Sucesso #16A34A
+ * Obs.: o token "gold" foi mantido por compatibilidade de classes, mas agora
+ * representa o cinza-grafite (acento).
  */
 const config: Config = {
   darkMode: ['class'],
@@ -20,14 +22,15 @@ const config: Config = {
       colors: {
         // Tokens da marca (uso direto: bg-brand, text-gold...)
         brand: {
-          DEFAULT: '#1B4332',
-          light: '#2D6A4F',
-          dark: '#102A20',
+          DEFAULT: '#6E1423', // bordô
+          light: '#8C2233',
+          dark: '#470B14',
         },
         gold: {
-          DEFAULT: '#C9A84C',
-          light: '#DCC178',
-          dark: '#A4862F',
+          // grafite (cinza escuro) — nome mantido por compatibilidade
+          DEFAULT: '#3F3F46',
+          light: '#5B5B64',
+          dark: '#27272A',
         },
         surface: '#F5F5F5',
         // Severidades (gravidade de ocorrências / alertas)

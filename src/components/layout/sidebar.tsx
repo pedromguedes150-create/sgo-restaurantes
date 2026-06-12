@@ -71,7 +71,7 @@ export function Sidebar({ isAdmin }: { isAdmin: boolean }) {
                           active ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-secondary',
                         )}
                       >
-                        <Icon className={cn('h-5 w-5', active ? 'text-accent' : 'text-muted-foreground')} />
+                        <Icon className={cn('h-5 w-5', active ? 'text-white/85' : 'text-muted-foreground')} />
                         {label}
                       </Link>
                     </li>

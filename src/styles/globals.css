@@ -2,34 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Tema claro (regra inegociável nº 2 — sempre tema claro, PT-BR).
-   Variáveis em HSL para o shadcn/ui mapear sobre a marca Beija Flor. */
+/* Tema claro (sempre claro, PT-BR). Paleta churrascaria: BORDÔ + CINZA ESCURO
+   (atualizada 2026-06-11). Variáveis em HSL para o shadcn/ui. */
 @layer base {
   :root {
     --background: 0 0% 100%; /* #FFFFFF */
-    --foreground: 158 38% 12%; /* texto verde-escuro suave */
+    --foreground: 240 6% 12%; /* cinza-escuro de texto */
 
     --card: 0 0% 100%;
-    --card-foreground: 158 38% 12%;
+    --card-foreground: 240 6% 12%;
 
-    --primary: 158 44% 18%; /* #1B4332 */
+    --primary: 350 69% 25%; /* bordô #6E1423 */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 96%; /* #F5F5F5 */
-    --secondary-foreground: 158 44% 18%;
+    --secondary-foreground: 350 69% 25%;
 
     --muted: 0 0% 96%;
-    --muted-foreground: 215 16% 40%;
+    --muted-foreground: 240 4% 40%;
 
-    --accent: 43 53% 54%; /* dourado #C9A84C */
-    --accent-foreground: 158 44% 12%;
+    --accent: 240 5% 26%; /* cinza escuro #3F3F46 */
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%; /* #DC2626 */
     --destructive-foreground: 0 0% 100%;
 
     --border: 220 13% 88%;
     --input: 220 13% 88%;
-    --ring: 158 44% 18%;
+    --ring: 350 69% 25%;
 
     --radius: 0.75rem;
 

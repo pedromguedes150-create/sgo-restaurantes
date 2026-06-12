@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 // PWA / mobile-first: viewport adequado e cor de tema da marca
 export const viewport: Viewport = {
-  themeColor: '#1B4332',
+  themeColor: '#6E1423',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

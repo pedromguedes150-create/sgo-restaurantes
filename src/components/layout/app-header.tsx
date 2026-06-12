@@ -37,7 +37,7 @@ export function AppHeader({ userName, roleLabel, unread = 0 }: { userName: strin
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-sm font-black text-brand-dark">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-sm font-black text-white">
           {initials}
         </div>
         <div className="leading-tight">

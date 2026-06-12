@@ -27,7 +27,7 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 
 ## Regras inegociáveis (nunca viole)
 1. **NUNCA alterar/derrubar/conflitar com a plataforma do CEO.** Ver mapa acima. Mudanças no proxy/túnel só com confirmação explícita.
-2. Interface 100% PT-BR, mobile-first, tema claro (verde `#1B4332`, dourado `#C9A84C`).
+2. Interface 100% PT-BR, mobile-first, tema claro. **Cores das churrascarias (desde 2026-06-11): bordô `#6E1423` + cinza escuro `#3F3F46`** (token tailwind `gold` = grafite, nome mantido por compatibilidade). Semáforos de status continuam verde/âmbar/vermelho.
 3. Escopo por unidade (`unit_id`) SEMPRE no servidor.
 4. Lógica diária usa **data operacional** (corte por unidade, padrão 04:00).
 5. Tarefas pelo **calendário de operação** (fins de semana incluídos), nunca "dias úteis".
