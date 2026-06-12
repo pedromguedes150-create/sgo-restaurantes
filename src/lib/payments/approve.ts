@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
+import { notifyRole, notifyUsers } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
 
@@ -32,10 +33,12 @@ export async function canApprove(user: SessionUser, requestId: string): Promise<
 }
 
 export async function approveRequest(user: SessionUser, id: string, ctx: Ctx = {}): Promise<PayActionResult> {
-  const req = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true, status: true, approverRole: true, type: true, amount: true } });
+  const req = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true, status: true, approverRole: true, type: true, amount: true, requestedById: true } });
   if (!req) return { ok: false, reason: 'NOT_FOUND' };
   if (!canAccessUnit(user, req.unitId)) return { ok: false, reason: 'FORBIDDEN' };
   if (req.status !== 'PENDING') return { ok: false, reason: 'STATE' };
+  // Segregação de funções: ninguém aprova a própria solicitação.
+  if (req.requestedById === user.id) return { ok: false, reason: 'FORBIDDEN' };
   const roles = await approverRolesFor(user);
   if (!roles.has(req.approverRole)) return { ok: false, reason: 'FORBIDDEN' };
 
@@ -46,6 +49,21 @@ export async function approveRequest(user: SessionUser, id: string, ctx: Ctx = {
   if (res.count === 0) return { ok: false, reason: 'STATE' };
 
   await audit({ userId: user.id, unitId: req.unitId, action: 'PAYMENT_APPROVE', module: 'PAYMENTS', entity: 'payment_request', entityId: id, metadata: { type: req.type, notify: ['FINANCE'] }, ...ctx });
+  // Aprovado → Financeiro processa; solicitante fica sabendo
+  await notifyRole('FINANCE', {
+    title: 'Pagamento aprovado — processar',
+    body: `Solicitação de R$ ${Number(req.amount).toFixed(2)} aprovada por ${user.name}.`,
+    link: '/modulos/pagamentos',
+    module: 'PAYMENTS',
+  });
+  if (req.requestedById) {
+    await notifyUsers([req.requestedById], {
+      title: 'Sua solicitação foi aprovada',
+      body: `Pagamento de R$ ${Number(req.amount).toFixed(2)} aprovado por ${user.name}.`,
+      link: '/modulos/pagamentos',
+      module: 'PAYMENTS',
+    });
+  }
   return { ok: true };
 }
 
@@ -64,18 +82,35 @@ export async function rejectRequest(user: SessionUser, id: string, reason: strin
   });
   if (res.count === 0) return { ok: false, reason: 'STATE' };
   await audit({ userId: user.id, unitId: req.unitId, action: 'PAYMENT_REJECT', module: 'PAYMENTS', entity: 'payment_request', entityId: id, ...ctx });
+  const rejected = await prisma.paymentRequest.findUnique({ where: { id }, select: { requestedById: true, rejectionReason: true } });
+  if (rejected?.requestedById) {
+    await notifyUsers([rejected.requestedById], {
+      title: 'Sua solicitação foi rejeitada',
+      body: `Motivo: ${rejected.rejectionReason ?? '—'}`,
+      link: '/modulos/pagamentos',
+      module: 'PAYMENTS',
+    });
+  }
   return { ok: true };
 }
 
 /** Financeiro/Admin marca como paga. */
 export async function markPaid(user: SessionUser, id: string, ctx: Ctx = {}): Promise<PayActionResult> {
   if (user.role !== 'FINANCE' && user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
-  const req = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true, status: true } });
+  const req = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true, status: true, requestedById: true, amount: true } });
   if (!req) return { ok: false, reason: 'NOT_FOUND' };
   if (req.status !== 'APPROVED') return { ok: false, reason: 'STATE' };
 
   const res = await prisma.paymentRequest.updateMany({ where: { id, status: 'APPROVED' }, data: { status: 'PAID', paidById: user.id, paidAt: new Date() } });
   if (res.count === 0) return { ok: false, reason: 'STATE' };
   await audit({ userId: user.id, unitId: req.unitId, action: 'PAYMENT_PAID', module: 'PAYMENTS', entity: 'payment_request', entityId: id, ...ctx });
+  if (req.requestedById) {
+    await notifyUsers([req.requestedById], {
+      title: 'Pagamento realizado',
+      body: `O pagamento de R$ ${Number(req.amount).toFixed(2)} foi efetuado.`,
+      link: '/modulos/pagamentos',
+      module: 'PAYMENTS',
+    });
+  }
   return { ok: true };
 }

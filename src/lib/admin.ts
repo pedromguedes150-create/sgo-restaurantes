@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { hashPassword } from '@/lib/auth/password';
+import { fromZonedTime } from 'date-fns-tz';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role, TaskModule } from '@prisma/client';
@@ -134,8 +135,13 @@ export async function toggleMiscType(user: SessionUser, id: string, active: bool
 
 export async function createDelegation(user: SessionUser, input: { fromUserId: string; toUserId: string; startsAt: string; endsAt: string }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
-  const start = new Date(input.startsAt);
-  const end = new Date(input.endsAt);
+  // Datas vêm como 'YYYY-MM-DD' (input date). Interpretar no fuso da operação:
+  // início = 00:00 e fim = 23:59:59 do dia escolhido (não meia-noite UTC, que
+  // encerrava a delegação um dia antes no horário de Brasília).
+  const TZ = 'America/Sao_Paulo';
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
+  const start = dateOnly.test(input.startsAt ?? '') ? fromZonedTime(`${input.startsAt}T00:00:00`, TZ) : new Date(input.startsAt);
+  const end = dateOnly.test(input.endsAt ?? '') ? fromZonedTime(`${input.endsAt}T23:59:59`, TZ) : new Date(input.endsAt);
   if (!input.fromUserId || !input.toUserId || input.fromUserId === input.toUserId || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
     return { ok: false, reason: 'INVALID' };
   }

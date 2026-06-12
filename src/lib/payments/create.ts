@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
+import { notifyUnitRole, notifyRole } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import type { PaymentType, Role } from '@prisma/client';
 
@@ -82,5 +83,20 @@ export async function createPaymentRequest(
     metadata: { type: input.type, amount: input.amount, approverRole },
     ...ctx,
   });
+
+  // Notifica os aprovadores: por unidade quando o papel é vinculado (SUPERVISOR/
+  // COORDINATOR/MANAGER), globalmente para ADMIN/CEO/FINANCE.
+  const TYPE_LABEL: Record<string, string> = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra', MISC: 'Pagamento avulso' };
+  const payload = {
+    title: 'Pagamento aguardando aprovação',
+    body: `${TYPE_LABEL[input.type] ?? input.type} de R$ ${input.amount.toFixed(2)} solicitado por ${user.name}.`,
+    link: '/modulos/pagamentos',
+    module: 'PAYMENTS',
+  };
+  if (approverRole === 'ADMIN' || approverRole === 'CEO' || approverRole === 'FINANCE') {
+    await notifyRole(approverRole, payload);
+  } else {
+    await notifyUnitRole(input.unitId, approverRole, payload);
+  }
   return { ok: true, id: req.id };
 }

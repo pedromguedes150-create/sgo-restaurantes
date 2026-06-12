@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { currentOperationalDate } from '@/lib/date/operational';
+import { generateDailyTasksForUnit } from '@/lib/tasks/generate';
+import { subDays, format } from 'date-fns';
 
 /**
  * Marca como "Não realizada" (MISSED) toda tarefa PENDENTE de um dia operacional
@@ -21,4 +23,48 @@ export async function markMissedTasks(now: Date = new Date()): Promise<number> {
   }
 
   return total;
+}
+
+/** Quantos dias para trás garantimos a existência das instâncias (backfill). */
+const BACKFILL_DAYS = 7;
+
+/** Intervalo mínimo entre execuções da manutenção (evita custo por request). */
+const MAINTENANCE_INTERVAL_MS = 10 * 60 * 1000;
+
+let lastMaintenanceAt = 0;
+let maintenanceRunning = false;
+
+/**
+ * Manutenção automática das tarefas (corrige o bug "dias sem acesso somem da
+ * meta" e "PENDING para sempre"):
+ *  1. Gera instâncias dos últimos BACKFILL_DAYS dias operacionais de cada
+ *     unidade (idempotente — constraint única + skipDuplicates), cobrindo dias
+ *     em que ninguém abriu o sistema.
+ *  2. Marca como MISSED tudo que ficou pendente em dias já encerrados.
+ *
+ * Com throttle: roda no máximo a cada 10 min (chamada nos carregamentos do
+ * dashboard/tarefas e pelo scheduler do servidor). `force` ignora o throttle.
+ */
+export async function ensureTaskMaintenance(force = false, now: Date = new Date()): Promise<void> {
+  if (maintenanceRunning) return;
+  if (!force && Date.now() - lastMaintenanceAt < MAINTENANCE_INTERVAL_MS) return;
+  maintenanceRunning = true;
+  try {
+    const units = await prisma.unit.findMany({ where: { active: true } });
+    for (const u of units) {
+      const cfg = { timezone: u.timezone, cutoffHour: u.cutoffHour };
+      const today = currentOperationalDate(cfg, now);
+      const base = new Date(`${today}T12:00:00`);
+      for (let d = 0; d < BACKFILL_DAYS; d++) {
+        const opDate = format(subDays(base, d), 'yyyy-MM-dd');
+        await generateDailyTasksForUnit(u, opDate);
+      }
+    }
+    await markMissedTasks(now);
+    lastMaintenanceAt = Date.now();
+  } catch (err) {
+    console.error('[tasks] manutenção automática falhou:', err);
+  } finally {
+    maintenanceRunning = false;
+  }
 }

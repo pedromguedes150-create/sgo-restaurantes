@@ -6,6 +6,8 @@ const nextConfig = {
   experimental: {
     // uploads e libs nativas ficam fora do bundle do servidor
     serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs'],
+    // scheduler interno (src/instrumentation.ts): manutenção de tarefas
+    instrumentationHook: true,
   },
 };
 

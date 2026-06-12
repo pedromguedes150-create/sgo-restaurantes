@@ -80,15 +80,30 @@ export async function importCancellations(
   const operationalDate =
     input.operationalDate ?? currentOperationalDate({ timezone: unit.timezone, cutoffHour: unit.cutoffHour });
 
+  // Reimportação não pode duplicar pendências: ignora cupons que já existem
+  // para esta unidade/dia (qualquer status — justificados permanecem intactos).
+  const existing = await prisma.cancellation.findMany({
+    where: { unitId: unit.id, operationalDate, couponNumber: { in: rows.map((r) => r.couponNumber) } },
+    select: { couponNumber: true },
+  });
+  const seen = new Set(existing.map((e) => e.couponNumber));
+  const fresh = rows.filter((r) => {
+    if (seen.has(r.couponNumber)) return false;
+    seen.add(r.couponNumber); // dedup também dentro do próprio arquivo
+    return true;
+  });
+  const skipped = rows.length - fresh.length;
+  if (fresh.length === 0) return { ok: false, reason: 'EMPTY' };
+
   const imp = await prisma.cancellationImport.create({
     data: {
       unitId: unit.id,
       operationalDate,
       fileName: input.fileName,
-      rowCount: rows.length,
+      rowCount: fresh.length,
       importedById: user.id,
       cancellations: {
-        create: rows.map((r) => ({
+        create: fresh.map((r) => ({
           unitId: unit.id,
           operationalDate,
           couponNumber: r.couponNumber,
@@ -106,9 +121,9 @@ export async function importCancellations(
     module: 'CANCELLATIONS',
     entity: 'cancellation_import',
     entityId: imp.id,
-    metadata: { operationalDate, rows: rows.length, fileName: input.fileName },
+    metadata: { operationalDate, rows: fresh.length, skipped, fileName: input.fileName },
     ...ctx,
   });
 
-  return { ok: true, importId: imp.id, created: rows.length, operationalDate };
+  return { ok: true, importId: imp.id, created: fresh.length, operationalDate };
 }

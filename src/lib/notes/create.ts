@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
+import { notifyRole, notifyAdmins } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import type { NoteSource } from '@prisma/client';
 
@@ -69,6 +70,15 @@ export async function createNote(
     metadata: { source: input.source, value: input.totalValue, notify: ['FINANCE', 'ADMIN'] },
     ...ctx,
   });
+  // Notificação real ao Financeiro e Administrativo (spec Módulo 8)
+  const payload = {
+    title: 'Nova nota recebida',
+    body: `${input.supplierName.trim()} — R$ ${input.totalValue.toFixed(2)} (registrada por ${user.name}).`,
+    link: '/modulos/notas',
+    module: 'NOTES',
+  };
+  await notifyRole('FINANCE', payload);
+  await notifyAdmins(payload);
   return { ok: true, id: note.id };
 }
 

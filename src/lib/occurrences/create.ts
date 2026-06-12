@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { audit } from '@/lib/audit';
+import { notifyUnitRole, notifyRole } from '@/lib/notifications';
 import { subDays } from 'date-fns';
 import type { SessionUser } from '@/lib/auth/session';
 import type { OccurrenceGravity, Prisma } from '@prisma/client';
@@ -34,7 +35,8 @@ export async function createOccurrence(
     throw e;
   }
 
-  if (!input.description?.trim() || !input.typeId || !input.categoryId || !input.gravity) {
+  const GRAVITIES: OccurrenceGravity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+  if (!input.description?.trim() || !input.typeId || !input.categoryId || !GRAVITIES.includes(input.gravity)) {
     return { ok: false, reason: 'INVALID' };
   }
 
@@ -51,13 +53,14 @@ export async function createOccurrence(
     occurredAt,
   );
 
-  // Reincidência: mesmo tipo+categoria na mesma unidade em < 30 dias
+  // Reincidência: mesmo tipo+categoria na mesma unidade em < 30 dias,
+  // comparando pela data do FATO (occurredAt), não pela data de registro.
   const recurrence = await prisma.occurrence.findFirst({
     where: {
       unitId: unit.id,
       typeId: type.id,
       categoryId: category.id,
-      createdAt: { gte: subDays(new Date(), 30) },
+      occurredAt: { gte: subDays(occurredAt, 30), lt: occurredAt },
     },
     select: { id: true },
   });
@@ -120,7 +123,7 @@ export async function createOccurrence(
     ...ctx,
   });
 
-  // Alertas por gravidade (Central de Notificações entra em fase futura)
+  // Alertas por gravidade: 🔴 Alta → Supervisor · ⚫ Crítica → Supervisor + CEO
   if (input.gravity === 'HIGH' || input.gravity === 'CRITICAL') {
     await audit({
       userId: user.id,
@@ -132,6 +135,27 @@ export async function createOccurrence(
       metadata: { number: created.number, isRecurrence, notify: input.gravity === 'CRITICAL' ? ['SUPERVISOR', 'CEO'] : ['SUPERVISOR'] },
       ...ctx,
     });
+    const critical = input.gravity === 'CRITICAL';
+    const payload = {
+      title: critical ? '⚫ Ocorrência CRÍTICA' : '🔴 Ocorrência de gravidade alta',
+      body: `${unit.name} #${created.number}: ${type.name} — ${category.name}${isRecurrence ? ' (reincidência <30d)' : ''}.`,
+      link: `/modulos/ocorrencias/${created.id}`,
+      module: 'OCCURRENCES',
+      critical,
+    };
+    await notifyUnitRole(unit.id, 'SUPERVISOR', payload);
+    if (critical) await notifyRole('CEO', payload);
+  }
+  // Reincidência também alerta CEO e Supervisor (spec Módulo 6), mesmo fora de HIGH/CRITICAL
+  if (isRecurrence && input.gravity !== 'HIGH' && input.gravity !== 'CRITICAL') {
+    const payload = {
+      title: '♻ Reincidência de ocorrência',
+      body: `${unit.name} #${created.number}: ${type.name} — ${category.name} se repetiu em menos de 30 dias.`,
+      link: `/modulos/ocorrencias/${created.id}`,
+      module: 'OCCURRENCES',
+    };
+    await notifyUnitRole(unit.id, 'SUPERVISOR', payload);
+    await notifyRole('CEO', payload);
   }
 
   return { ok: true, id: created.id, number: created.number, isRecurrence, gravity: input.gravity };

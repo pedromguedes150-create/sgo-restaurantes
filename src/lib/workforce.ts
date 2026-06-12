@@ -66,6 +66,16 @@ export async function toggleSector(user: SessionUser, id: string, active: boolea
 export async function allocate(user: SessionUser, input: { unitId: string; sectorId: string; shift: string; collaboratorId: string }, ctx: Ctx = {}): Promise<WfResult> {
   if (!canAccessUnit(user, input.unitId)) return { ok: false, reason: 'FORBIDDEN' };
   if (!input.sectorId || !input.shift?.trim() || !input.collaboratorId) return { ok: false, reason: 'INVALID' };
+  // Integridade entre unidades: o setor deve ser DESTA unidade e o colaborador
+  // deve estar vinculado a ela (evita misturar dados de unidades diferentes).
+  const [sector, link] = await Promise.all([
+    prisma.sector.findUnique({ where: { id: input.sectorId }, select: { unitId: true } }),
+    prisma.collaboratorUnit.findUnique({
+      where: { collaboratorId_unitId: { collaboratorId: input.collaboratorId, unitId: input.unitId } },
+      select: { id: true },
+    }),
+  ]);
+  if (!sector || sector.unitId !== input.unitId || !link) return { ok: false, reason: 'INVALID' };
   const a = await prisma.workforceAllocation.create({ data: { unitId: input.unitId, sectorId: input.sectorId, shift: input.shift.trim(), collaboratorId: input.collaboratorId, source: 'MANUAL' } });
   await audit({ userId: user.id, unitId: input.unitId, action: 'ALLOCATE', module: 'PEOPLE', entity: 'workforce_allocation', entityId: a.id, ...ctx });
   await notifyWorkforceChange(user, input.unitId, input.sectorId, input.collaboratorId, input.shift.trim(), 'alocou', `/modulos/pessoas/mapa?unit=${input.unitId}`);

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { subDays, format } from 'date-fns';
 import { prisma } from '@/lib/db/prisma';
 import { saveWasteEntry } from '@/lib/waste/save';
 import type { SessionUser } from '@/lib/auth/session';
@@ -10,8 +11,10 @@ let userId: string;
 let catId: string;
 const user = (): SessionUser => ({ id: userId, name: 'T', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false });
 
-const OP = '2026-06-20';
-const PRIOR = ['2026-06-13', '2026-06-14', '2026-06-15', '2026-06-16', '2026-06-17', '2026-06-18', '2026-06-19'];
+// Datas dinâmicas: OP = ontem (dentro da janela de 7 dias do servidor);
+// PRIOR = os 7 dias operacionais anteriores a OP (base da média).
+const OP = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+const PRIOR = Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), 2 + i), 'yyyy-MM-dd'));
 
 beforeAll(async () => {
   const unit = await prisma.unit.create({
@@ -74,5 +77,14 @@ describe('Desperdícios (Módulo 2)', () => {
     const r = await saveWasteEntry(outsider, { unitId, operationalDate: OP, items: [{ categoryId: catId, kg: 1 }] });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('FORBIDDEN');
+  });
+
+  it('rejeita data futura, fora da janela de 7 dias ou malformada', async () => {
+    const futuro = format(subDays(new Date(), -2), 'yyyy-MM-dd');
+    const velho = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+    for (const bad of [futuro, velho, '2026-13-99', 'lixo']) {
+      const r = await saveWasteEntry(user(), { unitId, operationalDate: bad, items: [{ categoryId: catId, kg: 1 }] });
+      expect(r.ok).toBe(false);
+    }
   });
 });

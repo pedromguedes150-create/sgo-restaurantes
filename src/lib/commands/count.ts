@@ -3,10 +3,11 @@ import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { getActiveSequence } from '@/lib/commands/active';
 import { audit } from '@/lib/audit';
+import { notifyUnitRole } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 
 export type SubmitCountResult =
-  | { ok: true; absent: number[]; newDivergences: number }
+  | { ok: true; absent: number[]; newDivergences: number; rejected: number[] }
   | { ok: false; reason: 'FORBIDDEN' | 'NO_CONFIG' | 'OBSERVATION_REQUIRED' | 'INVALID' };
 
 /**
@@ -33,13 +34,23 @@ export async function submitCount(
   const seq = await getActiveSequence(unit.id);
   if (!seq.config) return { ok: false, reason: 'NO_CONFIG' };
 
-  const operationalDate =
-    input.operationalDate ?? currentOperationalDate({ timezone: unit.timezone, cutoffHour: unit.cutoffHour });
+  // Data operacional: se vier do cliente, valida formato e não permite futuro
+  const today = currentOperationalDate({ timezone: unit.timezone, cutoffHour: unit.cutoffHour });
+  let operationalDate = today;
+  if (input.operationalDate) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.operationalDate) || input.operationalDate > today) {
+      return { ok: false, reason: 'INVALID' };
+    }
+    operationalDate = input.operationalDate;
+  }
 
-  // normaliza ausentes: somente números que pertencem à sequência ativa
-  const absent = input.allPresent
+  // normaliza ausentes: somente números que pertencem à sequência ativa;
+  // os demais são devolvidos em `rejected` para a UI avisar o gerente
+  const requested = input.allPresent
     ? []
-    : Array.from(new Set((input.absentNumbers ?? []).filter((n) => Number.isInteger(n) && seq.active.has(n))));
+    : Array.from(new Set((input.absentNumbers ?? []).filter((n) => Number.isInteger(n))));
+  const absent = requested.filter((n) => seq.active.has(n));
+  const rejected = requested.filter((n) => !seq.active.has(n));
 
   if (!input.allPresent && absent.length > 0 && !input.observation?.trim()) {
     return { ok: false, reason: 'OBSERVATION_REQUIRED' };
@@ -89,7 +100,14 @@ export async function submitCount(
       metadata: { numbers: absent, notify: ['SUPERVISOR'] },
       ...ctx,
     });
+    // Alerta imediato ao Supervisor da unidade (spec Módulo 3)
+    await notifyUnitRole(unit.id, 'SUPERVISOR', {
+      title: 'Divergência de comandas',
+      body: `${unit.name}: comanda(s) ausente(s) ${absent.join(', ')} — registrado por ${user.name} (${operationalDate}).`,
+      link: '/modulos/comandas',
+      module: 'COMMANDS',
+    });
   }
 
-  return { ok: true, absent, newDivergences };
+  return { ok: true, absent, newDivergences, rejected };
 }

@@ -58,12 +58,25 @@ export async function syncCollaboratorsForUnit(user: SessionUser, unitId: string
     });
   }
 
+  // Quem veio do RH antes mas NÃO está mais na lista da unidade (demissão/
+  // transferência que o RH expressa por omissão) é inativado no SGO.
+  const matriculas = lista.filter((c) => c.matricula).map((c) => String(c.matricula));
+  const deactivated = await prisma.collaborator.updateMany({
+    where: {
+      source: 'RH',
+      active: true,
+      externalId: { notIn: matriculas },
+      units: { some: { unitId } },
+    },
+    data: { active: false },
+  });
+
   await audit({
     userId: user.id,
     unitId,
     action: 'RH_SYNC_COLLABORATORS',
     module: 'PEOPLE',
-    metadata: { rhUnitName: unit.rhUnitName, total: lista.length, created, updated },
+    metadata: { rhUnitName: unit.rhUnitName, total: lista.length, created, updated, deactivated: deactivated.count },
   });
 
   return { ok: true, created, updated, total: lista.length };

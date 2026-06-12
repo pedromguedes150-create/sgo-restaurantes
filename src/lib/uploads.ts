@@ -8,6 +8,16 @@ const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 export class UploadError extends Error {}
 
 /**
+ * Sanitiza um segmento de caminho (defesa contra path traversal — ids vêm do
+ * request e CEO/ADMIN passam pelo canAccessUnit sem validação de existência).
+ */
+function safeSegment(value: string, label: string): string {
+  const safe = (value ?? '').replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!safe) throw new UploadError(`${label} inválido`);
+  return safe;
+}
+
+/**
  * Salva uma evidência fotográfica no volume de uploads e retorna o caminho
  * relativo (a ser guardado em TaskInstance.evidencePath).
  * Valida tipo e tamanho (requisito de segurança — uploads validados).
@@ -25,14 +35,16 @@ export async function saveEvidence(
     throw new UploadError('Imagem muito grande (máx. 5MB)');
   }
 
+  const unit = safeSegment(unitId, 'unitId');
+  const inst = safeSegment(instanceId, 'instanceId');
   const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
-  const dir = path.join(UPLOAD_ROOT, unitId);
+  const dir = path.join(UPLOAD_ROOT, unit);
   await mkdir(dir, { recursive: true });
 
-  const filename = `${instanceId}-${buf.byteLength}.${ext}`;
+  const filename = `${inst}-${buf.byteLength}.${ext}`;
   await writeFile(path.join(dir, filename), buf);
 
-  return path.posix.join('uploads', unitId, filename);
+  return path.posix.join('uploads', unit, filename);
 }
 
 const ATTACH_MAX_BYTES = 25 * 1024 * 1024; // 25MB (fotos/vídeos de ocorrências)
@@ -59,7 +71,8 @@ export async function saveAttachment(
   if (buf.byteLength > ATTACH_MAX_BYTES) {
     throw new UploadError('Anexo muito grande (máx. 25MB)');
   }
-  const dir = path.join(UPLOAD_ROOT, unitId);
+  const unit = safeSegment(unitId, 'unitId');
+  const dir = path.join(UPLOAD_ROOT, unit);
   await mkdir(dir, { recursive: true });
 
   const extMap: Record<string, string> = {
@@ -72,9 +85,9 @@ export async function saveAttachment(
     'video/webm': 'webm',
   };
   const ext = extMap[file.type] ?? 'bin';
-  const safe = prefix.replace(/[^a-zA-Z0-9_-]/g, '');
+  const safe = safeSegment(prefix, 'prefix');
   const filename = `${safe}-${buf.byteLength}.${ext}`;
   await writeFile(path.join(dir, filename), buf);
 
-  return { path: path.posix.join('uploads', unitId, filename), mimeType: file.type };
+  return { path: path.posix.join('uploads', unit, filename), mimeType: file.type };
 }

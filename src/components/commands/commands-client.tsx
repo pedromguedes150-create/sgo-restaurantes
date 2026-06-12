@@ -70,11 +70,35 @@ export function CommandsClient({
       setMsg({ t: 'err', m: 'Informe os números ausentes ou use "Todas presentes".' });
       return;
     }
-    const ok = await post('/api/commands/count', { unitId, allPresent: false, absentNumbers: nums, observation });
-    if (ok) {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/commands/count', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unitId, allPresent: false, absentNumbers: nums, observation }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMsg({ t: 'err', m: data.error ?? 'Falha' });
+        return;
+      }
       setAbsent('');
       setObservation('');
-      setMsg({ t: 'ok', m: 'Divergências registradas e Supervisor alertado.' });
+      const rejected: number[] = data.rejected ?? [];
+      if (rejected.length > 0) {
+        setMsg({
+          t: 'err',
+          m: `Registrado, mas o(s) número(s) ${rejected.join(', ')} NÃO pertence(m) à sequência ativa (já baixado ou fora do intervalo) — confira.`,
+        });
+      } else {
+        setMsg({ t: 'ok', m: 'Divergências registradas e Supervisor alertado.' });
+      }
+      router.refresh();
+    } catch {
+      setMsg({ t: 'err', m: 'Falha de conexão' });
+    } finally {
+      setBusy(false);
     }
   }
 

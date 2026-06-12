@@ -77,4 +77,13 @@ describe('Pagamentos (Módulo 7)', () => {
     const r = await createPaymentRequest(outsider, { type: 'OVERTIME', unitId, amount: 10 });
     expect(r.ok).toBe(false);
   });
+
+  it('ninguém aprova a própria solicitação (segregação de funções)', async () => {
+    const created = await createPaymentRequest(sup(), { type: 'OVERTIME', unitId, amount: 50, collaboratorName: 'Y', hours: 1, reason: 'z' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const denied = await approveRequest(sup(), created.id);
+    expect(denied.ok).toBe(false);
+    if (!denied.ok) expect(denied.reason).toBe('FORBIDDEN');
+  });
 });

@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { generateDailyTasksForUnit } from '@/lib/tasks/generate';
+import { ensureTaskMaintenance } from '@/lib/tasks/maintenance';
 import { getUnitDaySummary, getUnitMonthScore, type DaySummary, type MonthScore } from '@/lib/tasks/summary';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
@@ -21,6 +22,7 @@ export async function getUnitsOverview(
   user: SessionUser,
   now: Date = new Date(),
 ): Promise<UnitOverview[]> {
+  await ensureTaskMaintenance(false, now); // backfill + MISSED automáticos (throttled)
   const units = await prisma.unit.findMany({
     where: { active: true, ...unitScopeWhere(user, 'id') },
     orderBy: { name: 'asc' },

@@ -7,8 +7,14 @@ import { rh, rhConfigured, RhApiError } from '@/lib/rh/client';
  * inspecionar o FORMATO real das respostas antes de mapear os campos no SGO.
  *
  * Uso: /api/rh/test?endpoint=colaboradores|unidades|escala|colaborador|folha&arg=<unidade|id>
+ *
+ * SEGURANÇA: expõe dados crus do RH do grupo inteiro (PII/folha) — por isso é
+ * EXCLUSIVO de desenvolvimento. Em produção retorna 404.
  */
 export async function GET(req: Request) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Indisponível em produção' }, { status: 404 });
+  }
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   if (user.role !== 'ADMIN' && user.role !== 'CEO') return NextResponse.json({ error: 'Apenas Admin/CEO' }, { status: 403 });

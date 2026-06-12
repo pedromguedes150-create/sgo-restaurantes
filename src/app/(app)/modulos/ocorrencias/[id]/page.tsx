@@ -6,6 +6,7 @@ import { GRAVITY_META, STATUS_META } from '@/lib/occurrences/labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { CloseForm } from '@/components/occurrences/close-form';
+import { ProgressButton } from '@/components/occurrences/progress-button';
 import { ArrowLeft, Paperclip } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -83,6 +84,8 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
           </CardContent>
         </Card>
       )}
+
+      {canClose && o.status === 'OPEN' && <ProgressButton occurrenceId={o.id} />}
 
       {canClose && (
         <Card>

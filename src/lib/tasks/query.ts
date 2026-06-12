@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { generateDailyTasksForUnit } from '@/lib/tasks/generate';
+import { ensureTaskMaintenance } from '@/lib/tasks/maintenance';
 import { getUnitDaySummary, type DaySummary } from '@/lib/tasks/summary';
 import type { SessionUser } from '@/lib/auth/session';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -24,6 +25,7 @@ export async function getTasksTodayForUser(
   user: SessionUser,
   now: Date = new Date(),
 ): Promise<UnitTasksToday[]> {
+  await ensureTaskMaintenance(false, now); // backfill + MISSED automáticos (throttled)
   const units = await prisma.unit.findMany({
     where: { active: true, ...unitScopeWhere(user, 'id') },
     orderBy: { name: 'asc' },

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { audit } from '@/lib/audit';
+import { notifyUnitRole } from '@/lib/notifications';
 import { subDays, format } from 'date-fns';
 import type { SessionUser } from '@/lib/auth/session';
 
@@ -50,12 +51,24 @@ export async function saveWasteEntry(
   if (!Array.isArray(input.items) || input.items.some((i) => !i.categoryId || i.kg < 0 || Number.isNaN(i.kg))) {
     return { ok: false, reason: 'INVALID' };
   }
+  // Dedup por categoria (categoryId repetido violaria a unique e geraria 500)
+  const itemMap = new Map<string, number>();
+  for (const i of input.items) itemMap.set(i.categoryId, i.kg);
+  const items = [...itemMap.entries()].map(([categoryId, kg]) => ({ categoryId, kg }));
 
   const unit = await prisma.unit.findUnique({ where: { id: input.unitId } });
   if (!unit) return { ok: false, reason: 'INVALID' };
 
   const cfg = { timezone: unit.timezone, cutoffHour: unit.cutoffHour };
-  const operationalDate = input.operationalDate ?? currentOperationalDate(cfg);
+  const today = currentOperationalDate(cfg);
+  let operationalDate = today;
+  if (input.operationalDate) {
+    // Valida formato e janela: hoje até 7 dias atrás (sem futuro, sem backdating livre)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.operationalDate)) return { ok: false, reason: 'INVALID' };
+    const limit = format(subDays(new Date(`${today}T12:00:00`), 7), 'yyyy-MM-dd');
+    if (input.operationalDate > today || input.operationalDate < limit) return { ok: false, reason: 'INVALID' };
+    operationalDate = input.operationalDate;
+  }
 
   // Tarefas WASTE do dia para esta unidade (deep-link/conclusão)
   const wasteTasks = await prisma.taskInstance.findMany({
@@ -84,9 +97,9 @@ export async function saveWasteEntry(
       },
     });
     await tx.wasteEntryItem.deleteMany({ where: { entryId: e.id } });
-    if (input.items.length) {
+    if (items.length) {
       await tx.wasteEntryItem.createMany({
-        data: input.items.map((i) => ({ entryId: e.id, categoryId: i.categoryId, kg: i.kg })),
+        data: items.map((i) => ({ entryId: e.id, categoryId: i.categoryId, kg: i.kg })),
       });
     }
     return e;
@@ -107,7 +120,7 @@ export async function saveWasteEntry(
     }
   }
 
-  const alerts = await computeAlerts(unit.id, operationalDate, input.items);
+  const alerts = await computeAlerts(unit.id, operationalDate, items);
 
   await audit({
     userId: user.id,
@@ -116,7 +129,7 @@ export async function saveWasteEntry(
     module: 'WASTE',
     entity: 'waste_entry',
     entityId: entry.id,
-    metadata: { operationalDate, items: input.items.length, alerts: alerts.length },
+    metadata: { operationalDate, items: items.length, alerts: alerts.length },
     ...ctx,
   });
   if (alerts.length) {
@@ -130,6 +143,14 @@ export async function saveWasteEntry(
       entityId: entry.id,
       metadata: { alerts },
       ...ctx,
+    });
+    // Alerta ao Supervisor da unidade (spec Módulo 2: categoria >20% vs média 7d)
+    const resumo = alerts.map((a) => `${a.categoryName} +${a.increasePct}%`).join(', ');
+    await notifyUnitRole(unit.id, 'SUPERVISOR', {
+      title: 'Desperdício acima da média',
+      body: `${unit.name} (${operationalDate}): ${resumo} em relação à média de 7 dias.`,
+      link: `/modulos/desperdicios?unit=${unit.id}`,
+      module: 'WASTE',
     });
   }
 

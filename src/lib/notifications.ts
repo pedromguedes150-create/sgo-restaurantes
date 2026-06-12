@@ -34,6 +34,18 @@ export async function notifyAdmins(p: NotifyPayload): Promise<void> {
   await notifyRole('ADMIN', p);
 }
 
+/**
+ * Notifica os usuários de um perfil VINCULADOS a uma unidade (ex.: o Supervisor
+ * daquela unidade). CEO/ADMIN não têm vínculo — use notifyRole/notifyAdmins.
+ */
+export async function notifyUnitRole(unitId: string, role: Role, p: NotifyPayload): Promise<void> {
+  const users = await prisma.user.findMany({
+    where: { role, active: true, memberships: { some: { unitId } } },
+    select: { id: true },
+  });
+  await notifyUsers(users.map((u) => u.id), p);
+}
+
 export async function listNotifications(user: SessionUser, limit = 50) {
   return prisma.notification.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' }, take: limit });
 }
