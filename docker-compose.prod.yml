@@ -20,6 +20,9 @@ services:
     env_file: .env
     environment:
       NODE_ENV: production
+      # Next standalone: liga em todas as interfaces (Docker sobrescreve HOSTNAME
+      # com o id do container, o que tiraria o app do loopback e quebraria o healthcheck)
+      HOSTNAME: "0.0.0.0"
       # dentro da rede docker o banco é alcançado pelo nome do serviço:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sgo-db:5432/${POSTGRES_DB}?schema=public
     ports:

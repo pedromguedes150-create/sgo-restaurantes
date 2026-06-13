@@ -28,7 +28,11 @@ RUN npm run build
 FROM base AS runner
 ENV NODE_ENV=production
 ENV PORT=3100
-RUN addgroup --system --gid 1001 nodejs \
+# Next standalone liga em HOSTNAME; 0.0.0.0 garante loopback + rede (healthcheck)
+ENV HOSTNAME=0.0.0.0
+# openssl: requerido pelo engine do Prisma (linux-musl-openssl-3.0.x)
+RUN apk add --no-cache openssl \
+  && addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
 # Artefatos do build standalone do Next.js

@@ -20,7 +20,9 @@ Esta máquina (Windows 10 Pro) **já roda em produção a plataforma do CEO ("Be
 
 **Portas/recursos do SGO (exclusivos, sem conflito):** app `3100` (prod) / `3101` (homolog) · Postgres dedicado `sgo_postgres` (host dev `5433`, em prod sem porta publicada) · rede docker `sgo` · volumes `sgo_db_data`/`sgo_uploads`.
 
-**Publicação:** decidido com o usuário em 2026-06-10 — **deixar para depois**. O domínio do SGO será "outro domínio" (a definir). Quando for publicar: adicionar regra de ingress NOVA no túnel Cloudflare (sem tocar nas rotas do CEO) + criar DNS na conta Cloudflare. Não editar `~/.cloudflared/config.yml` sem confirmação explícita.
+**Publicação:** ✅ NO AR desde 2026-06-12 em **https://sgorestaurantesgbf.com.br** (+ www). Produção via Docker (`docker-compose.prod.yml`: `sgo_app` em 127.0.0.1:3100, `sgo_postgres` sem porta exposta, `restart: unless-stopped`). Publicado pelo **mesmo túnel Cloudflare do CEO** (id `095cb96a…`, tunnel "beija-flor"): ingress do SGO adicionado em `~/.cloudflared/config.yml` (rotas do CEO intactas; backup em `config.yml.bak-pre-sgo`); DNS = CNAME proxied de apex+www → `095cb96a….cfargotunnel.com` (criados no painel — o cert.pem do cloudflared só gerencia a zona do CEO).
+**Operação do túnel (cuidado):** rode SEMPRE só UMA instância do cloudflared (binário real em `...WinGet\Packages\Cloudflare.cloudflared_*\cloudflared.exe`, NÃO o shim de `WinGet\Links`). Use `127.0.0.1` (não `localhost`) nas rotas do SGO (app é IPv4-only; `localhost`→::1 dá 502). Reiniciar o cloudflared derruba o CEO por ~5s.
+**Pendências de produção:** garantir auto-start do cloudflared no boot (hoje processo manual; Docker do SGO já reinicia sozinho); trocar senhas de demonstração antes de liberar usuários; rotacionar RH_API_KEY (exposta em prints).
 
 ## Stack
 Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · JWT+refresh+bcrypt · Prisma · FCM + Central in-app · PWA · Claude API (modelo via env)

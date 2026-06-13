@@ -3,6 +3,8 @@
 
 generator client {
   provider = "prisma-client-js"
+  // native = dev (Windows); linux-musl-openssl-3.0.x = produção (node:20-alpine)
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
