@@ -2,15 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 
-export interface UserRow { id: string; name: string; email: string; role: string; active: boolean }
+export interface UserRow { id: string; name: string; email: string; role: string; active: boolean; unitIds: string[] }
 interface Unit { id: string; name: string }
+
+const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
+function roleNeedsUnits(role: string) { return role !== 'ADMIN' && role !== 'CEO' && role !== 'FINANCE'; }
 
 export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Unit[]; meId: string }) {
   const router = useRouter();
@@ -22,8 +25,7 @@ export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Un
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
-  const needsUnits = role !== 'ADMIN' && role !== 'CEO' && role !== 'FINANCE';
+  const needsUnits = roleNeedsUnits(role);
 
   async function create() {
     setBusy(true); setMsg(null);
@@ -67,17 +69,82 @@ export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Un
 
       <div className="space-y-2">
         {users.map((u) => (
-          <div key={u.id} className="flex items-center justify-between rounded-lg border bg-card p-3">
-            <div>
-              <p className="font-semibold text-brand">{u.name}{u.id === meId && <span className="ml-1 text-xs text-muted-foreground">(você)</span>}</p>
-              <p className="text-xs text-muted-foreground">{u.email} · {ROLE_OPTIONS.find((r) => r.value === u.role)?.label ?? u.role}</p>
-            </div>
-            <button onClick={() => toggle(u)} disabled={u.id === meId}>
-              <StatusBadge tone={u.active ? 'success' : 'critical'}>{u.active ? 'Ativo' : 'Inativo'}</StatusBadge>
-            </button>
-          </div>
+          <UserItem key={u.id} u={u} units={units} meId={meId} onChange={() => router.refresh()} onToggle={() => toggle(u)} />
         ))}
       </div>
+    </div>
+  );
+}
+
+function UserItem({ u, units, meId, onChange, onToggle }: { u: UserRow; units: Unit[]; meId: string; onChange: () => void; onToggle: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(u.name);
+  const [role, setRole] = useState(u.role);
+  const [password, setPassword] = useState('');
+  const [unitIds, setUnitIds] = useState<string[]>(u.unitIds);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const needsUnits = roleNeedsUnits(role);
+  const isSelf = u.id === meId;
+
+  function toggleUnit(id: string) { setUnitIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id])); }
+
+  async function save() {
+    setBusy(true); setMsg(null);
+    const r = await postAdmin({ entity: 'user', action: 'update', id: u.id, name, role: isSelf ? undefined : role, password: password || undefined });
+    if (r.ok) await postAdmin({ entity: 'user', action: 'setUnits', id: u.id, unitIds: needsUnits ? unitIds : [] });
+    setBusy(false);
+    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    setPassword(''); setEditing(false); onChange();
+  }
+  async function remove() {
+    if (isSelf) return;
+    if (!confirm(`Excluir o usuário "${u.name}"? O histórico de ações fica preservado (sem autor). Esta ação não pode ser desfeita.`)) return;
+    setBusy(true); setMsg(null);
+    const r = await postAdmin({ entity: 'user', action: 'delete', id: u.id });
+    setBusy(false);
+    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    onChange();
+  }
+
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="font-semibold text-brand">{u.name}{isSelf && <span className="ml-1 text-xs text-muted-foreground">(você)</span>}</p>
+          <p className="text-xs text-muted-foreground">{u.email} · {ROLE_OPTIONS.find((r) => r.value === u.role)?.label ?? u.role}</p>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={onToggle} disabled={isSelf}>
+            <StatusBadge tone={u.active ? 'success' : 'critical'}>{u.active ? 'Ativo' : 'Inativo'}</StatusBadge>
+          </button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
+          <Button size="sm" variant="ghost" disabled={busy || isSelf} onClick={remove} aria-label="Excluir" className="text-critical"><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      </div>
+
+      {editing && (
+        <div className="mt-2 space-y-2 rounded-lg bg-muted/40 p-2">
+          <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Perfil</Label><select className={sel} value={role} disabled={isSelf} onChange={(e) => setRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</select></div>
+            <div><Label className="text-xs">Nova senha (opcional)</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="deixe em branco p/ manter" className="h-10 text-sm" /></div>
+          </div>
+          {needsUnits && (
+            <div>
+              <Label className="text-xs">Unidades</Label>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {units.map((unit) => (
+                  <button key={unit.id} type="button" onClick={() => toggleUnit(unit.id)} className={unitIds.includes(unit.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{unit.name}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+          <Button size="sm" className="w-full" disabled={busy} onClick={save}><Save className="h-4 w-4" /> Salvar alterações</Button>
+        </div>
+      )}
+      {!editing && msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}
     </div>
   );
 }

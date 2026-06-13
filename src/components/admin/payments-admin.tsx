@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Pencil, X, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { formatBRL } from '@/lib/utils';
 
 interface Unit { id: string; name: string }
 interface UserOpt { id: string; name: string; role: string }
-export interface FreelancerRow { id: string; name: string; defaultValue: number; active: boolean; units: string[] }
+export interface FreelancerRow { id: string; name: string; defaultValue: number; active: boolean; units: string[]; unitIds: string[] }
 export interface MiscTypeRow { id: string; name: string; approverRole: string; active: boolean }
 export interface DelegationRow { id: string; from: string; to: string; period: string }
 
@@ -64,10 +64,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
           <Button disabled={busy} className="w-full" onClick={async () => { if (await run({ entity: 'freelancer', action: 'create', name: fName, defaultValue: parseFloat((fValue || '0').replace(',', '.')), unitIds: fUnits })) { setFName(''); setFValue(''); setFUnits([]); } }}><Plus className="h-4 w-4" /> Adicionar freelancer</Button>
         </div>
         {freelancers.map((f) => (
-          <div key={f.id} className="flex items-center justify-between rounded-lg border bg-card p-3">
-            <div><p className="font-semibold text-brand">{f.name}</p><p className="text-xs text-muted-foreground">{formatBRL(f.defaultValue)} · {f.units.join(', ')}</p></div>
-            <button onClick={() => run({ entity: 'freelancer', action: 'toggle', id: f.id, active: !f.active })}><StatusBadge tone={f.active ? 'success' : 'critical'}>{f.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
-          </div>
+          <FreelancerItem key={f.id} f={f} units={units} onChange={() => router.refresh()} />
         ))}
       </section>
 
@@ -82,10 +79,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
           <Button disabled={busy} className="w-full" onClick={async () => { if (await run({ entity: 'miscType', action: 'create', name: mName, approverRole: mRole })) setMName(''); }}><Plus className="h-4 w-4" /> Adicionar tipo</Button>
         </div>
         {miscTypes.map((m) => (
-          <div key={m.id} className="flex items-center justify-between rounded-lg border bg-card p-3">
-            <div><p className="font-semibold text-brand">{m.name}</p><p className="text-xs text-muted-foreground">aprova: {ROLE_OPTIONS.find((r) => r.value === m.approverRole)?.label}</p></div>
-            <button onClick={() => run({ entity: 'miscType', action: 'toggle', id: m.id, active: !m.active })}><StatusBadge tone={m.active ? 'success' : 'critical'}>{m.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
-          </div>
+          <MiscTypeItem key={m.id} m={m} onChange={() => router.refresh()} />
         ))}
       </section>
 
@@ -109,6 +103,91 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
         ))}
         {delegations.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma delegação ativa.</p>}
       </section>
+    </div>
+  );
+}
+
+const SEL = 'h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
+
+function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[]; onChange: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(f.name);
+  const [value, setValue] = useState(String(f.defaultValue).replace('.', ','));
+  const [unitIds, setUnitIds] = useState<string[]>(f.unitIds);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function call(payload: Record<string, unknown>, after?: () => void) {
+    setBusy(true); setMsg(null);
+    const r = await postAdmin(payload);
+    setBusy(false);
+    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    after?.(); onChange();
+  }
+
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div><p className="font-semibold text-brand">{f.name}</p><p className="text-xs text-muted-foreground">{formatBRL(f.defaultValue)} · {f.units.join(', ')}</p></div>
+        <div className="flex items-center gap-1">
+          <button onClick={() => call({ entity: 'freelancer', action: 'toggle', id: f.id, active: !f.active })}><StatusBadge tone={f.active ? 'success' : 'critical'}>{f.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm(`Excluir o freelancer "${f.name}"? Só é possível se não houver pagamentos vinculados. Caso contrário, inative-o.`)) call({ entity: 'freelancer', action: 'delete', id: f.id }); }} aria-label="Excluir" className="text-critical"><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      </div>
+      {editing && (
+        <div className="mt-2 space-y-2 rounded-lg bg-muted/40 p-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
+            <div><Label className="text-xs">Valor padrão (R$)</Label><Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} className="h-10 text-sm" /></div>
+          </div>
+          <div>
+            <Label className="text-xs">Unidades</Label>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {units.map((u) => <button key={u.id} type="button" onClick={() => setUnitIds((s) => s.includes(u.id) ? s.filter((x) => x !== u.id) : [...s, u.id])} className={unitIds.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>)}
+            </div>
+          </div>
+          <Button size="sm" className="w-full" disabled={busy} onClick={() => call({ entity: 'freelancer', action: 'update', id: f.id, name, defaultValue: parseFloat((value || '0').replace(',', '.')), unitIds }, () => setEditing(false))}><Save className="h-4 w-4" /> Salvar alterações</Button>
+        </div>
+      )}
+      {msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}
+    </div>
+  );
+}
+
+function MiscTypeItem({ m, onChange }: { m: MiscTypeRow; onChange: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(m.name);
+  const [role, setRole] = useState(m.approverRole);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function call(payload: Record<string, unknown>, after?: () => void) {
+    setBusy(true); setMsg(null);
+    const r = await postAdmin(payload);
+    setBusy(false);
+    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    after?.(); onChange();
+  }
+
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div><p className="font-semibold text-brand">{m.name}</p><p className="text-xs text-muted-foreground">aprova: {ROLE_OPTIONS.find((r) => r.value === m.approverRole)?.label}</p></div>
+        <div className="flex items-center gap-1">
+          <button onClick={() => call({ entity: 'miscType', action: 'toggle', id: m.id, active: !m.active })}><StatusBadge tone={m.active ? 'success' : 'critical'}>{m.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm(`Excluir o tipo "${m.name}"? Só é possível se não houver pagamentos vinculados. Caso contrário, inative-o.`)) call({ entity: 'miscType', action: 'delete', id: m.id }); }} aria-label="Excluir" className="text-critical"><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      </div>
+      {editing && (
+        <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-2">
+          <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
+          <div><Label className="text-xs">Aprovador</Label><select className={SEL} value={role} onChange={(e) => setRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</select></div>
+          <Button size="sm" className="col-span-2" disabled={busy} onClick={() => call({ entity: 'miscType', action: 'update', id: m.id, name, approverRole: role }, () => setEditing(false))}><Save className="h-4 w-4" /> Salvar alterações</Button>
+        </div>
+      )}
+      {msg && <p className="col-span-2 mt-1 text-sm font-medium text-critical">{msg}</p>}
     </div>
   );
 }

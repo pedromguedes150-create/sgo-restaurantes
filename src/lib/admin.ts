@@ -5,7 +5,7 @@ import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role, TaskModule } from '@prisma/client';
 
-export type AdminResult = { ok: true; id?: string } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'CONFLICT' };
+export type AdminResult = { ok: true; id?: string } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'CONFLICT' | 'BLOCKED' };
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
 
@@ -43,6 +43,27 @@ export async function updateUnit(user: SessionUser, id: string, input: { name?: 
   return { ok: true, id: u.id };
 }
 
+export async function deleteUnit(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  // Excluir unidade faz cascade em TODOS os dados operacionais (tarefas, desperdícios,
+  // ocorrências, comandas, cancelamentos, pagamentos, notas, inventário, alocações…).
+  // Bloqueia se houver histórico — nesse caso o correto é INATIVAR (toggle active).
+  const [tasks, waste, occ, cmd, canc, pay, notes, inv] = await prisma.$transaction([
+    prisma.taskInstance.count({ where: { unitId: id } }),
+    prisma.wasteEntry.count({ where: { unitId: id } }),
+    prisma.occurrence.count({ where: { unitId: id } }),
+    prisma.commandCount.count({ where: { unitId: id } }),
+    prisma.cancellation.count({ where: { unitId: id } }),
+    prisma.paymentRequest.count({ where: { unitId: id } }),
+    prisma.receivedNote.count({ where: { unitId: id } }),
+    prisma.inventorySchedule.count({ where: { unitId: id } }),
+  ]);
+  if (tasks + waste + occ + cmd + canc + pay + notes + inv > 0) return { ok: false, reason: 'BLOCKED' };
+  await prisma.unit.delete({ where: { id } }).catch(() => {});
+  await audit({ userId: user.id, action: 'UNIT_DELETE', module: 'CONFIG', entity: 'unit', entityId: id, ...ctx });
+  return { ok: true };
+}
+
 function clampHour(h?: number) {
   const n = Number.isFinite(h) ? Math.trunc(h as number) : 4;
   return Math.min(23, Math.max(0, n));
@@ -67,6 +88,32 @@ export async function toggleUser(user: SessionUser, id: string, active: boolean,
   if (id === user.id) return { ok: false, reason: 'INVALID' }; // não inative a si mesmo
   await prisma.user.update({ where: { id }, data: { active } });
   await audit({ userId: user.id, action: active ? 'USER_ACTIVATE' : 'USER_DEACTIVATE', module: 'CONFIG', entity: 'user', entityId: id, ...ctx });
+  return { ok: true };
+}
+
+export async function updateUser(user: SessionUser, id: string, input: { name?: string; role?: Role; password?: string }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
+  if (input.password !== undefined && input.password.length > 0 && input.password.length < 6) return { ok: false, reason: 'INVALID' };
+  if (id === user.id && input.role !== undefined && input.role !== user.role) return { ok: false, reason: 'INVALID' }; // não rebaixe a si mesmo
+  const data: { name?: string; role?: Role; passwordHash?: string } = {};
+  if (input.name !== undefined) data.name = input.name.trim();
+  if (input.role !== undefined) data.role = input.role;
+  if (input.password) data.passwordHash = await hashPassword(input.password);
+  await prisma.user.update({ where: { id }, data });
+  // Trocar a senha invalida sessões antigas (refresh tokens)
+  if (data.passwordHash) await prisma.refreshToken.deleteMany({ where: { userId: id } });
+  await audit({ userId: user.id, action: 'USER_UPDATE', module: 'CONFIG', entity: 'user', entityId: id, metadata: { fields: Object.keys(data) }, ...ctx });
+  return { ok: true };
+}
+
+export async function deleteUser(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (id === user.id) return { ok: false, reason: 'INVALID' }; // não exclua a si mesmo
+  // Histórico operacional é preservado (relações com autor usam SetNull); apenas
+  // vínculos de unidade, tokens e leituras de POP somem (Cascade).
+  await prisma.user.delete({ where: { id } }).catch(() => {});
+  await audit({ userId: user.id, action: 'USER_DELETE', module: 'CONFIG', entity: 'user', entityId: id, ...ctx });
   return { ok: true };
 }
 
@@ -102,6 +149,35 @@ export async function toggleTemplate(user: SessionUser, id: string, active: bool
   return { ok: true };
 }
 
+export async function updateTemplate(user: SessionUser, id: string, input: { name?: string; limitTime?: string; weight?: number; module?: TaskModule; requiresEvidence?: boolean; entersMeta?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
+  await prisma.taskTemplate.update({
+    where: { id },
+    data: {
+      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+      ...(input.limitTime !== undefined ? { limitTime: input.limitTime || '23:59' } : {}),
+      ...(input.weight !== undefined ? { weight: Number.isFinite(input.weight) ? Math.max(0, Math.trunc(input.weight as number)) : 1 } : {}),
+      ...(input.module !== undefined ? { module: input.module } : {}),
+      ...(input.requiresEvidence !== undefined ? { requiresEvidence: Boolean(input.requiresEvidence) } : {}),
+      ...(input.entersMeta !== undefined ? { entersMeta: Boolean(input.entersMeta) } : {}),
+    },
+  });
+  await audit({ userId: user.id, action: 'TEMPLATE_UPDATE', module: 'CONFIG', entity: 'task_template', entityId: id, ...ctx });
+  return { ok: true };
+}
+
+export async function deleteTemplate(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  // Excluir o template apaga (Cascade) todas as tarefas já geradas dele — perde
+  // histórico e metas. Bloqueia se houver execuções; o correto é INATIVAR.
+  const used = await prisma.taskInstance.count({ where: { templateId: id } });
+  if (used > 0) return { ok: false, reason: 'BLOCKED' };
+  await prisma.taskTemplate.delete({ where: { id } }).catch(() => {});
+  await audit({ userId: user.id, action: 'TEMPLATE_DELETE', module: 'CONFIG', entity: 'task_template', entityId: id, ...ctx });
+  return { ok: true };
+}
+
 /* ──────────────────────── Pagamentos: cadastros ───────────────────── */
 export async function createFreelancer(user: SessionUser, input: { name: string; defaultValue: number; unitIds: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
@@ -118,6 +194,39 @@ export async function toggleFreelancer(user: SessionUser, id: string, active: bo
   return { ok: true };
 }
 
+export async function updateFreelancer(user: SessionUser, id: string, input: { name?: string; defaultValue?: number; unitIds?: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
+  if (input.defaultValue !== undefined && !(input.defaultValue > 0)) return { ok: false, reason: 'INVALID' };
+  if (input.unitIds !== undefined && input.unitIds.length === 0) return { ok: false, reason: 'INVALID' };
+  await prisma.$transaction(async (tx) => {
+    await tx.freelancer.update({
+      where: { id },
+      data: {
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(input.defaultValue !== undefined ? { defaultValue: input.defaultValue } : {}),
+      },
+    });
+    if (input.unitIds !== undefined) {
+      await tx.freelancerUnit.deleteMany({ where: { freelancerId: id } });
+      await tx.freelancerUnit.createMany({ data: input.unitIds.map((unitId) => ({ freelancerId: id, unitId })), skipDuplicates: true });
+    }
+  });
+  await audit({ userId: user.id, action: 'FREELANCER_UPDATE', module: 'CONFIG', entity: 'freelancer', entityId: id, ...ctx });
+  return { ok: true };
+}
+
+export async function deleteFreelancer(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  // Pagamentos referenciam o freelancer (SetNull). Para preservar rastreio,
+  // bloqueia se já houver pagamentos lançados; o correto é INATIVAR.
+  const used = await prisma.paymentRequest.count({ where: { freelancerId: id } });
+  if (used > 0) return { ok: false, reason: 'BLOCKED' };
+  await prisma.freelancer.delete({ where: { id } }).catch(() => {});
+  await audit({ userId: user.id, action: 'FREELANCER_DELETE', module: 'CONFIG', entity: 'freelancer', entityId: id, ...ctx });
+  return { ok: true };
+}
+
 export async function createMiscType(user: SessionUser, input: { name: string; approverRole: Role }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!input.name?.trim() || !input.approverRole) return { ok: false, reason: 'INVALID' };
@@ -130,6 +239,29 @@ export async function toggleMiscType(user: SessionUser, id: string, active: bool
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   await prisma.miscPaymentType.update({ where: { id }, data: { active } });
   await audit({ userId: user.id, action: active ? 'MISCTYPE_ACTIVATE' : 'MISCTYPE_DEACTIVATE', module: 'CONFIG', entity: 'misc_payment_type', entityId: id, ...ctx });
+  return { ok: true };
+}
+
+export async function updateMiscType(user: SessionUser, id: string, input: { name?: string; approverRole?: Role }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
+  await prisma.miscPaymentType.update({
+    where: { id },
+    data: {
+      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+      ...(input.approverRole !== undefined ? { approverRole: input.approverRole } : {}),
+    },
+  });
+  await audit({ userId: user.id, action: 'MISCTYPE_UPDATE', module: 'CONFIG', entity: 'misc_payment_type', entityId: id, ...ctx });
+  return { ok: true };
+}
+
+export async function deleteMiscType(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const used = await prisma.paymentRequest.count({ where: { miscTypeId: id } });
+  if (used > 0) return { ok: false, reason: 'BLOCKED' };
+  await prisma.miscPaymentType.delete({ where: { id } }).catch(() => {});
+  await audit({ userId: user.id, action: 'MISCTYPE_DELETE', module: 'CONFIG', entity: 'misc_payment_type', entityId: id, ...ctx });
   return { ok: true };
 }
 
