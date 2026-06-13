@@ -1,14 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +28,11 @@ export default function LoginPage() {
         return;
       }
       const from = new URLSearchParams(window.location.search).get('from');
-      router.replace(from ?? '/dashboard');
-      router.refresh();
+      // Navegação DURA (não router.replace): garante que o cookie recém-criado
+      // vá na requisição de topo — o soft-nav do Next pode não enxergá-lo e
+      // bater de volta no /login (inclusive no 1º login, que passa pelo termo).
+      window.location.assign(from && from.startsWith('/') ? from : '/dashboard');
+      return;
     } catch {
       setError('Falha de conexão. Tente novamente.');
     } finally {

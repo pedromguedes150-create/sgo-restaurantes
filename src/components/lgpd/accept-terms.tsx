@@ -1,11 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
 export function AcceptTerms() {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   return (
     <Button
@@ -15,7 +13,7 @@ export function AcceptTerms() {
         setBusy(true);
         try {
           const r = await fetch('/api/terms/accept', { method: 'POST' });
-          if (r.ok) { router.replace('/dashboard'); router.refresh(); }
+          if (r.ok) { window.location.assign('/dashboard'); return; }
         } finally { setBusy(false); }
       }}
     >
