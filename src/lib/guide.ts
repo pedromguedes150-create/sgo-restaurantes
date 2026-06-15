@@ -159,6 +159,7 @@ export const GUIDE: GuideSection[] = [
         summary: 'Quem trabalha em cada setor/turno e disponibilidade do dia.',
         steps: [
           'Em PESSOAS → Mapa de Funções, aloque cada colaborador em um Setor e Turno.',
+          'Alterne entre "Planta" (visão visual das áreas da unidade, colorida por cobertura) e "Lista".',
           'Use "Disponibilidade do dia" para escolher uma data e ver quem trabalha × quem está de folga/ausente.',
           'Isso ajuda a decidir hora-extra/freelancer.',
         ],

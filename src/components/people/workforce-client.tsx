@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, X, Pencil, Trash2, Save, Clock } from 'lucide-react';
+import { Plus, X, Pencil, Trash2, Save, Clock, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { UnitFloorplan } from '@/components/people/unit-floorplan';
 
 type Coverage = 'ok' | 'partial' | 'none';
 interface Grid {
@@ -35,6 +36,7 @@ export function WorkforceClient({ unitId, isAdmin, grid, collaborators, turnos, 
   const [sectorId, setSectorId] = useState(grid.sectors[0]?.id ?? '');
   const [turnoId, setTurnoId] = useState(turnos[0]?.id ?? '');
   const [collaboratorId, setCollaboratorId] = useState('');
+  const [view, setView] = useState<'planta' | 'lista'>('planta');
 
   const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
   const activeTurnos = turnos.filter((t) => t.active);
@@ -97,11 +99,20 @@ export function WorkforceClient({ unitId, isAdmin, grid, collaborators, turnos, 
         </div>
       </div>
 
-      {/* Grade */}
+      {/* Mapa: Planta (visual) ou Lista */}
       <div className="space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Mapa Setor × Turno</h2>
-        {grid.sectors.length === 0 && <p className="text-sm text-muted-foreground">Nenhum setor cadastrado.</p>}
-        {grid.sectors.map((s) => (
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Mapa da unidade</h2>
+          <div className="flex gap-1">
+            <button onClick={() => setView('planta')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'planta' ? 'bg-primary text-primary-foreground' : 'border')}><LayoutGrid className="h-3.5 w-3.5" /> Planta</button>
+            <button onClick={() => setView('lista')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'lista' ? 'bg-primary text-primary-foreground' : 'border')}><List className="h-3.5 w-3.5" /> Lista</button>
+          </div>
+        </div>
+
+        {view === 'planta' && <UnitFloorplan grid={grid} />}
+
+        {view === 'lista' && grid.sectors.length === 0 && <p className="text-sm text-muted-foreground">Nenhum setor cadastrado.</p>}
+        {view === 'lista' && grid.sectors.map((s) => (
           <div key={s.id} className="rounded-lg border bg-card p-3">
             <p className="font-semibold text-brand">{s.name} <span className="text-xs font-normal text-muted-foreground">(mín. {s.minHeadcount}/turno)</span></p>
             {grid.shifts.length === 0 && <p className="mt-1 text-xs text-muted-foreground">Sem turnos cadastrados ainda.</p>}
