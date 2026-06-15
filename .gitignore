@@ -45,3 +45,6 @@ Thumbs.db
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Anotacoes pessoais do Pedro (nao versionar)
+SGO.txt

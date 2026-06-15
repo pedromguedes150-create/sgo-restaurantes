@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { CloseForm } from '@/components/occurrences/close-form';
 import { ProgressButton } from '@/components/occurrences/progress-button';
+import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { ArrowLeft, Paperclip } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,7 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
 
   const canClose =
     (user.role === 'SUPERVISOR' || user.role === 'ADMIN' || user.role === 'CEO') && o.status !== 'CLOSED';
+  const isAdmin = user.role === 'ADMIN';
 
   return (
     <div className="space-y-4">
@@ -94,6 +96,18 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
           </CardHeader>
           <CardContent>
             <CloseForm occurrenceId={o.id} />
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && (
+        <Card className="border-critical/30">
+          <CardHeader>
+            <CardTitle className="text-critical">Excluir (admin)</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">Remove a ocorrência e seus anexos. Registrado na Auditoria.</p>
+            <DeleteOpButton entity="occurrence" id={o.id} label={`a ocorrência #${o.number}`} redirectTo="/modulos/ocorrencias" />
           </CardContent>
         </Card>
       )}

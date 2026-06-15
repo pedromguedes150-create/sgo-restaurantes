@@ -4,6 +4,8 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listCancellations, getReasons, getCancellationSummary } from '@/lib/cancellations/query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CancellationsClient } from '@/components/cancellations/cancellations-client';
+import { DeleteOpButton } from '@/components/admin/delete-op-button';
+import { formatBRL } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +19,14 @@ export default async function CancelamentosPage() {
     getCancellationSummary(user, yearMonth),
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
   ]);
+
+  const isAdmin = user.role === 'ADMIN';
+  const [recentCanc, imports] = isAdmin
+    ? await Promise.all([
+        prisma.cancellation.findMany({ where: { ...unitScopeWhere(user, 'unitId') }, orderBy: { createdAt: 'desc' }, take: 50, include: { unit: { select: { name: true } } } }),
+        prisma.cancellationImport.findMany({ where: { ...unitScopeWhere(user, 'unitId') }, orderBy: { createdAt: 'desc' }, take: 20, include: { unit: { select: { name: true } }, _count: { select: { cancellations: true } } } }),
+      ])
+    : [[], []];
 
   return (
     <div className="space-y-5">
@@ -39,6 +49,40 @@ export default async function CancelamentosPage() {
           />
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card>
+          <CardHeader><CardTitle>Gerenciar lançamentos (admin)</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Importações</p>
+              {imports.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma importação.</p>}
+              {imports.map((imp) => (
+                <div key={imp.id} className="flex items-center justify-between rounded-lg border bg-card p-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-brand">{imp.fileName}</p>
+                    <p className="text-xs text-muted-foreground">{imp.unit.name} · {imp.operationalDate} · {imp._count.cancellations} cupom(ns)</p>
+                  </div>
+                  <DeleteOpButton entity="cancellationImport" id={imp.id} label={`a importação "${imp.fileName}" e seus cupons`} />
+                </div>
+              ))}
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Cupons (recentes)</p>
+              {recentCanc.length === 0 && <p className="text-sm text-muted-foreground">Nenhum cupom.</p>}
+              {recentCanc.map((c) => (
+                <div key={c.id} className="flex items-center justify-between rounded-lg border bg-card p-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-brand">Cupom {c.couponNumber} · {formatBRL(Number(c.value))}</p>
+                    <p className="text-xs text-muted-foreground">{c.unit.name} · {c.operationalDate} · {c.status}{c.cashOperator ? ` · ${c.cashOperator}` : ''}</p>
+                  </div>
+                  <DeleteOpButton entity="cancellation" id={c.id} label={`o cupom ${c.couponNumber}`} />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {summary.byOperator.length > 0 && (
         <Card>

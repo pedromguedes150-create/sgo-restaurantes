@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
+import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 
@@ -21,7 +22,7 @@ const ST: Record<NoteDTO['status'], { label: string; tone: StatusTone }> = {
   PROBLEM: { label: 'Com problema', tone: 'critical' },
 };
 
-export function NotesClient({ units, notes }: { units: Unit[]; notes: NoteDTO[] }) {
+export function NotesClient({ units, notes, isAdmin = false }: { units: Unit[]; notes: NoteDTO[]; isAdmin?: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<'nova' | 'lista'>('lista');
   const [busy, setBusy] = useState(false);
@@ -59,12 +60,15 @@ export function NotesClient({ units, notes }: { units: Unit[]; notes: NoteDTO[] 
               </div>
               <p className="text-xs text-muted-foreground">{n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}</p>
               {n.problemNote && <p className="mt-1 text-xs text-critical">Problema: {n.problemNote}</p>}
-              {n.status === 'RECEIVED' && (
-                <div className="mt-2 flex gap-2">
-                  <Button size="sm" variant="gold" disabled={busy} onClick={() => status(n.id, 'PAID')}><Banknote className="h-4 w-4" /> Paga</Button>
-                  <Button size="sm" variant="destructive" disabled={busy} onClick={() => status(n.id, 'PROBLEM')}><AlertTriangle className="h-4 w-4" /> Problema</Button>
-                </div>
-              )}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {n.status === 'RECEIVED' && (
+                  <>
+                    <Button size="sm" variant="gold" disabled={busy} onClick={() => status(n.id, 'PAID')}><Banknote className="h-4 w-4" /> Paga</Button>
+                    <Button size="sm" variant="destructive" disabled={busy} onClick={() => status(n.id, 'PROBLEM')}><AlertTriangle className="h-4 w-4" /> Problema</Button>
+                  </>
+                )}
+                {isAdmin && <DeleteOpButton entity="note" id={n.id} label={`a nota de ${n.supplier}`} />}
+              </div>
             </div>
           ))}
         </div>

@@ -28,6 +28,7 @@ export default async function NotasPage() {
       <Card>
         <CardContent className="pt-4">
           <NotesClient
+            isAdmin={user.role === 'ADMIN'}
             units={units}
             notes={notes.map((n) => ({ id: n.id, unit: n.unit.name, supplier: n.supplierName, value: Number(n.totalValue), status: n.status, number: n.number, problemNote: n.problemNote }))}
           />

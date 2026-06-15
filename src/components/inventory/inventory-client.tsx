@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
+import { DeleteOpButton } from '@/components/admin/delete-op-button';
 
 export interface InvItem {
   id: string;
@@ -51,9 +52,12 @@ export function InventoryClient({ items, units, isAdmin }: { items: InvItem[]; u
                 <StatusBadge tone={ST[i.status].tone}>{ST[i.status].label}</StatusBadge>
               </div>
               <p className="text-xs text-muted-foreground">{i.unit} · {i.date}{i.responsible ? ` · resp. ${i.responsible}` : ''}{i.confirmedBy ? ` · por ${i.confirmedBy}` : ''}</p>
-              {i.status === 'PENDING' && (
-                <Button size="sm" className="mt-2" disabled={busy} onClick={() => confirm(i.id)}><Check className="h-4 w-4" /> Confirmar realização</Button>
-              )}
+              <div className="mt-2 flex items-center gap-2">
+                {i.status === 'PENDING' && (
+                  <Button size="sm" disabled={busy} onClick={() => confirm(i.id)}><Check className="h-4 w-4" /> Confirmar realização</Button>
+                )}
+                {isAdmin && <DeleteOpButton entity="inventory" id={i.id} label={`o inventário de ${i.category} (${i.date})`} />}
+              </div>
             </div>
           ))}
         </div>

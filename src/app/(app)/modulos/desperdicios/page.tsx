@@ -6,6 +6,7 @@ import { currentOperationalDate } from '@/lib/date/operational';
 import { getActiveCategories, getEntryForDay, getWasteSeries, getCrossUnitWaste } from '@/lib/waste/query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { WasteForm } from '@/components/waste/waste-form';
+import { DeleteOpButton } from '@/components/admin/delete-op-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,16 @@ export default async function DesperdiciosPage({
   const canCompare = user.seesAllUnits || user.role === 'SUPERVISOR';
   const cross = canCompare ? await getCrossUnitWaste(user, 30, now) : [];
   const maxCat = Math.max(1, ...series.byCategory.map((c) => c.total));
+
+  const isAdmin = user.role === 'ADMIN';
+  const recent = isAdmin
+    ? await prisma.wasteEntry.findMany({
+        where: { unitId: selected.id },
+        orderBy: { operationalDate: 'desc' },
+        take: 30,
+        include: { items: { select: { kg: true } }, createdBy: { select: { name: true } } },
+      })
+    : [];
 
   return (
     <div className="space-y-5">
@@ -91,6 +102,31 @@ export default async function DesperdiciosPage({
           />
         </CardContent>
       </Card>
+
+      {/* Histórico de lançamentos (Admin: editar pelo seletor de dia / excluir) */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Histórico de lançamentos (admin)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {recent.length === 0 && <p className="text-sm text-muted-foreground">Nenhum lançamento.</p>}
+            {recent.map((e) => {
+              const total = e.items.reduce((s, i) => s + Number(i.kg), 0);
+              return (
+                <div key={e.id} className="flex items-center justify-between rounded-lg border bg-card p-2.5">
+                  <div>
+                    <p className="text-sm font-semibold text-brand">{e.operationalDate}</p>
+                    <p className="text-xs text-muted-foreground">{total.toFixed(2)} KG · {e.items.length} categoria(s){e.createdBy ? ` · ${e.createdBy.name}` : ''}</p>
+                  </div>
+                  <DeleteOpButton entity="waste" id={e.id} label={`o desperdício de ${e.operationalDate}`} />
+                </div>
+              );
+            })}
+            <p className="pt-1 text-xs text-muted-foreground">Para editar um dia específico, use o formulário acima no dia correspondente.</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Mini-dashboard: barras por categoria (30 dias) */}
       <Card>
