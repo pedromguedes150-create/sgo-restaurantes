@@ -59,7 +59,10 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 | 10 — POPs | ✅ Concluído (blocos texto/checklist/imagem/vídeo, publicação, confirmação de leitura por versão, versionamento; editor rico avançado a refinar) |
 | 11 — Metas | ✅ Concluído (ranking mensal, Minha Meta do Mês, detalhamento por tarefa/peso; export PDF a refinar) |
 | 12 — Auditoria | ✅ Concluído (tela com filtros por módulo, timeline imutável; export PDF/CSV a refinar) |
-| 13 — Configurações + LGPD | ✅ Concluído (cadastros Admin: Unidades, Usuários, Checklists, Pagamentos [freelancers/tipos avulso/delegações] via /api/admin; aceite de termo no 1º login, LGPD retenção/visibilidade/export do titular) |
+| 13 — Configurações + LGPD | ✅ Concluído (cadastros Admin: Unidades, Usuários, Checklists, Pagamentos via /api/admin com **editar/excluir** [exclusão bloqueada se houver histórico]; **Perfis de acesso** = matriz perfil×módulo Ver/Editar, oculta no menu o que o perfil não pode ver, ADMIN/CEO sempre totais; aceite de termo, LGPD) |
+| 14 — Escala (presença mensal) | ✅ Concluído (`/modulos/escala`: Planejado [gerado do padrão 12x36 par/ímpar, 6x1, 5x2, personalizada + ajuste], Realizado [única aba editável: T/F/FI/FJ/A/FE por célula, Registrar ausência por período c/ anexo PDF/foto, preencher auto, puxar=planejado], Comparação; export Excel/CSV + PDF via print). Lógica em `src/lib/schedule.ts` |
+| 9.3 — Mapa de Funções (turnos) | ✅ Turnos por unidade (Admin CRUD); setores **editar/excluir** + ordem alfabética + setores de referência; **disponibilidade do dia** puxando da Escala (hora-extra/freela). Admin pode **excluir lançamentos** de toda a Operação (reversão + auditoria) |
+| — RH auto-sync | ✅ Sincronização automática ~1×/dia via scheduler (`instrumentation.ts`, log RH_SYNC_AUTO), além do botão manual |
 
 ## Como trabalhar
 1. Leia a seção em `docs/especificacao.md`.
