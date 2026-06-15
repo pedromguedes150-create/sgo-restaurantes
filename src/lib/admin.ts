@@ -127,6 +127,21 @@ export async function setUserUnits(user: SessionUser, id: string, unitIds: strin
   return { ok: true };
 }
 
+/* ──────────────────────── Comandas: sequência por unidade ──────────── */
+export async function setCommandConfig(user: SessionUser, input: { unitId: string; rangeStart: number; rangeEnd: number }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const start = Math.trunc(input.rangeStart);
+  const end = Math.trunc(input.rangeEnd);
+  if (!input.unitId || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start) return { ok: false, reason: 'INVALID' };
+  const c = await prisma.unitCommandConfig.upsert({
+    where: { unitId: input.unitId },
+    create: { unitId: input.unitId, rangeStart: start, rangeEnd: end },
+    update: { rangeStart: start, rangeEnd: end },
+  });
+  await audit({ userId: user.id, unitId: input.unitId, action: 'COMMAND_CONFIG_SET', module: 'CONFIG', entity: 'unit_command_config', entityId: c.id, metadata: { start, end }, ...ctx });
+  return { ok: true, id: c.id };
+}
+
 /* ──────────────────────── Checklists (templates) ──────────────────── */
 export async function createTemplate(user: SessionUser, input: { unitId: string; name: string; limitTime?: string; weight?: number; module?: TaskModule; requiresEvidence?: boolean; entersMeta?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };

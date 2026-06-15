@@ -101,6 +101,7 @@ export const GUIDE: GuideSection[] = [
         roles: MANAGERLINE,
         summary: 'Contagem diária e divergências.',
         steps: [
+          'Antes do uso, o Admin define a faixa de numeração em Configurações → Comandas (sequência).',
           'Abra COMANDAS e informe "todas presentes" ou as ausentes.',
           'Quando houver ausentes, a observação é obrigatória e gera divergência + alerta ao Supervisor.',
         ],
