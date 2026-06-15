@@ -24,8 +24,9 @@ const COV: Record<Coverage, { dot: string; label: string }> = {
   none: { dot: 'bg-critical', label: 'Sem cobertura' },
 };
 
-export function WorkforceClient({ unitId, isAdmin, grid, collaborators, turnos, suggestedSectors }: {
+export function WorkforceClient({ unitId, isAdmin, grid, collaborators, turnos, suggestedSectors, availDate, availability }: {
   unitId: string; isAdmin: boolean; grid: Grid; collaborators: Collab[]; turnos: Turno[]; suggestedSectors: string[];
+  availDate?: string | null; availability?: { working: string[]; off: string[] } | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -48,8 +49,37 @@ export function WorkforceClient({ unitId, isAdmin, grid, collaborators, turnos, 
     } finally { setBusy(false); }
   }
 
+  function navDate(date: string) {
+    const sp = new URLSearchParams({ unit: unitId });
+    if (date) sp.set('date', date);
+    router.push(`/modulos/pessoas/mapa?${sp.toString()}`);
+  }
+
   return (
     <div className="space-y-5">
+      {/* Disponibilidade da turma num dia (puxa da Escala) */}
+      <div className="rounded-lg border bg-card p-3">
+        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Disponibilidade do dia</h2>
+        <div className="flex items-end gap-2">
+          <div><Label className="text-xs">Escolha o dia</Label><Input type="date" defaultValue={availDate ?? ''} onChange={(e) => navDate(e.target.value)} className="h-10 text-sm" /></div>
+        </div>
+        {availability && (
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="rounded-md bg-success/10 p-2">
+              <p className="text-xs font-bold text-success">Trabalhando ({availability.working.length})</p>
+              <p className="text-sm">{availability.working.length ? availability.working.join(', ') : '—'}</p>
+            </div>
+            <div className="rounded-md bg-muted/50 p-2">
+              <p className="text-xs font-bold text-muted-foreground">Indisponíveis ({availability.off.length})</p>
+              <p className="text-sm text-muted-foreground">{availability.off.length ? availability.off.join(', ') : '—'}</p>
+            </div>
+          </div>
+        )}
+        {availDate && availability && availability.working.length === 0 && availability.off.length === 0 && (
+          <p className="mt-2 text-xs text-muted-foreground">Nenhuma escala cadastrada. Cadastre as escalas em Pessoas → Escala.</p>
+        )}
+      </div>
+
       {isAdmin && <TurnosManager unitId={unitId} turnos={turnos} post={post} busy={busy} />}
       {isAdmin && <SectorsManager unitId={unitId} sectors={grid.sectors} suggested={suggestedSectors} post={post} busy={busy} />}
 

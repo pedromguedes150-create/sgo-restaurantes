@@ -3,13 +3,14 @@ import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getWorkforceGrid, listShifts, STANDARD_SECTORS } from '@/lib/workforce';
+import { availabilityForDate } from '@/lib/schedule';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkforceClient } from '@/components/people/workforce-client';
 import { ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function MapaFuncoesPage({ searchParams }: { searchParams: { unit?: string } }) {
+export default async function MapaFuncoesPage({ searchParams }: { searchParams: { unit?: string; date?: string } }) {
   const user = (await getSessionUser())!;
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
   if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
@@ -22,6 +23,9 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
   ]);
   const existingSectorNames = grid.sectors.map((s) => s.name.toLowerCase());
   const suggestedSectors = STANDARD_SECTORS.filter((n) => !existingSectorNames.includes(n.toLowerCase()));
+
+  const availDate = searchParams.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date) ? searchParams.date : null;
+  const availability = availDate ? await availabilityForDate(selected.id, availDate) : null;
 
   return (
     <div className="space-y-4">
@@ -45,6 +49,8 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
           collaborators={collaborators}
           turnos={turnos.map((t) => ({ id: t.id, name: t.name, startTime: t.startTime, endTime: t.endTime, active: t.active }))}
           suggestedSectors={suggestedSectors}
+          availDate={availDate}
+          availability={availability}
         />
       </CardContent></Card>
     </div>

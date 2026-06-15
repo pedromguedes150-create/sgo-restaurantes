@@ -47,14 +47,15 @@ const GROUPS: { title: string; items: Item[] }[] = [
   },
 ];
 
-export function Sidebar({ isAdmin }: { isAdmin: boolean }) {
+export function Sidebar({ isAdmin, viewable }: { isAdmin: boolean; viewable?: string[] }) {
   const pathname = usePathname();
+  const canSee = (href: string) => !viewable || viewable.includes(href);
 
   return (
     <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 overflow-y-auto border-r bg-background px-3 py-4 md:block">
       <nav className="space-y-5">
         {GROUPS.map((g) => {
-          const items = g.items.filter((it) => !it.adminOnly || isAdmin);
+          const items = g.items.filter((it) => (!it.adminOnly || isAdmin) && canSee(it.href));
           if (items.length === 0) return null;
           return (
             <div key={g.title}>
