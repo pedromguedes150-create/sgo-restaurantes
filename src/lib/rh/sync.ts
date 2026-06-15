@@ -69,6 +69,12 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
     metadata: { rhUnitName: unit.rhUnitName, total: lista.length, created, updated, deactivated: deactivated.count },
   });
 
+  // novos colaboradores → gera treinamentos iniciais (e setoriais quando alocados)
+  try {
+    const { reconcileTrainingForUnit } = await import('@/lib/training');
+    await reconcileTrainingForUnit(unitId);
+  } catch { /* não bloqueia o sync */ }
+
   return { ok: true, created, updated, total: lista.length };
 }
 

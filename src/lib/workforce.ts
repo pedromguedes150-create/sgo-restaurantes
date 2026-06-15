@@ -174,6 +174,7 @@ export async function allocate(user: SessionUser, input: { unitId: string; secto
   const a = await prisma.workforceAllocation.create({ data: { unitId: input.unitId, sectorId: input.sectorId, shift: shiftText, shiftId, collaboratorId: input.collaboratorId, source: 'MANUAL' } });
   await audit({ userId: user.id, unitId: input.unitId, action: 'ALLOCATE', module: 'PEOPLE', entity: 'workforce_allocation', entityId: a.id, ...ctx });
   await notifyWorkforceChange(user, input.unitId, input.sectorId, input.collaboratorId, shiftText, 'alocou', `/modulos/pessoas/mapa?unit=${input.unitId}`);
+  await reconcileTraining(input.unitId); // gera os treinamentos do novo setor
   return { ok: true, id: a.id };
 }
 
@@ -186,6 +187,7 @@ export async function removeAllocation(user: SessionUser, id: string, ctx: Ctx =
   if (!canAccessUnit(user, a.unitId)) return { ok: false, reason: 'FORBIDDEN' };
   await prisma.workforceAllocation.delete({ where: { id } });
   await audit({ userId: user.id, unitId: a.unitId, action: 'DEALLOCATE', module: 'PEOPLE', entity: 'workforce_allocation', entityId: id, ...ctx });
+  await reconcileTraining(a.unitId); // remove pendências de treinamento do setor que saiu
   const who = a.collaborator?.name ?? a.collaboratorName ?? 'colaborador';
   await notifyAdmins({
     title: 'Mapa de Funções alterado',
@@ -194,6 +196,12 @@ export async function removeAllocation(user: SessionUser, id: string, ctx: Ctx =
     module: 'PEOPLE',
   });
   return { ok: true };
+}
+
+/** Reconciliação de treinamentos da unidade (import dinâmico evita ciclo). */
+async function reconcileTraining(unitId: string) {
+  const { reconcileTrainingForUnit } = await import('@/lib/training');
+  await reconcileTrainingForUnit(unitId).catch(() => {});
 }
 
 /** Notifica os administradores sobre uma alteração de alocação (avisar o RH). */

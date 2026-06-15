@@ -65,6 +65,7 @@ model Unit {
   employeeSchedules   EmployeeSchedule[]
   schedulePlanOverrides SchedulePlanOverride[]
   scheduleActuals     ScheduleActual[]
+  trainings           TrainingRecord[]
 
   @@map("units")
 }
@@ -108,6 +109,7 @@ model User {
   popReads             PopRead[]
   notifications        Notification[]
   scheduleActuals      ScheduleActual[] @relation("ScheduleActualBy")
+  trainingsApplied     TrainingRecord[] @relation("TrainingBy")
 
   @@map("users")
 }
@@ -741,6 +743,7 @@ model Collaborator {
   employeeSchedules EmployeeSchedule[]
   planOverrides     SchedulePlanOverride[]
   scheduleActuals   ScheduleActual[]
+  trainings         TrainingRecord[]
 
   @@map("collaborators")
 }
@@ -812,23 +815,88 @@ enum PopStatus {
   ARCHIVED // Arquivado
 }
 
-/// POP (Módulo 10) — blocos em JSON, versionamento e confirmação de leitura.
-model Pop {
-  id        String    @id @default(cuid())
-  title     String
-  category  String?
-  sector    String?
-  version   Int       @default(1)
-  status    PopStatus @default(DRAFT)
-  /// blocos: [{type:'text'|'image'|'video'|'checklist', ...}]
-  content   Json
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+enum PopRecurrence {
+  ONCE    // treinamento único
+  MONTHLY // reciclagem mensal
+}
 
-  units PopUnit[]
-  reads PopRead[]
+/// POP (Módulo 10) — blocos em JSON, versionamento e confirmação de leitura.
+/// Também serve de TREINAMENTO (Fase POPs-treino): isInitial = todo novo colaborador;
+/// sectors = setorial; recurrence = reciclagem. Se não for inicial e sem setores,
+/// é apenas POP de referência (não gera treinamento obrigatório).
+model Pop {
+  id         String        @id @default(cuid())
+  title      String
+  category   String?
+  sector     String? // legado (texto único); novo cadastro usa PopSector
+  version    Int           @default(1)
+  status     PopStatus     @default(DRAFT)
+  isInitial  Boolean       @default(false) // treinamento inicial (toda a unidade)
+  recurrence PopRecurrence @default(ONCE)
+  /// blocos: [{type:'text'|'image'|'video'|'checklist', ...}]
+  content    Json
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  units     PopUnit[]
+  reads     PopRead[]
+  sectors   PopSector[]
+  trainings TrainingRecord[]
 
   @@map("pops")
+}
+
+/// Setor (por NOME) ao qual o POP/treinamento se aplica (vale em todas as unidades do POP).
+model PopSector {
+  id         String @id @default(cuid())
+  popId      String
+  sectorName String
+
+  pop Pop @relation(fields: [popId], references: [id], onDelete: Cascade)
+
+  @@unique([popId, sectorName])
+  @@map("pop_sectors")
+}
+
+enum TrainingStatus {
+  PENDING // pendente (no prazo)
+  DONE    // realizado
+  MISSED  // não realizado (venceu o prazo)
+}
+
+/// Registro de treinamento de um colaborador num POP, por período
+/// (periodKey = 'INICIAL' para onboarding/setor, ou 'AAAA-MM' para reciclagem mensal).
+model TrainingRecord {
+  id             String         @id @default(cuid())
+  popId          String
+  popVersion     Int
+  collaboratorId String
+  unitId         String
+  sectorName     String? // null = treinamento inicial
+  periodKey      String
+  status         TrainingStatus @default(PENDING)
+  dueDate        DateTime
+  completedAt    DateTime?
+  completedById  String?
+  createdAt      DateTime       @default(now())
+
+  pop          Pop          @relation(fields: [popId], references: [id], onDelete: Cascade)
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  completedBy  User?        @relation("TrainingBy", fields: [completedById], references: [id], onDelete: SetNull)
+
+  @@unique([popId, collaboratorId, periodKey])
+  @@index([unitId, status])
+  @@index([collaboratorId])
+  @@map("training_records")
+}
+
+/// Configurações simples chave/valor (ex.: peso de Treinamentos na meta).
+model AppSetting {
+  key   String @id
+  value String
+
+  @@map("app_settings")
 }
 
 model PopUnit {

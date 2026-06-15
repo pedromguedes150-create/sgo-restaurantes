@@ -3,8 +3,12 @@ import { notFound } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { getPop, type PopBlock } from '@/lib/pops';
 import { youtubeEmbedUrl } from '@/lib/youtube';
+import { STANDARD_SECTORS } from '@/lib/workforce';
+import { prisma } from '@/lib/db/prisma';
+import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { Card, CardContent } from '@/components/ui/card';
 import { ConfirmRead } from '@/components/pops/confirm-read';
+import { PopEditor } from '@/components/pops/pop-editor';
 import { ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +19,19 @@ export default async function PopDetailPage({ params }: { params: { id: string }
   if (!pop) notFound();
 
   const blocks = (Array.isArray(pop.content) ? pop.content : []) as unknown as PopBlock[];
+  const isAdmin = user.role === 'ADMIN';
+  const units = isAdmin
+    ? await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } })
+    : [];
+  const editData = isAdmin
+    ? {
+        id: pop.id, title: pop.title, category: pop.category,
+        isInitial: pop.isInitial, recurrence: pop.recurrence as 'ONCE' | 'MONTHLY',
+        unitIds: pop.units.map((u) => u.unitId), sectorNames: pop.sectors.map((s) => s.sectorName),
+        text: blocks.filter((b) => b.type === 'text').map((b) => b.text).join('\n\n'),
+        videos: blocks.filter((b) => b.type === 'video' && b.url).map((b) => b.url!) as string[],
+      }
+    : null;
 
   return (
     <div className="space-y-4">
@@ -56,6 +73,10 @@ export default async function PopDetailPage({ params }: { params: { id: string }
       </Card>
 
       <ConfirmRead popId={pop.id} confirmed={pop.confirmed} />
+
+      {isAdmin && editData && (
+        <PopEditor units={units} standardSectors={STANDARD_SECTORS} pop={editData} redirectOnDelete="/modulos/pops" />
+      )}
     </div>
   );
 }

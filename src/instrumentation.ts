@@ -9,6 +9,11 @@ export async function register() {
 
   const { ensureTaskMaintenance } = await import('@/lib/tasks/maintenance');
   const { runDailyRhSync, recentlyAutoSynced } = await import('@/lib/rh/sync');
+  const { reconcileAllTraining } = await import('@/lib/training');
+
+  async function maintainTraining() {
+    try { await reconcileAllTraining(); } catch (e) { console.error('[training] falha na reconciliação:', e); }
+  }
 
   async function maybeSyncRh() {
     try {
@@ -24,9 +29,11 @@ export async function register() {
   setTimeout(() => {
     void ensureTaskMaintenance(true);
     void maybeSyncRh();
+    void maintainTraining();
   }, 15_000);
 
-  // tarefas: a cada 30 min · RH: verificação de hora em hora (roda ~1x/dia)
+  // tarefas: a cada 30 min · RH e treinamentos: de hora em hora
   setInterval(() => { void ensureTaskMaintenance(true); }, 30 * 60 * 1000);
   setInterval(() => { void maybeSyncRh(); }, 60 * 60 * 1000);
+  setInterval(() => { void maintainTraining(); }, 60 * 60 * 1000);
 }

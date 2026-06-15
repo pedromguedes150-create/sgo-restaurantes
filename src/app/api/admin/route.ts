@@ -4,6 +4,7 @@ import { requestContext } from '@/lib/auth/service';
 import * as admin from '@/lib/admin';
 import type { AdminResult } from '@/lib/admin';
 import { setRolePermission } from '@/lib/permissions';
+import { setTrainingWeight } from '@/lib/training';
 
 /**
  * Dispatch único dos cadastros administrativos (Configurações).
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
   else if (e === 'delegation' && a === 'create') r = await admin.createDelegation(user, b, ctx);
   else if (e === 'delegation' && a === 'delete') r = await admin.deleteDelegation(user, b.id, ctx);
   else if (e === 'permission' && a === 'set') r = await setRolePermission(user, b, ctx);
+  else if (e === 'training' && a === 'setWeight') r = await setTrainingWeight(user, Number(b.weight));
 
   if (!r) return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });
   if (!r.ok) {

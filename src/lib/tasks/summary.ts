@@ -78,6 +78,15 @@ export async function getUnitMonthScore(
     if (i.status === 'DONE') doneWeight += w;
   }
 
+  // Componente "Treinamentos" (POPs) — peso único configurável.
+  const { getTrainingMonthStats, getTrainingWeight } = await import('@/lib/training');
+  const [tStats, tWeight] = await Promise.all([getTrainingMonthStats(unitId, yearMonth), getTrainingWeight()]);
+  const tResolved = tStats.done + tStats.missed;
+  if (tResolved > 0 && tWeight > 0) {
+    resolvedWeight += tWeight;
+    doneWeight += tWeight * (tStats.done / tResolved);
+  }
+
   const scorePct = resolvedWeight === 0 ? 0 : Math.round((doneWeight / resolvedWeight) * 100);
   return { scorePct, doneWeight, resolvedWeight };
 }

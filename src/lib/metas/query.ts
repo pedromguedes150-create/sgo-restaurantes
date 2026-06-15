@@ -35,9 +35,17 @@ export async function getMetaBreakdown(unitId: string, yearMonth: string): Promi
     if (i.status === 'DONE') cur.done++;
     map.set(key, cur);
   }
-  return [...map.values()]
-    .map((r) => ({ ...r, scorePct: r.resolved === 0 ? 0 : Math.round((r.done / r.resolved) * 100) }))
-    .sort((a, b) => b.weight - a.weight);
+  const rows = [...map.values()].map((r) => ({ ...r, scorePct: r.resolved === 0 ? 0 : Math.round((r.done / r.resolved) * 100) }));
+
+  // Linha "Treinamentos" (POPs) — peso único configurável
+  const { getTrainingMonthStats, getTrainingWeight } = await import('@/lib/training');
+  const [tStats, tWeight] = await Promise.all([getTrainingMonthStats(unitId, yearMonth), getTrainingWeight()]);
+  const tResolved = tStats.done + tStats.missed;
+  if (tWeight > 0 && tResolved > 0) {
+    rows.push({ name: 'Treinamentos (POPs)', weight: tWeight, done: tStats.done, resolved: tResolved, scorePct: Math.round((tStats.done / tResolved) * 100) });
+  }
+
+  return rows.sort((a, b) => b.weight - a.weight);
 }
 
 export interface MetaRankingRow {
