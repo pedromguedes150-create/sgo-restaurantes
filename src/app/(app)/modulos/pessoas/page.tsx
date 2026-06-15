@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { listCollaborators, listVacations, listSchedule } from '@/lib/people';
 import { Card, CardContent } from '@/components/ui/card';
 import { PeopleClient } from '@/components/people/people-client';
-import { Grid3x3 } from 'lucide-react';
+import { Grid3x3, CalendarDays } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,9 +17,14 @@ export default async function PessoasModulePage() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-brand">Gestão de Pessoas</h1>
       <p className="text-sm text-muted-foreground">Fonte primária: API do RH · fallback manual. Escala é somente leitura (registre variações).</p>
-      <Link href="/modulos/pessoas/mapa" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
-        <Grid3x3 className="h-5 w-5 text-accent" /> Mapa de Funções (Setor × Horário)
-      </Link>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Link href="/modulos/escala" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
+          <CalendarDays className="h-5 w-5 text-accent" /> Escala de funcionários (presença mensal)
+        </Link>
+        <Link href="/modulos/pessoas/mapa" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
+          <Grid3x3 className="h-5 w-5 text-accent" /> Mapa de Funções (Setor × Turno)
+        </Link>
+      </div>
       <Card>
         <CardContent className="pt-4">
           <PeopleClient

@@ -56,6 +56,7 @@ const ATTACH_ALLOWED = [
   'video/mp4',
   'video/quicktime',
   'video/webm',
+  'application/pdf',
 ];
 
 /** Salva anexo (foto/vídeo) de ocorrência. Retorna { path, mimeType }. */
@@ -83,6 +84,7 @@ export async function saveAttachment(
     'video/mp4': 'mp4',
     'video/quicktime': 'mov',
     'video/webm': 'webm',
+    'application/pdf': 'pdf',
   };
   const ext = extMap[file.type] ?? 'bin';
   const safe = safeSegment(prefix, 'prefix');
