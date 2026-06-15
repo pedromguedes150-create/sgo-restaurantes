@@ -9,14 +9,11 @@ export type SyncResult =
   | { ok: false; reason: 'FORBIDDEN' | 'NOT_CONFIGURED' | 'NO_RH_NAME' | 'NOT_FOUND' | 'RH_ERROR'; message?: string };
 
 /**
- * Sincroniza os colaboradores de UMA unidade do SGO a partir do RH.
- * Casa pela razão social configurada em Unit.rhUnitName (decisão: por nome).
- * Upsert por matrícula (externalId); vincula à unidade; inativa quem não está "Ativo".
+ * Núcleo da sincronização de UMA unidade (sem checagem de papel — uso interno).
+ * Casa pela razão social em Unit.rhUnitName. Upsert por matrícula (externalId);
+ * vincula à unidade; inativa quem saiu da lista. `actorUserId` null = sistema.
  */
-export async function syncCollaboratorsForUnit(user: SessionUser, unitId: string): Promise<SyncResult> {
-  if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
-  if (!rhConfigured()) return { ok: false, reason: 'NOT_CONFIGURED' };
-
+async function syncUnitCore(unitId: string, actorUserId: string | null): Promise<SyncResult> {
   const unit = await prisma.unit.findUnique({ where: { id: unitId } });
   if (!unit) return { ok: false, reason: 'NOT_FOUND' };
   if (!unit.rhUnitName) return { ok: false, reason: 'NO_RH_NAME' };
@@ -50,7 +47,6 @@ export async function syncCollaboratorsForUnit(user: SessionUser, unitId: string
       collaboratorId = c2.id;
       created++;
     }
-    // garante o vínculo com a unidade
     await prisma.collaboratorUnit.upsert({
       where: { collaboratorId_unitId: { collaboratorId, unitId } },
       create: { collaboratorId, unitId },
@@ -58,23 +54,17 @@ export async function syncCollaboratorsForUnit(user: SessionUser, unitId: string
     });
   }
 
-  // Quem veio do RH antes mas NÃO está mais na lista da unidade (demissão/
-  // transferência que o RH expressa por omissão) é inativado no SGO.
+  // Quem veio do RH antes mas NÃO está mais na lista (demissão/transferência) é inativado.
   const matriculas = lista.filter((c) => c.matricula).map((c) => String(c.matricula));
   const deactivated = await prisma.collaborator.updateMany({
-    where: {
-      source: 'RH',
-      active: true,
-      externalId: { notIn: matriculas },
-      units: { some: { unitId } },
-    },
+    where: { source: 'RH', active: true, externalId: { notIn: matriculas }, units: { some: { unitId } } },
     data: { active: false },
   });
 
   await audit({
-    userId: user.id,
+    userId: actorUserId,
     unitId,
-    action: 'RH_SYNC_COLLABORATORS',
+    action: actorUserId ? 'RH_SYNC_COLLABORATORS' : 'RH_SYNC_AUTO',
     module: 'PEOPLE',
     metadata: { rhUnitName: unit.rhUnitName, total: lista.length, created, updated, deactivated: deactivated.count },
   });
@@ -82,19 +72,47 @@ export async function syncCollaboratorsForUnit(user: SessionUser, unitId: string
   return { ok: true, created, updated, total: lista.length };
 }
 
-/**
- * Sincroniza TODAS as unidades do SGO que têm "Nome no RH" definido.
- * Garante que só entram colaboradores das unidades cadastradas no SGO
- * (segmentos não-restaurante do RH nunca aparecem).
- */
+/** Sincroniza os colaboradores de UMA unidade (acionado por Admin). */
+export async function syncCollaboratorsForUnit(user: SessionUser, unitId: string): Promise<SyncResult> {
+  if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
+  if (!rhConfigured()) return { ok: false, reason: 'NOT_CONFIGURED' };
+  return syncUnitCore(unitId, user.id);
+}
+
+/** Sincroniza TODAS as unidades do SGO com "Nome no RH" definido (acionado por Admin). */
 export async function syncAllRegisteredUnits(user: SessionUser): Promise<SyncResult & { units?: number }> {
   if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
   if (!rhConfigured()) return { ok: false, reason: 'NOT_CONFIGURED' };
   const units = await prisma.unit.findMany({ where: { active: true, rhUnitName: { not: null } }, select: { id: true } });
   let created = 0, updated = 0, total = 0;
   for (const u of units) {
-    const r = await syncCollaboratorsForUnit(user, u.id);
+    const r = await syncUnitCore(u.id, user.id);
     if (r.ok) { created += r.created; updated += r.updated; total += r.total; }
   }
   return { ok: true, created, updated, total, units: units.length };
+}
+
+/**
+ * Sincronização AUTOMÁTICA (sistema) — chamada pelo scheduler ~1x/dia.
+ * Não exige sessão; só roda se o RH estiver configurado. Idempotente.
+ */
+export async function runDailyRhSync(): Promise<{ ran: boolean; units?: number; created?: number; updated?: number }> {
+  if (!rhConfigured()) return { ran: false };
+  const units = await prisma.unit.findMany({ where: { active: true, rhUnitName: { not: null } }, select: { id: true } });
+  let created = 0, updated = 0;
+  for (const u of units) {
+    const r = await syncUnitCore(u.id, null);
+    if (r.ok) { created += r.created; updated += r.updated; }
+  }
+  return { ran: true, units: units.length, created, updated };
+}
+
+/** True se já houve uma sincronização automática nas últimas `hours` horas. */
+export async function recentlyAutoSynced(hours = 23): Promise<boolean> {
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+  const last = await prisma.auditLog.findFirst({
+    where: { action: 'RH_SYNC_AUTO', createdAt: { gte: since } },
+    select: { id: true },
+  });
+  return Boolean(last);
 }

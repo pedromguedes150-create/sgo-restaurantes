@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { createSector, toggleSector, allocate, removeAllocation, type WfResult } from '@/lib/workforce';
+import { createSector, updateSector, toggleSector, deleteSector, createShift, updateShift, deleteShift, allocate, removeAllocation, type WfResult } from '@/lib/workforce';
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -12,7 +12,12 @@ export async function POST(req: Request) {
 
   let r: WfResult | undefined;
   if (b.action === 'createSector') r = await createSector(user, b, ctx);
+  else if (b.action === 'updateSector') r = await updateSector(user, b.id, b, ctx);
   else if (b.action === 'toggleSector') r = await toggleSector(user, b.id, b.active, ctx);
+  else if (b.action === 'deleteSector') r = await deleteSector(user, b.id, ctx);
+  else if (b.action === 'createShift') r = await createShift(user, b, ctx);
+  else if (b.action === 'updateShift') r = await updateShift(user, b.id, b, ctx);
+  else if (b.action === 'deleteShift') r = await deleteShift(user, b.id, ctx);
   else if (b.action === 'allocate') r = await allocate(user, b, ctx);
   else if (b.action === 'removeAllocation') r = await removeAllocation(user, b.id, ctx);
 

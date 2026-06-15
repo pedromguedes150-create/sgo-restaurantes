@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
-import { getWorkforceGrid } from '@/lib/workforce';
+import { getWorkforceGrid, listShifts, STANDARD_SECTORS } from '@/lib/workforce';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkforceClient } from '@/components/people/workforce-client';
 import { ArrowLeft } from 'lucide-react';
@@ -15,10 +15,13 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
   if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
 
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
-  const [grid, collaborators] = await Promise.all([
+  const [grid, collaborators, turnos] = await Promise.all([
     getWorkforceGrid(selected.id),
     prisma.collaborator.findMany({ where: { active: true, units: { some: { unitId: selected.id } } }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    listShifts(selected.id),
   ]);
+  const existingSectorNames = grid.sectors.map((s) => s.name.toLowerCase());
+  const suggestedSectors = STANDARD_SECTORS.filter((n) => !existingSectorNames.includes(n.toLowerCase()));
 
   return (
     <div className="space-y-4">
@@ -35,7 +38,14 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
       )}
 
       <Card><CardContent className="pt-4">
-        <WorkforceClient unitId={selected.id} isAdmin={user.role === 'ADMIN'} grid={grid} collaborators={collaborators} />
+        <WorkforceClient
+          unitId={selected.id}
+          isAdmin={user.role === 'ADMIN'}
+          grid={grid}
+          collaborators={collaborators}
+          turnos={turnos.map((t) => ({ id: t.id, name: t.name, startTime: t.startTime, endTime: t.endTime, active: t.active }))}
+          suggestedSectors={suggestedSectors}
+        />
       </CardContent></Card>
     </div>
   );

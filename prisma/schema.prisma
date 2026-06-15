@@ -61,6 +61,10 @@ model Unit {
   popUnits            PopUnit[]
   sectors             Sector[]
   allocations         WorkforceAllocation[]
+  shifts              Shift[]
+  employeeSchedules   EmployeeSchedule[]
+  schedulePlanOverrides SchedulePlanOverride[]
+  scheduleActuals     ScheduleActual[]
 
   @@map("units")
 }
@@ -103,6 +107,7 @@ model User {
   inventoryConfirmed   InventorySchedule[] @relation("InvConf")
   popReads             PopRead[]
   notifications        Notification[]
+  scheduleActuals      ScheduleActual[] @relation("ScheduleActualBy")
 
   @@map("users")
 }
@@ -733,6 +738,9 @@ model Collaborator {
   vacations Vacation[]
   schedule  ScheduleEntry[]
   allocations WorkforceAllocation[]
+  employeeSchedules EmployeeSchedule[]
+  planOverrides     SchedulePlanOverride[]
+  scheduleActuals   ScheduleActual[]
 
   @@map("collaborators")
 }
@@ -879,6 +887,8 @@ model WorkforceAllocation {
   collaboratorId String?
   /// nome quando vier do RH sem vínculo local (fallback)
   collaboratorName String?
+  /// turno padronizado da unidade (opcional; mantém `shift` como rótulo p/ compat)
+  shiftId        String?
   /// 'RH' (escala) ou 'MANUAL' (alocação do gerente/admin)
   source         String   @default("MANUAL")
   createdAt      DateTime @default(now())
@@ -886,6 +896,7 @@ model WorkforceAllocation {
   unit         Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
   sector       Sector        @relation(fields: [sectorId], references: [id], onDelete: Cascade)
   collaborator Collaborator? @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
+  shiftRef     Shift?        @relation(fields: [shiftId], references: [id], onDelete: SetNull)
 
   @@index([unitId, sectorId])
   @@map("workforce_allocations")
@@ -910,4 +921,119 @@ model Notification {
   @@index([userId, read])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+// ── Perfis de acesso (Fase C) ──
+// Matriz de permissões por perfil × módulo (ver/editar). Perfis continuam fixos
+// (enum Role); o Admin ajusta o que cada um pode. Ausência de linha = padrão no código.
+model RolePermission {
+  id      String  @id @default(cuid())
+  role    Role
+  module  String  // chave do módulo (ex: 'WASTE', 'PEOPLE', 'SCHEDULE', 'CONFIG'...)
+  canView Boolean @default(true)
+  canEdit Boolean @default(true)
+
+  @@unique([role, module])
+  @@map("role_permissions")
+}
+
+// ── Turnos por unidade (Fase B) ──
+model Shift {
+  id        String   @id @default(cuid())
+  unitId    String
+  name      String   // ex: "Manhã", "Noite"
+  startTime String?  // "06:00"
+  endTime   String?  // "14:00"
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  unit              Unit                  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  allocations       WorkforceAllocation[]
+  employeeSchedules EmployeeSchedule[]
+
+  @@index([unitId])
+  @@map("shifts")
+}
+
+// ── Escala (Fase D) ──
+// PLANEJADO = gerado do padrão (EmployeeSchedule) + ajustes (SchedulePlanOverride).
+// REALIZADO = ScheduleActual (única coisa editável no dia a dia).
+enum ScheduleType {
+  TWELVE36_ODD  // 12x36 turno ímpar (trabalha dias ímpares do ciclo)
+  TWELVE36_EVEN // 12x36 turno par
+  SIX_ONE       // 6x1
+  FIVE_TWO      // 5x2
+  CUSTOM        // padrão livre (customMask)
+}
+
+/// Status de um dia: T, F, FI, FJ, A, FE
+enum DayStatus {
+  WORK         // T  - Trabalho
+  OFF          // F  - Folga
+  FALTA_INJUST // FI - Falta injustificada
+  FALTA_JUST   // FJ - Falta justificada
+  ATESTADO     // A  - Atestado
+  FERIAS       // FE - Férias
+}
+
+/// Cadastro do padrão de escala do colaborador (gera o Planejado).
+model EmployeeSchedule {
+  id             String       @id @default(cuid())
+  collaboratorId String
+  unitId         String
+  scheduleType   ScheduleType
+  anchorDate     DateTime     // início do ciclo (referência p/ gerar o padrão)
+  shiftId        String?
+  customMask     String?      // p/ CUSTOM: ciclo em T/F, ex "TTTTTFF"
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  shift        Shift?       @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
+  @@unique([collaboratorId, unitId])
+  @@map("employee_schedules")
+}
+
+/// Ajuste manual pontual do PLANEJADO (sobrescreve o gerado por dia).
+model SchedulePlanOverride {
+  id             String    @id @default(cuid())
+  collaboratorId String
+  unitId         String
+  date           DateTime
+  status         DayStatus // normalmente WORK/OFF
+  createdAt      DateTime  @default(now())
+
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([collaboratorId, date])
+  @@index([unitId, date])
+  @@map("schedule_plan_overrides")
+}
+
+/// REALIZADO — o que de fato aconteceu (única aba editável pelo gerente).
+model ScheduleActual {
+  id             String    @id @default(cuid())
+  collaboratorId String
+  unitId         String
+  date           DateTime
+  status         DayStatus
+  note           String?
+  reason         String?   // motivo (ausência)
+  attachmentPath String?   // atestado/anexo
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("ScheduleActualBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([collaboratorId, date])
+  @@index([unitId, date])
+  @@map("schedule_actuals")
 }
