@@ -70,6 +70,7 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 2. Plano curto antes de implementar; aguarde confirmação.
 3. Um módulo por vez; testes para regras de negócio.
 4. Commit por funcionalidade; tag ao concluir módulo; atualize esta tabela.
+5. **A cada novo recurso/ajuste, atualize a central "Treinamento da Plataforma"** (`src/lib/guide.ts`, aba `/ajuda`) — guias por perfil. Pedido do Pedro: a central deve refletir TUDO que for criado/ajustado.
 
 ## Comandos
 - `docker compose up -d` — sobe o Postgres dedicado do SGO (dev)
