@@ -10,9 +10,14 @@ export async function register() {
   const { ensureTaskMaintenance } = await import('@/lib/tasks/maintenance');
   const { runDailyRhSync, recentlyAutoSynced } = await import('@/lib/rh/sync');
   const { reconcileAllTraining } = await import('@/lib/training');
+  const { notifyDueSoonTasks } = await import('@/lib/tasks/notify');
 
   async function maintainTraining() {
     try { await reconcileAllTraining(); } catch (e) { console.error('[training] falha na reconciliação:', e); }
+  }
+  async function checkDueSoon() {
+    try { const n = await notifyDueSoonTasks(); if (n) console.log(`[tasks] ${n} aviso(s) de vencimento enviado(s)`); }
+    catch (e) { console.error('[tasks] falha no aviso de vencimento:', e); }
   }
 
   async function maybeSyncRh() {
@@ -30,10 +35,12 @@ export async function register() {
     void ensureTaskMaintenance(true);
     void maybeSyncRh();
     void maintainTraining();
+    void checkDueSoon();
   }, 15_000);
 
-  // tarefas: a cada 30 min · RH e treinamentos: de hora em hora
+  // tarefas: a cada 30 min · RH e treinamentos: de hora em hora · vencimento: a cada 10 min
   setInterval(() => { void ensureTaskMaintenance(true); }, 30 * 60 * 1000);
   setInterval(() => { void maybeSyncRh(); }, 60 * 60 * 1000);
   setInterval(() => { void maintainTraining(); }, 60 * 60 * 1000);
+  setInterval(() => { void checkDueSoon(); }, 10 * 60 * 1000);
 }

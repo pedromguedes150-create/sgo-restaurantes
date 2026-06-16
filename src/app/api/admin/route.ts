@@ -32,6 +32,7 @@ export async function POST(req: Request) {
   else if (e === 'user' && a === 'setUnits') r = await admin.setUserUnits(user, b.id, b.unitIds ?? [], ctx);
   else if (e === 'commandConfig' && a === 'set') r = await admin.setCommandConfig(user, b, ctx);
   else if (e === 'template' && a === 'create') r = await admin.createTemplate(user, b, ctx);
+  else if (e === 'template' && a === 'seedExamples') r = await admin.seedExampleChecklists(user, b.unitId, ctx);
   else if (e === 'template' && a === 'update') r = await admin.updateTemplate(user, b.id, b, ctx);
   else if (e === 'template' && a === 'toggle') r = await admin.toggleTemplate(user, b.id, b.active, ctx);
   else if (e === 'template' && a === 'delete') r = await admin.deleteTemplate(user, b.id, ctx);

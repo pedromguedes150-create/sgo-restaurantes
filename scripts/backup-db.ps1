@@ -44,13 +44,27 @@ $size = (Get-Item $local).Length
 if ($size -lt 1024) { throw "Backup suspeito: so $size bytes em $local" }
 Write-Host ("OK - backup local: {0} ({1} MB)" -f $local, [math]::Round($size/1MB,2))
 
+# --- Backup das FOTOS (volume de uploads) ---
+# Via docker exec + docker cp (evita problemas de mount de path do Windows com espaco/":").
+$updump = Join-Path $out "sgo-uploads-$stamp.tgz"
+try {
+  docker exec sgo_app sh -c "tar czf /tmp/sgo-uploads.tgz -C /app/uploads . 2>/dev/null || true" | Out-Null
+  docker cp "sgo_app:/tmp/sgo-uploads.tgz" "$updump" | Out-Null
+  if (Test-Path $updump) {
+    Write-Host ("OK - backup de fotos: {0} ({1} MB)" -f $updump, [math]::Round((Get-Item $updump).Length/1MB,2))
+    Get-ChildItem $out -Filter "sgo-uploads-*.tgz" | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$RET) } | Remove-Item -Force
+  }
+} catch { Write-Warning ("Falha no backup de fotos: {0}" -f $_.Exception.Message) }
+
 # --- 2a copia (3-2-1) ---
 if ($MIRROR) {
   try {
     New-Item -ItemType Directory -Force -Path $MIRROR | Out-Null
     Copy-Item $local (Join-Path $MIRROR $file) -Force
+    if (Test-Path $updump) { Copy-Item $updump (Join-Path $MIRROR (Split-Path $updump -Leaf)) -Force }
     Write-Host "OK - copia espelhada: $MIRROR"
     Get-ChildItem $MIRROR -Filter "sgo-db-*.dump" | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$RET) } | Remove-Item -Force
+    Get-ChildItem $MIRROR -Filter "sgo-uploads-*.tgz" -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$RET) } | Remove-Item -Force
   } catch {
     Write-Warning ("Falha ao espelhar para '{0}': {1}" -f $MIRROR, $_.Exception.Message)
   }

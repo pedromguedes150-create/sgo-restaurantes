@@ -187,6 +187,70 @@ export async function createTemplate(
   return { ok: true, id: firstId };
 }
 
+/** Modelos prontos (padrão de restaurante) — criados sob demanda pelo Admin numa unidade. */
+const EXAMPLE_CHECKLISTS: { name: string; limitTime: string | null; weight: number; scope: Scope; requiresEvidence: boolean; items: ChecklistItemInput[] }[] = [
+  {
+    name: 'Abertura do restaurante', limitTime: '11:00', weight: 20, scope: 'UNIT', requiresEvidence: false,
+    items: [
+      { section: 'Salão', text: 'Mesas montadas e organizadas' }, { section: 'Salão', text: 'Iluminação, som e climatização ligados' },
+      { section: 'Caixa', text: 'Fundo de troco conferido' }, { section: 'Caixa', text: 'Sistema/PDV operacional' },
+      { section: 'Cozinha', text: 'Mise en place pronto' }, { section: 'Cozinha', text: 'Equipamentos ligados e na temperatura' },
+      { section: 'Churrasqueira', text: 'Fogo/brasa preparados', requiresPhoto: true }, { section: 'Bar', text: 'Estoque de bebidas e gelo conferido' },
+      { section: 'Limpeza', text: 'Banheiros limpos e abastecidos' },
+    ],
+  },
+  {
+    name: 'Fechamento do restaurante', limitTime: null, weight: 20, scope: 'UNIT', requiresEvidence: false,
+    items: [
+      { section: 'Caixa', text: 'Caixa fechado e conferido' }, { section: 'Cozinha', text: 'Sobras armazenadas e identificadas' },
+      { section: 'Cozinha', text: 'Equipamentos desligados' }, { section: 'Salão', text: 'Salão limpo e organizado' },
+      { section: 'Geral', text: 'Luzes apagadas e portas trancadas' },
+    ],
+  },
+  {
+    name: 'Segurança alimentar — temperaturas', limitTime: '12:00', weight: 15, scope: 'UNIT', requiresEvidence: true,
+    items: [
+      { section: 'Freezer', text: 'Temperatura do freezer dentro do padrão', requiresPhoto: true },
+      { section: 'Câmara fria', text: 'Temperatura da câmara dentro do padrão', requiresPhoto: true },
+      { section: 'Validades', text: 'Validades conferidas (sem itens vencidos)' },
+      { section: 'Higiene', text: 'Higienização de bancadas e utensílios' },
+    ],
+  },
+  {
+    name: 'Padrão de vitrine / exposição', limitTime: '11:30', weight: 10, scope: 'UNIT', requiresEvidence: true,
+    items: [
+      { section: 'Vitrine', text: 'Produtos organizados conforme o padrão', requiresPhoto: true },
+      { section: 'Vitrine', text: 'Etiquetas/preços corretos' },
+    ],
+  },
+  {
+    name: 'Início de jornada do gerente', limitTime: null, weight: 10, scope: 'MANAGER', requiresEvidence: false,
+    items: [
+      { section: null, text: 'Equipe presente e uniformizada' }, { section: null, text: 'Avisos do dia repassados' },
+      { section: null, text: 'Pendências do dia anterior verificadas' },
+    ],
+  },
+];
+
+export async function seedExampleChecklists(user: SessionUser, unitId: string, ctx: Ctx = {}): Promise<AdminResult & { created?: number }> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!unitId) return { ok: false, reason: 'INVALID' };
+  const existing = new Set((await prisma.taskTemplate.findMany({ where: { unitId }, select: { name: true } })).map((t) => t.name));
+  let created = 0;
+  for (const c of EXAMPLE_CHECKLISTS) {
+    if (existing.has(c.name)) continue; // não duplica
+    await prisma.taskTemplate.create({
+      data: {
+        unitId, name: c.name, limitTime: c.limitTime, weight: c.weight, scope: c.scope, requiresEvidence: c.requiresEvidence,
+        items: { create: normItems(c.items).map((i) => ({ ...i })) },
+      },
+    });
+    created++;
+  }
+  await audit({ userId: user.id, unitId, action: 'TEMPLATE_SEED_EXAMPLES', module: 'CONFIG', entity: 'task_template', metadata: { created }, ...ctx });
+  return { ok: true, created };
+}
+
 export async function toggleTemplate(user: SessionUser, id: string, active: boolean, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   await prisma.taskTemplate.update({ where: { id }, data: { active } });

@@ -36,7 +36,14 @@ export function TemplatesAdmin({ units, templates }: { units: Unit[]; templates:
       {creating ? (
         <ChecklistForm units={units} defaultUnitId={unitId} onDone={() => { setCreating(false); router.refresh(); }} onCancel={() => setCreating(false)} />
       ) : (
-        <Button onClick={() => setCreating(true)} variant="gold" className="w-full"><Plus className="h-5 w-5" /> Novo checklist</Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button onClick={() => setCreating(true)} variant="gold" className="flex-1"><Plus className="h-5 w-5" /> Novo checklist</Button>
+          <Button variant="outline" disabled={!unitId} onClick={async () => {
+            if (!confirm('Adicionar checklists de exemplo (abertura, fechamento, segurança alimentar, vitrine, gerente) nesta unidade? Os que já existirem são ignorados.')) return;
+            const r = await postAdmin({ entity: 'template', action: 'seedExamples', unitId });
+            if (r.ok) router.refresh(); else alert(r.error ?? 'Falha');
+          }}>+ Exemplos</Button>
+        </div>
       )}
 
       <p className="text-xs text-muted-foreground">Soma dos pesos (ativos, na meta): <span className={sumWeight === 100 ? 'font-bold text-success' : 'font-bold text-medium'}>{sumWeight}</span> {sumWeight !== 100 && '(ideal: 100)'}</p>

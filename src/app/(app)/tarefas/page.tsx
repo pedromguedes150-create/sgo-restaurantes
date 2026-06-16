@@ -27,7 +27,9 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
       <AutoRefresh seconds={60} />
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-bold text-brand">{onlyOverdue ? 'Tarefas atrasadas' : 'Tarefas de hoje'}</h1>
-        {onlyOverdue && <Link href="/tarefas" className="text-sm font-semibold text-accent underline">Ver todas</Link>}
+        {onlyOverdue
+          ? <Link href="/tarefas" className="text-sm font-semibold text-accent underline">Ver todas</Link>
+          : <Link href="/tarefas/historico" className="text-sm font-semibold text-accent underline">Histórico</Link>}
       </div>
 
       {groups.length === 0 && (
