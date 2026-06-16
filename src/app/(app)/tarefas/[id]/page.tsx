@@ -42,7 +42,7 @@ export default async function TarefaExecPage({ params }: { params: { id: string 
           requiresEvidence={inst.template.requiresEvidence}
           done={done}
           lateStatus={inst.status === 'LATE'}
-          items={inst.template.items.map((i) => ({ id: i.id, section: i.section, text: i.text, requiresPhoto: i.requiresPhoto }))}
+          items={inst.template.items.map((i) => ({ id: i.id, section: i.section, text: i.text, requiresPhoto: i.requiresPhoto, aiCheck: i.aiCheck }))}
           initialAnswers={done
             ? Object.fromEntries(inst.itemResponses.map((r) => [r.itemId, { status: r.status, note: r.note ?? '' }]))
             : (draft?.answers ?? {})}

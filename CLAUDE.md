@@ -26,7 +26,7 @@ Esta máquina (Windows 10 Pro) **já roda em produção a plataforma do CEO ("Be
 **Pendências de produção:** trocar senhas de demonstração antes de liberar usuários; rotacionar RH_API_KEY (exposta em prints); backup 3-2-1 agendado; refinos (PDF/Excel Teknisa, exports PDF/CSV, PWA/FCM, IA Claude nas Notas, Pessoas: férias/comissões/mobilidade).
 
 ## Stack
-Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · JWT+refresh+bcrypt · Prisma · FCM + Central in-app · PWA · Claude API (modelo via env)
+Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · JWT+refresh+bcrypt · Prisma · FCM + Central in-app · PWA · Claude API (`@anthropic-ai/sdk`, modelo via `CLAUDE_MODEL`, chave `ANTHROPIC_API_KEY` — visão usada na checagem de foto×padrão dos checklists, `src/lib/ai/vision.ts`, inerte sem chave)
 
 ## Regras inegociáveis (nunca viole)
 1. **NUNCA alterar/derrubar/conflitar com a plataforma do CEO.** Ver mapa acima. Mudanças no proxy/túnel só com confirmação explícita.

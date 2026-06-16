@@ -12,7 +12,7 @@ export default async function ChecklistsAdminPage() {
   if (user.role !== 'ADMIN') return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
   const [units, templates] = await Promise.all([
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-    prisma.taskTemplate.findMany({ orderBy: { order: 'asc' }, include: { items: { orderBy: { order: 'asc' }, select: { section: true, text: true, requiresPhoto: true } } } }),
+    prisma.taskTemplate.findMany({ orderBy: { order: 'asc' }, include: { items: { orderBy: { order: 'asc' }, select: { section: true, text: true, requiresPhoto: true, aiCheck: true, standardDescription: true } } } }),
   ]);
 
   return (
@@ -22,7 +22,7 @@ export default async function ChecklistsAdminPage() {
       <Card><CardContent className="pt-4">
         <TemplatesAdmin
           units={units}
-          templates={templates.map((t) => ({ id: t.id, unitId: t.unitId, name: t.name, limitTime: t.limitTime, weight: t.weight, scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, active: t.active, items: t.items.map((i) => ({ section: i.section, text: i.text, requiresPhoto: i.requiresPhoto })) }))}
+          templates={templates.map((t) => ({ id: t.id, unitId: t.unitId, name: t.name, limitTime: t.limitTime, weight: t.weight, scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, active: t.active, items: t.items.map((i) => ({ section: i.section, text: i.text, requiresPhoto: i.requiresPhoto, aiCheck: i.aiCheck, standardDescription: i.standardDescription })) }))}
         />
       </CardContent></Card>
     </div>

@@ -241,6 +241,12 @@ model ChecklistItem {
   text         String
   requiresPhoto Boolean @default(false)
   order        Int     @default(0)
+  /// Checagem por IA (visão): compara a foto com o padrão esperado (modo consultivo).
+  aiCheck      Boolean @default(false)
+  /// Descrição do padrão esperado (o que a IA deve verificar na foto).
+  standardDescription String?
+  /// Imagem de referência do padrão (opcional) — caminho no volume de uploads.
+  referenceImagePath  String?
 
   template TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 

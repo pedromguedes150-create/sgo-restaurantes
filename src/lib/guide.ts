@@ -81,7 +81,8 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Abra TAREFAS e toque em "Realizar" no checklist.',
           'Responda cada item: 🟢 De acordo / 🟡 Em correção / 🔴 A corrigir (o "A corrigir" abre uma ocorrência automática).',
-          'Anexe até 5 fotos. O preenchimento é salvo sozinho — se for interrompido, retoma de onde parou.',
+          'Anexe até 5 fotos. Em itens com checagem por IA, toque em "Conferir a foto com IA" para ver se está no padrão (compatível/divergente).',
+          'O preenchimento é salvo sozinho — se for interrompido, retoma de onde parou.',
           'Toque em "Concluir checklist". Feito após o horário = conta como "fora do prazo" (não penaliza, mas também não pontua).',
           'Use "Ver preenchimento" para rever respostas e fotos de um checklist concluído.',
           'O sistema avisa ~30 min antes do vencimento de cada checklist. Veja execuções passadas em Tarefas → "Histórico".',

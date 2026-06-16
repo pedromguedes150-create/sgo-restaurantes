@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Check, X } from 'lucide-react';
+import { Camera, Check, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 type ItemStatus = 'OK' | 'EM_CORRECAO' | 'A_CORRIGIR';
-interface Item { id: string; section: string | null; text: string; requiresPhoto: boolean }
+interface Item { id: string; section: string | null; text: string; requiresPhoto: boolean; aiCheck?: boolean }
+interface AiState { loading?: boolean; configured?: boolean; verdict?: 'COMPATIVEL' | 'DIVERGENTE' | 'INCERTO'; observations?: string; error?: string }
 interface Answer { status: ItemStatus; note?: string }
 
 const ST: Record<ItemStatus, { label: string; short: string; cls: string }> = {
@@ -28,8 +29,24 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
     return out;
   });
   const [files, setFiles] = useState<File[]>([]);
+  const [ai, setAi] = useState<Record<string, AiState>>({});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  async function analyzeAi(itemId: string, file: File) {
+    setFiles((f) => [...f, file].slice(0, 5)); // a foto também é salva no checklist
+    setAi((s) => ({ ...s, [itemId]: { loading: true } }));
+    try {
+      const fd = new FormData();
+      fd.set('itemId', itemId); fd.set('photo', file);
+      const res = await fetch('/api/ai/checklist-photo', { method: 'POST', body: fd });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setAi((s) => ({ ...s, [itemId]: { error: d.error ?? 'Falha' } })); return; }
+      setAi((s) => ({ ...s, [itemId]: { configured: d.configured, verdict: d.verdict, observations: d.observations, error: d.error } }));
+    } catch {
+      setAi((s) => ({ ...s, [itemId]: { error: 'Falha de conexão' } }));
+    }
+  }
   const fileRef = useRef<HTMLInputElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -127,6 +144,23 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                   </div>
                   {a && a.status !== 'OK' && (
                     <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Observação (o que corrigir)" className="mt-2 h-9 w-full rounded-md border-2 border-input bg-background px-2 text-sm" />
+                  )}
+                  {it.aiCheck && (
+                    <div className="mt-2 rounded-md border border-dashed bg-background/60 p-2">
+                      <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-accent">
+                        <Sparkles className="h-4 w-4" /> {ai[it.id]?.loading ? 'Analisando com IA…' : 'Conferir a foto com IA'}
+                        <input type="file" accept="image/*" capture="environment" hidden disabled={ai[it.id]?.loading} onChange={(e) => { const f = e.target.files?.[0]; if (f) analyzeAi(it.id, f); e.target.value = ''; }} />
+                      </label>
+                      {ai[it.id] && !ai[it.id].loading && (
+                        ai[it.id].configured === false ? <p className="mt-1 text-xs text-muted-foreground">IA não configurada no servidor.</p>
+                        : ai[it.id].error ? <p className="mt-1 text-xs text-critical">{ai[it.id].error}</p>
+                        : ai[it.id].verdict ? (
+                          <p className={cn('mt-1 text-xs font-medium', ai[it.id].verdict === 'COMPATIVEL' ? 'text-success' : ai[it.id].verdict === 'DIVERGENTE' ? 'text-critical' : 'text-[#92600A]')}>
+                            {ai[it.id].verdict === 'COMPATIVEL' ? '🟢 Compatível' : ai[it.id].verdict === 'DIVERGENTE' ? '🔴 Divergente' : '🟡 Incerto'}{ai[it.id].observations ? ` — ${ai[it.id].observations}` : ''}
+                          </p>
+                        ) : null
+                      )}
+                    </div>
                   )}
                 </div>
               );

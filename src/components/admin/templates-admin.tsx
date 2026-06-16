@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { postAdmin } from '@/lib/admin-client';
 
-export interface TplItem { section: string | null; text: string; requiresPhoto: boolean }
+export interface TplItem { section: string | null; text: string; requiresPhoto: boolean; aiCheck: boolean; standardDescription: string | null }
 export interface TplRow {
   id: string; unitId: string; name: string; limitTime: string | null; weight: number;
   scope: 'UNIT' | 'MANAGER'; requiresEvidence: boolean; entersMeta: boolean; active: boolean; items: TplItem[];
@@ -160,14 +160,14 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
   const [items, setItems] = useState<TplItem[]>(init.items);
 
   function setItem(i: number, patch: Partial<TplItem>) { setItems((arr) => arr.map((it, idx) => idx === i ? { ...it, ...patch } : it)); }
-  function addItem() { setItems((arr) => [...arr, { section: null, text: '', requiresPhoto: false }]); }
+  function addItem() { setItems((arr) => [...arr, { section: null, text: '', requiresPhoto: false, aiCheck: false, standardDescription: null }]); }
   function removeItem(i: number) { setItems((arr) => arr.filter((_, idx) => idx !== i)); }
 
   function payload() {
     return {
       name, weight: Number(weight), scope, requiresEvidence, entersMeta,
       limitTime: noTime ? null : limitTime,
-      items: items.filter((it) => it.text.trim()).map((it) => ({ section: it.section, text: it.text, requiresPhoto: it.requiresPhoto })),
+      items: items.filter((it) => it.text.trim()).map((it) => ({ section: it.section, text: it.text, requiresPhoto: it.requiresPhoto, aiCheck: it.aiCheck, standardDescription: it.standardDescription })),
     };
   }
 
@@ -205,6 +205,8 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
                   <Input value={it.section ?? ''} onChange={(e) => setItem(i, { section: e.target.value || null })} placeholder="Seção (ex.: Cozinha)" className="col-span-4 h-9 text-sm" />
                   <Input value={it.text} onChange={(e) => setItem(i, { text: e.target.value })} placeholder="O que verificar" className="col-span-8 h-9 text-sm" />
                   <label className="col-span-12 flex items-center gap-2 text-xs"><input type="checkbox" checked={it.requiresPhoto} onChange={(e) => setItem(i, { requiresPhoto: e.target.checked })} /> Exige foto neste item</label>
+                  <label className="col-span-12 flex items-center gap-2 text-xs"><input type="checkbox" checked={it.aiCheck} onChange={(e) => setItem(i, { aiCheck: e.target.checked })} /> Checar a foto com IA (compara com o padrão)</label>
+                  {it.aiCheck && <Input value={it.standardDescription ?? ''} onChange={(e) => setItem(i, { standardDescription: e.target.value || null })} placeholder="Padrão esperado (ex.: vitrine cheia, produtos alinhados por tipo, etiquetas visíveis)" className="col-span-12 h-9 text-sm" />}
                 </div>
                 <Button size="sm" variant="ghost" className="text-critical" onClick={() => removeItem(i)} aria-label="Remover item"><X className="h-4 w-4" /></Button>
               </div>

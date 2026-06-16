@@ -143,7 +143,7 @@ export async function setCommandConfig(user: SessionUser, input: { unitId: strin
 }
 
 /* ──────────────────────── Checklists (templates) ──────────────────── */
-export interface ChecklistItemInput { section?: string | null; text: string; requiresPhoto?: boolean }
+export interface ChecklistItemInput { section?: string | null; text: string; requiresPhoto?: boolean; aiCheck?: boolean; standardDescription?: string | null }
 type Scope = 'UNIT' | 'MANAGER';
 
 function normLimit(v?: string | null): string | null {
@@ -154,7 +154,14 @@ function normLimit(v?: string | null): string | null {
 function normItems(items?: ChecklistItemInput[]) {
   return (items ?? [])
     .filter((i) => i.text?.trim())
-    .map((i, order) => ({ section: i.section?.trim() || null, text: i.text.trim(), requiresPhoto: Boolean(i.requiresPhoto), order }));
+    .map((i, order) => ({
+      section: i.section?.trim() || null,
+      text: i.text.trim(),
+      requiresPhoto: Boolean(i.requiresPhoto),
+      order,
+      aiCheck: Boolean(i.aiCheck) && Boolean(i.standardDescription?.trim()),
+      standardDescription: i.standardDescription?.trim() || null,
+    }));
 }
 
 /** Cria checklist(s). Pode replicar para várias unidades (uma cópia por unidade, ligadas por groupKey). */
