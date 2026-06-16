@@ -1,0 +1,54 @@
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { getSessionUser } from '@/lib/auth/session';
+import { prisma } from '@/lib/db/prisma';
+import { canAccessUnit } from '@/lib/scope/unit-scope';
+import { Card, CardContent } from '@/components/ui/card';
+import { ChecklistRunner } from '@/components/tasks/checklist-runner';
+import { ArrowLeft } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
+
+export default async function TarefaExecPage({ params }: { params: { id: string } }) {
+  const user = (await getSessionUser())!;
+  const inst = await prisma.taskInstance.findUnique({
+    where: { id: params.id },
+    include: {
+      template: { include: { items: { orderBy: { order: 'asc' } } } },
+      itemResponses: true,
+      photos: true,
+      completedBy: { select: { name: true } },
+    },
+  });
+  if (!inst || !canAccessUnit(user, inst.unitId)) notFound();
+
+  const done = inst.status === 'DONE' || inst.status === 'LATE';
+  const draft = (inst.draft as { answers?: Record<string, { status: string; note?: string }> } | null) ?? null;
+
+  return (
+    <div className="space-y-4">
+      <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
+      <div>
+        <h1 className="text-xl font-bold text-brand">{inst.template.name}</h1>
+        <p className="text-xs text-muted-foreground">
+          {inst.template.limitTime ? `limite ${inst.template.limitTime}` : 'sem horário'} · {inst.operationalDate}
+          {done && inst.completedBy ? ` · concluído por ${inst.completedBy.name}` : ''}
+        </p>
+      </div>
+
+      <Card><CardContent className="pt-4">
+        <ChecklistRunner
+          instanceId={inst.id}
+          requiresEvidence={inst.template.requiresEvidence}
+          done={done}
+          lateStatus={inst.status === 'LATE'}
+          items={inst.template.items.map((i) => ({ id: i.id, section: i.section, text: i.text, requiresPhoto: i.requiresPhoto }))}
+          initialAnswers={done
+            ? Object.fromEntries(inst.itemResponses.map((r) => [r.itemId, { status: r.status, note: r.note ?? '' }]))
+            : (draft?.answers ?? {})}
+          photos={inst.photos.map((p) => `/${p.path}`)}
+        />
+      </CardContent></Card>
+    </div>
+  );
+}

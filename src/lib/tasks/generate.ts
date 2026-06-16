@@ -1,39 +1,45 @@
 import { prisma } from '@/lib/db/prisma';
 import { computeDueAt } from '@/lib/tasks/due';
 import { currentOperationalDate } from '@/lib/date/operational';
-import type { Unit } from '@prisma/client';
+import type { Unit, Role } from '@prisma/client';
+
+/** Perfis considerados "gerentes" para checklists individuais (scope MANAGER). */
+const MANAGER_ROLES: Role[] = ['MANAGER', 'COORDINATOR'];
 
 /**
  * Gera as instâncias de tarefa de uma unidade para um dia operacional.
- *
- * Idempotente: a constraint única (templateId, operationalDate) garante que
- * rodar duas vezes não duplica. Retorna quantas foram criadas.
- *
- * NOTA: o "calendário de operação" (fechamentos excepcionais — regra nº 5) será
- * plugado no Módulo 13. Por ora considera-se que a unidade opera todos os dias.
+ * Idempotente (verifica existência por modelo/dia[/gerente] antes de criar).
+ * - scope UNIT    → 1 instância por modelo/dia (qualquer gerente conclui).
+ * - scope MANAGER → 1 instância por gerente da unidade/dia (checklist individual).
+ * - limitTime NULL → vale até o fim do dia operacional (23:59).
  */
 export async function generateDailyTasksForUnit(
   unit: Pick<Unit, 'id' | 'timezone' | 'cutoffHour'>,
   operationalDate: string,
 ): Promise<number> {
-  const templates = await prisma.taskTemplate.findMany({
-    where: { unitId: unit.id, active: true },
-  });
+  const templates = await prisma.taskTemplate.findMany({ where: { unitId: unit.id, active: true } });
   if (templates.length === 0) return 0;
 
   const cfg = { timezone: unit.timezone, cutoffHour: unit.cutoffHour };
+  const hasManagerScope = templates.some((t) => t.scope === 'MANAGER');
+  const managers = hasManagerScope
+    ? await prisma.user.findMany({ where: { active: true, role: { in: MANAGER_ROLES }, memberships: { some: { unitId: unit.id } } }, select: { id: true } })
+    : [];
 
-  const result = await prisma.taskInstance.createMany({
-    data: templates.map((t) => ({
-      templateId: t.id,
-      unitId: unit.id,
-      operationalDate,
-      dueAt: computeDueAt(operationalDate, t.limitTime, cfg),
-    })),
-    skipDuplicates: true, // idempotência
-  });
-
-  return result.count;
+  let created = 0;
+  for (const t of templates) {
+    const dueAt = computeDueAt(operationalDate, t.limitTime ?? '23:59', cfg);
+    if (t.scope === 'MANAGER') {
+      for (const m of managers) {
+        const exists = await prisma.taskInstance.findFirst({ where: { templateId: t.id, operationalDate, assignedToId: m.id }, select: { id: true } });
+        if (!exists) { await prisma.taskInstance.create({ data: { templateId: t.id, unitId: unit.id, operationalDate, dueAt, assignedToId: m.id } }); created++; }
+      }
+    } else {
+      const exists = await prisma.taskInstance.findFirst({ where: { templateId: t.id, operationalDate, assignedToId: null }, select: { id: true } });
+      if (!exists) { await prisma.taskInstance.create({ data: { templateId: t.id, unitId: unit.id, operationalDate, dueAt } }); created++; }
+    }
+  }
+  return created;
 }
 
 /** Gera as tarefas do dia operacional atual para todas as unidades ativas. */

@@ -89,6 +89,7 @@ model User {
   refreshTokens  RefreshToken[]
   auditLogs      AuditLog[]
   completedTasks TaskInstance[] @relation("CompletedBy")
+  assignedTasks  TaskInstance[] @relation("AssignedTo")
   wasteEntries   WasteEntry[]   @relation("WasteCreatedBy")
   reportedOccurrences Occurrence[] @relation("OccReportedBy")
   closedOccurrences   Occurrence[] @relation("OccClosedBy")
@@ -183,21 +184,38 @@ enum TaskModule {
 
 enum TaskStatus {
   PENDING // a fazer
-  DONE // concluída
-  MISSED // "Não realizada" (passou da hora de corte) — entra na meta
+  DONE // concluída (no prazo)
+  MISSED // "Não realizada" (passou da hora) — penaliza a meta
+  LATE // concluída FORA do prazo — neutro (não conta na meta)
 }
 
-/// Modelo (catálogo) de tarefa configurável por unidade (Módulo 1 / Config).
+/// Escopo do checklist: da unidade (qualquer gerente conclui) ou individual (1 por gerente/dia).
+enum ChecklistScope {
+  UNIT
+  MANAGER
+}
+
+/// Marcação de um item do checklist.
+enum ItemStatus {
+  OK // De acordo
+  EM_CORRECAO // Em correção
+  A_CORRIGIR // A corrigir (gera ocorrência)
+}
+
+/// Modelo (catálogo) de tarefa/checklist configurável por unidade (Módulo 1 / Config).
 model TaskTemplate {
   id              String     @id @default(cuid())
   unitId          String
   name            String
   description     String?
-  /// Horário limite no formato "HH:mm" (dentro do dia operacional)
-  limitTime       String     @default("23:59")
+  /// Horário limite "HH:mm" (dentro do dia operacional). NULL = sem horário (até o fim do dia).
+  limitTime       String?
   /// Peso na meta (Módulo 11). Só conta se entersMeta = true.
   weight          Int        @default(1)
   module          TaskModule @default(GENERAL)
+  scope           ChecklistScope @default(UNIT)
+  /// Liga cópias do mesmo checklist em várias unidades (replicação).
+  groupKey        String?
   /// Exige evidência fotográfica ao concluir (conceito transversal nº 6)
   requiresEvidence Boolean   @default(false)
   /// "Entra na Meta" (Módulo 11)
@@ -209,9 +227,25 @@ model TaskTemplate {
 
   unit      Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
   instances TaskInstance[]
+  items     ChecklistItem[]
 
   @@index([unitId, active])
   @@map("task_templates")
+}
+
+/// Item/etapa de um checklist (verificação com marcação 🟢🟡🔴).
+model ChecklistItem {
+  id           String  @id @default(cuid())
+  templateId   String
+  section      String? // agrupador opcional (ex.: "Cozinha", "Salão")
+  text         String
+  requiresPhoto Boolean @default(false)
+  order        Int     @default(0)
+
+  template TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("checklist_items")
 }
 
 /// Instância diária de uma tarefa, amarrada à DATA OPERACIONAL (regra nº 4).
@@ -224,22 +258,60 @@ model TaskInstance {
   status          TaskStatus @default(PENDING)
   /// Limite efetivo (UTC) calculado a partir do dia operacional + limitTime
   dueAt           DateTime
+  /// Para checklists individuais (scope MANAGER): o gerente dono desta instância.
+  assignedToId    String?
   completedById   String?
   completedAt     DateTime?
-  /// Caminho da evidência fotográfica no volume de uploads (se exigida)
+  /// Caminho da evidência fotográfica no volume de uploads (se exigida) — legado/foto principal
   evidencePath    String?
+  /// Rascunho de preenchimento (auto-salvamento contra interrupções)
+  draft           Json?
   createdAt       DateTime   @default(now())
 
-  template    TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  unit        Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  completedBy User?        @relation("CompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  template      TaskTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  unit          Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  completedBy   User?               @relation("CompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  assignedTo    User?               @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
+  itemResponses TaskItemResponse[]
+  photos        TaskPhoto[]
 
-  // Uma tarefa por modelo por dia operacional → geração idempotente +
-  // conclusão transacional (dois gerentes concluindo = um único registro).
-  @@unique([templateId, operationalDate])
+  // Uma tarefa por modelo/dia (UNIT) ou por modelo/dia/gerente (MANAGER).
+  @@unique([templateId, operationalDate, assignedToId])
   @@index([unitId, operationalDate])
   @@index([status])
+  @@index([assignedToId, operationalDate])
   @@map("task_instances")
+}
+
+/// Resposta de um item do checklist (desacoplada do item p/ preservar histórico).
+model TaskItemResponse {
+  id         String     @id @default(cuid())
+  instanceId String
+  itemId     String // referência ao ChecklistItem (sem FK; histórico sobrevive a edições)
+  itemText   String // snapshot do texto no momento da resposta
+  status     ItemStatus
+  note       String?
+  createdAt  DateTime   @default(now())
+
+  instance TaskInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, itemId])
+  @@map("task_item_responses")
+}
+
+/// Foto anexada a uma execução de checklist (até 5 por instância). Arquivo no volume de uploads.
+model TaskPhoto {
+  id         String   @id @default(cuid())
+  instanceId String
+  path       String
+  itemId     String?
+  caption    String?
+  createdAt  DateTime @default(now())
+
+  instance TaskInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@map("task_photos")
 }
 
 /// Categoria de desperdício (Módulo 2). Global e expansível sem quebrar histórico.

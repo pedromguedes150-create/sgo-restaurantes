@@ -2,111 +2,111 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2, X, Save } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { postAdmin } from '@/lib/admin-client';
 
-export interface TplRow { id: string; unitId: string; name: string; limitTime: string; weight: number; module: string; requiresEvidence: boolean; entersMeta: boolean; active: boolean }
+export interface TplItem { section: string | null; text: string; requiresPhoto: boolean }
+export interface TplRow {
+  id: string; unitId: string; name: string; limitTime: string | null; weight: number;
+  scope: 'UNIT' | 'MANAGER'; requiresEvidence: boolean; entersMeta: boolean; active: boolean; items: TplItem[];
+}
 interface Unit { id: string; name: string }
 
-const MODULES = [
-  { value: 'GENERAL', label: 'Geral' },
-  { value: 'WASTE', label: 'Desperdícios' },
-  { value: 'COMMANDS', label: 'Comandas' },
-  { value: 'CANCELLATIONS', label: 'Cancelamentos' },
-  { value: 'INVENTORY', label: 'Inventário' },
-  { value: 'OCCURRENCES', label: 'Ocorrências' },
-];
+const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
 export function TemplatesAdmin({ units, templates }: { units: Unit[]; templates: TplRow[] }) {
   const router = useRouter();
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
-  const [name, setName] = useState('');
-  const [limitTime, setLimitTime] = useState('23:00');
-  const [weight, setWeight] = useState('10');
-  const [moduleV, setModuleV] = useState('GENERAL');
-  const [requiresEvidence, setRequiresEvidence] = useState(false);
-  const [entersMeta, setEntersMeta] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const list = useMemo(() => templates.filter((t) => t.unitId === unitId), [templates, unitId]);
   const sumWeight = list.filter((t) => t.active && t.entersMeta).reduce((s, t) => s + t.weight, 0);
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
-
-  async function create() {
-    setBusy(true); setMsg(null);
-    const r = await postAdmin({ entity: 'template', action: 'create', unitId, name, limitTime, weight: Number(weight), module: moduleV, requiresEvidence, entersMeta });
-    setBusy(false);
-    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
-    setName(''); router.refresh();
-  }
-  async function toggle(t: TplRow) {
-    await postAdmin({ entity: 'template', action: 'toggle', id: t.id, active: !t.active });
-    router.refresh();
-  }
 
   return (
     <div className="space-y-4">
       <div>
-        <Label>Unidade</Label>
+        <Label>Unidade (para ver os checklists)</Label>
         <select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
       </div>
 
-      <div className="rounded-lg border border-dashed p-3">
-        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Nova tarefa do checklist</h2>
-        <div className="space-y-2">
-          <div><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="grid grid-cols-3 gap-2">
-            <div><Label>Limite</Label><Input value={limitTime} onChange={(e) => setLimitTime(e.target.value)} placeholder="23:00" /></div>
-            <div><Label>Peso</Label><Input inputMode="numeric" value={weight} onChange={(e) => setWeight(e.target.value)} /></div>
-            <div><Label>Módulo</Label><select className={sel} value={moduleV} onChange={(e) => setModuleV(e.target.value)}>{MODULES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></div>
-          </div>
-          <div className="flex gap-4 text-sm">
-            <label className="flex items-center gap-2"><input type="checkbox" checked={requiresEvidence} onChange={(e) => setRequiresEvidence(e.target.checked)} /> Exige evidência</label>
-            <label className="flex items-center gap-2"><input type="checkbox" checked={entersMeta} onChange={(e) => setEntersMeta(e.target.checked)} /> Entra na meta</label>
-          </div>
-          {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
-          <Button onClick={create} disabled={busy} className="w-full"><Plus className="h-4 w-4" /> Adicionar</Button>
-        </div>
-      </div>
+      {creating ? (
+        <ChecklistForm units={units} defaultUnitId={unitId} onDone={() => { setCreating(false); router.refresh(); }} onCancel={() => setCreating(false)} />
+      ) : (
+        <Button onClick={() => setCreating(true)} variant="gold" className="w-full"><Plus className="h-5 w-5" /> Novo checklist</Button>
+      )}
 
       <p className="text-xs text-muted-foreground">Soma dos pesos (ativos, na meta): <span className={sumWeight === 100 ? 'font-bold text-success' : 'font-bold text-medium'}>{sumWeight}</span> {sumWeight !== 100 && '(ideal: 100)'}</p>
 
       <div className="space-y-2">
-        {list.map((t) => (
-          <TplItem key={t.id} t={t} onChange={() => router.refresh()} onToggle={() => toggle(t)} />
-        ))}
-        {list.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma tarefa nesta unidade.</p>}
+        {list.map((t) => <TplItemRow key={t.id} t={t} onChange={() => router.refresh()} />)}
+        {list.length === 0 && <p className="text-sm text-muted-foreground">Nenhum checklist nesta unidade.</p>}
       </div>
     </div>
   );
 }
 
-function TplItem({ t, onChange, onToggle }: { t: TplRow; onChange: () => void; onToggle: () => void }) {
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(t.name);
-  const [limitTime, setLimitTime] = useState(t.limitTime);
-  const [weight, setWeight] = useState(String(t.weight));
-  const [moduleV, setModuleV] = useState(t.module);
-  const [requiresEvidence, setRequiresEvidence] = useState(t.requiresEvidence);
-  const [entersMeta, setEntersMeta] = useState(t.entersMeta);
+/* ───────── Formulário de criação ───────── */
+function ChecklistForm({ units, defaultUnitId, onDone, onCancel }: { units: Unit[]; defaultUnitId: string; onDone: () => void; onCancel: () => void }) {
+  const f = useChecklistForm({ unitId: defaultUnitId, name: '', limitTime: '', noTime: false, weight: '10', scope: 'UNIT', requiresEvidence: false, entersMeta: true, items: [] });
+  const [targetUnits, setTargetUnits] = useState<string[]>([defaultUnitId]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
-  async function save() {
+  function toggleUnit(id: string) { setTargetUnits((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]); }
+
+  async function submit() {
+    if (!f.name.trim() || targetUnits.length === 0) { setMsg('Informe nome e ao menos uma unidade.'); return; }
     setBusy(true); setMsg(null);
-    const r = await postAdmin({ entity: 'template', action: 'update', id: t.id, name, limitTime, weight: Number(weight), module: moduleV, requiresEvidence, entersMeta });
+    const r = await postAdmin({ entity: 'template', action: 'create', unitIds: targetUnits, ...f.payload() });
+    setBusy(false);
+    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    onDone();
+  }
+
+  return (
+    <div className="rounded-lg border border-dashed p-3 space-y-3">
+      <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Novo checklist</h2>
+      {f.fields}
+      <div>
+        <Label className="text-xs">Replicar para unidades</Label>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {units.map((u) => (
+            <button key={u.id} type="button" onClick={() => toggleUnit(u.id)} className={targetUnits.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>
+          ))}
+          <button type="button" onClick={() => setTargetUnits(units.map((u) => u.id))} className="rounded-full border px-3 py-1.5 text-sm font-medium hover:border-accent">Todas</button>
+        </div>
+      </div>
+      {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+      <div className="flex gap-2">
+        <Button onClick={submit} disabled={busy} className="flex-1">Publicar</Button>
+        <Button variant="outline" onClick={onCancel}>Cancelar</Button>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Linha de checklist existente (editar/ativar/excluir) ───────── */
+function TplItemRow({ t, onChange }: { t: TplRow; onChange: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const f = useChecklistForm({ unitId: t.unitId, name: t.name, limitTime: t.limitTime ?? '', noTime: t.limitTime === null, weight: String(t.weight), scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, items: t.items });
+
+  async function toggle() { await postAdmin({ entity: 'template', action: 'toggle', id: t.id, active: !t.active }); onChange(); }
+  async function save() {
+    if (!f.name.trim()) { setMsg('Informe o nome.'); return; }
+    setBusy(true); setMsg(null);
+    const r = await postAdmin({ entity: 'template', action: 'update', id: t.id, ...f.payload() });
     setBusy(false);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
     setEditing(false); onChange();
   }
   async function remove() {
-    if (!confirm(`Excluir a tarefa "${t.name}"? Só é possível se ela nunca tiver gerado execuções. Caso contrário, inative-a.`)) return;
+    if (!confirm(`Excluir o checklist "${t.name}"? Só é possível se nunca tiver gerado execuções. Caso contrário, inative-o.`)) return;
     setBusy(true); setMsg(null);
     const r = await postAdmin({ entity: 'template', action: 'delete', id: t.id });
     setBusy(false);
@@ -119,31 +119,94 @@ function TplItem({ t, onChange, onToggle }: { t: TplRow; onChange: () => void; o
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="font-semibold text-brand">{t.name}</p>
-          <p className="text-xs text-muted-foreground">limite {t.limitTime} · peso {t.weight} · {MODULES.find((m) => m.value === t.module)?.label}{t.requiresEvidence ? ' · foto' : ''}{t.entersMeta ? ' · meta' : ''}</p>
+          <p className="text-xs text-muted-foreground">
+            {t.limitTime ? `limite ${t.limitTime}` : 'sem horário'} · peso {t.weight} · {t.scope === 'MANAGER' ? 'individual' : 'da unidade'}
+            {t.items.length > 0 ? ` · ${t.items.length} item(ns)` : ''}{t.requiresEvidence ? ' · foto' : ''}{t.entersMeta ? ' · meta' : ''}
+          </p>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={onToggle}><StatusBadge tone={t.active ? 'success' : 'critical'}>{t.active ? 'Ativa' : 'Inativa'}</StatusBadge></button>
+          <button onClick={toggle}><StatusBadge tone={t.active ? 'success' : 'critical'}>{t.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
           <Button size="sm" variant="ghost" disabled={busy} onClick={remove} aria-label="Excluir" className="text-critical"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
-
       {editing && (
-        <div className="mt-2 space-y-2 rounded-lg bg-muted/40 p-2">
-          <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
-          <div className="grid grid-cols-3 gap-2">
-            <div><Label className="text-xs">Limite</Label><Input value={limitTime} onChange={(e) => setLimitTime(e.target.value)} className="h-10 text-sm" /></div>
-            <div><Label className="text-xs">Peso</Label><Input inputMode="numeric" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-10 text-sm" /></div>
-            <div><Label className="text-xs">Módulo</Label><select className={sel} value={moduleV} onChange={(e) => setModuleV(e.target.value)}>{MODULES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</select></div>
-          </div>
-          <div className="flex gap-4 text-sm">
-            <label className="flex items-center gap-2"><input type="checkbox" checked={requiresEvidence} onChange={(e) => setRequiresEvidence(e.target.checked)} /> Exige evidência</label>
-            <label className="flex items-center gap-2"><input type="checkbox" checked={entersMeta} onChange={(e) => setEntersMeta(e.target.checked)} /> Entra na meta</label>
-          </div>
+        <div className="mt-2 space-y-3 rounded-lg bg-muted/40 p-2">
+          {f.fields}
           <Button size="sm" className="w-full" disabled={busy} onClick={save}><Save className="h-4 w-4" /> Salvar alterações</Button>
         </div>
       )}
       {msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}
     </div>
   );
+}
+
+/* ───────── Hook de formulário compartilhado (campos + itens) ───────── */
+function useChecklistForm(init: { unitId: string; name: string; limitTime: string; noTime: boolean; weight: string; scope: 'UNIT' | 'MANAGER'; requiresEvidence: boolean; entersMeta: boolean; items: TplItem[] }) {
+  const [name, setName] = useState(init.name);
+  const [noTime, setNoTime] = useState(init.noTime);
+  const [limitTime, setLimitTime] = useState(init.limitTime || '23:00');
+  const [weight, setWeight] = useState(init.weight);
+  const [scope, setScope] = useState<'UNIT' | 'MANAGER'>(init.scope);
+  const [requiresEvidence, setRequiresEvidence] = useState(init.requiresEvidence);
+  const [entersMeta, setEntersMeta] = useState(init.entersMeta);
+  const [items, setItems] = useState<TplItem[]>(init.items);
+
+  function setItem(i: number, patch: Partial<TplItem>) { setItems((arr) => arr.map((it, idx) => idx === i ? { ...it, ...patch } : it)); }
+  function addItem() { setItems((arr) => [...arr, { section: null, text: '', requiresPhoto: false }]); }
+  function removeItem(i: number) { setItems((arr) => arr.filter((_, idx) => idx !== i)); }
+
+  function payload() {
+    return {
+      name, weight: Number(weight), scope, requiresEvidence, entersMeta,
+      limitTime: noTime ? null : limitTime,
+      items: items.filter((it) => it.text.trim()).map((it) => ({ section: it.section, text: it.text, requiresPhoto: it.requiresPhoto })),
+    };
+  }
+
+  const fields = (
+      <div className="space-y-2">
+        <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label className="text-xs">Escopo</Label>
+            <select className={sel} value={scope} onChange={(e) => setScope(e.target.value as 'UNIT' | 'MANAGER')}>
+              <option value="UNIT">Da unidade (qualquer gerente conclui)</option>
+              <option value="MANAGER">Individual (1 por gerente/dia)</option>
+            </select>
+          </div>
+          <div><Label className="text-xs">Peso na meta</Label><Input inputMode="numeric" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-10 text-sm" /></div>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          <label className="flex items-center gap-2"><input type="checkbox" checked={noTime} onChange={(e) => setNoTime(e.target.checked)} /> Sem horário (até o fim do dia)</label>
+          {!noTime && <span className="flex items-center gap-1"><Label className="text-xs">Limite</Label><Input value={limitTime} onChange={(e) => setLimitTime(e.target.value)} placeholder="23:00" className="h-9 w-24 text-sm" /></span>}
+        </div>
+        <div className="flex gap-4 text-sm">
+          <label className="flex items-center gap-2"><input type="checkbox" checked={requiresEvidence} onChange={(e) => setRequiresEvidence(e.target.checked)} /> Exige foto</label>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={entersMeta} onChange={(e) => setEntersMeta(e.target.checked)} /> Entra na meta</label>
+        </div>
+
+        {/* Itens/etapas */}
+        <div className="rounded-lg bg-background/60 p-2">
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Itens / etapas (opcional)</p>
+          <p className="mb-2 text-[11px] text-muted-foreground">Cada item é verificado pelo gerente como 🟢 De acordo / 🟡 Em correção / 🔴 A corrigir.</p>
+          <div className="space-y-2">
+            {items.map((it, i) => (
+              <div key={i} className="flex items-start gap-1 rounded-md border bg-card p-1.5">
+                <GripVertical className="mt-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="grid flex-1 grid-cols-12 gap-1">
+                  <Input value={it.section ?? ''} onChange={(e) => setItem(i, { section: e.target.value || null })} placeholder="Seção (ex.: Cozinha)" className="col-span-4 h-9 text-sm" />
+                  <Input value={it.text} onChange={(e) => setItem(i, { text: e.target.value })} placeholder="O que verificar" className="col-span-8 h-9 text-sm" />
+                  <label className="col-span-12 flex items-center gap-2 text-xs"><input type="checkbox" checked={it.requiresPhoto} onChange={(e) => setItem(i, { requiresPhoto: e.target.checked })} /> Exige foto neste item</label>
+                </div>
+                <Button size="sm" variant="ghost" className="text-critical" onClick={() => removeItem(i)} aria-label="Remover item"><X className="h-4 w-4" /></Button>
+              </div>
+            ))}
+          </div>
+          <Button size="sm" variant="outline" className="mt-2" onClick={addItem}><Plus className="h-4 w-4" /> Adicionar item</Button>
+        </div>
+      </div>
+    );
+
+  return { name, payload, fields };
 }

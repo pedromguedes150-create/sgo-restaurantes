@@ -136,7 +136,7 @@ async function main() {
     for (let d = 0; d < 30; d++) {
       const opDate = format(subDays(new Date(`${todayOp}T12:00:00`), d), 'yyyy-MM-dd');
       for (const tpl of templates) {
-        const dueAt = dueAtFor(opDate, tpl.limitTime, unit.timezone, unit.cutoffHour);
+        const dueAt = dueAtFor(opDate, tpl.limitTime ?? '23:59', unit.timezone, unit.cutoffHour);
         let status: TaskStatus = 'PENDING';
         let completedById: string | null = null;
         let completedAt: Date | null = null;

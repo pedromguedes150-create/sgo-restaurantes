@@ -40,7 +40,8 @@ export async function getTasksTodayForUser(
     await generateDailyTasksForUnit(u, operationalDate);
 
     const tasks = await prisma.taskInstance.findMany({
-      where: { unitId: u.id, operationalDate },
+      // checklists da unidade (assignedToId null) + os individuais DESTE usuário
+      where: { unitId: u.id, operationalDate, OR: [{ assignedToId: null }, { assignedToId: user.id }] },
       include: { template: true },
       orderBy: [{ template: { order: 'asc' } }, { dueAt: 'asc' }],
     });

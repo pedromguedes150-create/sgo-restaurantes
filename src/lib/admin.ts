@@ -143,18 +143,48 @@ export async function setCommandConfig(user: SessionUser, input: { unitId: strin
 }
 
 /* ──────────────────────── Checklists (templates) ──────────────────── */
-export async function createTemplate(user: SessionUser, input: { unitId: string; name: string; limitTime?: string; weight?: number; module?: TaskModule; requiresEvidence?: boolean; entersMeta?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
+export interface ChecklistItemInput { section?: string | null; text: string; requiresPhoto?: boolean }
+type Scope = 'UNIT' | 'MANAGER';
+
+function normLimit(v?: string | null): string | null {
+  if (v === undefined || v === null) return null;
+  const s = String(v).trim();
+  return /^\d{1,2}:\d{2}$/.test(s) ? s : null; // vazio/invalido = sem horário
+}
+function normItems(items?: ChecklistItemInput[]) {
+  return (items ?? [])
+    .filter((i) => i.text?.trim())
+    .map((i, order) => ({ section: i.section?.trim() || null, text: i.text.trim(), requiresPhoto: Boolean(i.requiresPhoto), order }));
+}
+
+/** Cria checklist(s). Pode replicar para várias unidades (uma cópia por unidade, ligadas por groupKey). */
+export async function createTemplate(
+  user: SessionUser,
+  input: { unitId?: string; unitIds?: string[]; name: string; limitTime?: string | null; weight?: number; scope?: Scope; requiresEvidence?: boolean; entersMeta?: boolean; items?: ChecklistItemInput[] },
+  ctx: Ctx = {},
+): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
-  if (!input.unitId || !input.name?.trim()) return { ok: false, reason: 'INVALID' };
-  const t = await prisma.taskTemplate.create({
-    data: {
-      unitId: input.unitId, name: input.name.trim(), limitTime: input.limitTime || '23:59',
-      weight: Number.isFinite(input.weight) ? Math.max(0, Math.trunc(input.weight as number)) : 1,
-      module: input.module ?? 'GENERAL', requiresEvidence: Boolean(input.requiresEvidence), entersMeta: input.entersMeta ?? true,
-    },
-  });
-  await audit({ userId: user.id, unitId: input.unitId, action: 'TEMPLATE_CREATE', module: 'CONFIG', entity: 'task_template', entityId: t.id, ...ctx });
-  return { ok: true, id: t.id };
+  const unitIds = (input.unitIds?.length ? input.unitIds : input.unitId ? [input.unitId] : []).filter(Boolean);
+  if (!input.name?.trim() || unitIds.length === 0) return { ok: false, reason: 'INVALID' };
+  const items = normItems(input.items);
+  const common = {
+    name: input.name.trim(),
+    limitTime: normLimit(input.limitTime),
+    weight: Number.isFinite(input.weight) ? Math.max(0, Math.trunc(input.weight as number)) : 1,
+    scope: (input.scope === 'MANAGER' ? 'MANAGER' : 'UNIT') as Scope,
+    requiresEvidence: Boolean(input.requiresEvidence),
+    entersMeta: input.entersMeta ?? true,
+  };
+  const groupKey = unitIds.length > 1 ? crypto.randomUUID() : null;
+  let firstId: string | undefined;
+  for (const unitId of unitIds) {
+    const t = await prisma.taskTemplate.create({
+      data: { unitId, groupKey, ...common, items: items.length ? { create: items.map((i) => ({ ...i })) } : undefined },
+    });
+    firstId = firstId ?? t.id;
+    await audit({ userId: user.id, unitId, action: 'TEMPLATE_CREATE', module: 'CONFIG', entity: 'task_template', entityId: t.id, metadata: { scope: common.scope, items: items.length, groupKey }, ...ctx });
+  }
+  return { ok: true, id: firstId };
 }
 
 export async function toggleTemplate(user: SessionUser, id: string, active: boolean, ctx: Ctx = {}): Promise<AdminResult> {
@@ -164,19 +194,31 @@ export async function toggleTemplate(user: SessionUser, id: string, active: bool
   return { ok: true };
 }
 
-export async function updateTemplate(user: SessionUser, id: string, input: { name?: string; limitTime?: string; weight?: number; module?: TaskModule; requiresEvidence?: boolean; entersMeta?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateTemplate(
+  user: SessionUser,
+  id: string,
+  input: { name?: string; limitTime?: string | null; weight?: number; scope?: Scope; requiresEvidence?: boolean; entersMeta?: boolean; items?: ChecklistItemInput[] },
+  ctx: Ctx = {},
+): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
-  await prisma.taskTemplate.update({
-    where: { id },
-    data: {
-      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
-      ...(input.limitTime !== undefined ? { limitTime: input.limitTime || '23:59' } : {}),
-      ...(input.weight !== undefined ? { weight: Number.isFinite(input.weight) ? Math.max(0, Math.trunc(input.weight as number)) : 1 } : {}),
-      ...(input.module !== undefined ? { module: input.module } : {}),
-      ...(input.requiresEvidence !== undefined ? { requiresEvidence: Boolean(input.requiresEvidence) } : {}),
-      ...(input.entersMeta !== undefined ? { entersMeta: Boolean(input.entersMeta) } : {}),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.taskTemplate.update({
+      where: { id },
+      data: {
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(input.limitTime !== undefined ? { limitTime: normLimit(input.limitTime) } : {}),
+        ...(input.weight !== undefined ? { weight: Number.isFinite(input.weight) ? Math.max(0, Math.trunc(input.weight as number)) : 1 } : {}),
+        ...(input.scope !== undefined ? { scope: (input.scope === 'MANAGER' ? 'MANAGER' : 'UNIT') as Scope } : {}),
+        ...(input.requiresEvidence !== undefined ? { requiresEvidence: Boolean(input.requiresEvidence) } : {}),
+        ...(input.entersMeta !== undefined ? { entersMeta: Boolean(input.entersMeta) } : {}),
+      },
+    });
+    if (input.items !== undefined) {
+      await tx.checklistItem.deleteMany({ where: { templateId: id } });
+      const items = normItems(input.items);
+      if (items.length) await tx.checklistItem.createMany({ data: items.map((i) => ({ templateId: id, ...i })) });
+    }
   });
   await audit({ userId: user.id, action: 'TEMPLATE_UPDATE', module: 'CONFIG', entity: 'task_template', entityId: id, ...ctx });
   return { ok: true };

@@ -1,9 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Camera, Check, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Camera, Clock, AlertTriangle, ArrowRight, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { cn } from '@/lib/utils';
@@ -12,55 +10,19 @@ export interface TaskItemData {
   id: string;
   name: string;
   description: string | null;
-  limitTime: string;
+  limitTime: string | null;
   requiresEvidence: boolean;
-  status: 'PENDING' | 'DONE' | 'MISSED';
+  status: 'PENDING' | 'DONE' | 'MISSED' | 'LATE';
   isOverdue: boolean;
+  itemsCount?: number;
   /** Se a tarefa pertence a um módulo já implementado, "Realizar" abre o módulo. */
   moduleHref?: string | null;
 }
 
 export function TaskItem({ task }: { task: TaskItemData }) {
-  const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function complete(evidence?: File) {
-    setError(null);
-    setLoading(true);
-    try {
-      let res: Response;
-      if (evidence) {
-        const fd = new FormData();
-        fd.append('evidence', evidence);
-        res = await fetch(`/api/tasks/${task.id}/complete`, { method: 'POST', body: fd });
-      } else {
-        res = await fetch(`/api/tasks/${task.id}/complete`, { method: 'POST' });
-      }
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error ?? 'Não foi possível concluir');
-        return;
-      }
-      router.refresh();
-    } catch {
-      setError('Falha de conexão');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function onRealizar() {
-    if (task.requiresEvidence) {
-      fileRef.current?.click(); // abre a câmera (capture)
-    } else {
-      complete();
-    }
-  }
-
-  const done = task.status === 'DONE';
+  const done = task.status === 'DONE' || task.status === 'LATE';
   const missed = task.status === 'MISSED';
+  const execHref = `/tarefas/${task.id}`;
 
   return (
     <div
@@ -73,74 +35,33 @@ export function TaskItem({ task }: { task: TaskItemData }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className={cn('font-semibold', done && 'text-success', missed && 'text-critical')}>
-            {task.name}
-          </p>
-          {task.description && (
-            <p className="mt-0.5 text-sm text-muted-foreground">{task.description}</p>
-          )}
+          <p className={cn('font-semibold', task.status === 'DONE' && 'text-success', missed && 'text-critical')}>{task.name}</p>
+          {task.description && <p className="mt-0.5 text-sm text-muted-foreground">{task.description}</p>}
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" /> limite {task.limitTime}
-            </span>
-            {task.requiresEvidence && (
-              <span className="inline-flex items-center gap-1 text-gold-dark">
-                <Camera className="h-3.5 w-3.5" /> exige foto
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {task.limitTime ? `limite ${task.limitTime}` : 'sem horário'}</span>
+            {task.itemsCount ? <span>{task.itemsCount} item(ns)</span> : null}
+            {task.requiresEvidence && <span className="inline-flex items-center gap-1 text-gold-dark"><Camera className="h-3.5 w-3.5" /> exige foto</span>}
           </div>
         </div>
-
-        {done && <StatusBadge tone="success">Concluída</StatusBadge>}
+        {task.status === 'DONE' && <StatusBadge tone="success">Concluída</StatusBadge>}
+        {task.status === 'LATE' && <StatusBadge tone="medium">Fora do prazo</StatusBadge>}
         {missed && <StatusBadge tone="critical">Não realizada</StatusBadge>}
-        {!done && !missed && task.isOverdue && (
-          <StatusBadge tone="critical">
-            <AlertTriangle className="mr-1 h-3.5 w-3.5" /> Atrasada
-          </StatusBadge>
-        )}
+        {!done && !missed && task.isOverdue && <StatusBadge tone="critical"><AlertTriangle className="mr-1 h-3.5 w-3.5" /> Atrasada</StatusBadge>}
       </div>
 
-      {error && <p className="mt-2 text-sm font-medium text-critical">{error}</p>}
-
-      {!done && !missed && task.moduleHref && (
-        <div className="mt-3">
-          <Link href={task.moduleHref}>
-            <Button className="w-full" variant="default">
-              Realizar <ArrowRight className="h-5 w-5" />
+      <div className="mt-3">
+        {task.moduleHref && !done ? (
+          <Link href={task.moduleHref}><Button className="w-full">Realizar <ArrowRight className="h-5 w-5" /></Button></Link>
+        ) : done ? (
+          <Link href={execHref}><Button variant="outline" className="w-full"><Eye className="h-4 w-4" /> Ver preenchimento</Button></Link>
+        ) : (
+          <Link href={execHref}>
+            <Button className="w-full" variant={task.requiresEvidence ? 'gold' : 'default'}>
+              {missed || task.isOverdue ? 'Realizar (atrasado)' : 'Realizar'} <ArrowRight className="h-5 w-5" />
             </Button>
           </Link>
-        </div>
-      )}
-
-      {!done && !missed && !task.moduleHref && (
-        <div className="mt-3">
-          <Button onClick={onRealizar} disabled={loading} className="w-full" variant={task.requiresEvidence ? 'gold' : 'default'}>
-            {loading ? (
-              'Salvando…'
-            ) : task.requiresEvidence ? (
-              <>
-                <Camera className="h-5 w-5" /> Tirar foto e concluir
-              </>
-            ) : (
-              <>
-                <Check className="h-5 w-5" /> Realizar
-              </>
-            )}
-          </Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) complete(f);
-              e.target.value = '';
-            }}
-          />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
