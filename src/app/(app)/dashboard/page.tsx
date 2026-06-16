@@ -86,8 +86,8 @@ export default async function DashboardPage() {
         <Link href="/modulos/comandas">
           <Card className="border-medium/50 bg-medium/5">
             <CardContent className="flex items-center gap-3 py-3 text-sm font-semibold text-[#92600A]">
-              <AlertTriangle className="h-5 w-5" />
-              {openDiv} divergência(s) de comanda em aberto.
+              <AlertTriangle className="h-5 w-5 shrink-0" />
+              {openDiv} comanda(s) com divergência (faltaram na contagem) aguardando verificação — toque para resolver.
             </CardContent>
           </Card>
         </Link>
@@ -134,7 +134,9 @@ function ManagerDashboard({
               {agg.done} de {agg.total} tarefas concluídas
             </p>
             {agg.overdue > 0 && (
-              <p className="text-critical">⚠ {agg.overdue} atrasada(s)</p>
+              <Link href="/tarefas?filter=atrasadas" className="block font-semibold text-critical underline">
+                ⚠ {agg.overdue} atrasada(s) — resolver agora →
+              </Link>
             )}
             {agg.missed > 0 && (
               <p className="text-critical">✖ {agg.missed} não realizada(s)</p>
@@ -198,16 +200,23 @@ function ConsolidatedDashboard({
   return (
     <>
       {/* Alertas críticos */}
-      <Card className={totalOverdue > 0 ? 'border-critical/40' : undefined}>
-        <CardContent className="flex items-center gap-3 py-4">
-          <AlertTriangle className={totalOverdue > 0 ? 'h-6 w-6 text-critical' : 'h-6 w-6 text-success'} />
-          <p className="text-sm font-semibold">
-            {totalOverdue > 0
-              ? `${totalOverdue} tarefa(s) atrasada(s)/não realizada(s) na rede`
-              : 'Nenhuma pendência crítica agora'}
-          </p>
-        </CardContent>
-      </Card>
+      {totalOverdue > 0 ? (
+        <Link href="/tarefas?filter=atrasadas">
+          <Card className="border-critical/40 transition-colors hover:border-critical">
+            <CardContent className="flex items-center gap-3 py-4">
+              <AlertTriangle className="h-6 w-6 text-critical" />
+              <p className="text-sm font-semibold">{totalOverdue} tarefa(s) atrasada(s)/não realizada(s) na rede — ver →</p>
+            </CardContent>
+          </Card>
+        </Link>
+      ) : (
+        <Card>
+          <CardContent className="flex items-center gap-3 py-4">
+            <AlertTriangle className="h-6 w-6 text-success" />
+            <p className="text-sm font-semibold">Nenhuma pendência crítica agora</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Semáforo por unidade */}
       <Card>
