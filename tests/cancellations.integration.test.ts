@@ -32,8 +32,8 @@ let unitId: string;
 let admId: string;
 let mgrId: string;
 let reasonId: string;
-const adm = (): SessionUser => ({ id: admId, name: 'A', role: 'ADMIN', unitIds: [], seesAllUnits: true });
-const mgr = (): SessionUser => ({ id: mgrId, name: 'M', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false });
+const adm = (): SessionUser => ({ id: admId, name: 'A', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false });
+const mgr = (): SessionUser => ({ id: mgrId, name: 'M', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
 
 beforeAll(async () => {
   const unit = await prisma.unit.create({ data: { code: `CNC-${sfx}`, name: 'U Canc', timezone: 'America/Sao_Paulo', cutoffHour: 4 } });

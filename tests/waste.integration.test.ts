@@ -9,7 +9,7 @@ const sfx = process.pid.toString(36);
 let unitId: string;
 let userId: string;
 let catId: string;
-const user = (): SessionUser => ({ id: userId, name: 'T', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false });
+const user = (): SessionUser => ({ id: userId, name: 'T', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
 
 // Datas dinâmicas: OP = ontem (dentro da janela de 7 dias do servidor);
 // PRIOR = os 7 dias operacionais anteriores a OP (base da média).
@@ -73,7 +73,7 @@ describe('Desperdícios (Módulo 2)', () => {
   });
 
   it('nega lançamento fora do escopo de unidade', async () => {
-    const outsider: SessionUser = { id: userId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false };
+    const outsider: SessionUser = { id: userId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false, needsTerms: false };
     const r = await saveWasteEntry(outsider, { unitId, operationalDate: OP, items: [{ categoryId: catId, kg: 1 }] });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('FORBIDDEN');

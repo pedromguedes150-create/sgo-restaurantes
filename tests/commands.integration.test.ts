@@ -12,9 +12,9 @@ let mgrId: string;
 let supId: string;
 let admId: string;
 
-const mgr = (): SessionUser => ({ id: mgrId, name: 'M', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false });
-const sup = (): SessionUser => ({ id: supId, name: 'S', role: 'SUPERVISOR', unitIds: [unitId], seesAllUnits: false });
-const adm = (): SessionUser => ({ id: admId, name: 'A', role: 'ADMIN', unitIds: [], seesAllUnits: true });
+const mgr = (): SessionUser => ({ id: mgrId, name: 'M', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
+const sup = (): SessionUser => ({ id: supId, name: 'S', role: 'SUPERVISOR', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
+const adm = (): SessionUser => ({ id: admId, name: 'A', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false });
 
 beforeAll(async () => {
   const unit = await prisma.unit.create({ data: { code: `CMD-${sfx}`, name: 'U Cmd', timezone: 'America/Sao_Paulo', cutoffHour: 4 } });
@@ -78,7 +78,7 @@ describe('Comandas (Módulo 3)', () => {
   });
 
   it('nega contagem fora do escopo', async () => {
-    const outsider: SessionUser = { id: mgrId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false };
+    const outsider: SessionUser = { id: mgrId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false, needsTerms: false };
     const r = await submitCount(outsider, { unitId, allPresent: true });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('FORBIDDEN');

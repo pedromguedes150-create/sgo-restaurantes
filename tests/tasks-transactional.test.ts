@@ -13,7 +13,7 @@ import type { SessionUser } from '@/lib/auth/session';
 const suffix = process.pid.toString(36);
 let unitId: string;
 let userId: string;
-const user = (): SessionUser => ({ id: userId, name: 'Teste', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false });
+const user = (): SessionUser => ({ id: userId, name: 'Teste', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
 
 beforeAll(async () => {
   const unit = await prisma.unit.create({
@@ -47,7 +47,9 @@ async function makeInstance(opts: { requiresEvidence?: boolean; operationalDate?
       templateId: tpl.id,
       unitId,
       operationalDate: opts.operationalDate ?? '2026-06-10',
-      dueAt: new Date('2026-06-11T02:00:00Z'),
+      // Prazo dinâmico no futuro: conclusão dentro do prazo = DONE (a data
+      // operacional do teste de "não realizada" é que define o MISSED).
+      dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     },
   });
 }
@@ -81,7 +83,7 @@ describe('conclusão transacional (regra nº 8)', () => {
 
   it('nega conclusão fora do escopo de unidade (regra nº 3)', async () => {
     const inst = await makeInstance();
-    const outsider: SessionUser = { id: userId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false };
+    const outsider: SessionUser = { id: userId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false, needsTerms: false };
     const r = await completeTask(inst.id, outsider);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('FORBIDDEN');

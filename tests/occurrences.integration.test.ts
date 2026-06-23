@@ -13,8 +13,8 @@ let typeId: string;
 let catId: string;
 let catId2: string;
 
-const mgr = (): SessionUser => ({ id: mgrId, name: 'Ger', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false });
-const sup = (): SessionUser => ({ id: supId, name: 'Sup', role: 'SUPERVISOR', unitIds: [unitId], seesAllUnits: false });
+const mgr = (): SessionUser => ({ id: mgrId, name: 'Ger', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
+const sup = (): SessionUser => ({ id: supId, name: 'Sup', role: 'SUPERVISOR', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
 
 beforeAll(async () => {
   const unit = await prisma.unit.create({ data: { code: `OCC-${sfx}`, name: 'U Occ', timezone: 'America/Sao_Paulo', cutoffHour: 4 } });
@@ -70,7 +70,7 @@ describe('Ocorrências (Módulo 6)', () => {
   });
 
   it('nega criação fora do escopo de unidade', async () => {
-    const outsider: SessionUser = { id: mgrId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false };
+    const outsider: SessionUser = { id: mgrId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false, needsTerms: false };
     const r = await createOccurrence(outsider, { unitId, typeId, categoryId: catId, gravity: 'LOW', description: 'fora' });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('FORBIDDEN');

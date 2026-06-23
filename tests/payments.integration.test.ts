@@ -9,10 +9,10 @@ const sfx = process.pid.toString(36);
 let unitId: string;
 let mgrId: string, supId: string, coordId: string, finId: string;
 
-const mgr = (): SessionUser => ({ id: mgrId, name: 'M', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false });
-const sup = (): SessionUser => ({ id: supId, name: 'S', role: 'SUPERVISOR', unitIds: [unitId], seesAllUnits: false });
-const coord = (): SessionUser => ({ id: coordId, name: 'C', role: 'COORDINATOR', unitIds: [unitId], seesAllUnits: false });
-const fin = (): SessionUser => ({ id: finId, name: 'F', role: 'FINANCE', unitIds: [], seesAllUnits: false });
+const mgr = (): SessionUser => ({ id: mgrId, name: 'M', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
+const sup = (): SessionUser => ({ id: supId, name: 'S', role: 'SUPERVISOR', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
+const coord = (): SessionUser => ({ id: coordId, name: 'C', role: 'COORDINATOR', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
+const fin = (): SessionUser => ({ id: finId, name: 'F', role: 'FINANCE', unitIds: [], seesAllUnits: false, needsTerms: false });
 
 beforeAll(async () => {
   const unit = await prisma.unit.create({ data: { code: `PAY-${sfx}`, name: 'U Pay', timezone: 'America/Sao_Paulo', cutoffHour: 4 } });
@@ -73,7 +73,7 @@ describe('Pagamentos (Módulo 7)', () => {
   });
 
   it('nega solicitação fora do escopo', async () => {
-    const outsider: SessionUser = { id: mgrId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false };
+    const outsider: SessionUser = { id: mgrId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false, needsTerms: false };
     const r = await createPaymentRequest(outsider, { type: 'OVERTIME', unitId, amount: 10 });
     expect(r.ok).toBe(false);
   });

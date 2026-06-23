@@ -7,14 +7,15 @@ import {
 } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
 
-const ceo: SessionUser = { id: 'u1', name: 'CEO', role: 'CEO', unitIds: [], seesAllUnits: true };
-const admin: SessionUser = { id: 'u2', name: 'Admin', role: 'ADMIN', unitIds: [], seesAllUnits: true };
+const ceo: SessionUser = { id: 'u1', name: 'CEO', role: 'CEO', unitIds: [], seesAllUnits: true, needsTerms: false };
+const admin: SessionUser = { id: 'u2', name: 'Admin', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false };
 const manager: SessionUser = {
   id: 'u3',
   name: 'Gerente',
   role: 'MANAGER',
   unitIds: ['unitA', 'unitB'],
   seesAllUnits: false,
+  needsTerms: false,
 };
 
 describe('escopo por unidade (regra nº 3 — sempre no servidor)', () => {
