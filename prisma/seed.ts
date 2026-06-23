@@ -293,9 +293,10 @@ async function main() {
   await prisma.commandReplacement.deleteMany({});
   await prisma.commandDivergence.deleteMany({});
   await prisma.commandCount.deleteMany({});
+  await prisma.commandSequence.deleteMany({});
   await prisma.unitCommandConfig.deleteMany({});
   for (const unit of units) {
-    await prisma.unitCommandConfig.create({ data: { unitId: unit.id, rangeStart: 1, rangeEnd: 150 } });
+    await prisma.commandSequence.create({ data: { unitId: unit.id, name: 'Sequência principal', rangeStart: 1, rangeEnd: 150, order: 0 } });
   }
   // Centro: 1 divergência aberta (37) e 1 baixa definitiva (88, perdida)
   await prisma.commandDivergence.create({

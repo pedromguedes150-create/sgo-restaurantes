@@ -98,6 +98,10 @@ export const GUIDE: GuideSection[] = [
           'Abra DESPERDÍCIOS, informe os kg por categoria e anexe a foto.',
           'Salvar conclui a tarefa de desperdício do dia automaticamente.',
           'Se uma categoria subir mais de 20% vs a média de 7 dias, o Supervisor é avisado.',
+          'No histórico, clique em um lançamento para ver os itens (categoria, kg e observação).',
+          'Esqueceu de lançar? Use o seletor de data para registrar um dia anterior.',
+          'Botão "Exportar (Excel)" baixa a planilha do mês para relatório.',
+          'O Admin cadastra as categorias de desperdício em Configurações → Desperdícios.',
         ],
       },
       {
@@ -106,8 +110,8 @@ export const GUIDE: GuideSection[] = [
         roles: MANAGERLINE,
         summary: 'Contagem diária e divergências.',
         steps: [
-          'Antes do uso, o Admin define a faixa de numeração em Configurações → Comandas (sequência).',
-          'Abra COMANDAS e informe "todas presentes" ou as ausentes.',
+          'Antes do uso, o Admin cadastra as faixas em Configurações → Comandas (várias sequências por unidade, ex.: 1–200 e 500–650).',
+          'Abra COMANDAS e informe "todas presentes" ou as ausentes (considera todas as faixas ativas).',
           'Quando houver ausentes, a observação é obrigatória e gera divergência + alerta ao Supervisor.',
         ],
       },
@@ -120,6 +124,9 @@ export const GUIDE: GuideSection[] = [
           'Em OCORRÊNCIAS → "Nova", escolha tipo, gravidade e descreva; anexe foto/vídeo.',
           'Gravidade alta/crítica e reincidência (<30 dias) alertam Supervisor/CEO.',
           'O Supervisor/Admin encerra a ocorrência com a ação corretiva.',
+          'Na ocorrência, "Gerar relatório (PDF)" abre uma versão A4 para imprimir/salvar e compartilhar no WhatsApp.',
+          'A sub-aba "Manutenção" lista só as ocorrências de tipos marcados como manutenção (ex.: problema crônico).',
+          'O Admin cria/edita/exclui tipos e categorias em Configurações → Ocorrências (a gravidade segue fixa em 4 níveis).',
         ],
       },
       {
@@ -256,6 +263,7 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Em PAGAMENTOS, solicite (aba Minhas), aprove (Aprovar) e registre o pagamento (Pagar).',
           'O Admin pode delegar a aprovação por período (férias do aprovador).',
+          'O Admin pode editar o valor/descrição ou excluir lançamentos no histórico (tudo fica no Log de Auditoria).',
         ],
       },
       {
@@ -279,7 +287,8 @@ export const GUIDE: GuideSection[] = [
         roles: ['ADMIN'],
         summary: 'Criar, editar e excluir cadastros.',
         steps: [
-          'Em CONFIGURAÇÕES, gerencie Unidades, Usuários, Checklists e Pagamentos.',
+          'Em CONFIGURAÇÕES, gerencie Unidades, Usuários, Checklists, Comandas, Desperdícios, Ocorrências e Pagamentos.',
+          'Comandas: cadastre várias sequências por unidade. Desperdícios e Ocorrências: crie/edite/exclua categorias (e tipos, nas Ocorrências).',
           'Tudo tem editar e excluir; a exclusão é bloqueada quando há histórico (nesse caso, inative).',
         ],
       },

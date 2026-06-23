@@ -162,19 +162,98 @@ export async function deleteWasteCategory(user: SessionUser, id: string, ctx: Ct
   return { ok: true };
 }
 
-/* ──────────────────────── Comandas: sequência por unidade ──────────── */
-export async function setCommandConfig(user: SessionUser, input: { unitId: string; rangeStart: number; rangeEnd: number }, ctx: Ctx = {}): Promise<AdminResult> {
+/* ──────────────────────── Comandas: sequências por unidade (várias) ──── */
+function validRange(s: number, e: number) { return Number.isFinite(s) && Number.isFinite(e) && s >= 0 && e >= s; }
+
+export async function createCommandSequence(user: SessionUser, input: { unitId: string; name?: string; rangeStart: number; rangeEnd: number }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
-  const start = Math.trunc(input.rangeStart);
-  const end = Math.trunc(input.rangeEnd);
-  if (!input.unitId || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start) return { ok: false, reason: 'INVALID' };
-  const c = await prisma.unitCommandConfig.upsert({
-    where: { unitId: input.unitId },
-    create: { unitId: input.unitId, rangeStart: start, rangeEnd: end },
-    update: { rangeStart: start, rangeEnd: end },
-  });
-  await audit({ userId: user.id, unitId: input.unitId, action: 'COMMAND_CONFIG_SET', module: 'CONFIG', entity: 'unit_command_config', entityId: c.id, metadata: { start, end }, ...ctx });
+  const start = Math.trunc(input.rangeStart), end = Math.trunc(input.rangeEnd);
+  if (!input.unitId || !validRange(start, end)) return { ok: false, reason: 'INVALID' };
+  const count = await prisma.commandSequence.count({ where: { unitId: input.unitId } });
+  const c = await prisma.commandSequence.create({ data: { unitId: input.unitId, name: input.name?.trim() || `Sequência ${count + 1}`, rangeStart: start, rangeEnd: end, order: count } });
+  await audit({ userId: user.id, unitId: input.unitId, action: 'COMMAND_SEQ_CREATE', module: 'CONFIG', entity: 'command_sequence', entityId: c.id, metadata: { start, end }, ...ctx });
   return { ok: true, id: c.id };
+}
+export async function updateCommandSequence(user: SessionUser, id: string, input: { name?: string; rangeStart?: number; rangeEnd?: number; active?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const cur = await prisma.commandSequence.findUnique({ where: { id } });
+  if (!cur) return { ok: false, reason: 'INVALID' };
+  const start = input.rangeStart !== undefined ? Math.trunc(input.rangeStart) : cur.rangeStart;
+  const end = input.rangeEnd !== undefined ? Math.trunc(input.rangeEnd) : cur.rangeEnd;
+  if (!validRange(start, end)) return { ok: false, reason: 'INVALID' };
+  await prisma.commandSequence.update({ where: { id }, data: { ...(input.name !== undefined ? { name: input.name.trim() || cur.name } : {}), rangeStart: start, rangeEnd: end, ...(input.active !== undefined ? { active: input.active } : {}) } });
+  await audit({ userId: user.id, unitId: cur.unitId, action: 'COMMAND_SEQ_UPDATE', module: 'CONFIG', entity: 'command_sequence', entityId: id, ...ctx });
+  return { ok: true };
+}
+export async function deleteCommandSequence(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const c = await prisma.commandSequence.findUnique({ where: { id }, select: { unitId: true } });
+  if (!c) return { ok: false, reason: 'INVALID' };
+  await prisma.commandSequence.delete({ where: { id } }).catch(() => {});
+  await audit({ userId: user.id, unitId: c.unitId, action: 'COMMAND_SEQ_DELETE', module: 'CONFIG', entity: 'command_sequence', entityId: id, ...ctx });
+  return { ok: true };
+}
+
+/* ──────────────────────── Ocorrências: tipos e categorias ──────────── */
+export async function createOccType(user: SessionUser, input: { name: string; isMaintenance?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!input.name?.trim()) return { ok: false, reason: 'INVALID' };
+  let code = slugCode(input.name);
+  if (await prisma.occurrenceType.findUnique({ where: { code } })) code = `${code}_${Date.now().toString().slice(-4)}`;
+  const count = await prisma.occurrenceType.count();
+  const t = await prisma.occurrenceType.create({ data: { name: input.name.trim(), code, order: count, isMaintenance: Boolean(input.isMaintenance) } });
+  await audit({ userId: user.id, action: 'OCC_TYPE_CREATE', module: 'CONFIG', entity: 'occurrence_type', entityId: t.id, ...ctx });
+  return { ok: true, id: t.id };
+}
+export async function updateOccType(user: SessionUser, id: string, input: { name?: string; isMaintenance?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
+  await prisma.occurrenceType.update({ where: { id }, data: { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(input.isMaintenance !== undefined ? { isMaintenance: Boolean(input.isMaintenance) } : {}) } });
+  await audit({ userId: user.id, action: 'OCC_TYPE_UPDATE', module: 'CONFIG', entity: 'occurrence_type', entityId: id, ...ctx });
+  return { ok: true };
+}
+export async function toggleOccType(user: SessionUser, id: string, active: boolean, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  await prisma.occurrenceType.update({ where: { id }, data: { active } });
+  await audit({ userId: user.id, action: active ? 'OCC_TYPE_ACTIVATE' : 'OCC_TYPE_DEACTIVATE', module: 'CONFIG', entity: 'occurrence_type', entityId: id, ...ctx });
+  return { ok: true };
+}
+export async function deleteOccType(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const used = await prisma.occurrence.count({ where: { typeId: id } });
+  if (used > 0) return { ok: false, reason: 'BLOCKED' };
+  await prisma.occurrenceType.delete({ where: { id } }).catch(() => {}); // categorias em cascade
+  await audit({ userId: user.id, action: 'OCC_TYPE_DELETE', module: 'CONFIG', entity: 'occurrence_type', entityId: id, ...ctx });
+  return { ok: true };
+}
+export async function createOccCategory(user: SessionUser, input: { typeId: string; name: string }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!input.typeId || !input.name?.trim()) return { ok: false, reason: 'INVALID' };
+  const count = await prisma.occurrenceCategory.count({ where: { typeId: input.typeId } });
+  const c = await prisma.occurrenceCategory.create({ data: { typeId: input.typeId, name: input.name.trim(), order: count } });
+  await audit({ userId: user.id, action: 'OCC_CATEGORY_CREATE', module: 'CONFIG', entity: 'occurrence_category', entityId: c.id, ...ctx });
+  return { ok: true, id: c.id };
+}
+export async function updateOccCategory(user: SessionUser, id: string, input: { name?: string }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
+  await prisma.occurrenceCategory.update({ where: { id }, data: { ...(input.name !== undefined ? { name: input.name.trim() } : {}) } });
+  await audit({ userId: user.id, action: 'OCC_CATEGORY_UPDATE', module: 'CONFIG', entity: 'occurrence_category', entityId: id, ...ctx });
+  return { ok: true };
+}
+export async function toggleOccCategory(user: SessionUser, id: string, active: boolean, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  await prisma.occurrenceCategory.update({ where: { id }, data: { active } });
+  await audit({ userId: user.id, action: active ? 'OCC_CATEGORY_ACTIVATE' : 'OCC_CATEGORY_DEACTIVATE', module: 'CONFIG', entity: 'occurrence_category', entityId: id, ...ctx });
+  return { ok: true };
+}
+export async function deleteOccCategory(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const used = await prisma.occurrence.count({ where: { categoryId: id } });
+  if (used > 0) return { ok: false, reason: 'BLOCKED' };
+  await prisma.occurrenceCategory.delete({ where: { id } }).catch(() => {});
+  await audit({ userId: user.id, action: 'OCC_CATEGORY_DELETE', module: 'CONFIG', entity: 'occurrence_category', entityId: id, ...ctx });
+  return { ok: true };
 }
 
 /* ──────────────────────── Checklists (templates) ──────────────────── */

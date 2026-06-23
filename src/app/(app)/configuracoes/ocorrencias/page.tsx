@@ -2,26 +2,29 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
-import { CommandsConfigAdmin } from '@/components/admin/commands-config-admin';
+import { OccurrencesConfigAdmin } from '@/components/admin/occurrences-config-admin';
 import { ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ComandasConfigPage() {
+export default async function OcorrenciasConfigPage() {
   const user = (await getSessionUser())!;
   if (user.role !== 'ADMIN') return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
 
-  const [units, sequences] = await Promise.all([
-    prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-    prisma.commandSequence.findMany({ orderBy: [{ order: 'asc' }, { rangeStart: 'asc' }], select: { id: true, unitId: true, name: true, rangeStart: true, rangeEnd: true, active: true } }),
-  ]);
+  const types = await prisma.occurrenceType.findMany({
+    orderBy: [{ order: 'asc' }, { name: 'asc' }],
+    select: {
+      id: true, name: true, active: true, isMaintenance: true,
+      categories: { orderBy: [{ order: 'asc' }, { name: 'asc' }], select: { id: true, name: true, active: true } },
+    },
+  });
 
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Comandas — sequências por unidade</h1>
+      <h1 className="text-xl font-bold text-brand">Ocorrências — tipos e categorias</h1>
       <Card><CardContent className="pt-4">
-        <CommandsConfigAdmin units={units} sequences={sequences} />
+        <OccurrencesConfigAdmin types={types} />
       </CardContent></Card>
     </div>
   );

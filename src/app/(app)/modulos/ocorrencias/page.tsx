@@ -5,20 +5,23 @@ import { GRAVITY_META, STATUS_META } from '@/lib/occurrences/labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle, Wrench } from 'lucide-react';
 import type { OccurrenceStatus } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
-export default async function OcorrenciasPage({ searchParams }: { searchParams: { status?: string } }) {
+export default async function OcorrenciasPage({ searchParams }: { searchParams: { status?: string; view?: string } }) {
   const user = (await getSessionUser())!;
   const status = (['OPEN', 'IN_PROGRESS', 'CLOSED'].includes(searchParams.status ?? '')
     ? searchParams.status
     : undefined) as OccurrenceStatus | undefined;
+  const isMaint = searchParams.view === 'manutencao';
+  const base = isMaint ? '/modulos/ocorrencias?view=manutencao' : '/modulos/ocorrencias';
+  const sep = isMaint ? '&' : '?';
 
   const [summary, list] = await Promise.all([
     getOccurrenceSummary(user),
-    listOccurrences(user, { status, limit: 50 }),
+    listOccurrences(user, { status, maintenance: isMaint ? true : undefined, limit: 50 }),
   ]);
 
   const filters: { key?: OccurrenceStatus; label: string }[] = [
@@ -34,6 +37,16 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
         <h1 className="text-xl font-bold text-brand">Ocorrências</h1>
         <Link href="/modulos/ocorrencias/nova">
           <Button size="sm"><Plus className="h-4 w-4" /> Nova</Button>
+        </Link>
+      </div>
+
+      {/* Visão: Geral × Manutenção */}
+      <div className="flex gap-2">
+        <Link href="/modulos/ocorrencias" className={!isMaint ? 'flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium'}>
+          Geral
+        </Link>
+        <Link href="/modulos/ocorrencias?view=manutencao" className={isMaint ? 'flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium'}>
+          <Wrench className="h-4 w-4" /> Manutenção
         </Link>
       </div>
 
@@ -57,7 +70,7 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
       <div className="flex flex-wrap gap-2">
         {filters.map((f) => {
           const active = (f.key ?? undefined) === status;
-          const href = f.key ? `/modulos/ocorrencias?status=${f.key}` : '/modulos/ocorrencias';
+          const href = f.key ? `${base}${sep}status=${f.key}` : base;
           return (
             <Link
               key={f.label}

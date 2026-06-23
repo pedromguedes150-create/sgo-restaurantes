@@ -13,7 +13,7 @@ export interface ActiveSequence {
  * Comandas com baixa definitiva NÃO reaparecem como ausentes.
  */
 export async function getActiveSequence(unitId: string): Promise<ActiveSequence> {
-  const config = await prisma.unitCommandConfig.findUnique({ where: { unitId } });
+  const sequences = await prisma.commandSequence.findMany({ where: { unitId, active: true }, select: { rangeStart: true, rangeEnd: true } });
 
   const lostRows = await prisma.commandDivergence.findMany({
     where: { unitId, status: 'CLOSED', outcome: 'LOST' },
@@ -25,17 +25,17 @@ export async function getActiveSequence(unitId: string): Promise<ActiveSequence>
   const replacements = new Set(replRows.map((r) => r.number));
 
   const active = new Set<number>();
-  if (config) {
-    for (let n = config.rangeStart; n <= config.rangeEnd; n++) {
+  for (const s of sequences) {
+    for (let n = s.rangeStart; n <= s.rangeEnd; n++) {
       if (!lost.has(n)) active.add(n);
     }
   }
   for (const n of replacements) if (!lost.has(n)) active.add(n);
 
-  return {
-    config: config ? { rangeStart: config.rangeStart, rangeEnd: config.rangeEnd } : null,
-    active,
-    lost,
-    replacements,
-  };
+  // config = resumo (mín..máx) — usado como "configurado?" e exibição
+  const config = sequences.length
+    ? { rangeStart: Math.min(...sequences.map((s) => s.rangeStart)), rangeEnd: Math.max(...sequences.map((s) => s.rangeEnd)) }
+    : null;
+
+  return { config, active, lost, replacements };
 }

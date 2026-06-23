@@ -30,7 +30,17 @@ export async function POST(req: Request) {
   else if (e === 'user' && a === 'toggle') r = await admin.toggleUser(user, b.id, b.active, ctx);
   else if (e === 'user' && a === 'delete') r = await admin.deleteUser(user, b.id, ctx);
   else if (e === 'user' && a === 'setUnits') r = await admin.setUserUnits(user, b.id, b.unitIds ?? [], ctx);
-  else if (e === 'commandConfig' && a === 'set') r = await admin.setCommandConfig(user, b, ctx);
+  else if (e === 'commandSequence' && a === 'create') r = await admin.createCommandSequence(user, b, ctx);
+  else if (e === 'commandSequence' && a === 'update') r = await admin.updateCommandSequence(user, b.id, b, ctx);
+  else if (e === 'commandSequence' && a === 'delete') r = await admin.deleteCommandSequence(user, b.id, ctx);
+  else if (e === 'occType' && a === 'create') r = await admin.createOccType(user, b, ctx);
+  else if (e === 'occType' && a === 'update') r = await admin.updateOccType(user, b.id, b, ctx);
+  else if (e === 'occType' && a === 'toggle') r = await admin.toggleOccType(user, b.id, b.active, ctx);
+  else if (e === 'occType' && a === 'delete') r = await admin.deleteOccType(user, b.id, ctx);
+  else if (e === 'occCategory' && a === 'create') r = await admin.createOccCategory(user, b, ctx);
+  else if (e === 'occCategory' && a === 'update') r = await admin.updateOccCategory(user, b.id, b, ctx);
+  else if (e === 'occCategory' && a === 'toggle') r = await admin.toggleOccCategory(user, b.id, b.active, ctx);
+  else if (e === 'occCategory' && a === 'delete') r = await admin.deleteOccCategory(user, b.id, ctx);
   else if (e === 'wasteCategory' && a === 'create') r = await admin.createWasteCategory(user, b, ctx);
   else if (e === 'wasteCategory' && a === 'update') r = await admin.updateWasteCategory(user, b.id, b, ctx);
   else if (e === 'wasteCategory' && a === 'toggle') r = await admin.toggleWasteCategory(user, b.id, b.active, ctx);

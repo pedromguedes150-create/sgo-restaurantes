@@ -46,6 +46,7 @@ model Unit {
   wasteEntries  WasteEntry[]
   occurrences   Occurrence[]
   commandConfig       UnitCommandConfig?
+  commandSequences    CommandSequence[]
   commandCounts       CommandCount[]
   commandDivergences  CommandDivergence[]
   commandReplacements CommandReplacement[]
@@ -392,6 +393,8 @@ model OccurrenceType {
   name       String
   order      Int                   @default(0)
   active     Boolean               @default(true)
+  /// Tipo de manutenção → ocorrências aparecem na sub-aba Manutenção.
+  isMaintenance Boolean            @default(false)
   categories OccurrenceCategory[]
   occurrences Occurrence[]
 
@@ -482,7 +485,24 @@ enum DivergenceOutcome {
   LOST // perdida → baixa definitiva (sai da sequência ativa)
 }
 
-/// Sequência de numeração de comandas por unidade (base do saldo esperado).
+/// Faixa(s) de numeração de comandas por unidade (pode haver várias).
+model CommandSequence {
+  id         String   @id @default(cuid())
+  unitId     String
+  name       String   @default("Sequência")
+  rangeStart Int
+  rangeEnd   Int
+  active     Boolean  @default(true)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId])
+  @@map("command_sequences")
+}
+
+/// (Legado) Sequência única por unidade — substituída por CommandSequence.
 model UnitCommandConfig {
   id         String   @id @default(cuid())
   unitId     String   @unique

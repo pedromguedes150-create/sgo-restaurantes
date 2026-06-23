@@ -19,7 +19,7 @@ const adm = (): SessionUser => ({ id: admId, name: 'A', role: 'ADMIN', unitIds: 
 beforeAll(async () => {
   const unit = await prisma.unit.create({ data: { code: `CMD-${sfx}`, name: 'U Cmd', timezone: 'America/Sao_Paulo', cutoffHour: 4 } });
   unitId = unit.id;
-  await prisma.unitCommandConfig.create({ data: { unitId, rangeStart: 1, rangeEnd: 100 } });
+  await prisma.commandSequence.create({ data: { unitId, name: 'Principal', rangeStart: 1, rangeEnd: 100, order: 0 } });
   mgrId = (await prisma.user.create({ data: { name: 'M', email: `cm-${sfx}@e.com`, role: 'MANAGER', passwordHash: 'x' } })).id;
   supId = (await prisma.user.create({ data: { name: 'S', email: `cs-${sfx}@e.com`, role: 'SUPERVISOR', passwordHash: 'x' } })).id;
   admId = (await prisma.user.create({ data: { name: 'A', email: `ca-${sfx}@e.com`, role: 'ADMIN', passwordHash: 'x' } })).id;
