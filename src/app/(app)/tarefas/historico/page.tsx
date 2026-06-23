@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { ArrowLeft, Eye } from 'lucide-react';
 import { subDays, format } from 'date-fns';
 
@@ -18,6 +19,7 @@ const ST: Record<string, { tone: 'success' | 'medium' | 'critical' | 'neutral'; 
 
 export default async function HistoricoTarefasPage({ searchParams }: { searchParams: { unit?: string; days?: string } }) {
   const user = (await getSessionUser())!;
+  const isAdmin = user.role === 'ADMIN';
   const days = [7, 15, 30].includes(Number(searchParams.days)) ? Number(searchParams.days) : 7;
   const fromDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
 
@@ -71,16 +73,27 @@ export default async function HistoricoTarefasPage({ searchParams }: { searchPar
           <CardContent className="space-y-1.5 pt-4">
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{date}</p>
             {list.map((i) => (
-              <Link key={i.id} href={`/tarefas/${i.id}`} className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2.5 transition-colors hover:border-accent">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-brand">{i.template.name}</p>
-                  <p className="text-xs text-muted-foreground">{i.unit.name}{i.completedBy ? ` · ${i.completedBy.name}` : ''}</p>
-                </div>
-                <span className="flex items-center gap-2">
-                  <StatusBadge tone={ST[i.status]?.tone ?? 'neutral'}>{ST[i.status]?.label ?? i.status}</StatusBadge>
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                </span>
-              </Link>
+              <div key={i.id} className="flex items-center gap-2 rounded-lg border bg-card p-2.5 transition-colors hover:border-accent">
+                <Link href={`/tarefas/${i.id}`} className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-brand">{i.template.name}</p>
+                    <p className="text-xs text-muted-foreground">{i.unit.name}{i.completedBy ? ` · ${i.completedBy.name}` : ''}</p>
+                  </div>
+                  <span className="flex items-center gap-2">
+                    <StatusBadge tone={ST[i.status]?.tone ?? 'neutral'}>{ST[i.status]?.label ?? i.status}</StatusBadge>
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  </span>
+                </Link>
+                {isAdmin && (
+                  <DeleteOpButton
+                    entity="taskInstance"
+                    id={i.id}
+                    size="icon"
+                    label={`o registro de "${i.template.name}" (${i.operationalDate})`}
+                    confirmText={`Excluir do histórico o checklist "${i.template.name}" de ${i.unit.name} em ${i.operationalDate}? Sai das métricas do mês. Registrado na Auditoria. Não pode ser desfeito.`}
+                  />
+                )}
+              </div>
             ))}
           </CardContent>
         </Card>

@@ -651,6 +651,8 @@ model Freelancer {
   id           String           @id @default(cuid())
   name         String
   defaultValue Decimal          @db.Decimal(10, 2)
+  /// Chave PIX para pagamento (obrigatória no cadastro) — Módulo 7.
+  pixKey       String?
   active       Boolean          @default(true)
   createdAt    DateTime         @default(now())
   units        FreelancerUnit[]
@@ -711,6 +713,10 @@ model PaymentRequest {
   /// Perfil que deve aprovar (SUPERVISOR p/ freela/HE; do tipo p/ avulso)
   approverRole  Role          @default(SUPERVISOR)
   amount        Decimal       @db.Decimal(10, 2)
+  /// Valor-padrão do freelancer no momento do lançamento (snapshot) — base da divergência
+  standardValue Decimal?      @db.Decimal(10, 2)
+  /// true quando o valor lançado diverge do padrão cadastrado (alerta, não bloqueia)
+  divergent     Boolean       @default(false)
   description   String?
 
   // Freelancer

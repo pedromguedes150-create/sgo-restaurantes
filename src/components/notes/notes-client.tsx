@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
+import { QrScanner } from '@/components/notes/qr-scanner';
 import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 
@@ -130,7 +131,10 @@ function NewNote({ units, onDone }: { units: Unit[]; onDone: () => void }) {
       )}
       <div>
         <Label htmlFor="key"><ScanLine className="mr-1 inline h-4 w-4" /> Chave de acesso (44 dígitos — QR/DANFE)</Label>
-        <Input id="key" inputMode="numeric" value={accessKey} onChange={(e) => onKey(e.target.value)} placeholder="cole ou escaneie a chave" />
+        <div className="flex gap-2">
+          <Input id="key" inputMode="numeric" value={accessKey} onChange={(e) => onKey(e.target.value)} placeholder="cole, digite ou escaneie" className="flex-1" />
+          <QrScanner onResult={(chave) => onKey(chave)} />
+        </div>
         {prefilled && <p className="mt-1 text-xs text-[#92600A]">Campos preenchidos pela chave — confira em amarelo.</p>}
       </div>
       <div><Label>Fornecedor</Label><Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} /></div>

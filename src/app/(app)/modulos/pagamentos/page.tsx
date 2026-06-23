@@ -2,8 +2,10 @@ import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getMyRequests, getToApprove, getToPay, getHistory, getMiscTypes } from '@/lib/payments/query';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { PaymentsClient, type PayReq } from '@/components/payments/payments-client';
+import { FileText } from 'lucide-react';
 import type { PaymentRequest } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -31,6 +33,8 @@ function toDTO(r: ReqRow): PayReq {
     requestedBy: r.requestedBy?.name ?? null,
     title,
     rejectionReason: r.rejectionReason,
+    divergent: r.divergent,
+    standardValue: r.standardValue !== null && r.standardValue !== undefined ? Number(r.standardValue) : null,
   };
 }
 
@@ -50,7 +54,14 @@ export default async function PagamentosPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-brand">Pagamentos</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-bold text-brand">Pagamentos</h1>
+        {isFinanceView && (
+          <Link href="/modulos/pagamentos/relatorio-freelancers" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent">
+            <FileText className="h-4 w-4" /> Consolidação de freelancers
+          </Link>
+        )}
+      </div>
       <Card>
         <CardContent className="pt-4">
           <PaymentsClient

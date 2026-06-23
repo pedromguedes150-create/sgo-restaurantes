@@ -50,6 +50,7 @@ export async function POST(req: Request) {
   else if (e === 'template' && a === 'update') r = await admin.updateTemplate(user, b.id, b, ctx);
   else if (e === 'template' && a === 'toggle') r = await admin.toggleTemplate(user, b.id, b.active, ctx);
   else if (e === 'template' && a === 'delete') r = await admin.deleteTemplate(user, b.id, ctx);
+  else if (e === 'template' && a === 'setUnits') r = await admin.setTemplateUnits(user, b.id, b.unitIds ?? [], ctx);
   else if (e === 'freelancer' && a === 'create') r = await admin.createFreelancer(user, b, ctx);
   else if (e === 'freelancer' && a === 'update') r = await admin.updateFreelancer(user, b.id, b, ctx);
   else if (e === 'freelancer' && a === 'toggle') r = await admin.toggleFreelancer(user, b.id, b.active, ctx);

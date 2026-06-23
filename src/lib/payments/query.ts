@@ -83,3 +83,57 @@ export async function getFreelancersForUnit(unitId: string) {
 export async function getMiscTypes() {
   return prisma.miscPaymentType.findMany({ where: { active: true }, orderBy: { order: 'asc' }, select: { id: true, name: true } });
 }
+
+/* ───────────────────────── Consolidação mensal de freelancers ───────────────────────── */
+export interface FreelancerPayLine { id: string; date: string; unit: string; status: string; amount: number; divergent: boolean; standardValue: number | null }
+export interface FreelancerConsolidationGroup { freelancerId: string; name: string; pixKey: string | null; count: number; total: number; lines: FreelancerPayLine[] }
+export interface FreelancerConsolidation { yearMonth: string; groups: FreelancerConsolidationGroup[]; grandTotal: number; grandCount: number }
+
+const PAY_STATUS_LABEL: Record<string, string> = { PENDING: 'Pendente', APPROVED: 'Aprovada', PAID: 'Paga', REJECTED: 'Rejeitada' };
+
+/**
+ * Consolidação mensal de pagamentos de freelancers para envio ao Financeiro.
+ * Considera solicitações APROVADAS e PAGAS (o que será/foi pago), agrupadas por
+ * freelancer com a chave PIX e o total. Filtra pelo mês de lançamento (createdAt).
+ */
+export async function getFreelancerConsolidation(user: SessionUser, yearMonth: string, unitId?: string): Promise<FreelancerConsolidation> {
+  const [y, m] = yearMonth.split('-').map(Number);
+  const start = new Date(Date.UTC(y, m - 1, 1));
+  const end = new Date(Date.UTC(y, m, 1));
+  const rows = await prisma.paymentRequest.findMany({
+    where: {
+      type: 'FREELANCER',
+      status: { in: ['APPROVED', 'PAID'] },
+      createdAt: { gte: start, lt: end },
+      ...paymentScope(user),
+      ...(unitId ? { unitId } : {}),
+    },
+    orderBy: { createdAt: 'asc' },
+    include: { unit: { select: { name: true } }, freelancer: { select: { id: true, name: true, pixKey: true } } },
+  });
+
+  const map = new Map<string, FreelancerConsolidationGroup>();
+  let grandTotal = 0;
+  for (const r of rows) {
+    const key = r.freelancerId ?? r.id;
+    const name = r.freelancer?.name ?? 'Freelancer';
+    const g = map.get(key) ?? { freelancerId: key, name, pixKey: r.freelancer?.pixKey ?? null, count: 0, total: 0, lines: [] };
+    const amount = Number(r.amount);
+    g.lines.push({
+      id: r.id,
+      date: r.createdAt.toISOString().slice(0, 10),
+      unit: r.unit.name,
+      status: PAY_STATUS_LABEL[r.status] ?? r.status,
+      amount,
+      divergent: r.divergent,
+      standardValue: r.standardValue != null ? Number(r.standardValue) : null,
+    });
+    g.count++;
+    g.total += amount;
+    grandTotal += amount;
+    map.set(key, g);
+  }
+
+  const groups = [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  return { yearMonth, groups, grandTotal, grandCount: rows.length };
+}

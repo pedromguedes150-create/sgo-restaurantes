@@ -86,6 +86,7 @@ export const GUIDE: GuideSection[] = [
           'Toque em "Concluir checklist". Feito após o horário = conta como "fora do prazo" (não penaliza, mas também não pontua).',
           'Use "Ver preenchimento" para rever respostas e fotos de um checklist concluído.',
           'O sistema avisa ~30 min antes do vencimento de cada checklist. Veja execuções passadas em Tarefas → "Histórico".',
+          'No Histórico, o Admin pode excluir um registro (sai das métricas do mês; fica na Auditoria).',
         ],
         tips: ['Não realizado (não feito) penaliza a meta; por isso, mesmo atrasado, vale concluir.'],
       },
@@ -145,10 +146,12 @@ export const GUIDE: GuideSection[] = [
         roles: [...MANAGERLINE, 'FINANCE'],
         summary: 'Registrar notas e controlar pagamento.',
         steps: [
-          'Em NOTAS → "Registrar nota", cole a chave de 44 dígitos (preenche sozinho) ou informe manualmente.',
+          'Em NOTAS → "Registrar nota", toque em "Escanear QR" para abrir a câmera e ler o QR code da nota — a chave preenche sozinha.',
+          'Sem câmera? Cole/digite a chave de 44 dígitos (preenche sozinho) ou informe manualmente.',
           'Confirme os dados e salve. O Financeiro/Admin é avisado.',
           'Marque "Paga" ou "Com problema" conforme o andamento.',
         ],
+        tips: ['A leitura do QR usa a câmera do próprio celular no navegador (precisa permitir o acesso à câmera).'],
       },
       {
         id: 'cancelamentos',
@@ -253,6 +256,8 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Em METAS, veja "Minha Meta do Mês" e o detalhamento por item (tarefas, treinamentos…).',
           'A nota considera o que já foi resolvido; pendências no prazo não penalizam.',
+          'Use o seletor de meses para ver o histórico dos meses anteriores.',
+          'Botões "PDF" (imprimir/salvar) e "Excel" geram o relatório do mês selecionado.',
         ],
       },
       {
@@ -262,6 +267,8 @@ export const GUIDE: GuideSection[] = [
         summary: 'Freelancers, horas-extra e avulsos.',
         steps: [
           'Em PAGAMENTOS, solicite (aba Minhas), aprove (Aprovar) e registre o pagamento (Pagar).',
+          'Freelancer: ao lançar, o valor vem do padrão cadastrado. Se você mudar o valor, aparece um alerta de divergência (não bloqueia) e o aprovador é avisado.',
+          'Financeiro/Admin: use "Consolidação de freelancers" para o relatório mensal (chave PIX + total por freelancer) em PDF e Excel, pronto para o Financeiro.',
           'O Admin pode delegar a aprovação por período (férias do aprovador).',
           'O Admin pode editar o valor/descrição ou excluir lançamentos no histórico (tudo fica no Log de Auditoria).',
         ],
@@ -289,6 +296,8 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Em CONFIGURAÇÕES, gerencie Unidades, Usuários, Checklists, Comandas, Desperdícios, Ocorrências e Pagamentos.',
           'Comandas: cadastre várias sequências por unidade. Desperdícios e Ocorrências: crie/edite/exclua categorias (e tipos, nas Ocorrências).',
+          'Checklists: ao editar um checklist, use "Salvar unidades" para mudar em quais unidades ele aparece (replica nas novas; remove/inativa nas retiradas).',
+          'Pagamentos: o cadastro de freelancers e tipos de avulso é só aqui. No freelancer, a chave PIX é obrigatória.',
           'Tudo tem editar e excluir; a exclusão é bloqueada quando há histórico (nesse caso, inative).',
         ],
       },

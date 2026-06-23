@@ -12,7 +12,7 @@ import { formatBRL } from '@/lib/utils';
 
 interface Unit { id: string; name: string }
 interface UserOpt { id: string; name: string; role: string }
-export interface FreelancerRow { id: string; name: string; defaultValue: number; active: boolean; units: string[]; unitIds: string[] }
+export interface FreelancerRow { id: string; name: string; defaultValue: number; pixKey: string | null; active: boolean; units: string[]; unitIds: string[] }
 export interface MiscTypeRow { id: string; name: string; approverRole: string; active: boolean }
 export interface DelegationRow { id: string; from: string; to: string; period: string }
 
@@ -25,6 +25,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
   // Freelancer
   const [fName, setFName] = useState('');
   const [fValue, setFValue] = useState('');
+  const [fPix, setFPix] = useState('');
   const [fUnits, setFUnits] = useState<string[]>([]);
   // Misc type
   const [mName, setMName] = useState('');
@@ -55,13 +56,17 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
             <div><Label>Nome</Label><Input value={fName} onChange={(e) => setFName(e.target.value)} /></div>
             <div><Label>Valor padrão (R$)</Label><Input inputMode="decimal" value={fValue} onChange={(e) => setFValue(e.target.value)} /></div>
           </div>
+          <div><Label>Chave PIX (obrigatória)</Label><Input value={fPix} onChange={(e) => setFPix(e.target.value)} placeholder="CPF, CNPJ, e-mail, telefone ou aleatória" /></div>
           <div>
             <Label>Unidades</Label>
             <div className="mt-1 flex flex-wrap gap-2">
               {units.map((u) => <button key={u.id} type="button" onClick={() => setFUnits((s) => s.includes(u.id) ? s.filter((x) => x !== u.id) : [...s, u.id])} className={fUnits.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>)}
             </div>
           </div>
-          <Button disabled={busy} className="w-full" onClick={async () => { if (await run({ entity: 'freelancer', action: 'create', name: fName, defaultValue: parseFloat((fValue || '0').replace(',', '.')), unitIds: fUnits })) { setFName(''); setFValue(''); setFUnits([]); } }}><Plus className="h-4 w-4" /> Adicionar freelancer</Button>
+          <Button disabled={busy} className="w-full" onClick={async () => {
+            if (!fPix.trim()) { alert('Informe a chave PIX do freelancer.'); return; }
+            if (await run({ entity: 'freelancer', action: 'create', name: fName, defaultValue: parseFloat((fValue || '0').replace(',', '.')), pixKey: fPix, unitIds: fUnits })) { setFName(''); setFValue(''); setFPix(''); setFUnits([]); }
+          }}><Plus className="h-4 w-4" /> Adicionar freelancer</Button>
         </div>
         {freelancers.map((f) => (
           <FreelancerItem key={f.id} f={f} units={units} onChange={() => router.refresh()} />
@@ -113,6 +118,7 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(f.name);
   const [value, setValue] = useState(String(f.defaultValue).replace('.', ','));
+  const [pix, setPix] = useState(f.pixKey ?? '');
   const [unitIds, setUnitIds] = useState<string[]>(f.unitIds);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -128,7 +134,7 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
   return (
     <div className="rounded-lg border bg-card p-3">
       <div className="flex items-center justify-between gap-2">
-        <div><p className="font-semibold text-brand">{f.name}</p><p className="text-xs text-muted-foreground">{formatBRL(f.defaultValue)} · {f.units.join(', ')}</p></div>
+        <div><p className="font-semibold text-brand">{f.name}</p><p className="text-xs text-muted-foreground">{formatBRL(f.defaultValue)} · PIX: {f.pixKey || <span className="text-critical">não cadastrada</span>} · {f.units.join(', ')}</p></div>
         <div className="flex items-center gap-1">
           <button onClick={() => call({ entity: 'freelancer', action: 'toggle', id: f.id, active: !f.active })}><StatusBadge tone={f.active ? 'success' : 'critical'}>{f.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
@@ -141,13 +147,14 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
             <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
             <div><Label className="text-xs">Valor padrão (R$)</Label><Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} className="h-10 text-sm" /></div>
           </div>
+          <div><Label className="text-xs">Chave PIX</Label><Input value={pix} onChange={(e) => setPix(e.target.value)} className="h-10 text-sm" placeholder="chave PIX" /></div>
           <div>
             <Label className="text-xs">Unidades</Label>
             <div className="mt-1 flex flex-wrap gap-2">
               {units.map((u) => <button key={u.id} type="button" onClick={() => setUnitIds((s) => s.includes(u.id) ? s.filter((x) => x !== u.id) : [...s, u.id])} className={unitIds.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>)}
             </div>
           </div>
-          <Button size="sm" className="w-full" disabled={busy} onClick={() => call({ entity: 'freelancer', action: 'update', id: f.id, name, defaultValue: parseFloat((value || '0').replace(',', '.')), unitIds }, () => setEditing(false))}><Save className="h-4 w-4" /> Salvar alterações</Button>
+          <Button size="sm" className="w-full" disabled={busy} onClick={() => { if (!pix.trim()) { setMsg('Informe a chave PIX.'); return; } call({ entity: 'freelancer', action: 'update', id: f.id, name, defaultValue: parseFloat((value || '0').replace(',', '.')), pixKey: pix, unitIds }, () => setEditing(false)); }}><Save className="h-4 w-4" /> Salvar alterações</Button>
         </div>
       )}
       {msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}

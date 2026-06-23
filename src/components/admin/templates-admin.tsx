@@ -12,7 +12,7 @@ import { postAdmin } from '@/lib/admin-client';
 export interface TplItem { section: string | null; text: string; requiresPhoto: boolean; aiCheck: boolean; standardDescription: string | null }
 export interface TplRow {
   id: string; unitId: string; name: string; limitTime: string | null; weight: number;
-  scope: 'UNIT' | 'MANAGER'; requiresEvidence: boolean; entersMeta: boolean; active: boolean; items: TplItem[];
+  scope: 'UNIT' | 'MANAGER'; requiresEvidence: boolean; entersMeta: boolean; active: boolean; groupUnitIds: string[]; items: TplItem[];
 }
 interface Unit { id: string; name: string }
 
@@ -49,7 +49,7 @@ export function TemplatesAdmin({ units, templates }: { units: Unit[]; templates:
       <p className="text-xs text-muted-foreground">Soma dos pesos (ativos, na meta): <span className={sumWeight === 100 ? 'font-bold text-success' : 'font-bold text-medium'}>{sumWeight}</span> {sumWeight !== 100 && '(ideal: 100)'}</p>
 
       <div className="space-y-2">
-        {list.map((t) => <TplItemRow key={t.id} t={t} onChange={() => router.refresh()} />)}
+        {list.map((t) => <TplItemRow key={t.id} t={t} units={units} onChange={() => router.refresh()} />)}
         {list.length === 0 && <p className="text-sm text-muted-foreground">Nenhum checklist nesta unidade.</p>}
       </div>
     </div>
@@ -97,7 +97,7 @@ function ChecklistForm({ units, defaultUnitId, onDone, onCancel }: { units: Unit
 }
 
 /* ───────── Linha de checklist existente (editar/ativar/excluir) ───────── */
-function TplItemRow({ t, onChange }: { t: TplRow; onChange: () => void }) {
+function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange: () => void }) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -141,8 +141,42 @@ function TplItemRow({ t, onChange }: { t: TplRow; onChange: () => void }) {
         <div className="mt-2 space-y-3 rounded-lg bg-muted/40 p-2">
           {f.fields}
           <Button size="sm" className="w-full" disabled={busy} onClick={save}><Save className="h-4 w-4" /> Salvar alterações</Button>
+          <p className="text-[11px] text-muted-foreground">As alterações acima valem para este checklist nesta unidade. Para mudar em quais unidades ele aparece, use abaixo.</p>
+          <UnitsEditor t={t} units={units} onChange={onChange} />
         </div>
       )}
+      {msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}
+    </div>
+  );
+}
+
+/* ───────── Editor de unidades onde o checklist aparece ───────── */
+function UnitsEditor({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange: () => void }) {
+  const [sel, setSel] = useState<string[]>(t.groupUnitIds);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  function toggle(id: string) { setSel((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]); }
+
+  async function save() {
+    if (sel.length === 0) { setMsg('Selecione ao menos uma unidade.'); return; }
+    setBusy(true); setMsg(null);
+    const r = await postAdmin({ entity: 'template', action: 'setUnits', id: t.id, unitIds: sel });
+    setBusy(false);
+    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    onChange();
+  }
+
+  return (
+    <div className="rounded-lg border border-dashed p-2">
+      <Label className="text-xs">Unidades onde este checklist aparece</Label>
+      <div className="mt-1 flex flex-wrap gap-2">
+        {units.map((u) => (
+          <button key={u.id} type="button" onClick={() => toggle(u.id)} className={sel.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>
+        ))}
+        <button type="button" onClick={() => setSel(units.map((u) => u.id))} className="rounded-full border px-3 py-1.5 text-sm font-medium hover:border-accent">Todas</button>
+      </div>
+      <p className="mt-1 text-[11px] text-muted-foreground">Ao remover uma unidade com histórico, o checklist é inativado nela (preserva métricas); sem histórico, é excluído.</p>
+      <Button size="sm" variant="outline" className="mt-2 w-full" disabled={busy} onClick={save}><Save className="h-4 w-4" /> Salvar unidades</Button>
       {msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}
     </div>
   );

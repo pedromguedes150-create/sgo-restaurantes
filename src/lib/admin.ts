@@ -420,11 +420,54 @@ export async function deleteTemplate(user: SessionUser, id: string, ctx: Ctx = {
   return { ok: true };
 }
 
-/* ──────────────────────── Pagamentos: cadastros ───────────────────── */
-export async function createFreelancer(user: SessionUser, input: { name: string; defaultValue: number; unitIds: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
+/**
+ * Redefine em quais unidades um checklist aparece (mantém o "grupo" por groupKey).
+ * Adiciona uma cópia (config + itens) nas novas unidades; nas removidas, exclui
+ * se nunca gerou execução, senão INATIVA (preserva histórico/metas).
+ */
+export async function setTemplateUnits(user: SessionUser, id: string, unitIds: string[], ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
-  if (!input.name?.trim() || !(input.defaultValue > 0) || input.unitIds.length === 0) return { ok: false, reason: 'INVALID' };
-  const f = await prisma.freelancer.create({ data: { name: input.name.trim(), defaultValue: input.defaultValue, units: { create: input.unitIds.map((unitId) => ({ unitId })) } } });
+  const targets = [...new Set((unitIds ?? []).filter(Boolean))];
+  if (targets.length === 0) return { ok: false, reason: 'INVALID' };
+  const tpl = await prisma.taskTemplate.findUnique({ where: { id }, include: { items: { orderBy: { order: 'asc' } } } });
+  if (!tpl) return { ok: false, reason: 'INVALID' };
+
+  // Garante uma âncora de grupo
+  let groupKey = tpl.groupKey;
+  if (!groupKey) { groupKey = crypto.randomUUID(); await prisma.taskTemplate.update({ where: { id }, data: { groupKey } }); }
+
+  const group = await prisma.taskTemplate.findMany({ where: { groupKey }, select: { id: true, unitId: true } });
+  const current = new Map(group.map((g) => [g.unitId, g.id]));
+  const targetSet = new Set(targets);
+
+  // Adiciona / reativa
+  for (const unitId of targets) {
+    const existingId = current.get(unitId);
+    if (existingId) { await prisma.taskTemplate.update({ where: { id: existingId }, data: { active: true } }); continue; }
+    await prisma.taskTemplate.create({
+      data: {
+        unitId, groupKey, name: tpl.name, limitTime: tpl.limitTime, weight: tpl.weight, scope: tpl.scope,
+        requiresEvidence: tpl.requiresEvidence, entersMeta: tpl.entersMeta,
+        items: tpl.items.length ? { create: tpl.items.map((i) => ({ section: i.section, text: i.text, requiresPhoto: i.requiresPhoto, order: i.order, aiCheck: i.aiCheck, standardDescription: i.standardDescription })) } : undefined,
+      },
+    });
+  }
+  // Remove (excluir se sem histórico; senão inativar)
+  for (const [unitId, tid] of current) {
+    if (targetSet.has(unitId)) continue;
+    const used = await prisma.taskInstance.count({ where: { templateId: tid } });
+    if (used > 0) await prisma.taskTemplate.update({ where: { id: tid }, data: { active: false } });
+    else await prisma.taskTemplate.delete({ where: { id: tid } }).catch(() => {});
+  }
+  await audit({ userId: user.id, action: 'TEMPLATE_SET_UNITS', module: 'CONFIG', entity: 'task_template', entityId: id, metadata: { groupKey, units: targets.length }, ...ctx });
+  return { ok: true };
+}
+
+/* ──────────────────────── Pagamentos: cadastros ───────────────────── */
+export async function createFreelancer(user: SessionUser, input: { name: string; defaultValue: number; pixKey?: string; unitIds: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!input.name?.trim() || !(input.defaultValue > 0) || !input.pixKey?.trim() || input.unitIds.length === 0) return { ok: false, reason: 'INVALID' };
+  const f = await prisma.freelancer.create({ data: { name: input.name.trim(), defaultValue: input.defaultValue, pixKey: input.pixKey.trim(), units: { create: input.unitIds.map((unitId) => ({ unitId })) } } });
   await audit({ userId: user.id, action: 'FREELANCER_CREATE', module: 'CONFIG', entity: 'freelancer', entityId: f.id, ...ctx });
   return { ok: true, id: f.id };
 }
@@ -436,10 +479,11 @@ export async function toggleFreelancer(user: SessionUser, id: string, active: bo
   return { ok: true };
 }
 
-export async function updateFreelancer(user: SessionUser, id: string, input: { name?: string; defaultValue?: number; unitIds?: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateFreelancer(user: SessionUser, id: string, input: { name?: string; defaultValue?: number; pixKey?: string; unitIds?: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
   if (input.defaultValue !== undefined && !(input.defaultValue > 0)) return { ok: false, reason: 'INVALID' };
+  if (input.pixKey !== undefined && !input.pixKey.trim()) return { ok: false, reason: 'INVALID' };
   if (input.unitIds !== undefined && input.unitIds.length === 0) return { ok: false, reason: 'INVALID' };
   await prisma.$transaction(async (tx) => {
     await tx.freelancer.update({
@@ -447,6 +491,7 @@ export async function updateFreelancer(user: SessionUser, id: string, input: { n
       data: {
         ...(input.name !== undefined ? { name: input.name.trim() } : {}),
         ...(input.defaultValue !== undefined ? { defaultValue: input.defaultValue } : {}),
+        ...(input.pixKey !== undefined ? { pixKey: input.pixKey.trim() } : {}),
       },
     });
     if (input.unitIds !== undefined) {

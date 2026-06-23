@@ -350,8 +350,8 @@ async function main() {
   await prisma.freelancer.deleteMany({});
   await prisma.miscPaymentType.deleteMany({});
 
-  const fl1 = await prisma.freelancer.create({ data: { name: 'João Garçom (freela)', defaultValue: 150, units: { create: [{ unitId: centro.id }, { unitId: orla.id }] } } });
-  const fl2 = await prisma.freelancer.create({ data: { name: 'Maria Cozinha (freela)', defaultValue: 180, units: { create: [{ unitId: centro.id }] } } });
+  const fl1 = await prisma.freelancer.create({ data: { name: 'João Garçom (freela)', defaultValue: 150, pixKey: 'joao.garcom@email.com', units: { create: [{ unitId: centro.id }, { unitId: orla.id }] } } });
+  const fl2 = await prisma.freelancer.create({ data: { name: 'Maria Cozinha (freela)', defaultValue: 180, pixKey: '11999990000', units: { create: [{ unitId: centro.id }] } } });
   const mt1 = await prisma.miscPaymentType.create({ data: { name: 'Reembolso de despesa', approverRole: 'SUPERVISOR', order: 1 } });
   const mt2 = await prisma.miscPaymentType.create({ data: { name: 'Adiantamento', approverRole: 'ADMIN', order: 2 } });
 

@@ -15,6 +15,13 @@ export default async function ChecklistsAdminPage() {
     prisma.taskTemplate.findMany({ orderBy: { order: 'asc' }, include: { items: { orderBy: { order: 'asc' }, select: { section: true, text: true, requiresPhoto: true, aiCheck: true, standardDescription: true } } } }),
   ]);
 
+  // Unidades de cada "grupo" (checklist replicado em várias unidades compartilha groupKey)
+  const groupUnits = new Map<string, string[]>();
+  for (const t of templates) {
+    if (!t.groupKey) continue;
+    groupUnits.set(t.groupKey, [...(groupUnits.get(t.groupKey) ?? []), t.unitId]);
+  }
+
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
@@ -22,7 +29,7 @@ export default async function ChecklistsAdminPage() {
       <Card><CardContent className="pt-4">
         <TemplatesAdmin
           units={units}
-          templates={templates.map((t) => ({ id: t.id, unitId: t.unitId, name: t.name, limitTime: t.limitTime, weight: t.weight, scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, active: t.active, items: t.items.map((i) => ({ section: i.section, text: i.text, requiresPhoto: i.requiresPhoto, aiCheck: i.aiCheck, standardDescription: i.standardDescription })) }))}
+          templates={templates.map((t) => ({ id: t.id, unitId: t.unitId, name: t.name, limitTime: t.limitTime, weight: t.weight, scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, active: t.active, groupUnitIds: t.groupKey ? (groupUnits.get(t.groupKey) ?? [t.unitId]) : [t.unitId], items: t.items.map((i) => ({ section: i.section, text: i.text, requiresPhoto: i.requiresPhoto, aiCheck: i.aiCheck, standardDescription: i.standardDescription })) }))}
         />
       </CardContent></Card>
     </div>

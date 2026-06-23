@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, X, Banknote, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Check, X, Banknote, Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,8 @@ export interface PayReq {
   requestedBy: string | null;
   title: string; // descrição curta (freelancer/colaborador/beneficiário)
   rejectionReason?: string | null;
+  divergent?: boolean;
+  standardValue?: number | null;
 }
 interface Unit { id: string; name: string }
 interface Freelancer { id: string; name: string; defaultValue: number; unitIds: string[] }
@@ -155,6 +157,11 @@ function List({ items, actions }: { items: PayReq[]; actions?: (r: PayReq) => Re
             <StatusBadge tone={STATUS[r.status].tone}>{STATUS[r.status].label}</StatusBadge>
           </div>
           <p className="text-xs text-muted-foreground">{r.unit} · {formatBRL(r.amount)}{r.requestedBy ? ` · por ${r.requestedBy}` : ''}</p>
+          {r.divergent && (
+            <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-medium">
+              <AlertTriangle className="h-3.5 w-3.5" /> Divergência: padrão {r.standardValue != null ? formatBRL(r.standardValue) : '—'}
+            </p>
+          )}
           {r.rejectionReason && <p className="mt-1 text-xs text-critical">Rejeição: {r.rejectionReason}</p>}
           {actions && <div className="mt-2">{actions(r)}</div>}
         </div>
@@ -181,6 +188,10 @@ function NewRequest({ units, freelancers, miscTypes, onDone }: { units: Unit[]; 
 
   const unitFreelancers = useMemo(() => freelancers.filter((f) => f.unitIds.includes(unitId)), [freelancers, unitId]);
   const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
+
+  const selectedFreelancer = useMemo(() => freelancers.find((f) => f.id === freelancerId), [freelancers, freelancerId]);
+  const amt = parseFloat((amount || '0').replace(',', '.'));
+  const freelaDivergent = type === 'FREELANCER' && selectedFreelancer != null && amt > 0 && Math.abs(amt - selectedFreelancer.defaultValue) > 0.001;
 
   async function submit() {
     setErr(null);
@@ -264,6 +275,13 @@ function NewRequest({ units, freelancers, miscTypes, onDone }: { units: Unit[]; 
       )}
 
       <div><Label>Valor (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" /></div>
+
+      {freelaDivergent && selectedFreelancer && (
+        <p className="flex items-center gap-2 rounded-lg bg-medium/10 px-3 py-2 text-sm font-medium text-medium">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          Valor diferente do padrão cadastrado ({formatBRL(selectedFreelancer.defaultValue)}). Você pode prosseguir — o aprovador será avisado da divergência.
+        </p>
+      )}
 
       {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Plus className="h-5 w-5" /> Enviar solicitação</Button>

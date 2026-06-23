@@ -52,6 +52,15 @@ export async function createPaymentRequest(
   }
   if (input.type === 'FREELANCER' && !input.freelancerId) return { ok: false, reason: 'INVALID' };
 
+  // Divergência de valor (freelancer): compara o valor lançado com o padrão cadastrado.
+  // Não bloqueia — apenas sinaliza e alerta gerente/aprovadores.
+  let standardValue: number | null = null;
+  let divergent = false;
+  if (input.type === 'FREELANCER' && input.freelancerId) {
+    const fr = await prisma.freelancer.findUnique({ where: { id: input.freelancerId }, select: { defaultValue: true } });
+    if (fr) { standardValue = Number(fr.defaultValue); divergent = Math.abs(standardValue - input.amount) > 0.001; }
+  }
+
   const req = await prisma.paymentRequest.create({
     data: {
       type: input.type,
@@ -59,6 +68,8 @@ export async function createPaymentRequest(
       requestedById: user.id,
       approverRole,
       amount: input.amount,
+      standardValue,
+      divergent,
       description: input.description?.trim() || null,
       freelancerId: input.freelancerId || null,
       workDate: input.workDate ? new Date(input.workDate) : null,
@@ -87,9 +98,12 @@ export async function createPaymentRequest(
   // Notifica os aprovadores: por unidade quando o papel é vinculado (SUPERVISOR/
   // COORDINATOR/MANAGER), globalmente para ADMIN/CEO/FINANCE.
   const TYPE_LABEL: Record<string, string> = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra', MISC: 'Pagamento avulso' };
+  const divNote = divergent && standardValue !== null
+    ? ` ⚠ DIVERGÊNCIA: valor padrão é R$ ${standardValue.toFixed(2)}.`
+    : '';
   const payload = {
-    title: 'Pagamento aguardando aprovação',
-    body: `${TYPE_LABEL[input.type] ?? input.type} de R$ ${input.amount.toFixed(2)} solicitado por ${user.name}.`,
+    title: divergent ? '⚠ Pagamento com divergência de valor' : 'Pagamento aguardando aprovação',
+    body: `${TYPE_LABEL[input.type] ?? input.type} de R$ ${input.amount.toFixed(2)} solicitado por ${user.name}.${divNote}`,
     link: '/modulos/pagamentos',
     module: 'PAYMENTS',
   };

@@ -113,6 +113,17 @@ export async function deleteReceivedNote(user: SessionUser, id: string, ctx: Ctx
   return { ok: true };
 }
 
+/* ───────────────────────── Checklists (histórico) ───────────────────────── */
+/** Exclui um registro do histórico de checklists (execução do dia). Some das metas. */
+export async function deleteTaskInstance(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const i = await prisma.taskInstance.findUnique({ where: { id }, select: { unitId: true, operationalDate: true, status: true, template: { select: { name: true } } } });
+  if (!i) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.taskInstance.delete({ where: { id } }); // respostas/fotos em cascade
+  await audit({ userId: user.id, unitId: i.unitId, action: 'TASK_INSTANCE_DELETE', module: 'CHECKLISTS', entity: 'task_instance', entityId: id, metadata: { operationalDate: i.operationalDate, status: i.status, template: i.template.name }, ...ctx });
+  return { ok: true };
+}
+
 /* ───────────────────────── Inventário ───────────────────────── */
 export async function deleteInventory(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };

@@ -1,16 +1,31 @@
+import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getMetaBreakdown, getMetaRanking } from '@/lib/metas/query';
 import { getUnitMonthScore } from '@/lib/tasks/summary';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy } from 'lucide-react';
+import { PrintButton } from '@/components/ui/print-button';
+import { Trophy, Download } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function MetasPage({ searchParams }: { searchParams: { unit?: string } }) {
+const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+function lastMonths(n: number): { value: string; label: string }[] {
+  const now = new Date();
+  const out: { value: string; label: string }[] = [];
+  for (let i = 0; i < n; i++) {
+    const d = new Date(Date.UTC(now.getFullYear(), now.getMonth() - i, 1));
+    out.push({ value: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`, label: `${MONTHS[d.getUTCMonth()]}/${d.getUTCFullYear()}` });
+  }
+  return out;
+}
+
+export default async function MetasPage({ searchParams }: { searchParams: { unit?: string; month?: string } }) {
   const user = (await getSessionUser())!;
-  const ym = new Date().toISOString().slice(0, 7);
+  const months = lastMonths(12);
+  const ym = /^\d{4}-\d{2}$/.test(searchParams.month ?? '') ? searchParams.month! : months[0].value;
+  const monthLabel = months.find((m) => m.value === ym)?.label ?? ym;
 
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' } });
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
@@ -20,10 +35,29 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
   const breakdown = selected ? await getMetaBreakdown(selected.id, ym) : [];
   const score = selected ? await getUnitMonthScore(selected.id, ym) : null;
 
+  const linkFor = (p: Record<string, string>) => {
+    const sp = new URLSearchParams({ month: ym, ...(selected ? { unit: selected.id } : {}), ...p });
+    return `/modulos/metas?${sp.toString()}`;
+  };
+  const exportHref = `/api/metas/export?month=${ym}${selected ? `&unit=${selected.id}` : ''}`;
+
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-brand">Metas e Performance</h1>
-      <p className="text-sm text-muted-foreground">Mês {ym}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-bold text-brand">Metas e Performance</h1>
+        <div className="flex gap-2 print:hidden">
+          <a href={exportHref} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><Download className="h-4 w-4" /> Excel</a>
+          <PrintButton label="PDF" />
+        </div>
+      </div>
+      <p className="text-sm text-muted-foreground">Mês {monthLabel}</p>
+
+      {/* Histórico: seletor de meses */}
+      <div className="flex flex-wrap gap-2 print:hidden">
+        {months.map((m) => (
+          <Link key={m.value} href={linkFor({ month: m.value })} className={m.value === ym ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{m.label}</Link>
+        ))}
+      </div>
 
       {isAdminView && ranking.length > 0 && (
         <Card>
@@ -42,7 +76,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
       {units.length > 1 && (
         <div className="flex flex-wrap gap-2">
           {units.map((u) => (
-            <a key={u.id} href={`/modulos/metas?unit=${u.id}`} className={u.id === selected?.id ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{u.name}</a>
+            <a key={u.id} href={`/modulos/metas?month=${ym}&unit=${u.id}`} className={u.id === selected?.id ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{u.name}</a>
           ))}
         </div>
       )}
