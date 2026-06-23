@@ -8,7 +8,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { CloseForm } from '@/components/occurrences/close-form';
 import { ProgressButton } from '@/components/occurrences/progress-button';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
-import { ArrowLeft, Paperclip } from 'lucide-react';
+import { ArrowLeft, Paperclip, FileText } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +37,10 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
         </h1>
         <StatusBadge tone={STATUS_META[o.status].tone}>{STATUS_META[o.status].label}</StatusBadge>
       </div>
+
+      <Link href={`/modulos/ocorrencias/${o.id}/relatorio`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold text-brand hover:border-accent">
+        <FileText className="h-4 w-4 text-accent" /> Gerar relatório (PDF) para compartilhar
+      </Link>
 
       <Card>
         <CardContent className="space-y-2 py-4 text-sm">

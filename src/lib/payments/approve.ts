@@ -114,3 +114,29 @@ export async function markPaid(user: SessionUser, id: string, ctx: Ctx = {}): Pr
   }
   return { ok: true };
 }
+
+/* ───────── Admin: editar / excluir histórico (Módulo 7) ───────── */
+export async function adminEditPayment(user: SessionUser, id: string, input: { amount?: number; description?: string }, ctx: Ctx = {}): Promise<PayActionResult> {
+  if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
+  const p = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true } });
+  if (!p) return { ok: false, reason: 'NOT_FOUND' };
+  if (input.amount !== undefined && !(input.amount > 0)) return { ok: false, reason: 'INVALID' };
+  await prisma.paymentRequest.update({
+    where: { id },
+    data: {
+      ...(input.amount !== undefined ? { amount: input.amount } : {}),
+      ...(input.description !== undefined ? { description: input.description.trim() || null } : {}),
+    },
+  });
+  await audit({ userId: user.id, unitId: p.unitId, action: 'PAYMENT_ADMIN_EDIT', module: 'PAYMENTS', entity: 'payment_request', entityId: id, metadata: { fields: Object.keys(input) }, ...ctx });
+  return { ok: true };
+}
+
+export async function adminDeletePayment(user: SessionUser, id: string, ctx: Ctx = {}): Promise<PayActionResult> {
+  if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
+  const p = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true } });
+  if (!p) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.paymentRequest.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: p.unitId, action: 'PAYMENT_ADMIN_DELETE', module: 'PAYMENTS', entity: 'payment_request', entityId: id, ...ctx });
+  return { ok: true };
+}

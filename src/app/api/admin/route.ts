@@ -31,6 +31,10 @@ export async function POST(req: Request) {
   else if (e === 'user' && a === 'delete') r = await admin.deleteUser(user, b.id, ctx);
   else if (e === 'user' && a === 'setUnits') r = await admin.setUserUnits(user, b.id, b.unitIds ?? [], ctx);
   else if (e === 'commandConfig' && a === 'set') r = await admin.setCommandConfig(user, b, ctx);
+  else if (e === 'wasteCategory' && a === 'create') r = await admin.createWasteCategory(user, b, ctx);
+  else if (e === 'wasteCategory' && a === 'update') r = await admin.updateWasteCategory(user, b.id, b, ctx);
+  else if (e === 'wasteCategory' && a === 'toggle') r = await admin.toggleWasteCategory(user, b.id, b.active, ctx);
+  else if (e === 'wasteCategory' && a === 'delete') r = await admin.deleteWasteCategory(user, b.id, ctx);
   else if (e === 'template' && a === 'create') r = await admin.createTemplate(user, b, ctx);
   else if (e === 'template' && a === 'seedExamples') r = await admin.seedExampleChecklists(user, b.unitId, ctx);
   else if (e === 'template' && a === 'update') r = await admin.updateTemplate(user, b.id, b, ctx);

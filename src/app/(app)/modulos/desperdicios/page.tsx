@@ -6,6 +6,7 @@ import { currentOperationalDate } from '@/lib/date/operational';
 import { getActiveCategories, getEntryForDay, getWasteSeries, getCrossUnitWaste } from '@/lib/waste/query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { WasteForm } from '@/components/waste/waste-form';
+import { WasteDatePicker } from '@/components/waste/waste-date-picker';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ export const dynamic = 'force-dynamic';
 export default async function DesperdiciosPage({
   searchParams,
 }: {
-  searchParams: { unit?: string };
+  searchParams: { unit?: string; date?: string };
 }) {
   const user = (await getSessionUser())!;
   const now = new Date();
@@ -28,7 +29,9 @@ export default async function DesperdiciosPage({
   }
 
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
-  const operationalDate = currentOperationalDate({ timezone: selected.timezone, cutoffHour: selected.cutoffHour }, now);
+  const today = currentOperationalDate({ timezone: selected.timezone, cutoffHour: selected.cutoffHour }, now);
+  const operationalDate = searchParams.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date) && searchParams.date <= today ? searchParams.date : today;
+  const isBackdated = operationalDate !== today;
 
   const [categories, entry, series, wasteTemplate] = await Promise.all([
     getActiveCategories(),
@@ -50,15 +53,18 @@ export default async function DesperdiciosPage({
         where: { unitId: selected.id },
         orderBy: { operationalDate: 'desc' },
         take: 30,
-        include: { items: { select: { kg: true } }, createdBy: { select: { name: true } } },
+        include: { items: { select: { kg: true, category: { select: { name: true } } } }, createdBy: { select: { name: true } } },
       })
     : [];
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-brand">Desperdícios</h1>
-        <p className="text-sm text-muted-foreground">Dia operacional {operationalDate}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-bold text-brand">Desperdícios</h1>
+          <p className="text-sm text-muted-foreground">Dia operacional {operationalDate}</p>
+        </div>
+        <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent">Exportar (Excel)</a>
       </div>
 
       {/* Seletor de unidade (multi-unidade) */}
@@ -83,9 +89,11 @@ export default async function DesperdiciosPage({
       {/* Lançamento do dia */}
       <Card>
         <CardHeader>
-          <CardTitle>Lançamento de hoje — {selected.name}</CardTitle>
+          <CardTitle>{isBackdated ? `Lançamento de ${operationalDate}` : 'Lançamento de hoje'} — {selected.name}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} />
+          {isBackdated && <p className="rounded-lg bg-medium/10 px-3 py-2 text-xs font-medium text-[#92600A]">Lançando para um dia anterior ({operationalDate}).</p>}
           {entry?.createdBy && (
             <p className="mb-3 text-xs text-muted-foreground">
               Registrado por {entry.createdBy} · total atual {entry.total.toFixed(2)} KG
@@ -114,16 +122,32 @@ export default async function DesperdiciosPage({
             {recent.map((e) => {
               const total = e.items.reduce((s, i) => s + Number(i.kg), 0);
               return (
-                <div key={e.id} className="flex items-center justify-between rounded-lg border bg-card p-2.5">
-                  <div>
-                    <p className="text-sm font-semibold text-brand">{e.operationalDate}</p>
-                    <p className="text-xs text-muted-foreground">{total.toFixed(2)} KG · {e.items.length} categoria(s){e.createdBy ? ` · ${e.createdBy.name}` : ''}</p>
+                <div key={e.id} className="rounded-lg border bg-card p-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-brand">{e.operationalDate}</p>
+                      <p className="text-xs text-muted-foreground">{total.toFixed(2)} KG · {e.items.length} categoria(s){e.createdBy ? ` · ${e.createdBy.name}` : ''}</p>
+                    </div>
+                    <DeleteOpButton entity="waste" id={e.id} label={`o desperdício de ${e.operationalDate}`} />
                   </div>
-                  <DeleteOpButton entity="waste" id={e.id} label={`o desperdício de ${e.operationalDate}`} />
+                  {e.items.length > 0 && (
+                    <details className="mt-1">
+                      <summary className="cursor-pointer text-xs font-medium text-accent">Ver itens lançados</summary>
+                      <ul className="mt-1 space-y-0.5">
+                        {e.items.map((i, idx) => (
+                          <li key={idx} className="flex justify-between text-xs">
+                            <span>{i.category?.name ?? 'Categoria'}</span>
+                            <span className="font-medium">{Number(i.kg).toFixed(2)} KG</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {e.observation && <p className="mt-1 text-xs text-muted-foreground">Obs.: {e.observation}</p>}
+                    </details>
+                  )}
                 </div>
               );
             })}
-            <p className="pt-1 text-xs text-muted-foreground">Para editar um dia específico, use o formulário acima no dia correspondente.</p>
+            <p className="pt-1 text-xs text-muted-foreground">Para lançar/corrigir um dia específico, escolha a data no formulário acima.</p>
           </CardContent>
         </Card>
       )}

@@ -55,6 +55,7 @@ export default async function PagamentosPage() {
         <CardContent className="pt-4">
           <PaymentsClient
             isFinanceView={isFinanceView}
+            isAdmin={user.role === 'ADMIN'}
             units={units}
             miscTypes={miscTypes.map((t) => ({ id: t.id, name: t.name }))}
             freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, defaultValue: Number(f.defaultValue), unitIds: f.units.map((u) => u.unitId) }))}

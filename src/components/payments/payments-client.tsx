@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, X, Banknote, Plus } from 'lucide-react';
+import { Check, X, Banknote, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +35,7 @@ type Tab = 'nova' | 'minhas' | 'aprovar' | 'pagar' | 'historico';
 
 export function PaymentsClient({
   isFinanceView,
+  isAdmin = false,
   units,
   freelancers,
   miscTypes,
@@ -44,6 +45,7 @@ export function PaymentsClient({
   history,
 }: {
   isFinanceView: boolean;
+  isAdmin?: boolean;
   units: Unit[];
   freelancers: Freelancer[];
   miscTypes: MiscType[];
@@ -56,18 +58,33 @@ export function PaymentsClient({
   const [tab, setTab] = useState<Tab>(toApprove.length > 0 ? 'aprovar' : 'nova');
   const [busy, setBusy] = useState(false);
 
-  async function act(id: string, action: string, reason?: string) {
+  async function act(id: string, action: string, extra?: Record<string, unknown>) {
     setBusy(true);
     try {
       const res = await fetch(`/api/payments/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, reason }),
+        body: JSON.stringify({ action, ...extra }),
       });
-      if (res.ok) router.refresh();
+      if (res.ok) router.refresh(); else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
     } finally {
       setBusy(false);
     }
+  }
+
+  function adminActions(r: PayReq) {
+    return (
+      <div className="flex gap-2">
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
+          const v = prompt('Novo valor (R$):', String(r.amount).replace('.', ','));
+          if (v === null) return;
+          const amount = parseFloat(v.replace(/\./g, '').replace(',', '.'));
+          if (!(amount > 0)) { alert('Valor inválido'); return; }
+          act(r.id, 'adminEdit', { amount });
+        }} aria-label="Editar valor"><Pencil className="h-4 w-4" /> Editar valor</Button>
+        <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Excluir este pagamento (${TYPE_LABEL[r.type]} · ${formatBRL(r.amount)})? Registrado na Auditoria.`)) act(r.id, 'adminDelete'); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /> Excluir</Button>
+      </div>
+    );
   }
 
   const tabs: { key: Tab; label: string; badge?: number; show: boolean }[] = [
@@ -107,7 +124,7 @@ export function PaymentsClient({
           actions={(r) => (
             <div className="flex gap-2">
               <Button size="sm" disabled={busy} onClick={() => act(r.id, 'approve')}><Check className="h-4 w-4" /> Aprovar</Button>
-              <Button size="sm" variant="destructive" disabled={busy} onClick={() => { const m = prompt('Motivo da rejeição:'); if (m) act(r.id, 'reject', m); }}><X className="h-4 w-4" /> Rejeitar</Button>
+              <Button size="sm" variant="destructive" disabled={busy} onClick={() => { const m = prompt('Motivo da rejeição:'); if (m) act(r.id, 'reject', { reason: m }); }}><X className="h-4 w-4" /> Rejeitar</Button>
             </div>
           )}
         />
@@ -122,7 +139,7 @@ export function PaymentsClient({
         />
       )}
 
-      {tab === 'historico' && <List items={history} />}
+      {tab === 'historico' && <List items={history} actions={isAdmin ? adminActions : undefined} />}
     </div>
   );
 }

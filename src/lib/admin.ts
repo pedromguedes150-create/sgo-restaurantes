@@ -127,6 +127,41 @@ export async function setUserUnits(user: SessionUser, id: string, unitIds: strin
   return { ok: true };
 }
 
+/* ──────────────────────── Categorias de desperdício ──────────────────── */
+function slugCode(s: string) { return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 30) || 'CAT'; }
+
+export async function createWasteCategory(user: SessionUser, input: { name: string }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!input.name?.trim()) return { ok: false, reason: 'INVALID' };
+  let code = slugCode(input.name);
+  if (await prisma.wasteCategory.findUnique({ where: { code } })) code = `${code}_${Date.now().toString().slice(-4)}`;
+  const count = await prisma.wasteCategory.count();
+  const c = await prisma.wasteCategory.create({ data: { name: input.name.trim(), code, order: count } });
+  await audit({ userId: user.id, action: 'WASTE_CATEGORY_CREATE', module: 'CONFIG', entity: 'waste_category', entityId: c.id, ...ctx });
+  return { ok: true, id: c.id };
+}
+export async function updateWasteCategory(user: SessionUser, id: string, input: { name?: string }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
+  await prisma.wasteCategory.update({ where: { id }, data: { ...(input.name !== undefined ? { name: input.name.trim() } : {}) } });
+  await audit({ userId: user.id, action: 'WASTE_CATEGORY_UPDATE', module: 'CONFIG', entity: 'waste_category', entityId: id, ...ctx });
+  return { ok: true };
+}
+export async function toggleWasteCategory(user: SessionUser, id: string, active: boolean, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  await prisma.wasteCategory.update({ where: { id }, data: { active } });
+  await audit({ userId: user.id, action: active ? 'WASTE_CATEGORY_ACTIVATE' : 'WASTE_CATEGORY_DEACTIVATE', module: 'CONFIG', entity: 'waste_category', entityId: id, ...ctx });
+  return { ok: true };
+}
+export async function deleteWasteCategory(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const used = await prisma.wasteEntryItem.count({ where: { categoryId: id } });
+  if (used > 0) return { ok: false, reason: 'BLOCKED' }; // tem histórico → inative
+  await prisma.wasteCategory.delete({ where: { id } }).catch(() => {});
+  await audit({ userId: user.id, action: 'WASTE_CATEGORY_DELETE', module: 'CONFIG', entity: 'waste_category', entityId: id, ...ctx });
+  return { ok: true };
+}
+
 /* ──────────────────────── Comandas: sequência por unidade ──────────── */
 export async function setCommandConfig(user: SessionUser, input: { unitId: string; rangeStart: number; rangeEnd: number }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
