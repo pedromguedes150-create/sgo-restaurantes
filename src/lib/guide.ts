@@ -146,12 +146,12 @@ export const GUIDE: GuideSection[] = [
         roles: [...MANAGERLINE, 'FINANCE'],
         summary: 'Registrar notas e controlar pagamento.',
         steps: [
-          'Em NOTAS → "Registrar nota", toque em "Escanear QR" para abrir a câmera e ler o QR code da nota — a chave preenche sozinha.',
+          'Em NOTAS → "Registrar nota", toque em "Escanear" para abrir a câmera e ler o QR code OU o código de barras da nota (DANFE) — a chave preenche sozinha.',
           'Sem câmera? Cole/digite a chave de 44 dígitos (preenche sozinho) ou informe manualmente.',
           'Confirme os dados e salve. O Financeiro/Admin é avisado.',
           'Marque "Paga" ou "Com problema" conforme o andamento.',
         ],
-        tips: ['A leitura do QR usa a câmera do próprio celular no navegador (precisa permitir o acesso à câmera).'],
+        tips: ['A leitura usa a câmera do próprio celular no navegador (precisa permitir o acesso à câmera). Lê tanto o QR (NFC-e) quanto o código de barras (Code-128 da DANFE).'],
       },
       {
         id: 'cancelamentos',
