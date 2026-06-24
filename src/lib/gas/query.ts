@@ -1,0 +1,86 @@
+import { prisma } from '@/lib/db/prisma';
+import { unitScopeWhere } from '@/lib/scope/unit-scope';
+import { audit } from '@/lib/audit';
+import type { SessionUser } from '@/lib/auth/session';
+
+const ALERT_KEY = 'GAS_ALERT_PCT';
+const DEFAULT_ALERT = 10;
+
+export async function getGasAlertPct(): Promise<number> {
+  const s = await prisma.appSetting.findUnique({ where: { key: ALERT_KEY } });
+  const n = s ? Number(s.value) : DEFAULT_ALERT;
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_ALERT;
+}
+export async function setGasAlertPct(user: SessionUser, pct: number) {
+  if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' as const };
+  const p = Math.max(1, Math.round(pct));
+  await prisma.appSetting.upsert({ where: { key: ALERT_KEY }, create: { key: ALERT_KEY, value: String(p) }, update: { value: String(p) } });
+  await audit({ userId: user.id, action: 'GAS_ALERT_PCT_SET', module: 'CONFIG', metadata: { pct: p } });
+  return { ok: true as const };
+}
+
+export async function listGasReceipts(user: SessionUser, opts: { unitId?: string; limit?: number } = {}) {
+  return prisma.gasReceipt.findMany({
+    where: { ...unitScopeWhere(user, 'unitId'), ...(opts.unitId ? { unitId: opts.unitId } : {}) },
+    orderBy: [{ operationalDate: 'desc' }, { createdAt: 'desc' }],
+    take: opts.limit ?? 100,
+    include: { unit: { select: { name: true, code: true } }, supplier: { select: { name: true } }, createdBy: { select: { name: true } } },
+  });
+}
+
+export interface GasGroupStat { key: string; name: string; count: number; avg: number; last: number; min: number; max: number }
+export interface GasMonthPoint { month: string; avg: number; count: number }
+export interface GasDashboard {
+  totalReceipts: number;
+  avgPrice: number;
+  lastPrice: number | null;
+  byUnit: GasGroupStat[];
+  bySupplier: GasGroupStat[];
+  monthly: GasMonthPoint[];
+  alertPct: number;
+}
+
+function agg(rows: { key: string; name: string; price: number; date: string }[]): GasGroupStat[] {
+  const map = new Map<string, { name: string; prices: number[]; lastDate: string; last: number }>();
+  for (const r of rows) {
+    const cur = map.get(r.key) ?? { name: r.name, prices: [], lastDate: '', last: 0 };
+    cur.prices.push(r.price);
+    if (r.date >= cur.lastDate) { cur.lastDate = r.date; cur.last = r.price; }
+    map.set(r.key, cur);
+  }
+  return [...map.entries()].map(([key, v]) => ({
+    key, name: v.name, count: v.prices.length,
+    avg: v.prices.reduce((s, p) => s + p, 0) / v.prices.length,
+    last: v.last, min: Math.min(...v.prices), max: Math.max(...v.prices),
+  })).sort((a, b) => a.avg - b.avg);
+}
+
+/** Painel de gás: comparativo por unidade, por fornecedor e tendência mensal. */
+export async function getGasDashboard(user: SessionUser, opts: { unitId?: string; months?: number } = {}): Promise<GasDashboard> {
+  const months = opts.months ?? 6;
+  const d = new Date();
+  const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - (months - 1), 1));
+  const startStr = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}-01`;
+
+  const receipts = await prisma.gasReceipt.findMany({
+    where: { ...unitScopeWhere(user, 'unitId'), ...(opts.unitId ? { unitId: opts.unitId } : {}), operationalDate: { gte: startStr } },
+    orderBy: [{ operationalDate: 'asc' }],
+    include: { unit: { select: { name: true } }, supplier: { select: { name: true } } },
+  });
+
+  const all = receipts.map((r) => ({ price: Number(r.pricePerKg), date: r.operationalDate, unitId: r.unitId, unitName: r.unit.name, supplierId: r.supplierId, supplierName: r.supplier?.name ?? 'Sem fornecedor' }));
+
+  const byUnit = agg(all.map((r) => ({ key: r.unitId, name: r.unitName, price: r.price, date: r.date })));
+  const bySupplier = agg(all.map((r) => ({ key: r.supplierId ?? 'none', name: r.supplierName, price: r.price, date: r.date })));
+
+  // tendência mensal (média do preço/kg no escopo)
+  const byMonth = new Map<string, number[]>();
+  for (const r of all) { const m = r.date.slice(0, 7); const arr = byMonth.get(m) ?? []; arr.push(r.price); byMonth.set(m, arr); }
+  const monthly: GasMonthPoint[] = [...byMonth.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([month, ps]) => ({ month, avg: ps.reduce((s, p) => s + p, 0) / ps.length, count: ps.length }));
+
+  const avgPrice = all.length ? all.reduce((s, r) => s + r.price, 0) / all.length : 0;
+  const last = all.length ? all.reduce((a, b) => (b.date >= a.date ? b : a)) : null;
+  const alertPct = await getGasAlertPct();
+
+  return { totalReceipts: all.length, avgPrice, lastPrice: last ? last.price : null, byUnit, bySupplier, monthly, alertPct };
+}

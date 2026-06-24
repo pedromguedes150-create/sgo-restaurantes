@@ -2,6 +2,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getMyRequests, getToApprove, getToPay, getHistory, getMiscTypes } from '@/lib/payments/query';
+import { listSuppliers } from '@/lib/suppliers';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { PaymentsClient, type PayReq } from '@/components/payments/payments-client';
@@ -42,7 +43,7 @@ export default async function PagamentosPage() {
   const user = (await getSessionUser())!;
   const isFinanceView = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO';
 
-  const [mine, toApprove, toPay, history, units, miscTypes, freelancers] = await Promise.all([
+  const [mine, toApprove, toPay, history, units, miscTypes, freelancers, suppliers] = await Promise.all([
     getMyRequests(user),
     getToApprove(user),
     getToPay(user),
@@ -50,6 +51,7 @@ export default async function PagamentosPage() {
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     getMiscTypes(),
     prisma.freelancer.findMany({ where: { active: true }, include: { units: { select: { unitId: true } } }, orderBy: { name: 'asc' } }),
+    listSuppliers({ activeOnly: true }),
   ]);
 
   return (
@@ -69,6 +71,7 @@ export default async function PagamentosPage() {
             isAdmin={user.role === 'ADMIN'}
             units={units}
             miscTypes={miscTypes.map((t) => ({ id: t.id, name: t.name }))}
+            suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
             freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, defaultValue: Number(f.defaultValue), unitIds: f.units.map((u) => u.unitId) }))}
             mine={(mine as ReqRow[]).map(toDTO)}
             toApprove={(toApprove as ReqRow[]).map(toDTO)}

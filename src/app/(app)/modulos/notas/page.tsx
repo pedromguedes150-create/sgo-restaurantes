@@ -2,6 +2,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listNotes, getNoteSummary } from '@/lib/notes/query';
+import { listSuppliers } from '@/lib/suppliers';
 import { Card, CardContent } from '@/components/ui/card';
 import { NotesClient } from '@/components/notes/notes-client';
 import { formatBRL } from '@/lib/utils';
@@ -11,10 +12,11 @@ export const dynamic = 'force-dynamic';
 export default async function NotasPage() {
   const user = (await getSessionUser())!;
   const ym = new Date().toISOString().slice(0, 7);
-  const [notes, summary, units] = await Promise.all([
+  const [notes, summary, units, suppliers] = await Promise.all([
     listNotes(user),
     getNoteSummary(user, ym),
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    listSuppliers({ activeOnly: true }),
   ]);
 
   return (
@@ -30,6 +32,7 @@ export default async function NotasPage() {
           <NotesClient
             isAdmin={user.role === 'ADMIN'}
             units={units}
+            suppliers={suppliers.map((s) => ({ id: s.id, name: s.name, cnpj: s.cnpj }))}
             notes={notes.map((n) => ({ id: n.id, unit: n.unit.name, supplier: n.supplierName, value: Number(n.totalValue), status: n.status, number: n.number, problemNote: n.problemNote }))}
           />
         </CardContent>

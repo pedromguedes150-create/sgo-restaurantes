@@ -22,6 +22,7 @@ export interface CreatePaymentInput {
   miscTypeId?: string;
   beneficiary?: string;
   attachmentPath?: string;
+  supplierId?: string;
 }
 
 export type CreatePaymentResult =
@@ -80,6 +81,7 @@ export async function createPaymentRequest(
       miscTypeId: input.miscTypeId || null,
       beneficiary: input.beneficiary?.trim() || null,
       attachmentPath: input.attachmentPath || null,
+      supplierId: input.supplierId || null,
     },
     select: { id: true },
   });

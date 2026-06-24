@@ -69,6 +69,7 @@ model Unit {
   trainings           TrainingRecord[]
   communicationUnits      CommunicationUnit[]
   communicationRecipients CommunicationRecipient[]
+  gasReceipts             GasReceipt[]
 
   @@map("units")
 }
@@ -116,6 +117,8 @@ model User {
   trainingsApplied     TrainingRecord[] @relation("TrainingBy")
   communicationsAuthored  Communication[]          @relation("CommAuthor")
   communicationRecipients CommunicationRecipient[] @relation("CommRecipient")
+  gasReceipts             GasReceipt[]             @relation("GasReceiptBy")
+  suppliersCreated        Supplier[]               @relation("SupplierBy")
 
   @@map("users")
 }
@@ -737,6 +740,8 @@ model PaymentRequest {
   miscTypeId     String?
   beneficiary    String?
   attachmentPath String?
+  /// Vínculo opcional ao cadastro de fornecedores (lista compartilhada)
+  supplierId     String?
 
   // Workflow
   approvedById    String?
@@ -754,6 +759,7 @@ model PaymentRequest {
   paidBy      User?            @relation("PayPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
   freelancer  Freelancer?      @relation(fields: [freelancerId], references: [id], onDelete: SetNull)
   miscType    MiscPaymentType? @relation(fields: [miscTypeId], references: [id], onDelete: SetNull)
+  supplier    Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@index([unitId, status])
   @@index([status])
@@ -781,6 +787,8 @@ model ReceivedNote {
   accessKey    String? // chave de acesso (44 dígitos)
   supplierName String
   supplierCnpj String?
+  /// Vínculo opcional ao cadastro de fornecedores (lista compartilhada)
+  supplierId   String?
   number       String?
   issueDate    DateTime?
   dueDate      DateTime?
@@ -794,8 +802,9 @@ model ReceivedNote {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  unit      Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  createdBy User? @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  unit      Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  supplier  Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@index([unitId, status])
   @@index([accessKey])
@@ -1301,4 +1310,61 @@ model CommunicationRecipient {
   @@index([userId, status])
   @@index([unitId])
   @@map("communication_recipients")
+}
+
+// ───────────────────────── Fornecedores (lista compartilhada) ─────────────────────────
+/// Cadastro de fornecedores compartilhado: Gás, Notas Recebidas e Pagamentos.
+/// Alimentado por Admin/Supervisor. Comparações por fornecedor dependem deste registro.
+model Supplier {
+  id          String   @id @default(cuid())
+  name        String
+  cnpj        String?
+  pixKey      String?
+  /// Categoria livre (ex.: Gás, Carnes, Bebidas, Hortifruti)
+  category    String?
+  notes       String?
+  active      Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy       User?            @relation("SupplierBy", fields: [createdById], references: [id], onDelete: SetNull)
+  gasReceipts     GasReceipt[]
+  receivedNotes   ReceivedNote[]
+  paymentRequests PaymentRequest[]
+
+  @@index([active])
+  @@map("suppliers")
+}
+
+// ───────────────────────── Recebimento de Gás (Módulo 16) ─────────────────────────
+/// Recebimento de gás (granel, em kg). preço/kg = valor total ÷ kg. Acompanhamento
+/// de preço por unidade e por fornecedor, com alerta de variação.
+model GasReceipt {
+  id              String   @id @default(cuid())
+  unitId          String
+  supplierId      String?
+  /// Dia operacional do recebimento (YYYY-MM-DD)
+  operationalDate String
+  accessKey       String?
+  noteNumber      String?
+  quantityKg      Decimal  @db.Decimal(10, 2)
+  totalValue      Decimal  @db.Decimal(12, 2)
+  /// Snapshot do preço por kg (valor total ÷ kg)
+  pricePerKg      Decimal  @db.Decimal(10, 4)
+  /// Preço/kg da compra anterior (mesma unidade) para a variação
+  prevPricePerKg  Decimal? @db.Decimal(10, 4)
+  variationPct    Float?
+  alerted         Boolean  @default(false)
+  observation     String?
+  createdById     String?
+  createdAt       DateTime @default(now())
+
+  unit      Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  supplier  Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  createdBy User?     @relation("GasReceiptBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([unitId, operationalDate])
+  @@index([supplierId])
+  @@map("gas_receipts")
 }

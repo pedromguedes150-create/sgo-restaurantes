@@ -135,6 +135,16 @@ export async function deleteCommunication(user: SessionUser, id: string, ctx: Ct
   return { ok: true };
 }
 
+/* ───────────────────────── Gás (recebimento) ───────────────────────── */
+export async function deleteGasReceipt(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const g = await prisma.gasReceipt.findUnique({ where: { id }, select: { unitId: true, operationalDate: true } });
+  if (!g) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.gasReceipt.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: g.unitId, action: 'GAS_RECEIPT_DELETE', module: 'GAS', entity: 'gas_receipt', entityId: id, metadata: { operationalDate: g.operationalDate }, ...ctx });
+  return { ok: true };
+}
+
 /* ───────────────────────── Inventário ───────────────────────── */
 export async function deleteInventory(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };

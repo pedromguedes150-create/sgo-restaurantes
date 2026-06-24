@@ -168,6 +168,20 @@ export const GUIDE: GuideSection[] = [
         tips: ['A leitura usa a câmera do próprio celular no navegador (precisa permitir o acesso à câmera). Lê tanto o QR (NFC-e) quanto o código de barras (Code-128 da DANFE).'],
       },
       {
+        id: 'gas',
+        title: 'Recebimento de Gás',
+        roles: [...MANAGERLINE, 'CEO'],
+        summary: 'Controle do preço real por kg, com comparativo entre unidades e fornecedores.',
+        steps: [
+          'Em GÁS → "Lançar recebimento", leia a nota (QR ou código de barras) ou digite a chave; escolha o fornecedor.',
+          'Informe a quantidade recebida (kg) e o valor total da nota — o sistema calcula o preço real por kg na hora.',
+          'Se o preço por kg subir acima do limite (padrão 10%) vs a última compra da unidade, gerente e supervisor são avisados.',
+          'A aba "Dashboard" compara o preço médio/kg por unidade e por fornecedor, e mostra a tendência mensal.',
+          'O cadastro de fornecedores fica em Configurações → Fornecedores (Admin/CEO/Supervisão).',
+        ],
+        tips: ['A lista de fornecedores é compartilhada com Notas Recebidas e Pagamentos. O Admin ajusta o limite do alerta no Dashboard.'],
+      },
+      {
         id: 'cancelamentos',
         title: 'Cancelamento de Cupons',
         roles: [...MANAGERLINE, 'FINANCE'],
@@ -312,6 +326,7 @@ export const GUIDE: GuideSection[] = [
           'Comandas: cadastre várias sequências por unidade. Desperdícios e Ocorrências: crie/edite/exclua categorias (e tipos, nas Ocorrências).',
           'Checklists: ao editar um checklist, use "Salvar unidades" para mudar em quais unidades ele aparece (replica nas novas; remove/inativa nas retiradas).',
           'Pagamentos: o cadastro de freelancers e tipos de avulso é só aqui. No freelancer, a chave PIX é obrigatória.',
+          'Fornecedores: lista única (Admin/CEO/Supervisão) usada em Gás, Notas Recebidas e Pagamentos.',
           'Tudo tem editar e excluir; a exclusão é bloqueada quando há histórico (nesse caso, inative).',
         ],
       },

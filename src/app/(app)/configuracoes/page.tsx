@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import { roleLabel } from '@/lib/roles';
 import { RETENTION_MONTHS_DEFAULT, TERMS_VERSION } from '@/lib/lgpd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollText, Building2, Users, ShieldCheck, ListChecks, Wallet, KeyRound, ClipboardList, Trash2, AlertTriangle } from 'lucide-react';
+import { ScrollText, Building2, Users, ShieldCheck, ListChecks, Wallet, KeyRound, ClipboardList, Trash2, AlertTriangle, Truck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +39,7 @@ export default async function ConfiguracoesPage() {
           { href: '/configuracoes/comandas', label: 'Comandas (sequência)', icon: ClipboardList },
           { href: '/configuracoes/desperdicios', label: 'Desperdícios (categorias)', icon: Trash2 },
           { href: '/configuracoes/ocorrencias', label: 'Ocorrências (tipos/categorias)', icon: AlertTriangle },
+          { href: '/configuracoes/fornecedores', label: 'Fornecedores', icon: Truck },
           { href: '/configuracoes/pagamentos', label: 'Pagamentos', icon: Wallet },
           { href: '/configuracoes/perfis', label: 'Perfis de acesso', icon: KeyRound },
           { href: '/auditoria', label: 'Auditoria', icon: ScrollText },

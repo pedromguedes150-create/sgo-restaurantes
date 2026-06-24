@@ -13,6 +13,7 @@ import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 
 interface Unit { id: string; name: string }
+interface Supplier { id: string; name: string; cnpj: string | null }
 export interface NoteDTO {
   id: string; unit: string; supplier: string; value: number;
   status: 'RECEIVED' | 'PAID' | 'PROBLEM'; number: string | null; problemNote: string | null;
@@ -23,7 +24,7 @@ const ST: Record<NoteDTO['status'], { label: string; tone: StatusTone }> = {
   PROBLEM: { label: 'Com problema', tone: 'critical' },
 };
 
-export function NotesClient({ units, notes, isAdmin = false }: { units: Unit[]; notes: NoteDTO[]; isAdmin?: boolean }) {
+export function NotesClient({ units, notes, suppliers = [], isAdmin = false }: { units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; isAdmin?: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<'nova' | 'lista'>('lista');
   const [busy, setBusy] = useState(false);
@@ -49,7 +50,7 @@ export function NotesClient({ units, notes, isAdmin = false }: { units: Unit[]; 
       </div>
 
       {tab === 'nova' ? (
-        <NewNote units={units} onDone={() => { setTab('lista'); router.refresh(); }} />
+        <NewNote units={units} suppliers={suppliers} onDone={() => { setTab('lista'); router.refresh(); }} />
       ) : (
         <div className="space-y-2">
           {notes.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma nota registrada.</p>}
@@ -78,9 +79,10 @@ export function NotesClient({ units, notes, isAdmin = false }: { units: Unit[]; 
   );
 }
 
-function NewNote({ units, onDone }: { units: Unit[]; onDone: () => void }) {
+function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Supplier[]; onDone: () => void }) {
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
   const [accessKey, setAccessKey] = useState('');
+  const [supplierId, setSupplierId] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [supplierCnpj, setSupplierCnpj] = useState('');
   const [number, setNumber] = useState('');
@@ -111,7 +113,7 @@ function NewNote({ units, onDone }: { units: Unit[]; onDone: () => void }) {
     try {
       const res = await fetch('/api/notes', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unitId, source: accessKey ? 'QRCODE' : 'MANUAL', accessKey, supplierName, supplierCnpj, number, issueDate, dueDate, totalValue: v, productType }),
+        body: JSON.stringify({ unitId, source: accessKey ? 'QRCODE' : 'MANUAL', accessKey, supplierId, supplierName, supplierCnpj, number, issueDate, dueDate, totalValue: v, productType }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
@@ -137,7 +139,20 @@ function NewNote({ units, onDone }: { units: Unit[]; onDone: () => void }) {
         </div>
         {prefilled && <p className="mt-1 text-xs text-[#92600A]">Campos preenchidos pela chave — confira em amarelo.</p>}
       </div>
-      <div><Label>Fornecedor</Label><Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} /></div>
+      {suppliers.length > 0 && (
+        <div>
+          <Label>Fornecedor cadastrado</Label>
+          <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={supplierId} onChange={(e) => {
+            const s = suppliers.find((x) => x.id === e.target.value);
+            setSupplierId(e.target.value);
+            if (s) { setSupplierName(s.name); if (s.cnpj) setSupplierCnpj(s.cnpj); }
+          }}>
+            <option value="">— escolher / digitar abaixo —</option>
+            {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+      )}
+      <div><Label>Fornecedor</Label><Input value={supplierName} onChange={(e) => { setSupplierName(e.target.value); setSupplierId(''); }} /></div>
       <div className="grid grid-cols-2 gap-2">
         <div><Label>CNPJ</Label><Input className={hl} value={supplierCnpj} onChange={(e) => setSupplierCnpj(e.target.value)} /></div>
         <div><Label>Número</Label><Input className={hl} value={number} onChange={(e) => setNumber(e.target.value)} /></div>

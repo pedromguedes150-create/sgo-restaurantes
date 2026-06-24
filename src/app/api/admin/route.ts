@@ -6,6 +6,7 @@ import type { AdminResult } from '@/lib/admin';
 import { setRolePermission } from '@/lib/permissions';
 import { setTrainingWeight } from '@/lib/training';
 import { setCommunicationWeight } from '@/lib/communications/meta';
+import { setGasAlertPct } from '@/lib/gas/query';
 
 /**
  * Dispatch único dos cadastros administrativos (Configurações).
@@ -65,6 +66,7 @@ export async function POST(req: Request) {
   else if (e === 'permission' && a === 'set') r = await setRolePermission(user, b, ctx);
   else if (e === 'training' && a === 'setWeight') r = await setTrainingWeight(user, Number(b.weight));
   else if (e === 'communication' && a === 'setWeight') r = await setCommunicationWeight(user, Number(b.weight));
+  else if (e === 'gas' && a === 'setAlertPct') r = await setGasAlertPct(user, Number(b.pct));
 
   if (!r) return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });
   if (!r.ok) {

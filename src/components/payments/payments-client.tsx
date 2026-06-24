@@ -24,6 +24,7 @@ export interface PayReq {
 interface Unit { id: string; name: string }
 interface Freelancer { id: string; name: string; defaultValue: number; unitIds: string[] }
 interface MiscType { id: string; name: string }
+interface Supplier { id: string; name: string }
 
 const TYPE_LABEL = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra', MISC: 'Avulso' } as const;
 const STATUS: Record<PayReq['status'], { label: string; tone: StatusTone }> = {
@@ -41,6 +42,7 @@ export function PaymentsClient({
   units,
   freelancers,
   miscTypes,
+  suppliers = [],
   mine,
   toApprove,
   toPay,
@@ -51,6 +53,7 @@ export function PaymentsClient({
   units: Unit[];
   freelancers: Freelancer[];
   miscTypes: MiscType[];
+  suppliers?: Supplier[];
   mine: PayReq[];
   toApprove: PayReq[];
   toPay: PayReq[];
@@ -116,7 +119,7 @@ export function PaymentsClient({
         ))}
       </div>
 
-      {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} onDone={() => { setTab('minhas'); router.refresh(); }} />}
+      {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} onDone={() => { setTab('minhas'); router.refresh(); }} />}
 
       {tab === 'minhas' && <List items={mine} />}
 
@@ -170,7 +173,8 @@ function List({ items, actions }: { items: PayReq[]; actions?: (r: PayReq) => Re
   );
 }
 
-function NewRequest({ units, freelancers, miscTypes, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; onDone: () => void }) {
+function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; onDone: () => void }) {
+  const [supplierId, setSupplierId] = useState('');
   const [type, setType] = useState<'FREELANCER' | 'OVERTIME' | 'MISC'>('FREELANCER');
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
   const [freelancerId, setFreelancerId] = useState('');
@@ -202,7 +206,7 @@ function NewRequest({ units, freelancers, miscTypes, onDone }: { units: Unit[]; 
       const body: Record<string, unknown> = { type, unitId, amount: amt, description };
       if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, hours: hours ? Number(hours) : undefined });
       if (type === 'OVERTIME') Object.assign(body, { collaboratorName, workDate, hours: hours ? Number(hours) : undefined, reason });
-      if (type === 'MISC') Object.assign(body, { miscTypeId, beneficiary });
+      if (type === 'MISC') Object.assign(body, { miscTypeId, beneficiary, supplierId: supplierId || undefined });
       const res = await fetch('/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
@@ -269,7 +273,16 @@ function NewRequest({ units, freelancers, miscTypes, onDone }: { units: Unit[]; 
               {miscTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
-          <div><Label>Beneficiário</Label><Input value={beneficiary} onChange={(e) => setBeneficiary(e.target.value)} /></div>
+          {suppliers.length > 0 && (
+            <div>
+              <Label>Fornecedor (opcional)</Label>
+              <select className={sel} value={supplierId} onChange={(e) => { const s = suppliers.find((x) => x.id === e.target.value); setSupplierId(e.target.value); if (s) setBeneficiary(s.name); }}>
+                <option value="">— nenhum / digitar abaixo —</option>
+                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          )}
+          <div><Label>Beneficiário</Label><Input value={beneficiary} onChange={(e) => { setBeneficiary(e.target.value); setSupplierId(''); }} /></div>
           <div><Label>Descrição</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
         </>
       )}

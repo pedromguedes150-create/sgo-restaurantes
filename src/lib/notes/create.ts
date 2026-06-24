@@ -11,6 +11,7 @@ export interface CreateNoteInput {
   accessKey?: string;
   supplierName: string;
   supplierCnpj?: string;
+  supplierId?: string;
   number?: string;
   issueDate?: string;
   dueDate?: string;
@@ -48,6 +49,7 @@ export async function createNote(
       accessKey: input.accessKey?.replace(/\D/g, '') || null,
       supplierName: input.supplierName.trim(),
       supplierCnpj: input.supplierCnpj || null,
+      supplierId: input.supplierId || null,
       number: input.number || null,
       issueDate: input.issueDate ? new Date(input.issueDate) : null,
       dueDate: input.dueDate ? new Date(input.dueDate) : null,

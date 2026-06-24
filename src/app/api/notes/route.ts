@@ -18,6 +18,7 @@ export async function POST(req: Request) {
       accessKey: b.accessKey,
       supplierName: b.supplierName,
       supplierCnpj: b.supplierCnpj,
+      supplierId: b.supplierId,
       number: b.number,
       issueDate: b.issueDate,
       dueDate: b.dueDate,

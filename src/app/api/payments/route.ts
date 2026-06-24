@@ -26,6 +26,7 @@ export async function POST(req: Request) {
       reason: b.reason,
       miscTypeId: b.miscTypeId,
       beneficiary: b.beneficiary,
+      supplierId: b.supplierId,
     },
     requestContext(req),
   );
