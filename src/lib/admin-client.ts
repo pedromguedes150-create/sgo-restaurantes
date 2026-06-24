@@ -1,11 +1,11 @@
 'use client';
 
 /** Helper client para os cadastros administrativos (POST /api/admin). */
-export async function postAdmin(payload: Record<string, unknown>): Promise<{ ok: boolean; error?: string; id?: string; reason?: string }> {
+export async function postAdmin(payload: Record<string, unknown>): Promise<{ ok: boolean; error?: string; id?: string; reason?: string; created?: number }> {
   try {
     const res = await fetch('/api/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json().catch(() => ({}));
-    return res.ok ? { ok: true, id: data.id } : { ok: false, error: data.error ?? 'Falha', reason: data.reason };
+    return res.ok ? { ok: true, id: data.id, created: data.created } : { ok: false, error: data.error ?? 'Falha', reason: data.reason };
   } catch {
     return { ok: false, error: 'Falha de conexão' };
   }

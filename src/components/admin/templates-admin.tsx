@@ -17,7 +17,7 @@ export interface TplRow {
   startDate: string | null; endDate: string | null; groupUnitIds: string[]; items: TplItem[];
 }
 interface Unit { id: string; name: string }
-export interface ExampleOpt { name: string; scope: 'UNIT' | 'MANAGER'; limitTime: string | null; requiresEvidence: boolean; weight: number; itemCount: number; sections: string[] }
+export interface ExampleOpt { id: string; name: string; category: string | null; moment: string | null; scope: 'UNIT' | 'MANAGER'; limitTime: string | null; requiresEvidence: boolean; weight: number; itemCount: number }
 
 const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
@@ -59,18 +59,24 @@ export function TemplatesAdmin({ units, templates, examples = [] }: { units: Uni
   );
 }
 
-/* ───────── Seletor de modelos prontos ───────── */
+/* ───────── Seletor de modelos prontos (biblioteca editável) ───────── */
 function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: { examples: ExampleOpt[]; unitId: string; existingNames: Set<string>; onDone: () => void; onCancel: () => void }) {
   const available = examples.filter((e) => !existingNames.has(e.name));
-  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [sel, setSel] = useState<Set<string>>(new Set()); // ids
+  const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  function toggle(name: string) { setSel((s) => { const n = new Set(s); n.has(name) ? n.delete(name) : n.add(name); return n; }); }
+  function toggle(id: string) { setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
+
+  const shown = q ? examples.filter((e) => e.name.toLowerCase().includes(q.toLowerCase())) : examples;
+  // agrupa por categoria (setor)
+  const groups = new Map<string, ExampleOpt[]>();
+  for (const e of shown) { const k = e.category || 'Outros'; groups.set(k, [...(groups.get(k) ?? []), e]); }
 
   async function create() {
     if (sel.size === 0) { setMsg('Selecione ao menos um modelo.'); return; }
     setBusy(true); setMsg(null);
-    const r = await postAdmin({ entity: 'template', action: 'seedExamples', unitId, names: [...sel] });
+    const r = await postAdmin({ entity: 'template', action: 'fromModels', unitId, modelIds: [...sel] });
     setBusy(false);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
     onDone();
@@ -79,29 +85,35 @@ function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: {
   return (
     <div className="space-y-2 rounded-lg border border-dashed p-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Modelos prontos</h2>
-        {available.length > 0 && <button className="text-xs font-semibold text-accent" onClick={() => setSel(sel.size === available.length ? new Set() : new Set(available.map((e) => e.name)))}>{sel.size === available.length ? 'Limpar' : 'Selecionar todos'}</button>}
+        <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Modelos de checklist</h2>
+        {available.length > 0 && <button className="text-xs font-semibold text-accent" onClick={() => setSel(sel.size === available.length ? new Set() : new Set(available.map((e) => e.id)))}>{sel.size === available.length ? 'Limpar' : 'Selecionar todos'}</button>}
       </div>
-      <p className="text-xs text-muted-foreground">Marque os que quer criar nesta unidade. Você pode editá-los depois (itens, horário, datas…).</p>
+      <p className="text-xs text-muted-foreground">Marque os que quer criar nesta unidade (você edita depois). Os que já existem ficam sinalizados.</p>
+      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar modelo…" className="h-9 text-sm" />
 
-      <div className="space-y-1.5">
-        {examples.map((e) => {
-          const exists = existingNames.has(e.name);
-          const checked = sel.has(e.name);
-          return (
-            <button key={e.name} type="button" disabled={exists} onClick={() => toggle(e.name)}
-              className={`flex w-full items-start gap-2 rounded-lg border p-2.5 text-left ${exists ? 'cursor-not-allowed opacity-50' : checked ? 'border-primary bg-primary/5' : 'bg-card hover:border-accent'}`}>
-              {exists ? <Check className="mt-0.5 h-5 w-5 shrink-0 text-success" /> : checked ? <CheckSquare className="mt-0.5 h-5 w-5 shrink-0 text-primary" /> : <Square className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />}
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-brand">{e.name}{exists && <span className="ml-1 text-xs font-normal text-success">já existe</span>}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {e.scope === 'MANAGER' ? 'individual' : 'da unidade'} · peso {e.weight} · {e.limitTime ? `limite ${e.limitTime}` : 'sem horário'} · {e.itemCount} item(ns){e.requiresEvidence ? ' · foto' : ''}
-                  {e.sections.length ? ` · ${e.sections.join(', ')}` : ''}
-                </span>
-              </span>
-            </button>
-          );
-        })}
+      <div className="max-h-[28rem] space-y-2 overflow-y-auto">
+        {[...groups.entries()].map(([cat, list]) => (
+          <div key={cat}>
+            <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-accent">{cat}</p>
+            <div className="space-y-1">
+              {list.map((e) => {
+                const exists = existingNames.has(e.name);
+                const checked = sel.has(e.id);
+                return (
+                  <button key={e.id} type="button" disabled={exists} onClick={() => toggle(e.id)}
+                    className={`flex w-full items-start gap-2 rounded-lg border p-2 text-left ${exists ? 'cursor-not-allowed opacity-50' : checked ? 'border-primary bg-primary/5' : 'bg-card hover:border-accent'}`}>
+                    {exists ? <Check className="mt-0.5 h-5 w-5 shrink-0 text-success" /> : checked ? <CheckSquare className="mt-0.5 h-5 w-5 shrink-0 text-primary" /> : <Square className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />}
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-brand">{e.moment ?? e.name}{exists && <span className="ml-1 text-xs font-normal text-success">já existe</span>}</span>
+                      <span className="block text-xs text-muted-foreground">{e.itemCount} item(ns) · {e.limitTime ? `limite ${e.limitTime}` : 'sem horário'} · peso {e.weight}{e.requiresEvidence ? ' · foto' : ''}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        {shown.length === 0 && <p className="text-sm text-muted-foreground">Nenhum modelo encontrado.</p>}
       </div>
 
       {msg && <p className="text-sm font-medium text-critical">{msg}</p>}

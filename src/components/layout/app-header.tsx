@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { LogOut, Bell, ArrowLeft } from 'lucide-react';
+import { LogOut, Bell, ArrowLeft, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function AppHeader({ userName, roleLabel, unread = 0 }: { userName: string; roleLabel: string; unread?: number }) {
@@ -46,6 +46,9 @@ export function AppHeader({ userName, roleLabel, unread = 0 }: { userName: strin
         </div>
       </div>
       <div className="flex items-center gap-1">
+        <Link href="/ajuda" aria-label="Treinamento da Plataforma" className="inline-flex h-12 w-12 items-center justify-center rounded-lg text-white hover:bg-white/10">
+          <GraduationCap className="h-5 w-5" />
+        </Link>
         <Link href="/notificacoes" aria-label="Notificações" className="relative inline-flex h-12 w-12 items-center justify-center rounded-lg text-white hover:bg-white/10">
           <Bell className="h-5 w-5" />
           {unread > 0 && (

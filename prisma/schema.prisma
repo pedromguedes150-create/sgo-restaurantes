@@ -125,6 +125,7 @@ model User {
   oilCollections          OilCollection[]          @relation("OilBy")
   inventoryItemsCreated   InventoryItem[]          @relation("InvItemBy")
   inventoryMovements      InventoryMovement[]      @relation("InvMoveBy")
+  checklistModels         ChecklistModel[]         @relation("ChecklistModelBy")
 
   @@map("users")
 }
@@ -1463,4 +1464,45 @@ model InventoryMovement {
   @@index([itemId, createdAt])
   @@index([unitId, operationalDate])
   @@map("inventory_movements")
+}
+
+// ───────────────────────── Modelos de checklist (biblioteca editável) ─────────────────────────
+/// Biblioteca de modelos prontos de checklist (Admin cria/edita/exclui). A partir
+/// de um modelo, o Admin gera checklists (TaskTemplate) nas unidades.
+model ChecklistModel {
+  id               String              @id @default(cuid())
+  name             String
+  category         String?             // setor (ex.: Cozinha, Churrasco, Salão)
+  moment           String?             // Abertura, Durante o turno, Fechamento…
+  scope            ChecklistScope      @default(UNIT)
+  limitTime        String?
+  weight           Int                 @default(10)
+  requiresEvidence Boolean             @default(false)
+  active           Boolean             @default(true)
+  order            Int                 @default(0)
+  /// veio do seed padrão (apenas marca a origem)
+  builtin          Boolean             @default(false)
+  createdById      String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  createdBy User?                 @relation("ChecklistModelBy", fields: [createdById], references: [id], onDelete: SetNull)
+  items     ChecklistModelItem[]
+
+  @@index([active, order])
+  @@map("checklist_models")
+}
+
+model ChecklistModelItem {
+  id            String  @id @default(cuid())
+  modelId       String
+  section       String?
+  text          String
+  requiresPhoto Boolean @default(false)
+  order         Int     @default(0)
+
+  model ChecklistModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@index([modelId])
+  @@map("checklist_model_items")
 }

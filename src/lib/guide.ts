@@ -36,6 +36,7 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'No computador, use o MENU LATERAL à esquerda. No celular, use a barra inferior.',
           'O sino 🔔 no topo mostra suas NOTIFICAÇÕES (alertas e avisos). O número vermelho é o que falta ler.',
+          'O capelo 🎓 no topo (ao lado do sino) abre o "Treinamento da Plataforma" — os guias do SEU perfil, em qualquer aparelho.',
           'Ao entrar em uma tela, use o link "← Voltar" para retornar.',
           'Se você cuida de mais de uma unidade, escolha a unidade nos botões/lista no topo de cada tela.',
         ],
@@ -342,7 +343,8 @@ export const GUIDE: GuideSection[] = [
           'Comandas: cadastre várias sequências por unidade. Desperdícios e Ocorrências: crie/edite/exclua categorias (e tipos, nas Ocorrências).',
           'Checklists: ao editar um checklist, use "Salvar unidades" para mudar em quais unidades ele aparece (replica nas novas; remove/inativa nas retiradas).',
           'Checklists têm "Programação" (início/encerramento): sem início vale desde já; sem encerramento é contínuo. O checklist só é gerado dentro do período.',
-          'Botão "Modelos prontos…" abre a lista de modelos (abertura, fechamento, segurança alimentar, vitrine, gerente) — marque só os que quiser criar; os que já existem ficam sinalizados.',
+          'Botão "Modelos prontos…" abre a biblioteca de modelos (por setor/momento) — marque só os que quiser criar na unidade; os que já existem ficam sinalizados.',
+          'Em "Biblioteca de modelos" (ou Configurações → Modelos de checklist) o Admin cria, edita e exclui os modelos — inclusive os padrão da rede Beija Flor.',
           'Excluir checklist: se ele já tiver execuções, o sistema bloqueia e oferece a exclusão definitiva (apaga histórico/fotos) — ideal para checklists de teste.',
           'Pagamentos: o cadastro de freelancers e tipos de avulso é só aqui. No freelancer, a chave PIX é obrigatória.',
           'Fornecedores: lista única (Admin/CEO/Supervisão) usada em Gás, Notas Recebidas e Pagamentos.',
