@@ -1,0 +1,184 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Save, Droplets } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { DeleteOpButton } from '@/components/admin/delete-op-button';
+import { formatBRL } from '@/lib/utils';
+
+interface Unit { id: string; name: string }
+interface Supplier { id: string; name: string }
+interface Group { key: string; name: string; liters: number; total: number }
+interface MonthPoint { month: string; liters: number; total: number }
+export interface OilDash { totalLiters: number; totalValue: number; avgPricePerLiter: number; byUnit: Group[]; byMethod: Group[]; monthly: MonthPoint[] }
+export interface OilRow { id: string; date: string; unit: string; supplier: string; liters: number; price: number; total: number; method: string; by: string }
+
+const METHODS = ['PIX', 'Dinheiro', 'Crédito em conta', 'Transferência', 'Troca por produto'];
+const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const mlabel = (m: string) => { const [y, mm] = m.split('-'); return `${MONTHS[Number(mm) - 1]}/${y.slice(2)}`; };
+const perL = (n: number) => `R$ ${n.toFixed(4).replace('.', ',')}/L`;
+
+export function OilClient({ canLaunch, isAdmin, units, suppliers, dashboard, rows }: {
+  canLaunch: boolean; isAdmin: boolean; units: Unit[]; suppliers: Supplier[]; dashboard: OilDash; rows: OilRow[];
+}) {
+  const [tab, setTab] = useState<'lancar' | 'painel' | 'historico'>(canLaunch ? 'lancar' : 'painel');
+  const tabs: { key: typeof tab; label: string; show: boolean }[] = [
+    { key: 'lancar', label: 'Lançar coleta', show: canLaunch },
+    { key: 'painel', label: 'Dashboard', show: true },
+    { key: 'historico', label: 'Histórico', show: true },
+  ];
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {tabs.filter((t) => t.show).map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>
+        ))}
+      </div>
+      {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
+      {tab === 'painel' && <Dashboard d={dashboard} />}
+      {tab === 'historico' && <History rows={rows} isAdmin={isAdmin} />}
+    </div>
+  );
+}
+
+function Launch({ units, suppliers }: { units: Unit[]; suppliers: Supplier[] }) {
+  const router = useRouter();
+  const [unitId, setUnitId] = useState(units[0]?.id ?? '');
+  const [supplierId, setSupplierId] = useState('');
+  const [liters, setLiters] = useState('');
+  const [price, setPrice] = useState('');
+  const [method, setMethod] = useState('');
+  const [collector, setCollector] = useState('');
+  const [obs, setObs] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
+
+  const l = parseFloat((liters || '0').replace(',', '.'));
+  const p = parseFloat((price || '0').replace(',', '.'));
+  const total = l > 0 && p > 0 ? l * p : 0;
+
+  async function submit() {
+    setErr(null); setOk(null);
+    if (!unitId || !(l > 0) || !(p >= 0)) { setErr('Informe unidade, litros e valor por litro.'); return; }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/oil', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unitId, supplierId, liters: l, pricePerLiter: p, paymentMethod: method, collectorName: collector, observation: obs }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
+      setOk(`Coleta registrada: ${l.toLocaleString('pt-BR')} L · ${formatBRL(data.totalValue)} a receber.`);
+      setLiters(''); setPrice(''); setMethod(''); setCollector(''); setObs(''); setSupplierId('');
+      router.refresh();
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="space-y-3">
+      {units.length > 1 && <div><Label>Unidade</Label><select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>}
+      <div>
+        <Label>Empresa coletora (fornecedor)</Label>
+        <select className={sel} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+          <option value="">— opcional —</option>
+          {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div><Label>Litros coletados</Label><Input inputMode="decimal" value={liters} onChange={(e) => setLiters(e.target.value)} placeholder="ex: 80" /></div>
+        <div><Label>Valor por litro (R$)</Label><Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" /></div>
+      </div>
+      {total > 0 && (
+        <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 text-center">
+          <p className="text-xs text-muted-foreground">Valor total a receber</p>
+          <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
+        </div>
+      )}
+      <div>
+        <Label>Como recebemos</Label>
+        <select className={sel} value={method} onChange={(e) => setMethod(e.target.value)}>
+          <option value="">— selecione —</option>
+          {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
+      <div><Label>Observação (opcional)</Label><Input value={obs} onChange={(e) => setObs(e.target.value)} /></div>
+      {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
+      {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
+      <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Save className="h-5 w-5" /> Registrar coleta</Button>
+    </div>
+  );
+}
+
+function Dashboard({ d }: { d: OilDash }) {
+  if (d.totalLiters === 0) return <p className="text-sm text-muted-foreground">Ainda não há coletas no período.</p>;
+  const maxU = Math.max(...d.byUnit.map((u) => u.total), 1);
+  const maxM = Math.max(...d.monthly.map((m) => m.total), 1);
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-2">
+        <Cell label="Litros (6m)" value={d.totalLiters.toLocaleString('pt-BR')} />
+        <Cell label="Recebido (6m)" value={formatBRL(d.totalValue)} />
+        <Cell label="Médio/litro" value={perL(d.avgPricePerLiter)} />
+      </div>
+      <div>
+        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">Por unidade</h2>
+        <div className="space-y-2">
+          {d.byUnit.map((u) => (
+            <div key={u.key} className="rounded-lg border bg-card p-2.5">
+              <div className="flex items-center justify-between text-sm"><span className="font-semibold text-brand">{u.name}</span><span className="font-bold">{formatBRL(u.total)}</span></div>
+              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${(u.total / maxU) * 100}%` }} /></div>
+              <p className="mt-1 text-xs text-muted-foreground">{u.liters.toLocaleString('pt-BR')} L · {perL(u.liters > 0 ? u.total / u.liters : 0)}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">Como recebemos</h2>
+        <div className="space-y-1">
+          {d.byMethod.map((m) => (
+            <div key={m.key} className="flex items-center justify-between rounded-lg border bg-card px-3 py-1.5 text-sm">
+              <span>{m.name}</span><span className="font-semibold">{formatBRL(m.total)} <span className="text-xs font-normal text-muted-foreground">· {m.liters.toLocaleString('pt-BR')} L</span></span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">Tendência mensal (R$ recebido)</h2>
+        <div className="flex items-end gap-2 rounded-lg border bg-card p-3" style={{ height: 140 }}>
+          {d.monthly.map((m) => (
+            <div key={m.month} className="flex flex-1 flex-col items-center justify-end gap-1">
+              <span className="text-[10px] font-semibold text-brand">{Math.round(m.total)}</span>
+              <div className="w-full rounded-t bg-accent" style={{ height: `${Math.max(4, (m.total / maxM) * 90)}px` }} />
+              <span className="text-[10px] text-muted-foreground">{mlabel(m.month)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Cell({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-lg border bg-card py-3 text-center"><p className="text-base font-black text-brand">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div>;
+}
+
+function History({ rows, isAdmin }: { rows: OilRow[]; isAdmin: boolean }) {
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma coleta registrada.</p>;
+  return (
+    <div className="space-y-2">
+      {rows.map((r) => (
+        <div key={r.id} className="rounded-lg border bg-card p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="flex items-center gap-1 font-semibold text-brand"><Droplets className="h-4 w-4 text-accent" /> {r.liters.toLocaleString('pt-BR')} L · {formatBRL(r.total)}</p>
+              <p className="text-xs text-muted-foreground">{r.date} · {r.unit} · {perL(r.price)}{r.method ? ` · ${r.method}` : ''}{r.supplier !== 'Sem fornecedor' ? ` · ${r.supplier}` : ''}{r.by ? ` · ${r.by}` : ''}</p>
+            </div>
+          </div>
+          {isAdmin && <div className="mt-2"><DeleteOpButton entity="oil" id={r.id} label={`a coleta de óleo (${r.date}, ${r.unit})`} /></div>}
+        </div>
+      ))}
+    </div>
+  );
+}

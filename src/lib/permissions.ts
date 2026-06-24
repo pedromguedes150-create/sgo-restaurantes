@@ -22,6 +22,7 @@ export const MODULES: { key: string; label: string; nav?: string }[] = [
   { key: 'INVENTORY', label: 'Inventário', nav: '/modulos/inventario' },
   { key: 'NOTES', label: 'Notas Recebidas', nav: '/modulos/notas' },
   { key: 'GAS', label: 'Recebimento de Gás', nav: '/modulos/gas' },
+  { key: 'OIL', label: 'Coleta de Óleo', nav: '/modulos/oleo' },
   { key: 'PAYMENTS', label: 'Pagamentos', nav: '/modulos/pagamentos' },
   { key: 'PEOPLE', label: 'Pessoas / Escala / Mapa', nav: '/modulos/pessoas' },
   { key: 'POPS', label: 'POPs', nav: '/modulos/pops' },

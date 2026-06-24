@@ -145,6 +145,16 @@ export async function deleteGasReceipt(user: SessionUser, id: string, ctx: Ctx =
   return { ok: true };
 }
 
+/* ───────────────────────── Coleta de óleo ───────────────────────── */
+export async function deleteOilCollection(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const o = await prisma.oilCollection.findUnique({ where: { id }, select: { unitId: true, operationalDate: true } });
+  if (!o) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.oilCollection.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: o.unitId, action: 'OIL_COLLECTION_DELETE', module: 'OIL', entity: 'oil_collection', entityId: id, metadata: { operationalDate: o.operationalDate }, ...ctx });
+  return { ok: true };
+}
+
 /* ───────────────────────── Inventário ───────────────────────── */
 export async function deleteInventory(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
