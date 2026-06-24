@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2, X, Save, GripVertical } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, GripVertical, Check, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,16 +16,19 @@ export interface TplRow {
   startDate: string | null; endDate: string | null; groupUnitIds: string[]; items: TplItem[];
 }
 interface Unit { id: string; name: string }
+export interface ExampleOpt { name: string; scope: 'UNIT' | 'MANAGER'; limitTime: string | null; requiresEvidence: boolean; weight: number; itemCount: number; sections: string[] }
 
 const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
-export function TemplatesAdmin({ units, templates }: { units: Unit[]; templates: TplRow[] }) {
+export function TemplatesAdmin({ units, templates, examples = [] }: { units: Unit[]; templates: TplRow[]; examples?: ExampleOpt[] }) {
   const router = useRouter();
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
   const [creating, setCreating] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   const list = useMemo(() => templates.filter((t) => t.unitId === unitId), [templates, unitId]);
   const sumWeight = list.filter((t) => t.active && t.entersMeta).reduce((s, t) => s + t.weight, 0);
+  const existingNames = useMemo(() => new Set(list.map((t) => t.name)), [list]);
 
   return (
     <div className="space-y-4">
@@ -36,14 +39,12 @@ export function TemplatesAdmin({ units, templates }: { units: Unit[]; templates:
 
       {creating ? (
         <ChecklistForm units={units} defaultUnitId={unitId} onDone={() => { setCreating(false); router.refresh(); }} onCancel={() => setCreating(false)} />
+      ) : picking ? (
+        <ExamplesPicker examples={examples} unitId={unitId} existingNames={existingNames} onDone={() => { setPicking(false); router.refresh(); }} onCancel={() => setPicking(false)} />
       ) : (
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button onClick={() => setCreating(true)} variant="gold" className="flex-1"><Plus className="h-5 w-5" /> Novo checklist</Button>
-          <Button variant="outline" disabled={!unitId} onClick={async () => {
-            if (!confirm('Adicionar checklists de exemplo (abertura, fechamento, segurança alimentar, vitrine, gerente) nesta unidade? Os que já existirem são ignorados.')) return;
-            const r = await postAdmin({ entity: 'template', action: 'seedExamples', unitId });
-            if (r.ok) router.refresh(); else alert(r.error ?? 'Falha');
-          }}>+ Exemplos</Button>
+          {examples.length > 0 && <Button variant="outline" disabled={!unitId} onClick={() => setPicking(true)}>Modelos prontos…</Button>}
         </div>
       )}
 
@@ -52,6 +53,60 @@ export function TemplatesAdmin({ units, templates }: { units: Unit[]; templates:
       <div className="space-y-2">
         {list.map((t) => <TplItemRow key={t.id} t={t} units={units} onChange={() => router.refresh()} />)}
         {list.length === 0 && <p className="text-sm text-muted-foreground">Nenhum checklist nesta unidade.</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Seletor de modelos prontos ───────── */
+function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: { examples: ExampleOpt[]; unitId: string; existingNames: Set<string>; onDone: () => void; onCancel: () => void }) {
+  const available = examples.filter((e) => !existingNames.has(e.name));
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  function toggle(name: string) { setSel((s) => { const n = new Set(s); n.has(name) ? n.delete(name) : n.add(name); return n; }); }
+
+  async function create() {
+    if (sel.size === 0) { setMsg('Selecione ao menos um modelo.'); return; }
+    setBusy(true); setMsg(null);
+    const r = await postAdmin({ entity: 'template', action: 'seedExamples', unitId, names: [...sel] });
+    setBusy(false);
+    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    onDone();
+  }
+
+  return (
+    <div className="space-y-2 rounded-lg border border-dashed p-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Modelos prontos</h2>
+        {available.length > 0 && <button className="text-xs font-semibold text-accent" onClick={() => setSel(sel.size === available.length ? new Set() : new Set(available.map((e) => e.name)))}>{sel.size === available.length ? 'Limpar' : 'Selecionar todos'}</button>}
+      </div>
+      <p className="text-xs text-muted-foreground">Marque os que quer criar nesta unidade. Você pode editá-los depois (itens, horário, datas…).</p>
+
+      <div className="space-y-1.5">
+        {examples.map((e) => {
+          const exists = existingNames.has(e.name);
+          const checked = sel.has(e.name);
+          return (
+            <button key={e.name} type="button" disabled={exists} onClick={() => toggle(e.name)}
+              className={`flex w-full items-start gap-2 rounded-lg border p-2.5 text-left ${exists ? 'cursor-not-allowed opacity-50' : checked ? 'border-primary bg-primary/5' : 'bg-card hover:border-accent'}`}>
+              {exists ? <Check className="mt-0.5 h-5 w-5 shrink-0 text-success" /> : checked ? <CheckSquare className="mt-0.5 h-5 w-5 shrink-0 text-primary" /> : <Square className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />}
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-brand">{e.name}{exists && <span className="ml-1 text-xs font-normal text-success">já existe</span>}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {e.scope === 'MANAGER' ? 'individual' : 'da unidade'} · peso {e.weight} · {e.limitTime ? `limite ${e.limitTime}` : 'sem horário'} · {e.itemCount} item(ns){e.requiresEvidence ? ' · foto' : ''}
+                  {e.sections.length ? ` · ${e.sections.join(', ')}` : ''}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+      <div className="flex gap-2">
+        <Button size="sm" className="flex-1" disabled={busy || sel.size === 0} onClick={create}><Plus className="h-4 w-4" /> Criar selecionados ({sel.size})</Button>
+        <Button size="sm" variant="outline" onClick={onCancel}>Cancelar</Button>
       </div>
     </div>
   );

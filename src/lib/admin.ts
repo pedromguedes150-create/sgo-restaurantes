@@ -360,12 +360,31 @@ const EXAMPLE_CHECKLISTS: { name: string; limitTime: string | null; weight: numb
   },
 ];
 
-export async function seedExampleChecklists(user: SessionUser, unitId: string, ctx: Ctx = {}): Promise<AdminResult & { created?: number }> {
+/** Metadados leves dos modelos prontos (para o seletor na UI). */
+export function exampleChecklistOptions() {
+  return EXAMPLE_CHECKLISTS.map((c) => ({
+    name: c.name,
+    scope: c.scope,
+    limitTime: c.limitTime,
+    requiresEvidence: c.requiresEvidence,
+    weight: c.weight,
+    itemCount: c.items.length,
+    sections: [...new Set(c.items.map((i) => i.section).filter(Boolean))] as string[],
+  }));
+}
+
+/**
+ * Cria modelos prontos numa unidade. Se `names` for informado, cria apenas os
+ * selecionados; senão, todos. Pula os que já existem (não duplica).
+ */
+export async function seedExampleChecklists(user: SessionUser, unitId: string, names: string[] | undefined, ctx: Ctx = {}): Promise<AdminResult & { created?: number }> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!unitId) return { ok: false, reason: 'INVALID' };
+  const wanted = names && names.length ? new Set(names) : null;
   const existing = new Set((await prisma.taskTemplate.findMany({ where: { unitId }, select: { name: true } })).map((t) => t.name));
   let created = 0;
   for (const c of EXAMPLE_CHECKLISTS) {
+    if (wanted && !wanted.has(c.name)) continue; // não selecionado
     if (existing.has(c.name)) continue; // não duplica
     await prisma.taskTemplate.create({
       data: {
@@ -375,7 +394,7 @@ export async function seedExampleChecklists(user: SessionUser, unitId: string, c
     });
     created++;
   }
-  await audit({ userId: user.id, unitId, action: 'TEMPLATE_SEED_EXAMPLES', module: 'CONFIG', entity: 'task_template', metadata: { created }, ...ctx });
+  await audit({ userId: user.id, unitId, action: 'TEMPLATE_SEED_EXAMPLES', module: 'CONFIG', entity: 'task_template', metadata: { created, selected: wanted ? wanted.size : 'all' }, ...ctx });
   return { ok: true, created };
 }
 
