@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     else if (e === 'cancellationImport') r = await ops.deleteCancellationImport(user, b.id, ctx);
     else if (e === 'note') r = await ops.deleteReceivedNote(user, b.id, ctx);
     else if (e === 'taskInstance') r = await ops.deleteTaskInstance(user, b.id, ctx);
+    else if (e === 'communication') r = await ops.deleteCommunication(user, b.id, ctx);
     else if (e === 'inventory') r = await ops.deleteInventory(user, b.id, ctx);
   }
 

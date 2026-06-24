@@ -124,6 +124,17 @@ export async function deleteTaskInstance(user: SessionUser, id: string, ctx: Ctx
   return { ok: true };
 }
 
+/* ───────────────────────── Comunicação ───────────────────────── */
+/** Exclui um comunicado inteiro (unidades, anexos e confirmações em cascade). */
+export async function deleteCommunication(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const c = await prisma.communication.findUnique({ where: { id }, select: { title: true } });
+  if (!c) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.communication.delete({ where: { id } });
+  await audit({ userId: user.id, action: 'COMMUNICATION_DELETE', module: 'COMMUNICATION', entity: 'communication', entityId: id, metadata: { title: c.title }, ...ctx });
+  return { ok: true };
+}
+
 /* ───────────────────────── Inventário ───────────────────────── */
 export async function deleteInventory(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };

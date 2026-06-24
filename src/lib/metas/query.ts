@@ -45,6 +45,14 @@ export async function getMetaBreakdown(unitId: string, yearMonth: string): Promi
     rows.push({ name: 'Treinamentos (POPs)', weight: tWeight, done: tStats.done, resolved: tResolved, scorePct: Math.round((tStats.done / tResolved) * 100) });
   }
 
+  // Linha "Comunicados" (Central de Comunicação) — peso único configurável
+  const { getCommunicationMonthStats, getCommunicationWeight } = await import('@/lib/communications/meta');
+  const [cStats, cWeight] = await Promise.all([getCommunicationMonthStats(unitId, yearMonth), getCommunicationWeight()]);
+  const cResolved = cStats.done + cStats.missed;
+  if (cWeight > 0 && cResolved > 0) {
+    rows.push({ name: 'Comunicados', weight: cWeight, done: cStats.done, resolved: cResolved, scorePct: Math.round((cStats.done / cResolved) * 100) });
+  }
+
   return rows.sort((a, b) => b.weight - a.weight);
 }
 

@@ -13,6 +13,7 @@ import type { Role } from '@prisma/client';
 export const MODULES: { key: string; label: string; nav?: string }[] = [
   { key: 'DASHBOARD', label: 'Dashboard', nav: '/dashboard' },
   { key: 'TASKS', label: 'Tarefas', nav: '/tarefas' },
+  { key: 'COMMUNICATION', label: 'Central de Comunicação', nav: '/modulos/comunicacao' },
   { key: 'HELP', label: 'Treinamento da Plataforma', nav: '/ajuda' },
   { key: 'WASTE', label: 'Desperdícios', nav: '/modulos/desperdicios' },
   { key: 'OCCURRENCES', label: 'Ocorrências', nav: '/modulos/ocorrencias' },

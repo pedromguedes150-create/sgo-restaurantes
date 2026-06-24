@@ -91,6 +91,20 @@ export const GUIDE: GuideSection[] = [
         tips: ['Não realizado (não feito) penaliza a meta; por isso, mesmo atrasado, vale concluir.'],
       },
       {
+        id: 'comunicacao',
+        title: 'Central de Comunicação',
+        roles: ALL_ROLES,
+        summary: 'Comunicados oficiais com confirmação de leitura (substitui a cobrança por WhatsApp).',
+        steps: [
+          'Gerente: em COMUNICAÇÃO, a aba "Recebidos" mostra o que falta confirmar. Abra, leia e toque em "Confirmar leitura".',
+          'Se o comunicado exigir resposta, anexe foto e/ou escreva um comentário ao confirmar (prova de execução).',
+          'Supervisão/Admin: aba "Novo comunicado" — escreva título e mensagem, escolha prioridade, prazo, unidades (e pessoas avulsas), anexe fotos/PDF e links; marque "Fixar no topo" e "Exigir resposta" se quiser.',
+          'Aba "Painel & Histórico": acompanhe quem já confirmou e quem está pendente, com barra de progresso, por comunicado.',
+          'A confirmação conta na META do gerente: no prazo pontua; atrasado é neutro; vencido sem confirmar penaliza.',
+        ],
+        tips: ['O peso de "Comunicados" na meta é configurável pelo Admin (no Painel). Comunicados urgentes geram notificação destacada no sino.'],
+      },
+      {
         id: 'desperdicios',
         title: 'Desperdícios',
         roles: MANAGERLINE,

@@ -87,6 +87,15 @@ export async function getUnitMonthScore(
     doneWeight += tWeight * (tStats.done / tResolved);
   }
 
+  // Componente "Comunicados" (Central de Comunicação) — peso único configurável.
+  const { getCommunicationMonthStats, getCommunicationWeight } = await import('@/lib/communications/meta');
+  const [cStats, cWeight] = await Promise.all([getCommunicationMonthStats(unitId, yearMonth), getCommunicationWeight()]);
+  const cResolved = cStats.done + cStats.missed;
+  if (cResolved > 0 && cWeight > 0) {
+    resolvedWeight += cWeight;
+    doneWeight += cWeight * (cStats.done / cResolved);
+  }
+
   const scorePct = resolvedWeight === 0 ? 0 : Math.round((doneWeight / resolvedWeight) * 100);
   return { scorePct, doneWeight, resolvedWeight };
 }

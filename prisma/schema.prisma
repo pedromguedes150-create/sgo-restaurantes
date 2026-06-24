@@ -67,6 +67,8 @@ model Unit {
   schedulePlanOverrides SchedulePlanOverride[]
   scheduleActuals     ScheduleActual[]
   trainings           TrainingRecord[]
+  communicationUnits      CommunicationUnit[]
+  communicationRecipients CommunicationRecipient[]
 
   @@map("units")
 }
@@ -112,6 +114,8 @@ model User {
   notifications        Notification[]
   scheduleActuals      ScheduleActual[] @relation("ScheduleActualBy")
   trainingsApplied     TrainingRecord[] @relation("TrainingBy")
+  communicationsAuthored  Communication[]          @relation("CommAuthor")
+  communicationRecipients CommunicationRecipient[] @relation("CommRecipient")
 
   @@map("users")
 }
@@ -1208,4 +1212,93 @@ model ScheduleActual {
   @@unique([collaboratorId, date])
   @@index([unitId, date])
   @@map("schedule_actuals")
+}
+
+// ───────────────────────── Central de Comunicação (Módulo 15) ─────────────────────────
+enum CommunicationPriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
+enum CommRecipientStatus {
+  PENDING
+  CONFIRMED
+}
+
+/// Comunicado da supervisão/admin para gerentes (confirmação obrigatória + meta).
+model Communication {
+  id               String                @id @default(cuid())
+  authorId         String?
+  title            String
+  body             String
+  priority         CommunicationPriority @default(NORMAL)
+  pinned           Boolean               @default(false)
+  /// Exige que o gerente anexe foto/comentário ao confirmar (prova de execução)
+  requiresResponse Boolean               @default(false)
+  /// Links clicáveis: array de { label, url }
+  links            Json?
+  /// Prazo de confirmação (define pontual/atrasado/não lido na meta)
+  dueAt            DateTime
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  author      User?                     @relation("CommAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  units       CommunicationUnit[]
+  attachments CommunicationAttachment[]
+  recipients  CommunicationRecipient[]
+
+  @@index([createdAt])
+  @@map("communications")
+}
+
+/// Unidades-alvo do comunicado (todos os gerentes destas unidades confirmam).
+model CommunicationUnit {
+  id              String @id @default(cuid())
+  communicationId String
+  unitId          String
+
+  communication Communication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
+  unit          Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([communicationId, unitId])
+  @@map("communication_units")
+}
+
+/// Anexo (foto/PDF) do comunicado.
+model CommunicationAttachment {
+  id              String  @id @default(cuid())
+  communicationId String
+  path            String
+  mimeType        String
+  name            String?
+
+  communication Communication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
+
+  @@map("communication_attachments")
+}
+
+/// Destinatário (snapshot) que precisa confirmar — base do painel e da meta.
+model CommunicationRecipient {
+  id              String              @id @default(cuid())
+  communicationId String
+  userId          String
+  /// Unidade de atribuição (para a meta). Null = avulso sem unidade.
+  unitId          String?
+  status          CommRecipientStatus @default(PENDING)
+  confirmedAt     DateTime?
+  /// true quando confirmou após o prazo (neutro na meta)
+  late            Boolean             @default(false)
+  responseNote    String?
+  responsePath    String?
+  createdAt       DateTime            @default(now())
+
+  communication Communication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
+  user          User          @relation("CommRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  unit          Unit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  @@unique([communicationId, userId])
+  @@index([userId, status])
+  @@index([unitId])
+  @@map("communication_recipients")
 }
