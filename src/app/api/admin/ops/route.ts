@@ -13,14 +13,16 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   const b = await req.json().catch(() => null);
-  if (!b?.entity || !b?.action || !b?.id) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
+  if (!b?.entity || !b?.action || (!b?.id && !b?.ids)) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   const ctx = requestContext(req);
 
-  let r: OpResult | undefined;
+  let r: (OpResult & { count?: number }) | undefined;
   const e = b.entity as string;
   const a = b.action as string;
 
-  if (a === 'delete') {
+  if (a === 'deleteMany' && e === 'taskInstance') {
+    r = await ops.deleteTaskInstances(user, Array.isArray(b.ids) ? b.ids : [], ctx);
+  } else if (a === 'delete') {
     if (e === 'waste') r = await ops.deleteWasteEntry(user, b.id, ctx);
     else if (e === 'commandCount') r = await ops.deleteCommandCount(user, b.id, ctx);
     else if (e === 'commandDivergence') r = await ops.deleteCommandDivergence(user, b.id, ctx);
@@ -44,5 +46,5 @@ export async function POST(req: Request) {
       'Dados inválidos';
     return NextResponse.json({ error: msg, reason: r.reason }, { status: map[r.reason] });
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, count: r.count });
 }

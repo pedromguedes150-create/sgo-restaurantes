@@ -86,7 +86,7 @@ export const GUIDE: GuideSection[] = [
           'Toque em "Concluir checklist". Feito após o horário = conta como "fora do prazo" (não penaliza, mas também não pontua).',
           'Use "Ver preenchimento" para rever respostas e fotos de um checklist concluído.',
           'O sistema avisa ~30 min antes do vencimento de cada checklist. Veja execuções passadas em Tarefas → "Histórico".',
-          'No Histórico, o Admin pode excluir um registro (sai das métricas do mês; fica na Auditoria).',
+          'No Histórico, o Admin pode "Selecionar para excluir", marcar vários (ou todos) e excluir o histórico em lote (sai das métricas; fica na Auditoria).',
         ],
         tips: ['Não realizado (não feito) penaliza a meta; por isso, mesmo atrasado, vale concluir.', 'Checklist "da unidade" (1 por unidade) só pode ser concluído UMA vez no dia — depois fica como "Concluída" e abre só em leitura ("Ver preenchimento").'],
       },

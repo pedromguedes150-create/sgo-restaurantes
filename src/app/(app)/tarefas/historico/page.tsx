@@ -2,20 +2,11 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
-import { Card, CardContent } from '@/components/ui/card';
-import { StatusBadge } from '@/components/ui/status-badge';
-import { DeleteOpButton } from '@/components/admin/delete-op-button';
-import { ArrowLeft, Eye } from 'lucide-react';
+import { ChecklistHistoryList, type HistGroup } from '@/components/tasks/checklist-history-list';
+import { ArrowLeft } from 'lucide-react';
 import { subDays, format } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
-
-const ST: Record<string, { tone: 'success' | 'medium' | 'critical' | 'neutral'; label: string }> = {
-  DONE: { tone: 'success', label: 'Concluída' },
-  LATE: { tone: 'medium', label: 'Fora do prazo' },
-  MISSED: { tone: 'critical', label: 'Não realizada' },
-  PENDING: { tone: 'neutral', label: 'Pendente' },
-};
 
 export default async function HistoricoTarefasPage({ searchParams }: { searchParams: { unit?: string; days?: string } }) {
   const user = (await getSessionUser())!;
@@ -39,9 +30,14 @@ export default async function HistoricoTarefasPage({ searchParams }: { searchPar
     include: { template: { select: { name: true } }, unit: { select: { name: true } }, completedBy: { select: { name: true } } },
   });
 
-  // agrupa por dia
-  const byDate = new Map<string, typeof instances>();
-  for (const i of instances) { const arr = byDate.get(i.operationalDate) ?? []; arr.push(i); byDate.set(i.operationalDate, arr); }
+  // agrupa por dia (formato serializável para o componente cliente)
+  const byDate = new Map<string, HistGroup>();
+  for (const i of instances) {
+    const g = byDate.get(i.operationalDate) ?? { date: i.operationalDate, items: [] };
+    g.items.push({ id: i.id, name: i.template.name, unit: i.unit.name, by: i.completedBy?.name ?? null, status: i.status });
+    byDate.set(i.operationalDate, g);
+  }
+  const groups: HistGroup[] = [...byDate.values()];
 
   const linkFor = (p: Record<string, string | number>) => {
     const sp = new URLSearchParams({ days: String(days), ...(selectedUnit ? { unit: selectedUnit } : {}), ...Object.fromEntries(Object.entries(p).map(([k, v]) => [k, String(v)])) });
@@ -67,37 +63,7 @@ export default async function HistoricoTarefasPage({ searchParams }: { searchPar
         )}
       </div>
 
-      {byDate.size === 0 && <p className="text-sm text-muted-foreground">Nenhum registro no período.</p>}
-      {[...byDate.entries()].map(([date, list]) => (
-        <Card key={date}>
-          <CardContent className="space-y-1.5 pt-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{date}</p>
-            {list.map((i) => (
-              <div key={i.id} className="flex items-center gap-2 rounded-lg border bg-card p-2.5 transition-colors hover:border-accent">
-                <Link href={`/tarefas/${i.id}`} className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-brand">{i.template.name}</p>
-                    <p className="text-xs text-muted-foreground">{i.unit.name}{i.completedBy ? ` · ${i.completedBy.name}` : ''}</p>
-                  </div>
-                  <span className="flex items-center gap-2">
-                    <StatusBadge tone={ST[i.status]?.tone ?? 'neutral'}>{ST[i.status]?.label ?? i.status}</StatusBadge>
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                  </span>
-                </Link>
-                {isAdmin && (
-                  <DeleteOpButton
-                    entity="taskInstance"
-                    id={i.id}
-                    size="icon"
-                    label={`o registro de "${i.template.name}" (${i.operationalDate})`}
-                    confirmText={`Excluir do histórico o checklist "${i.template.name}" de ${i.unit.name} em ${i.operationalDate}? Sai das métricas do mês. Registrado na Auditoria. Não pode ser desfeito.`}
-                  />
-                )}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ))}
+      <ChecklistHistoryList groups={groups} isAdmin={isAdmin} />
     </div>
   );
 }

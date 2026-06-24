@@ -155,6 +155,16 @@ export async function deleteOilCollection(user: SessionUser, id: string, ctx: Ct
   return { ok: true };
 }
 
+/** Exclui VÁRIOS registros do histórico de checklists de uma vez (Admin). */
+export async function deleteTaskInstances(user: SessionUser, ids: string[], ctx: Ctx = {}): Promise<OpResult & { count?: number }> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const clean = [...new Set((ids ?? []).filter(Boolean))].slice(0, 500);
+  if (clean.length === 0) return { ok: false, reason: 'INVALID' };
+  const res = await prisma.taskInstance.deleteMany({ where: { id: { in: clean } } }); // respostas/fotos em cascade
+  await audit({ userId: user.id, action: 'TASK_INSTANCE_DELETE_BULK', module: 'CHECKLISTS', entity: 'task_instance', metadata: { requested: clean.length, deleted: res.count }, ...ctx });
+  return { ok: true, count: res.count };
+}
+
 /* ───────────────────────── Inventário ───────────────────────── */
 export async function deleteInventory(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
