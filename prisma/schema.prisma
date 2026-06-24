@@ -234,6 +234,10 @@ model TaskTemplate {
   requiresEvidence Boolean   @default(false)
   /// "Entra na Meta" (Módulo 11)
   entersMeta      Boolean    @default(true)
+  /// Programação: data de início 'YYYY-MM-DD' (NULL = vale desde sempre)
+  startDate       String?
+  /// Programação: data de encerramento 'YYYY-MM-DD' (NULL = sem fim)
+  endDate         String?
   active          Boolean    @default(true)
   order           Int        @default(0)
   createdAt       DateTime   @default(now())

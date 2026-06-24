@@ -12,7 +12,8 @@ import { postAdmin } from '@/lib/admin-client';
 export interface TplItem { section: string | null; text: string; requiresPhoto: boolean; aiCheck: boolean; standardDescription: string | null }
 export interface TplRow {
   id: string; unitId: string; name: string; limitTime: string | null; weight: number;
-  scope: 'UNIT' | 'MANAGER'; requiresEvidence: boolean; entersMeta: boolean; active: boolean; groupUnitIds: string[]; items: TplItem[];
+  scope: 'UNIT' | 'MANAGER'; requiresEvidence: boolean; entersMeta: boolean; active: boolean;
+  startDate: string | null; endDate: string | null; groupUnitIds: string[]; items: TplItem[];
 }
 interface Unit { id: string; name: string }
 
@@ -58,7 +59,7 @@ export function TemplatesAdmin({ units, templates }: { units: Unit[]; templates:
 
 /* ───────── Formulário de criação ───────── */
 function ChecklistForm({ units, defaultUnitId, onDone, onCancel }: { units: Unit[]; defaultUnitId: string; onDone: () => void; onCancel: () => void }) {
-  const f = useChecklistForm({ unitId: defaultUnitId, name: '', limitTime: '', noTime: false, weight: '10', scope: 'UNIT', requiresEvidence: false, entersMeta: true, items: [] });
+  const f = useChecklistForm({ unitId: defaultUnitId, name: '', limitTime: '', noTime: false, weight: '10', scope: 'UNIT', requiresEvidence: false, entersMeta: true, startDate: '', endDate: '', items: [] });
   const [targetUnits, setTargetUnits] = useState<string[]>([defaultUnitId]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -101,7 +102,7 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const f = useChecklistForm({ unitId: t.unitId, name: t.name, limitTime: t.limitTime ?? '', noTime: t.limitTime === null, weight: String(t.weight), scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, items: t.items });
+  const f = useChecklistForm({ unitId: t.unitId, name: t.name, limitTime: t.limitTime ?? '', noTime: t.limitTime === null, weight: String(t.weight), scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, startDate: t.startDate ?? '', endDate: t.endDate ?? '', items: t.items });
 
   async function toggle() { await postAdmin({ entity: 'template', action: 'toggle', id: t.id, active: !t.active }); onChange(); }
   async function save() {
@@ -113,12 +114,23 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
     setEditing(false); onChange();
   }
   async function remove() {
-    if (!confirm(`Excluir o checklist "${t.name}"? Só é possível se nunca tiver gerado execuções. Caso contrário, inative-o.`)) return;
+    if (!confirm(`Excluir o checklist "${t.name}"?`)) return;
     setBusy(true); setMsg(null);
     const r = await postAdmin({ entity: 'template', action: 'delete', id: t.id });
     setBusy(false);
-    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
-    onChange();
+    if (r.ok) { onChange(); return; }
+    if (r.reason === 'BLOCKED') {
+      // Tem histórico/execuções: oferece exclusão forçada (apaga tudo) — ideal p/ checklists de teste.
+      if (confirm(`"${t.name}" já tem execuções (histórico/metas). Para INATIVAR, cancele e use o botão de status.\n\nClique OK para EXCLUIR DEFINITIVAMENTE o checklist e TODO o histórico/fotos dele (ideal para checklists de teste). Não pode ser desfeito.`)) {
+        setBusy(true);
+        const f = await postAdmin({ entity: 'template', action: 'delete', id: t.id, force: true });
+        setBusy(false);
+        if (f.ok) { onChange(); return; }
+        setMsg(f.error ?? 'Falha');
+      }
+      return;
+    }
+    setMsg(r.error ?? 'Falha');
   }
 
   return (
@@ -129,6 +141,7 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
           <p className="text-xs text-muted-foreground">
             {t.limitTime ? `limite ${t.limitTime}` : 'sem horário'} · peso {t.weight} · {t.scope === 'MANAGER' ? 'individual' : 'da unidade'}
             {t.items.length > 0 ? ` · ${t.items.length} item(ns)` : ''}{t.requiresEvidence ? ' · foto' : ''}{t.entersMeta ? ' · meta' : ''}
+            {t.startDate || t.endDate ? ` · 📅 ${t.startDate ?? '…'} → ${t.endDate ?? 'sem fim'}` : ''}
           </p>
         </div>
         <div className="flex items-center gap-1">
@@ -183,7 +196,7 @@ function UnitsEditor({ t, units, onChange }: { t: TplRow; units: Unit[]; onChang
 }
 
 /* ───────── Hook de formulário compartilhado (campos + itens) ───────── */
-function useChecklistForm(init: { unitId: string; name: string; limitTime: string; noTime: boolean; weight: string; scope: 'UNIT' | 'MANAGER'; requiresEvidence: boolean; entersMeta: boolean; items: TplItem[] }) {
+function useChecklistForm(init: { unitId: string; name: string; limitTime: string; noTime: boolean; weight: string; scope: 'UNIT' | 'MANAGER'; requiresEvidence: boolean; entersMeta: boolean; startDate: string; endDate: string; items: TplItem[] }) {
   const [name, setName] = useState(init.name);
   const [noTime, setNoTime] = useState(init.noTime);
   const [limitTime, setLimitTime] = useState(init.limitTime || '23:00');
@@ -191,6 +204,8 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
   const [scope, setScope] = useState<'UNIT' | 'MANAGER'>(init.scope);
   const [requiresEvidence, setRequiresEvidence] = useState(init.requiresEvidence);
   const [entersMeta, setEntersMeta] = useState(init.entersMeta);
+  const [startDate, setStartDate] = useState(init.startDate);
+  const [endDate, setEndDate] = useState(init.endDate);
   const [items, setItems] = useState<TplItem[]>(init.items);
 
   function setItem(i: number, patch: Partial<TplItem>) { setItems((arr) => arr.map((it, idx) => idx === i ? { ...it, ...patch } : it)); }
@@ -201,6 +216,7 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
     return {
       name, weight: Number(weight), scope, requiresEvidence, entersMeta,
       limitTime: noTime ? null : limitTime,
+      startDate: startDate || null, endDate: endDate || null,
       items: items.filter((it) => it.text.trim()).map((it) => ({ section: it.section, text: it.text, requiresPhoto: it.requiresPhoto, aiCheck: it.aiCheck, standardDescription: it.standardDescription })),
     };
   }
@@ -225,6 +241,14 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
         <div className="flex gap-4 text-sm">
           <label className="flex items-center gap-2"><input type="checkbox" checked={requiresEvidence} onChange={(e) => setRequiresEvidence(e.target.checked)} /> Exige foto</label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={entersMeta} onChange={(e) => setEntersMeta(e.target.checked)} /> Entra na meta</label>
+        </div>
+        <div className="rounded-lg bg-background/60 p-2">
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Programação (opcional)</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Início</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9 text-sm" /></div>
+            <div><Label className="text-xs">Encerramento</Label><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9 text-sm" /></div>
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">Sem início = vale desde já. Sem encerramento = sem fim. O checklist só é gerado dentro do período.</p>
         </div>
 
         {/* Itens/etapas */}

@@ -17,7 +17,9 @@ export async function generateDailyTasksForUnit(
   unit: Pick<Unit, 'id' | 'timezone' | 'cutoffHour'>,
   operationalDate: string,
 ): Promise<number> {
-  const templates = await prisma.taskTemplate.findMany({ where: { unitId: unit.id, active: true } });
+  // Programação: só gera dentro de [startDate, endDate] (quando definidos).
+  const templates = (await prisma.taskTemplate.findMany({ where: { unitId: unit.id, active: true } }))
+    .filter((t) => (!t.startDate || operationalDate >= t.startDate) && (!t.endDate || operationalDate <= t.endDate));
   if (templates.length === 0) return 0;
 
   const cfg = { timezone: unit.timezone, cutoffHour: unit.cutoffHour };

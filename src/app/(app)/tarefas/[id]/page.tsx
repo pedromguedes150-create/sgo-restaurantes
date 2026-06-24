@@ -24,6 +24,9 @@ export default async function TarefaExecPage({ params }: { params: { id: string 
 
   const done = inst.status === 'DONE' || inst.status === 'LATE';
   const draft = (inst.draft as { answers?: Record<string, { status: string; note?: string }> } | null) ?? null;
+  // Fotos: une as do checklist estruturado (TaskPhoto) com a evidência única
+  // (evidencePath) de conclusões legadas/rápidas — sem duplicar.
+  const photoPaths = [...new Set([...inst.photos.map((p) => p.path), ...(inst.evidencePath ? [inst.evidencePath] : [])])];
 
   return (
     <div className="space-y-4">
@@ -46,7 +49,7 @@ export default async function TarefaExecPage({ params }: { params: { id: string 
           initialAnswers={done
             ? Object.fromEntries(inst.itemResponses.map((r) => [r.itemId, { status: r.status, note: r.note ?? '' }]))
             : (draft?.answers ?? {})}
-          photos={inst.photos.map((p) => `/${p.path}`)}
+          photos={photoPaths.map((p) => `/${p}`)}
         />
       </CardContent></Card>
     </div>

@@ -265,6 +265,11 @@ function normLimit(v?: string | null): string | null {
   const s = String(v).trim();
   return /^\d{1,2}:\d{2}$/.test(s) ? s : null; // vazio/invalido = sem horário
 }
+function normDate(v?: string | null): string | null {
+  if (v === undefined || v === null) return null;
+  const s = String(v).trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null; // vazio/invalido = sem data
+}
 function normItems(items?: ChecklistItemInput[]) {
   return (items ?? [])
     .filter((i) => i.text?.trim())
@@ -281,7 +286,7 @@ function normItems(items?: ChecklistItemInput[]) {
 /** Cria checklist(s). Pode replicar para várias unidades (uma cópia por unidade, ligadas por groupKey). */
 export async function createTemplate(
   user: SessionUser,
-  input: { unitId?: string; unitIds?: string[]; name: string; limitTime?: string | null; weight?: number; scope?: Scope; requiresEvidence?: boolean; entersMeta?: boolean; items?: ChecklistItemInput[] },
+  input: { unitId?: string; unitIds?: string[]; name: string; limitTime?: string | null; weight?: number; scope?: Scope; requiresEvidence?: boolean; entersMeta?: boolean; startDate?: string | null; endDate?: string | null; items?: ChecklistItemInput[] },
   ctx: Ctx = {},
 ): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
@@ -295,6 +300,8 @@ export async function createTemplate(
     scope: (input.scope === 'MANAGER' ? 'MANAGER' : 'UNIT') as Scope,
     requiresEvidence: Boolean(input.requiresEvidence),
     entersMeta: input.entersMeta ?? true,
+    startDate: normDate(input.startDate),
+    endDate: normDate(input.endDate),
   };
   const groupKey = unitIds.length > 1 ? crypto.randomUUID() : null;
   let firstId: string | undefined;
@@ -382,7 +389,7 @@ export async function toggleTemplate(user: SessionUser, id: string, active: bool
 export async function updateTemplate(
   user: SessionUser,
   id: string,
-  input: { name?: string; limitTime?: string | null; weight?: number; scope?: Scope; requiresEvidence?: boolean; entersMeta?: boolean; items?: ChecklistItemInput[] },
+  input: { name?: string; limitTime?: string | null; weight?: number; scope?: Scope; requiresEvidence?: boolean; entersMeta?: boolean; startDate?: string | null; endDate?: string | null; items?: ChecklistItemInput[] },
   ctx: Ctx = {},
 ): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
@@ -397,6 +404,8 @@ export async function updateTemplate(
         ...(input.scope !== undefined ? { scope: (input.scope === 'MANAGER' ? 'MANAGER' : 'UNIT') as Scope } : {}),
         ...(input.requiresEvidence !== undefined ? { requiresEvidence: Boolean(input.requiresEvidence) } : {}),
         ...(input.entersMeta !== undefined ? { entersMeta: Boolean(input.entersMeta) } : {}),
+        ...(input.startDate !== undefined ? { startDate: normDate(input.startDate) } : {}),
+        ...(input.endDate !== undefined ? { endDate: normDate(input.endDate) } : {}),
       },
     });
     if (input.items !== undefined) {
@@ -409,14 +418,16 @@ export async function updateTemplate(
   return { ok: true };
 }
 
-export async function deleteTemplate(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
+export async function deleteTemplate(user: SessionUser, id: string, ctx: Ctx = {}, opts: { force?: boolean } = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   // Excluir o template apaga (Cascade) todas as tarefas já geradas dele — perde
-  // histórico e metas. Bloqueia se houver execuções; o correto é INATIVAR.
+  // histórico e metas. Por padrão BLOQUEIA se houver execuções (o correto é
+  // INATIVAR). Com force=true (ex.: limpar checklist de teste), exclui tudo em
+  // cascade (instâncias, respostas, fotos) — auditado.
   const used = await prisma.taskInstance.count({ where: { templateId: id } });
-  if (used > 0) return { ok: false, reason: 'BLOCKED' };
+  if (used > 0 && !opts.force) return { ok: false, reason: 'BLOCKED' };
   await prisma.taskTemplate.delete({ where: { id } }).catch(() => {});
-  await audit({ userId: user.id, action: 'TEMPLATE_DELETE', module: 'CONFIG', entity: 'task_template', entityId: id, ...ctx });
+  await audit({ userId: user.id, action: 'TEMPLATE_DELETE', module: 'CONFIG', entity: 'task_template', entityId: id, metadata: { forced: Boolean(opts.force), instances: used }, ...ctx });
   return { ok: true };
 }
 
