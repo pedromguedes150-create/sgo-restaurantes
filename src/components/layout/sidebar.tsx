@@ -51,7 +51,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
   },
 ];
 
-export function Sidebar({ isAdmin, viewable }: { isAdmin: boolean; viewable?: string[] }) {
+export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewable?: string[]; badges?: Record<string, number> }) {
   const pathname = usePathname();
   const canSee = (href: string) => !viewable || viewable.includes(href);
 
@@ -67,6 +67,7 @@ export function Sidebar({ isAdmin, viewable }: { isAdmin: boolean; viewable?: st
               <ul className="space-y-0.5">
                 {items.map(({ href, label, icon: Icon }) => {
                   const active = pathname === href || pathname.startsWith(href + '/');
+                  const badge = badges?.[href];
                   return (
                     <li key={href}>
                       <Link
@@ -77,7 +78,8 @@ export function Sidebar({ isAdmin, viewable }: { isAdmin: boolean; viewable?: st
                         )}
                       >
                         <Icon className={cn('h-5 w-5', active ? 'text-white/85' : 'text-muted-foreground')} />
-                        {label}
+                        <span className="flex-1">{label}</span>
+                        {badge ? <span className="rounded-full bg-critical px-1.5 text-xs font-bold text-white">{badge}</span> : null}
                       </Link>
                     </li>
                   );

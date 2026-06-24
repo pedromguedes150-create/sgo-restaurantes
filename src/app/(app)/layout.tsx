@@ -6,6 +6,7 @@ import { BottomNav } from '@/components/layout/bottom-nav';
 import { Sidebar } from '@/components/layout/sidebar';
 import { unreadCount } from '@/lib/notifications';
 import { viewableNavHrefs } from '@/lib/permissions';
+import { getInboxPendingCount } from '@/lib/communications/query';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getSessionUser();
@@ -13,13 +14,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (user.needsTerms) redirect('/termo'); // LGPD: aceite no 1º login
 
   const isAdmin = user.role === 'ADMIN' || user.role === 'CEO';
-  const [unread, viewable] = await Promise.all([unreadCount(user), viewableNavHrefs(user.role)]);
+  const [unread, viewable, commPending] = await Promise.all([unreadCount(user), viewableNavHrefs(user.role), getInboxPendingCount(user)]);
+  const badges: Record<string, number> = {};
+  if (commPending > 0) badges['/modulos/comunicacao'] = commPending;
 
   return (
     <div className="min-h-dvh bg-surface">
       <AppHeader userName={user.name} roleLabel={roleLabel(user.role)} unread={unread} />
       <div className="mx-auto flex w-full max-w-6xl">
-        <Sidebar isAdmin={isAdmin} viewable={viewable} />
+        <Sidebar isAdmin={isAdmin} viewable={viewable} badges={badges} />
         <main className="w-full max-w-3xl flex-1 px-4 pb-24 pt-4 md:pb-8">{children}</main>
       </div>
       <BottomNav />

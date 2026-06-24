@@ -5,6 +5,7 @@ import { getCommunication } from '@/lib/communications/query';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { CommunicationConfirm } from '@/components/communications/communication-confirm';
+import { RemindButton } from '@/components/communications/remind-button';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { ArrowLeft, Pin, Paperclip, LinkIcon, CheckCircle2, Clock, FileText } from 'lucide-react';
 
@@ -90,7 +91,10 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
 
             {pending.length > 0 && (
               <div>
-                <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-medium"><Clock className="h-3.5 w-3.5" /> Pendentes ({pending.length})</p>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-medium"><Clock className="h-3.5 w-3.5" /> Pendentes ({pending.length})</p>
+                  <RemindButton id={comm.id} pending={pending.length} />
+                </div>
                 <div className="space-y-1">
                   {pending.map((r) => (
                     <div key={r.id} className="flex items-center justify-between rounded-lg border bg-card px-3 py-1.5 text-sm">
