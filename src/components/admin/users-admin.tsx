@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 
 export interface UserRow { id: string; name: string; email: string; role: string; active: boolean; unitIds: string[] }
@@ -39,8 +40,6 @@ export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Un
     await postAdmin({ entity: 'user', action: 'toggle', id: u.id, active: !u.active });
     router.refresh();
   }
-  function toggleUnit(id: string) { setUnitIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id])); }
-
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-dashed p-3">
@@ -55,11 +54,7 @@ export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Un
           {needsUnits && (
             <div>
               <Label>Unidades</Label>
-              <div className="mt-1 flex flex-wrap gap-2">
-                {units.map((u) => (
-                  <button key={u.id} type="button" onClick={() => toggleUnit(u.id)} className={unitIds.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>
-                ))}
-              </div>
+              <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
             </div>
           )}
           {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
@@ -86,8 +81,6 @@ function UserItem({ u, units, meId, onChange, onToggle }: { u: UserRow; units: U
   const [msg, setMsg] = useState<string | null>(null);
   const needsUnits = roleNeedsUnits(role);
   const isSelf = u.id === meId;
-
-  function toggleUnit(id: string) { setUnitIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id])); }
 
   async function save() {
     setBusy(true); setMsg(null);
@@ -133,11 +126,7 @@ function UserItem({ u, units, meId, onChange, onToggle }: { u: UserRow; units: U
           {needsUnits && (
             <div>
               <Label className="text-xs">Unidades</Label>
-              <div className="mt-1 flex flex-wrap gap-2">
-                {units.map((unit) => (
-                  <button key={unit.id} type="button" onClick={() => toggleUnit(unit.id)} className={unitIds.includes(unit.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{unit.name}</button>
-                ))}
-              </div>
+              <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
             </div>
           )}
           {msg && <p className="text-sm font-medium text-critical">{msg}</p>}

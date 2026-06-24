@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { postAdmin } from '@/lib/admin-client';
 
 export interface TplItem { section: string | null; text: string; requiresPhoto: boolean; aiCheck: boolean; standardDescription: string | null }
@@ -119,8 +120,6 @@ function ChecklistForm({ units, defaultUnitId, onDone, onCancel }: { units: Unit
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  function toggleUnit(id: string) { setTargetUnits((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]); }
-
   async function submit() {
     if (!f.name.trim() || targetUnits.length === 0) { setMsg('Informe nome e ao menos uma unidade.'); return; }
     setBusy(true); setMsg(null);
@@ -136,12 +135,7 @@ function ChecklistForm({ units, defaultUnitId, onDone, onCancel }: { units: Unit
       {f.fields}
       <div>
         <Label className="text-xs">Replicar para unidades</Label>
-        <div className="mt-1 flex flex-wrap gap-2">
-          {units.map((u) => (
-            <button key={u.id} type="button" onClick={() => toggleUnit(u.id)} className={targetUnits.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>
-          ))}
-          <button type="button" onClick={() => setTargetUnits(units.map((u) => u.id))} className="rounded-full border px-3 py-1.5 text-sm font-medium hover:border-accent">Todas</button>
-        </div>
+        <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={targetUnits} onChange={setTargetUnits} placeholder="Escolha as unidades…" searchable={units.length > 6} />
       </div>
       {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
       <div className="flex gap-2">
@@ -223,8 +217,6 @@ function UnitsEditor({ t, units, onChange }: { t: TplRow; units: Unit[]; onChang
   const [sel, setSel] = useState<string[]>(t.groupUnitIds);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  function toggle(id: string) { setSel((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]); }
-
   async function save() {
     if (sel.length === 0) { setMsg('Selecione ao menos uma unidade.'); return; }
     setBusy(true); setMsg(null);
@@ -237,12 +229,7 @@ function UnitsEditor({ t, units, onChange }: { t: TplRow; units: Unit[]; onChang
   return (
     <div className="rounded-lg border border-dashed p-2">
       <Label className="text-xs">Unidades onde este checklist aparece</Label>
-      <div className="mt-1 flex flex-wrap gap-2">
-        {units.map((u) => (
-          <button key={u.id} type="button" onClick={() => toggle(u.id)} className={sel.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>
-        ))}
-        <button type="button" onClick={() => setSel(units.map((u) => u.id))} className="rounded-full border px-3 py-1.5 text-sm font-medium hover:border-accent">Todas</button>
-      </div>
+      <div className="mt-1"><MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={sel} onChange={setSel} placeholder="Escolha as unidades…" searchable={units.length > 6} /></div>
       <p className="mt-1 text-[11px] text-muted-foreground">Ao remover uma unidade com histórico, o checklist é inativado nela (preserva métricas); sem histórico, é excluído.</p>
       <Button size="sm" variant="outline" className="mt-2 w-full" disabled={busy} onClick={save}><Save className="h-4 w-4" /> Salvar unidades</Button>
       {msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}

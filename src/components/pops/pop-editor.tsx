@@ -6,6 +6,7 @@ import { Plus, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MultiSelect } from '@/components/ui/multi-select';
 
 export interface PopEdit {
   id: string; title: string; category: string | null;
@@ -31,7 +32,6 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  function toggleUnit(id: string) { setUnitIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id])); }
   function addSector(name: string) { const n = name.trim(); if (n && !sectors.includes(n)) setSectors((s) => [...s, n]); }
   function removeSector(name: string) { setSectors((s) => s.filter((x) => x !== name)); }
   const suggest = standardSectors.filter((s) => !sectors.includes(s));
@@ -113,11 +113,7 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
         </div>
         <div>
           <Label>Unidades</Label>
-          <div className="mt-1 flex flex-wrap gap-2">
-            {units.map((u) => (
-              <button key={u.id} type="button" onClick={() => toggleUnit(u.id)} className={unitIds.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>
-            ))}
-          </div>
+          <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
         </div>
         {editing && <p className="text-xs text-muted-foreground">Editar o conteúdo gera uma nova versão e os colaboradores precisarão refazer o treinamento.</p>}
         {msg && <p className="text-sm font-medium text-critical">{msg}</p>}

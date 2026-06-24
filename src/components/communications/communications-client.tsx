@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { postAdmin } from '@/lib/admin-client';
 
 type Priority = 'NORMAL' | 'IMPORTANT' | 'URGENT';
@@ -150,7 +151,6 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
   const [dueAt, setDueAt] = useState('');
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [extraIds, setExtraIds] = useState<string[]>([]);
-  const [showPeople, setShowPeople] = useState(false);
   const [links, setLinks] = useState<{ label: string; url: string }[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
@@ -158,7 +158,6 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
   const [okMsg, setOkMsg] = useState<string | null>(null);
 
   const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
-  function toggle(list: string[], set: (v: string[]) => void, id: string) { set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]); }
 
   async function submit() {
     setErr(null); setOkMsg(null);
@@ -204,20 +203,12 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
 
       <div>
         <Label>Unidades (todos os gerentes confirmam)</Label>
-        <div className="mt-1 flex flex-wrap gap-2">
-          {units.map((u) => <button key={u.id} type="button" onClick={() => toggle(unitIds, setUnitIds, u.id)} className={unitIds.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>)}
-          {units.length > 1 && <button type="button" onClick={() => setUnitIds(unitIds.length === units.length ? [] : units.map((u) => u.id))} className="rounded-full border px-3 py-1.5 text-sm font-medium hover:border-accent">Todas</button>}
-        </div>
+        <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
       </div>
 
       <div>
-        <button type="button" onClick={() => setShowPeople((v) => !v)} className="text-sm font-semibold text-accent">{showPeople ? '− ' : '+ '}Destinatários avulsos {extraIds.length > 0 && `(${extraIds.length})`}</button>
-        {showPeople && (
-          <div className="mt-1 flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-lg border p-2">
-            {people.map((p) => <button key={p.id} type="button" onClick={() => toggle(extraIds, setExtraIds, p.id)} className={extraIds.includes(p.id) ? 'rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground' : 'rounded-full border px-2.5 py-1 text-xs'}>{p.name}</button>)}
-            {people.length === 0 && <span className="text-xs text-muted-foreground">Sem pessoas no seu escopo.</span>}
-          </div>
-        )}
+        <Label>Destinatários avulsos (opcional)</Label>
+        <MultiSelect options={people.map((p) => ({ value: p.id, label: p.name }))} selected={extraIds} onChange={setExtraIds} placeholder="Pessoas específicas…" searchable emptyLabel="Sem pessoas no seu escopo" allLabel="todos" />
       </div>
 
       {/* Links */}

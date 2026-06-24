@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 import { formatBRL } from '@/lib/utils';
 
@@ -60,9 +61,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
           <div><Label>Chave PIX (obrigatória)</Label><Input value={fPix} onChange={(e) => setFPix(e.target.value)} placeholder="CPF, CNPJ, e-mail, telefone ou aleatória" /></div>
           <div>
             <Label>Unidades</Label>
-            <div className="mt-1 flex flex-wrap gap-2">
-              {units.map((u) => <button key={u.id} type="button" onClick={() => setFUnits((s) => s.includes(u.id) ? s.filter((x) => x !== u.id) : [...s, u.id])} className={fUnits.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>)}
-            </div>
+            <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={fUnits} onChange={setFUnits} placeholder="Escolha as unidades…" searchable={units.length > 6} />
           </div>
           <Button disabled={busy} className="w-full" onClick={async () => {
             setFErr(null);
@@ -157,9 +156,7 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
           <div><Label className="text-xs">Chave PIX</Label><Input value={pix} onChange={(e) => setPix(e.target.value)} className="h-10 text-sm" placeholder="chave PIX" /></div>
           <div>
             <Label className="text-xs">Unidades</Label>
-            <div className="mt-1 flex flex-wrap gap-2">
-              {units.map((u) => <button key={u.id} type="button" onClick={() => setUnitIds((s) => s.includes(u.id) ? s.filter((x) => x !== u.id) : [...s, u.id])} className={unitIds.includes(u.id) ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</button>)}
-            </div>
+            <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
           </div>
           <Button size="sm" className="w-full" disabled={busy} onClick={() => { if (!pix.trim()) { setMsg('Informe a chave PIX.'); return; } call({ entity: 'freelancer', action: 'update', id: f.id, name, defaultValue: parseFloat((value || '0').replace(',', '.')), pixKey: pix, unitIds }, () => setEditing(false)); }}><Save className="h-4 w-4" /> Salvar alterações</Button>
         </div>
