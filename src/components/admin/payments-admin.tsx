@@ -27,6 +27,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
   const [fValue, setFValue] = useState('');
   const [fPix, setFPix] = useState('');
   const [fUnits, setFUnits] = useState<string[]>([]);
+  const [fErr, setFErr] = useState<string | null>(null);
   // Misc type
   const [mName, setMName] = useState('');
   const [mRole, setMRole] = useState('SUPERVISOR');
@@ -64,9 +65,15 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
             </div>
           </div>
           <Button disabled={busy} className="w-full" onClick={async () => {
-            if (!fPix.trim()) { alert('Informe a chave PIX do freelancer.'); return; }
-            if (await run({ entity: 'freelancer', action: 'create', name: fName, defaultValue: parseFloat((fValue || '0').replace(',', '.')), pixKey: fPix, unitIds: fUnits })) { setFName(''); setFValue(''); setFPix(''); setFUnits([]); }
+            setFErr(null);
+            const valor = parseFloat((fValue || '').replace(/\./g, '').replace(',', '.'));
+            if (!fName.trim()) { setFErr('Informe o nome do freelancer.'); return; }
+            if (!(valor > 0)) { setFErr('Informe o valor padrão (maior que zero).'); return; }
+            if (!fPix.trim()) { setFErr('Informe a chave PIX do freelancer.'); return; }
+            if (fUnits.length === 0) { setFErr('Selecione ao menos uma unidade (toque no nome da unidade acima).'); return; }
+            if (await run({ entity: 'freelancer', action: 'create', name: fName, defaultValue: valor, pixKey: fPix, unitIds: fUnits })) { setFName(''); setFValue(''); setFPix(''); setFUnits([]); }
           }}><Plus className="h-4 w-4" /> Adicionar freelancer</Button>
+          {fErr && <p className="text-sm font-medium text-critical">{fErr}</p>}
         </div>
         {freelancers.map((f) => (
           <FreelancerItem key={f.id} f={f} units={units} onChange={() => router.refresh()} />
