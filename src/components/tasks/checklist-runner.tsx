@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Camera, Check, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { compressImage } from '@/lib/image-compress';
 
 type ItemStatus = 'OK' | 'EM_CORRECAO' | 'A_CORRIGIR';
 interface Item { id: string; section: string | null; text: string; requiresPhoto: boolean; aiCheck?: boolean }
@@ -33,7 +34,8 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  async function analyzeAi(itemId: string, file: File) {
+  async function analyzeAi(itemId: string, rawFile: File) {
+    const file = await compressImage(rawFile);
     setFiles((f) => [...f, file].slice(0, 5)); // a foto também é salva no checklist
     setAi((s) => ({ ...s, [itemId]: { loading: true } }));
     try {
@@ -61,7 +63,15 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
   }, [answers, done, instanceId]);
 
   function setItem(id: string, patch: Partial<Answer>) { setAnswers((a) => ({ ...a, [id]: { ...(a[id] ?? { status: 'OK' }), ...patch } })); }
-  function addFiles(list: FileList | null) { if (!list) return; setFiles((f) => [...f, ...Array.from(list)].slice(0, 5)); }
+  const [processing, setProcessing] = useState(false);
+  async function addFiles(list: FileList | null) {
+    if (!list) return;
+    setProcessing(true);
+    try {
+      const compressed = await Promise.all(Array.from(list).map((f) => compressImage(f)));
+      setFiles((f) => [...f, ...compressed].slice(0, 5));
+    } finally { setProcessing(false); }
+  }
 
   async function submit() {
     if (requiresEvidence && files.length === 0) { setMsg('Este checklist exige ao menos uma foto.'); return; }
@@ -180,8 +190,8 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
             </div>
           ))}
           {files.length < 5 && (
-            <button onClick={() => fileRef.current?.click()} className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 border-dashed text-xs text-muted-foreground">
-              <Camera className="h-5 w-5" /> foto
+            <button onClick={() => fileRef.current?.click()} disabled={processing} className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 border-dashed text-xs text-muted-foreground disabled:opacity-60">
+              <Camera className="h-5 w-5" /> {processing ? 'aguarde…' : 'foto'}
             </button>
           )}
         </div>
