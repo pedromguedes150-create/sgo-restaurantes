@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2, X, Save, GripVertical, Check, CheckSquare, Square } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, ChevronUp, ChevronDown, Check, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -266,6 +266,15 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
   function setItem(i: number, patch: Partial<TplItem>) { setItems((arr) => arr.map((it, idx) => idx === i ? { ...it, ...patch } : it)); }
   function addItem() { setItems((arr) => [...arr, { section: null, text: '', requiresPhoto: false, aiCheck: false, standardDescription: null }]); }
   function removeItem(i: number) { setItems((arr) => arr.filter((_, idx) => idx !== i)); }
+  function moveItem(i: number, dir: -1 | 1) {
+    setItems((arr) => {
+      const j = i + dir;
+      if (j < 0 || j >= arr.length) return arr;
+      const next = [...arr];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  }
 
   function payload() {
     return {
@@ -309,11 +318,14 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
         {/* Itens/etapas */}
         <div className="rounded-lg bg-background/60 p-2">
           <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Itens / etapas (opcional)</p>
-          <p className="mb-2 text-[11px] text-muted-foreground">Cada item é verificado pelo gerente como 🟢 De acordo / 🟡 Em correção / 🔴 A corrigir.</p>
+          <p className="mb-2 text-[11px] text-muted-foreground">Cada item é verificado pelo gerente como 🟢 De acordo / 🟡 Em correção / 🔴 A corrigir. Use ↑ ↓ para ordenar.</p>
           <div className="space-y-2">
             {items.map((it, i) => (
               <div key={i} className="flex items-start gap-1 rounded-md border bg-card p-1.5">
-                <GripVertical className="mt-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="flex shrink-0 flex-col">
+                  <button type="button" onClick={() => moveItem(i, -1)} disabled={i === 0} aria-label="Mover para cima" className="text-muted-foreground hover:text-brand disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => moveItem(i, 1)} disabled={i === items.length - 1} aria-label="Mover para baixo" className="text-muted-foreground hover:text-brand disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
+                </div>
                 <div className="grid flex-1 grid-cols-12 gap-1">
                   <Input value={it.section ?? ''} onChange={(e) => setItem(i, { section: e.target.value || null })} placeholder="Seção (ex.: Cozinha)" className="col-span-4 h-9 text-sm" />
                   <Input value={it.text} onChange={(e) => setItem(i, { text: e.target.value })} placeholder="O que verificar" className="col-span-8 h-9 text-sm" />
