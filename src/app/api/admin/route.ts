@@ -54,6 +54,7 @@ export async function POST(req: Request) {
   else if (e === 'template' && a === 'toggle') r = await admin.toggleTemplate(user, b.id, b.active, ctx);
   else if (e === 'template' && a === 'delete') r = await admin.deleteTemplate(user, b.id, ctx, { force: Boolean(b.force) });
   else if (e === 'template' && a === 'setUnits') r = await admin.setTemplateUnits(user, b.id, b.unitIds ?? [], ctx);
+  else if (e === 'template' && a === 'duplicate') r = await admin.duplicateTemplate(user, b.id, ctx);
   else if (e === 'template' && a === 'fromModels') r = await createTemplatesFromModels(user, b.unitId, Array.isArray(b.modelIds) ? b.modelIds : [], ctx);
   else if (e === 'checklistModel' && a === 'create') r = await createChecklistModel(user, b, ctx);
   else if (e === 'checklistModel' && a === 'update') r = await updateChecklistModel(user, b.id, b, ctx);

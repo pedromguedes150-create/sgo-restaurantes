@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2, X, Save, ChevronUp, ChevronDown, Check, CheckSquare, Square } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, ChevronUp, ChevronDown, Check, CheckSquare, Square, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,7 +27,10 @@ export function TemplatesAdmin({ units, templates, examples = [] }: { units: Uni
   const [creating, setCreating] = useState(false);
   const [picking, setPicking] = useState(false);
 
-  const list = useMemo(() => templates.filter((t) => t.unitId === unitId), [templates, unitId]);
+  const list = useMemo(() => {
+    const mins = (t?: string | null) => { if (!t) return 99999; const [h, m] = t.split(':').map(Number); return (h || 0) * 60 + (m || 0); }; // sem horário = por último
+    return templates.filter((t) => t.unitId === unitId).sort((a, b) => mins(a.limitTime) - mins(b.limitTime) || a.name.localeCompare(b.name, 'pt-BR'));
+  }, [templates, unitId]);
   const sumWeight = list.filter((t) => t.active && t.entersMeta).reduce((s, t) => s + t.weight, 0);
   const existingNames = useMemo(() => new Set(list.map((t) => t.name)), [list]);
 
@@ -166,6 +169,12 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
   const f = useChecklistForm({ unitId: t.unitId, name: t.name, limitTime: t.limitTime ?? '', noTime: t.limitTime === null, weight: String(t.weight), scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, startDate: t.startDate ?? '', endDate: t.endDate ?? '', items: t.items });
 
   async function toggle() { await postAdmin({ entity: 'template', action: 'toggle', id: t.id, active: !t.active }); onChange(); }
+  async function duplicate() {
+    setBusy(true); setMsg(null);
+    const r = await postAdmin({ entity: 'template', action: 'duplicate', id: t.id });
+    setBusy(false);
+    if (r.ok) onChange(); else setMsg(r.error ?? 'Falha');
+  }
   async function save() {
     if (!f.name.trim()) { setMsg('Informe o nome.'); return; }
     setBusy(true); setMsg(null);
@@ -207,6 +216,7 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
         </div>
         <div className="flex items-center gap-1">
           <button onClick={toggle}><StatusBadge tone={t.active ? 'success' : 'critical'}>{t.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={duplicate} aria-label="Duplicar" title="Duplicar"><Copy className="h-4 w-4" /></Button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
           <Button size="sm" variant="ghost" disabled={busy} onClick={remove} aria-label="Excluir" className="text-critical"><Trash2 className="h-4 w-4" /></Button>
         </div>

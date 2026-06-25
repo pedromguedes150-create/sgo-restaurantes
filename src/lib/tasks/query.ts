@@ -43,7 +43,8 @@ export async function getTasksTodayForUser(
       // checklists da unidade (assignedToId null) + os individuais DESTE usuário
       where: { unitId: u.id, operationalDate, OR: [{ assignedToId: null }, { assignedToId: user.id }] },
       include: { template: true },
-      orderBy: [{ template: { order: 'asc' } }, { dueAt: 'asc' }],
+      // Ordem: por hora-limite (dueAt; sem horário cai no fim do dia) e depois alfabética.
+      orderBy: [{ dueAt: 'asc' }, { template: { name: 'asc' } }],
     });
 
     const summary = await getUnitDaySummary(u.id, operationalDate, now);

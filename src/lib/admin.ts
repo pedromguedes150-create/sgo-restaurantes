@@ -450,6 +450,26 @@ export async function deleteTemplate(user: SessionUser, id: string, ctx: Ctx = {
   return { ok: true };
 }
 
+/** Duplica um checklist na MESMA unidade (cópia independente, com os itens). */
+export async function duplicateTemplate(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const t = await prisma.taskTemplate.findUnique({ where: { id }, include: { items: { orderBy: { order: 'asc' } } } });
+  if (!t) return { ok: false, reason: 'INVALID' };
+  // nome único na unidade: "(cópia)", "(cópia 2)"…
+  const names = new Set((await prisma.taskTemplate.findMany({ where: { unitId: t.unitId }, select: { name: true } })).map((x) => x.name));
+  let name = `${t.name} (cópia)`;
+  for (let n = 2; names.has(name); n++) name = `${t.name} (cópia ${n})`;
+  const copy = await prisma.taskTemplate.create({
+    data: {
+      unitId: t.unitId, name, limitTime: t.limitTime, weight: t.weight, scope: t.scope,
+      requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, startDate: t.startDate, endDate: t.endDate,
+      items: t.items.length ? { create: t.items.map((i) => ({ section: i.section, text: i.text, requiresPhoto: i.requiresPhoto, order: i.order, aiCheck: i.aiCheck, standardDescription: i.standardDescription })) } : undefined,
+    },
+  });
+  await audit({ userId: user.id, unitId: t.unitId, action: 'TEMPLATE_DUPLICATE', module: 'CONFIG', entity: 'task_template', entityId: copy.id, metadata: { from: id }, ...ctx });
+  return { ok: true, id: copy.id };
+}
+
 /**
  * Redefine em quais unidades um checklist aparece (mantém o "grupo" por groupKey).
  * Adiciona uma cópia (config + itens) nas novas unidades; nas removidas, exclui
