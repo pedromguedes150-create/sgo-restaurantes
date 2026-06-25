@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { computeDueAt } from '@/lib/tasks/due';
-import { currentOperationalDate } from '@/lib/date/operational';
+import { currentOperationalDate, operationalDate as opDateOf } from '@/lib/date/operational';
 import type { Unit, Role } from '@prisma/client';
 
 /** Perfis considerados "gerentes" para checklists individuais (scope MANAGER). */
@@ -17,9 +17,18 @@ export async function generateDailyTasksForUnit(
   unit: Pick<Unit, 'id' | 'timezone' | 'cutoffHour'>,
   operationalDate: string,
 ): Promise<number> {
-  // Programação: só gera dentro de [startDate, endDate] (quando definidos).
+  // Trava de geração:
+  //  - dentro de [startDate, endDate] (programação), quando definidos;
+  //  - NUNCA antes do dia em que o checklist foi criado (evita "passado" em
+  //    checklists novos e a ressurreição de execuções excluídas no histórico).
+  const cfgUnit = { timezone: unit.timezone, cutoffHour: unit.cutoffHour };
   const templates = (await prisma.taskTemplate.findMany({ where: { unitId: unit.id, active: true } }))
-    .filter((t) => (!t.startDate || operationalDate >= t.startDate) && (!t.endDate || operationalDate <= t.endDate));
+    .filter((t) => {
+      const createdOp = opDateOf(t.createdAt, cfgUnit);
+      return operationalDate >= createdOp
+        && (!t.startDate || operationalDate >= t.startDate)
+        && (!t.endDate || operationalDate <= t.endDate);
+    });
   if (templates.length === 0) return 0;
 
   const cfg = { timezone: unit.timezone, cutoffHour: unit.cutoffHour };

@@ -86,14 +86,19 @@ export async function rotateRefresh(
     include: { user: true },
   });
 
-  if (!existing || existing.revokedAt || existing.expiresAt < new Date() || !existing.user.active) {
+  if (!existing || existing.expiresAt < new Date() || !existing.user.active) {
     return null;
   }
-
-  await prisma.refreshToken.update({
-    where: { id: existing.id },
-    data: { revokedAt: new Date() },
-  });
+  // Tolerância a corridas (prefetch/abas): um token revogado há poucos segundos
+  // ainda pode rotacionar uma vez — evita logout indevido. Revogado há mais
+  // tempo = inválido de fato.
+  const GRACE_MS = 30_000;
+  if (existing.revokedAt && Date.now() - existing.revokedAt.getTime() > GRACE_MS) {
+    return null;
+  }
+  if (!existing.revokedAt) {
+    await prisma.refreshToken.update({ where: { id: existing.id }, data: { revokedAt: new Date() } });
+  }
 
   return issueSession(existing.user, ctx);
 }

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { ACCESS_COOKIE } from '@/lib/auth/cookies';
+import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/auth/cookies';
 
 /**
  * Proteção de rotas no edge. Faz a checagem barata (presença do cookie de
@@ -18,10 +18,22 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const hasSession = req.cookies.has(ACCESS_COOKIE);
-  if (!hasSession) {
+  const hasAccess = req.cookies.has(ACCESS_COOKIE);
+  if (!hasAccess) {
+    // Access token expirou. Se ainda há refresh válido (30 dias) e é uma
+    // navegação (documento), renova de forma transparente em vez de deslogar.
+    const hasRefresh = req.cookies.has(REFRESH_COOKIE);
+    const isDocNav = req.method === 'GET' && !pathname.startsWith('/api');
+    if (hasRefresh && isDocNav) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/api/auth/refresh';
+      url.search = '';
+      url.searchParams.set('redirect', pathname + (req.nextUrl.search || ''));
+      return NextResponse.redirect(url);
+    }
     const url = req.nextUrl.clone();
     url.pathname = '/login';
+    url.search = '';
     url.searchParams.set('from', pathname);
     return NextResponse.redirect(url);
   }
