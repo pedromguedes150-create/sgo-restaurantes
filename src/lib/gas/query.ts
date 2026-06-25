@@ -28,6 +28,37 @@ export async function listGasReceipts(user: SessionUser, opts: { unitId?: string
   });
 }
 
+export interface GasVarRow { date: string; supplier: string; price: number; prevPrice: number | null; variationPct: number | null; alerted: boolean }
+export interface GasVarUnit { unitId: string; unit: string; rows: GasVarRow[]; first: number | null; last: number | null; min: number; max: number; avg: number }
+
+/** Relatório de variação do preço/kg por unidade (linha do tempo dos recebimentos). */
+export async function getGasVariationReport(user: SessionUser, opts: { unitId?: string; months?: number } = {}): Promise<GasVarUnit[]> {
+  const months = opts.months ?? 12;
+  const d = new Date();
+  const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - (months - 1), 1));
+  const startStr = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}-01`;
+  const receipts = await prisma.gasReceipt.findMany({
+    where: { ...unitScopeWhere(user, 'unitId'), ...(opts.unitId ? { unitId: opts.unitId } : {}), operationalDate: { gte: startStr } },
+    orderBy: [{ unitId: 'asc' }, { operationalDate: 'asc' }, { createdAt: 'asc' }],
+    include: { unit: { select: { name: true } }, supplier: { select: { name: true } } },
+  });
+
+  const byUnit = new Map<string, GasVarUnit>();
+  for (const r of receipts) {
+    const g = byUnit.get(r.unitId) ?? { unitId: r.unitId, unit: r.unit.name, rows: [], first: null, last: null, min: Infinity, max: 0, avg: 0 };
+    const price = Number(r.pricePerKg);
+    g.rows.push({ date: r.operationalDate, supplier: r.supplier?.name ?? 'Sem fornecedor', price, prevPrice: r.prevPricePerKg != null ? Number(r.prevPricePerKg) : null, variationPct: r.variationPct, alerted: r.alerted });
+    byUnit.set(r.unitId, g);
+  }
+  for (const g of byUnit.values()) {
+    const prices = g.rows.map((x) => x.price);
+    g.first = prices[0] ?? null; g.last = prices[prices.length - 1] ?? null;
+    g.min = Math.min(...prices); g.max = Math.max(...prices);
+    g.avg = prices.reduce((s, p) => s + p, 0) / prices.length;
+  }
+  return [...byUnit.values()].sort((a, b) => a.unit.localeCompare(b.unit, 'pt-BR'));
+}
+
 export interface GasGroupStat { key: string; name: string; count: number; avg: number; last: number; min: number; max: number }
 export interface GasMonthPoint { month: string; avg: number; count: number }
 export interface GasDashboard {

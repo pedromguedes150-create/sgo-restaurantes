@@ -6,7 +6,7 @@ import { getGasDashboard, listGasReceipts } from '@/lib/gas/query';
 import { listSuppliers, canManageSuppliers } from '@/lib/suppliers';
 import { Card, CardContent } from '@/components/ui/card';
 import { GasClient, type GasDash, type GasRow } from '@/components/gas/gas-client';
-import { Truck } from 'lucide-react';
+import { Truck, TrendingUp } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,9 +42,12 @@ export default async function GasPage() {
           <h1 className="text-xl font-bold text-brand">Recebimento de Gás</h1>
           <p className="text-sm text-muted-foreground">Controle do preço real por kg, com comparativo entre unidades e fornecedores.</p>
         </div>
-        {canManageSuppliers(user) && (
-          <Link href="/configuracoes/fornecedores" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><Truck className="h-4 w-4" /> Fornecedores</Link>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Link href="/modulos/gas/relatorio" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><TrendingUp className="h-4 w-4" /> Relatório de variação</Link>
+          {canManageSuppliers(user) && (
+            <Link href="/configuracoes/fornecedores" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><Truck className="h-4 w-4" /> Fornecedores</Link>
+          )}
+        </div>
       </div>
       <Card><CardContent className="pt-4">
         <GasClient

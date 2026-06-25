@@ -10,7 +10,10 @@ export interface CreateGasInput {
   unitId: string;
   supplierId?: string;
   quantityKg: number;
-  totalValue: number;
+  /** Preço unitário (R$/kg) — quando informado, o total é calculado (qtd × unitário). */
+  pricePerKg?: number;
+  /** Valor total (alternativa ao unitário; preço/kg = total ÷ kg). */
+  totalValue?: number;
   operationalDate?: string;
   accessKey?: string;
   noteNumber?: string;
@@ -29,13 +32,16 @@ export async function createGasReceipt(user: SessionUser, input: CreateGasInput,
     throw e;
   }
   const qty = Number(input.quantityKg);
-  const total = Number(input.totalValue);
+  const unitPrice = input.pricePerKg != null ? Number(input.pricePerKg) : NaN;
+  // Preferimos o preço UNITÁRIO (qtd × unitário = total); se não vier, usamos o total.
+  const hasUnit = Number.isFinite(unitPrice) && unitPrice > 0;
+  const total = hasUnit ? Math.round(qty * unitPrice * 100) / 100 : Number(input.totalValue);
   if (!(qty > 0) || !(total > 0)) return { ok: false, reason: 'INVALID' };
 
   const unit = await prisma.unit.findUnique({ where: { id: input.unitId }, select: { timezone: true, cutoffHour: true, name: true } });
   if (!unit) return { ok: false, reason: 'INVALID' };
 
-  const pricePerKg = Math.round((total / qty) * 10000) / 10000;
+  const pricePerKg = hasUnit ? Math.round(unitPrice * 10000) / 10000 : Math.round((total / qty) * 10000) / 10000;
   const opDate = input.operationalDate && /^\d{4}-\d{2}-\d{2}$/.test(input.operationalDate)
     ? input.operationalDate
     : currentOperationalDate({ timezone: unit.timezone, cutoffHour: unit.cutoffHour });

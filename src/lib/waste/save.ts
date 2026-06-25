@@ -109,19 +109,22 @@ export async function saveWasteEntry(
     return e;
   });
 
-  // Conclui as tarefas WASTE do dia (idempotente; marca o checklist)
+  // Conclui a(s) tarefa(s) WASTE do dia. Regra de meta (pedido do cliente):
+  //  - lançado no dia ou até 1 dia depois  → DONE (conta na meta);
+  //  - 2+ dias depois                      → LATE (neutro: não conta nem penaliza).
+  const daysLate = Math.round((new Date(`${today}T12:00:00`).getTime() - new Date(`${operationalDate}T12:00:00`).getTime()) / 86_400_000);
+  const counts = daysLate <= 1;
   for (const t of wasteTasks) {
-    if (t.status === 'PENDING') {
-      await prisma.taskInstance.updateMany({
-        where: { id: t.id, status: 'PENDING' },
-        data: {
-          status: 'DONE',
-          completedById: user.id,
-          completedAt: new Date(),
-          evidencePath: input.evidencePath ?? null,
-        },
-      });
-    }
+    if (t.status === 'DONE') continue; // já concluída
+    await prisma.taskInstance.updateMany({
+      where: { id: t.id },
+      data: {
+        status: counts ? 'DONE' : 'LATE',
+        completedById: user.id,
+        completedAt: new Date(),
+        evidencePath: input.evidencePath ?? null,
+      },
+    });
   }
 
   const alerts = await computeAlerts(unit.id, operationalDate, items);

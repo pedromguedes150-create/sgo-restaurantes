@@ -55,7 +55,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
   const [accessKey, setAccessKey] = useState('');
   const [noteNumber, setNoteNumber] = useState('');
   const [qty, setQty] = useState('');
-  const [total, setTotal] = useState('');
+  const [unitPrice, setUnitPrice] = useState('');
   const [obs, setObs] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -63,8 +63,8 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
   const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   const q = parseFloat((qty || '0').replace(',', '.'));
-  const t = parseFloat((total || '0').replace(',', '.'));
-  const price = q > 0 && t > 0 ? t / q : 0;
+  const price = parseFloat((unitPrice || '0').replace(',', '.'));
+  const total = q > 0 && price > 0 ? q * price : 0;
 
   function onKey(v: string) {
     setAccessKey(v);
@@ -77,15 +77,15 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
 
   async function submit() {
     setErr(null); setOk(null);
-    if (!unitId || !(q > 0) || !(t > 0)) { setErr('Informe unidade, quantidade (kg) e valor total.'); return; }
+    if (!unitId || !(q > 0) || !(price > 0)) { setErr('Informe unidade, quantidade (kg) e valor por kg.'); return; }
     setBusy(true);
     try {
-      const res = await fetch('/api/gas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unitId, supplierId, quantityKg: q, totalValue: t, accessKey, noteNumber, observation: obs }) });
+      const res = await fetch('/api/gas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unitId, supplierId, quantityKg: q, pricePerKg: price, accessKey, noteNumber, observation: obs }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
       const v = data.variationPct;
       setOk(`Registrado: ${kg(data.pricePerKg)}.${v != null ? ` Variação ${v > 0 ? '+' : ''}${v}% vs anterior.` : ''}${data.alerted ? ' ⚠ Acima do limite — supervisão avisada.' : ''}`);
-      setAccessKey(''); setNoteNumber(''); setQty(''); setTotal(''); setObs(''); setSupplierId('');
+      setAccessKey(''); setNoteNumber(''); setQty(''); setUnitPrice(''); setObs(''); setSupplierId('');
       router.refresh();
     } finally { setBusy(false); }
   }
@@ -113,13 +113,14 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div><Label>Quantidade (kg)</Label><Input inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="ex: 45" /></div>
-        <div><Label>Valor total (R$)</Label><Input inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0,00" /></div>
+        <div><Label>Valor por kg (R$)</Label><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0,0000" /></div>
       </div>
 
-      {price > 0 && (
+      {total > 0 && (
         <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 text-center">
-          <p className="text-xs text-muted-foreground">Preço real por kg</p>
-          <p className="text-2xl font-black text-brand">{kg(price)}</p>
+          <p className="text-xs text-muted-foreground">Valor total (calculado)</p>
+          <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
+          <p className="text-xs text-muted-foreground">{kg(price)}</p>
         </div>
       )}
 

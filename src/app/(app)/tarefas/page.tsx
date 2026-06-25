@@ -29,7 +29,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
         <h1 className="text-xl font-bold text-brand">{onlyOverdue ? 'Tarefas atrasadas' : 'Tarefas de hoje'}</h1>
         {onlyOverdue
           ? <Link href="/tarefas" className="text-sm font-semibold text-accent underline">Ver todas</Link>
-          : <Link href="/tarefas/historico" className="text-sm font-semibold text-accent underline">Histórico</Link>}
+          : <span className="flex gap-3"><Link href="/tarefas/correcoes" className="text-sm font-semibold text-accent underline">Correções do dia</Link><Link href="/tarefas/historico" className="text-sm font-semibold text-accent underline">Histórico</Link></span>}
       </div>
 
       {groups.length === 0 && (
