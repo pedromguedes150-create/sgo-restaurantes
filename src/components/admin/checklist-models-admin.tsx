@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2, X, Save, ChevronUp, ChevronDown, Camera } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, ChevronUp, ChevronDown, Camera, Download, Printer, Upload, Eye } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +29,8 @@ export function ChecklistModelsAdmin({ models }: { models: ModelRow[] }) {
 
   return (
     <div className="space-y-3">
+      <Toolbar />
+
       {creating
         ? <ModelForm onDone={() => { setCreating(false); router.refresh(); }} onCancel={() => setCreating(false)} />
         : <Button variant="gold" className="w-full" onClick={() => setCreating(true)}><Plus className="h-5 w-5" /> Novo modelo</Button>}
@@ -47,8 +50,41 @@ export function ChecklistModelsAdmin({ models }: { models: ModelRow[] }) {
   );
 }
 
+function Toolbar() {
+  const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function onImport(file: File) {
+    setBusy(true); setMsg(null);
+    try {
+      const fd = new FormData(); fd.set('file', file);
+      const res = await fetch('/api/checklist-models/import', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setMsg(data.error ?? 'Falha na importação'); return; }
+      setMsg(`Importado: ${data.created} novo(s), ${data.updated} atualizado(s).`);
+      router.refresh();
+    } finally { setBusy(false); if (fileRef.current) fileRef.current.value = ''; }
+  }
+
+  return (
+    <div className="rounded-lg border border-dashed p-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <a href="/api/checklist-models/export" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><Download className="h-4 w-4" /> Exportar (Excel)</a>
+        <Link href="/configuracoes/modelos/imprimir" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><Printer className="h-4 w-4" /> Imprimir (PDF)</Link>
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {busy ? 'Importando…' : 'Importar (Excel)'}</Button>
+        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onImport(f); }} />
+      </div>
+      <p className="mt-1 text-[11px] text-muted-foreground">Exporte, edite a planilha (altere/adicione modelos e etapas) e importe de volta — a biblioteca é atualizada em lote (casamento por nome do modelo; não exclui ausentes).</p>
+      {msg && <p className="mt-1 text-sm font-medium text-success">{msg}</p>}
+    </div>
+  );
+}
+
 function ModelItemRow({ m, onChange }: { m: ModelRow; onChange: () => void }) {
   const [editing, setEditing] = useState(false);
+  const [viewing, setViewing] = useState(false);
   const [busy, setBusy] = useState(false);
   async function toggle() { await postAdmin({ entity: 'checklistModel', action: 'toggle', id: m.id, active: !m.active }); onChange(); }
   async function remove() {
@@ -61,16 +97,32 @@ function ModelItemRow({ m, onChange }: { m: ModelRow; onChange: () => void }) {
   return (
     <div className="rounded-lg border bg-card p-3">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-semibold text-brand">{m.moment ?? m.name}</p>
+        <button type="button" onClick={() => { if (!editing) setViewing((v) => !v); }} className="min-w-0 flex-1 text-left">
+          <p className="flex items-center gap-1 font-semibold text-brand">{m.moment ?? m.name}{!editing && <Eye className="h-3.5 w-3.5 text-muted-foreground" />}</p>
           <p className="text-xs text-muted-foreground">{m.scope === 'MANAGER' ? 'individual' : 'da unidade'} · peso {m.weight} · {m.limitTime ? `limite ${m.limitTime}` : 'sem horário'} · {m.items.length} item(ns){m.requiresEvidence ? ' · foto' : ''}</p>
-        </div>
+        </button>
         <div className="flex items-center gap-1">
           <button onClick={toggle}><StatusBadge tone={m.active ? 'success' : 'critical'}>{m.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
-          <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setEditing((v) => !v); setViewing(false); }} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
           <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={remove} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
+
+      {viewing && !editing && (
+        <div className="mt-2 rounded-lg bg-muted/40 p-2">
+          {m.category && <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-accent">{m.category}{m.moment ? ` · ${m.moment}` : ''}</p>}
+          <ul className="space-y-1">
+            {m.items.map((it, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm">
+                <span className="mt-0.5 inline-block h-4 w-4 shrink-0 rounded border-2 border-input" />
+                <span>{it.text}{it.requiresPhoto && <Camera className="ml-1 inline h-3.5 w-3.5 text-gold-dark" />}</span>
+              </li>
+            ))}
+            {m.items.length === 0 && <li className="text-xs text-muted-foreground">Sem itens.</li>}
+          </ul>
+        </div>
+      )}
+
       {editing && <div className="mt-2"><ModelForm edit={m} onDone={() => { setEditing(false); onChange(); }} onCancel={() => setEditing(false)} /></div>}
     </div>
   );

@@ -121,3 +121,86 @@ function normLimit(v?: string | null): string | null {
   return /^\d{1,2}:\d{2}$/.test(s) ? s : null;
 }
 function clampW(w?: number): number { return Number.isFinite(w) ? Math.max(0, Math.trunc(w as number)) : 10; }
+
+/* ───────── Exportar / Importar (Excel) ───────── */
+export interface ModelSheetRow {
+  Setor: string; Momento: string; Modelo: string; Escopo: string; Horario: string;
+  Peso: number; ExigeFotoModelo: string; Ativo: string; Item: string; ItemExigeFoto: string;
+}
+
+/** Linhas planas (1 por item) para a planilha — formato de ida e volta. */
+export async function exportModelRows(): Promise<ModelSheetRow[]> {
+  const models = await listChecklistModels();
+  const rows: ModelSheetRow[] = [];
+  for (const m of models) {
+    const base = {
+      Setor: m.category ?? '', Momento: m.moment ?? '', Modelo: m.name,
+      Escopo: m.scope === 'MANAGER' ? 'Individual' : 'Unidade',
+      Horario: m.limitTime ?? '', Peso: m.weight,
+      ExigeFotoModelo: m.requiresEvidence ? 'Sim' : 'Não', Ativo: m.active ? 'Sim' : 'Não',
+    };
+    if (m.items.length === 0) rows.push({ ...base, Item: '', ItemExigeFoto: '' });
+    else for (const it of m.items) rows.push({ ...base, Item: it.text, ItemExigeFoto: it.requiresPhoto ? 'Sim' : 'Não' });
+  }
+  return rows;
+}
+
+function str(v: unknown): string { return String(v ?? '').trim(); }
+function yes(v: unknown): boolean { return /^(s|sim|y|yes|true|1|x)$/i.test(str(v)); }
+function pick(r: Record<string, unknown>, ...keys: string[]): unknown {
+  for (const k of keys) { for (const rk of Object.keys(r)) { if (rk.toLowerCase().replace(/\s+/g, '') === k.toLowerCase().replace(/\s+/g, '')) return r[rk]; } }
+  return undefined;
+}
+
+/**
+ * Importa modelos de uma planilha (linhas). Agrupa por "Modelo" (nome) preservando
+ * a ordem; faz UPSERT por nome (atualiza config + substitui itens; cria novos).
+ * NÃO exclui modelos ausentes na planilha (não destrutivo).
+ */
+export async function importModelRows(user: SessionUser, rows: Record<string, unknown>[], ctx: Ctx = {}): Promise<ModelResult & { created?: number; updated?: number }> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const order: string[] = [];
+  const map = new Map<string, { meta: Record<string, unknown>; items: { text: string; requiresPhoto: boolean }[] }>();
+  for (const r of rows) {
+    const name = str(pick(r, 'Modelo'));
+    if (!name) continue;
+    if (!map.has(name)) { map.set(name, { meta: r, items: [] }); order.push(name); }
+    const g = map.get(name)!;
+    const itemText = str(pick(r, 'Item'));
+    if (itemText) g.items.push({ text: itemText, requiresPhoto: yes(pick(r, 'ItemExigeFoto', 'ItemFoto', 'Foto')) });
+  }
+  if (order.length === 0) return { ok: false, reason: 'INVALID' };
+
+  const existing = new Map((await prisma.checklistModel.findMany({ select: { id: true, name: true } })).map((m) => [m.name, m.id]));
+  let created = 0, updated = 0, idx = 0;
+  for (const name of order) {
+    const g = map.get(name)!;
+    const meta = g.meta;
+    const ativoRaw = pick(meta, 'Ativo');
+    const data = {
+      name,
+      category: str(pick(meta, 'Setor')) || null,
+      moment: str(pick(meta, 'Momento')) || null,
+      scope: (/indiv/i.test(str(pick(meta, 'Escopo'))) ? 'MANAGER' : 'UNIT') as ChecklistScope,
+      limitTime: normLimit(str(pick(meta, 'Horario', 'Horário'))),
+      weight: clampW(Number(pick(meta, 'Peso'))),
+      requiresEvidence: yes(pick(meta, 'ExigeFotoModelo', 'ExigeFoto')),
+      active: ativoRaw === undefined || ativoRaw === '' ? true : yes(ativoRaw),
+    };
+    const id = existing.get(name);
+    if (id) {
+      await prisma.$transaction(async (tx) => {
+        await tx.checklistModel.update({ where: { id }, data });
+        await tx.checklistModelItem.deleteMany({ where: { modelId: id } });
+        if (g.items.length) await tx.checklistModelItem.createMany({ data: g.items.map((it, o) => ({ modelId: id, section: null, text: it.text, requiresPhoto: it.requiresPhoto, order: o })) });
+      });
+      updated++;
+    } else {
+      await prisma.checklistModel.create({ data: { ...data, order: 1000 + idx, createdById: user.id, items: { create: g.items.map((it, o) => ({ section: null, text: it.text, requiresPhoto: it.requiresPhoto, order: o })) } } });
+      created++;
+    }
+    idx++;
+  }
+  await audit({ userId: user.id, action: 'CHECKLIST_MODEL_IMPORT', module: 'CONFIG', entity: 'checklist_model', metadata: { created, updated }, ...ctx });
+  return { ok: true, created, updated };
+}

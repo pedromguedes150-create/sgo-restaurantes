@@ -75,7 +75,7 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 3. Um módulo por vez; testes para regras de negócio.
 4. Commit por funcionalidade; tag ao concluir módulo; atualize esta tabela.
 5. **A cada novo recurso/ajuste, atualize a central "Treinamento da Plataforma"** (`src/lib/guide.ts`, aba `/ajuda`) — guias por perfil (filtra por `user.role`; acessível pelo ícone 🎓 no header, em qualquer aparelho). Pedido do Pedro: a central deve refletir TUDO que for criado/ajustado.
-6. **Biblioteca de modelos de checklist** (`ChecklistModel`/`ChecklistModelItem`, `src/lib/checklist-models.ts`): Admin CRUD em `/configuracoes/modelos`; seed padrão (rede Beija Flor, por setor/momento) em `checklist-models-seed.ts` via `ensureDefaultModels()`. Em `/configuracoes/checklists`, "Modelos prontos…" gera TaskTemplates nas unidades a partir dos modelos (`template.fromModels`).
+6. **Biblioteca de modelos de checklist** (`ChecklistModel`/`ChecklistModelItem`, `src/lib/checklist-models.ts`): Admin CRUD em `/configuracoes/modelos`; seed padrão (rede Beija Flor, por setor/momento) em `checklist-models-seed.ts` via `ensureDefaultModels()`. Em `/configuracoes/checklists`, "Modelos prontos…" gera TaskTemplates nas unidades a partir dos modelos (`template.fromModels`). **Visualização** ao clicar no modelo; **Export/Import Excel (.xlsx via `xlsx`/SheetJS)** + **PDF (print)** para edição em lote (`/api/checklist-models/export|import`, upsert por nome, não destrutivo; `/configuracoes/modelos/imprimir`).
 
 ## Comandos
 - `docker compose up -d` — sobe o Postgres dedicado do SGO (dev)
