@@ -155,6 +155,24 @@ export async function deleteOilCollection(user: SessionUser, id: string, ctx: Ct
   return { ok: true };
 }
 
+/* ───────────────────────── Atestados (Módulo 19) ───────────────────────── */
+export async function deleteMedicalCertificate(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const c = await prisma.medicalCertificate.findUnique({ where: { id }, select: { unitId: true, collaboratorId: true, startDate: true, endDate: true, type: true, days: true } });
+  if (!c) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.medicalCertificate.delete({ where: { id } });
+  // Reverte a Escala: remove os dias marcados como "Atestado" deste período (não toca em outros status)
+  if (c.type !== 'HOURS') {
+    const [ys, ms, ds] = c.startDate.split('-').map(Number);
+    const [ye, me, de] = c.endDate.split('-').map(Number);
+    await prisma.scheduleActual.deleteMany({
+      where: { collaboratorId: c.collaboratorId, unitId: c.unitId, status: 'ATESTADO', date: { gte: new Date(Date.UTC(ys, ms - 1, ds)), lte: new Date(Date.UTC(ye, me - 1, de)) } },
+    });
+  }
+  await audit({ userId: user.id, unitId: c.unitId, action: 'CERTIFICATE_DELETE', module: 'PEOPLE', entity: 'medical_certificate', entityId: id, metadata: { start: c.startDate, end: c.endDate, days: c.days }, ...ctx });
+  return { ok: true };
+}
+
 /** Exclui VÁRIOS registros do histórico de checklists de uma vez (Admin). */
 export async function deleteTaskInstances(user: SessionUser, ids: string[], ctx: Ctx = {}): Promise<OpResult & { count?: number }> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };

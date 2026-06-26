@@ -263,6 +263,35 @@ export const GUIDE: GuideSection[] = [
           'No modo COMPARAÇÃO veja planejado × realizado; exporte em Excel ou PDF para o RH.',
         ],
       },
+      {
+        id: 'atestados',
+        title: 'Atestados (Central de Atestados)',
+        roles: MANAGERLINE,
+        summary: 'Lance o atestado por foto; a IA lê e pré-preenche.',
+        steps: [
+          'Em ATESTADOS → aba "Lançar", tire a foto do atestado (ou anexe um PDF).',
+          'A IA lê os campos e pré-preenche o formulário; confira os campos destacados em amarelo (baixa confiança).',
+          'Selecione o colaborador na lista (a IA mostra o nome lido como dica), confirme as datas e salve.',
+          'Ao salvar, os dias do período são marcados automaticamente como "Atestado" na Escala — não precisa lançar de novo lá.',
+          'Atestado de horas (consulta) não afasta o dia todo; acompanhamento de familiar marca o(s) dia(s).',
+        ],
+        tips: [
+          'O sistema avisa o RH a cada novo atestado (Central de Notificações).',
+          'Evita duplicidade: o mesmo colaborador + mesmo período não é aceito duas vezes.',
+        ],
+      },
+      {
+        id: 'atestados-painel',
+        title: 'Atestados — Painel e Relatório',
+        roles: ['ADMIN', 'CEO', 'SUPERVISOR'],
+        summary: 'Quantidade, dias perdidos e absenteísmo por unidade.',
+        steps: [
+          'Na aba "Painel", escolha o mês e veja total de atestados, dias perdidos, ranking por unidade e taxa de absenteísmo.',
+          'Veja a tendência de 12 meses, a distribuição por dia da semana e por tipo.',
+          'Use "Relatório (PDF)" para imprimir e "Excel/CSV" para enviar ao RH/contabilidade.',
+        ],
+        tips: ['O CID é dado sensível (LGPD): só Administrador/CEO (papel de RH) enxergam; nunca aparece para gerentes nem nos rankings.'],
+      },
     ],
   },
   {

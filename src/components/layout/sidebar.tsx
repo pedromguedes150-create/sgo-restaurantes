@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, ListChecks, Trash2, AlertOctagon, ClipboardList, Ticket,
-  Boxes, Receipt, Wallet, Users, BookOpen, Target, ScrollText, Settings, GraduationCap, LifeBuoy, Megaphone, Flame, Droplets,
+  Boxes, Receipt, Wallet, Users, BookOpen, Target, ScrollText, Settings, GraduationCap, LifeBuoy, Megaphone, Flame, Droplets, Stethoscope,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +38,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { href: '/modulos/pagamentos', label: 'Pagamentos', icon: Wallet },
       { href: '/modulos/pessoas', label: 'Pessoas', icon: Users },
+      { href: '/modulos/atestados', label: 'Atestados', icon: Stethoscope },
       { href: '/modulos/pops', label: 'POPs', icon: BookOpen },
       { href: '/modulos/treinamentos', label: 'Treinamentos', icon: GraduationCap },
       { href: '/modulos/metas', label: 'Metas', icon: Target },

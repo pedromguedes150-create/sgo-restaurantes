@@ -73,6 +73,7 @@ model Unit {
   oilCollections          OilCollection[]
   inventoryItems          InventoryItem[]
   inventoryMovements      InventoryMovement[]
+  medicalCertificates     MedicalCertificate[]
 
   @@map("units")
 }
@@ -126,6 +127,7 @@ model User {
   inventoryItemsCreated   InventoryItem[]          @relation("InvItemBy")
   inventoryMovements      InventoryMovement[]      @relation("InvMoveBy")
   checklistModels         ChecklistModel[]         @relation("ChecklistModelBy")
+  medicalCertificates     MedicalCertificate[]     @relation("CertBy")
 
   @@map("users")
 }
@@ -872,6 +874,7 @@ model Collaborator {
   planOverrides     SchedulePlanOverride[]
   scheduleActuals   ScheduleActual[]
   trainings         TrainingRecord[]
+  medicalCertificates MedicalCertificate[]
 
   @@map("collaborators")
 }
@@ -1406,6 +1409,47 @@ model OilCollection {
 
   @@index([unitId, operationalDate])
   @@map("oil_collections")
+}
+
+// ───────────────────────── Central de Atestados (Módulo 19) ─────────────────────────
+enum CertificateType {
+  FULL_DAY // dias inteiros de afastamento
+  HOURS // atestado de horas (consulta) — não afasta o dia todo
+  COMPANION // acompanhamento de familiar (declaração de comparecimento)
+}
+
+/// Atestado médico de colaborador (Módulo 19). Captura por foto + leitura por IA,
+/// análise por unidade. CID é dado sensível (LGPD): exibir só p/ ADMIN/CEO/RH.
+model MedicalCertificate {
+  id             String          @id @default(cuid())
+  unitId         String
+  collaboratorId String
+  type           CertificateType @default(FULL_DAY)
+  /// Datas em yyyy-mm-dd (dia civil; afastamento usa o calendário, regra nº 5)
+  issueDate      String?
+  startDate      String
+  endDate        String
+  /// Dias de afastamento (inclusivo). Para HOURS normalmente 1 e usa `hours`.
+  days           Int             @default(1)
+  hours          Decimal?        @db.Decimal(5, 2)
+  doctorName     String?
+  doctorCrm      String?
+  /// CID — DADO SENSÍVEL (LGPD). Nunca expor a gerentes nem em dashboards.
+  cid            String?
+  attachmentPath String?
+  /// Espelho do que a IA leu (campos + confiança), só para referência/auditoria.
+  aiExtracted    Json?
+  observation    String?
+  createdById    String?
+  createdAt      DateTime        @default(now())
+
+  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("CertBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([unitId, startDate])
+  @@index([collaboratorId, startDate])
+  @@map("medical_certificates")
 }
 
 // ───────────────────────── Inventário de Equipamentos (Módulo 18) ─────────────────────────
