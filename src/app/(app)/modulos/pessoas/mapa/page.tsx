@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
-import { getUnitDayMap, getAllocationBoard, listShifts, STANDARD_SECTORS } from '@/lib/workforce';
+import { getUnitDayMap, getAllocationBoard, getDayFreelancers, listShifts, STANDARD_SECTORS } from '@/lib/workforce';
 import { availabilityForDate } from '@/lib/schedule';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkforceClient } from '@/components/people/workforce-client';
@@ -27,11 +27,12 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
   const selectedDate = searchParams.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date) ? searchParams.date : todayISO;
   const isToday = selectedDate === todayISO;
 
-  const [grid, board, turnos, availability] = await Promise.all([
+  const [grid, board, turnos, availability, freelancers] = await Promise.all([
     getUnitDayMap(selected.id, selectedDate, isToday ? nowMinutes : null),
     getAllocationBoard(selected.id),
     listShifts(selected.id),
     availabilityForDate(selected.id, selectedDate),
+    getDayFreelancers(selected.id, selectedDate, isToday ? nowMinutes : null),
   ]);
   const existingSectorNames = grid.sectors.map((s) => s.name.toLowerCase());
   const suggestedSectors = STANDARD_SECTORS.filter((n) => !existingSectorNames.includes(n.toLowerCase()));
@@ -61,6 +62,7 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
           mapDate={selectedDate}
           isToday={isToday}
           availability={availability}
+          freelancers={freelancers}
         />
       </CardContent></Card>
     </div>

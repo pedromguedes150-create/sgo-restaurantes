@@ -185,6 +185,53 @@ export async function getUnitDayMap(unitId: string, dateISO: string, nowMinutes:
   return { sectors: sectors.map((s) => ({ id: s.id, name: s.name, minHeadcount: s.minHeadcount })), shifts: cols.map((c) => ({ id: c.id, label: c.label })), cells, coverage };
 }
 
+/** Freelancers com pedido de pagamento para o dia (disponíveis para alocar). */
+export interface DayFreelancer {
+  requestId: string;
+  name: string;
+  sectorId: string | null;
+  sectorName: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  present: boolean; // dentro da janela agora (ou true se nowMinutes==null / sem horário)
+  status: string;
+}
+export async function getDayFreelancers(unitId: string, dateISO: string, nowMinutes: number | null): Promise<DayFreelancer[]> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return [];
+  const [y, m, d] = dateISO.split('-').map(Number);
+  const dayStart = new Date(Date.UTC(y, m - 1, d));
+  const dayEnd = new Date(Date.UTC(y, m - 1, d + 1));
+  const reqs = await prisma.paymentRequest.findMany({
+    where: { unitId, type: 'FREELANCER', status: { not: 'REJECTED' }, workDate: { gte: dayStart, lt: dayEnd } },
+    include: { freelancer: { select: { name: true } }, workSector: { select: { name: true } } },
+    orderBy: { createdAt: 'asc' },
+  });
+  return reqs.map((r) => ({
+    requestId: r.id,
+    name: r.freelancer?.name ?? 'Freelancer',
+    sectorId: r.workSectorId,
+    sectorName: r.workSector?.name ?? null,
+    startTime: r.workStartTime,
+    endTime: r.workEndTime,
+    present: nowMinutes == null ? true : inWindow(nowMinutes, parseHM(r.workStartTime), parseHM(r.workEndTime)),
+    status: r.status,
+  }));
+}
+
+/** Aloca (ou remove a alocação de) um freelancer num setor para o dia do pedido. */
+export async function assignFreelancerSector(user: SessionUser, requestId: string, sectorId: string | null, ctx: Ctx = {}): Promise<WfResult> {
+  const r = await prisma.paymentRequest.findUnique({ where: { id: requestId }, select: { unitId: true, type: true } });
+  if (!r || r.type !== 'FREELANCER') return { ok: false, reason: 'NOT_FOUND' };
+  if (!canAccessUnit(user, r.unitId)) return { ok: false, reason: 'FORBIDDEN' };
+  if (sectorId) {
+    const sector = await prisma.sector.findUnique({ where: { id: sectorId }, select: { unitId: true } });
+    if (!sector || sector.unitId !== r.unitId) return { ok: false, reason: 'INVALID', detail: 'Setor não pertence a esta unidade.' };
+  }
+  await prisma.paymentRequest.update({ where: { id: requestId }, data: { workSectorId: sectorId } });
+  await audit({ userId: user.id, unitId: r.unitId, action: 'FREELANCER_ALLOCATE', module: 'PEOPLE', entity: 'payment_request', entityId: requestId, metadata: { sectorId }, ...ctx });
+  return { ok: true };
+}
+
 /* ───────── Setores (Admin) ───────── */
 export async function createSector(user: SessionUser, input: { unitId: string; name: string; minHeadcount?: number }, ctx: Ctx = {}): Promise<WfResult> {
   if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };

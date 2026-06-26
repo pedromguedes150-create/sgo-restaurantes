@@ -744,6 +744,11 @@ model PaymentRequest {
   workDate     DateTime?
   shift        String?
   hours        Float?
+  /// Janela de trabalho do freelancer (HH:MM) — usada na alocação/Mapa do dia
+  workStartTime String?
+  workEndTime   String?
+  /// Setor onde o freelancer foi alocado no Mapa do dia (Módulo 9.3)
+  workSectorId  String?
 
   // Hora extra
   collaboratorName String?
@@ -773,6 +778,7 @@ model PaymentRequest {
   freelancer  Freelancer?      @relation(fields: [freelancerId], references: [id], onDelete: SetNull)
   miscType    MiscPaymentType? @relation(fields: [miscTypeId], references: [id], onDelete: SetNull)
   supplier    Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  workSector  Sector?          @relation("FreelancerSector", fields: [workSectorId], references: [id], onDelete: SetNull)
 
   @@index([unitId, status])
   @@index([status])
@@ -1070,6 +1076,7 @@ model Sector {
 
   unit        Unit                  @relation(fields: [unitId], references: [id], onDelete: Cascade)
   allocations WorkforceAllocation[]
+  freelancerRequests PaymentRequest[] @relation("FreelancerSector")
 
   @@index([unitId])
   @@map("sectors")

@@ -182,6 +182,8 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
   const [amount, setAmount] = useState('');
   const [workDate, setWorkDate] = useState('');
   const [shift, setShift] = useState('');
+  const [workStartTime, setWorkStartTime] = useState('');
+  const [workEndTime, setWorkEndTime] = useState('');
   const [hours, setHours] = useState('');
   const [collaboratorName, setCollaboratorName] = useState('');
   const [reason, setReason] = useState('');
@@ -204,7 +206,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
     setBusy(true);
     try {
       const body: Record<string, unknown> = { type, unitId, amount: amt, description };
-      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, hours: hours ? Number(hours) : undefined });
+      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, hours: hours ? Number(hours) : undefined });
       if (type === 'OVERTIME') Object.assign(body, { collaboratorName, workDate, hours: hours ? Number(hours) : undefined, reason });
       if (type === 'MISC') Object.assign(body, { miscTypeId, beneficiary, supplierId: supplierId || undefined });
       const res = await fetch('/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -244,11 +246,13 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
               {unitFreelancers.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
+          <div><Label>Dia do trabalho</Label><Input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Data</Label><Input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} /></div>
-            <div><Label>Turno</Label><Input value={shift} onChange={(e) => setShift(e.target.value)} placeholder="ex: noite" /></div>
+            <div><Label>Hora início</Label><Input type="time" value={workStartTime} onChange={(e) => setWorkStartTime(e.target.value)} /></div>
+            <div><Label>Hora fim</Label><Input type="time" value={workEndTime} onChange={(e) => setWorkEndTime(e.target.value)} /></div>
           </div>
-          <div><Label>Horas</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} /></div>
+          <p className="text-xs text-muted-foreground">Com o dia e a hora preenchidos, o freelancer fica disponível para alocar no Mapa da unidade naquele dia/horário.</p>
+          <div><Label>Horas (p/ pagamento)</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="opcional" /></div>
         </>
       )}
 

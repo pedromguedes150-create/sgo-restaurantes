@@ -21,6 +21,7 @@ interface AllocBoard {
   toAllocate: { id: string; name: string }[];
   allocated: { allocationId: string; collaboratorId: string; name: string; sectorId: string; sectorName: string; shiftId: string | null; shiftLabel: string }[];
 }
+interface DayFreela { requestId: string; name: string; sectorId: string | null; sectorName: string | null; startTime: string | null; endTime: string | null; present: boolean; status: string }
 
 const COV: Record<Coverage, { dot: string; label: string }> = {
   ok: { dot: 'bg-success', label: 'Coberto' },
@@ -30,9 +31,9 @@ const COV: Record<Coverage, { dot: string; label: string }> = {
 
 function fmtDateBR(iso: string): string { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
 
-export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggestedSectors, mapDate, isToday, availability }: {
+export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggestedSectors, mapDate, isToday, availability, freelancers }: {
   unitId: string; isAdmin: boolean; grid: Grid; board: AllocBoard; turnos: Turno[]; suggestedSectors: string[];
-  mapDate: string; isToday: boolean; availability?: { working: string[]; off: string[] } | null;
+  mapDate: string; isToday: boolean; availability?: { working: string[]; off: string[] } | null; freelancers?: DayFreela[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -92,6 +93,9 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
           <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">Ninguém trabalhando na unidade neste momento. O mapa segue a Escala — confira em Pessoas → Escala se os turnos do dia estão lançados.</p>
         )}
 
+        {/* Freelancers do dia: alocar em um setor (ficam disponíveis após o pedido de pagamento) */}
+        <FreelancersPanel freelancers={freelancers ?? []} sectors={grid.sectors} isToday={isToday} post={post} busy={busy} />
+
         {view === 'planta' && <UnitFloorplan grid={grid} />}
 
         {view === 'lista' && grid.sectors.length === 0 && <p className="text-sm text-muted-foreground">Nenhum setor cadastrado.</p>}
@@ -120,6 +124,44 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
                 );
               })}
             </div>
+            {(freelancers ?? []).filter((f) => f.sectorId === s.id && (isToday ? f.present : true)).length > 0 && (
+              <div className="mt-2 rounded-md bg-accent/5 p-2">
+                <p className="text-xs font-bold text-accent">Freelancers</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {(freelancers ?? []).filter((f) => f.sectorId === s.id && (isToday ? f.present : true)).map((f) => (
+                    <span key={f.requestId} className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs">{f.name}{f.startTime && f.endTime ? ` (${f.startTime}-${f.endTime})` : ''}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Freelancers do dia ───────── */
+function FreelancersPanel({ freelancers, sectors, isToday, post, busy }: {
+  freelancers: DayFreela[]; sectors: Grid['sectors']; isToday: boolean;
+  post: (p: Record<string, unknown>) => Promise<boolean>; busy: boolean;
+}) {
+  if (freelancers.length === 0) return null;
+  const selCls = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-xs';
+  return (
+    <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-accent">Freelancers do dia ({freelancers.length})</p>
+      <div className="space-y-1.5">
+        {freelancers.map((f) => (
+          <div key={f.requestId} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-card p-2">
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold text-brand">{f.name}{isToday && !f.present ? <span className="ml-1 text-xs font-normal text-muted-foreground">(fora do horário agora)</span> : ''}</span>
+              <span className="block text-xs text-muted-foreground">{f.startTime && f.endTime ? `${f.startTime}-${f.endTime}` : 'sem horário'}{f.sectorName ? ` · ${f.sectorName}` : ''}</span>
+            </span>
+            <select className={selCls} value={f.sectorId ?? ''} disabled={busy} onChange={(e) => post({ action: 'assignFreelancerSector', requestId: f.requestId, sectorId: e.target.value || null })}>
+              <option value="">Sem setor…</option>
+              {sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
           </div>
         ))}
       </div>

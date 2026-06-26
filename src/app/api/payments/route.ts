@@ -22,6 +22,8 @@ export async function POST(req: Request) {
       workDate: b.workDate,
       shift: b.shift,
       hours: b.hours != null ? Number(b.hours) : undefined,
+      workStartTime: b.workStartTime,
+      workEndTime: b.workEndTime,
       collaboratorName: b.collaboratorName,
       reason: b.reason,
       miscTypeId: b.miscTypeId,

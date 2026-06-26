@@ -15,6 +15,8 @@ export interface CreatePaymentInput {
   workDate?: string;
   shift?: string;
   hours?: number;
+  workStartTime?: string;
+  workEndTime?: string;
   // overtime
   collaboratorName?: string;
   reason?: string;
@@ -76,6 +78,8 @@ export async function createPaymentRequest(
       workDate: input.workDate ? new Date(input.workDate) : null,
       shift: input.shift || null,
       hours: input.hours ?? null,
+      workStartTime: input.type === 'FREELANCER' ? (input.workStartTime?.trim() || null) : null,
+      workEndTime: input.type === 'FREELANCER' ? (input.workEndTime?.trim() || null) : null,
       collaboratorName: input.collaboratorName?.trim() || null,
       reason: input.reason?.trim() || null,
       miscTypeId: input.miscTypeId || null,
