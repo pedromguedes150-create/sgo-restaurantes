@@ -110,7 +110,7 @@ function ImportForm({ units, onDone }: { units: Unit[]; onDone: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
 
   async function submit() {
-    if (!file) { setMsg('Selecione o arquivo CSV do Teknisa.'); return; }
+    if (!file) { setMsg('Selecione o arquivo (Excel ou CSV) do Teknisa.'); return; }
     setBusy(true);
     setMsg(null);
     try {
@@ -128,7 +128,7 @@ function ImportForm({ units, onDone }: { units: Unit[]; onDone: () => void }) {
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Importar Teknisa (CSV) — Admin</h2>
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Importar Teknisa (Excel/CSV) — Admin</h2>
       <div className="space-y-2">
         <div>
           <Label htmlFor="iu">Unidade</Label>
@@ -136,7 +136,8 @@ function ImportForm({ units, onDone }: { units: Unit[]; onDone: () => void }) {
             {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
         </div>
-        <input type="file" accept=".csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="block w-full text-sm" />
+        <input type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="block w-full text-sm" />
+        <p className="text-[11px] text-muted-foreground">Relatório Relação de Cupons SAT/NFC-e (Teknisa). Traz nº do cupom e valor; linhas de total são ignoradas.</p>
         <Button onClick={submit} disabled={busy} className="w-full"><Upload className="h-4 w-4" /> Importar</Button>
         {msg && <p className="text-sm font-medium text-muted-foreground">{msg}</p>}
       </div>

@@ -18,9 +18,52 @@ export function parseBRNumber(raw: string): number {
   return parseFloat(s) || 0;
 }
 
-const COUPON_KEYS = ['cupom', 'comanda', 'documento', 'coo', 'ccf', 'numero', 'número', 'cupom fiscal'];
+const COUPON_KEYS = ['nr. nota', 'nota', 'cupom', 'comanda', 'documento', 'coo', 'ccf', 'numero', 'número', 'cupom fiscal'];
 const OPERATOR_KEYS = ['operador', 'caixa', 'usuario', 'usuário', 'vendedor'];
-const VALUE_KEYS = ['valor', 'total', 'vlr', 'montante'];
+const VALUE_KEYS = ['vr. venda', 'venda', 'valor', 'total', 'vlr', 'montante'];
+
+function num(v: unknown): number {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  return parseBRNumber(String(v ?? '0'));
+}
+
+/**
+ * Parser da planilha (.xlsx) do Teknisa "Relação de Cupons SAT/NFC-e".
+ * Traz só o básico: número do cupom (Nr. Nota) e valor (Vr. Venda + Acrés + Desc).
+ * Ignora linhas de subtotal/total e linhas sem número de cupom.
+ */
+export function parseTeknisaSheet(matrix: unknown[][]): { rows: ParsedRow[]; mapped: boolean } {
+  const norm = (v: unknown) => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  let hi = -1;
+  for (let i = 0; i < Math.min(matrix.length, 20); i++) {
+    const cells = (matrix[i] ?? []).map(norm);
+    const hasCoupon = cells.some((c) => c.includes('nota') || c.includes('cupom') || c.includes('documento'));
+    const hasValue = cells.some((c) => c.includes('venda') || c.includes('valor'));
+    if (hasCoupon && hasValue) { hi = i; break; }
+  }
+  if (hi === -1) return { rows: [], mapped: false };
+
+  const headers = (matrix[hi] ?? []).map(norm);
+  const idxOf = (...keys: string[]) => headers.findIndex((h) => keys.some((k) => h.includes(k)));
+  const couponIdx = idxOf('nr. nota', 'nota', 'cupom', 'documento', 'coo');
+  const vendaIdx = idxOf('vr. venda', 'venda', 'valor');
+  const acresIdx = idxOf('acrés', 'acres');
+  const descIdx = idxOf('desc');
+  const caixaIdx = idxOf('caixa');
+  if (couponIdx === -1 || vendaIdx === -1) return { rows: [], mapped: false };
+
+  const rows: ParsedRow[] = [];
+  for (let i = hi + 1; i < matrix.length; i++) {
+    const row = matrix[i] ?? [];
+    const first = norm(row[caixaIdx >= 0 ? caixaIdx : 0]);
+    if (first.startsWith('total')) continue; // subtotal/total
+    const coupon = String(row[couponIdx] ?? '').trim();
+    if (!coupon || /^total/i.test(coupon)) continue;
+    const value = num(row[vendaIdx]) + (acresIdx >= 0 ? num(row[acresIdx]) : 0) + (descIdx >= 0 ? num(row[descIdx]) : 0);
+    rows.push({ couponNumber: coupon, cashOperator: null, value: Math.round(value * 100) / 100 });
+  }
+  return { rows, mapped: rows.length > 0 };
+}
 
 function findIndex(headers: string[], keys: string[]): number {
   return headers.findIndex((h) => keys.some((k) => h.includes(k)));
@@ -64,7 +107,7 @@ export type ImportResult =
 /** Importa um relatório de cancelamentos (Admin). Cada linha vira pendência. */
 export async function importCancellations(
   user: SessionUser,
-  input: { unitId: string; operationalDate?: string; fileName: string; csv: string },
+  input: { unitId: string; operationalDate?: string; fileName: string; rows: ParsedRow[] },
   ctx: { ip?: string | null; userAgent?: string | null } = {},
 ): Promise<ImportResult> {
   if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
@@ -73,8 +116,7 @@ export async function importCancellations(
   const unit = await prisma.unit.findUnique({ where: { id: input.unitId } });
   if (!unit) return { ok: false, reason: 'INVALID' };
 
-  const { rows, mapped } = parseCancellationsCsv(input.csv);
-  if (!mapped) return { ok: false, reason: 'INVALID' };
+  const rows = input.rows;
   if (rows.length === 0) return { ok: false, reason: 'EMPTY' };
 
   const operationalDate =

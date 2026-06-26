@@ -27,11 +27,12 @@ export async function markMissedTasks(now: Date = new Date()): Promise<number> {
 
 /**
  * Quantos dias para trás garantimos a existência das instâncias (backfill).
- * Mantido baixo (cobre reinícios perto da virada do dia operacional). NÃO use
- * janela grande: como a geração é idempotente, recriaria execuções que o Admin
- * excluiu do histórico (a geração também respeita a data de criação do modelo).
+ * = 1 (somente o dia operacional atual). Como a geração é idempotente, qualquer
+ * janela maior RECRIARIA execuções que o Admin excluiu do histórico (era o bug
+ * "checklists do dia anterior voltam após excluir"). O servidor roda contínuo e
+ * gera o dia atual a cada ~10-30 min, então 1 dia basta.
  */
-const BACKFILL_DAYS = 2;
+const BACKFILL_DAYS = 1;
 
 /** Intervalo mínimo entre execuções da manutenção (evita custo por request). */
 const MAINTENANCE_INTERVAL_MS = 10 * 60 * 1000;

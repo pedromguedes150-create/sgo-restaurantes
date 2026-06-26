@@ -207,7 +207,7 @@ export const GUIDE: GuideSection[] = [
         roles: [...MANAGERLINE, 'FINANCE'],
         summary: 'Justificar cancelamentos importados.',
         steps: [
-          'O Admin importa o relatório (CSV do Teknisa).',
+          'O Admin importa o relatório do Teknisa em Excel (.xlsx) ou CSV — "Relação de Cupons SAT/NFC-e". O sistema traz só o nº do cupom e o valor; linhas de total são ignoradas.',
           'Cada cupom vira uma pendência: selecione o motivo e justifique.',
         ],
       },

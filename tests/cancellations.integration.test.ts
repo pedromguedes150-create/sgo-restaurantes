@@ -55,10 +55,11 @@ describe('Cancelamentos (Módulo 4) — integração', () => {
   const csv = 'Cupom;Operador;Valor\n900001;Caixa 01;10,00\n900002;Caixa 02;20,00';
 
   it('admin importa e cria pendências; não-admin é negado', async () => {
-    const denied = await importCancellations(mgr(), { unitId, fileName: 'x.csv', csv });
+    const rows = parseCancellationsCsv(csv).rows;
+    const denied = await importCancellations(mgr(), { unitId, fileName: 'x.csv', rows });
     expect(denied.ok).toBe(false);
 
-    const r = await importCancellations(adm(), { unitId, operationalDate: '2026-06-01', fileName: 'x.csv', csv });
+    const r = await importCancellations(adm(), { unitId, operationalDate: '2026-06-01', fileName: 'x.csv', rows });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.created).toBe(2);
 
