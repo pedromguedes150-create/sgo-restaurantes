@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { createSector, updateSector, toggleSector, deleteSector, createShift, updateShift, deleteShift, allocate, removeAllocation, type WfResult } from '@/lib/workforce';
+import { createSector, updateSector, toggleSector, deleteSector, createShift, updateShift, deleteShift, allocate, updateAllocation, removeAllocation, type WfResult } from '@/lib/workforce';
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -19,6 +19,7 @@ export async function POST(req: Request) {
   else if (b.action === 'updateShift') r = await updateShift(user, b.id, b, ctx);
   else if (b.action === 'deleteShift') r = await deleteShift(user, b.id, ctx);
   else if (b.action === 'allocate') r = await allocate(user, b, ctx);
+  else if (b.action === 'updateAllocation') r = await updateAllocation(user, b.id, b, ctx);
   else if (b.action === 'removeAllocation') r = await removeAllocation(user, b.id, ctx);
 
   if (!r) return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });

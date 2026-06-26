@@ -67,6 +67,50 @@ export async function getWorkforceGrid(unitId: string): Promise<WorkforceGrid> {
   return { sectors: sectors.map((s) => ({ id: s.id, name: s.name, minHeadcount: s.minHeadcount })), shifts: cols, cells, coverage };
 }
 
+/** Quadro padrão em duas listas: quem ainda falta alocar × quem já está alocado. */
+export interface AllocationBoard {
+  toAllocate: { id: string; name: string }[];
+  allocated: { allocationId: string; collaboratorId: string; name: string; sectorId: string; sectorName: string; shiftId: string | null; shiftLabel: string }[];
+}
+export async function getAllocationBoard(unitId: string): Promise<AllocationBoard> {
+  const [collabs, allocations] = await Promise.all([
+    prisma.collaborator.findMany({ where: { active: true, units: { some: { unitId } } }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    prisma.workforceAllocation.findMany({ where: { unitId }, include: { collaborator: { select: { name: true } }, sector: { select: { name: true } }, shiftRef: true } }),
+  ]);
+  const allocatedIds = new Set(allocations.map((a) => a.collaboratorId).filter(Boolean) as string[]);
+  const toAllocate = collabs.filter((c) => !allocatedIds.has(c.id));
+  const allocated = allocations
+    .map((a) => ({
+      allocationId: a.id,
+      collaboratorId: a.collaboratorId ?? '',
+      name: a.collaborator?.name ?? a.collaboratorName ?? '—',
+      sectorId: a.sectorId,
+      sectorName: a.sector?.name ?? '—',
+      shiftId: a.shiftRef?.id ?? a.shiftId ?? null,
+      shiftLabel: a.shiftRef ? shiftLabel(a.shiftRef) : a.shift,
+    }))
+    .sort((x, y) => x.name.localeCompare(y.name, 'pt-BR'));
+  return { toAllocate, allocated };
+}
+
+/** Edita o setor/turno de uma alocação existente (mover de lugar no quadro). */
+export async function updateAllocation(user: SessionUser, id: string, input: { sectorId: string; shiftId: string }, ctx: Ctx = {}): Promise<WfResult> {
+  const a = await prisma.workforceAllocation.findUnique({ where: { id }, select: { unitId: true } });
+  if (!a) return { ok: false, reason: 'NOT_FOUND' };
+  if (!canAccessUnit(user, a.unitId)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!input.sectorId || !input.shiftId) return { ok: false, reason: 'INVALID', detail: 'Selecione setor e turno.' };
+  const [sector, turno] = await Promise.all([
+    prisma.sector.findUnique({ where: { id: input.sectorId }, select: { unitId: true } }),
+    prisma.shift.findUnique({ where: { id: input.shiftId }, select: { unitId: true, name: true, startTime: true, endTime: true } }),
+  ]);
+  if (!sector || sector.unitId !== a.unitId) return { ok: false, reason: 'INVALID', detail: 'Setor não pertence a esta unidade.' };
+  if (!turno || turno.unitId !== a.unitId) return { ok: false, reason: 'INVALID', detail: 'Turno não pertence a esta unidade.' };
+  await prisma.workforceAllocation.update({ where: { id }, data: { sectorId: input.sectorId, shiftId: input.shiftId, shift: shiftLabel(turno) } });
+  await audit({ userId: user.id, unitId: a.unitId, action: 'ALLOCATE_UPDATE', module: 'PEOPLE', entity: 'workforce_allocation', entityId: id, ...ctx });
+  await reconcileTraining(a.unitId);
+  return { ok: true };
+}
+
 /* ───────── Setores (Admin) ───────── */
 export async function createSector(user: SessionUser, input: { unitId: string; name: string; minHeadcount?: number }, ctx: Ctx = {}): Promise<WfResult> {
   if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };

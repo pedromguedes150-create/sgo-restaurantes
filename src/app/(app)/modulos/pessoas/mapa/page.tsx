@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
-import { getWorkforceGrid, listShifts, STANDARD_SECTORS } from '@/lib/workforce';
+import { getWorkforceGrid, getAllocationBoard, listShifts, STANDARD_SECTORS } from '@/lib/workforce';
 import { availabilityForDate } from '@/lib/schedule';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkforceClient } from '@/components/people/workforce-client';
@@ -16,9 +16,9 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
   if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
 
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
-  const [grid, collaborators, turnos] = await Promise.all([
+  const [grid, board, turnos] = await Promise.all([
     getWorkforceGrid(selected.id),
-    prisma.collaborator.findMany({ where: { active: true, units: { some: { unitId: selected.id } } }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    getAllocationBoard(selected.id),
     listShifts(selected.id),
   ]);
   const existingSectorNames = grid.sectors.map((s) => s.name.toLowerCase());
@@ -46,7 +46,7 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
           unitId={selected.id}
           isAdmin={user.role === 'ADMIN'}
           grid={grid}
-          collaborators={collaborators}
+          board={board}
           turnos={turnos.map((t) => ({ id: t.id, name: t.name, startTime: t.startTime, endTime: t.endTime, active: t.active }))}
           suggestedSectors={suggestedSectors}
           availDate={availDate}

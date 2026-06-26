@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X, Pencil, Trash2, Save, Clock, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,11 @@ interface Grid {
   cells: Record<string, Record<string, { id: string; name: string; source: string }[]>>;
   coverage: Record<string, Record<string, Coverage>>;
 }
-interface Collab { id: string; name: string }
 interface Turno { id: string; name: string; startTime: string | null; endTime: string | null; active: boolean }
+interface AllocBoard {
+  toAllocate: { id: string; name: string }[];
+  allocated: { allocationId: string; collaboratorId: string; name: string; sectorId: string; sectorName: string; shiftId: string | null; shiftLabel: string }[];
+}
 
 const COV: Record<Coverage, { dot: string; label: string }> = {
   ok: { dot: 'bg-success', label: 'Coberto' },
@@ -25,31 +28,16 @@ const COV: Record<Coverage, { dot: string; label: string }> = {
   none: { dot: 'bg-critical', label: 'Sem cobertura' },
 };
 
-export function WorkforceClient({ unitId, isAdmin, grid, collaborators, turnos, suggestedSectors, availDate, availability }: {
-  unitId: string; isAdmin: boolean; grid: Grid; collaborators: Collab[]; turnos: Turno[]; suggestedSectors: string[];
+export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggestedSectors, availDate, availability }: {
+  unitId: string; isAdmin: boolean; grid: Grid; board: AllocBoard; turnos: Turno[]; suggestedSectors: string[];
   availDate?: string | null; availability?: { working: string[]; off: string[] } | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  // alocação
-  const [sectorId, setSectorId] = useState(grid.sectors[0]?.id ?? '');
-  const [turnoId, setTurnoId] = useState(turnos[0]?.id ?? '');
-  const [collaboratorId, setCollaboratorId] = useState('');
   const [view, setView] = useState<'planta' | 'lista'>('planta');
 
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
   const activeTurnos = turnos.filter((t) => t.active);
-
-  // Mantém a seleção sincronizada com a lista atual: ao criar o 1º setor/turno
-  // (ou se o selecionado sumir), aponta para o primeiro válido. Evita o estado
-  // "mostra Cozinha mas o valor interno está vazio" logo após cadastrar.
-  useEffect(() => {
-    if (!grid.sectors.some((s) => s.id === sectorId)) setSectorId(grid.sectors[0]?.id ?? '');
-  }, [grid.sectors, sectorId]);
-  useEffect(() => {
-    if (!activeTurnos.some((t) => t.id === turnoId)) setTurnoId(activeTurnos[0]?.id ?? '');
-  }, [activeTurnos, turnoId]);
 
   async function post(payload: Record<string, unknown>): Promise<boolean> {
     setBusy(true); setMsg(null);
@@ -95,19 +83,10 @@ export function WorkforceClient({ unitId, isAdmin, grid, collaborators, turnos, 
       {isAdmin && <TurnosManager unitId={unitId} turnos={turnos} post={post} busy={busy} />}
       {isAdmin && <SectorsManager unitId={unitId} sectors={grid.sectors} suggested={suggestedSectors} post={post} busy={busy} />}
 
-      {/* Alocar colaborador */}
-      <div className="rounded-lg border border-dashed p-3">
-        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Alocar colaborador</h2>
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>Setor</Label><select className={sel} value={sectorId} onChange={(e) => setSectorId(e.target.value)}>{grid.sectors.length === 0 && <option value="">(crie um setor)</option>}{grid.sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-            <div><Label>Turno</Label><select className={sel} value={turnoId} onChange={(e) => setTurnoId(e.target.value)}>{activeTurnos.length === 0 && <option value="">(crie um turno)</option>}{activeTurnos.map((t) => <option key={t.id} value={t.id}>{t.name}{t.startTime && t.endTime ? ` ${t.startTime}-${t.endTime}` : ''}</option>)}</select></div>
-          </div>
-          <div><Label>Colaborador</Label><select className={sel} value={collaboratorId} onChange={(e) => setCollaboratorId(e.target.value)}><option value="">Selecione…</option>{collaborators.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-          {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
-          <Button className="w-full" disabled={busy || !sectorId || !turnoId || !collaboratorId} onClick={async () => { if (await post({ action: 'allocate', unitId, sectorId, shiftId: turnoId, collaboratorId })) setCollaboratorId(''); }}><Plus className="h-4 w-4" /> Alocar</Button>
-        </div>
-      </div>
+      {/* Quadro padrão: A alocar × Alocados */}
+      <AllocationBoardEditor unitId={unitId} board={board} grid={grid} activeTurnos={activeTurnos} post={post} busy={busy} />
+      {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+
 
       {/* Mapa: Planta (visual) ou Lista */}
       <div className="space-y-3">
@@ -152,6 +131,100 @@ export function WorkforceClient({ unitId, isAdmin, grid, collaborators, turnos, 
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Quadro padrão: A alocar × Alocados ───────── */
+function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }: {
+  unitId: string; board: AllocBoard; grid: Grid; activeTurnos: Turno[];
+  post: (p: Record<string, unknown>) => Promise<boolean>; busy: boolean;
+}) {
+  const selCls = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
+  const turnoLabel = (t: Turno) => `${t.name}${t.startTime && t.endTime ? ` ${t.startTime}-${t.endTime}` : ''}`;
+
+  // Form de alocação (escolhe quem falta + setor + turno)
+  const [collaboratorId, setCollaboratorId] = useState('');
+  const [sectorId, setSectorId] = useState('');
+  const [turnoId, setTurnoId] = useState('');
+  // valores efetivos (caem no 1º válido se o selecionado não existir mais)
+  const secVal = grid.sectors.some((s) => s.id === sectorId) ? sectorId : (grid.sectors[0]?.id ?? '');
+  const turVal = activeTurnos.some((t) => t.id === turnoId) ? turnoId : (activeTurnos[0]?.id ?? '');
+  const collabVal = board.toAllocate.some((c) => c.id === collaboratorId) ? collaboratorId : '';
+
+  // Edição de uma alocação já existente
+  const [editId, setEditId] = useState<string | null>(null);
+  const [eSector, setESector] = useState('');
+  const [eTurno, setETurno] = useState('');
+  function openEdit(a: AllocBoard['allocated'][number]) { setEditId(a.allocationId); setESector(a.sectorId); setETurno(a.shiftId ?? (activeTurnos[0]?.id ?? '')); }
+
+  const noSectors = grid.sectors.length === 0;
+  const noTurnos = activeTurnos.length === 0;
+
+  return (
+    <div className="rounded-lg border border-dashed p-3">
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Quadro padrão da equipe</h2>
+      <p className="mb-3 text-xs text-muted-foreground">Defina uma vez onde cada um trabalha. O mapa do dia mostra automaticamente só quem está escalado (folga/falta/atestado não aparecem no dia).</p>
+
+      {/* Alocar quem falta */}
+      <div className="rounded-md bg-surface p-2">
+        <p className="mb-1 text-xs font-bold text-brand">A alocar ({board.toAllocate.length})</p>
+        {board.toAllocate.length === 0 ? (
+          <p className="text-sm font-medium text-success">Quadro completo ✅ — todos os colaboradores estão alocados.</p>
+        ) : (noSectors || noTurnos) ? (
+          <p className="text-sm text-critical">Cadastre {noSectors ? 'um setor' : ''}{noSectors && noTurnos ? ' e ' : ''}{noTurnos ? 'um turno' : ''} antes de alocar.</p>
+        ) : (
+          <div className="space-y-2">
+            <select className={selCls} value={collabVal} onChange={(e) => setCollaboratorId(e.target.value)}>
+              <option value="">Selecione quem alocar…</option>
+              {board.toAllocate.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <div className="grid grid-cols-2 gap-2">
+              <select className={selCls} value={secVal} onChange={(e) => setSectorId(e.target.value)}>{grid.sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+              <select className={selCls} value={turVal} onChange={(e) => setTurnoId(e.target.value)}>{activeTurnos.map((t) => <option key={t.id} value={t.id}>{turnoLabel(t)}</option>)}</select>
+            </div>
+            <Button className="w-full" disabled={busy || !collabVal || !secVal || !turVal}
+              onClick={async () => { if (await post({ action: 'allocate', unitId, sectorId: secVal, shiftId: turVal, collaboratorId: collabVal })) setCollaboratorId(''); }}>
+              <Plus className="h-4 w-4" /> Alocar
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Já alocados (editável) */}
+      <div className="mt-3">
+        <p className="mb-1 text-xs font-bold text-brand">Alocados ({board.allocated.length})</p>
+        {board.allocated.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Ninguém alocado ainda.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {board.allocated.map((a) => editId === a.allocationId ? (
+              <div key={a.allocationId} className="rounded-md border bg-card p-2">
+                <p className="mb-1 text-sm font-semibold text-brand">{a.name}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <select className={selCls} value={eSector} onChange={(e) => setESector(e.target.value)}>{grid.sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                  <select className={selCls} value={eTurno} onChange={(e) => setETurno(e.target.value)}>{activeTurnos.map((t) => <option key={t.id} value={t.id}>{turnoLabel(t)}</option>)}</select>
+                </div>
+                <div className="mt-2 flex justify-end gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>Cancelar</Button>
+                  <Button size="sm" disabled={busy || !eSector || !eTurno} onClick={async () => { if (await post({ action: 'updateAllocation', id: a.allocationId, sectorId: eSector, shiftId: eTurno })) setEditId(null); }}><Save className="h-4 w-4" /> Salvar</Button>
+                </div>
+              </div>
+            ) : (
+              <div key={a.allocationId} className="flex items-center justify-between gap-2 rounded-md border bg-card p-2">
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-brand">{a.name}</span>
+                  <span className="block text-xs text-muted-foreground">{a.sectorName} · {a.shiftLabel}</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => openEdit(a)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Remover ${a.name} do quadro?`)) post({ action: 'removeAllocation', id: a.allocationId }); }} aria-label="Remover"><X className="h-4 w-4" /></Button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
