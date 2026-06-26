@@ -15,7 +15,7 @@ export default async function TarefaExecPage({ params }: { params: { id: string 
     where: { id: params.id },
     include: {
       template: { include: { items: { orderBy: { order: 'asc' } } } },
-      itemResponses: true,
+      itemResponses: { orderBy: { createdAt: 'asc' } },
       photos: true,
       completedBy: { select: { name: true } },
     },
@@ -49,6 +49,7 @@ export default async function TarefaExecPage({ params }: { params: { id: string 
           initialAnswers={done
             ? Object.fromEntries(inst.itemResponses.map((r) => [r.itemId, { status: r.status, note: r.note ?? '' }]))
             : (draft?.answers ?? {})}
+          responses={done ? inst.itemResponses.map((r) => ({ itemText: r.itemText, status: r.status, note: r.note })) : []}
           photos={photoPaths.map((p) => `/${p}`)}
         />
       </CardContent></Card>

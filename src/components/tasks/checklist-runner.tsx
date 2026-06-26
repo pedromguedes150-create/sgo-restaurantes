@@ -19,9 +19,12 @@ const ST: Record<ItemStatus, { label: string; short: string; cls: string }> = {
 };
 const STATUSES: ItemStatus[] = ['OK', 'EM_CORRECAO', 'A_CORRIGIR'];
 
-export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus, items, initialAnswers, photos }: {
+export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus, items, initialAnswers, responses = [], photos }: {
   instanceId: string; requiresEvidence: boolean; done: boolean; lateStatus: boolean;
-  items: Item[]; initialAnswers: Record<string, { status: string; note?: string }>; photos: string[];
+  items: Item[]; initialAnswers: Record<string, { status: string; note?: string }>;
+  /** Respostas registradas (snapshot do texto) — usado na visão concluída p/ não depender do ID atual do item. */
+  responses?: { itemText: string; status: ItemStatus; note: string | null }[];
+  photos: string[];
 }) {
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<string, Answer>>(() => {
@@ -103,22 +106,34 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
         <p className={cn('rounded-lg px-3 py-2 text-sm font-semibold', lateStatus ? 'bg-medium/15 text-[#92600A]' : 'bg-success/10 text-success')}>
           {lateStatus ? 'Concluído fora do prazo (não conta na meta).' : 'Concluído no prazo.'}
         </p>
-        {groups.map((g) => (
-          <div key={g.section ?? '_'}>
-            {g.section && <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{g.section}</p>}
-            <div className="space-y-1">
-              {g.items.map((it) => {
-                const a = answers[it.id];
-                return (
-                  <div key={it.id} className="flex items-start justify-between gap-2 rounded-md border p-2 text-sm">
-                    <span>{it.text}{a?.note ? <span className="block text-xs text-muted-foreground">{a.note}</span> : null}</span>
-                    {a && <span className={cn('shrink-0 rounded px-2 py-0.5 text-xs font-bold', ST[a.status].cls)}>{ST[a.status].label}</span>}
-                  </div>
-                );
-              })}
-            </div>
+        {/* Visão completa a partir do SNAPSHOT das respostas (sobrevive a edições do checklist). */}
+        {responses.length > 0 ? (
+          <div className="space-y-1">
+            {responses.map((r, i) => (
+              <div key={i} className="flex items-start justify-between gap-2 rounded-md border p-2 text-sm">
+                <span>{r.itemText}{r.note ? <span className="block text-xs text-muted-foreground">{r.note}</span> : null}</span>
+                <span className={cn('shrink-0 rounded px-2 py-0.5 text-xs font-bold', ST[r.status].cls)}>{ST[r.status].label}</span>
+              </div>
+            ))}
           </div>
-        ))}
+        ) : (
+          groups.map((g) => (
+            <div key={g.section ?? '_'}>
+              {g.section && <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{g.section}</p>}
+              <div className="space-y-1">
+                {g.items.map((it) => {
+                  const a = answers[it.id];
+                  return (
+                    <div key={it.id} className="flex items-start justify-between gap-2 rounded-md border p-2 text-sm">
+                      <span>{it.text}{a?.note ? <span className="block text-xs text-muted-foreground">{a.note}</span> : null}</span>
+                      {a && <span className={cn('shrink-0 rounded px-2 py-0.5 text-xs font-bold', ST[a.status].cls)}>{ST[a.status].label}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))
+        )}
         {photos.length > 0 && (
           <div>
             <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Fotos</p>
