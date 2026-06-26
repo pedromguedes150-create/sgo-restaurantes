@@ -16,7 +16,7 @@ const ST: Record<string, { tone: Tone; label: string }> = {
   PENDING: { tone: 'neutral', label: 'Pendente' },
 };
 
-export interface HistItem { id: string; name: string; unit: string; by: string | null; status: string }
+export interface HistItem { id: string; name: string; unit: string; by: string | null; time: string | null; status: string }
 export interface HistGroup { date: string; items: HistItem[] }
 
 export function ChecklistHistoryList({ groups, isAdmin }: { groups: HistGroup[]; isAdmin: boolean }) {
@@ -72,7 +72,7 @@ export function ChecklistHistoryList({ groups, isAdmin }: { groups: HistGroup[];
                     {checked ? <CheckSquare className="h-5 w-5 shrink-0 text-critical" /> : <Square className="h-5 w-5 shrink-0 text-muted-foreground" />}
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-brand">{i.name}</span>
-                      <span className="block text-xs text-muted-foreground">{i.unit}{i.by ? ` · ${i.by}` : ''}</span>
+                      <span className="block text-xs text-muted-foreground">{i.unit}{i.by ? ` · ${i.by}` : ''}{i.time ? ` · ${i.time}` : ''}</span>
                     </span>
                     <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
                   </button>
@@ -82,7 +82,7 @@ export function ChecklistHistoryList({ groups, isAdmin }: { groups: HistGroup[];
                 <Link key={i.id} href={`/tarefas/${i.id}`} className="flex items-center gap-2 rounded-lg border bg-card p-2.5 transition-colors hover:border-accent">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-brand">{i.name}</span>
-                    <span className="block text-xs text-muted-foreground">{i.unit}{i.by ? ` · ${i.by}` : ''}</span>
+                    <span className="block text-xs text-muted-foreground">{i.unit}{i.by ? ` · ${i.by}` : ''}{i.time ? ` · ${i.time}` : ''}</span>
                   </span>
                   <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
                   <Eye className="h-4 w-4 text-muted-foreground" />

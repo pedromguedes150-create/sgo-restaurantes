@@ -36,6 +36,7 @@ export default async function TarefaExecPage({ params }: { params: { id: string 
         <p className="text-xs text-muted-foreground">
           {inst.template.limitTime ? `limite ${inst.template.limitTime}` : 'sem horário'} · {inst.operationalDate}
           {done && inst.completedBy ? ` · concluído por ${inst.completedBy.name}` : ''}
+          {done && inst.completedAt ? ` às ${new Date(inst.completedAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}` : ''}
         </p>
       </div>
 

@@ -34,7 +34,7 @@ export default async function HistoricoTarefasPage({ searchParams }: { searchPar
   const byDate = new Map<string, HistGroup>();
   for (const i of instances) {
     const g = byDate.get(i.operationalDate) ?? { date: i.operationalDate, items: [] };
-    g.items.push({ id: i.id, name: i.template.name, unit: i.unit.name, by: i.completedBy?.name ?? null, status: i.status });
+    g.items.push({ id: i.id, name: i.template.name, unit: i.unit.name, by: i.completedBy?.name ?? null, time: i.completedAt ? new Date(i.completedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : null, status: i.status });
     byDate.set(i.operationalDate, g);
   }
   const groups: HistGroup[] = [...byDate.values()];
