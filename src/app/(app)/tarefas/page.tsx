@@ -52,23 +52,36 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
             </h2>
           )}
 
-          {/* Barra "X de Y concluídas hoje" (oculta no filtro de atrasadas) */}
-          {!onlyOverdue && (
-            <div>
-              <div className="mb-1 flex items-center justify-between text-sm">
-                <span className="font-semibold text-brand">
-                  {g.summary.done} de {g.summary.total} concluídas
-                </span>
-                <span className="text-muted-foreground">{g.summary.progressPct}%</span>
+          {/* Acompanhamento do dia: o que falta fazer vs feito (no prazo/atrasado) */}
+          {!onlyOverdue && (() => {
+            const total = g.tasks.length;
+            const done = g.tasks.filter((t) => t.status === 'DONE').length;     // no prazo (conta na meta)
+            const late = g.tasks.filter((t) => t.status === 'LATE').length;     // feito fora do prazo
+            const missed = g.tasks.filter((t) => t.status === 'MISSED').length; // não realizada
+            const todo = g.tasks.filter((t) => t.status === 'PENDING').length;  // ainda a fazer
+            const pct = (n: number) => (total ? (n / total) * 100 : 0);
+            return (
+              <div>
+                <div className="mb-1 flex items-center justify-between text-sm">
+                  <span className={`font-semibold ${todo > 0 ? 'text-critical' : 'text-success'}`}>
+                    {todo > 0 ? `${todo} a fazer` : 'Tudo realizado ✅'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{done + late} de {total} feitos</span>
+                </div>
+                <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-secondary">
+                  <div className="h-full bg-success transition-all" style={{ width: `${pct(done)}%` }} />
+                  <div className="h-full bg-medium transition-all" style={{ width: `${pct(late)}%` }} />
+                  <div className="h-full bg-critical transition-all" style={{ width: `${pct(missed)}%` }} />
+                </div>
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                  <span>🟢 {done} no prazo <span className="text-[10px]">(conta na meta)</span></span>
+                  {late > 0 && <span>🟡 {late} fora do prazo</span>}
+                  {missed > 0 && <span>🔴 {missed} não realizada(s)</span>}
+                  {todo > 0 && <span className="font-semibold text-critical">⚪ {todo} a fazer</span>}
+                </div>
               </div>
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
-                <div
-                  className="h-full rounded-full bg-success transition-all"
-                  style={{ width: `${g.summary.progressPct}%` }}
-                />
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div className="space-y-3">
             {tasks.map((t) => {
