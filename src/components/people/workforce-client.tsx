@@ -31,9 +31,9 @@ const COV: Record<Coverage, { dot: string; label: string }> = {
 
 function fmtDateBR(iso: string): string { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
 
-export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggestedSectors, mapDate, isToday, availability, freelancers }: {
+export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggestedSectors, mapDate, isToday, historical, availability, freelancers }: {
   unitId: string; isAdmin: boolean; grid: Grid; board: AllocBoard; turnos: Turno[]; suggestedSectors: string[];
-  mapDate: string; isToday: boolean; availability?: { working: string[]; off: string[] } | null; freelancers?: DayFreela[];
+  mapDate: string; isToday: boolean; historical?: boolean; availability?: { working: string[]; off: string[] } | null; freelancers?: DayFreela[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -78,10 +78,12 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
               {' · '}{availability ? `${availability.working.length} escalado(s) no dia` : ''}
             </p>
           </div>
-          <div className="flex gap-1">
-            <button onClick={() => setView('planta')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'planta' ? 'bg-primary text-primary-foreground' : 'border')}><LayoutGrid className="h-3.5 w-3.5" /> Planta</button>
-            <button onClick={() => setView('lista')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'lista' ? 'bg-primary text-primary-foreground' : 'border')}><List className="h-3.5 w-3.5" /> Lista</button>
-          </div>
+          {!historical && (
+            <div className="flex gap-1">
+              <button onClick={() => setView('planta')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'planta' ? 'bg-primary text-primary-foreground' : 'border')}><LayoutGrid className="h-3.5 w-3.5" /> Planta</button>
+              <button onClick={() => setView('lista')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'lista' ? 'bg-primary text-primary-foreground' : 'border')}><List className="h-3.5 w-3.5" /> Lista</button>
+            </div>
+          )}
         </div>
 
         {/* Seletor de dia: vê o histórico; em branco/hoje volta ao tempo real */}
@@ -96,10 +98,11 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
         {/* Freelancers do dia: alocar em um setor (ficam disponíveis após o pedido de pagamento) */}
         <FreelancersPanel freelancers={freelancers ?? []} sectors={grid.sectors} isToday={isToday} post={post} busy={busy} />
 
-        {view === 'planta' && <UnitFloorplan grid={grid} />}
+        {historical && <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">Foto do dia (histórico congelado) — somente leitura.</p>}
+        {!historical && view === 'planta' && <UnitFloorplan grid={grid} />}
 
-        {view === 'lista' && grid.sectors.length === 0 && <p className="text-sm text-muted-foreground">Nenhum setor cadastrado.</p>}
-        {view === 'lista' && grid.sectors.map((s) => (
+        {(historical || view === 'lista') && grid.sectors.length === 0 && <p className="text-sm text-muted-foreground">Sem registro para este dia.</p>}
+        {(historical || view === 'lista') && grid.sectors.map((s) => (
           <div key={s.id} className="rounded-lg border bg-card p-3">
             <p className="font-semibold text-brand">{s.name} <span className="text-xs font-normal text-muted-foreground">(mín. {s.minHeadcount}/turno)</span></p>
             {grid.shifts.length === 0 && <p className="mt-1 text-xs text-muted-foreground">Sem turnos cadastrados ainda.</p>}

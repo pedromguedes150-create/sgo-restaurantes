@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
-import { getUnitDayMap, getAllocationBoard, getDayFreelancers, listShifts, STANDARD_SECTORS } from '@/lib/workforce';
+import { getUnitDayMap, getAllocationBoard, getDayFreelancers, getSnapshotGrid, listShifts, STANDARD_SECTORS, type WorkforceGrid } from '@/lib/workforce';
 import { availabilityForDate } from '@/lib/schedule';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkforceClient } from '@/components/people/workforce-client';
@@ -26,15 +26,26 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
 
   const selectedDate = searchParams.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date) ? searchParams.date : todayISO;
   const isToday = selectedDate === todayISO;
+  const isPast = selectedDate < todayISO;
 
-  const [grid, board, turnos, availability, freelancers] = await Promise.all([
-    getUnitDayMap(selected.id, selectedDate, isToday ? nowMinutes : null),
+  const [board, turnos, availability] = await Promise.all([
     getAllocationBoard(selected.id),
     listShifts(selected.id),
     availabilityForDate(selected.id, selectedDate),
-    getDayFreelancers(selected.id, selectedDate, isToday ? nowMinutes : null),
   ]);
-  const existingSectorNames = grid.sectors.map((s) => s.name.toLowerCase());
+
+  // Dias passados: lê o snapshot congelado (histórico imutável). Sem snapshot, deriva ao vivo.
+  let grid: WorkforceGrid | null = isPast ? await getSnapshotGrid(selected.id, selectedDate) : null;
+  const historical = isPast && grid != null;
+  let freelancers: Awaited<ReturnType<typeof getDayFreelancers>> = [];
+  if (!historical) {
+    [grid, freelancers] = await Promise.all([
+      getUnitDayMap(selected.id, selectedDate, isToday ? nowMinutes : null),
+      getDayFreelancers(selected.id, selectedDate, isToday ? nowMinutes : null),
+    ]);
+  }
+  const safeGrid = grid as WorkforceGrid;
+  const existingSectorNames = safeGrid.sectors.map((s) => s.name.toLowerCase());
   const suggestedSectors = STANDARD_SECTORS.filter((n) => !existingSectorNames.includes(n.toLowerCase()));
 
   return (
@@ -55,8 +66,9 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
         <WorkforceClient
           unitId={selected.id}
           isAdmin={user.role === 'ADMIN'}
-          grid={grid}
+          grid={safeGrid}
           board={board}
+          historical={historical}
           turnos={turnos.map((t) => ({ id: t.id, name: t.name, startTime: t.startTime, endTime: t.endTime, active: t.active }))}
           suggestedSectors={suggestedSectors}
           mapDate={selectedDate}

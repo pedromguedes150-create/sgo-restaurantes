@@ -62,6 +62,7 @@ model Unit {
   popUnits            PopUnit[]
   sectors             Sector[]
   allocations         WorkforceAllocation[]
+  workforceDaySnapshots WorkforceDaySnapshot[]
   shifts              Shift[]
   employeeSchedules   EmployeeSchedule[]
   schedulePlanOverrides SchedulePlanOverride[]
@@ -1106,6 +1107,24 @@ model WorkforceAllocation {
 
   @@index([unitId, sectorId])
   @@map("workforce_allocations")
+}
+
+/// Foto do mapa da unidade num DIA (congelada ao fim do dia operacional, Módulo 9.3).
+/// Texto denormalizado para o histórico não mudar se o quadro/escala forem editados.
+model WorkforceDaySnapshot {
+  id         String   @id @default(cuid())
+  unitId     String
+  date       String // yyyy-mm-dd (dia civil no fuso da unidade)
+  sectorName String
+  shiftLabel String
+  personName String
+  kind       String   @default("STAFF") // STAFF | FREELANCER
+  createdAt  DateTime @default(now())
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId, date])
+  @@map("workforce_day_snapshots")
 }
 
 /// Central de Notificações in-app (conceito transversal nº 4). Fonte garantida

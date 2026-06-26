@@ -185,6 +185,75 @@ export async function getUnitDayMap(unitId: string, dateISO: string, nowMinutes:
   return { sectors: sectors.map((s) => ({ id: s.id, name: s.name, minHeadcount: s.minHeadcount })), shifts: cols.map((c) => ({ id: c.id, label: c.label })), cells, coverage };
 }
 
+/* ───────── Histórico por dia (snapshot) ───────── */
+/** Congela o mapa de um dia (idempotente: não refaz se já existe — preserva o passado). */
+export async function snapshotUnitDay(unitId: string, dateISO: string): Promise<{ created: number }> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return { created: 0 };
+  const exists = await prisma.workforceDaySnapshot.count({ where: { unitId, date: dateISO } });
+  if (exists > 0) return { created: 0 };
+
+  const [map, freelancers] = await Promise.all([
+    getUnitDayMap(unitId, dateISO, null),
+    getDayFreelancers(unitId, dateISO, null),
+  ]);
+  const rows: { unitId: string; date: string; sectorName: string; shiftLabel: string; personName: string; kind: string }[] = [];
+  for (const s of map.sectors) {
+    for (const col of map.shifts) {
+      for (const p of map.cells[s.id]?.[col.label] ?? []) {
+        rows.push({ unitId, date: dateISO, sectorName: s.name, shiftLabel: col.label, personName: p.name, kind: 'STAFF' });
+      }
+    }
+  }
+  const sectorNameById = new Map(map.sectors.map((s) => [s.id, s.name]));
+  for (const f of freelancers) {
+    if (!f.sectorId) continue;
+    rows.push({ unitId, date: dateISO, sectorName: sectorNameById.get(f.sectorId) ?? f.sectorName ?? 'Freelancer', shiftLabel: f.startTime && f.endTime ? `${f.startTime}-${f.endTime}` : 'Freelancer', personName: f.name, kind: 'FREELANCER' });
+  }
+  if (rows.length === 0) return { created: 0 };
+  await prisma.workforceDaySnapshot.createMany({ data: rows });
+  return { created: rows.length };
+}
+
+/** Reconstrói a grade de um dia a partir do snapshot (somente leitura). null se não houver. */
+export async function getSnapshotGrid(unitId: string, dateISO: string): Promise<WorkforceGrid | null> {
+  const rows = await prisma.workforceDaySnapshot.findMany({ where: { unitId, date: dateISO }, orderBy: [{ sectorName: 'asc' }, { shiftLabel: 'asc' }] });
+  if (rows.length === 0) return null;
+  const sectorNames = [...new Set(rows.map((r) => r.sectorName))];
+  const shiftLabels = [...new Set(rows.map((r) => r.shiftLabel))];
+  const cells: WorkforceGrid['cells'] = {};
+  const coverage: WorkforceGrid['coverage'] = {};
+  for (const sn of sectorNames) {
+    cells[sn] = {}; coverage[sn] = {};
+    for (const sl of shiftLabels) {
+      const people = rows.filter((r) => r.sectorName === sn && r.shiftLabel === sl).map((r, i) => ({ id: `${sn}-${sl}-${i}`, name: r.personName, source: r.kind }));
+      cells[sn][sl] = people;
+      coverage[sn][sl] = people.length === 0 ? 'none' : 'ok';
+    }
+  }
+  return {
+    sectors: sectorNames.map((sn) => ({ id: sn, name: sn, minHeadcount: 0 })),
+    shifts: shiftLabels.map((sl) => ({ id: null, label: sl })),
+    cells, coverage,
+  };
+}
+
+/** Congela "ontem" (no fuso de cada unidade) para todas as unidades ativas. Idempotente. */
+export async function snapshotYesterdayAllUnits(): Promise<{ units: number; rows: number }> {
+  const units = await prisma.unit.findMany({ where: { active: true }, select: { id: true, timezone: true } });
+  let rows = 0; let touched = 0;
+  for (const u of units) {
+    const tz = u.timezone || 'America/Sao_Paulo';
+    const now = new Date();
+    const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+    const [y, m, d] = todayISO.split('-').map(Number);
+    const yest = new Date(Date.UTC(y, m - 1, d - 1));
+    const yISO = `${yest.getUTCFullYear()}-${String(yest.getUTCMonth() + 1).padStart(2, '0')}-${String(yest.getUTCDate()).padStart(2, '0')}`;
+    const r = await snapshotUnitDay(u.id, yISO);
+    if (r.created > 0) { touched += 1; rows += r.created; }
+  }
+  return { units: touched, rows };
+}
+
 /** Freelancers com pedido de pagamento para o dia (disponíveis para alocar). */
 export interface DayFreelancer {
   requestId: string;
