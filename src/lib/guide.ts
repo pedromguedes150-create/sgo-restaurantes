@@ -85,6 +85,7 @@ export const GUIDE: GuideSection[] = [
           'Anexe até 5 fotos. Em itens com checagem por IA, toque em "Conferir a foto com IA" para ver se está no padrão (compatível/divergente).',
           'O preenchimento é salvo sozinho — se for interrompido, retoma de onde parou.',
           'Toque em "Concluir checklist". Feito após o horário = conta como "fora do prazo" (não penaliza, mas também não pontua).',
+          'No topo de TAREFAS, o resumo do dia mostra logo se ainda há algo "a fazer": 🟢 no prazo (conta na meta) · 🟡 fora do prazo · 🔴 não realizada · ⚪ a fazer. Mesmo com checklists feitos atrasados, dá pra ver na hora se sobrou algum pendente.',
           'Use "Ver preenchimento" para rever respostas e fotos de um checklist concluído.',
           'O sistema avisa ~30 min antes do vencimento de cada checklist. Veja execuções passadas em Tarefas → "Histórico".',
           'No Histórico, o Admin pode "Selecionar para excluir", marcar vários (ou todos) e excluir o histórico em lote (sai das métricas; fica na Auditoria).',
