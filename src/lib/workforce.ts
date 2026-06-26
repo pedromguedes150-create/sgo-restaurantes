@@ -5,7 +5,7 @@ import { notifyAdmins } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
-export type WfResult = { ok: true; id?: string } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND' };
+export type WfResult = { ok: true; id?: string } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND'; detail?: string };
 
 export type Coverage = 'ok' | 'partial' | 'none';
 
@@ -150,18 +150,19 @@ export async function deleteShift(user: SessionUser, id: string, ctx: Ctx = {}):
 /* ───────── Alocação (gerente/coordenador/supervisor/admin com acesso) ───────── */
 export async function allocate(user: SessionUser, input: { unitId: string; sectorId: string; shiftId?: string; shift?: string; collaboratorId: string }, ctx: Ctx = {}): Promise<WfResult> {
   if (!canAccessUnit(user, input.unitId)) return { ok: false, reason: 'FORBIDDEN' };
-  if (!input.sectorId || !input.collaboratorId) return { ok: false, reason: 'INVALID' };
+  if (!input.sectorId) return { ok: false, reason: 'INVALID', detail: 'Selecione um setor.' };
+  if (!input.collaboratorId) return { ok: false, reason: 'INVALID', detail: 'Selecione um colaborador.' };
 
   // Resolve o turno: por id (preferido) ou rótulo livre (compat)
   let shiftId: string | null = null;
   let shiftText = input.shift?.trim() || '';
   if (input.shiftId) {
     const turno = await prisma.shift.findUnique({ where: { id: input.shiftId }, select: { unitId: true, name: true, startTime: true, endTime: true } });
-    if (!turno || turno.unitId !== input.unitId) return { ok: false, reason: 'INVALID' };
+    if (!turno || turno.unitId !== input.unitId) return { ok: false, reason: 'INVALID', detail: 'Turno não pertence a esta unidade — recarregue a página e tente de novo.' };
     shiftId = input.shiftId;
     shiftText = shiftLabel(turno);
   }
-  if (!shiftText) return { ok: false, reason: 'INVALID' };
+  if (!shiftText) return { ok: false, reason: 'INVALID', detail: 'Selecione um turno.' };
 
   const [sector, link] = await Promise.all([
     prisma.sector.findUnique({ where: { id: input.sectorId }, select: { unitId: true } }),
@@ -170,7 +171,8 @@ export async function allocate(user: SessionUser, input: { unitId: string; secto
       select: { id: true },
     }),
   ]);
-  if (!sector || sector.unitId !== input.unitId || !link) return { ok: false, reason: 'INVALID' };
+  if (!sector || sector.unitId !== input.unitId) return { ok: false, reason: 'INVALID', detail: 'Setor não pertence a esta unidade — recarregue a página e tente de novo.' };
+  if (!link) return { ok: false, reason: 'INVALID', detail: 'Este colaborador não está vinculado a esta unidade.' };
   const a = await prisma.workforceAllocation.create({ data: { unitId: input.unitId, sectorId: input.sectorId, shift: shiftText, shiftId, collaboratorId: input.collaboratorId, source: 'MANUAL' } });
   await audit({ userId: user.id, unitId: input.unitId, action: 'ALLOCATE', module: 'PEOPLE', entity: 'workforce_allocation', entityId: a.id, ...ctx });
   await notifyWorkforceChange(user, input.unitId, input.sectorId, input.collaboratorId, shiftText, 'alocou', `/modulos/pessoas/mapa?unit=${input.unitId}`);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X, Pencil, Trash2, Save, Clock, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,16 @@ export function WorkforceClient({ unitId, isAdmin, grid, collaborators, turnos, 
 
   const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
   const activeTurnos = turnos.filter((t) => t.active);
+
+  // Mantém a seleção sincronizada com a lista atual: ao criar o 1º setor/turno
+  // (ou se o selecionado sumir), aponta para o primeiro válido. Evita o estado
+  // "mostra Cozinha mas o valor interno está vazio" logo após cadastrar.
+  useEffect(() => {
+    if (!grid.sectors.some((s) => s.id === sectorId)) setSectorId(grid.sectors[0]?.id ?? '');
+  }, [grid.sectors, sectorId]);
+  useEffect(() => {
+    if (!activeTurnos.some((t) => t.id === turnoId)) setTurnoId(activeTurnos[0]?.id ?? '');
+  }, [activeTurnos, turnoId]);
 
   async function post(payload: Record<string, unknown>): Promise<boolean> {
     setBusy(true); setMsg(null);

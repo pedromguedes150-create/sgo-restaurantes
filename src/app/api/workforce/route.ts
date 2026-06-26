@@ -24,7 +24,8 @@ export async function POST(req: Request) {
   if (!r) return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
   if (!r.ok) {
     const map: Record<string, number> = { FORBIDDEN: 403, INVALID: 400, NOT_FOUND: 404 };
-    return NextResponse.json({ error: r.reason === 'FORBIDDEN' ? 'Sem permissão' : 'Dados inválidos', reason: r.reason }, { status: map[r.reason] });
+    const fallback = r.reason === 'FORBIDDEN' ? 'Sem permissão' : r.reason === 'NOT_FOUND' ? 'Registro não encontrado' : 'Dados inválidos';
+    return NextResponse.json({ error: ('detail' in r && r.detail) ? r.detail : fallback, reason: r.reason }, { status: map[r.reason] });
   }
   return NextResponse.json({ ok: true, id: r.id });
 }

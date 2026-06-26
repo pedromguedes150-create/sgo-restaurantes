@@ -11,6 +11,7 @@ export async function listDivergences(
   return prisma.commandDivergence.findMany({
     where: {
       ...unitScopeWhere(user, 'unitId'),
+      unit: { active: true }, // ignora unidades inativas/demo
       ...(filters.unitId ? { unitId: filters.unitId } : {}),
       ...(filters.status ? { status: filters.status } : {}),
     },
@@ -23,7 +24,7 @@ export async function listDivergences(
 /** Nº de divergências em aberto no escopo do usuário (dashboard). */
 export async function getOpenDivergenceCount(user: SessionUser): Promise<number> {
   return prisma.commandDivergence.count({
-    where: { ...unitScopeWhere(user, 'unitId'), status: { in: ['OPEN', 'INVESTIGATING'] } },
+    where: { ...unitScopeWhere(user, 'unitId'), status: { in: ['OPEN', 'INVESTIGATING'] }, unit: { active: true } },
   });
 }
 
