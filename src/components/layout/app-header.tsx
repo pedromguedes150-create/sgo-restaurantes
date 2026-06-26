@@ -24,7 +24,7 @@ export function AppHeader({ userName, roleLabel, unread = 0 }: { userName: strin
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-brand px-4 text-white">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-brand px-4 text-white print:hidden">
       <div className="flex items-center gap-2">
         {showBack && (
           <Button

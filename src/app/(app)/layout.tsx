@@ -19,11 +19,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (commPending > 0) badges['/modulos/comunicacao'] = commPending;
 
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="min-h-dvh bg-surface print:min-h-0 print:bg-white">
       <AppHeader userName={user.name} roleLabel={roleLabel(user.role)} unread={unread} />
-      <div className="mx-auto flex w-full max-w-6xl">
+      <div className="mx-auto flex w-full max-w-6xl print:block print:max-w-none">
         <Sidebar isAdmin={isAdmin} viewable={viewable} badges={badges} />
-        <main className="w-full max-w-3xl flex-1 px-4 pb-24 pt-4 md:pb-8">{children}</main>
+        <main className="w-full max-w-3xl flex-1 px-4 pb-24 pt-4 md:pb-8 print:max-w-none print:p-0">{children}</main>
       </div>
       <BottomNav />
     </div>
