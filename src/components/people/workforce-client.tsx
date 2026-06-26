@@ -28,9 +28,11 @@ const COV: Record<Coverage, { dot: string; label: string }> = {
   none: { dot: 'bg-critical', label: 'Sem cobertura' },
 };
 
-export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggestedSectors, availDate, availability }: {
+function fmtDateBR(iso: string): string { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
+
+export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggestedSectors, mapDate, isToday, availability }: {
   unitId: string; isAdmin: boolean; grid: Grid; board: AllocBoard; turnos: Turno[]; suggestedSectors: string[];
-  availDate?: string | null; availability?: { working: string[]; off: string[] } | null;
+  mapDate: string; isToday: boolean; availability?: { working: string[]; off: string[] } | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -57,29 +59,6 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
 
   return (
     <div className="space-y-5">
-      {/* Disponibilidade da turma num dia (puxa da Escala) */}
-      <div className="rounded-lg border bg-card p-3">
-        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Disponibilidade do dia</h2>
-        <div className="flex items-end gap-2">
-          <div><Label className="text-xs">Escolha o dia</Label><Input type="date" defaultValue={availDate ?? ''} onChange={(e) => navDate(e.target.value)} className="h-10 text-sm" /></div>
-        </div>
-        {availability && (
-          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div className="rounded-md bg-success/10 p-2">
-              <p className="text-xs font-bold text-success">Trabalhando ({availability.working.length})</p>
-              <p className="text-sm">{availability.working.length ? availability.working.join(', ') : '—'}</p>
-            </div>
-            <div className="rounded-md bg-muted/50 p-2">
-              <p className="text-xs font-bold text-muted-foreground">Indisponíveis ({availability.off.length})</p>
-              <p className="text-sm text-muted-foreground">{availability.off.length ? availability.off.join(', ') : '—'}</p>
-            </div>
-          </div>
-        )}
-        {availDate && availability && availability.working.length === 0 && availability.off.length === 0 && (
-          <p className="mt-2 text-xs text-muted-foreground">Nenhuma escala cadastrada. Cadastre as escalas em Pessoas → Escala.</p>
-        )}
-      </div>
-
       {isAdmin && <TurnosManager unitId={unitId} turnos={turnos} post={post} busy={busy} />}
       {isAdmin && <SectorsManager unitId={unitId} sectors={grid.sectors} suggested={suggestedSectors} post={post} busy={busy} />}
 
@@ -88,15 +67,30 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
       {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
 
 
-      {/* Mapa: Planta (visual) ou Lista */}
+      {/* Mapa da unidade — derivado da Escala (tempo real / por dia) */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Mapa da unidade</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Mapa da unidade</h2>
+            <p className="text-xs text-muted-foreground">
+              {isToday ? <span className="font-semibold text-success">● Na unidade agora</span> : <>Como ficou em <b>{fmtDateBR(mapDate)}</b></>}
+              {' · '}{availability ? `${availability.working.length} escalado(s) no dia` : ''}
+            </p>
+          </div>
           <div className="flex gap-1">
             <button onClick={() => setView('planta')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'planta' ? 'bg-primary text-primary-foreground' : 'border')}><LayoutGrid className="h-3.5 w-3.5" /> Planta</button>
             <button onClick={() => setView('lista')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'lista' ? 'bg-primary text-primary-foreground' : 'border')}><List className="h-3.5 w-3.5" /> Lista</button>
           </div>
         </div>
+
+        {/* Seletor de dia: vê o histórico; em branco/hoje volta ao tempo real */}
+        <div className="flex flex-wrap items-end gap-2 rounded-lg border bg-card p-2">
+          <div><Label className="text-xs">Ver outro dia</Label><Input type="date" defaultValue={mapDate} onChange={(e) => navDate(e.target.value)} className="h-10 text-sm" /></div>
+          {!isToday && <button onClick={() => navDate('')} className="h-10 rounded-lg border px-3 text-sm font-semibold text-accent">Voltar para agora</button>}
+        </div>
+        {isToday && grid.sectors.every((s) => grid.shifts.every((c) => (grid.cells[s.id]?.[c.label]?.length ?? 0) === 0)) && (
+          <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">Ninguém trabalhando na unidade neste momento. O mapa segue a Escala — confira em Pessoas → Escala se os turnos do dia estão lançados.</p>
+        )}
 
         {view === 'planta' && <UnitFloorplan grid={grid} />}
 
@@ -117,12 +111,9 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
                       <span className="text-xs text-muted-foreground">({people.length})</span>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1">
-                      {people.length === 0 && <span className="text-xs text-critical">sem colaborador</span>}
+                      {people.length === 0 && <span className="text-xs text-muted-foreground">—</span>}
                       {people.map((p) => (
-                        <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs">
-                          {p.name}
-                          <button onClick={() => post({ action: 'removeAllocation', id: p.id })} aria-label="Remover" className="text-critical"><X className="h-3 w-3" /></button>
-                        </span>
+                        <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs">{p.name}</span>
                       ))}
                     </div>
                   </div>

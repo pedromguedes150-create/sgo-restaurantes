@@ -111,6 +111,80 @@ export async function updateAllocation(user: SessionUser, id: string, input: { s
   return { ok: true };
 }
 
+/* ───────── Mapa do dia (derivado da Escala) ───────── */
+function parseHM(s?: string | null): number | null {
+  if (!s) return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s.trim());
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+/** true se o "agora" (min) cai na janela do turno. Sem horário = dia todo. Vira a meia-noite OK. */
+function inWindow(now: number, start: number | null, end: number | null): boolean {
+  if (start == null || end == null || start === end) return true;
+  return start < end ? now >= start && now < end : now >= start || now < end;
+}
+/** Colaboradores com status WORK (realizado ou planejado) na data. */
+async function workingSetForDate(unitId: string, dateISO: string): Promise<Set<string>> {
+  const set = new Set<string>();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return set;
+  const { getScheduleGrid } = await import('@/lib/schedule');
+  const [y, m, d] = dateISO.split('-').map(Number);
+  const grid = await getScheduleGrid(unitId, y, m);
+  for (const row of grid.rows) {
+    const cell = row.days[d - 1];
+    if (cell && (cell.actual ?? cell.planned) === 'WORK') set.add(row.collaboratorId);
+  }
+  return set;
+}
+
+/**
+ * Mapa da unidade para um DIA, derivado da Escala (quem realmente trabalha).
+ * - nowMinutes != null → filtra também pela janela do turno ("na unidade agora").
+ * - nowMinutes == null → mostra todos os escalados do dia (visão histórica).
+ * Folga/falta/atestado/férias não entram (não têm status WORK).
+ */
+export async function getUnitDayMap(unitId: string, dateISO: string, nowMinutes: number | null): Promise<WorkforceGrid> {
+  const [sectors, turnos, allocations, working] = await Promise.all([
+    prisma.sector.findMany({ where: { unitId, active: true }, orderBy: { name: 'asc' } }),
+    prisma.shift.findMany({ where: { unitId, active: true }, orderBy: [{ order: 'asc' }, { name: 'asc' }] }),
+    prisma.workforceAllocation.findMany({ where: { unitId }, include: { collaborator: { select: { name: true } }, shiftRef: true } }),
+    workingSetForDate(unitId, dateISO),
+  ]);
+
+  type Col = { id: string | null; label: string; start: number | null; end: number | null };
+  const cols: Col[] = turnos.map((t) => ({ id: t.id, label: shiftLabel(t), start: parseHM(t.startTime), end: parseHM(t.endTime) }));
+  const colByLabel = new Map(cols.map((c) => [c.label, c]));
+  const allocLabel = (a: (typeof allocations)[number]) => (a.shiftRef ? shiftLabel(a.shiftRef) : a.shift);
+  for (const a of allocations) {
+    const label = allocLabel(a);
+    if (!colByLabel.has(label)) {
+      const c: Col = { id: a.shiftRef?.id ?? null, label, start: parseHM(a.shiftRef?.startTime), end: parseHM(a.shiftRef?.endTime) };
+      colByLabel.set(label, c); cols.push(c);
+    }
+  }
+
+  const visible = allocations.filter((a) => {
+    if (!a.collaboratorId || !working.has(a.collaboratorId)) return false;
+    if (nowMinutes == null) return true;
+    const col = colByLabel.get(allocLabel(a));
+    return inWindow(nowMinutes, col?.start ?? null, col?.end ?? null);
+  });
+
+  const cells: WorkforceGrid['cells'] = {};
+  const coverage: WorkforceGrid['coverage'] = {};
+  for (const s of sectors) {
+    cells[s.id] = {}; coverage[s.id] = {};
+    for (const col of cols) {
+      const people = visible
+        .filter((a) => a.sectorId === s.id && allocLabel(a) === col.label)
+        .map((a) => ({ id: a.id, name: a.collaborator?.name ?? a.collaboratorName ?? '—', source: a.source }));
+      cells[s.id][col.label] = people;
+      coverage[s.id][col.label] = people.length === 0 ? 'none' : people.length < s.minHeadcount ? 'partial' : 'ok';
+    }
+  }
+
+  return { sectors: sectors.map((s) => ({ id: s.id, name: s.name, minHeadcount: s.minHeadcount })), shifts: cols.map((c) => ({ id: c.id, label: c.label })), cells, coverage };
+}
+
 /* ───────── Setores (Admin) ───────── */
 export async function createSector(user: SessionUser, input: { unitId: string; name: string; minHeadcount?: number }, ctx: Ctx = {}): Promise<WfResult> {
   if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
