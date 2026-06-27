@@ -10,7 +10,7 @@ import { ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function MapaFuncoesPage({ searchParams }: { searchParams: { unit?: string; date?: string } }) {
+export default async function MapaFuncoesPage({ searchParams }: { searchParams: { unit?: string; date?: string; hora?: string } }) {
   const user = (await getSessionUser())!;
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true, timezone: true } });
   if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
@@ -27,6 +27,14 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
   const selectedDate = searchParams.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date) ? searchParams.date : todayISO;
   const isToday = selectedDate === todayISO;
   const isPast = selectedDate < todayISO;
+  const isFuture = selectedDate > todayISO;
+
+  // Horário escolhido (HH:MM). Vazio = dia inteiro (ou "agora", se for hoje).
+  const horaMatch = /^(\d{2}):(\d{2})$/.exec(searchParams.hora ?? '');
+  const horaMinutes = horaMatch ? Number(horaMatch[1]) * 60 + Number(horaMatch[2]) : null;
+  const mapTime = horaMatch && horaMinutes != null && horaMinutes >= 0 && horaMinutes < 24 * 60 ? searchParams.hora! : '';
+  const filterMinutes = mapTime ? horaMinutes : (isToday ? nowMinutes : null);
+  const isNow = isToday && !mapTime;
 
   const [board, turnos, availability] = await Promise.all([
     getAllocationBoard(selected.id),
@@ -34,14 +42,15 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
     availabilityForDate(selected.id, selectedDate),
   ]);
 
-  // Dias passados: lê o snapshot congelado (histórico imutável). Sem snapshot, deriva ao vivo.
-  let grid: WorkforceGrid | null = isPast ? await getSnapshotGrid(selected.id, selectedDate) : null;
-  const historical = isPast && grid != null;
+  // Dia passado SEM horário específico → snapshot congelado (histórico imutável).
+  // Com horário (ou hoje/futuro) → deriva da Escala (realizado no passado, planejado no futuro = projeção).
+  let grid: WorkforceGrid | null = (isPast && !mapTime) ? await getSnapshotGrid(selected.id, selectedDate) : null;
+  const historical = grid != null;
   let freelancers: Awaited<ReturnType<typeof getDayFreelancers>> = [];
-  if (!historical) {
+  if (!grid) {
     [grid, freelancers] = await Promise.all([
-      getUnitDayMap(selected.id, selectedDate, isToday ? nowMinutes : null),
-      getDayFreelancers(selected.id, selectedDate, isToday ? nowMinutes : null),
+      getUnitDayMap(selected.id, selectedDate, filterMinutes),
+      getDayFreelancers(selected.id, selectedDate, filterMinutes),
     ]);
   }
   const safeGrid = grid as WorkforceGrid;
@@ -72,7 +81,11 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
           turnos={turnos.map((t) => ({ id: t.id, name: t.name, startTime: t.startTime, endTime: t.endTime, active: t.active }))}
           suggestedSectors={suggestedSectors}
           mapDate={selectedDate}
+          mapTime={mapTime}
+          todayISO={todayISO}
           isToday={isToday}
+          isFuture={isFuture}
+          isNow={isNow}
           availability={availability}
           freelancers={freelancers}
         />

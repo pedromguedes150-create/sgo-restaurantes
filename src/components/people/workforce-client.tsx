@@ -31,9 +31,16 @@ const COV: Record<Coverage, { dot: string; label: string }> = {
 
 function fmtDateBR(iso: string): string { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
 
-export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggestedSectors, mapDate, isToday, historical, availability, freelancers }: {
+function addDaysISO(iso: string, n: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + n));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+}
+
+export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggestedSectors, mapDate, mapTime, todayISO, isToday, isFuture, isNow, historical, availability, freelancers }: {
   unitId: string; isAdmin: boolean; grid: Grid; board: AllocBoard; turnos: Turno[]; suggestedSectors: string[];
-  mapDate: string; isToday: boolean; historical?: boolean; availability?: { working: string[]; off: string[] } | null; freelancers?: DayFreela[];
+  mapDate: string; mapTime: string; todayISO: string; isToday: boolean; isFuture: boolean; isNow: boolean;
+  historical?: boolean; availability?: { working: string[]; off: string[] } | null; freelancers?: DayFreela[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -52,9 +59,10 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
     } finally { setBusy(false); }
   }
 
-  function navDate(date: string) {
+  function navTo(date: string, hora: string) {
     const sp = new URLSearchParams({ unit: unitId });
     if (date) sp.set('date', date);
+    if (hora) sp.set('hora', hora);
     router.push(`/modulos/pessoas/mapa?${sp.toString()}`);
   }
 
@@ -74,7 +82,11 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Mapa da unidade</h2>
             <p className="text-xs text-muted-foreground">
-              {isToday ? <span className="font-semibold text-success">● Na unidade agora</span> : <>Como ficou em <b>{fmtDateBR(mapDate)}</b></>}
+              {isNow
+                ? <span className="font-semibold text-success">● Na unidade agora</span>
+                : <span className={isFuture ? 'font-semibold text-accent' : 'font-semibold text-brand'}>
+                    {isFuture ? 'Projeção' : isToday ? 'Hoje' : 'Histórico'} — {fmtDateBR(mapDate)}{mapTime ? ` às ${mapTime}` : ' (dia todo)'}
+                  </span>}
               {' · '}{availability ? `${availability.working.length} escalado(s) no dia` : ''}
             </p>
           </div>
@@ -86,13 +98,28 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
           )}
         </div>
 
-        {/* Seletor de dia: vê o histórico; em branco/hoje volta ao tempo real */}
-        <div className="flex flex-wrap items-end gap-2 rounded-lg border bg-card p-2">
-          <div><Label className="text-xs">Ver outro dia</Label><Input type="date" defaultValue={mapDate} onChange={(e) => navDate(e.target.value)} className="h-10 text-sm" /></div>
-          {!isToday && <button onClick={() => navDate('')} className="h-10 rounded-lg border px-3 text-sm font-semibold text-accent">Voltar para agora</button>}
+        {/* Seletor de dia + horário: histórico (passado) e projeção (futuro), pela Escala */}
+        <div className="space-y-2 rounded-lg border bg-card p-2">
+          <div className="flex flex-wrap items-end gap-2">
+            <div><Label className="text-xs">Dia</Label><Input type="date" value={mapDate} onChange={(e) => navTo(e.target.value, mapTime)} className="h-10 text-sm" /></div>
+            <div><Label className="text-xs">Horário</Label><Input type="time" value={mapTime} onChange={(e) => navTo(mapDate, e.target.value)} className="h-10 w-32 text-sm" /></div>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            <button onClick={() => navTo('', '')} className={`rounded-full px-3 py-1 text-xs font-semibold ${isNow ? 'bg-primary text-primary-foreground' : 'border'}`}>Agora</button>
+            <button onClick={() => navTo(addDaysISO(todayISO, 1), '')} className="rounded-full border px-3 py-1 text-xs font-semibold">Amanhã</button>
+            <button onClick={() => navTo(addDaysISO(todayISO, 2), '')} className="rounded-full border px-3 py-1 text-xs font-semibold">Depois de amanhã</button>
+            {mapTime && <button onClick={() => navTo(mapDate, '')} className="rounded-full border px-3 py-1 text-xs font-semibold text-accent">Dia inteiro</button>}
+          </div>
+          <p className="text-[11px] text-muted-foreground">Escolha um dia futuro para <b>projetar</b> a equipe (pela escala planejada) ou um dia passado para o <b>histórico</b>. Deixe o horário em branco para o dia todo.</p>
         </div>
-        {isToday && grid.sectors.every((s) => grid.shifts.every((c) => (grid.cells[s.id]?.[c.label]?.length ?? 0) === 0)) && (
-          <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">Ninguém trabalhando na unidade neste momento. O mapa segue a Escala — confira em Pessoas → Escala se os turnos do dia estão lançados.</p>
+        {isFuture && (
+          <p className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">Projeção baseada na <b>escala planejada</b> — pode mudar se houver ajustes, faltas ou freelancers.</p>
+        )}
+        {grid.sectors.every((s) => grid.shifts.every((c) => (grid.cells[s.id]?.[c.label]?.length ?? 0) === 0)) && (
+          <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            {isNow ? 'Ninguém trabalhando na unidade neste momento.' : `Ninguém ${isFuture ? 'previsto' : 'registrado'} para ${fmtDateBR(mapDate)}${mapTime ? ` às ${mapTime}` : ''}.`}
+            {' '}O mapa segue a Escala — confira em Pessoas → Escala.
+          </p>
         )}
 
         {/* Freelancers do dia: alocar em um setor (ficam disponíveis após o pedido de pagamento) */}

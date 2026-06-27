@@ -226,7 +226,8 @@ export const GUIDE: GuideSection[] = [
           'QUADRO PADRÃO: em PESSOAS → Mapa de Funções, use "A alocar" para colocar cada colaborador num Setor e Turno. Ao alocar, ele sai de "A alocar" e entra em "Alocados" (editável/removível). Isso é feito UMA vez.',
           'MAPA DA UNIDADE: mostra automaticamente quem está trabalhando AGORA — segue a Escala. Quem está de folga, falta, atestado ou férias não aparece naquele dia (sem você fazer nada).',
           'Se ninguém estiver no horário, o mapa fica vazio — confira a Escala do dia em Pessoas → Escala.',
-          'Use "Ver outro dia" para olhar como a equipe ficou em datas passadas (histórico); "Voltar para agora" retorna ao tempo real.',
+          'HISTÓRICO: escolha um DIA passado e um HORÁRIO para ver como a equipe estava naquele dia e hora exatos.',
+          'PROJEÇÃO: escolha um DIA futuro (ou use "Amanhã"/"Depois de amanhã") para ver como a equipe deve ficar, pela escala planejada — ótimo para se programar. "Agora" volta ao tempo real.',
           'FREELANCER: depois de lançar o pedido de pagamento dele com o DIA e a HORA (início/fim), ele aparece em "Freelancers do dia" no Mapa — escolha o setor e ele entra no mapa naquele dia/horário.',
         ],
         tips: [
