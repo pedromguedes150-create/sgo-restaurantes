@@ -1462,6 +1462,8 @@ model MedicalCertificate {
   doctorCrm      String?
   /// CID — DADO SENSÍVEL (LGPD). Nunca expor a gerentes nem em dashboards.
   cid            String?
+  /// Descrição do CID (o que o código significa) — também sensível, só ADMIN/CEO/RH.
+  cidDescription String?
   attachmentPath String?
   /// Espelho do que a IA leu (campos + confiança), só para referência/auditoria.
   aiExtracted    Json?

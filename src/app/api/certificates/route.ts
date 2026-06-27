@@ -28,6 +28,7 @@ export async function POST(req: Request) {
     doctorName: b.doctorName || undefined,
     doctorCrm: b.doctorCrm || undefined,
     cid: b.cid || undefined,
+    cidDescription: b.cidDescription || undefined,
     observation: b.observation || undefined,
     attachmentPath: b.attachmentPath || undefined,
     aiExtracted: b.aiExtracted ?? undefined,

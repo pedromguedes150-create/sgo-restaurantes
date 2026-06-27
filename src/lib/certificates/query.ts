@@ -18,6 +18,7 @@ export interface CertListItem {
   doctorName: string | null;
   doctorCrm: string | null;
   cid: string | null; // já mascarado conforme o perfil
+  cidDescription: string | null; // sensível como o CID — só ADMIN/CEO
   attachmentPath: string | null;
   observation: string | null;
   by: string | null;
@@ -60,6 +61,7 @@ export async function listCertificates(
     doctorName: r.doctorName,
     doctorCrm: r.doctorCrm,
     cid: showCid ? r.cid : (r.cid ? '•••' : null),
+    cidDescription: showCid ? r.cidDescription : null,
     attachmentPath: r.attachmentPath,
     observation: r.observation,
     by: r.createdBy?.name ?? null,

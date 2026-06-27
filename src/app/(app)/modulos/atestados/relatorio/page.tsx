@@ -64,7 +64,7 @@ export default async function AtestadosRelatorioPage({ searchParams }: { searchP
                 <td className="py-1">{certTypeLabel(r.type)}</td>
                 <td className="py-1">{fmt(r.startDate)}{r.type !== 'HOURS' ? ` → ${fmt(r.endDate)}` : ''}</td>
                 <td className="py-1 text-right">{r.type === 'HOURS' ? `${r.hours ?? '—'}h` : r.days}</td>
-                {showCid && <td className="py-1">{r.cid ?? '—'}</td>}
+                {showCid && <td className="py-1">{r.cid ? `${r.cid}${r.cidDescription ? ` — ${r.cidDescription}` : ''}` : '—'}</td>}
               </tr>
             ))}
           </tbody>

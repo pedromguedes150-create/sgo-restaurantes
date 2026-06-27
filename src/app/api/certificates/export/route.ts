@@ -18,7 +18,7 @@ export async function GET(req: Request) {
 
   const sep = ';';
   const header = ['Unidade', 'Colaborador', 'Tipo', 'Início', 'Fim', 'Dias', 'Horas', 'Médico', 'CRM'];
-  if (showCid) header.push('CID');
+  if (showCid) header.push('CID', 'CID (descrição)');
   header.push('Lançado por');
   const lines = [header.join(sep)];
   for (const r of rows) {
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       r.startDate, r.type === 'HOURS' ? '' : r.endDate, r.type === 'HOURS' ? '' : String(r.days),
       r.hours != null ? String(r.hours).replace('.', ',') : '', `"${r.doctorName ?? ''}"`, `"${r.doctorCrm ?? ''}"`,
     ];
-    if (showCid) cols.push(`"${r.cid ?? ''}"`);
+    if (showCid) cols.push(`"${r.cid ?? ''}"`, `"${r.cidDescription ?? ''}"`);
     cols.push(`"${r.by ?? ''}"`);
     lines.push(cols.join(sep));
   }

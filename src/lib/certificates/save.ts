@@ -17,6 +17,7 @@ export interface CreateCertInput {
   doctorName?: string;
   doctorCrm?: string;
   cid?: string;
+  cidDescription?: string;
   observation?: string;
   attachmentPath?: string;
   aiExtracted?: unknown;
@@ -75,6 +76,7 @@ export async function createCertificate(user: SessionUser, input: CreateCertInpu
       doctorName: input.doctorName?.trim() || null,
       doctorCrm: input.doctorCrm?.trim() || null,
       cid: input.cid?.trim() || null,
+      cidDescription: input.cidDescription?.trim() || null,
       observation: input.observation?.trim() || null,
       attachmentPath: input.attachmentPath || null,
       aiExtracted: (input.aiExtracted as object) ?? undefined,

@@ -26,6 +26,7 @@ export interface CertReadResult {
     doctorName?: string | null;
     doctorCrm?: string | null;
     cid?: string | null;
+    cidDescription?: string | null;
   };
   /** Nomes dos campos que a IA NÃO conseguiu ler com confiança (para destacar). */
   lowConfidence?: string[];
@@ -62,10 +63,12 @@ export async function readMedicalCertificate(input: {
         'COMPANION = acompanhamento de familiar / declaração de comparecimento. ' +
         '"days" = número de dias de afastamento (inteiro). "hours" = horas, só quando type=HOURS. ' +
         '"cid" = código CID se houver (ex.: "J11", "M54.5"). ' +
+        '"cidDescription" = a descrição do que esse CID significa, em português (ex.: "J11" → "Influenza (gripe), vírus não identificado"). ' +
+        'Preencha pela descrição padrão da CID-10 mesmo que não esteja escrita no documento; se não houver código CID, use null. ' +
         'Responda APENAS em JSON, sem texto fora do JSON, no formato exato: ' +
         '{"collaboratorName":string|null,"issueDate":string|null,"startDate":string|null,"endDate":string|null,' +
         '"days":number|null,"hours":number|null,"type":"FULL_DAY"|"HOURS"|"COMPANION"|null,' +
-        '"doctorName":string|null,"doctorCrm":string|null,"cid":string|null,"lowConfidence":string[]}.',
+        '"doctorName":string|null,"doctorCrm":string|null,"cid":string|null,"cidDescription":string|null,"lowConfidence":string[]}.',
     },
   ];
 
@@ -100,6 +103,7 @@ export async function readMedicalCertificate(input: {
         doctorName: str(parsed.doctorName),
         doctorCrm: str(parsed.doctorCrm),
         cid: str(parsed.cid),
+        cidDescription: str(parsed.cidDescription),
       },
       lowConfidence: low,
     };

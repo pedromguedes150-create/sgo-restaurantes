@@ -74,6 +74,7 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
   const [doctorName, setDoctorName] = useState('');
   const [doctorCrm, setDoctorCrm] = useState('');
   const [cid, setCid] = useState('');
+  const [cidDescription, setCidDescription] = useState('');
   const [observation, setObservation] = useState('');
   const [attachmentPath, setAttachmentPath] = useState('');
   const [aiName, setAiName] = useState('');
@@ -112,6 +113,7 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
       if (f.doctorName) setDoctorName(f.doctorName);
       if (f.doctorCrm) setDoctorCrm(f.doctorCrm);
       if (f.cid) setCid(f.cid);
+      if (f.cidDescription) setCidDescription(f.cidDescription);
       if (f.collaboratorName) setAiName(f.collaboratorName);
       setLow(new Set(Array.isArray(ai.lowConfidence) ? ai.lowConfidence : []));
       setMsg({ kind: 'ok', text: 'IA preencheu o que conseguiu ler. Confira os campos destacados em amarelo e selecione o colaborador.' });
@@ -129,7 +131,7 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
           startDate, endDate: type === 'HOURS' ? startDate : endDate,
           hours: type === 'HOURS' && hours ? Number(hours) : undefined,
           doctorName: doctorName || undefined, doctorCrm: doctorCrm || undefined,
-          cid: cid || undefined, observation: observation || undefined,
+          cid: cid || undefined, cidDescription: cidDescription || undefined, observation: observation || undefined,
           attachmentPath: attachmentPath || undefined,
         }),
       });
@@ -180,9 +182,12 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
       <div><Label>Nome do médico</Label><Input className={ring('doctorName')} value={doctorName} onChange={(e) => setDoctorName(e.target.value)} /></div>
 
       {showCid && (
-        <div>
-          <Label>CID <span className="text-xs font-normal text-critical">(dado sensível — visível só ao RH/Admin)</span></Label>
-          <Input className={ring('cid')} value={cid} onChange={(e) => setCid(e.target.value)} placeholder="ex: J11" />
+        <div className="space-y-2 rounded-lg border border-critical/30 bg-critical/5 p-2">
+          <p className="text-xs font-semibold text-critical">Dados sensíveis (LGPD) — visíveis só ao RH/Admin</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div><Label>CID</Label><Input className={ring('cid')} value={cid} onChange={(e) => setCid(e.target.value)} placeholder="ex: J11" /></div>
+            <div className="col-span-2"><Label>O que é (descrição)</Label><Input className={ring('cidDescription')} value={cidDescription} onChange={(e) => setCidDescription(e.target.value)} placeholder="a IA preenche o significado do CID" /></div>
+          </div>
         </div>
       )}
       <div><Label>Observação</Label><Input value={observation} onChange={(e) => setObservation(e.target.value)} placeholder="opcional" /></div>
@@ -223,7 +228,7 @@ function History({ rows, isAdmin, showCid, onChanged }: { rows: CertListItem[]; 
             <span><b>{r.type === 'HOURS' ? `${r.hours ?? '—'} h` : `${r.days} dia(s)`}</b></span>
             <span className="text-muted-foreground">{fmtDate(r.startDate)}{r.type !== 'HOURS' ? ` → ${fmtDate(r.endDate)}` : ''}</span>
             {r.doctorCrm && <span className="text-muted-foreground">CRM {r.doctorCrm}</span>}
-            {showCid && r.cid && <span className="text-muted-foreground">CID {r.cid}</span>}
+            {showCid && r.cid && <span className="text-muted-foreground">CID {r.cid}{r.cidDescription ? ` — ${r.cidDescription}` : ''}</span>}
             {r.attachmentPath && <a href={`/${r.attachmentPath}`} target="_blank" rel="noreferrer" className="font-semibold text-accent underline">Ver anexo</a>}
           </div>
           {isAdmin && (
