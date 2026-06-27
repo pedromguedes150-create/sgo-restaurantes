@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { listCollaborators, listVacations, listSchedule } from '@/lib/people';
 import { Card, CardContent } from '@/components/ui/card';
 import { PeopleClient } from '@/components/people/people-client';
-import { Grid3x3, CalendarDays } from 'lucide-react';
+import { Grid3x3, CalendarDays, Stethoscope } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +23,9 @@ export default async function PessoasModulePage() {
         </Link>
         <Link href="/modulos/pessoas/mapa" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
           <Grid3x3 className="h-5 w-5 text-accent" /> Mapa de Funções (Setor × Turno)
+        </Link>
+        <Link href="/modulos/atestados" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
+          <Stethoscope className="h-5 w-5 text-accent" /> Central de Atestados
         </Link>
       </div>
       <Card>
