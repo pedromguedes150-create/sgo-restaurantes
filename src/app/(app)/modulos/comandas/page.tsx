@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -7,6 +6,7 @@ import { getUnitCommandState } from '@/lib/commands/query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CommandsClient } from '@/components/commands/commands-client';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
+import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,19 +41,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
         <p className="text-sm text-muted-foreground">Dia operacional {operationalDate}</p>
       </div>
 
-      {units.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {units.map((u) => (
-            <Link
-              key={u.id}
-              href={`/modulos/comandas?unit=${u.id}`}
-              className={u.id === selected.id ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}
-            >
-              {u.name}
-            </Link>
-          ))}
-        </div>
-      )}
+      {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
 
       {state.config && (
         <Card>

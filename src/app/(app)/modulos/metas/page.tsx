@@ -6,6 +6,7 @@ import { getMetaBreakdown, getMetaRanking } from '@/lib/metas/query';
 import { getUnitMonthScore } from '@/lib/tasks/summary';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PrintButton } from '@/components/ui/print-button';
+import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { Trophy, Download } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -73,13 +74,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
         </Card>
       )}
 
-      {units.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {units.map((u) => (
-            <a key={u.id} href={`/modulos/metas?month=${ym}&unit=${u.id}`} className={u.id === selected?.id ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{u.name}</a>
-          ))}
-        </div>
-      )}
+      {units.length > 1 && <UnitSelectNav units={units} selected={selected?.id ?? ''} />}
 
       {selected && score && (
         <Card>

@@ -6,6 +6,7 @@ import { getUnitDayMap, getAllocationBoard, getDayFreelancers, getSnapshotGrid, 
 import { availabilityForDate } from '@/lib/schedule';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkforceClient } from '@/components/people/workforce-client';
+import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -63,13 +64,7 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
       <h1 className="text-xl font-bold text-brand">Mapa de Funções</h1>
       <p className="text-sm text-muted-foreground">Monte o <b>quadro padrão</b> uma vez; o <b>mapa da unidade</b> mostra automaticamente quem está trabalhando agora (segue a Escala). Cobertura 🟢 ok · 🟡 parcial · 🔴 sem cobertura.</p>
 
-      {units.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {units.map((u) => (
-            <Link key={u.id} href={`/modulos/pessoas/mapa?unit=${u.id}`} className={u.id === selected.id ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{u.name}</Link>
-          ))}
-        </div>
-      )}
+      {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
 
       <Card><CardContent className="pt-4">
         <WorkforceClient

@@ -19,7 +19,7 @@ const ST: Record<string, { tone: Tone; label: string }> = {
 export interface HistItem { id: string; name: string; unit: string; by: string | null; time: string | null; status: string }
 export interface HistGroup { date: string; items: HistItem[] }
 
-export function ChecklistHistoryList({ groups, isAdmin }: { groups: HistGroup[]; isAdmin: boolean }) {
+export function ChecklistHistoryList({ groups, isAdmin, groupByUnit = false }: { groups: HistGroup[]; isAdmin: boolean; groupByUnit?: boolean }) {
   const router = useRouter();
   const [selecting, setSelecting] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -59,39 +59,56 @@ export function ChecklistHistoryList({ groups, isAdmin }: { groups: HistGroup[];
 
       {groups.length === 0 && <p className="text-sm text-muted-foreground">Nenhum registro no período.</p>}
 
-      {groups.map((g) => (
-        <Card key={g.date}>
-          <CardContent className="space-y-1.5 pt-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{g.date}</p>
-            {g.items.map((i) => {
-              const checked = sel.has(i.id);
-              const st = ST[i.status] ?? ST.PENDING;
-              if (selecting) {
-                return (
-                  <button key={i.id} onClick={() => toggle(i.id)} className={`flex w-full items-center gap-2 rounded-lg border p-2.5 text-left transition-colors ${checked ? 'border-critical bg-critical/5' : 'bg-card hover:border-accent'}`}>
-                    {checked ? <CheckSquare className="h-5 w-5 shrink-0 text-critical" /> : <Square className="h-5 w-5 shrink-0 text-muted-foreground" />}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-brand">{i.name}</span>
-                      <span className="block text-xs text-muted-foreground">{i.unit}{i.by ? ` · ${i.by}` : ''}{i.time ? ` · ${i.time}` : ''}</span>
-                    </span>
-                    <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
-                  </button>
-                );
-              }
-              return (
-                <Link key={i.id} href={`/tarefas/${i.id}`} className="flex items-center gap-2 rounded-lg border bg-card p-2.5 transition-colors hover:border-accent">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-brand">{i.name}</span>
-                    <span className="block text-xs text-muted-foreground">{i.unit}{i.by ? ` · ${i.by}` : ''}{i.time ? ` · ${i.time}` : ''}</span>
-                  </span>
-                  <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                </Link>
-              );
-            })}
-          </CardContent>
-        </Card>
-      ))}
+      {groups.map((g) => {
+        const renderItem = (i: HistItem, showUnit: boolean) => {
+          const checked = sel.has(i.id);
+          const st = ST[i.status] ?? ST.PENDING;
+          const sub = `${showUnit ? i.unit : ''}${showUnit && (i.by || i.time) ? ' · ' : ''}${i.by ?? ''}${i.by && i.time ? ' · ' : ''}${i.time ?? ''}`;
+          if (selecting) {
+            return (
+              <button key={i.id} onClick={() => toggle(i.id)} className={`flex w-full items-center gap-2 rounded-lg border p-2.5 text-left transition-colors ${checked ? 'border-critical bg-critical/5' : 'bg-card hover:border-accent'}`}>
+                {checked ? <CheckSquare className="h-5 w-5 shrink-0 text-critical" /> : <Square className="h-5 w-5 shrink-0 text-muted-foreground" />}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-brand">{i.name}</span>
+                  <span className="block text-xs text-muted-foreground">{sub || '—'}</span>
+                </span>
+                <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
+              </button>
+            );
+          }
+          return (
+            <Link key={i.id} href={`/tarefas/${i.id}`} className="flex items-center gap-2 rounded-lg border bg-card p-2.5 transition-colors hover:border-accent">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-brand">{i.name}</span>
+                <span className="block text-xs text-muted-foreground">{sub || '—'}</span>
+              </span>
+              <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          );
+        };
+
+        // Agrupa por unidade dentro do dia quando há mais de uma unidade
+        const byUnit = new Map<string, HistItem[]>();
+        for (const i of g.items) { const arr = byUnit.get(i.unit) ?? []; arr.push(i); byUnit.set(i.unit, arr); }
+        const useUnitGroups = groupByUnit && byUnit.size > 1;
+
+        return (
+          <Card key={g.date}>
+            <CardContent className="space-y-1.5 pt-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{g.date}</p>
+              {useUnitGroups
+                ? [...byUnit.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR')).map(([unit, items]) => (
+                    <div key={unit} className="space-y-1.5">
+                      <p className="pt-1 text-xs font-semibold text-brand">{unit} <span className="font-normal text-muted-foreground">({items.length})</span></p>
+                      {items.map((i) => renderItem(i, false))}
+                    </div>
+                  ))
+                : g.items.map((i) => renderItem(i, true))}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* Barra fixa de ação (seleção) */}
       {selecting && sel.size > 0 && (

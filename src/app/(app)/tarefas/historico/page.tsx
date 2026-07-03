@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
+import { parseUnitParam } from '@/lib/scope/unit-param';
 import { ChecklistHistoryList, type HistGroup } from '@/components/tasks/checklist-history-list';
+import { UnitFilter } from '@/components/ui/unit-filter';
 import { ArrowLeft } from 'lucide-react';
 import { subDays, format } from 'date-fns';
 
@@ -15,12 +17,12 @@ export default async function HistoricoTarefasPage({ searchParams }: { searchPar
   const fromDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
 
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
-  const selectedUnit = searchParams.unit && units.some((u) => u.id === searchParams.unit) ? searchParams.unit : undefined;
+  const unitFilter = parseUnitParam(searchParams.unit, units.map((u) => u.id));
 
   const instances = await prisma.taskInstance.findMany({
     where: {
       ...unitScopeWhere(user, 'unitId'),
-      ...(selectedUnit ? { unitId: selectedUnit } : {}),
+      ...(unitFilter.all ? {} : { unitId: { in: unitFilter.ids } }),
       operationalDate: { gte: fromDate },
       status: { in: ['DONE', 'LATE', 'MISSED'] },
       ...(user.seesAllUnits ? {} : { OR: [{ assignedToId: null }, { assignedToId: user.id }] }),
@@ -39,8 +41,8 @@ export default async function HistoricoTarefasPage({ searchParams }: { searchPar
   }
   const groups: HistGroup[] = [...byDate.values()];
 
-  const linkFor = (p: Record<string, string | number>) => {
-    const sp = new URLSearchParams({ days: String(days), ...(selectedUnit ? { unit: selectedUnit } : {}), ...Object.fromEntries(Object.entries(p).map(([k, v]) => [k, String(v)])) });
+  const linkForDays = (d: number) => {
+    const sp = new URLSearchParams({ days: String(d), ...(unitFilter.all ? {} : { unit: unitFilter.ids.join(',') }) });
     return `/tarefas/historico?${sp.toString()}`;
   };
 
@@ -49,21 +51,14 @@ export default async function HistoricoTarefasPage({ searchParams }: { searchPar
       <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
       <h1 className="text-xl font-bold text-brand">Histórico de checklists</h1>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {[7, 15, 30].map((d) => (
-          <Link key={d} href={linkFor({ days: d })} className={d === days ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{d} dias</Link>
+          <Link key={d} href={linkForDays(d)} className={d === days ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{d} dias</Link>
         ))}
-        {units.length > 1 && (
-          <>
-            <Link href={linkFor({ unit: '' })} className={!selectedUnit ? 'rounded-full bg-secondary px-3 py-1.5 text-sm font-semibold' : 'rounded-full border px-3 py-1.5 text-sm'}>Todas</Link>
-            {units.map((u) => (
-              <Link key={u.id} href={`/tarefas/historico?days=${days}&unit=${u.id}`} className={selectedUnit === u.id ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</Link>
-            ))}
-          </>
-        )}
+        {units.length > 1 && <UnitFilter units={units} selected={unitFilter.all ? [] : unitFilter.ids} />}
       </div>
 
-      <ChecklistHistoryList groups={groups} isAdmin={isAdmin} />
+      <ChecklistHistoryList groups={groups} isAdmin={isAdmin} groupByUnit={units.length > 1} />
     </div>
   );
 }

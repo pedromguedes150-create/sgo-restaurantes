@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -8,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { WasteForm } from '@/components/waste/waste-form';
 import { WasteDatePicker } from '@/components/waste/waste-date-picker';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
+import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,24 +67,8 @@ export default async function DesperdiciosPage({
         <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent">Exportar (Excel)</a>
       </div>
 
-      {/* Seletor de unidade (multi-unidade) */}
-      {units.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {units.map((u) => (
-            <Link
-              key={u.id}
-              href={`/modulos/desperdicios?unit=${u.id}`}
-              className={
-                u.id === selected.id
-                  ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground'
-                  : 'rounded-full border px-3 py-1.5 text-sm font-medium'
-              }
-            >
-              {u.name}
-            </Link>
-          ))}
-        </div>
-      )}
+      {/* Seletor de unidade (compacto) */}
+      {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
 
       {/* Lançamento do dia */}
       <Card>

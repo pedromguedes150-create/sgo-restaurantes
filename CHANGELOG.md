@@ -32,9 +32,15 @@ Primeira versão consolidada, já em uso pelos gerentes. Módulos entregues:
 ### Adicionado
 - **Versão do app** visível no rodapé do menu e na tela de login; `CHANGELOG.md`.
 
-<!--
-## v1.1.0 — (em desenvolvimento)
-### Adicionado
+## v1.1.0 — 2026-07-03 (padronização do filtro de unidades — parte 1)
 ### Alterado
-### Corrigido
+- **Filtro de unidades compacto** no lugar das listas largas de "pills" que ocupavam a tela:
+  - **Histórico de checklists**: filtro compacto com **"Selecionar todas"** (multi) e lista **agrupada por unidade dentro de cada dia**.
+  - **Metas, Treinamentos, Mapa de Funções, Desperdícios, Comandas**: seletor de unidade compacto (dropdown único), preservando os demais filtros (mês/data).
+- Componentes reutilizáveis: `UnitFilter` (multi + todas) e `UnitSelectNav` (único).
+
+<!--
+## v1.1.x — (em desenvolvimento)
+### Próximos: Correções por período; agrupar por empresa em Ocorrências/Notas/Óleo;
+### Tarefas de hoje minimizável por unidade; fotos por item no checklist.
 -->
