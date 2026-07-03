@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { APP_VERSION_LABEL } from '@/lib/version';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -92,7 +93,7 @@ export default function LoginPage() {
         </CardContent>
       </Card>
 
-      <p className="mt-6 text-center text-xs text-white/50">Rede Beija Flor · Acesso restrito</p>
+      <p className="mt-6 text-center text-xs text-white/50">Rede Beija Flor · Acesso restrito · SGO {APP_VERSION_LABEL}</p>
     </main>
   );
 }

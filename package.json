@@ -1,6 +1,6 @@
 {
   "name": "sgo-beija-flor",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Sistema de Gestão Operacional (SGO) — Rede Beija Flor",
   "scripts": {

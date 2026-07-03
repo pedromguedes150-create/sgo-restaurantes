@@ -7,6 +7,7 @@ import {
   Boxes, Receipt, Wallet, Users, BookOpen, Target, ScrollText, Settings, GraduationCap, LifeBuoy, Megaphone, Flame, Droplets,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { APP_VERSION_LABEL } from '@/lib/version';
 
 interface Item { href: string; label: string; icon: React.ComponentType<{ className?: string }>; adminOnly?: boolean }
 
@@ -90,6 +91,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
           );
         })}
       </nav>
+      <p className="mt-6 px-2 text-[11px] font-medium text-muted-foreground">SGO {APP_VERSION_LABEL}</p>
     </aside>
   );
 }
