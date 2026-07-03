@@ -66,7 +66,7 @@ export async function createPop(user: SessionUser, input: PopInput, ctx: { ip?: 
       sector: sectors[0] ?? null, // compat com o campo legado
       status: 'PUBLISHED',
       version: 1,
-      isInitial: Boolean(input.isInitial),
+      isInitial: sectors.length > 0 ? false : Boolean(input.isInitial), // setorial e inicial são exclusivos
       recurrence: input.recurrence === 'MONTHLY' ? 'MONTHLY' : 'ONCE',
       content: input.blocks as unknown as Prisma.InputJsonValue,
       units: { create: input.unitIds.map((unitId) => ({ unitId })) },
@@ -97,7 +97,7 @@ export async function updatePop(user: SessionUser, id: string, input: PopInput &
         title: input.title.trim(),
         category: input.category || null,
         sector: sectors[0] ?? null,
-        isInitial: Boolean(input.isInitial),
+        isInitial: sectors.length > 0 ? false : Boolean(input.isInitial), // setorial e inicial são exclusivos
         recurrence: input.recurrence === 'MONTHLY' ? 'MONTHLY' : 'ONCE',
         version: newVersion,
         content: input.blocks as unknown as Prisma.InputJsonValue,

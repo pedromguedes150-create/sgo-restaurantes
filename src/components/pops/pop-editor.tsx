@@ -32,7 +32,7 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  function addSector(name: string) { const n = name.trim(); if (n && !sectors.includes(n)) setSectors((s) => [...s, n]); }
+  function addSector(name: string) { const n = name.trim(); if (n && !sectors.includes(n)) { setSectors((s) => [...s, n]); setIsInitial(false); } }
   function removeSector(name: string) { setSectors((s) => s.filter((x) => x !== name)); }
   const suggest = standardSectors.filter((s) => !sectors.includes(s));
 
@@ -74,10 +74,13 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
 
         {/* Treinamento */}
         <div className="rounded-lg bg-muted/40 p-2">
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Treinamento</p>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={isInitial} onChange={(e) => setIsInitial(e.target.checked)} /> Treinamento inicial (todo colaborador novo da unidade faz)</label>
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Treinamento — escolha UM tipo</p>
+          <label className={`flex items-center gap-2 text-sm ${sectors.length > 0 ? 'opacity-50' : ''}`}>
+            <input type="checkbox" checked={isInitial} disabled={sectors.length > 0} onChange={(e) => { setIsInitial(e.target.checked); if (e.target.checked) setSectors([]); }} />
+            Inicial — TODO colaborador da unidade faz (independe do setor)
+          </label>
           <div className="mt-2">
-            <Label className="text-xs">Setores (treinamento setorial)</Label>
+            <Label className="text-xs">Ou setorial — só os setores abaixo {isInitial && <span className="text-critical">(desmarque a opção Inicial para usar)</span>}</Label>
             <div className="mt-1 flex flex-wrap gap-1">
               {sectors.map((s) => (
                 <span key={s} className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">{s}<button onClick={() => removeSector(s)} aria-label="Remover"><X className="h-3 w-3" /></button></span>

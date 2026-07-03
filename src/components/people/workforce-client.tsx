@@ -116,10 +116,12 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
           <p className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">Projeção baseada na <b>escala planejada</b> — pode mudar se houver ajustes, faltas ou freelancers.</p>
         )}
         {grid.sectors.every((s) => grid.shifts.every((c) => (grid.cells[s.id]?.[c.label]?.length ?? 0) === 0)) && (
-          <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-            {isNow ? 'Ninguém trabalhando na unidade neste momento.' : `Ninguém ${isFuture ? 'previsto' : 'registrado'} para ${fmtDateBR(mapDate)}${mapTime ? ` às ${mapTime}` : ''}.`}
-            {' '}O mapa segue a Escala — confira em Pessoas → Escala.
-          </p>
+          <div className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+            <p>{isNow ? 'Ninguém trabalhando na unidade neste momento.' : `Ninguém ${isFuture ? 'previsto' : 'registrado'} para ${fmtDateBR(mapDate)}${mapTime ? ` às ${mapTime}` : ''}.`}</p>
+            {!historical && board.allocated.length > 0
+              ? <p className="mt-1">Você já tem <b>{board.allocated.length}</b> pessoa(s) no quadro padrão, mas o mapa só mostra quem está <b>escalado para trabalhar</b> neste dia/horário. Cadastre a <b>Escala</b> em Pessoas → Escala para o mapa preencher.</p>
+              : <p className="mt-1">O mapa segue a Escala — confira em Pessoas → Escala.</p>}
+          </div>
         )}
 
         {/* Freelancers do dia: alocar em um setor (ficam disponíveis após o pedido de pagamento) */}

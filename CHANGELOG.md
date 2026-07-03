@@ -25,6 +25,13 @@ Primeira versão consolidada, já em uso pelos gerentes. Módulos entregues:
 - **IA** (leitura de atestados e conferência de fotos de checklist) ligada em produção.
 - Publicado em https://sgorestaurantesgbf.com.br (Docker + Cloudflare Tunnel), backup diário do banco.
 
+## v1.0.1 — 2026-07-03 (correções)
+### Corrigido
+- **Treinamentos por setor**: POP marcado como "inicial" **e** com setor aparecia para todos os colaboradores. Agora "inicial" e "setorial" são **exclusivos** (escolher setor = não é inicial), reforçado no servidor e no editor de POP. Os 2 POPs de teste foram corrigidos para setoriais.
+- **Mapa da unidade**: quando há gente no quadro padrão mas ninguém escalado, o aviso agora explica que o mapa segue a **Escala** e orienta a cadastrá-la (antes o mapa só ficava vazio sem explicação).
+### Adicionado
+- **Versão do app** visível no rodapé do menu e na tela de login; `CHANGELOG.md`.
+
 <!--
 ## v1.1.0 — (em desenvolvimento)
 ### Adicionado
