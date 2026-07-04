@@ -2,23 +2,32 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
+import { parseUnitParam } from '@/lib/scope/unit-param';
 import { getCorrectionsReport, type CorrectionItem } from '@/lib/tasks/corrections';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { Card, CardContent } from '@/components/ui/card';
 import { PrintButton } from '@/components/ui/print-button';
+import { UnitFilter } from '@/components/ui/unit-filter';
 import { ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CorrecoesPage({ searchParams }: { searchParams: { unit?: string; date?: string } }) {
+function fmtBR(iso: string) { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
+
+export default async function CorrecoesPage({ searchParams }: { searchParams: { unit?: string; from?: string; to?: string } }) {
   const user = (await getSessionUser())!;
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true, timezone: true, cutoffHour: true } });
-  const selectedUnit = units.find((u) => u.id === searchParams.unit) ?? units[0];
-  const today = selectedUnit ? currentOperationalDate({ timezone: selectedUnit.timezone, cutoffHour: selectedUnit.cutoffHour }) : new Date().toISOString().slice(0, 10);
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date ?? '') ? searchParams.date! : today;
+  if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
 
-  const report = selectedUnit ? await getCorrectionsReport(user, selectedUnit.id, date) : null;
-  const linkFor = (p: Record<string, string>) => `/tarefas/correcoes?${new URLSearchParams({ unit: selectedUnit?.id ?? '', date, ...p }).toString()}`;
+  const unitFilter = parseUnitParam(searchParams.unit, units.map((u) => u.id));
+  const ref = units[0];
+  const today = currentOperationalDate({ timezone: ref.timezone, cutoffHour: ref.cutoffHour });
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(searchParams.to ?? '') ? searchParams.to! : today;
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(searchParams.from ?? '') ? searchParams.from! : to;
+
+  const report = await getCorrectionsReport(user, unitFilter.ids, from, to);
+  const multi = units.length > 1;
+  const showMeta = (it: CorrectionItem) => `${it.checklist}${multi ? ` · ${it.unit}` : ''} · ${fmtBR(it.operationalDate)}${it.by ? ` · ${it.by}` : ''}${it.time ? ` · ${it.time}` : ''}`;
 
   return (
     <div className="space-y-4">
@@ -26,42 +35,36 @@ export default async function CorrecoesPage({ searchParams }: { searchParams: { 
         <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
         <PrintButton label="Imprimir / PDF" />
       </div>
-      <h1 className="text-xl font-bold text-brand">Relatório de correções do dia</h1>
-      <p className="text-sm text-muted-foreground">Itens marcados como 🟡 Em correção e 🔴 A corrigir nos checklists. Escolha a data para ver o histórico.</p>
+      <h1 className="text-xl font-bold text-brand">Relatório de correções</h1>
+      <p className="text-sm text-muted-foreground">Itens marcados como 🟡 Em correção e 🔴 A corrigir nos checklists. Escolha o período e as unidades.</p>
 
-      <form className="flex flex-wrap items-center gap-2 print:hidden">
-        {units.length > 1 && (
-          <select name="unit" defaultValue={selectedUnit?.id} className="h-9 rounded-lg border-2 border-input bg-background px-2 text-sm">
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        )}
-        <input type="date" name="date" defaultValue={date} className="h-9 rounded-lg border-2 border-input bg-background px-2 text-sm" />
-        <button className="rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent">Ver</button>
-      </form>
+      <div className="space-y-2 print:hidden">
+        {multi && <UnitFilter units={units.map((u) => ({ id: u.id, name: u.name }))} selected={unitFilter.all ? [] : unitFilter.ids} />}
+        <form className="flex flex-wrap items-end gap-2">
+          {!unitFilter.all && <input type="hidden" name="unit" value={unitFilter.ids.join(',')} />}
+          <div><label className="block text-xs font-medium text-muted-foreground">De</label><input type="date" name="from" defaultValue={from} max={to} className="h-9 rounded-lg border-2 border-input bg-background px-2 text-sm" /></div>
+          <div><label className="block text-xs font-medium text-muted-foreground">Até</label><input type="date" name="to" defaultValue={to} className="h-9 rounded-lg border-2 border-input bg-background px-2 text-sm" /></div>
+          <button className="h-9 rounded-lg border px-3 text-sm font-semibold hover:border-accent">Ver</button>
+        </form>
+      </div>
 
-      <p className="text-sm font-semibold text-brand">{selectedUnit?.name} · {date}</p>
+      <p className="text-sm font-semibold text-brand">
+        {unitFilter.all ? 'Todas as unidades' : `${unitFilter.ids.length} unidade(s)`} · {from === to ? fmtBR(from) : `${fmtBR(from)} a ${fmtBR(to)}`}
+      </p>
 
-      {!report || report.total === 0 ? (
-        <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">Nenhum item em correção ou a corrigir neste dia. 🎉</p>
+      {report.total === 0 ? (
+        <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">Nenhum item em correção ou a corrigir no período. 🎉</p>
       ) : (
         <>
-          <Section title="🔴 A corrigir" items={report.aCorrigir} tone="critical" />
-          <Section title="🟡 Em correção" items={report.emCorrecao} tone="medium" />
+          <Section title="🔴 A corrigir" items={report.aCorrigir} tone="critical" meta={showMeta} />
+          <Section title="🟡 Em correção" items={report.emCorrecao} tone="medium" meta={showMeta} />
         </>
       )}
-
-      <div className="flex flex-wrap gap-2 print:hidden">
-        {[1, 2, 3, 7].map((d) => {
-          const dt = new Date(`${date}T12:00:00`); dt.setDate(dt.getDate() - d);
-          const s = dt.toISOString().slice(0, 10);
-          return <Link key={d} href={linkFor({ date: s })} className="rounded-full border px-3 py-1.5 text-xs hover:border-accent">{s} (−{d}d)</Link>;
-        })}
-      </div>
     </div>
   );
 }
 
-function Section({ title, items, tone }: { title: string; items: CorrectionItem[]; tone: 'critical' | 'medium' }) {
+function Section({ title, items, tone, meta }: { title: string; items: CorrectionItem[]; tone: 'critical' | 'medium'; meta: (it: CorrectionItem) => string }) {
   if (items.length === 0) return null;
   return (
     <Card>
@@ -71,7 +74,7 @@ function Section({ title, items, tone }: { title: string; items: CorrectionItem[
           <div key={i} className="rounded-lg border bg-card p-2.5 text-sm">
             <p className="font-medium text-brand">{it.text}</p>
             {it.note && <p className="text-xs text-muted-foreground">Obs.: {it.note}</p>}
-            <p className="text-[11px] text-muted-foreground">{it.checklist}{it.by ? ` · ${it.by}` : ''}{it.time ? ` · ${it.time}` : ''}</p>
+            <p className="text-[11px] text-muted-foreground">{meta(it)}</p>
           </div>
         ))}
       </CardContent>

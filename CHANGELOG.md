@@ -9,6 +9,22 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.1.1 — 2026-07-03
+### Adicionado
+- **Correções de checklist por período**: a tela de correções agora aceita um intervalo (De→Até) e **várias unidades / todas** (antes era só um dia e uma unidade).
+- **Tarefas de hoje minimizáveis por unidade**: o mini-dashboard de cada unidade fica sempre visível e a lista de checklists recolhe (recolhida por padrão quando há várias unidades), para o gestor ver o resumo de todas de uma vez.
+
+## v1.1.0 — 2026-07-03
+### Alterado
+- **Filtro de unidades padronizado (compacto)**: as listas largas de unidades viraram um seletor compacto. Histórico de checklists com **"Selecionar todas"** e **agrupado por unidade dentro de cada dia**; Metas, Treinamentos, Mapa de Funções, Desperdícios e Comandas com seletor compacto.
+
+## v1.0.1 — 2026-07-03
+### Corrigido
+- **Treinamentos por setor**: POP não pode mais ser "inicial" e setorial ao mesmo tempo (aparecia para todos). Exclusividade reforçada; POPs de teste normalizados.
+- **Mapa da unidade**: aviso claro quando há gente no quadro padrão mas sem escala (o mapa segue a Escala).
+### Adicionado
+- **Versão do app** no rodapé do menu e no login; `CHANGELOG.md`.
+
 ## v1.0.0 — 2026-07-02 (base em produção)
 Primeira versão consolidada, já em uso pelos gerentes. Módulos entregues:
 

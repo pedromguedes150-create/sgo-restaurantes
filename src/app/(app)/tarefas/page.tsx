@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { getTasksTodayForUser } from '@/lib/tasks/query';
 import { TaskItem, type TaskItemData } from '@/components/tasks/task-item';
+import { UnitTasksSection } from '@/components/tasks/unit-tasks-section';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
 
 export const dynamic = 'force-dynamic';
@@ -43,47 +44,21 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
       {groups.map((g) => {
         const tasks = onlyOverdue ? g.tasks.filter(isOverdueTask) : g.tasks;
         if (onlyOverdue && tasks.length === 0) return null;
+        const summary = {
+          total: g.tasks.length,
+          done: g.tasks.filter((t) => t.status === 'DONE').length,
+          late: g.tasks.filter((t) => t.status === 'LATE').length,
+          missed: g.tasks.filter((t) => t.status === 'MISSED').length,
+          todo: g.tasks.filter((t) => t.status === 'PENDING').length,
+        };
         return (
-        <section key={g.unit.id} className="space-y-3">
-          {/* Mostra o nome da unidade quando o usuário vê mais de uma */}
-          {groups.length > 1 && (
-            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
-              {g.unit.name}
-            </h2>
-          )}
-
-          {/* Acompanhamento do dia: o que falta fazer vs feito (no prazo/atrasado) */}
-          {!onlyOverdue && (() => {
-            const total = g.tasks.length;
-            const done = g.tasks.filter((t) => t.status === 'DONE').length;     // no prazo (conta na meta)
-            const late = g.tasks.filter((t) => t.status === 'LATE').length;     // feito fora do prazo
-            const missed = g.tasks.filter((t) => t.status === 'MISSED').length; // não realizada
-            const todo = g.tasks.filter((t) => t.status === 'PENDING').length;  // ainda a fazer
-            const pct = (n: number) => (total ? (n / total) * 100 : 0);
-            return (
-              <div>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className={`font-semibold ${todo > 0 ? 'text-critical' : 'text-success'}`}>
-                    {todo > 0 ? `${todo} a fazer` : 'Tudo realizado ✅'}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{done + late} de {total} feitos</span>
-                </div>
-                <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-secondary">
-                  <div className="h-full bg-success transition-all" style={{ width: `${pct(done)}%` }} />
-                  <div className="h-full bg-medium transition-all" style={{ width: `${pct(late)}%` }} />
-                  <div className="h-full bg-critical transition-all" style={{ width: `${pct(missed)}%` }} />
-                </div>
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-                  <span>🟢 {done} no prazo <span className="text-[10px]">(conta na meta)</span></span>
-                  {late > 0 && <span>🟡 {late} fora do prazo</span>}
-                  {missed > 0 && <span>🔴 {missed} não realizada(s)</span>}
-                  {todo > 0 && <span className="font-semibold text-critical">⚪ {todo} a fazer</span>}
-                </div>
-              </div>
-            );
-          })()}
-
-          <div className="space-y-3">
+          <UnitTasksSection
+            key={g.unit.id}
+            unitName={groups.length > 1 ? g.unit.name : null}
+            summary={summary}
+            showSummary={!onlyOverdue}
+            defaultOpen={onlyOverdue || groups.length === 1}
+          >
             {tasks.map((t) => {
               const data: TaskItemData = {
                 id: t.id,
@@ -97,11 +72,8 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
               };
               return <TaskItem key={t.id} task={data} />;
             })}
-            {tasks.length === 0 && (
-              <p className="text-sm text-muted-foreground">Sem tarefas para hoje.</p>
-            )}
-          </div>
-        </section>
+            {tasks.length === 0 && <p className="text-sm text-muted-foreground">Sem tarefas para hoje.</p>}
+          </UnitTasksSection>
         );
       })}
     </div>
