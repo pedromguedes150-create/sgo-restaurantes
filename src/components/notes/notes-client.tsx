@@ -52,29 +52,53 @@ export function NotesClient({ units, notes, suppliers = [], isAdmin = false }: {
       {tab === 'nova' ? (
         <NewNote units={units} suppliers={suppliers} onDone={() => { setTab('lista'); router.refresh(); }} />
       ) : (
-        <div className="space-y-2">
-          {notes.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma nota registrada.</p>}
-          {notes.map((n) => (
-            <div key={n.id} className="rounded-lg border bg-card p-3">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-brand">{n.supplier}</p>
-                <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
-              </div>
-              <p className="text-xs text-muted-foreground">{n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}</p>
-              {n.problemNote && <p className="mt-1 text-xs text-critical">Problema: {n.problemNote}</p>}
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {n.status === 'RECEIVED' && (
-                  <>
-                    <Button size="sm" variant="gold" disabled={busy} onClick={() => status(n.id, 'PAID')}><Banknote className="h-4 w-4" /> Paga</Button>
-                    <Button size="sm" variant="destructive" disabled={busy} onClick={() => status(n.id, 'PROBLEM')}><AlertTriangle className="h-4 w-4" /> Problema</Button>
-                  </>
-                )}
-                {isAdmin && <DeleteOpButton entity="note" id={n.id} label={`a nota de ${n.supplier}`} />}
-              </div>
-            </div>
-          ))}
-        </div>
+        <NotesList notes={notes} isAdmin={isAdmin} busy={busy} onStatus={status} />
       )}
+    </div>
+  );
+}
+
+function NotesList({ notes, isAdmin, busy, onStatus }: { notes: NoteDTO[]; isAdmin: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM') => void }) {
+  if (notes.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma nota registrada.</p>;
+  const byCompany = new Map<string, NoteDTO[]>();
+  for (const n of notes) { const arr = byCompany.get(n.supplier) ?? []; arr.push(n); byCompany.set(n.supplier, arr); }
+  const groups = [...byCompany.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
+
+  const card = (n: NoteDTO) => (
+    <div key={n.id} className="rounded-lg border bg-card p-3">
+      <div className="flex items-center justify-between">
+        <p className="font-semibold text-brand">{n.supplier}</p>
+        <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
+      </div>
+      <p className="text-xs text-muted-foreground">{n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}</p>
+      {n.problemNote && <p className="mt-1 text-xs text-critical">Problema: {n.problemNote}</p>}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {n.status === 'RECEIVED' && (
+          <>
+            <Button size="sm" variant="gold" disabled={busy} onClick={() => onStatus(n.id, 'PAID')}><Banknote className="h-4 w-4" /> Paga</Button>
+            <Button size="sm" variant="destructive" disabled={busy} onClick={() => onStatus(n.id, 'PROBLEM')}><AlertTriangle className="h-4 w-4" /> Problema</Button>
+          </>
+        )}
+        {isAdmin && <DeleteOpButton entity="note" id={n.id} label={`a nota de ${n.supplier}`} />}
+      </div>
+    </div>
+  );
+
+  if (groups.length <= 1) return <div className="space-y-2">{notes.map(card)}</div>;
+  return (
+    <div className="space-y-4">
+      {groups.map(([company, items]) => {
+        const total = items.reduce((s, n) => s + n.value, 0);
+        return (
+          <div key={company} className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">{company} <span className="font-normal">({items.length})</span></h2>
+              <span className="text-xs font-semibold text-brand">{formatBRL(total)}</span>
+            </div>
+            {items.map(card)}
+          </div>
+        );
+      })}
     </div>
   );
 }

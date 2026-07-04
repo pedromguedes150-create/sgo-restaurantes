@@ -165,10 +165,19 @@ function Cell({ label, value }: { label: string; value: string }) {
 }
 
 function History({ rows, isAdmin }: { rows: OilRow[]; isAdmin: boolean }) {
+  const [unit, setUnit] = useState('');
+  const unitNames = [...new Set(rows.map((r) => r.unit))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const shown = unit ? rows.filter((r) => r.unit === unit) : rows;
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma coleta registrada.</p>;
   return (
     <div className="space-y-2">
-      {rows.map((r) => (
+      {unitNames.length > 1 && (
+        <select value={unit} onChange={(e) => setUnit(e.target.value)} className="h-10 w-full max-w-sm rounded-lg border-2 border-input bg-background px-3 text-sm font-medium">
+          <option value="">Todas as unidades</option>
+          {unitNames.map((u) => <option key={u} value={u}>{u}</option>)}
+        </select>
+      )}
+      {shown.map((r) => (
         <div key={r.id} className="rounded-lg border bg-card p-3">
           <div className="flex items-start justify-between gap-2">
             <div>

@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.1.2 — 2026-07-04
+### Alterado
+- **Ocorrências**: lista **agrupada por unidade** (cabeçalho por empresa) quando há mais de uma.
+- **Notas Recebidas**: lista **agrupada por empresa** (fornecedor), com total por empresa.
+- **Coleta de Óleo**: **filtro por unidade** no histórico (Todas + cada unidade).
+
 ## v1.1.1 — 2026-07-03
 ### Adicionado
 - **Correções de checklist por período**: a tela de correções agora aceita um intervalo (De→Até) e **várias unidades / todas** (antes era só um dia e uma unidade).
