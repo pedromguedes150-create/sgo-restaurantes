@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.1.3 — 2026-07-04
+### Adicionado
+- **Tolerância de tempo nos checklists** (Configurações → Checklists, Admin): concluir até N minutos após o horário-limite ainda conta **no prazo** (padrão **10 min**). Vale para todos os checklists.
+
 ## v1.1.2 — 2026-07-04
 ### Alterado
 - **Ocorrências**: lista **agrupada por unidade** (cabeçalho por empresa) quando há mais de uma.

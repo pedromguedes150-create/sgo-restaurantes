@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
+import { getChecklistToleranceMin, isLate } from '@/lib/tasks/tolerance';
 import type { SessionUser } from '@/lib/auth/session';
 
 export type CompleteResult =
@@ -40,8 +41,8 @@ export async function completeTask(
     return { ok: false, reason: 'EVIDENCE_REQUIRED' };
   }
 
-  // Fora do prazo: conclui como LATE (neutro na meta, não penaliza).
-  const late = new Date() > inst.dueAt;
+  // Fora do prazo (+ tolerância): conclui como LATE (neutro na meta, não penaliza).
+  const late = isLate(inst.dueAt, await getChecklistToleranceMin());
   const res = await prisma.taskInstance.updateMany({
     where: { id: instanceId, status: { in: ['PENDING', 'MISSED'] } },
     data: {
@@ -99,7 +100,7 @@ export async function completeChecklist(
     return { ok: false, reason: 'EVIDENCE_REQUIRED' };
   }
 
-  const late = new Date() > inst.dueAt;
+  const late = isLate(inst.dueAt, await getChecklistToleranceMin());
   const res = await prisma.taskInstance.updateMany({
     where: { id: instanceId, status: { in: ['PENDING', 'MISSED'] } },
     data: { status: late ? 'LATE' : 'DONE', completedById: user.id, completedAt: new Date(), evidencePath: allPhotos[0] ?? null, draft: undefined },

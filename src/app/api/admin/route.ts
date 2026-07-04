@@ -7,6 +7,7 @@ import { setRolePermission } from '@/lib/permissions';
 import { setTrainingWeight } from '@/lib/training';
 import { setCommunicationWeight } from '@/lib/communications/meta';
 import { setGasAlertPct } from '@/lib/gas/query';
+import { setChecklistToleranceMin } from '@/lib/tasks/tolerance';
 import { createChecklistModel, updateChecklistModel, toggleChecklistModel, deleteChecklistModel, createTemplatesFromModels } from '@/lib/checklist-models';
 
 /**
@@ -74,6 +75,7 @@ export async function POST(req: Request) {
   else if (e === 'training' && a === 'setWeight') r = await setTrainingWeight(user, Number(b.weight));
   else if (e === 'communication' && a === 'setWeight') r = await setCommunicationWeight(user, Number(b.weight));
   else if (e === 'gas' && a === 'setAlertPct') r = await setGasAlertPct(user, Number(b.pct));
+  else if (e === 'checklistTolerance' && a === 'set') r = await setChecklistToleranceMin(user, Number(b.minutes), ctx);
 
   if (!r) return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });
   if (!r.ok) {
