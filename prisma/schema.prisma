@@ -75,6 +75,7 @@ model Unit {
   inventoryItems          InventoryItem[]
   inventoryMovements      InventoryMovement[]
   medicalCertificates     MedicalCertificate[]
+  freelancerRates         FreelancerHourlyRate[]
 
   @@map("units")
 }
@@ -668,6 +669,36 @@ enum PaymentStatus {
 }
 
 /// Cadastro de freelancer (multi-unidade, valor padrão) — Módulo 7.1.
+/// Tipo de dia para o valor/hora do freelancer.
+enum DayType {
+  WEEKDAY // dia útil (seg-sex, não feriado)
+  WEEKEND // sábado/domingo
+  HOLIDAY // feriado (cadastro `Holiday`)
+}
+
+/// Valor da hora do freelancer por unidade × tipo de dia (Módulo 7 / v1.2).
+model FreelancerHourlyRate {
+  id      String  @id @default(cuid())
+  unitId  String
+  dayType DayType
+  value   Decimal @db.Decimal(10, 2)
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([unitId, dayType])
+  @@map("freelancer_hourly_rates")
+}
+
+/// Feriados (para o valor/hora do freelancer). Global; data única yyyy-mm-dd.
+model Holiday {
+  id        String   @id @default(cuid())
+  date      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  @@map("holidays")
+}
+
 model Freelancer {
   id           String           @id @default(cuid())
   name         String
@@ -750,6 +781,8 @@ model PaymentRequest {
   workEndTime   String?
   /// Setor onde o freelancer foi alocado no Mapa do dia (Módulo 9.3)
   workSectorId  String?
+  /// Vale transporte somado ao valor do freelancer (opcional)
+  transportValue Decimal? @db.Decimal(10, 2)
 
   // Hora extra
   collaboratorName String?

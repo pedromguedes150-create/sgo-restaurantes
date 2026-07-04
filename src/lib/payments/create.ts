@@ -17,6 +17,7 @@ export interface CreatePaymentInput {
   hours?: number;
   workStartTime?: string;
   workEndTime?: string;
+  transportValue?: number;
   // overtime
   collaboratorName?: string;
   reason?: string;
@@ -43,8 +44,6 @@ export async function createPaymentRequest(
     if (e instanceof UnitScopeError) return { ok: false, reason: 'FORBIDDEN' };
     throw e;
   }
-  if (!input.amount || input.amount <= 0) return { ok: false, reason: 'INVALID' };
-
   // Aprovador: SUPERVISOR para freela/HE; do tipo para avulso
   let approverRole: Role = 'SUPERVISOR';
   if (input.type === 'MISC') {
@@ -55,14 +54,27 @@ export async function createPaymentRequest(
   }
   if (input.type === 'FREELANCER' && !input.freelancerId) return { ok: false, reason: 'INVALID' };
 
-  // Divergência de valor (freelancer): compara o valor lançado com o padrão cadastrado.
-  // Não bloqueia — apenas sinaliza e alerta gerente/aprovadores.
+  // Freelancer: se houver valor/hora cadastrado p/ a unidade+tipo de dia, o valor
+  // sai AUTOMÁTICO (horas × valor/hora + vale transporte). Senão, usa o valor
+  // digitado (modo manual/temporário) e mantém a divergência vs valor padrão.
+  let effectiveAmount = input.amount;
+  let effectiveHours = input.hours ?? null;
+  const transportValue = input.type === 'FREELANCER' && input.transportValue && input.transportValue > 0 ? Number(input.transportValue) : null;
   let standardValue: number | null = null;
   let divergent = false;
-  if (input.type === 'FREELANCER' && input.freelancerId) {
-    const fr = await prisma.freelancer.findUnique({ where: { id: input.freelancerId }, select: { defaultValue: true } });
-    if (fr) { standardValue = Number(fr.defaultValue); divergent = Math.abs(standardValue - input.amount) > 0.001; }
+  let autoPriced = false;
+  if (input.type === 'FREELANCER') {
+    if (input.workDate && input.workStartTime && input.workEndTime) {
+      const { computeFreelancerAmount } = await import('@/lib/freelancer/pricing');
+      const calc = await computeFreelancerAmount({ unitId: input.unitId, dateISO: input.workDate, start: input.workStartTime, end: input.workEndTime, transport: transportValue ?? 0 });
+      if (calc.configured) { effectiveAmount = calc.amount; effectiveHours = calc.hours; autoPriced = true; }
+    }
+    if (!autoPriced && input.freelancerId) {
+      const fr = await prisma.freelancer.findUnique({ where: { id: input.freelancerId }, select: { defaultValue: true } });
+      if (fr) { standardValue = Number(fr.defaultValue); divergent = Math.abs(standardValue - effectiveAmount) > 0.001; }
+    }
   }
+  if (!effectiveAmount || effectiveAmount <= 0) return { ok: false, reason: 'INVALID' };
 
   const req = await prisma.paymentRequest.create({
     data: {
@@ -70,14 +82,15 @@ export async function createPaymentRequest(
       unitId: input.unitId,
       requestedById: user.id,
       approverRole,
-      amount: input.amount,
+      amount: effectiveAmount,
       standardValue,
       divergent,
       description: input.description?.trim() || null,
       freelancerId: input.freelancerId || null,
       workDate: input.workDate ? new Date(input.workDate) : null,
       shift: input.shift || null,
-      hours: input.hours ?? null,
+      hours: effectiveHours,
+      transportValue,
       workStartTime: input.type === 'FREELANCER' ? (input.workStartTime?.trim() || null) : null,
       workEndTime: input.type === 'FREELANCER' ? (input.workEndTime?.trim() || null) : null,
       collaboratorName: input.collaboratorName?.trim() || null,

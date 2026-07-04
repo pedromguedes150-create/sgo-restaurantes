@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, X, Banknote, Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -184,6 +184,8 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
   const [shift, setShift] = useState('');
   const [workStartTime, setWorkStartTime] = useState('');
   const [workEndTime, setWorkEndTime] = useState('');
+  const [transportValue, setTransportValue] = useState('');
+  const [calc, setCalc] = useState<{ configured: boolean; hours: number; rate: number | null; amount: number; transport: number; dayTypeLabel: string } | null>(null);
   const [hours, setHours] = useState('');
   const [collaboratorName, setCollaboratorName] = useState('');
   const [reason, setReason] = useState('');
@@ -197,16 +199,28 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
 
   const selectedFreelancer = useMemo(() => freelancers.find((f) => f.id === freelancerId), [freelancers, freelancerId]);
   const amt = parseFloat((amount || '0').replace(',', '.'));
-  const freelaDivergent = type === 'FREELANCER' && selectedFreelancer != null && amt > 0 && Math.abs(amt - selectedFreelancer.defaultValue) > 0.001;
+  const autoPriced = type === 'FREELANCER' && Boolean(calc?.configured);
+  const freelaDivergent = type === 'FREELANCER' && !autoPriced && selectedFreelancer != null && amt > 0 && Math.abs(amt - selectedFreelancer.defaultValue) > 0.001;
+
+  // Prévia do valor do freelancer (horas × valor/hora do dia + vale transporte)
+  useEffect(() => {
+    if (type !== 'FREELANCER' || !unitId || !workDate || !workStartTime || !workEndTime) { setCalc(null); return; }
+    const t = parseFloat((transportValue || '0').replace(',', '.')) || 0;
+    let cancelled = false;
+    fetch('/api/payments/freelancer-calc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unitId, workDate, start: workStartTime, end: workEndTime, transport: t }) })
+      .then((r) => r.json()).then((d) => { if (!cancelled) setCalc(d); }).catch(() => { if (!cancelled) setCalc(null); });
+    return () => { cancelled = true; };
+  }, [type, unitId, workDate, workStartTime, workEndTime, transportValue]);
 
   async function submit() {
     setErr(null);
-    const amt = parseFloat((amount || '0').replace(',', '.'));
-    if (!unitId || !amt) { setErr('Informe unidade e valor.'); return; }
+    const manualAmt = parseFloat((amount || '0').replace(',', '.'));
+    const effAmt = autoPriced ? (calc?.amount ?? 0) : manualAmt;
+    if (!unitId || (!autoPriced && !effAmt)) { setErr('Informe unidade e valor.'); return; }
     setBusy(true);
     try {
-      const body: Record<string, unknown> = { type, unitId, amount: amt, description };
-      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, hours: hours ? Number(hours) : undefined });
+      const body: Record<string, unknown> = { type, unitId, amount: effAmt, description };
+      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, hours: hours ? Number(hours) : undefined });
       if (type === 'OVERTIME') Object.assign(body, { collaboratorName, workDate, hours: hours ? Number(hours) : undefined, reason });
       if (type === 'MISC') Object.assign(body, { miscTypeId, beneficiary, supplierId: supplierId || undefined });
       const res = await fetch('/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -252,7 +266,18 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
             <div><Label>Hora fim</Label><Input type="time" value={workEndTime} onChange={(e) => setWorkEndTime(e.target.value)} /></div>
           </div>
           <p className="text-xs text-muted-foreground">Com o dia e a hora preenchidos, o freelancer fica disponível para alocar no Mapa da unidade naquele dia/horário.</p>
-          <div><Label>Horas (p/ pagamento)</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="opcional" /></div>
+          <div><Label>Vale transporte (R$, opcional)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>
+          {calc?.configured && (
+            <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3">
+              <p className="text-xs text-muted-foreground">Valor calculado ({calc.dayTypeLabel})</p>
+              <p className="text-2xl font-black text-brand">{formatBRL(calc.amount)}</p>
+              <p className="text-xs text-muted-foreground">{calc.hours}h × {formatBRL(calc.rate ?? 0)}/h{calc.transport > 0 ? ` + ${formatBRL(calc.transport)} VT` : ''}</p>
+            </div>
+          )}
+          {calc && !calc.configured && workDate && workStartTime && workEndTime && (
+            <p className="rounded-lg bg-medium/10 px-3 py-2 text-xs text-[#92600A]">Sem valor/hora cadastrado para este dia nesta unidade. Informe o valor manualmente abaixo (o Admin pode cadastrar em Configurações → Valor do freelancer).</p>
+          )}
+          <div><Label>Observações (opcional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex: cobriu falta, evento…" /></div>
         </>
       )}
 
@@ -291,7 +316,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
         </>
       )}
 
-      <div><Label>Valor (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" /></div>
+      {!autoPriced && <div><Label>Valor (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" /></div>}
 
       {freelaDivergent && selectedFreelancer && (
         <p className="flex items-center gap-2 rounded-lg bg-medium/10 px-3 py-2 text-sm font-medium text-medium">

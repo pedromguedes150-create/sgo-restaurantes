@@ -42,6 +42,7 @@ export default async function ConfiguracoesPage() {
           { href: '/configuracoes/ocorrencias', label: 'Ocorrências (tipos/categorias)', icon: AlertTriangle },
           { href: '/configuracoes/fornecedores', label: 'Fornecedores', icon: Truck },
           { href: '/configuracoes/pagamentos', label: 'Pagamentos', icon: Wallet },
+          { href: '/configuracoes/freelancer-valores', label: 'Valor do freelancer (hora)', icon: Wallet },
           { href: '/configuracoes/perfis', label: 'Perfis de acesso', icon: KeyRound },
           { href: '/auditoria', label: 'Auditoria', icon: ScrollText },
         ].map(({ href, label, icon: Icon }) => (
