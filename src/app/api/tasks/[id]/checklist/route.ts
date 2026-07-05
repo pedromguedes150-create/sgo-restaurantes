@@ -28,19 +28,21 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   let items: ItemAnswer[] = [];
   try { items = JSON.parse(String(form.get('items') ?? '[]')); } catch { items = []; }
 
-  // até 5 fotos
+  // até 5 fotos, cada uma ligada (opcionalmente) ao item que a exigiu
   const files = form.getAll('photos').filter((f): f is File => f instanceof File && f.size > 0).slice(0, 5);
-  const photoPaths: string[] = [];
-  for (const f of files) {
+  let photoItemIds: (string | null)[] = [];
+  try { photoItemIds = JSON.parse(String(form.get('photoItemIds') ?? '[]')); } catch { photoItemIds = []; }
+  const photos: { path: string; itemId: string | null }[] = [];
+  for (let i = 0; i < files.length; i++) {
     try {
-      const saved = await saveAttachment(f, inst.unitId, `checklist-${instanceId}`);
-      photoPaths.push(saved.path);
+      const saved = await saveAttachment(files[i], inst.unitId, `checklist-${instanceId}`);
+      photos.push({ path: saved.path, itemId: (photoItemIds[i] as string) || null });
     } catch (e) {
       return NextResponse.json({ error: e instanceof UploadError ? e.message : 'Falha no anexo' }, { status: 422 });
     }
   }
 
-  const r = await completeChecklist(instanceId, user, { items, photoPaths }, requestContext(req));
+  const r = await completeChecklist(instanceId, user, { items, photos }, requestContext(req));
   if (!r.ok) { const m = MSG[r.reason]; return NextResponse.json({ error: m.msg, reason: r.reason }, { status: m.status }); }
   return NextResponse.json({ ok: true });
 }

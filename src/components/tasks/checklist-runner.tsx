@@ -24,7 +24,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
   items: Item[]; initialAnswers: Record<string, { status: string; note?: string }>;
   /** Respostas registradas (snapshot do texto) — usado na visão concluída p/ não depender do ID atual do item. */
   responses?: { itemText: string; status: ItemStatus; note: string | null }[];
-  photos: string[];
+  photos: { path: string; itemId: string | null }[];
 }) {
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<string, Answer>>(() => {
@@ -32,14 +32,14 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
     for (const [k, v] of Object.entries(initialAnswers)) out[k] = { status: v.status as ItemStatus, note: v.note };
     return out;
   });
-  const [files, setFiles] = useState<File[]>([]);
+  const [photoEntries, setPhotoEntries] = useState<{ itemId: string | null; file: File }[]>([]);
   const [ai, setAi] = useState<Record<string, AiState>>({});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function analyzeAi(itemId: string, rawFile: File) {
     const file = await compressImage(rawFile);
-    setFiles((f) => [...f, file].slice(0, 5)); // a foto também é salva no checklist
+    setPhotoEntries((f) => [...f, { itemId, file }].slice(0, 5)); // a foto também é salva, ligada ao item
     setAi((s) => ({ ...s, [itemId]: { loading: true } }));
     try {
       const fd = new FormData();
@@ -67,24 +67,26 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
 
   function setItem(id: string, patch: Partial<Answer>) { setAnswers((a) => ({ ...a, [id]: { ...(a[id] ?? { status: 'OK' }), ...patch } })); }
   const [processing, setProcessing] = useState(false);
-  async function addFiles(list: FileList | null) {
+  async function addFiles(itemId: string | null, list: FileList | null) {
     if (!list) return;
     setProcessing(true);
     try {
       const compressed = await Promise.all(Array.from(list).map((f) => compressImage(f)));
-      setFiles((f) => [...f, ...compressed].slice(0, 5));
+      setPhotoEntries((f) => [...f, ...compressed.map((file) => ({ itemId, file }))].slice(0, 5));
     } finally { setProcessing(false); }
   }
+  const removePhoto = (idx: number) => setPhotoEntries((arr) => arr.filter((_, i) => i !== idx));
 
   async function submit() {
-    if (requiresEvidence && files.length === 0) { setMsg('Este checklist exige ao menos uma foto.'); return; }
+    if (requiresEvidence && photoEntries.length === 0) { setMsg('Este checklist exige ao menos uma foto.'); return; }
     const unanswered = items.filter((i) => !answers[i.id]);
     if (unanswered.length > 0) { setMsg(`Responda todos os itens (${unanswered.length} pendente(s)).`); return; }
     setBusy(true); setMsg(null);
     try {
       const fd = new FormData();
       fd.set('items', JSON.stringify(items.map((i) => ({ itemId: i.id, itemText: i.text, status: answers[i.id]?.status ?? 'OK', note: answers[i.id]?.note ?? '' }))));
-      files.forEach((f) => fd.append('photos', f));
+      photoEntries.forEach((e) => fd.append('photos', e.file));
+      fd.set('photoItemIds', JSON.stringify(photoEntries.map((e) => e.itemId)));
       const res = await fetch(`/api/tasks/${instanceId}/checklist`, { method: 'POST', body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setMsg(data.error ?? 'Falha ao concluir'); return; }
@@ -134,14 +136,25 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
             </div>
           ))
         )}
-        {photos.length > 0 && (
-          <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Fotos</p>
-            <div className="flex flex-wrap gap-2">
-              {photos.map((p, i) => <a key={i} href={p} target="_blank" rel="noreferrer"><img src={p} alt="" className="h-24 w-24 rounded-lg border object-cover" /></a>)}
+        {photos.length > 0 && (() => {
+          const textById = new Map(items.map((i) => [i.id, i.text]));
+          const groups2 = new Map<string, typeof photos>();
+          for (const p of photos) { const k = p.itemId ?? '_'; groups2.set(k, [...(groups2.get(k) ?? []), p]); }
+          const ordered = [...groups2.entries()].sort((a, b) => (a[0] === '_' ? 1 : b[0] === '_' ? -1 : 0));
+          return (
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Fotos</p>
+              {ordered.map(([k, ps]) => (
+                <div key={k}>
+                  <p className="mb-1 text-xs font-medium text-brand">{k === '_' ? 'Gerais' : (textById.get(k) ?? 'Item')}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ps.map((p, i) => <a key={i} href={p.path} target="_blank" rel="noreferrer"><img src={p.path} alt="" className="h-24 w-24 rounded-lg border object-cover" /></a>)}
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-        )}
+          );
+        })()}
         {items.length === 0 && photos.length === 0 && <p className="text-sm text-muted-foreground">Tarefa concluída.</p>}
       </div>
     );
@@ -187,6 +200,25 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                       )}
                     </div>
                   )}
+                  {it.requiresPhoto && (
+                    <div className="mt-2">
+                      <p className="mb-1 text-xs font-semibold text-gold-dark">Foto deste item</p>
+                      <div className="flex flex-wrap gap-2">
+                        {photoEntries.map((e, idx) => ({ e, idx })).filter((x) => x.e.itemId === it.id).map(({ e, idx }) => (
+                          <div key={idx} className="relative">
+                            <img src={URL.createObjectURL(e.file)} alt="" className="h-16 w-16 rounded-lg border object-cover" />
+                            <button onClick={() => removePhoto(idx)} className="absolute -right-1 -top-1 rounded-full bg-critical p-0.5 text-white"><X className="h-3 w-3" /></button>
+                          </div>
+                        ))}
+                        {photoEntries.length < 5 && (
+                          <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed text-[10px] text-muted-foreground">
+                            <Camera className="h-4 w-4" /> foto
+                            <input type="file" accept="image/*" capture="environment" hidden multiple onChange={(ev) => { addFiles(it.id, ev.target.files); ev.target.value = ''; }} />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -194,23 +226,23 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
         </div>
       ))}
 
-      {/* Fotos (até 5) */}
+      {/* Fotos gerais (não ligadas a um item específico) — até 5 no total */}
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Fotos {requiresEvidence && <span className="text-gold-dark">(obrigatória)</span>} — até 5</p>
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Outras fotos {requiresEvidence && <span className="text-gold-dark">(exige ao menos 1)</span>} — {photoEntries.length}/5</p>
         <div className="flex flex-wrap gap-2">
-          {files.map((f, i) => (
+          {photoEntries.map((e, i) => ({ e, i })).filter((x) => x.e.itemId === null).map(({ e, i }) => (
             <div key={i} className="relative">
-              <img src={URL.createObjectURL(f)} alt="" className="h-20 w-20 rounded-lg border object-cover" />
-              <button onClick={() => setFiles((arr) => arr.filter((_, idx) => idx !== i))} className="absolute -right-1 -top-1 rounded-full bg-critical p-0.5 text-white"><X className="h-3 w-3" /></button>
+              <img src={URL.createObjectURL(e.file)} alt="" className="h-20 w-20 rounded-lg border object-cover" />
+              <button onClick={() => removePhoto(i)} className="absolute -right-1 -top-1 rounded-full bg-critical p-0.5 text-white"><X className="h-3 w-3" /></button>
             </div>
           ))}
-          {files.length < 5 && (
+          {photoEntries.length < 5 && (
             <button onClick={() => fileRef.current?.click()} disabled={processing} className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 border-dashed text-xs text-muted-foreground disabled:opacity-60">
               <Camera className="h-5 w-5" /> {processing ? 'aguarde…' : 'foto'}
             </button>
           )}
         </div>
-        <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden multiple onChange={(e) => { addFiles(null, e.target.files); e.target.value = ''; }} />
       </div>
 
       {msg && <p className="text-sm font-medium text-critical">{msg}</p>}

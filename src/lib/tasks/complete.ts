@@ -76,10 +76,12 @@ export interface ItemAnswer { itemId: string; itemText: string; status: 'OK' | '
  * - Fora do prazo → status LATE (neutro). Dentro → DONE.
  * - Cada item "A corrigir" gera uma OCORRÊNCIA automática (não bloqueia se falhar).
  */
+export interface ChecklistPhoto { path: string; itemId: string | null }
+
 export async function completeChecklist(
   instanceId: string,
   user: SessionUser,
-  data: { items: ItemAnswer[]; photoPaths: string[]; evidencePath?: string },
+  data: { items: ItemAnswer[]; photos: ChecklistPhoto[]; evidencePath?: string },
   ctx: { ip?: string | null; userAgent?: string | null } = {},
 ): Promise<CompleteResult> {
   const inst = await prisma.taskInstance.findUnique({
@@ -95,7 +97,7 @@ export async function completeChecklist(
   if (inst.assignedToId && inst.assignedToId !== user.id && user.role !== 'ADMIN') {
     return { ok: false, reason: 'FORBIDDEN' };
   }
-  const allPhotos = [...(data.evidencePath ? [data.evidencePath] : []), ...data.photoPaths].slice(0, 5);
+  const allPhotos: ChecklistPhoto[] = [...(data.evidencePath ? [{ path: data.evidencePath, itemId: null }] : []), ...data.photos].slice(0, 5);
   if (inst.template.requiresEvidence && allPhotos.length === 0) {
     return { ok: false, reason: 'EVIDENCE_REQUIRED' };
   }
@@ -103,7 +105,7 @@ export async function completeChecklist(
   const late = isLate(inst.dueAt, await getChecklistToleranceMin());
   const res = await prisma.taskInstance.updateMany({
     where: { id: instanceId, status: { in: ['PENDING', 'MISSED'] } },
-    data: { status: late ? 'LATE' : 'DONE', completedById: user.id, completedAt: new Date(), evidencePath: allPhotos[0] ?? null, draft: undefined },
+    data: { status: late ? 'LATE' : 'DONE', completedById: user.id, completedAt: new Date(), evidencePath: allPhotos[0]?.path ?? null, draft: undefined },
   });
   if (res.count === 0) return { ok: false, reason: 'ALREADY_DONE' };
 
@@ -115,7 +117,7 @@ export async function completeChecklist(
     }
     await tx.taskPhoto.deleteMany({ where: { instanceId } });
     if (allPhotos.length) {
-      await tx.taskPhoto.createMany({ data: allPhotos.map((p) => ({ instanceId, path: p })) });
+      await tx.taskPhoto.createMany({ data: allPhotos.map((p) => ({ instanceId, path: p.path, itemId: p.itemId })) });
     }
   });
 
