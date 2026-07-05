@@ -76,6 +76,7 @@ model Unit {
   inventoryMovements      InventoryMovement[]
   medicalCertificates     MedicalCertificate[]
   freelancerRates         FreelancerHourlyRate[]
+  terminations            Termination[]
 
   @@map("units")
 }
@@ -133,6 +134,8 @@ model User {
   managerTasks            ManagerTask[]            @relation("MgrTasks")
   managerNotes            ManagerNote[]            @relation("MgrNotes")
   managerLeaves           ManagerLeave[]           @relation("MgrLeaves")
+  terminationsRequested   Termination[]            @relation("TermReqBy")
+  terminationsApproved    Termination[]            @relation("TermApprBy")
 
   @@map("users")
 }
@@ -961,6 +964,8 @@ model Collaborator {
   active    Boolean            @default(true)
   source    CollaboratorSource @default(MANUAL)
   externalId String? // id no RH
+  /// Data de admissão (do RH, 'YYYY-MM-DD') — base do tempo de empresa
+  hireDate  String?
   createdAt DateTime           @default(now())
 
   units     CollaboratorUnit[]
@@ -972,8 +977,51 @@ model Collaborator {
   scheduleActuals   ScheduleActual[]
   trainings         TrainingRecord[]
   medicalCertificates MedicalCertificate[]
+  terminations      Termination[]
 
   @@map("collaborators")
+}
+
+// ───────────────────────── Desligamentos (Módulo 21 / v1.3) ─────────────────────────
+enum NoticeType {
+  WORKED // aviso trabalhado
+  INDEMNIFIED // aviso indenizado
+}
+
+enum TerminationStatus {
+  PENDING // aguardando o supervisor
+  APPROVED // aprovado (encaminhar ao RH)
+  REJECTED // recusado
+}
+
+/// Solicitação de desligamento (gerente → supervisor → RH).
+model Termination {
+  id                  String            @id @default(cuid())
+  unitId              String
+  collaboratorId      String
+  requestedById       String?
+  noticeType          NoticeType
+  noticeJustification String? // justificativa do tipo de aviso
+  reason              String // motivo do desligamento
+  // Snapshots no momento da solicitação
+  collaboratorName    String
+  ageYears            Int?
+  tenureText          String?
+  certCount           Int               @default(0)
+  certDays            Int               @default(0)
+  status              TerminationStatus @default(PENDING)
+  approvedById        String?
+  approvedAt          DateTime?
+  rejectionReason     String?
+  createdAt           DateTime          @default(now())
+
+  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  requestedBy  User?        @relation("TermReqBy", fields: [requestedById], references: [id], onDelete: SetNull)
+  approvedBy   User?        @relation("TermApprBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@index([unitId, status])
+  @@map("terminations")
 }
 
 model CollaboratorUnit {
