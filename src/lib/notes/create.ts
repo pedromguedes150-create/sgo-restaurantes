@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
-import { notifyRole, notifyAdmins } from '@/lib/notifications';
+import { notifyRole, notifyAdmins, notifyUnitRole } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import type { NoteSource } from '@prisma/client';
 
@@ -81,7 +81,52 @@ export async function createNote(
   };
   await notifyRole('FINANCE', payload);
   await notifyAdmins(payload);
+
+  // Fornecedor digitado (não cadastrado) → pendência p/ o supervisor aprovar/cadastrar.
+  if (!input.supplierId) {
+    const exists = await prisma.supplier.findFirst({ where: { name: { equals: input.supplierName.trim(), mode: 'insensitive' } }, select: { id: true } });
+    if (!exists) {
+      const sup = {
+        title: 'Fornecedor a cadastrar',
+        body: `${user.name} lançou uma nota do fornecedor "${input.supplierName.trim()}"${input.supplierCnpj ? ` (CNPJ ${input.supplierCnpj})` : ''}, ainda não cadastrado. Confira e cadastre em Fornecedores.`,
+        link: '/configuracoes/fornecedores',
+        module: 'NOTES',
+      };
+      await notifyUnitRole(input.unitId, 'SUPERVISOR', sup);
+      await notifyAdmins(sup);
+    }
+  }
   return { ok: true, id: note.id };
+}
+
+export interface UpdateNoteInput {
+  supplierName?: string; supplierCnpj?: string; number?: string;
+  issueDate?: string; dueDate?: string; totalValue?: number; productType?: string; observation?: string;
+}
+/** Edita os dados de uma nota (gestor com acesso à unidade). */
+export async function updateNote(user: SessionUser, id: string, input: UpdateNoteInput, ctx: { ip?: string | null; userAgent?: string | null } = {}): Promise<NoteStatusResult> {
+  const note = await prisma.receivedNote.findUnique({ where: { id }, select: { unitId: true } });
+  if (!note) return { ok: false, reason: 'NOT_FOUND' };
+  const { canAccessUnit } = await import('@/lib/scope/unit-scope');
+  if (!canAccessUnit(user, note.unitId)) return { ok: false, reason: 'FORBIDDEN' };
+  if (input.supplierName !== undefined && !input.supplierName.trim()) return { ok: false, reason: 'INVALID' };
+  if (input.totalValue !== undefined && !(input.totalValue > 0)) return { ok: false, reason: 'INVALID' };
+
+  await prisma.receivedNote.update({
+    where: { id },
+    data: {
+      ...(input.supplierName !== undefined ? { supplierName: input.supplierName.trim(), supplierId: null } : {}),
+      ...(input.supplierCnpj !== undefined ? { supplierCnpj: input.supplierCnpj.trim() || null } : {}),
+      ...(input.number !== undefined ? { number: input.number.trim() || null } : {}),
+      ...(input.issueDate !== undefined ? { issueDate: input.issueDate ? new Date(input.issueDate) : null } : {}),
+      ...(input.dueDate !== undefined ? { dueDate: input.dueDate ? new Date(input.dueDate) : null } : {}),
+      ...(input.totalValue !== undefined ? { totalValue: input.totalValue } : {}),
+      ...(input.productType !== undefined ? { productType: input.productType.trim() || null } : {}),
+      ...(input.observation !== undefined ? { observation: input.observation.trim() || null } : {}),
+    },
+  });
+  await audit({ userId: user.id, unitId: note.unitId, action: 'NOTE_UPDATE', module: 'NOTES', entity: 'received_note', entityId: id, ...ctx });
+  return { ok: true };
 }
 
 export type NoteStatusResult = { ok: true } | { ok: false; reason: 'NOT_FOUND' | 'FORBIDDEN' | 'INVALID' };

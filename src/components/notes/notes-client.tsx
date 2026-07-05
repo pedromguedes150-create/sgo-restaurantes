@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, Banknote, AlertTriangle } from 'lucide-react';
+import { ScanLine, Save, Banknote, AlertTriangle, Pencil, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,7 @@ interface Supplier { id: string; name: string; cnpj: string | null }
 export interface NoteDTO {
   id: string; unit: string; supplier: string; value: number;
   status: 'RECEIVED' | 'PAID' | 'PROBLEM'; number: string | null; problemNote: string | null;
+  cnpj: string; issueDate: string; dueDate: string; productType: string; observation: string;
 }
 const ST: Record<NoteDTO['status'], { label: string; tone: StatusTone }> = {
   RECEIVED: { label: 'Recebida', tone: 'medium' },
@@ -64,25 +65,7 @@ function NotesList({ notes, isAdmin, busy, onStatus }: { notes: NoteDTO[]; isAdm
   for (const n of notes) { const arr = byCompany.get(n.supplier) ?? []; arr.push(n); byCompany.set(n.supplier, arr); }
   const groups = [...byCompany.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
 
-  const card = (n: NoteDTO) => (
-    <div key={n.id} className="rounded-lg border bg-card p-3">
-      <div className="flex items-center justify-between">
-        <p className="font-semibold text-brand">{n.supplier}</p>
-        <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
-      </div>
-      <p className="text-xs text-muted-foreground">{n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}</p>
-      {n.problemNote && <p className="mt-1 text-xs text-critical">Problema: {n.problemNote}</p>}
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {n.status === 'RECEIVED' && (
-          <>
-            <Button size="sm" variant="gold" disabled={busy} onClick={() => onStatus(n.id, 'PAID')}><Banknote className="h-4 w-4" /> Paga</Button>
-            <Button size="sm" variant="destructive" disabled={busy} onClick={() => onStatus(n.id, 'PROBLEM')}><AlertTriangle className="h-4 w-4" /> Problema</Button>
-          </>
-        )}
-        {isAdmin && <DeleteOpButton entity="note" id={n.id} label={`a nota de ${n.supplier}`} />}
-      </div>
-    </div>
-  );
+  const card = (n: NoteDTO) => <NoteCard key={n.id} n={n} isAdmin={isAdmin} busy={busy} onStatus={onStatus} />;
 
   if (groups.length <= 1) return <div className="space-y-2">{notes.map(card)}</div>;
   return (
@@ -99,6 +82,78 @@ function NotesList({ notes, isAdmin, busy, onStatus }: { notes: NoteDTO[]; isAdm
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function NoteCard({ n, isAdmin, busy, onStatus }: { n: NoteDTO; isAdmin: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM') => void }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [f, setF] = useState({ supplierName: n.supplier, cnpj: n.cnpj, number: n.number ?? '', issueDate: n.issueDate, dueDate: n.dueDate, totalValue: String(n.value).replace('.', ','), productType: n.productType, observation: n.observation });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }));
+
+  async function save() {
+    setErr(null); setSaving(true);
+    try {
+      const res = await fetch(`/api/notes/${n.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        supplierName: f.supplierName, supplierCnpj: f.cnpj, number: f.number, issueDate: f.issueDate || null, dueDate: f.dueDate || null,
+        totalValue: parseFloat((f.totalValue || '0').replace('.', '').replace(',', '.')) || parseFloat(f.totalValue), productType: f.productType, observation: f.observation,
+      }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
+      setEditing(false); router.refresh();
+    } finally { setSaving(false); }
+  }
+
+  if (editing) {
+    return (
+      <div className="rounded-lg border-2 border-accent/40 bg-card p-3">
+        <div className="grid grid-cols-1 gap-2">
+          <div><Label className="text-xs">Fornecedor</Label><Input value={f.supplierName} onChange={(e) => set('supplierName', e.target.value)} className="h-9 text-sm" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">CNPJ</Label><Input value={f.cnpj} onChange={(e) => set('cnpj', e.target.value)} className="h-9 text-sm" /></div>
+            <div><Label className="text-xs">Número</Label><Input value={f.number} onChange={(e) => set('number', e.target.value)} className="h-9 text-sm" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Emissão</Label><Input type="date" value={f.issueDate} onChange={(e) => set('issueDate', e.target.value)} className="h-9 text-sm" /></div>
+            <div><Label className="text-xs">Vencimento</Label><Input type="date" value={f.dueDate} onChange={(e) => set('dueDate', e.target.value)} className="h-9 text-sm" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Valor (R$)</Label><Input inputMode="decimal" value={f.totalValue} onChange={(e) => set('totalValue', e.target.value)} className="h-9 text-sm" /></div>
+            <div><Label className="text-xs">Produto</Label><Input value={f.productType} onChange={(e) => set('productType', e.target.value)} className="h-9 text-sm" /></div>
+          </div>
+          <div><Label className="text-xs">Observação</Label><Input value={f.observation} onChange={(e) => set('observation', e.target.value)} className="h-9 text-sm" /></div>
+          {err && <p className="text-sm font-medium text-critical">{err}</p>}
+          <div className="flex justify-end gap-1">
+            <Button size="sm" variant="ghost" onClick={() => setEditing(false)}><X className="h-4 w-4" /> Cancelar</Button>
+            <Button size="sm" disabled={saving} onClick={save}><Save className="h-4 w-4" /> Salvar</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <div className="flex items-center justify-between">
+        <p className="font-semibold text-brand">{n.supplier}</p>
+        <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
+      </div>
+      <p className="text-xs text-muted-foreground">{n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${n.dueDate.split('-').reverse().join('/')}` : ''}</p>
+      {n.observation && <p className="mt-1 text-xs text-muted-foreground">Obs.: {n.observation}</p>}
+      {n.problemNote && <p className="mt-1 text-xs text-critical">Problema: {n.problemNote}</p>}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Ver/Editar</Button>
+        {n.status === 'RECEIVED' && (
+          <>
+            <Button size="sm" variant="gold" disabled={busy} onClick={() => onStatus(n.id, 'PAID')}><Banknote className="h-4 w-4" /> Paga</Button>
+            <Button size="sm" variant="destructive" disabled={busy} onClick={() => onStatus(n.id, 'PROBLEM')}><AlertTriangle className="h-4 w-4" /> Problema</Button>
+          </>
+        )}
+        {isAdmin && <DeleteOpButton entity="note" id={n.id} label={`a nota de ${n.supplier}`} />}
+      </div>
     </div>
   );
 }
