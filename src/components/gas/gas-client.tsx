@@ -57,6 +57,12 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
   const [qty, setQty] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
   const [obs, setObs] = useState('');
+  // Botijão (P45)
+  const [kind, setKind] = useState<'BULK' | 'CYLINDER'>('BULK');
+  const [cylCount, setCylCount] = useState('');
+  const [cylKg, setCylKg] = useState('45');
+  const [cylReturned, setCylReturned] = useState('');
+  const [cylTotal, setCylTotal] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -65,6 +71,12 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
   const q = parseFloat((qty || '0').replace(',', '.'));
   const price = parseFloat((unitPrice || '0').replace(',', '.'));
   const total = q > 0 && price > 0 ? q * price : 0;
+  // botijão
+  const cc = parseInt(cylCount || '0', 10);
+  const ck = parseInt(cylKg || '45', 10) || 45;
+  const cTotal = parseFloat((cylTotal || '0').replace(',', '.'));
+  const cKg = cc > 0 ? cc * ck : 0;
+  const cPricePerKg = cKg > 0 && cTotal > 0 ? cTotal / cKg : 0;
 
   function onKey(v: string) {
     setAccessKey(v);
@@ -77,15 +89,22 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
 
   async function submit() {
     setErr(null); setOk(null);
-    if (!unitId || !(q > 0) || !(price > 0)) { setErr('Informe unidade, quantidade (kg) e valor por kg.'); return; }
+    const body: Record<string, unknown> = { unitId, supplierId, accessKey, noteNumber, observation: obs };
+    if (kind === 'CYLINDER') {
+      if (!unitId || !(cc > 0) || !(cTotal > 0)) { setErr('Informe unidade, nº de botijões e valor total.'); return; }
+      Object.assign(body, { kind: 'CYLINDER', cylinderCount: cc, cylinderKg: ck, cylindersReturned: cylReturned ? parseInt(cylReturned, 10) : undefined, totalValue: cTotal });
+    } else {
+      if (!unitId || !(q > 0) || !(price > 0)) { setErr('Informe unidade, quantidade (kg) e valor por kg.'); return; }
+      Object.assign(body, { quantityKg: q, pricePerKg: price });
+    }
     setBusy(true);
     try {
-      const res = await fetch('/api/gas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unitId, supplierId, quantityKg: q, pricePerKg: price, accessKey, noteNumber, observation: obs }) });
+      const res = await fetch('/api/gas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
       const v = data.variationPct;
       setOk(`Registrado: ${kg(data.pricePerKg)}.${v != null ? ` Variação ${v > 0 ? '+' : ''}${v}% vs anterior.` : ''}${data.alerted ? ' ⚠ Acima do limite — supervisão avisada.' : ''}`);
-      setAccessKey(''); setNoteNumber(''); setQty(''); setUnitPrice(''); setObs(''); setSupplierId('');
+      setAccessKey(''); setNoteNumber(''); setQty(''); setUnitPrice(''); setObs(''); setSupplierId(''); setCylCount(''); setCylReturned(''); setCylTotal('');
       router.refresh();
     } finally { setBusy(false); }
   }
@@ -111,17 +130,44 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
         </select>
         {suppliers.length === 0 && <p className="mt-1 text-xs text-medium">Nenhum fornecedor cadastrado. Peça ao Admin/Supervisor para cadastrar em Configurações → Fornecedores.</p>}
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div><Label>Quantidade (kg)</Label><Input inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="ex: 45" /></div>
-        <div><Label>Valor por kg (R$)</Label><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0,0000" /></div>
+      {/* Forma de recebimento */}
+      <div>
+        <Label>Forma de recebimento</Label>
+        <div className="flex gap-1">
+          <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-primary text-primary-foreground' : ''}`}>Granel (kg)</button>
+          <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-primary text-primary-foreground' : ''}`}>Botijão (P45)</button>
+        </div>
       </div>
 
-      {total > 0 && (
-        <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 text-center">
-          <p className="text-xs text-muted-foreground">Valor total (calculado)</p>
-          <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
-          <p className="text-xs text-muted-foreground">{kg(price)}</p>
-        </div>
+      {kind === 'BULK' ? (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>Quantidade (kg)</Label><Input inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="ex: 45" /></div>
+            <div><Label>Valor por kg (R$)</Label><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0,0000" /></div>
+          </div>
+          {total > 0 && (
+            <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 text-center">
+              <p className="text-xs text-muted-foreground">Valor total (calculado)</p>
+              <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
+              <p className="text-xs text-muted-foreground">{kg(price)}</p>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <div><Label>Botijões recebidos</Label><Input inputMode="numeric" value={cylCount} onChange={(e) => setCylCount(e.target.value.replace(/\D/g, ''))} placeholder="ex: 4" /></div>
+            <div><Label>Kg por botijão</Label><Input inputMode="numeric" value={cylKg} onChange={(e) => setCylKg(e.target.value.replace(/\D/g, ''))} placeholder="45" /></div>
+            <div><Label>Valor total (R$)</Label><Input inputMode="decimal" value={cylTotal} onChange={(e) => setCylTotal(e.target.value)} placeholder="0,00" /></div>
+          </div>
+          <div><Label>Botijões vazios devolvidos (troca)</Label><Input inputMode="numeric" value={cylReturned} onChange={(e) => setCylReturned(e.target.value.replace(/\D/g, ''))} placeholder="ex: 4" /></div>
+          {cKg > 0 && cTotal > 0 && (
+            <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 text-center">
+              <p className="text-xs text-muted-foreground">{cc} botijão(ões) × {ck}kg = {cKg}kg · valor total {formatBRL(cTotal)}</p>
+              <p className="text-2xl font-black text-brand">{kg(cPricePerKg)}</p>
+            </div>
+          )}
+        </>
       )}
 
       <div><Label>Observação (opcional)</Label><Input value={obs} onChange={(e) => setObs(e.target.value)} /></div>

@@ -1415,6 +1415,12 @@ model Supplier {
 // ───────────────────────── Recebimento de Gás (Módulo 16) ─────────────────────────
 /// Recebimento de gás (granel, em kg). preço/kg = valor total ÷ kg. Acompanhamento
 /// de preço por unidade e por fornecedor, com alerta de variação.
+/// Forma de recebimento do gás: granel (kg) ou botijão (ex.: P45).
+enum GasKind {
+  BULK // granel (kg)
+  CYLINDER // botijão (P13/P20/P45…)
+}
+
 model GasReceipt {
   id              String   @id @default(cuid())
   unitId          String
@@ -1423,6 +1429,11 @@ model GasReceipt {
   operationalDate String
   accessKey       String?
   noteNumber      String?
+  /// Forma de recebimento. Botijão converte para kg (count × cylinderKg) p/ os dashboards.
+  kind             GasKind @default(BULK)
+  cylinderCount    Int? // botijões recebidos
+  cylinderKg       Int? // kg por botijão (P45 = 45)
+  cylindersReturned Int? // botijões vazios devolvidos (troca)
   quantityKg      Decimal  @db.Decimal(10, 2)
   totalValue      Decimal  @db.Decimal(12, 2)
   /// Snapshot do preço por kg (valor total ÷ kg)

@@ -9,7 +9,7 @@ import type { SessionUser } from '@/lib/auth/session';
 export interface CreateGasInput {
   unitId: string;
   supplierId?: string;
-  quantityKg: number;
+  quantityKg?: number;
   /** Preço unitário (R$/kg) — quando informado, o total é calculado (qtd × unitário). */
   pricePerKg?: number;
   /** Valor total (alternativa ao unitário; preço/kg = total ÷ kg). */
@@ -18,6 +18,11 @@ export interface CreateGasInput {
   accessKey?: string;
   noteNumber?: string;
   observation?: string;
+  // Botijão (P45 etc.) — converte para kg (count × cylinderKg)
+  kind?: 'BULK' | 'CYLINDER';
+  cylinderCount?: number;
+  cylinderKg?: number;
+  cylindersReturned?: number;
 }
 export type CreateGasResult =
   | { ok: true; id: string; pricePerKg: number; variationPct: number | null; alerted: boolean }
@@ -31,10 +36,15 @@ export async function createGasReceipt(user: SessionUser, input: CreateGasInput,
     if (e instanceof UnitScopeError) return { ok: false, reason: 'FORBIDDEN' };
     throw e;
   }
-  const qty = Number(input.quantityKg);
+  const isCylinder = input.kind === 'CYLINDER';
+  const cylinderKg = isCylinder ? Math.max(1, Math.trunc(Number(input.cylinderKg) || 45)) : null;
+  const cylinderCount = isCylinder ? Math.trunc(Number(input.cylinderCount) || 0) : null;
+  const cylindersReturned = isCylinder && input.cylindersReturned != null ? Math.max(0, Math.trunc(Number(input.cylindersReturned))) : null;
+
+  // Botijão: kg = nº de botijões × kg por botijão. Granel: kg direto.
+  const qty = isCylinder ? (cylinderCount! * cylinderKg!) : Number(input.quantityKg);
   const unitPrice = input.pricePerKg != null ? Number(input.pricePerKg) : NaN;
-  // Preferimos o preço UNITÁRIO (qtd × unitário = total); se não vier, usamos o total.
-  const hasUnit = Number.isFinite(unitPrice) && unitPrice > 0;
+  const hasUnit = !isCylinder && Number.isFinite(unitPrice) && unitPrice > 0;
   const total = hasUnit ? Math.round(qty * unitPrice * 100) / 100 : Number(input.totalValue);
   if (!(qty > 0) || !(total > 0)) return { ok: false, reason: 'INVALID' };
 
@@ -64,6 +74,10 @@ export async function createGasReceipt(user: SessionUser, input: CreateGasInput,
       operationalDate: opDate,
       accessKey: input.accessKey || null,
       noteNumber: input.noteNumber || null,
+      kind: isCylinder ? 'CYLINDER' : 'BULK',
+      cylinderCount,
+      cylinderKg,
+      cylindersReturned,
       quantityKg: qty,
       totalValue: total,
       pricePerKg,

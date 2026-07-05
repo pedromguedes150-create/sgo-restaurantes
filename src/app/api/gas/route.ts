@@ -17,13 +17,17 @@ export async function POST(req: Request) {
   const r = await createGasReceipt(user, {
     unitId: b.unitId,
     supplierId: b.supplierId || undefined,
-    quantityKg: Number(b.quantityKg),
+    quantityKg: b.quantityKg != null ? Number(b.quantityKg) : undefined,
     pricePerKg: b.pricePerKg != null ? Number(b.pricePerKg) : undefined,
     totalValue: b.totalValue != null ? Number(b.totalValue) : undefined,
     operationalDate: b.operationalDate || undefined,
     accessKey: b.accessKey || undefined,
     noteNumber: b.noteNumber || undefined,
     observation: b.observation || undefined,
+    kind: b.kind === 'CYLINDER' ? 'CYLINDER' : undefined,
+    cylinderCount: b.cylinderCount != null ? Number(b.cylinderCount) : undefined,
+    cylinderKg: b.cylinderKg != null ? Number(b.cylinderKg) : undefined,
+    cylindersReturned: b.cylindersReturned != null ? Number(b.cylindersReturned) : undefined,
   }, requestContext(req));
 
   if (!r.ok) {
