@@ -982,6 +982,22 @@ model Collaborator {
   @@map("collaborators")
 }
 
+/// Catálogo de produtos-padrão da rede (Módulo 22 / v1.3). Foto de referência
+/// usada pela IA para apontar, numa foto da vitrine, produtos FORA do padrão.
+model ProductStandard {
+  id          String   @id @default(cuid())
+  category    String // ex: "Vitrine de bebidas"
+  name        String
+  description String?
+  photoPath   String?
+  active      Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([category])
+  @@map("product_standards")
+}
+
 // ───────────────────────── Desligamentos (Módulo 21 / v1.3) ─────────────────────────
 enum NoticeType {
   WORKED // aviso trabalhado

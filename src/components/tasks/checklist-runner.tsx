@@ -34,6 +34,19 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
   });
   const [photoEntries, setPhotoEntries] = useState<{ itemId: string | null; file: File }[]>([]);
   const [ai, setAi] = useState<Record<string, AiState>>({});
+  const [ps, setPs] = useState<Record<string, { loading?: boolean; configured?: boolean; verdict?: string; offStandard?: string[]; observations?: string; error?: string }>>({});
+
+  async function analyzeProductStd(itemId: string, rawFile: File) {
+    const file = await compressImage(rawFile);
+    setPhotoEntries((f) => [...f, { itemId, file }].slice(0, 5));
+    setPs((s) => ({ ...s, [itemId]: { loading: true } }));
+    try {
+      const fd = new FormData(); fd.set('photo', file);
+      const res = await fetch('/api/ai/product-standard-check', { method: 'POST', body: fd });
+      const d = await res.json().catch(() => ({}));
+      setPs((s) => ({ ...s, [itemId]: { configured: d.configured, verdict: d.verdict, offStandard: d.offStandard, observations: d.observations, error: d.error } }));
+    } catch { setPs((s) => ({ ...s, [itemId]: { error: 'Falha de conexão' } })); }
+  }
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -197,6 +210,21 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                             {ai[it.id].verdict === 'COMPATIVEL' ? '🟢 Compatível' : ai[it.id].verdict === 'DIVERGENTE' ? '🔴 Divergente' : '🟡 Incerto'}{ai[it.id].observations ? ` — ${ai[it.id].observations}` : ''}
                           </p>
                         ) : null
+                      )}
+                    </div>
+                  )}
+                  {it.aiCheck && (
+                    <div className="mt-2 rounded-md border border-dashed bg-background/60 p-2">
+                      <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-accent">
+                        <Sparkles className="h-4 w-4" /> {ps[it.id]?.loading ? 'Conferindo o padrão…' : 'Conferir padrão de produtos (IA)'}
+                        <input type="file" accept="image/*" capture="environment" hidden disabled={ps[it.id]?.loading} onChange={(e) => { const f = e.target.files?.[0]; if (f) analyzeProductStd(it.id, f); e.target.value = ''; }} />
+                      </label>
+                      {ps[it.id] && !ps[it.id].loading && (
+                        ps[it.id].configured === false ? <p className="mt-1 text-xs text-muted-foreground">IA não configurada / sem padrão cadastrado.</p>
+                        : ps[it.id].error ? <p className="mt-1 text-xs text-critical">{ps[it.id].error}</p>
+                        : (ps[it.id].offStandard && ps[it.id].offStandard!.length > 0)
+                          ? <p className="mt-1 text-xs font-medium text-critical">🔴 Fora do padrão: {ps[it.id].offStandard!.join(', ')}{ps[it.id].observations ? ` — ${ps[it.id].observations}` : ''}</p>
+                          : ps[it.id].verdict ? <p className="mt-1 text-xs font-medium text-success">🟢 Tudo no padrão{ps[it.id].observations ? ` — ${ps[it.id].observations}` : ''}</p> : null
                       )}
                     </div>
                   )}
