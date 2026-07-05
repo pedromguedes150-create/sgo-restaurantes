@@ -130,6 +130,9 @@ model User {
   inventoryMovements      InventoryMovement[]      @relation("InvMoveBy")
   checklistModels         ChecklistModel[]         @relation("ChecklistModelBy")
   medicalCertificates     MedicalCertificate[]     @relation("CertBy")
+  managerTasks            ManagerTask[]            @relation("MgrTasks")
+  managerNotes            ManagerNote[]            @relation("MgrNotes")
+  managerLeaves           ManagerLeave[]           @relation("MgrLeaves")
 
   @@map("users")
 }
@@ -697,6 +700,60 @@ model Holiday {
   createdAt DateTime @default(now())
 
   @@map("holidays")
+}
+
+// ───────────────────────── Área do Gerente (Módulo 20 / v1.3) ─────────────────────────
+enum ManagerLeaveKind {
+  FOLGA
+  FERIAS
+}
+
+/// Tarefas pessoais do gerente (agenda simples). Lembrete quando `dueAt` chega.
+model ManagerTask {
+  id         String    @id @default(cuid())
+  userId     String
+  title      String
+  notes      String?
+  dueAt      DateTime?
+  done       Boolean   @default(false)
+  doneAt     DateTime?
+  notifiedAt DateTime? // lembrete já enviado (evita duplicar)
+  createdAt  DateTime  @default(now())
+
+  user User @relation("MgrTasks", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("manager_tasks")
+}
+
+/// Bloco de notas livre do gerente.
+model ManagerNote {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation("MgrNotes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("manager_notes")
+}
+
+/// Folgas/férias do gerente (ele não bate ponto). Nesses dias os checklists somem da visão dele.
+model ManagerLeave {
+  id        String           @id @default(cuid())
+  userId    String
+  kind      ManagerLeaveKind @default(FOLGA)
+  startDate String // yyyy-mm-dd
+  endDate   String
+  note      String?
+  createdAt DateTime         @default(now())
+
+  user User @relation("MgrLeaves", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("manager_leaves")
 }
 
 model Freelancer {

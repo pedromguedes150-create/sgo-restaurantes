@@ -13,6 +13,7 @@ export async function register() {
   const { notifyDueSoonTasks } = await import('@/lib/tasks/notify');
   const { notifyDueSoonCommunications } = await import('@/lib/communications/notify');
   const { snapshotYesterdayAllUnits } = await import('@/lib/workforce');
+  const { notifyDueManagerTasks } = await import('@/lib/manager-area');
 
   async function maintainTraining() {
     try { await reconcileAllTraining(); } catch (e) { console.error('[training] falha na reconciliação:', e); }
@@ -20,6 +21,8 @@ export async function register() {
   async function checkDueSoon() {
     try { const n = await notifyDueSoonTasks(); if (n) console.log(`[tasks] ${n} aviso(s) de vencimento enviado(s)`); }
     catch (e) { console.error('[tasks] falha no aviso de vencimento:', e); }
+    try { const m = await notifyDueManagerTasks(); if (m) console.log(`[minha-area] ${m} lembrete(s) de tarefa pessoal`); }
+    catch (e) { console.error('[minha-area] falha nos lembretes:', e); }
   }
   async function checkCommunications() {
     try { const n = await notifyDueSoonCommunications(); if (n) console.log(`[comunicacao] ${n} lembrete(s) enviado(s)`); }

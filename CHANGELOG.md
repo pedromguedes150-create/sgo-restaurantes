@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.3.0 — 2026-07-05
+### Adicionado
+- **Minha área (do gerente)**: nova aba no menu com **tarefas pessoais** (agenda simples; o sistema **lembra por notificação** na data/hora marcada), **bloco de notas** livre e **folgas/férias**. Nos dias de folga/férias, os **checklists não aparecem** na aba Tarefas do gerente (ele ainda entra no sistema).
+
 ## v1.2.3 — 2026-07-05
 ### Alterado
 - **Fotos por item no checklist**: cada item que exige foto tem o **seu próprio botão de foto**, e na visão concluída as fotos aparecem **agrupadas sob o item** (antes ficavam todas juntas no fim, sem indicar de qual item eram). Fotos gerais (sem item) continuam numa seção "Outras fotos".

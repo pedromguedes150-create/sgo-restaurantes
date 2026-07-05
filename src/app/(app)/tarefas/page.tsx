@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { getTasksTodayForUser } from '@/lib/tasks/query';
+import { leaveOnDate } from '@/lib/manager-area';
 import { TaskItem, type TaskItemData } from '@/components/tasks/task-item';
 import { UnitTasksSection } from '@/components/tasks/unit-tasks-section';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
@@ -18,7 +19,10 @@ const MODULE_HREFS: Partial<Record<string, string>> = {
 export default async function TarefasPage({ searchParams }: { searchParams: { filter?: string } }) {
   const user = (await getSessionUser())!;
   const now = new Date();
-  const groups = await getTasksTodayForUser(user, now);
+  // Folga/férias do gerente: nesses dias os checklists não aparecem para ele.
+  const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  const leave = await leaveOnDate(user.id, todayISO);
+  const groups = leave ? [] : await getTasksTodayForUser(user, now);
   const onlyOverdue = searchParams.filter === 'atrasadas';
   const isOverdueTask = (t: (typeof groups)[number]['tasks'][number]) => t.status === 'PENDING' && t.dueAt < now;
   const overdueCount = groups.reduce((s, g) => s + g.tasks.filter(isOverdueTask).length, 0);
@@ -33,7 +37,13 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
           : <span className="flex gap-3"><Link href="/tarefas/correcoes" className="text-sm font-semibold text-accent underline">Correções do dia</Link><Link href="/tarefas/historico" className="text-sm font-semibold text-accent underline">Histórico</Link></span>}
       </div>
 
-      {groups.length === 0 && (
+      {leave && (
+        <p className="rounded-lg bg-accent/10 px-3 py-3 text-sm font-medium text-accent">
+          🌴 Você está de {leave.kind === 'FERIAS' ? 'férias' : 'folga'} hoje — seus checklists não aparecem. Bom descanso! <Link href="/minha-area" className="underline">Gerenciar folgas</Link>
+        </p>
+      )}
+
+      {!leave && groups.length === 0 && (
         <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>
       )}
 
