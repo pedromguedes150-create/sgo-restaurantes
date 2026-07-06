@@ -43,6 +43,19 @@ export const GUIDE: GuideSection[] = [
         tips: ['O sistema usa a "data operacional" (o dia vira após o horário de corte, ex.: 04:00). Lançamentos da madrugada contam no dia anterior.'],
       },
       {
+        id: 'minha-area',
+        title: 'Minha área',
+        roles: ALL_ROLES,
+        summary: 'Seu espaço pessoal — tarefas, notas e folgas.',
+        steps: [
+          'A aba MINHA ÁREA aparece para todos os usuários, individualmente (é sua, ninguém mais vê).',
+          'Tarefas pessoais: crie lembretes com data/hora — o sistema avisa por notificação na hora marcada.',
+          'Bloco de notas: anotações livres do dia a dia.',
+          'Folgas/férias: registre seus dias de folga/férias.',
+        ],
+        tips: ['Para gerentes: nos dias marcados como folga/férias, os checklists não aparecem na aba Tarefas (você ainda pode entrar no sistema).'],
+      },
+      {
         id: 'inicio-gerente',
         title: 'Por onde começar (Gerente)',
         roles: ['MANAGER', 'COORDINATOR'],
@@ -130,8 +143,9 @@ export const GUIDE: GuideSection[] = [
         summary: 'Contagem diária e divergências.',
         steps: [
           'Antes do uso, o Admin cadastra as faixas em Configurações → Comandas (várias sequências por unidade, ex.: 1–200 e 500–650).',
-          'Abra COMANDAS e informe "todas presentes" ou as ausentes (considera todas as faixas ativas).',
-          'Quando houver ausentes, a observação é obrigatória e gera divergência + alerta ao Supervisor.',
+          'Conferência em grade: abra COMANDAS e toque em cada comanda conferida (fica verde), como na folha de papel. Um contador mostra conferidas/faltando. Use "Marcar todas"/"Limpar" e o filtro por número para agilizar.',
+          'Ao "Confirmar conferência", as comandas NÃO marcadas viram as ausentes: o sistema registra a contagem e alerta os supervisores automaticamente (observação obrigatória quando há falta).',
+          'Atalhos: "Todas presentes" registra tudo presente num toque; o lançamento manual de ausentes continua disponível (recolhido).',
         ],
       },
       {
@@ -184,6 +198,7 @@ export const GUIDE: GuideSection[] = [
           'Sem câmera? Cole/digite a chave de 44 dígitos (preenche sozinho) ou informe manualmente.',
           'Confirme os dados e salve. O Financeiro/Admin é avisado.',
           'Marque "Paga" ou "Com problema" conforme o andamento.',
+          'Editar/excluir uma nota lançada: somente supervisores, administradores e CEO. O gerente lança e acompanha (Paga/Problema), mas não altera nem apaga.',
         ],
         tips: ['A leitura usa a câmera do próprio celular no navegador (precisa permitir o acesso à câmera). Lê tanto o QR (NFC-e) quanto o código de barras (Code-128 da DANFE).'],
       },

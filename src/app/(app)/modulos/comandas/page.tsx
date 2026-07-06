@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { getUnitCommandState } from '@/lib/commands/query';
+import { getActiveSequence } from '@/lib/commands/active';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CommandsClient } from '@/components/commands/commands-client';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
@@ -23,6 +24,8 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const operationalDate = currentOperationalDate({ timezone: selected.timezone, cutoffHour: selected.cutoffHour }, now);
   const state = await getUnitCommandState(selected.id, operationalDate);
+  const seq = await getActiveSequence(selected.id);
+  const activeNumbers = [...seq.active].sort((a, b) => a - b);
 
   const canResolve = user.role === 'SUPERVISOR' || user.role === 'ADMIN' || user.role === 'CEO';
 
@@ -73,6 +76,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
             isAdmin={user.role === 'ADMIN'}
             hasConfig={Boolean(state.config)}
             todayDone={Boolean(state.todayCount)}
+            activeNumbers={activeNumbers}
             openDivergences={state.openDivergences.map((d) => ({
               id: d.id,
               number: d.number,

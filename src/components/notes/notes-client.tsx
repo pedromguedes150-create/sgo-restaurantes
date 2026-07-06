@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, Banknote, AlertTriangle, Pencil, X } from 'lucide-react';
+import { ScanLine, Save, Banknote, AlertTriangle, Pencil, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
-import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { QrScanner } from '@/components/notes/qr-scanner';
 import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
@@ -25,7 +24,7 @@ const ST: Record<NoteDTO['status'], { label: string; tone: StatusTone }> = {
   PROBLEM: { label: 'Com problema', tone: 'critical' },
 };
 
-export function NotesClient({ units, notes, suppliers = [], isAdmin = false }: { units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; isAdmin?: boolean }) {
+export function NotesClient({ units, notes, suppliers = [], canManage = false }: { units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<'nova' | 'lista'>('lista');
   const [busy, setBusy] = useState(false);
@@ -53,19 +52,19 @@ export function NotesClient({ units, notes, suppliers = [], isAdmin = false }: {
       {tab === 'nova' ? (
         <NewNote units={units} suppliers={suppliers} onDone={() => { setTab('lista'); router.refresh(); }} />
       ) : (
-        <NotesList notes={notes} isAdmin={isAdmin} busy={busy} onStatus={status} />
+        <NotesList notes={notes} canManage={canManage} busy={busy} onStatus={status} />
       )}
     </div>
   );
 }
 
-function NotesList({ notes, isAdmin, busy, onStatus }: { notes: NoteDTO[]; isAdmin: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM') => void }) {
+function NotesList({ notes, canManage, busy, onStatus }: { notes: NoteDTO[]; canManage: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM') => void }) {
   if (notes.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma nota registrada.</p>;
   const byCompany = new Map<string, NoteDTO[]>();
   for (const n of notes) { const arr = byCompany.get(n.supplier) ?? []; arr.push(n); byCompany.set(n.supplier, arr); }
   const groups = [...byCompany.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
 
-  const card = (n: NoteDTO) => <NoteCard key={n.id} n={n} isAdmin={isAdmin} busy={busy} onStatus={onStatus} />;
+  const card = (n: NoteDTO) => <NoteCard key={n.id} n={n} canManage={canManage} busy={busy} onStatus={onStatus} />;
 
   if (groups.length <= 1) return <div className="space-y-2">{notes.map(card)}</div>;
   return (
@@ -86,9 +85,10 @@ function NotesList({ notes, isAdmin, busy, onStatus }: { notes: NoteDTO[]; isAdm
   );
 }
 
-function NoteCard({ n, isAdmin, busy, onStatus }: { n: NoteDTO; isAdmin: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM') => void }) {
+function NoteCard({ n, canManage, busy, onStatus }: { n: NoteDTO; canManage: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM') => void }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [f, setF] = useState({ supplierName: n.supplier, cnpj: n.cnpj, number: n.number ?? '', issueDate: n.issueDate, dueDate: n.dueDate, totalValue: String(n.value).replace('.', ','), productType: n.productType, observation: n.observation });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -105,6 +105,17 @@ function NoteCard({ n, isAdmin, busy, onStatus }: { n: NoteDTO; isAdmin: boolean
       if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
       setEditing(false); router.refresh();
     } finally { setSaving(false); }
+  }
+
+  async function remove() {
+    if (!window.confirm(`Excluir a nota de ${n.supplier} (${formatBRL(n.value)})? Esta ação não pode ser desfeita.`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/notes/${n.id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { window.alert(data.error ?? 'Falha ao excluir'); return; }
+      router.refresh();
+    } finally { setDeleting(false); }
   }
 
   if (editing) {
@@ -145,14 +156,14 @@ function NoteCard({ n, isAdmin, busy, onStatus }: { n: NoteDTO; isAdmin: boolean
       {n.observation && <p className="mt-1 text-xs text-muted-foreground">Obs.: {n.observation}</p>}
       {n.problemNote && <p className="mt-1 text-xs text-critical">Problema: {n.problemNote}</p>}
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Ver/Editar</Button>
+        {canManage && <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Ver/Editar</Button>}
         {n.status === 'RECEIVED' && (
           <>
             <Button size="sm" variant="gold" disabled={busy} onClick={() => onStatus(n.id, 'PAID')}><Banknote className="h-4 w-4" /> Paga</Button>
             <Button size="sm" variant="destructive" disabled={busy} onClick={() => onStatus(n.id, 'PROBLEM')}><AlertTriangle className="h-4 w-4" /> Problema</Button>
           </>
         )}
-        {isAdmin && <DeleteOpButton entity="note" id={n.id} label={`a nota de ${n.supplier}`} />}
+        {canManage && <Button size="sm" variant="destructive" disabled={deleting} onClick={remove}><Trash2 className="h-4 w-4" /> Excluir</Button>}
       </div>
     </div>
   );

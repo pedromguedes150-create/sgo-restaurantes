@@ -103,8 +103,14 @@ export interface UpdateNoteInput {
   supplierName?: string; supplierCnpj?: string; number?: string;
   issueDate?: string; dueDate?: string; totalValue?: number; productType?: string; observation?: string;
 }
-/** Edita os dados de uma nota (gestor com acesso à unidade). */
+/** Perfis que podem editar/excluir notas: supervisor, admin, CEO. */
+export function canManageNotes(role: string): boolean {
+  return role === 'SUPERVISOR' || role === 'ADMIN' || role === 'CEO';
+}
+
+/** Edita os dados de uma nota (somente Supervisor/Admin/CEO com acesso à unidade). */
 export async function updateNote(user: SessionUser, id: string, input: UpdateNoteInput, ctx: { ip?: string | null; userAgent?: string | null } = {}): Promise<NoteStatusResult> {
+  if (!canManageNotes(user.role)) return { ok: false, reason: 'FORBIDDEN' };
   const note = await prisma.receivedNote.findUnique({ where: { id }, select: { unitId: true } });
   if (!note) return { ok: false, reason: 'NOT_FOUND' };
   const { canAccessUnit } = await import('@/lib/scope/unit-scope');
@@ -126,6 +132,18 @@ export async function updateNote(user: SessionUser, id: string, input: UpdateNot
     },
   });
   await audit({ userId: user.id, unitId: note.unitId, action: 'NOTE_UPDATE', module: 'NOTES', entity: 'received_note', entityId: id, ...ctx });
+  return { ok: true };
+}
+
+/** Exclui uma nota (somente Supervisor/Admin/CEO com acesso à unidade). */
+export async function deleteNote(user: SessionUser, id: string, ctx: { ip?: string | null; userAgent?: string | null } = {}): Promise<NoteStatusResult> {
+  if (!canManageNotes(user.role)) return { ok: false, reason: 'FORBIDDEN' };
+  const note = await prisma.receivedNote.findUnique({ where: { id }, select: { unitId: true, supplierName: true } });
+  if (!note) return { ok: false, reason: 'NOT_FOUND' };
+  const { canAccessUnit } = await import('@/lib/scope/unit-scope');
+  if (!canAccessUnit(user, note.unitId)) return { ok: false, reason: 'FORBIDDEN' };
+  await prisma.receivedNote.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: note.unitId, action: 'NOTE_DELETE', module: 'NOTES', entity: 'received_note', entityId: id, metadata: { supplier: note.supplierName }, ...ctx });
   return { ok: true };
 }
 

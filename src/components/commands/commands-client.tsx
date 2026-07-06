@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Search, RotateCcw, XCircle, Plus } from 'lucide-react';
+import { Check, Search, RotateCcw, XCircle, Plus, Grid3x3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,7 @@ export function CommandsClient({
   isAdmin,
   hasConfig,
   todayDone,
+  activeNumbers = [],
   openDivergences,
 }: {
   unitId: string;
@@ -29,6 +30,7 @@ export function CommandsClient({
   isAdmin: boolean;
   hasConfig: boolean;
   todayDone: boolean;
+  activeNumbers?: number[];
   openDivergences: Divergence[];
 }) {
   const router = useRouter();
@@ -119,19 +121,24 @@ export function CommandsClient({
             Contagem de hoje já registrada (pode reenviar para corrigir).
           </p>
         )}
+
+        {/* Conferência em grade: seleciona as presentes; as não marcadas = faltando */}
+        <GridConference unitId={unitId} activeNumbers={activeNumbers} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
+
         <Button onClick={allPresent} disabled={busy} size="lg" className="w-full" variant="default">
-          <Check className="h-5 w-5" /> Todas presentes
+          <Check className="h-5 w-5" /> Todas presentes (atalho)
         </Button>
 
-        <div className="rounded-lg border p-3">
-          <Label htmlFor="absent">Comandas ausentes (números separados por vírgula)</Label>
-          <Input id="absent" inputMode="numeric" placeholder="ex: 12, 45, 78" value={absent} onChange={(e) => setAbsent(e.target.value)} className="mt-1.5" />
-          <Label htmlFor="obs" className="mt-3 block">Observação (obrigatória se houver ausentes)</Label>
-          <Input id="obs" value={observation} onChange={(e) => setObservation(e.target.value)} className="mt-1.5" />
-          <Button onClick={submitAbsent} disabled={busy} className="mt-3 w-full" variant="gold">
-            Registrar ausentes
-          </Button>
-        </div>
+        <details className="rounded-lg border p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-muted-foreground">Informar ausentes manualmente (por número)</summary>
+          <div className="mt-2">
+            <Label htmlFor="absent">Comandas ausentes (números separados por vírgula)</Label>
+            <Input id="absent" inputMode="numeric" placeholder="ex: 12, 45, 78" value={absent} onChange={(e) => setAbsent(e.target.value)} className="mt-1.5" />
+            <Label htmlFor="obs" className="mt-3 block">Observação (obrigatória se houver ausentes)</Label>
+            <Input id="obs" value={observation} onChange={(e) => setObservation(e.target.value)} className="mt-1.5" />
+            <Button onClick={submitAbsent} disabled={busy} className="mt-3 w-full" variant="gold">Registrar ausentes</Button>
+          </div>
+        </details>
 
         {msg && (
           <p className={msg.t === 'ok' ? 'text-sm font-medium text-success' : 'text-sm font-medium text-critical'}>{msg.m}</p>
@@ -174,6 +181,61 @@ export function CommandsClient({
 
       {/* Reposição (Admin) */}
       {isAdmin && <ReplacementForm unitId={unitId} onDone={() => router.refresh()} />}
+    </div>
+  );
+}
+
+function GridConference({ unitId, activeNumbers, busy, setBusy, onResult }: {
+  unitId: string; activeNumbers: number[]; busy: boolean; setBusy: (b: boolean) => void; onResult: (m: { t: 'ok' | 'err'; m: string }) => void;
+}) {
+  const router = useRouter();
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [filter, setFilter] = useState('');
+  const [obs, setObs] = useState('');
+  const total = activeNumbers.length;
+  const conferidas = selected.size;
+  const faltando = total - conferidas;
+  const shown = useMemo(() => (filter.trim() ? activeNumbers.filter((n) => String(n).includes(filter.trim())) : activeNumbers), [filter, activeNumbers]);
+
+  function toggle(n: number) { setSelected((s) => { const x = new Set(s); x.has(n) ? x.delete(n) : x.add(n); return x; }); }
+
+  async function confirmConf() {
+    const absent = activeNumbers.filter((n) => !selected.has(n));
+    if (absent.length > 0 && !obs.trim()) { onResult({ t: 'err', m: 'Há comandas faltando — informe uma observação.' }); return; }
+    const ok = window.confirm(absent.length === 0 ? 'Confirmar: TODAS as comandas presentes?' : `Confirmar conferência?\n${absent.length} comanda(s) faltando: ${absent.slice(0, 40).join(', ')}${absent.length > 40 ? '…' : ''}`);
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const body = absent.length === 0 ? { unitId, allPresent: true } : { unitId, allPresent: false, absentNumbers: absent, observation: obs };
+      const res = await fetch('/api/commands/count', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { onResult({ t: 'err', m: data.error ?? 'Falha' }); return; }
+      onResult({ t: 'ok', m: absent.length === 0 ? 'Conferência registrada: todas presentes ✓' : `Conferência registrada. ${absent.length} faltando — supervisor alertado.` });
+      setSelected(new Set()); setObs(''); router.refresh();
+    } finally { setBusy(false); }
+  }
+
+  if (total === 0) return null;
+  return (
+    <div className="rounded-lg border-2 border-accent/30 bg-accent/5 p-3">
+      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><Grid3x3 className="h-4 w-4" /> Conferência em grade</h2>
+      <p className="mb-2 text-xs text-muted-foreground">Toque em cada comanda conferida (fica verde). As <b>não marcadas</b> serão registradas como faltando.</p>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <button onClick={() => setSelected(new Set(activeNumbers))} className="rounded-full border px-3 py-1 text-xs font-semibold">Marcar todas</button>
+        <button onClick={() => setSelected(new Set())} className="rounded-full border px-3 py-1 text-xs font-semibold">Limpar</button>
+        <Input inputMode="numeric" value={filter} onChange={(e) => setFilter(e.target.value.replace(/\D/g, ''))} placeholder="filtrar nº" className="h-8 w-24 text-sm" />
+        <span className="ml-auto text-xs font-semibold"><span className="text-success">{conferidas} ok</span> · <span className={faltando > 0 ? 'text-critical' : 'text-muted-foreground'}>{faltando} faltando</span> / {total}</span>
+      </div>
+      <div className="max-h-72 overflow-y-auto rounded-md border bg-background p-2">
+        <div className="grid grid-cols-6 gap-1 sm:grid-cols-10">
+          {shown.map((n) => (
+            <button key={n} onClick={() => toggle(n)} className={`rounded px-1 py-1 text-xs font-semibold ${selected.has(n) ? 'bg-success text-white' : 'border text-muted-foreground'}`}>{n}</button>
+          ))}
+        </div>
+        {shown.length === 0 && <p className="p-2 text-xs text-muted-foreground">Nenhum número com esse filtro.</p>}
+      </div>
+      {faltando > 0 && <Input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Observação (o que houve com as que faltam)" className="mt-2" />}
+      <Button onClick={confirmConf} disabled={busy} className="mt-2 w-full" variant="gold"><Check className="h-4 w-4" /> Confirmar conferência</Button>
     </div>
   );
 }
