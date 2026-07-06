@@ -13,6 +13,7 @@ import type { Role } from '@prisma/client';
 export const MODULES: { key: string; label: string; nav?: string }[] = [
   { key: 'DASHBOARD', label: 'Dashboard', nav: '/dashboard' },
   { key: 'MANAGER_AREA', label: 'Minha área', nav: '/minha-area' },
+  { key: 'LEAVES_TEAM', label: 'Consolidado de Folgas/Férias', nav: '/modulos/folgas-equipe' },
   { key: 'TASKS', label: 'Tarefas', nav: '/tarefas' },
   { key: 'COMMUNICATION', label: 'Central de Comunicação', nav: '/modulos/comunicacao' },
   { key: 'HELP', label: 'Treinamento da Plataforma', nav: '/ajuda' },
@@ -41,6 +42,12 @@ function isFullAccess(role: Role) { return role === 'ADMIN' || role === 'CEO'; }
 
 export interface Perm { canView: boolean; canEdit: boolean }
 
+// Módulos restritos por padrão: só os perfis listados veem se não houver config
+// explícita (ADMIN/CEO sempre veem). Admin pode liberar/restringir na matriz.
+const RESTRICTED_DEFAULT: Record<string, Role[]> = {
+  LEAVES_TEAM: ['SUPERVISOR'],
+};
+
 /** Permissões efetivas de um perfil por módulo (com defaults). */
 export async function effectivePermissions(role: Role): Promise<Record<string, Perm>> {
   const rows = await prisma.rolePermission.findMany({ where: { role } });
@@ -49,7 +56,9 @@ export async function effectivePermissions(role: Role): Promise<Record<string, P
   for (const m of MODULES) {
     if (isFullAccess(role)) { out[m.key] = { canView: true, canEdit: true }; continue; }
     const r = byModule.get(m.key);
-    out[m.key] = { canView: r ? r.canView : true, canEdit: r ? r.canEdit : true };
+    const restricted = RESTRICTED_DEFAULT[m.key];
+    const def = restricted ? restricted.includes(role) : true;
+    out[m.key] = { canView: r ? r.canView : def, canEdit: r ? r.canEdit : def };
   }
   return out;
 }

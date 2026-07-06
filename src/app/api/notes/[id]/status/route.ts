@@ -7,7 +7,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const b = await req.json().catch(() => ({}));
-  if (b.status !== 'PAID' && b.status !== 'PROBLEM') return NextResponse.json({ error: 'Status inválido' }, { status: 400 });
+  if (b.status !== 'PAID' && b.status !== 'PROBLEM' && b.status !== 'RETURNED') return NextResponse.json({ error: 'Status inválido' }, { status: 400 });
 
   const result = await setNoteStatus(user, params.id, b.status, b.problemNote, requestContext(req));
   if (!result.ok) {

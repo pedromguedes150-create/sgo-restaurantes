@@ -83,6 +83,32 @@ export async function deleteManagerLeave(user: SessionUser, id: string) {
   await prisma.managerLeave.delete({ where: { id } });
   return { ok: true as const };
 }
+/** Consolidado de folgas/férias da equipe num período, agrupado por unidade (gestores). */
+export async function getTeamLeaves(user: SessionUser, startISO: string, endISO: string) {
+  const { unitScopeWhere } = await import('@/lib/scope/unit-scope');
+  const leaves = await prisma.managerLeave.findMany({
+    where: {
+      startDate: { lte: endISO },
+      endDate: { gte: startISO },
+      user: { memberships: { some: { ...unitScopeWhere(user, 'unitId') } } },
+    },
+    include: { user: { select: { name: true, memberships: { select: { unit: { select: { name: true } } } } } } },
+    orderBy: [{ startDate: 'asc' }],
+    take: 500,
+  });
+  const groups = new Map<string, { name: string; kind: 'FOLGA' | 'FERIAS'; startDate: string; endDate: string; note: string | null }[]>();
+  for (const l of leaves) {
+    const unitLabel = l.user.memberships.map((m) => m.unit.name).sort().join(', ') || '—';
+    const arr = groups.get(unitLabel) ?? [];
+    arr.push({ name: l.user.name, kind: l.kind, startDate: l.startDate, endDate: l.endDate, note: l.note });
+    groups.set(unitLabel, arr);
+  }
+  return {
+    total: leaves.length,
+    groups: [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR')).map(([unit, items]) => ({ unit, items })),
+  };
+}
+
 /** Folga/férias do usuário cobrindo a data (yyyy-mm-dd), se houver. */
 export async function leaveOnDate(userId: string, dateISO: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return null;

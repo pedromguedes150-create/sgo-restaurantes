@@ -885,6 +885,7 @@ enum NoteStatus {
   RECEIVED // Recebida
   PAID // Paga
   PROBLEM // Com problema
+  RETURNED // Devolvida (nota errada / devolução ao fornecedor)
 }
 
 enum NoteSource {

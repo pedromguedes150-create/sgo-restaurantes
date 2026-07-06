@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, Banknote, AlertTriangle, Pencil, X, Trash2 } from 'lucide-react';
+import { ScanLine, Save, Banknote, AlertTriangle, Pencil, X, Trash2, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,23 +15,25 @@ interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null }
 export interface NoteDTO {
   id: string; unit: string; supplier: string; value: number;
-  status: 'RECEIVED' | 'PAID' | 'PROBLEM'; number: string | null; problemNote: string | null;
+  status: 'RECEIVED' | 'PAID' | 'PROBLEM' | 'RETURNED'; number: string | null; problemNote: string | null;
   cnpj: string; issueDate: string; dueDate: string; productType: string; observation: string;
 }
 const ST: Record<NoteDTO['status'], { label: string; tone: StatusTone }> = {
   RECEIVED: { label: 'Recebida', tone: 'medium' },
   PAID: { label: 'Paga', tone: 'success' },
   PROBLEM: { label: 'Com problema', tone: 'critical' },
+  RETURNED: { label: 'Devolvida', tone: 'neutral' },
 };
 
 export function NotesClient({ units, notes, suppliers = [], canManage = false }: { units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'nova' | 'lista'>('lista');
+  const [tab, setTab] = useState<'nova' | 'lista' | 'analise'>('lista');
   const [busy, setBusy] = useState(false);
 
-  async function status(id: string, st: 'PAID' | 'PROBLEM') {
+  async function status(id: string, st: 'PAID' | 'PROBLEM' | 'RETURNED') {
     let problemNote: string | undefined;
     if (st === 'PROBLEM') { const m = prompt('Descreva o problema:'); if (!m) return; problemNote = m; }
+    if (st === 'RETURNED') { const m = prompt('Motivo da devolução (ex.: nota errada, valor divergente):'); if (!m) return; problemNote = m; }
     setBusy(true);
     try {
       const res = await fetch(`/api/notes/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: st, problemNote }) });
@@ -39,26 +41,86 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false }:
     } finally { setBusy(false); }
   }
 
+  const tabs: { key: typeof tab; label: string }[] = [
+    { key: 'lista', label: 'Notas' },
+    { key: 'nova', label: 'Registrar nota' },
+    ...(canManage ? [{ key: 'analise' as const, label: 'Análise' }] : []),
+  ];
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        {(['lista', 'nova'] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={tab === t ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
-            {t === 'lista' ? 'Notas' : 'Registrar nota'}
+      <div className="flex flex-wrap gap-2">
+        {tabs.map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
+            {t.label}
           </button>
         ))}
       </div>
 
-      {tab === 'nova' ? (
-        <NewNote units={units} suppliers={suppliers} onDone={() => { setTab('lista'); router.refresh(); }} />
-      ) : (
-        <NotesList notes={notes} canManage={canManage} busy={busy} onStatus={status} />
-      )}
+      {tab === 'nova' && <NewNote units={units} suppliers={suppliers} onDone={() => { setTab('lista'); router.refresh(); }} />}
+      {tab === 'lista' && <NotesList notes={notes} canManage={canManage} busy={busy} onStatus={status} />}
+      {tab === 'analise' && <NotesAnalysis notes={notes} units={units} />}
     </div>
   );
 }
 
-function NotesList({ notes, canManage, busy, onStatus }: { notes: NoteDTO[]; canManage: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM') => void }) {
+function NotesAnalysis({ notes, units }: { notes: NoteDTO[]; units: Unit[] }) {
+  const [supplier, setSupplier] = useState('ALL');
+  const [unit, setUnit] = useState('ALL');
+  const [st, setStatus] = useState<'ALL' | NoteDTO['status']>('ALL');
+  const supplierNames = useMemo(() => [...new Set(notes.map((n) => n.supplier))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [notes]);
+  const filtered = useMemo(() => notes.filter((n) =>
+    (supplier === 'ALL' || n.supplier === supplier) &&
+    (unit === 'ALL' || n.unit === unit) &&
+    (st === 'ALL' || n.status === st),
+  ), [notes, supplier, unit, st]);
+  const total = filtered.reduce((s, n) => s + n.value, 0);
+  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
+        <select value={supplier} onChange={(e) => setSupplier(e.target.value)} className={sel}>
+          <option value="ALL">Todos os fornecedores</option>
+          {supplierNames.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        {units.length > 1 && (
+          <select value={unit} onChange={(e) => setUnit(e.target.value)} className={sel}>
+            <option value="ALL">Todas as unidades</option>
+            {units.map((u) => <option key={u.id} value={u.name}>{u.name}</option>)}
+          </select>
+        )}
+        <select value={st} onChange={(e) => setStatus(e.target.value as typeof st)} className={sel}>
+          <option value="ALL">Todos os status</option>
+          <option value="RECEIVED">Recebida</option>
+          <option value="PAID">Paga</option>
+          <option value="PROBLEM">Com problema</option>
+          <option value="RETURNED">Devolvida</option>
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg border bg-card p-3 text-center"><p className="text-2xl font-black text-brand">{filtered.length}</p><p className="text-xs text-muted-foreground">notas</p></div>
+        <div className="rounded-lg border bg-card p-3 text-center"><p className="text-2xl font-black text-brand">{formatBRL(total)}</p><p className="text-xs text-muted-foreground">valor total</p></div>
+      </div>
+      <div className="space-y-1.5">
+        {filtered.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma nota com esses filtros.</p>}
+        {filtered.map((n) => (
+          <div key={n.id} className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2.5 text-sm">
+            <span className="min-w-0">
+              <span className="block font-medium text-brand">{n.supplier}</span>
+              <span className="block text-xs text-muted-foreground">{n.unit}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${n.dueDate.split('-').reverse().join('/')}` : ''}</span>
+            </span>
+            <span className="flex shrink-0 items-center gap-2">
+              <span className="font-semibold">{formatBRL(n.value)}</span>
+              <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NotesList({ notes, canManage, busy, onStatus }: { notes: NoteDTO[]; canManage: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM' | 'RETURNED') => void }) {
   if (notes.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma nota registrada.</p>;
   const byCompany = new Map<string, NoteDTO[]>();
   for (const n of notes) { const arr = byCompany.get(n.supplier) ?? []; arr.push(n); byCompany.set(n.supplier, arr); }
@@ -85,7 +147,7 @@ function NotesList({ notes, canManage, busy, onStatus }: { notes: NoteDTO[]; can
   );
 }
 
-function NoteCard({ n, canManage, busy, onStatus }: { n: NoteDTO; canManage: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM') => void }) {
+function NoteCard({ n, canManage, busy, onStatus }: { n: NoteDTO; canManage: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM' | 'RETURNED') => void }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -154,13 +216,14 @@ function NoteCard({ n, canManage, busy, onStatus }: { n: NoteDTO; canManage: boo
       </div>
       <p className="text-xs text-muted-foreground">{n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${n.dueDate.split('-').reverse().join('/')}` : ''}</p>
       {n.observation && <p className="mt-1 text-xs text-muted-foreground">Obs.: {n.observation}</p>}
-      {n.problemNote && <p className="mt-1 text-xs text-critical">Problema: {n.problemNote}</p>}
+      {n.problemNote && <p className="mt-1 text-xs text-critical">{n.status === 'RETURNED' ? 'Devolução' : 'Problema'}: {n.problemNote}</p>}
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {canManage && <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Ver/Editar</Button>}
         {n.status === 'RECEIVED' && (
           <>
             <Button size="sm" variant="gold" disabled={busy} onClick={() => onStatus(n.id, 'PAID')}><Banknote className="h-4 w-4" /> Paga</Button>
             <Button size="sm" variant="destructive" disabled={busy} onClick={() => onStatus(n.id, 'PROBLEM')}><AlertTriangle className="h-4 w-4" /> Problema</Button>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => onStatus(n.id, 'RETURNED')}><Undo2 className="h-4 w-4" /> Devolver</Button>
           </>
         )}
         {canManage && <Button size="sm" variant="destructive" disabled={deleting} onClick={remove}><Trash2 className="h-4 w-4" /> Excluir</Button>}

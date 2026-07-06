@@ -42,7 +42,7 @@ function TimePicker({ date, time, onDate, onTime }: { date: string; time: string
   );
 }
 
-export function ManagerAreaClient({ tasks, notes, leaves }: { tasks: MTask[]; notes: MNote[]; leaves: MLeave[] }) {
+export function ManagerAreaClient({ tasks, notes, leaves, canSeeTeam = false }: { tasks: MTask[]; notes: MNote[]; leaves: MLeave[]; canSeeTeam?: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<'tarefas' | 'notas' | 'folgas'>('tarefas');
   const [busy, setBusy] = useState(false);
@@ -65,7 +65,7 @@ export function ManagerAreaClient({ tasks, notes, leaves }: { tasks: MTask[]; no
       </div>
       {tab === 'tarefas' && <TasksTab tasks={tasks} busy={busy} post={post} />}
       {tab === 'notas' && <NotesTab notes={notes} busy={busy} post={post} />}
-      {tab === 'folgas' && <LeavesTab leaves={leaves} busy={busy} post={post} />}
+      {tab === 'folgas' && <LeavesTab leaves={leaves} busy={busy} post={post} canSeeTeam={canSeeTeam} />}
     </div>
   );
 }
@@ -195,12 +195,18 @@ function NoteCard({ n, busy, post }: { n: MNote; busy: boolean; post: Post }) {
   );
 }
 
-function LeavesTab({ leaves, busy, post }: { leaves: MLeave[]; busy: boolean; post: Post }) {
+function LeavesTab({ leaves, busy, post, canSeeTeam }: { leaves: MLeave[]; busy: boolean; post: Post; canSeeTeam?: boolean }) {
   const [kind, setKind] = useState<'FOLGA' | 'FERIAS'>('FOLGA');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   return (
     <div className="space-y-3">
+      {canSeeTeam && (
+        <a href="/modulos/folgas-equipe" className="flex items-center justify-between gap-2 rounded-lg border border-accent/40 bg-accent/5 p-3 text-sm hover:bg-accent/10">
+          <span className="flex items-center gap-2 font-semibold text-brand"><CalendarOff className="h-4 w-4" /> Ver consolidado de folgas/férias da equipe</span>
+          <span className="text-accent">→</span>
+        </a>
+      )}
       <div className="rounded-lg border border-dashed p-3">
         <p className="mb-2 text-xs text-muted-foreground">Nos dias de folga/férias, seus checklists e tarefas do dia não aparecem para você (você ainda pode entrar no sistema).</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">

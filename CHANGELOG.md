@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.6.0 — 2026-07-06
+### Adicionado
+- **Notas — aba Análise**: supervisores/admins têm uma aba de **análise/histórico** que filtra por **fornecedor, unidade e status**, com totais (nº de notas + valor).
+- **Notas — devolução**: ao receber uma nota errada, dá para marcá-la como **Devolvida** (com o motivo) — novo status ao lado de Recebida/Paga/Problema.
+- **Folgas/Férias — consolidado da equipe**: novo **/modulos/folgas-equipe** para gestores, com **período selecionável** e agrupamento por unidade. **Quem vê é configurável** em Configurações → Perfis de acesso (padrão: Supervisão/Admin/CEO). Atalho na aba Folgas da Minha área.
+
 ## v1.5.0 — 2026-07-06
 ### Adicionado
 - **Comandas — seleção em lote**: na conferência em grade dá para **marcar/desmarcar uma faixa** de comandas de uma vez (ex.: sequências guardadas que não se confere todos os dias), além do "Marcar todas"/"Limpar".

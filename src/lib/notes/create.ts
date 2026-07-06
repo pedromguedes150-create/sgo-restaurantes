@@ -149,11 +149,11 @@ export async function deleteNote(user: SessionUser, id: string, ctx: { ip?: stri
 
 export type NoteStatusResult = { ok: true } | { ok: false; reason: 'NOT_FOUND' | 'FORBIDDEN' | 'INVALID' };
 
-/** Atualiza status da nota (Paga / Com problema). */
+/** Atualiza status da nota (Paga / Com problema / Devolvida). PROBLEM e RETURNED exigem motivo. */
 export async function setNoteStatus(
   user: SessionUser,
   id: string,
-  status: 'PAID' | 'PROBLEM',
+  status: 'PAID' | 'PROBLEM' | 'RETURNED',
   problemNote: string | undefined,
   ctx: { ip?: string | null; userAgent?: string | null } = {},
 ): Promise<NoteStatusResult> {
@@ -161,11 +161,12 @@ export async function setNoteStatus(
   if (!note) return { ok: false, reason: 'NOT_FOUND' };
   const { canAccessUnit } = await import('@/lib/scope/unit-scope');
   if (!canAccessUnit(user, note.unitId)) return { ok: false, reason: 'FORBIDDEN' };
-  if (status === 'PROBLEM' && !problemNote?.trim()) return { ok: false, reason: 'INVALID' };
+  const needsReason = status === 'PROBLEM' || status === 'RETURNED';
+  if (needsReason && !problemNote?.trim()) return { ok: false, reason: 'INVALID' };
 
   await prisma.receivedNote.update({
     where: { id },
-    data: { status, problemNote: status === 'PROBLEM' ? problemNote!.trim() : null },
+    data: { status, problemNote: needsReason ? problemNote!.trim() : null },
   });
   await audit({ userId: user.id, unitId: note.unitId, action: `NOTE_${status}`, module: 'NOTES', entity: 'received_note', entityId: id, ...ctx });
   return { ok: true };
