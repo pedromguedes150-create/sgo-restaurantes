@@ -50,6 +50,13 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
         </Link>
       </div>
 
+      {isMaint && (
+        <Link href="/modulos/manutencao" className="flex items-center justify-between gap-2 rounded-lg border border-accent/40 bg-accent/5 p-3 text-sm hover:bg-accent/10">
+          <span className="flex items-center gap-2 font-medium text-brand"><Wrench className="h-4 w-4" /> Abrir chamados e planos preventivos no módulo Manutenção</span>
+          <span className="text-accent">→</span>
+        </Link>
+      )}
+
       {/* Resumo */}
       <div className="grid grid-cols-3 gap-2">
         <SummaryCell label="Abertas" value={summary.open + summary.inProgress} tone="medium" />

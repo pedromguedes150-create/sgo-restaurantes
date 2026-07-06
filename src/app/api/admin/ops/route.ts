@@ -36,6 +36,8 @@ export async function POST(req: Request) {
     else if (e === 'oil') r = await ops.deleteOilCollection(user, b.id, ctx);
     else if (e === 'inventory') r = await ops.deleteInventory(user, b.id, ctx);
     else if (e === 'medicalCertificate') r = await ops.deleteMedicalCertificate(user, b.id, ctx);
+    else if (e === 'maintenanceTicket') r = await ops.deleteMaintenanceTicket(user, b.id, ctx);
+    else if (e === 'maintenancePlan') r = await ops.deleteMaintenancePlan(user, b.id, ctx);
   }
 
   if (!r) return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });

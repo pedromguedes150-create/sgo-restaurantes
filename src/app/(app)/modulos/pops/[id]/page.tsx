@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
-import { getPop, type PopBlock } from '@/lib/pops';
+import { getPop, sanitizePopHtml, type PopBlock } from '@/lib/pops';
 import { youtubeEmbedUrl } from '@/lib/youtube';
 import { STANDARD_SECTORS } from '@/lib/workforce';
 import { prisma } from '@/lib/db/prisma';
@@ -28,8 +28,7 @@ export default async function PopDetailPage({ params }: { params: { id: string }
         id: pop.id, title: pop.title, category: pop.category,
         isInitial: pop.isInitial, recurrence: pop.recurrence as 'ONCE' | 'MONTHLY',
         unitIds: pop.units.map((u) => u.unitId), sectorNames: pop.sectors.map((s) => s.sectorName),
-        text: blocks.filter((b) => b.type === 'text').map((b) => b.text).join('\n\n'),
-        videos: blocks.filter((b) => b.type === 'video' && b.url).map((b) => b.url!) as string[],
+        blocks,
       }
     : null;
 
@@ -45,7 +44,7 @@ export default async function PopDetailPage({ params }: { params: { id: string }
         <CardContent className="space-y-3 py-4 text-sm">
           {blocks.length === 0 && <p className="text-muted-foreground">Sem conteúdo.</p>}
           {blocks.map((b, i) => {
-            if (b.type === 'text') return <p key={i} className="whitespace-pre-wrap">{b.text}</p>;
+            if (b.type === 'text') return <div key={i} className="pop-rich" dangerouslySetInnerHTML={{ __html: sanitizePopHtml(b.text ?? '') }} />;
             if (b.type === 'checklist') return (
               <ul key={i} className="list-disc pl-5">{(b.items ?? []).map((it, j) => <li key={j}>{it}</li>)}</ul>
             );

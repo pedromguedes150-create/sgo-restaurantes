@@ -1743,3 +1743,79 @@ model ChecklistModelItem {
   @@index([modelId])
   @@map("checklist_model_items")
 }
+
+// ===== Módulo 6.1 — Manutenção (chamados + preventiva) =======================
+enum MaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELED
+}
+
+// Chamado de manutenção (reativo). Pode nascer de uma ocorrência de manutenção.
+// Campos denormalizados (equipamento/fornecedor/pessoas) no padrão snapshot.
+model MaintenanceTicket {
+  id             String            @id @default(cuid())
+  unitId         String
+  number         Int
+  title          String
+  description    String?
+  equipmentId    String?
+  equipmentName  String?
+  supplierId     String?
+  supplierName   String?
+  status         MaintenanceStatus @default(OPEN)
+  cost           Decimal?          @db.Decimal(12, 2)
+  deadline       DateTime?
+  occurrenceId   String?
+  planId         String?
+  openedById     String?
+  openedByName   String?
+  doneById       String?
+  doneByName     String?
+  doneAt         DateTime?
+  resolutionNote String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([unitId, status])
+  @@map("maintenance_tickets")
+}
+
+// Plano de manutenção preventiva por equipamento (recorrência em dias).
+model MaintenancePlan {
+  id            String   @id @default(cuid())
+  unitId        String
+  title         String
+  description   String?
+  equipmentId   String?
+  equipmentName String?
+  frequencyDays Int
+  nextDueAt     DateTime
+  lastDoneAt    DateTime?
+  lastNotifiedAt DateTime?
+  active        Boolean  @default(true)
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  logs MaintenancePlanLog[]
+
+  @@index([unitId, active])
+  @@map("maintenance_plans")
+}
+
+// Histórico de execuções de um plano preventivo.
+model MaintenancePlanLog {
+  id         String   @id @default(cuid())
+  planId     String
+  doneAt     DateTime @default(now())
+  doneById   String?
+  doneByName String?
+  note       String?
+
+  plan MaintenancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@map("maintenance_plan_logs")
+}

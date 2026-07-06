@@ -192,3 +192,22 @@ export async function deleteInventory(user: SessionUser, id: string, ctx: Ctx = 
   await audit({ userId: user.id, unitId: s.unitId, action: 'INVENTORY_DELETE', module: 'INVENTORY', entity: 'inventory_schedule', entityId: id, ...ctx });
   return { ok: true };
 }
+
+/* ───────────────────────── Manutenção ───────────────────────── */
+export async function deleteMaintenanceTicket(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const t = await prisma.maintenanceTicket.findUnique({ where: { id }, select: { unitId: true, number: true } });
+  if (!t) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.maintenanceTicket.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: t.unitId, action: 'MAINT_TICKET_DELETE', module: 'MAINTENANCE', entity: 'maintenance_ticket', entityId: id, metadata: { number: t.number }, ...ctx });
+  return { ok: true };
+}
+
+export async function deleteMaintenancePlan(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const p = await prisma.maintenancePlan.findUnique({ where: { id }, select: { unitId: true, title: true } });
+  if (!p) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.maintenancePlan.delete({ where: { id } }); // logs em cascade
+  await audit({ userId: user.id, unitId: p.unitId, action: 'MAINT_PLAN_DELETE', module: 'MAINTENANCE', entity: 'maintenance_plan', entityId: id, metadata: { title: p.title }, ...ctx });
+  return { ok: true };
+}

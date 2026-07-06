@@ -68,3 +68,45 @@ export async function getCancellationSummary(user: SessionUser, yearMonth: strin
 export async function getPendingCancellationCount(user: SessionUser): Promise<number> {
   return prisma.cancellation.count({ where: { ...unitScopeWhere(user, 'unitId'), status: 'PENDING' } });
 }
+
+export interface CancellationExportRow {
+  operationalDate: string;
+  unit: string;
+  coupon: string;
+  operator: string;
+  value: number;
+  status: string;
+  reason: string;
+  justifiedBy: string;
+  justifiedAt: string;
+  note: string;
+}
+
+/** Linhas detalhadas do mês (relatório/export). Respeita escopo e filtro opcional de unidade. */
+export async function getCancellationsForExport(
+  user: SessionUser,
+  yearMonth: string,
+  unitId?: string,
+): Promise<CancellationExportRow[]> {
+  const rows = await prisma.cancellation.findMany({
+    where: {
+      ...unitScopeWhere(user, 'unitId'),
+      ...(unitId ? { unitId } : {}),
+      operationalDate: { startsWith: yearMonth },
+    },
+    orderBy: [{ operationalDate: 'asc' }, { createdAt: 'asc' }],
+    include: { unit: { select: { name: true } }, reason: { select: { name: true } }, justifiedBy: { select: { name: true } } },
+  });
+  return rows.map((c) => ({
+    operationalDate: c.operationalDate,
+    unit: c.unit.name,
+    coupon: c.couponNumber,
+    operator: c.cashOperator?.trim() || '—',
+    value: Number(c.value),
+    status: c.status === 'JUSTIFIED' ? 'Justificado' : 'Pendente',
+    reason: c.reason?.name ?? '',
+    justifiedBy: c.justifiedBy?.name ?? '',
+    justifiedAt: c.justifiedAt ? new Date(c.justifiedAt).toLocaleString('pt-BR') : '',
+    note: c.justificationNote ?? '',
+  }));
+}

@@ -158,8 +158,21 @@ export const GUIDE: GuideSection[] = [
           'Gravidade alta/crítica e reincidência (<30 dias) alertam Supervisor/CEO.',
           'O Supervisor/Admin encerra a ocorrência com a ação corretiva.',
           'Na ocorrência, "Gerar relatório (PDF)" abre uma versão A4 para imprimir/salvar e compartilhar no WhatsApp.',
-          'A sub-aba "Manutenção" lista só as ocorrências de tipos marcados como manutenção (ex.: problema crônico).',
+          'A sub-aba "Manutenção" lista só as ocorrências de tipos marcados como manutenção e leva ao módulo Manutenção (chamados e planos preventivos).',
           'O Admin cria/edita/exclui tipos e categorias em Configurações → Ocorrências (a gravidade segue fixa em 4 níveis).',
+        ],
+      },
+      {
+        id: 'manutencao',
+        title: 'Manutenção',
+        roles: MANAGERLINE,
+        summary: 'Chamados e manutenção preventiva.',
+        steps: [
+          'Aba "Chamados": abra um chamado (o que precisa, equipamento, prestador e prazo). Acompanhe pelo status Aberto → Em andamento → Concluído.',
+          'Ao concluir, informe o custo e o que foi feito — os supervisores são avisados na abertura, e o painel mostra abertos, atrasados e o custo do mês.',
+          'Aba "Preventiva": crie planos recorrentes por equipamento (ex.: limpar a coifa a cada 30 dias). O sistema avisa gerente e supervisão quando vence.',
+          'Ao fazer a preventiva, use "Registrar execução" — o sistema agenda a próxima automaticamente e guarda o histórico.',
+          'O Admin pode excluir chamados e planos.',
         ],
       },
       {
@@ -225,6 +238,7 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'O Admin importa o relatório do Teknisa em Excel (.xlsx) ou CSV — "Relação de Cupons SAT/NFC-e". O sistema traz só o nº do cupom e o valor; linhas de total são ignoradas.',
           'Cada cupom vira uma pendência: selecione o motivo e justifique.',
+          'O botão "Relatório" abre a visão do mês (por unidade) para exportar em Excel ou salvar em PDF, com o ranking por operador.',
         ],
       },
     ],
@@ -323,7 +337,8 @@ export const GUIDE: GuideSection[] = [
         roles: ['ADMIN'],
         summary: 'Procedimentos e treinamentos da equipe.',
         steps: [
-          'Em POPs → "Novo POP", escreva o conteúdo e adicione vídeos do YouTube se quiser.',
+          'Em POPs → "Novo POP", monte o conteúdo em BLOCOS: Texto (com negrito, itálico, listas, subtítulo e link), Checklist, Imagem e Vídeo do YouTube.',
+          'Arraste os blocos pelo ícone ⁞⁞ (ou use ▲▼) para reordenar; cada bloco tem seu botão de remover.',
           'Marque "Treinamento inicial" (todo novo colaborador faz) e/ou selecione os SETORES.',
           'Escolha a recorrência: Único ou Mensal (reciclagem).',
           'Selecione as unidades. Ao editar o conteúdo, a versão sobe e a equipe refaz o treino.',
@@ -440,7 +455,10 @@ export const GUIDE: GuideSection[] = [
         title: 'Auditoria',
         roles: ['ADMIN', 'CEO'],
         summary: 'Registro imutável de ações.',
-        steps: ['Em AUDITORIA, filtre por módulo e veja a linha do tempo das ações críticas.'],
+        steps: [
+          'Em AUDITORIA, filtre por módulo e veja a linha do tempo das ações críticas.',
+          'Em "Relatório / Export", escolha o período (7/30/90 dias) e o módulo, salve em PDF ou exporte o CSV completo (com entidade, ID e IP).',
+        ],
       },
     ],
   },

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { listAuditLogs, getAuditModules, canViewAudit } from '@/lib/audit-query';
 import { Card, CardContent } from '@/components/ui/card';
-import { ScrollText } from 'lucide-react';
+import { ScrollText, FileText } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,10 @@ export default async function AuditoriaPage({ searchParams }: { searchParams: { 
 
   return (
     <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ScrollText className="h-5 w-5 text-accent" /> Log de Auditoria</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ScrollText className="h-5 w-5 text-accent" /> Log de Auditoria</h1>
+        <Link href="/auditoria/relatorio" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-muted"><FileText className="h-4 w-4" /> Relatório / Export</Link>
+      </div>
       <p className="text-sm text-muted-foreground">Registro imutável de ações críticas (LGPD: acessos a dados sensíveis são auditados).</p>
 
       <div className="flex flex-wrap gap-2">

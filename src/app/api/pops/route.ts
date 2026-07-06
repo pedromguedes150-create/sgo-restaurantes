@@ -5,6 +5,9 @@ import { createPop, updatePop, deletePop, type PopBlock } from '@/lib/pops';
 import { youtubeId } from '@/lib/youtube';
 
 function buildBlocks(b: Record<string, unknown>): PopBlock[] {
+  // Formato novo (editor de blocos): usa direto os blocos enviados.
+  if (Array.isArray(b.blocks)) return b.blocks as PopBlock[];
+  // Fallback legado: texto único + vídeos.
   const blocks: PopBlock[] = [];
   if (b.text) blocks.push({ type: 'text', text: String(b.text) });
   const videos: string[] = Array.isArray(b.videos) ? (b.videos as string[]) : [];

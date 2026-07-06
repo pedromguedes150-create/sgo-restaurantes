@@ -14,6 +14,7 @@ export async function register() {
   const { notifyDueSoonCommunications } = await import('@/lib/communications/notify');
   const { snapshotYesterdayAllUnits } = await import('@/lib/workforce');
   const { notifyDueManagerTasks } = await import('@/lib/manager-area');
+  const { runDueMaintenancePlans } = await import('@/lib/maintenance');
 
   async function maintainTraining() {
     try { await reconcileAllTraining(); } catch (e) { console.error('[training] falha na reconciliação:', e); }
@@ -31,6 +32,10 @@ export async function register() {
   async function snapshotYesterday() {
     try { const r = await snapshotYesterdayAllUnits(); if (r.rows) console.log(`[mapa] snapshot de ontem: ${r.units} unidade(s), ${r.rows} registro(s)`); }
     catch (e) { console.error('[mapa] falha no snapshot diário:', e); }
+  }
+  async function checkMaintenance() {
+    try { const r = await runDueMaintenancePlans(); if (r.notified) console.log(`[manutencao] ${r.notified} plano(s) preventivo(s) vencido(s) avisado(s)`); }
+    catch (e) { console.error('[manutencao] falha no aviso preventivo:', e); }
   }
 
   async function maybeSyncRh() {
@@ -51,6 +56,7 @@ export async function register() {
     void checkDueSoon();
     void checkCommunications();
     void snapshotYesterday();
+    void checkMaintenance();
   }, 15_000);
 
   // tarefas: a cada 30 min · RH e treinamentos: de hora em hora · vencimento: a cada 10 min
@@ -60,4 +66,5 @@ export async function register() {
   setInterval(() => { void checkDueSoon(); }, 10 * 60 * 1000);
   setInterval(() => { void checkCommunications(); }, 60 * 60 * 1000);
   setInterval(() => { void snapshotYesterday(); }, 60 * 60 * 1000);
+  setInterval(() => { void checkMaintenance(); }, 60 * 60 * 1000);
 }

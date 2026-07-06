@@ -11,6 +11,62 @@ export interface PopBlock {
   items?: string[];
 }
 
+// --- Rich text: sanitização do HTML dos blocos de texto -----------------------
+// Apenas Admin cria/edita POPs, mas ainda assim limpamos o HTML para uma
+// allowlist segura (negrito/itálico/listas/H2/H3/link/parágrafo).
+const ALLOWED_TAGS = new Set(['b', 'strong', 'i', 'em', 'u', 's', 'ul', 'ol', 'li', 'h2', 'h3', 'p', 'br', 'a', 'span', 'div']);
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** Limpa o HTML de um bloco de texto para uma allowlist segura. */
+export function sanitizePopHtml(html: string): string {
+  if (!html) return '';
+  // Texto puro (legado ou digitado sem formatação): escapa e preserva quebras.
+  if (!/<[a-z][\s\S]*>/i.test(html)) return escapeHtml(html).replace(/\r?\n/g, '<br>');
+  // Remove blocos perigosos inteiros.
+  let s = html.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
+  // Tags de abertura: mantém só as permitidas, descartando atributos (exceto href em <a>).
+  s = s.replace(/<([a-zA-Z0-9]+)((?:[^>"']|"[^"]*"|'[^']*')*)>/g, (_m, rawTag: string, attrs: string) => {
+    const tag = rawTag.toLowerCase();
+    if (!ALLOWED_TAGS.has(tag)) return '';
+    if (tag === 'a') {
+      const m = /href\s*=\s*("([^"]*)"|'([^']*)')/i.exec(attrs);
+      const url = m ? (m[2] ?? m[3] ?? '') : '';
+      if (/^\s*(https?:|mailto:)/i.test(url)) return `<a href="${url.replace(/["<>]/g, '')}" target="_blank" rel="noopener noreferrer">`;
+      return '<a>';
+    }
+    return `<${tag}>`;
+  });
+  // Tags de fechamento.
+  s = s.replace(/<\/([a-zA-Z0-9]+)\s*>/g, (_m, rawTag: string) => (ALLOWED_TAGS.has(rawTag.toLowerCase()) ? `</${rawTag.toLowerCase()}>` : ''));
+  return s.trim();
+}
+
+/** Normaliza e sanitiza os blocos recebidos do editor. */
+export function sanitizePopBlocks(raw: unknown): PopBlock[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PopBlock[] = [];
+  for (const b of raw as PopBlock[]) {
+    if (!b || typeof b !== 'object') continue;
+    if (b.type === 'text') {
+      const text = sanitizePopHtml(String(b.text ?? ''));
+      if (text.replace(/<[^>]*>/g, '').trim() || /<(img|br)/i.test(text)) out.push({ type: 'text', text });
+    } else if (b.type === 'checklist') {
+      const items = (Array.isArray(b.items) ? b.items : []).map((i) => String(i).trim()).filter(Boolean);
+      if (items.length) out.push({ type: 'checklist', items });
+    } else if (b.type === 'image') {
+      const url = String(b.url ?? '').trim();
+      if (/^(https?:|\/)/i.test(url)) out.push({ type: 'image', url });
+    } else if (b.type === 'video') {
+      const url = String(b.url ?? '').trim();
+      if (url) out.push({ type: 'video', url });
+    }
+  }
+  return out;
+}
+
 /** POPs publicados visíveis ao usuário + se ele já confirmou a versão atual. */
 export async function listPopsForUser(user: SessionUser) {
   const pops = await prisma.pop.findMany({
@@ -59,6 +115,7 @@ export async function createPop(user: SessionUser, input: PopInput, ctx: { ip?: 
   if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' };
   if (!input.title?.trim() || input.unitIds.length === 0) return { ok: false as const, reason: 'INVALID' };
   const sectors = dedupeSectors(input.sectorNames);
+  const blocks = sanitizePopBlocks(input.blocks);
   const pop = await prisma.pop.create({
     data: {
       title: input.title.trim(),
@@ -68,7 +125,7 @@ export async function createPop(user: SessionUser, input: PopInput, ctx: { ip?: 
       version: 1,
       isInitial: sectors.length > 0 ? false : Boolean(input.isInitial), // setorial e inicial são exclusivos
       recurrence: input.recurrence === 'MONTHLY' ? 'MONTHLY' : 'ONCE',
-      content: input.blocks as unknown as Prisma.InputJsonValue,
+      content: blocks as unknown as Prisma.InputJsonValue,
       units: { create: input.unitIds.map((unitId) => ({ unitId })) },
       sectors: { create: sectors.map((sectorName) => ({ sectorName })) },
     },
@@ -85,7 +142,8 @@ export async function updatePop(user: SessionUser, id: string, input: PopInput &
   const current = await prisma.pop.findUnique({ where: { id }, select: { version: true, content: true, units: { select: { unitId: true } } } });
   if (!current) return { ok: false as const, reason: 'INVALID' };
   const sectors = dedupeSectors(input.sectorNames);
-  const contentChanged = JSON.stringify(current.content) !== JSON.stringify(input.blocks);
+  const blocks = sanitizePopBlocks(input.blocks);
+  const contentChanged = JSON.stringify(current.content) !== JSON.stringify(blocks);
   const newVersion = (input.bumpVersion ?? contentChanged) ? current.version + 1 : current.version;
 
   await prisma.$transaction(async (tx) => {
@@ -100,7 +158,7 @@ export async function updatePop(user: SessionUser, id: string, input: PopInput &
         isInitial: sectors.length > 0 ? false : Boolean(input.isInitial), // setorial e inicial são exclusivos
         recurrence: input.recurrence === 'MONTHLY' ? 'MONTHLY' : 'ONCE',
         version: newVersion,
-        content: input.blocks as unknown as Prisma.InputJsonValue,
+        content: blocks as unknown as Prisma.InputJsonValue,
         units: { create: input.unitIds.map((unitId) => ({ unitId })) },
         sectors: { create: sectors.map((sectorName) => ({ sectorName })) },
       },

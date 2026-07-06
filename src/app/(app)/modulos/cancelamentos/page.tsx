@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import { FileText } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -30,7 +32,10 @@ export default async function CancelamentosPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-brand">Cancelamento de Cupons</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-bold text-brand">Cancelamento de Cupons</h1>
+        <Link href="/modulos/cancelamentos/relatorio" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-muted"><FileText className="h-4 w-4" /> Relatório</Link>
+      </div>
 
       {/* Resumo do mês */}
       <div className="grid grid-cols-3 gap-2">
