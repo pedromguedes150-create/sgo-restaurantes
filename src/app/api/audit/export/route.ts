@@ -10,10 +10,10 @@ export async function GET(req: Request) {
   if (!canViewAudit(user)) return new Response('Restrito ao Administrador/Diretoria', { status: 403 });
 
   const url = new URL(req.url);
-  const module = url.searchParams.get('module') || undefined;
+  const mod = url.searchParams.get('module') || undefined;
   const days = Number(url.searchParams.get('days')) || 30;
 
-  const rows = await getAuditForExport({ module, days });
+  const rows = await getAuditForExport({ module: mod, days });
 
   const sep = ';';
   const esc = (s: string) => `"${(s ?? '').replace(/"/g, "'")}"`;
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
       esc(r.ip),
     ].join(sep));
   }
-  const title = `Log de Auditoria - ultimos ${days} dias${module ? ` - ${module}` : ''}`;
+  const title = `Log de Auditoria - ultimos ${days} dias${mod ? ` - ${mod}` : ''}`;
   const csv = '﻿' + `"${title}"\n` + lines.join('\n');
 
   return new Response(csv, {

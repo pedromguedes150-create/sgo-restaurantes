@@ -13,10 +13,10 @@ export default async function AuditoriaRelatorioPage({ searchParams }: { searchP
   const user = (await getSessionUser())!;
   if (!canViewAudit(user)) return <p className="text-sm text-muted-foreground">Acesso restrito ao Administrador e à Diretoria.</p>;
 
-  const module = searchParams.module || undefined;
+  const mod = searchParams.module || undefined;
   const days = PERIODS.includes(Number(searchParams.days)) ? Number(searchParams.days) : 30;
-  const [rows, modules] = await Promise.all([getAuditForExport({ module, days, take: 2000 }), getAuditModules()]);
-  const exportHref = `/api/audit/export?days=${days}${module ? `&module=${module}` : ''}`;
+  const [rows, modules] = await Promise.all([getAuditForExport({ module: mod, days, take: 2000 }), getAuditModules()]);
+  const exportHref = `/api/audit/export?days=${days}${mod ? `&module=${mod}` : ''}`;
   const q = (d: number, m?: string) => `/auditoria/relatorio?days=${d}${m ? `&module=${m}` : ''}`;
 
   return (
@@ -31,12 +31,12 @@ export default async function AuditoriaRelatorioPage({ searchParams }: { searchP
 
       <div className="flex flex-wrap gap-2 print:hidden">
         {PERIODS.map((d) => (
-          <Link key={d} href={q(d, module)} className={days === d ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{d} dias</Link>
+          <Link key={d} href={q(d, mod)} className={days === d ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{d} dias</Link>
         ))}
         <span className="mx-1 self-center text-muted-foreground">·</span>
-        <Link href={q(days)} className={!module ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>Todos</Link>
+        <Link href={q(days)} className={!mod ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>Todos</Link>
         {modules.map((m) => (
-          <Link key={m} href={q(days, m)} className={module === m ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{m}</Link>
+          <Link key={m} href={q(days, m)} className={mod === m ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{m}</Link>
         ))}
       </div>
 
