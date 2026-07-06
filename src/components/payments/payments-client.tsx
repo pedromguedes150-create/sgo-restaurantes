@@ -144,7 +144,50 @@ export function PaymentsClient({
         />
       )}
 
-      {tab === 'historico' && <List items={history} actions={isAdmin ? adminActions : undefined} />}
+      {tab === 'historico' && <HistoryTab items={history} actions={isAdmin ? adminActions : undefined} />}
+    </div>
+  );
+}
+
+function HistoryTab({ items, actions }: { items: PayReq[]; actions?: (r: PayReq) => React.ReactNode }) {
+  const [type, setType] = useState<'ALL' | PayReq['type']>('ALL');
+  const [unit, setUnit] = useState('ALL');
+  const [status, setStatus] = useState<'ALL' | PayReq['status']>('ALL');
+  const [q, setQ] = useState('');
+  const unitNames = useMemo(() => [...new Set(items.map((i) => i.unit))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [items]);
+  const filtered = useMemo(() => items.filter((i) =>
+    (type === 'ALL' || i.type === type) &&
+    (unit === 'ALL' || i.unit === unit) &&
+    (status === 'ALL' || i.status === status) &&
+    (!q.trim() || i.title.toLowerCase().includes(q.trim().toLowerCase()) || (i.requestedBy ?? '').toLowerCase().includes(q.trim().toLowerCase()))
+  ), [items, type, unit, status, q]);
+  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
+        <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className={sel}>
+          <option value="ALL">Todos os tipos</option>
+          <option value="FREELANCER">Freelancer</option>
+          <option value="OVERTIME">Hora Extra</option>
+          <option value="MISC">Avulso</option>
+        </select>
+        {unitNames.length > 1 && (
+          <select value={unit} onChange={(e) => setUnit(e.target.value)} className={sel}>
+            <option value="ALL">Todas as unidades</option>
+            {unitNames.map((u) => <option key={u} value={u}>{u}</option>)}
+          </select>
+        )}
+        <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className={sel}>
+          <option value="ALL">Todos os status</option>
+          <option value="PENDING">Pendente</option>
+          <option value="APPROVED">Aprovada</option>
+          <option value="PAID">Paga</option>
+          <option value="REJECTED">Rejeitada</option>
+        </select>
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar prestador/beneficiário…" className="h-9 w-48 text-sm" />
+        <span className="ml-auto text-xs text-muted-foreground">{filtered.length} de {items.length}</span>
+      </div>
+      <List items={filtered} actions={actions} />
     </div>
   );
 }

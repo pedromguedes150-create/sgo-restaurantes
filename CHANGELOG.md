@@ -9,6 +9,16 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.5.0 — 2026-07-06
+### Adicionado
+- **Comandas — seleção em lote**: na conferência em grade dá para **marcar/desmarcar uma faixa** de comandas de uma vez (ex.: sequências guardadas que não se confere todos os dias), além do "Marcar todas"/"Limpar".
+- **Minha área — tarefas melhores**: agora dá para **editar e excluir** cada tarefa pessoal, e o horário do lembrete é escolhido em **passos de 30 minutos** (data + hora em lista).
+- **Minha área — notas ricas**: o bloco de notas ganhou **título** (nomear a nota), **edição** e **texto formatado** (negrito, itálico, sublinhado, listas, subtítulo, link) — o mesmo editor dos POPs.
+- **Pagamentos — filtros no histórico**: filtre por **tipo** (freelancer/hora extra/avulso), **unidade**, **status** e busca por **prestador/beneficiário**.
+### Alterado
+- **Metas — seletor de mês em lista**: a escolha do mês passou de botões para uma **lista suspensa** (mais compacta).
+- **Consolidação de freelancers — filtros em lista**: mês e unidade agora são **listas suspensas** no lugar dos botões.
+
 ## v1.4.0 — 2026-07-06
 ### Adicionado
 - **Manutenção (módulo novo)**: `/modulos/manutencao` com duas abas. **Chamados** — abra um chamado (o que precisa, equipamento, prestador, prazo) e acompanhe o status **Aberto → Em andamento → Concluído** (com custo e o que foi feito); painel com abertos, em andamento, atrasados, feitos no mês e custo do mês; supervisão avisada na abertura. **Preventiva** — planos recorrentes por equipamento (ex.: limpar a coifa a cada 30 dias); quando vencem, gerente e supervisão são avisados na Central de Notificações; "Registrar execução" agenda a próxima e guarda o histórico. Acessível também pela sub-aba Manutenção das Ocorrências. Admin exclui chamados e planos.

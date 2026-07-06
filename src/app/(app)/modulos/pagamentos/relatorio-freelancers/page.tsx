@@ -5,6 +5,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getFreelancerConsolidation } from '@/lib/payments/query';
 import { Card, CardContent } from '@/components/ui/card';
 import { PrintButton } from '@/components/ui/print-button';
+import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { formatBRL } from '@/lib/utils';
 import { ArrowLeft, Download, AlertTriangle } from 'lucide-react';
 
@@ -37,10 +38,6 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
   const data = await getFreelancerConsolidation(user, ym, selectedUnit);
   const label = months.find((m) => m.value === ym)?.label ?? ym;
 
-  const linkFor = (p: Record<string, string>) => {
-    const sp = new URLSearchParams({ month: ym, ...(selectedUnit ? { unit: selectedUnit } : {}), ...p });
-    return `/modulos/pagamentos/relatorio-freelancers?${sp.toString()}`;
-  };
   const exportHref = `/api/payments/freelancer-report?month=${ym}${selectedUnit ? `&unit=${selectedUnit}` : ''}`;
 
   return (
@@ -57,20 +54,19 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
       </div>
       <p className="text-sm text-muted-foreground">Pagamentos de freelancers <strong>aprovados e pagos</strong> no mês — base para envio ao Financeiro.</p>
 
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-2 print:hidden">
-        {months.map((m) => (
-          <Link key={m.value} href={linkFor({ month: m.value })} className={m.value === ym ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{m.label}</Link>
-        ))}
-      </div>
-      {units.length > 1 && (
-        <div className="flex flex-wrap gap-2 print:hidden">
-          <Link href={linkFor({ unit: '' })} className={!selectedUnit ? 'rounded-full bg-secondary px-3 py-1.5 text-sm font-semibold' : 'rounded-full border px-3 py-1.5 text-sm'}>Todas as unidades</Link>
-          {units.map((u) => (
-            <Link key={u.id} href={`/modulos/pagamentos/relatorio-freelancers?month=${ym}&unit=${u.id}`} className={selectedUnit === u.id ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</Link>
-          ))}
+      {/* Filtros (listas suspensas) */}
+      <div className="flex flex-wrap items-end gap-3 print:hidden">
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mês</p>
+          <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" className="h-10 w-56 rounded-lg border-2 border-input bg-background px-3 text-sm font-medium" />
         </div>
-      )}
+        {units.length > 1 && (
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unidade</p>
+            <UnitSelectNav units={[{ id: '', name: 'Todas as unidades' }, ...units]} selected={selectedUnit ?? ''} paramName="unit" className="h-10 w-56 rounded-lg border-2 border-input bg-background px-3 text-sm font-medium" />
+          </div>
+        )}
+      </div>
 
       {/* Total geral */}
       <Card>

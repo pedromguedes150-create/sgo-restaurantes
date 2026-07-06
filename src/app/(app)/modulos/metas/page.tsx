@@ -53,11 +53,10 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
       </div>
       <p className="text-sm text-muted-foreground">Mês {monthLabel}</p>
 
-      {/* Histórico: seletor de meses */}
-      <div className="flex flex-wrap gap-2 print:hidden">
-        {months.map((m) => (
-          <Link key={m.value} href={linkFor({ month: m.value })} className={m.value === ym ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{m.label}</Link>
-        ))}
+      {/* Histórico: seletor de mês (lista suspensa) */}
+      <div className="max-w-xs print:hidden">
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mês de referência</p>
+        <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" />
       </div>
 
       {isAdminView && ranking.length > 0 && (

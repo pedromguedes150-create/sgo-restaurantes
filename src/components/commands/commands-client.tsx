@@ -192,12 +192,27 @@ function GridConference({ unitId, activeNumbers, busy, setBusy, onResult }: {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [filter, setFilter] = useState('');
   const [obs, setObs] = useState('');
+  const [rangeFrom, setRangeFrom] = useState('');
+  const [rangeTo, setRangeTo] = useState('');
   const total = activeNumbers.length;
   const conferidas = selected.size;
   const faltando = total - conferidas;
   const shown = useMemo(() => (filter.trim() ? activeNumbers.filter((n) => String(n).includes(filter.trim())) : activeNumbers), [filter, activeNumbers]);
 
   function toggle(n: number) { setSelected((s) => { const x = new Set(s); x.has(n) ? x.delete(n) : x.add(n); return x; }); }
+
+  // Marca/desmarca uma faixa de números em lote (comandas guardadas que não se confere todo dia).
+  function applyRange(mark: boolean) {
+    const a = parseInt(rangeFrom, 10);
+    const b = parseInt(rangeTo, 10);
+    if (Number.isNaN(a) || Number.isNaN(b)) return;
+    const lo = Math.min(a, b), hi = Math.max(a, b);
+    setSelected((s) => {
+      const x = new Set(s);
+      for (const n of activeNumbers) if (n >= lo && n <= hi) { if (mark) x.add(n); else x.delete(n); }
+      return x;
+    });
+  }
 
   async function confirmConf() {
     const absent = activeNumbers.filter((n) => !selected.has(n));
@@ -225,6 +240,15 @@ function GridConference({ unitId, activeNumbers, busy, setBusy, onResult }: {
         <button onClick={() => setSelected(new Set())} className="rounded-full border px-3 py-1 text-xs font-semibold">Limpar</button>
         <Input inputMode="numeric" value={filter} onChange={(e) => setFilter(e.target.value.replace(/\D/g, ''))} placeholder="filtrar nº" className="h-8 w-24 text-sm" />
         <span className="ml-auto text-xs font-semibold"><span className="text-success">{conferidas} ok</span> · <span className={faltando > 0 ? 'text-critical' : 'text-muted-foreground'}>{faltando} faltando</span> / {total}</span>
+      </div>
+      {/* Seleção em lote por faixa (ex.: comandas guardadas) */}
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-md border border-dashed p-2">
+        <span className="text-xs font-semibold text-muted-foreground">Faixa:</span>
+        <Input inputMode="numeric" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value.replace(/\D/g, ''))} placeholder="de" className="h-8 w-16 text-sm" />
+        <span className="text-xs text-muted-foreground">até</span>
+        <Input inputMode="numeric" value={rangeTo} onChange={(e) => setRangeTo(e.target.value.replace(/\D/g, ''))} placeholder="até" className="h-8 w-16 text-sm" />
+        <button onClick={() => applyRange(true)} className="rounded-full border border-success/50 px-2.5 py-1 text-xs font-semibold text-success">Marcar faixa</button>
+        <button onClick={() => applyRange(false)} className="rounded-full border border-critical/50 px-2.5 py-1 text-xs font-semibold text-critical">Desmarcar faixa</button>
       </div>
       <div className="max-h-72 overflow-y-auto rounded-md border bg-background p-2">
         <div className="grid grid-cols-6 gap-1 sm:grid-cols-10">

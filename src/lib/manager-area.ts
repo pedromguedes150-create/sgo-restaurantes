@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { notifyUsers } from '@/lib/notifications';
+import { sanitizePopHtml } from '@/lib/pops';
 import type { SessionUser } from '@/lib/auth/session';
 import type { ManagerLeaveKind } from '@prisma/client';
 
@@ -12,6 +13,19 @@ export async function createManagerTask(user: SessionUser, input: { title: strin
   const dueAt = input.dueAt ? new Date(input.dueAt) : null;
   const t = await prisma.managerTask.create({ data: { userId: user.id, title: input.title.trim(), notes: input.notes?.trim() || null, dueAt: dueAt && !isNaN(dueAt.getTime()) ? dueAt : null } });
   return { ok: true as const, id: t.id };
+}
+export async function updateManagerTask(user: SessionUser, id: string, input: { title?: string; notes?: string; dueAt?: string | null }) {
+  const t = await prisma.managerTask.findUnique({ where: { id }, select: { userId: true } });
+  if (!t || t.userId !== user.id) return { ok: false as const, reason: 'FORBIDDEN' as const };
+  const data: Record<string, unknown> = {};
+  if (input.title !== undefined) { if (!input.title.trim()) return { ok: false as const, reason: 'INVALID' as const }; data.title = input.title.trim(); }
+  if (input.notes !== undefined) data.notes = input.notes.trim() || null;
+  if (input.dueAt !== undefined) {
+    if (input.dueAt === null || input.dueAt === '') { data.dueAt = null; data.notifiedAt = null; }
+    else { const d = new Date(input.dueAt); if (!isNaN(d.getTime())) { data.dueAt = d; data.notifiedAt = null; } }
+  }
+  await prisma.managerTask.update({ where: { id }, data });
+  return { ok: true as const };
 }
 export async function toggleManagerTask(user: SessionUser, id: string, done: boolean) {
   const t = await prisma.managerTask.findUnique({ where: { id }, select: { userId: true } });
@@ -30,10 +44,20 @@ export async function deleteManagerTask(user: SessionUser, id: string) {
 export async function listManagerNotes(userId: string) {
   return prisma.managerNote.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 200 });
 }
-export async function addManagerNote(user: SessionUser, content: string) {
-  if (!content?.trim()) return { ok: false as const, reason: 'INVALID' as const };
-  const n = await prisma.managerNote.create({ data: { userId: user.id, content: content.trim() } });
+export async function addManagerNote(user: SessionUser, input: { title?: string; content: string }) {
+  const content = sanitizePopHtml((input.content ?? '').trim());
+  if (!content.replace(/<[^>]*>/g, '').trim() && !/<(img|br)/i.test(content)) return { ok: false as const, reason: 'INVALID' as const };
+  const n = await prisma.managerNote.create({ data: { userId: user.id, title: input.title?.trim() || null, content } });
   return { ok: true as const, id: n.id };
+}
+export async function updateManagerNote(user: SessionUser, id: string, input: { title?: string; content?: string }) {
+  const n = await prisma.managerNote.findUnique({ where: { id }, select: { userId: true } });
+  if (!n || n.userId !== user.id) return { ok: false as const, reason: 'FORBIDDEN' as const };
+  const data: Record<string, unknown> = {};
+  if (input.title !== undefined) data.title = input.title.trim() || null;
+  if (input.content !== undefined) { const c = sanitizePopHtml(input.content.trim()); if (!c.replace(/<[^>]*>/g, '').trim() && !/<(img|br)/i.test(c)) return { ok: false as const, reason: 'INVALID' as const }; data.content = c; }
+  await prisma.managerNote.update({ where: { id }, data });
+  return { ok: true as const };
 }
 export async function deleteManagerNote(user: SessionUser, id: string) {
   const n = await prisma.managerNote.findUnique({ where: { id }, select: { userId: true } });

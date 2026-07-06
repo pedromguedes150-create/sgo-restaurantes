@@ -49,8 +49,8 @@ export const GUIDE: GuideSection[] = [
         summary: 'Seu espaço pessoal — tarefas, notas e folgas.',
         steps: [
           'A aba MINHA ÁREA aparece para todos os usuários, individualmente (é sua, ninguém mais vê).',
-          'Tarefas pessoais: crie lembretes com data/hora — o sistema avisa por notificação na hora marcada.',
-          'Bloco de notas: anotações livres do dia a dia.',
+          'Tarefas pessoais: crie lembretes com data e hora (a hora é escolhida de 30 em 30 min). Dá para editar (✏️) e excluir (🗑️) cada tarefa; o sistema avisa por notificação na hora marcada.',
+          'Bloco de notas: dê um título, escreva com formatação (negrito, itálico, sublinhado, listas, link) e edite quando quiser.',
           'Folgas/férias: registre seus dias de folga/férias.',
         ],
         tips: ['Para gerentes: nos dias marcados como folga/férias, os checklists não aparecem na aba Tarefas (você ainda pode entrar no sistema).'],
@@ -143,7 +143,7 @@ export const GUIDE: GuideSection[] = [
         summary: 'Contagem diária e divergências.',
         steps: [
           'Antes do uso, o Admin cadastra as faixas em Configurações → Comandas (várias sequências por unidade, ex.: 1–200 e 500–650).',
-          'Conferência em grade: abra COMANDAS e toque em cada comanda conferida (fica verde), como na folha de papel. Um contador mostra conferidas/faltando. Use "Marcar todas"/"Limpar" e o filtro por número para agilizar.',
+          'Conferência em grade: abra COMANDAS e toque em cada comanda conferida (fica verde), como na folha de papel. Um contador mostra conferidas/faltando. Use "Marcar todas"/"Limpar", a seleção por FAIXA (de X até Y — marca/desmarca em lote as sequências guardadas) e o filtro por número para agilizar.',
           'Ao "Confirmar conferência", as comandas NÃO marcadas viram as ausentes: o sistema registra a contagem e alerta os supervisores automaticamente (observação obrigatória quando há falta).',
           'Atalhos: "Todas presentes" registra tudo presente num toque; o lançamento manual de ausentes continua disponível (recolhido).',
         ],
@@ -384,6 +384,7 @@ export const GUIDE: GuideSection[] = [
           'Financeiro/Admin: use "Consolidação de freelancers" para o relatório mensal (chave PIX + total por freelancer) em PDF e Excel, pronto para o Financeiro.',
           'O Admin pode delegar a aprovação por período (férias do aprovador).',
           'O Admin pode editar o valor/descrição ou excluir lançamentos no histórico (tudo fica no Log de Auditoria).',
+          'No Histórico dá para filtrar por tipo (freelancer/hora extra/avulso), unidade e status, e buscar por prestador/beneficiário.',
         ],
       },
       {

@@ -733,6 +733,7 @@ model ManagerTask {
 model ManagerNote {
   id        String   @id @default(cuid())
   userId    String
+  title     String?
   content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
