@@ -21,6 +21,7 @@ export const MODULES: { key: string; label: string; nav?: string }[] = [
   { key: 'OCCURRENCES', label: 'Ocorrências', nav: '/modulos/ocorrencias' },
   { key: 'MAINTENANCE', label: 'Manutenção', nav: '/modulos/manutencao' },
   { key: 'COMMANDS', label: 'Comandas', nav: '/modulos/comandas' },
+  { key: 'CASH', label: 'Gestão de Troco', nav: '/modulos/troco' },
   { key: 'CANCELLATIONS', label: 'Cancelamentos', nav: '/modulos/cancelamentos' },
   { key: 'INVENTORY', label: 'Inventário', nav: '/modulos/inventario' },
   { key: 'NOTES', label: 'Notas Recebidas', nav: '/modulos/notas' },

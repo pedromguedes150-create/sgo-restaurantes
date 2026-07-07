@@ -249,6 +249,15 @@ export async function deleteVacation(user: SessionUser, id: string, ctx: Ctx = {
   return { ok: true };
 }
 
+export async function deleteCashSession(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const s = await prisma.cashSession.findUnique({ where: { id }, select: { unitId: true, operationalDate: true, seq: true } });
+  if (!s) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.cashSession.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: s.unitId, action: 'CASH_SESSION_DELETE', module: 'CASH', entity: 'cash_session', entityId: id, metadata: { opDate: s.operationalDate, seq: s.seq }, ...ctx });
+  return { ok: true };
+}
+
 export async function deleteCollaboratorObservation(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   const o = await prisma.collaboratorObservation.findUnique({ where: { id }, select: { unitId: true, collaboratorName: true } });

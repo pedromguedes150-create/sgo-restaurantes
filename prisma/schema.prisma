@@ -1125,6 +1125,33 @@ model ScheduleChange {
   @@map("schedule_changes")
 }
 
+// ===== Módulo 16 — Gestão de Troco (Onda 4) ==================================
+
+/// Sessão de caixa em CADEIA: o fechamento de um caixa é a abertura esperada do
+/// próximo (mesmo entre dias — o troco pernoita). Abertura digitada ≠ fechamento
+/// anterior → divergência (alerta). closingAmount null = caixa aberto.
+model CashSession {
+  id              String    @id @default(cuid())
+  unitId          String
+  operationalDate String // 'YYYY-MM-DD' (dia operacional da unidade)
+  seq             Int // ordem no dia (1º, 2º… caixa)
+  openingAmount   Decimal   @db.Decimal(10, 2)
+  expectedOpening Decimal?  @db.Decimal(10, 2) // fechamento do caixa anterior (null = 1º da unidade)
+  divergence      Decimal?  @db.Decimal(10, 2) // abertura − esperado (≠0 alerta)
+  closingAmount   Decimal?  @db.Decimal(10, 2)
+  note            String?
+  openedById      String
+  openedByName    String
+  openedAt        DateTime  @default(now())
+  closedById      String?
+  closedByName    String?
+  closedAt        DateTime?
+
+  @@unique([unitId, operationalDate, seq])
+  @@index([unitId, operationalDate])
+  @@map("cash_sessions")
+}
+
 /// Catálogo de produtos-padrão da rede (Módulo 22 / v1.3). Foto de referência
 /// usada pela IA para apontar, numa foto da vitrine, produtos FORA do padrão.
 model ProductStandard {

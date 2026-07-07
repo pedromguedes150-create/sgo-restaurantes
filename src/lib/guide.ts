@@ -175,6 +175,19 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'troco',
+        title: 'Gestão de Troco',
+        roles: MANAGERLINE,
+        summary: 'Caixas em cadeia com alerta de divergência.',
+        steps: [
+          'Em Operação → "Gestão de Troco": ao abrir um caixa, conte o troco e digite o valor real.',
+          'O sistema compara com o fechamento do caixa anterior (a abertura esperada) — diferença gera alerta automático à supervisão.',
+          'Ao fechar, conte de novo e digite o valor: ele vira a abertura esperada do próximo caixa (vale até de um dia para o outro).',
+          'Pode haver vários caixas no mesmo dia — sempre um aberto por vez.',
+          'A tela mostra os caixas de hoje, o histórico e as divergências do mês (por unidade, para a supervisão).',
+        ],
+      },
+      {
         id: 'comissoes-mobilidade',
         title: 'Comissões & Mobilidade',
         roles: MANAGERLINE,

@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.11.0 — 2026-07-07
+### Adicionado
+- **Novo módulo: Gestão de Troco** (item 16, Onda 4) em `Operação → Gestão de Troco`: **sessões de caixa em cadeia** — o fechamento de um caixa é a **abertura esperada** do próximo (o troco "pernoita" entre dias). Abertura digitada diferente do fechamento anterior gera **divergência com alerta automático** ao supervisor da unidade + Admins. Vários caixas por dia (um aberto por vez), resumo do dia, **dashboard de divergências do mês por unidade** e histórico. Admin exclui sessões (auditado). Módulo `CASH` na matriz de Perfis.
+
 ## v1.10.0 — 2026-07-07 (fecha a Onda 3 — Pessoas/RH)
 ### Adicionado
 - **Pessoas — Comissões & Mobilidade** (item 14): Supervisão/Admin lança valores (comissão do Teknisa / mobilidade) por colaborador/mês, com **dashboard** (totais do mês, por unidade, maiores do mês, tendência 12 meses) e **histórico mensal**. Admin exclui lançamentos (auditado).

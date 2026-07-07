@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Trash2, ClipboardList, Ticket, Boxes, AlertOctagon, Wallet, Receipt, Target, Users, BookOpen, Megaphone, Flame, Droplets, Wrench } from 'lucide-react';
+import { Trash2, ClipboardList, Ticket, Boxes, AlertOctagon, Wallet, Receipt, Target, Users, BookOpen, Megaphone, Flame, Droplets, Wrench, Banknote } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const MODULES = [
@@ -10,6 +10,7 @@ const MODULES = [
   { href: '/modulos/ocorrencias', label: 'Ocorrências', icon: AlertOctagon, ready: true },
   { href: '/modulos/manutencao', label: 'Manutenção', icon: Wrench, ready: true },
   { href: '/modulos/comandas', label: 'Comandas', icon: ClipboardList, ready: true },
+  { href: '/modulos/troco', label: 'Gestão de Troco', icon: Banknote, ready: true },
   { href: '/modulos/cancelamentos', label: 'Cancelamentos', icon: Ticket, ready: true },
   { href: '/modulos/pagamentos', label: 'Pagamentos', icon: Wallet, ready: true },
   { href: '/modulos/notas', label: 'Notas', icon: Receipt, ready: true },

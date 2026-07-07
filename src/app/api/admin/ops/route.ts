@@ -42,6 +42,7 @@ export async function POST(req: Request) {
     else if (e === 'collaboratorPayout') r = await ops.deleteCollaboratorPayout(user, b.id, ctx);
     else if (e === 'scheduleChange') r = await ops.deleteScheduleChange(user, b.id, ctx);
     else if (e === 'vacation') r = await ops.deleteVacation(user, b.id, ctx);
+    else if (e === 'cashSession') r = await ops.deleteCashSession(user, b.id, ctx);
     else if (e === 'collaboratorObservation') r = await ops.deleteCollaboratorObservation(user, b.id, ctx);
   }
 
