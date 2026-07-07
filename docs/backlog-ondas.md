@@ -20,7 +20,12 @@
 - ✅ **17 — Rotina do Supervisor** (v1.12.0, 3 fases): módulo `SUPERVISION` (default restrito a SUPERVISOR na matriz), `/modulos/supervisao`. **A** painel de uso (`src/lib/supervisor/usage.ts`: checklist%, cobertura waste/comandas ÷ dias decorridos, ocorrências/notas/caixas, meta, tone 🟢≥80/🟡≥50/🔴, piores primeiro). **B** visitas (`SupervisorVisit` PLANNED→DONE/CANCELED, feedback obrigatório, notifica gerente no agendar e no feedback, números do mês). **C** checklists de visita (`SupervisorChecklist` items JSON, CRUD Admin em `/configuracoes/checklists-supervisor`, resultados congelados em `checklistResults` na visita; excluir com histórico = inativa). `src/lib/supervisor/visits.ts`.
 
 ## 🎉 LOTE DE AJUSTES JUL/2026 CONCLUÍDO (Ondas 1–4, v1.5.0 → v1.12.0)
-> Nota: recorrência automática de visitas (lembrete por frequência variável) ficou como refino futuro da Fase B — hoje o agendamento é manual e atrasos ficam destacados.
+
+## ✅ Pós-lote 08/07 (sugestões 2, 4, 5, 6, 7 da análise) — v1.13.0 + v1.14.0
+- **Testes**: suíte 47/47 verde + 15 novos (cadeia do troco, avaliação-meta) = 62.
+- **v1.13.0**: recorrência de visitas (`SupervisorVisitPlan`, vencida avisa 1×/dia), resumo semanal de aderência (cobra sozinho), exports CSV Troco/Comissões/Visitas.
+- **v1.14.0**: **Visão Executiva** (`/modulos/executivo`, EXECUTIVE só CEO/Admin) — rede em 1 tela/mês + Imprimir/PDF.
+- **Higiene**: `BACKUP_MIRROR_DIR` → Google Drive (3-2-1 completo, testado); build cache Docker −6,5 GB. Senhas/chaves: passo a passo em `docs/pendencias-producao.md` (exigem o Pedro). PWA/FCM segue pendente (próximo grande bloco).
 
 ## Itens cancelados/decididos
 - **Notas — leitura por foto/IA**: cancelado pelo Pedro (lançamento já é simples).
