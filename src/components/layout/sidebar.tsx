@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, ListChecks, Trash2, AlertOctagon, ClipboardList, Ticket,
-  Boxes, Receipt, Wallet, Users, BookOpen, Target, ScrollText, Settings, GraduationCap, LifeBuoy, Megaphone, Flame, Droplets, NotebookPen, Wrench, CalendarOff, Banknote, Eye,
+  Boxes, Receipt, Wallet, Users, BookOpen, Target, ScrollText, Settings, GraduationCap, LifeBuoy, Megaphone, Flame, Droplets, NotebookPen, Wrench, CalendarOff, Banknote, Eye, BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { APP_VERSION_LABEL } from '@/lib/version';
@@ -47,6 +47,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: '/modulos/treinamentos', label: 'Treinamentos', icon: GraduationCap },
       { href: '/modulos/metas', label: 'Metas', icon: Target },
       { href: '/modulos/supervisao', label: 'Rotina do Supervisor', icon: Eye },
+      { href: '/modulos/executivo', label: 'Visão Executiva', icon: BarChart3 },
     ],
   },
   {

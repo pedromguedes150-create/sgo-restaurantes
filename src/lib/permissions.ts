@@ -35,6 +35,7 @@ export const MODULES: { key: string; label: string; nav?: string }[] = [
   { key: 'TRAINING', label: 'Treinamentos', nav: '/modulos/treinamentos' },
   { key: 'METAS', label: 'Metas', nav: '/modulos/metas' },
   { key: 'SUPERVISION', label: 'Rotina do Supervisor', nav: '/modulos/supervisao' },
+  { key: 'EXECUTIVE', label: 'Visão Executiva', nav: '/modulos/executivo' },
   { key: 'AUDIT', label: 'Auditoria', nav: '/auditoria' },
   { key: 'CONFIG', label: 'Configurações', nav: '/configuracoes' },
 ];
@@ -49,6 +50,7 @@ export interface Perm { canView: boolean; canEdit: boolean }
 const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   LEAVES_TEAM: ['SUPERVISOR'],
   SUPERVISION: ['SUPERVISOR'],
+  EXECUTIVE: [], // só ADMIN/CEO por padrão (Admin pode liberar na matriz)
 };
 
 /** Permissões efetivas de um perfil por módulo (com defaults). */

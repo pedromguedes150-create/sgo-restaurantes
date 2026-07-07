@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.14.0 — 2026-07-08
+### Adicionado
+- **Novo módulo: Visão Executiva** (`Gestão → Visão Executiva`, restrito a CEO/Admin por padrão): a rede inteira em uma tela por mês — cartões consolidados (meta média, uso do sistema, desperdício total, dias de atestado, divergências de troco, custo de manutenção, ocorrências graves, visitas de supervisão) + **tabela por unidade** ordenada pela meta, com semáforo de uso. Botão **Imprimir/PDF** para reunião de diretoria. Tudo composto do que os módulos já calculam (mesmos números das telas de origem).
+
 ## v1.13.0 — 2026-07-08
 ### Adicionado
 - **Recorrência de visitas** (Rotina do Supervisor): defina por unidade "visitar a cada N dias" — concluir uma visita reagenda a próxima automaticamente; visita **vencida gera aviso diário** ao supervisor da unidade + Admins (0 = desliga).

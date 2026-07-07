@@ -175,6 +175,17 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'visao-executiva',
+        title: 'Visão Executiva',
+        roles: ['CEO', 'ADMIN'],
+        summary: 'A rede em uma tela por mês.',
+        steps: [
+          'Em "Visão Executiva", escolha o mês: cartões da rede (meta média, uso, desperdício, atestados, troco, manutenção, ocorrências graves, visitas) + tabela por unidade ordenada pela meta.',
+          'A bolinha ao lado da unidade é o uso do sistema (🟢 ≥80% · 🟡 ≥50% · 🔴 <50%).',
+          '"Imprimir / PDF" gera a versão para reunião de diretoria.',
+        ],
+      },
+      {
         id: 'rotina-supervisor',
         title: 'Rotina do Supervisor',
         roles: ['SUPERVISOR', 'ADMIN', 'CEO'],
