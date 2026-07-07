@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.7.0 — 2026-07-07
+### Adicionado
+- **Pessoas — Período de Experiência**: nova tela (`Pessoas → Período de Experiência`) que lista automaticamente os colaboradores com **até 90 dias de casa** (admissão vinda do RH), com barra de dias (X/90) e alerta quando faltam ≤15 dias. O gestor **aprova ou reprova** o período com **anotações**; a decisão notifica os Admins para avisar o RH. (1º bloco da Onda 3 — Pessoas/RH.)
+
 ## v1.6.0 — 2026-07-06
 ### Adicionado
 - **Notas — aba Análise**: supervisores/admins têm uma aba de **análise/histórico** que filtra por **fornecedor, unidade e status**, com totais (nº de notas + valor).

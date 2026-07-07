@@ -164,6 +164,17 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'experiencia',
+        title: 'Período de Experiência',
+        roles: MANAGERLINE,
+        summary: 'Aprovar colaboradores em 90 dias.',
+        steps: [
+          'Em Pessoas → "Período de Experiência", veja quem tem até 90 dias de casa (a admissão vem do RH).',
+          'A barra mostra os dias (X/90) e fica vermelha quando faltam 15 dias ou menos.',
+          'Aprove ou reprove com anotações — a decisão avisa os Admins para comunicar ao RH.',
+        ],
+      },
+      {
         id: 'manutencao',
         title: 'Manutenção',
         roles: MANAGERLINE,

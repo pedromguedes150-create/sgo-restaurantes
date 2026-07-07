@@ -984,6 +984,32 @@ model Collaborator {
   @@map("collaborators")
 }
 
+// ===== Pessoas 9.x — Período de experiência (≤90 dias) =======================
+enum ProbationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Avaliação do período de experiência de um colaborador (decisão do gestor).
+// Denormalizado (collaboratorId/unitId como string) no padrão snapshot.
+model ProbationReview {
+  id               String          @id @default(cuid())
+  collaboratorId   String          @unique
+  collaboratorName String
+  unitId           String
+  status           ProbationStatus @default(PENDING)
+  notes            String?
+  decidedById      String?
+  decidedByName    String?
+  decidedAt        DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([unitId])
+  @@map("probation_reviews")
+}
+
 /// Catálogo de produtos-padrão da rede (Módulo 22 / v1.3). Foto de referência
 /// usada pela IA para apontar, numa foto da vitrine, produtos FORA do padrão.
 model ProductStandard {
