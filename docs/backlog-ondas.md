@@ -8,11 +8,11 @@
 - **v1.5.0 (Onda 1)** — Metas dropdown; Minha área (editar/excluir tarefas + horário 30min; notas com título/edição/texto rico); Comandas seleção em lote por faixa; Pagamentos histórico com filtros; consolidação freelancer em lista.
 - **v1.6.0 (Onda 2)** — Notas: aba Análise (fornecedor/unidade/status) + status **Devolvida**; Folgas/férias: consolidado da equipe por período (`/modulos/folgas-equipe`, visibilidade configurável na matriz de Perfis, módulo `LEAVES_TEAM`).
 - **v1.7.0 (Onda 3 — Bloco A)** — Pessoas: **Período de Experiência ≤90d** (aprovação + anotações, notifica Admins). Modelo `ProbationReview`.
+- **v1.8.0 (Onda 3 — Bloco B, item 13)** — Pessoas: **Avaliação do colaborador** — observações do dia a dia + avaliação mensal (4 critérios 1–5★, 1/colaborador/mês, histórico 12m). Models `CollaboratorObservation`/`CollaboratorEvaluation`. Meta: componente "Avaliações da equipe", peso `EVALUATION_META_WEIGHT` **padrão 0** (Admin liga na própria tela); missed só em mês encerrado. Admin exclui via `/api/admin/ops`.
 
 ## 🔜 Onda 3 — Pessoas/RH (restante)
 > Itens 11, 12, 15 dependem de uma **futura API do RH** (não existe hoje) → entregar como **registro local + notificação aos Admins** (prontos para plugar a API depois).
 
-- **13 — Avaliação do colaborador**: observações no dia a dia (sem editar o cadastro, que vem do RH) + **avaliação mensal** com histórico. **Conta na meta com PESO 0 por padrão** (decisão do Pedro em 07/07 — não mexer nas notas atuais; Admin liga o peso em Config quando a equipe estiver pronta). Modelos sugeridos: `CollaboratorObservation`, `CollaboratorEvaluation` (unique collaboratorId+yearMonth); peso `EVALUATION_META_WEIGHT` default 0 integrado em `getUnitMonthScore`.
 - **12 — Mudança de função/setor → RH**: no Mapa de Funções, gerente edita **função e setor** do colaborador; a mudança gera um **registro** (`RoleChange`) que notifica Admins p/ avisar o RH. Reusar `WorkforceAllocation`/`updateAllocation` (já notifica). Falta editar a função (jobTitle) e um registro consolidado.
 - **14 — Comissões/Mobilidade**: supervisor/admin lança valores (comissão do Teknisa / mobilidade manual) por colaborador/unidade → **dashboard + histórico mensal**. Modelo `CollaboratorPayout` (tipo COMMISSION|MOBILITY, valor, mês, colaborador, unidade).
 - **11 — Férias (provisório)**: gerente **seleciona colaborador e pede as férias ao RH** pelo sistema, com período. Já existe `Vacation`; adicionar fluxo "solicitar ao RH" + notificação (sem API RH ainda).

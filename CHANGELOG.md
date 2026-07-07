@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.8.0 — 2026-07-07
+### Adicionado
+- **Pessoas — Avaliação do colaborador** (item 13, Onda 3): nova tela (`Pessoas → Avaliação do colaborador`) com **observações do dia a dia** (texto livre, com autor e data — sem mexer no cadastro, que continua vindo do RH) e **avaliação mensal** (1 por colaborador/mês) com 4 critérios de 1–5 ★ (Pontualidade, Desempenho, Trabalho em equipe, Apresentação/higiene) + comentário, com **histórico dos últimos 12 meses**.
+- **Meta — componente "Avaliações da equipe"**: as avaliações contam na meta do gerente como componente único com **peso configurável pelo Admin (padrão 0 = desligado — as notas atuais não mudam)**. Só penaliza colaborador sem avaliação em **mês já encerrado**. Peso ajustável na própria tela (Admin).
+- **Admin**: pode excluir avaliações e observações lançadas (auditado), via padrão de exclusão da Operação.
+
 ## v1.7.0 — 2026-07-07
 ### Adicionado
 - **Pessoas — Período de Experiência**: nova tela (`Pessoas → Período de Experiência`) que lista automaticamente os colaboradores com **até 90 dias de casa** (admissão vinda do RH), com barra de dias (X/90) e alerta quando faltam ≤15 dias. O gestor **aprova ou reprova** o período com **anotações**; a decisão notifica os Admins para avisar o RH. (1º bloco da Onda 3 — Pessoas/RH.)

@@ -53,6 +53,14 @@ export async function getMetaBreakdown(unitId: string, yearMonth: string): Promi
     rows.push({ name: 'Comunicados', weight: cWeight, done: cStats.done, resolved: cResolved, scorePct: Math.round((cStats.done / cResolved) * 100) });
   }
 
+  // Linha "Avaliações da equipe" — peso configurável (padrão 0 = desligado)
+  const { getEvaluationMonthStats, getEvaluationWeight } = await import('@/lib/people/evaluation');
+  const [eStats, eWeight] = await Promise.all([getEvaluationMonthStats(unitId, yearMonth), getEvaluationWeight()]);
+  const eResolved = eStats.done + eStats.missed;
+  if (eWeight > 0 && eResolved > 0) {
+    rows.push({ name: 'Avaliações da equipe', weight: eWeight, done: eStats.done, resolved: eResolved, scorePct: Math.round((eStats.done / eResolved) * 100) });
+  }
+
   return rows.sort((a, b) => b.weight - a.weight);
 }
 

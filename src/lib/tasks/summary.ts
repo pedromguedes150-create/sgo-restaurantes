@@ -96,6 +96,15 @@ export async function getUnitMonthScore(
     doneWeight += cWeight * (cStats.done / cResolved);
   }
 
+  // Componente "Avaliações da equipe" — peso configurável (padrão 0 = desligado).
+  const { getEvaluationMonthStats, getEvaluationWeight } = await import('@/lib/people/evaluation');
+  const [eStats, eWeight] = await Promise.all([getEvaluationMonthStats(unitId, yearMonth), getEvaluationWeight()]);
+  const eResolved = eStats.done + eStats.missed;
+  if (eResolved > 0 && eWeight > 0) {
+    resolvedWeight += eWeight;
+    doneWeight += eWeight * (eStats.done / eResolved);
+  }
+
   const scorePct = resolvedWeight === 0 ? 0 : Math.round((doneWeight / resolvedWeight) * 100);
   return { scorePct, doneWeight, resolvedWeight };
 }

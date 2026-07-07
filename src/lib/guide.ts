@@ -175,6 +175,19 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'avaliacao-colaborador',
+        title: 'Avaliação do colaborador',
+        roles: MANAGERLINE,
+        summary: 'Observações do dia a dia + nota mensal.',
+        steps: [
+          'Em Pessoas → "Avaliação do colaborador", escolha o mês e toque no colaborador.',
+          'Registre observações do dia a dia na aba "Observações" (não altera o cadastro do RH).',
+          'Na aba "Avaliação", dê nota de 1 a 5 em Pontualidade, Desempenho, Trabalho em equipe e Apresentação + comentário do mês.',
+          'A aba "Histórico" mostra as médias dos meses anteriores.',
+          'O Admin define o peso das avaliações na meta do gerente (padrão 0 = não conta; só passa a contar quando o Admin ligar).',
+        ],
+      },
+      {
         id: 'manutencao',
         title: 'Manutenção',
         roles: MANAGERLINE,

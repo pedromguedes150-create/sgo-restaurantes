@@ -6,6 +6,7 @@ import type { AdminResult } from '@/lib/admin';
 import { setRolePermission } from '@/lib/permissions';
 import { setTrainingWeight } from '@/lib/training';
 import { setCommunicationWeight } from '@/lib/communications/meta';
+import { setEvaluationWeight } from '@/lib/people/evaluation';
 import { setGasAlertPct } from '@/lib/gas/query';
 import { setChecklistToleranceMin } from '@/lib/tasks/tolerance';
 import { setHourlyRate, addHoliday, deleteHoliday } from '@/lib/freelancer/pricing';
@@ -76,6 +77,7 @@ export async function POST(req: Request) {
   else if (e === 'permission' && a === 'set') r = await setRolePermission(user, b, ctx);
   else if (e === 'training' && a === 'setWeight') r = await setTrainingWeight(user, Number(b.weight));
   else if (e === 'communication' && a === 'setWeight') r = await setCommunicationWeight(user, Number(b.weight));
+  else if (e === 'evaluation' && a === 'setWeight') r = await setEvaluationWeight(user, Number(b.weight));
   else if (e === 'gas' && a === 'setAlertPct') r = await setGasAlertPct(user, Number(b.pct));
   else if (e === 'checklistTolerance' && a === 'set') r = await setChecklistToleranceMin(user, Number(b.minutes), ctx);
   else if (e === 'freelancerRate' && a === 'set') r = await setHourlyRate(user, b.unitId, b.dayType as DayType, Number(b.value), ctx);

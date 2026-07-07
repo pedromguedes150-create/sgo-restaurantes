@@ -1010,6 +1010,47 @@ model ProbationReview {
   @@map("probation_reviews")
 }
 
+// ===== Pessoas 9.x — Avaliação do colaborador (item 13, Onda 3) ==============
+
+/// Observação do dia a dia sobre um colaborador (não altera o cadastro do RH).
+/// Denormalizado (snapshot de nomes) no padrão do módulo Pessoas.
+model CollaboratorObservation {
+  id               String   @id @default(cuid())
+  collaboratorId   String
+  collaboratorName String
+  unitId           String
+  text             String
+  authorId         String
+  authorName       String
+  createdAt        DateTime @default(now())
+
+  @@index([collaboratorId])
+  @@index([unitId])
+  @@map("collaborator_observations")
+}
+
+/// Avaliação mensal do colaborador (1 por colaborador/mês). Critérios 1–5.
+model CollaboratorEvaluation {
+  id               String   @id @default(cuid())
+  collaboratorId   String
+  collaboratorName String
+  unitId           String
+  yearMonth        String // 'YYYY-MM'
+  punctuality      Int // 1–5
+  performance      Int // 1–5
+  teamwork         Int // 1–5
+  presentation     Int // 1–5 (apresentação/higiene)
+  comments         String?
+  evaluatorId      String
+  evaluatorName    String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([collaboratorId, yearMonth])
+  @@index([unitId, yearMonth])
+  @@map("collaborator_evaluations")
+}
+
 /// Catálogo de produtos-padrão da rede (Módulo 22 / v1.3). Foto de referência
 /// usada pela IA para apontar, numa foto da vitrine, produtos FORA do padrão.
 model ProductStandard {

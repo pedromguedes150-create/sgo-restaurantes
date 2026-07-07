@@ -211,3 +211,22 @@ export async function deleteMaintenancePlan(user: SessionUser, id: string, ctx: 
   await audit({ userId: user.id, unitId: p.unitId, action: 'MAINT_PLAN_DELETE', module: 'MAINTENANCE', entity: 'maintenance_plan', entityId: id, metadata: { title: p.title }, ...ctx });
   return { ok: true };
 }
+
+/* ───────────────── Avaliação do colaborador (item 13) ───────────────── */
+export async function deleteCollaboratorEvaluation(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const e = await prisma.collaboratorEvaluation.findUnique({ where: { id }, select: { unitId: true, collaboratorName: true, yearMonth: true } });
+  if (!e) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.collaboratorEvaluation.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: e.unitId, action: 'EVALUATION_DELETE', module: 'PEOPLE', entity: 'collaborator_evaluation', entityId: id, metadata: { name: e.collaboratorName, yearMonth: e.yearMonth }, ...ctx });
+  return { ok: true };
+}
+
+export async function deleteCollaboratorObservation(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const o = await prisma.collaboratorObservation.findUnique({ where: { id }, select: { unitId: true, collaboratorName: true } });
+  if (!o) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.collaboratorObservation.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: o.unitId, action: 'OBSERVATION_DELETE', module: 'PEOPLE', entity: 'collaborator_observation', entityId: id, metadata: { name: o.collaboratorName }, ...ctx });
+  return { ok: true };
+}
