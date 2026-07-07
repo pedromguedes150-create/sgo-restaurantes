@@ -39,6 +39,9 @@ export async function POST(req: Request) {
     else if (e === 'maintenanceTicket') r = await ops.deleteMaintenanceTicket(user, b.id, ctx);
     else if (e === 'maintenancePlan') r = await ops.deleteMaintenancePlan(user, b.id, ctx);
     else if (e === 'collaboratorEvaluation') r = await ops.deleteCollaboratorEvaluation(user, b.id, ctx);
+    else if (e === 'collaboratorPayout') r = await ops.deleteCollaboratorPayout(user, b.id, ctx);
+    else if (e === 'scheduleChange') r = await ops.deleteScheduleChange(user, b.id, ctx);
+    else if (e === 'vacation') r = await ops.deleteVacation(user, b.id, ctx);
     else if (e === 'collaboratorObservation') r = await ops.deleteCollaboratorObservation(user, b.id, ctx);
   }
 

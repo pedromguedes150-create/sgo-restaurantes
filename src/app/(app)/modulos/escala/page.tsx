@@ -6,7 +6,7 @@ import { getScheduleGrid } from '@/lib/schedule';
 import { listShifts } from '@/lib/workforce';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScheduleClient } from '@/components/schedule/schedule-client';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,9 +32,14 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
   return (
     <div className="space-y-4">
       <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent print:hidden"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
-      <div className="print:hidden">
-        <h1 className="text-xl font-bold text-brand">Escala de funcionários</h1>
-        <p className="text-sm text-muted-foreground">Controle de presença mensal — Planejado, Realizado e Comparação.</p>
+      <div className="flex flex-wrap items-end justify-between gap-2 print:hidden">
+        <div>
+          <h1 className="text-xl font-bold text-brand">Escala de funcionários</h1>
+          <p className="text-sm text-muted-foreground">Controle de presença mensal — Planejado, Realizado e Comparação.</p>
+        </div>
+        <Link href={`/modulos/escala/trocas?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-accent">
+          <ArrowRightLeft className="h-4 w-4 text-accent" /> Trocas de escala (RH)
+        </Link>
       </div>
 
       <Card><CardContent className="pt-4">

@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { listCollaborators, listVacations, listSchedule } from '@/lib/people';
 import { Card, CardContent } from '@/components/ui/card';
 import { PeopleClient } from '@/components/people/people-client';
-import { Grid3x3, CalendarDays, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft } from 'lucide-react';
+import { Grid3x3, CalendarDays, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft, HandCoins } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,10 +39,14 @@ export default async function PessoasModulePage() {
         <Link href="/modulos/pessoas/mudancas" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
           <ArrowRightLeft className="h-5 w-5 text-accent" /> Mudanças de função/setor (RH)
         </Link>
+        <Link href="/modulos/pessoas/comissoes" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
+          <HandCoins className="h-5 w-5 text-accent" /> Comissões &amp; Mobilidade
+        </Link>
       </div>
       <Card>
         <CardContent className="pt-4">
           <PeopleClient
+            canRequestVacation={user.role !== 'FINANCE' && user.role !== 'CEO'}
             collaborators={collaborators.map((c) => ({ id: c.id, name: c.name, jobTitle: c.jobTitle, units: c.units.map((u) => u.unit.name) }))}
             vacations={vacations.map((v) => ({ id: v.id, collaborator: v.collaborator.name, unit: v.unit.name, start: d(v.startDate), end: d(v.endDate), status: v.status, changeNote: v.changeNote }))}
             schedule={schedule.map((s) => ({ id: s.id, collaborator: s.collaborator.name, unit: s.unit.name, date: d(s.date), planned: s.planned, variation: s.variation, note: s.variationNote }))}

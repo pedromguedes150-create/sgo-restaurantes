@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.10.0 — 2026-07-07 (fecha a Onda 3 — Pessoas/RH)
+### Adicionado
+- **Pessoas — Comissões & Mobilidade** (item 14): Supervisão/Admin lança valores (comissão do Teknisa / mobilidade) por colaborador/mês, com **dashboard** (totais do mês, por unidade, maiores do mês, tendência 12 meses) e **histórico mensal**. Admin exclui lançamentos (auditado).
+- **Pessoas — Solicitar férias ao RH** (item 11, provisório até a API do RH): na aba Férias, o gerente escolhe colaborador + período e **pede ao RH** — o pedido fica "Solicitada ao RH" e os **Admins são avisados**. Anti-duplicidade de período por colaborador.
+- **Escala — Trocas → RH** (item 15): novo registro de trocas (`Escala → Trocas de escala (RH)`): só de dia, entre dois colaboradores ou troca completa, com motivo. Cada registro **notifica os Admins** para informar o RH (pronto para plugar a futura API).
+
 ## v1.9.0 — 2026-07-07
 ### Adicionado
 - **Pessoas — Mudanças de função/setor → RH** (item 12, Onda 3): no **Mapa de Funções**, ao editar um alocado dá para trocar também a **função (cargo)**. Mudança de **setor** vale na hora no SGO e gera registro; mudança de **função** vira **solicitação ao RH** (o cadastro vem do RH — o cargo atualiza no próximo sync). Toda mudança **notifica os Admins** e entra no **registro consolidado** `Pessoas → Mudanças de função/setor (RH)` (pronto para plugar a futura API do RH).

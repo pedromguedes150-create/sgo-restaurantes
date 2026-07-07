@@ -222,6 +222,33 @@ export async function deleteCollaboratorEvaluation(user: SessionUser, id: string
   return { ok: true };
 }
 
+export async function deleteCollaboratorPayout(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const p = await prisma.collaboratorPayout.findUnique({ where: { id }, select: { unitId: true, collaboratorName: true, yearMonth: true, type: true } });
+  if (!p) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.collaboratorPayout.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: p.unitId, action: 'PAYOUT_DELETE', module: 'PEOPLE', entity: 'collaborator_payout', entityId: id, metadata: { name: p.collaboratorName, yearMonth: p.yearMonth, type: p.type }, ...ctx });
+  return { ok: true };
+}
+
+export async function deleteScheduleChange(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const c = await prisma.scheduleChange.findUnique({ where: { id }, select: { unitId: true, collaboratorAName: true, dateA: true } });
+  if (!c) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.scheduleChange.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: c.unitId, action: 'SCHEDULE_CHANGE_DELETE', module: 'PEOPLE', entity: 'schedule_change', entityId: id, metadata: { name: c.collaboratorAName, dateA: c.dateA }, ...ctx });
+  return { ok: true };
+}
+
+export async function deleteVacation(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const v = await prisma.vacation.findUnique({ where: { id }, select: { unitId: true, status: true, collaborator: { select: { name: true } } } });
+  if (!v) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.vacation.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: v.unitId, action: 'VACATION_DELETE', module: 'PEOPLE', entity: 'vacation', entityId: id, metadata: { name: v.collaborator?.name, status: v.status }, ...ctx });
+  return { ok: true };
+}
+
 export async function deleteCollaboratorObservation(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   const o = await prisma.collaboratorObservation.findUnique({ where: { id }, select: { unitId: true, collaboratorName: true } });

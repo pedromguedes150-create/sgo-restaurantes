@@ -1076,6 +1076,55 @@ model RoleChange {
   @@map("role_changes")
 }
 
+// ===== Pessoas 9.x — Comissões/Mobilidade (item 14, Onda 3) ==================
+enum PayoutType {
+  COMMISSION // comissão (valores do Teknisa, lançados manualmente)
+  MOBILITY // mobilidade (manual)
+}
+
+/// Lançamento de comissão/mobilidade por colaborador/unidade/mês.
+/// Vários lançamentos por mês são permitidos (ajustes); dashboards somam.
+model CollaboratorPayout {
+  id               String     @id @default(cuid())
+  collaboratorId   String
+  collaboratorName String
+  unitId           String
+  type             PayoutType
+  yearMonth        String // 'YYYY-MM'
+  amount           Decimal    @db.Decimal(10, 2)
+  note             String?
+  createdById      String
+  createdByName    String
+  createdAt        DateTime   @default(now())
+
+  @@index([unitId, yearMonth])
+  @@index([collaboratorId])
+  @@map("collaborator_payouts")
+}
+
+// ===== Escala — Trocas → RH (item 15, Onda 3) ================================
+
+/// Registro de troca de escala para informar o RH (futura API pluga aqui).
+/// A troca pode ser: mesmo colaborador mudando de dia (B vazio), dois
+/// colaboradores trocando um dia (dateB vazio) ou troca completa (tudo).
+model ScheduleChange {
+  id                String   @id @default(cuid())
+  unitId            String
+  collaboratorAId   String
+  collaboratorAName String
+  dateA             String // 'YYYY-MM-DD' (dia original de A)
+  collaboratorBId   String?
+  collaboratorBName String?
+  dateB             String? // 'YYYY-MM-DD' (novo dia / dia de B)
+  reason            String?
+  createdById       String
+  createdByName     String
+  createdAt         DateTime @default(now())
+
+  @@index([unitId, createdAt])
+  @@map("schedule_changes")
+}
+
 /// Catálogo de produtos-padrão da rede (Módulo 22 / v1.3). Foto de referência
 /// usada pela IA para apontar, numa foto da vitrine, produtos FORA do padrão.
 model ProductStandard {
@@ -1150,6 +1199,7 @@ enum VacationStatus {
   CONFIRMED // confirmada (via RH)
   CHANGE_REQUESTED // alteração solicitada pelo gerente
   APPROVED // aprovada
+  REQUESTED // solicitada ao RH pelo gerente (item 11, Onda 3 — provisório até a API do RH)
 }
 
 /// Férias (Módulo 9.1). Programação via RH; gerente solicita alteração.

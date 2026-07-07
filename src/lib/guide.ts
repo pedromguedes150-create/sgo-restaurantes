@@ -175,6 +175,39 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'comissoes-mobilidade',
+        title: 'Comissões & Mobilidade',
+        roles: MANAGERLINE,
+        summary: 'Lançar e acompanhar valores por colaborador.',
+        steps: [
+          'Em Pessoas → "Comissões & Mobilidade", a Supervisão/Admin lança o valor (comissão do Teknisa ou mobilidade) escolhendo colaborador, tipo e mês.',
+          'O dashboard mostra os totais do mês, por unidade, os maiores valores e a tendência de 12 meses.',
+          'O histórico lista cada lançamento (quem lançou, quando, observação); o Admin pode excluir (auditado).',
+        ],
+      },
+      {
+        id: 'ferias-solicitar',
+        title: 'Férias — pedir ao RH',
+        roles: MANAGERLINE,
+        summary: 'Solicitar férias de um colaborador.',
+        steps: [
+          'Em Pessoas → aba "Férias", use "Solicitar férias ao RH": escolha o colaborador e o período.',
+          'O pedido fica com status "Solicitada ao RH" e os Admins são avisados para levar ao RH.',
+          'As férias vindas do RH continuam aparecendo na lista; use "Solicitar alteração" quando precisar mudar uma já confirmada.',
+        ],
+      },
+      {
+        id: 'escala-trocas',
+        title: 'Trocas de escala (RH)',
+        roles: MANAGERLINE,
+        summary: 'Registrar trocas para informar o RH.',
+        steps: [
+          'Na Escala, toque em "Trocas de escala (RH)".',
+          'Registre quem trocou: só de dia (colaborador + dia original + novo dia) ou entre dois colaboradores.',
+          'Cada registro avisa os Admins para informar o RH. A presença em si você continua lançando na aba Realizado da Escala.',
+        ],
+      },
+      {
         id: 'mudancas-funcao-setor',
         title: 'Mudanças de função/setor (RH)',
         roles: MANAGERLINE,
