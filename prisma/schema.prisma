@@ -1180,6 +1180,25 @@ model SupervisorVisit {
   @@map("supervisor_visits")
 }
 
+/// Recorrência de visitas (Fase B): 1 plano por unidade — "visitar a cada N
+/// dias". Concluir uma visita da unidade reagenda a próxima; vencido → aviso
+/// 1×/dia ao supervisor da unidade (espelho do MaintenancePlan).
+model SupervisorVisitPlan {
+  id             String    @id @default(cuid())
+  unitId         String    @unique
+  frequencyDays  Int
+  active         Boolean   @default(true)
+  createdById    String
+  createdByName  String
+  lastVisitAt    DateTime?
+  nextDueAt      DateTime
+  lastNotifiedAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([nextDueAt])
+  @@map("supervisor_visit_plans")
+}
+
 /// Checklist de supervisor (Fase C) — criado em Configurações, usado na visita.
 model SupervisorChecklist {
   id        String   @id @default(cuid())

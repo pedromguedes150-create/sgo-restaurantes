@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { scheduleVisit, completeVisit, cancelVisit } from '@/lib/supervisor/visits';
+import { setVisitPlan } from '@/lib/supervisor/visit-plans';
 
 /** POST { action: 'schedule' | 'complete' | 'cancel', … } — Rotina do Supervisor. */
 export async function POST(req: Request) {
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
   if (b.action === 'schedule') r = await scheduleVisit(user, { unitId: String(b.unitId ?? ''), scheduledDate: String(b.scheduledDate ?? '') }, ctx);
   else if (b.action === 'complete') r = await completeVisit(user, String(b.id ?? ''), { feedback: String(b.feedback ?? ''), checklistId: b.checklistId ? String(b.checklistId) : undefined, results: Array.isArray(b.results) ? b.results : undefined }, ctx);
   else if (b.action === 'cancel') r = await cancelVisit(user, String(b.id ?? ''), ctx);
+  else if (b.action === 'setPlan') r = await setVisitPlan(user, String(b.unitId ?? ''), Number(b.frequencyDays), ctx);
   else return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
 
   if (!r.ok) {

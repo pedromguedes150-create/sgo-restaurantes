@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -84,6 +84,12 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
         <select value={yearMonth} onChange={(e) => router.push(`/modulos/pessoas/comissoes?mes=${e.target.value}`)} className="h-9 rounded-md border bg-card px-2 text-sm font-semibold capitalize">
           {months.map((m) => <option key={m} value={m}>{fmtMonthLong(m)}</option>)}
         </select>
+        <a
+          href={`/api/people/payouts/export?year=${yearMonth.split('-')[0]}&month=${Number(yearMonth.split('-')[1])}`}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"
+        >
+          <FileSpreadsheet className="h-3.5 w-3.5 text-accent" /> Excel do mês
+        </a>
       </div>
 
       {/* Dashboard do mês */}

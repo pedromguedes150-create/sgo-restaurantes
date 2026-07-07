@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Unlock, Trash2, AlertTriangle } from 'lucide-react';
+import { Lock, Unlock, Trash2, AlertTriangle, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -98,11 +98,19 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
 
   return (
     <div className="space-y-4">
-      {units.length > 1 && (
-        <select className="h-9 rounded-md border bg-card px-2 text-sm font-semibold" value={selectedUnitId} onChange={(e) => router.push(`/modulos/troco?unit=${e.target.value}`)}>
-          {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
-      )}
+      <div className="flex flex-wrap items-center gap-2">
+        {units.length > 1 && (
+          <select className="h-9 rounded-md border bg-card px-2 text-sm font-semibold" value={selectedUnitId} onChange={(e) => router.push(`/modulos/troco?unit=${e.target.value}`)}>
+            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+        )}
+        <a
+          href={`/api/cash/export?unit=${selectedUnitId}&year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"
+        >
+          <FileSpreadsheet className="h-3.5 w-3.5 text-accent" /> Excel do mês
+        </a>
+      </div>
 
       {/* Estatística do mês (unidade) */}
       <div className="grid grid-cols-3 gap-2">

@@ -15,6 +15,8 @@ export async function register() {
   const { snapshotYesterdayAllUnits } = await import('@/lib/workforce');
   const { notifyDueManagerTasks } = await import('@/lib/manager-area');
   const { runDueMaintenancePlans } = await import('@/lib/maintenance');
+  const { runDueVisitPlans } = await import('@/lib/supervisor/visit-plans');
+  const { runWeeklyAdherenceDigest } = await import('@/lib/supervisor/digest');
 
   async function maintainTraining() {
     try { await reconcileAllTraining(); } catch (e) { console.error('[training] falha na reconciliação:', e); }
@@ -37,6 +39,12 @@ export async function register() {
     try { const r = await runDueMaintenancePlans(); if (r.notified) console.log(`[manutencao] ${r.notified} plano(s) preventivo(s) vencido(s) avisado(s)`); }
     catch (e) { console.error('[manutencao] falha no aviso preventivo:', e); }
   }
+  async function checkSupervision() {
+    try { const r = await runDueVisitPlans(); if (r.notified) console.log(`[supervisao] ${r.notified} visita(s) vencida(s) avisada(s)`); }
+    catch (e) { console.error('[supervisao] falha no aviso de visita:', e); }
+    try { const d = await runWeeklyAdherenceDigest(); if (d.ran) console.log(`[supervisao] resumo semanal de aderência: ${d.flagged} unidade(s) com alerta`); }
+    catch (e) { console.error('[supervisao] falha no resumo semanal:', e); }
+  }
 
   async function maybeSyncRh() {
     try {
@@ -57,6 +65,7 @@ export async function register() {
     void checkCommunications();
     void snapshotYesterday();
     void checkMaintenance();
+    void checkSupervision();
   }, 15_000);
 
   // tarefas: a cada 30 min · RH e treinamentos: de hora em hora · vencimento: a cada 10 min
@@ -67,4 +76,5 @@ export async function register() {
   setInterval(() => { void checkCommunications(); }, 60 * 60 * 1000);
   setInterval(() => { void snapshotYesterday(); }, 60 * 60 * 1000);
   setInterval(() => { void checkMaintenance(); }, 60 * 60 * 1000);
+  setInterval(() => { void checkSupervision(); }, 60 * 60 * 1000);
 }

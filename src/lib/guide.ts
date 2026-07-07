@@ -185,6 +185,9 @@ export const GUIDE: GuideSection[] = [
           'Ao concluir a visita, escreva o feedback (obrigatório) e, se quiser, preencha um checklist de visita item a item (OK/Não + observação).',
           'O Admin cria os checklists de visita em Configurações → Checklists de supervisor.',
           'Visitas atrasadas ficam destacadas; o histórico guarda feedbacks e resultados dos checklists.',
+          'Em "Recorrência de visitas", defina por unidade "visitar a cada N dias" — concluir a visita reagenda a próxima e vencida gera aviso diário.',
+          'Toda semana o sistema envia sozinho um resumo de aderência: unidades com dias sem lançamentos ou checklists baixos são cobradas automaticamente.',
+          'Use "Excel do mês" para exportar as visitas (com feedback e itens não OK).',
         ],
       },
       {
@@ -198,6 +201,7 @@ export const GUIDE: GuideSection[] = [
           'Ao fechar, conte de novo e digite o valor: ele vira a abertura esperada do próximo caixa (vale até de um dia para o outro).',
           'Pode haver vários caixas no mesmo dia — sempre um aberto por vez.',
           'A tela mostra os caixas de hoje, o histórico e as divergências do mês (por unidade, para a supervisão).',
+          '"Excel do mês" exporta todas as sessões (abertura, esperado, divergência, fechamento, quem abriu/fechou).',
         ],
       },
       {
@@ -209,6 +213,7 @@ export const GUIDE: GuideSection[] = [
           'Em Pessoas → "Comissões & Mobilidade", a Supervisão/Admin lança o valor (comissão do Teknisa ou mobilidade) escolhendo colaborador, tipo e mês.',
           'O dashboard mostra os totais do mês, por unidade, os maiores valores e a tendência de 12 meses.',
           'O histórico lista cada lançamento (quem lançou, quando, observação); o Admin pode excluir (auditado).',
+          '"Excel do mês" exporta os lançamentos com total (bom para conferência com o financeiro).',
         ],
       },
       {

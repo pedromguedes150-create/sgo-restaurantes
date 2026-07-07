@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.13.0 — 2026-07-08
+### Adicionado
+- **Recorrência de visitas** (Rotina do Supervisor): defina por unidade "visitar a cada N dias" — concluir uma visita reagenda a próxima automaticamente; visita **vencida gera aviso diário** ao supervisor da unidade + Admins (0 = desliga).
+- **Resumo semanal de aderência (automático)**: 1×/semana o sistema avalia os últimos 7 dias de cada unidade (dias sem desperdício/comandas, checklists < 70%) e **cobra sozinho**: supervisor da unidade recebe o alerta e os Admins um consolidado.
+- **Exports Excel/CSV dos módulos novos**: Gestão de Troco (`/api/cash/export`), Comissões & Mobilidade (`/api/people/payouts/export`, com total) e Visitas do Supervisor (`/api/supervision/export`, com feedback e itens não OK) — botão "Excel do mês" nas telas.
+- **+15 testes** (62 no total): cadeia do troco (divergência, um caixa por vez, fechamento transacional) e regras da avaliação na meta (peso 0 padrão, mês corrente não penaliza).
+
 ## v1.12.0 — 2026-07-07 (fecha a Onda 4 e o lote de ajustes jul/2026)
 ### Adicionado
 - **Novo módulo: Rotina do Supervisor** (item 17, Onda 4) em `Gestão → Rotina do Supervisor` (visível por padrão para Supervisão/Admin/CEO; ajustável na matriz de Perfis):

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Check, X, Trash2, CalendarDays, ClipboardCheck } from 'lucide-react';
+import { Plus, Check, X, Trash2, CalendarDays, FileSpreadsheet, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,7 @@ export interface VisitRowUI {
 }
 interface UnitOpt { id: string; name: string }
 interface ChecklistOpt { id: string; name: string; items: string[] }
+export interface PlanRowUI { unitId: string; unitName: string; frequencyDays: number; active: boolean; lastVisitAt: string | null; nextDueAt: string; overdue: boolean }
 
 const fmtBR = (iso: string) => iso.split('-').reverse().join('/');
 const fmtMonthLong = (ym: string) => {
@@ -30,10 +31,10 @@ const fmtMonthLong = (ym: string) => {
 };
 const TONE_DOT = { success: 'bg-success', medium: 'bg-medium', critical: 'bg-critical' } as const;
 
-export function SupervisionClient({ usage, yearMonth, months, board, units, checklists, canOperate, isAdmin }: {
+export function SupervisionClient({ usage, yearMonth, months, board, units, checklists, plans, canOperate, isAdmin }: {
   usage: UsageRowUI[]; yearMonth: string; months: string[];
   board: { upcoming: VisitRowUI[]; history: VisitRowUI[]; month: { done: number; planned: number; overdue: number } };
-  units: UnitOpt[]; checklists: ChecklistOpt[]; canOperate: boolean; isAdmin: boolean;
+  units: UnitOpt[]; checklists: ChecklistOpt[]; plans: PlanRowUI[]; canOperate: boolean; isAdmin: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<'PAINEL' | 'VISITAS'>('PAINEL');
@@ -95,11 +96,21 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
 
       {tab === 'VISITAS' && (
         <div className="space-y-3">
+          <div className="flex justify-end">
+            <a
+              href={`/api/supervision/export?year=${yearMonth.split('-')[0]}&month=${Number(yearMonth.split('-')[1])}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5 text-accent" /> Excel do mês
+            </a>
+          </div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="rounded-lg border bg-card p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.done}</p><p className="text-xs text-muted-foreground">feitas no mês</p></div>
             <div className="rounded-lg border bg-card p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.planned}</p><p className="text-xs text-muted-foreground">agendadas</p></div>
             <div className={cn('rounded-lg border p-2.5', board.month.overdue > 0 ? 'border-critical/50 bg-critical/5' : 'bg-card')}><p className={cn('text-lg font-bold tabular-nums', board.month.overdue > 0 && 'text-critical')}>{board.month.overdue}</p><p className="text-xs text-muted-foreground">atrasadas</p></div>
           </div>
+
+          {canOperate && <PlansEditor plans={plans} busy={busy} post={post} />}
 
           {canOperate && (
             <div className="rounded-lg border border-dashed p-3">
@@ -130,6 +141,41 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
               {board.history.map((v) => <HistoryVisit key={v.id} v={v} isAdmin={isAdmin} busy={busy} onDelete={async (id) => { if (confirm('Excluir esta visita? (auditado)')) await post({ entity: 'supervisorVisit', action: 'delete', id }, '/api/admin/ops'); }} />)}
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlansEditor({ plans, busy, post }: { plans: PlanRowUI[]; busy: boolean; post: (b: Record<string, unknown>) => Promise<boolean> }) {
+  const [open, setOpen] = useState(false);
+  const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(plans.map((p) => [p.unitId, p.active ? String(p.frequencyDays) : ''])));
+  const overdueCount = plans.filter((p) => p.overdue).length;
+
+  return (
+    <div className={cn('rounded-lg border p-3', overdueCount > 0 ? 'border-critical/50 bg-critical/5' : 'border-dashed')}>
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left">
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground"><Repeat className="h-3.5 w-3.5" /> Recorrência de visitas</p>
+        <span className="text-xs font-semibold">{overdueCount > 0 ? <span className="text-critical">{overdueCount} unidade(s) vencida(s)</span> : `${plans.filter((p) => p.active).length} plano(s) ativo(s)`}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1.5 border-t pt-2">
+          <p className="text-xs text-muted-foreground">Visitar a cada N dias (0 = sem recorrência). Concluir uma visita reagenda a próxima; vencida gera aviso diário.</p>
+          {plans.map((p) => (
+            <div key={p.unitId} className="flex items-center justify-between gap-2 rounded-md bg-surface p-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-brand">{p.unitName}{p.overdue && <span className="ml-1.5 text-xs font-bold text-critical">VENCIDA</span>}</p>
+                <p className="text-xs text-muted-foreground">
+                  {p.active ? `a cada ${p.frequencyDays}d · próxima ${new Date(p.nextDueAt).toLocaleDateString('pt-BR')}` : 'sem recorrência'}
+                  {p.lastVisitAt ? ` · última ${new Date(p.lastVisitAt).toLocaleDateString('pt-BR')}` : ''}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <Input inputMode="numeric" value={values[p.unitId] ?? ''} onChange={(e) => setValues((s) => ({ ...s, [p.unitId]: e.target.value }))} placeholder="dias" className="h-9 w-16 text-sm" />
+                <Button size="sm" variant="outline" disabled={busy || values[p.unitId] === undefined || values[p.unitId] === ''} onClick={() => void post({ action: 'setPlan', unitId: p.unitId, frequencyDays: Number(values[p.unitId]) })}>Salvar</Button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

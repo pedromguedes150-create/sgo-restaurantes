@@ -83,6 +83,9 @@ export async function completeVisit(
     },
   });
   await audit({ userId: user.id, unitId: v.unitId, action: 'VISIT_DONE', module: 'SUPERVISION', entity: 'supervisor_visit', entityId: id, metadata: { checklist: checklistName, itemsNotOk: results?.filter((r) => !r.ok).length }, ...ctx });
+  // recorrência (plano da unidade): reagenda a próxima visita
+  const { registerVisitDone } = await import('@/lib/supervisor/visit-plans');
+  await registerVisitDone(v.unitId).catch(() => {});
   await notifyUnitRole(v.unitId, 'MANAGER', {
     title: 'Feedback da visita do supervisor',
     body: `${user.name} concluiu a visita e registrou o feedback. Confira na Rotina do Supervisor.`,
