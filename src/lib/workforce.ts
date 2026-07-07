@@ -70,12 +70,12 @@ export async function getWorkforceGrid(unitId: string): Promise<WorkforceGrid> {
 /** Quadro padrão em duas listas: quem ainda falta alocar × quem já está alocado. */
 export interface AllocationBoard {
   toAllocate: { id: string; name: string }[];
-  allocated: { allocationId: string; collaboratorId: string; name: string; sectorId: string; sectorName: string; shiftId: string | null; shiftLabel: string }[];
+  allocated: { allocationId: string; collaboratorId: string; name: string; jobTitle: string | null; sectorId: string; sectorName: string; shiftId: string | null; shiftLabel: string }[];
 }
 export async function getAllocationBoard(unitId: string): Promise<AllocationBoard> {
   const [collabs, allocations] = await Promise.all([
     prisma.collaborator.findMany({ where: { active: true, units: { some: { unitId } } }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-    prisma.workforceAllocation.findMany({ where: { unitId }, include: { collaborator: { select: { name: true } }, sector: { select: { name: true } }, shiftRef: true } }),
+    prisma.workforceAllocation.findMany({ where: { unitId }, include: { collaborator: { select: { name: true, jobTitle: true } }, sector: { select: { name: true } }, shiftRef: true } }),
   ]);
   const allocatedIds = new Set(allocations.map((a) => a.collaboratorId).filter(Boolean) as string[]);
   const toAllocate = collabs.filter((c) => !allocatedIds.has(c.id));
@@ -84,6 +84,7 @@ export async function getAllocationBoard(unitId: string): Promise<AllocationBoar
       allocationId: a.id,
       collaboratorId: a.collaboratorId ?? '',
       name: a.collaborator?.name ?? a.collaboratorName ?? '—',
+      jobTitle: a.collaborator?.jobTitle ?? null,
       sectorId: a.sectorId,
       sectorName: a.sector?.name ?? '—',
       shiftId: a.shiftRef?.id ?? a.shiftId ?? null,
@@ -95,18 +96,32 @@ export async function getAllocationBoard(unitId: string): Promise<AllocationBoar
 
 /** Edita o setor/turno de uma alocação existente (mover de lugar no quadro). */
 export async function updateAllocation(user: SessionUser, id: string, input: { sectorId: string; shiftId: string }, ctx: Ctx = {}): Promise<WfResult> {
-  const a = await prisma.workforceAllocation.findUnique({ where: { id }, select: { unitId: true } });
+  const a = await prisma.workforceAllocation.findUnique({
+    where: { id },
+    select: { unitId: true, sectorId: true, collaboratorId: true, collaboratorName: true, sector: { select: { name: true } }, collaborator: { select: { name: true } } },
+  });
   if (!a) return { ok: false, reason: 'NOT_FOUND' };
   if (!canAccessUnit(user, a.unitId)) return { ok: false, reason: 'FORBIDDEN' };
   if (!input.sectorId || !input.shiftId) return { ok: false, reason: 'INVALID', detail: 'Selecione setor e turno.' };
   const [sector, turno] = await Promise.all([
-    prisma.sector.findUnique({ where: { id: input.sectorId }, select: { unitId: true } }),
+    prisma.sector.findUnique({ where: { id: input.sectorId }, select: { unitId: true, name: true } }),
     prisma.shift.findUnique({ where: { id: input.shiftId }, select: { unitId: true, name: true, startTime: true, endTime: true } }),
   ]);
   if (!sector || sector.unitId !== a.unitId) return { ok: false, reason: 'INVALID', detail: 'Setor não pertence a esta unidade.' };
   if (!turno || turno.unitId !== a.unitId) return { ok: false, reason: 'INVALID', detail: 'Turno não pertence a esta unidade.' };
   await prisma.workforceAllocation.update({ where: { id }, data: { sectorId: input.sectorId, shiftId: input.shiftId, shift: shiftLabel(turno) } });
   await audit({ userId: user.id, unitId: a.unitId, action: 'ALLOCATE_UPDATE', module: 'PEOPLE', entity: 'workforce_allocation', entityId: id, ...ctx });
+  // Mudou de setor → registro consolidado p/ o RH (item 12) + aviso aos Admins
+  if (a.sectorId !== input.sectorId && a.collaboratorId) {
+    const { recordSectorChange } = await import('@/lib/people/role-change');
+    await recordSectorChange(user, {
+      collaboratorId: a.collaboratorId,
+      collaboratorName: a.collaborator?.name ?? a.collaboratorName ?? '—',
+      unitId: a.unitId,
+      from: a.sector?.name ?? null,
+      to: sector.name,
+    }).catch(() => {});
+  }
   await reconcileTraining(a.unitId);
   return { ok: true };
 }

@@ -19,7 +19,7 @@ interface Grid {
 interface Turno { id: string; name: string; startTime: string | null; endTime: string | null; active: boolean }
 interface AllocBoard {
   toAllocate: { id: string; name: string }[];
-  allocated: { allocationId: string; collaboratorId: string; name: string; sectorId: string; sectorName: string; shiftId: string | null; shiftLabel: string }[];
+  allocated: { allocationId: string; collaboratorId: string; name: string; jobTitle: string | null; sectorId: string; sectorName: string; shiftId: string | null; shiftLabel: string }[];
 }
 interface DayFreela { requestId: string; name: string; sectorId: string | null; sectorName: string | null; startTime: string | null; endTime: string | null; present: boolean; status: string }
 
@@ -222,7 +222,12 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
   const [editId, setEditId] = useState<string | null>(null);
   const [eSector, setESector] = useState('');
   const [eTurno, setETurno] = useState('');
-  function openEdit(a: AllocBoard['allocated'][number]) { setEditId(a.allocationId); setESector(a.sectorId); setETurno(a.shiftId ?? (activeTurnos[0]?.id ?? '')); }
+  const [eTitle, setETitle] = useState('');
+  const [eTitleOrig, setETitleOrig] = useState('');
+  function openEdit(a: AllocBoard['allocated'][number]) {
+    setEditId(a.allocationId); setESector(a.sectorId); setETurno(a.shiftId ?? (activeTurnos[0]?.id ?? ''));
+    setETitle(a.jobTitle ?? ''); setETitleOrig(a.jobTitle ?? '');
+  }
 
   const noSectors = grid.sectors.length === 0;
   const noTurnos = activeTurnos.length === 0;
@@ -271,16 +276,31 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
                   <select className={selCls} value={eSector} onChange={(e) => setESector(e.target.value)}>{grid.sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
                   <select className={selCls} value={eTurno} onChange={(e) => setETurno(e.target.value)}>{activeTurnos.map((t) => <option key={t.id} value={t.id}>{turnoLabel(t)}</option>)}</select>
                 </div>
+                <div className="mt-2">
+                  <Label className="text-xs">Função (cargo) — mudar avisa o RH</Label>
+                  <Input value={eTitle} onChange={(e) => setETitle(e.target.value)} placeholder="Ex.: Churrasqueiro" className="h-10 text-sm" />
+                  {eTitle.trim() !== eTitleOrig.trim() && eTitle.trim() !== '' && (
+                    <p className="mt-1 text-xs text-accent">A mudança de função vira uma solicitação ao RH (os Admins são avisados). O cargo atualiza no SGO quando o RH efetivar.</p>
+                  )}
+                </div>
                 <div className="mt-2 flex justify-end gap-1">
                   <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>Cancelar</Button>
-                  <Button size="sm" disabled={busy || !eSector || !eTurno} onClick={async () => { if (await post({ action: 'updateAllocation', id: a.allocationId, sectorId: eSector, shiftId: eTurno })) setEditId(null); }}><Save className="h-4 w-4" /> Salvar</Button>
+                  <Button size="sm" disabled={busy || !eSector || !eTurno} onClick={async () => {
+                    const ok = await post({ action: 'updateAllocation', id: a.allocationId, sectorId: eSector, shiftId: eTurno });
+                    if (!ok) return;
+                    const newTitle = eTitle.trim();
+                    if (newTitle && newTitle !== eTitleOrig.trim() && a.collaboratorId) {
+                      await post({ action: 'changeFunction', collaboratorId: a.collaboratorId, newTitle });
+                    }
+                    setEditId(null);
+                  }}><Save className="h-4 w-4" /> Salvar</Button>
                 </div>
               </div>
             ) : (
               <div key={a.allocationId} className="flex items-center justify-between gap-2 rounded-md border bg-card p-2">
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-semibold text-brand">{a.name}</span>
-                  <span className="block text-xs text-muted-foreground">{a.sectorName} · {a.shiftLabel}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{a.jobTitle ? `${a.jobTitle} · ` : ''}{a.sectorName} · {a.shiftLabel}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1">
                   <Button size="sm" variant="ghost" onClick={() => openEdit(a)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>

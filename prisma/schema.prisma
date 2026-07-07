@@ -1051,6 +1051,31 @@ model CollaboratorEvaluation {
   @@map("collaborator_evaluations")
 }
 
+// ===== Pessoas 9.x — Mudança de função/setor → RH (item 12, Onda 3) ==========
+enum RoleChangeKind {
+  FUNCTION // mudança de função/cargo (efetivada pelo RH; aqui é o registro/solicitação)
+  SECTOR // mudança de setor no Mapa de Funções (efetiva no SGO)
+}
+
+/// Registro consolidado de mudanças de função/setor para informar o RH
+/// (futura API do RH pluga aqui). Denormalizado no padrão snapshot.
+model RoleChange {
+  id               String         @id @default(cuid())
+  collaboratorId   String
+  collaboratorName String
+  unitId           String
+  kind             RoleChangeKind
+  fromValue        String?
+  toValue          String
+  requestedById    String
+  requestedByName  String
+  createdAt        DateTime       @default(now())
+
+  @@index([unitId, createdAt])
+  @@index([collaboratorId])
+  @@map("role_changes")
+}
+
 /// Catálogo de produtos-padrão da rede (Módulo 22 / v1.3). Foto de referência
 /// usada pela IA para apontar, numa foto da vitrine, produtos FORA do padrão.
 model ProductStandard {

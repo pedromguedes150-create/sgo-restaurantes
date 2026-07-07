@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { listCollaborators, listVacations, listSchedule } from '@/lib/people';
 import { Card, CardContent } from '@/components/ui/card';
 import { PeopleClient } from '@/components/people/people-client';
-import { Grid3x3, CalendarDays, Stethoscope, UserMinus, UserCheck, Star } from 'lucide-react';
+import { Grid3x3, CalendarDays, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +35,9 @@ export default async function PessoasModulePage() {
         </Link>
         <Link href="/modulos/pessoas/avaliacao" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
           <Star className="h-5 w-5 text-accent" /> Avaliação do colaborador
+        </Link>
+        <Link href="/modulos/pessoas/mudancas" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
+          <ArrowRightLeft className="h-5 w-5 text-accent" /> Mudanças de função/setor (RH)
         </Link>
       </div>
       <Card>

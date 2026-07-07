@@ -175,6 +175,17 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'mudancas-funcao-setor',
+        title: 'Mudanças de função/setor (RH)',
+        roles: MANAGERLINE,
+        summary: 'Registrar mudanças e avisar o RH.',
+        steps: [
+          'No Mapa de Funções, ao editar um alocado dá para trocar o setor/turno e também a função (cargo).',
+          'Mudança de setor vale na hora no SGO; mudança de função vira uma solicitação — os Admins são avisados para efetivar no RH, e o cargo atualiza no próximo sync.',
+          'Em Pessoas → "Mudanças de função/setor (RH)" fica o registro consolidado (quem mudou, de onde para onde, quando e por quem).',
+        ],
+      },
+      {
         id: 'avaliacao-colaborador',
         title: 'Avaliação do colaborador',
         roles: MANAGERLINE,

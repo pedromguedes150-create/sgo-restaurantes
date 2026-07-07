@@ -9,11 +9,11 @@
 - **v1.6.0 (Onda 2)** — Notas: aba Análise (fornecedor/unidade/status) + status **Devolvida**; Folgas/férias: consolidado da equipe por período (`/modulos/folgas-equipe`, visibilidade configurável na matriz de Perfis, módulo `LEAVES_TEAM`).
 - **v1.7.0 (Onda 3 — Bloco A)** — Pessoas: **Período de Experiência ≤90d** (aprovação + anotações, notifica Admins). Modelo `ProbationReview`.
 - **v1.8.0 (Onda 3 — Bloco B, item 13)** — Pessoas: **Avaliação do colaborador** — observações do dia a dia + avaliação mensal (4 critérios 1–5★, 1/colaborador/mês, histórico 12m). Models `CollaboratorObservation`/`CollaboratorEvaluation`. Meta: componente "Avaliações da equipe", peso `EVALUATION_META_WEIGHT` **padrão 0** (Admin liga na própria tela); missed só em mês encerrado. Admin exclui via `/api/admin/ops`.
+- **v1.9.0 (Onda 3 — item 12)** — Pessoas: **Mudanças de função/setor → RH**. Model `RoleChange` (FUNCTION|SECTOR, from→to, snapshot). Setor muda no SGO via `updateAllocation` (agora registra+notifica); função é **solicitação** (RH sobrescreve `jobTitle` no sync — decisão: não editar local). UI: campo "Função" no editar do Mapa + registro em `/modulos/pessoas/mudancas`.
 
 ## 🔜 Onda 3 — Pessoas/RH (restante)
 > Itens 11, 12, 15 dependem de uma **futura API do RH** (não existe hoje) → entregar como **registro local + notificação aos Admins** (prontos para plugar a API depois).
 
-- **12 — Mudança de função/setor → RH**: no Mapa de Funções, gerente edita **função e setor** do colaborador; a mudança gera um **registro** (`RoleChange`) que notifica Admins p/ avisar o RH. Reusar `WorkforceAllocation`/`updateAllocation` (já notifica). Falta editar a função (jobTitle) e um registro consolidado.
 - **14 — Comissões/Mobilidade**: supervisor/admin lança valores (comissão do Teknisa / mobilidade manual) por colaborador/unidade → **dashboard + histórico mensal**. Modelo `CollaboratorPayout` (tipo COMMISSION|MOBILITY, valor, mês, colaborador, unidade).
 - **11 — Férias (provisório)**: gerente **seleciona colaborador e pede as férias ao RH** pelo sistema, com período. Já existe `Vacation`; adicionar fluxo "solicitar ao RH" + notificação (sem API RH ainda).
 - **15 — Escala: trocas → RH**: registrar as trocas de escala (a partir do cadastramento) para informar o RH via futura API. Construir o **registro** agora (`ScheduleChange`), plugar API depois.
