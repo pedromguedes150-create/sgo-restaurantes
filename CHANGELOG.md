@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.12.0 — 2026-07-07 (fecha a Onda 4 e o lote de ajustes jul/2026)
+### Adicionado
+- **Novo módulo: Rotina do Supervisor** (item 17, Onda 4) em `Gestão → Rotina do Supervisor` (visível por padrão para Supervisão/Admin/CEO; ajustável na matriz de Perfis):
+  - **Fase A — Painel de uso dos gerentes**: consolida por unidade/mês % de checklists, cobertura de desperdício e comandas (dias com lançamento ÷ dias decorridos), ocorrências, notas, caixas de troco e meta, com **indicador de uso correto** (🟢🟡🔴) e piores primeiro.
+  - **Fase B — Visitas & Feedbacks**: agenda de visitas por unidade (gerente é notificado), conclusão com **feedback obrigatório** (gerente recebe), números do mês (feitas/agendadas/atrasadas) e histórico.
+  - **Fase C — Checklists de supervisor**: criados em `Configurações → Checklists de supervisor` (Admin), preenchidos na visita item a item (OK/Não + observação), resultados congelados na visita.
+
 ## v1.11.0 — 2026-07-07
 ### Adicionado
 - **Novo módulo: Gestão de Troco** (item 16, Onda 4) em `Operação → Gestão de Troco`: **sessões de caixa em cadeia** — o fechamento de um caixa é a **abertura esperada** do próximo (o troco "pernoita" entre dias). Abertura digitada diferente do fechamento anterior gera **divergência com alerta automático** ao supervisor da unidade + Admins. Vários caixas por dia (um aberto por vez), resumo do dia, **dashboard de divergências do mês por unidade** e histórico. Admin exclui sessões (auditado). Módulo `CASH` na matriz de Perfis.

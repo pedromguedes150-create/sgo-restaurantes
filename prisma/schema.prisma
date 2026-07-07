@@ -1152,6 +1152,45 @@ model CashSession {
   @@map("cash_sessions")
 }
 
+// ===== Módulo 17 — Rotina do Supervisor (Onda 4) =============================
+enum VisitStatus {
+  PLANNED
+  DONE
+  CANCELED
+}
+
+/// Visita do supervisor a uma unidade (Fase B) + feedback e checklist da visita
+/// (Fase C — resultados congelados em JSON: [{ item, ok, note }]).
+model SupervisorVisit {
+  id               String      @id @default(cuid())
+  unitId           String
+  supervisorId     String
+  supervisorName   String
+  scheduledDate    String // 'YYYY-MM-DD'
+  status           VisitStatus @default(PLANNED)
+  feedback         String?
+  checklistId      String?
+  checklistName    String?
+  checklistResults Json?
+  doneAt           DateTime?
+  createdAt        DateTime    @default(now())
+
+  @@index([unitId, scheduledDate])
+  @@index([supervisorId, status])
+  @@map("supervisor_visits")
+}
+
+/// Checklist de supervisor (Fase C) — criado em Configurações, usado na visita.
+model SupervisorChecklist {
+  id        String   @id @default(cuid())
+  name      String
+  items     Json // string[]
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("supervisor_checklists")
+}
+
 /// Catálogo de produtos-padrão da rede (Módulo 22 / v1.3). Foto de referência
 /// usada pela IA para apontar, numa foto da vitrine, produtos FORA do padrão.
 model ProductStandard {

@@ -17,10 +17,10 @@
 
 ## 🔴 Onda 4 — Módulos novos
 - ✅ **16 — Gestão de Troco** (v1.11.0): model `CashSession` (cadeia: `expectedOpening` = último fechamento da unidade, mesmo entre dias; `divergence` ≥ R$0,01 → alerta supervisor+admins), um caixa aberto por vez, `/modulos/troco` (abrir/fechar, hoje, histórico, divergências do mês por unidade), módulo `CASH` na matriz, Admin exclui via /api/admin/ops. `src/lib/cash.ts`.
-- **17 — Rotina do Supervisor** (aprovado: **3 fases**):
-  - **Fase A** — Painel de uso dos gerentes: consolida checklists %, desperdício, comandas, ocorrências, notas, metas… num placar por gerente/unidade com indicador de "uso correto" (quem está deixando de usar).
-  - **Fase B** — Visitas & Feedbacks: agenda de visitas por unidade + feedbacks recorrentes (recorrência variável), acompanhados por números.
-  - **Fase C** — Checklists de supervisor: checklists específicos de unidade, criados em Configurações mas destinados ao supervisor (usados na visita).
+- ✅ **17 — Rotina do Supervisor** (v1.12.0, 3 fases): módulo `SUPERVISION` (default restrito a SUPERVISOR na matriz), `/modulos/supervisao`. **A** painel de uso (`src/lib/supervisor/usage.ts`: checklist%, cobertura waste/comandas ÷ dias decorridos, ocorrências/notas/caixas, meta, tone 🟢≥80/🟡≥50/🔴, piores primeiro). **B** visitas (`SupervisorVisit` PLANNED→DONE/CANCELED, feedback obrigatório, notifica gerente no agendar e no feedback, números do mês). **C** checklists de visita (`SupervisorChecklist` items JSON, CRUD Admin em `/configuracoes/checklists-supervisor`, resultados congelados em `checklistResults` na visita; excluir com histórico = inativa). `src/lib/supervisor/visits.ts`.
+
+## 🎉 LOTE DE AJUSTES JUL/2026 CONCLUÍDO (Ondas 1–4, v1.5.0 → v1.12.0)
+> Nota: recorrência automática de visitas (lembrete por frequência variável) ficou como refino futuro da Fase B — hoje o agendamento é manual e atrasos ficam destacados.
 
 ## Itens cancelados/decididos
 - **Notas — leitura por foto/IA**: cancelado pelo Pedro (lançamento já é simples).

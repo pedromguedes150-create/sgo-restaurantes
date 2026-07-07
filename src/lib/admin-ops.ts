@@ -258,6 +258,15 @@ export async function deleteCashSession(user: SessionUser, id: string, ctx: Ctx 
   return { ok: true };
 }
 
+export async function deleteSupervisorVisit(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const v = await prisma.supervisorVisit.findUnique({ where: { id }, select: { unitId: true, scheduledDate: true } });
+  if (!v) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.supervisorVisit.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: v.unitId, action: 'VISIT_DELETE', module: 'SUPERVISION', entity: 'supervisor_visit', entityId: id, metadata: { date: v.scheduledDate }, ...ctx });
+  return { ok: true };
+}
+
 export async function deleteCollaboratorObservation(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   const o = await prisma.collaboratorObservation.findUnique({ where: { id }, select: { unitId: true, collaboratorName: true } });

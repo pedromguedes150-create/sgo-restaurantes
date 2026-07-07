@@ -175,6 +175,19 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'rotina-supervisor',
+        title: 'Rotina do Supervisor',
+        roles: ['SUPERVISOR', 'ADMIN', 'CEO'],
+        summary: 'Painel de uso, visitas e checklists de visita.',
+        steps: [
+          'Em "Rotina do Supervisor", o Painel de uso mostra por unidade: % de checklists, dias com desperdício/comandas lançados, ocorrências, notas e meta — piores primeiro (quem está deixando de usar o sistema).',
+          'Na aba Visitas & Feedbacks, agende visitas por unidade; o gerente é avisado.',
+          'Ao concluir a visita, escreva o feedback (obrigatório) e, se quiser, preencha um checklist de visita item a item (OK/Não + observação).',
+          'O Admin cria os checklists de visita em Configurações → Checklists de supervisor.',
+          'Visitas atrasadas ficam destacadas; o histórico guarda feedbacks e resultados dos checklists.',
+        ],
+      },
+      {
         id: 'troco',
         title: 'Gestão de Troco',
         roles: MANAGERLINE,
