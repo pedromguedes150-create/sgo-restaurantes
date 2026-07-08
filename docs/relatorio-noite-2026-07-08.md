@@ -113,4 +113,6 @@ Ao escolher o colaborador no lançamento, aparecem os **últimos 12 lançamentos
 2. **Equipe do RH**: corrigir o endpoint de colaboradores (admissões pós-09/04 não aparecem — causa do Período de Experiência mostrar 2) e incluir `nascimento` na API (destrava idade automática nos Desligamentos).
 3. **Meta**: decidir em quais unidades gerar os checklists de Desperdício/Comandas (hoje não pontuam em lugar nenhum) — e conferir se o desconto padrão de 2%/lançamento fora do prazo te atende.
 4. **Me enviar quando tiver**: planilha dos colaboradores em experiência (conferência), modelos Teknisa/mobilidade/Swile (imports automáticos), e a decisão sobre o "modo simulação" do Mapa.
-5. Continuam pendentes: senhas demo + rotação de chaves + push GitHub (`docs/pendencias-producao.md`) — agora são **19 commits** locais.
+5. Continuam pendentes: senhas demo + rotação de chaves + push GitHub (`docs/pendencias-producao.md`).
+
+*Extra verificado no deploy: recepção RH→SGO testada ponta a ponta em produção (401 sem token; com token criou e vinculou colaborador de teste, removido em seguida — o evento ficou anotado na central).*
