@@ -174,7 +174,24 @@ export async function setActual(
     create: { collaboratorId: input.collaboratorId, unitId: input.unitId, date, status: input.status, note: input.note?.trim() || null, createdById: user.id },
     update: { status: input.status, note: input.note?.trim() || null, createdById: user.id },
   });
+  // Variação (≠ trabalho/folga) → aviso automático ao RH (registro local; API futura)
+  if (input.status !== 'WORK' && input.status !== 'OFF') {
+    await recordRhNotice(user, input.collaboratorId, input.unitId, [input.date], input.status).catch(() => {});
+  }
   return { ok: true };
+}
+
+/** Registra aviso(s) ao RH de variação na escala (pacote 07/07 — relatório por período). */
+async function recordRhNotice(user: SessionUser, collaboratorId: string, unitId: string, dates: string[], status: DayStatus): Promise<void> {
+  const collab = await prisma.collaborator.findUnique({ where: { id: collaboratorId }, select: { name: true } });
+  if (!collab) return;
+  await prisma.rhScheduleNotice.createMany({
+    data: dates.map((date) => ({
+      unitId, collaboratorId, collaboratorName: collab.name, date,
+      status: STATUS_LABEL[status] ?? String(status),
+      createdById: user.id, createdByName: user.name,
+    })),
+  });
 }
 
 /** Registrar ausência num período (FI/FJ/A/FE) — preenche o Realizado. */
@@ -201,6 +218,12 @@ export async function registerAbsence(
     });
   }
   await audit({ userId: user.id, unitId: input.unitId, action: 'SCHEDULE_ABSENCE', module: 'SCHEDULE', entity: 'collaborator', entityId: input.collaboratorId, metadata: { status: input.status, start: input.start, end: input.end }, ...ctx });
+  // Ausência por período → um aviso ao RH por dia (registro local; API futura)
+  {
+    const dates: string[] = [];
+    for (let cur = new Date(start); cur <= end; cur = new Date(cur.getTime() + 86_400_000)) dates.push(cur.toISOString().slice(0, 10));
+    await recordRhNotice(user, input.collaboratorId, input.unitId, dates, input.status).catch(() => {});
+  }
   return { ok: true };
 }
 

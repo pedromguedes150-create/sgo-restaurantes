@@ -9,6 +9,16 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.16.0 — 2026-07-08 (pacote 07/07 — parte 2: Pessoas + Integrações RH)
+### Adicionado
+- **Central "APIs & Integrações"** (`Configurações → APIs & Integrações`, Admin/CEO): tudo que o SGO consome e expõe — API do RH (status/chave mascarada), **endpoints de recepção RH→SGO** (URLs prontas para colar no painel do RH + token), **webhook de férias SGO→RH** (destino + token para combinar com o RH) e os **últimos eventos** de integração. Toda nova API entra aqui.
+- **Recepção RH→SGO**: endpoints `/api/integracoes/rh/{inclusao|desligamento|periodo-aquisitivo|exclusao-periodo}` com token Bearer. Admissão cria/reativa colaborador (por CPF/matrícula) e vincula à unidade; desligamento inativa por CPF; períodos aquisitivos ficam registrados. **O sync automático atual continua intocado.**
+- **Webhook de férias SGO→RH**: solicitar férias (planejamento) e excluir férias (cancelamento) agora avisam o RH automaticamente no endereço da doc (inerte até o token ser colado no painel do RH; disparos registrados na central).
+- **CPF no cadastro**: o sync do RH agora grava o CPF do colaborador (base do casamento de eventos de desligamento).
+- **Escala — Avisos ao RH**: toda variação lançada no Realizado (falta, atestado, férias…) gera um **aviso automático registrado**, com tela de **relatório por período** (`Escala → Avisos ao RH`); quando a API do RH aceitar estes eventos, passam a ser enviados na hora.
+- **Avaliação do colaborador — filtro de unidade** na barra (para quem tem mais de uma unidade).
+- **Comissões & Mobilidade — histórico ao lançar**: ao escolher o colaborador, aparecem os últimos lançamentos dele com a **variação de valor** (verde/vermelho).
+
 ## v1.15.0 — 2026-07-08 (pacote de ajustes 07/07 — parte 1)
 ### Adicionado
 - **Ocorrências — segmento TI**: nova sub-aba **TI** (igual à de Manutenção): tipos marcados como "TI" em Configurações → Ocorrências aparecem separados, preparado para a futura integração com sistema de gestão de TI.

@@ -44,6 +44,7 @@ export default async function ConfiguracoesPage() {
           { href: '/configuracoes/pagamentos', label: 'Pagamentos', icon: Wallet },
           { href: '/configuracoes/freelancer-valores', label: 'Valor do freelancer (hora)', icon: Wallet },
           { href: '/configuracoes/perfis', label: 'Perfis de acesso', icon: KeyRound },
+          { href: '/configuracoes/integracoes', label: 'APIs & Integrações', icon: KeyRound },
           { href: '/auditoria', label: 'Auditoria', icon: ScrollText },
         ].map(({ href, label, icon: Icon }) => (
           <Link key={href} href={href} className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">

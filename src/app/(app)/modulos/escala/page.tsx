@@ -6,7 +6,7 @@ import { getScheduleGrid } from '@/lib/schedule';
 import { listShifts } from '@/lib/workforce';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScheduleClient } from '@/components/schedule/schedule-client';
-import { ArrowLeft, ArrowRightLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, BellRing } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,9 +37,14 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
           <h1 className="text-xl font-bold text-brand">Escala de funcionários</h1>
           <p className="text-sm text-muted-foreground">Controle de presença mensal — Planejado, Realizado e Comparação.</p>
         </div>
-        <Link href={`/modulos/escala/trocas?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-accent">
-          <ArrowRightLeft className="h-4 w-4 text-accent" /> Trocas de escala (RH)
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/modulos/escala/trocas?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-accent">
+            <ArrowRightLeft className="h-4 w-4 text-accent" /> Trocas de escala (RH)
+          </Link>
+          <Link href={`/modulos/escala/avisos-rh?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-accent">
+            <BellRing className="h-4 w-4 text-accent" /> Avisos ao RH
+          </Link>
+        </div>
       </div>
 
       <Card><CardContent className="pt-4">

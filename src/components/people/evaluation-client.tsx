@@ -10,7 +10,7 @@ import { postAdmin } from '@/lib/admin-client';
 import { cn } from '@/lib/utils';
 
 export interface EvalRow {
-  collaboratorId: string; name: string; jobTitle: string | null; unitName: string; observationCount: number;
+  collaboratorId: string; name: string; jobTitle: string | null; unitId: string; unitName: string; observationCount: number;
   evaluation: { punctuality: number; performance: number; teamwork: number; presentation: number; comments: string | null; evaluatorName: string; updatedAt: string } | null;
 }
 interface Obs { id: string; text: string; authorName: string; createdAt: string }
@@ -34,11 +34,18 @@ export function EvaluationClient({ rows, yearMonth, months, canEvaluate, isAdmin
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<'PENDING' | 'ALL'>('PENDING');
+  const [unitFilter, setUnitFilter] = useState('ALL');
   const [busy, setBusy] = useState(false);
   const [w, setW] = useState(String(weight));
 
-  const shown = useMemo(() => rows.filter((r) => filter === 'ALL' || !r.evaluation), [rows, filter]);
-  const done = rows.filter((r) => r.evaluation).length;
+  const unitOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of rows) if (r.unitId) map.set(r.unitId, r.unitName);
+    return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
+  }, [rows]);
+  const inUnit = useMemo(() => rows.filter((r) => unitFilter === 'ALL' || r.unitId === unitFilter), [rows, unitFilter]);
+  const shown = useMemo(() => inUnit.filter((r) => filter === 'ALL' || !r.evaluation), [inUnit, filter]);
+  const done = inUnit.filter((r) => r.evaluation).length;
 
   async function saveWeight() {
     setBusy(true);
@@ -67,12 +74,18 @@ export function EvaluationClient({ rows, yearMonth, months, canEvaluate, isAdmin
         >
           {months.map((m) => <option key={m} value={m}>{fmtMonth(m)}</option>)}
         </select>
+        {unitOptions.length > 1 && (
+          <select value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)} className="h-9 max-w-[220px] rounded-md border bg-card px-2 text-sm font-semibold">
+            <option value="ALL">Todas as unidades</option>
+            {unitOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+        )}
         {(['PENDING', 'ALL'] as const).map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={filter === f ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>
             {f === 'PENDING' ? 'A avaliar' : 'Todos'}
           </button>
         ))}
-        <span className="ml-auto text-xs text-muted-foreground">{done}/{rows.length} avaliado(s)</span>
+        <span className="ml-auto text-xs text-muted-foreground">{done}/{inUnit.length} avaliado(s)</span>
       </div>
 
       {shown.length === 0 && (

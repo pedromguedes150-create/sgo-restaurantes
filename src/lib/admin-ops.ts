@@ -242,10 +242,21 @@ export async function deleteScheduleChange(user: SessionUser, id: string, ctx: C
 
 export async function deleteVacation(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
-  const v = await prisma.vacation.findUnique({ where: { id }, select: { unitId: true, status: true, collaborator: { select: { name: true } } } });
+  const v = await prisma.vacation.findUnique({ where: { id }, include: { collaborator: { select: { name: true, cpf: true, externalId: true } } } });
   if (!v) return { ok: false, reason: 'NOT_FOUND' };
   await prisma.vacation.delete({ where: { id } });
   await audit({ userId: user.id, unitId: v.unitId, action: 'VACATION_DELETE', module: 'PEOPLE', entity: 'vacation', entityId: id, metadata: { name: v.collaborator?.name, status: v.status }, ...ctx });
+  // webhook de férias SGO→RH: cancelamento (inerte sem token)
+  {
+    const { sendFeriasWebhook } = await import('@/lib/rh/webhook');
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    void sendFeriasWebhook({
+      acao: 'cancelar', movimento: 'PLANEJAMENTO',
+      colaborador: { nome: v.collaborator?.name ?? '—', cpf: v.collaborator?.cpf, matricula: v.collaborator?.externalId },
+      inicio: iso(v.startDate), fim: iso(v.endDate),
+      dias: Math.round((v.endDate.getTime() - v.startDate.getTime()) / 86400000) + 1, origem: 'SGO',
+    });
+  }
   return { ok: true };
 }
 

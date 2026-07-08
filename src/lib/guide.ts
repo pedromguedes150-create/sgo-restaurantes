@@ -175,6 +175,51 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'lancamento-fora-do-prazo',
+        title: 'Lançamento fora do prazo',
+        roles: MANAGERLINE,
+        summary: 'Data corrigida desconta na meta.',
+        steps: [
+          'Pagamentos, Notas, Gás e Óleo mostram a data da solicitação e ordenam do mais novo para o mais antigo.',
+          'Se o gerente esquecer de lançar no dia, o Admin/Supervisor corrige a data pelo botão "Editar data".',
+          'Cada correção marca o lançamento, avisa o gerente e desconta % na meta do mês (padrão 2%/lançamento; o Admin ajusta na tela de Metas).',
+          'A linha "Fora do prazo" aparece no detalhamento da meta.',
+        ],
+      },
+      {
+        id: 'ocorrencias-ti',
+        title: 'Ocorrências de TI',
+        roles: MANAGERLINE,
+        summary: 'Sub-aba separada para chamados de TI.',
+        steps: [
+          'Em Configurações → Ocorrências, marque um tipo como "TI".',
+          'As ocorrências desses tipos aparecem na sub-aba TI dentro de Ocorrências (como a de Manutenção).',
+          'Preparado para a futura integração com o sistema de gestão de TI.',
+        ],
+      },
+      {
+        id: 'avisos-rh-escala',
+        title: 'Avisos ao RH (Escala)',
+        roles: MANAGERLINE,
+        summary: 'Variações do Realizado viram avisos.',
+        steps: [
+          'Toda variação lançada no Realizado da Escala (falta, atestado, férias…) gera um aviso automático registrado.',
+          'Em Escala → "Avisos ao RH", acompanhe tudo em formato de relatório, filtrando por período e unidade.',
+          'Quando a API do RH aceitar estes eventos, os avisos passam a ser enviados na hora (a tela mostra o status).',
+        ],
+      },
+      {
+        id: 'apis-integracoes',
+        title: 'APIs & Integrações',
+        roles: ['ADMIN', 'CEO'],
+        summary: 'Central única de chaves, URLs e eventos.',
+        steps: [
+          'Em Configurações → APIs & Integrações: API do RH (consumo), endpoints de recepção RH→SGO (URLs para colar no painel do RH) e webhook de férias SGO→RH.',
+          'Os tokens aparecem mascarados; os valores completos ficam no .env do servidor.',
+          'A lista "Últimos eventos" mostra tudo que entrou/saiu (admissões, desligamentos, webhooks de férias) com status.',
+        ],
+      },
+      {
         id: 'visao-executiva',
         title: 'Visão Executiva',
         roles: ['CEO', 'ADMIN'],

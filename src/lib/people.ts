@@ -82,6 +82,17 @@ export async function requestVacation(
     },
   });
   await audit({ userId: user.id, unitId: unit.unitId, action: 'VACATION_REQUEST', module: 'PEOPLE', entity: 'vacation', entityId: v.id, metadata: { name: collab.name, start: input.startDate, end: input.endDate }, ...ctx });
+  // webhook de férias SGO→RH (inerte sem SGO_WEBHOOK_TOKEN)
+  {
+    const { sendFeriasWebhook } = await import('@/lib/rh/webhook');
+    const full = await prisma.collaborator.findUnique({ where: { id: input.collaboratorId }, select: { cpf: true, externalId: true } });
+    const dias = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    void sendFeriasWebhook({
+      acao: 'criar', movimento: 'PLANEJAMENTO',
+      colaborador: { nome: collab.name, cpf: full?.cpf, matricula: full?.externalId },
+      inicio: input.startDate, fim: input.endDate, dias, observacao: input.note ?? null, origem: 'SGO',
+    });
+  }
   const fmt = (iso: string) => iso.split('-').reverse().join('/');
   await notifyAdmins({
     title: 'Férias solicitadas ao RH',

@@ -39,7 +39,7 @@ export default async function AvaliacaoPage({ searchParams }: { searchParams: { 
         <CardContent className="pt-4">
           <EvaluationClient
             rows={rows.map((r) => ({
-              collaboratorId: r.collaboratorId, name: r.name, jobTitle: r.jobTitle, unitName: r.unitName,
+              collaboratorId: r.collaboratorId, name: r.name, jobTitle: r.jobTitle, unitId: r.unitId, unitName: r.unitName,
               observationCount: r.observationCount, evaluation: r.evaluation,
             }))}
             yearMonth={yearMonth}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -45,6 +45,18 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [q, setQ] = useState('');
+  const [collabHistory, setCollabHistory] = useState<{ yearMonth: string; type: 'COMMISSION' | 'MOBILITY'; amount: number }[] | null>(null);
+
+  // histórico do colaborador selecionado (acompanhar variação ao lançar)
+  useEffect(() => {
+    if (!collaboratorId) { setCollabHistory(null); return; }
+    let alive = true;
+    fetch(`/api/people/payouts?collaboratorId=${collaboratorId}`)
+      .then((r) => (r.ok ? r.json() : { history: [] }))
+      .then((d) => { if (alive) setCollabHistory(d.history ?? []); })
+      .catch(() => { if (alive) setCollabHistory([]); });
+    return () => { alive = false; };
+  }, [collaboratorId]);
 
   const filteredCollabs = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -164,6 +176,31 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
               <option value="">Selecione o colaborador…</option>
               {filteredCollabs.map((c) => <option key={c.id} value={c.id}>{c.name}{c.jobTitle ? ` — ${c.jobTitle}` : ''} ({c.units})</option>)}
             </select>
+            {collaboratorId && collabHistory && collabHistory.length > 0 && (
+              <div className="rounded-md bg-surface p-2">
+                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Histórico do colaborador (variação)</p>
+                <div className="space-y-0.5">
+                  {collabHistory.map((h, i) => {
+                    const prev = collabHistory.slice(i + 1).find((x) => x.type === h.type);
+                    const diff = prev ? h.amount - prev.amount : null;
+                    return (
+                      <p key={`${h.yearMonth}-${i}`} className="flex items-center justify-between text-xs tabular-nums">
+                        <span className="capitalize">{fmtMonth(h.yearMonth)} · {TYPE[h.type].label}</span>
+                        <span>
+                          <strong>{brl(h.amount)}</strong>
+                          {diff != null && Math.abs(diff) >= 0.01 && (
+                            <span className={diff > 0 ? 'ml-1 text-success' : 'ml-1 text-critical'}>({diff > 0 ? '+' : ''}{brl(diff)})</span>
+                          )}
+                        </span>
+                      </p>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {collaboratorId && collabHistory && collabHistory.length === 0 && (
+              <p className="text-xs text-muted-foreground">Primeiro lançamento deste colaborador.</p>
+            )}
             <div className="flex gap-1.5">
               {(['COMMISSION', 'MOBILITY'] as const).map((t) => (
                 <button key={t} onClick={() => setType(t)} className={type === t ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>

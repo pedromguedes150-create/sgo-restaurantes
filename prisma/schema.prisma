@@ -1214,6 +1214,47 @@ model SupervisorVisitPlan {
   @@map("supervisor_visit_plans")
 }
 
+// ===== Integrações RH (v1.16.0) ==============================================
+enum RhEventStatus {
+  PROCESSED // aplicado no SGO
+  RECEIVED // recebido e registrado (processamento futuro)
+  ERROR // payload inválido / colaborador não encontrado
+}
+
+/// Evento recebido do RH (envio automático RH→SGO): admissões, desligamentos,
+/// períodos aquisitivos. Tudo fica registrado (rastreável na central de APIs).
+model RhInboundEvent {
+  id        String        @id @default(cuid())
+  event     String // inclusao | desligamento | periodo_aquisitivo | exclusao_periodo | …
+  payload   Json
+  status    RhEventStatus
+  message   String?
+  createdAt DateTime      @default(now())
+
+  @@index([createdAt])
+  @@map("rh_inbound_events")
+}
+
+/// Aviso ao RH de variação da Escala (Realizado ≠ trabalho normal): registro
+/// local + relatório por período; `sent` marca o envio quando a API do RH
+/// aceitar este tipo de evento.
+model RhScheduleNotice {
+  id               String   @id @default(cuid())
+  unitId           String
+  collaboratorId   String
+  collaboratorName String
+  date             String // 'YYYY-MM-DD'
+  status           String // rótulo lançado no Realizado (F, FI, FJ, A, FE…)
+  createdById      String
+  createdByName    String
+  sent             Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([unitId, date])
+  @@index([createdAt])
+  @@map("rh_schedule_notices")
+}
+
 /// Checklist de supervisor (Fase C) — criado em Configurações, usado na visita.
 model SupervisorChecklist {
   id        String   @id @default(cuid())

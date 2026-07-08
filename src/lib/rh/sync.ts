@@ -36,6 +36,8 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
       source: 'RH' as const,
       externalId: String(c.matricula),
       hireDate: c.admissao && /^\d{4}-\d{2}-\d{2}$/.test(c.admissao) ? c.admissao : null,
+      // CPF (só dígitos) — casa os eventos de desligamento da integração RH→SGO
+      cpf: c.cpf ? String(c.cpf).replace(/\D/g, '') || null : null,
     };
     const existing = await prisma.collaborator.findFirst({ where: { externalId: data.externalId } });
     let collaboratorId: string;
