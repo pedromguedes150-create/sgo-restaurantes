@@ -21,6 +21,11 @@
 
 ## 🎉 LOTE DE AJUSTES JUL/2026 CONCLUÍDO (Ondas 1–4, v1.5.0 → v1.12.0)
 
+## ✅ Pacote 07/07 do Pedro (noite 07→08/07) — v1.15.0 + v1.16.0
+- **v1.15.0**: Ocorrências sub-aba **TI** (`isIT`); Manutenção fora da sidebar; **unidades de teste excluídas** (backup antes); **lançamento fora do prazo** em Pagamentos/Notas/Gás/Óleo (data visível, ordenação por solicitação, edição Admin/Supervisor via `/api/entry-date`, penalidade `LATE_ENTRY_PENALTY_PCT` 2%/lançamento na meta + editor na tela de Metas); POP via Treinamentos = visualização + confirmar leitura marca treinado; Config: checklists unificados (1 página, 3 abas).
+- **v1.16.0**: **Integrações RH** — recepção RH→SGO (`/api/integracoes/rh/*`, Bearer `RH_INBOUND_TOKEN`, `RhInboundEvent`), webhook férias SGO→RH (`SGO_WEBHOOK_TOKEN`, inerte até colar no painel), CPF no sync, central `Configurações → APIs & Integrações`; Escala: `RhScheduleNotice` + `/modulos/escala/avisos-rh`; Avaliação filtro de unidade; Comissões histórico/variação ao lançar. `/api/integracoes` liberado no middleware (auth por token na rota).
+- **Diagnósticos**: Período de Experiência 2×30+ = **bug na API do RH** (sem admissões pós-09/04); API sem `nascimento` (idade dos Desligamentos segue manual); meta sem templates Desperdício/Comandas em NENHUMA unidade (4 unidades com zero templates); Mapa de Funções: único gap vs. visão do Pedro = **simulação salvável na projeção** (aguardando aprovação p/ construir). Relatório completo: `docs/relatorio-noite-2026-07-08.md`.
+
 ## ✅ Pós-lote 08/07 (sugestões 2, 4, 5, 6, 7 da análise) — v1.13.0 + v1.14.0
 - **Testes**: suíte 47/47 verde + 15 novos (cadeia do troco, avaliação-meta) = 62.
 - **v1.13.0**: recorrência de visitas (`SupervisorVisitPlan`, vencida avisa 1×/dia), resumo semanal de aderência (cobra sozinho), exports CSV Troco/Comissões/Visitas.

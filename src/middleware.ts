@@ -9,7 +9,9 @@ import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/auth/cookies';
  * Nota: não verificamos o JWT aqui porque o middleware roda no edge runtime e o
  * `jsonwebtoken` depende de APIs Node; a fonte de verdade é o servidor.
  */
-const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health'];
+// /api/integracoes = recepção máquina-a-máquina (RH→SGO), autenticada por
+// token Bearer DENTRO da rota (RH_INBOUND_TOKEN) — sem cookie de sessão.
+const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health', '/api/integracoes'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
