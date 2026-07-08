@@ -16,7 +16,7 @@ export async function getOccurrenceTypes() {
 
 export async function listOccurrences(
   user: SessionUser,
-  filters: { unitId?: string; status?: OccurrenceStatus; gravity?: OccurrenceGravity; maintenance?: boolean; limit?: number } = {},
+  filters: { unitId?: string; status?: OccurrenceStatus; gravity?: OccurrenceGravity; maintenance?: boolean; it?: boolean; limit?: number } = {},
 ) {
   return prisma.occurrence.findMany({
     where: {
@@ -25,6 +25,7 @@ export async function listOccurrences(
       ...(filters.status ? { status: filters.status } : {}),
       ...(filters.gravity ? { gravity: filters.gravity } : {}),
       ...(filters.maintenance !== undefined ? { type: { isMaintenance: filters.maintenance } } : {}),
+      ...(filters.it !== undefined ? { type: { isIT: filters.it } } : {}),
     },
     orderBy: [{ createdAt: 'desc' }],
     take: filters.limit ?? 50,

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, ListChecks, Trash2, AlertOctagon, ClipboardList, Ticket,
-  Boxes, Receipt, Wallet, Users, BookOpen, Target, ScrollText, Settings, GraduationCap, LifeBuoy, Megaphone, Flame, Droplets, NotebookPen, Wrench, CalendarOff, Banknote, Eye, BarChart3,
+  Boxes, Receipt, Wallet, Users, BookOpen, Target, ScrollText, Settings, GraduationCap, LifeBuoy, Megaphone, Flame, Droplets, NotebookPen, CalendarOff, Banknote, Eye, BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { APP_VERSION_LABEL } from '@/lib/version';
@@ -27,7 +27,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { href: '/modulos/desperdicios', label: 'Desperdícios', icon: Trash2 },
       { href: '/modulos/ocorrencias', label: 'Ocorrências', icon: AlertOctagon },
-      { href: '/modulos/manutencao', label: 'Manutenção', icon: Wrench },
+      // Manutenção saiu da sidebar (07/07): acesso via Ocorrências → sub-aba Manutenção
       { href: '/modulos/comandas', label: 'Comandas', icon: ClipboardList },
       { href: '/modulos/troco', label: 'Gestão de Troco', icon: Banknote },
       { href: '/modulos/cancelamentos', label: 'Cancelamentos', icon: Ticket },

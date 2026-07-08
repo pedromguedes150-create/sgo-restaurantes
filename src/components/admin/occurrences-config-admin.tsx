@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2, X, Save, Wrench } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, Wrench, MonitorSmartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,13 +10,13 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { postAdmin } from '@/lib/admin-client';
 
 export interface OccCategoryRow { id: string; name: string; active: boolean }
-export interface OccTypeRow { id: string; name: string; active: boolean; isMaintenance: boolean; categories: OccCategoryRow[] }
+export interface OccTypeRow { id: string; name: string; active: boolean; isMaintenance: boolean; isIT: boolean; categories: OccCategoryRow[] }
 
 export function OccurrencesConfigAdmin({ types }: { types: OccTypeRow[] }) {
   const router = useRouter();
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Tipos e categorias usados ao registrar uma ocorrência. Marque <strong>Manutenção</strong> para que ocorrências do tipo apareçam na sub-aba de Manutenção. A gravidade segue fixa em 4 níveis.</p>
+      <p className="text-sm text-muted-foreground">Tipos e categorias usados ao registrar uma ocorrência. Marque <strong>Manutenção</strong> ou <strong>TI</strong> para que ocorrências do tipo apareçam na sub-aba correspondente. A gravidade segue fixa em 4 níveis.</p>
       <div className="space-y-2">
         {types.map((t) => <TypeRow key={t.id} t={t} onChange={() => router.refresh()} />)}
         {types.length === 0 && <p className="text-sm text-muted-foreground">Nenhum tipo cadastrado.</p>}
@@ -30,6 +30,7 @@ function TypeRow({ t, onChange }: { t: OccTypeRow; onChange: () => void }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(t.name);
   const [maint, setMaint] = useState(t.isMaintenance);
+  const [it, setIt] = useState(t.isIT);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -48,20 +49,22 @@ function TypeRow({ t, onChange }: { t: OccTypeRow; onChange: () => void }) {
           <div className="flex flex-1 flex-col gap-1">
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome do tipo" className="h-9 text-sm" />
             <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={maint} onChange={(e) => setMaint(e.target.checked)} /> É tipo de manutenção</label>
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={it} onChange={(e) => setIt(e.target.checked)} /> É tipo de TI</label>
           </div>
         ) : (
           <div className="flex items-center gap-2">
             <p className="text-sm font-semibold text-brand">{t.name}</p>
             {t.isMaintenance && <span className="inline-flex items-center gap-0.5 rounded bg-gold/10 px-1.5 py-0.5 text-[10px] font-bold text-gold"><Wrench className="h-3 w-3" /> Manutenção</span>}
+            {t.isIT && <span className="inline-flex items-center gap-0.5 rounded bg-gold/10 px-1.5 py-0.5 text-[10px] font-bold text-gold"><MonitorSmartphone className="h-3 w-3" /> TI</span>}
           </div>
         )}
         <div className="flex items-center gap-1">
           <button onClick={() => call({ entity: 'occType', action: 'toggle', id: t.id, active: !t.active })}><StatusBadge tone={t.active ? 'success' : 'critical'}>{t.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
           {editing
-            ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => call({ entity: 'occType', action: 'update', id: t.id, name, isMaintenance: maint }, () => setEditing(false))} aria-label="Salvar"><Save className="h-4 w-4" /></Button>
+            ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => call({ entity: 'occType', action: 'update', id: t.id, name, isMaintenance: maint, isIT: it }, () => setEditing(false))} aria-label="Salvar"><Save className="h-4 w-4" /></Button>
             : <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>}
           {editing
-            ? <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setName(t.name); setMaint(t.isMaintenance); }} aria-label="Cancelar"><X className="h-4 w-4" /></Button>
+            ? <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setName(t.name); setMaint(t.isMaintenance); setIt(t.isIT); }} aria-label="Cancelar"><X className="h-4 w-4" /></Button>
             : <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Excluir o tipo "${t.name}" e suas categorias?`)) call({ entity: 'occType', action: 'delete', id: t.id }); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
         </div>
       </div>
@@ -126,15 +129,16 @@ function NewCategory({ typeId, onDone }: { typeId: string; onDone: () => void })
 function NewType({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('');
   const [maint, setMaint] = useState(false);
+  const [it, setIt] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   async function add() {
     if (!name.trim()) { setMsg('Informe o nome.'); return; }
     setBusy(true); setMsg(null);
-    const r = await postAdmin({ entity: 'occType', action: 'create', name, isMaintenance: maint });
+    const r = await postAdmin({ entity: 'occType', action: 'create', name, isMaintenance: maint, isIT: it });
     setBusy(false);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
-    setName(''); setMaint(false); onDone();
+    setName(''); setMaint(false); setIt(false); onDone();
   }
   return (
     <div className="rounded-lg border border-dashed p-2.5">
@@ -145,6 +149,7 @@ function NewType({ onDone }: { onDone: () => void }) {
           <Button size="sm" disabled={busy} onClick={add}><Plus className="mr-1 h-4 w-4" /> Adicionar</Button>
         </div>
         <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={maint} onChange={(e) => setMaint(e.target.checked)} /> É tipo de manutenção (aparece na sub-aba Manutenção)</label>
+        <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={it} onChange={(e) => setIt(e.target.checked)} /> É tipo de TI (aparece na sub-aba TI)</label>
       </div>
       {msg && <p className="mt-1 text-xs font-medium text-critical">{msg}</p>}
     </div>

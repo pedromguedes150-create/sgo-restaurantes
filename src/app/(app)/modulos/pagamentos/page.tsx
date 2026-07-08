@@ -36,6 +36,10 @@ function toDTO(r: ReqRow): PayReq {
     rejectionReason: r.rejectionReason,
     divergent: r.divergent,
     standardValue: r.standardValue !== null && r.standardValue !== undefined ? Number(r.standardValue) : null,
+    requestedAt: r.createdAt.toISOString(),
+    entryDate: r.entryDate ? r.entryDate.toISOString() : null,
+    dateEdited: r.dateEdited,
+    dateEditedByName: r.dateEditedByName,
   };
 }
 
@@ -69,6 +73,7 @@ export default async function PagamentosPage() {
           <PaymentsClient
             isFinanceView={isFinanceView}
             isAdmin={user.role === 'ADMIN'}
+            canEditDate={user.role === 'ADMIN' || user.role === 'SUPERVISOR'}
             units={units}
             miscTypes={miscTypes.map((t) => ({ id: t.id, name: t.name }))}
             suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}

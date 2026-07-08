@@ -5,7 +5,7 @@ import { GRAVITY_META, STATUS_META } from '@/lib/occurrences/labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
-import { Plus, AlertTriangle, Wrench } from 'lucide-react';
+import { Plus, AlertTriangle, Wrench, MonitorSmartphone } from 'lucide-react';
 import type { OccurrenceStatus } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -16,12 +16,13 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
     ? searchParams.status
     : undefined) as OccurrenceStatus | undefined;
   const isMaint = searchParams.view === 'manutencao';
-  const base = isMaint ? '/modulos/ocorrencias?view=manutencao' : '/modulos/ocorrencias';
-  const sep = isMaint ? '&' : '?';
+  const isIT = searchParams.view === 'ti';
+  const base = isMaint ? '/modulos/ocorrencias?view=manutencao' : isIT ? '/modulos/ocorrencias?view=ti' : '/modulos/ocorrencias';
+  const sep = isMaint || isIT ? '&' : '?';
 
   const [summary, list] = await Promise.all([
     getOccurrenceSummary(user),
-    listOccurrences(user, { status, maintenance: isMaint ? true : undefined, limit: 50 }),
+    listOccurrences(user, { status, maintenance: isMaint ? true : undefined, it: isIT ? true : undefined, limit: 50 }),
   ]);
 
   const filters: { key?: OccurrenceStatus; label: string }[] = [
@@ -40,15 +41,24 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
         </Link>
       </div>
 
-      {/* Visão: Geral × Manutenção */}
+      {/* Visão: Geral × Manutenção × TI */}
       <div className="flex gap-2">
-        <Link href="/modulos/ocorrencias" className={!isMaint ? 'flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium'}>
+        <Link href="/modulos/ocorrencias" className={!isMaint && !isIT ? 'flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium'}>
           Geral
         </Link>
         <Link href="/modulos/ocorrencias?view=manutencao" className={isMaint ? 'flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium'}>
           <Wrench className="h-4 w-4" /> Manutenção
         </Link>
+        <Link href="/modulos/ocorrencias?view=ti" className={isIT ? 'flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium'}>
+          <MonitorSmartphone className="h-4 w-4" /> TI
+        </Link>
       </div>
+
+      {isIT && (
+        <p className="rounded-lg border border-dashed bg-surface p-3 text-xs text-muted-foreground">
+          Ocorrências de tipos marcados como <strong>TI</strong> (Configurações → Ocorrências). Preparado para a futura integração com o sistema de gestão de TI.
+        </p>
+      )}
 
       {isMaint && (
         <Link href="/modulos/manutencao" className="flex items-center justify-between gap-2 rounded-lg border border-accent/40 bg-accent/5 p-3 text-sm hover:bg-accent/10">

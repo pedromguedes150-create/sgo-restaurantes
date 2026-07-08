@@ -105,6 +105,15 @@ export async function getUnitMonthScore(
     doneWeight += eWeight * (eStats.done / eResolved);
   }
 
-  const scorePct = resolvedWeight === 0 ? 0 : Math.round((doneWeight / resolvedWeight) * 100);
+  let scorePct = resolvedWeight === 0 ? 0 : Math.round((doneWeight / resolvedWeight) * 100);
+
+  // Penalidade "lançamento fora do prazo" (item 4, 07/07): cada data editada
+  // por Admin/Supervisor (Pagamentos/Notas/Gás/Óleo) desconta X% da meta.
+  const { countLateEntries, getLateEntryPenaltyPct } = await import('@/lib/late-entry');
+  const [lateCount, penaltyPct] = await Promise.all([countLateEntries(unitId, yearMonth), getLateEntryPenaltyPct()]);
+  if (lateCount > 0 && penaltyPct > 0) {
+    scorePct = Math.max(0, Math.round(scorePct - lateCount * penaltyPct));
+  }
+
   return { scorePct, doneWeight, resolvedWeight };
 }

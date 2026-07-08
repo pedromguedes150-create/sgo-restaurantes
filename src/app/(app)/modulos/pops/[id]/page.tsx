@@ -13,13 +13,17 @@ import { ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PopDetailPage({ params }: { params: { id: string } }) {
+export default async function PopDetailPage({ params, searchParams }: { params: { id: string }; searchParams: { treino?: string } }) {
   const user = (await getSessionUser())!;
   const pop = await getPop(user, params.id);
   if (!pop) notFound();
 
+  // Aberto a partir de Treinamentos (?treino=<recordId>): SÓ visualização
+  // (sem editor, mesmo p/ admin) e a confirmação de leitura marca o treinamento.
+  const trainingRecordId = searchParams.treino?.trim() || null;
+
   const blocks = (Array.isArray(pop.content) ? pop.content : []) as unknown as PopBlock[];
-  const isAdmin = user.role === 'ADMIN';
+  const isAdmin = user.role === 'ADMIN' && !trainingRecordId;
   const units = isAdmin
     ? await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } })
     : [];
@@ -71,7 +75,7 @@ export default async function PopDetailPage({ params }: { params: { id: string }
         </CardContent>
       </Card>
 
-      <ConfirmRead popId={pop.id} confirmed={pop.confirmed} />
+      <ConfirmRead popId={pop.id} confirmed={pop.confirmed} trainingRecordId={trainingRecordId} />
 
       {isAdmin && editData && (
         <PopEditor units={units} standardSectors={STANDARD_SECTORS} pop={editData} redirectOnDelete="/modulos/pops" />

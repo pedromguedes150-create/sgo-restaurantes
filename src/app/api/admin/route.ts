@@ -7,6 +7,7 @@ import { setRolePermission } from '@/lib/permissions';
 import { setTrainingWeight } from '@/lib/training';
 import { setCommunicationWeight } from '@/lib/communications/meta';
 import { setEvaluationWeight } from '@/lib/people/evaluation';
+import { setLateEntryPenaltyPct } from '@/lib/late-entry';
 import { setGasAlertPct } from '@/lib/gas/query';
 import { setChecklistToleranceMin } from '@/lib/tasks/tolerance';
 import { setHourlyRate, addHoliday, deleteHoliday } from '@/lib/freelancer/pricing';
@@ -79,6 +80,7 @@ export async function POST(req: Request) {
   else if (e === 'training' && a === 'setWeight') r = await setTrainingWeight(user, Number(b.weight));
   else if (e === 'communication' && a === 'setWeight') r = await setCommunicationWeight(user, Number(b.weight));
   else if (e === 'evaluation' && a === 'setWeight') r = await setEvaluationWeight(user, Number(b.weight));
+  else if (e === 'lateEntry' && a === 'setPenalty') r = await setLateEntryPenaltyPct(user, Number(b.pct));
   else if (e === 'supervisorChecklist' && a === 'create') r = await createSupervisorChecklist(user, b, ctx);
   else if (e === 'supervisorChecklist' && a === 'update') r = await updateSupervisorChecklist(user, b.id, b, ctx);
   else if (e === 'supervisorChecklist' && a === 'toggle') r = await toggleSupervisorChecklist(user, b.id, b.active, ctx);

@@ -23,6 +23,7 @@ export default async function OleoPage() {
   const list: OilRow[] = rows.map((r) => ({
     id: r.id, date: r.operationalDate, unit: r.unit.name, supplier: r.supplier?.name ?? 'Sem fornecedor',
     liters: Number(r.liters), price: Number(r.pricePerLiter), total: Number(r.totalValue), method: r.paymentMethod ?? '', by: r.createdBy?.name ?? '',
+    dateEdited: r.dateEdited, dateEditedByName: r.dateEditedByName,
   }));
 
   return (
@@ -35,6 +36,7 @@ export default async function OleoPage() {
         <OilClient
           canLaunch={canLaunch}
           isAdmin={user.role === 'ADMIN'}
+          canEditDate={user.role === 'ADMIN' || user.role === 'SUPERVISOR'}
           units={units}
           suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
           dashboard={dashboard}

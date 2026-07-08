@@ -61,6 +61,14 @@ export async function getMetaBreakdown(unitId: string, yearMonth: string): Promi
     rows.push({ name: 'Avaliações da equipe', weight: eWeight, done: eStats.done, resolved: eResolved, scorePct: Math.round((eStats.done / eResolved) * 100) });
   }
 
+  // Linha informativa "Lançamentos fora do prazo" (penalidade, item 4 07/07):
+  // cada data editada desconta X% direto do score final (não é peso).
+  const { countLateEntries, getLateEntryPenaltyPct } = await import('@/lib/late-entry');
+  const [lateCount, penaltyPct] = await Promise.all([countLateEntries(unitId, yearMonth), getLateEntryPenaltyPct()]);
+  if (lateCount > 0 && penaltyPct > 0) {
+    rows.push({ name: `Fora do prazo (−${Math.round(lateCount * penaltyPct)}% na meta)`, weight: 0, done: 0, resolved: lateCount, scorePct: 0 });
+  }
+
   return rows.sort((a, b) => b.weight - a.weight);
 }
 

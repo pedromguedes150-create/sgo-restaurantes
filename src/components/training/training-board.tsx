@@ -82,7 +82,7 @@ export function TrainingBoard({ board, isAdmin, weight }: { board: Group[]; isAd
                           <p className="text-xs text-muted-foreground">prazo {it.dueDate} · <StatusBadge tone={ST[it.status].tone}>{ST[it.status].label}</StatusBadge></p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
-                          <Link href={`/modulos/pops/${it.popId}`}><Button size="sm" variant="outline"><BookOpen className="h-4 w-4" /> Abrir POP</Button></Link>
+                          <Link href={`/modulos/pops/${it.popId}?treino=${it.recordId}`}><Button size="sm" variant="outline"><BookOpen className="h-4 w-4" /> Abrir POP</Button></Link>
                           {it.status === 'DONE'
                             ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(it.recordId, 'reopen')} aria-label="Reabrir"><RotateCcw className="h-4 w-4" /></Button>
                             : <Button size="sm" disabled={busy} onClick={() => act(it.recordId, 'complete')}><Check className="h-4 w-4" /> Treinei</Button>}

@@ -20,6 +20,12 @@ export interface PayReq {
   rejectionReason?: string | null;
   divergent?: boolean;
   standardValue?: number | null;
+  /// data da solicitação (ISO) — exibida e base da ordenação do histórico
+  requestedAt?: string;
+  /// data efetiva (editada por Admin/Supervisor) — presença indica edição
+  dateEdited?: boolean;
+  dateEditedByName?: string | null;
+  entryDate?: string | null;
 }
 interface Unit { id: string; name: string }
 interface Freelancer { id: string; name: string; defaultValue: number; unitIds: string[] }
@@ -39,6 +45,7 @@ type Tab = 'nova' | 'minhas' | 'aprovar' | 'pagar' | 'historico';
 export function PaymentsClient({
   isFinanceView,
   isAdmin = false,
+  canEditDate = false,
   units,
   freelancers,
   miscTypes,
@@ -50,6 +57,7 @@ export function PaymentsClient({
 }: {
   isFinanceView: boolean;
   isAdmin?: boolean;
+  canEditDate?: boolean;
   units: Unit[];
   freelancers: Freelancer[];
   miscTypes: MiscType[];
@@ -77,17 +85,28 @@ export function PaymentsClient({
     }
   }
 
+  async function editDate(r: PayReq) {
+    const v = prompt('Data correta do lançamento (AAAA-MM-DD) — a edição desconta % na meta do gerente:', (r.entryDate ?? r.requestedAt ?? '').slice(0, 10));
+    if (!v) return;
+    setBusy(true);
+    try {
+      const res = await fetch('/api/entry-date', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ module: 'payment', id: r.id, date: v.trim() }) });
+      if (res.ok) router.refresh(); else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
+    } finally { setBusy(false); }
+  }
+
   function adminActions(r: PayReq) {
     return (
-      <div className="flex gap-2">
-        <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
+      <div className="flex flex-wrap gap-2">
+        {isAdmin && <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
           const v = prompt('Novo valor (R$):', String(r.amount).replace('.', ','));
           if (v === null) return;
           const amount = parseFloat(v.replace(/\./g, '').replace(',', '.'));
           if (!(amount > 0)) { alert('Valor inválido'); return; }
           act(r.id, 'adminEdit', { amount });
-        }} aria-label="Editar valor"><Pencil className="h-4 w-4" /> Editar valor</Button>
-        <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Excluir este pagamento (${TYPE_LABEL[r.type]} · ${formatBRL(r.amount)})? Registrado na Auditoria.`)) act(r.id, 'adminDelete'); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /> Excluir</Button>
+        }} aria-label="Editar valor"><Pencil className="h-4 w-4" /> Editar valor</Button>}
+        {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void editDate(r)} aria-label="Editar data"><Pencil className="h-4 w-4" /> Editar data</Button>}
+        {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Excluir este pagamento (${TYPE_LABEL[r.type]} · ${formatBRL(r.amount)})? Registrado na Auditoria.`)) act(r.id, 'adminDelete'); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /> Excluir</Button>}
       </div>
     );
   }
@@ -144,7 +163,7 @@ export function PaymentsClient({
         />
       )}
 
-      {tab === 'historico' && <HistoryTab items={history} actions={isAdmin ? adminActions : undefined} />}
+      {tab === 'historico' && <HistoryTab items={history} actions={isAdmin || canEditDate ? adminActions : undefined} />}
     </div>
   );
 }
@@ -202,7 +221,15 @@ function List({ items, actions }: { items: PayReq[]; actions?: (r: PayReq) => Re
             <p className="font-semibold text-brand">{TYPE_LABEL[r.type]} · {r.title}</p>
             <StatusBadge tone={STATUS[r.status].tone}>{STATUS[r.status].label}</StatusBadge>
           </div>
-          <p className="text-xs text-muted-foreground">{r.unit} · {formatBRL(r.amount)}{r.requestedBy ? ` · por ${r.requestedBy}` : ''}</p>
+          <p className="text-xs text-muted-foreground">
+            {r.unit} · {formatBRL(r.amount)}{r.requestedBy ? ` · por ${r.requestedBy}` : ''}
+            {r.requestedAt ? ` · solicitado ${new Date(r.requestedAt).toLocaleDateString('pt-BR')}` : ''}
+          </p>
+          {r.dateEdited && (
+            <p className="mt-0.5 text-xs font-semibold text-critical">
+              Data corrigida{r.entryDate ? ` p/ ${new Date(r.entryDate).toLocaleDateString('pt-BR')}` : ''}{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta
+            </p>
+          )}
           {r.divergent && (
             <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-medium">
               <AlertTriangle className="h-3.5 w-3.5" /> Divergência: padrão {r.standardValue != null ? formatBRL(r.standardValue) : '—'}

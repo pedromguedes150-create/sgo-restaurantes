@@ -9,6 +9,17 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.15.0 — 2026-07-08 (pacote de ajustes 07/07 — parte 1)
+### Adicionado
+- **Ocorrências — segmento TI**: nova sub-aba **TI** (igual à de Manutenção): tipos marcados como "TI" em Configurações → Ocorrências aparecem separados, preparado para a futura integração com sistema de gestão de TI.
+- **Lançamento fora do prazo (conta na meta)**: em **Pagamentos, Notas, Gás e Óleo**, a data da solicitação aparece no lançamento e o histórico é ordenado da mais nova para a mais antiga. **Admin/Supervisor podem corrigir a data** quando o gerente esqueceu de lançar — cada correção marca o lançamento, avisa o gerente e **desconta % na meta do mês** (padrão 2%/lançamento, ajustável pelo Admin na tela de Metas). Linha "Fora do prazo" aparece no detalhamento da meta.
+- **POPs nos Treinamentos**: abrir um POP a partir de Treinamentos agora é **só visualização** (sem editor) e o botão vira "Confirmar leitura e marcar treinado" — confirma a leitura E completa o treinamento de uma vez.
+### Alterado
+- **Manutenção saiu da sidebar** — acesso via Ocorrências → sub-aba Manutenção (que já leva a chamados e preventivas).
+- **Configurações — Checklists unificados**: Checklists das unidades, Biblioteca de modelos e Checklists de supervisor agora são **uma página com 3 abas** (menos botões nas Configurações).
+### Removido
+- **Unidades de teste** (Beija Flor Centro, Orla e Shopping) excluídas com todos os históricos vinculados (backup 3-2-1 feito antes; auditado). 11 unidades reais intactas.
+
 ## v1.14.0 — 2026-07-08
 ### Adicionado
 - **Novo módulo: Visão Executiva** (`Gestão → Visão Executiva`, restrito a CEO/Admin por padrão): a rede inteira em uma tela por mês — cartões consolidados (meta média, uso do sistema, desperdício total, dias de atestado, divergências de troco, custo de manutenção, ocorrências graves, visitas de supervisão) + **tabela por unidade** ordenada pela meta, com semáforo de uso. Botão **Imprimir/PDF** para reunião de diretoria. Tudo composto do que os módulos já calculam (mesmos números das telas de origem).

@@ -54,11 +54,11 @@ export async function getToPay(user: SessionUser) {
   });
 }
 
-/** Histórico (resolvidas). */
+/** Histórico (resolvidas) — ordenado pela data da SOLICITAÇÃO, mais nova primeiro (pedido 07/07). */
 export async function getHistory(user: SessionUser) {
   return prisma.paymentRequest.findMany({
     where: { status: { in: ['APPROVED', 'REJECTED', 'PAID'] }, ...paymentScope(user) },
-    orderBy: { updatedAt: 'desc' },
+    orderBy: { createdAt: 'desc' },
     take: 100,
     include: REQUEST_INCLUDE,
   });

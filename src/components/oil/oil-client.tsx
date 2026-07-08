@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Droplets } from 'lucide-react';
+import { Save, Droplets, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,15 +14,15 @@ interface Supplier { id: string; name: string }
 interface Group { key: string; name: string; liters: number; total: number }
 interface MonthPoint { month: string; liters: number; total: number }
 export interface OilDash { totalLiters: number; totalValue: number; avgPricePerLiter: number; byUnit: Group[]; byMethod: Group[]; monthly: MonthPoint[] }
-export interface OilRow { id: string; date: string; unit: string; supplier: string; liters: number; price: number; total: number; method: string; by: string }
+export interface OilRow { id: string; date: string; unit: string; supplier: string; liters: number; price: number; total: number; method: string; by: string; dateEdited?: boolean; dateEditedByName?: string | null }
 
 const METHODS = ['PIX', 'Dinheiro', 'Crédito em conta', 'Transferência', 'Troca por produto'];
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const mlabel = (m: string) => { const [y, mm] = m.split('-'); return `${MONTHS[Number(mm) - 1]}/${y.slice(2)}`; };
 const perL = (n: number) => `R$ ${n.toFixed(4).replace('.', ',')}/L`;
 
-export function OilClient({ canLaunch, isAdmin, units, suppliers, dashboard, rows }: {
-  canLaunch: boolean; isAdmin: boolean; units: Unit[]; suppliers: Supplier[]; dashboard: OilDash; rows: OilRow[];
+export function OilClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, rows }: {
+  canLaunch: boolean; isAdmin: boolean; canEditDate?: boolean; units: Unit[]; suppliers: Supplier[]; dashboard: OilDash; rows: OilRow[];
 }) {
   const [tab, setTab] = useState<'lancar' | 'painel' | 'historico'>(canLaunch ? 'lancar' : 'painel');
   const tabs: { key: typeof tab; label: string; show: boolean }[] = [
@@ -39,7 +39,7 @@ export function OilClient({ canLaunch, isAdmin, units, suppliers, dashboard, row
       </div>
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
       {tab === 'painel' && <Dashboard d={dashboard} />}
-      {tab === 'historico' && <History rows={rows} isAdmin={isAdmin} />}
+      {tab === 'historico' && <History rows={rows} isAdmin={isAdmin} canEditDate={canEditDate} />}
     </div>
   );
 }
@@ -164,11 +164,20 @@ function Cell({ label, value }: { label: string; value: string }) {
   return <div className="rounded-lg border bg-card py-3 text-center"><p className="text-base font-black text-brand">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div>;
 }
 
-function History({ rows, isAdmin }: { rows: OilRow[]; isAdmin: boolean }) {
+function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdmin: boolean; canEditDate?: boolean }) {
+  const router = useRouter();
   const [unit, setUnit] = useState('');
   const unitNames = [...new Set(rows.map((r) => r.unit))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   const shown = unit ? rows.filter((r) => r.unit === unit) : rows;
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma coleta registrada.</p>;
+
+  async function editDate(r: OilRow) {
+    const v = prompt('Data correta da coleta (AAAA-MM-DD) — a edição desconta % na meta do gerente:', r.date);
+    if (!v) return;
+    const res = await fetch('/api/entry-date', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ module: 'oil', id: r.id, date: v.trim() }) });
+    if (res.ok) router.refresh(); else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
+  }
+
   return (
     <div className="space-y-2">
       {unitNames.length > 1 && (
@@ -185,7 +194,13 @@ function History({ rows, isAdmin }: { rows: OilRow[]; isAdmin: boolean }) {
               <p className="text-xs text-muted-foreground">{r.date} · {r.unit} · {perL(r.price)}{r.method ? ` · ${r.method}` : ''}{r.supplier !== 'Sem fornecedor' ? ` · ${r.supplier}` : ''}{r.by ? ` · ${r.by}` : ''}</p>
             </div>
           </div>
-          {isAdmin && <div className="mt-2"><DeleteOpButton entity="oil" id={r.id} label={`a coleta de óleo (${r.date}, ${r.unit})`} /></div>}
+          {r.dateEdited && <p className="mt-1 text-xs font-semibold text-critical">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
+          {(isAdmin || canEditDate) && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {canEditDate && <Button size="sm" variant="ghost" onClick={() => void editDate(r)}><Pencil className="h-4 w-4" /> Editar data</Button>}
+              {isAdmin && <DeleteOpButton entity="oil" id={r.id} label={`a coleta de óleo (${r.date}, ${r.unit})`} />}
+            </div>
+          )}
         </div>
       ))}
     </div>

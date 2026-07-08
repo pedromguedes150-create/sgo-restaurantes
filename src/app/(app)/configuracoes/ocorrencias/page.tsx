@@ -14,7 +14,7 @@ export default async function OcorrenciasConfigPage() {
   const types = await prisma.occurrenceType.findMany({
     orderBy: [{ order: 'asc' }, { name: 'asc' }],
     select: {
-      id: true, name: true, active: true, isMaintenance: true,
+      id: true, name: true, active: true, isMaintenance: true, isIT: true,
       categories: { orderBy: [{ order: 'asc' }, { name: 'asc' }], select: { id: true, name: true, active: true } },
     },
   });

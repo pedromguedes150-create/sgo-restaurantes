@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,14 +18,14 @@ interface Supplier { id: string; name: string; cnpj: string | null }
 interface GroupStat { key: string; name: string; count: number; avg: number; last: number; min: number; max: number }
 interface MonthPoint { month: string; avg: number; count: number }
 export interface GasDash { totalReceipts: number; avgPrice: number; lastPrice: number | null; byUnit: GroupStat[]; bySupplier: GroupStat[]; monthly: MonthPoint[]; alertPct: number }
-export interface GasRow { id: string; date: string; unit: string; supplier: string; qty: number; total: number; price: number; variation: number | null; alerted: boolean; by: string }
+export interface GasRow { id: string; date: string; unit: string; supplier: string; qty: number; total: number; price: number; variation: number | null; alerted: boolean; by: string; dateEdited?: boolean; dateEditedByName?: string | null }
 
 const kg = (n: number) => `R$ ${n.toFixed(4).replace('.', ',')}/kg`;
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 function mlabel(m: string) { const [y, mm] = m.split('-'); return `${MONTHS[Number(mm) - 1]}/${y.slice(2)}`; }
 
-export function GasClient({ canLaunch, isAdmin, units, suppliers, dashboard, receipts }: {
-  canLaunch: boolean; isAdmin: boolean; units: Unit[]; suppliers: Supplier[]; dashboard: GasDash; receipts: GasRow[];
+export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, receipts }: {
+  canLaunch: boolean; isAdmin: boolean; canEditDate?: boolean; units: Unit[]; suppliers: Supplier[]; dashboard: GasDash; receipts: GasRow[];
 }) {
   const [tab, setTab] = useState<'painel' | 'lancar' | 'historico'>(canLaunch ? 'lancar' : 'painel');
   const tabs: { key: typeof tab; label: string; show: boolean }[] = [
@@ -42,7 +42,7 @@ export function GasClient({ canLaunch, isAdmin, units, suppliers, dashboard, rec
       </div>
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
       {tab === 'painel' && <Dashboard d={dashboard} isAdmin={isAdmin} />}
-      {tab === 'historico' && <History rows={receipts} isAdmin={isAdmin} />}
+      {tab === 'historico' && <History rows={receipts} isAdmin={isAdmin} canEditDate={canEditDate} />}
     </div>
   );
 }
@@ -257,8 +257,17 @@ function MonthlyBars({ points }: { points: MonthPoint[] }) {
 }
 
 /* ───────── Histórico ───────── */
-function History({ rows, isAdmin }: { rows: GasRow[]; isAdmin: boolean }) {
+function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdmin: boolean; canEditDate?: boolean }) {
+  const router = useRouter();
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhum recebimento registrado.</p>;
+
+  async function editDate(r: GasRow) {
+    const v = prompt('Data correta do recebimento (AAAA-MM-DD) — a edição desconta % na meta do gerente:', r.date);
+    if (!v) return;
+    const res = await fetch('/api/entry-date', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ module: 'gas', id: r.id, date: v.trim() }) });
+    if (res.ok) router.refresh(); else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
+  }
+
   return (
     <div className="space-y-2">
       {rows.map((r) => {
@@ -275,7 +284,13 @@ function History({ rows, isAdmin }: { rows: GasRow[]; isAdmin: boolean }) {
               )}
             </div>
             {r.alerted && <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-critical"><AlertTriangle className="h-3.5 w-3.5" /> Alta acima do limite</p>}
-            {isAdmin && <div className="mt-2"><DeleteOpButton entity="gas" id={r.id} label={`o recebimento de gás (${r.date}, ${r.unit})`} /></div>}
+            {r.dateEdited && <p className="mt-1 text-xs font-semibold text-critical">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
+            {(isAdmin || canEditDate) && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {canEditDate && <Button size="sm" variant="ghost" onClick={() => void editDate(r)}><Pencil className="h-4 w-4" /> Editar data</Button>}
+                {isAdmin && <DeleteOpButton entity="gas" id={r.id} label={`o recebimento de gás (${r.date}, ${r.unit})`} />}
+              </div>
+            )}
           </div>
         );
       })}

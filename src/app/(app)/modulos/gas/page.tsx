@@ -33,6 +33,8 @@ export default async function GasPage() {
     variation: r.variationPct,
     alerted: r.alerted,
     by: r.createdBy?.name ?? '',
+    dateEdited: r.dateEdited,
+    dateEditedByName: r.dateEditedByName,
   }));
 
   return (
@@ -53,6 +55,7 @@ export default async function GasPage() {
         <GasClient
           canLaunch={canLaunch}
           isAdmin={user.role === 'ADMIN'}
+          canEditDate={user.role === 'ADMIN' || user.role === 'SUPERVISOR'}
           units={units}
           suppliers={suppliers.map((s) => ({ id: s.id, name: s.name, cnpj: s.cnpj }))}
           dashboard={dashboard}

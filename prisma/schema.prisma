@@ -423,6 +423,8 @@ model OccurrenceType {
   active     Boolean               @default(true)
   /// Tipo de manutenção → ocorrências aparecem na sub-aba Manutenção.
   isMaintenance Boolean            @default(false)
+  /// Tipo de TI → ocorrências aparecem na sub-aba TI (futura API de gestão de TI).
+  isIT          Boolean            @default(false)
   categories OccurrenceCategory[]
   occurrences Occurrence[]
 
@@ -856,6 +858,12 @@ model PaymentRequest {
   /// Vínculo opcional ao cadastro de fornecedores (lista compartilhada)
   supplierId     String?
 
+  // Data efetiva do lançamento (item 4, 07/07): null = createdAt. Editável por
+  // Admin/Supervisor quando o gerente esqueceu de lançar — edição penaliza a meta.
+  entryDate        DateTime?
+  dateEdited       Boolean   @default(false)
+  dateEditedByName String?
+
   // Workflow
   approvedById    String?
   approvedAt      DateTime?
@@ -913,6 +921,10 @@ model ReceivedNote {
   imagePath    String?
   status       NoteStatus @default(RECEIVED)
   problemNote  String?
+  /// Data efetiva do lançamento (item 4): null = createdAt; edição penaliza a meta.
+  entryDate        DateTime?
+  dateEdited       Boolean   @default(false)
+  dateEditedByName String?
   createdById  String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
@@ -966,6 +978,8 @@ model Collaborator {
   active    Boolean            @default(true)
   source    CollaboratorSource @default(MANUAL)
   externalId String? // id no RH
+  /// CPF (só dígitos, do RH) — casa os eventos de desligamento da integração
+  cpf       String?
   /// Data de admissão (do RH, 'YYYY-MM-DD') — base do tempo de empresa
   hireDate  String?
   createdAt DateTime           @default(now())
@@ -981,6 +995,7 @@ model Collaborator {
   medicalCertificates MedicalCertificate[]
   terminations      Termination[]
 
+  @@index([cpf])
   @@map("collaborators")
 }
 
@@ -1777,6 +1792,9 @@ model GasReceipt {
   supplierId      String?
   /// Dia operacional do recebimento (YYYY-MM-DD)
   operationalDate String
+  /// Edição de data por Admin/Supervisor (item 4) — penaliza a meta do gerente
+  dateEdited       Boolean @default(false)
+  dateEditedByName String?
   accessKey       String?
   noteNumber      String?
   /// Forma de recebimento. Botijão converte para kg (count × cylinderKg) p/ os dashboards.
@@ -1813,6 +1831,9 @@ model OilCollection {
   unitId          String
   supplierId      String?
   operationalDate String
+  /// Edição de data por Admin/Supervisor (item 4) — penaliza a meta do gerente
+  dateEdited       Boolean @default(false)
+  dateEditedByName String?
   liters          Decimal  @db.Decimal(10, 2)
   pricePerLiter   Decimal  @db.Decimal(10, 4)
   totalValue      Decimal  @db.Decimal(12, 2)

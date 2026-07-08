@@ -195,17 +195,17 @@ export async function deleteCommandSequence(user: SessionUser, id: string, ctx: 
 }
 
 /* ──────────────────────── Ocorrências: tipos e categorias ──────────── */
-export async function createOccType(user: SessionUser, input: { name: string; isMaintenance?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function createOccType(user: SessionUser, input: { name: string; isMaintenance?: boolean; isIT?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!input.name?.trim()) return { ok: false, reason: 'INVALID' };
   let code = slugCode(input.name);
   if (await prisma.occurrenceType.findUnique({ where: { code } })) code = `${code}_${Date.now().toString().slice(-4)}`;
   const count = await prisma.occurrenceType.count();
-  const t = await prisma.occurrenceType.create({ data: { name: input.name.trim(), code, order: count, isMaintenance: Boolean(input.isMaintenance) } });
+  const t = await prisma.occurrenceType.create({ data: { name: input.name.trim(), code, order: count, isMaintenance: Boolean(input.isMaintenance), isIT: Boolean(input.isIT) } });
   await audit({ userId: user.id, action: 'OCC_TYPE_CREATE', module: 'CONFIG', entity: 'occurrence_type', entityId: t.id, ...ctx });
   return { ok: true, id: t.id };
 }
-export async function updateOccType(user: SessionUser, id: string, input: { name?: string; isMaintenance?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateOccType(user: SessionUser, id: string, input: { name?: string; isMaintenance?: boolean; isIT?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
   await prisma.occurrenceType.update({ where: { id }, data: { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(input.isMaintenance !== undefined ? { isMaintenance: Boolean(input.isMaintenance) } : {}) } });

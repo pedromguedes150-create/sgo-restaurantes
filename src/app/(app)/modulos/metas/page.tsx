@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getMetaBreakdown, getMetaRanking } from '@/lib/metas/query';
 import { getUnitMonthScore } from '@/lib/tasks/summary';
+import { getLateEntryPenaltyPct } from '@/lib/late-entry';
+import { LateEntryConfig } from '@/components/metas/late-entry-config';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PrintButton } from '@/components/ui/print-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
@@ -35,6 +37,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
   const ranking = isAdminView ? await getMetaRanking(user, ym) : [];
   const breakdown = selected ? await getMetaBreakdown(selected.id, ym) : [];
   const score = selected ? await getUnitMonthScore(selected.id, ym) : null;
+  const lateEntryPct = user.role === 'ADMIN' ? await getLateEntryPenaltyPct() : null;
 
   const linkFor = (p: Record<string, string>) => {
     const sp = new URLSearchParams({ month: ym, ...(selected ? { unit: selected.id } : {}), ...p });
@@ -51,6 +54,8 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
           <PrintButton label="PDF" />
         </div>
       </div>
+
+      {lateEntryPct != null && <LateEntryConfig current={lateEntryPct} />}
       <p className="text-sm text-muted-foreground">Mês {monthLabel}</p>
 
       {/* Histórico: seletor de mês (lista suspensa) */}

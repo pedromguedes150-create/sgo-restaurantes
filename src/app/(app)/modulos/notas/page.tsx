@@ -31,11 +31,13 @@ export default async function NotasPage() {
         <CardContent className="pt-4">
           <NotesClient
             canManage={user.role === 'SUPERVISOR' || user.role === 'ADMIN' || user.role === 'CEO'}
+            canEditDate={user.role === 'SUPERVISOR' || user.role === 'ADMIN'}
             units={units}
             suppliers={suppliers.map((s) => ({ id: s.id, name: s.name, cnpj: s.cnpj }))}
             notes={notes.map((n) => ({
               id: n.id, unit: n.unit.name, supplier: n.supplierName, value: Number(n.totalValue), status: n.status, number: n.number, problemNote: n.problemNote,
               cnpj: n.supplierCnpj ?? '', issueDate: n.issueDate ? new Date(n.issueDate).toISOString().slice(0, 10) : '', dueDate: n.dueDate ? new Date(n.dueDate).toISOString().slice(0, 10) : '', productType: n.productType ?? '', observation: n.observation ?? '',
+              requestedAt: n.createdAt.toISOString(), entryDate: n.entryDate ? n.entryDate.toISOString() : null, dateEdited: n.dateEdited, dateEditedByName: n.dateEditedByName,
             }))}
           />
         </CardContent>

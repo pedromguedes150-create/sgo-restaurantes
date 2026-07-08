@@ -17,6 +17,8 @@ export interface NoteDTO {
   id: string; unit: string; supplier: string; value: number;
   status: 'RECEIVED' | 'PAID' | 'PROBLEM' | 'RETURNED'; number: string | null; problemNote: string | null;
   cnpj: string; issueDate: string; dueDate: string; productType: string; observation: string;
+  /// data da solicitação/lançamento (ISO) + marcação de data corrigida (item 4)
+  requestedAt?: string; entryDate?: string | null; dateEdited?: boolean; dateEditedByName?: string | null;
 }
 const ST: Record<NoteDTO['status'], { label: string; tone: StatusTone }> = {
   RECEIVED: { label: 'Recebida', tone: 'medium' },
@@ -25,7 +27,7 @@ const ST: Record<NoteDTO['status'], { label: string; tone: StatusTone }> = {
   RETURNED: { label: 'Devolvida', tone: 'neutral' },
 };
 
-export function NotesClient({ units, notes, suppliers = [], canManage = false }: { units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean }) {
+export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false }: { units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<'nova' | 'lista' | 'analise'>('lista');
   const [busy, setBusy] = useState(false);
@@ -58,7 +60,7 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false }:
       </div>
 
       {tab === 'nova' && <NewNote units={units} suppliers={suppliers} onDone={() => { setTab('lista'); router.refresh(); }} />}
-      {tab === 'lista' && <NotesList notes={notes} canManage={canManage} busy={busy} onStatus={status} />}
+      {tab === 'lista' && <NotesList notes={notes} canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={status} />}
       {tab === 'analise' && <NotesAnalysis notes={notes} units={units} />}
     </div>
   );
@@ -120,13 +122,13 @@ function NotesAnalysis({ notes, units }: { notes: NoteDTO[]; units: Unit[] }) {
   );
 }
 
-function NotesList({ notes, canManage, busy, onStatus }: { notes: NoteDTO[]; canManage: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM' | 'RETURNED') => void }) {
+function NotesList({ notes, canManage, canEditDate, busy, onStatus }: { notes: NoteDTO[]; canManage: boolean; canEditDate: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM' | 'RETURNED') => void }) {
   if (notes.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma nota registrada.</p>;
   const byCompany = new Map<string, NoteDTO[]>();
   for (const n of notes) { const arr = byCompany.get(n.supplier) ?? []; arr.push(n); byCompany.set(n.supplier, arr); }
   const groups = [...byCompany.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
 
-  const card = (n: NoteDTO) => <NoteCard key={n.id} n={n} canManage={canManage} busy={busy} onStatus={onStatus} />;
+  const card = (n: NoteDTO) => <NoteCard key={n.id} n={n} canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={onStatus} />;
 
   if (groups.length <= 1) return <div className="space-y-2">{notes.map(card)}</div>;
   return (
@@ -147,8 +149,15 @@ function NotesList({ notes, canManage, busy, onStatus }: { notes: NoteDTO[]; can
   );
 }
 
-function NoteCard({ n, canManage, busy, onStatus }: { n: NoteDTO; canManage: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM' | 'RETURNED') => void }) {
+function NoteCard({ n, canManage, canEditDate = false, busy, onStatus }: { n: NoteDTO; canManage: boolean; canEditDate?: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM' | 'RETURNED') => void }) {
   const router = useRouter();
+
+  async function editDate() {
+    const v = prompt('Data correta do lançamento (AAAA-MM-DD) — a edição desconta % na meta do gerente:', (n.entryDate ?? n.requestedAt ?? '').slice(0, 10));
+    if (!v) return;
+    const res = await fetch('/api/entry-date', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ module: 'note', id: n.id, date: v.trim() }) });
+    if (res.ok) router.refresh(); else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
+  }
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [f, setF] = useState({ supplierName: n.supplier, cnpj: n.cnpj, number: n.number ?? '', issueDate: n.issueDate, dueDate: n.dueDate, totalValue: String(n.value).replace('.', ','), productType: n.productType, observation: n.observation });
@@ -214,11 +223,20 @@ function NoteCard({ n, canManage, busy, onStatus }: { n: NoteDTO; canManage: boo
         <p className="font-semibold text-brand">{n.supplier}</p>
         <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
       </div>
-      <p className="text-xs text-muted-foreground">{n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${n.dueDate.split('-').reverse().join('/')}` : ''}</p>
+      <p className="text-xs text-muted-foreground">
+        {n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${n.dueDate.split('-').reverse().join('/')}` : ''}
+        {n.requestedAt ? ` · lançada ${new Date(n.requestedAt).toLocaleDateString('pt-BR')}` : ''}
+      </p>
+      {n.dateEdited && (
+        <p className="mt-0.5 text-xs font-semibold text-critical">
+          Data corrigida{n.entryDate ? ` p/ ${new Date(n.entryDate).toLocaleDateString('pt-BR')}` : ''}{n.dateEditedByName ? ` por ${n.dateEditedByName}` : ''} — desconta na meta
+        </p>
+      )}
       {n.observation && <p className="mt-1 text-xs text-muted-foreground">Obs.: {n.observation}</p>}
       {n.problemNote && <p className="mt-1 text-xs text-critical">{n.status === 'RETURNED' ? 'Devolução' : 'Problema'}: {n.problemNote}</p>}
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {canManage && <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Ver/Editar</Button>}
+        {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void editDate()}><Pencil className="h-4 w-4" /> Editar data</Button>}
         {n.status === 'RECEIVED' && (
           <>
             <Button size="sm" variant="gold" disabled={busy} onClick={() => onStatus(n.id, 'PAID')}><Banknote className="h-4 w-4" /> Paga</Button>

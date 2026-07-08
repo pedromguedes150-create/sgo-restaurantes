@@ -4,21 +4,31 @@ import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { TemplatesAdmin } from '@/components/admin/templates-admin';
 import { ChecklistToleranceConfig } from '@/components/admin/checklist-tolerance-config';
+import { ChecklistModelsAdmin } from '@/components/admin/checklist-models-admin';
+import { SupervisorChecklistsAdmin } from '@/components/admin/supervisor-checklists-admin';
 import { ensureDefaultModels, listChecklistModels } from '@/lib/checklist-models';
+import { listSupervisorChecklists } from '@/lib/supervisor/visits';
 import { getChecklistToleranceMin } from '@/lib/tasks/tolerance';
-import { ArrowLeft, LayoutTemplate } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ChecklistsAdminPage() {
+/**
+ * Hub único de checklists (pedido 07/07): Checklists das unidades + Biblioteca
+ * de modelos + Checklists de supervisor em UMA página com abas (?tab=).
+ */
+export default async function ChecklistsAdminPage({ searchParams }: { searchParams: { tab?: string } }) {
   const user = (await getSessionUser())!;
-  if (user.role !== 'ADMIN') return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
+  if (user.role !== 'ADMIN' && user.role !== 'CEO') return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
   await ensureDefaultModels().catch(() => {}); // popula a biblioteca padrão na 1ª vez
-  const [units, templates, models, tolerance] = await Promise.all([
+  const tab = ['unidades', 'modelos', 'supervisor'].includes(searchParams.tab ?? '') ? (searchParams.tab as string) : 'unidades';
+
+  const [units, templates, models, tolerance, supChecklists] = await Promise.all([
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     prisma.taskTemplate.findMany({ orderBy: { order: 'asc' }, include: { items: { orderBy: { order: 'asc' }, select: { section: true, text: true, requiresPhoto: true, aiCheck: true, standardDescription: true } } } }),
-    listChecklistModels({ activeOnly: true }),
+    listChecklistModels({}),
     getChecklistToleranceMin(),
+    listSupervisorChecklists(),
   ]);
 
   // Unidades de cada "grupo" (checklist replicado em várias unidades compartilha groupKey)
@@ -28,22 +38,48 @@ export default async function ChecklistsAdminPage() {
     groupUnits.set(t.groupKey, [...(groupUnits.get(t.groupKey) ?? []), t.unitId]);
   }
 
+  const TABS = [
+    { key: 'unidades', label: 'Checklists das unidades' },
+    { key: 'modelos', label: 'Biblioteca de modelos' },
+    { key: 'supervisor', label: 'Checklists de supervisor' },
+  ];
+
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-brand">Checklists</h1>
-        <Link href="/configuracoes/modelos" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><LayoutTemplate className="h-4 w-4" /> Biblioteca de modelos</Link>
+      <h1 className="text-xl font-bold text-brand">Checklists</h1>
+      <div className="flex flex-wrap gap-2">
+        {TABS.map((t) => (
+          <Link key={t.key} href={`/configuracoes/checklists?tab=${t.key}`} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
+            {t.label}
+          </Link>
+        ))}
       </div>
-      <Card><CardContent className="pt-4"><ChecklistToleranceConfig current={tolerance} /></CardContent></Card>
 
-      <Card><CardContent className="pt-4">
-        <TemplatesAdmin
-          units={units}
-          examples={models.map((m) => ({ id: m.id, name: m.name, category: m.category, moment: m.moment, scope: m.scope, limitTime: m.limitTime, requiresEvidence: m.requiresEvidence, weight: m.weight, itemCount: m.items.length }))}
-          templates={templates.map((t) => ({ id: t.id, unitId: t.unitId, name: t.name, limitTime: t.limitTime, weight: t.weight, scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, active: t.active, startDate: t.startDate, endDate: t.endDate, groupUnitIds: t.groupKey ? (groupUnits.get(t.groupKey) ?? [t.unitId]) : [t.unitId], items: t.items.map((i) => ({ section: i.section, text: i.text, requiresPhoto: i.requiresPhoto, aiCheck: i.aiCheck, standardDescription: i.standardDescription })) }))}
-        />
-      </CardContent></Card>
+      {tab === 'unidades' && (
+        <>
+          <Card><CardContent className="pt-4"><ChecklistToleranceConfig current={tolerance} /></CardContent></Card>
+          <Card><CardContent className="pt-4">
+            <TemplatesAdmin
+              units={units}
+              examples={models.filter((m) => m.active).map((m) => ({ id: m.id, name: m.name, category: m.category, moment: m.moment, scope: m.scope, limitTime: m.limitTime, requiresEvidence: m.requiresEvidence, weight: m.weight, itemCount: m.items.length }))}
+              templates={templates.map((t) => ({ id: t.id, unitId: t.unitId, name: t.name, limitTime: t.limitTime, weight: t.weight, scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, active: t.active, startDate: t.startDate, endDate: t.endDate, groupUnitIds: t.groupKey ? (groupUnits.get(t.groupKey) ?? [t.unitId]) : [t.unitId], items: t.items.map((i) => ({ section: i.section, text: i.text, requiresPhoto: i.requiresPhoto, aiCheck: i.aiCheck, standardDescription: i.standardDescription })) }))}
+            />
+          </CardContent></Card>
+        </>
+      )}
+
+      {tab === 'modelos' && (
+        <Card><CardContent className="pt-4">
+          <ChecklistModelsAdmin models={models.map((m) => ({ id: m.id, name: m.name, category: m.category, moment: m.moment, scope: m.scope, limitTime: m.limitTime, weight: m.weight, requiresEvidence: m.requiresEvidence, active: m.active, builtin: m.builtin, items: m.items.map((i) => ({ section: i.section, text: i.text, requiresPhoto: i.requiresPhoto })) }))} />
+        </CardContent></Card>
+      )}
+
+      {tab === 'supervisor' && (
+        <Card><CardContent className="pt-4">
+          <SupervisorChecklistsAdmin checklists={supChecklists.map((c) => ({ id: c.id, name: c.name, items: Array.isArray(c.items) ? (c.items as string[]) : [], active: c.active }))} />
+        </CardContent></Card>
+      )}
     </div>
   );
 }
