@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { createSector, updateSector, toggleSector, deleteSector, createShift, updateShift, deleteShift, allocate, updateAllocation, removeAllocation, assignFreelancerSector, type WfResult } from '@/lib/workforce';
+import { createSector, updateSector, toggleSector, deleteSector, createShift, updateShift, deleteShift, allocate, updateAllocation, removeAllocation, assignFreelancerSector, saveSimulation, type WfResult } from '@/lib/workforce';
 import { requestFunctionChange } from '@/lib/people/role-change';
 
 export async function POST(req: Request) {
@@ -24,6 +24,7 @@ export async function POST(req: Request) {
   else if (b.action === 'removeAllocation') r = await removeAllocation(user, b.id, ctx);
   else if (b.action === 'assignFreelancerSector') r = await assignFreelancerSector(user, b.requestId, b.sectorId ?? null, ctx);
   else if (b.action === 'changeFunction') r = await requestFunctionChange(user, String(b.collaboratorId ?? ''), String(b.newTitle ?? ''), ctx);
+  else if (b.action === 'saveSimulation') r = await saveSimulation(user, String(b.unitId ?? ''), String(b.date ?? ''), Array.isArray(b.assignments) ? b.assignments : [], b.note, ctx);
 
   if (!r) return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
   if (!r.ok) {

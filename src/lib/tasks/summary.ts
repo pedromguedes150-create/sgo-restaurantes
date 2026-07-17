@@ -96,6 +96,18 @@ export async function getUnitMonthScore(
     doneWeight += cWeight * (cStats.done / cResolved);
   }
 
+  // Componentes DIÁRIOS "Desperdício" e "Comandas" (16/07): cobertura mensal
+  // (dias preenchidos ÷ dias decorridos). Pesos padrão 0 = desligados.
+  const { getWasteCoverage, getCommandsCoverage, getWasteMetaWeight, getCommandsMetaWeight } = await import('@/lib/metas/config');
+  const [wCov, wWeight, cmCov, cmWeight] = await Promise.all([
+    getWasteCoverage(unitId, yearMonth), getWasteMetaWeight(),
+    getCommandsCoverage(unitId, yearMonth), getCommandsMetaWeight(),
+  ]);
+  const wResolved = wCov.done + wCov.missed;
+  if (wResolved > 0 && wWeight > 0) { resolvedWeight += wWeight; doneWeight += wWeight * (wCov.done / wResolved); }
+  const cmResolved = cmCov.done + cmCov.missed;
+  if (cmResolved > 0 && cmWeight > 0) { resolvedWeight += cmWeight; doneWeight += cmWeight * (cmCov.done / cmResolved); }
+
   // Componente "Avaliações da equipe" — peso configurável (padrão 0 = desligado).
   const { getEvaluationMonthStats, getEvaluationWeight } = await import('@/lib/people/evaluation');
   const [eStats, eWeight] = await Promise.all([getEvaluationMonthStats(unitId, yearMonth), getEvaluationWeight()]);

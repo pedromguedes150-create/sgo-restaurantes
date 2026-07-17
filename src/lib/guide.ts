@@ -564,6 +564,7 @@ export const GUIDE: GuideSection[] = [
         roles: [...MANAGERLINE, 'CEO'],
         summary: 'Sua nota do mês e o ranking.',
         steps: [
+          'Supervisão/Admin: "Configuração da Meta" reúne todos os componentes e pesos — inclusive os novos "Desperdício diário" e "Comandas diárias" (cobertura mensal; nascem desligados).',
           'Em METAS, veja "Minha Meta do Mês" e o detalhamento por item (tarefas, treinamentos…).',
           'A nota considera o que já foi resolvido; pendências no prazo não penalizam.',
           'Use o seletor de meses para ver o histórico dos meses anteriores.',

@@ -37,10 +37,11 @@ function addDaysISO(iso: string, n: number): string {
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
 }
 
-export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggestedSectors, mapDate, mapTime, todayISO, isToday, isFuture, isNow, historical, availability, freelancers }: {
+export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggestedSectors, mapDate, mapTime, todayISO, isToday, isFuture, isNow, historical, availability, freelancers, simulation }: {
   unitId: string; isAdmin: boolean; grid: Grid; board: AllocBoard; turnos: Turno[]; suggestedSectors: string[];
   mapDate: string; mapTime: string; todayISO: string; isToday: boolean; isFuture: boolean; isNow: boolean;
   historical?: boolean; availability?: { working: string[]; off: string[] } | null; freelancers?: DayFreela[];
+  simulation?: { assignments: { collaboratorId: string; name: string; sectorId: string; sectorName: string }[]; note: string | null; by: string; at: string } | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -74,6 +75,17 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
       {/* Quadro padrão: A alocar × Alocados */}
       <AllocationBoardEditor unitId={unitId} board={board} grid={grid} activeTurnos={activeTurnos} post={post} busy={busy} />
       {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+
+      {/* Simulação de alocação para dia FUTURO (16/07): rascunho salvável */}
+      {isFuture && (
+        <SimulationPanel
+          unitId={unitId} date={mapDate}
+          working={availability?.working ?? []}
+          board={board} sectors={grid.sectors}
+          saved={simulation ?? null}
+          post={post} busy={busy}
+        />
+      )}
 
 
       {/* Mapa da unidade — derivado da Escala (tempo real / por dia) */}
@@ -402,6 +414,59 @@ function SectorsManager({ unitId, sectors, suggested, post, busy }: { unitId: st
           <div className="col-span-1 flex justify-end"><Button size="sm" disabled={busy || !name.trim()} onClick={async () => { if (await post({ action: 'createSector', unitId, name, minHeadcount: Number(min) })) { setName(''); setMin('1'); } }} aria-label="Adicionar"><Plus className="h-4 w-4" /></Button></div>
         </div>
       </div>
+    </div>
+  );
+}
+
+
+/* ───────── Simulação de dia futuro (16/07) ───────── */
+function SimulationPanel({ unitId, date, working, board, sectors, saved, post, busy }: {
+  unitId: string; date: string; working: string[]; board: AllocBoard;
+  sectors: { id: string; name: string }[];
+  saved: { assignments: { collaboratorId: string; name: string; sectorId: string; sectorName: string }[]; note: string | null; by: string; at: string } | null;
+  post: (p: Record<string, unknown>) => Promise<boolean>; busy: boolean;
+}) {
+  // Escalados do dia (pela Escala) com o setor: começa do salvo, senão do quadro padrão
+  const workingSet = new Set(working);
+  const base = board.allocated.filter((a) => a.collaboratorId && workingSet.has(a.collaboratorId));
+  const savedBy = new Map((saved?.assignments ?? []).map((a) => [a.collaboratorId, a.sectorId]));
+  const [open, setOpen] = useState(Boolean(saved));
+  const [assign, setAssign] = useState<Record<string, string>>(
+    () => Object.fromEntries(base.map((a) => [a.collaboratorId, savedBy.get(a.collaboratorId) ?? a.sectorId])),
+  );
+  const [note, setNote] = useState(saved?.note ?? '');
+  const secName = (id: string) => sectors.find((s) => s.id === id)?.name ?? '—';
+
+  if (base.length === 0) return null;
+  return (
+    <div className="rounded-lg border border-dashed border-accent/50 p-3">
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left">
+        <p className="text-sm font-bold text-brand">🧪 Simulação de alocação — {date.split('-').reverse().join('/')}</p>
+        <span className="text-xs font-semibold text-accent">{saved ? `salva por ${saved.by} em ${new Date(saved.at).toLocaleDateString('pt-BR')}` : open ? 'fechar' : 'simular'}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1.5">
+          <p className="text-xs text-muted-foreground">Monte como a equipe ficaria neste dia (não altera o quadro padrão). Salve para revisitar/compartilhar.</p>
+          {base.map((a) => (
+            <div key={a.collaboratorId} className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate text-sm">{a.name}</span>
+              <select
+                value={assign[a.collaboratorId] ?? a.sectorId}
+                onChange={(e) => setAssign((s) => ({ ...s, [a.collaboratorId]: e.target.value }))}
+                className="h-9 w-44 shrink-0 rounded-lg border-2 border-input bg-background px-2 text-sm"
+              >
+                {sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          ))}
+          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação da simulação (opcional)" className="h-9 text-sm" />
+          <Button size="sm" className="w-full" disabled={busy} onClick={() => void post({
+            action: 'saveSimulation', unitId, date,
+            assignments: base.map((a) => ({ collaboratorId: a.collaboratorId, name: a.name, sectorId: assign[a.collaboratorId] ?? a.sectorId, sectorName: secName(assign[a.collaboratorId] ?? a.sectorId) })),
+            note,
+          })}><Save className="h-4 w-4" /> Salvar simulação</Button>
+        </div>
+      )}
     </div>
   );
 }

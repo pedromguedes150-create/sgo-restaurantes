@@ -61,6 +61,17 @@ export async function getMetaBreakdown(unitId: string, yearMonth: string): Promi
     rows.push({ name: 'Avaliações da equipe', weight: eWeight, done: eStats.done, resolved: eResolved, scorePct: Math.round((eStats.done / eResolved) * 100) });
   }
 
+  // Linhas "Desperdício diário" e "Comandas diárias" (cobertura mensal, peso config.)
+  const { getWasteCoverage, getCommandsCoverage, getWasteMetaWeight, getCommandsMetaWeight } = await import('@/lib/metas/config');
+  const [wCov, wWeight2, cmCov, cmWeight2] = await Promise.all([
+    getWasteCoverage(unitId, yearMonth), getWasteMetaWeight(),
+    getCommandsCoverage(unitId, yearMonth), getCommandsMetaWeight(),
+  ]);
+  const wRes = wCov.done + wCov.missed;
+  if (wWeight2 > 0 && wRes > 0) rows.push({ name: 'Desperdício diário (cobertura)', weight: wWeight2, done: wCov.done, resolved: wRes, scorePct: Math.round((wCov.done / wRes) * 100) });
+  const cmRes = cmCov.done + cmCov.missed;
+  if (cmWeight2 > 0 && cmRes > 0) rows.push({ name: 'Comandas diárias (cobertura)', weight: cmWeight2, done: cmCov.done, resolved: cmRes, scorePct: Math.round((cmCov.done / cmRes) * 100) });
+
   // Linha informativa "Lançamentos fora do prazo" (penalidade, item 4 07/07):
   // cada data editada desconta X% direto do score final (não é peso).
   const { countLateEntries, getLateEntryPenaltyPct } = await import('@/lib/late-entry');

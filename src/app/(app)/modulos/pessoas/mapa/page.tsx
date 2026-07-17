@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
-import { getUnitDayMap, getAllocationBoard, getDayFreelancers, getSnapshotGrid, listShifts, STANDARD_SECTORS, type WorkforceGrid } from '@/lib/workforce';
+import { getUnitDayMap, getAllocationBoard, getDayFreelancers, getSnapshotGrid, listShifts, STANDARD_SECTORS, type WorkforceGrid , getSimulation } from '@/lib/workforce';
 import { availabilityForDate } from '@/lib/schedule';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkforceClient } from '@/components/people/workforce-client';
@@ -37,6 +37,7 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
   const filterMinutes = mapTime ? horaMinutes : (isToday ? nowMinutes : null);
   const isNow = isToday && !mapTime;
 
+  const simulation = isFuture ? await getSimulation(selected.id, selectedDate) : null;
   const [board, turnos, availability] = await Promise.all([
     getAllocationBoard(selected.id),
     listShifts(selected.id),
@@ -82,6 +83,7 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
           isFuture={isFuture}
           isNow={isNow}
           availability={availability}
+          simulation={simulation ? { assignments: (simulation.assignments as { collaboratorId: string; name: string; sectorId: string; sectorName: string }[]) ?? [], note: simulation.note, by: simulation.createdByName, at: simulation.updatedAt.toISOString() } : null}
           freelancers={freelancers}
         />
       </CardContent></Card>

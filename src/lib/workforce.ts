@@ -201,6 +201,28 @@ export async function getUnitDayMap(unitId: string, dateISO: string, nowMinutes:
   return { sectors: sectors.map((s) => ({ id: s.id, name: s.name, minHeadcount: s.minHeadcount })), shifts: cols.map((c) => ({ id: c.id, label: c.label })), cells, coverage };
 }
 
+/* ───────── Simulação de dia futuro (16/07) ───────── */
+export interface SimAssignment { collaboratorId: string; name: string; sectorId: string; sectorName: string }
+
+/** Salva/atualiza a simulação de alocação de um dia futuro (rascunho do gerente). */
+export async function saveSimulation(user: SessionUser, unitId: string, date: string, assignments: SimAssignment[], note: string | undefined, ctx: Ctx = {}): Promise<WfResult> {
+  if (!canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!/^d{4}-d{2}-d{2}$/.test(date)) return { ok: false, reason: 'INVALID' };
+  const today = new Date().toISOString().slice(0, 10);
+  if (date <= today) return { ok: false, reason: 'INVALID', detail: 'Simulação é só para dias futuros (o passado é histórico congelado).' };
+  await prisma.workforceSimulation.upsert({
+    where: { unitId_date: { unitId, date } },
+    create: { unitId, date, assignments: assignments as object, note: note?.trim() || null, createdById: user.id, createdByName: user.name },
+    update: { assignments: assignments as object, note: note?.trim() || null, createdById: user.id, createdByName: user.name },
+  });
+  await audit({ userId: user.id, unitId, action: 'WORKFORCE_SIMULATION_SAVE', module: 'PEOPLE', entity: 'workforce_simulation', metadata: { date, people: assignments.length }, ...ctx });
+  return { ok: true };
+}
+
+export async function getSimulation(unitId: string, date: string) {
+  return prisma.workforceSimulation.findUnique({ where: { unitId_date: { unitId, date } } });
+}
+
 /* ───────── Histórico por dia (snapshot) ───────── */
 /** Congela o mapa de um dia (idempotente: não refaz se já existe — preserva o passado). */
 export async function snapshotUnitDay(unitId: string, dateISO: string): Promise<{ created: number }> {

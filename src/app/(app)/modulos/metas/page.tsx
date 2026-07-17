@@ -55,6 +55,11 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
         </div>
       </div>
 
+      {(user.role === 'ADMIN' || user.role === 'SUPERVISOR') && (
+        <Link href="/modulos/metas/config" className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-accent print:hidden">
+          ⚙️ Configuração da Meta (todos os componentes e pesos)
+        </Link>
+      )}
       {lateEntryPct != null && <LateEntryConfig current={lateEntryPct} />}
       <p className="text-sm text-muted-foreground">Mês {monthLabel}</p>
 

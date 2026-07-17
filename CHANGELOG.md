@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.23.0 — 2026-07-16 (pacote 16/07 — bloco 7: Central da Meta + Simulação do Mapa)
+### Adicionado
+- **Configuração da Meta centralizada** (`Metas → Configuração da Meta`; Admin edita, Supervisão visualiza): TODOS os componentes num lugar só — Checklists (peso por checklist), **NOVOS componentes diários "Desperdício" e "Comandas"** (cobertura mensal: dias preenchidos ÷ dias decorridos — sem preenchimento o % cai; **nascem com peso 0**), Comunicados, Treinamentos, Avaliações da equipe e a **penalidade por correções da supervisão** (fora do prazo).
+- **Mapa de Funções — simulação salvável**: ao ver um **dia futuro** na projeção, o gerente monta uma **simulação de alocação** (quem fica em qual setor naquele dia) e **salva** — sem alterar o quadro padrão; a simulação salva reaparece ao voltar na data.
+
 ## v1.22.0 — 2026-07-16 (pacote 16/07 — bloco 6: Troco reformulado como COFRE)
 ### Alterado
 - **Gestão de Troco reformulada** (modelo correto confirmado pelo Pedro + foto): agora é um **COFRE por unidade** com saldo **por denominação** (valor em R$ de cada nota/moeda, como a folha do gerente — 200/100/50/…/0,05 + "Outros") que alimenta os **baldes dos caixas** (valor-alvo fixado pela supervisão).

@@ -1119,6 +1119,24 @@ enum RoleChangeKind {
   SECTOR // mudança de setor no Mapa de Funções (efetiva no SGO)
 }
 
+/// Simulação de alocação para um DIA FUTURO do Mapa (16/07): rascunho que o
+/// gerente monta na projeção e salva; não altera o quadro padrão.
+model WorkforceSimulation {
+  id            String   @id @default(cuid())
+  unitId        String
+  date          String // YYYY-MM-DD (dia futuro)
+  /// [{ collaboratorId, name, sectorId, sectorName }]
+  assignments   Json
+  note          String?
+  createdById   String
+  createdByName String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([unitId, date])
+  @@map("workforce_simulations")
+}
+
 /// Registro consolidado de mudanças de função/setor para informar o RH
 /// (futura API do RH pluga aqui). Denormalizado no padrão snapshot.
 model RoleChange {
