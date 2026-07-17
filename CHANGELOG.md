@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.21.0 — 2026-07-16 (pacote 16/07 — bloco 5: Contratos de Gás)
+### Adicionado
+- **Gás — Contratos por unidade+fornecedor**: nova aba **Contratos** no módulo (Supervisão/Admin gerenciam): período, **quantidade (kg)** e **preço/kg acordados**, com espaço para lançar a **posição atual** de contrato que já estava andando ("já comprado"). A **baixa é automática** pelos recebimentos lançados da unidade+fornecedor dentro do período.
+- **Gás — Dashboard**: **% cumprido de cada contrato vigente** (barra verde/âmbar/vermelha) + **filtros de unidade, fornecedor e mês** com o total **comprado no filtro** (kg, R$ e nº de recebimentos).
+- **Gás — Histórico com filtros**: busca + unidade + fornecedor sobre todos os lançamentos.
+
 ## v1.20.0 — 2026-07-16 (pacote 16/07 — bloco 4: Checklist↔Ocorrência)
 ### Adicionado
 - **Checklist — problema em aberto sinalizado**: quando um item "A corrigir" gera uma ocorrência, os checklists dos **dias seguintes mostram o aviso** "⚠ Problema em aberto desde DD/MM (ocorrência nº X)" naquele item, **sem criar pendência nova todo dia** — o aviso some quando a ocorrência é encerrada.

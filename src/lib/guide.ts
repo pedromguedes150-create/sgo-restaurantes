@@ -416,6 +416,8 @@ export const GUIDE: GuideSection[] = [
         roles: [...MANAGERLINE, 'CEO'],
         summary: 'Controle do preço real por kg, com comparativo entre unidades e fornecedores.',
         steps: [
+          'Aba CONTRATOS: Supervisão/Admin cadastram o contrato com cada fornecedor (período, kg e preço/kg) e a posição "já comprado" de contrato em andamento — os recebimentos lançados abatem sozinhos.',
+          'O Dashboard mostra o % cumprido de cada contrato vigente e tem filtros de unidade/fornecedor/mês com o total comprado no filtro.',
           'Em GÁS → "Lançar recebimento", leia a nota (QR ou código de barras) ou digite a chave; escolha o fornecedor.',
           'Informe a quantidade (kg) e o VALOR POR KG — o valor total é calculado automaticamente.',
           'Em "Relatório de variação" você acompanha a evolução do preço/kg por unidade (com Δ% a cada compra), imprimível e exportável em Excel.',

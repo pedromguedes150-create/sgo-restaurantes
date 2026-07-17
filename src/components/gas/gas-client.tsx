@@ -19,19 +19,27 @@ interface GroupStat { key: string; name: string; count: number; avg: number; las
 interface MonthPoint { month: string; avg: number; count: number }
 export interface GasDash { totalReceipts: number; avgPrice: number; lastPrice: number | null; byUnit: GroupStat[]; bySupplier: GroupStat[]; monthly: MonthPoint[]; alertPct: number }
 export interface GasRow { id: string; date: string; unit: string; supplier: string; qty: number; total: number; price: number; variation: number | null; alerted: boolean; by: string; dateEdited?: boolean; dateEditedByName?: string | null }
+export interface GasContractUI {
+  id: string; unitId: string; unitName: string; supplierId: string; supplierName: string;
+  startDate: string; endDate: string; quantityKg: number; pricePerKg: number; initialUsedKg: number;
+  purchasedKg: number; usedKg: number; progressPct: number; remainingKg: number; expired: boolean; active: boolean; note: string | null;
+}
+export interface PurchasedUI { kg: number; total: number; count: number }
 
 const kg = (n: number) => `R$ ${n.toFixed(4).replace('.', ',')}/kg`;
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 function mlabel(m: string) { const [y, mm] = m.split('-'); return `${MONTHS[Number(mm) - 1]}/${y.slice(2)}`; }
 
-export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, receipts }: {
+export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, receipts, contracts = [], purchased, canManageContracts = false, filter }: {
   canLaunch: boolean; isAdmin: boolean; canEditDate?: boolean; units: Unit[]; suppliers: Supplier[]; dashboard: GasDash; receipts: GasRow[];
+  contracts?: GasContractUI[]; purchased?: PurchasedUI; canManageContracts?: boolean; filter?: { unitId: string; supplierId: string; mes: string };
 }) {
-  const [tab, setTab] = useState<'painel' | 'lancar' | 'historico'>(canLaunch ? 'lancar' : 'painel');
+  const [tab, setTab] = useState<'painel' | 'lancar' | 'historico' | 'contratos'>(canLaunch ? 'lancar' : 'painel');
   const tabs: { key: typeof tab; label: string; show: boolean }[] = [
     { key: 'painel', label: 'Dashboard', show: true },
     { key: 'lancar', label: 'Lançar recebimento', show: canLaunch },
     { key: 'historico', label: 'Histórico', show: true },
+    { key: 'contratos', label: `Contratos (${contracts.filter((c) => c.active).length})`, show: true },
   ];
   return (
     <div className="space-y-4">
@@ -41,8 +49,171 @@ export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, supp
         ))}
       </div>
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
-      {tab === 'painel' && <Dashboard d={dashboard} isAdmin={isAdmin} />}
+      {tab === 'painel' && (
+        <>
+          <DashFilters units={units} suppliers={suppliers} filter={filter} purchased={purchased} />
+          <ContractProgress contracts={contracts.filter((c) => c.active && !c.expired)} compact />
+          <Dashboard d={dashboard} isAdmin={isAdmin} />
+        </>
+      )}
       {tab === 'historico' && <History rows={receipts} isAdmin={isAdmin} canEditDate={canEditDate} />}
+      {tab === 'contratos' && <ContractsTab contracts={contracts} units={units} suppliers={suppliers} canManage={canManageContracts} isAdmin={isAdmin} />}
+    </div>
+  );
+}
+
+/* ───────── Filtros do dashboard + total comprado (16/07) ───────── */
+function DashFilters({ units, suppliers, filter, purchased }: { units: Unit[]; suppliers: Supplier[]; filter?: { unitId: string; supplierId: string; mes: string }; purchased?: PurchasedUI }) {
+  const router = useRouter();
+  const f = filter ?? { unitId: '', supplierId: '', mes: '' };
+  const nav = (patch: Partial<typeof f>) => {
+    const next = { ...f, ...patch };
+    const sp = new URLSearchParams();
+    if (next.unitId) sp.set('unidade', next.unitId);
+    if (next.supplierId) sp.set('fornecedor', next.supplierId);
+    if (next.mes) sp.set('mes', next.mes);
+    router.push(`/modulos/gas${sp.toString() ? `?${sp.toString()}` : ''}`);
+  };
+  const months: string[] = [];
+  { const d = new Date(); for (let i = 0; i < 12; i++) { months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); d.setMonth(d.getMonth() - 1); } }
+  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
+        <select value={f.unitId} onChange={(e) => nav({ unitId: e.target.value })} className={sel}>
+          <option value="">Todas as unidades</option>
+          {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
+        <select value={f.supplierId} onChange={(e) => nav({ supplierId: e.target.value })} className={sel}>
+          <option value="">Todos os fornecedores</option>
+          {suppliers.map((sp) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
+        </select>
+        <select value={f.mes} onChange={(e) => nav({ mes: e.target.value })} className={sel}>
+          <option value="">Todos os meses</option>
+          {months.map((m) => <option key={m} value={m}>{m.split('-').reverse().join('/')}</option>)}
+        </select>
+      </div>
+      {purchased && (
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-lg border bg-card p-2.5 text-center"><p className="text-lg font-black tabular-nums text-brand">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-muted-foreground">comprado no filtro</p></div>
+          <div className="rounded-lg border bg-card p-2.5 text-center"><p className="text-base font-black tabular-nums text-brand">{formatBRL(purchased.total)}</p><p className="text-xs text-muted-foreground">valor no filtro</p></div>
+          <div className="rounded-lg border bg-card p-2.5 text-center"><p className="text-lg font-black tabular-nums text-brand">{purchased.count}</p><p className="text-xs text-muted-foreground">recebimentos</p></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ───────── Contratos: barras de % cumprido ───────── */
+function ContractProgress({ contracts, compact = false }: { contracts: GasContractUI[]; compact?: boolean }) {
+  if (contracts.length === 0) return null;
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Contratos vigentes — % cumprido</p>
+      <div className="space-y-2.5">
+        {contracts.map((c) => (
+          <div key={c.id}>
+            <div className="flex items-center justify-between text-sm">
+              <span className="min-w-0 truncate font-medium text-brand">{c.unitName} · {c.supplierName}</span>
+              <span className="shrink-0 text-xs tabular-nums"><b>{c.progressPct}%</b> · {c.usedKg.toLocaleString('pt-BR')}/{c.quantityKg.toLocaleString('pt-BR')} kg</span>
+            </div>
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary">
+              <div className={`h-full rounded-full ${c.progressPct >= 100 ? 'bg-critical' : c.progressPct >= 80 ? 'bg-medium' : 'bg-success'}`} style={{ width: `${Math.min(100, c.progressPct)}%` }} />
+            </div>
+            {!compact && <p className="mt-0.5 text-xs text-muted-foreground">{c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {kg(c.pricePerKg)} acordado · restam {c.remainingKg.toLocaleString('pt-BR')} kg</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Aba Contratos (gestão — Supervisão/Admin) ───────── */
+function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { contracts: GasContractUI[]; units: Unit[]; suppliers: Supplier[]; canManage: boolean; isAdmin: boolean }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ unitId: '', supplierId: '', startDate: '', endDate: '', quantityKg: '', pricePerKg: '', initialUsedKg: '', note: '' });
+  const set = (k: keyof typeof form, v: string) => setForm((s2) => ({ ...s2, [k]: v }));
+  const sel = 'h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
+
+  async function post(body: Record<string, unknown>): Promise<boolean> {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/gas/contracts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (res.ok) { router.refresh(); return true; }
+      const d = await res.json().catch(() => ({}));
+      alert(d.error ?? 'Falha');
+      return false;
+    } finally { setBusy(false); }
+  }
+
+  const num = (v: string) => parseFloat(v.replace(/\./g, '').replace(',', '.'));
+
+  return (
+    <div className="space-y-4">
+      {canManage && (
+        <div className="rounded-lg border border-dashed p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Novo contrato</p>
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <select className={sel} value={form.unitId} onChange={(e) => set('unitId', e.target.value)}>
+                <option value="">Unidade…</option>
+                {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+              <select className={sel} value={form.supplierId} onChange={(e) => set('supplierId', e.target.value)}>
+                <option value="">Fornecedor…</option>
+                {suppliers.map((sp) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label className="text-xs">Início</Label><Input type="date" value={form.startDate} onChange={(e) => set('startDate', e.target.value)} className="h-10 text-sm" /></div>
+              <div><Label className="text-xs">Fim</Label><Input type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} className="h-10 text-sm" /></div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div><Label className="text-xs">Quantidade (kg)</Label><Input inputMode="decimal" value={form.quantityKg} onChange={(e) => set('quantityKg', e.target.value)} placeholder="ex.: 12000" className="h-10 text-sm" /></div>
+              <div><Label className="text-xs">Preço/kg (R$)</Label><Input inputMode="decimal" value={form.pricePerKg} onChange={(e) => set('pricePerKg', e.target.value)} placeholder="ex.: 7,80" className="h-10 text-sm" /></div>
+              <div><Label className="text-xs">Já comprado (kg)</Label><Input inputMode="decimal" value={form.initialUsedKg} onChange={(e) => set('initialUsedKg', e.target.value)} placeholder="posição atual" className="h-10 text-sm" /></div>
+            </div>
+            <Input value={form.note} onChange={(e) => set('note', e.target.value)} placeholder="Observação (opcional)" className="h-10 text-sm" />
+            <p className="text-xs text-muted-foreground">&quot;Já comprado&quot; = posição de contrato que já estava andando antes do SGO; os recebimentos lançados daqui em diante abatem sozinhos.</p>
+            <Button className="w-full" disabled={busy || !form.unitId || !form.supplierId || !form.startDate || !form.endDate || !form.quantityKg || !form.pricePerKg}
+              onClick={async () => {
+                const ok = await post({ action: 'create', unitId: form.unitId, supplierId: form.supplierId, startDate: form.startDate, endDate: form.endDate, quantityKg: num(form.quantityKg), pricePerKg: num(form.pricePerKg), initialUsedKg: form.initialUsedKg ? num(form.initialUsedKg) : undefined, note: form.note });
+                if (ok) setForm({ unitId: '', supplierId: '', startDate: '', endDate: '', quantityKg: '', pricePerKg: '', initialUsedKg: '', note: '' });
+              }}>Criar contrato</Button>
+          </div>
+        </div>
+      )}
+
+      <ContractProgress contracts={contracts.filter((c) => c.active)} />
+
+      <div className="space-y-1.5">
+        {contracts.map((c) => (
+          <div key={c.id} className={`rounded-lg border p-2.5 ${c.expired || !c.active ? 'opacity-70' : 'bg-card'}`}>
+            <div className="flex items-center justify-between gap-2">
+              <p className="min-w-0 truncate text-sm font-semibold text-brand">{c.unitName} · {c.supplierName}</p>
+              <span className="shrink-0 text-xs font-bold tabular-nums">{c.progressPct}%{c.expired ? ' · vencido' : !c.active ? ' · inativo' : ''}</span>
+            </div>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {c.quantityKg.toLocaleString('pt-BR')} kg a {kg(c.pricePerKg)} ·
+              comprado {c.purchasedKg.toLocaleString('pt-BR')} kg{c.initialUsedKg > 0 ? ` (+${c.initialUsedKg.toLocaleString('pt-BR')} kg posição inicial)` : ''} · restam {c.remainingKg.toLocaleString('pt-BR')} kg
+            </p>
+            {c.note && <p className="text-xs text-muted-foreground">Obs.: {c.note}</p>}
+            {canManage && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
+                  const v = prompt('Ajustar posição inicial (kg já comprados antes do SGO):', String(c.initialUsedKg).replace('.', ','));
+                  if (v === null) return;
+                  void post({ action: 'update', id: c.id, initialUsedKg: num(v) });
+                }}>Ajustar posição</Button>
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => void post({ action: 'update', id: c.id, active: !c.active })}>{c.active ? 'Inativar' : 'Reativar'}</Button>
+                {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm('Excluir este contrato? (auditado)')) void post({ action: 'delete', id: c.id }); }}>Excluir</Button>}
+              </div>
+            )}
+          </div>
+        ))}
+        {contracts.length === 0 && <p className="text-sm text-muted-foreground">Nenhum contrato cadastrado.</p>}
+      </div>
     </div>
   );
 }
@@ -259,6 +430,16 @@ function MonthlyBars({ points }: { points: MonthPoint[] }) {
 /* ───────── Histórico ───────── */
 function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdmin: boolean; canEditDate?: boolean }) {
   const router = useRouter();
+  // Filtros do histórico (16/07): busca + unidade + fornecedor sobre todos os lançamentos carregados
+  const [q, setQ] = useState('');
+  const [unit, setUnit] = useState('');
+  const [supplier, setSupplier] = useState('');
+  const unitNames = useMemo(() => [...new Set(rows.map((r) => r.unit))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [rows]);
+  const supplierNames = useMemo(() => [...new Set(rows.map((r) => r.supplier))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [rows]);
+  const shown = useMemo(() => rows.filter((r) =>
+    (!unit || r.unit === unit) && (!supplier || r.supplier === supplier) &&
+    (!q.trim() || r.date.includes(q.trim()) || r.by.toLowerCase().includes(q.trim().toLowerCase()) || String(r.qty).includes(q.trim()) || String(r.total).includes(q.trim())),
+  ), [rows, q, unit, supplier]);
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhum recebimento registrado.</p>;
 
   async function editDate(r: GasRow) {
@@ -268,9 +449,24 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
     if (res.ok) router.refresh(); else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
   }
 
+  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
   return (
     <div className="space-y-2">
-      {rows.map((r) => {
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar data/quem/kg/valor…" className="h-9 w-44 text-sm" />
+        {unitNames.length > 1 && (
+          <select value={unit} onChange={(e) => setUnit(e.target.value)} className={sel}>
+            <option value="">Todas as unidades</option>
+            {unitNames.map((u) => <option key={u} value={u}>{u}</option>)}
+          </select>
+        )}
+        <select value={supplier} onChange={(e) => setSupplier(e.target.value)} className={sel}>
+          <option value="">Todos os fornecedores</option>
+          {supplierNames.map((sp2) => <option key={sp2} value={sp2}>{sp2}</option>)}
+        </select>
+        <span className="ml-auto text-xs text-muted-foreground">{shown.length} de {rows.length}</span>
+      </div>
+      {shown.map((r) => {
         const tone: StatusTone = r.variation == null ? 'neutral' : r.variation > 0 ? (r.alerted ? 'critical' : 'medium') : 'success';
         return (
           <div key={r.id} className="rounded-lg border bg-card p-3">

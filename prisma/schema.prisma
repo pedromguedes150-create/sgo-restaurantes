@@ -1875,6 +1875,29 @@ enum GasKind {
   CYLINDER // botijão (P13/P20/P45…)
 }
 
+/// Contrato de gás por UNIDADE+FORNECEDOR (16/07): período, quantidade (kg) e
+/// preço/kg acordados. A baixa vem dos recebimentos lançados; initialUsedKg é a
+/// posição de contrato que já estava em andamento antes do SGO.
+model GasContract {
+  id            String   @id @default(cuid())
+  unitId        String
+  supplierId    String
+  startDate     String // YYYY-MM-DD
+  endDate       String
+  quantityKg    Decimal  @db.Decimal(12, 2)
+  pricePerKg    Decimal  @db.Decimal(10, 4)
+  initialUsedKg Decimal  @db.Decimal(12, 2) @default(0)
+  active        Boolean  @default(true)
+  note          String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+
+  @@index([unitId, active])
+  @@index([supplierId])
+  @@map("gas_contracts")
+}
+
 model GasReceipt {
   id              String   @id @default(cuid())
   unitId          String

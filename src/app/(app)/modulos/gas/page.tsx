@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import Link from 'next/link';
 import { getGasDashboard, listGasReceipts } from '@/lib/gas/query';
+import { listGasContracts, getGasPurchasedInFilter } from '@/lib/gas/contracts';
 import { listSuppliers, canManageSuppliers } from '@/lib/suppliers';
 import { Card, CardContent } from '@/components/ui/card';
 import { GasClient, type GasDash, type GasRow } from '@/components/gas/gas-client';
@@ -10,15 +11,21 @@ import { Truck, TrendingUp } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function GasPage() {
+export default async function GasPage({ searchParams }: { searchParams: { unidade?: string; fornecedor?: string; mes?: string } }) {
   const user = (await getSessionUser())!;
   const canLaunch = ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'ADMIN'].includes(user.role);
+  // Filtros do dashboard (16/07): unidade/fornecedor/mês → total comprado no filtro
+  const fUnit = searchParams.unidade || undefined;
+  const fSupplier = searchParams.fornecedor || undefined;
+  const fMes = /^d{4}-d{2}$/.test(searchParams.mes ?? '') ? searchParams.mes : undefined;
 
-  const [units, suppliers, dash, receipts] = await Promise.all([
+  const [units, suppliers, dash, receipts, contracts, purchased] = await Promise.all([
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     listSuppliers({ activeOnly: true }),
     getGasDashboard(user),
-    listGasReceipts(user, { limit: 150 }),
+    listGasReceipts(user, { limit: 300 }),
+    listGasContracts(user),
+    getGasPurchasedInFilter(user, { unitId: fUnit, supplierId: fSupplier, yearMonth: fMes }),
   ]);
 
   const dashboard: GasDash = dash;
@@ -60,6 +67,10 @@ export default async function GasPage() {
           suppliers={suppliers.map((s) => ({ id: s.id, name: s.name, cnpj: s.cnpj }))}
           dashboard={dashboard}
           receipts={rows}
+          contracts={contracts}
+          purchased={purchased}
+          canManageContracts={user.role === 'SUPERVISOR' || user.role === 'ADMIN' || user.role === 'CEO'}
+          filter={{ unitId: fUnit ?? '', supplierId: fSupplier ?? '', mes: fMes ?? '' }}
         />
       </CardContent></Card>
     </div>
