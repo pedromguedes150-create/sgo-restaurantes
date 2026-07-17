@@ -3,11 +3,16 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
 import type { NoteStatus } from '@prisma/client';
 
-export async function listNotes(user: SessionUser, status?: NoteStatus) {
+/**
+ * Notas do período (16/07): padrão = últimos 60 dias; período maior via
+ * sinceDays. Sempre por data de lançamento, mais nova primeiro.
+ */
+export async function listNotes(user: SessionUser, status?: NoteStatus, sinceDays = 60) {
+  const since = new Date(Date.now() - Math.max(1, sinceDays) * 24 * 60 * 60 * 1000);
   return prisma.receivedNote.findMany({
-    where: { ...unitScopeWhere(user, 'unitId'), ...(status ? { status } : {}) },
+    where: { ...unitScopeWhere(user, 'unitId'), ...(status ? { status } : {}), createdAt: { gte: since } },
     orderBy: { createdAt: 'desc' },
-    take: 100,
+    take: 500,
     include: { unit: { select: { name: true } }, createdBy: { select: { name: true } } },
   });
 }

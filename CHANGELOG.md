@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.18.0 — 2026-07-16 (pacote 16/07 — bloco 2: Notas + Comandas)
+### Alterado
+- **Notas — aba "Notas" reformulada**: lista por **data de lançamento (mais nova → mais antiga)**, sem agrupamento por fornecedor; **filtros completos** (busca por fornecedor/nº/CNPJ/produto/obs/valor, fornecedor, unidade, status, período); **padrão últimos 60 dias** (troca no filtro: 90/180/365).
+- **Notas — sem botão "Paga"**: pagamento é controlado no Teknisa; aqui fica só recebimento/**problema**/**devolução** (o status "Paga" antigo permanece como legado nos filtros).
+- **Notas — fornecedor SÓ da lista de cadastrados** ao lançar (acabou a digitação livre; a tela orienta pedir cadastro ao Admin quando faltar).
+- **Notas — Análise completa**: mesmos filtros da lista + totais + **campos completos** (CNPJ, emissão, produto, obs, problema) + **editar/excluir** para Supervisão/Admin + **Excel e Imprimir/PDF** (`/api/notes/export`).
+- **Notas — meta**: além da correção de data, **nota lançada pela Supervisão/Admin** (gerente esqueceu) agora também desconta na meta (marcada em vermelho no card).
+- **Comandas — grade com 3 estados**: toque 1× = **conferida** (verde), 2× = **em uso** (azul — com cliente, conta como presente), 3× = limpa; não marcadas viram **apuração**. Comandas **em apuração ou perdidas saem da grade** (tratadas no bloco de Divergências).
+
 ## v1.17.0 — 2026-07-16 (pacote 16/07 — bloco 1)
 ### Corrigido
 - **Celular — módulos que não apareciam**: a página "Módulos" (navegação do celular) estava desatualizada — agora espelha o menu do computador: **Minha área, Folgas da equipe, Rotina do Supervisor, Visão Executiva, Treinamentos, Gestão de Troco e Ajuda** entraram, agrupados como no desktop e respeitando a matriz de Perfis.

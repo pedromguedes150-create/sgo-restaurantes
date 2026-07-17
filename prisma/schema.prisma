@@ -927,6 +927,8 @@ model ReceivedNote {
   entryDate        DateTime?
   dateEdited       Boolean   @default(false)
   dateEditedByName String?
+  /// Nota lançada pela supervisão (gerente esqueceu) — desconta na meta (16/07)
+  supervisorLaunched Boolean @default(false)
   createdById  String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt

@@ -58,6 +58,8 @@ export async function createNote(
       observation: input.observation || null,
       imagePath: input.imagePath || null,
       createdById: user.id,
+      // Nota lançada pela supervisão (gerente esqueceu) — desconta na meta (16/07)
+      supervisorLaunched: user.role === 'SUPERVISOR' || user.role === 'ADMIN',
     },
     select: { id: true },
   });

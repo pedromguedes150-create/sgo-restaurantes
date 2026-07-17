@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, Banknote, AlertTriangle, Pencil, X, Trash2, Undo2 } from 'lucide-react';
+import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,22 +17,33 @@ export interface NoteDTO {
   id: string; unit: string; supplier: string; value: number;
   status: 'RECEIVED' | 'PAID' | 'PROBLEM' | 'RETURNED'; number: string | null; problemNote: string | null;
   cnpj: string; issueDate: string; dueDate: string; productType: string; observation: string;
-  /// data da solicitação/lançamento (ISO) + marcação de data corrigida (item 4)
   requestedAt?: string; entryDate?: string | null; dateEdited?: boolean; dateEditedByName?: string | null;
+  supervisorLaunched?: boolean; createdByName?: string;
 }
 const ST: Record<NoteDTO['status'], { label: string; tone: StatusTone }> = {
   RECEIVED: { label: 'Recebida', tone: 'medium' },
-  PAID: { label: 'Paga', tone: 'success' },
+  PAID: { label: 'Paga', tone: 'success' }, // legado (pagamento é controlado no Teknisa)
   PROBLEM: { label: 'Com problema', tone: 'critical' },
   RETURNED: { label: 'Devolvida', tone: 'neutral' },
 };
+const fmtBR = (iso: string) => (iso ? iso.split('-').reverse().join('/') : '—');
 
-export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false }: { units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean }) {
+/** Períodos do filtro (padrão 60 dias — pedido 16/07). */
+const PERIODS = [
+  { dias: 60, label: 'Últimos 60 dias' },
+  { dias: 90, label: 'Últimos 90 dias' },
+  { dias: 180, label: 'Últimos 180 dias' },
+  { dias: 365, label: 'Último ano' },
+];
+
+export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false, sinceDays = 60 }: {
+  units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean; sinceDays?: number;
+}) {
   const router = useRouter();
   const [tab, setTab] = useState<'nova' | 'lista' | 'analise'>('lista');
   const [busy, setBusy] = useState(false);
 
-  async function status(id: string, st: 'PAID' | 'PROBLEM' | 'RETURNED') {
+  async function status(id: string, st: 'PROBLEM' | 'RETURNED') {
     let problemNote: string | undefined;
     if (st === 'PROBLEM') { const m = prompt('Descreva o problema:'); if (!m) return; problemNote = m; }
     if (st === 'RETURNED') { const m = prompt('Motivo da devolução (ex.: nota errada, valor divergente):'); if (!m) return; problemNote = m; }
@@ -51,7 +62,7 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 print:hidden">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
             {t.label}
@@ -60,27 +71,61 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
       </div>
 
       {tab === 'nova' && <NewNote units={units} suppliers={suppliers} onDone={() => { setTab('lista'); router.refresh(); }} />}
-      {tab === 'lista' && <NotesList notes={notes} canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={status} />}
-      {tab === 'analise' && <NotesAnalysis notes={notes} units={units} />}
+      {tab === 'lista' && (
+        <FilterableNotes
+          notes={notes} units={units} sinceDays={sinceDays}
+          canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={status}
+          full={false}
+        />
+      )}
+      {tab === 'analise' && (
+        <FilterableNotes
+          notes={notes} units={units} sinceDays={sinceDays}
+          canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={status}
+          full
+        />
+      )}
     </div>
   );
 }
 
-function NotesAnalysis({ notes, units }: { notes: NoteDTO[]; units: Unit[] }) {
+/**
+ * Lista de notas por DATA DE LANÇAMENTO (mais nova → mais antiga) com filtros
+ * completos (16/07). `full` = modo Análise (totais + campos completos).
+ */
+function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy, onStatus, full }: {
+  notes: NoteDTO[]; units: Unit[]; sinceDays: number;
+  canManage: boolean; canEditDate: boolean; busy: boolean;
+  onStatus: (id: string, st: 'PROBLEM' | 'RETURNED') => void; full: boolean;
+}) {
+  const router = useRouter();
+  const [q, setQ] = useState('');
   const [supplier, setSupplier] = useState('ALL');
   const [unit, setUnit] = useState('ALL');
   const [st, setStatus] = useState<'ALL' | NoteDTO['status']>('ALL');
   const supplierNames = useMemo(() => [...new Set(notes.map((n) => n.supplier))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [notes]);
-  const filtered = useMemo(() => notes.filter((n) =>
-    (supplier === 'ALL' || n.supplier === supplier) &&
-    (unit === 'ALL' || n.unit === unit) &&
-    (st === 'ALL' || n.status === st),
-  ), [notes, supplier, unit, st]);
+
+  const filtered = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    return notes.filter((n) =>
+      (supplier === 'ALL' || n.supplier === supplier) &&
+      (unit === 'ALL' || n.unit === unit) &&
+      (st === 'ALL' || n.status === st) &&
+      (!t ||
+        n.supplier.toLowerCase().includes(t) || (n.number ?? '').toLowerCase().includes(t) ||
+        n.cnpj.toLowerCase().includes(t) || n.productType.toLowerCase().includes(t) ||
+        n.observation.toLowerCase().includes(t) || (n.problemNote ?? '').toLowerCase().includes(t) ||
+        (n.createdByName ?? '').toLowerCase().includes(t) || String(n.value).includes(t)),
+    );
+  }, [notes, q, supplier, unit, st]);
   const total = filtered.reduce((s, n) => s + n.value, 0);
   const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
+  const exportHref = `/api/notes/export?dias=${sinceDays}${unit !== 'ALL' ? `&unidade=${encodeURIComponent(unit)}` : ''}${supplier !== 'ALL' ? `&fornecedor=${encodeURIComponent(supplier)}` : ''}${st !== 'ALL' ? `&status=${st}` : ''}`;
+
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2 print:hidden">
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar fornecedor, nº, CNPJ, produto, obs., valor…" className="h-9 w-56 text-sm" />
         <select value={supplier} onChange={(e) => setSupplier(e.target.value)} className={sel}>
           <option value="ALL">Todos os fornecedores</option>
           {supplierNames.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -94,62 +139,43 @@ function NotesAnalysis({ notes, units }: { notes: NoteDTO[]; units: Unit[] }) {
         <select value={st} onChange={(e) => setStatus(e.target.value as typeof st)} className={sel}>
           <option value="ALL">Todos os status</option>
           <option value="RECEIVED">Recebida</option>
-          <option value="PAID">Paga</option>
           <option value="PROBLEM">Com problema</option>
           <option value="RETURNED">Devolvida</option>
+          <option value="PAID">Paga (legado)</option>
         </select>
+        <select value={sinceDays} onChange={(e) => router.push(`/modulos/notas?dias=${e.target.value}`)} className={sel}>
+          {PERIODS.map((p) => <option key={p.dias} value={p.dias}>{p.label}</option>)}
+        </select>
+        <span className="ml-auto text-xs text-muted-foreground">{filtered.length} de {notes.length}</span>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg border bg-card p-3 text-center"><p className="text-2xl font-black text-brand">{filtered.length}</p><p className="text-xs text-muted-foreground">notas</p></div>
-        <div className="rounded-lg border bg-card p-3 text-center"><p className="text-2xl font-black text-brand">{formatBRL(total)}</p><p className="text-xs text-muted-foreground">valor total</p></div>
-      </div>
-      <div className="space-y-1.5">
-        {filtered.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma nota com esses filtros.</p>}
-        {filtered.map((n) => (
-          <div key={n.id} className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2.5 text-sm">
-            <span className="min-w-0">
-              <span className="block font-medium text-brand">{n.supplier}</span>
-              <span className="block text-xs text-muted-foreground">{n.unit}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${n.dueDate.split('-').reverse().join('/')}` : ''}</span>
-            </span>
-            <span className="flex shrink-0 items-center gap-2">
-              <span className="font-semibold">{formatBRL(n.value)}</span>
-              <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
-            </span>
+
+      {full && (
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <div className="grid flex-1 grid-cols-2 gap-2">
+            <div className="rounded-lg border bg-card p-3 text-center"><p className="text-2xl font-black text-brand">{filtered.length}</p><p className="text-xs text-muted-foreground">notas</p></div>
+            <div className="rounded-lg border bg-card p-3 text-center"><p className="text-xl font-black text-brand">{formatBRL(total)}</p><p className="text-xs text-muted-foreground">valor total</p></div>
           </div>
+          <div className="flex flex-col gap-1.5">
+            <a href={exportHref} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"><FileSpreadsheet className="h-3.5 w-3.5 text-accent" /> Excel</a>
+            <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"><Printer className="h-3.5 w-3.5 text-accent" /> Imprimir/PDF</button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {filtered.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma nota com esses filtros no período.</p>}
+        {filtered.map((n) => (
+          <NoteCard key={n.id} n={n} canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={onStatus} full={full} />
         ))}
       </div>
     </div>
   );
 }
 
-function NotesList({ notes, canManage, canEditDate, busy, onStatus }: { notes: NoteDTO[]; canManage: boolean; canEditDate: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM' | 'RETURNED') => void }) {
-  if (notes.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma nota registrada.</p>;
-  const byCompany = new Map<string, NoteDTO[]>();
-  for (const n of notes) { const arr = byCompany.get(n.supplier) ?? []; arr.push(n); byCompany.set(n.supplier, arr); }
-  const groups = [...byCompany.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
-
-  const card = (n: NoteDTO) => <NoteCard key={n.id} n={n} canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={onStatus} />;
-
-  if (groups.length <= 1) return <div className="space-y-2">{notes.map(card)}</div>;
-  return (
-    <div className="space-y-4">
-      {groups.map(([company, items]) => {
-        const total = items.reduce((s, n) => s + n.value, 0);
-        return (
-          <div key={company} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">{company} <span className="font-normal">({items.length})</span></h2>
-              <span className="text-xs font-semibold text-brand">{formatBRL(total)}</span>
-            </div>
-            {items.map(card)}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function NoteCard({ n, canManage, canEditDate = false, busy, onStatus }: { n: NoteDTO; canManage: boolean; canEditDate?: boolean; busy: boolean; onStatus: (id: string, st: 'PAID' | 'PROBLEM' | 'RETURNED') => void }) {
+function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = false }: {
+  n: NoteDTO; canManage: boolean; canEditDate?: boolean; busy: boolean;
+  onStatus: (id: string, st: 'PROBLEM' | 'RETURNED') => void; full?: boolean;
+}) {
   const router = useRouter();
 
   async function editDate() {
@@ -224,9 +250,18 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus }: { n: No
         <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
       </div>
       <p className="text-xs text-muted-foreground">
-        {n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${n.dueDate.split('-').reverse().join('/')}` : ''}
+        {n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${fmtBR(n.dueDate)}` : ''}
         {n.requestedAt ? ` · lançada ${new Date(n.requestedAt).toLocaleDateString('pt-BR')}` : ''}
+        {n.createdByName ? ` por ${n.createdByName}` : ''}
       </p>
+      {full && (
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {n.cnpj ? `CNPJ ${n.cnpj} · ` : ''}{n.issueDate ? `emissão ${fmtBR(n.issueDate)} · ` : ''}{n.productType ? `produto: ${n.productType}` : 'sem tipo de produto'}
+        </p>
+      )}
+      {n.supervisorLaunched && (
+        <p className="mt-0.5 text-xs font-semibold text-critical">Lançada pela supervisão (gerente não lançou) — desconta na meta</p>
+      )}
       {n.dateEdited && (
         <p className="mt-0.5 text-xs font-semibold text-critical">
           Data corrigida{n.entryDate ? ` p/ ${new Date(n.entryDate).toLocaleDateString('pt-BR')}` : ''}{n.dateEditedByName ? ` por ${n.dateEditedByName}` : ''} — desconta na meta
@@ -234,12 +269,12 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus }: { n: No
       )}
       {n.observation && <p className="mt-1 text-xs text-muted-foreground">Obs.: {n.observation}</p>}
       {n.problemNote && <p className="mt-1 text-xs text-critical">{n.status === 'RETURNED' ? 'Devolução' : 'Problema'}: {n.problemNote}</p>}
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
         {canManage && <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Ver/Editar</Button>}
         {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void editDate()}><Pencil className="h-4 w-4" /> Editar data</Button>}
         {n.status === 'RECEIVED' && (
           <>
-            <Button size="sm" variant="gold" disabled={busy} onClick={() => onStatus(n.id, 'PAID')}><Banknote className="h-4 w-4" /> Paga</Button>
+            {/* Pagamento é controlado no Teknisa — aqui só recebimento/problema/devolução (16/07) */}
             <Button size="sm" variant="destructive" disabled={busy} onClick={() => onStatus(n.id, 'PROBLEM')}><AlertTriangle className="h-4 w-4" /> Problema</Button>
             <Button size="sm" variant="outline" disabled={busy} onClick={() => onStatus(n.id, 'RETURNED')}><Undo2 className="h-4 w-4" /> Devolver</Button>
           </>
@@ -279,7 +314,8 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
   async function submit() {
     setErr(null);
     const v = parseFloat((totalValue || '0').replace('.', '').replace(',', '.')) || parseFloat(totalValue);
-    if (!unitId || !supplierName.trim() || !v) { setErr('Preencha unidade, fornecedor e valor.'); return; }
+    // Fornecedor SÓ da lista de cadastrados (16/07 — sem digitação livre)
+    if (!unitId || !supplierId || !v) { setErr('Preencha unidade, fornecedor (da lista) e valor.'); return; }
     setBusy(true);
     try {
       const res = await fetch('/api/notes', {
@@ -310,20 +346,19 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
         </div>
         {prefilled && <p className="mt-1 text-xs text-[#92600A]">Campos preenchidos pela chave — confira em amarelo.</p>}
       </div>
-      {suppliers.length > 0 && (
-        <div>
-          <Label>Fornecedor cadastrado</Label>
-          <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={supplierId} onChange={(e) => {
-            const s = suppliers.find((x) => x.id === e.target.value);
-            setSupplierId(e.target.value);
-            if (s) { setSupplierName(s.name); if (s.cnpj) setSupplierCnpj(s.cnpj); }
-          }}>
-            <option value="">— escolher / digitar abaixo —</option>
-            {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
-      )}
-      <div><Label>Fornecedor</Label><Input value={supplierName} onChange={(e) => { setSupplierName(e.target.value); setSupplierId(''); }} /></div>
+      <div>
+        <Label>Fornecedor (da lista de cadastrados)</Label>
+        <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={supplierId} onChange={(e) => {
+          const s = suppliers.find((x) => x.id === e.target.value);
+          setSupplierId(e.target.value);
+          setSupplierName(s?.name ?? '');
+          setSupplierCnpj(s?.cnpj ?? supplierCnpj);
+        }}>
+          <option value="">Selecione o fornecedor…</option>
+          {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <p className="mt-1 text-xs text-muted-foreground">Fornecedor não está na lista? Peça à Supervisão/Admin para cadastrar em Configurações → Fornecedores.</p>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <div><Label>CNPJ</Label><Input className={hl} value={supplierCnpj} onChange={(e) => setSupplierCnpj(e.target.value)} /></div>
         <div><Label>Número</Label><Input className={hl} value={number} onChange={(e) => setNumber(e.target.value)} /></div>

@@ -82,16 +82,21 @@ export async function editEntryDate(user: SessionUser, module: LateEntryModule, 
   return { ok: true };
 }
 
-/** Nº de lançamentos com data editada no mês (base da penalidade da meta). */
+/**
+ * Nº de lançamentos "fora do prazo" no mês (base da penalidade da meta):
+ * datas editadas por Admin/Supervisor + notas que a supervisão precisou lançar
+ * porque o gerente esqueceu (decisão do Pedro 16/07).
+ */
 export async function countLateEntries(unitId: string, yearMonth: string): Promise<number> {
   const [y, m] = yearMonth.split('-').map(Number);
   const start = new Date(Date.UTC(y, m - 1, 1));
   const end = new Date(Date.UTC(y, m, 1));
-  const [pay, note, gas, oil] = await Promise.all([
+  const [pay, note, gas, oil, supLaunched] = await Promise.all([
     prisma.paymentRequest.count({ where: { unitId, dateEdited: true, entryDate: { gte: start, lt: end } } }),
     prisma.receivedNote.count({ where: { unitId, dateEdited: true, entryDate: { gte: start, lt: end } } }),
     prisma.gasReceipt.count({ where: { unitId, dateEdited: true, operationalDate: { startsWith: yearMonth } } }),
     prisma.oilCollection.count({ where: { unitId, dateEdited: true, operationalDate: { startsWith: yearMonth } } }),
+    prisma.receivedNote.count({ where: { unitId, supervisorLaunched: true, dateEdited: false, createdAt: { gte: start, lt: end } } }),
   ]);
-  return pay + note + gas + oil;
+  return pay + note + gas + oil + supLaunched;
 }
