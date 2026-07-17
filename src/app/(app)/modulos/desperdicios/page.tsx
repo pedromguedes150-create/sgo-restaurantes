@@ -86,7 +86,7 @@ export default async function DesperdiciosPage({
           <WasteForm
             unitId={selected.id}
             operationalDate={operationalDate}
-            categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+            categories={categories.map((c) => ({ id: c.id, name: c.name, measure: (c.measure === 'un' ? 'un' : 'kg') as 'kg' | 'un' }))}
             initialKg={entry?.kgByCategory ?? {}}
             initialObservation={entry?.observation ?? null}
             requiresEvidence={Boolean(wasteTemplate?.requiresEvidence)}

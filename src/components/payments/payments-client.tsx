@@ -28,7 +28,7 @@ export interface PayReq {
   entryDate?: string | null;
 }
 interface Unit { id: string; name: string }
-interface Freelancer { id: string; name: string; defaultValue: number; unitIds: string[] }
+interface Freelancer { id: string; name: string; defaultValue: number; unitIds: string[]; sectorRates?: { sectorName: string; dayValue: number }[] }
 interface MiscType { id: string; name: string }
 interface Supplier { id: string; name: string }
 
@@ -255,6 +255,8 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
   const [workStartTime, setWorkStartTime] = useState('');
   const [workEndTime, setWorkEndTime] = useState('');
   const [transportValue, setTransportValue] = useState('');
+  const [coverage, setCoverage] = useState(false); // cobertura temporária de setor (16/07)
+  const [coverageSector, setCoverageSector] = useState('');
   const [calc, setCalc] = useState<{ configured: boolean; hours: number; rate: number | null; amount: number; transport: number; dayTypeLabel: string } | null>(null);
   const [hours, setHours] = useState('');
   const [collaboratorName, setCollaboratorName] = useState('');
@@ -274,24 +276,26 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
 
   // Prévia do valor do freelancer (horas × valor/hora do dia + vale transporte)
   useEffect(() => {
-    if (type !== 'FREELANCER' || !unitId || !workDate || !workStartTime || !workEndTime) { setCalc(null); return; }
+    if (type !== 'FREELANCER' || coverage || !unitId || !workDate || !workStartTime || !workEndTime) { setCalc(null); return; }
     const t = parseFloat((transportValue || '0').replace(',', '.')) || 0;
     let cancelled = false;
     fetch('/api/payments/freelancer-calc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unitId, workDate, start: workStartTime, end: workEndTime, transport: t }) })
       .then((r) => r.json()).then((d) => { if (!cancelled) setCalc(d); }).catch(() => { if (!cancelled) setCalc(null); });
     return () => { cancelled = true; };
-  }, [type, unitId, workDate, workStartTime, workEndTime, transportValue]);
+  }, [type, unitId, workDate, workStartTime, workEndTime, transportValue, coverage]);
 
   async function submit() {
     setErr(null);
     const manualAmt = parseFloat((amount || '0').replace(',', '.'));
-    const effAmt = autoPriced ? (calc?.amount ?? 0) : manualAmt;
-    if (!unitId || (!autoPriced && !effAmt)) { setErr('Informe unidade e valor.'); return; }
+    const covRate = coverage ? (selectedFreelancer?.sectorRates ?? []).find((r) => r.sectorName === coverageSector)?.dayValue ?? 0 : 0;
+    const effAmt = coverage ? covRate : autoPriced ? (calc?.amount ?? 0) : manualAmt;
+    if (coverage && !coverageSector) { setErr('Escolha o setor da cobertura.'); return; }
+    if (!unitId || (!coverage && !autoPriced && !effAmt)) { setErr('Informe unidade e valor.'); return; }
     setBusy(true);
     try {
       const body: Record<string, unknown> = { type, unitId, amount: effAmt, description };
-      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, hours: hours ? Number(hours) : undefined });
-      if (type === 'OVERTIME') Object.assign(body, { collaboratorName, workDate, hours: hours ? Number(hours) : undefined, reason });
+      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, hours: hours ? Number(hours) : undefined, coverageSector: coverage && coverageSector ? coverageSector : undefined });
+      if (type === 'OVERTIME') Object.assign(body, { collaboratorName, workDate, hours: hours ? Number(hours) : undefined, reason, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined });
       if (type === 'MISC') Object.assign(body, { miscTypeId, beneficiary, supplierId: supplierId || undefined });
       const res = await fetch('/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
@@ -330,6 +334,24 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
               {unitFreelancers.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
+          {(selectedFreelancer?.sectorRates?.length ?? 0) > 0 && (
+            <label className="flex items-center gap-2 rounded-lg border border-dashed p-2 text-sm">
+              <input type="checkbox" checked={coverage} onChange={(e) => { setCoverage(e.target.checked); setCoverageSector(''); }} />
+              <span><b>Cobertura temporária de setor</b> — valor fechado por dia (varia por setor)</span>
+            </label>
+          )}
+          {coverage && (
+            <div>
+              <Label>Setor coberto</Label>
+              <select className={sel} value={coverageSector} onChange={(e) => setCoverageSector(e.target.value)}>
+                <option value="">Selecione o setor…</option>
+                {(selectedFreelancer?.sectorRates ?? []).map((r) => <option key={r.sectorName} value={r.sectorName}>{r.sectorName} — {formatBRL(r.dayValue)}/dia</option>)}
+              </select>
+              {coverageSector && (
+                <p className="mt-1 text-xs text-muted-foreground">Valor do dia: <b>{formatBRL((selectedFreelancer?.sectorRates ?? []).find((r) => r.sectorName === coverageSector)?.dayValue ?? 0)}</b>{transportValue ? ' + VT' : ''} (calculado automaticamente).</p>
+              )}
+            </div>
+          )}
           <div><Label>Dia do trabalho</Label><Input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Hora início</Label><Input type="time" value={workStartTime} onChange={(e) => setWorkStartTime(e.target.value)} /></div>
@@ -359,6 +381,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
             <div><Label>Horas</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} /></div>
           </div>
           <div><Label>Motivo</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+          <div><Label>Vale transporte (R$, opcional — soma ao total)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>
           <p className="text-xs text-muted-foreground">Valor é estimativa para aprovação; o cálculo final (50%/100%, reflexos) é do RH/folha.</p>
         </>
       )}

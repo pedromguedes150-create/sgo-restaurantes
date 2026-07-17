@@ -10,7 +10,10 @@ import { Label } from '@/components/ui/label';
 interface Category {
   id: string;
   name: string;
+  /// 'kg' (padrão) ou 'un' — categorias em unidades (ex.: lanchonete) têm sub-itens (16/07)
+  measure?: 'kg' | 'un';
 }
+interface SubItem { name: string; qty: string }
 
 export function WasteForm({
   unitId,
@@ -35,6 +38,11 @@ export function WasteForm({
     Object.fromEntries(categories.map((c) => [c.id, initialKg[c.id]?.toString() ?? ''])),
   );
   const [observation, setObservation] = useState(initialObservation ?? '');
+  // Sub-itens por categoria em 'un' (produtos diferentes; o total soma sozinho)
+  const [subs, setSubs] = useState<Record<string, SubItem[]>>(
+    Object.fromEntries(categories.filter((c) => c.measure === 'un').map((c) => [c.id, [{ name: '', qty: '' }]])),
+  );
+  const subTotal = (cid: string) => (subs[cid] ?? []).reduce((t, si) => t + (parseInt(si.qty, 10) || 0), 0);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err' | 'alert'; text: string } | null>(null);
@@ -48,10 +56,13 @@ export function WasteForm({
     }
     setLoading(true);
     try {
-      const items = categories.map((c) => ({
-        categoryId: c.id,
-        kg: parseFloat((kg[c.id] || '0').replace(',', '.')) || 0,
-      }));
+      const items = categories.map((c) => {
+        if (c.measure === 'un') {
+          const list = (subs[c.id] ?? []).filter((si) => si.name.trim() && (parseInt(si.qty, 10) || 0) > 0);
+          return { categoryId: c.id, kg: list.reduce((t, si) => t + (parseInt(si.qty, 10) || 0), 0), subItems: list.map((si) => ({ name: si.name.trim(), qty: parseInt(si.qty, 10) || 0 })) };
+        }
+        return { categoryId: c.id, kg: parseFloat((kg[c.id] || '0').replace(',', '.')) || 0 };
+      });
 
       let res: Response;
       if (file) {
@@ -94,7 +105,22 @@ export function WasteForm({
 
   return (
     <div className="space-y-4">
-      {categories.map((c) => (
+      {categories.map((c) => c.measure === 'un' ? (
+        <div key={c.id} className="space-y-1.5 rounded-lg border border-dashed p-2">
+          <div className="flex items-center justify-between">
+            <Label>{c.name} (UNIDADES)</Label>
+            <span className="text-xs font-bold tabular-nums">Total: {subTotal(c.id)} un</span>
+          </div>
+          {(subs[c.id] ?? []).map((si, i) => (
+            <div key={i} className="flex gap-1.5">
+              <Input value={si.name} onChange={(e) => setSubs((s) => ({ ...s, [c.id]: s[c.id].map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) }))} placeholder="Produto (ex.: coxinha)" className="h-10 flex-1 text-sm" />
+              <Input inputMode="numeric" value={si.qty} onChange={(e) => setSubs((s) => ({ ...s, [c.id]: s[c.id].map((x, j) => (j === i ? { ...x, qty: e.target.value.replace(/D/g, '') } : x)) }))} placeholder="qtd" className="h-10 w-20 text-sm" />
+              <button type="button" onClick={() => setSubs((s) => ({ ...s, [c.id]: s[c.id].length > 1 ? s[c.id].filter((_, j) => j !== i) : s[c.id] }))} className="px-1 text-critical" aria-label="Remover">×</button>
+            </div>
+          ))}
+          <button type="button" onClick={() => setSubs((s) => ({ ...s, [c.id]: [...(s[c.id] ?? []), { name: '', qty: '' }] }))} className="rounded-full border px-3 py-1 text-xs font-semibold">+ Adicionar produto</button>
+        </div>
+      ) : (
         <div key={c.id} className="space-y-1.5">
           <Label htmlFor={`kg-${c.id}`}>{c.name} (KG)</Label>
           <Input

@@ -130,20 +130,20 @@ export async function setUserUnits(user: SessionUser, id: string, unitIds: strin
 /* ──────────────────────── Categorias de desperdício ──────────────────── */
 function slugCode(s: string) { return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 30) || 'CAT'; }
 
-export async function createWasteCategory(user: SessionUser, input: { name: string }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function createWasteCategory(user: SessionUser, input: { name: string; measure?: string }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!input.name?.trim()) return { ok: false, reason: 'INVALID' };
   let code = slugCode(input.name);
   if (await prisma.wasteCategory.findUnique({ where: { code } })) code = `${code}_${Date.now().toString().slice(-4)}`;
   const count = await prisma.wasteCategory.count();
-  const c = await prisma.wasteCategory.create({ data: { name: input.name.trim(), code, order: count } });
+  const c = await prisma.wasteCategory.create({ data: { name: input.name.trim(), code, order: count, measure: input.measure === 'un' ? 'un' : 'kg' } });
   await audit({ userId: user.id, action: 'WASTE_CATEGORY_CREATE', module: 'CONFIG', entity: 'waste_category', entityId: c.id, ...ctx });
   return { ok: true, id: c.id };
 }
-export async function updateWasteCategory(user: SessionUser, id: string, input: { name?: string }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateWasteCategory(user: SessionUser, id: string, input: { name?: string; measure?: string }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
-  await prisma.wasteCategory.update({ where: { id }, data: { ...(input.name !== undefined ? { name: input.name.trim() } : {}) } });
+  await prisma.wasteCategory.update({ where: { id }, data: { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(input.measure !== undefined ? { measure: input.measure === 'un' ? 'un' : 'kg' } : {}) } });
   await audit({ userId: user.id, action: 'WASTE_CATEGORY_UPDATE', module: 'CONFIG', entity: 'waste_category', entityId: id, ...ctx });
   return { ok: true };
 }
@@ -520,6 +520,27 @@ export async function createFreelancer(user: SessionUser, input: { name: string;
   const f = await prisma.freelancer.create({ data: { name: input.name.trim(), defaultValue: input.defaultValue, pixKey: input.pixKey.trim(), units: { create: input.unitIds.map((unitId) => ({ unitId })) } } });
   await audit({ userId: user.id, action: 'FREELANCER_CREATE', module: 'CONFIG', entity: 'freelancer', entityId: f.id, ...ctx });
   return { ok: true, id: f.id };
+}
+
+/** Cobertura de setor (16/07): define/atualiza o valor por DIA de um setor do freelancer. */
+export async function setFreelancerSectorRate(user: SessionUser, input: { freelancerId: string; sectorName: string; dayValue: number }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const sector = input.sectorName?.trim();
+  if (!input.freelancerId || !sector || !(input.dayValue > 0)) return { ok: false, reason: 'INVALID' };
+  await prisma.freelancerSectorRate.upsert({
+    where: { freelancerId_sectorName: { freelancerId: input.freelancerId, sectorName: sector } },
+    create: { freelancerId: input.freelancerId, sectorName: sector, dayValue: input.dayValue },
+    update: { dayValue: input.dayValue },
+  });
+  await audit({ userId: user.id, action: 'FREELANCER_SECTOR_RATE_SET', module: 'CONFIG', entity: 'freelancer', entityId: input.freelancerId, metadata: { sector, dayValue: input.dayValue }, ...ctx });
+  return { ok: true };
+}
+
+export async function deleteFreelancerSectorRate(user: SessionUser, input: { freelancerId: string; sectorName: string }, ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  await prisma.freelancerSectorRate.deleteMany({ where: { freelancerId: input.freelancerId, sectorName: input.sectorName } });
+  await audit({ userId: user.id, action: 'FREELANCER_SECTOR_RATE_DELETE', module: 'CONFIG', entity: 'freelancer', entityId: input.freelancerId, metadata: { sector: input.sectorName }, ...ctx });
+  return { ok: true };
 }
 
 export async function toggleFreelancer(user: SessionUser, id: string, active: boolean, ctx: Ctx = {}): Promise<AdminResult> {

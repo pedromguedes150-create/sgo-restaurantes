@@ -356,6 +356,8 @@ model WasteCategory {
   id        String   @id @default(cuid())
   code      String   @unique
   name      String
+  /// Unidade de medida: 'kg' (padrão) ou 'un' (ex.: lanchonete — 16/07)
+  measure   String   @default("kg")
   order     Int      @default(0)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -392,7 +394,10 @@ model WasteEntryItem {
   id         String  @id @default(cuid())
   entryId    String
   categoryId String
+  /// Total na unidade da categoria (kg ou unidades)
   kg         Decimal @db.Decimal(10, 3)
+  /// Sub-itens (categorias em 'un', ex. lanchonete): [{ name, qty }] — soma = kg
+  subItems   Json?
 
   entry    WasteEntry    @relation(fields: [entryId], references: [id], onDelete: Cascade)
   category WasteCategory @relation(fields: [categoryId], references: [id])
@@ -774,6 +779,7 @@ model Freelancer {
   createdAt    DateTime         @default(now())
   units        FreelancerUnit[]
   requests     PaymentRequest[]
+  sectorRates  FreelancerSectorRate[]
 
   @@map("freelancers")
 }
@@ -788,6 +794,21 @@ model FreelancerUnit {
 
   @@unique([freelancerId, unitId])
   @@map("freelancer_units")
+}
+
+/// Cobertura temporária de setor (16/07): valor por DIA de trabalho por setor
+/// cadastrado no freelancer (o valor varia por setor). Setor por NOME (vale em
+/// qualquer unidade).
+model FreelancerSectorRate {
+  id           String  @id @default(cuid())
+  freelancerId String
+  sectorName   String
+  dayValue     Decimal @db.Decimal(10, 2)
+
+  freelancer Freelancer @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+
+  @@unique([freelancerId, sectorName])
+  @@map("freelancer_sector_rates")
 }
 
 /// Tipo de pagamento avulso + aprovador por tipo — Módulo 7.3.
@@ -846,6 +867,8 @@ model PaymentRequest {
   workEndTime   String?
   /// Setor onde o freelancer foi alocado no Mapa do dia (Módulo 9.3)
   workSectorId  String?
+  /// Cobertura temporária de setor (16/07): nome do setor coberto — valor por DIA
+  coverageSector String?
   /// Vale transporte somado ao valor do freelancer (opcional)
   transportValue Decimal? @db.Decimal(10, 2)
 

@@ -16,7 +16,7 @@ export default async function PagamentosAdminPage() {
   const [units, users, freelancers, miscTypes, delegations] = await Promise.all([
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     prisma.user.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, role: true } }),
-    prisma.freelancer.findMany({ orderBy: { name: 'asc' }, include: { units: { include: { unit: { select: { id: true, name: true } } } } } }),
+    prisma.freelancer.findMany({ orderBy: { name: 'asc' }, include: { units: { include: { unit: { select: { id: true, name: true } } } }, sectorRates: true } }),
     prisma.miscPaymentType.findMany({ orderBy: { order: 'asc' } }),
     prisma.approvalDelegation.findMany({ orderBy: { startsAt: 'desc' }, include: { fromUser: { select: { name: true } }, toUser: { select: { name: true } } } }),
   ]);
@@ -29,7 +29,7 @@ export default async function PagamentosAdminPage() {
         <PaymentsAdmin
           units={units}
           users={users}
-          freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, defaultValue: Number(f.defaultValue), pixKey: f.pixKey, active: f.active, units: f.units.map((u) => u.unit.name), unitIds: f.units.map((u) => u.unit.id) }))}
+          freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, defaultValue: Number(f.defaultValue), pixKey: f.pixKey, active: f.active, units: f.units.map((u) => u.unit.name), unitIds: f.units.map((u) => u.unit.id), sectorRates: f.sectorRates.map((r) => ({ sectorName: r.sectorName, dayValue: Number(r.dayValue) })) }))}
           miscTypes={miscTypes.map((m) => ({ id: m.id, name: m.name, approverRole: m.approverRole, active: m.active }))}
           delegations={delegations.map((x) => ({ id: x.id, from: x.fromUser.name, to: x.toUser.name, period: `${d(x.startsAt)} a ${d(x.endsAt)}` }))}
         />

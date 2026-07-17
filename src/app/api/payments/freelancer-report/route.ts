@@ -7,10 +7,14 @@ export async function GET(req: Request) {
   if (!user) return new Response('Não autenticado', { status: 401 });
   const url = new URL(req.url);
   const ym = url.searchParams.get('month') ?? new Date().toISOString().slice(0, 7);
+  const semana = url.searchParams.get('semana');
+  const range = semana && /^d{4}-d{2}-d{2}$/.test(semana)
+    ? { from: semana, to: new Date(new Date(semana + 'T12:00:00Z').getTime() + 6 * 86400000).toISOString().slice(0, 10) }
+    : undefined;
   const unitId = url.searchParams.get('unit') || undefined;
   if (!/^\d{4}-\d{2}$/.test(ym)) return new Response('Mês inválido', { status: 400 });
 
-  const data = await getFreelancerConsolidation(user, ym, unitId);
+  const data = await getFreelancerConsolidation(user, ym, unitId, range);
 
   const sep = ';';
   const brl = (n: number) => n.toFixed(2).replace('.', ',');

@@ -70,6 +70,8 @@ export async function POST(req: Request) {
   else if (e === 'freelancer' && a === 'update') r = await admin.updateFreelancer(user, b.id, b, ctx);
   else if (e === 'freelancer' && a === 'toggle') r = await admin.toggleFreelancer(user, b.id, b.active, ctx);
   else if (e === 'freelancer' && a === 'delete') r = await admin.deleteFreelancer(user, b.id, ctx);
+  else if (e === 'freelancerSector' && a === 'set') r = await admin.setFreelancerSectorRate(user, { freelancerId: b.freelancerId, sectorName: b.sectorName, dayValue: Number(b.dayValue) }, ctx);
+  else if (e === 'freelancerSector' && a === 'delete') r = await admin.deleteFreelancerSectorRate(user, { freelancerId: b.freelancerId, sectorName: b.sectorName }, ctx);
   else if (e === 'miscType' && a === 'create') r = await admin.createMiscType(user, b, ctx);
   else if (e === 'miscType' && a === 'update') r = await admin.updateMiscType(user, b.id, b, ctx);
   else if (e === 'miscType' && a === 'toggle') r = await admin.toggleMiscType(user, b.id, b.active, ctx);

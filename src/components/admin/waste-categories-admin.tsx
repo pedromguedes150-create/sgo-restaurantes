@@ -8,18 +8,19 @@ import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { postAdmin } from '@/lib/admin-client';
 
-export interface WasteCatRow { id: string; name: string; active: boolean }
+export interface WasteCatRow { id: string; name: string; active: boolean; measure: 'kg' | 'un' }
 
 export function WasteCategoriesAdmin({ categories }: { categories: WasteCatRow[] }) {
   const router = useRouter();
   const [name, setName] = useState('');
+  const [measure, setMeasure] = useState<'kg' | 'un'>('kg');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function create() {
     if (!name.trim()) return;
     setBusy(true); setMsg(null);
-    const r = await postAdmin({ entity: 'wasteCategory', action: 'create', name });
+    const r = await postAdmin({ entity: 'wasteCategory', action: 'create', name, measure });
     setBusy(false);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
     setName(''); router.refresh();
@@ -27,9 +28,13 @@ export function WasteCategoriesAdmin({ categories }: { categories: WasteCatRow[]
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Categorias usadas no lançamento de desperdícios (kg por categoria).</p>
+      <p className="text-sm text-muted-foreground">Categorias do lançamento de desperdícios. Medida <b>kg</b> = peso; <b>un</b> = unidades com sub-itens por produto (ex.: lanchonete).</p>
       <div className="flex gap-2">
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nova categoria (ex.: Carne, Salada, Sobremesa)" />
+        <select value={measure} onChange={(e) => setMeasure(e.target.value as 'kg' | 'un')} className="h-11 rounded-lg border-2 border-input bg-background px-2 text-sm">
+          <option value="kg">kg</option>
+          <option value="un">un</option>
+        </select>
         <Button disabled={busy} onClick={create}><Plus className="h-4 w-4" /> Adicionar</Button>
       </div>
       {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
@@ -44,6 +49,7 @@ export function WasteCategoriesAdmin({ categories }: { categories: WasteCatRow[]
 function CatRow({ c, onChange }: { c: WasteCatRow; onChange: () => void }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(c.name);
+  const [mEdit, setMEdit] = useState<'kg' | 'un'>(c.measure);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -59,14 +65,15 @@ function CatRow({ c, onChange }: { c: WasteCatRow; onChange: () => void }) {
     <div className="rounded-lg border bg-card p-2.5">
       <div className="flex items-center justify-between gap-2">
         {editing ? (
-          <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 text-sm" />
+          <span className="flex flex-1 items-center gap-1.5"><Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 text-sm" />
+          <select value={mEdit} onChange={(e) => setMEdit(e.target.value as 'kg' | 'un')} className="h-9 rounded-lg border-2 border-input bg-background px-1.5 text-sm"><option value="kg">kg</option><option value="un">un</option></select></span>
         ) : (
-          <span className="font-medium text-brand">{c.name}</span>
+          <span className="font-medium text-brand">{c.name} <span className="text-xs text-muted-foreground">({c.measure})</span></span>
         )}
         <div className="flex items-center gap-1">
           <button onClick={() => call({ entity: 'wasteCategory', action: 'toggle', id: c.id, active: !c.active })}><StatusBadge tone={c.active ? 'success' : 'critical'}>{c.active ? 'Ativa' : 'Inativa'}</StatusBadge></button>
           {editing
-            ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => call({ entity: 'wasteCategory', action: 'update', id: c.id, name }, () => setEditing(false))} aria-label="Salvar"><Save className="h-4 w-4" /></Button>
+            ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => call({ entity: 'wasteCategory', action: 'update', id: c.id, name, measure: mEdit }, () => setEditing(false))} aria-label="Salvar"><Save className="h-4 w-4" /></Button>
             : <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>}
           {editing
             ? <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setName(c.name); }} aria-label="Cancelar"><X className="h-4 w-4" /></Button>

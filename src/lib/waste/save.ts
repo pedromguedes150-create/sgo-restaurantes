@@ -8,7 +8,10 @@ import type { SessionUser } from '@/lib/auth/session';
 
 export interface WasteItemInput {
   categoryId: string;
+  /// total na unidade da categoria (kg ou unidades)
   kg: number;
+  /// sub-itens (categorias em 'un', ex. lanchonete): produtos diferentes somando o total
+  subItems?: { name: string; qty: number }[];
 }
 
 export interface WasteAlert {
@@ -52,9 +55,9 @@ export async function saveWasteEntry(
     return { ok: false, reason: 'INVALID' };
   }
   // Dedup por categoria (categoryId repetido violaria a unique e geraria 500)
-  const itemMap = new Map<string, number>();
-  for (const i of input.items) itemMap.set(i.categoryId, i.kg);
-  const items = [...itemMap.entries()].map(([categoryId, kg]) => ({ categoryId, kg }));
+  const itemMap = new Map<string, WasteItemInput>();
+  for (const i of input.items) itemMap.set(i.categoryId, i);
+  const items = [...itemMap.values()].map((i) => ({ categoryId: i.categoryId, kg: i.kg, subItems: i.subItems?.length ? i.subItems : undefined }));
 
   const unit = await prisma.unit.findUnique({ where: { id: input.unitId } });
   if (!unit) return { ok: false, reason: 'INVALID' };
@@ -103,7 +106,7 @@ export async function saveWasteEntry(
     await tx.wasteEntryItem.deleteMany({ where: { entryId: e.id } });
     if (items.length) {
       await tx.wasteEntryItem.createMany({
-        data: items.map((i) => ({ entryId: e.id, categoryId: i.categoryId, kg: i.kg })),
+        data: items.map((i) => ({ entryId: e.id, categoryId: i.categoryId, kg: i.kg, subItems: i.subItems ?? undefined })),
       });
     }
     return e;

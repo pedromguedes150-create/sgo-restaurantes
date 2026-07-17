@@ -8,13 +8,14 @@ export interface WasteCategoryDTO {
   id: string;
   code: string;
   name: string;
+  measure: string;
 }
 
 export async function getActiveCategories(): Promise<WasteCategoryDTO[]> {
   const cats = await prisma.wasteCategory.findMany({
     where: { active: true },
     orderBy: { order: 'asc' },
-    select: { id: true, code: true, name: true },
+    select: { id: true, code: true, name: true, measure: true },
   });
   return cats;
 }

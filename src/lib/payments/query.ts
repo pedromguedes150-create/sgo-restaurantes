@@ -96,15 +96,30 @@ const PAY_STATUS_LABEL: Record<string, string> = { PENDING: 'Pendente', APPROVED
  * Considera solicitações APROVADAS e PAGAS (o que será/foi pago), agrupadas por
  * freelancer com a chave PIX e o total. Filtra pelo mês de lançamento (createdAt).
  */
-export async function getFreelancerConsolidation(user: SessionUser, yearMonth: string, unitId?: string): Promise<FreelancerConsolidation> {
-  const [y, m] = yearMonth.split('-').map(Number);
-  const start = new Date(Date.UTC(y, m - 1, 1));
-  const end = new Date(Date.UTC(y, m, 1));
+/**
+ * Consolidação de freelancers por MÊS ou por PERÍODO (semana, 16/07):
+ * passe range {from,to} (YYYY-MM-DD, inclusivo) para fechamento semanal
+ * (segunda→domingo, pago na segunda). Filtra pelo DIA DO TRABALHO quando
+ * houver (workDate), senão pela criação.
+ */
+export async function getFreelancerConsolidation(user: SessionUser, yearMonth: string, unitId?: string, range?: { from: string; to: string }): Promise<FreelancerConsolidation> {
+  let start: Date; let end: Date;
+  if (range) {
+    start = new Date(range.from + 'T00:00:00Z');
+    end = new Date(new Date(range.to + 'T00:00:00Z').getTime() + 86400000);
+  } else {
+    const [y, m] = yearMonth.split('-').map(Number);
+    start = new Date(Date.UTC(y, m - 1, 1));
+    end = new Date(Date.UTC(y, m, 1));
+  }
   const rows = await prisma.paymentRequest.findMany({
     where: {
       type: 'FREELANCER',
       status: { in: ['APPROVED', 'PAID'] },
-      createdAt: { gte: start, lt: end },
+      OR: [
+        { workDate: { gte: start, lt: end } },
+        { workDate: null, createdAt: { gte: start, lt: end } },
+      ],
       ...paymentScope(user),
       ...(unitId ? { unitId } : {}),
     },

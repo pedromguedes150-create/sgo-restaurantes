@@ -24,7 +24,19 @@ function lastMonths(n: number): { value: string; label: string }[] {
   return out;
 }
 
-export default async function RelatorioFreelancersPage({ searchParams }: { searchParams: { month?: string; unit?: string } }) {
+function mondayOf(iso: string): string {
+  const d = new Date(iso + 'T12:00:00Z');
+  const dow = d.getUTCDay(); // 0=dom
+  d.setUTCDate(d.getUTCDate() - ((dow + 6) % 7)); // volta até segunda
+  return d.toISOString().slice(0, 10);
+}
+function addDaysISO(iso: string, n: number): string {
+  const d = new Date(iso + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+export default async function RelatorioFreelancersPage({ searchParams }: { searchParams: { month?: string; unit?: string; semana?: string } }) {
   const user = (await getSessionUser())!;
   const canSee = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO' || user.role === 'SUPERVISOR';
   if (!canSee) return <p className="text-sm text-muted-foreground">Relatório restrito a Financeiro/Supervisão/Admin.</p>;
@@ -35,10 +47,15 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
   const selectedUnit = searchParams.unit && units.some((u) => u.id === searchParams.unit) ? searchParams.unit : undefined;
 
-  const data = await getFreelancerConsolidation(user, ym, selectedUnit);
-  const label = months.find((m) => m.value === ym)?.label ?? ym;
+  // Fechamento SEMANAL (16/07): ?semana=<qualquer dia> → segunda→domingo daquela semana
+  const weekMode = /^d{4}-d{2}-d{2}$/.test(searchParams.semana ?? '');
+  const weekFrom = weekMode ? mondayOf(searchParams.semana!) : null;
+  const weekTo = weekFrom ? addDaysISO(weekFrom, 6) : null;
+  const data = await getFreelancerConsolidation(user, ym, selectedUnit, weekFrom && weekTo ? { from: weekFrom, to: weekTo } : undefined);
+  const fmtBR = (iso: string) => iso.split('-').reverse().join('/');
+  const label = weekFrom && weekTo ? `Semana ${fmtBR(weekFrom)} → ${fmtBR(weekTo)}` : (months.find((m) => m.value === ym)?.label ?? ym);
 
-  const exportHref = `/api/payments/freelancer-report?month=${ym}${selectedUnit ? `&unit=${selectedUnit}` : ''}`;
+  const exportHref = `/api/payments/freelancer-report?month=${ym}${weekFrom ? `&semana=${weekFrom}` : ''}${selectedUnit ? `&unit=${selectedUnit}` : ''}`;
 
   return (
     <div className="space-y-4">
@@ -52,7 +69,7 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
           <PrintButton />
         </div>
       </div>
-      <p className="text-sm text-muted-foreground">Pagamentos de freelancers <strong>aprovados e pagos</strong> no mês — base para envio ao Financeiro.</p>
+      <p className="text-sm text-muted-foreground">Pagamentos de freelancers <strong>aprovados e pagos</strong> no período — base para envio ao Financeiro. Fechamento semanal: segunda → domingo (pago na segunda), pelo dia do trabalho.</p>
 
       {/* Filtros (listas suspensas) */}
       <div className="flex flex-wrap items-end gap-3 print:hidden">
@@ -60,6 +77,15 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mês</p>
           <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" className="h-10 w-56 rounded-lg border-2 border-input bg-background px-3 text-sm font-medium" />
         </div>
+        <form method="get" className="flex items-end gap-1.5">
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ou fechamento semanal</p>
+            <input type="date" name="semana" defaultValue={weekFrom ?? ''} className="h-10 rounded-lg border-2 border-input bg-background px-3 text-sm font-medium" />
+            {selectedUnit && <input type="hidden" name="unit" value={selectedUnit} />}
+          </div>
+          <button type="submit" className="h-10 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground">Ver semana</button>
+          {weekFrom && <Link href={`/modulos/pagamentos/relatorio-freelancers?month=${ym}${selectedUnit ? `&unit=${selectedUnit}` : ''}`} className="h-10 rounded-lg border px-3 py-2 text-sm font-semibold">Voltar ao mês</Link>}
+        </form>
         {units.length > 1 && (
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unidade</p>

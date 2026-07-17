@@ -13,7 +13,7 @@ import { formatBRL } from '@/lib/utils';
 
 interface Unit { id: string; name: string }
 interface UserOpt { id: string; name: string; role: string }
-export interface FreelancerRow { id: string; name: string; defaultValue: number; pixKey: string | null; active: boolean; units: string[]; unitIds: string[] }
+export interface FreelancerRow { id: string; name: string; defaultValue: number; pixKey: string | null; active: boolean; units: string[]; unitIds: string[]; sectorRates: { sectorName: string; dayValue: number }[] }
 export interface MiscTypeRow { id: string; name: string; approverRole: string; active: boolean }
 export interface DelegationRow { id: string; from: string; to: string; period: string }
 
@@ -126,6 +126,8 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
   const [value, setValue] = useState(String(f.defaultValue).replace('.', ','));
   const [pix, setPix] = useState(f.pixKey ?? '');
   const [unitIds, setUnitIds] = useState<string[]>(f.unitIds);
+  const [secName, setSecName] = useState('');
+  const [secValue, setSecValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -140,7 +142,7 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
   return (
     <div className="rounded-lg border bg-card p-3">
       <div className="flex items-center justify-between gap-2">
-        <div><p className="font-semibold text-brand">{f.name}</p><p className="text-xs text-muted-foreground">{formatBRL(f.defaultValue)} · PIX: {f.pixKey || <span className="text-critical">não cadastrada</span>} · {f.units.join(', ')}</p></div>
+        <div><p className="font-semibold text-brand">{f.name}</p><p className="text-xs text-muted-foreground">{formatBRL(f.defaultValue)} · PIX: {f.pixKey || <span className="text-critical">não cadastrada</span>} · {f.units.join(', ')}{f.sectorRates.length > 0 ? ` · ${f.sectorRates.length} setor(es) c/ valor-dia` : ''}</p></div>
         <div className="flex items-center gap-1">
           <button onClick={() => call({ entity: 'freelancer', action: 'toggle', id: f.id, active: !f.active })}><StatusBadge tone={f.active ? 'success' : 'critical'}>{f.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
@@ -159,6 +161,23 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
             <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
           </div>
           <Button size="sm" className="w-full" disabled={busy} onClick={() => { if (!pix.trim()) { setMsg('Informe a chave PIX.'); return; } call({ entity: 'freelancer', action: 'update', id: f.id, name, defaultValue: parseFloat((value || '0').replace(',', '.')), pixKey: pix, unitIds }, () => setEditing(false)); }}><Save className="h-4 w-4" /> Salvar alterações</Button>
+
+          {/* Cobertura temporária de setor (16/07): valor por DIA por setor */}
+          <div className="rounded-md border border-dashed p-2">
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Cobertura de setor — valor por dia</p>
+            {f.sectorRates.length === 0 && <p className="text-xs text-muted-foreground">Nenhum setor cadastrado. Com setor + valor/dia, o gerente pode lançar &quot;cobertura temporária de setor&quot; (valor fechado do dia + VT).</p>}
+            {f.sectorRates.map((r) => (
+              <div key={r.sectorName} className="flex items-center justify-between gap-2 py-0.5 text-sm">
+                <span>{r.sectorName} — <b>{formatBRL(r.dayValue)}</b>/dia</span>
+                <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => call({ entity: 'freelancerSector', action: 'delete', freelancerId: f.id, sectorName: r.sectorName })} aria-label="Remover setor"><Trash2 className="h-3.5 w-3.5" /></Button>
+              </div>
+            ))}
+            <div className="mt-1 flex items-end gap-1.5">
+              <div className="flex-1"><Label className="text-xs">Setor</Label><Input value={secName} onChange={(e) => setSecName(e.target.value)} placeholder="ex.: Churrasqueira" className="h-9 text-sm" /></div>
+              <div className="w-28"><Label className="text-xs">R$/dia</Label><Input inputMode="decimal" value={secValue} onChange={(e) => setSecValue(e.target.value)} placeholder="0,00" className="h-9 text-sm" /></div>
+              <Button size="sm" disabled={busy || !secName.trim() || !secValue} onClick={() => call({ entity: 'freelancerSector', action: 'set', freelancerId: f.id, sectorName: secName.trim(), dayValue: parseFloat(secValue.replace(',', '.')) }, () => { setSecName(''); setSecValue(''); })}><Plus className="h-4 w-4" /></Button>
+            </div>
+          </div>
         </div>
       )}
       {msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}

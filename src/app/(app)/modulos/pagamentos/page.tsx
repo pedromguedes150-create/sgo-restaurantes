@@ -54,7 +54,7 @@ export default async function PagamentosPage() {
     getHistory(user),
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     getMiscTypes(),
-    prisma.freelancer.findMany({ where: { active: true }, include: { units: { select: { unitId: true } } }, orderBy: { name: 'asc' } }),
+    prisma.freelancer.findMany({ where: { active: true }, include: { units: { select: { unitId: true } }, sectorRates: true }, orderBy: { name: 'asc' } }),
     listSuppliers({ activeOnly: true }),
   ]);
 
@@ -77,7 +77,7 @@ export default async function PagamentosPage() {
             units={units}
             miscTypes={miscTypes.map((t) => ({ id: t.id, name: t.name }))}
             suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
-            freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, defaultValue: Number(f.defaultValue), unitIds: f.units.map((u) => u.unitId) }))}
+            freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, defaultValue: Number(f.defaultValue), unitIds: f.units.map((u) => u.unitId), sectorRates: f.sectorRates.map((r) => ({ sectorName: r.sectorName, dayValue: Number(r.dayValue) })) }))}
             mine={(mine as ReqRow[]).map(toDTO)}
             toApprove={(toApprove as ReqRow[]).map(toDTO)}
             toPay={(toPay as ReqRow[]).map(toDTO)}

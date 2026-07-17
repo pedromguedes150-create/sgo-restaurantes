@@ -133,6 +133,7 @@ export const GUIDE: GuideSection[] = [
           'Conta na meta se o lançamento for feito no dia ou até 1 dia depois; passando disso, não conta (nem penaliza).',
           'No histórico, clique em um lançamento para ver os itens (categoria, kg e observação).',
           'Esqueceu de lançar? Use o seletor de data para registrar um dia anterior.',
+          'Categorias em UNIDADES (ex.: lanchonete): lance produto por produto (nome + quantidade) — o total soma sozinho. O Admin define kg/un em Configurações → Desperdícios.',
           'Botão "Exportar (Excel)" baixa a planilha do mês para relatório.',
           'O Admin cadastra as categorias de desperdício em Configurações → Desperdícios.',
         ],
@@ -172,6 +173,18 @@ export const GUIDE: GuideSection[] = [
           'Em Pessoas → "Período de Experiência", veja quem tem até 90 dias de casa (a admissão vem do RH).',
           'A barra mostra os dias (X/90) e fica vermelha quando faltam 15 dias ou menos.',
           'Aprove ou reprove com anotações — a decisão avisa os Admins para comunicar ao RH.',
+        ],
+      },
+      {
+        id: 'cobertura-setor',
+        title: 'Freelancer — cobertura de setor',
+        roles: MANAGERLINE,
+        summary: 'Valor fechado por dia, por setor.',
+        steps: [
+          'O Admin cadastra no freelancer os setores com valor por dia (Configurações → Pagamentos → editar freelancer).',
+          'No lançamento Freelancer, marque "Cobertura temporária de setor", escolha o setor — o valor do dia sai automático (+ VT opcional).',
+          'Na Hora Extra também dá para somar o vale-transporte ao total.',
+          'Na Consolidação de freelancers, além do mês dá para fechar por SEMANA (segunda→domingo) — como o pagamento de segunda.',
         ],
       },
       {

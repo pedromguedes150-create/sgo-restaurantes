@@ -10,13 +10,13 @@ export const dynamic = 'force-dynamic';
 export default async function DesperdiciosConfigPage() {
   const user = (await getSessionUser())!;
   if (user.role !== 'ADMIN') return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
-  const categories = await prisma.wasteCategory.findMany({ orderBy: [{ active: 'desc' }, { order: 'asc' }, { name: 'asc' }], select: { id: true, name: true, active: true } });
+  const categories = await prisma.wasteCategory.findMany({ orderBy: [{ active: 'desc' }, { order: 'asc' }, { name: 'asc' }], select: { id: true, name: true, active: true, measure: true } });
 
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
       <h1 className="text-xl font-bold text-brand">Desperdícios — categorias</h1>
-      <Card><CardContent className="pt-4"><WasteCategoriesAdmin categories={categories} /></CardContent></Card>
+      <Card><CardContent className="pt-4"><WasteCategoriesAdmin categories={categories.map((c) => ({ ...c, measure: (c.measure === 'un' ? 'un' : 'kg') as 'kg' | 'un' }))} /></CardContent></Card>
     </div>
   );
 }

@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.19.0 — 2026-07-16 (pacote 16/07 — bloco 3: Pagamentos + Desperdícios)
+### Adicionado
+- **Pagamentos — cobertura temporária de setor** (freelancer): o Admin cadastra no freelancer os **setores com valor por DIA** (Configurações → Pagamentos → editar freelancer); no lançamento, o gerente marca "Cobertura temporária de setor", escolhe o setor e o valor sai **automático** (valor do dia + VT opcional).
+- **Pagamentos — vale-transporte na Hora Extra**: campo VT opcional que soma ao total.
+- **Consolidação de freelancers — fechamento semanal**: além do mês, escolha uma data e o relatório fecha a semana **segunda → domingo** (pelo dia do trabalho), como o pagamento de segunda-feira. Excel idem.
+- **Desperdícios — categoria em UNIDADES com sub-itens**: categoria pode ser **kg** ou **un** (Configurações → Desperdícios). Categorias em "un" (ex.: lanchonete) ganham **sub-itens por produto** (nome + quantidade) com **soma total automática**.
+
 ## v1.18.0 — 2026-07-16 (pacote 16/07 — bloco 2: Notas + Comandas)
 ### Alterado
 - **Notas — aba "Notas" reformulada**: lista por **data de lançamento (mais nova → mais antiga)**, sem agrupamento por fornecedor; **filtros completos** (busca por fornecedor/nº/CNPJ/produto/obs/valor, fornecedor, unidade, status, período); **padrão últimos 60 dias** (troca no filtro: 90/180/365).
