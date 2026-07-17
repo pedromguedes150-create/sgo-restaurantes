@@ -31,6 +31,19 @@ export default async function TarefaExecPage({ params }: { params: { id: string 
     ...(inst.evidencePath && !inst.photos.some((p) => p.path === inst.evidencePath) ? [{ path: `/${inst.evidencePath}`, itemId: null }] : []),
   ];
 
+  // Ocorrências ABERTAS geradas por itens deste checklist (16/07): sinalização sem pendência nova
+
+  const openOcc = await prisma.occurrence.findMany({
+
+    where: { unitId: inst.unitId, sourceTaskItemId: { in: inst.template.items.map((i) => i.id) }, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+
+    select: { sourceTaskItemId: true, number: true, createdAt: true },
+
+  });
+
+  const openIssues = Object.fromEntries(openOcc.map((o) => [o.sourceTaskItemId!, { number: o.number, since: o.createdAt.toLocaleDateString('pt-BR') }]));
+
+
   return (
     <div className="space-y-4">
       <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
@@ -45,6 +58,7 @@ export default async function TarefaExecPage({ params }: { params: { id: string 
 
       <Card><CardContent className="pt-4">
         <ChecklistRunner
+          openIssues={openIssues}
           instanceId={inst.id}
           requiresEvidence={inst.template.requiresEvidence}
           done={done}

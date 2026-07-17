@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
-import { getOccurrence } from '@/lib/occurrences/query';
+import { getOccurrence, getOccurrenceTypes } from '@/lib/occurrences/query';
 import { GRAVITY_META, STATUS_META } from '@/lib/occurrences/labels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -9,6 +9,7 @@ import { CloseForm } from '@/components/occurrences/close-form';
 import { ProgressButton } from '@/components/occurrences/progress-button';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { ArrowLeft, Paperclip, FileText } from 'lucide-react';
+import { OccurrenceProgress } from '@/components/occurrences/occurrence-progress';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +20,7 @@ function fmt(d: Date | null) {
 export default async function OcorrenciaDetailPage({ params }: { params: { id: string } }) {
   const user = (await getSessionUser())!;
   const o = await getOccurrence(user, params.id);
+  const occTypes = await getOccurrenceTypes();
   if (!o) notFound();
 
   const canClose =
@@ -69,6 +71,17 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
           )}
         </CardContent>
       </Card>
+
+      {/* Fases do andamento + reclassificação (16/07) */}
+      {user.role !== 'FINANCE' && (
+        <OccurrenceProgress
+          occurrenceId={o.id}
+          closed={o.status === 'CLOSED'}
+          currentType={o.typeName}
+          updates={o.updates.map((u) => ({ id: u.id, text: u.text, authorName: u.authorName, createdAt: u.createdAt.toISOString() }))}
+          types={occTypes.map((t) => ({ id: t.id, name: t.name, categories: t.categories.map((c) => ({ id: c.id, name: c.name })) }))}
+        />
+      )}
 
       {o.status === 'CLOSED' && (
         <Card className="border-success/40">

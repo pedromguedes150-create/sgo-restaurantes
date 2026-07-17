@@ -104,6 +104,7 @@ export const GUIDE: GuideSection[] = [
           'O sistema avisa ~30 min antes do vencimento de cada checklist. Veja execuções passadas em Tarefas → "Histórico".',
           'No Histórico, o Admin pode "Selecionar para excluir", marcar vários (ou todos) e excluir o histórico em lote (sai das métricas; fica na Auditoria).',
           'Em Tarefas → "Correções do dia": relatório consolidado dos itens 🟡 Em correção e 🔴 A corrigir do dia (com histórico por data, imprimível). Itens "A corrigir" também viram ocorrência automática.',
+          'Item com ocorrência EM ABERTO aparece sinalizado (⚠ desde DD/MM) nos checklists seguintes, sem gerar pendência nova — o aviso some quando a ocorrência for encerrada.',
         ],
         tips: ['Não realizado (não feito) penaliza a meta; por isso, mesmo atrasado, vale concluir.', 'Checklist "da unidade" (1 por unidade) só pode ser concluído UMA vez no dia — depois fica como "Concluída" e abre só em leitura ("Ver preenchimento").'],
       },
@@ -158,6 +159,8 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Em OCORRÊNCIAS → "Nova", escolha tipo, gravidade e descreva; anexe foto/vídeo.',
           'Gravidade alta/crítica e reincidência (<30 dias) alertam Supervisor/CEO.',
+          'Na ocorrência, registre as FASES do andamento (timeline "Andamento") até o encerramento.',
+          'Precisa mudar a classificação? Use "Reclassificar" — tipos de Manutenção/TI movem a ocorrência para a sub-aba correspondente.',
           'O Supervisor/Admin encerra a ocorrência com a ação corretiva.',
           'Na ocorrência, "Gerar relatório (PDF)" abre uma versão A4 para imprimir/salvar e compartilhar no WhatsApp.',
           'A sub-aba "Manutenção" lista só as ocorrências de tipos marcados como manutenção e leva ao módulo Manutenção (chamados e planos preventivos).',

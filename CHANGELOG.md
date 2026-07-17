@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.20.0 — 2026-07-16 (pacote 16/07 — bloco 4: Checklist↔Ocorrência)
+### Adicionado
+- **Checklist — problema em aberto sinalizado**: quando um item "A corrigir" gera uma ocorrência, os checklists dos **dias seguintes mostram o aviso** "⚠ Problema em aberto desde DD/MM (ocorrência nº X)" naquele item, **sem criar pendência nova todo dia** — o aviso some quando a ocorrência é encerrada.
+- **Ocorrências — fases de andamento**: timeline "Andamento" na ocorrência — registre cada fase (técnico acionado, peça pedida…) até o encerramento; cada registro guarda autor e horário.
+- **Ocorrências — reclassificar**: mude o **tipo/categoria** de qualquer ocorrência aberta (inclusive as geradas pelo checklist) — tipos de Manutenção/TI movem a ocorrência para a sub-aba correspondente.
+
 ## v1.19.0 — 2026-07-16 (pacote 16/07 — bloco 3: Pagamentos + Desperdícios)
 ### Adicionado
 - **Pagamentos — cobertura temporária de setor** (freelancer): o Admin cadastra no freelancer os **setores com valor por DIA** (Configurações → Pagamentos → editar freelancer); no lançamento, o gerente marca "Cobertura temporária de setor", escolhe o setor e o valor sai **automático** (valor do dia + VT opcional).

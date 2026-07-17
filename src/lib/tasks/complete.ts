@@ -131,8 +131,17 @@ export async function completeChecklist(
   return { ok: true };
 }
 
-/** Cria uma ocorrência simples a partir de um item "A corrigir" (sem depender de tipos/categorias cadastrados). */
+/**
+ * Cria uma ocorrência a partir de um item "A corrigir".
+ * 16/07: se JÁ EXISTE ocorrência aberta para o MESMO item, não cria outra —
+ * o item aparece sinalizado nos checklists seguintes até a ocorrência encerrar.
+ */
 async function createChecklistOccurrence(unitId: string, userId: string, checklistName: string, item: ItemAnswer) {
+  const open = await prisma.occurrence.findFirst({
+    where: { unitId, sourceTaskItemId: item.itemId, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+    select: { id: true },
+  });
+  if (open) return; // problema segue em aberto — sem pendência duplicada
   // nº sequencial por unidade (com retry contra corrida)
   for (let attempt = 0; attempt < 5; attempt++) {
     const last = await prisma.occurrence.findFirst({ where: { unitId }, orderBy: { number: 'desc' }, select: { number: true } });
@@ -144,6 +153,7 @@ async function createChecklistOccurrence(unitId: string, userId: string, checkli
           operationalDate: new Date().toISOString().slice(0, 10),
           reportedById: userId,
           typeName: 'Checklist', categoryName: item.itemText.slice(0, 80),
+          sourceTaskItemId: item.itemId,
           gravity: 'MEDIUM',
           description: `Item do checklist "${checklistName}" marcado como A CORRIGIR: ${item.itemText}${item.note ? ` — ${item.note}` : ''}`,
           isRecurrence: false,

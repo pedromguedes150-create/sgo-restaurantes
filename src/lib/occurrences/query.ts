@@ -46,6 +46,7 @@ export async function getOccurrence(user: SessionUser, id: string) {
       reportedBy: { select: { name: true } },
       closedBy: { select: { name: true } },
       attachments: true,
+      updates: { orderBy: { createdAt: 'asc' } },
     },
   });
   if (!occ || !canAccessUnit(user, occ.unitId)) return null;

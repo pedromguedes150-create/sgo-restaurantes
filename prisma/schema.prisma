@@ -473,6 +473,9 @@ model Occurrence {
   status          OccurrenceStatus @default(OPEN)
   /// reincidência: mesmo tipo+categoria na mesma unidade em < 30 dias
   isRecurrence    Boolean          @default(false)
+  /// Item do checklist que gerou a ocorrência (16/07): enquanto ela estiver
+  /// aberta, o item aparece SINALIZADO nos checklists seguintes (sem recriar).
+  sourceTaskItemId String?
   // Encerramento (somente Supervisor/Admin)
   closedById          String?
   closedAt            DateTime?
@@ -488,15 +491,32 @@ model Occurrence {
   type        OccurrenceType?      @relation(fields: [typeId], references: [id], onDelete: SetNull)
   category    OccurrenceCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   attachments OccurrenceAttachment[]
+  updates     OccurrenceUpdate[]
 
   @@unique([unitId, number])
   @@index([unitId, status])
   @@index([unitId, operationalDate])
+  @@index([sourceTaskItemId])
   @@index([gravity])
   @@map("occurrences")
 }
 
 /// Anexo (foto/vídeo) de uma ocorrência. Acesso a anexos sensíveis é auditado (LGPD).
+/// Fase/andamento da ocorrência (16/07): registros de progresso até o encerramento.
+model OccurrenceUpdate {
+  id           String     @id @default(cuid())
+  occurrenceId String
+  text         String
+  authorId     String?
+  authorName   String
+  createdAt    DateTime   @default(now())
+
+  occurrence Occurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+
+  @@index([occurrenceId, createdAt])
+  @@map("occurrence_updates")
+}
+
 model OccurrenceAttachment {
   id           String   @id @default(cuid())
   occurrenceId String

@@ -19,9 +19,11 @@ const ST: Record<ItemStatus, { label: string; short: string; cls: string }> = {
 };
 const STATUSES: ItemStatus[] = ['OK', 'EM_CORRECAO', 'A_CORRIGIR'];
 
-export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus, items, initialAnswers, responses = [], photos }: {
+export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus, items, initialAnswers, responses = [], photos, openIssues = {} }: {
   instanceId: string; requiresEvidence: boolean; done: boolean; lateStatus: boolean;
   items: Item[]; initialAnswers: Record<string, { status: string; note?: string }>;
+  /// itemId → ocorrência ABERTA gerada por este item (16/07): sinaliza sem recriar pendência
+  openIssues?: Record<string, { number: number; since: string }>;
   /** Respostas registradas (snapshot do texto) — usado na visão concluída p/ não depender do ID atual do item. */
   responses?: { itemText: string; status: ItemStatus; note: string | null }[];
   photos: { path: string; itemId: string | null }[];
@@ -184,8 +186,13 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
             {g.items.map((it) => {
               const a = answers[it.id];
               return (
-                <div key={it.id} className="rounded-lg border bg-card p-2.5">
+                <div key={it.id} className={cn('rounded-lg border bg-card p-2.5', openIssues[it.id] && 'border-critical/50')}>
                   <p className="text-sm font-medium">{it.text}{it.requiresPhoto && <span className="ml-1 text-xs text-gold-dark">(foto)</span>}</p>
+                  {openIssues[it.id] && (
+                    <p className="mt-1 rounded-md bg-critical/10 px-2 py-1 text-xs font-semibold text-critical">
+                      ⚠ Problema em aberto desde {openIssues[it.id].since} (ocorrência nº {openIssues[it.id].number}) — some daqui quando a ocorrência for encerrada; não gera pendência nova.
+                    </p>
+                  )}
                   <div className="mt-2 grid grid-cols-3 gap-1">
                     {STATUSES.map((s) => (
                       <button key={s} onClick={() => setItem(it.id, { status: s })} className={cn('rounded-md border px-2 py-1.5 text-xs font-semibold', a?.status === s ? ST[s].cls : 'border-input text-muted-foreground')}>
