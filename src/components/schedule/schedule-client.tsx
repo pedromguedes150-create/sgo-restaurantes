@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS';
+type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'ATRASO';
 type ScheduleType = 'TWELVE36_ODD' | 'TWELVE36_EVEN' | 'SIX_ONE' | 'FIVE_TWO' | 'CUSTOM';
 interface Cell { planned: DayStatus; actual: DayStatus | null }
 interface Row { collaboratorId: string; name: string; jobTitle: string | null; typeLabel: string; scheduleType: ScheduleType; shiftLabel: string | null; days: Cell[] }
@@ -24,8 +24,9 @@ const STATUS: Record<DayStatus, { code: string; cls: string }> = {
   FALTA_JUST:   { code: 'FJ', cls: 'bg-medium/25 text-[#92600A] border border-medium/50' },
   ATESTADO:     { code: 'A',  cls: 'bg-blue-100 text-blue-700 border border-blue-300' },
   FERIAS:       { code: 'FE', cls: 'bg-success/15 text-success border border-success/40' },
+  ATRASO:       { code: 'AT', cls: 'bg-medium/15 text-[#92600A] border border-medium/40' },
 };
-const STATUS_ORDER: DayStatus[] = ['WORK', 'OFF', 'FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
+const STATUS_ORDER: DayStatus[] = ['WORK', 'ATRASO', 'OFF', 'FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
 const ABSENCE: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
 const TYPE_OPTIONS: { value: ScheduleType; label: string }[] = [
   { value: 'TWELVE36_ODD', label: '12x36 — Turno Ímpar' },
@@ -112,7 +113,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
         {STATUS_ORDER.map((s) => (
           <span key={s} className="inline-flex items-center gap-1">
             <span className={cn('inline-flex h-5 w-6 items-center justify-center rounded text-[11px] font-bold', STATUS[s].cls)}>{STATUS[s].code}</span>
-            {s === 'WORK' ? 'Trabalho' : s === 'OFF' ? 'Folga' : s === 'FALTA_INJUST' ? 'Falta injustificada' : s === 'FALTA_JUST' ? 'Falta justificada' : s === 'ATESTADO' ? 'Atestado' : 'Férias'}
+            {s === 'WORK' ? 'Trabalho' : s === 'ATRASO' ? 'Atraso' : s === 'OFF' ? 'Folga' : s === 'FALTA_INJUST' ? 'Falta injustificada' : s === 'FALTA_JUST' ? 'Falta justificada' : s === 'ATESTADO' ? 'Atestado' : 'Férias'}
           </span>
         ))}
       </div>

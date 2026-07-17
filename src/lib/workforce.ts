@@ -146,7 +146,8 @@ async function workingSetForDate(unitId: string, dateISO: string): Promise<Set<s
   const grid = await getScheduleGrid(unitId, y, m);
   for (const row of grid.rows) {
     const cell = row.days[d - 1];
-    if (cell && (cell.actual ?? cell.planned) === 'WORK') set.add(row.collaboratorId);
+    const st = cell ? (cell.actual ?? cell.planned) : null;
+    if (st === 'WORK' || st === 'ATRASO') set.add(row.collaboratorId); // atraso = presente (chegou tarde)
   }
   return set;
 }

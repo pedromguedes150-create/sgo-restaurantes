@@ -21,11 +21,11 @@ export const TYPE_LABELS: Record<ScheduleType, string> = {
   CUSTOM: 'Personalizada',
 };
 export const STATUS_CODE: Record<DayStatus, string> = {
-  WORK: 'T', OFF: 'F', FALTA_INJUST: 'FI', FALTA_JUST: 'FJ', ATESTADO: 'A', FERIAS: 'FE',
+  WORK: 'T', OFF: 'F', FALTA_INJUST: 'FI', FALTA_JUST: 'FJ', ATESTADO: 'A', FERIAS: 'FE', ATRASO: 'AT',
 };
 export const STATUS_LABEL: Record<DayStatus, string> = {
   WORK: 'Trabalho', OFF: 'Folga', FALTA_INJUST: 'Falta injustificada',
-  FALTA_JUST: 'Falta justificada', ATESTADO: 'Atestado', FERIAS: 'Férias',
+  FALTA_JUST: 'Falta justificada', ATESTADO: 'Atestado', FERIAS: 'Férias', ATRASO: 'Atraso',
 };
 export const ABSENCE_TYPES: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
 

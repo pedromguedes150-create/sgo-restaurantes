@@ -175,6 +175,28 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'meu-perfil',
+        title: 'Meu Perfil',
+        roles: [...MANAGERLINE, 'CEO', 'FINANCE'],
+        summary: 'Complete seus dados e troque sua senha.',
+        steps: [
+          'Toque no seu nome/avatar no topo da tela para abrir o Meu Perfil.',
+          'Complete o nome completo e o CPF — a Supervisão/Admin visualizam esses dados em Configurações → Usuários.',
+          'Troque a senha informando a senha atual + a nova (mínimo 8 caracteres).',
+        ],
+      },
+      {
+        id: 'escala-atraso',
+        title: 'Escala — Atraso',
+        roles: MANAGERLINE,
+        summary: 'Registrar atraso avisa o RH.',
+        steps: [
+          'Na Escala → aba Realizado, além de Falta/Atestado/Férias agora existe o status "Atraso" (AT).',
+          'Use quando o colaborador trabalhou mas chegou atrasado — ele continua aparecendo no Mapa do dia.',
+          'Cada atraso registrado entra nos Avisos ao RH automaticamente (facilita a conferência de ponto).',
+        ],
+      },
+      {
         id: 'lancamento-fora-do-prazo',
         title: 'Lançamento fora do prazo',
         roles: MANAGERLINE,

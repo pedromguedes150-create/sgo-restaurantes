@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.17.0 — 2026-07-16 (pacote 16/07 — bloco 1)
+### Corrigido
+- **Celular — módulos que não apareciam**: a página "Módulos" (navegação do celular) estava desatualizada — agora espelha o menu do computador: **Minha área, Folgas da equipe, Rotina do Supervisor, Visão Executiva, Treinamentos, Gestão de Troco e Ajuda** entraram, agrupados como no desktop e respeitando a matriz de Perfis.
+- **Túnel de publicação — proteção**: criado watchdog que verifica a cada 5 minutos se o túnel Cloudflare está vivo e o religa sozinho (causa da queda de 13→14/07: o processo encerrou quando a internet caiu e nada o reiniciava). Desfazer: `schtasks /Delete /TN "sgo-tunnel-watchdog" /F`.
+### Adicionado
+- **Meu Perfil** (toque no seu nome/avatar no topo): o próprio usuário completa **nome completo e CPF** e **troca a própria senha** (exige a atual). Supervisor/CEO ganham **visualização dos usuários** (Configurações → Usuários, sem edição).
+- **Escala — status "Atraso" (AT)** no Realizado: colaborador trabalhou mas chegou atrasado — segue aparecendo no Mapa do dia e o atraso entra automaticamente nos **Avisos ao RH** (conferência de ponto). *(Verificado também: atestado lançado já ajusta a Escala automaticamente — nenhuma correção necessária.)*
+
 ## v1.16.0 — 2026-07-08 (pacote 07/07 — parte 2: Pessoas + Integrações RH)
 ### Adicionado
 - **Central "APIs & Integrações"** (`Configurações → APIs & Integrações`, Admin/CEO): tudo que o SGO consome e expõe — API do RH (status/chave mascarada), **endpoints de recepção RH→SGO** (URLs prontas para colar no painel do RH + token), **webhook de férias SGO→RH** (destino + token para combinar com o RH) e os **últimos eventos** de integração. Toda nova API entra aqui.

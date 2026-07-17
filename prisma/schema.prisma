@@ -85,6 +85,8 @@ model Unit {
 model User {
   id             String   @id @default(cuid())
   name           String
+  /// CPF do usuário (só dígitos) — preenchido pelo próprio no Meu Perfil (16/07)
+  cpf            String?
   email          String   @unique
   passwordHash   String
   role           Role
@@ -1639,6 +1641,7 @@ enum DayStatus {
   FALTA_JUST   // FJ - Falta justificada
   ATESTADO     // A  - Atestado
   FERIAS       // FE - Férias
+  ATRASO       // AT - Atraso (trabalhou, chegou atrasado — avisa o RH p/ conferência de ponto)
 }
 
 /// Cadastro do padrão de escala do colaborador (gera o Planejado).

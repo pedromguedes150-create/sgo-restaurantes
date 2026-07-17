@@ -13,10 +13,21 @@ export default async function ConfiguracoesPage() {
   const isAdmin = user.role === 'ADMIN' || user.role === 'CEO';
 
   if (!isAdmin) {
+    const isSupervisor = user.role === 'SUPERVISOR';
     return (
       <div className="space-y-4">
         <h1 className="text-xl font-bold text-brand">Configurações</h1>
-        <Card><CardContent className="py-6 text-sm text-muted-foreground">Configurações são restritas ao Administrador.</CardContent></Card>
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/perfil" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
+            <Users className="h-5 w-5 text-accent" /> Meu Perfil (dados e senha)
+          </Link>
+          {isSupervisor && (
+            <Link href="/configuracoes/usuarios" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
+              <Users className="h-5 w-5 text-accent" /> Usuários (visualização)
+            </Link>
+          )}
+        </div>
+        <Card><CardContent className="py-6 text-sm text-muted-foreground">As demais configurações são restritas ao Administrador.</CardContent></Card>
       </div>
     );
   }

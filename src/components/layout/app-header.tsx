@@ -37,13 +37,16 @@ export function AppHeader({ userName, roleLabel, unread = 0 }: { userName: strin
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-sm font-black text-white">
-          {initials}
-        </div>
-        <div className="leading-tight">
-          <p className="text-sm font-semibold">{userName}</p>
-          <p className="text-xs text-white/70">{roleLabel}</p>
-        </div>
+        {/* Avatar/nome levam ao Meu Perfil (dados + troca de senha) */}
+        <Link href="/perfil" className="flex items-center gap-3 rounded-lg py-1 pr-2 hover:bg-white/10" aria-label="Meu Perfil">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-sm font-black text-white">
+            {initials}
+          </div>
+          <div className="leading-tight">
+            <p className="text-sm font-semibold">{userName}</p>
+            <p className="text-xs text-white/70">{roleLabel}</p>
+          </div>
+        </Link>
       </div>
       <div className="flex items-center gap-1">
         <Link href="/ajuda" aria-label="Treinamento da Plataforma" className="inline-flex h-12 w-12 items-center justify-center rounded-lg text-white hover:bg-white/10">
