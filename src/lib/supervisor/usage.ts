@@ -18,7 +18,7 @@ export interface UnitUsageRow {
   commandsPct: number; // idem
   occurrences: number; // nº no mês
   notes: number; // nº no mês
-  cashSessions: number; // caixas no mês (módulo Troco)
+  cashSessions: number; // movimentações do cofre no mês (módulo Troco v2)
   metaPct: number; // score da meta
   usagePct: number; // média dos indicadores de uso diário (checklist/waste/commands)
   tone: 'success' | 'medium' | 'critical';
@@ -55,7 +55,7 @@ export async function getUsageBoard(user: SessionUser, yearMonth: string): Promi
       where: { unitId: { in: ids }, createdAt: { gte: new Date(`${yearMonth}-01T00:00:00Z`), lt: nextMonthStart(yearMonth) } },
       _count: true,
     }),
-    prisma.cashSession.groupBy({ by: ['unitId'], where: { unitId: { in: ids }, operationalDate: { startsWith: yearMonth } }, _count: true }),
+    prisma.cashVaultMovement.groupBy({ by: ['unitId'], where: { unitId: { in: ids }, createdAt: { gte: new Date(`${yearMonth}-01T00:00:00Z`), lt: nextMonthStart(yearMonth) } }, _count: true }),
   ]);
 
   const countBy = (list: { unitId: string; _count: number }[]) => new Map(list.map((r) => [r.unitId, r._count]));

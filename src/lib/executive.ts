@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getUnitMonthScore } from '@/lib/tasks/summary';
 import { getUsageBoard } from '@/lib/supervisor/usage';
-import { getCashDashboard } from '@/lib/cash';
+import { getVaultAlerts } from '@/lib/cash-vault';
 import { getCertificatesReport } from '@/lib/certificates/query';
 import type { SessionUser } from '@/lib/auth/session';
 
@@ -22,8 +22,8 @@ export interface ExecutiveUnitRow {
   wasteKg: number;
   absenteeismPct: number;
   certDays: number;
-  cashDivergent: number;
-  cashDivergenceTotal: number;
+  cashDivergent: number; // retiradas proibidas do cofre no mês
+  cashDivergenceTotal: number; // total retirado (R$)
   maintenanceCost: number;
   maintenanceOpen: number;
   severeOccurrences: number; // gravidade alta/crítica no mês
@@ -49,7 +49,7 @@ export async function getExecutiveOverview(user: SessionUser, yearMonth: string)
 
   const [usage, cash, certs, wasteItems, tickets, occurrences, visits] = await Promise.all([
     getUsageBoard(user, yearMonth),
-    getCashDashboard(user, yearMonth),
+    getVaultAlerts(user, yearMonth),
     getCertificatesReport(user, yearMonth),
     prisma.wasteEntryItem.findMany({
       where: { entry: { unitId: { in: ids }, operationalDate: { startsWith: yearMonth } } },
@@ -105,8 +105,8 @@ export async function getExecutiveOverview(user: SessionUser, yearMonth: string)
       wasteKg: Math.round((wasteBy.get(u.id) ?? 0) * 10) / 10,
       absenteeismPct: cert?.absenteeismPct ?? 0,
       certDays: cert?.days ?? 0,
-      cashDivergent: c?.divergent ?? 0,
-      cashDivergenceTotal: c?.divergenceTotal ?? 0,
+      cashDivergent: c?.withdrawals ?? 0,
+      cashDivergenceTotal: c?.withdrawnTotal ?? 0,
       maintenanceCost: Math.round((m?.cost ?? 0) * 100) / 100,
       maintenanceOpen: m?.open ?? 0,
       severeOccurrences: occBy.get(u.id) ?? 0,

@@ -1214,6 +1214,60 @@ model CashSession {
   @@map("cash_sessions")
 }
 
+// ===== Módulo 18 v2 — Troco como COFRE (16/07, foto do Pedro) ================
+enum CashMovementType {
+  COUNT // conferência/posição completa por denominação (substitui o saldo)
+  REFILL // reposição de balde: sai miúdo do cofre, entram notas grandes do balde
+  OFFICE_SWAP // troca com o escritório: saem notas grandes, entram moedas/miúdos
+  WITHDRAWAL // retirada p/ pagamento (PROIBIDA — registra, avisa supervisão)
+  ADJUST // ajuste manual (supervisão)
+}
+
+/// Cofre de troco da unidade (1 por unidade). Saldo POR DENOMINAÇÃO em R$:
+/// { "200": 0, "100": 0, …, "0.05": 60, "outros": 250 } — como na folha do gerente.
+model CashVault {
+  id        String   @id @default(cuid())
+  unitId    String   @unique
+  balances  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cash_vaults")
+}
+
+/// Balde de troco de um caixa físico — valor-alvo pré-fixado pelo supervisor.
+model CashBucket {
+  id          String  @id @default(cuid())
+  unitId      String
+  name        String // ex.: "Caixa 1"
+  targetValue Decimal @db.Decimal(10, 2)
+  active      Boolean @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([unitId, active])
+  @@map("cash_buckets")
+}
+
+/// Movimento do cofre — deltas por denominação em R$ (positivo entra, negativo sai).
+model CashVaultMovement {
+  id            String           @id @default(cuid())
+  unitId        String
+  type          CashMovementType
+  bucketId      String?
+  bucketName    String?
+  deltas        Json
+  totalIn       Decimal          @db.Decimal(12, 2)
+  totalOut      Decimal          @db.Decimal(12, 2)
+  note          String?
+  createdById   String
+  createdByName String
+  createdAt     DateTime         @default(now())
+
+  @@index([unitId, createdAt])
+  @@index([unitId, type])
+  @@map("cash_vault_movements")
+}
+
 // ===== Módulo 17 — Rotina do Supervisor (Onda 4) =============================
 enum VisitStatus {
   PLANNED

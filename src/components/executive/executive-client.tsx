@@ -46,7 +46,7 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
           ['Uso médio do sistema', `${totals.usageAvg}%`, pctCls(totals.usageAvg)],
           ['Desperdício total', `${totals.wasteKg.toLocaleString('pt-BR')} kg`, ''],
           ['Dias de atestado', String(totals.certDays), ''],
-          ['Divergências de troco', `${totals.cashDivergent} (${brl(totals.cashDivergenceTotal)})`, totals.cashDivergent > 0 ? 'text-critical' : 'text-success'],
+          ['Retiradas do troco (proibidas)', `${totals.cashDivergent} (${brl(totals.cashDivergenceTotal)})`, totals.cashDivergent > 0 ? 'text-critical' : 'text-success'],
           ['Custo de manutenção', brl(totals.maintenanceCost), ''],
           ['Ocorrências graves', String(totals.severeOccurrences), totals.severeOccurrences > 0 ? 'text-critical' : 'text-success'],
           ['Visitas de supervisão', String(totals.visitsDone), ''],
@@ -68,7 +68,7 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
               <th className="p-2 text-right">Uso</th>
               <th className="p-2 text-right">Desperdício</th>
               <th className="p-2 text-right">Absent.</th>
-              <th className="p-2 text-right">Troco (div.)</th>
+              <th className="p-2 text-right">Troco (retiradas)</th>
               <th className="p-2 text-right">Manutenção</th>
               <th className="p-2 text-right">Ocorr. graves</th>
               <th className="p-2 text-right">Visitas</th>

@@ -9,6 +9,17 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.22.0 — 2026-07-16 (pacote 16/07 — bloco 6: Troco reformulado como COFRE)
+### Alterado
+- **Gestão de Troco reformulada** (modelo correto confirmado pelo Pedro + foto): agora é um **COFRE por unidade** com saldo **por denominação** (valor em R$ de cada nota/moeda, como a folha do gerente — 200/100/50/…/0,05 + "Outros") que alimenta os **baldes dos caixas** (valor-alvo fixado pela supervisão).
+### Adicionado
+- **Conferência diária**: lança a contagem completa por denominação (substitui o saldo; primeira contagem = posição inicial).
+- **Reposição de balde**: registra o que **saiu** do cofre (miúdos) e o que **entrou** (notas grandes do balde) — troca 1:1 validada.
+- **Troca com o escritório**: envia notas grandes, recebe moedas/miúdos (mesmo valor, validado).
+- **Retirada para pagamento (PROIBIDA)**: dá para registrar em emergência, mas em **vermelho com aviso forte** — supervisão e admins avisados **na hora** (trava total virá depois, como combinado).
+- **Indicador "hora de pedir troca"**: % de notas grandes no cofre (alerta ≥50%).
+- Painel da rede (Supervisão): cofres e **retiradas proibidas do mês por unidade**; Visão Executiva e Painel de Uso atualizados para o novo modelo.
+
 ## v1.21.0 — 2026-07-16 (pacote 16/07 — bloco 5: Contratos de Gás)
 ### Adicionado
 - **Gás — Contratos por unidade+fornecedor**: nova aba **Contratos** no módulo (Supervisão/Admin gerenciam): período, **quantidade (kg)** e **preço/kg acordados**, com espaço para lançar a **posição atual** de contrato que já estava andando ("já comprado"). A **baixa é automática** pelos recebimentos lançados da unidade+fornecedor dentro do período.
