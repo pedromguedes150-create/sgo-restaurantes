@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { listOccurrences, getOccurrenceSummary } from '@/lib/occurrences/query';
-import { GRAVITY_META, STATUS_META } from '@/lib/occurrences/labels';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { StatusBadge } from '@/components/ui/status-badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, AlertTriangle, Wrench, MonitorSmartphone } from 'lucide-react';
+import { OccurrencesClient, type OccItem } from '@/components/occurrences/occurrences-client';
 import type { OccurrenceStatus } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -31,6 +30,21 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
     { key: 'IN_PROGRESS', label: 'Em andamento' },
     { key: 'CLOSED', label: 'Encerradas' },
   ];
+
+  const items: OccItem[] = list.map((o) => ({
+    id: o.id,
+    number: o.number,
+    unitName: o.unit.name,
+    unitCode: o.unit.code,
+    typeName: o.typeName,
+    categoryName: o.categoryName,
+    description: o.description,
+    gravity: o.gravity,
+    status: o.status,
+    isRecurrence: o.isRecurrence,
+    attachments: o._count.attachments,
+    createdAt: o.createdAt.toISOString(),
+  }));
 
   return (
     <div className="space-y-5">
@@ -83,7 +97,7 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
         </Card>
       )}
 
-      {/* Filtros */}
+      {/* Filtros de status (barra superior) */}
       <div className="flex flex-wrap gap-2">
         {filters.map((f) => {
           const active = (f.key ?? undefined) === status;
@@ -100,42 +114,8 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
         })}
       </div>
 
-      {/* Lista — agrupada por unidade quando há mais de uma */}
-      <OccurrencesList list={list} />
-    </div>
-  );
-}
-
-function OccurrencesList({ list }: { list: Awaited<ReturnType<typeof listOccurrences>> }) {
-  if (list.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma ocorrência.</p>;
-
-  const byUnit = new Map<string, typeof list>();
-  for (const o of list) { const arr = byUnit.get(o.unit.name) ?? []; arr.push(o); byUnit.set(o.unit.name, arr as typeof list); }
-  const groups = [...byUnit.entries()];
-  const card = (o: (typeof list)[number]) => (
-    <Link key={o.id} href={`/modulos/ocorrencias/${o.id}`}>
-      <Card className="transition-colors hover:border-accent">
-        <CardContent className="flex items-start justify-between gap-3 py-3">
-          <div className="min-w-0">
-            <p className="font-semibold text-brand">{GRAVITY_META[o.gravity].emoji} #{o.unit.code}-{String(o.number).padStart(4, '0')} · {o.typeName}</p>
-            <p className="truncate text-sm text-muted-foreground">{o.categoryName} — {o.description}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{o.isRecurrence && '♻ reincidência'}{o.isRecurrence && o._count.attachments > 0 && ' · '}{o._count.attachments > 0 && `${o._count.attachments} anexo(s)`}</p>
-          </div>
-          <StatusBadge tone={STATUS_META[o.status].tone}>{STATUS_META[o.status].label}</StatusBadge>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-
-  if (groups.length <= 1) return <div className="space-y-2">{list.map(card)}</div>;
-  return (
-    <div className="space-y-4">
-      {groups.map(([unit, items]) => (
-        <div key={unit} className="space-y-2">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">{unit} <span className="font-normal">({items.length})</span></h2>
-          {items.map(card)}
-        </div>
-      ))}
+      {/* Lista — busca, filtros (unidade/gravidade) e unidades recolhidas */}
+      <OccurrencesClient items={items} />
     </div>
   );
 }

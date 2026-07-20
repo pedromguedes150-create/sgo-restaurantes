@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.24.0 — 2026-07-20 (ajustes pós-revisão do Pedro)
+### Corrigido / Ajustado
+- **Ocorrências (lista "Todas")**: cards agora mostram a **data/hora de criação**; unidades vêm **recolhidas** (abre ao tocar); nova **barra de busca** (nº, tipo, categoria, descrição) e **filtros no topo** (unidade + gravidade).
+- **Desperdício — Lanchonete** passa a ser lançada em **UNIDADES** (não kg), com **sub-itens por tipo de salgado** somando o total. (A funcionalidade já existia desde a v1.19; faltava a categoria estar marcada como "un" — corrigido no dado + seed.)
+- **Notas recebidas**: ordenação por **data de lançamento (mais recente primeiro)** confirmada no ar — antes a produção rodava uma imagem antiga.
+- **Pagamentos — cobertura de setor do freelancer**: recurso confirmado no ar; o seletor aparece assim que houver **setores+valores cadastrados** para o freelancer (Configurações → Pagamentos).
+
 ## v1.23.0 — 2026-07-16 (pacote 16/07 — bloco 7: Central da Meta + Simulação do Mapa)
 ### Adicionado
 - **Configuração da Meta centralizada** (`Metas → Configuração da Meta`; Admin edita, Supervisão visualiza): TODOS os componentes num lugar só — Checklists (peso por checklist), **NOVOS componentes diários "Desperdício" e "Comandas"** (cobertura mensal: dias preenchidos ÷ dias decorridos — sem preenchimento o % cai; **nascem com peso 0**), Comunicados, Treinamentos, Avaliações da equipe e a **penalidade por correções da supervisão** (fora do prazo).

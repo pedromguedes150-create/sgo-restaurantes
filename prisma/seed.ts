@@ -183,14 +183,14 @@ async function main() {
   await prisma.wasteEntry.deleteMany({});
   await prisma.wasteCategory.deleteMany({});
   const catData = [
-    { code: 'SELF', name: 'Self-Service', order: 1, base: 12 },
-    { code: 'CLIENT', name: 'Clientes', order: 2, base: 6 },
-    { code: 'SNACK', name: 'Lanchonete', order: 3, base: 3 },
-    { code: 'KITCHEN', name: 'Cozinha', order: 4, base: 8 },
+    { code: 'SELF', name: 'Self-Service', order: 1, base: 12, measure: 'kg' },
+    { code: 'CLIENT', name: 'Clientes', order: 2, base: 6, measure: 'kg' },
+    { code: 'SNACK', name: 'Lanchonete', order: 3, base: 3, measure: 'un' }, // lanchonete conta em UNIDADES por tipo de salgado (16/07)
+    { code: 'KITCHEN', name: 'Cozinha', order: 4, base: 8, measure: 'kg' },
   ];
   const cats = [];
   for (const c of catData) {
-    cats.push(await prisma.wasteCategory.create({ data: { code: c.code, name: c.name, order: c.order } }));
+    cats.push(await prisma.wasteCategory.create({ data: { code: c.code, name: c.name, order: c.order, measure: c.measure } }));
   }
 
   let wasteCount = 0;

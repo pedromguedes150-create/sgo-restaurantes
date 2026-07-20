@@ -1,0 +1,146 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Search, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { GRAVITY_META, STATUS_META } from '@/lib/occurrences/labels';
+import type { OccurrenceGravity, OccurrenceStatus } from '@prisma/client';
+
+export interface OccItem {
+  id: string;
+  number: number;
+  unitName: string;
+  unitCode: string;
+  typeName: string;
+  categoryName: string;
+  description: string;
+  gravity: OccurrenceGravity;
+  status: OccurrenceStatus;
+  isRecurrence: boolean;
+  attachments: number;
+  createdAt: string; // ISO
+}
+
+function fmtDateTime(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** Lista de ocorrências com busca, filtros na barra superior e unidades recolhidas (16/07). */
+export function OccurrencesClient({ items }: { items: OccItem[] }) {
+  const [q, setQ] = useState('');
+  const [unit, setUnit] = useState('ALL');
+  const [gravity, setGravity] = useState<'ALL' | OccurrenceGravity>('ALL');
+
+  const unitNames = useMemo(
+    () => [...new Set(items.map((o) => o.unitName))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [items],
+  );
+
+  const filtered = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    return items.filter((o) => {
+      if (unit !== 'ALL' && o.unitName !== unit) return false;
+      if (gravity !== 'ALL' && o.gravity !== gravity) return false;
+      if (!t) return true;
+      const num = `${o.unitCode}-${String(o.number).padStart(4, '0')}`.toLowerCase();
+      return (
+        num.includes(t) ||
+        o.typeName.toLowerCase().includes(t) ||
+        o.categoryName.toLowerCase().includes(t) ||
+        (o.description ?? '').toLowerCase().includes(t) ||
+        o.unitName.toLowerCase().includes(t)
+      );
+    });
+  }, [items, q, unit, gravity]);
+
+  const groups = useMemo(() => {
+    const m = new Map<string, OccItem[]>();
+    for (const o of filtered) {
+      const arr = m.get(o.unitName) ?? [];
+      arr.push(o);
+      m.set(o.unitName, arr);
+    }
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
+  }, [filtered]);
+
+  const sel = 'h-10 rounded-lg border-2 border-input bg-background px-2 text-sm';
+
+  const card = (o: OccItem) => (
+    <Link key={o.id} href={`/modulos/ocorrencias/${o.id}`}>
+      <Card className="transition-colors hover:border-accent">
+        <CardContent className="flex items-start justify-between gap-3 py-3">
+          <div className="min-w-0">
+            <p className="font-semibold text-brand">
+              {GRAVITY_META[o.gravity].emoji} #{o.unitCode}-{String(o.number).padStart(4, '0')} · {o.typeName}
+            </p>
+            <p className="truncate text-sm text-muted-foreground">{o.categoryName} — {o.description}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              🕒 {fmtDateTime(o.createdAt)}
+              {o.isRecurrence && ' · ♻ reincidência'}
+              {o.attachments > 0 && ` · ${o.attachments} anexo(s)`}
+            </p>
+          </div>
+          <StatusBadge tone={STATUS_META[o.status].tone}>{STATUS_META[o.status].label}</StatusBadge>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+
+  return (
+    <div className="space-y-3">
+      {/* Barra superior: busca + filtros */}
+      <div className="space-y-2 rounded-lg border bg-card p-2.5">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por nº, tipo, categoria, descrição…"
+            className="h-10 w-full rounded-lg border-2 border-input bg-background pl-9 pr-3 text-sm"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><SlidersHorizontal className="h-3.5 w-3.5" /> Filtros:</span>
+          {unitNames.length > 1 && (
+            <select value={unit} onChange={(e) => setUnit(e.target.value)} className={sel} aria-label="Unidade">
+              <option value="ALL">Todas as unidades</option>
+              {unitNames.map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
+          )}
+          <select value={gravity} onChange={(e) => setGravity(e.target.value as 'ALL' | OccurrenceGravity)} className={sel} aria-label="Gravidade">
+            <option value="ALL">Todas as gravidades</option>
+            <option value="LOW">🟢 Baixa</option>
+            <option value="MEDIUM">🟡 Média</option>
+            <option value="HIGH">🔴 Alta</option>
+            <option value="CRITICAL">⚫ Crítica</option>
+          </select>
+          <span className="ml-auto text-xs text-muted-foreground">{filtered.length} ocorrência(s)</span>
+        </div>
+      </div>
+
+      {filtered.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma ocorrência encontrada.</p>}
+
+      {/* Uma unidade: lista direta. Várias: cada unidade recolhida (fechada por padrão). */}
+      {groups.length === 1 && <div className="space-y-2">{groups[0][1].map(card)}</div>}
+      {groups.length > 1 && (
+        <div className="space-y-2">
+          {groups.map(([unitName, list]) => (
+            <details key={unitName} className="group rounded-lg border bg-card">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5">
+                <span className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                  {unitName} <span className="font-normal">({list.length})</span>
+                </span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="space-y-2 border-t p-2">{list.map(card)}</div>
+            </details>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
