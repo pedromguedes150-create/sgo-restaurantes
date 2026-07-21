@@ -2,19 +2,28 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, X, Banknote, Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Check, X, Banknote, Plus, Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { formatBRL } from '@/lib/utils';
 
+export interface PayDetail {
+  workDate: string | null; shift: string | null; workStartTime: string | null; workEndTime: string | null;
+  hours: number | null; transportValue: number | null; coverageSector: string | null;
+  collaboratorName: string | null; reason: string | null; beneficiary: string | null; description: string | null;
+  pixKey: string | null; supplierName: string | null; miscTypeName: string | null;
+  approvedBy: string | null; approvedAt: string | null; paidBy: string | null; paidAt: string | null;
+  hasAttachment: boolean; attachmentPath: string | null;
+}
 export interface PayReq {
   id: string;
   type: 'FREELANCER' | 'OVERTIME' | 'MISC';
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID';
   amount: number;
   unit: string;
+  unitCode?: string;
   requestedBy: string | null;
   title: string; // descrição curta (freelancer/colaborador/beneficiário)
   rejectionReason?: string | null;
@@ -26,6 +35,9 @@ export interface PayReq {
   dateEdited?: boolean;
   dateEditedByName?: string | null;
   entryDate?: string | null;
+  /// dia de referência (YYYY-MM-DD) p/ agrupamento por dia
+  day?: string;
+  detail?: PayDetail;
 }
 interface Unit { id: string; name: string }
 interface Freelancer { id: string; name: string; defaultValue: number; unitIds: string[]; sectorRates?: { sectorName: string; dayValue: number }[] }
@@ -211,34 +223,122 @@ function HistoryTab({ items, actions }: { items: PayReq[]; actions?: (r: PayReq)
   );
 }
 
-function List({ items, actions }: { items: PayReq[]; actions?: (r: PayReq) => React.ReactNode }) {
-  if (items.length === 0) return <p className="text-sm text-muted-foreground">Nada por aqui.</p>;
+function fmtDay(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return d ? `${d}/${m}/${y}` : iso;
+}
+function fmtDate(iso?: string | null): string { return iso ? new Date(iso).toLocaleDateString('pt-BR') : '—'; }
+
+/** Detalhes completos da solicitação (para conferência do supervisor) — 16/07. */
+function DetailView({ r }: { r: PayReq }) {
+  const d = r.detail;
+  const rows: [string, string | null][] = [];
+  if (r.type === 'FREELANCER') {
+    rows.push(['Freelancer', r.title]);
+    if (d?.pixKey) rows.push(['Chave PIX', d.pixKey]);
+    if (d?.coverageSector) rows.push(['Cobertura de setor', d.coverageSector]);
+    if (d?.workDate) rows.push(['Dia do trabalho', fmtDay(d.workDate)]);
+    if (d?.workStartTime || d?.workEndTime) rows.push(['Horário', `${d?.workStartTime ?? '?'} – ${d?.workEndTime ?? '?'}`]);
+    if (d?.hours != null) rows.push(['Horas', String(d.hours)]);
+  } else if (r.type === 'OVERTIME') {
+    rows.push(['Colaborador', d?.collaboratorName ?? r.title]);
+    if (d?.workDate) rows.push(['Data', fmtDay(d.workDate)]);
+    if (d?.hours != null) rows.push(['Horas', String(d.hours)]);
+    if (d?.reason) rows.push(['Motivo', d.reason]);
+  } else {
+    if (d?.miscTypeName) rows.push(['Tipo', d.miscTypeName]);
+    if (d?.beneficiary) rows.push(['Beneficiário', d.beneficiary]);
+    if (d?.supplierName) rows.push(['Fornecedor', d.supplierName]);
+  }
+  if (d?.transportValue) rows.push(['Vale transporte', formatBRL(d.transportValue)]);
+  if (d?.description) rows.push(['Observações', d.description]);
+  rows.push(['Valor', formatBRL(r.amount)]);
+  if (r.divergent) rows.push(['Valor padrão', r.standardValue != null ? formatBRL(r.standardValue) : '—']);
+  rows.push(['Unidade', r.unit]);
+  rows.push(['Solicitado por', `${r.requestedBy ?? '—'}${r.requestedAt ? ` em ${new Date(r.requestedAt).toLocaleString('pt-BR')}` : ''}`]);
+  if (d?.approvedBy) rows.push(['Aprovado por', `${d.approvedBy}${d.approvedAt ? ` em ${fmtDate(d.approvedAt)}` : ''}`]);
+  if (d?.paidBy) rows.push(['Pago por', `${d.paidBy}${d.paidAt ? ` em ${fmtDate(d.paidAt)}` : ''}`]);
+  if (r.rejectionReason) rows.push(['Rejeição', r.rejectionReason]);
   return (
-    <div className="space-y-2">
-      {items.map((r) => (
-        <div key={r.id} className="rounded-lg border bg-card p-3">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-brand">{TYPE_LABEL[r.type]} · {r.title}</p>
-            <StatusBadge tone={STATUS[r.status].tone}>{STATUS[r.status].label}</StatusBadge>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {r.unit} · {formatBRL(r.amount)}{r.requestedBy ? ` · por ${r.requestedBy}` : ''}
-            {r.requestedAt ? ` · solicitado ${new Date(r.requestedAt).toLocaleDateString('pt-BR')}` : ''}
-          </p>
-          {r.dateEdited && (
-            <p className="mt-0.5 text-xs font-semibold text-critical">
-              Data corrigida{r.entryDate ? ` p/ ${new Date(r.entryDate).toLocaleDateString('pt-BR')}` : ''}{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta
-            </p>
-          )}
-          {r.divergent && (
-            <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-medium">
-              <AlertTriangle className="h-3.5 w-3.5" /> Divergência: padrão {r.standardValue != null ? formatBRL(r.standardValue) : '—'}
-            </p>
-          )}
-          {r.rejectionReason && <p className="mt-1 text-xs text-critical">Rejeição: {r.rejectionReason}</p>}
-          {actions && <div className="mt-2">{actions(r)}</div>}
+    <div className="mt-2 space-y-1 rounded-md bg-surface p-2">
+      {rows.map(([k, v], i) => (
+        <div key={i} className="flex justify-between gap-3 text-xs">
+          <span className="shrink-0 text-muted-foreground">{k}</span>
+          <span className="text-right font-medium text-foreground">{v}</span>
         </div>
       ))}
+      {d?.hasAttachment && d.attachmentPath && (
+        <a href={`/${d.attachmentPath}`} target="_blank" rel="noreferrer" className="block pt-1 text-xs font-semibold text-accent underline">Ver anexo</a>
+      )}
+    </div>
+  );
+}
+
+function Row({ r, open, onToggle, actions }: { r: PayReq; open: boolean; onToggle: () => void; actions?: (r: PayReq) => React.ReactNode }) {
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <button onClick={onToggle} className="flex w-full items-start justify-between gap-2 text-left">
+        <span className="min-w-0">
+          <span className="block font-semibold text-brand">{TYPE_LABEL[r.type]} · {r.title}</span>
+          <span className="block text-xs text-muted-foreground">
+            {formatBRL(r.amount)}{r.requestedBy ? ` · por ${r.requestedBy}` : ''}
+            {r.requestedAt ? ` · solicitado ${new Date(r.requestedAt).toLocaleDateString('pt-BR')}` : ''}
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <StatusBadge tone={STATUS[r.status].tone}>{STATUS[r.status].label}</StatusBadge>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+        </span>
+      </button>
+      {r.dateEdited && (
+        <p className="mt-0.5 text-xs font-semibold text-critical">
+          Data corrigida{r.entryDate ? ` p/ ${new Date(r.entryDate).toLocaleDateString('pt-BR')}` : ''}{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta
+        </p>
+      )}
+      {r.divergent && (
+        <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-medium">
+          <AlertTriangle className="h-3.5 w-3.5" /> Divergência: padrão {r.standardValue != null ? formatBRL(r.standardValue) : '—'}
+        </p>
+      )}
+      {open && <DetailView r={r} />}
+      {actions && <div className="mt-2">{actions(r)}</div>}
+    </div>
+  );
+}
+
+function List({ items, actions }: { items: PayReq[]; actions?: (r: PayReq) => React.ReactNode }) {
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setOpen((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  if (items.length === 0) return <p className="text-sm text-muted-foreground">Nada por aqui.</p>;
+
+  // Agrupa por DIA (mais recente primeiro) e, dentro do dia, por UNIDADE (pedido 16/07)
+  const byDay = new Map<string, PayReq[]>();
+  for (const r of items) { const k = r.day ?? (r.requestedAt?.slice(0, 10) ?? '—'); const arr = byDay.get(k) ?? []; arr.push(r); byDay.set(k, arr); }
+  const days = [...byDay.keys()].sort((a, b) => b.localeCompare(a));
+
+  return (
+    <div className="space-y-4">
+      {days.map((day) => {
+        const dayItems = byDay.get(day)!;
+        const byUnit = new Map<string, PayReq[]>();
+        for (const r of dayItems) { const arr = byUnit.get(r.unit) ?? []; arr.push(r); byUnit.set(r.unit, arr); }
+        const unitNames = [...byUnit.keys()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const dayTotal = dayItems.reduce((s, r) => s + r.amount, 0);
+        return (
+          <div key={day} className="space-y-2">
+            <div className="flex items-center justify-between border-b pb-1">
+              <p className="text-sm font-bold text-brand">📅 {fmtDay(day)}</p>
+              <span className="text-xs text-muted-foreground">{dayItems.length} lançamento(s) · {formatBRL(dayTotal)}</span>
+            </div>
+            {unitNames.map((u) => (
+              <div key={u} className="space-y-1.5">
+                {unitNames.length > 1 && <p className="pt-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{u} <span className="font-normal">({byUnit.get(u)!.length})</span></p>}
+                {byUnit.get(u)!.map((r) => <Row key={r.id} r={r} open={open.has(r.id)} onToggle={() => toggle(r.id)} actions={actions} />)}
+              </div>
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

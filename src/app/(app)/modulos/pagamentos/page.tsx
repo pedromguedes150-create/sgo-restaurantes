@@ -12,10 +12,13 @@ import type { PaymentRequest } from '@prisma/client';
 export const dynamic = 'force-dynamic';
 
 type ReqRow = PaymentRequest & {
-  unit: { name: string };
+  unit: { name: string; code: string };
   requestedBy: { name: string } | null;
-  freelancer: { name: string } | null;
+  approvedBy: { name: string } | null;
+  paidBy: { name: string } | null;
+  freelancer: { name: string; pixKey: string | null } | null;
   miscType: { name: string } | null;
+  supplier: { name: string } | null;
 };
 
 function toDTO(r: ReqRow): PayReq {
@@ -25,12 +28,15 @@ function toDTO(r: ReqRow): PayReq {
       : r.type === 'OVERTIME'
         ? r.collaboratorName ?? 'Hora extra'
         : `${r.miscType?.name ?? 'Avulso'}${r.beneficiary ? ` — ${r.beneficiary}` : ''}`;
+  // Dia de referência para agrupamento: data efetiva/trabalho quando houver, senão a solicitação
+  const day = (r.entryDate ?? r.workDate ?? r.createdAt).toISOString().slice(0, 10);
   return {
     id: r.id,
     type: r.type,
     status: r.status,
     amount: Number(r.amount),
     unit: r.unit.name,
+    unitCode: r.unit.code,
     requestedBy: r.requestedBy?.name ?? null,
     title,
     rejectionReason: r.rejectionReason,
@@ -40,6 +46,30 @@ function toDTO(r: ReqRow): PayReq {
     entryDate: r.entryDate ? r.entryDate.toISOString() : null,
     dateEdited: r.dateEdited,
     dateEditedByName: r.dateEditedByName,
+    day,
+    // Detalhes para conferência (expandir no card)
+    detail: {
+      workDate: r.workDate ? r.workDate.toISOString().slice(0, 10) : null,
+      shift: r.shift ?? null,
+      workStartTime: r.workStartTime ?? null,
+      workEndTime: r.workEndTime ?? null,
+      hours: r.hours ?? null,
+      transportValue: r.transportValue != null ? Number(r.transportValue) : null,
+      coverageSector: r.coverageSector ?? null,
+      collaboratorName: r.collaboratorName ?? null,
+      reason: r.reason ?? null,
+      beneficiary: r.beneficiary ?? null,
+      description: r.description ?? null,
+      pixKey: r.freelancer?.pixKey ?? null,
+      supplierName: r.supplier?.name ?? null,
+      miscTypeName: r.miscType?.name ?? null,
+      approvedBy: r.approvedBy?.name ?? null,
+      approvedAt: r.approvedAt ? r.approvedAt.toISOString() : null,
+      paidBy: r.paidBy?.name ?? null,
+      paidAt: r.paidAt ? r.paidAt.toISOString() : null,
+      hasAttachment: Boolean(r.attachmentPath),
+      attachmentPath: r.attachmentPath ?? null,
+    },
   };
 }
 

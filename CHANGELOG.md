@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.26.0 — 2026-07-20 (pacote 20/07 — bloco 2: Pagamentos por dia/unidade + detalhes)
+### Alterado
+- **Pagamentos — todas as abas** (Minhas, Para Aprovar, Pagar, Histórico): lançamentos **agrupados por DIA e por UNIDADE** (dia mais recente primeiro, total do dia no cabeçalho) para a conferência do supervisor.
+- **Clicar na solicitação abre os detalhes completos** (freelancer+PIX, cobertura de setor, dia/horário/horas, VT, motivo, beneficiário/fornecedor, observações, quem aprovou/pagou e quando, anexo) — em qualquer aba.
+
 ## v1.25.0 — 2026-07-20 (pacote 20/07 — bloco 1: Tarefas N/A + Notificações + Gás)
 ### Adicionado
 - **Checklist: "Não se aplica" (⚪)** — 4ª opção por item, neutra (não gera ocorrência, não entra em correções).

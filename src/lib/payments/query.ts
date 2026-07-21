@@ -7,8 +7,10 @@ const REQUEST_INCLUDE = {
   unit: { select: { name: true, code: true } },
   requestedBy: { select: { name: true } },
   approvedBy: { select: { name: true } },
-  freelancer: { select: { name: true } },
+  paidBy: { select: { name: true } },
+  freelancer: { select: { name: true, pixKey: true } },
   miscType: { select: { name: true } },
+  supplier: { select: { name: true } },
 } satisfies Prisma.PaymentRequestInclude;
 
 /** Escopo de pagamentos: FINANCE e CEO/ADMIN veem toda a rede; demais, suas unidades. */
