@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Eye, Trash2, CheckSquare, Square, X } from 'lucide-react';
+import { Eye, Trash2, CheckSquare, Square, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -59,7 +59,7 @@ export function ChecklistHistoryList({ groups, isAdmin, groupByUnit = false }: {
 
       {groups.length === 0 && <p className="text-sm text-muted-foreground">Nenhum registro no período.</p>}
 
-      {groups.map((g) => {
+      {groups.map((g, gi) => {
         const renderItem = (i: HistItem, showUnit: boolean) => {
           const checked = sel.has(i.id);
           const st = ST[i.status] ?? ST.PENDING;
@@ -95,16 +95,24 @@ export function ChecklistHistoryList({ groups, isAdmin, groupByUnit = false }: {
 
         return (
           <Card key={g.date}>
-            <CardContent className="space-y-1.5 pt-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{g.date}</p>
-              {useUnitGroups
-                ? [...byUnit.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR')).map(([unit, items]) => (
-                    <div key={unit} className="space-y-1.5">
-                      <p className="pt-1 text-xs font-semibold text-brand">{unit} <span className="font-normal text-muted-foreground">({items.length})</span></p>
-                      {items.map((i) => renderItem(i, false))}
-                    </div>
-                  ))
-                : g.items.map((i) => renderItem(i, true))}
+            <CardContent className="pt-4">
+              {/* Dia recolhível — abre o mais recente por padrão; em modo seleção fica aberto (16/07) */}
+              <details open={selecting || gi === 0} className="group">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{g.date} <span className="font-normal normal-case">· {g.items.length} checklist(s)</span></span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="mt-1.5 space-y-1.5">
+                  {useUnitGroups
+                    ? [...byUnit.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR')).map(([unit, items]) => (
+                        <div key={unit} className="space-y-1.5">
+                          <p className="pt-1 text-xs font-semibold text-brand">{unit} <span className="font-normal text-muted-foreground">({items.length})</span></p>
+                          {items.map((i) => renderItem(i, false))}
+                        </div>
+                      ))
+                    : g.items.map((i) => renderItem(i, true))}
+                </div>
+              </details>
             </CardContent>
           </Card>
         );

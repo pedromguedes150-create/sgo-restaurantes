@@ -69,7 +69,7 @@ export async function completeTask(
   return { ok: true };
 }
 
-export interface ItemAnswer { itemId: string; itemText: string; status: 'OK' | 'EM_CORRECAO' | 'A_CORRIGIR'; note?: string }
+export interface ItemAnswer { itemId: string; itemText: string; status: 'OK' | 'EM_CORRECAO' | 'A_CORRIGIR' | 'NAO_SE_APLICA'; note?: string }
 
 /**
  * Conclui um checklist ESTRUTURADO: respostas dos itens + fotos (até 5).

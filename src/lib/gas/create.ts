@@ -100,3 +100,43 @@ export async function createGasReceipt(user: SessionUser, input: CreateGasInput,
 
   return { ok: true, id: rec.id, pricePerKg, variationPct, alerted };
 }
+
+export interface EditGasInput { quantityKg?: number; totalValue?: number; supplierId?: string | null; observation?: string | null }
+export type EditGasResult = { ok: true } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND' };
+
+/**
+ * Corrige um lançamento de gás (erro de digitação do gerente) — Supervisão/Admin.
+ * Recalcula preço/kg e variação; NÃO mexe na meta (só a edição de DATA penaliza).
+ */
+export async function editGasReceipt(user: SessionUser, id: string, input: EditGasInput, ctx: Ctx = {}): Promise<EditGasResult> {
+  if (!['ADMIN', 'SUPERVISOR', 'CEO'].includes(user.role)) return { ok: false, reason: 'FORBIDDEN' };
+  const rec = await prisma.gasReceipt.findUnique({ where: { id }, select: { id: true, unitId: true, quantityKg: true, totalValue: true, prevPricePerKg: true, supplierId: true, observation: true } });
+  if (!rec) return { ok: false, reason: 'NOT_FOUND' };
+  try { assertUnitAccess(user, rec.unitId); } catch (e) {
+    if (e instanceof UnitScopeError) return { ok: false, reason: 'FORBIDDEN' };
+    throw e;
+  }
+  const qty = input.quantityKg != null ? Number(input.quantityKg) : Number(rec.quantityKg);
+  const total = input.totalValue != null ? Number(input.totalValue) : Number(rec.totalValue);
+  if (!(qty > 0) || !(total > 0)) return { ok: false, reason: 'INVALID' };
+  const pricePerKg = Math.round((total / qty) * 10000) / 10000;
+  const prevPrice = rec.prevPricePerKg != null ? Number(rec.prevPricePerKg) : null;
+  const variationPct = prevPrice && prevPrice > 0 ? Math.round(((pricePerKg - prevPrice) / prevPrice) * 1000) / 10 : null;
+  const threshold = await getGasAlertPct();
+  const alerted = variationPct != null && variationPct > threshold;
+
+  await prisma.gasReceipt.update({
+    where: { id },
+    data: {
+      quantityKg: qty,
+      totalValue: total,
+      pricePerKg,
+      variationPct,
+      alerted,
+      supplierId: input.supplierId === undefined ? rec.supplierId : (input.supplierId || null),
+      observation: input.observation === undefined ? rec.observation : (input.observation?.trim() || null),
+    },
+  });
+  await audit({ userId: user.id, unitId: rec.unitId, action: 'GAS_RECEIPT_EDIT', module: 'GAS', entity: 'gas_receipt', entityId: id, metadata: { qty, total, pricePerKg }, ...ctx });
+  return { ok: true };
+}

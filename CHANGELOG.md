@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.25.0 — 2026-07-20 (pacote 20/07 — bloco 1: Tarefas N/A + Notificações + Gás)
+### Adicionado
+- **Checklist: "Não se aplica" (⚪)** — 4ª opção por item, neutra (não gera ocorrência, não entra em correções).
+- **Histórico de checklists recolhível** — cada dia abre/fecha (o mais recente aberto); em modo de exclusão fica aberto.
+- **Notificações com filtros por tipo** — chips Todas / 💳 Pagamentos / 👥 Pessoal / 🍽️ Operação / Outros (com contagem).
+- **Gás: editar lançamento** (kg + valor) por erro de digitação do gerente — Supervisão/Admin, recalcula preço/kg; **não interfere na meta** (só a edição de DATA penaliza).
+
 ## v1.24.0 — 2026-07-20 (ajustes pós-revisão do Pedro)
 ### Corrigido / Ajustado
 - **Ocorrências (lista "Todas")**: cards agora mostram a **data/hora de criação**; unidades vêm **recolhidas** (abre ao tocar); nova **barra de busca** (nº, tipo, categoria, descrição) e **filtros no topo** (unidade + gravidade).

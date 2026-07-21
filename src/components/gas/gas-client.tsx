@@ -434,6 +434,11 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
   const [q, setQ] = useState('');
   const [unit, setUnit] = useState('');
   const [supplier, setSupplier] = useState('');
+  // Correção de lançamento (kg/valor) por erro do gerente — NÃO interfere na meta (16/07)
+  const [editId, setEditId] = useState<string | null>(null);
+  const [eKg, setEKg] = useState('');
+  const [eTotal, setETotal] = useState('');
+  const [eBusy, setEBusy] = useState(false);
   const unitNames = useMemo(() => [...new Set(rows.map((r) => r.unit))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [rows]);
   const supplierNames = useMemo(() => [...new Set(rows.map((r) => r.supplier))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [rows]);
   const shown = useMemo(() => rows.filter((r) =>
@@ -447,6 +452,18 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
     if (!v) return;
     const res = await fetch('/api/entry-date', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ module: 'gas', id: r.id, date: v.trim() }) });
     if (res.ok) router.refresh(); else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
+  }
+
+  function startEdit(r: GasRow) { setEditId(r.id); setEKg(String(r.qty).replace('.', ',')); setETotal(String(r.total).replace('.', ',')); }
+  async function saveEdit(r: GasRow) {
+    const kgN = parseFloat(eKg.replace(',', '.'));
+    const totN = parseFloat(eTotal.replace(',', '.'));
+    if (!(kgN > 0) || !(totN > 0)) { alert('Informe kg e valor válidos.'); return; }
+    setEBusy(true);
+    try {
+      const res = await fetch('/api/gas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'edit', id: r.id, quantityKg: kgN, totalValue: totN }) });
+      if (res.ok) { setEditId(null); router.refresh(); } else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
+    } finally { setEBusy(false); }
   }
 
   const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
@@ -481,8 +498,17 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
             </div>
             {r.alerted && <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-critical"><AlertTriangle className="h-3.5 w-3.5" /> Alta acima do limite</p>}
             {r.dateEdited && <p className="mt-1 text-xs font-semibold text-critical">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
-            {(isAdmin || canEditDate) && (
+            {editId === r.id ? (
+              <div className="mt-2 flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-2">
+                <div><span className="block text-[11px] text-muted-foreground">Quantidade (kg)</span><Input value={eKg} onChange={(e) => setEKg(e.target.value)} inputMode="decimal" className="h-9 w-28 text-sm" /></div>
+                <div><span className="block text-[11px] text-muted-foreground">Valor total (R$)</span><Input value={eTotal} onChange={(e) => setETotal(e.target.value)} inputMode="decimal" className="h-9 w-28 text-sm" /></div>
+                <Button size="sm" disabled={eBusy} onClick={() => void saveEdit(r)}>Salvar</Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>Cancelar</Button>
+                <span className="w-full text-[11px] text-muted-foreground">Correção de erro de lançamento — recalcula o preço/kg. Não interfere na meta do gerente.</span>
+              </div>
+            ) : (isAdmin || canEditDate) && (
               <div className="mt-2 flex flex-wrap gap-2">
+                {(isAdmin || canEditDate) && <Button size="sm" variant="ghost" onClick={() => startEdit(r)}><Pencil className="h-4 w-4" /> Editar lançamento</Button>}
                 {canEditDate && <Button size="sm" variant="ghost" onClick={() => void editDate(r)}><Pencil className="h-4 w-4" /> Editar data</Button>}
                 {isAdmin && <DeleteOpButton entity="gas" id={r.id} label={`o recebimento de gás (${r.date}, ${r.unit})`} />}
               </div>

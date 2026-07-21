@@ -7,17 +7,18 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { compressImage } from '@/lib/image-compress';
 
-type ItemStatus = 'OK' | 'EM_CORRECAO' | 'A_CORRIGIR';
+type ItemStatus = 'OK' | 'EM_CORRECAO' | 'A_CORRIGIR' | 'NAO_SE_APLICA';
 interface Item { id: string; section: string | null; text: string; requiresPhoto: boolean; aiCheck?: boolean }
 interface AiState { loading?: boolean; configured?: boolean; verdict?: 'COMPATIVEL' | 'DIVERGENTE' | 'INCERTO'; observations?: string; error?: string }
 interface Answer { status: ItemStatus; note?: string }
 
 const ST: Record<ItemStatus, { label: string; short: string; cls: string }> = {
-  OK:          { label: 'De acordo',  short: '🟢', cls: 'bg-success text-white border-success' },
-  EM_CORRECAO: { label: 'Em correção', short: '🟡', cls: 'bg-medium text-[#3b2a00] border-medium' },
-  A_CORRIGIR:  { label: 'A corrigir',  short: '🔴', cls: 'bg-critical text-white border-critical' },
+  OK:            { label: 'De acordo',    short: '🟢', cls: 'bg-success text-white border-success' },
+  EM_CORRECAO:   { label: 'Em correção',  short: '🟡', cls: 'bg-medium text-[#3b2a00] border-medium' },
+  A_CORRIGIR:    { label: 'A corrigir',   short: '🔴', cls: 'bg-critical text-white border-critical' },
+  NAO_SE_APLICA: { label: 'Não se aplica', short: '⚪', cls: 'bg-muted text-muted-foreground border-input' },
 };
-const STATUSES: ItemStatus[] = ['OK', 'EM_CORRECAO', 'A_CORRIGIR'];
+const STATUSES: ItemStatus[] = ['OK', 'EM_CORRECAO', 'A_CORRIGIR', 'NAO_SE_APLICA'];
 
 export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus, items, initialAnswers, responses = [], photos, openIssues = {} }: {
   instanceId: string; requiresEvidence: boolean; done: boolean; lateStatus: boolean;
@@ -193,15 +194,18 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                       ⚠ Problema em aberto desde {openIssues[it.id].since} (ocorrência nº {openIssues[it.id].number}) — some daqui quando a ocorrência for encerrada; não gera pendência nova.
                     </p>
                   )}
-                  <div className="mt-2 grid grid-cols-3 gap-1">
+                  <div className="mt-2 grid grid-cols-2 gap-1">
                     {STATUSES.map((s) => (
                       <button key={s} onClick={() => setItem(it.id, { status: s })} className={cn('rounded-md border px-2 py-1.5 text-xs font-semibold', a?.status === s ? ST[s].cls : 'border-input text-muted-foreground')}>
                         {ST[s].short} {ST[s].label}
                       </button>
                     ))}
                   </div>
-                  {a && a.status !== 'OK' && (
+                  {a && (a.status === 'EM_CORRECAO' || a.status === 'A_CORRIGIR') && (
                     <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Observação (o que corrigir)" className="mt-2 h-9 w-full rounded-md border-2 border-input bg-background px-2 text-sm" />
+                  )}
+                  {a && a.status === 'NAO_SE_APLICA' && (
+                    <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Motivo (opcional)" className="mt-2 h-9 w-full rounded-md border-2 border-input bg-background px-2 text-sm" />
                   )}
                   {it.aiCheck && (
                     <div className="mt-2 rounded-md border border-dashed bg-background/60 p-2">

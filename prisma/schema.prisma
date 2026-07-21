@@ -227,6 +227,7 @@ enum ItemStatus {
   OK // De acordo
   EM_CORRECAO // Em correção
   A_CORRIGIR // A corrigir (gera ocorrência)
+  NAO_SE_APLICA // Não se aplica (neutro — não gera ocorrência)
 }
 
 /// Modelo (catálogo) de tarefa/checklist configurável por unidade (Módulo 1 / Config).

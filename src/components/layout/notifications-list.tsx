@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Check, CheckCheck } from 'lucide-react';
@@ -13,24 +14,60 @@ export interface NotifItem {
   link: string | null;
   read: boolean;
   critical: boolean;
+  module: string | null;
   createdAt: string;
 }
 
+type Cat = 'ALL' | 'PAYMENTS' | 'PEOPLE' | 'OPS' | 'OTHER';
+
+/** Agrupa os módulos das notificações em categorias amigáveis (16/07). */
+function categoryOf(module: string | null): Exclude<Cat, 'ALL'> {
+  const m = (module ?? '').toUpperCase();
+  if (m === 'PAYMENTS') return 'PAYMENTS';
+  if (['PEOPLE', 'SCHEDULE', 'CERTIFICATES', 'TRAININGS', 'TRAINING', 'TERMINATIONS'].includes(m)) return 'PEOPLE';
+  if (['TASKS', 'WASTE', 'COMMANDS', 'OCCURRENCES', 'NOTES', 'GAS', 'OIL', 'CASH', 'INVENTORY', 'MAINTENANCE', 'CANCELLATIONS'].includes(m)) return 'OPS';
+  return 'OTHER';
+}
+
+const CAT_LABEL: { key: Cat; label: string }[] = [
+  { key: 'ALL', label: 'Todas' },
+  { key: 'PAYMENTS', label: '💳 Pagamentos' },
+  { key: 'PEOPLE', label: '👥 Pessoal' },
+  { key: 'OPS', label: '🍽️ Operação' },
+  { key: 'OTHER', label: 'Outros' },
+];
+
 export function NotificationsList({ items }: { items: NotifItem[] }) {
   const router = useRouter();
+  const [cat, setCat] = useState<Cat>('ALL');
 
   async function read(id?: string) {
     await fetch('/api/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(id ? { id } : { all: true }) });
     router.refresh();
   }
 
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const n of items) { const k = categoryOf(n.module); c[k] = (c[k] ?? 0) + 1; }
+    return c;
+  }, [items]);
+  const filtered = cat === 'ALL' ? items : items.filter((n) => categoryOf(n.module) === cat);
+
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
-        <Button size="sm" variant="outline" onClick={() => read()}><CheckCheck className="h-4 w-4" /> Marcar todas como lidas</Button>
+      <div className="flex flex-wrap items-center gap-2">
+        {CAT_LABEL.map((c) => {
+          const n = c.key === 'ALL' ? items.length : (counts[c.key] ?? 0);
+          return (
+            <button key={c.key} onClick={() => setCat(c.key)} className={cn('rounded-full border px-3 py-1.5 text-sm font-medium', cat === c.key ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground')}>
+              {c.label} <span className="text-xs opacity-80">({n})</span>
+            </button>
+          );
+        })}
+        <Button size="sm" variant="outline" className="ml-auto" onClick={() => read()}><CheckCheck className="h-4 w-4" /> Marcar todas como lidas</Button>
       </div>
-      {items.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma notificação.</p>}
-      {items.map((n) => (
+      {filtered.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma notificação nesta categoria.</p>}
+      {filtered.map((n) => (
         <div key={n.id} className={cn('rounded-lg border bg-card p-3', !n.read && 'border-accent/50 bg-accent/5', n.critical && 'border-critical/50 bg-critical/5')}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
