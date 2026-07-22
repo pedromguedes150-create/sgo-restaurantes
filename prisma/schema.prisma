@@ -791,6 +791,25 @@ model ManagerLeave {
   @@map("manager_leaves")
 }
 
+/// Análise de "Comandas em Aberto" (Teknisa) — antifraude das 2 comandas (20/07).
+/// Supervisor/Admin sobe o relatório; guardamos as suspeitas (aberta + valor + data < hoje).
+model OpenCommandAnalysis {
+  id              String   @id @default(cuid())
+  unitId          String
+  createdById     String
+  createdByName   String
+  cutDate         String // yyyy-mm-dd usado como corte
+  fileName        String?
+  totalCommands   Int
+  suspectCount    Int
+  suspectValue    Decimal  @db.Decimal(12, 2)
+  suspects        Json // [{ number, openedAt, value, daysOpen, items:[{name,qty,value}] }]
+  createdAt       DateTime @default(now())
+
+  @@index([unitId, createdAt])
+  @@map("open_command_analyses")
+}
+
 /// Horário de trabalho do gerente (padrão semanal recorrente) — base do calendário
 /// consolidado de gerência por unidade (20/07). weekdays = dias trabalhados (0=dom..6=sáb).
 model ManagerWorkSchedule {

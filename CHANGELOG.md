@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.34.0 — 2026-07-21 (Antifraude: análise de comandas em aberto)
+### Adicionado
+- **Comandas → Análise de comandas em aberto** (Supervisão/Admin): sobe o relatório do Teknisa (.xlsx/.csv) e o SGO destaca **comandas abertas com valor e data de abertura anterior ao corte** (possível fraude das "2 comandas") — nº, data/hora, dias em aberto, valor e itens; ordena pelas mais antigas; imprimível para o monitoramento buscar câmeras. Histórico das análises por unidade. `src/lib/commands/open-analysis.ts`, `OpenCommandAnalysis`.
+
 ## v1.33.0 — 2026-07-21 (Painel resumo da unidade — reunião supervisor×gerente)
 ### Adicionado
 - **Painel da unidade** (`/modulos/painel-unidade`, Supervisão/Admin): uma tela por unidade+mês para a reunião com o gerente — **performance** (meta, uso, checklists, desperdício), **preenchimento operacional** (checklists concluídos/atrasados/não realizados, cobertura de comandas/desperdício, notas, movimentos do cofre, ocorrências) e **detalhamento da meta**. Seletor de unidade/mês + **Imprimir/PDF**. Reaproveita os números de `getUsageBoard`/`getMetaBreakdown` (sem divergência). Link na Rotina do Supervisor.

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -39,9 +40,14 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-brand">Contagem de Comandas</h1>
-        <p className="text-sm text-muted-foreground">Dia operacional {operationalDate}</p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-bold text-brand">Contagem de Comandas</h1>
+          <p className="text-sm text-muted-foreground">Dia operacional {operationalDate}</p>
+        </div>
+        {canResolve && (
+          <Link href="/modulos/comandas/analise-aberto" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent">🛡️ Análise de comandas em aberto</Link>
+        )}
       </div>
 
       {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
