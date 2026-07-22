@@ -7,7 +7,7 @@ import type { Role } from '@prisma/client';
  * `roles` = perfis para quem o guia é mais relevante (todos veem se ligarem "ver tudo").
  */
 
-export const ALL_ROLES: Role[] = ['CEO', 'ADMIN', 'SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE'];
+export const ALL_ROLES: Role[] = ['CEO', 'ADMIN', 'SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE', 'CASHIER'];
 
 export interface Guide {
   id: string;
@@ -149,6 +149,27 @@ export const GUIDE: GuideSection[] = [
           'Conferência em grade: abra COMANDAS e toque em cada comanda conferida (fica verde), como na folha de papel. Um contador mostra conferidas/faltando. Use "Marcar todas"/"Limpar", a seleção por FAIXA (de X até Y — marca/desmarca em lote as sequências guardadas) e o filtro por número para agilizar.',
           'Ao "Confirmar conferência", as comandas NÃO marcadas viram as ausentes: o sistema registra a contagem e alerta os supervisores automaticamente (observação obrigatória quando há falta).',
           'Atalhos: "Todas presentes" registra tudo presente num toque; o lançamento manual de ausentes continua disponível (recolhido).',
+          'Mais rápido: o botão "📷 Conferir com leitor" abre a conferência por código de barras (ver o guia próprio) — o caixa passa o leitor em vez de tocar comanda por comanda.',
+        ],
+      },
+      {
+        id: 'comandas-leitor',
+        title: 'Conferência de comandas com leitor de código de barras',
+        roles: [...MANAGERLINE, 'CASHIER'],
+        summary: 'O caixa bipa as comandas presentes e o sistema calcula as faltantes sozinho.',
+        steps: [
+          'O Administrador cria o usuário do caixa em Configurações → Usuários com o perfil "Caixa" e vincula a unidade. Esse perfil só enxerga a conferência de comandas.',
+          'Na máquina do caixa, entre no SGO com esse usuário — a tela de conferência abre direto.',
+          'O leitor funciona como teclado: clique uma vez no campo grande e vá passando o leitor em cada comanda presente. Não precisa tocar em nada entre uma comanda e outra.',
+          'Os contadores no topo mostram conferidas / ativas / faltando em tempo real. "Desfazer última" corrige um bipe errado.',
+          'Terminou a bandeja? Toque em "Concluir conferência", confira a lista de faltantes na confirmação e registre.',
+          'As faltantes viram divergências e o supervisor da unidade é avisado na hora — exatamente como na conferência em grade.',
+        ],
+        tips: [
+          'Leituras repetidas são ignoradas (aparece "já bipada") — não tem risco de contar a mesma comanda duas vezes.',
+          'Se o código bipado não pertencer à sequência da unidade, a tela avisa e mostra o código lido, em vez de aceitar em silêncio.',
+          'Comanda em uso na mesa: bipe assim que ela voltar, ou registre na observação antes de concluir.',
+          'Se a unidade já tiver subido o relatório de "Comandas em Aberto", ao concluir o sistema mostra quais faltantes estão ABERTAS com valor no Teknisa — é o sinal forte da fraude das "2 comandas", leve os horários ao monitoramento.',
         ],
       },
       {

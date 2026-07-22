@@ -20,6 +20,7 @@ enum Role {
   COORDINATOR // Sua(s) unidade(s) — acompanhamento, sem aprovação
   MANAGER // Gerente — operação diária, lançamentos
   FINANCE // Financeiro — sem acesso operacional; recebe notificações
+  CASHIER // Caixa — login próprio SÓ para a conferência de comandas por leitor
 }
 
 /// Unidade (restaurante). Toda lógica diária usa a data operacional desta unidade.

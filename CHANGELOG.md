@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.39.0 — 2026-07-22 (Conferência de comandas por leitor de código de barras)
+### Adicionado
+- **Perfil CAIXA** (`Role.CASHIER`, rótulo "Caixa"): login próprio criado em Configurações → Usuários. Nasce **fechado** — vê só Comandas e o Treinamento da Plataforma (novo `DEFAULT_ALLOW_ONLY` em `permissions.ts`; o Admin ainda pode liberar mais na matriz). Ao entrar, cai direto na conferência.
+- **Conferência por leitor** (`/modulos/comandas/conferencia`, botão "📷 Conferir com leitor" na tela de Comandas): campo focado que recebe a bipagem (o leitor age como teclado, digita o código e dá Enter), contadores **conferidas / ativas / faltando** em tempo real, "Desfazer última", leituras repetidas sinalizadas ("já bipada") e código fora da sequência **avisado com o valor lido** em vez de aceito em silêncio. Substitui os 600+ toques da grade manual.
+- Ao concluir: **faltantes = ativas − bipadas**, reaproveitando `submitCount` — mesmas divergências, mesmo alerta imediato ao supervisor, sem lógica paralela.
+- **Cruzamento antifraude (itens 3 + 4)**: as faltantes são cruzadas com a **última análise de "Comandas em Aberto"** da unidade; comanda que sumiu da bandeja **E** está aberta com valor no Teknisa aparece destacada com data/hora e valor — o padrão da fraude das "2 comandas", pronto para o monitoramento buscar a câmera.
+- `src/lib/commands/barcode.ts` (parser **tolerante**: número puro, zeros à esquerda, prefixos, EAN-13 com dígito verificador — só aceita palpite que exista na sequência ativa, nunca inventa comanda), `src/lib/commands/scan.ts`, `/api/commands/scan`, migração `20260722200000_cashier_role`. 12 testes novos.
+- ⚠️ O parser será **calibrado** quando chegar 1 exemplo real do código de barras da comanda da rede.
+
 ## v1.38.0 — 2026-07-22 (Notificações no celular — PWA + Web Push)
 ### Adicionado
 - **App instalável (PWA)**: manifesto, ícones da marca (bordô + "BF") e service worker. No Android dá para "Instalar aplicativo"; no iPhone, "Adicionar à Tela de Início" (pré-requisito do push no iOS).

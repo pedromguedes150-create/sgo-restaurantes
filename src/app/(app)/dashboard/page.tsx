@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { getUnitsOverview, aggregateDay } from '@/lib/tasks/overview';
 import { getOccurrenceSummary } from '@/lib/occurrences/query';
@@ -16,6 +17,9 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardPage() {
   const user = (await getSessionUser())!;
   const now = new Date();
+
+  // Caixa entra no SGO só para bipar as comandas — vai direto para a conferência
+  if (user.role === 'CASHIER') redirect('/modulos/comandas/conferencia');
 
   if (user.role === 'FINANCE') {
     return (

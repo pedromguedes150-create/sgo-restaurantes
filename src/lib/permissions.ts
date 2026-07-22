@@ -42,7 +42,7 @@ export const MODULES: { key: string; label: string; nav?: string }[] = [
   { key: 'CONFIG', label: 'Configurações', nav: '/configuracoes' },
 ];
 
-export const ALL_ROLES: Role[] = ['CEO', 'ADMIN', 'SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE'];
+export const ALL_ROLES: Role[] = ['CEO', 'ADMIN', 'SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE', 'CASHIER'];
 function isFullAccess(role: Role) { return role === 'ADMIN' || role === 'CEO'; }
 
 export interface Perm { canView: boolean; canEdit: boolean }
@@ -55,6 +55,16 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   EXECUTIVE: [], // só ADMIN/CEO por padrão (Admin pode liberar na matriz)
 };
 
+/**
+ * Perfis que nascem FECHADOS: em vez de "tudo liberado menos o restrito", só
+ * enxergam os módulos listados. O Caixa entra no SGO apenas para bipar comandas
+ * na conferência — não deve ver o resto da operação. O Admin ainda pode liberar
+ * mais coisas na matriz (a linha cadastrada sempre vence o padrão).
+ */
+const DEFAULT_ALLOW_ONLY: Partial<Record<Role, string[]>> = {
+  CASHIER: ['COMMANDS', 'HELP'],
+};
+
 /** Permissões efetivas de um perfil por módulo (com defaults). */
 export async function effectivePermissions(role: Role): Promise<Record<string, Perm>> {
   const rows = await prisma.rolePermission.findMany({ where: { role } });
@@ -63,8 +73,9 @@ export async function effectivePermissions(role: Role): Promise<Record<string, P
   for (const m of MODULES) {
     if (isFullAccess(role)) { out[m.key] = { canView: true, canEdit: true }; continue; }
     const r = byModule.get(m.key);
+    const allowOnly = DEFAULT_ALLOW_ONLY[role];
     const restricted = RESTRICTED_DEFAULT[m.key];
-    const def = restricted ? restricted.includes(role) : true;
+    const def = allowOnly ? allowOnly.includes(m.key) : restricted ? restricted.includes(role) : true;
     out[m.key] = { canView: r ? r.canView : def, canEdit: r ? r.canEdit : def };
   }
   return out;

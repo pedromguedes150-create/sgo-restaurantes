@@ -18,4 +18,5 @@ export const ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: 'COORDINATOR', label: 'Coordenador' },
   { value: 'MANAGER', label: 'Gerente' },
   { value: 'FINANCE', label: 'Financeiro' },
+  { value: 'CASHIER', label: 'Caixa (só conferência de comandas)' },
 ];
