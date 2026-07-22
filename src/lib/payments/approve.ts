@@ -37,8 +37,8 @@ export async function approveRequest(user: SessionUser, id: string, ctx: Ctx = {
   if (!req) return { ok: false, reason: 'NOT_FOUND' };
   if (!canAccessUnit(user, req.unitId)) return { ok: false, reason: 'FORBIDDEN' };
   if (req.status !== 'PENDING') return { ok: false, reason: 'STATE' };
-  // Segregação de funções: ninguém aprova a própria solicitação.
-  if (req.requestedById === user.id) return { ok: false, reason: 'FORBIDDEN' };
+  // Segregação de funções: quem lança não aprova o próprio — EXCETO ADMIN/CEO (decisão do Pedro, 21/07).
+  if (req.requestedById === user.id && user.role !== 'ADMIN' && user.role !== 'CEO') return { ok: false, reason: 'FORBIDDEN' };
   const roles = await approverRolesFor(user);
   if (!roles.has(req.approverRole)) return { ok: false, reason: 'FORBIDDEN' };
 

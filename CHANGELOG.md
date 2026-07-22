@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.30.0 — 2026-07-21 (Pagamentos: admin/CEO podem se autoaprovar)
+### Alterado
+- **Autoaprovação de pagamentos** liberada para **ADMIN/CEO** (decisão do Pedro). Demais perfis seguem com a segregação de funções (quem lança não aprova o próprio). Investigação do caso Jefferson documentada em `docs/antifraude-e-automacoes.md`.
+
 ## v1.29.0 — 2026-07-21 (Troco: editar/excluir baldes)
 ### Adicionado
 - **Gestão de Troco → baldes dos caixas**: Supervisão/Admin agora **editam o nome E o valor-alvo** (antes só o valor) e podem **excluir o balde inteiro** (o histórico de movimentos preserva o nome). Auditado.
