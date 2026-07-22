@@ -43,7 +43,7 @@ const GROUPS: { title: string; items: { href: string; label: string; icon: React
     items: [
       { href: '/modulos/pagamentos', label: 'Pagamentos', icon: Wallet },
       { href: '/modulos/pessoas', label: 'Pessoas', icon: Users },
-      { href: '/modulos/folgas-equipe', label: 'Folgas da equipe', icon: CalendarOff },
+      { href: '/modulos/folgas-equipe', label: 'Controle de gerentes', icon: CalendarOff },
       { href: '/modulos/pops', label: 'POPs', icon: BookOpen },
       { href: '/modulos/treinamentos', label: 'Treinamentos', icon: GraduationCap },
       { href: '/modulos/metas', label: 'Metas', icon: Target },

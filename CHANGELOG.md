@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.27.0 — 2026-07-21 (pacote 20/07 — bloco 3: Controle de gerentes)
+### Adicionado
+- **"Folgas da equipe" → "Controle de gerentes"** (nova nomenclatura na sidebar e no módulo).
+- **Horário de trabalho do gerente** (padrão semanal): cada gerente cadastra em **Minha área → Folgas / férias** os dias que trabalha + horário.
+- **Calendário de gerentes** (nova aba): visão mensal por unidade da cobertura de gerência (padrão semanal − folgas/férias). **Dias sem nenhum gerente ficam em vermelho** ("buraco de gerência") para o supervisor realocar reservas; badges de dias sem cobertura e gerentes sem horário.
+- **Alerta automático ao supervisor** quando um gerente **não lança folga há 7+ dias** (scheduler diário, anti-spam de 7 dias).
+
 ## v1.26.0 — 2026-07-20 (pacote 20/07 — bloco 2: Pagamentos por dia/unidade + detalhes)
 ### Alterado
 - **Pagamentos — todas as abas** (Minhas, Para Aprovar, Pagar, Histórico): lançamentos **agrupados por DIA e por UNIDADE** (dia mais recente primeiro, total do dia no cabeçalho) para a conferência do supervisor.

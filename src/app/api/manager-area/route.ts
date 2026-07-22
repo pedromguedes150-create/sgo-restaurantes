@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import * as ma from '@/lib/manager-area';
+import { setMyWorkSchedule } from '@/lib/manager-schedule';
 import type { ManagerLeaveKind } from '@prisma/client';
 
 export async function POST(req: Request) {
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
   else if (e === 'note' && a === 'delete') r = await ma.deleteManagerNote(user, b.id);
   else if (e === 'leave' && a === 'add') r = await ma.addManagerLeave(user, { kind: b.kind as ManagerLeaveKind, startDate: b.startDate, endDate: b.endDate, note: b.note });
   else if (e === 'leave' && a === 'delete') r = await ma.deleteManagerLeave(user, b.id);
+  else if (e === 'workSchedule' && a === 'set') r = await setMyWorkSchedule(user, { weekdays: Array.isArray(b.weekdays) ? b.weekdays : [], startTime: b.startTime, endTime: b.endTime, note: b.note });
 
   if (!r) return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });
   if (!r.ok) {

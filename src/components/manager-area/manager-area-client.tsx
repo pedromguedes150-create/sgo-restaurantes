@@ -42,7 +42,9 @@ function TimePicker({ date, time, onDate, onTime }: { date: string; time: string
   );
 }
 
-export function ManagerAreaClient({ tasks, notes, leaves, canSeeTeam = false }: { tasks: MTask[]; notes: MNote[]; leaves: MLeave[]; canSeeTeam?: boolean }) {
+export interface MWorkSchedule { weekdays: number[]; startTime: string | null; endTime: string | null; note: string | null }
+
+export function ManagerAreaClient({ tasks, notes, leaves, schedule = null, canSeeTeam = false }: { tasks: MTask[]; notes: MNote[]; leaves: MLeave[]; schedule?: MWorkSchedule | null; canSeeTeam?: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<'tarefas' | 'notas' | 'folgas'>('tarefas');
   const [busy, setBusy] = useState(false);
@@ -65,7 +67,7 @@ export function ManagerAreaClient({ tasks, notes, leaves, canSeeTeam = false }: 
       </div>
       {tab === 'tarefas' && <TasksTab tasks={tasks} busy={busy} post={post} />}
       {tab === 'notas' && <NotesTab notes={notes} busy={busy} post={post} />}
-      {tab === 'folgas' && <LeavesTab leaves={leaves} busy={busy} post={post} canSeeTeam={canSeeTeam} />}
+      {tab === 'folgas' && <LeavesTab leaves={leaves} schedule={schedule} busy={busy} post={post} canSeeTeam={canSeeTeam} />}
     </div>
   );
 }
@@ -195,15 +197,45 @@ function NoteCard({ n, busy, post }: { n: MNote; busy: boolean; post: Post }) {
   );
 }
 
-function LeavesTab({ leaves, busy, post, canSeeTeam }: { leaves: MLeave[]; busy: boolean; post: Post; canSeeTeam?: boolean }) {
+const WD_LABEL = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+function WorkScheduleEditor({ schedule, busy, post }: { schedule: MWorkSchedule | null; busy: boolean; post: Post }) {
+  const [days, setDays] = useState<number[]>(schedule?.weekdays ?? []);
+  const [start, setStart] = useState(schedule?.startTime ?? '');
+  const [end, setEnd] = useState(schedule?.endTime ?? '');
+  const [note, setNote] = useState(schedule?.note ?? '');
+  const [saved, setSaved] = useState(false);
+  const toggle = (d: number) => setDays((s) => (s.includes(d) ? s.filter((x) => x !== d) : [...s, d].sort((a, b) => a - b)));
+  return (
+    <div className="rounded-lg border-2 border-accent/30 bg-accent/5 p-3">
+      <p className="text-sm font-bold text-brand">🕒 Meu horário de trabalho (padrão semanal)</p>
+      <p className="mb-2 text-xs text-muted-foreground">Marque os dias que você trabalha e o horário. Serve para o supervisor ver a cobertura de gerência de cada unidade.</p>
+      <div className="flex flex-wrap gap-1">
+        {WD_LABEL.map((w, i) => (
+          <button key={i} type="button" onClick={() => toggle(i)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${days.includes(i) ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground'}`}>{w}</button>
+        ))}
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <div><Label className="text-xs">Início</Label><Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="h-10 text-sm" /></div>
+        <div><Label className="text-xs">Fim</Label><Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="h-10 text-sm" /></div>
+      </div>
+      <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-2 h-10 text-sm" />
+      <Button size="sm" className="mt-2" disabled={busy} onClick={async () => { if (await post({ entity: 'workSchedule', action: 'set', weekdays: days, startTime: start || null, endTime: end || null, note })) { setSaved(true); setTimeout(() => setSaved(false), 2500); } }}>Salvar horário</Button>
+      {saved && <span className="ml-2 text-xs font-semibold text-success">Salvo ✓</span>}
+    </div>
+  );
+}
+
+function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam }: { leaves: MLeave[]; schedule?: MWorkSchedule | null; busy: boolean; post: Post; canSeeTeam?: boolean }) {
   const [kind, setKind] = useState<'FOLGA' | 'FERIAS'>('FOLGA');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   return (
     <div className="space-y-3">
+      <WorkScheduleEditor schedule={schedule} busy={busy} post={post} />
       {canSeeTeam && (
         <a href="/modulos/folgas-equipe" className="flex items-center justify-between gap-2 rounded-lg border border-accent/40 bg-accent/5 p-3 text-sm hover:bg-accent/10">
-          <span className="flex items-center gap-2 font-semibold text-brand"><CalendarOff className="h-4 w-4" /> Ver consolidado de folgas/férias da equipe</span>
+          <span className="flex items-center gap-2 font-semibold text-brand"><CalendarOff className="h-4 w-4" /> Controle de gerentes (consolidado + calendário)</span>
           <span className="text-accent">→</span>
         </a>
       )}

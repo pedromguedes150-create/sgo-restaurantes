@@ -1,8 +1,11 @@
+import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { effectivePermissions } from '@/lib/permissions';
 import { getTeamLeaves } from '@/lib/manager-area';
+import { getManagerCoverageCalendar } from '@/lib/manager-schedule';
 import { Card, CardContent } from '@/components/ui/card';
-import { CalendarOff } from 'lucide-react';
+import { ManagerCalendar } from '@/components/people/manager-calendar';
+import { CalendarOff, CalendarDays } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,12 +17,49 @@ function monthRange(): { start: string; end: string } {
   return { start: iso(start), end: iso(end) };
 }
 const fmtBR = (iso: string) => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
+const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
-export default async function FolgasEquipePage({ searchParams }: { searchParams: { start?: string; end?: string } }) {
+export default async function FolgasEquipePage({ searchParams }: { searchParams: { start?: string; end?: string; view?: string; ano?: string; mes?: string } }) {
   const user = (await getSessionUser())!;
   const perms = await effectivePermissions(user.role);
   if (!perms.LEAVES_TEAM?.canView) {
-    return <p className="text-sm text-muted-foreground">Acesso restrito. O consolidado de folgas/férias é liberado pela Supervisão/Administração (Configurações → Perfis de acesso).</p>;
+    return <p className="text-sm text-muted-foreground">Acesso restrito. O Controle de gerentes é liberado pela Supervisão/Administração (Configurações → Perfis de acesso).</p>;
+  }
+
+  const isCal = searchParams.view === 'calendario';
+  const now = new Date();
+  const year = Number(searchParams.ano) || now.getFullYear();
+  const month = Math.min(12, Math.max(1, Number(searchParams.mes) || now.getMonth() + 1));
+  const prevM = month === 1 ? { a: year - 1, m: 12 } : { a: year, m: month - 1 };
+  const nextM = month === 12 ? { a: year + 1, m: 1 } : { a: year, m: month + 1 };
+
+  const header = (
+    <div className="space-y-3">
+      <div>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><CalendarDays className="h-5 w-5 text-accent" /> Controle de gerentes</h1>
+        <p className="text-sm text-muted-foreground">Folgas, férias e cobertura de gerência por unidade. Escopo: suas unidades.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Link href="/modulos/folgas-equipe" className={!isCal ? 'flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium'}><CalendarOff className="h-4 w-4" /> Folgas / férias</Link>
+        <Link href="/modulos/folgas-equipe?view=calendario" className={isCal ? 'flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium'}><CalendarDays className="h-4 w-4" /> Calendário de gerentes</Link>
+      </div>
+    </div>
+  );
+
+  if (isCal) {
+    const cal = await getManagerCoverageCalendar(user, year, month);
+    return (
+      <div className="space-y-4">
+        {header}
+        <div className="flex items-center justify-between rounded-lg border border-dashed p-2">
+          <Link href={`/modulos/folgas-equipe?view=calendario&ano=${prevM.a}&mes=${prevM.m}`} className="rounded-lg border px-3 py-1.5 text-sm font-semibold">← anterior</Link>
+          <span className="text-sm font-bold text-brand">{MONTHS[month - 1]} de {year}</span>
+          <Link href={`/modulos/folgas-equipe?view=calendario&ano=${nextM.a}&mes=${nextM.m}`} className="rounded-lg border px-3 py-1.5 text-sm font-semibold">próximo →</Link>
+        </div>
+        <p className="text-xs text-muted-foreground">Baseado no horário de trabalho que cada gerente cadastra em <b>Minha área → Folgas / férias</b>, menos folgas e férias. Dias em vermelho = unidade sem gerente (realocar reserva).</p>
+        <ManagerCalendar data={cal} />
+      </div>
+    );
   }
 
   const def = monthRange();
@@ -31,10 +71,7 @@ export default async function FolgasEquipePage({ searchParams }: { searchParams:
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><CalendarOff className="h-5 w-5 text-accent" /> Folgas e Férias — Equipe</h1>
-        <p className="text-sm text-muted-foreground">Consolidado por unidade no período. Escopo: suas unidades.</p>
-      </div>
+      {header}
 
       <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3">
         <div>

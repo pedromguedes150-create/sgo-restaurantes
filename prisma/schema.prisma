@@ -136,6 +136,7 @@ model User {
   managerTasks            ManagerTask[]            @relation("MgrTasks")
   managerNotes            ManagerNote[]            @relation("MgrNotes")
   managerLeaves           ManagerLeave[]           @relation("MgrLeaves")
+  managerWorkSchedule     ManagerWorkSchedule?     @relation("MgrWorkSchedule")
   terminationsRequested   Termination[]            @relation("TermReqBy")
   terminationsApproved    Termination[]            @relation("TermApprBy")
 
@@ -788,6 +789,24 @@ model ManagerLeave {
 
   @@index([userId])
   @@map("manager_leaves")
+}
+
+/// Horário de trabalho do gerente (padrão semanal recorrente) — base do calendário
+/// consolidado de gerência por unidade (20/07). weekdays = dias trabalhados (0=dom..6=sáb).
+model ManagerWorkSchedule {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  weekdays         Json      @default("[]")
+  startTime        String? // "HH:mm"
+  endTime          String? // "HH:mm"
+  note             String?
+  /// Última vez que o supervisor foi avisado da falta de folga (guarda anti-spam do alerta 7d).
+  lastFolgaAlertAt DateTime?
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation("MgrWorkSchedule", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("manager_work_schedules")
 }
 
 model Freelancer {

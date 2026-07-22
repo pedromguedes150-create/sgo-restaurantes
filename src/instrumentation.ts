@@ -17,6 +17,7 @@ export async function register() {
   const { runDueMaintenancePlans } = await import('@/lib/maintenance');
   const { runDueVisitPlans } = await import('@/lib/supervisor/visit-plans');
   const { runWeeklyAdherenceDigest } = await import('@/lib/supervisor/digest');
+  const { notifyManagersWithoutRecentFolga } = await import('@/lib/manager-schedule');
 
   async function maintainTraining() {
     try { await reconcileAllTraining(); } catch (e) { console.error('[training] falha na reconciliação:', e); }
@@ -44,6 +45,8 @@ export async function register() {
     catch (e) { console.error('[supervisao] falha no aviso de visita:', e); }
     try { const d = await runWeeklyAdherenceDigest(); if (d.ran) console.log(`[supervisao] resumo semanal de aderência: ${d.flagged} unidade(s) com alerta`); }
     catch (e) { console.error('[supervisao] falha no resumo semanal:', e); }
+    try { const f = await notifyManagersWithoutRecentFolga(); if (f.notified) console.log(`[gerentes] ${f.notified} gerente(s) sem folga há 7+ dias — supervisor avisado`); }
+    catch (e) { console.error('[gerentes] falha no alerta de folga:', e); }
   }
 
   async function maybeSyncRh() {
