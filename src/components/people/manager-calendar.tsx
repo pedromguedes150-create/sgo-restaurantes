@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import type { ManagerCalendar, CalUnit, CalDay } from '@/lib/manager-schedule';
+import { useRouter } from 'next/navigation';
+import type { ManagerCalendar, CalUnit, CalDay, CalManager } from '@/lib/manager-schedule';
 
 const WD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const WD_FULL = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 /** Calendário consolidado de gerência por unidade (20/07) — dias sem gerente destacados. */
-export function ManagerCalendar({ data }: { data: ManagerCalendar }) {
+export function ManagerCalendar({ data, isAdmin = false }: { data: ManagerCalendar; isAdmin?: boolean }) {
   if (data.units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade no escopo.</p>;
   return (
     <div className="space-y-4">
@@ -17,12 +18,47 @@ export function ManagerCalendar({ data }: { data: ManagerCalendar }) {
         <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rounded bg-muted" /> Sem horário cadastrado</span>
         <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rounded bg-accent/40" /> Folga/férias</span>
       </div>
-      {data.units.map((u) => <UnitCalendar key={u.unitId} unit={u} year={data.year} month={data.month} />)}
+      {data.units.map((u) => <UnitCalendar key={u.unitId} unit={u} year={data.year} month={data.month} isAdmin={isAdmin} />)}
     </div>
   );
 }
 
-function UnitCalendar({ unit, year, month }: { unit: CalUnit; year: number; month: number }) {
+/** Editor admin do horário de um gerente (padrão semanal) — só ADMIN/CEO. */
+function AdminScheduleEditor({ m }: { m: CalManager }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [days, setDays] = useState<number[]>(m.weekdays);
+  const [start, setStart] = useState(m.startTime ?? '');
+  const [end, setEnd] = useState(m.endTime ?? '');
+  const [busy, setBusy] = useState(false);
+  const toggle = (d: number) => setDays((s) => (s.includes(d) ? s.filter((x) => x !== d) : [...s, d].sort((a, b) => a - b)));
+  async function save() {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/manager-area', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entity: 'workSchedule', action: 'setForUser', userId: m.userId, weekdays: days, startTime: start || null, endTime: end || null }) });
+      if (res.ok) { setOpen(false); router.refresh(); } else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
+    } finally { setBusy(false); }
+  }
+  if (!open) return <button onClick={() => setOpen(true)} className="ml-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold text-accent">Editar horário</button>;
+  return (
+    <div className="mt-1 w-full rounded-md border border-accent/40 bg-background p-2">
+      <div className="flex flex-wrap gap-1">
+        {WD_FULL.map((w, i) => (
+          <button key={i} type="button" onClick={() => toggle(i)} className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${days.includes(i) ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground'}`}>{w}</button>
+        ))}
+      </div>
+      <div className="mt-1.5 flex items-center gap-1.5">
+        <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="h-8 rounded border-2 border-input bg-background px-1.5 text-xs" />
+        <span className="text-xs text-muted-foreground">até</span>
+        <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="h-8 rounded border-2 border-input bg-background px-1.5 text-xs" />
+        <button onClick={() => void save()} disabled={busy} className="rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-60">Salvar</button>
+        <button onClick={() => setOpen(false)} className="rounded border px-2 py-1 text-xs">Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
+function UnitCalendar({ unit, year, month, isAdmin = false }: { unit: CalUnit; year: number; month: number; isAdmin?: boolean }) {
   const [sel, setSel] = useState<CalDay | null>(null);
   const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
   const blanks = Array.from({ length: firstWeekday });
@@ -50,9 +86,10 @@ function UnitCalendar({ unit, year, month }: { unit: CalUnit; year: number; mont
       <div className="mt-2 flex flex-wrap gap-2">
         {unit.managers.length === 0 && <span className="text-xs text-muted-foreground">Sem gerente vinculado.</span>}
         {unit.managers.map((m) => (
-          <span key={m.userId} className="rounded-lg border px-2 py-1 text-xs">
+          <span key={m.userId} className="flex flex-wrap items-center rounded-lg border px-2 py-1 text-xs">
             <b className="text-brand">{m.name}</b>{' '}
-            {m.hasSchedule ? <span className="text-muted-foreground">{m.weekdays.map((w) => WD_FULL[w]).join(', ')}{m.time ? ` · ${m.time}` : ''}</span> : <span className="text-critical">sem horário cadastrado</span>}
+            {m.hasSchedule ? <span className="ml-1 text-muted-foreground">{m.weekdays.map((w) => WD_FULL[w]).join(', ')}{m.time ? ` · ${m.time}` : ''}</span> : <span className="ml-1 text-critical">sem horário cadastrado</span>}
+            {isAdmin && <AdminScheduleEditor m={m} />}
           </span>
         ))}
       </div>

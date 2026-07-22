@@ -25,6 +25,24 @@ export async function setMyWorkSchedule(user: SessionUser, input: { weekdays: nu
   return { ok: true as const };
 }
 
+/**
+ * Admin cadastra/edita o horário de QUALQUER gerente (20/07 — pedido do Pedro).
+ * Restrito a ADMIN/CEO. Audita a alteração.
+ */
+export async function setManagerWorkSchedule(actor: SessionUser, targetUserId: string, input: { weekdays: number[]; startTime?: string | null; endTime?: string | null; note?: string | null }) {
+  if (!['ADMIN', 'CEO'].includes(actor.role)) return { ok: false as const, reason: 'FORBIDDEN' as const };
+  if (!targetUserId) return { ok: false as const, reason: 'INVALID' as const };
+  const target = await prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, name: true, role: true } });
+  if (!target || !['MANAGER', 'COORDINATOR'].includes(target.role)) return { ok: false as const, reason: 'INVALID' as const };
+  const weekdays = parseWeekdays(input.weekdays);
+  const time = (t?: string | null) => (t && /^\d{2}:\d{2}$/.test(t) ? t : null);
+  const data = { weekdays, startTime: time(input.startTime), endTime: time(input.endTime), note: input.note?.trim() || null };
+  await prisma.managerWorkSchedule.upsert({ where: { userId: targetUserId }, create: { userId: targetUserId, ...data }, update: data });
+  const { audit } = await import('@/lib/audit');
+  await audit({ userId: actor.id, action: 'MANAGER_SCHEDULE_SET', module: 'PEOPLE', entity: 'manager_work_schedule', entityId: targetUserId, metadata: { manager: target.name, weekdays, startTime: data.startTime, endTime: data.endTime } });
+  return { ok: true as const };
+}
+
 const WD_LABEL = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 export { WD_LABEL };
 
@@ -39,7 +57,7 @@ function daysOfMonth(year: number, month: number): { day: number; weekday: numbe
   return out;
 }
 
-export interface CalManager { userId: string; name: string; hasSchedule: boolean; weekdays: number[]; time: string | null }
+export interface CalManager { userId: string; name: string; hasSchedule: boolean; weekdays: number[]; time: string | null; startTime: string | null; endTime: string | null; note: string | null }
 export interface CalDay { day: number; weekday: number; iso: string; working: string[]; onLeave: { name: string; kind: string }[]; gap: boolean }
 export interface CalUnit { unitId: string; unitName: string; managers: CalManager[]; days: CalDay[]; gapDays: number; noScheduleCount: number }
 export interface ManagerCalendar { year: number; month: number; firstWeekday: number; units: CalUnit[] }
@@ -74,8 +92,8 @@ export async function getManagerCoverageCalendar(user: SessionUser, year: number
     const unitManagers = managers.filter((m) => m.memberships.some((mm) => mm.unitId === u.id));
     const calManagers: CalManager[] = unitManagers.map((m) => {
       const wd = parseWeekdays(m.managerWorkSchedule?.weekdays);
-      const st = m.managerWorkSchedule?.startTime; const en = m.managerWorkSchedule?.endTime;
-      return { userId: m.id, name: m.name, hasSchedule: Boolean(m.managerWorkSchedule) && wd.length > 0, weekdays: wd, time: st || en ? `${st ?? ''}${st || en ? '–' : ''}${en ?? ''}` : null };
+      const st = m.managerWorkSchedule?.startTime ?? null; const en = m.managerWorkSchedule?.endTime ?? null;
+      return { userId: m.id, name: m.name, hasSchedule: Boolean(m.managerWorkSchedule) && wd.length > 0, weekdays: wd, time: st || en ? `${st ?? ''}${st || en ? '–' : ''}${en ?? ''}` : null, startTime: st, endTime: en, note: m.managerWorkSchedule?.note ?? null };
     });
     const calDays: CalDay[] = days.map((d) => {
       const working: string[] = [];

@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.28.0 — 2026-07-21 (pacote 20/07 — bloco 3.1: Admin cadastra horário do gerente)
+### Adicionado
+- **Admin/CEO cadastram o horário de qualquer gerente** direto no **Calendário de gerentes** (botão "Editar horário" em cada gerente): marca os dias + horário e salva (auditado). Antes só o próprio gerente podia; agora o admin também preenche por eles.
+
 ## v1.27.0 — 2026-07-21 (pacote 20/07 — bloco 3: Controle de gerentes)
 ### Adicionado
 - **"Folgas da equipe" → "Controle de gerentes"** (nova nomenclatura na sidebar e no módulo).
