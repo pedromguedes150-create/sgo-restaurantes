@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.37.0 — 2026-07-22 (Antifraude de cancelamentos + relatórios de comandas)
+### Adicionado
+- **Cancelamentos → Análise antifraude (PDF)** (Supervisão/Admin): sobe o **PDF** "Vendas/Itens Cancelados no Período" (Teknisa) e o SGO analisa por **caixa (terminal)**, por **autorizador (SUPERVISOR)**, por **horário** e **valor**, com **alertas automáticos** (concentração ≥50% do valor num caixa/autorizador, valor médio muito acima da mediana, cancelamentos altos, pico de horário) + maiores cancelamentos + histórico. `src/lib/cancellations/fraud-analysis.ts` (parser via pdf-parse), model `CancellationAnalysis`.
+- **Comandas em aberto**: **relatório A4 dedicado para o Monitoramento** (corrige o "Imprimir" que saía desfigurado) + **Consolidado da rede para o Administrativo** (comandas a travar por unidade e data, imprimível). Histórico já existente.
+
 ## v1.36.0 — 2026-07-21 (Módulo Solicitação de Produtos — Fase 1)
 ### Adicionado
 - **Solicitação de Produtos (Fábrica/CD)**: catálogo (`Configurações → Catálogo de Produtos`, CRUD + **import/export Excel**); **pedido mobile** com **busca inteligente** (ignora acento), agrupado por categoria e quantidade por item; ao enviar, o sistema **separa automaticamente em Fábrica e CD** (gera 1 pedido por destino). **Meus pedidos** com status (Novo→Em separação→Enviado→Recebido) e **confirmação de recebimento** pelo gerente; **visão Fábrica/CD** (Supervisão/Admin) move os status e imprime a separação. `src/lib/products.ts`, models `Product`/`ProductRequest`. Fábrica/CD por e-mail entra na fase seguinte.

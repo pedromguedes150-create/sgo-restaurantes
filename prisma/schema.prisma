@@ -791,6 +791,24 @@ model ManagerLeave {
   @@map("manager_leaves")
 }
 
+/// Análise antifraude de cancelamentos de itens (Teknisa PDF) — item 5 (22/07).
+model CancellationAnalysis {
+  id            String   @id @default(cuid())
+  unitId        String
+  createdById   String
+  createdByName String
+  filial        String?
+  period        String?
+  fileName      String?
+  totalCount    Int
+  totalValue    Decimal  @db.Decimal(12, 2)
+  data          Json // { byCaixa, bySupervisor, byOperador, byHour, byDay, topValue, flags }
+  createdAt     DateTime @default(now())
+
+  @@index([unitId, createdAt])
+  @@map("cancellation_analyses")
+}
+
 /// Solicitação de Produtos (Fase 1, 21/07): catálogo Fábrica/CD + pedido do gerente.
 enum ProductOrigin {
   FABRICA

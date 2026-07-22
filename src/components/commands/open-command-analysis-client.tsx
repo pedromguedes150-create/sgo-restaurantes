@@ -48,6 +48,7 @@ export function OpenCommandAnalysisClient({ unitId, unitName, today, analyses }:
         </div>
         <Button disabled={busy} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {busy ? 'Analisando…' : 'Subir relatório (.xlsx/.csv)'}</Button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ''; }} />
+        <a href="/modulos/comandas/analise-aberto/consolidado" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent">📄 Consolidado da rede (Administrativo)</a>
       </div>
       {msg && <p className="rounded-lg bg-accent/10 px-3 py-2 text-sm font-medium text-accent print:hidden">{msg}</p>}
 
@@ -70,7 +71,7 @@ export function OpenCommandAnalysisClient({ unitId, unitName, today, analyses }:
                   <p className="text-sm font-bold text-brand">Comandas suspeitas — {unitName}</p>
                   <p className="text-xs text-muted-foreground">Abertas com valor e data anterior a {fmtDT(a.cutDate)}. Para o monitoramento buscar câmeras por data/hora.</p>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => window.print()} className="print:hidden"><Printer className="h-4 w-4" /> Imprimir</Button>
+                <a href={`/modulos/comandas/analise-aberto/${a.id}/relatorio`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent print:hidden"><Printer className="h-4 w-4" /> Relatório p/ monitoramento</a>
               </div>
               {a.suspects.length === 0 ? <p className="text-sm text-success">Nenhuma comanda suspeita 🎉</p> : (
                 <div className="overflow-x-auto">

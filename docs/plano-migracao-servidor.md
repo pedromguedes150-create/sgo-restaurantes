@@ -50,3 +50,21 @@
 2. Túnel Cloudflare próprio do SGO (recomendo) ou reaproveitar o modelo atual?
 3. Data da janela (sugestão: madrugada de um dia de menor movimento).
 4. Quero fazer a Fase 0 (ensaio) já na próxima oportunidade — me diga quando o servidor estiver de pé.
+
+---
+
+## Execução assistida (noite de 22/07) — PRONTO, aguarda só sua autorização
+
+**Scripts prontos no repositório:**
+- `scripts/pre-migracao-export.sh` — empacota TUDO do servidor atual (dump do banco `-Fc`, volume de uploads, `.env`, compose, Dockerfile, estado das migrações) numa pasta transferível. **Não derruba nada**; roda com o SGO no ar.
+- `scripts/restore-migracao.sh <pasta>` — no servidor NOVO: restaura banco + uploads e sobe o app.
+
+**Sequência da noite (quando você autorizar):**
+1. `bash scripts/pre-migracao-export.sh` → gera o pacote (mando o caminho).
+2. Você me passa o **acesso ao servidor novo** (IP/SSH ou como prefere) — sem isso não dá para restaurar do outro lado.
+3. Transfiro o pacote e rodo `restore-migracao.sh` no novo servidor.
+4. Subo o app, confiro `/api/health` local.
+5. **Cutover do túnel Cloudflare**: apontar o ingress do SGO para o novo servidor (as rotas do CEO ficam intactas) e conferir `https://sgorestaurantesgbf.com.br`. Reiniciar o cloudflared derruba o CEO por ~5s — combinar o instante.
+6. Janela escolhida: madrugada (gerentes fora). Rollback: o servidor atual continua de pé até validarmos o novo (só troco o DNS/ingress de volta).
+
+**O que eu preciso de você para executar:** (a) sua autorização; (b) acesso ao servidor de destino; (c) confirmar se o túnel do CEO pode piscar ~5s no cutover.

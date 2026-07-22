@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { prisma } from '@/lib/db/prisma';
-import { canAccessUnit } from '@/lib/scope/unit-scope';
+import { canAccessUnit, unitScopeWhere } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 
@@ -87,4 +87,25 @@ export async function saveOpenCommandAnalysis(
 export async function listOpenCommandAnalyses(user: SessionUser, unitId: string) {
   if (!canAccessUnit(user, unitId)) return [];
   return prisma.openCommandAnalysis.findMany({ where: { unitId }, orderBy: { createdAt: 'desc' }, take: 30 });
+}
+
+export async function getOpenCommandAnalysis(user: SessionUser, id: string) {
+  const a = await prisma.openCommandAnalysis.findUnique({ where: { id } });
+  if (!a || !canAccessUnit(user, a.unitId)) return null;
+  return a;
+}
+
+/**
+ * Consolidado da REDE (para o Administrativo): junta a análise MAIS RECENTE de
+ * cada unidade e lista os números das comandas a TRAVAR, por unidade e data.
+ */
+export async function getNetworkLockConsolidation(user: SessionUser) {
+  const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
+  const out: { unitId: string; unitName: string; cutDate: string; createdAt: string; suspects: OpenCmdSuspect[]; suspectValue: number }[] = [];
+  for (const u of units) {
+    const a = await prisma.openCommandAnalysis.findFirst({ where: { unitId: u.id }, orderBy: { createdAt: 'desc' } });
+    if (!a || a.suspectCount === 0) continue;
+    out.push({ unitId: u.id, unitName: u.name, cutDate: a.cutDate, createdAt: a.createdAt.toISOString(), suspects: (a.suspects as unknown as OpenCmdSuspect[]) ?? [], suspectValue: Number(a.suspectValue) });
+  }
+  return out;
 }
