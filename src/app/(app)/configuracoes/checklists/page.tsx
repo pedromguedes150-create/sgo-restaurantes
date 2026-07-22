@@ -6,6 +6,7 @@ import { TemplatesAdmin } from '@/components/admin/templates-admin';
 import { ChecklistToleranceConfig } from '@/components/admin/checklist-tolerance-config';
 import { ChecklistModelsAdmin } from '@/components/admin/checklist-models-admin';
 import { SupervisorChecklistsAdmin } from '@/components/admin/supervisor-checklists-admin';
+import { ChecklistCoverageMatrix } from '@/components/admin/checklist-coverage-matrix';
 import { ensureDefaultModels, listChecklistModels } from '@/lib/checklist-models';
 import { listSupervisorChecklists } from '@/lib/supervisor/visits';
 import { getChecklistToleranceMin } from '@/lib/tasks/tolerance';
@@ -21,10 +22,10 @@ export default async function ChecklistsAdminPage({ searchParams }: { searchPara
   const user = (await getSessionUser())!;
   if (user.role !== 'ADMIN' && user.role !== 'CEO') return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
   await ensureDefaultModels().catch(() => {}); // popula a biblioteca padrão na 1ª vez
-  const tab = ['unidades', 'modelos', 'supervisor'].includes(searchParams.tab ?? '') ? (searchParams.tab as string) : 'unidades';
+  const tab = ['unidades', 'modelos', 'supervisor', 'resumo'].includes(searchParams.tab ?? '') ? (searchParams.tab as string) : 'unidades';
 
   const [units, templates, models, tolerance, supChecklists] = await Promise.all([
-    prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, code: true } }),
     prisma.taskTemplate.findMany({ orderBy: { order: 'asc' }, include: { items: { orderBy: { order: 'asc' }, select: { section: true, text: true, requiresPhoto: true, aiCheck: true, standardDescription: true } } } }),
     listChecklistModels({}),
     getChecklistToleranceMin(),
@@ -40,9 +41,21 @@ export default async function ChecklistsAdminPage({ searchParams }: { searchPara
 
   const TABS = [
     { key: 'unidades', label: 'Checklists das unidades' },
+    { key: 'resumo', label: 'Resumo por unidade' },
     { key: 'modelos', label: 'Biblioteca de modelos' },
     { key: 'supervisor', label: 'Checklists de supervisor' },
   ];
+
+  // Matriz checklist × unidade (só ativos) — resumo p/ o supervisor achar faltas
+  const covMap = new Map<string, { name: string; module: string; unitIds: Set<string> }>();
+  for (const t of templates) {
+    if (!t.active) continue;
+    const key = t.name.trim().toLowerCase();
+    const r = covMap.get(key) ?? { name: t.name, module: t.module, unitIds: new Set<string>() };
+    r.unitIds.add(t.unitId);
+    covMap.set(key, r);
+  }
+  const covRows = [...covMap.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((r) => ({ name: r.name, module: r.module, unitIds: [...r.unitIds] }));
 
   return (
     <div className="space-y-4">
@@ -67,6 +80,12 @@ export default async function ChecklistsAdminPage({ searchParams }: { searchPara
             />
           </CardContent></Card>
         </>
+      )}
+
+      {tab === 'resumo' && (
+        <Card><CardContent className="pt-4">
+          <ChecklistCoverageMatrix units={units.map((u) => ({ id: u.id, name: u.name, code: u.code }))} rows={covRows} />
+        </CardContent></Card>
       )}
 
       {tab === 'modelos' && (

@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
-import { notifyUnitRole, notifyRole } from '@/lib/notifications';
+import { notifyUnitRole, notifyRole, notifyAdmins } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 
 /** Padrão semanal de trabalho do gerente (dias 0=dom..6=sáb + horário). */
@@ -57,9 +57,9 @@ function daysOfMonth(year: number, month: number): { day: number; weekday: numbe
   return out;
 }
 
-export interface CalManager { userId: string; name: string; hasSchedule: boolean; weekdays: number[]; time: string | null; startTime: string | null; endTime: string | null; note: string | null }
+export interface CalManager { userId: string; name: string; hasSchedule: boolean; weekdays: number[]; time: string | null; startTime: string | null; endTime: string | null; note: string | null; missingFolga: boolean }
 export interface CalDay { day: number; weekday: number; iso: string; working: string[]; onLeave: { name: string; kind: string }[]; gap: boolean }
-export interface CalUnit { unitId: string; unitName: string; managers: CalManager[]; days: CalDay[]; gapDays: number; noScheduleCount: number }
+export interface CalUnit { unitId: string; unitName: string; managers: CalManager[]; days: CalDay[]; gapDays: number; noScheduleCount: number; missingFolgaNames: string[] }
 export interface ManagerCalendar { year: number; month: number; firstWeekday: number; units: CalUnit[] }
 
 /**
@@ -72,6 +72,15 @@ export async function getManagerCoverageCalendar(user: SessionUser, year: number
   const days = daysOfMonth(year, month);
   const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
   const monthEnd = days[days.length - 1]?.iso ?? monthStart;
+
+  // Folga nos últimos 7 dias (relativo a HOJE) → quem não tem, entra no alerta da aba
+  const todayReal = new Date().toISOString().slice(0, 10);
+  const sevenAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const recentFolgas = await prisma.managerLeave.findMany({
+    where: { kind: 'FOLGA', endDate: { gte: sevenAgo }, startDate: { lte: todayReal } },
+    select: { userId: true },
+  });
+  const hasRecentFolga = new Set(recentFolgas.map((f) => f.userId));
 
   // Gerentes (e coordenadores) das unidades em escopo, com horário e folgas do mês
   const managers = await prisma.user.findMany({
@@ -93,7 +102,7 @@ export async function getManagerCoverageCalendar(user: SessionUser, year: number
     const calManagers: CalManager[] = unitManagers.map((m) => {
       const wd = parseWeekdays(m.managerWorkSchedule?.weekdays);
       const st = m.managerWorkSchedule?.startTime ?? null; const en = m.managerWorkSchedule?.endTime ?? null;
-      return { userId: m.id, name: m.name, hasSchedule: Boolean(m.managerWorkSchedule) && wd.length > 0, weekdays: wd, time: st || en ? `${st ?? ''}${st || en ? '–' : ''}${en ?? ''}` : null, startTime: st, endTime: en, note: m.managerWorkSchedule?.note ?? null };
+      return { userId: m.id, name: m.name, hasSchedule: Boolean(m.managerWorkSchedule) && wd.length > 0, weekdays: wd, time: st || en ? `${st ?? ''}${st || en ? '–' : ''}${en ?? ''}` : null, startTime: st, endTime: en, note: m.managerWorkSchedule?.note ?? null, missingFolga: !hasRecentFolga.has(m.id) };
     });
     const calDays: CalDay[] = days.map((d) => {
       const working: string[] = [];
@@ -111,6 +120,7 @@ export async function getManagerCoverageCalendar(user: SessionUser, year: number
       unitId: u.id, unitName: u.name, managers: calManagers, days: calDays,
       gapDays: calDays.filter((d) => d.gap).length,
       noScheduleCount: calManagers.filter((m) => !m.hasSchedule).length,
+      missingFolgaNames: calManagers.filter((m) => m.hasSchedule && m.missingFolga).map((m) => m.name),
     };
   });
 
@@ -150,6 +160,7 @@ export async function notifyManagersWithoutRecentFolga(now: Date = new Date()): 
     };
     if (unitIds.length > 0) { for (const uid of unitIds) await notifyUnitRole(uid, 'SUPERVISOR', payload); }
     else await notifyRole('SUPERVISOR', payload);
+    await notifyAdmins(payload).catch(() => {}); // admins também (pedido 21/07)
     await prisma.managerWorkSchedule.upsert({
       where: { userId: m.id },
       create: { userId: m.id, weekdays: [], lastFolgaAlertAt: now },

@@ -210,11 +210,13 @@ function WorkScheduleEditor({ schedule, busy, post }: { schedule: MWorkSchedule 
     <div className="rounded-lg border-2 border-accent/30 bg-accent/5 p-3">
       <p className="text-sm font-bold text-brand">🕒 Meu horário de trabalho (padrão semanal)</p>
       <p className="mb-2 text-xs text-muted-foreground">Marque os dias que você trabalha e o horário. Serve para o supervisor ver a cobertura de gerência de cada unidade.</p>
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         {WD_LABEL.map((w, i) => (
           <button key={i} type="button" onClick={() => toggle(i)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${days.includes(i) ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground'}`}>{w}</button>
         ))}
+        <button type="button" onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])} className="ml-1 rounded-full border border-dashed px-3 py-1.5 text-xs font-semibold text-accent">Todos os dias</button>
       </div>
+      <p className="mt-1 text-[11px] text-muted-foreground">Sem folga fixa? Toque em <b>Todos os dias</b> — depois marque cada folga na agenda abaixo (7 dias sem folga gera aviso ao supervisor).</p>
       <div className="mt-2 grid grid-cols-2 gap-2">
         <div><Label className="text-xs">Início</Label><Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="h-10 text-sm" /></div>
         <div><Label className="text-xs">Fim</Label><Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="h-10 text-sm" /></div>

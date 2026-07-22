@@ -42,10 +42,11 @@ function AdminScheduleEditor({ m }: { m: CalManager }) {
   if (!open) return <button onClick={() => setOpen(true)} className="ml-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold text-accent">Editar horário</button>;
   return (
     <div className="mt-1 w-full rounded-md border border-accent/40 bg-background p-2">
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         {WD_FULL.map((w, i) => (
           <button key={i} type="button" onClick={() => toggle(i)} className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${days.includes(i) ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground'}`}>{w}</button>
         ))}
+        <button type="button" onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])} className="ml-1 rounded-full border border-dashed px-2 py-1 text-[10px] font-semibold text-accent">Todos os dias</button>
       </div>
       <div className="mt-1.5 flex items-center gap-1.5">
         <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="h-8 rounded border-2 border-input bg-background px-1.5 text-xs" />
@@ -54,6 +55,64 @@ function AdminScheduleEditor({ m }: { m: CalManager }) {
         <button onClick={() => void save()} disabled={busy} className="rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-60">Salvar</button>
         <button onClick={() => setOpen(false)} className="rounded border px-2 py-1 text-xs">Cancelar</button>
       </div>
+    </div>
+  );
+}
+
+function firstName(n: string): string { return n.trim().split(/\s+/)[0]; }
+function hourNum(t: string | null): number | null { if (!t) return null; const m = /^(\d{1,2}):/.exec(t); return m ? Number(m[1]) : null; }
+
+/** Grade semanal por horário (linha de horários à esquerda) — mostra nomes e horas sem gerente (20/07). */
+function WeeklyTimetable({ managers }: { managers: CalManager[] }) {
+  const scheduled = managers.filter((m) => m.hasSchedule);
+  if (scheduled.length === 0) return null;
+  // Faixa de horas = união dos horários cadastrados (padrão 8..23 se algum for "dia todo")
+  let minH = 24, maxH = 0; let anyFullDay = false;
+  for (const m of scheduled) {
+    const s = hourNum(m.startTime); const e = hourNum(m.endTime);
+    if (s == null || e == null) { anyFullDay = true; continue; }
+    minH = Math.min(minH, s); maxH = Math.max(maxH, e);
+  }
+  if (anyFullDay || minH >= maxH) { minH = Math.min(minH === 24 ? 8 : minH, 8); maxH = Math.max(maxH, 23); }
+  const hours: number[] = [];
+  for (let h = minH; h < maxH; h++) hours.push(h);
+
+  function coverFor(wd: number, h: number): string[] {
+    return scheduled.filter((m) => {
+      if (!m.weekdays.includes(wd)) return false;
+      const s = hourNum(m.startTime); const e = hourNum(m.endTime);
+      if (s == null || e == null) return true; // dia todo
+      return h >= s && h < e;
+    }).map((m) => firstName(m.name));
+  }
+
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Grade semanal por horário</p>
+      <table className="w-full border-collapse text-center text-[10px]">
+        <thead>
+          <tr>
+            <th className="sticky left-0 bg-card p-1 text-muted-foreground">hora</th>
+            {WD_FULL.map((w, i) => <th key={i} className="p-1 font-semibold text-muted-foreground">{w}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {hours.map((h) => (
+            <tr key={h}>
+              <td className="sticky left-0 bg-card p-1 font-mono text-muted-foreground">{String(h).padStart(2, '0')}h</td>
+              {WD_FULL.map((_, wd) => {
+                const names = coverFor(wd, h);
+                return (
+                  <td key={wd} className={`border p-1 ${names.length ? 'bg-success/70 text-white' : 'bg-critical/15 text-critical'}`} title={names.length ? names.join(', ') : 'sem gerente'}>
+                    {names.length ? names.join(', ') : '—'}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-1 text-[10px] text-muted-foreground">Verde = gerente presente (nome). Vermelho = sem gerente naquele horário.</p>
     </div>
   );
 }
@@ -82,6 +141,13 @@ function UnitCalendar({ unit, year, month, isAdmin = false }: { unit: CalUnit; y
         </div>
       </div>
 
+      {/* Alerta: gerente 7+ dias sem folga lançada (também notifica admin/supervisor) */}
+      {unit.missingFolgaNames.length > 0 && (
+        <p className="mt-2 rounded-lg bg-critical/10 px-3 py-2 text-xs font-semibold text-critical">
+          ⚠ Sem folga lançada há 7+ dias: {unit.missingFolgaNames.join(', ')}. Cobrar o lançamento da folga.
+        </p>
+      )}
+
       {/* Gerentes e padrão semanal */}
       <div className="mt-2 flex flex-wrap gap-2">
         {unit.managers.length === 0 && <span className="text-xs text-muted-foreground">Sem gerente vinculado.</span>}
@@ -94,13 +160,17 @@ function UnitCalendar({ unit, year, month, isAdmin = false }: { unit: CalUnit; y
         ))}
       </div>
 
+      {/* Grade semanal por horário (nomes + horas sem gerente) */}
+      <WeeklyTimetable managers={unit.managers} />
+
       {/* Grade do mês */}
       <div className="mt-3 grid grid-cols-7 gap-1 text-center">
         {WD.map((w, i) => <div key={i} className="text-[10px] font-bold uppercase text-muted-foreground">{w}</div>)}
         {blanks.map((_, i) => <div key={`b${i}`} />)}
         {unit.days.map((d) => (
-          <button key={d.day} onClick={() => setSel(sel?.day === d.day ? null : d)} className={`aspect-square rounded text-xs font-semibold ${cellClass(d)} ${sel?.day === d.day ? 'ring-2 ring-brand' : ''}`} title={d.working.length ? `Gerente(s): ${d.working.join(', ')}` : d.gap ? 'Sem gerente' : ''}>
-            {d.day}
+          <button key={d.day} onClick={() => setSel(sel?.day === d.day ? null : d)} className={`min-h-[2.4rem] rounded px-0.5 py-0.5 text-xs font-semibold ${cellClass(d)} ${sel?.day === d.day ? 'ring-2 ring-brand' : ''}`} title={d.working.length ? `Gerente(s): ${d.working.join(', ')}` : d.gap ? 'Sem gerente' : ''}>
+            <span className="block leading-tight">{d.day}</span>
+            {d.working.length > 0 && <span className="block truncate text-[8px] font-normal leading-tight">{d.working.map(firstName).join(', ')}</span>}
           </button>
         ))}
       </div>

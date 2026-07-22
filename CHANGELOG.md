@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.31.0 — 2026-07-21 (Calendário de gerentes + Resumo de checklists)
+### Adicionado
+- **Calendário de gerentes**: nova **grade semanal por horário** (linha de horas à esquerda) mostrando o **nome dos gerentes** em cada faixa e destacando em vermelho as **horas sem gerente**; nomes também nas células do mês; **alerta na aba** para gerentes 7+ dias sem folga (além da notificação a supervisores E admins); botão **"Todos os dias"** (gerente sem folga fixa marca a folga depois).
+- **Configurações → Checklists → aba "Resumo por unidade"**: **matriz checklist × unidade** (✓ habilitado; âmbar = checklist comum faltando na unidade) + busca + filtro "só possíveis faltas" + total por unidade. Ajuda o supervisor a achar checklists faltando.
+
 ## v1.30.0 — 2026-07-21 (Pagamentos: admin/CEO podem se autoaprovar)
 ### Alterado
 - **Autoaprovação de pagamentos** liberada para **ADMIN/CEO** (decisão do Pedro). Demais perfis seguem com a segregação de funções (quem lança não aprova o próprio). Investigação do caso Jefferson documentada em `docs/antifraude-e-automacoes.md`.
