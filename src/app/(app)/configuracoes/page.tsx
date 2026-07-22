@@ -51,6 +51,7 @@ export default async function ConfiguracoesPage() {
           { href: '/configuracoes/desperdicios', label: 'Desperdícios (categorias)', icon: Trash2 },
           { href: '/configuracoes/ocorrencias', label: 'Ocorrências (tipos/categorias)', icon: AlertTriangle },
           { href: '/configuracoes/fornecedores', label: 'Fornecedores', icon: Truck },
+          { href: '/configuracoes/produtos', label: 'Catálogo de Produtos (Fábrica/CD)', icon: Truck },
           { href: '/configuracoes/padrao-produtos', label: 'Padrão de produtos (IA)', icon: ListChecks },
           { href: '/configuracoes/pagamentos', label: 'Pagamentos', icon: Wallet },
           { href: '/configuracoes/freelancer-valores', label: 'Valor do freelancer (hora)', icon: Wallet },

@@ -791,6 +791,43 @@ model ManagerLeave {
   @@map("manager_leaves")
 }
 
+/// Solicitação de Produtos (Fase 1, 21/07): catálogo Fábrica/CD + pedido do gerente.
+enum ProductOrigin {
+  FABRICA
+  CD
+}
+
+model Product {
+  id        String        @id @default(cuid())
+  name      String
+  origin    ProductOrigin
+  category  String        @default("Geral")
+  measure   String        @default("un")
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+
+  @@index([active, category])
+  @@map("products")
+}
+
+model ProductRequest {
+  id            String        @id @default(cuid())
+  unitId        String
+  origin        ProductOrigin
+  number        Int
+  status        String        @default("NEW") // NEW SEPARATING SENT RECEIVED
+  createdById   String
+  createdByName String
+  note          String?
+  items         Json // [{ productId, name, category, measure, qty }]
+  createdAt     DateTime      @default(now())
+  receivedAt    DateTime?
+
+  @@index([unitId, createdAt])
+  @@index([origin, status])
+  @@map("product_requests")
+}
+
 /// Local de higiene (banheiro) por unidade — QR aponta para a página pública (20/07).
 model HygieneLocation {
   id        String   @id @default(cuid())

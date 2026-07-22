@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.36.0 — 2026-07-21 (Módulo Solicitação de Produtos — Fase 1)
+### Adicionado
+- **Solicitação de Produtos (Fábrica/CD)**: catálogo (`Configurações → Catálogo de Produtos`, CRUD + **import/export Excel**); **pedido mobile** com **busca inteligente** (ignora acento), agrupado por categoria e quantidade por item; ao enviar, o sistema **separa automaticamente em Fábrica e CD** (gera 1 pedido por destino). **Meus pedidos** com status (Novo→Em separação→Enviado→Recebido) e **confirmação de recebimento** pelo gerente; **visão Fábrica/CD** (Supervisão/Admin) move os status e imprime a separação. `src/lib/products.ts`, models `Product`/`ProductRequest`. Fábrica/CD por e-mail entra na fase seguinte.
+
 ## v1.35.0 — 2026-07-21 (Higiene dos banheiros — QR + notificação + análise)
 ### Adicionado
 - **Módulo Higiene dos banheiros**: QR do banheiro aponta para uma **página pública** (`/higiene/<unidade>`, sem login) onde o cliente escolhe o banheiro, o problema e uma avaliação e envia — o **gerente é notificado na hora** (in-app). Módulo interno com **análise** (solicitações, em aberto, tempo médio de resposta, horário de pico, banheiros com mais pedidos), **resolver** solicitação, **cadastro de banheiros** e o **link do QR** por unidade. Substitui o antigo Forms→WhatsApp; **WhatsApp fica para a fase 2** (Evolution API do CEO). `src/lib/hygiene.ts`, models `HygieneLocation`/`HygieneRequest`.

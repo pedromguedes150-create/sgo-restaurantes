@@ -38,6 +38,7 @@ export const MODULES: { key: string; label: string; nav?: string }[] = [
   { key: 'EXECUTIVE', label: 'Visão Executiva', nav: '/modulos/executivo' },
   { key: 'AUDIT', label: 'Auditoria', nav: '/auditoria' },
   { key: 'HYGIENE', label: 'Higiene dos banheiros', nav: '/modulos/higiene' },
+  { key: 'PRODUCTS', label: 'Solicitação de Produtos', nav: '/modulos/produtos' },
   { key: 'CONFIG', label: 'Configurações', nav: '/configuracoes' },
 ];
 
