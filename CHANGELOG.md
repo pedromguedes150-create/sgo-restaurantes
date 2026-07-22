@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.33.0 — 2026-07-21 (Painel resumo da unidade — reunião supervisor×gerente)
+### Adicionado
+- **Painel da unidade** (`/modulos/painel-unidade`, Supervisão/Admin): uma tela por unidade+mês para a reunião com o gerente — **performance** (meta, uso, checklists, desperdício), **preenchimento operacional** (checklists concluídos/atrasados/não realizados, cobertura de comandas/desperdício, notas, movimentos do cofre, ocorrências) e **detalhamento da meta**. Seletor de unidade/mês + **Imprimir/PDF**. Reaproveita os números de `getUsageBoard`/`getMetaBreakdown` (sem divergência). Link na Rotina do Supervisor.
+
 ## v1.32.0 — 2026-07-21 (Comunicados em tela cheia ao abrir o app)
 ### Adicionado
 - **Comunicados pendentes aparecem em TELA CHEIA ao abrir o app** (como um anúncio): o gerente lê e **confirma ali mesmo**. Um por vez (urgentes/fixados primeiro), com anexos e, quando exigido, campo de resposta. "Ver depois" pula sem confirmar. `/api/communications/pending` + `CommunicationInterstitial` no layout.
