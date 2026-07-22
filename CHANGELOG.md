@@ -17,6 +17,8 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 - **Cruzamento antifraude (itens 3 + 4)**: as faltantes são cruzadas com a **última análise de "Comandas em Aberto"** da unidade; comanda que sumiu da bandeja **E** está aberta com valor no Teknisa aparece destacada com data/hora e valor — o padrão da fraude das "2 comandas", pronto para o monitoramento buscar a câmera.
 - `src/lib/commands/barcode.ts` (parser **tolerante**: número puro, zeros à esquerda, prefixos, EAN-13 com dígito verificador — só aceita palpite que exista na sequência ativa, nunca inventa comanda), `src/lib/commands/scan.ts`, `/api/commands/scan`, migração `20260722200000_cashier_role`. 12 testes novos.
 - ⚠️ O parser será **calibrado** quando chegar 1 exemplo real do código de barras da comanda da rede.
+### Corrigido
+- **Servidor não subia com o push ligado** (pego na verificação em instância local, antes de qualquer deploy): o scheduler (`src/instrumentation.ts`) importa a Central de Notificações, que agora carrega `web-push`; o Next compila a instrumentação **também para o runtime edge**, onde `http`/`https` do Node não resolvem — o app respondia 500 em todas as telas. `next.config.mjs` passou a marcar `web-push` como externo no bundle edge (onde o `register()` já sai na primeira linha).
 
 ## v1.38.0 — 2026-07-22 (Notificações no celular — PWA + Web Push)
 ### Adicionado
