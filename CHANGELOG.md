@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.32.0 — 2026-07-21 (Comunicados em tela cheia ao abrir o app)
+### Adicionado
+- **Comunicados pendentes aparecem em TELA CHEIA ao abrir o app** (como um anúncio): o gerente lê e **confirma ali mesmo**. Um por vez (urgentes/fixados primeiro), com anexos e, quando exigido, campo de resposta. "Ver depois" pula sem confirmar. `/api/communications/pending` + `CommunicationInterstitial` no layout.
+
 ## v1.31.0 — 2026-07-21 (Calendário de gerentes + Resumo de checklists)
 ### Adicionado
 - **Calendário de gerentes**: nova **grade semanal por horário** (linha de horas à esquerda) mostrando o **nome dos gerentes** em cada faixa e destacando em vermelho as **horas sem gerente**; nomes também nas células do mês; **alerta na aba** para gerentes 7+ dias sem folga (além da notificação a supervisores E admins); botão **"Todos os dias"** (gerente sem folga fixa marca a folga depois).

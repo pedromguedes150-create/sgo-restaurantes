@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { unreadCount } from '@/lib/notifications';
 import { viewableNavHrefs } from '@/lib/permissions';
 import { getInboxPendingCount } from '@/lib/communications/query';
+import { CommunicationInterstitial } from '@/components/communications/communication-interstitial';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getSessionUser();
@@ -26,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <main className="w-full max-w-3xl flex-1 px-4 pb-24 pt-4 md:pb-8 print:max-w-none print:p-0">{children}</main>
       </div>
       <BottomNav />
+      {commPending > 0 && <CommunicationInterstitial />}
     </div>
   );
 }

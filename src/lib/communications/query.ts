@@ -22,6 +22,37 @@ export async function getInboxPendingCount(user: SessionUser): Promise<number> {
   return prisma.communicationRecipient.count({ where: { userId: user.id, status: 'PENDING' } });
 }
 
+export interface InterstitialComm {
+  id: string; title: string; body: string; priority: string; pinned: boolean; requiresResponse: boolean;
+  authorName: string; createdAt: string;
+  attachments: { path: string; name: string; isImage: boolean }[];
+}
+
+/**
+ * Comunicados PENDENTES do usuário para exibir em tela cheia ao abrir o app
+ * (20/07): urgentes/fixados primeiro. O gerente confirma ali mesmo.
+ */
+export async function getPendingInterstitials(user: SessionUser): Promise<InterstitialComm[]> {
+  const PRIO: Record<string, number> = { URGENT: 0, IMPORTANT: 1, NORMAL: 2 };
+  const rows = await prisma.communicationRecipient.findMany({
+    where: { userId: user.id, status: 'PENDING' },
+    include: { communication: { include: { author: { select: { name: true } }, attachments: true } } },
+    take: 20,
+  });
+  return rows
+    .map((r) => r.communication)
+    .sort((a, b) => (Number(b.pinned) - Number(a.pinned)) || ((PRIO[a.priority] ?? 9) - (PRIO[b.priority] ?? 9)) || (a.dueAt.getTime() - b.dueAt.getTime()))
+    .map((c) => ({
+      id: c.id, title: c.title, body: c.body, priority: c.priority, pinned: c.pinned, requiresResponse: c.requiresResponse,
+      authorName: c.author?.name ?? '—', createdAt: c.createdAt.toISOString(),
+      attachments: (c.attachments ?? []).map((a) => {
+        const path = (a as { path?: string; url?: string }).path ?? (a as { url?: string }).url ?? '';
+        const name = (a as { name?: string; fileName?: string }).name ?? (a as { fileName?: string }).fileName ?? 'anexo';
+        return { path, name, isImage: /\.(png|jpe?g|gif|webp)$/i.test(path) };
+      }).filter((a) => a.path),
+    }));
+}
+
 /** Painel do autor/supervisão: comunicados que pode acompanhar, com contagens. */
 export async function getAuthoredCommunications(user: SessionUser) {
   const where = user.seesAllUnits
