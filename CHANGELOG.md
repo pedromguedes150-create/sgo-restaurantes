@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.35.0 — 2026-07-21 (Higiene dos banheiros — QR + notificação + análise)
+### Adicionado
+- **Módulo Higiene dos banheiros**: QR do banheiro aponta para uma **página pública** (`/higiene/<unidade>`, sem login) onde o cliente escolhe o banheiro, o problema e uma avaliação e envia — o **gerente é notificado na hora** (in-app). Módulo interno com **análise** (solicitações, em aberto, tempo médio de resposta, horário de pico, banheiros com mais pedidos), **resolver** solicitação, **cadastro de banheiros** e o **link do QR** por unidade. Substitui o antigo Forms→WhatsApp; **WhatsApp fica para a fase 2** (Evolution API do CEO). `src/lib/hygiene.ts`, models `HygieneLocation`/`HygieneRequest`.
+
 ## v1.34.0 — 2026-07-21 (Antifraude: análise de comandas em aberto)
 ### Adicionado
 - **Comandas → Análise de comandas em aberto** (Supervisão/Admin): sobe o relatório do Teknisa (.xlsx/.csv) e o SGO destaca **comandas abertas com valor e data de abertura anterior ao corte** (possível fraude das "2 comandas") — nº, data/hora, dias em aberto, valor e itens; ordena pelas mais antigas; imprimível para o monitoramento buscar câmeras. Histórico das análises por unidade. `src/lib/commands/open-analysis.ts`, `OpenCommandAnalysis`.

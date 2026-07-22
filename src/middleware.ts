@@ -11,7 +11,7 @@ import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/auth/cookies';
  */
 // /api/integracoes = recepção máquina-a-máquina (RH→SGO), autenticada por
 // token Bearer DENTRO da rota (RH_INBOUND_TOKEN) — sem cookie de sessão.
-const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health', '/api/integracoes'];
+const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health', '/api/integracoes', '/higiene', '/api/higiene'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

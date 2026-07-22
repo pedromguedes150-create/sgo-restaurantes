@@ -791,6 +791,38 @@ model ManagerLeave {
   @@map("manager_leaves")
 }
 
+/// Local de higiene (banheiro) por unidade — QR aponta para a página pública (20/07).
+model HygieneLocation {
+  id        String   @id @default(cuid())
+  unitId    String
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([unitId, active])
+  @@map("hygiene_locations")
+}
+
+/// Solicitação de higienização (pública, via QR do banheiro) — centraliza o antigo Forms→WhatsApp.
+model HygieneRequest {
+  id             String    @id @default(cuid())
+  unitId         String
+  locationId     String?
+  locationName   String
+  issue          String?
+  rating         Int?
+  comment        String?
+  status         String    @default("OPEN")
+  resolvedById   String?
+  resolvedByName String?
+  resolvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([unitId, createdAt])
+  @@index([unitId, status])
+  @@map("hygiene_requests")
+}
+
 /// Análise de "Comandas em Aberto" (Teknisa) — antifraude das 2 comandas (20/07).
 /// Supervisor/Admin sobe o relatório; guardamos as suspeitas (aberta + valor + data < hoje).
 model OpenCommandAnalysis {
