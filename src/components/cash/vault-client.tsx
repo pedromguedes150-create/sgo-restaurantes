@@ -71,6 +71,10 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, canOperate, 
   const [bucketId, setBucketId] = useState('');
   const [bName, setBName] = useState('');
   const [bTarget, setBTarget] = useState('');
+  // edição de balde (nome + valor) — 20/07
+  const [editBucketId, setEditBucketId] = useState<string | null>(null);
+  const [ebName, setEbName] = useState('');
+  const [ebTarget, setEbTarget] = useState('');
 
   const activeBuckets = vault.buckets.filter((b) => b.active);
   const bucketsTotal = useMemo(() => activeBuckets.reduce((t, b) => t + b.targetValue, 0), [activeBuckets]);
@@ -126,15 +130,23 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, canOperate, 
         {activeBuckets.length === 0 && <p className="text-sm text-muted-foreground">Nenhum balde cadastrado{canManageBuckets ? ' — cadastre abaixo' : ' (peça à supervisão)'}. </p>}
         <div className="flex flex-wrap gap-2">
           {activeBuckets.map((b) => (
-            <span key={b.id} className="rounded-lg border px-3 py-1.5 text-sm font-semibold">{b.name} · {brl(b.targetValue)}
-              {canManageBuckets && (
-                <button className="ml-2 text-xs text-muted-foreground underline" disabled={busy} onClick={() => {
-                  const v = prompt(`Novo valor-alvo do ${b.name} (R$):`, String(b.targetValue).replace('.', ','));
-                  if (v === null) return;
-                  void post({ action: 'bucketSet', id: b.id, unitId: selectedUnitId, name: b.name, targetValue: parseFloat(v.replace(/\./g, '').replace(',', '.')) });
-                }}>editar</button>
-              )}
-            </span>
+            editBucketId === b.id ? (
+              <span key={b.id} className="flex flex-wrap items-end gap-1.5 rounded-lg border-2 border-accent/40 bg-background p-2">
+                <div><span className="block text-[11px] text-muted-foreground">Nome</span><Input value={ebName} onChange={(e) => setEbName(e.target.value)} className="h-8 w-28 text-sm" /></div>
+                <div><span className="block text-[11px] text-muted-foreground">Alvo (R$)</span><Input inputMode="decimal" value={ebTarget} onChange={(e) => setEbTarget(e.target.value)} className="h-8 w-24 text-sm" /></div>
+                <Button size="sm" disabled={busy || !ebName.trim() || !ebTarget} onClick={async () => { if (await post({ action: 'bucketSet', id: b.id, unitId: selectedUnitId, name: ebName.trim(), targetValue: parseFloat(ebTarget.replace(/\./g, '').replace(',', '.')) })) setEditBucketId(null); }}>Salvar</Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditBucketId(null)}>Cancelar</Button>
+              </span>
+            ) : (
+              <span key={b.id} className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-semibold">{b.name} · {brl(b.targetValue)}
+                {canManageBuckets && (
+                  <>
+                    <button className="text-xs text-accent underline" disabled={busy} onClick={() => { setEditBucketId(b.id); setEbName(b.name); setEbTarget(String(b.targetValue).replace('.', ',')); }}>editar</button>
+                    <button className="text-xs text-critical underline" disabled={busy} onClick={() => { if (confirm(`Excluir o balde "${b.name}"? Esta ação não pode ser desfeita (o histórico de movimentos mantém o nome).`)) void post({ action: 'bucketDelete', id: b.id }); }}>excluir</button>
+                  </>
+                )}
+              </span>
+            )
           ))}
         </div>
         {canManageBuckets && (

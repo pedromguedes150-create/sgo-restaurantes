@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.29.0 — 2026-07-21 (Troco: editar/excluir baldes)
+### Adicionado
+- **Gestão de Troco → baldes dos caixas**: Supervisão/Admin agora **editam o nome E o valor-alvo** (antes só o valor) e podem **excluir o balde inteiro** (o histórico de movimentos preserva o nome). Auditado.
+
 ## v1.28.0 — 2026-07-21 (pacote 20/07 — bloco 3.1: Admin cadastra horário do gerente)
 ### Adicionado
 - **Admin/CEO cadastram o horário de qualquer gerente** direto no **Calendário de gerentes** (botão "Editar horário" em cada gerente): marca os dias + horário e salva (auditado). Antes só o próprio gerente podia; agora o admin também preenche por eles.

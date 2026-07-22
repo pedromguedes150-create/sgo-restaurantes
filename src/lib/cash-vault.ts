@@ -205,6 +205,16 @@ export async function toggleBucket(user: SessionUser, id: string, active: boolea
   return { ok: true };
 }
 
+/** Exclui o balde por completo (Supervisão/Admin). Os movimentos guardam o nome (snapshot). */
+export async function deleteBucket(user: SessionUser, id: string, ctx: Ctx = {}): Promise<Result> {
+  if (!canManageBuckets(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const b = await prisma.cashBucket.findUnique({ where: { id }, select: { unitId: true, name: true } });
+  if (!b) return { ok: false, reason: 'NOT_FOUND' };
+  await prisma.cashBucket.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: b.unitId, action: 'CASH_BUCKET_DELETE', module: 'CASH', entity: 'cash_bucket', entityId: id, metadata: { name: b.name }, ...ctx });
+  return { ok: true };
+}
+
 /* ───────── Visões ───────── */
 export interface VaultOverview {
   balances: Balances;

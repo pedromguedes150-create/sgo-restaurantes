@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { countVault, refillBucket, officeSwap, vaultWithdrawal, upsertBucket, toggleBucket } from '@/lib/cash-vault';
+import { countVault, refillBucket, officeSwap, vaultWithdrawal, upsertBucket, toggleBucket, deleteBucket } from '@/lib/cash-vault';
 
 /** POST { action, … } — Cofre de troco v2 (16/07). */
 export async function POST(req: Request) {
@@ -18,6 +18,7 @@ export async function POST(req: Request) {
   else if (b.action === 'withdrawal') r = await vaultWithdrawal(user, String(b.unitId ?? ''), b.amounts ?? {}, String(b.reason ?? ''), ctx);
   else if (b.action === 'bucketSet') r = await upsertBucket(user, { id: b.id ? String(b.id) : undefined, unitId: String(b.unitId ?? ''), name: String(b.name ?? ''), targetValue: Number(b.targetValue) }, ctx);
   else if (b.action === 'bucketToggle') r = await toggleBucket(user, String(b.id ?? ''), Boolean(b.active), ctx);
+  else if (b.action === 'bucketDelete') r = await deleteBucket(user, String(b.id ?? ''), ctx);
   else return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
 
   if (!r.ok) {
