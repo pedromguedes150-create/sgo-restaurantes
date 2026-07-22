@@ -22,6 +22,8 @@ RUN npx prisma generate
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public" \
     JWT_ACCESS_SECRET="build-time-dummy-secret-not-used" \
     JWT_REFRESH_SECRET="build-time-dummy-secret-not-used"
+# Heap maior p/ o type-check do build (app cresceu — evita OOM/SIGABRT no worker)
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 # ---- Runner ----
