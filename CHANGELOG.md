@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.38.0 — 2026-07-22 (Notificações no celular — PWA + Web Push)
+### Adicionado
+- **App instalável (PWA)**: manifesto, ícones da marca (bordô + "BF") e service worker. No Android dá para "Instalar aplicativo"; no iPhone, "Adicionar à Tela de Início" (pré-requisito do push no iOS).
+- **Notificações no celular (Web Push/VAPID)**: em **Meu Perfil → Notificações no celular**, o usuário ativa o aviso **em cada aparelho**; a notificação chega **com o app fechado** e, ao tocar, abre direto na tela do assunto. Envia teste, lista "Meus aparelhos" (com remoção) e **preferências por categoria** (Tarefas e metas, Comunicados, Ocorrências e manutenção, Operação do dia, Pessoas e escala, Gerais) — avisos **críticos ignoram a preferência**.
+- O push é um **canal extra plugado na Central de Notificações**: todo aviso que já existia (`notifyUsers`/`notifyRole`/`notifyAdmins`/`notifyUnitRole`) passa a sair também no aparelho, sem mudança nos módulos. O registro no sino 🔔 continua sendo criado mesmo se o push falhar.
+- Inscrições mortas (aparelho trocado/app desinstalado) são **removidas automaticamente** (404/410 do serviço de push ou 5 falhas seguidas).
+- `src/lib/push/*` (send/manage/categories), `/api/push` + `/api/push/key`, models `PushSubscription`/`PushPreference`, migração `20260722190000_web_push`, `scripts/gen-vapid.mjs` e `scripts/gen-icons.mjs`. **Inerte sem as chaves** `VAPID_*` no `.env` (o sistema segue igual, só in-app). 10 testes novos.
+
 ## v1.37.0 — 2026-07-22 (Antifraude de cancelamentos + relatórios de comandas)
 ### Adicionado
 - **Cancelamentos → Análise antifraude (PDF)** (Supervisão/Admin): sobe o **PDF** "Vendas/Itens Cancelados no Período" (Teknisa) e o SGO analisa por **caixa (terminal)**, por **autorizador (SUPERVISOR)**, por **horário** e **valor**, com **alertas automáticos** (concentração ≥50% do valor num caixa/autorizador, valor médio muito acima da mediana, cancelamentos altos, pico de horário) + maiores cancelamentos + histórico. `src/lib/cancellations/fraud-analysis.ts` (parser via pdf-parse), model `CancellationAnalysis`.

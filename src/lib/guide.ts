@@ -199,6 +199,28 @@ export const GUIDE: GuideSection[] = [
           'Toque no seu nome/avatar no topo da tela para abrir o Meu Perfil.',
           'Complete o nome completo e o CPF — a Supervisão/Admin visualizam esses dados em Configurações → Usuários.',
           'Troque a senha informando a senha atual + a nova (mínimo 8 caracteres).',
+          'Mais abaixo, em "Notificações no celular", ative os avisos do SGO no aparelho (ver o guia próprio).',
+        ],
+      },
+      {
+        id: 'push-celular',
+        title: 'Receber notificações no celular (avisos com o app fechado)',
+        roles: ALL_ROLES,
+        summary: 'Instale o SGO no celular e ative as notificações — o aviso chega mesmo sem o app aberto.',
+        steps: [
+          'INSTALAR O APP: no Android (Chrome), abra o SGO e toque no menu ⋮ → "Instalar aplicativo"/"Adicionar à tela de início". No iPhone (Safari), toque em Compartilhar → "Adicionar à Tela de Início".',
+          'No iPhone esse passo é OBRIGATÓRIO: sem instalar, o iOS não entrega notificação nenhuma.',
+          'Abra o SGO pelo ÍCONE instalado, entre em Meu Perfil (seu nome no topo) e vá até "Notificações no celular".',
+          'Toque em "Ativar notificações neste aparelho" e responda PERMITIR na pergunta do navegador.',
+          'Toque em "Enviar teste" — deve aparecer uma notificação na tela em alguns segundos.',
+          'Ao tocar na notificação, o SGO abre direto na tela do assunto.',
+        ],
+        tips: [
+          'É por aparelho: se você usa celular e computador, ative nos dois.',
+          'Em "O que quero receber no celular" dá para desligar categorias (ex.: só comunicados e ocorrências). O aviso continua no sino 🔔 — só não vira notificação no aparelho.',
+          'Avisos críticos são sempre enviados, mesmo com a categoria desligada.',
+          'Se você bloqueou por engano, libere em Configurações do site → Notificações e recarregue a página.',
+          'A lista "Meus aparelhos" mostra onde você ativou; toque na lixeira para remover um aparelho antigo (ex.: celular trocado).',
         ],
       },
       {

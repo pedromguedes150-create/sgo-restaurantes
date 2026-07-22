@@ -5,6 +5,16 @@ export const metadata: Metadata = {
   title: 'SGO Beija Flor',
   description: 'Sistema de Gestão Operacional — Rede Beija Flor',
   applicationName: 'SGO Beija Flor',
+  // PWA: instalável na tela de início (pré-requisito do push no iPhone)
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
+  appleWebApp: { capable: true, title: 'SGO', statusBarStyle: 'black-translucent' },
 };
 
 // PWA / mobile-first: viewport adequado e cor de tema da marca

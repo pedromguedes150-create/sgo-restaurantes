@@ -1,8 +1,9 @@
-import { UserCircle2 } from 'lucide-react';
+import { UserCircle2, BellRing } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProfileClient } from '@/components/profile/profile-client';
+import { PushClient } from '@/components/push/push-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,14 @@ export default async function PerfilPage() {
       </div>
       <Card><CardContent className="pt-4">
         <ProfileClient name={me?.name ?? ''} cpf={me?.cpf ?? ''} email={me?.email ?? ''} />
+      </CardContent></Card>
+
+      <div>
+        <h2 className="flex items-center gap-2 text-lg font-bold text-brand"><BellRing className="h-5 w-5 text-accent" /> Notificações no celular</h2>
+        <p className="text-sm text-muted-foreground">Receba os avisos do SGO mesmo com o app fechado. É preciso ativar em cada aparelho que você usa.</p>
+      </div>
+      <Card><CardContent className="pt-4">
+        <PushClient />
       </CardContent></Card>
     </div>
   );

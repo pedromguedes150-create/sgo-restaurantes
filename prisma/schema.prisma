@@ -122,6 +122,8 @@ model User {
   inventoryConfirmed   InventorySchedule[] @relation("InvConf")
   popReads             PopRead[]
   notifications        Notification[]
+  pushSubscriptions    PushSubscription[]
+  pushPreferences      PushPreference[]
   scheduleActuals      ScheduleActual[] @relation("ScheduleActualBy")
   trainingsApplied     TrainingRecord[] @relation("TrainingBy")
   communicationsAuthored  Communication[]          @relation("CommAuthor")
@@ -1830,6 +1832,44 @@ model Notification {
   @@index([userId, read])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+/// Inscrição de Web Push (VAPID) — uma por aparelho/navegador do usuário.
+/// Criada em Meu Perfil ao tocar "Ativar notificações neste aparelho".
+model PushSubscription {
+  id            String    @id @default(cuid())
+  userId        String
+  /// URL do serviço de push do navegador (identifica o aparelho)
+  endpoint      String    @unique
+  p256dh        String
+  auth          String
+  /// Rótulo amigável do aparelho (derivado do user-agent) p/ o usuário reconhecer
+  deviceLabel   String?
+  userAgent     String?
+  lastSuccessAt DateTime?
+  /// Envios seguidos com falha; ao estourar o limite a inscrição é removida
+  failCount     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+/// Preferência de push por categoria. Ausência de linha = ligado (padrão).
+/// Notificações críticas ignoram a preferência (regra do modelo Notification).
+model PushPreference {
+  id       String  @id @default(cuid())
+  userId   String
+  category String
+  enabled  Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
+  @@map("push_preferences")
 }
 
 // ── Perfis de acesso (Fase C) ──

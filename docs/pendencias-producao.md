@@ -27,6 +27,17 @@ Há **11 commits locais** de 07/07: v1.8.0 → v1.14.0 + testes + docs.
 git push origin main
 ```
 
+## 5. Chaves VAPID do push (v1.38.0) — gerar NO SERVIDOR de produção
+As notificações no celular só funcionam com um par de chaves VAPID no `.env` do servidor.
+As chaves do `.env` local são de desenvolvimento — **não reaproveite em produção** (a privada já circulou fora do servidor).
+```
+node scripts/gen-vapid.mjs
+```
+- Cole as 3 linhas (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) no `.env` de produção e suba o app (`up -d`).
+- Sem elas o sistema roda normalmente, só sem push (o sino 🔔 continua igual).
+- **Trocar as chaves depois invalida as inscrições já feitas** — cada usuário precisa reativar em Meu Perfil.
+- O push exige **HTTPS** (já temos) e, no iPhone, que o usuário instale o app na Tela de Início.
+
 ## ⚠️ Avisos de infraestrutura
 - **Disco C: com ~6,7 GB livres (95% cheio).** O VHDX do Docker não devolve espaço ao host automaticamente; compactá-lo exige parar o Docker Desktop — **derruba SGO e a plataforma do CEO por minutos**, só fazer combinado e fora de horário. Sugestão alternativa: mover a pasta `backups/` local para outro disco, e apagar downloads/temporários do Windows.
 - O backup diário (03:00) agora espelha no Google Drive; confira em alguns dias se o `G:\Meu Drive\SGO Backups` está sincronizando na nuvem (ícone verde no Drive).

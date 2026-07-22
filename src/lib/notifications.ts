@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
+import { sendPushToUsers } from '@/lib/push/send';
 
 export interface NotifyPayload {
   title: string;
@@ -10,7 +11,12 @@ export interface NotifyPayload {
   critical?: boolean;
 }
 
-/** Cria notificações in-app para vários usuários (fonte garantida — conceito nº 4). */
+/**
+ * Cria notificações in-app para vários usuários (fonte garantida — conceito nº 4)
+ * e dispara o Web Push nos aparelhos inscritos.
+ * O push é um CANAL EXTRA: o registro in-app é sempre criado, mesmo que o push
+ * falhe ou não esteja configurado (por isso o envio não bloqueia nem propaga erro).
+ */
 export async function notifyUsers(userIds: string[], p: NotifyPayload): Promise<void> {
   const ids = [...new Set(userIds)].filter(Boolean);
   if (ids.length === 0) return;
@@ -21,6 +27,7 @@ export async function notifyUsers(userIds: string[], p: NotifyPayload): Promise<
   } catch (err) {
     console.error('[notifications] falha ao criar:', err);
   }
+  void sendPushToUsers(ids, p).catch((err) => console.error('[notifications] falha no push:', err));
 }
 
 /** Notifica todos os usuários de um perfil (ativos). */
