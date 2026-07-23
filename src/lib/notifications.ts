@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
 import { sendPushToUsers } from '@/lib/push/send';
+import { SUPERVISORY_ROLES } from '@/lib/roles';
 
 export interface NotifyPayload {
   title: string;
@@ -50,6 +51,22 @@ export async function notifyUnitRole(unitId: string, role: Role, p: NotifyPayloa
     where: { role, active: true, memberships: { some: { unitId } } },
     select: { id: true },
   });
+  await notifyUsers(users.map((u) => u.id), p);
+}
+
+/**
+ * Notifica a "linha supervisora" — SUPERVISOR + COORDINATOR + ADMIN (regra do Pedro,
+ * ver src/lib/roles.ts). Quando `unitId` é informado, SUPERVISOR/COORDINATOR são
+ * filtrados pelo vínculo com a unidade (ADMIN não tem vínculo e sempre recebe).
+ */
+export async function notifySupervisory(p: NotifyPayload, unitId?: string): Promise<void> {
+  const or = unitId
+    ? [
+        { role: 'ADMIN' as Role },
+        { role: { in: ['SUPERVISOR', 'COORDINATOR'] as Role[] }, memberships: { some: { unitId } } },
+      ]
+    : [{ role: { in: SUPERVISORY_ROLES } }];
+  const users = await prisma.user.findMany({ where: { active: true, OR: or }, select: { id: true } });
   await notifyUsers(users.map((u) => u.id), p);
 }
 

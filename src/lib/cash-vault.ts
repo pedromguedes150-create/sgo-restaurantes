@@ -1,9 +1,10 @@
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
-import { notifyAdmins, notifyUnitRole } from '@/lib/notifications';
+import { notifySupervisory, notifyUsers } from '@/lib/notifications';
+import { isSupervisory } from '@/lib/roles';
 import type { SessionUser } from '@/lib/auth/session';
-import type { CashMovementType, Prisma } from '@prisma/client';
+import type { CashMovementType, ChangeRequestStatus, Prisma } from '@prisma/client';
 
 /**
  * Gestão de Troco v2 — COFRE (16/07, modelo confirmado pelo Pedro + foto):
@@ -57,7 +58,7 @@ function canOperate(user: SessionUser): boolean {
   return user.role !== 'FINANCE' && user.role !== 'CEO';
 }
 function canManageBuckets(user: SessionUser): boolean {
-  return user.role === 'SUPERVISOR' || user.role === 'ADMIN';
+  return isSupervisory(user.role); // SUPERVISOR + COORDINATOR + ADMIN
 }
 
 async function getOrCreateVault(unitId: string) {
@@ -177,9 +178,188 @@ export async function vaultWithdrawal(user: SessionUser, unitId: string, amounts
     body: `${user.name} retirou ${brl} do cofre de ${unit?.name ?? 'unidade'} para pagamento — motivo: ${reason.trim()}. A reposição precisa ser cobrada.`,
     link: '/modulos/troco', module: 'CASH', critical: true,
   };
-  await notifyUnitRole(unitId, 'SUPERVISOR', payload).catch(() => {});
-  await notifyAdmins(payload).catch(() => {});
+  await notifySupervisory(payload, unitId).catch(() => {});
   return { ok: true };
+}
+
+/**
+ * Troca de dinheiro DIRETO no caixa (unidades sem baldes, ex.: Nova União).
+ * Igual à reposição, mas sem balde: sai um conjunto do cofre e entra outro de
+ * valor igual (o caixa troca notas por moedas/miúdos ali mesmo). Fica no histórico.
+ */
+export async function registerChange(
+  user: SessionUser, unitId: string, registerName: string,
+  outFromVault: Record<string, unknown>, inToVault: Record<string, unknown>, note: string | undefined, ctx: Ctx = {},
+): Promise<Result> {
+  if (!canOperate(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!registerName?.trim()) return { ok: false, reason: 'INVALID', detail: 'Informe qual caixa.' };
+  const outB = sanitize(outFromVault);
+  const inB = sanitize(inToVault);
+  const outTotal = sumBalances(outB);
+  const inTotal = sumBalances(inB);
+  if (outTotal <= 0) return { ok: false, reason: 'INVALID', detail: 'Informe o que saiu do cofre para o caixa.' };
+  if (Math.abs(outTotal - inTotal) > 0.011) {
+    return { ok: false, reason: 'INVALID', detail: `Troca desigual: saiu ${outTotal.toFixed(2)} e entrou ${inTotal.toFixed(2)} — os valores devem ser iguais (troca 1:1).` };
+  }
+  const deltas = emptyBalances();
+  for (const k of DENOM_KEYS) deltas[k] = r2((inB[k] || 0) - (outB[k] || 0));
+  await applyMovement(user, unitId, 'REGISTER_CHANGE', deltas, { bucketName: registerName.trim(), note: note?.trim() || null }, ctx);
+  return { ok: true };
+}
+
+/* ───────── Solicitação de troco (gerente → supervisão) ───────── */
+
+/** Gerente (ou quem opera) pede troco à supervisão; SUPERVISOR+COORDINATOR+ADMIN são notificados. */
+export async function requestChange(user: SessionUser, unitId: string, input: { amount?: number | null; note: string }, ctx: Ctx = {}): Promise<Result> {
+  if (!canOperate(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN' };
+  const note = (input.note ?? '').trim();
+  if (!note) return { ok: false, reason: 'INVALID', detail: 'Descreva o troco que você precisa.' };
+  const amount = input.amount != null && input.amount > 0 ? r2(input.amount) : null;
+
+  const req = await prisma.cashChangeRequest.create({
+    data: { unitId, amount, note, requestedById: user.id, requestedByName: user.name },
+    select: { id: true },
+  });
+  const unit = await prisma.unit.findUnique({ where: { id: unitId }, select: { name: true } });
+  const valuePart = amount ? ` (${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})` : '';
+  await notifySupervisory(
+    {
+      title: '💱 Solicitação de troco',
+      body: `${user.name} pediu troco em ${unit?.name ?? 'unidade'}${valuePart}: ${note}`,
+      link: '/modulos/troco', module: 'CASH',
+    },
+    unitId,
+  ).catch(() => {});
+  await audit({ userId: user.id, unitId, action: 'CASH_CHANGE_REQUEST', module: 'CASH', entity: 'cash_change_request', entityId: req.id, metadata: { amount, note }, ...ctx });
+  return { ok: true };
+}
+
+/** Supervisão resolve, ou o próprio solicitante cancela, uma solicitação de troco. */
+export async function resolveChangeRequest(user: SessionUser, id: string, action: 'resolve' | 'cancel', resolvedNote: string | undefined, ctx: Ctx = {}): Promise<Result> {
+  const req = await prisma.cashChangeRequest.findUnique({ where: { id } });
+  if (!req) return { ok: false, reason: 'NOT_FOUND' };
+  if (!canAccessUnit(user, req.unitId)) return { ok: false, reason: 'FORBIDDEN' };
+  if (req.status !== 'OPEN') return { ok: false, reason: 'INVALID', detail: 'Esta solicitação já foi encerrada.' };
+  if (action === 'resolve' && !isSupervisory(user.role)) return { ok: false, reason: 'FORBIDDEN', detail: 'Só a supervisão pode atender.' };
+  if (action === 'cancel' && req.requestedById !== user.id && !isSupervisory(user.role)) return { ok: false, reason: 'FORBIDDEN' };
+
+  await prisma.cashChangeRequest.update({
+    where: { id },
+    data: { status: action === 'resolve' ? 'RESOLVED' : 'CANCELED', resolvedById: user.id, resolvedByName: user.name, resolvedNote: resolvedNote?.trim() || null, resolvedAt: new Date() },
+  });
+  if (action === 'resolve') {
+    await notifyUsers([req.requestedById], {
+      title: '✅ Troco atendido',
+      body: `${user.name} atendeu seu pedido de troco${resolvedNote?.trim() ? `: ${resolvedNote.trim()}` : '.'}`,
+      link: '/modulos/troco', module: 'CASH',
+    }).catch(() => {});
+  }
+  await audit({ userId: user.id, unitId: req.unitId, action: action === 'resolve' ? 'CASH_CHANGE_RESOLVE' : 'CASH_CHANGE_CANCEL', module: 'CASH', entity: 'cash_change_request', entityId: id, ...ctx });
+  return { ok: true };
+}
+
+export interface ChangeRequestUI {
+  id: string; unitId: string; unitName?: string; amount: number | null; note: string;
+  status: ChangeRequestStatus; requestedByName: string; createdAt: string;
+  resolvedByName: string | null; resolvedNote: string | null; resolvedAt: string | null;
+}
+
+/** Solicitações de troco de uma unidade (abertas primeiro). */
+export async function getChangeRequests(user: SessionUser, unitId: string): Promise<ChangeRequestUI[]> {
+  if (!canAccessUnit(user, unitId)) return [];
+  const rows = await prisma.cashChangeRequest.findMany({ where: { unitId }, orderBy: [{ status: 'asc' }, { createdAt: 'desc' }], take: 50 });
+  return rows.map((r) => ({
+    id: r.id, unitId: r.unitId, amount: r.amount != null ? Number(r.amount) : null, note: r.note, status: r.status,
+    requestedByName: r.requestedByName, createdAt: r.createdAt.toISOString(),
+    resolvedByName: r.resolvedByName, resolvedNote: r.resolvedNote, resolvedAt: r.resolvedAt?.toISOString() ?? null,
+  }));
+}
+
+/**
+ * Solicitações de troco ABERTAS nas unidades do usuário (para destaque/badge da
+ * supervisão). Retorna as unidades com pendência para a aba de Troco realçar.
+ */
+export async function getOpenChangeRequests(user: SessionUser): Promise<ChangeRequestUI[]> {
+  const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, select: { id: true, name: true } });
+  const nameById = new Map(units.map((u) => [u.id, u.name]));
+  if (nameById.size === 0) return [];
+  const rows = await prisma.cashChangeRequest.findMany({
+    where: { status: 'OPEN', unitId: { in: [...nameById.keys()] } },
+    orderBy: { createdAt: 'desc' }, take: 100,
+  });
+  return rows.map((r) => ({
+    id: r.id, unitId: r.unitId, unitName: nameById.get(r.unitId), amount: r.amount != null ? Number(r.amount) : null, note: r.note,
+    status: r.status, requestedByName: r.requestedByName, createdAt: r.createdAt.toISOString(),
+    resolvedByName: null, resolvedNote: null, resolvedAt: null,
+  }));
+}
+
+/* ───────── Histórico filtrável de movimentações ───────── */
+
+export interface VaultHistoryFilters {
+  types?: CashMovementType[];
+  userId?: string;
+  from?: string; // YYYY-MM-DD
+  to?: string; // YYYY-MM-DD (inclusive)
+  minValue?: number;
+  maxValue?: number;
+  sort?: 'date_desc' | 'date_asc' | 'value_desc' | 'value_asc';
+}
+export interface MovementUI {
+  id: string; type: CashMovementType; bucketName: string | null; totalIn: number; totalOut: number;
+  value: number; note: string | null; createdByName: string; createdById: string; createdAt: string; deltas: Balances;
+}
+export interface VaultHistoryResult {
+  rows: MovementUI[];
+  users: { id: string; name: string }[];
+  total: number;
+}
+
+/** Histórico completo do cofre da unidade, com filtros e ordenação. */
+export async function getVaultHistory(user: SessionUser, unitId: string, f: VaultHistoryFilters = {}): Promise<VaultHistoryResult | null> {
+  if (!canAccessUnit(user, unitId)) return null;
+
+  const where: Prisma.CashVaultMovementWhereInput = { unitId };
+  if (f.types?.length) where.type = { in: f.types };
+  if (f.userId) where.createdById = f.userId;
+  if (f.from || f.to) {
+    where.createdAt = {};
+    if (f.from) where.createdAt.gte = new Date(`${f.from}T00:00:00`);
+    if (f.to) where.createdAt.lte = new Date(`${f.to}T23:59:59.999`);
+  }
+
+  const [raw, distinctUsers] = await Promise.all([
+    prisma.cashVaultMovement.findMany({ where, orderBy: { createdAt: 'desc' }, take: 800 }),
+    prisma.cashVaultMovement.findMany({ where: { unitId }, distinct: ['createdById'], select: { createdById: true, createdByName: true }, orderBy: { createdByName: 'asc' } }),
+  ]);
+
+  let rows: MovementUI[] = raw.map((m) => {
+    const totalIn = Number(m.totalIn); const totalOut = Number(m.totalOut);
+    return {
+      id: m.id, type: m.type, bucketName: m.bucketName, totalIn, totalOut,
+      value: Math.max(totalIn, totalOut), note: m.note, createdByName: m.createdByName, createdById: m.createdById,
+      createdAt: m.createdAt.toISOString(), deltas: sanitize(m.deltas as Record<string, unknown>),
+    };
+  });
+
+  if (f.minValue != null) rows = rows.filter((r) => r.value >= f.minValue!);
+  if (f.maxValue != null) rows = rows.filter((r) => r.value <= f.maxValue!);
+
+  const sort = f.sort ?? 'date_desc';
+  rows.sort((a, b) =>
+    sort === 'date_asc' ? a.createdAt.localeCompare(b.createdAt)
+      : sort === 'value_desc' ? b.value - a.value
+      : sort === 'value_asc' ? a.value - b.value
+      : b.createdAt.localeCompare(a.createdAt),
+  );
+
+  return {
+    rows,
+    users: distinctUsers.map((u) => ({ id: u.createdById, name: u.createdByName })),
+    total: rows.length,
+  };
 }
 
 /* ───────── Baldes (supervisor fixa o valor) ───────── */
@@ -222,10 +402,12 @@ export interface VaultOverview {
   bigNotesTotal: number; // notas grandes (50/100/200) — indicador p/ pedir troca
   bigNotesPct: number;
   buckets: { id: string; name: string; targetValue: number; active: boolean }[];
-  movements: {
+  recentMovements: {
     id: string; type: CashMovementType; bucketName: string | null; totalIn: number; totalOut: number;
     note: string | null; createdByName: string; createdAt: string; deltas: Balances;
   }[];
+  changeRequests: ChangeRequestUI[]; // solicitações de troco desta unidade (abertas primeiro)
+  openChangeCount: number;
   monthWithdrawals: number;
   lastCountAt: string | null;
 }
@@ -238,22 +420,25 @@ export async function getVaultOverview(user: SessionUser, unitId: string): Promi
   const bigNotesTotal = r2(BIG_NOTES.reduce((t, k) => t + (balances[k] || 0), 0));
   const ym = new Date().toISOString().slice(0, 7);
 
-  const [buckets, movements, monthWithdrawals, lastCount] = await Promise.all([
+  const [buckets, movements, monthWithdrawals, lastCount, changeRequests] = await Promise.all([
     prisma.cashBucket.findMany({ where: { unitId }, orderBy: [{ active: 'desc' }, { name: 'asc' }] }),
-    prisma.cashVaultMovement.findMany({ where: { unitId }, orderBy: { createdAt: 'desc' }, take: 40 }),
+    prisma.cashVaultMovement.findMany({ where: { unitId }, orderBy: { createdAt: 'desc' }, take: 8 }),
     prisma.cashVaultMovement.count({ where: { unitId, type: 'WITHDRAWAL', createdAt: { gte: new Date(`${ym}-01T00:00:00Z`) } } }),
     prisma.cashVaultMovement.findFirst({ where: { unitId, type: 'COUNT' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+    getChangeRequests(user, unitId),
   ]);
 
   return {
     balances, total, bigNotesTotal,
     bigNotesPct: total > 0 ? Math.round((bigNotesTotal / total) * 100) : 0,
     buckets: buckets.map((b) => ({ id: b.id, name: b.name, targetValue: Number(b.targetValue), active: b.active })),
-    movements: movements.map((m) => ({
+    recentMovements: movements.map((m) => ({
       id: m.id, type: m.type, bucketName: m.bucketName, totalIn: Number(m.totalIn), totalOut: Number(m.totalOut),
       note: m.note, createdByName: m.createdByName, createdAt: m.createdAt.toISOString(),
       deltas: sanitize(m.deltas as Record<string, unknown>),
     })),
+    changeRequests,
+    openChangeCount: changeRequests.filter((c) => c.status === 'OPEN').length,
     monthWithdrawals,
     lastCountAt: lastCount?.createdAt.toISOString() ?? null,
   };

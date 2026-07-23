@@ -9,6 +9,16 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.40.0 — 2026-07-23 (Troco: solicitação + histórico + troca no caixa · busca no guia · onboarding)
+### Adicionado
+- **Colaboração no GitHub**: `.env.example` atualizado (VAPID/Caddy, aviso de valores de DEV) e novo **`docs/setup-dev.md`** (onboarding de colaboradores: clone → env → banco → rodar → PR).
+- **Regra permanente** — "supervisor/coordenador/administrador" nas conversas = perfis **SUPERVISOR + COORDINATOR + ADMIN**. Helper `SUPERVISORY_ROLES`/`isSupervisory` + `notifySupervisory`.
+- **Gestão de Troco — Solicitação de troco**: o gerente pede troco/moedas à supervisão pelo botão "Solicitar troco"; os três perfis são **notificados** e veem os pedidos abertos **destacados** ao abrir a aba (na unidade e na rede). Atender/cancelar; o solicitante é avisado quando atendido (`CashChangeRequest`).
+- **Gestão de Troco — Troca no caixa**: para unidades **sem baldes** (ex.: Nova União), registra a troca de dinheiro feita direto no cofre com o caixa (movimento `REGISTER_CHANGE`, troca 1:1), com histórico.
+- **Gestão de Troco — Histórico**: aba com **filtros completos** (tipo, usuário, período, valor mín/máx) e **ordenação** (data/valor), com totais de entradas/saídas.
+- **Filtros padronizados**: componente `FilterBar` (compacto e responsivo) que corrige os filtros grandes/desfigurados — estreia no histórico do troco e será adotado nas demais telas.
+- **Treinamento da Plataforma**: **barra de busca inteligente** (autocomplete, ignora acento, multi-termo) que filtra os guias em tempo real.
+
 ## v1.39.0 — 2026-07-22 (Conferência de comandas por leitor de código de barras)
 ### Adicionado
 - **Perfil CAIXA** (`Role.CASHIER`, rótulo "Caixa"): login próprio criado em Configurações → Usuários. Nasce **fechado** — vê só Comandas e o Treinamento da Plataforma (novo `DEFAULT_ALLOW_ONLY` em `permissions.ts`; o Admin ainda pode liberar mais na matriz). Ao entrar, cai direto na conferência.

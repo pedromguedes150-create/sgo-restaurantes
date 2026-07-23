@@ -339,6 +339,9 @@ export const GUIDE: GuideSection[] = [
           'Quando o cofre acumular notas grandes (o painel avisa em ≥50%), use "Troca c/ escritório": envia as grandes, recebe moedas.',
           'A supervisão fixa o valor-alvo de cada balde e vê os cofres da rede com as retiradas do mês.',
           '🚨 Retirar troco para pagamento é PROIBIDO — se for inevitável, registre pela opção vermelha: a supervisão é avisada na hora e a reposição será cobrada.',
+          '"Solicitar troco": peça troco/moedas à supervisão (supervisor, coordenador e administrador) — eles são avisados na hora e veem o pedido destacado ao abrir a aba de Troco.',
+          '"Troca no caixa": para unidades SEM baldes (ex.: Nova União), registre a troca de dinheiro feita direto no cofre com o caixa — fica no histórico.',
+          'Aba "Histórico": veja todas as movimentações do cofre com filtros completos (tipo, usuário, período, valor) e ordenação.',
         ],
       },
       {

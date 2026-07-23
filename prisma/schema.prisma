@@ -1368,6 +1368,14 @@ enum CashMovementType {
   OFFICE_SWAP // troca com o escritório: saem notas grandes, entram moedas/miúdos
   WITHDRAWAL // retirada p/ pagamento (PROIBIDA — registra, avisa supervisão)
   ADJUST // ajuste manual (supervisão)
+  REGISTER_CHANGE // troca de dinheiro direto no caixa (unidade sem baldes, ex.: Nova União)
+}
+
+/// Status de uma solicitação de troco do gerente para a supervisão.
+enum ChangeRequestStatus {
+  OPEN
+  RESOLVED
+  CANCELED
 }
 
 /// Cofre de troco da unidade (1 por unidade). Saldo POR DENOMINAÇÃO em R$:
@@ -1413,6 +1421,27 @@ model CashVaultMovement {
   @@index([unitId, createdAt])
   @@index([unitId, type])
   @@map("cash_vault_movements")
+}
+
+/// Solicitação de troco: o gerente pede troco/moedas à supervisão (SUPERVISOR +
+/// COORDINATOR + ADMIN), que é notificada e vê o pedido destacado na aba de Troco.
+model CashChangeRequest {
+  id              String              @id @default(cuid())
+  unitId          String
+  amount          Decimal?            @db.Decimal(12, 2) // valor pedido (opcional)
+  note            String // o que o gerente precisa (ex.: "R$ 100 em moedas")
+  status          ChangeRequestStatus @default(OPEN)
+  requestedById   String
+  requestedByName String
+  resolvedById    String?
+  resolvedByName  String?
+  resolvedNote    String?
+  resolvedAt      DateTime?
+  createdAt       DateTime            @default(now())
+
+  @@index([unitId, status])
+  @@index([status, createdAt])
+  @@map("cash_change_requests")
 }
 
 // ===== Módulo 17 — Rotina do Supervisor (Onda 4) =============================
