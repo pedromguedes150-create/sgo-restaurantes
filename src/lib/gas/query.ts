@@ -59,23 +59,27 @@ export async function getGasVariationReport(user: SessionUser, opts: { unitId?: 
   return [...byUnit.values()].sort((a, b) => a.unit.localeCompare(b.unit, 'pt-BR'));
 }
 
-export interface GasGroupStat { key: string; name: string; count: number; avg: number; last: number; min: number; max: number }
+export interface GasGroupStat { key: string; name: string; count: number; avg: number; last: number; min: number; max: number; kg: number; total: number }
 export interface GasMonthPoint { month: string; avg: number; count: number }
 export interface GasDashboard {
   totalReceipts: number;
   avgPrice: number;
   lastPrice: number | null;
+  totalKg: number; // volume comprado no filtro
+  totalValue: number; // valor comprado no filtro
   byUnit: GasGroupStat[];
   bySupplier: GasGroupStat[];
   monthly: GasMonthPoint[];
   alertPct: number;
 }
 
-function agg(rows: { key: string; name: string; price: number; date: string }[]): GasGroupStat[] {
-  const map = new Map<string, { name: string; prices: number[]; lastDate: string; last: number }>();
+type AggRow = { key: string; name: string; price: number; date: string; kg: number; total: number };
+function agg(rows: AggRow[]): GasGroupStat[] {
+  const map = new Map<string, { name: string; prices: number[]; lastDate: string; last: number; kg: number; total: number }>();
   for (const r of rows) {
-    const cur = map.get(r.key) ?? { name: r.name, prices: [], lastDate: '', last: 0 };
+    const cur = map.get(r.key) ?? { name: r.name, prices: [], lastDate: '', last: 0, kg: 0, total: 0 };
     cur.prices.push(r.price);
+    cur.kg += r.kg; cur.total += r.total;
     if (r.date >= cur.lastDate) { cur.lastDate = r.date; cur.last = r.price; }
     map.set(r.key, cur);
   }
@@ -83,26 +87,45 @@ function agg(rows: { key: string; name: string; price: number; date: string }[])
     key, name: v.name, count: v.prices.length,
     avg: v.prices.reduce((s, p) => s + p, 0) / v.prices.length,
     last: v.last, min: Math.min(...v.prices), max: Math.max(...v.prices),
+    kg: Math.round(v.kg * 100) / 100, total: Math.round(v.total * 100) / 100,
   })).sort((a, b) => a.avg - b.avg);
 }
 
-/** Painel de gás: comparativo por unidade, por fornecedor e tendência mensal. */
-export async function getGasDashboard(user: SessionUser, opts: { unitId?: string; months?: number } = {}): Promise<GasDashboard> {
-  const months = opts.months ?? 6;
-  const d = new Date();
-  const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - (months - 1), 1));
-  const startStr = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}-01`;
+/**
+ * Painel de gás: comparativo por unidade, por fornecedor e tendência mensal.
+ * Respeita os filtros de unidade, fornecedor e MÊS específico (yearMonth). Sem
+ * mês, usa a janela dos últimos `months` meses. Também soma o VOLUME (kg) comprado.
+ */
+export async function getGasDashboard(user: SessionUser, opts: { unitId?: string; supplierId?: string; yearMonth?: string; months?: number } = {}): Promise<GasDashboard> {
+  let dateFilter: Record<string, string> = {};
+  if (opts.yearMonth && /^\d{4}-\d{2}$/.test(opts.yearMonth)) {
+    // mês específico [primeiro dia, primeiro dia do mês seguinte)
+    const [y, m] = opts.yearMonth.split('-').map(Number);
+    const next = new Date(Date.UTC(y, m, 1));
+    const nextStr = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-01`;
+    dateFilter = { gte: `${opts.yearMonth}-01`, lt: nextStr };
+  } else {
+    const months = opts.months ?? 6;
+    const d = new Date();
+    const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - (months - 1), 1));
+    dateFilter = { gte: `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}-01` };
+  }
 
   const receipts = await prisma.gasReceipt.findMany({
-    where: { ...unitScopeWhere(user, 'unitId'), ...(opts.unitId ? { unitId: opts.unitId } : {}), operationalDate: { gte: startStr } },
+    where: {
+      ...unitScopeWhere(user, 'unitId'),
+      ...(opts.unitId ? { unitId: opts.unitId } : {}),
+      ...(opts.supplierId ? { supplierId: opts.supplierId } : {}),
+      operationalDate: dateFilter,
+    },
     orderBy: [{ operationalDate: 'asc' }],
     include: { unit: { select: { name: true } }, supplier: { select: { name: true } } },
   });
 
-  const all = receipts.map((r) => ({ price: Number(r.pricePerKg), date: r.operationalDate, unitId: r.unitId, unitName: r.unit.name, supplierId: r.supplierId, supplierName: r.supplier?.name ?? 'Sem fornecedor' }));
+  const all = receipts.map((r) => ({ price: Number(r.pricePerKg), date: r.operationalDate, kg: Number(r.quantityKg), total: Number(r.totalValue), unitId: r.unitId, unitName: r.unit.name, supplierId: r.supplierId, supplierName: r.supplier?.name ?? 'Sem fornecedor' }));
 
-  const byUnit = agg(all.map((r) => ({ key: r.unitId, name: r.unitName, price: r.price, date: r.date })));
-  const bySupplier = agg(all.map((r) => ({ key: r.supplierId ?? 'none', name: r.supplierName, price: r.price, date: r.date })));
+  const byUnit = agg(all.map((r) => ({ key: r.unitId, name: r.unitName, price: r.price, date: r.date, kg: r.kg, total: r.total })));
+  const bySupplier = agg(all.map((r) => ({ key: r.supplierId ?? 'none', name: r.supplierName, price: r.price, date: r.date, kg: r.kg, total: r.total })));
 
   // tendência mensal (média do preço/kg no escopo)
   const byMonth = new Map<string, number[]>();
@@ -113,5 +136,10 @@ export async function getGasDashboard(user: SessionUser, opts: { unitId?: string
   const last = all.length ? all.reduce((a, b) => (b.date >= a.date ? b : a)) : null;
   const alertPct = await getGasAlertPct();
 
-  return { totalReceipts: all.length, avgPrice, lastPrice: last ? last.price : null, byUnit, bySupplier, monthly, alertPct };
+  return {
+    totalReceipts: all.length, avgPrice, lastPrice: last ? last.price : null,
+    totalKg: Math.round(all.reduce((s, r) => s + r.kg, 0) * 100) / 100,
+    totalValue: Math.round(all.reduce((s, r) => s + r.total, 0) * 100) / 100,
+    byUnit, bySupplier, monthly, alertPct,
+  };
 }

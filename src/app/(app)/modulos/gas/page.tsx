@@ -17,12 +17,12 @@ export default async function GasPage({ searchParams }: { searchParams: { unidad
   // Filtros do dashboard (16/07): unidade/fornecedor/mês → total comprado no filtro
   const fUnit = searchParams.unidade || undefined;
   const fSupplier = searchParams.fornecedor || undefined;
-  const fMes = /^d{4}-d{2}$/.test(searchParams.mes ?? '') ? searchParams.mes : undefined;
+  const fMes = /^\d{4}-\d{2}$/.test(searchParams.mes ?? '') ? searchParams.mes : undefined;
 
   const [units, suppliers, dash, receipts, contracts, purchased] = await Promise.all([
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     listSuppliers({ activeOnly: true }),
-    getGasDashboard(user),
+    getGasDashboard(user, { unitId: fUnit, supplierId: fSupplier, yearMonth: fMes }),
     listGasReceipts(user, { limit: 300 }),
     listGasContracts(user),
     getGasPurchasedInFilter(user, { unitId: fUnit, supplierId: fSupplier, yearMonth: fMes }),

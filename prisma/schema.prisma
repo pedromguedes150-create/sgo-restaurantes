@@ -2117,6 +2117,8 @@ model Supplier {
   pixKey      String?
   /// Categoria livre (ex.: Gás, Carnes, Bebidas, Hortifruti)
   category    String?
+  /// Fornecedor de GÁS: no lançamento da nota, os campos viram os de gás (kg/preço).
+  isGas       Boolean  @default(false)
   notes       String?
   active      Boolean  @default(true)
   createdById String?
@@ -2177,6 +2179,8 @@ model GasReceipt {
   dateEditedByName String?
   accessKey       String?
   noteNumber      String?
+  /// Vencimento do boleto (item 23/07) — usado no acompanhamento de vencimentos das notas.
+  dueDate         DateTime?
   /// Forma de recebimento. Botijão converte para kg (count × cylinderKg) p/ os dashboards.
   kind             GasKind @default(BULK)
   cylinderCount    Int? // botijões recebidos

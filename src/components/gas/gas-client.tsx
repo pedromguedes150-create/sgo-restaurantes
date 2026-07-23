@@ -15,9 +15,9 @@ import { formatBRL } from '@/lib/utils';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null }
-interface GroupStat { key: string; name: string; count: number; avg: number; last: number; min: number; max: number }
+interface GroupStat { key: string; name: string; count: number; avg: number; last: number; min: number; max: number; kg: number; total: number }
 interface MonthPoint { month: string; avg: number; count: number }
-export interface GasDash { totalReceipts: number; avgPrice: number; lastPrice: number | null; byUnit: GroupStat[]; bySupplier: GroupStat[]; monthly: MonthPoint[]; alertPct: number }
+export interface GasDash { totalReceipts: number; avgPrice: number; lastPrice: number | null; totalKg: number; totalValue: number; byUnit: GroupStat[]; bySupplier: GroupStat[]; monthly: MonthPoint[]; alertPct: number }
 export interface GasRow { id: string; date: string; unit: string; supplier: string; qty: number; total: number; price: number; variation: number | null; alerted: boolean; by: string; dateEdited?: boolean; dateEditedByName?: string | null }
 export interface GasContractUI {
   id: string; unitId: string; unitName: string; supplierId: string; supplierName: string;
@@ -361,8 +361,9 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-2">
-        <Cell label="Recebimentos (6m)" value={String(d.totalReceipts)} />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Cell label="Recebimentos" value={String(d.totalReceipts)} />
+        <Cell label="Volume comprado" value={`${d.totalKg.toLocaleString('pt-BR')} kg`} />
         <Cell label="Preço médio/kg" value={kg(d.avgPrice)} />
         <Cell label="Último preço/kg" value={d.lastPrice != null ? kg(d.lastPrice) : '—'} />
       </div>
@@ -403,7 +404,7 @@ function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
               <span className="font-bold">{kg(r.avg)} <span className="text-xs font-normal text-muted-foreground">méd</span></span>
             </div>
             <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${(r.avg / max) * 100}%` }} /></div>
-            <p className="mt-1 text-xs text-muted-foreground">{r.count} compra(s) · último {kg(r.last)} · mín {kg(r.min)} · máx {kg(r.max)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{r.count} compra(s) · <b className="text-brand">{r.kg.toLocaleString('pt-BR')} kg</b> · último {kg(r.last)} · mín {kg(r.min)} · máx {kg(r.max)}</p>
           </div>
         ))}
       </div>
