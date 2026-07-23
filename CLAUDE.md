@@ -5,7 +5,26 @@
 ## O que é
 Sistema de Gestão Operacional (SGO) para rede de restaurantes/churrascarias (6–15 unidades). Especificação completa: `docs/especificacao.md` — leia a seção do módulo antes de codar.
 
-## ⚠️ Ambiente REAL deste servidor (inspeção Fase 0.1 — 2026-06-10)
+## 🚚 MIGRADO PARA O DROPLET EM 22/07/2026 — leia isto antes de qualquer deploy
+A produção do SGO **NÃO roda mais nesta máquina Windows**. Desde 22/07/2026 (~01:35 UTC) roda no
+**droplet `174.138.88.225`** (DigitalOcean, 2 vCPU / 8 GB / 154 GB), **ao lado da plataforma do CEO**:
+
+| | |
+|---|---|
+| Acesso | `ssh -i ~/.ssh/bjf_vps root@174.138.88.225` · app em `/opt/sgo/app` |
+| Containers | `sgo_app` (127.0.0.1:3100, nenhuma porta pública) + `sgo_postgres` (sem porta), rede `sgo` |
+| Publicação | **Caddy do CEO** (`bjf_caddy`, `/opt/bjf/Caddyfile`) → `reverse_proxy sgo_app:3100`; TLS Let's Encrypt automático. **Não há mais Cloudflare Tunnel no caminho do SGO** — DNS é registro **A → 174.138.88.225, DNS only (cinza)**, apex + www |
+| Build | **passa no droplet** (o que estourava a RAM no Windows). `docker build -t sgo-sgo-app:vX.Y.Z .` em `/opt/sgo/app`, `docker tag … latest`, `docker compose -f docker-compose.prod.yml up -d --no-build` |
+| Migrações | container descartável na rede `sgo` com `prisma migrate deploy` (ver [[prod-migrations]]) |
+| Backup | `/opt/sgo/backup-sgo.sh` + cron 06:00 UTC (03:00 BRT), retenção 14 dias. **Espelho em nuvem ainda a definir** (o droplet tem `rclone` com remote `gdrive:` do CEO) |
+| Swap | `+4 GB` em `/swapfile-sgo` (ativo, **fora do fstab** — some no reboot; recriar antes de builds grandes) |
+| Rollback | máquina Windows **intacta**: `sgo_postgres` no ar, volumes preservados, `sgo_app` **parado** (evita scheduler duplicado). Reverter = `docker start sgo_app` + recriar os CNAME de Tunnel no DNS |
+
+⚠️ Ao mexer no Caddy: backup do Caddyfile, `caddy validate` e `caddy reload` (gracioso). **Restart do `bjf_caddy` derruba o CEO por ~2s** — só quando necessário (foi preciso 1× para zerar o backoff de certificado, que o reload não limpa).
+
+O mapa abaixo descreve a **máquina Windows**, que segue rodando o que sobrou (Postgres do SGO congelado p/ rollback). A plataforma do CEO também já vive no droplet.
+
+## ⚠️ Ambiente da máquina Windows (inspeção Fase 0.1 — 2026-06-10; histórico)
 Esta máquina (Windows 10 Pro) **já roda em produção a plataforma do CEO ("Beija Flor Platform") — INTOCÁVEL**. Mapa do que NÃO pode ser conflitado:
 
 | Recurso do CEO | Porta / Local |

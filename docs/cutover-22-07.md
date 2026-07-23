@@ -16,7 +16,23 @@
 | Backup | `/opt/sgo/backup-sgo.sh` + cron diário 06:00 UTC (03:00 BRT), retenção 14 dias, testado |
 | Swap | +4 GB temporários (`/swapfile-sgo`, **não** no fstab) para o build nunca pressionar a RAM do CEO |
 
-## O único passo que falta: DNS
+## ✅ CUTOVER CONCLUÍDO — 23/07/2026 01:35 UTC (22/07 22:35 BRT)
+
+- DNS trocado para **A → 174.138.88.225, DNS only** (apex + www) pelo Pedro.
+- Certificado Let's Encrypt (produção) emitido. **Pegadinha:** o Caddy estava em backoff de 30 min
+  das tentativas feitas *antes* do DNS virar, e `caddy reload` **não** limpa esse backoff (nem apagar
+  os locks em `/data/caddy/locks`). Foi preciso `docker restart bjf_caddy` — **CEO fora por 2 s**,
+  cert emitido em ~20 s.
+- Verificado no domínio público, logado como admin: dashboard com a rede toda, Produtos, Conferência
+  por leitor, Cancelamentos, Análise de comandas em aberto, Perfil, Ajuda — todos 200; foto real
+  servida (JPEG 253 KB); push configurado com a chave de produção; PWA (sw/manifest/ícone) 200.
+- Delta final aplicado antes da virada: contagens idênticas às da origem
+  (users 36, task_instances 1853, notifications 7679, audit_logs 4325, collaborators 317).
+- `sgo_app` da máquina Windows **parado** para não rodar scheduler em paralelo (evita aviso ao RH e
+  notificação duplicados). Banco e volumes preservados para rollback.
+- CEO verificado em cada etapa: 307 antes e depois de cada mudança.
+
+## Histórico: o passo que faltava (DNS)
 
 Hoje `sgorestaurantesgbf.com.br` está **proxied na Cloudflare** apontando para o túnel da máquina Windows
 (resolve para 104.21.x / 172.67.x). O domínio do CEO, por comparação, aponta **direto** para o droplet
