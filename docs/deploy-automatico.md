@@ -43,6 +43,25 @@ Em **Settings → Secrets and variables → Actions → New repository secret**,
 Depois de criar os secrets, todo push na `main` publica automaticamente.
 (A chave privada é de deploy — mesmo travada, guarde só nos Secrets, nunca no código.)
 
+## Avisos a cada publicação
+
+- **No SGO (in-app):** a cada publicação bem-sucedida, os **ADMIN/CEO** recebem uma
+  notificação no sino com a versão e quem publicou (feito pelo `ci-deploy.sh`).
+- **Por e-mail (opcional):** se os secrets de e-mail estiverem configurados, a esteira
+  envia um e-mail em toda publicação (OK ou falha). Sem os secrets, o passo é ignorado
+  (não atrapalha o deploy). Secrets de e-mail (SMTP do Gmail/Workspace):
+
+  | Secret | Valor |
+  |---|---|
+  | `SMTP_USERNAME` | seu e-mail (ex.: `voce@grupobeijaflor.com.br`) |
+  | `SMTP_PASSWORD` | uma **senha de app** do e-mail (não a senha normal) |
+  | `NOTIFY_EMAIL` | para quem enviar (pode ser o mesmo e-mail) |
+  | `SMTP_SERVER` | opcional (padrão `smtp.gmail.com`) |
+  | `SMTP_PORT` | opcional (padrão `465`) |
+
+  Senha de app do Google: conta com verificação em 2 etapas → "Senhas de app" →
+  gerar uma para "Correio". Cole essa senha em `SMTP_PASSWORD`.
+
 ## Rollback — voltar uma versão
 
 1. GitHub → aba **Actions** → workflow **"Voltar versão (rollback)"** → **Run workflow**.

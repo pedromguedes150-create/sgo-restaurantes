@@ -42,12 +42,65 @@ jobs:
           # valida a chave antes de seguir (erro claro se estiver errada)
           ssh-keygen -y -f ~/.ssh/id_deploy > /dev/null && echo "chave de deploy OK"
 
-      - name: Publicar no servidor (envia a imagem + migra + sobe)
+      - name: Publicar no servidor (envia a imagem + migra + sobe + avisa no SGO)
         run: |
           docker save sgo-sgo-app:latest "sgo-sgo-app:v${{ steps.v.outputs.version }}" \
             | gzip \
             | ssh -i ~/.ssh/id_deploy -o ConnectTimeout=30 \
-                "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" deploy
+                "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+                "deploy ${{ github.actor }} v${{ steps.v.outputs.version }}"
+
+      # E-mail de aviso. Opcional: só dispara se os secrets SMTP estiverem
+      # configurados; se não estiverem, o passo é ignorado (não falha o deploy).
+      - name: Avisar por e-mail (publicação OK)
+        if: success() && env.SMTP_USERNAME != ''
+        continue-on-error: true
+        env:
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER || 'smtp.gmail.com' }}
+          server_port: ${{ secrets.SMTP_PORT || '465' }}
+          secure: true
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          from: SGO Deploy <${{ secrets.SMTP_USERNAME }}>
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          subject: "✅ SGO publicado: v${{ steps.v.outputs.version }}"
+          body: |
+            Nova versão do SGO foi publicada para todos os usuários.
+
+            Versão:        v${{ steps.v.outputs.version }}
+            Publicado por: ${{ github.actor }}
+            Quando:        ${{ github.event.head_commit.timestamp }}
+            Site:          https://sgorestaurantesgbf.com.br
+
+            Detalhes da publicação:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Avisar por e-mail (publicação FALHOU)
+        if: failure() && env.SMTP_USERNAME != ''
+        continue-on-error: true
+        env:
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER || 'smtp.gmail.com' }}
+          server_port: ${{ secrets.SMTP_PORT || '465' }}
+          secure: true
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          from: SGO Deploy <${{ secrets.SMTP_USERNAME }}>
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          subject: "❌ SGO — deploy FALHOU (v${{ steps.v.outputs.version }})"
+          body: |
+            Uma publicação do SGO FALHOU e não foi ao ar (ou foi revertida sozinha).
+
+            Versão tentada: v${{ steps.v.outputs.version }}
+            Por:            ${{ github.actor }}
+
+            Veja o erro em:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Resumo
         if: always()
