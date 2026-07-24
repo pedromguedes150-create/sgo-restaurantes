@@ -286,7 +286,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
 
       {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
       <p className="text-[11px] text-muted-foreground">Seu preenchimento é salvo automaticamente — se for interrompido, retoma de onde parou.</p>
-      <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Check className="h-5 w-5" /> {busy ? 'Concluindo…' : 'Concluir checklist'}</Button>
+      <Button onClick={submit} disabled={busy} size="lg" className="w-full md:w-auto md:px-10"><Check className="h-5 w-5" /> {busy ? 'Concluindo…' : 'Concluir checklist'}</Button>
     </div>
   );
 }
