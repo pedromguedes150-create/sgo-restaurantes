@@ -35,9 +35,12 @@ jobs:
       - name: Preparar acesso ao servidor
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          # A chave é guardada em base64 (uma linha) para não corromper na colagem.
+          printf '%s' "${{ secrets.DEPLOY_SSH_KEY }}" | base64 -d > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          # valida a chave antes de seguir (erro claro se estiver errada)
+          ssh-keygen -y -f ~/.ssh/id_deploy > /dev/null && echo "chave de deploy OK"
 
       - name: Publicar no servidor (envia a imagem + migra + sobe)
         run: |

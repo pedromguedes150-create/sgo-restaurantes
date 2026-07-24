@@ -37,7 +37,7 @@ Em **Settings → Secrets and variables → Actions → New repository secret**,
 |---|---|
 | `DEPLOY_HOST` | `174.138.88.225` |
 | `DEPLOY_USER` | `root` |
-| `DEPLOY_SSH_KEY` | a chave PRIVADA de deploy (conteúdo do arquivo `sgo_deploy_key`) |
+| `DEPLOY_SSH_KEY` | a chave PRIVADA de deploy em **base64** (uma linha só — gere com `base64 -w0 sgo_deploy_key`). Usar base64 evita corromper a chave na colagem. |
 | `DEPLOY_KNOWN_HOSTS` | `174.138.88.225 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKM+1war16Xo9KpC+/lBkrCdRbV6SV+E/Qw7l4y4+mza` |
 
 Depois de criar os secrets, todo push na `main` publica automaticamente.
