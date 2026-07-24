@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ProgressRing } from '@/components/dashboard/progress-ring';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
-import { ListChecks, AlertTriangle, ScrollText, Trophy } from 'lucide-react';
+import { ListChecks, AlertTriangle, ScrollText, Trophy, ChevronRight } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -171,18 +171,26 @@ function ManagerDashboard({
         </CardContent>
       </Card>
 
-      {/* Por unidade (quando multi-unidade) */}
+      {/* Por unidade (quando multi-unidade) — cada linha abre as tarefas da unidade */}
       {overviews.length > 1 &&
         overviews.map((o) => (
-          <div key={o.unit.id} className="flex items-center justify-between rounded-lg border bg-card px-3 py-2.5">
-            <div>
+          <Link
+            key={o.unit.id}
+            href={`/tarefas?unit=${o.unit.id}`}
+            aria-label={`Ver as tarefas de hoje da unidade ${o.unit.name}`}
+            className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-3 transition-colors hover:border-accent active:bg-secondary/60"
+          >
+            <div className="min-w-0">
               <p className="font-semibold text-brand">{o.unit.name}</p>
               <p className="text-xs text-muted-foreground">
                 {o.summary.done}/{o.summary.total} hoje · meta {o.monthScore.scorePct}%
               </p>
             </div>
-            <StatusBadge tone={o.summary.tone}>{toneLabel(o.summary.tone)}</StatusBadge>
-          </div>
+            <span className="flex shrink-0 items-center gap-1">
+              <StatusBadge tone={o.summary.tone}>{toneLabel(o.summary.tone)}</StatusBadge>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+            </span>
+          </Link>
         ))}
 
       <Shortcuts />
@@ -229,16 +237,24 @@ function ConsolidatedDashboard({
         </CardHeader>
         <CardContent className="space-y-2">
           {overviews.map((o) => (
-            <div key={o.unit.id} className="flex items-center justify-between rounded-lg border bg-surface px-3 py-2.5">
-              <div>
+            <Link
+              key={o.unit.id}
+              href={`/tarefas?unit=${o.unit.id}`}
+              aria-label={`Ver as tarefas de hoje da unidade ${o.unit.name}`}
+              className="flex items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-3 transition-colors hover:border-accent active:bg-secondary/60"
+            >
+              <div className="min-w-0">
                 <p className="font-semibold text-brand">{o.unit.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {o.summary.done}/{o.summary.total} concluídas
                   {o.summary.overdue > 0 && ` · ${o.summary.overdue} atrasada(s)`}
                 </p>
               </div>
-              <StatusBadge tone={o.summary.tone}>{toneLabel(o.summary.tone)}</StatusBadge>
-            </div>
+              <span className="flex shrink-0 items-center gap-1">
+                <StatusBadge tone={o.summary.tone}>{toneLabel(o.summary.tone)}</StatusBadge>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+              </span>
+            </Link>
           ))}
           {overviews.length === 0 && (
             <p className="text-sm text-muted-foreground">Nenhuma unidade.</p>

@@ -639,6 +639,8 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'O Dashboard mostra semáforo por unidade, ranking de metas e alertas.',
           'Use para priorizar onde agir.',
+          'Em "Unidades hoje", cada unidade é um botão: toque nela para abrir as tarefas do dia já filtradas por aquela unidade (o mesmo vale para a lista por unidade do gerente multi-unidade).',
+          'Na tela de tarefas filtrada, o nome da unidade aparece abaixo do título com o atalho "Ver todas as unidades" para voltar à visão completa.',
         ],
       },
     ],

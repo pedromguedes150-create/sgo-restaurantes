@@ -20,14 +20,23 @@ export interface UnitTasksToday {
  * Tarefas do dia operacional para todas as unidades acessíveis ao usuário.
  * Gera as instâncias sob demanda se ainda não existirem (até termos o job/cron).
  * Escopo por unidade aplicado no servidor (regra nº 3).
+ *
+ * @param unitIds filtro opcional (ex.: veio de `?unit=` na URL). SOMA-SE ao escopo
+ *   do usuário, nunca o substitui — id de unidade fora do escopo simplesmente não
+ *   retorna nada.
  */
 export async function getTasksTodayForUser(
   user: SessionUser,
   now: Date = new Date(),
+  unitIds?: string[],
 ): Promise<UnitTasksToday[]> {
   await ensureTaskMaintenance(false, now); // backfill + MISSED automáticos (throttled)
   const units = await prisma.unit.findMany({
-    where: { active: true, ...unitScopeWhere(user, 'id') },
+    where: {
+      active: true,
+      ...unitScopeWhere(user, 'id'),
+      ...(unitIds && unitIds.length > 0 ? { id: { in: unitIds } } : {}),
+    },
     orderBy: { name: 'asc' },
   });
 
