@@ -80,3 +80,5 @@ banco pedem cuidado extra na revisão.
 - `.github/workflows/deploy.yml` — publica no push da `main`.
 - `.github/workflows/rollback.yml` — rollback manual.
 - Servidor: `/opt/sgo/ci-deploy.sh` (script travado), chave em `/root/.ssh/authorized_keys`.
+
+<!-- teste da esteira de deploy: f3104ba -->
