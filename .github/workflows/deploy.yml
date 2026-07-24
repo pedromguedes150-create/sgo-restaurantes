@@ -1,0 +1,51 @@
+name: Publicar SGO (produção)
+
+# Publica automaticamente para TODOS os usuários sempre que o código entra na
+# branch principal (main). Só toca no SGO — nunca na plataforma do CEO (a chave
+# de deploy no servidor está travada para rodar apenas o script de deploy do SGO).
+on:
+  push:
+    branches: [main]
+
+# Nunca deixa dois deploys rodando ao mesmo tempo.
+concurrency:
+  group: deploy-sgo-producao
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Ler a versão do app
+        id: v
+        run: |
+          VER=$(grep -oE "APP_VERSION *= *'[0-9]+\.[0-9]+\.[0-9]+'" src/lib/version.ts | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "Versão: v$VER"
+
+      - name: Buildar a imagem (aqui no GitHub, sem pesar no servidor)
+        run: |
+          DOCKER_BUILDKIT=1 docker build --provenance=false \
+            -t sgo-sgo-app:latest \
+            -t "sgo-sgo-app:v${{ steps.v.outputs.version }}" .
+
+      - name: Preparar acesso ao servidor
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Publicar no servidor (envia a imagem + migra + sobe)
+        run: |
+          docker save sgo-sgo-app:latest "sgo-sgo-app:v${{ steps.v.outputs.version }}" \
+            | gzip \
+            | ssh -i ~/.ssh/id_deploy -o ConnectTimeout=30 \
+                "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" deploy
+
+      - name: Resumo
+        if: always()
+        run: echo "Deploy da v${{ steps.v.outputs.version }} concluído (veja o log acima)."

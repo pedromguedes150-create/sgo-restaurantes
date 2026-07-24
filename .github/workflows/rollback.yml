@@ -1,0 +1,32 @@
+name: Voltar versão (rollback)
+
+# Volta o SGO para uma versão anterior JÁ publicada — instantâneo, sem rebuildar.
+# Rode manualmente em: aba "Actions" do GitHub → "Voltar versão (rollback)" →
+# "Run workflow" → informe a versão (ex.: v1.40.0).
+on:
+  workflow_dispatch:
+    inputs:
+      versao:
+        description: "Versão para voltar (ex.: v1.40.0)"
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-sgo-producao
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preparar acesso ao servidor
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Voltar para a versão ${{ inputs.versao }}
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ConnectTimeout=30 \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "rollback ${{ inputs.versao }}"
