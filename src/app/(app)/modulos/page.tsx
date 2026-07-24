@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { viewableNavHrefs } from '@/lib/permissions';
 import {
   Trash2, ClipboardList, Ticket, Boxes, AlertOctagon, Wallet, Receipt, Target, Users, BookOpen,
-  Megaphone, Flame, Droplets, Banknote, NotebookPen, CalendarOff, GraduationCap, Eye, BarChart3, LifeBuoy, Sparkles, PackagePlus,
+  Megaphone, Droplets, Banknote, NotebookPen, CalendarOff, GraduationCap, Eye, BarChart3, LifeBuoy, Sparkles, PackagePlus,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -34,7 +34,6 @@ const GROUPS: { title: string; items: { href: string; label: string; icon: React
       { href: '/modulos/cancelamentos', label: 'Cancelamentos', icon: Ticket },
       { href: '/modulos/inventario', label: 'Inventário', icon: Boxes },
       { href: '/modulos/notas', label: 'Notas Recebidas', icon: Receipt },
-      { href: '/modulos/gas', label: 'Recebimento de Gás', icon: Flame },
       { href: '/modulos/oleo', label: 'Coleta de Óleo', icon: Droplets },
       { href: '/modulos/higiene', label: 'Higiene dos banheiros', icon: Sparkles },
       { href: '/modulos/produtos', label: 'Solicitação de Produtos', icon: PackagePlus },

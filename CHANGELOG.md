@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.41.0 — 2026-07-23 (Gás dentro de Notas Recebidas · vencimentos · dashboard de gás corrigido)
+### Adicionado
+- **Gás absorvido por Notas Recebidas**: o cadastro de fornecedor ganhou o marcador **"fornecedor de gás"**; ao escolher esse fornecedor no lançamento da nota, os campos viram os de **gás** (granel kg/preço ou botijão) + **vencimento do boleto**, e o lançamento alimenta a análise de gás. Nova aba **"Análise de gás"** dentro de Notas (dashboard, histórico, contratos e link do relatório de variação). O módulo "Recebimento de Gás" saiu da barra lateral — a rota `/modulos/gas` **redireciona** para Notas Recebidas.
+- **Acompanhamento de vencimentos** (aba "Vencimentos" em Notas): lista os boletos **a vencer** (notas comuns + gás) com **filtros** (unidade, fornecedor, janela de dias, incluir vencidos) e destaque dos mais próximos. Um alerta diário avisa **a supervisão (supervisor+coordenador+admin) e o Financeiro** dos boletos que vencem em até 3 dias, sem repetir (`dueAlertedAt`). `src/lib/notes/due.ts`, `/api/notes/due`, job no scheduler.
+### Corrigido
+- **Dashboard de gás não variava com os filtros** — o filtro de mês nunca casava (regex sem barras) e o dashboard era montado ignorando unidade/fornecedor/mês. Agora os filtros afetam os números; adicionado o **volume comprado (kg)** por unidade e por fornecedor.
+- Migração `20260723130000_gas_in_notes` (Supplier.isGas, GasReceipt.dueDate, dueAlertedAt em notas e gás).
+
 ## v1.40.0 — 2026-07-23 (Troco: solicitação + histórico + troca no caixa · busca no guia · onboarding)
 ### Adicionado
 - **Colaboração no GitHub**: `.env.example` atualizado (VAPID/Caddy, aviso de valores de DEV) e novo **`docs/setup-dev.md`** (onboarding de colaboradores: clone → env → banco → rodar → PR).

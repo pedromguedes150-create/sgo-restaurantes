@@ -12,6 +12,7 @@ export async function register() {
   const { reconcileAllTraining } = await import('@/lib/training');
   const { notifyDueSoonTasks } = await import('@/lib/tasks/notify');
   const { notifyDueSoonCommunications } = await import('@/lib/communications/notify');
+  const { notifyUpcomingDueNotes } = await import('@/lib/notes/due');
   const { snapshotYesterdayAllUnits } = await import('@/lib/workforce');
   const { notifyDueManagerTasks } = await import('@/lib/manager-area');
   const { runDueMaintenancePlans } = await import('@/lib/maintenance');
@@ -31,6 +32,10 @@ export async function register() {
   async function checkCommunications() {
     try { const n = await notifyDueSoonCommunications(); if (n) console.log(`[comunicacao] ${n} lembrete(s) enviado(s)`); }
     catch (e) { console.error('[comunicacao] falha no lembrete:', e); }
+  }
+  async function checkNoteDueDates() {
+    try { const r = await notifyUpcomingDueNotes(); if (r.notes + r.gas > 0) console.log(`[notas] ${r.notes + r.gas} boleto(s) a vencer avisados em ${r.units} unidade(s)`); }
+    catch (e) { console.error('[notas] falha no aviso de vencimentos:', e); }
   }
   async function snapshotYesterday() {
     try { const r = await snapshotYesterdayAllUnits(); if (r.rows) console.log(`[mapa] snapshot de ontem: ${r.units} unidade(s), ${r.rows} registro(s)`); }
@@ -69,6 +74,7 @@ export async function register() {
     void snapshotYesterday();
     void checkMaintenance();
     void checkSupervision();
+    void checkNoteDueDates();
   }, 15_000);
 
   // tarefas: a cada 30 min · RH e treinamentos: de hora em hora · vencimento: a cada 10 min
@@ -80,4 +86,5 @@ export async function register() {
   setInterval(() => { void snapshotYesterday(); }, 60 * 60 * 1000);
   setInterval(() => { void checkMaintenance(); }, 60 * 60 * 1000);
   setInterval(() => { void checkSupervision(); }, 60 * 60 * 1000);
+  setInterval(() => { void checkNoteDueDates(); }, 60 * 60 * 1000);
 }

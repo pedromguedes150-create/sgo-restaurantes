@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, ListChecks, Trash2, AlertOctagon, ClipboardList, Ticket,
-  Boxes, Receipt, Wallet, Users, BookOpen, Target, ScrollText, Settings, GraduationCap, LifeBuoy, Megaphone, Flame, Droplets, NotebookPen, CalendarOff, Banknote, Eye, BarChart3, Sparkles, PackagePlus,
+  Boxes, Receipt, Wallet, Users, BookOpen, Target, ScrollText, Settings, GraduationCap, LifeBuoy, Megaphone, Droplets, NotebookPen, CalendarOff, Banknote, Eye, BarChart3, Sparkles, PackagePlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { APP_VERSION_LABEL } from '@/lib/version';
@@ -33,7 +33,8 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: '/modulos/cancelamentos', label: 'Cancelamentos', icon: Ticket },
       { href: '/modulos/inventario', label: 'Inventário', icon: Boxes },
       { href: '/modulos/notas', label: 'Notas Recebidas', icon: Receipt },
-      { href: '/modulos/gas', label: 'Recebimento de Gás', icon: Flame },
+      // Recebimento de Gás foi absorvido por Notas Recebidas (23/07): lançamento pelo
+      // fornecedor de gás na nota + aba "Análise de gás". A rota /modulos/gas redireciona.
       { href: '/modulos/oleo', label: 'Coleta de Óleo', icon: Droplets },
       { href: '/modulos/higiene', label: 'Higiene dos banheiros', icon: Sparkles },
       { href: '/modulos/produtos', label: 'Solicitação de Produtos', icon: PackagePlus },

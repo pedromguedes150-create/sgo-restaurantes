@@ -17,6 +17,8 @@ export interface CreateGasInput {
   operationalDate?: string;
   accessKey?: string;
   noteNumber?: string;
+  /** Vencimento do boleto (YYYY-MM-DD) — usado no acompanhamento de vencimentos. */
+  dueDate?: string;
   observation?: string;
   // Botijão (P45 etc.) — converte para kg (count × cylinderKg)
   kind?: 'BULK' | 'CYLINDER';
@@ -74,6 +76,7 @@ export async function createGasReceipt(user: SessionUser, input: CreateGasInput,
       operationalDate: opDate,
       accessKey: input.accessKey || null,
       noteNumber: input.noteNumber || null,
+      dueDate: input.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate) ? new Date(`${input.dueDate}T12:00:00`) : null,
       kind: isCylinder ? 'CYLINDER' : 'BULK',
       cylinderCount,
       cylinderKg,

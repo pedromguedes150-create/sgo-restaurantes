@@ -30,9 +30,9 @@ const kg = (n: number) => `R$ ${n.toFixed(4).replace('.', ',')}/kg`;
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 function mlabel(m: string) { const [y, mm] = m.split('-'); return `${MONTHS[Number(mm) - 1]}/${y.slice(2)}`; }
 
-export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, receipts, contracts = [], purchased, canManageContracts = false, filter }: {
+export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, receipts, contracts = [], purchased, canManageContracts = false, filter, basePath = '/modulos/gas' }: {
   canLaunch: boolean; isAdmin: boolean; canEditDate?: boolean; units: Unit[]; suppliers: Supplier[]; dashboard: GasDash; receipts: GasRow[];
-  contracts?: GasContractUI[]; purchased?: PurchasedUI; canManageContracts?: boolean; filter?: { unitId: string; supplierId: string; mes: string };
+  contracts?: GasContractUI[]; purchased?: PurchasedUI; canManageContracts?: boolean; filter?: { unitId: string; supplierId: string; mes: string }; basePath?: string;
 }) {
   const [tab, setTab] = useState<'painel' | 'lancar' | 'historico' | 'contratos'>(canLaunch ? 'lancar' : 'painel');
   const tabs: { key: typeof tab; label: string; show: boolean }[] = [
@@ -51,7 +51,7 @@ export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, supp
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
       {tab === 'painel' && (
         <>
-          <DashFilters units={units} suppliers={suppliers} filter={filter} purchased={purchased} />
+          <DashFilters units={units} suppliers={suppliers} filter={filter} purchased={purchased} basePath={basePath} />
           <ContractProgress contracts={contracts.filter((c) => c.active && !c.expired)} compact />
           <Dashboard d={dashboard} isAdmin={isAdmin} />
         </>
@@ -63,7 +63,7 @@ export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, supp
 }
 
 /* ───────── Filtros do dashboard + total comprado (16/07) ───────── */
-function DashFilters({ units, suppliers, filter, purchased }: { units: Unit[]; suppliers: Supplier[]; filter?: { unitId: string; supplierId: string; mes: string }; purchased?: PurchasedUI }) {
+function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos/gas' }: { units: Unit[]; suppliers: Supplier[]; filter?: { unitId: string; supplierId: string; mes: string }; purchased?: PurchasedUI; basePath?: string }) {
   const router = useRouter();
   const f = filter ?? { unitId: '', supplierId: '', mes: '' };
   const nav = (patch: Partial<typeof f>) => {
@@ -72,7 +72,7 @@ function DashFilters({ units, suppliers, filter, purchased }: { units: Unit[]; s
     if (next.unitId) sp.set('unidade', next.unitId);
     if (next.supplierId) sp.set('fornecedor', next.supplierId);
     if (next.mes) sp.set('mes', next.mes);
-    router.push(`/modulos/gas${sp.toString() ? `?${sp.toString()}` : ''}`);
+    router.push(`${basePath}${sp.toString() ? `?${sp.toString()}` : ''}`);
   };
   const months: string[] = [];
   { const d = new Date(); for (let i = 0; i < 12; i++) { months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); d.setMonth(d.getMonth() - 1); } }
@@ -382,6 +382,8 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
         <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">Tendência mensal (preço médio/kg)</h2>
         <MonthlyBars points={d.monthly} />
       </div>
+
+      <a href="/modulos/gas/relatorio" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><TrendingUp className="h-4 w-4 text-accent" /> Relatório de variação (imprimir/PDF)</a>
     </div>
   );
 }

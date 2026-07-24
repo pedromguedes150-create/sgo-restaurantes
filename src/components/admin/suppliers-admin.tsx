@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 
-export interface SupplierRow { id: string; name: string; cnpj: string | null; pixKey: string | null; category: string | null; notes: string | null; active: boolean }
+export interface SupplierRow { id: string; name: string; cnpj: string | null; pixKey: string | null; category: string | null; notes: string | null; active: boolean; isGas: boolean }
 
 async function callSupplier(payload: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
   const res = await fetch('/api/suppliers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -22,16 +22,17 @@ export function SuppliersAdmin({ suppliers }: { suppliers: SupplierRow[] }) {
   const [cnpj, setCnpj] = useState('');
   const [pixKey, setPixKey] = useState('');
   const [category, setCategory] = useState('');
+  const [isGas, setIsGas] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function add() {
     if (!name.trim()) { setMsg('Informe o nome do fornecedor.'); return; }
     setBusy(true); setMsg(null);
-    const r = await callSupplier({ action: 'create', name, cnpj, pixKey, category });
+    const r = await callSupplier({ action: 'create', name, cnpj, pixKey, category, isGas });
     setBusy(false);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
-    setName(''); setCnpj(''); setPixKey(''); setCategory(''); router.refresh();
+    setName(''); setCnpj(''); setPixKey(''); setCategory(''); setIsGas(false); router.refresh();
   }
 
   return (
@@ -44,6 +45,10 @@ export function SuppliersAdmin({ suppliers }: { suppliers: SupplierRow[] }) {
           <div><Label>CNPJ</Label><Input value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="opcional" /></div>
           <div><Label>Chave PIX</Label><Input value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder="opcional" /></div>
         </div>
+        <label className="flex items-center gap-2 rounded-md bg-muted/40 p-2 text-sm">
+          <input type="checkbox" className="h-4 w-4 accent-brand" checked={isGas} onChange={(e) => setIsGas(e.target.checked)} />
+          <span><strong>Fornecedor de gás</strong> — ao lançar uma nota deste fornecedor, os campos viram os de gás (kg, preço/kg) automaticamente.</span>
+        </label>
         <Button disabled={busy} className="w-full" onClick={add}><Plus className="h-4 w-4" /> Adicionar fornecedor</Button>
         {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
       </div>
@@ -62,6 +67,7 @@ function SupplierItem({ s, onChange }: { s: SupplierRow; onChange: () => void })
   const [cnpj, setCnpj] = useState(s.cnpj ?? '');
   const [pixKey, setPixKey] = useState(s.pixKey ?? '');
   const [category, setCategory] = useState(s.category ?? '');
+  const [isGas, setIsGas] = useState(s.isGas);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -77,7 +83,7 @@ function SupplierItem({ s, onChange }: { s: SupplierRow; onChange: () => void })
     <div className="rounded-lg border bg-card p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="font-semibold text-brand">{s.name}{s.category ? <span className="ml-1 text-xs font-normal text-muted-foreground">· {s.category}</span> : null}</p>
+          <p className="font-semibold text-brand">{s.name}{s.category ? <span className="ml-1 text-xs font-normal text-muted-foreground">· {s.category}</span> : null}{s.isGas ? <span className="ml-1 rounded bg-accent/15 px-1.5 text-[11px] font-bold text-accent">GÁS</span> : null}</p>
           <p className="text-xs text-muted-foreground">{s.cnpj ? `CNPJ ${s.cnpj}` : 'sem CNPJ'}{s.pixKey ? ` · PIX ${s.pixKey}` : ''}</p>
         </div>
         <div className="flex items-center gap-1">
@@ -92,7 +98,11 @@ function SupplierItem({ s, onChange }: { s: SupplierRow; onChange: () => void })
           <div><Label className="text-xs">Categoria</Label><Input value={category} onChange={(e) => setCategory(e.target.value)} className="h-10 text-sm" /></div>
           <div><Label className="text-xs">CNPJ</Label><Input value={cnpj} onChange={(e) => setCnpj(e.target.value)} className="h-10 text-sm" /></div>
           <div><Label className="text-xs">Chave PIX</Label><Input value={pixKey} onChange={(e) => setPixKey(e.target.value)} className="h-10 text-sm" /></div>
-          <Button size="sm" className="col-span-2" disabled={busy} onClick={() => call({ action: 'update', id: s.id, name, cnpj, pixKey, category }, () => setEditing(false))}><Save className="h-4 w-4" /> Salvar</Button>
+          <label className="col-span-2 flex items-center gap-2 text-sm">
+            <input type="checkbox" className="h-4 w-4 accent-brand" checked={isGas} onChange={(e) => setIsGas(e.target.checked)} />
+            <span><strong>Fornecedor de gás</strong> (campos de gás no lançamento da nota)</span>
+          </label>
+          <Button size="sm" className="col-span-2" disabled={busy} onClick={() => call({ action: 'update', id: s.id, name, cnpj, pixKey, category, isGas }, () => setEditing(false))}><Save className="h-4 w-4" /> Salvar</Button>
         </div>
       )}
       {msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}

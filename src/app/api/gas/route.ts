@@ -39,6 +39,7 @@ export async function POST(req: Request) {
     operationalDate: b.operationalDate || undefined,
     accessKey: b.accessKey || undefined,
     noteNumber: b.noteNumber || undefined,
+    dueDate: b.dueDate || undefined,
     observation: b.observation || undefined,
     kind: b.kind === 'CYLINDER' ? 'CYLINDER' : undefined,
     cylinderCount: b.cylinderCount != null ? Number(b.cylinderCount) : undefined,

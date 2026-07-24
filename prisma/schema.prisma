@@ -1089,6 +1089,8 @@ model ReceivedNote {
   number       String?
   issueDate    DateTime?
   dueDate      DateTime?
+  /// Marca de quando o alerta de "vencimento próximo" foi disparado (evita repetir).
+  dueAlertedAt DateTime?
   totalValue   Decimal    @db.Decimal(12, 2)
   productType  String?
   observation  String?
@@ -2181,6 +2183,8 @@ model GasReceipt {
   noteNumber      String?
   /// Vencimento do boleto (item 23/07) — usado no acompanhamento de vencimentos das notas.
   dueDate         DateTime?
+  /// Marca de quando o alerta de "vencimento próximo" foi disparado (evita repetir).
+  dueAlertedAt    DateTime?
   /// Forma de recebimento. Botijão converte para kg (count × cylinderKg) p/ os dashboards.
   kind             GasKind @default(BULK)
   cylinderCount    Int? // botijões recebidos

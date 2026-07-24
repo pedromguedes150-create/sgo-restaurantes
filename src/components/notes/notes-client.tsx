@@ -1,18 +1,26 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer } from 'lucide-react';
+import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
+import { FilterBar, FilterField, FilterSelect } from '@/components/ui/filter-bar';
 import { QrScanner } from '@/components/notes/qr-scanner';
 import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
+import { GasClient, type GasDash, type GasRow, type GasContractUI, type PurchasedUI } from '@/components/gas/gas-client';
 
 interface Unit { id: string; name: string }
-interface Supplier { id: string; name: string; cnpj: string | null }
+interface Supplier { id: string; name: string; cnpj: string | null; isGas?: boolean }
+
+export interface NotesGasProps {
+  canLaunch: boolean; isAdmin: boolean; canEditDate: boolean; canManageContracts: boolean;
+  dashboard: GasDash; receipts: GasRow[]; contracts: GasContractUI[]; purchased: PurchasedUI;
+  filter: { unitId: string; supplierId: string; mes: string };
+}
 export interface NoteDTO {
   id: string; unit: string; supplier: string; value: number;
   status: 'RECEIVED' | 'PAID' | 'PROBLEM' | 'RETURNED'; number: string | null; problemNote: string | null;
@@ -36,11 +44,11 @@ const PERIODS = [
   { dias: 365, label: 'Último ano' },
 ];
 
-export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false, sinceDays = 60 }: {
-  units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean; sinceDays?: number;
+export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false, sinceDays = 60, gas }: {
+  units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean; sinceDays?: number; gas?: NotesGasProps;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'nova' | 'lista' | 'analise'>('lista');
+  const [tab, setTab] = useState<'nova' | 'lista' | 'analise' | 'gas' | 'venc'>('lista');
   const [busy, setBusy] = useState(false);
 
   async function status(id: string, st: 'PROBLEM' | 'RETURNED') {
@@ -57,7 +65,9 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
   const tabs: { key: typeof tab; label: string }[] = [
     { key: 'lista', label: 'Notas' },
     { key: 'nova', label: 'Registrar nota' },
+    { key: 'venc', label: 'Vencimentos' },
     ...(canManage ? [{ key: 'analise' as const, label: 'Análise' }] : []),
+    ...(gas ? [{ key: 'gas' as const, label: 'Análise de gás' }] : []),
   ];
 
   return (
@@ -71,6 +81,23 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
       </div>
 
       {tab === 'nova' && <NewNote units={units} suppliers={suppliers} onDone={() => { setTab('lista'); router.refresh(); }} />}
+      {tab === 'venc' && <DueTracking units={units} />}
+      {tab === 'gas' && gas && (
+        <GasClient
+          basePath="/modulos/notas"
+          canLaunch={false}
+          isAdmin={gas.isAdmin}
+          canEditDate={gas.canEditDate}
+          canManageContracts={gas.canManageContracts}
+          units={units}
+          suppliers={suppliers.filter((s) => s.isGas).map((s) => ({ id: s.id, name: s.name, cnpj: s.cnpj ?? null }))}
+          dashboard={gas.dashboard}
+          receipts={gas.receipts}
+          contracts={gas.contracts}
+          purchased={gas.purchased}
+          filter={gas.filter}
+        />
+      )}
       {tab === 'lista' && (
         <FilterableNotes
           notes={notes} units={units} sinceDays={sinceDays}
@@ -285,6 +312,79 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
   );
 }
 
+interface DueRow { id: string; kind: 'NOTE' | 'GAS'; unitId: string; unit: string; supplier: string; value: number; dueDate: string; daysToDue: number; number: string | null }
+
+/** Acompanhamento de vencimentos — foco em boletos a vencer; alerta a supervisão + financeiro. */
+function DueTracking({ units }: { units: Unit[] }) {
+  const [rows, setRows] = useState<DueRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [unitId, setUnitId] = useState('');
+  const [supplier, setSupplier] = useState('');
+  const [dias, setDias] = useState('30');
+  const [vencidos, setVencidos] = useState('0');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const p = new URLSearchParams({ dias });
+    if (unitId) p.set('unitId', unitId);
+    if (supplier) p.set('supplier', supplier);
+    if (vencidos === '1') p.set('vencidos', '1');
+    try {
+      const res = await fetch(`/api/notes/due?${p.toString()}`, { cache: 'no-store' });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) setRows(d.rows ?? []);
+    } finally { setLoading(false); }
+  }, [unitId, supplier, dias, vencidos]);
+  useEffect(() => { void load(); }, [load]);
+
+  const suppliers = useMemo(() => [...new Set(rows.map((r) => r.supplier))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [rows]);
+  const total = rows.reduce((s, r) => s + r.value, 0);
+  const activeCount = [unitId, supplier, vencidos === '1' ? '1' : ''].filter(Boolean).length;
+  const clear = () => { setUnitId(''); setSupplier(''); setVencidos('0'); setDias('30'); };
+
+  const tone = (d: number): StatusTone => (d < 0 ? 'critical' : d <= 3 ? 'critical' : d <= 7 ? 'medium' : 'success');
+  const dueLabel = (d: number) => (d < 0 ? `vencido há ${-d}d` : d === 0 ? 'vence hoje' : d === 1 ? 'vence amanhã' : `vence em ${d}d`);
+
+  return (
+    <div className="space-y-3">
+      <p className="rounded-md bg-accent/10 px-3 py-2 text-xs text-muted-foreground">
+        Foco nos boletos <strong>a vencer</strong> — a supervisão e o financeiro são avisados automaticamente dos próximos vencimentos (o pagamento em si é controlado pelo financeiro). Inclui notas comuns e recebimentos de gás.
+      </p>
+      <FilterBar active={activeCount} onClear={clear}>
+        {units.length > 1 && (
+          <FilterField label="Unidade"><FilterSelect value={unitId} onChange={(e) => setUnitId(e.target.value)}><option value="">Todas</option>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</FilterSelect></FilterField>
+        )}
+        <FilterField label="Fornecedor"><FilterSelect value={supplier} onChange={(e) => setSupplier(e.target.value)}><option value="">Todos</option>{suppliers.map((s) => <option key={s} value={s}>{s}</option>)}</FilterSelect></FilterField>
+        <FilterField label="Janela"><FilterSelect value={dias} onChange={(e) => setDias(e.target.value)}><option value="7">7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option><option value="60">60 dias</option><option value="90">90 dias</option></FilterSelect></FilterField>
+        <FilterField label="Vencidos"><FilterSelect value={vencidos} onChange={(e) => setVencidos(e.target.value)}><option value="0">Só a vencer</option><option value="1">Incluir vencidos</option></FilterSelect></FilterField>
+      </FilterBar>
+
+      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+        <span><strong className="text-brand">{rows.length}</strong> boleto(s)</span>
+        <span>total <strong className="text-brand">{formatBRL(total)}</strong></span>
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Carregando…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nenhum boleto a vencer nesta janela.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {rows.map((r) => (
+            <div key={`${r.kind}-${r.id}`} className={`rounded-lg border p-2.5 ${r.daysToDue <= 3 ? 'border-critical/40 bg-critical/5' : 'bg-card'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-brand">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-accent/15 px-1 text-[10px] font-bold text-accent">GÁS</span> : null}</p>
+                <StatusBadge tone={tone(r.daysToDue)}>{dueLabel(r.daysToDue)}</StatusBadge>
+              </div>
+              <p className="text-xs text-muted-foreground">{r.unit} · {formatBRL(r.value)}{r.number ? ` · nº ${r.number}` : ''} · vence {fmtBR(r.dueDate)}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Supplier[]; onDone: () => void }) {
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
   const [accessKey, setAccessKey] = useState('');
@@ -299,6 +399,18 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
   const [prefilled, setPrefilled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+  // Campos de GÁS (aparecem quando o fornecedor é de gás)
+  const [kind, setKind] = useState<'BULK' | 'CYLINDER'>('BULK');
+  const [qty, setQty] = useState('');
+  const [unitPrice, setUnitPrice] = useState('');
+  const [cylCount, setCylCount] = useState('');
+  const [cylKg, setCylKg] = useState('45');
+  const [cylReturned, setCylReturned] = useState('');
+  const [cylTotal, setCylTotal] = useState('');
+
+  const selected = suppliers.find((s) => s.id === supplierId);
+  const isGas = Boolean(selected?.isGas);
 
   function onKey(v: string) {
     setAccessKey(v);
@@ -311,11 +423,45 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
     } else setPrefilled(false);
   }
 
+  // Gás — cálculos de conferência
+  const q = parseFloat((qty || '0').replace(',', '.'));
+  const price = parseFloat((unitPrice || '0').replace(',', '.'));
+  const gasTotal = q > 0 && price > 0 ? q * price : 0;
+  const cc = parseInt(cylCount || '0', 10);
+  const ck = parseInt(cylKg || '45', 10) || 45;
+  const cTotal = parseFloat((cylTotal || '0').replace(',', '.'));
+  const cKg = cc > 0 ? cc * ck : 0;
+  const cPricePerKg = cKg > 0 && cTotal > 0 ? cTotal / cKg : 0;
+
   async function submit() {
-    setErr(null);
+    setErr(null); setOk(null);
+    if (!unitId || !supplierId) { setErr('Preencha unidade e fornecedor (da lista).'); return; }
+
+    if (isGas) {
+      // Lançamento de GÁS (cria GasReceipt) — vencimento do boleto incluso
+      const body: Record<string, unknown> = { unitId, supplierId, accessKey, noteNumber: number, dueDate };
+      if (kind === 'CYLINDER') {
+        if (!(cc > 0) || !(cTotal > 0)) { setErr('Informe nº de botijões e valor total.'); return; }
+        Object.assign(body, { kind: 'CYLINDER', cylinderCount: cc, cylinderKg: ck, cylindersReturned: cylReturned ? parseInt(cylReturned, 10) : undefined, totalValue: cTotal });
+      } else {
+        if (!(q > 0) || !(price > 0)) { setErr('Informe quantidade (kg) e valor por kg.'); return; }
+        Object.assign(body, { quantityKg: q, pricePerKg: price });
+      }
+      setBusy(true);
+      try {
+        const res = await fetch('/api/gas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
+        const v = data.variationPct;
+        setOk(`Recebimento de gás registrado.${v != null ? ` Variação ${v > 0 ? '+' : ''}${v}% vs anterior.` : ''}${data.alerted ? ' ⚠ Acima do limite — supervisão avisada.' : ''}`);
+        setTimeout(onDone, 900);
+      } finally { setBusy(false); }
+      return;
+    }
+
+    // Nota comum
     const v = parseFloat((totalValue || '0').replace('.', '').replace(',', '.')) || parseFloat(totalValue);
-    // Fornecedor SÓ da lista de cadastrados (16/07 — sem digitação livre)
-    if (!unitId || !supplierId || !v) { setErr('Preencha unidade, fornecedor (da lista) e valor.'); return; }
+    if (!v) { setErr('Preencha o valor da nota.'); return; }
     setBusy(true);
     try {
       const res = await fetch('/api/notes', {
@@ -355,24 +501,63 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
           setSupplierCnpj(s?.cnpj ?? supplierCnpj);
         }}>
           <option value="">Selecione o fornecedor…</option>
-          {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}{s.isGas ? ' (gás)' : ''}</option>)}
         </select>
         <p className="mt-1 text-xs text-muted-foreground">Fornecedor não está na lista? Peça à Supervisão/Admin para cadastrar em Configurações → Fornecedores.</p>
       </div>
+
+      {isGas && (
+        <p className="rounded-md bg-accent/10 px-3 py-2 text-xs font-semibold text-accent">Fornecedor de gás — preencha os dados do recebimento de gás. Isso alimenta a Análise de gás (dashboard, contratos e variação).</p>
+      )}
+
       <div className="grid grid-cols-2 gap-2">
         <div><Label>CNPJ</Label><Input className={hl} value={supplierCnpj} onChange={(e) => setSupplierCnpj(e.target.value)} /></div>
         <div><Label>Número</Label><Input className={hl} value={number} onChange={(e) => setNumber(e.target.value)} /></div>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>Emissão</Label><Input className={hl} type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></div>
-        <div><Label>Vencimento</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+        <div><Label>{isGas ? 'Emissão' : 'Emissão'}</Label><Input className={hl} type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></div>
+        <div><Label>Vencimento do boleto</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div><Label>Valor total (R$)</Label><Input inputMode="decimal" value={totalValue} onChange={(e) => setTotalValue(e.target.value)} placeholder="0,00" /></div>
-        <div><Label>Tipo de produto</Label><Input value={productType} onChange={(e) => setProductType(e.target.value)} /></div>
-      </div>
+
+      {isGas ? (
+        <div className="space-y-2 rounded-lg border-2 border-accent/30 bg-accent/5 p-3">
+          <div>
+            <Label>Forma de recebimento</Label>
+            <div className="flex gap-1">
+              <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-primary text-primary-foreground' : ''}`}>Granel (kg)</button>
+              <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-primary text-primary-foreground' : ''}`}>Botijão (P45)</button>
+            </div>
+          </div>
+          {kind === 'BULK' ? (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>Quantidade (kg)</Label><Input inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="ex: 45" /></div>
+                <div><Label>Valor por kg (R$)</Label><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0,0000" /></div>
+              </div>
+              {gasTotal > 0 && <p className="text-center text-sm font-bold text-brand">Valor total: {formatBRL(gasTotal)}</p>}
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-2">
+                <div><Label>Botijões</Label><Input inputMode="numeric" value={cylCount} onChange={(e) => setCylCount(e.target.value.replace(/\D/g, ''))} placeholder="ex: 4" /></div>
+                <div><Label>Kg/botijão</Label><Input inputMode="numeric" value={cylKg} onChange={(e) => setCylKg(e.target.value.replace(/\D/g, ''))} placeholder="45" /></div>
+                <div><Label>Valor total (R$)</Label><Input inputMode="decimal" value={cylTotal} onChange={(e) => setCylTotal(e.target.value)} placeholder="0,00" /></div>
+              </div>
+              <div><Label>Botijões vazios devolvidos</Label><Input inputMode="numeric" value={cylReturned} onChange={(e) => setCylReturned(e.target.value.replace(/\D/g, ''))} placeholder="ex: 4" /></div>
+              {cKg > 0 && cTotal > 0 && <p className="text-center text-sm font-bold text-brand">{cc} × {ck}kg = {cKg}kg · R$ {cPricePerKg.toFixed(4).replace('.', ',')}/kg</p>}
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          <div><Label>Valor total (R$)</Label><Input inputMode="decimal" value={totalValue} onChange={(e) => setTotalValue(e.target.value)} placeholder="0,00" /></div>
+          <div><Label>Tipo de produto</Label><Input value={productType} onChange={(e) => setProductType(e.target.value)} /></div>
+        </div>
+      )}
+
       {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
-      <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Save className="h-5 w-5" /> Confirmar e salvar</Button>
+      {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
+      <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Save className="h-5 w-5" /> {isGas ? 'Registrar recebimento de gás' : 'Confirmar e salvar'}</Button>
     </div>
   );
 }

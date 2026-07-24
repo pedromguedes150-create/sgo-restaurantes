@@ -17,11 +17,11 @@ export async function listSuppliers(opts: { activeOnly?: boolean } = {}) {
   return prisma.supplier.findMany({
     where: opts.activeOnly ? { active: true } : {},
     orderBy: [{ active: 'desc' }, { name: 'asc' }],
-    select: { id: true, name: true, cnpj: true, pixKey: true, category: true, notes: true, active: true },
+    select: { id: true, name: true, cnpj: true, pixKey: true, category: true, notes: true, active: true, isGas: true },
   });
 }
 
-export async function createSupplier(user: SessionUser, input: { name: string; cnpj?: string; pixKey?: string; category?: string; notes?: string }, ctx: Ctx = {}): Promise<SupplierResult> {
+export async function createSupplier(user: SessionUser, input: { name: string; cnpj?: string; pixKey?: string; category?: string; notes?: string; isGas?: boolean }, ctx: Ctx = {}): Promise<SupplierResult> {
   if (!canManageSuppliers(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!input.name?.trim()) return { ok: false, reason: 'INVALID' };
   const s = await prisma.supplier.create({
@@ -31,6 +31,7 @@ export async function createSupplier(user: SessionUser, input: { name: string; c
       pixKey: input.pixKey?.trim() || null,
       category: input.category?.trim() || null,
       notes: input.notes?.trim() || null,
+      isGas: Boolean(input.isGas),
       createdById: user.id,
     },
   });
@@ -38,7 +39,7 @@ export async function createSupplier(user: SessionUser, input: { name: string; c
   return { ok: true, id: s.id };
 }
 
-export async function updateSupplier(user: SessionUser, id: string, input: { name?: string; cnpj?: string; pixKey?: string; category?: string; notes?: string }, ctx: Ctx = {}): Promise<SupplierResult> {
+export async function updateSupplier(user: SessionUser, id: string, input: { name?: string; cnpj?: string; pixKey?: string; category?: string; notes?: string; isGas?: boolean }, ctx: Ctx = {}): Promise<SupplierResult> {
   if (!canManageSuppliers(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
   await prisma.supplier.update({
@@ -49,6 +50,7 @@ export async function updateSupplier(user: SessionUser, id: string, input: { nam
       ...(input.pixKey !== undefined ? { pixKey: input.pixKey.trim() || null } : {}),
       ...(input.category !== undefined ? { category: input.category.trim() || null } : {}),
       ...(input.notes !== undefined ? { notes: input.notes.trim() || null } : {}),
+      ...(input.isGas !== undefined ? { isGas: Boolean(input.isGas) } : {}),
     },
   });
   await audit({ userId: user.id, action: 'SUPPLIER_UPDATE', module: 'CONFIG', entity: 'supplier', entityId: id, ...ctx });
