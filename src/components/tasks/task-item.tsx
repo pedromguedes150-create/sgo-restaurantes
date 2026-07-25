@@ -49,14 +49,15 @@ export function TaskItem({ task }: { task: TaskItemData }) {
         {!done && !missed && task.isOverdue && <StatusBadge tone="critical"><AlertTriangle className="mr-1 h-3.5 w-3.5" /> Atrasada</StatusBadge>}
       </div>
 
-      <div className="mt-3">
+      {/* Ação: largura total no celular (alvo de toque), largura natural à direita no desktop */}
+      <div className="mt-3 flex md:justify-end">
         {task.moduleHref && !done ? (
-          <Link href={task.moduleHref}><Button className="w-full">Realizar <ArrowRight className="h-5 w-5" /></Button></Link>
+          <Link href={task.moduleHref} className="w-full md:w-auto"><Button className="w-full md:w-auto md:px-6">Realizar <ArrowRight className="h-5 w-5" /></Button></Link>
         ) : done ? (
-          <Link href={execHref}><Button variant="outline" className="w-full"><Eye className="h-4 w-4" /> Ver preenchimento</Button></Link>
+          <Link href={execHref} className="w-full md:w-auto"><Button variant="outline" className="w-full md:w-auto md:px-6"><Eye className="h-4 w-4" /> Ver preenchimento</Button></Link>
         ) : (
-          <Link href={execHref}>
-            <Button className="w-full" variant={task.requiresEvidence ? 'gold' : 'default'}>
+          <Link href={execHref} className="w-full md:w-auto">
+            <Button className="w-full md:w-auto md:px-6" variant={task.requiresEvidence ? 'gold' : 'default'}>
               {missed || task.isOverdue ? 'Realizar (atrasado)' : 'Realizar'} <ArrowRight className="h-5 w-5" />
             </Button>
           </Link>
