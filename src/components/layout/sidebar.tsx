@@ -2,14 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
 import {
   LayoutDashboard, ListChecks, Trash2, AlertOctagon, ClipboardList, Ticket,
   Boxes, Receipt, Wallet, Users, BookOpen, Target, ScrollText, Settings, GraduationCap, LifeBuoy, Megaphone, Droplets, NotebookPen, CalendarOff, Banknote, Eye, BarChart3, Sparkles, PackagePlus,
-  PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { sidebarCookieValue } from '@/lib/sidebar-state';
+import { useSidebarState } from '@/components/layout/sidebar-state-provider';
 import { APP_VERSION_LABEL } from '@/lib/version';
 
 interface Item { href: string; label: string; icon: React.ComponentType<{ className?: string }>; adminOnly?: boolean }
@@ -65,59 +63,24 @@ const GROUPS: { title: string; items: Item[] }[] = [
   },
 ];
 
-export function Sidebar({
-  isAdmin,
-  viewable,
-  badges,
-  defaultCollapsed = false,
-}: {
-  isAdmin: boolean;
-  viewable?: string[];
-  badges?: Record<string, number>;
-  /** Vem do cookie lido no servidor — evita piscar na hidratação. */
-  defaultCollapsed?: boolean;
-}) {
+export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewable?: string[]; badges?: Record<string, number> }) {
   const pathname = usePathname();
   const canSee = (href: string) => !viewable || viewable.includes(href);
 
-  // O estado sobrevive à navegação sozinho: no App Router o layout não é
-  // desmontado entre telas. O cookie cobre o reload.
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  const toggle = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    document.cookie = sidebarCookieValue(next);
-  };
+  // O botão de recolher vive no header; aqui só consumimos o estado.
+  const { collapsed } = useSidebarState();
 
   // Larguras: w-60 até `lg`; de `lg` em diante w-52 expandida ou w-14 (faixa só
   // de ícones) recolhida. Recolher é feature de desktop — a sidebar é `hidden`
-  // no celular e o botão é `lg:flex`, então nada muda no mobile nem no tablet.
+  // no celular e o botão é `lg:inline-flex`, então nada muda no mobile nem no
+  // tablet. `top`/`h` acompanham a altura do header (64px, 56px a partir de lg).
   return (
     <aside
       className={cn(
-        'sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 overflow-y-auto border-r bg-background py-4 transition-[width] duration-200 ease-out motion-reduce:transition-none md:block print:hidden',
+        'sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 overflow-y-auto border-r bg-background py-4 transition-[width] duration-200 ease-out motion-reduce:transition-none md:block lg:top-14 lg:h-[calc(100dvh-3.5rem)] print:hidden',
         collapsed ? 'px-3 lg:w-14 lg:px-2' : 'px-3 lg:w-52',
       )}
     >
-      {/* Sticky: a lista é longa e o botão não pode sumir no scroll da aside. */}
-      <div
-        className={cn(
-          'sticky top-0 z-10 mb-2 hidden bg-background pb-1 lg:flex',
-          collapsed ? 'justify-center' : 'justify-end',
-        )}
-      >
-        <button
-          type="button"
-          onClick={toggle}
-          aria-expanded={!collapsed}
-          aria-controls="sidebar-nav"
-          aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
-          title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
-        </button>
-      </div>
       <nav id="sidebar-nav" className="space-y-5">
         {GROUPS.map((g) => {
           const items = g.items.filter((it) => (!it.adminOnly || isAdmin) && canSee(it.href));
