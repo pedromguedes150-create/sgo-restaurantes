@@ -129,7 +129,11 @@ function ManagerDashboard({
   const metaPct = resW === 0 ? 0 : Math.round((doneW / resW) * 100);
 
   return (
-    <>
+    // Desktop (lg+): 2 colunas para a largura extra virar conteúdo, e não card
+    // esticado. `items-start` evita que um card curto seja esticado até a altura
+    // do vizinho. No celular NADA muda: o empilhamento continua vindo de
+    // `space-y-5` (o mesmo de antes) e o grid só liga em `lg`.
+    <div className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
       <Card>
         <CardContent className="flex items-center gap-5 py-5">
           <ProgressRing value={agg.progressPct} sublabel="do dia" />
@@ -194,7 +198,7 @@ function ManagerDashboard({
         ))}
 
       <Shortcuts />
-    </>
+    </div>
   );
 }
 
@@ -210,25 +214,29 @@ function ConsolidatedDashboard({
   const totalOverdue = overviews.reduce((s, o) => s + o.summary.overdue + o.summary.missed, 0);
 
   return (
-    <>
+    // Desktop (lg+): 2 colunas (ver comentário no ManagerDashboard). Os alertas
+    // ocupam a linha inteira para não perderem destaque.
+    <div className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
       {/* Alertas críticos */}
-      {totalOverdue > 0 ? (
-        <Link href="/tarefas?filter=atrasadas">
-          <Card className="border-critical/40 transition-colors hover:border-critical">
+      <div className="lg:col-span-2">
+        {totalOverdue > 0 ? (
+          <Link href="/tarefas?filter=atrasadas">
+            <Card className="border-critical/40 transition-colors hover:border-critical">
+              <CardContent className="flex items-center gap-3 py-4">
+                <AlertTriangle className="h-6 w-6 text-critical" />
+                <p className="text-sm font-semibold">{totalOverdue} tarefa(s) atrasada(s)/não realizada(s) na rede — ver →</p>
+              </CardContent>
+            </Card>
+          </Link>
+        ) : (
+          <Card>
             <CardContent className="flex items-center gap-3 py-4">
-              <AlertTriangle className="h-6 w-6 text-critical" />
-              <p className="text-sm font-semibold">{totalOverdue} tarefa(s) atrasada(s)/não realizada(s) na rede — ver →</p>
+              <AlertTriangle className="h-6 w-6 text-success" />
+              <p className="text-sm font-semibold">Nenhuma pendência crítica agora</p>
             </CardContent>
           </Card>
-        </Link>
-      ) : (
-        <Card>
-          <CardContent className="flex items-center gap-3 py-4">
-            <AlertTriangle className="h-6 w-6 text-success" />
-            <p className="text-sm font-semibold">Nenhuma pendência crítica agora</p>
-          </CardContent>
-        </Card>
-      )}
+        )}
+      </div>
 
       {/* Semáforo por unidade */}
       <Card>
@@ -282,7 +290,7 @@ function ConsolidatedDashboard({
       </Card>
 
       {canSeeAudit && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:col-span-2">
           <Link href="/auditoria" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand">
             <ScrollText className="h-5 w-5 text-accent" /> Auditoria
           </Link>
@@ -291,13 +299,15 @@ function ConsolidatedDashboard({
           </Link>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
 function Shortcuts() {
+  // `lg:col-span-2`: os atalhos ficam na linha inteira do grid do dashboard
+  // (inerte fora de um grid).
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-3 lg:col-span-2">
       <Link href="/tarefas" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand">
         <ListChecks className="h-5 w-5 text-accent" /> Tarefas
       </Link>

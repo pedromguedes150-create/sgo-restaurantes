@@ -641,6 +641,7 @@ export const GUIDE: GuideSection[] = [
           'Use para priorizar onde agir.',
           'Em "Unidades hoje", cada unidade é um botão: toque nela para abrir as tarefas do dia já filtradas por aquela unidade (o mesmo vale para a lista por unidade do gerente multi-unidade).',
           'Na tela de tarefas filtrada, o nome da unidade aparece abaixo do título com o atalho "Ver todas as unidades" para voltar à visão completa.',
+          'No computador (telas a partir de 1024px) os cartões do Dashboard ficam em duas colunas para aproveitar a largura; os alertas seguem em linha cheia. No celular nada muda: continua uma coluna.',
         ],
       },
     ],

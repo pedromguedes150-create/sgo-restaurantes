@@ -66,8 +66,10 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
   const pathname = usePathname();
   const canSee = (href: string) => !viewable || viewable.includes(href);
 
+  // w-60 até `lg`; de `lg` em diante w-52 devolve 32px de largura ao conteúdo
+  // (a sidebar é `hidden` no celular, então nada muda no mobile).
   return (
-    <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 overflow-y-auto border-r bg-background px-3 py-4 md:block print:hidden">
+    <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 overflow-y-auto border-r bg-background px-3 py-4 md:block lg:w-52 print:hidden">
       <nav className="space-y-5">
         {GROUPS.map((g) => {
           const items = g.items.filter((it) => (!it.adminOnly || isAdmin) && canSee(it.href));
