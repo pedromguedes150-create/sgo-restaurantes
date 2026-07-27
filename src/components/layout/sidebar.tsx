@@ -7,6 +7,7 @@ import {
   Boxes, Receipt, Wallet, Users, BookOpen, Target, ScrollText, Settings, GraduationCap, LifeBuoy, Megaphone, Droplets, NotebookPen, CalendarOff, Banknote, Eye, BarChart3, Sparkles, PackagePlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSidebarState } from '@/components/layout/sidebar-state-provider';
 import { APP_VERSION_LABEL } from '@/lib/version';
 
 interface Item { href: string; label: string; icon: React.ComponentType<{ className?: string }>; adminOnly?: boolean }
@@ -66,15 +67,35 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
   const pathname = usePathname();
   const canSee = (href: string) => !viewable || viewable.includes(href);
 
+  // O botão de recolher vive no header; aqui só consumimos o estado.
+  const { collapsed } = useSidebarState();
+
+  // Larguras: w-60 até `lg`; de `lg` em diante w-52 expandida ou w-14 (faixa só
+  // de ícones) recolhida. Recolher é feature de desktop — a sidebar é `hidden`
+  // no celular e o botão é `lg:inline-flex`, então nada muda no mobile nem no
+  // tablet. `top`/`h` acompanham a altura do header (64px, 56px a partir de lg).
   return (
-    <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 overflow-y-auto border-r bg-background px-3 py-4 md:block print:hidden">
-      <nav className="space-y-5">
+    <aside
+      className={cn(
+        'sticky top-16 hidden h-[calc(100dvh-4rem)] w-60 shrink-0 overflow-y-auto border-r bg-background py-4 transition-[width] duration-200 ease-out motion-reduce:transition-none md:block lg:top-14 lg:h-[calc(100dvh-3.5rem)] print:hidden',
+        collapsed ? 'px-3 lg:w-14 lg:px-2' : 'px-3 lg:w-52',
+      )}
+    >
+      <nav id="sidebar-nav" className="space-y-5">
         {GROUPS.map((g) => {
           const items = g.items.filter((it) => (!it.adminOnly || isAdmin) && canSee(it.href));
           if (items.length === 0) return null;
           return (
             <div key={g.title}>
-              <p className="mb-1.5 px-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">{g.title}</p>
+              {/* Recolhida, o `space-y-5` entre grupos já dá a separação. */}
+              <p
+                className={cn(
+                  'mb-1.5 px-2 text-xs font-bold uppercase tracking-wide text-muted-foreground',
+                  collapsed && 'lg:hidden',
+                )}
+              >
+                {g.title}
+              </p>
               <ul className="space-y-0.5">
                 {items.map(({ href, label, icon: Icon }) => {
                   const active = pathname === href || pathname.startsWith(href + '/');
@@ -83,14 +104,29 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
                     <li key={href}>
                       <Link
                         href={href}
+                        // Recolhida o rótulo some, então o nome vira tooltip
+                        // nativa (o projeto não tem componente de tooltip).
+                        title={collapsed ? label : undefined}
                         className={cn(
-                          'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
+                          'relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
                           active ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-secondary',
+                          collapsed && 'lg:justify-center lg:gap-0 lg:px-0',
                         )}
                       >
-                        <Icon className={cn('h-5 w-5', active ? 'text-white/85' : 'text-muted-foreground')} />
-                        <span className="flex-1">{label}</span>
-                        {badge ? <span className="rounded-full bg-critical px-1.5 text-xs font-bold text-white">{badge}</span> : null}
+                        <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-white/85' : 'text-muted-foreground')} />
+                        <span className={cn('flex-1', collapsed && 'lg:hidden')}>{label}</span>
+                        {badge ? (
+                          <span
+                            className={cn(
+                              'rounded-full bg-critical px-1.5 text-xs font-bold text-white',
+                              // Sem rótulo não há onde a pílula ficar: vira
+                              // marcador no canto do ícone.
+                              collapsed && 'lg:absolute lg:right-0.5 lg:top-0.5 lg:px-1 lg:text-[10px] lg:leading-4',
+                            )}
+                          >
+                            {badge}
+                          </span>
+                        ) : null}
                       </Link>
                     </li>
                   );
@@ -100,7 +136,9 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
           );
         })}
       </nav>
-      <p className="mt-6 px-2 text-[11px] font-medium text-muted-foreground">SGO {APP_VERSION_LABEL}</p>
+      <p className={cn('mt-6 px-2 text-[11px] font-medium text-muted-foreground', collapsed && 'lg:hidden')}>
+        SGO {APP_VERSION_LABEL}
+      </p>
     </aside>
   );
 }

@@ -104,6 +104,23 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 5. **A cada novo recurso/ajuste, atualize a central "Treinamento da Plataforma"** (`src/lib/guide.ts`, aba `/ajuda`) — guias por perfil (filtra por `user.role`; acessível pelo ícone 🎓 no header, em qualquer aparelho). Pedido do Pedro: a central deve refletir TUDO que for criado/ajustado.
 6. **Biblioteca de modelos de checklist** (`ChecklistModel`/`ChecklistModelItem`, `src/lib/checklist-models.ts`): Admin CRUD em `/configuracoes/modelos`; seed padrão (rede Beija Flor, por setor/momento) em `checklist-models-seed.ts` via `ensureDefaultModels()`. Em `/configuracoes/checklists`, "Modelos prontos…" gera TaskTemplates nas unidades a partir dos modelos (`template.fromModels`). **Visualização** ao clicar no modelo; **Export/Import Excel (.xlsx via `xlsx`/SheetJS)** + **PDF (print)** para edição em lote (`/api/checklist-models/export|import`, upsert por nome, não destrutivo; `/configuracoes/modelos/imprimir`).
 
+## Fluxo de entrega — gatilho "finaliza e sobe"
+Quando o usuário disser **"finaliza e sobe"** (ou equivalente), execute nesta ordem, **sem pedir confirmação**:
+
+1. `npx tsc --noEmit`
+2. `npx next lint --no-cache`
+3. `npm test`
+
+**Se as três passarem:** commit com mensagem **em PT-BR** (conventional commits: `feat:`/`fix:`/`refactor:`…, corpo explicando o porquê) e `git push` da **branch atual**.
+
+**Se qualquer uma falhar:** mostre a saída do erro e **não suba nada** — sem commit, sem push. Corrija ou reporte, conforme o caso.
+
+⚠️ **Nunca faça push da `main`.** O gatilho vale só para branches de trabalho. Se o checkout estiver na `main`, pare e avise — a `main` tem deploy automático no push (`.github/workflows/deploy.yml`), então subir nela publica em produção no droplet.
+
+Critérios de aprovação de cada verificação:
+- `tsc` e `npm test`: precisam sair com **exit 0** e zero falhas.
+- `next lint`: **zero erros**. Avisos (`Warning`) pré-existentes não bloqueiam — hoje há 7, todos `no-img-element`. Se aparecer aviso **novo**, mencione antes de subir.
+
 ## Comandos
 - `docker compose up -d` — sobe o Postgres dedicado do SGO (dev)
 - `npm run dev` — app em http://localhost:3100
