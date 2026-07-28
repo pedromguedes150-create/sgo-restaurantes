@@ -3,6 +3,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { getVaultOverview, countVault, refillBucket, invalidMultiples } from '@/lib/cash-vault';
 import { getDenominations, defaultConfig, DEFAULT_DENOMINATIONS, ensureUnitDenominations, saveDenomination } from '@/lib/cash-denominations';
+import { deleteCashDenomination } from '@/lib/admin-ops';
 import type { SessionUser } from '@/lib/auth/session';
 
 const sfx = `dnm${process.pid.toString(36)}`;
@@ -12,10 +13,13 @@ let unitC: string; // config sem R$ 0,25 → saldo legado no cofre
 let unitD: string; // config (supervisor) — bloqueio R2
 let userId: string;
 let supId: string;
+let adminId: string;
 const user = (): SessionUser =>
   ({ id: userId, name: 'Ger', role: 'MANAGER', unitIds: [unitA, unitB, unitC], seesAllUnits: false, needsTerms: false });
 const sup = (): SessionUser =>
   ({ id: supId, name: 'Sup', role: 'SUPERVISOR', unitIds: [unitD], seesAllUnits: false, needsTerms: false });
+const admin = (): SessionUser =>
+  ({ id: adminId, name: 'Adm', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false });
 
 async function seedConfig(unitId: string, mutate: (d: (typeof DEFAULT_DENOMINATIONS)[number]) => Partial<(typeof DEFAULT_DENOMINATIONS)[number]> = () => ({}), skip: (key: string) => boolean = () => false) {
   const rows = DEFAULT_DENOMINATIONS.filter((d) => !skip(d.key)).map((d) => ({ ...d, ...mutate(d) }));
@@ -37,6 +41,8 @@ beforeAll(async () => {
   userId = u.id;
   const s = await prisma.user.create({ data: { name: 'Sup', email: `${sfx}-sup@example.com`, role: 'SUPERVISOR', passwordHash: 'x' } });
   supId = s.id;
+  const a = await prisma.user.create({ data: { name: 'Adm', email: `${sfx}-adm@example.com`, role: 'ADMIN', passwordHash: 'x' } });
+  adminId = a.id;
   for (const uid of [unitA, unitB, unitC]) await prisma.unitMembership.create({ data: { userId, unitId: uid } });
   await prisma.unitMembership.create({ data: { userId: supId, unitId: unitD } });
 });
@@ -48,9 +54,9 @@ afterAll(async () => {
     await prisma.cashBucket.deleteMany({ where: { unitId: uid } }).catch(() => {});
     await prisma.cashDenomination.deleteMany({ where: { unitId: uid } }).catch(() => {});
   }
-  await prisma.unitMembership.deleteMany({ where: { userId: { in: [userId, supId] } } }).catch(() => {});
+  await prisma.unitMembership.deleteMany({ where: { userId: { in: [userId, supId, adminId] } } }).catch(() => {});
   await prisma.unit.deleteMany({ where: { id: { in: [unitA, unitB, unitC, unitD] } } }).catch(() => {});
-  await prisma.user.deleteMany({ where: { id: { in: [userId, supId] } } }).catch(() => {});
+  await prisma.user.deleteMany({ where: { id: { in: [userId, supId, adminId] } } }).catch(() => {});
   await prisma.$disconnect();
 });
 
@@ -165,5 +171,40 @@ describe('getVaultOverview expõe a configuração (base do PR 3)', () => {
     const ten = o!.denominations.find((d) => d.key === '10');
     expect(ten?.isBig).toBe(true);
     expect(ten?.label).toContain('10');
+  });
+});
+
+describe('Exclusão de denominação pelo Admin (PR 4) — /api/admin/ops', () => {
+  it('não-admin (supervisor) não exclui', async () => {
+    await ensureUnitDenominations(unitD, sup());
+    const row = await prisma.cashDenomination.findFirst({ where: { unitId: unitD, key: '0.05' } });
+    const r = await deleteCashDenomination(sup(), row!.id);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('FORBIDDEN');
+  });
+
+  it('bloqueia "outros" (linha de sistema, R6)', async () => {
+    const row = await prisma.cashDenomination.findFirst({ where: { unitId: unitD, key: 'outros' } });
+    const r = await deleteCashDenomination(admin(), row!.id);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('INVALID');
+  });
+
+  it('bloqueia exclusão com saldo ≠ 0 (R2); com saldo zero, exclui', async () => {
+    await prisma.cashVault.upsert({
+      where: { unitId: unitD },
+      create: { unitId: unitD, balances: { '0.05': 3 } },
+      update: { balances: { '0.05': 3 } },
+    });
+    const row = await prisma.cashDenomination.findFirst({ where: { unitId: unitD, key: '0.05' } });
+    const blocked = await deleteCashDenomination(admin(), row!.id);
+    expect(blocked.ok).toBe(false);
+    if (!blocked.ok) expect(blocked.reason).toBe('INVALID');
+
+    await prisma.cashVault.update({ where: { unitId: unitD }, data: { balances: { '0.05': 0 } } });
+    const okNow = await deleteCashDenomination(admin(), row!.id);
+    expect(okNow.ok).toBe(true);
+    const gone = await prisma.cashDenomination.findUnique({ where: { id: row!.id } });
+    expect(gone).toBeNull();
   });
 });

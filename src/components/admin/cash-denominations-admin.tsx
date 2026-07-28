@@ -1,13 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ChevronUp, ChevronDown, Plus, Copy, Loader2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, Plus, Copy, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 interface Unit { id: string; name: string }
 interface Row {
+  id: string;
   key: string; value: number | null; kind: 'NOTE' | 'COIN' | 'OTHER'; label: string | null;
   isSmall: boolean; isBig: boolean; countsAsBigIndicator: boolean;
   order: number; active: boolean; balance: number; system: boolean;
@@ -19,7 +20,7 @@ const brl = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', curren
 const rowLabel = (r: { label: string | null; kind: string; value: number | null }) =>
   r.label ?? (r.kind === 'OTHER' || r.value == null ? 'Outros (PIX/caixinha)' : `${r.kind === 'COIN' ? 'Moeda' : 'Nota'} ${brl(r.value)}`);
 
-export function CashDenominationsAdmin({ units }: { units: Unit[] }) {
+export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAdmin: boolean }) {
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(false);
@@ -67,6 +68,17 @@ export function CashDenominationsAdmin({ units }: { units: Unit[] }) {
     const r = await post({ action: 'reorder', orderedKeys: keys });
     setBusyKey(null);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    await load();
+  }
+
+  async function del(row: Row) {
+    if (!confirm(`Excluir a denominação "${rowLabel(row)}" desta unidade? (Só é possível se o saldo estiver zerado.)`)) return;
+    setBusyKey(row.key); setMsg(null); setOk(null);
+    try {
+      const res = await fetch('/api/admin/ops', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entity: 'cashDenomination', action: 'delete', id: row.id }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setMsg(d.error === 'Dados inválidos' ? 'Não é possível excluir: linha de sistema ou com saldo no cofre.' : (d.error ?? 'Falha')); return; }
+    } catch { setMsg('Falha de conexão'); return; } finally { setBusyKey(null); }
     await load();
   }
 
@@ -143,6 +155,7 @@ export function CashDenominationsAdmin({ units }: { units: Unit[] }) {
                   <div className="col-span-12 flex justify-end gap-1 sm:col-span-2">
                     <Button size="sm" variant="ghost" aria-label="Subir" disabled={idx === 0 || busyKey != null} onClick={() => move(idx, -1)}><ChevronUp className="h-4 w-4" /></Button>
                     <Button size="sm" variant="ghost" aria-label="Descer" disabled={idx === data.denominations.length - 1 || busyKey != null} onClick={() => move(idx, 1)}><ChevronDown className="h-4 w-4" /></Button>
+                    {isAdmin && !r.system && <Button size="sm" variant="ghost" className="text-critical" aria-label="Excluir" disabled={busyKey != null} onClick={() => del(r)}><Trash2 className="h-4 w-4" /></Button>}
                   </div>
                 </div>
               </div>

@@ -29,7 +29,7 @@ export default async function TrocoConfigPage() {
         <Card><CardContent className="py-6 text-sm text-muted-foreground">Nenhuma unidade no seu escopo.</CardContent></Card>
       ) : (
         <Card><CardContent className="pt-4">
-          <CashDenominationsAdmin units={units} />
+          <CashDenominationsAdmin units={units} isAdmin={user.role === 'ADMIN'} />
         </CardContent></Card>
       )}
     </div>

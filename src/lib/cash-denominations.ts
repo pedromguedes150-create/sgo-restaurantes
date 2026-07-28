@@ -195,6 +195,7 @@ function heldBalance(balances: unknown, key: string): number {
 }
 
 export interface DenomAdminRow {
+  id: string;
   key: string; value: number | null; kind: DenomKind; label: string | null;
   isSmall: boolean; isBig: boolean; countsAsBigIndicator: boolean; order: number;
   active: boolean;
@@ -219,6 +220,7 @@ export async function listUnitDenominations(user: SessionUser, unitId: string): 
   ]);
   const present = new Set(rows.map((r) => r.key));
   const denominations: DenomAdminRow[] = rows.map((r) => ({
+    id: r.id,
     key: r.key,
     value: r.value != null ? Number(r.value) : null,
     kind: (r.kind as DenomKind) ?? 'NOTE',
