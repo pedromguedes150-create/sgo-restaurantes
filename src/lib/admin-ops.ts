@@ -212,6 +212,24 @@ export async function deleteMaintenancePlan(user: SessionUser, id: string, ctx: 
   return { ok: true };
 }
 
+/* ───────────────── Troco — denominações do cofre (Módulo 18) ───────────────── */
+/**
+ * Exclui uma denominação do cofre (Admin). Bloqueia a linha de sistema "outros"
+ * (R6) e a exclusão com saldo ≠ 0 no cofre (R2: dinheiro não some da conta).
+ */
+export async function deleteCashDenomination(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const d = await prisma.cashDenomination.findUnique({ where: { id }, select: { unitId: true, key: true } });
+  if (!d) return { ok: false, reason: 'NOT_FOUND' };
+  if (d.key === 'outros') return { ok: false, reason: 'INVALID' }; // linha de sistema
+  const vault = await prisma.cashVault.findUnique({ where: { unitId: d.unitId }, select: { balances: true } });
+  const bal = Math.abs(Number((vault?.balances as Record<string, unknown> | null)?.[d.key]) || 0);
+  if (bal > 0.005) return { ok: false, reason: 'INVALID' }; // saldo no cofre
+  await prisma.cashDenomination.delete({ where: { id } });
+  await audit({ userId: user.id, unitId: d.unitId, action: 'CASH_DENOM_DELETE', module: 'CASH', entity: 'cash_denomination', entityId: id, metadata: { key: d.key }, ...ctx });
+  return { ok: true };
+}
+
 /* ───────────────── Avaliação do colaborador (item 13) ───────────────── */
 export async function deleteCollaboratorEvaluation(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };

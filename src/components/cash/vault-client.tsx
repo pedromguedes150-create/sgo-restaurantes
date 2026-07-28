@@ -10,10 +10,9 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { FilterBar, FilterField, FilterSelect, FilterInput } from '@/components/ui/filter-bar';
 import { cn } from '@/lib/utils';
 
-/** Denominações (iguais à folha do gerente) + linha "outros". */
-const DENOMS = ['200', '100', '50', '20', '10', '5', '2', '1', '0.50', '0.25', '0.10', '0.05'] as const;
-const KEYS = [...DENOMS, 'outros'] as const;
 type Bal = Record<string, number>;
+/** Denominação vinda da configuração da unidade (dirige rótulos e blocos). */
+interface DenomView { key: string; label: string; value: number | null; kind: 'NOTE' | 'COIN' | 'OTHER'; isSmall: boolean; isBig: boolean; countsAsBigIndicator: boolean }
 
 interface ChangeRequest {
   id: string; unitId: string; unitName?: string; amount: number | null; note: string;
@@ -21,7 +20,7 @@ interface ChangeRequest {
   resolvedByName: string | null; resolvedNote: string | null; resolvedAt: string | null;
 }
 export interface VaultUI {
-  balances: Bal; total: number; bigNotesTotal: number; bigNotesPct: number;
+  balances: Bal; total: number; denominations: DenomView[]; bigNotesTotal: number; bigNotesPct: number;
   buckets: { id: string; name: string; targetValue: number; active: boolean }[];
   recentMovements: { id: string; type: string; bucketName: string | null; totalIn: number; totalOut: number; note: string | null; createdByName: string; createdAt: string; deltas: Bal }[];
   changeRequests: ChangeRequest[];
@@ -35,7 +34,8 @@ interface UnitOpt { id: string; name: string }
 interface MovementRow { id: string; type: string; bucketName: string | null; totalIn: number; totalOut: number; value: number; note: string | null; createdByName: string; createdById: string; createdAt: string; deltas: Bal }
 
 const brl = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const denomLabel = (k: string) => (k === 'outros' ? 'Outros (PIX/caixinha…)' : Number(k) >= 2 ? `Nota R$ ${k}` : `Moeda R$ ${Number(k).toFixed(2).replace('.', ',')}`);
+/** Rótulo curto de uma chave legado (fora da config atual da unidade). */
+const legacyLabel = (k: string) => (k === 'outros' ? 'Outros' : `R$ ${k.replace('.', ',')} (legado)`);
 const TYPE_LABEL: Record<string, { label: string; tone: 'success' | 'medium' | 'critical' | 'neutral' }> = {
   COUNT: { label: 'Conferência', tone: 'neutral' },
   REFILL: { label: 'Reposição de balde', tone: 'success' },
@@ -46,20 +46,20 @@ const TYPE_LABEL: Record<string, { label: string; tone: 'success' | 'medium' | '
 };
 const dt = (s: string) => new Date(s).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-/** Tabela de denominações (valor em R$ por linha, total automático). */
-function DenomForm({ values, onChange, only }: { values: Record<string, string>; onChange: (k: string, v: string) => void; only?: 'big' | 'small' }) {
-  const keys = only === 'big' ? ['200', '100', '50', '20'] : only === 'small' ? ['10', '5', '2', '1', '0.50', '0.25', '0.10', '0.05'] : [...KEYS];
-  const total = keys.reduce((t, k) => t + (parseFloat((values[k] || '0').replace(/\./g, '').replace(',', '.')) || 0), 0);
+const parseNum = (s: string) => parseFloat((s || '0').replace(/\./g, '').replace(',', '.')) || 0;
+
+/** Tabela de denominações (valor em R$ por linha, total automático) — orientada à config. */
+function DenomForm({ list, values, onChange }: { list: DenomView[]; values: Record<string, string>; onChange: (k: string, v: string) => void }) {
+  const total = list.reduce((t, d) => t + parseNum(values[d.key] || '0'), 0);
   return (
     <div className="space-y-1">
-      {keys.map((k) => {
-        const denom = Number(k);
-        const v = parseFloat((values[k] || '0').replace(/\./g, '').replace(',', '.')) || 0;
-        const badMultiple = k !== 'outros' && v > 0 && Math.abs(Math.round(v / denom) * denom - v) > 0.011;
+      {list.map((d) => {
+        const v = parseNum(values[d.key] || '0');
+        const badMultiple = d.value != null && v > 0 && Math.abs(Math.round(v / d.value) * d.value - v) > 0.011;
         return (
-          <div key={k} className="flex items-center gap-2">
-            <span className="w-40 shrink-0 text-sm">{denomLabel(k)}</span>
-            <Input inputMode="decimal" value={values[k] ?? ''} onChange={(e) => onChange(k, e.target.value)} placeholder="0,00" className={cn('h-9 flex-1 text-right text-sm tabular-nums', badMultiple && 'border-medium')} />
+          <div key={d.key} className="flex items-center gap-2">
+            <span className="w-40 shrink-0 text-sm">{d.label}</span>
+            <Input inputMode="decimal" value={values[d.key] ?? ''} onChange={(e) => onChange(d.key, e.target.value)} placeholder="0,00" className={cn('h-9 flex-1 text-right text-sm tabular-nums', badMultiple && 'border-medium')} />
           </div>
         );
       })}
@@ -67,20 +67,33 @@ function DenomForm({ values, onChange, only }: { values: Record<string, string>;
     </div>
   );
 }
-const emptyForm = () => Object.fromEntries(KEYS.map((k) => [k, ''])) as Record<string, string>;
-const toNumbers = (v: Record<string, string>): Bal => Object.fromEntries(KEYS.map((k) => [k, parseFloat((v[k] || '0').replace(/\./g, '').replace(',', '.')) || 0]));
-const parseNum = (s: string) => parseFloat((s || '0').replace(/\./g, '').replace(',', '.')) || 0;
+const emptyForm = (keys: string[]) => Object.fromEntries(keys.map((k) => [k, ''])) as Record<string, string>;
+const toNumbers = (keys: string[], v: Record<string, string>): Bal => Object.fromEntries(keys.map((k) => [k, parseNum(v[k] || '0')]));
 
 export function VaultClient({ units, selectedUnitId, vault, alerts, openRequestsNetwork, canOperate, canManageBuckets, canResolve }: {
   units: UnitOpt[]; selectedUnitId: string; vault: VaultUI; alerts: VaultAlertUI[] | null; openRequestsNetwork: ChangeRequest[];
   canOperate: boolean; canManageBuckets: boolean; canResolve: boolean;
 }) {
   const router = useRouter();
+  // Config de denominações da unidade (dirige rótulos e blocos das telas do cofre).
+  const denoms = vault.denominations;
+  const smallDenoms = denoms.filter((d) => d.isSmall);
+  const bigDenoms = denoms.filter((d) => d.isBig);
+  const allKeys = denoms.map((d) => d.key);
+  const denomByKey = useMemo(() => new Map(denoms.map((d) => [d.key, d])), [denoms]);
+  // Grade de saldo: denominações da config + chaves legado com valor ≠ 0 (nunca esconde dinheiro).
+  const balanceKeys = useMemo(() => {
+    const cfg = allKeys;
+    const extra = Object.keys(vault.balances).filter((k) => !denomByKey.has(k) && (vault.balances[k] || 0) !== 0);
+    return [...cfg, ...extra];
+  }, [allKeys, vault.balances, denomByKey]);
+  const indicatorLabel = bigDenoms.filter((d) => d.countsAsBigIndicator).map((d) => (d.value != null ? d.value.toLocaleString('pt-BR') : d.key)).join(' / ');
+
   const [tab, setTab] = useState<'cofre' | 'historico'>('cofre');
   const [busy, setBusy] = useState(false);
   const [action, setAction] = useState<'none' | 'count' | 'refill' | 'swap' | 'withdrawal' | 'register' | 'request'>('none');
-  const [formA, setFormA] = useState<Record<string, string>>(emptyForm());
-  const [formB, setFormB] = useState<Record<string, string>>(emptyForm());
+  const [formA, setFormA] = useState<Record<string, string>>(() => emptyForm(allKeys));
+  const [formB, setFormB] = useState<Record<string, string>>(() => emptyForm(allKeys));
   const [note, setNote] = useState('');
   const [bucketId, setBucketId] = useState('');
   const [registerName, setRegisterName] = useState('');
@@ -106,7 +119,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
       return false;
     } finally { setBusy(false); }
   }
-  const reset = () => { setAction('none'); setFormA(emptyForm()); setFormB(emptyForm()); setNote(''); setBucketId(''); setRegisterName(''); setReqAmount(''); };
+  const reset = () => { setAction('none'); setFormA(emptyForm(allKeys)); setFormB(emptyForm(allKeys)); setNote(''); setBucketId(''); setRegisterName(''); setReqAmount(''); };
 
   return (
     <div className="space-y-4">
@@ -187,15 +200,19 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
               {vault.lastCountAt ? `Última conferência: ${new Date(vault.lastCountAt).toLocaleDateString('pt-BR')}` : 'Nenhuma conferência ainda — lance a posição inicial em "Conferir cofre".'}
             </p>
             <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-3">
-              {KEYS.map((k) => (
-                <p key={k} className="flex justify-between text-xs tabular-nums">
-                  <span className="text-muted-foreground">{k === 'outros' ? 'Outros' : `R$ ${k.replace('.', ',')}`}</span>
-                  <span className={cn('font-semibold', (vault.balances[k] || 0) === 0 && 'text-muted-foreground/50')}>{brl(vault.balances[k] || 0)}</span>
-                </p>
-              ))}
+              {balanceKeys.map((k) => {
+                const d = denomByKey.get(k);
+                const label = d ? (k === 'outros' ? 'Outros' : `R$ ${(d.value ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`) : legacyLabel(k);
+                return (
+                  <p key={k} className="flex justify-between text-xs tabular-nums">
+                    <span className={cn('text-muted-foreground', !d && 'italic')}>{label}</span>
+                    <span className={cn('font-semibold', (vault.balances[k] || 0) === 0 && 'text-muted-foreground/50')}>{brl(vault.balances[k] || 0)}</span>
+                  </p>
+                );
+              })}
             </div>
             <div className={cn('mt-2 rounded-md px-2 py-1 text-xs font-semibold', vault.bigNotesPct >= 50 ? 'bg-critical/10 text-critical' : 'bg-surface text-muted-foreground')}>
-              Notas grandes (50/100/200): {brl(vault.bigNotesTotal)} ({vault.bigNotesPct}% do cofre){vault.bigNotesPct >= 50 ? ' — hora de pedir troca ao escritório!' : ''}
+              Notas grandes{indicatorLabel ? ` (${indicatorLabel})` : ''}: {brl(vault.bigNotesTotal)} ({vault.bigNotesPct}% do cofre){vault.bigNotesPct >= 50 ? ' — hora de pedir troca ao escritório!' : ''}
             </div>
             {vault.monthWithdrawals > 0 && (
               <p className="mt-1 rounded-md bg-critical/10 px-2 py-1 text-xs font-bold text-critical">🚨 {vault.monthWithdrawals} retirada(s) para pagamento neste mês — prática proibida, supervisão avisada.</p>
@@ -251,11 +268,11 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
             <div className="rounded-lg border border-dashed p-3">
               <p className="mb-1 text-sm font-bold text-brand">Conferência do cofre (rotina diária)</p>
               <p className="mb-2 text-xs text-muted-foreground">Lance o VALOR EM R$ contado de cada denominação (como na folha). Isso substitui o saldo do cofre.</p>
-              <DenomForm values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
+              <DenomForm list={denoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-2 h-9 text-sm" />
               <div className="mt-2 flex justify-end gap-1.5">
                 <Button size="sm" variant="ghost" onClick={reset}>Cancelar</Button>
-                <Button size="sm" variant="gold" disabled={busy} onClick={async () => { if (await post({ action: 'count', unitId: selectedUnitId, balances: toNumbers(formA), note })) reset(); }}>Salvar conferência</Button>
+                <Button size="sm" variant="gold" disabled={busy} onClick={async () => { if (await post({ action: 'count', unitId: selectedUnitId, balances: toNumbers(allKeys, formA), note })) reset(); }}>Salvar conferência</Button>
               </div>
             </div>
           )}
@@ -268,13 +285,13 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
                 {activeBuckets.map((b) => <option key={b.id} value={b.id}>{b.name} (alvo {brl(b.targetValue)})</option>)}
               </select>
               <p className="mb-1 text-xs font-bold text-critical">SAIU do cofre (miúdos p/ o balde):</p>
-              <DenomForm values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} only="small" />
+              <DenomForm list={smallDenoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <p className="mb-1 mt-3 text-xs font-bold text-success">ENTROU no cofre (notas grandes do balde):</p>
-              <DenomForm values={formB} onChange={(k, v) => setFormB((s) => ({ ...s, [k]: v }))} only="big" />
+              <DenomForm list={bigDenoms} values={formB} onChange={(k, v) => setFormB((s) => ({ ...s, [k]: v }))} />
               <p className="mt-1 text-xs text-muted-foreground">Os dois totais devem ser IGUAIS (é uma troca).</p>
               <div className="mt-2 flex justify-end gap-1.5">
                 <Button size="sm" variant="ghost" onClick={reset}>Cancelar</Button>
-                <Button size="sm" variant="gold" disabled={busy || !bucketId} onClick={async () => { if (await post({ action: 'refill', unitId: selectedUnitId, bucketId, outSmall: toNumbers(formA), inBig: toNumbers(formB), note })) reset(); }}>Registrar reposição</Button>
+                <Button size="sm" variant="gold" disabled={busy || !bucketId} onClick={async () => { if (await post({ action: 'refill', unitId: selectedUnitId, bucketId, outSmall: toNumbers(allKeys, formA), inBig: toNumbers(allKeys, formB), note })) reset(); }}>Registrar reposição</Button>
               </div>
             </div>
           )}
@@ -285,13 +302,13 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
               <p className="mb-2 text-xs text-muted-foreground">Para unidades sem baldes (ex.: Nova União): o caixa troca notas por moedas/miúdos direto no cofre. Fica registrado no histórico.</p>
               <Input value={registerName} onChange={(e) => setRegisterName(e.target.value)} placeholder="Qual caixa (ex.: Caixa 1)" className="mb-2 h-9 text-sm" />
               <p className="mb-1 text-xs font-bold text-critical">SAIU do cofre (para o caixa):</p>
-              <DenomForm values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
+              <DenomForm list={denoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <p className="mb-1 mt-3 text-xs font-bold text-success">ENTROU no cofre (do caixa):</p>
-              <DenomForm values={formB} onChange={(k, v) => setFormB((s) => ({ ...s, [k]: v }))} />
+              <DenomForm list={denoms} values={formB} onChange={(k, v) => setFormB((s) => ({ ...s, [k]: v }))} />
               <p className="mt-1 text-xs text-muted-foreground">Os dois totais devem ser IGUAIS (é uma troca).</p>
               <div className="mt-2 flex justify-end gap-1.5">
                 <Button size="sm" variant="ghost" onClick={reset}>Cancelar</Button>
-                <Button size="sm" variant="gold" disabled={busy || !registerName.trim()} onClick={async () => { if (await post({ action: 'registerChange', unitId: selectedUnitId, registerName, outFromVault: toNumbers(formA), inToVault: toNumbers(formB), note })) reset(); }}>Registrar troca</Button>
+                <Button size="sm" variant="gold" disabled={busy || !registerName.trim()} onClick={async () => { if (await post({ action: 'registerChange', unitId: selectedUnitId, registerName, outFromVault: toNumbers(allKeys, formA), inToVault: toNumbers(allKeys, formB), note })) reset(); }}>Registrar troca</Button>
               </div>
             </div>
           )}
@@ -300,13 +317,13 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
             <div className="rounded-lg border border-dashed p-3">
               <p className="mb-1 text-sm font-bold text-brand">Troca com o escritório</p>
               <p className="mb-1 text-xs font-bold text-critical">ENVIADO ao escritório (notas grandes):</p>
-              <DenomForm values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} only="big" />
+              <DenomForm list={bigDenoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <p className="mb-1 mt-3 text-xs font-bold text-success">RECEBIDO do escritório (moedas/miúdos):</p>
-              <DenomForm values={formB} onChange={(k, v) => setFormB((s) => ({ ...s, [k]: v }))} only="small" />
+              <DenomForm list={smallDenoms} values={formB} onChange={(k, v) => setFormB((s) => ({ ...s, [k]: v }))} />
               <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-2 h-9 text-sm" />
               <div className="mt-2 flex justify-end gap-1.5">
                 <Button size="sm" variant="ghost" onClick={reset}>Cancelar</Button>
-                <Button size="sm" variant="gold" disabled={busy} onClick={async () => { if (await post({ action: 'officeSwap', unitId: selectedUnitId, outBig: toNumbers(formA), inSmall: toNumbers(formB), note })) reset(); }}>Registrar troca</Button>
+                <Button size="sm" variant="gold" disabled={busy} onClick={async () => { if (await post({ action: 'officeSwap', unitId: selectedUnitId, outBig: toNumbers(allKeys, formA), inSmall: toNumbers(allKeys, formB), note })) reset(); }}>Registrar troca</Button>
               </div>
             </div>
           )}
@@ -315,13 +332,13 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
             <div className="rounded-lg border-2 border-critical/60 bg-critical/5 p-3">
               <p className="mb-1 text-sm font-bold text-critical">🚨 Retirada do troco para pagamento — PRÁTICA PROIBIDA</p>
               <p className="mb-2 text-xs text-critical">A supervisão e os administradores serão avisados NA HORA. Use apenas em emergência real e reponha o valor.</p>
-              <DenomForm values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
+              <DenomForm list={denoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Motivo da retirada (obrigatório)" className="mt-2 h-9 text-sm" />
               <div className="mt-2 flex justify-end gap-1.5">
                 <Button size="sm" variant="ghost" onClick={reset}>Cancelar</Button>
                 <Button size="sm" variant="destructive" disabled={busy || !note.trim()} onClick={async () => {
                   if (!confirm('Confirma a retirada PROIBIDA do troco? A supervisão será avisada imediatamente.')) return;
-                  if (await post({ action: 'withdrawal', unitId: selectedUnitId, amounts: toNumbers(formA), reason: note })) reset();
+                  if (await post({ action: 'withdrawal', unitId: selectedUnitId, amounts: toNumbers(allKeys, formA), reason: note })) reset();
                 }}>Confirmar retirada</Button>
               </div>
             </div>

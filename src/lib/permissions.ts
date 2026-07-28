@@ -36,6 +36,7 @@ export const MODULES: { key: string; label: string; nav?: string }[] = [
   { key: 'METAS', label: 'Metas', nav: '/modulos/metas' },
   { key: 'SUPERVISION', label: 'Rotina do Supervisor', nav: '/modulos/supervisao' },
   { key: 'EXECUTIVE', label: 'Visão Executiva', nav: '/modulos/executivo' },
+  { key: 'CASH_CONFIG', label: 'Gestão de Troco — configurações' }, // sem nav: configuração, não aparece na sidebar
   { key: 'AUDIT', label: 'Auditoria', nav: '/auditoria' },
   { key: 'HYGIENE', label: 'Higiene dos banheiros', nav: '/modulos/higiene' },
   { key: 'PRODUCTS', label: 'Solicitação de Produtos', nav: '/modulos/produtos' },
@@ -53,6 +54,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   LEAVES_TEAM: ['SUPERVISOR'],
   SUPERVISION: ['SUPERVISOR'],
   EXECUTIVE: [], // só ADMIN/CEO por padrão (Admin pode liberar na matriz)
+  CASH_CONFIG: ['SUPERVISOR', 'COORDINATOR'], // R5: supervisão configura o cofre; Admin/CEO sempre
 };
 
 /**
@@ -79,6 +81,13 @@ export async function effectivePermissions(role: Role): Promise<Record<string, P
     out[m.key] = { canView: r ? r.canView : def, canEdit: r ? r.canEdit : def };
   }
   return out;
+}
+
+/** Este perfil pode EDITAR o módulo? (ADMIN/CEO sempre.) Checagem de servidor. */
+export async function canEditModule(role: Role, moduleKey: string): Promise<boolean> {
+  if (isFullAccess(role)) return true;
+  const perms = await effectivePermissions(role);
+  return Boolean(perms[moduleKey]?.canEdit);
 }
 
 /** Conjunto de hrefs de navegação que o perfil pode VER (para a sidebar). */
