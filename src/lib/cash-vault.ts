@@ -3,6 +3,7 @@ import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { notifySupervisory, notifyUsers } from '@/lib/notifications';
 import { isSupervisory } from '@/lib/roles';
+import { getDenominations, type DenomConfig } from '@/lib/cash-denominations';
 import type { SessionUser } from '@/lib/auth/session';
 import type { CashMovementType, ChangeRequestStatus, Prisma } from '@prisma/client';
 
@@ -15,14 +16,16 @@ import type { CashMovementType, ChangeRequestStatus, Prisma } from '@prisma/clie
  * PROIBIDA: registra, marca em vermelho e avisa supervisão na hora.
  */
 
-/** Denominações do Real (a folha do gerente) + linha "outros". */
+/**
+ * Denominações do Real (a folha do gerente) + linha "outros".
+ * Fonte da verdade agora é a config por unidade (`getDenominations`). Estas
+ * constantes permanecem como o formato do padrão de fábrica e ainda são
+ * consumidas pelo frontend (cópia própria) até o PR 3.
+ */
 export const DENOMINATIONS = ['200', '100', '50', '20', '10', '5', '2', '1', '0.50', '0.25', '0.10', '0.05'] as const;
 export const DENOM_KEYS = [...DENOMINATIONS, 'outros'] as const;
 export type DenomKey = (typeof DENOM_KEYS)[number];
 export type Balances = Record<string, number>;
-
-/// notas grandes (indicador de "hora de pedir troca ao escritório")
-const BIG_NOTES = ['200', '100', '50'];
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
 type Result = { ok: true } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND'; detail?: string };
@@ -32,24 +35,47 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 export function emptyBalances(): Balances {
   return Object.fromEntries(DENOM_KEYS.map((k) => [k, 0]));
 }
+/** Soma TODAS as chaves presentes — inclusive chaves legado (fora da config atual). */
 export function sumBalances(b: Balances): number {
-  return r2(DENOM_KEYS.reduce((t, k) => t + (Number(b[k]) || 0), 0));
+  return r2(Object.values(b).reduce((t: number, v) => t + (Number(v) || 0), 0));
 }
-function sanitize(input: Record<string, unknown>): Balances {
-  const out = emptyBalances();
-  for (const k of DENOM_KEYS) {
+
+/**
+ * Validação de ENTRADA (restritiva): só aceita as chaves ATIVAS da unidade;
+ * o resto é ignorado. Usada quando o usuário digita valores.
+ */
+function sanitizeInput(config: DenomConfig, input: Record<string, unknown>): Balances {
+  const out: Balances = {};
+  for (const k of config.keys) {
     const v = Number(input?.[k]);
     out[k] = Number.isFinite(v) ? r2(v) : 0;
   }
   return out;
 }
+
+/**
+ * Leitura de HISTÓRICO/SALDO (tolerante): devolve TUDO que está gravado no
+ * JSON, inclusive chaves que já não existem mais na config (aparecem como
+ * "legado" na tela). Nunca descarta valor gravado — totais antigos não mudam.
+ */
+function readBalances(input: Record<string, unknown> | null | undefined): Balances {
+  const out: Balances = {};
+  if (input && typeof input === 'object') {
+    for (const [k, raw] of Object.entries(input)) {
+      const v = Number(raw);
+      if (Number.isFinite(v)) out[k] = r2(v);
+    }
+  }
+  return out;
+}
+
 /** Valor deve ser múltiplo da denominação (ex.: 0,10 → 50,00 ✓; 50,05 ✗). Tolerância 1 centavo. */
-export function invalidMultiples(b: Balances): string[] {
+export function invalidMultiples(config: DenomConfig, b: Balances): string[] {
   const bad: string[] = [];
-  for (const d of DENOMINATIONS) {
-    const denom = Number(d);
-    const v = Number(b[d]) || 0;
-    if (v > 0 && Math.abs(Math.round(v / denom) * denom - v) > 0.011) bad.push(d);
+  for (const d of config.denominations) {
+    if (d.value == null) continue; // "outros" não tem valor de nota
+    const v = Number(b[d.key]) || 0;
+    if (v > 0 && Math.abs(Math.round(v / d.value) * d.value - v) > 0.011) bad.push(d.key);
   }
   return bad;
 }
@@ -78,16 +104,17 @@ async function applyMovement(
   ctx: Ctx,
 ): Promise<void> {
   const vault = await getOrCreateVault(unitId);
-  const current = sanitize(vault.balances as Record<string, unknown>);
+  const current = readBalances(vault.balances as Record<string, unknown>);
   let next: Balances;
   if (opts.replaceBalances) {
     next = opts.replaceBalances;
   } else {
     next = { ...current };
-    for (const k of DENOM_KEYS) next[k] = r2((next[k] || 0) + (deltas[k] || 0));
+    for (const [k, dv] of Object.entries(deltas)) next[k] = r2((next[k] || 0) + (dv || 0));
   }
-  const totalIn = r2(DENOM_KEYS.reduce((t, k) => t + Math.max(0, deltas[k] || 0), 0));
-  const totalOut = r2(DENOM_KEYS.reduce((t, k) => t + Math.max(0, -(deltas[k] || 0)), 0));
+  const deltaVals = Object.values(deltas);
+  const totalIn = r2(deltaVals.reduce((t: number, v) => t + Math.max(0, v || 0), 0));
+  const totalOut = r2(deltaVals.reduce((t: number, v) => t + Math.max(0, -(v || 0)), 0));
 
   await prisma.$transaction([
     prisma.cashVault.update({ where: { id: vault.id }, data: { balances: next as unknown as Prisma.InputJsonValue } }),
@@ -106,11 +133,16 @@ async function applyMovement(
 export async function countVault(user: SessionUser, unitId: string, balancesInput: Record<string, unknown>, note: string | undefined, ctx: Ctx = {}): Promise<Result> {
   if (!canOperate(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN' };
-  const counted = sanitize(balancesInput);
+  const config = await getDenominations(unitId);
+  const counted = sanitizeInput(config, balancesInput);
   const vault = await getOrCreateVault(unitId);
-  const current = sanitize(vault.balances as Record<string, unknown>);
-  const deltas = emptyBalances();
-  for (const k of DENOM_KEYS) deltas[k] = r2((counted[k] || 0) - (current[k] || 0));
+  const current = readBalances(vault.balances as Record<string, unknown>);
+  // Delta sobre a UNIÃO das chaves: se havia chave legado no cofre, o movimento
+  // registra a diferença honestamente (a conferência é a nova fotografia).
+  const deltas: Balances = {};
+  for (const k of new Set([...Object.keys(current), ...config.keys])) {
+    deltas[k] = r2((counted[k] || 0) - (current[k] || 0));
+  }
   await applyMovement(user, unitId, 'COUNT', deltas, { note: note?.trim() || null, replaceBalances: counted }, ctx);
   return { ok: true };
 }
@@ -124,16 +156,17 @@ export async function refillBucket(
   if (!canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN' };
   const bucket = await prisma.cashBucket.findUnique({ where: { id: bucketId }, select: { unitId: true, name: true } });
   if (!bucket || bucket.unitId !== unitId) return { ok: false, reason: 'NOT_FOUND' };
-  const outB = sanitize(outSmall);
-  const inB = sanitize(inBig);
+  const config = await getDenominations(unitId);
+  const outB = sanitizeInput(config, outSmall);
+  const inB = sanitizeInput(config, inBig);
   const outTotal = sumBalances(outB);
   const inTotal = sumBalances(inB);
   if (outTotal <= 0) return { ok: false, reason: 'INVALID', detail: 'Informe o que saiu do cofre para o balde.' };
   if (Math.abs(outTotal - inTotal) > 0.011) {
     return { ok: false, reason: 'INVALID', detail: `Troca desigual: saiu ${outTotal.toFixed(2)} e entrou ${inTotal.toFixed(2)} — os valores devem ser iguais (troca 1:1).` };
   }
-  const deltas = emptyBalances();
-  for (const k of DENOM_KEYS) deltas[k] = r2((inB[k] || 0) - (outB[k] || 0));
+  const deltas: Balances = {};
+  for (const k of config.keys) deltas[k] = r2((inB[k] || 0) - (outB[k] || 0));
   await applyMovement(user, unitId, 'REFILL', deltas, { bucketId, bucketName: bucket.name, note: note?.trim() || null }, ctx);
   return { ok: true };
 }
@@ -145,16 +178,17 @@ export async function officeSwap(
 ): Promise<Result> {
   if (!canOperate(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN' };
-  const outB = sanitize(outBig);
-  const inB = sanitize(inSmall);
+  const config = await getDenominations(unitId);
+  const outB = sanitizeInput(config, outBig);
+  const inB = sanitizeInput(config, inSmall);
   const outTotal = sumBalances(outB);
   const inTotal = sumBalances(inB);
   if (outTotal <= 0) return { ok: false, reason: 'INVALID', detail: 'Informe as notas enviadas ao escritório.' };
   if (Math.abs(outTotal - inTotal) > 0.011) {
     return { ok: false, reason: 'INVALID', detail: `Troca desigual: enviou ${outTotal.toFixed(2)} e recebeu ${inTotal.toFixed(2)} — os valores devem ser iguais.` };
   }
-  const deltas = emptyBalances();
-  for (const k of DENOM_KEYS) deltas[k] = r2((inB[k] || 0) - (outB[k] || 0));
+  const deltas: Balances = {};
+  for (const k of config.keys) deltas[k] = r2((inB[k] || 0) - (outB[k] || 0));
   await applyMovement(user, unitId, 'OFFICE_SWAP', deltas, { note: note?.trim() || null }, ctx);
   return { ok: true };
 }
@@ -163,12 +197,13 @@ export async function officeSwap(
 export async function vaultWithdrawal(user: SessionUser, unitId: string, amounts: Record<string, unknown>, reason: string, ctx: Ctx = {}): Promise<Result> {
   if (!canOperate(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN' };
-  const outB = sanitize(amounts);
+  const config = await getDenominations(unitId);
+  const outB = sanitizeInput(config, amounts);
   const total = sumBalances(outB);
   if (total <= 0) return { ok: false, reason: 'INVALID' };
   if (!reason?.trim()) return { ok: false, reason: 'INVALID', detail: 'Informe o motivo da retirada.' };
-  const deltas = emptyBalances();
-  for (const k of DENOM_KEYS) deltas[k] = -(outB[k] || 0);
+  const deltas: Balances = {};
+  for (const k of config.keys) deltas[k] = -(outB[k] || 0);
   await applyMovement(user, unitId, 'WITHDRAWAL', deltas, { note: reason.trim() }, ctx);
 
   const unit = await prisma.unit.findUnique({ where: { id: unitId }, select: { name: true } });
@@ -194,16 +229,17 @@ export async function registerChange(
   if (!canOperate(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN' };
   if (!registerName?.trim()) return { ok: false, reason: 'INVALID', detail: 'Informe qual caixa.' };
-  const outB = sanitize(outFromVault);
-  const inB = sanitize(inToVault);
+  const config = await getDenominations(unitId);
+  const outB = sanitizeInput(config, outFromVault);
+  const inB = sanitizeInput(config, inToVault);
   const outTotal = sumBalances(outB);
   const inTotal = sumBalances(inB);
   if (outTotal <= 0) return { ok: false, reason: 'INVALID', detail: 'Informe o que saiu do cofre para o caixa.' };
   if (Math.abs(outTotal - inTotal) > 0.011) {
     return { ok: false, reason: 'INVALID', detail: `Troca desigual: saiu ${outTotal.toFixed(2)} e entrou ${inTotal.toFixed(2)} — os valores devem ser iguais (troca 1:1).` };
   }
-  const deltas = emptyBalances();
-  for (const k of DENOM_KEYS) deltas[k] = r2((inB[k] || 0) - (outB[k] || 0));
+  const deltas: Balances = {};
+  for (const k of config.keys) deltas[k] = r2((inB[k] || 0) - (outB[k] || 0));
   await applyMovement(user, unitId, 'REGISTER_CHANGE', deltas, { bucketName: registerName.trim(), note: note?.trim() || null }, ctx);
   return { ok: true };
 }
@@ -340,7 +376,7 @@ export async function getVaultHistory(user: SessionUser, unitId: string, f: Vaul
     return {
       id: m.id, type: m.type, bucketName: m.bucketName, totalIn, totalOut,
       value: Math.max(totalIn, totalOut), note: m.note, createdByName: m.createdByName, createdById: m.createdById,
-      createdAt: m.createdAt.toISOString(), deltas: sanitize(m.deltas as Record<string, unknown>),
+      createdAt: m.createdAt.toISOString(), deltas: readBalances(m.deltas as Record<string, unknown>),
     };
   });
 
@@ -414,10 +450,11 @@ export interface VaultOverview {
 
 export async function getVaultOverview(user: SessionUser, unitId: string): Promise<VaultOverview | null> {
   if (!canAccessUnit(user, unitId)) return null;
+  const config = await getDenominations(unitId);
   const vault = await getOrCreateVault(unitId);
-  const balances = sanitize(vault.balances as Record<string, unknown>);
+  const balances = readBalances(vault.balances as Record<string, unknown>);
   const total = sumBalances(balances);
-  const bigNotesTotal = r2(BIG_NOTES.reduce((t, k) => t + (balances[k] || 0), 0));
+  const bigNotesTotal = r2(config.indicatorKeys.reduce((t, k) => t + (balances[k] || 0), 0));
   const ym = new Date().toISOString().slice(0, 7);
 
   const [buckets, movements, monthWithdrawals, lastCount, changeRequests] = await Promise.all([
@@ -435,7 +472,7 @@ export async function getVaultOverview(user: SessionUser, unitId: string): Promi
     recentMovements: movements.map((m) => ({
       id: m.id, type: m.type, bucketName: m.bucketName, totalIn: Number(m.totalIn), totalOut: Number(m.totalOut),
       note: m.note, createdByName: m.createdByName, createdAt: m.createdAt.toISOString(),
-      deltas: sanitize(m.deltas as Record<string, unknown>),
+      deltas: readBalances(m.deltas as Record<string, unknown>),
     })),
     changeRequests,
     openChangeCount: changeRequests.filter((c) => c.status === 'OPEN').length,
@@ -459,7 +496,7 @@ export async function getVaultAlerts(user: SessionUser, yearMonth: string): Prom
     out.push({
       unitId: u.id, unitName: u.name,
       withdrawals: wd._count, withdrawnTotal: r2(Number(wd._sum.totalOut ?? 0)),
-      vaultTotal: vault ? sumBalances(sanitize(vault.balances as Record<string, unknown>)) : 0,
+      vaultTotal: vault ? sumBalances(readBalances(vault.balances as Record<string, unknown>)) : 0,
     });
   }
   return out.sort((a, b) => b.withdrawals - a.withdrawals);
