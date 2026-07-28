@@ -150,3 +150,20 @@ describe('Configuração de denominações (PR 2) — bloqueios R2/R6', () => {
     if (!r.ok) expect(r.reason).toBe('FORBIDDEN');
   });
 });
+
+describe('getVaultOverview expõe a configuração (base do PR 3)', () => {
+  it('unidade padrão: denominations trazem outros e o indicador 200/100/50', async () => {
+    const o = await getVaultOverview(user(), unitA);
+    expect(o).not.toBeNull();
+    expect(o!.denominations.map((d) => d.key)).toContain('outros');
+    const indicator = o!.denominations.filter((d) => d.countsAsBigIndicator).map((d) => d.key);
+    expect(indicator).toEqual(['200', '100', '50']);
+  });
+
+  it('com R$ 10 ligado em Notas grandes, o overview marca isBig no 10 (a linha vai aparecer na reposição)', async () => {
+    const o = await getVaultOverview(user(), unitB);
+    const ten = o!.denominations.find((d) => d.key === '10');
+    expect(ten?.isBig).toBe(true);
+    expect(ten?.label).toContain('10');
+  });
+});

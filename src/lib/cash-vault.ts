@@ -3,7 +3,7 @@ import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { notifySupervisory, notifyUsers } from '@/lib/notifications';
 import { isSupervisory } from '@/lib/roles';
-import { getDenominations, type DenomConfig } from '@/lib/cash-denominations';
+import { getDenominations, denomLabel, type DenomConfig, type DenomKind } from '@/lib/cash-denominations';
 import type { SessionUser } from '@/lib/auth/session';
 import type { CashMovementType, ChangeRequestStatus, Prisma } from '@prisma/client';
 
@@ -432,10 +432,16 @@ export async function deleteBucket(user: SessionUser, id: string, ctx: Ctx = {})
 }
 
 /* ───────── Visões ───────── */
+/** Denominação como a tela do cofre precisa (rótulo + blocos), vinda da config da unidade. */
+export interface DenominationView {
+  key: string; label: string; value: number | null; kind: DenomKind;
+  isSmall: boolean; isBig: boolean; countsAsBigIndicator: boolean;
+}
 export interface VaultOverview {
   balances: Balances;
   total: number;
-  bigNotesTotal: number; // notas grandes (50/100/200) — indicador p/ pedir troca
+  denominations: DenominationView[]; // config ativa da unidade (ordenada) — dirige os formulários
+  bigNotesTotal: number; // notas grandes (indicador) — p/ pedir troca
   bigNotesPct: number;
   buckets: { id: string; name: string; targetValue: number; active: boolean }[];
   recentMovements: {
@@ -466,7 +472,12 @@ export async function getVaultOverview(user: SessionUser, unitId: string): Promi
   ]);
 
   return {
-    balances, total, bigNotesTotal,
+    balances, total,
+    denominations: config.denominations.map((d) => ({
+      key: d.key, label: denomLabel(d), value: d.value, kind: d.kind,
+      isSmall: d.isSmall, isBig: d.isBig, countsAsBigIndicator: d.countsAsBigIndicator,
+    })),
+    bigNotesTotal,
     bigNotesPct: total > 0 ? Math.round((bigNotesTotal / total) * 100) : 0,
     buckets: buckets.map((b) => ({ id: b.id, name: b.name, targetValue: Number(b.targetValue), active: b.active })),
     recentMovements: movements.map((m) => ({
