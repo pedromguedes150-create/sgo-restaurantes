@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { roleLabel } from '@/lib/roles';
+import { effectivePermissions } from '@/lib/permissions';
 import { RETENTION_MONTHS_DEFAULT, TERMS_VERSION } from '@/lib/lgpd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollText, Building2, Users, ShieldCheck, ListChecks, Wallet, KeyRound, ClipboardList, Trash2, AlertTriangle, Truck } from 'lucide-react';
+import { ScrollText, Building2, Users, ShieldCheck, ListChecks, Wallet, KeyRound, ClipboardList, Trash2, AlertTriangle, Truck, Coins } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,8 @@ export default async function ConfiguracoesPage() {
 
   if (!isAdmin) {
     const isSupervisor = user.role === 'SUPERVISOR';
+    const perms = await effectivePermissions(user.role);
+    const canCashConfig = Boolean(perms.CASH_CONFIG?.canEdit);
     return (
       <div className="space-y-4">
         <h1 className="text-xl font-bold text-brand">Configurações</h1>
@@ -24,6 +27,11 @@ export default async function ConfiguracoesPage() {
           {isSupervisor && (
             <Link href="/configuracoes/usuarios" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
               <Users className="h-5 w-5 text-accent" /> Usuários (visualização)
+            </Link>
+          )}
+          {canCashConfig && (
+            <Link href="/configuracoes/troco" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
+              <Coins className="h-5 w-5 text-accent" /> Troco — denominações por unidade
             </Link>
           )}
         </div>
@@ -48,6 +56,7 @@ export default async function ConfiguracoesPage() {
           { href: '/configuracoes/usuarios', label: 'Usuários', icon: Users },
           { href: '/configuracoes/checklists', label: 'Checklists (unidades · modelos · supervisor)', icon: ListChecks },
           { href: '/configuracoes/comandas', label: 'Comandas (sequência)', icon: ClipboardList },
+          { href: '/configuracoes/troco', label: 'Troco — denominações por unidade', icon: Coins },
           { href: '/configuracoes/desperdicios', label: 'Desperdícios (categorias)', icon: Trash2 },
           { href: '/configuracoes/ocorrencias', label: 'Ocorrências (tipos/categorias)', icon: AlertTriangle },
           { href: '/configuracoes/fornecedores', label: 'Fornecedores', icon: Truck },

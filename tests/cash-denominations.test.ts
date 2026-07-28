@@ -2,16 +2,20 @@ import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { getVaultOverview, countVault, refillBucket, invalidMultiples } from '@/lib/cash-vault';
-import { getDenominations, defaultConfig, DEFAULT_DENOMINATIONS } from '@/lib/cash-denominations';
+import { getDenominations, defaultConfig, DEFAULT_DENOMINATIONS, ensureUnitDenominations, saveDenomination } from '@/lib/cash-denominations';
 import type { SessionUser } from '@/lib/auth/session';
 
 const sfx = `dnm${process.pid.toString(36)}`;
 let unitA: string; // sem config (padrão de fábrica)
 let unitB: string; // R$ 10 ligado no bloco ENTROU (isBig)
 let unitC: string; // config sem R$ 0,25 → saldo legado no cofre
+let unitD: string; // config (supervisor) — bloqueio R2
 let userId: string;
+let supId: string;
 const user = (): SessionUser =>
   ({ id: userId, name: 'Ger', role: 'MANAGER', unitIds: [unitA, unitB, unitC], seesAllUnits: false, needsTerms: false });
+const sup = (): SessionUser =>
+  ({ id: supId, name: 'Sup', role: 'SUPERVISOR', unitIds: [unitD], seesAllUnits: false, needsTerms: false });
 
 async function seedConfig(unitId: string, mutate: (d: (typeof DEFAULT_DENOMINATIONS)[number]) => Partial<(typeof DEFAULT_DENOMINATIONS)[number]> = () => ({}), skip: (key: string) => boolean = () => false) {
   const rows = DEFAULT_DENOMINATIONS.filter((d) => !skip(d.key)).map((d) => ({ ...d, ...mutate(d) }));
@@ -28,21 +32,25 @@ beforeAll(async () => {
   unitA = await mk('A');
   unitB = await mk('B');
   unitC = await mk('C');
+  unitD = await mk('D');
   const u = await prisma.user.create({ data: { name: 'Ger', email: `${sfx}@example.com`, role: 'MANAGER', passwordHash: 'x' } });
   userId = u.id;
+  const s = await prisma.user.create({ data: { name: 'Sup', email: `${sfx}-sup@example.com`, role: 'SUPERVISOR', passwordHash: 'x' } });
+  supId = s.id;
   for (const uid of [unitA, unitB, unitC]) await prisma.unitMembership.create({ data: { userId, unitId: uid } });
+  await prisma.unitMembership.create({ data: { userId: supId, unitId: unitD } });
 });
 
 afterAll(async () => {
-  for (const uid of [unitA, unitB, unitC]) {
+  for (const uid of [unitA, unitB, unitC, unitD]) {
     await prisma.cashVaultMovement.deleteMany({ where: { unitId: uid } }).catch(() => {});
     await prisma.cashVault.deleteMany({ where: { unitId: uid } }).catch(() => {});
     await prisma.cashBucket.deleteMany({ where: { unitId: uid } }).catch(() => {});
     await prisma.cashDenomination.deleteMany({ where: { unitId: uid } }).catch(() => {});
   }
-  await prisma.unitMembership.deleteMany({ where: { userId } }).catch(() => {});
-  await prisma.unit.deleteMany({ where: { id: { in: [unitA, unitB, unitC] } } }).catch(() => {});
-  await prisma.user.delete({ where: { id: userId } }).catch(() => {});
+  await prisma.unitMembership.deleteMany({ where: { userId: { in: [userId, supId] } } }).catch(() => {});
+  await prisma.unit.deleteMany({ where: { id: { in: [unitA, unitB, unitC, unitD] } } }).catch(() => {});
+  await prisma.user.deleteMany({ where: { id: { in: [userId, supId] } } }).catch(() => {});
   await prisma.$disconnect();
 });
 
@@ -104,5 +112,41 @@ describe('Denominações configuráveis (Módulo 18) — PR 1 backend', () => {
     expect(invalidMultiples(config, { '10': 30 })).toEqual([]);       // 30 é múltiplo de 10
     expect(invalidMultiples(config, { '10': 25 })).toContain('10');   // 25 não é
     expect(invalidMultiples(config, { outros: 37.37 })).toEqual([]);  // "outros" fora da regra
+  });
+});
+
+describe('Configuração de denominações (PR 2) — bloqueios R2/R6', () => {
+  it('(R2) não deixa desativar denominação com saldo ≠ 0; depois de zerar, permite', async () => {
+    await ensureUnitDenominations(unitD, sup());
+    // coloca R$ 8,50 em moedas de 0,25 no cofre
+    await prisma.cashVault.upsert({
+      where: { unitId: unitD },
+      create: { unitId: unitD, balances: { '0.25': 8.5 } },
+      update: { balances: { '0.25': 8.5 } },
+    });
+
+    const blocked = await saveDenomination(sup(), unitD, { key: '0.25', active: false });
+    expect(blocked.ok).toBe(false);
+    if (!blocked.ok) expect(blocked.reason).toBe('INVALID');
+
+    // zera o saldo e tenta de novo
+    await prisma.cashVault.update({ where: { unitId: unitD }, data: { balances: { '0.25': 0 } } });
+    const okNow = await saveDenomination(sup(), unitD, { key: '0.25', active: false });
+    expect(okNow.ok).toBe(true);
+    const row = await prisma.cashDenomination.findFirst({ where: { unitId: unitD, key: '0.25' } });
+    expect(row?.active).toBe(false);
+  });
+
+  it('(R6) "outros" é linha de sistema e não pode ser desativada', async () => {
+    await ensureUnitDenominations(unitD, sup());
+    const r = await saveDenomination(sup(), unitD, { key: 'outros', active: false });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('INVALID');
+  });
+
+  it('gerente (sem CASH_CONFIG) não configura', async () => {
+    const r = await saveDenomination(user(), unitA, { key: '10', isBig: true });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('FORBIDDEN');
   });
 });

@@ -342,6 +342,7 @@ export const GUIDE: GuideSection[] = [
           '"Solicitar troco": peça troco/moedas à supervisão (supervisor, coordenador e administrador) — eles são avisados na hora e veem o pedido destacado ao abrir a aba de Troco.',
           '"Troca no caixa": para unidades SEM baldes (ex.: Nova União), registre a troca de dinheiro feita direto no cofre com o caixa — fica no histórico.',
           'Aba "Histórico": veja todas as movimentações do cofre com filtros completos (tipo, usuário, período, valor) e ordenação.',
+          '⚙️ Configuração (Supervisão/Coordenação, em Configurações → "Troco — denominações por unidade"): escolha, por unidade, quais notas/moedas existem no cofre e em quais blocos aparecem (miúdos × notas grandes), quais contam no indicador de ≥50% e a ordem de exibição. O botão "copiar para todas as minhas unidades" replica a configuração de uma vez. Denominação com saldo no cofre não pode ser desativada (some valor da conta).',
         ],
       },
       {
