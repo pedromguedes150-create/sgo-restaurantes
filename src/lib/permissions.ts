@@ -37,6 +37,7 @@ export const MODULES: { key: string; label: string; nav?: string }[] = [
   { key: 'SUPERVISION', label: 'Rotina do Supervisor', nav: '/modulos/supervisao' },
   { key: 'EXECUTIVE', label: 'Visão Executiva', nav: '/modulos/executivo' },
   { key: 'CASH_CONFIG', label: 'Gestão de Troco — configurações' }, // sem nav: configuração, não aparece na sidebar
+  { key: 'CHECKLIST_FORMS', label: 'Fichas (checklists por link) — configurar e ver envios' }, // sem nav: configuração
   { key: 'AUDIT', label: 'Auditoria', nav: '/auditoria' },
   { key: 'HYGIENE', label: 'Higiene dos banheiros', nav: '/modulos/higiene' },
   { key: 'PRODUCTS', label: 'Solicitação de Produtos', nav: '/modulos/produtos' },
@@ -55,6 +56,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   SUPERVISION: ['SUPERVISOR'],
   EXECUTIVE: [], // só ADMIN/CEO por padrão (Admin pode liberar na matriz)
   CASH_CONFIG: ['SUPERVISOR', 'COORDINATOR'], // R5: supervisão configura o cofre; Admin/CEO sempre
+  CHECKLIST_FORMS: [], // sem papel fixo: só ADMIN/CEO por padrão; o admin libera na matriz (R5)
 };
 
 /**
