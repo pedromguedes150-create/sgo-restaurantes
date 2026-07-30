@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
+import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { formatBRL } from '@/lib/utils';
 
 interface Unit { id: string; name: string }
@@ -165,18 +166,11 @@ function Cell({ label, value }: { label: string; value: string }) {
 }
 
 function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdmin: boolean; canEditDate?: boolean }) {
-  const router = useRouter();
   const [unit, setUnit] = useState('');
+  const [dateEditId, setDateEditId] = useState<string | null>(null);
   const unitNames = [...new Set(rows.map((r) => r.unit))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   const shown = unit ? rows.filter((r) => r.unit === unit) : rows;
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma coleta registrada.</p>;
-
-  async function editDate(r: OilRow) {
-    const v = prompt('Data correta da coleta (AAAA-MM-DD) — a edição desconta % na meta do gerente:', r.date);
-    if (!v) return;
-    const res = await fetch('/api/entry-date', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ module: 'oil', id: r.id, date: v.trim() }) });
-    if (res.ok) router.refresh(); else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
-  }
 
   return (
     <div className="space-y-2">
@@ -197,10 +191,11 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdm
           {r.dateEdited && <p className="mt-1 text-xs font-semibold text-critical">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
           {(isAdmin || canEditDate) && (
             <div className="mt-2 flex flex-wrap gap-2">
-              {canEditDate && <Button size="sm" variant="ghost" onClick={() => void editDate(r)}><Pencil className="h-4 w-4" /> Editar data</Button>}
+              {canEditDate && <Button size="sm" variant="ghost" onClick={() => setDateEditId((id) => (id === r.id ? null : r.id))}><Pencil className="h-4 w-4" /> Editar data</Button>}
               {isAdmin && <DeleteOpButton entity="oil" id={r.id} label={`a coleta de óleo (${r.date}, ${r.unit})`} />}
             </div>
           )}
+          {dateEditId === r.id && <InlineDateEdit module="oil" id={r.id} current={r.date} onClose={() => setDateEditId(null)} />}
         </div>
       ))}
     </div>

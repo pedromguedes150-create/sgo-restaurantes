@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock } from 'lucide-react';
+import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -204,27 +205,7 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
   onStatus: (id: string, st: 'PROBLEM' | 'RETURNED') => void; full?: boolean;
 }) {
   const router = useRouter();
-  const today = new Date().toISOString().slice(0, 10);
-
   const [dateEditing, setDateEditing] = useState(false);
-  const [dateVal, setDateVal] = useState((n.entryDate ?? n.requestedAt ?? '').slice(0, 10));
-  const [dateBusy, setDateBusy] = useState(false);
-  const [dateErr, setDateErr] = useState<string | null>(null);
-
-  function openDateEditor() {
-    setDateVal((n.entryDate ?? n.requestedAt ?? today).slice(0, 10));
-    setDateErr(null);
-    setDateEditing((v) => !v);
-  }
-  async function submitDate() {
-    if (!dateVal) { setDateErr('Escolha uma data.'); return; }
-    setDateBusy(true); setDateErr(null);
-    try {
-      const res = await fetch('/api/entry-date', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ module: 'note', id: n.id, date: dateVal }) });
-      if (res.ok) { setDateEditing(false); router.refresh(); }
-      else { const d = await res.json().catch(() => ({})); setDateErr(d.error ?? 'Falha ao salvar a data.'); }
-    } finally { setDateBusy(false); }
-  }
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [f, setF] = useState({ supplierName: n.supplier, cnpj: n.cnpj, number: n.number ?? '', issueDate: n.issueDate, dueDate: n.dueDate, totalValue: String(n.value).replace('.', ','), productType: n.productType, observation: n.observation });
@@ -312,7 +293,7 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
       {n.problemNote && <p className="mt-1 text-xs text-critical">{n.status === 'RETURNED' ? 'Devolução' : 'Problema'}: {n.problemNote}</p>}
       <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
         {canManage && <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Ver/Editar</Button>}
-        {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={openDateEditor}><Pencil className="h-4 w-4" /> Editar data</Button>}
+        {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setDateEditing((v) => !v)}><Pencil className="h-4 w-4" /> Editar data</Button>}
         {n.status === 'RECEIVED' && (
           <>
             {/* Pagamento é controlado no Teknisa — aqui só recebimento/problema/devolução (16/07) */}
@@ -324,16 +305,7 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
       </div>
 
       {dateEditing && (
-        <div className="mt-2 rounded-lg border-2 border-accent/40 bg-card p-3 print:hidden">
-          <Label className="text-xs">Data correta do lançamento</Label>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <Input type="date" max={today} value={dateVal} onChange={(e) => { setDateVal(e.target.value); setDateErr(null); }} className="h-9 w-44 text-sm" />
-            <Button size="sm" disabled={dateBusy} onClick={() => void submitDate()}><Save className="h-4 w-4" /> Salvar</Button>
-            <Button size="sm" variant="ghost" disabled={dateBusy} onClick={() => setDateEditing(false)}><X className="h-4 w-4" /> Cancelar</Button>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Clique no calendário ou digite (DD/MM/AAAA). A edição desconta % na meta do gerente.</p>
-          {dateErr && <p className="mt-1 text-xs font-medium text-critical">{dateErr}</p>}
-        </div>
+        <InlineDateEdit module="note" id={n.id} current={(n.entryDate ?? n.requestedAt ?? '').slice(0, 10)} onClose={() => setDateEditing(false)} />
       )}
     </div>
   );
