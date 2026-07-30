@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
-import { getCommunication } from '@/lib/communications/query';
+import { prisma } from '@/lib/db/prisma';
+import { unitScopeWhere } from '@/lib/scope/unit-scope';
+import { getCommunication, getCommunicationForEdit } from '@/lib/communications/query';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { CommunicationConfirm } from '@/components/communications/communication-confirm';
+import { CommunicationEdit } from '@/components/communications/communication-edit';
 import { RemindButton } from '@/components/communications/remind-button';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { ArrowLeft, Pin, Paperclip, LinkIcon, CheckCircle2, Clock, FileText } from 'lucide-react';
@@ -21,8 +24,20 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
   const user = (await getSessionUser())!;
   const data = await getCommunication(user, params.id);
   if (!data) notFound();
-  const { comm, myRecipient, canManage } = data;
+  const { comm, myRecipient, canManage, isAuthor } = data;
   const prio = PRIO[comm.priority];
+
+  // Edição (apenas o autor): carrega valores atuais + unidades/pessoas do escopo.
+  const editData = isAuthor ? await getCommunicationForEdit(user, comm.id) : null;
+  const [editUnits, editPeople] = editData
+    ? await Promise.all([
+        prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+        prisma.user.findMany({
+          where: { active: true, id: { not: user.id }, ...(user.seesAllUnits ? {} : { memberships: { some: { unitId: { in: user.unitIds } } } }) },
+          orderBy: { name: 'asc' }, select: { id: true, name: true, role: true },
+        }),
+      ])
+    : [[], []];
   const links = Array.isArray(comm.links) ? (comm.links as { label: string; url: string }[]) : [];
 
   const confirmed = comm.recipients.filter((r) => r.status === 'CONFIRMED');
@@ -67,6 +82,13 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
           )}
         </CardContent>
       </Card>
+
+      {/* Edição (apenas o autor) */}
+      {editData && (
+        <Card><CardContent className="pt-4">
+          <CommunicationEdit id={comm.id} initial={editData} units={editUnits} people={editPeople} />
+        </CardContent></Card>
+      )}
 
       {/* Confirmação do gerente */}
       {myRecipient && (

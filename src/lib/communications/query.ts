@@ -92,5 +92,45 @@ export async function getCommunication(user: SessionUser, id: string) {
   const canManage = isAuthor || (canAuthorCommunications(user) && inScope) || user.seesAllUnits;
 
   if (!myRecipient && !canManage) return null;
-  return { comm, myRecipient, canManage };
+  return { comm, myRecipient, canManage, isAuthor };
+}
+
+export interface CommunicationEditData {
+  title: string; body: string; priority: string; requiresResponse: boolean; pinned: boolean;
+  dueAt: string; links: { label: string; url: string }[];
+  unitIds: string[]; extraUserIds: string[];
+  confirmedCount: number; total: number;
+}
+
+/**
+ * Valores atuais para pré-preencher a edição — APENAS para o autor (null caso contrário).
+ * Reconstrói `extraUserIds` (avulsos) subtraindo os gerentes das unidades-alvo do conjunto
+ * de destinatários, usando a mesma regra do create.
+ */
+export async function getCommunicationForEdit(user: SessionUser, id: string): Promise<CommunicationEditData | null> {
+  const comm = await prisma.communication.findUnique({
+    where: { id },
+    include: { units: { select: { unitId: true } }, recipients: { select: { userId: true, status: true } } },
+  });
+  if (!comm || comm.authorId !== user.id) return null;
+
+  const unitIds = comm.units.map((u) => u.unitId);
+  let managerIds = new Set<string>();
+  if (unitIds.length) {
+    const managers = await prisma.user.findMany({
+      where: { role: 'MANAGER', active: true, memberships: { some: { unitId: { in: unitIds } } } },
+      select: { id: true },
+    });
+    managerIds = new Set(managers.map((m) => m.id));
+  }
+  const extraUserIds = comm.recipients.map((r) => r.userId).filter((uid) => !managerIds.has(uid));
+
+  return {
+    title: comm.title, body: comm.body, priority: comm.priority, requiresResponse: comm.requiresResponse, pinned: comm.pinned,
+    dueAt: comm.dueAt.toISOString(),
+    links: Array.isArray(comm.links) ? (comm.links as { label: string; url: string }[]) : [],
+    unitIds, extraUserIds,
+    confirmedCount: comm.recipients.filter((r) => r.status === 'CONFIRMED').length,
+    total: comm.recipients.length,
+  };
 }
