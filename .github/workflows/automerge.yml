@@ -1,0 +1,31 @@
+name: Auto-merge (quando o CI passar)
+
+# Liga o "auto-merge" nativo do GitHub em cada PR para a main. O GitHub só faz o
+# merge de fato quando TODAS as regras da branch protection forem satisfeitas
+# (aqui: o check "verificacoes" do CI verde). Depois do merge na main, o workflow
+# de deploy (deploy.yml) publica sozinho.
+#
+# ⚠️ INERTE até o Pedro (admin) fazer, no repositório:
+#   1. Settings → General → "Allow auto-merge" LIGADO.
+#   2. Uma branch protection rule na main exigindo o status check "verificacoes".
+#   3. Criar o secret AUTOMERGE_TOKEN (PAT) — ver docs/deploy-auto-merge.md.
+#      (Sem PAT, o merge feito pelo GITHUB_TOKEN padrão NÃO dispara o deploy.)
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  habilitar-auto-merge:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Habilitar auto-merge (squash)
+        env:
+          # PAT p/ que o merge subsequente DISPARE o deploy (o GITHUB_TOKEN padrão não dispara).
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"

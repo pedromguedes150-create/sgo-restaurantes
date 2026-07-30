@@ -1,0 +1,62 @@
+name: CI (checagens do PR)
+
+# Roda em TODO pull request para a main. É o "verde" que o auto-merge exige antes
+# de publicar. NÃO faz deploy nem toca no servidor — só valida o código.
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificacoes:
+    runs-on: ubuntu-latest
+
+    # Postgres efêmero só para os testes de integração (mesma convenção do dev: 5433).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sgo
+          POSTGRES_PASSWORD: sgo_ci
+          POSTGRES_DB: sgo
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U sgo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql://sgo:sgo_ci@localhost:5433/sgo?schema=public
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Preparar Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Gerar o Prisma Client
+        run: npx prisma generate
+
+      - name: Aplicar as migrações no banco de teste
+        run: npx prisma migrate deploy
+
+      - name: Checagem de tipos (tsc)
+        run: npx tsc --noEmit
+
+      - name: Lint (0 erros; warnings pré-existentes não bloqueiam)
+        run: npx next lint --no-cache
+
+      - name: Testes (Vitest)
+        run: npm test
