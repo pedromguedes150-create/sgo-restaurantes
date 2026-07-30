@@ -69,6 +69,19 @@ Depois de criar os secrets, todo push na `main` publica automaticamente.
 - Só funciona para versões já publicadas (as imagens ficam guardadas no servidor).
 - Se um deploy quebrar a saúde do app, ele **reverte sozinho** para a versão anterior.
 
+## Migrações de banco (aplicadas automaticamente)
+A esteira aplica as migrações **sozinha** a cada deploy: o `ci-deploy.sh` (versionado em
+`scripts/ci-deploy.sh`) extrai a pasta `prisma/` **de dentro da imagem publicada** e roda
+`prisma migrate deploy`. O desenvolvedor só precisa **commitar o arquivo de migração**
+(gerado por `npx prisma migrate dev`) — não aplica nada em produção à mão.
+
+> ⚠️ **Incidente 28/07/2026 (corrigido):** antes, o script migrava lendo a pasta `prisma/`
+> do DISCO do servidor (que não era atualizada pelo deploy), então migrações novas nunca eram
+> aplicadas e a produção quebrava. Agora a pasta vem da própria imagem.
+
+**Cuidado que continua valendo:** migração **destrutiva** (apagar/renomear coluna) pode perder
+dados e a reversão automática volta só o código, não o banco — combine antes de subir.
+
 ## Segurança extra do banco
 
 Antes de cada publicação o robô faz um **backup do banco** (`/opt/sgo/backups/predeploy-*.dump`,

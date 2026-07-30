@@ -104,18 +104,26 @@ Next.js 14 full-stack + TS + Tailwind + shadcn/ui · PostgreSQL 16 (Docker) · J
 5. **A cada novo recurso/ajuste, atualize a central "Treinamento da Plataforma"** (`src/lib/guide.ts`, aba `/ajuda`) — guias por perfil (filtra por `user.role`; acessível pelo ícone 🎓 no header, em qualquer aparelho). Pedido do Pedro: a central deve refletir TUDO que for criado/ajustado.
 6. **Biblioteca de modelos de checklist** (`ChecklistModel`/`ChecklistModelItem`, `src/lib/checklist-models.ts`): Admin CRUD em `/configuracoes/modelos`; seed padrão (rede Beija Flor, por setor/momento) em `checklist-models-seed.ts` via `ensureDefaultModels()`. Em `/configuracoes/checklists`, "Modelos prontos…" gera TaskTemplates nas unidades a partir dos modelos (`template.fromModels`). **Visualização** ao clicar no modelo; **Export/Import Excel (.xlsx via `xlsx`/SheetJS)** + **PDF (print)** para edição em lote (`/api/checklist-models/export|import`, upsert por nome, não destrutivo; `/configuracoes/modelos/imprimir`).
 
-## Fluxo de entrega — gatilho "finaliza e sobe"
-Quando o usuário disser **"finaliza e sobe"** (ou equivalente), execute nesta ordem, **sem pedir confirmação**:
+## Fluxo de entrega — gatilho "finaliza e sobe" (PUBLICA em produção)
+**Publicar o SGO = commit + `git push origin main`.** Um push na `main` dispara a esteira
+(`.github/workflows/deploy.yml`) que builda, migra e sobe em produção sozinha, com verificação
+de saúde e reversão automática se falhar (ver [[deploy-ci-cd]], `docs/deploy-automatico.md`).
+**Não é preciso abrir Pull Request nem mexer no GitHub** — o push já publica.
 
-1. `npx tsc --noEmit`
-2. `npx next lint --no-cache`
-3. `npm test`
+Quando o usuário disser **"finaliza e sobe"** (ou equivalente), execute nesta ordem, **sem pedir confirmação** (o próprio pedido é a aprovação):
 
-**Se as três passarem:** commit com mensagem **em PT-BR** (conventional commits: `feat:`/`fix:`/`refactor:`…, corpo explicando o porquê) e `git push` da **branch atual**.
+1. `git pull origin main` (traz o que já está no ar — evita conflito, pois mais de uma pessoa publica)
+2. `npx tsc --noEmit`
+3. `npx next lint --no-cache`
+4. `npm test`
 
-**Se qualquer uma falhar:** mostre a saída do erro e **não suba nada** — sem commit, sem push. Corrija ou reporte, conforme o caso.
+**Se as quatro passarem:** commit em **PT-BR** (conventional commits: `feat:`/`fix:`/`refactor:`…, corpo explicando o porquê), suba o número em `src/lib/version.ts` se for mudança de verdade, e **`git push origin main`** — isso publica para todos os usuários.
 
-⚠️ **Nunca faça push da `main`.** O gatilho vale só para branches de trabalho. Se o checkout estiver na `main`, pare e avise — a `main` tem deploy automático no push (`.github/workflows/deploy.yml`), então subir nela publica em produção no droplet.
+**Se qualquer uma falhar:** mostre a saída do erro e **não suba nada** (sem commit, sem push). Corrija ou reporte.
+
+**Migrações de banco sobem sozinhas** no deploy (a esteira extrai `prisma/` da imagem publicada) — basta commitar o arquivo gerado por `npx prisma migrate dev --name ...`. ⚠️ Migração **destrutiva** (drop/rename de coluna) precisa ser combinada com o Pedro antes: a reversão automática volta só o código, não o banco.
+
+Se o push for recusado (*rejected/non-fast-forward*): rode `git pull origin main` e publique de novo. Rollback: aba **Actions → "Voltar versão (rollback)"** no GitHub.
 
 Critérios de aprovação de cada verificação:
 - `tsc` e `npm test`: precisam sair com **exit 0** e zero falhas.
