@@ -109,6 +109,20 @@ export const GUIDE: GuideSection[] = [
         tips: ['Não realizado (não feito) penaliza a meta; por isso, mesmo atrasado, vale concluir.', 'Checklist "da unidade" (1 por unidade) só pode ser concluído UMA vez no dia — depois fica como "Concluída" e abre só em leitura ("Ver preenchimento").'],
       },
       {
+        id: 'fichas-link',
+        title: 'Fichas (checklists por link)',
+        roles: MANAGERLINE,
+        summary: 'Fichas preenchidas por um link, sem login (ex.: Controle de Massas).',
+        steps: [
+          'Configuração (quem for liberado na Gestão de Acessos): Configurações → "Fichas (checklists por link)".',
+          'Crie a ficha com um título e escolha a UNIDADE; adicione as perguntas escolhendo o tipo de cada uma: texto, observação, número, horário, data, lista suspensa (com opções), Sim/Não, ou um subtítulo de seção.',
+          'Marque os campos obrigatórios; reordene com as setas; edite ou exclua quando precisar.',
+          'Gere/copie o LINK da ficha e compartilhe com a equipe. Dá para desligar o link, gerar um novo (revoga o antigo) e definir um teto de envios por dia.',
+          'Quem abre o link NÃO faz login: escolhe o próprio nome na lista de funcionários da unidade e preenche. Cada envio fica no histórico (quem, quando e as respostas).',
+        ],
+        tips: ['A ficha por link NÃO entra na meta nem aparece na aba Tarefas — é um formulário avulso, separado dos checklists diários.'],
+      },
+      {
         id: 'comunicacao',
         title: 'Central de Comunicação',
         roles: ALL_ROLES,
