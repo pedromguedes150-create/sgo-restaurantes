@@ -95,3 +95,5 @@ banco pedem cuidado extra na revisão.
 - Servidor: `/opt/sgo/ci-deploy.sh` (script travado), chave em `/root/.ssh/authorized_keys`.
 
 <!-- teste da esteira de deploy: f3104ba -->
+
+<!-- teste auto-merge ponta-a-ponta: 2026-07-31 -->
