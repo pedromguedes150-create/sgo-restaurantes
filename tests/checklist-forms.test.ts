@@ -3,6 +3,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { createChecklistForm, saveField, updateChecklistForm } from '@/lib/checklist-forms/config';
 import { getPublicChecklist, submitChecklist } from '@/lib/checklist-forms/public';
+import { listChecklistSubmissions } from '@/lib/checklist-forms/history';
 import { generateDailyTasksForUnit } from '@/lib/tasks/generate';
 import type { SessionUser } from '@/lib/auth/session';
 
@@ -121,5 +122,16 @@ describe('Fichas por link (checklist configurável) — PR1 backend', () => {
     const throttled = await submitChecklist({ token, collaboratorId: collabId, answers: { [numId]: 1, [selId]: '300g' }, ip: '10.0.0.1' });
     expect(throttled.ok).toBe(false);
     if (!throttled.ok) expect(throttled.reason).toBe('THROTTLED');
+  });
+
+  it('histórico: admin lista os envios do escopo; gerente sem CHECKLIST_FORMS recebe null', async () => {
+    const { token, numId, selId } = await buildFicha();
+    const sent = await submitChecklist({ token, collaboratorId: collabId, answers: { [numId]: 5, [selId]: '380g' }, ip: '10.9.9.9' });
+    expect(sent.ok).toBe(true);
+
+    expect(await listChecklistSubmissions(manager(), {})).toBeNull();
+    const rows = await listChecklistSubmissions(admin(), { days: 1 });
+    expect(rows).not.toBeNull();
+    expect(rows!.some((r) => r.respondentName === 'Funcionário A')).toBe(true);
   });
 });
