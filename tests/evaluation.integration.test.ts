@@ -12,6 +12,7 @@ const user = (): SessionUser => ({ id: userId, name: 'Ger', role: 'MANAGER', uni
 
 function ym(offsetMonths: number): string {
   const d = new Date();
+  d.setDate(1); // evita o estouro do setMonth no fim do mês (ex.: 31/07 → "junho 31" viraria julho)
   d.setMonth(d.getMonth() + offsetMonths);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
