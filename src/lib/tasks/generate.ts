@@ -22,7 +22,8 @@ export async function generateDailyTasksForUnit(
   //  - NUNCA antes do dia em que o checklist foi criado (evita "passado" em
   //    checklists novos e a ressurreição de execuções excluídas no histórico).
   const cfgUnit = { timezone: unit.timezone, cutoffHour: unit.cutoffHour };
-  const templates = (await prisma.taskTemplate.findMany({ where: { unitId: unit.id, active: true } }))
+  // deliveryMode: 'DAILY' → fichas por link (LINK) NÃO geram instância diária nem entram na meta.
+  const templates = (await prisma.taskTemplate.findMany({ where: { unitId: unit.id, active: true, deliveryMode: 'DAILY' } }))
     .filter((t) => {
       const createdOp = opDateOf(t.createdAt, cfgUnit);
       return operationalDate >= createdOp

@@ -235,6 +235,26 @@ enum ItemStatus {
   NAO_SE_APLICA // Não se aplica (neutro — não gera ocorrência)
 }
 
+/// Como um checklist é entregue/preenchido.
+enum DeliveryMode {
+  DAILY // checklist operacional gerado por dia (comportamento atual) — default
+  LINK // ficha preenchida por link público, sob demanda (sem login)
+}
+
+/// Tipo de campo de um item — VERIFICATION = item 🟢🟡🔴 dos checklists diários (default).
+/// Os demais são usados pelas "fichas por link" (deliveryMode = LINK).
+enum ChecklistFieldKind {
+  VERIFICATION // 🟢🟡🔴 (checklists diários — não muda nada)
+  SHORT_TEXT // texto curto
+  TEXTAREA // observação (texto livre)
+  NUMBER // quantidade
+  TIME // horário HH:mm
+  DATE // data
+  SELECT // lista suspensa (options)
+  BOOLEAN // Sim/Não / item de marcar
+  SECTION // subtítulo/separador (não é resposta)
+}
+
 /// Modelo (catálogo) de tarefa/checklist configurável por unidade (Módulo 1 / Config).
 model TaskTemplate {
   id              String     @id @default(cuid())
@@ -259,12 +279,21 @@ model TaskTemplate {
   endDate         String?
   active          Boolean    @default(true)
   order           Int        @default(0)
+  /// Modo de entrega: DAILY (gerado por dia, padrão) ou LINK (ficha por link público).
+  deliveryMode    DeliveryMode @default(DAILY)
+  /// Campos usados só quando deliveryMode = LINK (inertes para DAILY):
+  publicToken     String?    @unique // token aleatório do link (revogável)
+  linkEnabled     Boolean    @default(true)
+  expiresAt       DateTime?
+  maxPerDay       Int        @default(0) // 0 = sem teto (anti-spam)
+  notifyRole      String? // avisa este papel na unidade ao receber um envio (opcional)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  unit      Unit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  instances TaskInstance[]
-  items     ChecklistItem[]
+  unit        Unit                  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  instances   TaskInstance[]
+  items       ChecklistItem[]
+  submissions ChecklistSubmission[]
 
   @@index([unitId, active])
   @@map("task_templates")
@@ -284,6 +313,13 @@ model ChecklistItem {
   standardDescription String?
   /// Imagem de referência do padrão (opcional) — caminho no volume de uploads.
   referenceImagePath  String?
+  /// Tipo do campo. VERIFICATION (padrão) = item 🟢🟡🔴 dos checklists diários.
+  /// Os demais valem para as fichas por link (deliveryMode = LINK).
+  fieldKind    ChecklistFieldKind @default(VERIFICATION)
+  /// Opções da lista suspensa (SELECT), como JSON de strings.
+  options      Json?
+  /// Campo obrigatório no preenchimento da ficha.
+  required     Boolean @default(false)
 
   template TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
@@ -355,6 +391,29 @@ model TaskPhoto {
 
   @@index([instanceId])
   @@map("task_photos")
+}
+
+/// Preenchimento de uma FICHA (TaskTemplate deliveryMode = LINK), via link público.
+/// Respostas gravadas como snapshot JSON (imutável mesmo se a ficha for editada).
+model ChecklistSubmission {
+  id             String   @id @default(cuid())
+  templateId     String
+  /// Snapshot da unidade (vem da ficha, nunca do cliente).
+  unitId         String
+  /// Quem preencheu: escolhido numa lista de funcionários da unidade.
+  collaboratorId String? // ref. ao Collaborator (sem FK dura; histórico sobrevive)
+  respondentName String // snapshot do nome escolhido
+  /// [{ itemId, label, kind, value }] — fotografia das perguntas+respostas no envio.
+  answers        Json
+  ip             String? // anti-abuso/auditoria
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  template TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, createdAt])
+  @@index([unitId, createdAt])
+  @@map("checklist_submissions")
 }
 
 /// Categoria de desperdício (Módulo 2). Global e expansível sem quebrar histórico.

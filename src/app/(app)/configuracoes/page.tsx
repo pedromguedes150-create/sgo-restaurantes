@@ -17,6 +17,7 @@ export default async function ConfiguracoesPage() {
     const isSupervisor = user.role === 'SUPERVISOR';
     const perms = await effectivePermissions(user.role);
     const canCashConfig = Boolean(perms.CASH_CONFIG?.canEdit);
+    const canFichas = Boolean(perms.CHECKLIST_FORMS?.canEdit);
     return (
       <div className="space-y-4">
         <h1 className="text-xl font-bold text-brand">Configurações</h1>
@@ -32,6 +33,11 @@ export default async function ConfiguracoesPage() {
           {canCashConfig && (
             <Link href="/configuracoes/troco" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
               <Coins className="h-5 w-5 text-accent" /> Troco — denominações por unidade
+            </Link>
+          )}
+          {canFichas && (
+            <Link href="/configuracoes/fichas" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
+              <ClipboardList className="h-5 w-5 text-accent" /> Fichas (checklists por link)
             </Link>
           )}
         </div>
@@ -56,6 +62,7 @@ export default async function ConfiguracoesPage() {
           { href: '/configuracoes/usuarios', label: 'Usuários', icon: Users },
           { href: '/configuracoes/checklists', label: 'Checklists (unidades · modelos · supervisor)', icon: ListChecks },
           { href: '/configuracoes/comandas', label: 'Comandas (sequência)', icon: ClipboardList },
+          { href: '/configuracoes/fichas', label: 'Fichas (checklists por link)', icon: ClipboardList },
           { href: '/configuracoes/troco', label: 'Troco — denominações por unidade', icon: Coins },
           { href: '/configuracoes/desperdicios', label: 'Desperdícios (categorias)', icon: Trash2 },
           { href: '/configuracoes/ocorrencias', label: 'Ocorrências (tipos/categorias)', icon: AlertTriangle },
