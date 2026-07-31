@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { QrScanner } from '@/components/notes/qr-scanner';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
+import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { postAdmin } from '@/lib/admin-client';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 import { formatBRL } from '@/lib/utils';
@@ -439,6 +440,7 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
   const [supplier, setSupplier] = useState('');
   // Correção de lançamento (kg/valor) por erro do gerente — NÃO interfere na meta (16/07)
   const [editId, setEditId] = useState<string | null>(null);
+  const [dateEditId, setDateEditId] = useState<string | null>(null);
   const [eKg, setEKg] = useState('');
   const [eTotal, setETotal] = useState('');
   const [eBusy, setEBusy] = useState(false);
@@ -449,13 +451,6 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
     (!q.trim() || r.date.includes(q.trim()) || r.by.toLowerCase().includes(q.trim().toLowerCase()) || String(r.qty).includes(q.trim()) || String(r.total).includes(q.trim())),
   ), [rows, q, unit, supplier]);
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhum recebimento registrado.</p>;
-
-  async function editDate(r: GasRow) {
-    const v = prompt('Data correta do recebimento (AAAA-MM-DD) — a edição desconta % na meta do gerente:', r.date);
-    if (!v) return;
-    const res = await fetch('/api/entry-date', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ module: 'gas', id: r.id, date: v.trim() }) });
-    if (res.ok) router.refresh(); else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
-  }
 
   function startEdit(r: GasRow) { setEditId(r.id); setEKg(String(r.qty).replace('.', ',')); setETotal(String(r.total).replace('.', ',')); }
   async function saveEdit(r: GasRow) {
@@ -512,10 +507,11 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
             ) : (isAdmin || canEditDate) && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {(isAdmin || canEditDate) && <Button size="sm" variant="ghost" onClick={() => startEdit(r)}><Pencil className="h-4 w-4" /> Editar lançamento</Button>}
-                {canEditDate && <Button size="sm" variant="ghost" onClick={() => void editDate(r)}><Pencil className="h-4 w-4" /> Editar data</Button>}
+                {canEditDate && <Button size="sm" variant="ghost" onClick={() => setDateEditId((id) => (id === r.id ? null : r.id))}><Pencil className="h-4 w-4" /> Editar data</Button>}
                 {isAdmin && <DeleteOpButton entity="gas" id={r.id} label={`o recebimento de gás (${r.date}, ${r.unit})`} />}
               </div>
             )}
+            {dateEditId === r.id && <InlineDateEdit module="gas" id={r.id} current={r.date} onClose={() => setDateEditId(null)} />}
           </div>
         );
       })}

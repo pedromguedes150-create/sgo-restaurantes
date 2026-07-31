@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { formatBRL } from '@/lib/utils';
+import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 
 export interface PayDetail {
   workDate: string | null; shift: string | null; workStartTime: string | null; workEndTime: string | null;
@@ -82,6 +83,7 @@ export function PaymentsClient({
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(toApprove.length > 0 ? 'aprovar' : 'nova');
   const [busy, setBusy] = useState(false);
+  const [dateEditId, setDateEditId] = useState<string | null>(null);
 
   async function act(id: string, action: string, extra?: Record<string, unknown>) {
     setBusy(true);
@@ -97,29 +99,22 @@ export function PaymentsClient({
     }
   }
 
-  async function editDate(r: PayReq) {
-    const v = prompt('Data correta do lançamento (AAAA-MM-DD) — a edição desconta % na meta do gerente:', (r.entryDate ?? r.requestedAt ?? '').slice(0, 10));
-    if (!v) return;
-    setBusy(true);
-    try {
-      const res = await fetch('/api/entry-date', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ module: 'payment', id: r.id, date: v.trim() }) });
-      if (res.ok) router.refresh(); else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
-    } finally { setBusy(false); }
-  }
-
   function adminActions(r: PayReq) {
     return (
-      <div className="flex flex-wrap gap-2">
-        {isAdmin && <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
-          const v = prompt('Novo valor (R$):', String(r.amount).replace('.', ','));
-          if (v === null) return;
-          const amount = parseFloat(v.replace(/\./g, '').replace(',', '.'));
-          if (!(amount > 0)) { alert('Valor inválido'); return; }
-          act(r.id, 'adminEdit', { amount });
-        }} aria-label="Editar valor"><Pencil className="h-4 w-4" /> Editar valor</Button>}
-        {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void editDate(r)} aria-label="Editar data"><Pencil className="h-4 w-4" /> Editar data</Button>}
-        {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Excluir este pagamento (${TYPE_LABEL[r.type]} · ${formatBRL(r.amount)})? Registrado na Auditoria.`)) act(r.id, 'adminDelete'); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /> Excluir</Button>}
-      </div>
+      <>
+        <div className="flex flex-wrap gap-2">
+          {isAdmin && <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
+            const v = prompt('Novo valor (R$):', String(r.amount).replace('.', ','));
+            if (v === null) return;
+            const amount = parseFloat(v.replace(/\./g, '').replace(',', '.'));
+            if (!(amount > 0)) { alert('Valor inválido'); return; }
+            act(r.id, 'adminEdit', { amount });
+          }} aria-label="Editar valor"><Pencil className="h-4 w-4" /> Editar valor</Button>}
+          {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setDateEditId((id) => (id === r.id ? null : r.id))} aria-label="Editar data"><Pencil className="h-4 w-4" /> Editar data</Button>}
+          {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Excluir este pagamento (${TYPE_LABEL[r.type]} · ${formatBRL(r.amount)})? Registrado na Auditoria.`)) act(r.id, 'adminDelete'); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /> Excluir</Button>}
+        </div>
+        {dateEditId === r.id && <InlineDateEdit module="payment" id={r.id} current={(r.entryDate ?? r.requestedAt ?? '').slice(0, 10)} onClose={() => setDateEditId(null)} />}
+      </>
     );
   }
 
