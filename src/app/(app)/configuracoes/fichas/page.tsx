@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, History } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { canEditModule } from '@/lib/permissions';
@@ -23,7 +23,10 @@ export default async function FichasConfigPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <div className="flex items-center justify-between gap-2">
+        <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+        <Link href="/tarefas/fichas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><History className="h-4 w-4" /> Histórico de envios</Link>
+      </div>
       <div>
         <h1 className="text-xl font-bold text-brand">Fichas (checklists por link)</h1>
         <p className="text-sm text-muted-foreground">Monte fichas por unidade e gere um link para a equipe preencher (sem login). Os envios ficam no histórico.</p>
