@@ -11,7 +11,9 @@ import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/auth/cookies';
  */
 // /api/integracoes = recepção máquina-a-máquina (RH→SGO), autenticada por
 // token Bearer DENTRO da rota (RH_INBOUND_TOKEN) — sem cookie de sessão.
-const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health', '/api/integracoes', '/higiene', '/api/higiene'];
+// '/checklists' e '/api/checklists/public' = fichas preenchidas por link, SEM login
+// (a config em /configuracoes/fichas e a API /api/checklist-forms seguem protegidas).
+const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health', '/api/integracoes', '/higiene', '/api/higiene', '/checklists', '/api/checklists/public'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
