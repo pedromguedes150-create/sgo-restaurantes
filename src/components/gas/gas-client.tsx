@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil } from 'lucide-react';
+import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -137,6 +137,15 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
   const set = (k: keyof typeof form, v: string) => setForm((s2) => ({ ...s2, [k]: v }));
   const sel = 'h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
+  // Edição de um contrato existente (unidade/fornecedor não mudam — são a identidade).
+  const [editId, setEditId] = useState<string | null>(null);
+  const [ef, setEf] = useState({ startDate: '', endDate: '', quantityKg: '', pricePerKg: '', note: '' });
+  const setE = (k: keyof typeof ef, v: string) => setEf((s2) => ({ ...s2, [k]: v }));
+  function openEdit(c: GasContractUI) {
+    setEditId(c.id);
+    setEf({ startDate: c.startDate, endDate: c.endDate, quantityKg: String(c.quantityKg), pricePerKg: String(c.pricePerKg).replace('.', ','), note: c.note ?? '' });
+  }
+
   async function post(body: Record<string, unknown>): Promise<boolean> {
     setBusy(true);
     try {
@@ -200,8 +209,28 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
               comprado {c.purchasedKg.toLocaleString('pt-BR')} kg{c.initialUsedKg > 0 ? ` (+${c.initialUsedKg.toLocaleString('pt-BR')} kg posição inicial)` : ''} · restam {c.remainingKg.toLocaleString('pt-BR')} kg
             </p>
             {c.note && <p className="text-xs text-muted-foreground">Obs.: {c.note}</p>}
-            {canManage && (
+            {canManage && (editId === c.id ? (
+              <div className="mt-2 space-y-2 rounded-lg border border-dashed p-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Editar contrato</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div><Label className="text-xs">Início</Label><Input type="date" value={ef.startDate} onChange={(e) => setE('startDate', e.target.value)} className="h-9 text-sm" /></div>
+                  <div><Label className="text-xs">Fim</Label><Input type="date" value={ef.endDate} onChange={(e) => setE('endDate', e.target.value)} className="h-9 text-sm" /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div><Label className="text-xs">Quantidade (kg)</Label><Input inputMode="decimal" value={ef.quantityKg} onChange={(e) => setE('quantityKg', e.target.value)} className="h-9 text-sm" /></div>
+                  <div><Label className="text-xs">Preço/kg (R$)</Label><Input inputMode="decimal" value={ef.pricePerKg} onChange={(e) => setE('pricePerKg', e.target.value)} className="h-9 text-sm" /></div>
+                </div>
+                <Input value={ef.note} onChange={(e) => setE('note', e.target.value)} placeholder="Observação (opcional)" className="h-9 text-sm" />
+                <div className="flex justify-end gap-1.5">
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={() => setEditId(null)}><X className="h-4 w-4" /> Cancelar</Button>
+                  <Button size="sm" disabled={busy || !ef.startDate || !ef.endDate || !ef.quantityKg || !ef.pricePerKg} onClick={async () => {
+                    if (await post({ action: 'update', id: c.id, startDate: ef.startDate, endDate: ef.endDate, quantityKg: num(ef.quantityKg), pricePerKg: num(ef.pricePerKg), note: ef.note })) setEditId(null);
+                  }}><Save className="h-4 w-4" /> Salvar</Button>
+                </div>
+              </div>
+            ) : (
               <div className="mt-1.5 flex flex-wrap gap-1.5">
+                <Button size="sm" variant="ghost" disabled={busy} onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /> Editar</Button>
                 <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
                   const v = prompt('Ajustar posição inicial (kg já comprados antes do SGO):', String(c.initialUsedKg).replace('.', ','));
                   if (v === null) return;
@@ -210,7 +239,7 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
                 <Button size="sm" variant="ghost" disabled={busy} onClick={() => void post({ action: 'update', id: c.id, active: !c.active })}>{c.active ? 'Inativar' : 'Reativar'}</Button>
                 {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm('Excluir este contrato? (auditado)')) void post({ action: 'delete', id: c.id }); }}>Excluir</Button>}
               </div>
-            )}
+            ))}
           </div>
         ))}
         {contracts.length === 0 && <p className="text-sm text-muted-foreground">Nenhum contrato cadastrado.</p>}
