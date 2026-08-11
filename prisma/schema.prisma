@@ -2296,6 +2296,9 @@ model GasReceipt {
   variationPct    Float?
   alerted         Boolean  @default(false)
   observation     String?
+  /// Origem "importação em lote" (XLSX): id do lote (null = lançamento normal).
+  /// Agrupa o lote para auditoria e rollback do arquivo inteiro.
+  importBatchId   String?
   createdById     String?
   createdAt       DateTime @default(now())
 
@@ -2305,6 +2308,10 @@ model GasReceipt {
 
   @@index([unitId, operationalDate])
   @@index([supplierId])
+  @@index([importBatchId])
+  /// Idempotência do import: um recebimento por (unidade + fornecedor + nº da nota).
+  /// NULLs são distintos no Postgres → lançamentos sem nº/fornecedor não conflitam.
+  @@unique([unitId, supplierId, noteNumber])
   @@map("gas_receipts")
 }
 
