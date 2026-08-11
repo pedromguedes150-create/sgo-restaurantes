@@ -13,6 +13,7 @@ import { QrScanner } from '@/components/notes/qr-scanner';
 import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 import { GasClient, type GasDash, type GasRow, type GasContractUI, type PurchasedUI } from '@/components/gas/gas-client';
+import { GasImportModal } from '@/components/notes/gas-import-modal';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null; isGas?: boolean }
@@ -51,6 +52,7 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
   const router = useRouter();
   const [tab, setTab] = useState<'nova' | 'lista' | 'analise' | 'gas' | 'venc'>('lista');
   const [busy, setBusy] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   async function status(id: string, st: 'PROBLEM' | 'RETURNED') {
     let problemNote: string | undefined;
@@ -73,13 +75,19 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 print:hidden">
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
             {t.label}
           </button>
         ))}
+        {canManage && (
+          <button onClick={() => setShowImport(true)} className="ml-auto inline-flex items-center gap-1.5 rounded-full border-2 border-accent px-3 py-1.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/10">
+            <FileSpreadsheet className="h-4 w-4" /> Importar em lote (XLSX)
+          </button>
+        )}
       </div>
+      {showImport && <GasImportModal onClose={() => setShowImport(false)} />}
 
       {tab === 'nova' && <NewNote units={units} suppliers={suppliers} onDone={() => { setTab('lista'); router.refresh(); }} />}
       {tab === 'venc' && <DueTracking units={units} />}
