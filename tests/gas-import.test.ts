@@ -1,13 +1,13 @@
 import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
-import { validateGasImport, parseDateCell, parseDecimal, COLS, FORMA_BOTIJAO } from '@/lib/notes/gas-import';
+import { validateGasImport, commitGasImport, parseDateCell, parseDecimal, COLS, FORMA_BOTIJAO } from '@/lib/notes/gas-import';
 import type { SessionUser } from '@/lib/auth/session';
 
 const sfx = `gimp${process.pid.toString(36)}`;
 const UCNPJ = '05336082000163', SCNPJ = '61602199027665', NGCNPJ = '11222333000181';
-let unitId: string, gasSupId: string, nonGasSupId: string;
-const admin = (): SessionUser => ({ id: 'adm', name: 'Adm', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false });
+let unitId: string, gasSupId: string, nonGasSupId: string, adminId: string;
+const admin = (): SessionUser => ({ id: adminId, name: 'Adm', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false });
 
 function row(over: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -21,11 +21,13 @@ beforeAll(async () => {
   unitId = (await prisma.unit.create({ data: { code: `GI-${sfx}`, name: 'Un Import', cnpj: UCNPJ, timezone: 'America/Sao_Paulo', cutoffHour: 4 } })).id;
   gasSupId = (await prisma.supplier.create({ data: { name: 'Ultragaz', cnpj: SCNPJ, isGas: true, category: 'Gás' } })).id;
   nonGasSupId = (await prisma.supplier.create({ data: { name: 'Outros', cnpj: NGCNPJ, isGas: false } })).id;
+  adminId = (await prisma.user.create({ data: { name: 'Adm', email: `${sfx}@ex.com`, role: 'ADMIN', passwordHash: 'x' } })).id;
 });
 afterAll(async () => {
   await prisma.gasReceipt.deleteMany({ where: { unitId } }).catch(() => {});
   await prisma.unit.delete({ where: { id: unitId } }).catch(() => {});
   await prisma.supplier.deleteMany({ where: { id: { in: [gasSupId, nonGasSupId] } } }).catch(() => {});
+  await prisma.user.delete({ where: { id: adminId } }).catch(() => {});
   await prisma.$disconnect();
 });
 
@@ -109,5 +111,30 @@ describe('Import de gás — validação (dry-run)', () => {
       expect(bt?.resolved?.kind).toBe('CYLINDER');
       expect(r.rows.length).toBe(2); // a vazia não entra
     }
+  });
+});
+
+describe('Import de gás — gravação (commit)', () => {
+  it('grava só as OK (importBatchId), ignora duplicada e erro', async () => {
+    const rows = [
+      row({ [COLS.numero]: 'C-100' }),
+      row({ [COLS.numero]: 'C-101' }),
+      row({ [COLS.numero]: 'EXISTE1' }), // já existe (do teste de idempotência) → Duplicada
+      row({ [COLS.numero]: '' }),         // erro (número vazio)
+    ];
+    const r = await commitGasImport(admin(), rows);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.result.imported).toBe(2);
+      expect(r.result.duplicadas).toBe(1);
+      expect(r.result.erros).toBe(1);
+      const saved = await prisma.gasReceipt.findMany({ where: { importBatchId: r.result.batchId }, select: { noteNumber: true } });
+      expect(saved.map((s) => s.noteNumber).sort()).toEqual(['C-100', 'C-101']);
+    }
+  });
+
+  it('reimportar as mesmas notas não duplica (idempotência)', async () => {
+    const r = await commitGasImport(admin(), [row({ [COLS.numero]: 'C-100' })]);
+    if (r.ok) expect(r.result.imported).toBe(0);
   });
 });

@@ -1,7 +1,11 @@
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/db/prisma';
+import { audit } from '@/lib/audit';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { isSupervisory } from '@/lib/roles';
 import type { SessionUser } from '@/lib/auth/session';
+
+type Ctx = { ip?: string | null; userAgent?: string | null };
 
 /**
  * Import em lote de notas de GÁS (XLSX) → GasReceipt. Camada única de
@@ -221,4 +225,55 @@ export async function validateGasImport(user: SessionUser, rows: Record<string, 
     erros: results.filter((r) => r.status === 'ERRO').length,
   };
   return { ok: true, rows: results, summary };
+}
+
+/* ───────── gravação transacional ───────── */
+export interface CommitResult { batchId: string; imported: number; duplicadas: number; erros: number; rows: RowResult[] }
+export type CommitOutcome =
+  | { ok: false; missingColumns: string[] }
+  | { ok: false; tooMany: number }
+  | { ok: true; result: CommitResult };
+
+/**
+ * Revalida e grava SÓ as linhas OK, numa única transação, com importBatchId.
+ * `createMany({ skipDuplicates })` respeita o unique index (idempotência mesmo em corrida).
+ */
+export async function commitGasImport(user: SessionUser, rows: Record<string, unknown>[], ctx: Ctx = {}): Promise<CommitOutcome> {
+  const v = await validateGasImport(user, rows);
+  if (!v.ok) return v;
+
+  const batchId = randomUUID();
+  const okRows = v.rows.filter((r) => r.status === 'OK' && r.resolved);
+  const data = okRows.map((r) => {
+    const z = r.resolved!;
+    const isCyl = z.kind === 'CYLINDER';
+    return {
+      unitId: z.unitId, supplierId: z.supplierId, operationalDate: z.operationalDate, noteNumber: z.noteNumber,
+      quantityKg: z.quantityKg, totalValue: z.totalValue, pricePerKg: z.pricePerKg,
+      dueDate: z.dueDate ? new Date(`${z.dueDate}T12:00:00Z`) : null,
+      kind: z.kind, cylinderKg: isCyl ? 45 : null, cylinderCount: isCyl ? Math.max(1, Math.round(z.quantityKg / 45)) : null,
+      createdById: user.id, importBatchId: batchId,
+    };
+  });
+
+  let imported = 0;
+  if (data.length) {
+    imported = await prisma.$transaction(async (tx) => (await tx.gasReceipt.createMany({ data, skipDuplicates: true })).count);
+    // Reconcilia: OK que NÃO entraram (corrida) → Duplicada na resposta.
+    const inserted = await prisma.gasReceipt.findMany({ where: { importBatchId: batchId }, select: { unitId: true, supplierId: true, noteNumber: true } });
+    const insertedKeys = new Set(inserted.map((e) => `${e.unitId}|${e.supplierId}|${e.noteNumber}`));
+    for (const r of okRows) {
+      const k = `${r.resolved!.unitId}|${r.resolved!.supplierId}|${r.resolved!.noteNumber}`;
+      if (!insertedKeys.has(k)) { r.status = 'DUPLICADA'; r.motivo = 'Já existente (detectado na gravação)'; delete r.resolved; }
+    }
+  }
+
+  const result: CommitResult = {
+    batchId, imported,
+    duplicadas: v.rows.filter((r) => r.status === 'DUPLICADA').length,
+    erros: v.rows.filter((r) => r.status === 'ERRO').length,
+    rows: v.rows,
+  };
+  await audit({ userId: user.id, action: 'GAS_IMPORT_BATCH', module: 'GAS', entity: 'gas_receipt', metadata: { batchId, imported, duplicadas: result.duplicadas, erros: result.erros }, ...ctx });
+  return { ok: true, result };
 }
