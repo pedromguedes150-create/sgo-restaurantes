@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import { cookies } from 'next/headers';
+import { ThemeProvider } from '@/components/theme/theme-provider';
+import { THEME_COOKIE, isThemeChoice, type ThemeChoice } from '@/lib/theme';
 import '@/styles/sgo-design-system.css';
 import '@/styles/globals.css';
 
@@ -36,9 +39,22 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Lê a escolha de tema do cookie no servidor: se explícita, já marca data-theme
+  // no <html> (sem flash); 'system' fica sem atributo e o CSS usa prefers-color-scheme.
+  const cookieTheme = cookies().get(THEME_COOKIE)?.value;
+  const theme: ThemeChoice = isThemeChoice(cookieTheme) ? cookieTheme : 'system';
+  const explicit = theme === 'light' || theme === 'dark';
+
   return (
-    <html lang="pt-BR" className={inter.variable}>
-      <body>{children}</body>
+    <html
+      lang="pt-BR"
+      className={inter.variable}
+      suppressHydrationWarning
+      {...(explicit ? { 'data-theme': theme } : {})}
+    >
+      <body>
+        <ThemeProvider initial={theme}>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }
