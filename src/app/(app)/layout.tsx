@@ -1,6 +1,9 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/db/prisma';
 import { getSessionUser } from '@/lib/auth/session';
+import { unitScopeWhere } from '@/lib/scope/unit-scope';
+import { getSelectedUnitId } from '@/lib/scope/selected-unit';
 import { SIDEBAR_COOKIE, isSidebarCollapsed } from '@/lib/sidebar-state';
 import { roleLabel } from '@/lib/roles';
 import { AppHeader } from '@/components/layout/app-header';
@@ -23,7 +26,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // hidratação). O layout já é dinâmico por causa da sessão, então não custa
   // nada em cache.
   const sidebarCollapsed = isSidebarCollapsed(cookies().get(SIDEBAR_COOKIE)?.value);
-  const [unread, viewable, commPending] = await Promise.all([unreadCount(user), viewableNavHrefs(user.role), getInboxPendingCount(user)]);
+  const [unread, viewable, commPending, units] = await Promise.all([
+    unreadCount(user),
+    viewableNavHrefs(user.role),
+    getInboxPendingCount(user),
+    prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+  ]);
+  const selectedUnitId = getSelectedUnitId(units.map((u) => u.id));
   const badges: Record<string, number> = {};
   if (commPending > 0) badges['/modulos/comunicacao'] = commPending;
 
@@ -32,7 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* O provider envolve header e sidebar: o botão de recolher mora no
           header e a largura muda na sidebar, então os dois dividem o estado. */}
       <SidebarStateProvider defaultCollapsed={sidebarCollapsed}>
-        <AppHeader userName={user.name} roleLabel={roleLabel(user.role)} unread={unread} />
+        <AppHeader userName={user.name} roleLabel={roleLabel(user.role)} unread={unread} units={units} selectedUnitId={selectedUnitId} />
         {/*
           Largura do conteúdo. Mobile-first: `max-w-3xl` (768px) coincide com o
           breakpoint `md`, então os overrides `md:` abaixo NÃO alteram o celular —

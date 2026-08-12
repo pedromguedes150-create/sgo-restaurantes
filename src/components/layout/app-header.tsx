@@ -5,11 +5,12 @@ import { useRouter, usePathname } from 'next/navigation';
 import { LogOut, Bell, ArrowLeft, GraduationCap, PanelLeftClose, PanelLeftOpen, ChevronRight } from 'lucide-react';
 import { useSidebarState } from '@/components/layout/sidebar-state-provider';
 import { crumbFor } from '@/components/layout/nav-data';
+import { UnitSwitcher, type UnitOption } from '@/components/layout/unit-switcher';
 
 const iconBtn =
   'inline-flex h-11 w-11 items-center justify-center rounded-control text-ink-500 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken hover:text-ink-900 focus-visible:shadow-sgo-focus md:h-9 md:w-9';
 
-export function AppHeader({ userName, roleLabel, unread = 0 }: { userName: string; roleLabel: string; unread?: number }) {
+export function AppHeader({ userName, roleLabel, unread = 0, units = [], selectedUnitId = null }: { userName: string; roleLabel: string; unread?: number; units?: UnitOption[]; selectedUnitId?: string | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const showBack = pathname !== '/dashboard';
@@ -59,6 +60,12 @@ export function AppHeader({ userName, roleLabel, unread = 0 }: { userName: strin
             )}
             <span className="truncate text-[15px] font-semibold text-ink-900">{crumb?.label ?? 'SGO'}</span>
           </div>
+
+          {units.length > 0 && (
+            <div className="ml-1 shrink-0 border-l border-line pl-2">
+              <UnitSwitcher units={units} selectedId={selectedUnitId} />
+            </div>
+          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-0.5">
