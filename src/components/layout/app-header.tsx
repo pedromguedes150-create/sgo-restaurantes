@@ -2,14 +2,18 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { LogOut, Bell, ArrowLeft, GraduationCap, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { LogOut, Bell, ArrowLeft, GraduationCap, PanelLeftClose, PanelLeftOpen, ChevronRight } from 'lucide-react';
 import { useSidebarState } from '@/components/layout/sidebar-state-provider';
+import { crumbFor } from '@/components/layout/nav-data';
+
+const iconBtn =
+  'inline-flex h-11 w-11 items-center justify-center rounded-control text-ink-500 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken hover:text-ink-900 focus-visible:shadow-sgo-focus md:h-9 md:w-9';
 
 export function AppHeader({ userName, roleLabel, unread = 0 }: { userName: string; roleLabel: string; unread?: number }) {
   const router = useRouter();
   const pathname = usePathname();
   const showBack = pathname !== '/dashboard';
+  const crumb = crumbFor(pathname);
   const { collapsed, toggle } = useSidebarState();
 
   async function logout() {
@@ -18,23 +22,15 @@ export function AppHeader({ userName, roleLabel, unread = 0 }: { userName: strin
     router.refresh();
   }
 
-  const initials = userName
-    .split(' ')
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  const initials = userName.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
   return (
-    // A faixa bordô segue full-bleed; quem alinha é o container interno, que
-    // usa o MESMO envelope do conteúdo — assim o header não fica recuado em
-    // relação à sidebar no 2xl (era o degrau no canto superior esquerdo).
-    // Altura: 64px no celular (alvo de toque) e 56px a partir de `lg`.
-    <header className="sticky top-0 z-30 border-b bg-brand text-white print:hidden">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 lg:h-14 lg:max-w-none lg:pl-3 lg:pr-6 2xl:max-w-[1760px]">
-        <div className="flex items-center gap-2">
-          {/* Recolher/expandir mora aqui: fica fora da aside com overflow, não
-              some no scroll e não se move quando a sidebar anima. */}
+    // Barra branca translúcida (backdrop blur/saturate) — substitui o header bordô.
+    // Alinha pelo mesmo envelope do conteúdo. Altura 48px no mobile, 56px a partir de md.
+    <header className="sticky top-0 z-30 border-b border-line bg-glass backdrop-blur-xl backdrop-saturate-150 print:hidden">
+      <div className="mx-auto flex h-12 w-full max-w-6xl items-center justify-between gap-2 px-4 md:h-14 lg:max-w-none lg:pl-3 lg:pr-6 2xl:max-w-[1760px]">
+        <div className="flex min-w-0 items-center gap-1">
+          {/* Recolher/expandir a sidebar (desktop). */}
           <button
             type="button"
             onClick={toggle}
@@ -42,56 +38,52 @@ export function AppHeader({ userName, roleLabel, unread = 0 }: { userName: strin
             aria-controls="sidebar-nav"
             aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
             title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-            className="hidden h-9 w-9 items-center justify-center rounded-lg text-white/80 transition-colors hover:bg-white/10 hover:text-white lg:inline-flex"
+            className={`${iconBtn} hidden lg:inline-flex`}
           >
             {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           </button>
+
           {showBack && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="-ml-2 text-white hover:bg-white/10 lg:ml-0 lg:h-9 lg:w-9"
-              aria-label="Voltar"
-              onClick={() => router.back()}
-            >
+            <button type="button" onClick={() => router.back()} aria-label="Voltar" className={`${iconBtn} -ml-1`}>
               <ArrowLeft className="h-5 w-5" />
-            </Button>
+            </button>
           )}
-          {/* Avatar/nome levam ao Meu Perfil (dados + troca de senha) */}
-          <Link href="/perfil" className="flex items-center gap-3 rounded-lg py-1 pr-2 hover:bg-white/10" aria-label="Meu Perfil">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-sm font-black text-white lg:h-9 lg:w-9">
-              {initials}
-            </div>
-            {/* No desktop nome e cargo dividem a mesma linha — é o que devolve
-                altura sem apertar o texto. No celular seguem empilhados. */}
-            <div className="leading-tight lg:flex lg:items-baseline lg:gap-1.5">
-              <p className="text-sm font-semibold">{userName}</p>
-              <span aria-hidden className="hidden text-white/40 lg:inline">·</span>
-              <p className="text-xs text-white/70">{roleLabel}</p>
-            </div>
-          </Link>
+
+          {/* Breadcrumb: grupo › página. */}
+          <div className="flex min-w-0 items-center gap-1.5 pl-1">
+            {crumb?.group && (
+              <>
+                <span className="hidden text-[13px] font-medium text-ink-500 sm:inline">{crumb.group}</span>
+                <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 text-ink-400 sm:inline" />
+              </>
+            )}
+            <span className="truncate text-[15px] font-semibold text-ink-900">{crumb?.label ?? 'SGO'}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Link href="/ajuda" aria-label="Treinamento da Plataforma" className="inline-flex h-12 w-12 items-center justify-center rounded-lg text-white hover:bg-white/10 lg:h-9 lg:w-9">
+
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Link href="/ajuda" aria-label="Treinamento da Plataforma" className={iconBtn}>
             <GraduationCap className="h-5 w-5" />
           </Link>
-          <Link href="/notificacoes" aria-label="Notificações" className="relative inline-flex h-12 w-12 items-center justify-center rounded-lg text-white hover:bg-white/10 lg:h-9 lg:w-9">
+          <Link href="/notificacoes" aria-label="Notificações" className={`${iconBtn} relative`}>
             <Bell className="h-5 w-5" />
             {unread > 0 && (
-              <span className="absolute right-1.5 top-1.5 inline-flex min-w-[18px] items-center justify-center rounded-full bg-critical px-1 text-[10px] font-bold leading-4 text-white">
+              <span className="absolute right-1.5 top-1.5 inline-flex min-w-[18px] items-center justify-center rounded-pill bg-danger px-1 text-[10px] font-bold leading-4 tabular-nums text-white">
                 {unread > 99 ? '99+' : unread}
               </span>
             )}
           </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-white/10 lg:h-9 lg:w-9"
-            aria-label="Sair"
-            onClick={logout}
-          >
+          {/* Avatar + nome levam ao Meu Perfil. */}
+          <Link href="/perfil" className="ml-1 flex items-center gap-2 rounded-control py-1 pl-1 pr-2 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus" aria-label="Meu Perfil">
+            <span className="flex h-9 w-9 items-center justify-center rounded-control bg-sgo-brand text-[13px] font-bold text-on-brand">{initials}</span>
+            <span className="hidden leading-tight lg:block">
+              <span className="block text-[13px] font-semibold text-ink-900">{userName}</span>
+              <span className="block text-[11px] text-ink-500">{roleLabel}</span>
+            </span>
+          </Link>
+          <button type="button" onClick={logout} aria-label="Sair" className={iconBtn}>
             <LogOut className="h-5 w-5" />
-          </Button>
+          </button>
         </div>
       </div>
     </header>

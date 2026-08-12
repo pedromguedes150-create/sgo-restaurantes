@@ -24,6 +24,8 @@
   --sgo-canvas: #f7f5f3;
   --sgo-surface: #ffffff;
   --sgo-sunken: #ede9e6;
+  /* Superfície translúcida (barras com backdrop-blur). */
+  --sgo-glass: rgba(255, 255, 255, 0.72);
 
   /* ---- Cor · marca (light) ---- */
   --sgo-brand: #7c1a2b;
@@ -102,6 +104,7 @@
     --sgo-canvas: #151312;
     --sgo-surface: #1f1c1b;
     --sgo-sunken: #2a2624;
+    --sgo-glass: rgba(31, 28, 27, 0.72);
 
     --sgo-brand: #f0a7b1;
     --sgo-brand-hover: #f7bfc7;

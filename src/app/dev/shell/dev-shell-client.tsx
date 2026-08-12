@@ -2,6 +2,7 @@
 
 import { SidebarStateProvider, useSidebarState } from '@/components/layout/sidebar-state-provider';
 import { Sidebar } from '@/components/layout/sidebar';
+import { AppHeader } from '@/components/layout/app-header';
 
 function Toolbar() {
   const { collapsed, toggle } = useSidebarState();
@@ -27,6 +28,7 @@ export function DevShellClient() {
     <SidebarStateProvider defaultCollapsed={false}>
       <div className="min-h-screen bg-canvas">
         <Toolbar />
+        <AppHeader userName="Alan Silva" roleLabel="Administrador" unread={7} />
         <div className="flex">
           <Sidebar isAdmin viewable={undefined} badges={badges} />
           <main className="flex-1 p-6">

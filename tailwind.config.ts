@@ -87,6 +87,7 @@ const config: Config = {
         },
         canvas: 'var(--sgo-canvas)',
         sunken: 'var(--sgo-sunken)',
+        glass: 'var(--sgo-glass)',
         'on-brand': 'var(--sgo-on-brand)',
         danger: {
           DEFAULT: 'var(--sgo-danger)',

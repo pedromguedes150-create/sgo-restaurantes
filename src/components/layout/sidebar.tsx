@@ -3,76 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import {
-  Home, LayoutGrid, Users, BarChart3, Settings, ChevronRight,
-  LayoutDashboard, NotebookPen, Megaphone, ListChecks, BookOpen, GraduationCap,
-  ClipboardList, Trash2, AlertOctagon, Banknote, Ticket, Receipt, Boxes, Droplets, Sparkles, PackagePlus,
-  Wallet, CalendarOff, Target, Eye, ScrollText,
-} from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebarState } from '@/components/layout/sidebar-state-provider';
+import { NAV_GROUPS, type NavGroup } from '@/components/layout/nav-data';
 import { APP_VERSION_LABEL } from '@/lib/version';
-
-type IconType = React.ComponentType<{ className?: string }>;
-interface Leaf { href: string; label: string; icon: IconType; adminOnly?: boolean }
-interface Group { id: string; title: string; icon: IconType; items: Leaf[] }
-
-// Onda 1 — arquitetura de informação em 6 grupos (mapa aprovado 2026-08-12).
-const GROUPS: Group[] = [
-  {
-    id: 'inicio', title: 'Início', icon: Home,
-    items: [
-      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/minha-area', label: 'Minha área', icon: NotebookPen },
-      // Temporário: Comunicação vai para o inbox do header no commit 8 desta onda.
-      { href: '/modulos/comunicacao', label: 'Comunicação', icon: Megaphone },
-    ],
-  },
-  {
-    id: 'tarefas', title: 'Tarefas', icon: ListChecks,
-    items: [
-      { href: '/tarefas', label: 'Tarefas', icon: ListChecks },
-      { href: '/modulos/pops', label: 'POPs', icon: BookOpen },
-      { href: '/modulos/treinamentos', label: 'Treinamentos', icon: GraduationCap },
-    ],
-  },
-  {
-    id: 'operacao', title: 'Operação', icon: LayoutGrid,
-    items: [
-      { href: '/modulos/comandas', label: 'Comandas', icon: ClipboardList },
-      { href: '/modulos/desperdicios', label: 'Desperdícios', icon: Trash2 },
-      { href: '/modulos/ocorrencias', label: 'Ocorrências', icon: AlertOctagon },
-      { href: '/modulos/troco', label: 'Gestão de Troco', icon: Banknote },
-      { href: '/modulos/cancelamentos', label: 'Cancelamentos', icon: Ticket },
-      { href: '/modulos/notas', label: 'Notas Recebidas', icon: Receipt },
-      { href: '/modulos/inventario', label: 'Inventário', icon: Boxes },
-      { href: '/modulos/oleo', label: 'Coleta de Óleo', icon: Droplets },
-      { href: '/modulos/higiene', label: 'Higiene', icon: Sparkles },
-      { href: '/modulos/produtos', label: 'Solicitação de Produtos', icon: PackagePlus },
-    ],
-  },
-  {
-    id: 'pessoas', title: 'Pessoas', icon: Users,
-    items: [
-      { href: '/modulos/pessoas', label: 'Pessoas', icon: Users },
-      { href: '/modulos/pagamentos', label: 'Pagamentos', icon: Wallet },
-      { href: '/modulos/folgas-equipe', label: 'Controle de gerentes', icon: CalendarOff },
-    ],
-  },
-  {
-    id: 'performance', title: 'Performance', icon: BarChart3,
-    items: [
-      { href: '/modulos/metas', label: 'Metas', icon: Target },
-      { href: '/modulos/executivo', label: 'Visão Executiva', icon: BarChart3 },
-      { href: '/modulos/supervisao', label: 'Rotina do Supervisor', icon: Eye },
-      { href: '/auditoria', label: 'Auditoria', icon: ScrollText, adminOnly: true },
-    ],
-  },
-  {
-    id: 'ajustes', title: 'Ajustes', icon: Settings,
-    items: [{ href: '/configuracoes', label: 'Configurações', icon: Settings }],
-  },
-];
 
 export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewable?: string[]; badges?: Record<string, number> }) {
   const pathname = usePathname();
@@ -80,7 +15,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
   const canSee = (href: string) => !viewable || viewable.includes(href);
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
-  const groups = GROUPS
+  const groups = NAV_GROUPS
     .map((g) => ({ ...g, items: g.items.filter((it) => (!it.adminOnly || isAdmin) && canSee(it.href)) }))
     .filter((g) => g.items.length > 0);
 
@@ -89,12 +24,12 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const isOpen = (id: string) => open[id] ?? id === activeGroupId;
   const setGroup = (id: string, v: boolean) => setOpen((o) => ({ ...o, [id]: v }));
-  const groupBadge = (g: Group) => g.items.reduce((n, it) => n + (badges?.[it.href] ?? 0), 0);
+  const groupBadge = (g: NavGroup) => g.items.reduce((n, it) => n + (badges?.[it.href] ?? 0), 0);
 
   return (
     <aside
       className={cn(
-        'sticky top-16 hidden h-[calc(100dvh-4rem)] shrink-0 overflow-y-auto border-r border-line bg-sgo-surface py-3 transition-[width] duration-sgo-2 ease-sgo-std motion-reduce:transition-none md:block lg:top-14 lg:h-[calc(100dvh-3.5rem)] print:hidden',
+        'sticky top-14 hidden h-[calc(100dvh-3.5rem)] shrink-0 overflow-y-auto border-r border-line bg-sgo-surface py-3 transition-[width] duration-sgo-2 ease-sgo-std motion-reduce:transition-none md:block print:hidden',
         collapsed ? 'w-[72px] px-2' : 'w-64 px-3',
       )}
     >
@@ -180,7 +115,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
                           <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-on-brand' : 'text-ink-400')} />
                           <span className="flex-1">{label}</span>
                           {b ? (
-                            <span className={cn('rounded-pill px-1.5 text-[11px] font-bold tabular-nums', active ? 'bg-on-brand/20 text-on-brand' : 'bg-danger text-white')}>{b}</span>
+                            <span className="rounded-pill bg-danger px-1.5 text-[11px] font-bold tabular-nums text-white">{b}</span>
                           ) : null}
                         </Link>
                       </li>
