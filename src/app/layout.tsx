@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import '@/styles/sgo-design-system.css';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {

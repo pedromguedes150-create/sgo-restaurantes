@@ -1,0 +1,222 @@
+/* =============================================================================
+   SGO — Design System (fonte de verdade dos tokens)
+   Contrato: REDESIGN.md §3. Este é o ÚNICO arquivo onde hex literal é permitido.
+   Componentes SÓ consomem var(--sgo-*). Não escreva hex fora daqui.
+
+   Temas: light por padrão em :root. Dark em dois lugares, para que a escolha
+   explícita (data-theme) sempre vença o prefers-color-scheme:
+     1) @media (prefers-color-scheme: dark) → :root:not([data-theme="light"])
+     2) :root[data-theme="dark"]
+   Tokens não-cromáticos (espaço, raio, medida, movimento, tipografia) são
+   definidos uma vez em :root (não mudam por tema).
+   ========================================================================== */
+
+:root {
+  /* ---- Cor · texto (light) ---- */
+  --sgo-ink-900: #1a1614;
+  --sgo-ink-700: #47403c;
+  --sgo-ink-500: #5e5751;
+  --sgo-ink-400: #7a736e;
+
+  /* ---- Cor · linhas e superfícies (light) ---- */
+  --sgo-line: #e8e3df;
+  --sgo-line-strong: #d8d2cd;
+  --sgo-canvas: #f7f5f3;
+  --sgo-surface: #ffffff;
+  --sgo-sunken: #ede9e6;
+
+  /* ---- Cor · marca (light) ---- */
+  --sgo-brand: #7c1a2b;
+  --sgo-brand-hover: #97303f;
+  --sgo-brand-tint: #fdf6f7;
+  --sgo-brand-tint-2: #f6e4e7;
+  --sgo-on-brand: #ffffff;
+
+  /* ---- Cor · status (light) ---- */
+  --sgo-success: #0a5c34;
+  --sgo-success-bg: #edf7f1;
+  --sgo-warning: #7a4200;
+  --sgo-warning-bg: #fcf1e1;
+  --sgo-danger: #a31515;
+  --sgo-danger-bg: #fef3f2;
+  --sgo-info: #114e80;
+  --sgo-info-bg: #eaf2fa;
+
+  /* ---- Espaço · grid 8pt (4px é a única meia-parada) ---- */
+  --sgo-space-4: 4px;
+  --sgo-space-8: 8px;
+  --sgo-space-16: 16px;
+  --sgo-space-24: 24px;
+  --sgo-space-32: 32px;
+  --sgo-space-40: 40px;
+  --sgo-space-48: 48px;
+  --sgo-space-64: 64px;
+  --sgo-space-80: 80px;
+
+  /* ---- Raio ---- */
+  --sgo-radius-control: 10px;
+  --sgo-radius-card: 16px;
+  --sgo-radius-sheet: 20px;
+  --sgo-radius-pill: 999px;
+
+  /* ---- Medidas de layout ---- */
+  --sgo-sidebar: 256px;
+  --sgo-sidebar-collapsed: 72px;
+  --sgo-bar: 56px;
+  --sgo-bar-mobile: 48px;
+  --sgo-control-sm: 32px;
+  --sgo-control-md: 40px;
+  --sgo-control-lg: 48px;
+  --sgo-row: 64px;
+  --sgo-content: 1152px;
+  --sgo-content-wide: 1408px;
+
+  /* ---- Movimento ---- */
+  --sgo-ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+  --sgo-ease-nav: cubic-bezier(0.32, 0.72, 0, 1);
+  --sgo-ease-spring: cubic-bezier(0.34, 1.16, 0.64, 1);
+  --sgo-dur-1: 120ms;
+  --sgo-dur-2: 200ms;
+  --sgo-dur-3: 340ms;
+  --sgo-dur-4: 400ms;
+
+  /* ---- Tipografia ---- */
+  --sgo-font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Foco: anel duplo (2px surface + 2px brand) */
+  --sgo-focus-ring: 0 0 0 2px var(--sgo-surface), 0 0 0 4px var(--sgo-brand);
+}
+
+/* Dark — segue o sistema, a menos que haja escolha explícita de light */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --sgo-ink-900: #f5f2f0;
+    --sgo-ink-700: #d6d0cc;
+    --sgo-ink-500: #b5ada7;
+    --sgo-ink-400: #8f8781;
+
+    --sgo-line: #332e2c;
+    --sgo-line-strong: #403a37;
+    --sgo-canvas: #151312;
+    --sgo-surface: #1f1c1b;
+    --sgo-sunken: #2a2624;
+
+    --sgo-brand: #f0a7b1;
+    --sgo-brand-hover: #f7bfc7;
+    --sgo-brand-tint: #2a1b1e;
+    --sgo-brand-tint-2: #3a2429;
+    --sgo-on-brand: #2a0a11;
+
+    /* status: texto conforme §3; os *-bg do dark não constam no contrato,
+       derivados como tintas escuras coerentes (baixo croma sobre surface). */
+    --sgo-success: #5fd39a;
+    --sgo-success-bg: #16281f;
+    --sgo-warning: #f0b360;
+    --sgo-warning-bg: #2c2013;
+    --sgo-danger: #ff9a93;
+    --sgo-danger-bg: #2e1a18;
+    --sgo-info: #8fbeea;
+    --sgo-info-bg: #16222e;
+  }
+}
+
+/* Dark — escolha explícita vence em qualquer sistema */
+:root[data-theme='dark'] {
+  --sgo-ink-900: #f5f2f0;
+  --sgo-ink-700: #d6d0cc;
+  --sgo-ink-500: #b5ada7;
+  --sgo-ink-400: #8f8781;
+
+  --sgo-line: #332e2c;
+  --sgo-line-strong: #403a37;
+  --sgo-canvas: #151312;
+  --sgo-surface: #1f1c1b;
+  --sgo-sunken: #2a2624;
+
+  --sgo-brand: #f0a7b1;
+  --sgo-brand-hover: #f7bfc7;
+  --sgo-brand-tint: #2a1b1e;
+  --sgo-brand-tint-2: #3a2429;
+  --sgo-on-brand: #2a0a11;
+
+  --sgo-success: #5fd39a;
+  --sgo-success-bg: #16281f;
+  --sgo-warning: #f0b360;
+  --sgo-warning-bg: #2c2013;
+  --sgo-danger: #ff9a93;
+  --sgo-danger-bg: #2e1a18;
+  --sgo-info: #8fbeea;
+  --sgo-info-bg: #16222e;
+}
+
+/* =============================================================================
+   Escala tipográfica — tracking varia por tamanho (densidade tipo SF Pro).
+   REDESIGN.md §3. Números sempre tabulares onde a classe for aplicada a dado.
+   ========================================================================== */
+.sgo-type-34 {
+  font-size: 34px;
+  line-height: 40px;
+  letter-spacing: -0.022em;
+}
+.sgo-type-28 {
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: -0.02em;
+}
+.sgo-type-22 {
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.016em;
+}
+.sgo-type-20 {
+  font-size: 20px;
+  line-height: 26px;
+  letter-spacing: -0.014em;
+}
+.sgo-type-17 {
+  font-size: 17px;
+  line-height: 24px;
+  letter-spacing: -0.011em;
+}
+.sgo-type-15 {
+  font-size: 15px;
+  line-height: 20px;
+  letter-spacing: -0.006em;
+}
+.sgo-type-13 {
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: -0.002em;
+}
+.sgo-type-12 {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+}
+/* 11/14 +0.06em — único uso de caixa alta (overline/eyebrow) */
+.sgo-type-11 {
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Corpo responsivo: 17px no mobile, 15px acima de 1024px */
+.sgo-body {
+  font-size: 17px;
+  line-height: 24px;
+  letter-spacing: -0.011em;
+}
+@media (min-width: 1024px) {
+  .sgo-body {
+    font-size: 15px;
+    line-height: 20px;
+    letter-spacing: -0.006em;
+  }
+}
+
+/* Todo número tabular (REDESIGN.md §5) */
+.sgo-nums {
+  font-variant-numeric: tabular-nums;
+}
