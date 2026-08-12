@@ -11,6 +11,7 @@ import { BottomNav } from '@/components/layout/bottom-nav';
 import { CommandPalette } from '@/components/layout/command-palette';
 import { Sidebar } from '@/components/layout/sidebar';
 import { SidebarStateProvider } from '@/components/layout/sidebar-state-provider';
+import { PageChromeProvider } from '@/components/layout/page-chrome';
 import { unreadCount } from '@/lib/notifications';
 import { viewableNavHrefs } from '@/lib/permissions';
 import { getInboxPendingCount } from '@/lib/communications/query';
@@ -42,6 +43,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* O provider envolve header e sidebar: o botão de recolher mora no
           header e a largura muda na sidebar, então os dois dividem o estado. */}
       <SidebarStateProvider defaultCollapsed={sidebarCollapsed}>
+       <PageChromeProvider>
         <AppHeader userName={user.name} roleLabel={roleLabel(user.role)} unread={unread} units={units} selectedUnitId={selectedUnitId} />
         {/*
           Largura do conteúdo. Mobile-first: `max-w-3xl` (768px) coincide com o
@@ -63,6 +65,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Sidebar isAdmin={isAdmin} viewable={viewable} badges={badges} />
           <main className="w-full max-w-3xl flex-1 px-4 pb-24 pt-4 md:max-w-none md:px-6 md:pb-8 print:max-w-none print:p-0">{children}</main>
         </div>
+       </PageChromeProvider>
       </SidebarStateProvider>
       <BottomNav />
       <CommandPalette units={units} viewable={viewable} isAdmin={isAdmin} />

@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { LogOut, Bell, ArrowLeft, GraduationCap, PanelLeftClose, PanelLeftOpen, ChevronRight, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useSidebarState } from '@/components/layout/sidebar-state-provider';
+import { usePageChrome } from '@/components/layout/page-chrome';
 import { crumbFor } from '@/components/layout/nav-data';
 import { UnitSwitcher, type UnitOption } from '@/components/layout/unit-switcher';
 import { OPEN_COMMAND_EVENT } from '@/components/layout/command-palette';
@@ -17,6 +19,11 @@ export function AppHeader({ userName, roleLabel, unread = 0, units = [], selecte
   const showBack = pathname !== '/dashboard';
   const crumb = crumbFor(pathname);
   const { collapsed, toggle } = useSidebarState();
+  const { scrolled, collapsed: titleCollapsed, title: pageTitle } = usePageChrome();
+  // Título inline: telas com <LargeTitle> só o mostram ao rolar; telas legadas
+  // (sem título grande) mostram o rótulo do breadcrumb sempre.
+  const label = pageTitle ?? crumb?.label ?? null;
+  const showLabel = pageTitle != null ? titleCollapsed : label != null;
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -29,7 +36,7 @@ export function AppHeader({ userName, roleLabel, unread = 0, units = [], selecte
   return (
     // Barra branca translúcida (backdrop blur/saturate) — substitui o header bordô.
     // Alinha pelo mesmo envelope do conteúdo. Altura 48px no mobile, 56px a partir de md.
-    <header className="sticky top-0 z-30 border-b border-line bg-glass backdrop-blur-xl backdrop-saturate-150 print:hidden">
+    <header className={cn('sticky top-0 z-30 border-b bg-glass backdrop-blur-xl backdrop-saturate-150 transition-colors duration-sgo-2 ease-sgo-std print:hidden', scrolled ? 'border-line' : 'border-transparent')}>
       <div className="mx-auto flex h-12 w-full max-w-6xl items-center justify-between gap-2 px-4 md:h-14 lg:max-w-none lg:pl-3 lg:pr-6 2xl:max-w-[1760px]">
         <div className="flex min-w-0 items-center gap-1">
           {/* Recolher/expandir a sidebar (desktop). */}
@@ -51,15 +58,15 @@ export function AppHeader({ userName, roleLabel, unread = 0, units = [], selecte
             </button>
           )}
 
-          {/* Breadcrumb: grupo › página. */}
+          {/* Breadcrumb: grupo › página. O rótulo colapsa/expande conforme o scroll. */}
           <div className="flex min-w-0 items-center gap-1.5 pl-1">
-            {crumb?.group && (
-              <>
-                <span className="hidden text-[13px] font-medium text-ink-500 sm:inline">{crumb.group}</span>
-                <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 text-ink-400 sm:inline" />
-              </>
-            )}
-            <span className="truncate text-[15px] font-semibold text-ink-900">{crumb?.label ?? 'SGO'}</span>
+            {crumb?.group && <span className="hidden text-[13px] font-medium text-ink-500 sm:inline">{crumb.group}</span>}
+            {crumb?.group && showLabel && label && <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 text-ink-400 sm:inline" />}
+            {showLabel && label ? (
+              <span className="truncate text-[15px] font-semibold text-ink-900">{label}</span>
+            ) : !crumb?.group ? (
+              <span className="text-[15px] font-semibold text-ink-900">SGO</span>
+            ) : null}
           </div>
 
           {units.length > 0 && (

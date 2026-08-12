@@ -4,6 +4,7 @@ import { SidebarStateProvider, useSidebarState } from '@/components/layout/sideb
 import { Sidebar } from '@/components/layout/sidebar';
 import { AppHeader } from '@/components/layout/app-header';
 import { CommandPalette } from '@/components/layout/command-palette';
+import { PageChromeProvider, LargeTitle } from '@/components/layout/page-chrome';
 
 function Toolbar() {
   const { collapsed, toggle } = useSidebarState();
@@ -34,21 +35,31 @@ export function DevShellClient() {
   const badges = { '/modulos/comunicacao': 3, '/modulos/pagamentos': 158 };
   return (
     <SidebarStateProvider defaultCollapsed={false}>
-      <div className="min-h-screen bg-canvas">
-        <Toolbar />
-        <AppHeader userName="Alan Silva" roleLabel="Administrador" unread={7} units={UNITS} selectedUnitId="u1" />
-        <CommandPalette units={UNITS} isAdmin />
-        <div className="flex">
-          <Sidebar isAdmin viewable={undefined} badges={badges} />
-          <main className="flex-1 p-6">
-            <p className="sgo-type-20 font-semibold text-ink-900">Área de conteúdo</p>
-            <p className="sgo-body mt-2 text-ink-500">
-              Alterne os grupos, recolha a sidebar (rail de 72px) e confira o estado
-              ativo, os badges e o anel de foco pelo teclado.
-            </p>
-          </main>
+      <PageChromeProvider>
+        <div className="min-h-screen bg-canvas">
+          <Toolbar />
+          <AppHeader userName="Alan Silva" roleLabel="Administrador" unread={7} units={UNITS} selectedUnitId="u1" />
+          <CommandPalette units={UNITS} isAdmin />
+          <div className="flex">
+            <Sidebar isAdmin viewable={undefined} badges={badges} />
+            <main className="flex-1 p-6">
+              <LargeTitle title="Comandas" subtitle="Título grande (34px) que colapsa no header ao rolar." />
+              <p className="sgo-body text-ink-500">
+                Role a página: a barra ganha borda após 28px e o título inline aparece
+                após 72px. Alterne os grupos, recolha a sidebar (rail 72px) e confira o
+                estado ativo, os badges e o anel de foco pelo teclado.
+              </p>
+              <div className="mt-6 space-y-3">
+                {Array.from({ length: 40 }).map((_, i) => (
+                  <div key={i} className="rounded-card border border-line bg-sgo-surface p-4 text-[14px] text-ink-700">
+                    Linha de conteúdo {i + 1}
+                  </div>
+                ))}
+              </div>
+            </main>
+          </div>
         </div>
-      </div>
+      </PageChromeProvider>
     </SidebarStateProvider>
   );
 }
