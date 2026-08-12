@@ -3,6 +3,7 @@
 import { SidebarStateProvider, useSidebarState } from '@/components/layout/sidebar-state-provider';
 import { Sidebar } from '@/components/layout/sidebar';
 import { AppHeader } from '@/components/layout/app-header';
+import { CommandPalette } from '@/components/layout/command-palette';
 
 function Toolbar() {
   const { collapsed, toggle } = useSidebarState();
@@ -21,6 +22,13 @@ function Toolbar() {
   );
 }
 
+const UNITS = [
+  { id: 'u1', name: 'COMERCIAL LINS & GUEDES LTDA ( MOREIRA)' },
+  { id: 'u2', name: 'COMERCIAL LINS & GUEDES LTDA (KM13)' },
+  { id: 'u3', name: 'COMERCIAL LINS & GUEDES LTDA (SANTO ANTÔNIO DO AMPARO)' },
+  { id: 'u4', name: 'COMERCIAL LINS E GUEDES LTDA ME' },
+];
+
 export function DevShellClient() {
   // Badges de exemplo para exercitar a marcação de pendências.
   const badges = { '/modulos/comunicacao': 3, '/modulos/pagamentos': 158 };
@@ -28,18 +36,8 @@ export function DevShellClient() {
     <SidebarStateProvider defaultCollapsed={false}>
       <div className="min-h-screen bg-canvas">
         <Toolbar />
-        <AppHeader
-          userName="Alan Silva"
-          roleLabel="Administrador"
-          unread={7}
-          units={[
-            { id: 'u1', name: 'COMERCIAL LINS & GUEDES LTDA ( MOREIRA)' },
-            { id: 'u2', name: 'COMERCIAL LINS & GUEDES LTDA (KM13)' },
-            { id: 'u3', name: 'COMERCIAL LINS & GUEDES LTDA (SANTO ANTÔNIO DO AMPARO)' },
-            { id: 'u4', name: 'COMERCIAL LINS E GUEDES LTDA ME' },
-          ]}
-          selectedUnitId="u1"
-        />
+        <AppHeader userName="Alan Silva" roleLabel="Administrador" unread={7} units={UNITS} selectedUnitId="u1" />
+        <CommandPalette units={UNITS} isAdmin />
         <div className="flex">
           <Sidebar isAdmin viewable={undefined} badges={badges} />
           <main className="flex-1 p-6">

@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { LogOut, Bell, ArrowLeft, GraduationCap, PanelLeftClose, PanelLeftOpen, ChevronRight } from 'lucide-react';
+import { LogOut, Bell, ArrowLeft, GraduationCap, PanelLeftClose, PanelLeftOpen, ChevronRight, Search } from 'lucide-react';
 import { useSidebarState } from '@/components/layout/sidebar-state-provider';
 import { crumbFor } from '@/components/layout/nav-data';
 import { UnitSwitcher, type UnitOption } from '@/components/layout/unit-switcher';
+import { OPEN_COMMAND_EVENT } from '@/components/layout/command-palette';
 
 const iconBtn =
   'inline-flex h-11 w-11 items-center justify-center rounded-control text-ink-500 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken hover:text-ink-900 focus-visible:shadow-sgo-focus md:h-9 md:w-9';
@@ -69,6 +70,17 @@ export function AppHeader({ userName, roleLabel, unread = 0, units = [], selecte
         </div>
 
         <div className="flex shrink-0 items-center gap-0.5">
+          {/* Abre o ⌘K (busca global). No mobile é só o ícone. */}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_EVENT))}
+            aria-label="Buscar (atalho Ctrl+K)"
+            className="inline-flex h-11 items-center gap-2 rounded-control px-2 text-ink-500 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken hover:text-ink-900 focus-visible:shadow-sgo-focus md:h-9 lg:border lg:border-line-strong lg:pl-2.5 lg:pr-2"
+          >
+            <Search className="h-5 w-5 md:h-4 md:w-4" />
+            <span className="hidden text-[13px] font-medium text-ink-400 lg:inline">Buscar</span>
+            <kbd className="hidden rounded border border-line-strong px-1 text-[11px] font-medium text-ink-400 lg:inline">⌘K</kbd>
+          </button>
           <Link href="/ajuda" aria-label="Treinamento da Plataforma" className={iconBtn}>
             <GraduationCap className="h-5 w-5" />
           </Link>

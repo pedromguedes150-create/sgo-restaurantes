@@ -8,6 +8,7 @@ import { SIDEBAR_COOKIE, isSidebarCollapsed } from '@/lib/sidebar-state';
 import { roleLabel } from '@/lib/roles';
 import { AppHeader } from '@/components/layout/app-header';
 import { BottomNav } from '@/components/layout/bottom-nav';
+import { CommandPalette } from '@/components/layout/command-palette';
 import { Sidebar } from '@/components/layout/sidebar';
 import { SidebarStateProvider } from '@/components/layout/sidebar-state-provider';
 import { unreadCount } from '@/lib/notifications';
@@ -64,6 +65,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </SidebarStateProvider>
       <BottomNav />
+      <CommandPalette units={units} viewable={viewable} isAdmin={isAdmin} />
       <ServiceWorkerRegister />
       {commPending > 0 && <CommunicationInterstitial />}
     </div>
