@@ -8,7 +8,7 @@ export type StatusTone = 'success' | 'medium' | 'critical' | 'black' | 'neutral'
 
 const tones: Record<StatusTone, string> = {
   success: 'bg-success/15 text-success',
-  medium: 'bg-medium/15 text-[#92600A]',
+  medium: 'bg-medium/15 text-warning',
   critical: 'bg-critical/15 text-critical',
   black: 'bg-zinc-800 text-white',
   neutral: 'bg-secondary text-muted-foreground',

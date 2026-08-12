@@ -58,6 +58,12 @@ jobs:
       - name: Lint (0 erros; warnings pré-existentes não bloqueiam)
         run: npx next lint --no-cache
 
+      # Portão do design system: proíbe hex/rgb cru e espaçamento fora da grade
+      # 8pt no ESCOPO ATIVO (cresce por onda, ver scripts/ds-scope.cjs). Fora do
+      # escopo, nada é checado — o legado migra nas Ondas 3-5. Determinístico → bloqueia.
+      - name: Design system — hex/tokens no escopo ativo
+        run: npm run lint:ds
+
       # Os testes de integração rodam em SÉRIE (vitest.config.ts) contra um banco
       # efêmero. Eles RODAM e aparecem no log, mas NÃO bloqueiam o merge: a suíte
       # de integração é lenta/sensível a ambiente e não deve travar um PR legítimo
