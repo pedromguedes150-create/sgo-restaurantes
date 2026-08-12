@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.41.1 — 2026-08-12 (Import de gás: CNPJ da unidade + zero à esquerda)
+### Corrigido
+- **Import em lote de notas de gás dava "Unidade não encontrada" em todas as linhas.** O import casa a nota à unidade **pelo CNPJ**, mas não havia como cadastrar o CNPJ da unidade (nem tela, nem RH sync, nem seed) — então `Unit.cnpj` era `null` em todas e nada batia.
+  - **Cadastro de Unidades** (Configurações → Unidades) ganhou o campo **CNPJ** (criar e editar), normalizado para 14 dígitos; unidades sem CNPJ ganham um aviso de que ele é necessário para o import de gás. `createUnit`/`updateUnit`.
+  - O casamento de CNPJ no import passou a **normalizar para 14 dígitos com zero à esquerda**, cobrindo o caso do Excel ler o CNPJ como número e comer o zero inicial (ex.: `05336082000163` → `5336082000163`). `src/lib/notes/gas-import.ts`.
+
 ## v1.41.0 — 2026-07-23 (Gás dentro de Notas Recebidas · vencimentos · dashboard de gás corrigido)
 ### Adicionado
 - **Gás absorvido por Notas Recebidas**: o cadastro de fornecedor ganhou o marcador **"fornecedor de gás"**; ao escolher esse fornecedor no lançamento da nota, os campos viram os de **gás** (granel kg/preço ou botijão) + **vencimento do boleto**, e o lançamento alimenta a análise de gás. Nova aba **"Análise de gás"** dentro de Notas (dashboard, histórico, contratos e link do relatório de variação). O módulo "Recebimento de Gás" saiu da barra lateral — a rota `/modulos/gas` **redireciona** para Notas Recebidas.

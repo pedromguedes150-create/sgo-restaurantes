@@ -67,6 +67,16 @@ describe('Import de gás — validação (dry-run)', () => {
     }
   });
 
+  it('CNPJ como número (Excel comeu o zero à esquerda) ainda casa a unidade', async () => {
+    // 05336082000163 lido como número vira 5336082000163 (13 dígitos).
+    const r = await validateGasImport(admin(), [row({ [COLS.cnpj]: 5336082000163, [COLS.numero]: 'ZERO1' })]);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.rows[0].status).toBe('OK');
+      expect(r.rows[0].resolved?.unitId).toBe(unitId);
+    }
+  });
+
   it('erros por linha: unidade/fornecedor/data futura/venc<emissão/qtd/preço/número/forma', async () => {
     const future = new Date(Date.now() + 5 * 864e5).toISOString().slice(0, 10).split('-').reverse().join('/');
     const rows = [

@@ -40,6 +40,15 @@ export function canImportGasNotes(user: SessionUser): boolean {
 
 /* ───────── helpers de normalização/parse ───────── */
 const digits = (s: unknown) => String(s ?? '').replace(/\D/g, '');
+/**
+ * Chave de CNPJ p/ casamento: 14 dígitos com zero à esquerda. Cobre o caso do
+ * Excel/SheetJS ler o CNPJ como NÚMERO e comer o zero inicial
+ * (ex.: 05336082000163 → 5336082000163). Aplicada nos dois lados da comparação.
+ */
+const cnpjKey = (s: unknown) => {
+  const d = digits(s);
+  return d && d.length < 14 ? d.padStart(14, '0') : d;
+};
 const normHeader = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
 const isBlank = (v: unknown) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
 
@@ -133,9 +142,9 @@ export async function validateGasImport(user: SessionUser, rows: Record<string, 
 
   // Cadastros para resolução (unidades no escopo do usuário; fornecedores globais).
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, select: { id: true, cnpj: true } });
-  const unitByCnpj = new Map(units.filter((u) => u.cnpj).map((u) => [digits(u.cnpj), u.id]));
+  const unitByCnpj = new Map(units.filter((u) => u.cnpj).map((u) => [cnpjKey(u.cnpj), u.id]));
   const suppliers = await prisma.supplier.findMany({ where: { active: true }, select: { id: true, cnpj: true, isGas: true } });
-  const supByCnpj = new Map(suppliers.filter((s) => s.cnpj).map((s) => [digits(s.cnpj), s]));
+  const supByCnpj = new Map(suppliers.filter((s) => s.cnpj).map((s) => [cnpjKey(s.cnpj), s]));
 
   const today = new Date().toISOString().slice(0, 10);
   const seenInFile = new Set<string>(); // dup dentro do arquivo (cnpj|cnpjForn|numero)
@@ -172,14 +181,14 @@ export async function validateGasImport(user: SessionUser, rows: Record<string, 
     const err = (motivo: string): RowResult => ({ line, status: 'ERRO', motivo, preview });
 
     // Duplicidade dentro do arquivo.
-    const fileKey = `${digits(cnpjRaw)}|${digits(cnpjFornRaw)}|${numero}`;
+    const fileKey = `${cnpjKey(cnpjRaw)}|${cnpjKey(cnpjFornRaw)}|${numero}`;
     if (numero && seenInFile.has(fileKey)) { results.push(err('Duplicada no próprio arquivo')); continue; }
 
     // Validações.
     if (!numero) { results.push(err('Nº Nota Fiscal vazio')); continue; }
-    const unitId = unitByCnpj.get(digits(cnpjRaw));
+    const unitId = unitByCnpj.get(cnpjKey(cnpjRaw));
     if (!unitId) { results.push(err('Unidade não encontrada')); continue; }
-    const sup = supByCnpj.get(digits(cnpjFornRaw));
+    const sup = supByCnpj.get(cnpjKey(cnpjFornRaw));
     if (!sup) { results.push(err('Fornecedor não cadastrado (cadastre em Configurações → Fornecedores)')); continue; }
     if (!emissao) { results.push(err('Data de emissão inválida')); continue; }
     if (emissao > today) { results.push(err('Data de emissão futura')); continue; }
