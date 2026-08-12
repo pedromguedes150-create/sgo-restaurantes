@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { AppHeader } from '@/components/layout/app-header';
 import { CommandPalette } from '@/components/layout/command-palette';
 import { PageChromeProvider, LargeTitle } from '@/components/layout/page-chrome';
+import { BottomNav } from '@/components/layout/bottom-nav';
 
 function Toolbar() {
   const { collapsed, toggle } = useSidebarState();
@@ -40,6 +41,7 @@ export function DevShellClient() {
           <Toolbar />
           <AppHeader userName="Alan Silva" roleLabel="Administrador" unread={7} units={UNITS} selectedUnitId="u1" />
           <CommandPalette units={UNITS} isAdmin />
+          <BottomNav />
           <div className="flex">
             <Sidebar isAdmin viewable={undefined} badges={badges} />
             <main className="flex-1 p-6">
