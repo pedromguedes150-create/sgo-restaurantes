@@ -224,3 +224,25 @@
 .sgo-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Entrada de página (Onda 1): crossfade + leve deslize (aprox. do push).
+   A paralaxe da página que SAI exige AnimatePresence (lib externa, fora do
+   escopo), então animamos só a entrada. Respeita prefers-reduced-motion. */
+@keyframes sgo-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sgo-page-enter {
+  animation: sgo-page-enter var(--sgo-dur-2) var(--sgo-ease-nav) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sgo-page-enter {
+    animation: none;
+  }
+}
