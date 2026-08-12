@@ -13,21 +13,44 @@ function isAdmin(user: SessionUser) {
   return user.role === 'ADMIN';
 }
 
+/**
+ * Normaliza CNPJ para 14 dígitos (usado p/ casar notas de gás por CNPJ da unidade).
+ * '' → null (limpa). Provido mas != 14 dígitos → inválido.
+ */
+function normUnitCnpj(v: string): { ok: true; value: string | null } | { ok: false } {
+  const d = String(v).replace(/\D/g, '');
+  if (d === '') return { ok: true, value: null };
+  if (d.length !== 14) return { ok: false };
+  return { ok: true, value: d };
+}
+
 /* ───────────────────────────── Unidades ───────────────────────────── */
-export async function createUnit(user: SessionUser, input: { name: string; code: string; address?: string; cutoffHour?: number; timezone?: string }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function createUnit(user: SessionUser, input: { name: string; code: string; address?: string; cutoffHour?: number; timezone?: string; cnpj?: string }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!input.name?.trim() || !input.code?.trim()) return { ok: false, reason: 'INVALID' };
+  let cnpj: string | null = null;
+  if (input.cnpj !== undefined) {
+    const c = normUnitCnpj(input.cnpj);
+    if (!c.ok) return { ok: false, reason: 'INVALID' };
+    cnpj = c.value;
+  }
   const exists = await prisma.unit.findUnique({ where: { code: input.code.trim().toUpperCase() } });
   if (exists) return { ok: false, reason: 'CONFLICT' };
   const u = await prisma.unit.create({
-    data: { name: input.name.trim(), code: input.code.trim().toUpperCase(), address: input.address?.trim() || null, cutoffHour: clampHour(input.cutoffHour), timezone: input.timezone?.trim() || 'America/Sao_Paulo' },
+    data: { name: input.name.trim(), code: input.code.trim().toUpperCase(), address: input.address?.trim() || null, cutoffHour: clampHour(input.cutoffHour), timezone: input.timezone?.trim() || 'America/Sao_Paulo', cnpj },
   });
   await audit({ userId: user.id, unitId: u.id, action: 'UNIT_CREATE', module: 'CONFIG', entity: 'unit', entityId: u.id, ...ctx });
   return { ok: true, id: u.id };
 }
 
-export async function updateUnit(user: SessionUser, id: string, input: { name?: string; address?: string; cutoffHour?: number; timezone?: string; active?: boolean; rhUnitName?: string }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateUnit(user: SessionUser, id: string, input: { name?: string; address?: string; cutoffHour?: number; timezone?: string; active?: boolean; rhUnitName?: string; cnpj?: string }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  let cnpjPatch: { cnpj?: string | null } = {};
+  if (input.cnpj !== undefined) {
+    const c = normUnitCnpj(input.cnpj);
+    if (!c.ok) return { ok: false, reason: 'INVALID' };
+    cnpjPatch = { cnpj: c.value };
+  }
   const u = await prisma.unit.update({
     where: { id },
     data: {
@@ -37,6 +60,7 @@ export async function updateUnit(user: SessionUser, id: string, input: { name?: 
       ...(input.timezone !== undefined ? { timezone: input.timezone.trim() } : {}),
       ...(input.active !== undefined ? { active: input.active } : {}),
       ...(input.rhUnitName !== undefined ? { rhUnitName: input.rhUnitName.trim() || null } : {}),
+      ...cnpjPatch,
     },
   });
   await audit({ userId: user.id, unitId: id, action: 'UNIT_UPDATE', module: 'CONFIG', entity: 'unit', entityId: id, ...ctx });
