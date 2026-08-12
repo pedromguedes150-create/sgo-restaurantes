@@ -35,8 +35,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
   ]);
   const selectedUnitId = getSelectedUnitId(units.map((u) => u.id));
+  // Comunicação agora é o inbox do header (não mais item da sidebar).
   const badges: Record<string, number> = {};
-  if (commPending > 0) badges['/modulos/comunicacao'] = commPending;
 
   return (
     <div className="min-h-dvh bg-surface print:min-h-0 print:bg-white">
@@ -44,7 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           header e a largura muda na sidebar, então os dois dividem o estado. */}
       <SidebarStateProvider defaultCollapsed={sidebarCollapsed}>
        <PageChromeProvider>
-        <AppHeader userName={user.name} roleLabel={roleLabel(user.role)} unread={unread} units={units} selectedUnitId={selectedUnitId} />
+        <AppHeader userName={user.name} roleLabel={roleLabel(user.role)} unread={unread} commPending={commPending} units={units} selectedUnitId={selectedUnitId} />
         {/*
           Largura do conteúdo. Mobile-first: `max-w-3xl` (768px) coincide com o
           breakpoint `md`, então os overrides `md:` abaixo NÃO alteram o celular —

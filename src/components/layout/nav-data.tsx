@@ -1,6 +1,6 @@
 import {
   Home, LayoutGrid, Users, BarChart3, Settings,
-  LayoutDashboard, NotebookPen, Megaphone, ListChecks, BookOpen, GraduationCap,
+  LayoutDashboard, NotebookPen, Inbox, ListChecks, BookOpen, GraduationCap,
   ClipboardList, Trash2, AlertOctagon, Banknote, Ticket, Receipt, Boxes, Droplets, Sparkles, PackagePlus,
   Wallet, CalendarOff, Target, Eye, ScrollText, Bell, UserCircle,
 } from 'lucide-react';
@@ -17,8 +17,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { href: '/minha-area', label: 'Minha área', icon: NotebookPen },
-      // Temporário: Comunicação vai para o inbox do header no commit 8 desta onda.
-      { href: '/modulos/comunicacao', label: 'Comunicação', icon: Megaphone },
     ],
   },
   {
@@ -69,6 +67,7 @@ export const NAV_GROUPS: NavGroup[] = [
 
 // Destinos que vivem no header (fora da sidebar) — para o ⌘K e o breadcrumb.
 export const HEADER_DESTINATIONS: NavLeaf[] = [
+  { href: '/modulos/comunicacao', label: 'Comunicação', icon: Inbox },
   { href: '/notificacoes', label: 'Notificações', icon: Bell },
   { href: '/ajuda', label: 'Treinamento da Plataforma', icon: GraduationCap },
   { href: '/perfil', label: 'Meu Perfil', icon: UserCircle },

@@ -33,13 +33,13 @@ const UNITS = [
 
 export function DevShellClient() {
   // Badges de exemplo para exercitar a marcação de pendências.
-  const badges = { '/modulos/comunicacao': 3, '/modulos/pagamentos': 158 };
+  const badges = { '/modulos/pagamentos': 158 };
   return (
     <SidebarStateProvider defaultCollapsed={false}>
       <PageChromeProvider>
         <div className="min-h-screen bg-canvas">
           <Toolbar />
-          <AppHeader userName="Alan Silva" roleLabel="Administrador" unread={7} units={UNITS} selectedUnitId="u1" />
+          <AppHeader userName="Alan Silva" roleLabel="Administrador" unread={7} commPending={3} units={UNITS} selectedUnitId="u1" />
           <CommandPalette units={UNITS} isAdmin />
           <BottomNav />
           <div className="flex">

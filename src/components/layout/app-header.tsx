@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { LogOut, Bell, ArrowLeft, GraduationCap, PanelLeftClose, PanelLeftOpen, ChevronRight, Search } from 'lucide-react';
+import { LogOut, Bell, ArrowLeft, GraduationCap, PanelLeftClose, PanelLeftOpen, ChevronRight, Search, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebarState } from '@/components/layout/sidebar-state-provider';
 import { usePageChrome } from '@/components/layout/page-chrome';
@@ -13,7 +13,7 @@ import { OPEN_COMMAND_EVENT } from '@/components/layout/command-palette';
 const iconBtn =
   'inline-flex h-11 w-11 items-center justify-center rounded-control text-ink-500 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken hover:text-ink-900 focus-visible:shadow-sgo-focus md:h-9 md:w-9';
 
-export function AppHeader({ userName, roleLabel, unread = 0, units = [], selectedUnitId = null }: { userName: string; roleLabel: string; unread?: number; units?: UnitOption[]; selectedUnitId?: string | null }) {
+export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, units = [], selectedUnitId = null }: { userName: string; roleLabel: string; unread?: number; commPending?: number; units?: UnitOption[]; selectedUnitId?: string | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const showBack = pathname !== '/dashboard';
@@ -88,6 +88,14 @@ export function AppHeader({ userName, roleLabel, unread = 0, units = [], selecte
             <span className="hidden text-[13px] font-medium text-ink-400 lg:inline">Buscar</span>
             <kbd className="hidden rounded border border-line-strong px-1 text-[11px] font-medium text-ink-400 lg:inline">⌘K</kbd>
           </button>
+          <Link href="/modulos/comunicacao" aria-label="Comunicação" className={`${iconBtn} relative`}>
+            <Inbox className="h-5 w-5" />
+            {commPending > 0 && (
+              <span className="absolute right-1.5 top-1.5 inline-flex min-w-[18px] items-center justify-center rounded-pill bg-danger px-1 text-[10px] font-bold leading-4 tabular-nums text-white">
+                {commPending > 99 ? '99+' : commPending}
+              </span>
+            )}
+          </Link>
           <Link href="/ajuda" aria-label="Treinamento da Plataforma" className={iconBtn}>
             <GraduationCap className="h-5 w-5" />
           </Link>
