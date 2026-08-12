@@ -67,11 +67,76 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+
+        /* ---------------------------------------------------------------
+         * DESIGN SYSTEM (Onda 0+). Backed por var(--sgo-*) (fonte de verdade
+         * em src/styles/sgo-design-system.css). Aditivo: a paleta legada acima
+         * segue intacta e será migrada/removida nas Ondas 3-5.
+         * Colisões de nome com o legado (brand/surface/success) usam prefixo
+         * `sgo-` até a onda que renomeia aquela tela.
+         * ------------------------------------------------------------- */
+        ink: {
+          900: 'var(--sgo-ink-900)',
+          700: 'var(--sgo-ink-700)',
+          500: 'var(--sgo-ink-500)',
+          400: 'var(--sgo-ink-400)',
+        },
+        line: {
+          DEFAULT: 'var(--sgo-line)',
+          strong: 'var(--sgo-line-strong)',
+        },
+        canvas: 'var(--sgo-canvas)',
+        sunken: 'var(--sgo-sunken)',
+        'on-brand': 'var(--sgo-on-brand)',
+        danger: {
+          DEFAULT: 'var(--sgo-danger)',
+          bg: 'var(--sgo-danger-bg)',
+        },
+        warning: {
+          DEFAULT: 'var(--sgo-warning)',
+          bg: 'var(--sgo-warning-bg)',
+        },
+        info: {
+          DEFAULT: 'var(--sgo-info)',
+          bg: 'var(--sgo-info-bg)',
+        },
+        // Colididos com o legado → prefixo sgo- (removido por onda, 3-5).
+        'sgo-brand': {
+          DEFAULT: 'var(--sgo-brand)',
+          hover: 'var(--sgo-brand-hover)',
+          tint: 'var(--sgo-brand-tint)',
+          'tint-2': 'var(--sgo-brand-tint-2)',
+        },
+        'sgo-surface': 'var(--sgo-surface)',
+        'sgo-success': {
+          DEFAULT: 'var(--sgo-success)',
+          bg: 'var(--sgo-success-bg)',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+        // Design system (Onda 0+)
+        control: 'var(--sgo-radius-control)',
+        card: 'var(--sgo-radius-card)',
+        sheet: 'var(--sgo-radius-sheet)',
+        pill: 'var(--sgo-radius-pill)',
+      },
+      boxShadow: {
+        // Anel de foco duplo (2px surface + 2px brand)
+        'sgo-focus': 'var(--sgo-focus-ring)',
+      },
+      transitionTimingFunction: {
+        'sgo-std': 'var(--sgo-ease-std)',
+        'sgo-nav': 'var(--sgo-ease-nav)',
+        'sgo-spring': 'var(--sgo-ease-spring)',
+      },
+      transitionDuration: {
+        'sgo-1': '120ms',
+        'sgo-2': '200ms',
+        'sgo-3': '340ms',
+        'sgo-4': '400ms',
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
