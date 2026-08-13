@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Plus, Trash2, Check } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/ds/button';
 import { Input, Textarea, SearchField, CurrencyField } from '@/components/ui/ds/field';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
 
 /* Helpers da galeria (compartilhados pelas seções que entram a cada commit). */
 
@@ -119,6 +121,49 @@ export function FieldsSection() {
   );
 }
 
+/* ------------------------------------------------- Select e DatePicker */
+
+const UNIDADES = [
+  { value: 'u1', label: 'Moreira', hint: 'COMERCIAL LINS & GUEDES LTDA ( MOREIRA)' },
+  { value: 'u2', label: 'KM13', hint: 'COMERCIAL LINS & GUEDES LTDA (KM13)' },
+  { value: 'u3', label: 'Vivendas' },
+  { value: 'u4', label: 'Nova União (inativa)', disabled: true },
+];
+const CATEGORIAS = [
+  { value: 'self', label: 'Self-Service' },
+  { value: 'cozinha', label: 'Cozinha' },
+  { value: 'lanchonete', label: 'Lanchonete' },
+];
+
+export function ChoiceSection() {
+  const [unidade, setUnidade] = useState<string | null>('u1');
+  const [categoria, setCategoria] = useState<string | null>(null);
+  const [data, setData] = useState<string | null>('2026-08-11');
+  const [vazia, setVazia] = useState<string | null>(null);
+
+  return (
+    <GallerySection
+      title="Select e DatePicker"
+      hint="Ambos custom — nenhum <select> ou <input type=date> nativo chega em produção (regra 6). Teclado completo: setas, Enter, Esc; no calendário, PageUp/PageDown troca o mês."
+    >
+      <Panel>
+        <Grid>
+          <Select label="Unidade" options={UNIDADES} value={unidade} onValueChange={setUnidade} hint="Opção desabilitada é pulada pelo teclado." />
+          <Select label="Categoria" options={CATEGORIAS} value={categoria} onValueChange={setCategoria} placeholder="Selecione a categoria…" required error={categoria ? undefined : 'Escolha uma categoria.'} />
+          <Select label="Desabilitado" options={CATEGORIAS} value="self" onValueChange={() => {}} disabled />
+          <Select label="Tamanho sm" options={CATEGORIAS} value={categoria} onValueChange={setCategoria} size="sm" />
+        </Grid>
+        <div className="border-t border-line">
+          <Grid>
+            <DatePicker label="Data do lançamento" value={data} onValueChange={setData} hint="Hoje fica marcado com anel; dias fora do limite são bloqueados." />
+            <DatePicker label="Vencimento" value={vazia} onValueChange={setVazia} min="2026-08-01" max="2026-08-31" placeholder="dd/mm/aaaa" />
+          </Grid>
+        </div>
+      </Panel>
+    </GallerySection>
+  );
+}
+
 /* --------------------------------------------------------------- Galeria */
 
 export function ComponentsGallery() {
@@ -130,6 +175,7 @@ export function ComponentsGallery() {
       </p>
       <ButtonSection />
       <FieldsSection />
+      <ChoiceSection />
     </div>
   );
 }
