@@ -12,6 +12,8 @@ import { EmptyState } from '@/components/ui/ds/empty-state';
 import { StatCard } from '@/components/ui/ds/stat-card';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
 import { ProgressBar } from '@/components/ui/ds/progress-bar';
+import { Banner } from '@/components/ui/ds/banner';
+import { ToastProvider, useToast } from '@/components/ui/ds/toast';
 
 /* Helpers da galeria (compartilhados pelas seções que entram a cada commit). */
 
@@ -299,6 +301,51 @@ export function DataSection() {
   );
 }
 
+/* ------------------------------------------------------ Banner e Toast */
+
+function ToastDemo() {
+  const { toast } = useToast();
+  return (
+    <Row label="disparar">
+      <Button size="sm" variant="secondary" onClick={() => toast({ tone: 'success', title: 'Nota registrada', description: '49 notas importadas.' })}>Sucesso</Button>
+      <Button size="sm" variant="secondary" onClick={() => toast({ tone: 'info', title: 'Sincronizando com o RH…' })}>Info</Button>
+      <Button size="sm" variant="secondary" onClick={() => toast({ tone: 'warning', title: 'Comanda em divergência', description: 'Confira a faixa 100–160.' })}>Aviso</Button>
+      <Button size="sm" variant="secondary" onClick={() => toast({ tone: 'danger', title: 'Falha ao gravar', description: 'Tente novamente.' })}>Erro</Button>
+    </Row>
+  );
+}
+
+export function FeedbackSection() {
+  const [visivel, setVisivel] = useState(true);
+  return (
+    <GallerySection
+      title="Banner e Toast"
+      hint="Banner é aviso persistente no fluxo da página; Toast é confirmação passageira no canto. Ícone + texto carregam o significado; erros usam role=alert."
+    >
+      <div className="space-y-3">
+        <Banner tone="info" title="Sincronização automática às 03:00" description="Os dados do RH são atualizados uma vez por dia." />
+        <Banner tone="success" title="Importação concluída" description="49 notas gravadas, 0 duplicadas." />
+        <Banner
+          tone="warning"
+          title="9 comunicados pendentes de leitura"
+          description="A confirmação conta na meta do mês."
+          action={<Button size="sm" variant="secondary">Ver comunicados</Button>}
+        />
+        <Banner tone="danger" title="111 ocorrências abertas há mais de 48h" description="Priorize as de gravidade alta." />
+        {visivel && (
+          <Banner tone="info" title="Aviso dispensável" description="Tem botão de fechar." onDismiss={() => setVisivel(false)} />
+        )}
+      </div>
+
+      <div className="mt-4">
+        <ToastProvider>
+          <Panel><ToastDemo /></Panel>
+        </ToastProvider>
+      </div>
+    </GallerySection>
+  );
+}
+
 /* --------------------------------------------------------------- Galeria */
 
 export function ComponentsGallery() {
@@ -314,6 +361,7 @@ export function ComponentsGallery() {
       <SegmentedSection />
       <ListSection />
       <DataSection />
+      <FeedbackSection />
     </div>
   );
 }
