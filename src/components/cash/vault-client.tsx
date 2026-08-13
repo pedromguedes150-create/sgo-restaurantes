@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { FilterBar, FilterField, FilterSelect, FilterInput } from '@/components/ui/filter-bar';
+import { Button as DsButton } from '@/components/ui/ds/button';
+import { List, ListRow } from '@/components/ui/ds/list-row';
+import { Banner } from '@/components/ui/ds/banner';
 import { cn } from '@/lib/utils';
 
 type Bal = Record<string, number>;
@@ -176,17 +179,25 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
                 </div>
               )}
               {openRequests.length === 0 && action !== 'request' && <p className="text-sm text-muted-foreground">Nenhuma solicitação em aberto.</p>}
-              <div className="space-y-1.5">
-                {openRequests.map((r) => (
-                  <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background p-2 text-sm">
-                    <span className="min-w-0"><strong>{r.amount ? brl(r.amount) : 'Troco'}</strong> — {r.note}<span className="block text-xs text-muted-foreground">{r.requestedByName} · {dt(r.createdAt)}</span></span>
-                    <span className="flex gap-1.5">
-                      {canResolve && <Button size="sm" variant="gold" disabled={busy} onClick={() => void post({ action: 'resolveChange', id: r.id })}>Atender</Button>}
-                      <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Cancelar esta solicitação?')) void post({ action: 'resolveChange', id: r.id, cancel: true }); }}>Cancelar</Button>
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {openRequests.length > 0 && (
+                <List>
+                  {openRequests.map((r) => (
+                    <ListRow
+                      key={r.id}
+                      title={`${r.amount ? brl(r.amount) : 'Troco'} — ${r.note}`}
+                      subtitle={`${r.requestedByName} · ${dt(r.createdAt)}`}
+                      trailing={
+                        <>
+                          {canResolve && (
+                            <DsButton size="sm" disabled={busy} onClick={() => void post({ action: 'resolveChange', id: r.id })}>Atender</DsButton>
+                          )}
+                          <DsButton size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Cancelar esta solicitação?')) void post({ action: 'resolveChange', id: r.id, cancel: true }); }}>Cancelar</DsButton>
+                        </>
+                      }
+                    />
+                  ))}
+                </List>
+              )}
             </div>
           )}
 
@@ -211,12 +222,26 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
                 );
               })}
             </div>
-            <div className={cn('mt-2 rounded-md px-2 py-1 text-xs font-semibold', vault.bigNotesPct >= 50 ? 'bg-critical/10 text-critical' : 'bg-surface text-muted-foreground')}>
-              Notas grandes{indicatorLabel ? ` (${indicatorLabel})` : ''}: {brl(vault.bigNotesTotal)} ({vault.bigNotesPct}% do cofre){vault.bigNotesPct >= 50 ? ' — hora de pedir troca ao escritório!' : ''}
+            <div className="mt-2 space-y-2">
+              {vault.bigNotesPct >= 50 ? (
+                <Banner
+                  tone="warning"
+                  title={`Notas grandes${indicatorLabel ? ` (${indicatorLabel})` : ''}: ${brl(vault.bigNotesTotal)} — ${vault.bigNotesPct}% do cofre`}
+                  description="Hora de pedir troca ao escritório."
+                />
+              ) : (
+                <p className="text-[12px] tabular-nums text-ink-500">
+                  Notas grandes{indicatorLabel ? ` (${indicatorLabel})` : ''}: {brl(vault.bigNotesTotal)} ({vault.bigNotesPct}% do cofre)
+                </p>
+              )}
+              {vault.monthWithdrawals > 0 && (
+                <Banner
+                  tone="danger"
+                  title={`${vault.monthWithdrawals} retirada(s) para pagamento neste mês`}
+                  description="Prática proibida — a supervisão foi avisada."
+                />
+              )}
             </div>
-            {vault.monthWithdrawals > 0 && (
-              <p className="mt-1 rounded-md bg-critical/10 px-2 py-1 text-xs font-bold text-critical">🚨 {vault.monthWithdrawals} retirada(s) para pagamento neste mês — prática proibida, supervisão avisada.</p>
-            )}
           </div>
 
           {/* Baldes */}
