@@ -14,11 +14,13 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-/** Reflete a escolha no <html>: explícita → data-theme; 'system' → sem atributo. */
+/**
+ * Reflete a escolha no <html>. O atributo é SEMPRE escrito — inclusive
+ * 'system' — porque o CSS só segue o prefers-color-scheme quando
+ * data-theme="system". Sem atributo, o padrão de :root (claro) vale.
+ */
 function applyTheme(theme: ThemeChoice) {
-  const el = document.documentElement;
-  if (theme === 'system') el.removeAttribute('data-theme');
-  else el.setAttribute('data-theme', theme);
+  document.documentElement.setAttribute('data-theme', theme);
 }
 
 /**

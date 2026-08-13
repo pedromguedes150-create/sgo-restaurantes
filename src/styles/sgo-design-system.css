@@ -3,10 +3,17 @@
    Contrato: REDESIGN.md §3. Este é o ÚNICO arquivo onde hex literal é permitido.
    Componentes SÓ consomem var(--sgo-*). Não escreva hex fora daqui.
 
-   Temas: light por padrão em :root. Dark em dois lugares, para que a escolha
-   explícita (data-theme) sempre vença o prefers-color-scheme:
-     1) @media (prefers-color-scheme: dark) → :root:not([data-theme="light"])
-     2) :root[data-theme="dark"]
+   Temas: light por padrão em :root. O <html> SEMPRE recebe data-theme
+   (light | dark | system), carimbado no servidor a partir do cookie:
+     1) data-theme="dark"   → escuro sempre
+     2) data-theme="system" → segue prefers-color-scheme
+     3) data-theme="light" (padrão do app) → claro
+
+   POR QUE o padrão é claro e não "system" (transitório, até a Onda 3):
+   o conteúdo legado tem ~880 usos de cores FIXAS (text-brand, text-critical…)
+   que não reagem ao tema. Escurecer só as superfícies deixaria, por exemplo,
+   o bordô #6E1423 sobre card escuro (~1.3:1, ilegível). Quando o conteúdo
+   estiver migrado, basta o padrão voltar a ser "system".
    Tokens não-cromáticos (espaço, raio, medida, movimento, tipografia) são
    definidos uma vez em :root (não mudam por tema).
    ========================================================================== */
@@ -91,9 +98,9 @@
   --sgo-focus-ring: 0 0 0 2px var(--sgo-surface), 0 0 0 4px var(--sgo-brand);
 }
 
-/* Dark — segue o sistema, a menos que haja escolha explícita de light */
+/* Dark automático — SOMENTE para quem optou por "Sistema" (data-theme=system) */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root[data-theme='system'] {
     --sgo-ink-900: #f5f2f0;
     --sgo-ink-700: #d6d0cc;
     --sgo-ink-500: #b5ada7;

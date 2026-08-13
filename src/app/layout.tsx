@@ -39,18 +39,20 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // Lê a escolha de tema do cookie no servidor: se explícita, já marca data-theme
-  // no <html> (sem flash); 'system' fica sem atributo e o CSS usa prefers-color-scheme.
+  // Tema lido do cookie no servidor e carimbado no <html> antes do 1º paint
+  // (sem flash). Sem cookie, o padrão é CLARO — e não "system" — enquanto o
+  // conteúdo legado não usa os tokens do DS: escurecer só as superfícies
+  // deixaria textos de cor fixa (ex.: bordô) ilegíveis. Ver comentário em
+  // sgo-design-system.css; na Onda 3 o padrão volta a ser 'system'.
   const cookieTheme = cookies().get(THEME_COOKIE)?.value;
-  const theme: ThemeChoice = isThemeChoice(cookieTheme) ? cookieTheme : 'system';
-  const explicit = theme === 'light' || theme === 'dark';
+  const theme: ThemeChoice = isThemeChoice(cookieTheme) ? cookieTheme : 'light';
 
   return (
     <html
       lang="pt-BR"
       className={inter.variable}
       suppressHydrationWarning
-      {...(explicit ? { 'data-theme': theme } : {})}
+      data-theme={theme}
     >
       <body>
         <ThemeProvider initial={theme}>{children}</ThemeProvider>
