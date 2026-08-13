@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { Plus, Trash2, Check } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/ds/button';
+import { Input, Textarea, SearchField, CurrencyField } from '@/components/ui/ds/field';
 
 /* Helpers da galeria (compartilhados pelas seções que entram a cada commit). */
 
@@ -79,6 +81,44 @@ export function ButtonSection() {
   );
 }
 
+/* ------------------------------------------------------------- Campos */
+
+function Grid({ children }: { children: React.ReactNode }) {
+  return <div className="grid gap-4 p-4 sm:grid-cols-2">{children}</div>;
+}
+
+export function FieldsSection() {
+  const [busca, setBusca] = useState('');
+  const [valor, setValor] = useState<number | null>(1234.5);
+
+  return (
+    <GallerySection
+      title="Campos de texto"
+      hint="Rótulo, dica e erro no invólucro Field. O erro nunca é só cor — vem com ícone e texto. Valores monetários são tabulares e alinhados à direita."
+    >
+      <Panel>
+        <Grid>
+          <Input label="Nome do fornecedor" placeholder="ex.: Ultragaz" />
+          <Input label="Nº da nota" placeholder="6766" hint="Como aparece na DANFE." />
+          <Input label="CNPJ" defaultValue="05.336.082/0001-6" error="CNPJ precisa ter 14 dígitos." required />
+          <Input label="Unidade" defaultValue="Moreira" disabled hint="Definida pelo seletor no topo." />
+          <Input label="Tamanho sm" inputSize="sm" placeholder="32px" />
+          <Input label="Tamanho lg" inputSize="lg" placeholder="48px" />
+        </Grid>
+        <div className="border-t border-line">
+          <Grid>
+            <SearchField label="Busca" value={busca} onValueChange={setBusca} placeholder="Buscar fornecedor…" hint="Digite para ver o botão de limpar." />
+            <CurrencyField label="Valor total" value={valor} onValueChange={setValor} hint="Formata ao sair do campo." />
+          </Grid>
+        </div>
+        <div className="border-t border-line p-4">
+          <Textarea label="Observação" placeholder="Descreva o que aconteceu…" hint="Opcional." />
+        </div>
+      </Panel>
+    </GallerySection>
+  );
+}
+
 /* --------------------------------------------------------------- Galeria */
 
 export function ComponentsGallery() {
@@ -89,6 +129,7 @@ export function ComponentsGallery() {
         Biblioteca do design system (Onda 2). Todos os estados: padrão, foco, desabilitado, carregando.
       </p>
       <ButtonSection />
+      <FieldsSection />
     </div>
   );
 }
