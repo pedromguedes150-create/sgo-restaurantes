@@ -9,6 +9,9 @@ import { DatePicker } from '@/components/ui/ds/date-picker';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { List, ListRow, Avatar } from '@/components/ui/ds/list-row';
 import { EmptyState } from '@/components/ui/ds/empty-state';
+import { StatCard } from '@/components/ui/ds/stat-card';
+import { StatusBadge } from '@/components/ui/ds/status-badge';
+import { ProgressBar } from '@/components/ui/ds/progress-bar';
 
 /* Helpers da galeria (compartilhados pelas seções que entram a cada commit). */
 
@@ -255,6 +258,47 @@ export function ListSection() {
   );
 }
 
+/* ------------------------------------ StatCard, StatusBadge, ProgressBar */
+
+export function DataSection() {
+  return (
+    <GallerySection
+      title="StatCard, StatusBadge e ProgressBar"
+      hint="Números na escala 11 / 34 / 13, sempre tabulares. Sem dado é “–” em ink-400 — nunca zero, que mentiria. O texto do badge carrega o significado; a cor só reforça."
+    >
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Meta média" value="82%" delta={4.2} hint="vs. julho" />
+        <StatCard label="Desperdício" value="128,4 kg" delta={-11.5} invertDelta hint="queda é bom" />
+        <StatCard label="Ocorrências graves" value={3} delta={12} invertDelta hint="vs. julho" />
+        <StatCard label="Divergências de troco" value={null} hint="sem lançamento no mês" />
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Panel>
+          <Row label="tons">
+            <StatusBadge tone="success" dot>Concluída</StatusBadge>
+            <StatusBadge tone="warning" dot>Fora do prazo</StatusBadge>
+            <StatusBadge tone="danger" dot>Não realizada</StatusBadge>
+            <StatusBadge tone="info" dot>Em análise</StatusBadge>
+          </Row>
+          <Row label="sem ponto">
+            <StatusBadge tone="brand">Recebida</StatusBadge>
+            <StatusBadge tone="neutral">Rascunho</StatusBadge>
+            <StatusBadge tone="danger">Devolvida</StatusBadge>
+          </Row>
+        </Panel>
+
+        <div className="space-y-4 rounded-card border border-line bg-sgo-surface p-4">
+          <ProgressBar label="Checklists de hoje" value={15} max={29} valueLabel="15/29" />
+          <ProgressBar label="Meta do mês" value={82} tone="success" />
+          <ProgressBar label="Cobertura de desperdício" value={41} tone="warning" />
+          <ProgressBar label="Comandas conferidas" value={8} tone="danger" />
+        </div>
+      </div>
+    </GallerySection>
+  );
+}
+
 /* --------------------------------------------------------------- Galeria */
 
 export function ComponentsGallery() {
@@ -269,6 +313,7 @@ export function ComponentsGallery() {
       <ChoiceSection />
       <SegmentedSection />
       <ListSection />
+      <DataSection />
     </div>
   );
 }
