@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Field, controlBase, controlSize, controlTone } from './field';
+import { Field, controlBase, controlSize, controlTone, useDescribedBy } from './field';
 
 /**
  * DatePicker do design system (Onda 2) — CUSTOM, sem <input type="date"> (regra 6).
@@ -33,6 +33,7 @@ export function DatePicker({
   label, hint, error, required, disabled, size = 'md', placeholder = 'dd/mm/aaaa', className,
 }: DatePickerProps) {
   const id = React.useId();
+  const { descId, describedBy } = useDescribedBy(id, hint, error);
   const [open, setOpen] = React.useState(false);
   const [cursor, setCursor] = React.useState(() => value ?? todayISO());
   const rootRef = React.useRef<HTMLDivElement>(null);
@@ -68,7 +69,7 @@ export function DatePicker({
   }
 
   return (
-    <Field label={label} hint={hint} error={error} required={required} htmlFor={id}>
+    <Field label={label} hint={hint} error={error} required={required} htmlFor={id} descId={descId}>
       <div className="relative" ref={rootRef}>
         <button
           id={id}
@@ -76,7 +77,9 @@ export function DatePicker({
           disabled={disabled}
           aria-haspopup="dialog"
           aria-expanded={open}
-          aria-invalid={error ? true : undefined}
+          // Num <button> puro, aria-invalid não é suportado: o erro é anunciado
+          // pelo texto do Field via aria-describedby.
+          aria-describedby={describedBy}
           onClick={() => setOpen((v) => !v)}
           className={cn(controlBase, controlSize[size], controlTone(!!error), 'flex items-center gap-2 text-left tabular-nums', className)}
         >

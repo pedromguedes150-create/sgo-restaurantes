@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Field, controlBase, controlSize, controlTone } from './field';
+import { Field, controlBase, controlSize, controlTone, useDescribedBy } from './field';
 
 /**
  * Select do design system (Onda 2) — CUSTOM, sem <select> nativo (regra 6).
@@ -29,6 +29,7 @@ export function Select({
 }: SelectProps) {
   const id = React.useId();
   const listId = `${id}-list`;
+  const { descId, describedBy } = useDescribedBy(id, hint, error);
   const [open, setOpen] = React.useState(false);
   const [active, setActive] = React.useState(0);
   const rootRef = React.useRef<HTMLDivElement>(null);
@@ -82,7 +83,7 @@ export function Select({
   }
 
   return (
-    <Field label={label} hint={hint} error={error} required={required} htmlFor={id}>
+    <Field label={label} hint={hint} error={error} required={required} htmlFor={id} descId={descId}>
       <div className="relative" ref={rootRef}>
         <button
           id={id}
@@ -92,7 +93,9 @@ export function Select({
           aria-haspopup="listbox"
           aria-controls={open ? listId : undefined}
           aria-activedescendant={open ? `${id}-opt-${active}` : undefined}
+          // aria-invalid é válido em role=combobox (não seria num button puro).
           aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
           disabled={disabled}
           onClick={() => setOpen((v) => !v)}
           onKeyDown={onKeyDown}
