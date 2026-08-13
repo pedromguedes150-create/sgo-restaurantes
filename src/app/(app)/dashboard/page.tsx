@@ -9,6 +9,7 @@ import { getToApproveCount } from '@/lib/payments/query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ProgressRing } from '@/components/dashboard/progress-ring';
+import { AttentionCard, type AttentionItem } from '@/components/dashboard/attention-card';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
 import { ListChecks, AlertTriangle, ScrollText, Trophy, ChevronRight } from 'lucide-react';
 
@@ -49,7 +50,44 @@ export default async function DashboardPage() {
     getToApproveCount(user),
   ]);
   const isManagerView = user.role === 'MANAGER' || user.role === 'COORDINATOR';
-  const occAlert = occ.criticalOpen > 0 || occ.openOver48h > 0;
+
+  // Pendências do topo: uma lista só, ordenada por gravidade dentro do card.
+  const attention: AttentionItem[] = [];
+  if (occ.criticalOpen > 0 || occ.openOver48h > 0) {
+    attention.push({
+      id: 'ocorrencias',
+      tone: 'danger',
+      href: '/modulos/ocorrencias?status=OPEN',
+      text: [
+        occ.criticalOpen > 0 && `${occ.criticalOpen} ocorrência(s) crítica(s) aberta(s)`,
+        occ.openOver48h > 0 && `${occ.openOver48h} aberta(s) há mais de 48h`,
+      ].filter(Boolean).join(' · ') + '.',
+    });
+  }
+  if (openDiv > 0) {
+    attention.push({
+      id: 'comandas',
+      tone: 'warning',
+      href: '/modulos/comandas',
+      text: `${openDiv} comanda(s) com divergência aguardando verificação.`,
+    });
+  }
+  if (pendingCanc > 0) {
+    attention.push({
+      id: 'cancelamentos',
+      tone: 'warning',
+      href: '/modulos/cancelamentos',
+      text: `${pendingCanc} cancelamento(s) aguardando justificativa.`,
+    });
+  }
+  if (toApprove > 0) {
+    attention.push({
+      id: 'pagamentos',
+      tone: 'info',
+      href: '/modulos/pagamentos',
+      text: `${toApprove} pagamento(s) aguardando sua aprovação.`,
+    });
+  }
 
   return (
     <div className="space-y-5">
@@ -63,50 +101,7 @@ export default async function DashboardPage() {
         </p>
       </section>
 
-      {occAlert && (
-        <Link href="/modulos/ocorrencias?status=OPEN">
-          <Card className="border-critical/50 bg-critical/5">
-            <CardContent className="flex items-center gap-3 py-3 text-sm font-semibold text-critical">
-              <AlertTriangle className="h-5 w-5" />
-              {occ.criticalOpen > 0 && `${occ.criticalOpen} ocorrência(s) ⚫ crítica(s) aberta(s). `}
-              {occ.openOver48h > 0 && `${occ.openOver48h} aberta(s) há +48h.`}
-            </CardContent>
-          </Card>
-        </Link>
-      )}
-
-      {pendingCanc > 0 && (
-        <Link href="/modulos/cancelamentos">
-          <Card className="border-medium/50 bg-medium/5">
-            <CardContent className="flex items-center gap-3 py-3 text-sm font-semibold text-[#92600A]">
-              <AlertTriangle className="h-5 w-5" />
-              {pendingCanc} cancelamento(s) aguardando justificativa.
-            </CardContent>
-          </Card>
-        </Link>
-      )}
-
-      {openDiv > 0 && (
-        <Link href="/modulos/comandas">
-          <Card className="border-medium/50 bg-medium/5">
-            <CardContent className="flex items-center gap-3 py-3 text-sm font-semibold text-[#92600A]">
-              <AlertTriangle className="h-5 w-5 shrink-0" />
-              {openDiv} comanda(s) com divergência (faltaram na contagem) aguardando verificação — toque para resolver.
-            </CardContent>
-          </Card>
-        </Link>
-      )}
-
-      {toApprove > 0 && (
-        <Link href="/modulos/pagamentos">
-          <Card className="border-accent/50 bg-accent/5">
-            <CardContent className="flex items-center gap-3 py-3 text-sm font-semibold text-gold-dark">
-              <AlertTriangle className="h-5 w-5" />
-              {toApprove} pagamento(s) aguardando sua aprovação.
-            </CardContent>
-          </Card>
-        </Link>
-      )}
+      <AttentionCard items={attention} />
 
       {isManagerView ? (
         <ManagerDashboard overviews={overviews} />
