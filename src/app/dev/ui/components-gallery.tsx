@@ -14,6 +14,8 @@ import { StatusBadge } from '@/components/ui/ds/status-badge';
 import { ProgressBar } from '@/components/ui/ds/progress-bar';
 import { Banner } from '@/components/ui/ds/banner';
 import { ToastProvider, useToast } from '@/components/ui/ds/toast';
+import { Modal } from '@/components/ui/ds/modal';
+import { Sheet } from '@/components/ui/ds/sheet';
 
 /* Helpers da galeria (compartilhados pelas seções que entram a cada commit). */
 
@@ -346,6 +348,66 @@ export function FeedbackSection() {
   );
 }
 
+/* ------------------------------------------------------- Modal e Sheet */
+
+export function OverlaySection() {
+  const [modal, setModal] = useState(false);
+  const [sheet, setSheet] = useState(false);
+
+  return (
+    <GallerySection
+      title="Modal e Sheet"
+      hint="Esc fecha, o foco entra e circula (Tab não escapa), a rolagem do fundo trava e o foco volta para quem abriu. O Sheet sobe de baixo e o conteúdo atrás recua para scale(.94)."
+    >
+      <Panel>
+        <Row label="abrir">
+          <Button variant="secondary" onClick={() => setModal(true)}>Abrir Modal</Button>
+          <Button variant="secondary" onClick={() => setSheet(true)}>Abrir Sheet</Button>
+        </Row>
+      </Panel>
+
+      <Modal
+        open={modal}
+        onClose={() => setModal(false)}
+        title="Excluir lançamento?"
+        description="Esta ação não pode ser desfeita."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setModal(false)}>Cancelar</Button>
+            <Button variant="danger" onClick={() => setModal(false)}>Excluir</Button>
+          </>
+        }
+      >
+        <p className="text-[14px] text-ink-700">
+          O lançamento de <strong>R$ 2.841,61</strong> (Froneri Brasil, nº 611293) sairá do
+          histórico e da meta do mês. Fica registrado no Log de Auditoria.
+        </p>
+      </Modal>
+
+      <Sheet
+        open={sheet}
+        onClose={() => setSheet(false)}
+        title="Detalhe do pagamento"
+        description="César Alcides Vilaça Coelho · Freelancer"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setSheet(false)}>Fechar</Button>
+            <Button onClick={() => setSheet(false)}>Aprovar</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <ProgressBar label="Aprovações do dia" value={3} max={4} valueLabel="3/4" />
+          <p className="text-[14px] text-ink-700">
+            Valor de <strong className="tabular-nums">R$ 120,00</strong>, solicitado em 01/08 por Krislley.
+            PIX cadastrado, sem divergência com o valor padrão.
+          </p>
+        </div>
+      </Sheet>
+    </GallerySection>
+  );
+}
+
 /* --------------------------------------------------------------- Galeria */
 
 export function ComponentsGallery() {
@@ -362,6 +424,7 @@ export function ComponentsGallery() {
       <ListSection />
       <DataSection />
       <FeedbackSection />
+      <OverlaySection />
     </div>
   );
 }

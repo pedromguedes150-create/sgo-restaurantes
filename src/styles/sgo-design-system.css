@@ -253,3 +253,36 @@
     animation: none;
   }
 }
+
+/* Sheet: sobe de baixo (Onda 2). */
+@keyframes sgo-sheet-enter {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+.sgo-sheet-enter {
+  animation: sgo-sheet-enter var(--sgo-dur-3) var(--sgo-ease-nav) both;
+}
+
+/* Enquanto um Sheet está aberto, o conteúdo atrás recua para scale(.94).
+   Opt-in: a tela marca o container com [data-sheet-scales]. */
+[data-sheet-scales] {
+  transition: transform var(--sgo-dur-3) var(--sgo-ease-nav);
+  transform-origin: top center;
+}
+:root[data-sheet-open='true'] [data-sheet-scales] {
+  transform: scale(0.94);
+  border-radius: var(--sgo-radius-sheet);
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sgo-sheet-enter {
+    animation: none;
+  }
+  [data-sheet-scales] {
+    transition: none;
+  }
+}

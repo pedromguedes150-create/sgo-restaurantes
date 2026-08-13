@@ -220,7 +220,8 @@ export function DevUiClient() {
   }, [reduced]);
 
   return (
-    <div className="min-h-screen bg-canvas text-ink-900">
+    // data-sheet-scales: este container recua para scale(.94) quando um Sheet abre.
+    <div data-sheet-scales className="min-h-screen bg-canvas text-ink-900">
       <div className="mx-auto max-w-5xl px-6 py-16">
         <header className="mb-16 flex flex-wrap items-end justify-between gap-4">
           <div>
