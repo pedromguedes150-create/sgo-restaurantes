@@ -16,6 +16,8 @@ import { Banner } from '@/components/ui/ds/banner';
 import { ToastProvider, useToast } from '@/components/ui/ds/toast';
 import { Modal } from '@/components/ui/ds/modal';
 import { Sheet } from '@/components/ui/ds/sheet';
+import { Table, type Column } from '@/components/ui/ds/table';
+import { Skeleton, SkeletonText, SkeletonList, SkeletonStatCard } from '@/components/ui/ds/skeleton';
 
 /* Helpers da galeria (compartilhados pelas seções que entram a cada commit). */
 
@@ -408,6 +410,69 @@ export function OverlaySection() {
   );
 }
 
+/* ---------------------------------------------------------------- Table */
+
+interface Unidade { id: string; nome: string; meta: number; desperdicio: number | null; ocorrencias: number; uso: string }
+const LINHAS: Unidade[] = [
+  { id: '1', nome: 'KM13', meta: 100, desperdicio: 42.5, ocorrencias: 3, uso: 'Alto' },
+  { id: '2', nome: 'Nova União', meta: 99, desperdicio: 38.1, ocorrencias: 0, uso: 'Alto' },
+  { id: '3', nome: 'Vivendas', meta: 85, desperdicio: null, ocorrencias: 1, uso: 'Médio' },
+  { id: '4', nome: 'Moreira', meta: 61, desperdicio: 121.4, ocorrencias: 8, uso: 'Médio' },
+  { id: '5', nome: 'Centro de Distribuição', meta: 0, desperdicio: null, ocorrencias: 0, uso: 'Baixo' },
+];
+
+export function TableSection() {
+  const colunas: Column<Unidade>[] = [
+    { key: 'nome', header: 'Unidade', cell: (r) => <span className="font-medium text-ink-900">{r.nome}</span> },
+    { key: 'meta', header: 'Meta', numeric: true, cell: (r) => `${r.meta}%` },
+    { key: 'desp', header: 'Desperdício (kg)', numeric: true, cell: (r) => (r.desperdicio == null ? null : r.desperdicio.toLocaleString('pt-BR')) },
+    { key: 'ocor', header: 'Ocorrências', numeric: true, hideOnMobile: true, cell: (r) => r.ocorrencias },
+    { key: 'uso', header: 'Uso', cell: (r) => <StatusBadge tone={r.uso === 'Alto' ? 'success' : r.uso === 'Médio' ? 'warning' : 'danger'} dot>{r.uso}</StatusBadge> },
+  ];
+
+  return (
+    <GallerySection
+      title="Table"
+      hint="Cabeçalho gruda no topo, colunas numéricas já saem à direita com tabular-nums e valor ausente vira “–”. A tabela rola no próprio container — a página nunca rola na horizontal."
+    >
+      <Table columns={colunas} rows={LINHAS} getRowKey={(r) => r.id} caption="Desempenho por unidade" onRowClick={() => {}} />
+      <div className="mt-4">
+        <Table
+          columns={colunas}
+          rows={[]}
+          getRowKey={(r) => r.id}
+          empty={<EmptyState size="sm" icon={Inbox} title="Nenhuma unidade no filtro" description="Limpe os filtros para ver a rede inteira." />}
+        />
+      </div>
+    </GallerySection>
+  );
+}
+
+/* ------------------------------------------------------------- Skeleton */
+
+export function SkeletonSection() {
+  return (
+    <GallerySection
+      title="Skeleton"
+      hint="O placeholder tem a FORMA do conteúdo que vai chegar (mesma altura de linha, mesmo avatar), então a lista não “pula” quando os dados carregam."
+    >
+      <div className="grid gap-4 lg:grid-cols-2">
+        <SkeletonList rows={4} />
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+          </div>
+          <div className="rounded-card border border-line bg-sgo-surface p-4">
+            <SkeletonText lines={3} />
+            <Skeleton className="mt-4 h-10 w-32" />
+          </div>
+        </div>
+      </div>
+    </GallerySection>
+  );
+}
+
 /* --------------------------------------------------------------- Galeria */
 
 export function ComponentsGallery() {
@@ -425,6 +490,8 @@ export function ComponentsGallery() {
       <DataSection />
       <FeedbackSection />
       <OverlaySection />
+      <TableSection />
+      <SkeletonSection />
     </div>
   );
 }
