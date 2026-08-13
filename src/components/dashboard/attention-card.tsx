@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -27,8 +27,17 @@ const numberTone: Record<AttentionTone, string> = {
   info: 'bg-info-bg text-info',
 };
 
-export function AttentionCard({ items }: { items: AttentionItem[] }) {
-  if (items.length === 0) return null;
+export function AttentionCard({ items, emptyText }: { items: AttentionItem[]; emptyText?: string }) {
+  if (items.length === 0) {
+    // Sem pendência: confirmação calma (ou nada, se a tela não quiser ruído).
+    if (!emptyText) return null;
+    return (
+      <section className="flex items-center gap-2 rounded-card border border-line bg-sgo-success-bg px-4 py-3">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-sgo-success" aria-hidden />
+        <p className="text-[14px] font-medium text-ink-900">{emptyText}</p>
+      </section>
+    );
+  }
   const ordered = [...items].sort((a, b) => RANK[a.tone] - RANK[b.tone]);
 
   return (

@@ -10,8 +10,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ProgressRing } from '@/components/dashboard/progress-ring';
 import { AttentionCard, type AttentionItem } from '@/components/dashboard/attention-card';
+import { List, ListRow } from '@/components/ui/ds/list-row';
+import { StatusBadge as DsStatusBadge, type Tone as DsToneName } from '@/components/ui/ds/status-badge';
+import { EmptyState } from '@/components/ui/ds/empty-state';
+import { shortUnitName } from '@/lib/unit-name';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
-import { ListChecks, AlertTriangle, ScrollText, Trophy, ChevronRight } from 'lucide-react';
+import { ListChecks, AlertTriangle, ScrollText, Trophy, ChevronRight, Building2 } from 'lucide-react';
+
+/** Semáforo legado (success/medium/critical) → tons do design system. */
+function dsTone(t: 'success' | 'medium' | 'critical' | 'neutral'): DsToneName {
+  return t === 'medium' ? 'warning' : t === 'critical' ? 'danger' : t === 'neutral' ? 'neutral' : 'success';
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +62,15 @@ export default async function DashboardPage() {
 
   // Pendências do topo: uma lista só, ordenada por gravidade dentro do card.
   const attention: AttentionItem[] = [];
+  const totalOverdue = overviews.reduce((s, o) => s + o.summary.overdue + o.summary.missed, 0);
+  if (totalOverdue > 0) {
+    attention.push({
+      id: 'tarefas',
+      tone: 'danger',
+      href: '/tarefas?filter=atrasadas',
+      text: `${totalOverdue} tarefa(s) atrasada(s) ou não realizada(s) na rede.`,
+    });
+  }
   if (occ.criticalOpen > 0 || occ.openOver48h > 0) {
     attention.push({
       id: 'ocorrencias',
@@ -101,7 +119,7 @@ export default async function DashboardPage() {
         </p>
       </section>
 
-      <AttentionCard items={attention} />
+      <AttentionCard items={attention} emptyText="Tudo em dia — nenhuma pendência agora." />
 
       {isManagerView ? (
         <ManagerDashboard overviews={overviews} />
@@ -171,26 +189,19 @@ function ManagerDashboard({
       </Card>
 
       {/* Por unidade (quando multi-unidade) — cada linha abre as tarefas da unidade */}
-      {overviews.length > 1 &&
-        overviews.map((o) => (
-          <Link
-            key={o.unit.id}
-            href={`/tarefas?unit=${o.unit.id}`}
-            aria-label={`Ver as tarefas de hoje da unidade ${o.unit.name}`}
-            className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3 py-3 transition-colors hover:border-accent active:bg-secondary/60"
-          >
-            <div className="min-w-0">
-              <p className="font-semibold text-brand">{o.unit.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {o.summary.done}/{o.summary.total} hoje · meta {o.monthScore.scorePct}%
-              </p>
-            </div>
-            <span className="flex shrink-0 items-center gap-1">
-              <StatusBadge tone={o.summary.tone}>{toneLabel(o.summary.tone)}</StatusBadge>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
-            </span>
-          </Link>
-        ))}
+      {overviews.length > 1 && (
+        <List>
+          {overviews.map((o) => (
+            <ListRow
+              key={o.unit.id}
+              href={`/tarefas?unit=${o.unit.id}`}
+              title={shortUnitName(o.unit.name)}
+              subtitle={`${o.summary.done}/${o.summary.total} hoje · meta ${o.monthScore.scorePct}%`}
+              trailing={<DsStatusBadge tone={dsTone(o.summary.tone)} dot>{toneLabel(o.summary.tone)}</DsStatusBadge>}
+            />
+          ))}
+        </List>
+      )}
 
       <Shortcuts />
     </div>
@@ -206,83 +217,51 @@ function ConsolidatedDashboard({
   canSeeAudit: boolean;
 }) {
   const ranking = [...overviews].sort((a, b) => b.monthScore.scorePct - a.monthScore.scorePct);
-  const totalOverdue = overviews.reduce((s, o) => s + o.summary.overdue + o.summary.missed, 0);
 
   return (
-    // Desktop (lg+): 2 colunas (ver comentário no ManagerDashboard). Os alertas
-    // ocupam a linha inteira para não perderem destaque.
+    // Desktop (lg+): 2 colunas (ver comentário no ManagerDashboard).
     <div className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
-      {/* Alertas críticos */}
-      <div className="lg:col-span-2">
-        {totalOverdue > 0 ? (
-          <Link href="/tarefas?filter=atrasadas">
-            <Card className="border-critical/40 transition-colors hover:border-critical">
-              <CardContent className="flex items-center gap-3 py-4">
-                <AlertTriangle className="h-6 w-6 text-critical" />
-                <p className="text-sm font-semibold">{totalOverdue} tarefa(s) atrasada(s)/não realizada(s) na rede — ver →</p>
-              </CardContent>
-            </Card>
-          </Link>
-        ) : (
-          <Card>
-            <CardContent className="flex items-center gap-3 py-4">
-              <AlertTriangle className="h-6 w-6 text-success" />
-              <p className="text-sm font-semibold">Nenhuma pendência crítica agora</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
       {/* Semáforo por unidade */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Unidades hoje</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {overviews.map((o) => (
-            <Link
-              key={o.unit.id}
-              href={`/tarefas?unit=${o.unit.id}`}
-              aria-label={`Ver as tarefas de hoje da unidade ${o.unit.name}`}
-              className="flex items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-3 transition-colors hover:border-accent active:bg-secondary/60"
-            >
-              <div className="min-w-0">
-                <p className="font-semibold text-brand">{o.unit.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {o.summary.done}/{o.summary.total} concluídas
-                  {o.summary.overdue > 0 && ` · ${o.summary.overdue} atrasada(s)`}
-                </p>
-              </div>
-              <span className="flex shrink-0 items-center gap-1">
-                <StatusBadge tone={o.summary.tone}>{toneLabel(o.summary.tone)}</StatusBadge>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
-              </span>
-            </Link>
-          ))}
-          {overviews.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhuma unidade.</p>
-          )}
-        </CardContent>
-      </Card>
+      <section>
+        <h2 className="mb-2 text-[15px] font-semibold text-ink-900">Unidades hoje</h2>
+        {overviews.length === 0 ? (
+          <EmptyState size="sm" icon={Building2} title="Nenhuma unidade" description="Cadastre uma unidade em Configurações." />
+        ) : (
+          <List>
+            {overviews.map((o) => (
+              <ListRow
+                key={o.unit.id}
+                href={`/tarefas?unit=${o.unit.id}`}
+                title={shortUnitName(o.unit.name)}
+                subtitle={`${o.summary.done}/${o.summary.total} concluídas${o.summary.overdue > 0 ? ` · ${o.summary.overdue} atrasada(s)` : ''}`}
+                trailing={<DsStatusBadge tone={dsTone(o.summary.tone)} dot>{toneLabel(o.summary.tone)}</DsStatusBadge>}
+              />
+            ))}
+          </List>
+        )}
+      </section>
 
       {/* Ranking mensal de metas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-accent" /> Ranking de metas (mês)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
+      <section>
+        <h2 className="mb-2 flex items-center gap-2 text-[15px] font-semibold text-ink-900">
+          <Trophy className="h-4 w-4 text-ink-400" aria-hidden /> Ranking de metas (mês)
+        </h2>
+        <List>
           {ranking.map((o, i) => (
-            <div key={o.unit.id} className="flex items-center justify-between text-sm">
-              <span className="font-medium">
-                {i + 1}. {o.unit.name}
-              </span>
-              <span className="font-bold text-brand">{o.monthScore.scorePct}%</span>
-            </div>
+            <ListRow
+              key={o.unit.id}
+              href={`/tarefas?unit=${o.unit.id}`}
+              leading={
+                <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-sunken text-[13px] font-bold tabular-nums text-ink-700">
+                  {i + 1}
+                </span>
+              }
+              title={shortUnitName(o.unit.name)}
+              trailing={<span className="text-[15px] font-bold tabular-nums text-ink-900">{o.monthScore.scorePct}%</span>}
+            />
           ))}
-        </CardContent>
-      </Card>
+        </List>
+      </section>
 
       {canSeeAudit && (
         <div className="grid grid-cols-2 gap-3 lg:col-span-2">
@@ -313,14 +292,16 @@ function Shortcuts() {
   );
 }
 
+// Sem emoji de cor: o StatusBadge do DS já traz o ponto colorido, e o texto
+// sozinho já carrega o significado (DoD: nada só por cor).
 function toneLabel(tone: string): string {
   switch (tone) {
     case 'success':
-      return '🟢 OK';
+      return 'OK';
     case 'medium':
-      return '🟡 Pendente';
+      return 'Pendente';
     case 'critical':
-      return '🔴 Atenção';
+      return 'Atenção';
     default:
       return '—';
   }
