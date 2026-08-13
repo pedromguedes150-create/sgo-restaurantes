@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
-import { formatBRL } from '@/lib/utils';
+import { formatBRL, cn } from '@/lib/utils';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
+import { Button as DsButton } from '@/components/ui/ds/button';
+import { Banner } from '@/components/ui/ds/banner';
 
 export interface PayDetail {
   workDate: string | null; shift: string | null; workStartTime: string | null; workEndTime: string | null;
@@ -84,6 +86,36 @@ export function PaymentsClient({
   const [tab, setTab] = useState<Tab>(toApprove.length > 0 ? 'aprovar' : 'nova');
   const [busy, setBusy] = useState(false);
   const [dateEditId, setDateEditId] = useState<string | null>(null);
+  // Seleção para aprovação em lote (aba "Para Aprovar").
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [batchMsg, setBatchMsg] = useState<{ tone: 'success' | 'warning' | 'danger'; title: string; description?: string } | null>(null);
+  const selTotal = useMemo(() => toApprove.filter((r) => sel.has(r.id)).reduce((s, r) => s + r.amount, 0), [toApprove, sel]);
+
+  async function approveSelected() {
+    if (sel.size === 0) return;
+    const ids = [...sel];
+    if (!confirm(`Aprovar ${ids.length} pagamento(s), somando ${formatBRL(selTotal)}?`)) return;
+    setBusy(true);
+    setBatchMsg(null);
+    try {
+      const res = await fetch('/api/payments/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approveMany', ids }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setBatchMsg({ tone: 'danger', title: d.error ?? 'Falha ao aprovar em lote' }); return; }
+      setSel(new Set());
+      setBatchMsg(
+        d.failed?.length
+          ? { tone: 'warning', title: `${d.approved} aprovada(s), ${d.failed.length} não passaram`, description: 'As que falharam podem já ter sido aprovadas por outra pessoa ou estar fora do seu perfil de aprovação.' }
+          : { tone: 'success', title: `${d.approved} pagamento(s) aprovado(s)`, description: 'O Financeiro foi avisado uma única vez, com o total consolidado.' },
+      );
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function act(id: string, action: string, extra?: Record<string, unknown>) {
     setBusy(true);
@@ -150,15 +182,47 @@ export function PaymentsClient({
       {tab === 'minhas' && <List items={mine} />}
 
       {tab === 'aprovar' && (
-        <List
-          items={toApprove}
-          actions={(r) => (
-            <div className="flex gap-2">
-              <Button size="sm" disabled={busy} onClick={() => act(r.id, 'approve')}><Check className="h-4 w-4" /> Aprovar</Button>
-              <Button size="sm" variant="destructive" disabled={busy} onClick={() => { const m = prompt('Motivo da rejeição:'); if (m) act(r.id, 'reject', { reason: m }); }}><X className="h-4 w-4" /> Rejeitar</Button>
+        <>
+          {toApprove.length > 1 && (
+            // Barra de lote: gruda no topo para o gestor não precisar rolar de
+            // volta depois de marcar dezenas de itens.
+            <div className="sticky top-14 z-20 -mx-1 flex flex-wrap items-center gap-2 rounded-card border border-line bg-glass px-3 py-2 backdrop-blur-xl">
+              <label className="flex cursor-pointer items-center gap-2 text-[13px] font-medium text-ink-700">
+                <input
+                  type="checkbox"
+                  checked={sel.size === toApprove.length && toApprove.length > 0}
+                  ref={(el) => { if (el) el.indeterminate = sel.size > 0 && sel.size < toApprove.length; }}
+                  onChange={() => setSel((s) => (s.size === toApprove.length ? new Set() : new Set(toApprove.map((r) => r.id))))}
+                  style={{ accentColor: 'var(--sgo-brand)' }}
+                  className="h-4 w-4 rounded outline-none focus-visible:shadow-sgo-focus"
+                />
+                Selecionar todas ({toApprove.length})
+              </label>
+              <span className="text-[13px] tabular-nums text-ink-500">
+                {sel.size} selecionada(s) · {formatBRL(selTotal)}
+              </span>
+              <span className="ml-auto flex gap-2">
+                {sel.size > 0 && <DsButton size="sm" variant="ghost" onClick={() => setSel(new Set())}>Limpar</DsButton>}
+                <DsButton size="sm" disabled={sel.size === 0} loading={busy} onClick={approveSelected}>
+                  <Check className="h-4 w-4" /> Aprovar selecionadas
+                </DsButton>
+              </span>
             </div>
           )}
-        />
+          {batchMsg && (
+            <Banner tone={batchMsg.tone} title={batchMsg.title} description={batchMsg.description} onDismiss={() => setBatchMsg(null)} />
+          )}
+          <List
+            items={toApprove}
+            selection={toApprove.length > 1 ? { ids: sel, onToggle: (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }) } : undefined}
+            actions={(r) => (
+              <div className="flex gap-2">
+                <Button size="sm" disabled={busy} onClick={() => act(r.id, 'approve')}><Check className="h-4 w-4" /> Aprovar</Button>
+                <Button size="sm" variant="destructive" disabled={busy} onClick={() => { const m = prompt('Motivo da rejeição:'); if (m) act(r.id, 'reject', { reason: m }); }}><X className="h-4 w-4" /> Rejeitar</Button>
+              </div>
+            )}
+          />
+        </>
       )}
 
       {tab === 'pagar' && (
@@ -269,9 +333,21 @@ function DetailView({ r }: { r: PayReq }) {
   );
 }
 
-function Row({ r, open, onToggle, actions }: { r: PayReq; open: boolean; onToggle: () => void; actions?: (r: PayReq) => React.ReactNode }) {
+function Row({ r, open, onToggle, actions, selected, onSelect }: { r: PayReq; open: boolean; onToggle: () => void; actions?: (r: PayReq) => React.ReactNode; selected?: boolean; onSelect?: () => void }) {
   return (
-    <div className="rounded-lg border bg-card p-3">
+    <div className={cn('rounded-lg border bg-card p-3', selected && 'border-sgo-brand bg-sgo-brand-tint')}>
+      {onSelect && (
+        <label className="mb-2 flex cursor-pointer items-center gap-2 text-[13px] font-medium text-ink-700">
+          <input
+            type="checkbox"
+            checked={!!selected}
+            onChange={onSelect}
+            style={{ accentColor: 'var(--sgo-brand)' }}
+            className="h-4 w-4 rounded outline-none focus-visible:shadow-sgo-focus"
+          />
+          Selecionar para aprovação em lote
+        </label>
+      )}
       <button onClick={onToggle} className="flex w-full items-start justify-between gap-2 text-left">
         <span className="min-w-0">
           <span className="block font-semibold text-brand">{TYPE_LABEL[r.type]} · {r.title}</span>
@@ -301,7 +377,12 @@ function Row({ r, open, onToggle, actions }: { r: PayReq; open: boolean; onToggl
   );
 }
 
-function List({ items, actions }: { items: PayReq[]; actions?: (r: PayReq) => React.ReactNode }) {
+function List({ items, actions, selection }: {
+  items: PayReq[];
+  actions?: (r: PayReq) => React.ReactNode;
+  /** Quando presente, cada linha ganha caixa de seleção (aprovação em lote). */
+  selection?: { ids: Set<string>; onToggle: (id: string) => void };
+}) {
   const [open, setOpen] = useState<Set<string>>(new Set());
   const toggle = (id: string) => setOpen((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   if (items.length === 0) return <p className="text-sm text-muted-foreground">Nada por aqui.</p>;
@@ -328,7 +409,17 @@ function List({ items, actions }: { items: PayReq[]; actions?: (r: PayReq) => Re
             {unitNames.map((u) => (
               <div key={u} className="space-y-1.5">
                 {unitNames.length > 1 && <p className="pt-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{u} <span className="font-normal">({byUnit.get(u)!.length})</span></p>}
-                {byUnit.get(u)!.map((r) => <Row key={r.id} r={r} open={open.has(r.id)} onToggle={() => toggle(r.id)} actions={actions} />)}
+                {byUnit.get(u)!.map((r) => (
+                  <Row
+                    key={r.id}
+                    r={r}
+                    open={open.has(r.id)}
+                    onToggle={() => toggle(r.id)}
+                    actions={actions}
+                    selected={selection?.ids.has(r.id)}
+                    onSelect={selection ? () => selection.onToggle(r.id) : undefined}
+                  />
+                ))}
               </div>
             ))}
           </div>
