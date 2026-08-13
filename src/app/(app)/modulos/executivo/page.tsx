@@ -1,7 +1,8 @@
-import { BarChart3 } from 'lucide-react';
+
 import { getSessionUser } from '@/lib/auth/session';
 import { getExecutiveOverview } from '@/lib/executive';
 import { Card, CardContent } from '@/components/ui/card';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { ExecutiveClient } from '@/components/executive/executive-client';
 
 export const dynamic = 'force-dynamic';
@@ -25,8 +26,10 @@ export default async function ExecutivoPage({ searchParams }: { searchParams: { 
   return (
     <div className="space-y-4">
       <div className="print:hidden">
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><BarChart3 className="h-5 w-5 text-accent" /> Visão Executiva</h1>
-        <p className="text-sm text-muted-foreground">A rede em uma tela: meta, uso do sistema, desperdício, absenteísmo, troco, manutenção e ocorrências — por unidade, no mês.</p>
+        <LargeTitle
+          title="Visão Executiva"
+          subtitle="A rede em uma tela: meta, uso do sistema, desperdício, absenteísmo, troco, manutenção e ocorrências — por unidade, no mês."
+        />
       </div>
       <Card className="print:border-0 print:shadow-none">
         <CardContent className="pt-4">

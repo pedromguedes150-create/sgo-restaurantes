@@ -2,7 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { Printer } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button as DsButton } from '@/components/ui/ds/button';
+import { Select } from '@/components/ui/ds/select';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { cn } from '@/lib/utils';
 
 export interface ExecRowUI {
@@ -30,32 +32,32 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 print:hidden">
-        <select value={yearMonth} onChange={(e) => router.push(`/modulos/executivo?mes=${e.target.value}`)} className="h-9 rounded-md border bg-card px-2 text-sm font-semibold capitalize">
-          {months.map((m) => <option key={m} value={m}>{fmtMonthLong(m)}</option>)}
-        </select>
-        <Button size="sm" variant="outline" className="ml-auto" onClick={() => window.print()}><Printer className="h-4 w-4" /> Imprimir / PDF</Button>
+      <div className="flex flex-wrap items-end gap-2 print:hidden">
+        <div className="w-52">
+          <Select
+            aria-label="Mês"
+            options={months.map((m) => ({ value: m, label: fmtMonthLong(m) }))}
+            value={yearMonth}
+            onValueChange={(m) => router.push(`/modulos/executivo?mes=${m}`)}
+          />
+        </div>
+        <DsButton size="sm" variant="secondary" className="ml-auto" onClick={() => window.print()}><Printer className="h-4 w-4" /> Imprimir / PDF</DsButton>
       </div>
 
       <p className="hidden text-sm font-semibold capitalize print:block">Visão Executiva — {fmtMonthLong(yearMonth)}</p>
 
-      {/* Cartões da rede */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {([
-          ['Meta média da rede', `${totals.metaAvg}%`, pctCls(totals.metaAvg)],
-          ['Uso médio do sistema', `${totals.usageAvg}%`, pctCls(totals.usageAvg)],
-          ['Desperdício total', `${totals.wasteKg.toLocaleString('pt-BR')} kg`, ''],
-          ['Dias de atestado', String(totals.certDays), ''],
-          ['Retiradas do troco (proibidas)', `${totals.cashDivergent} (${brl(totals.cashDivergenceTotal)})`, totals.cashDivergent > 0 ? 'text-critical' : 'text-success'],
-          ['Custo de manutenção', brl(totals.maintenanceCost), ''],
-          ['Ocorrências graves', String(totals.severeOccurrences), totals.severeOccurrences > 0 ? 'text-critical' : 'text-success'],
-          ['Visitas de supervisão', String(totals.visitsDone), ''],
-        ] as const).map(([label, val, cls]) => (
-          <div key={label} className="rounded-lg border bg-card p-2.5">
-            <p className={cn('text-base font-bold tabular-nums', cls)}>{val}</p>
-            <p className="text-xs text-muted-foreground">{label}</p>
-          </div>
-        ))}
+      {/* Os 4 números que dizem se o mês foi bom. Os demais totais ficam no
+          rodapé da tabela, junto da coluna que já os detalha por unidade —
+          antes eram 8 cartões, metade repetindo coluna. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Meta média da rede" value={`${totals.metaAvg}%`} />
+        <StatCard label="Uso médio do sistema" value={`${totals.usageAvg}%`} />
+        <StatCard label="Desperdício total" value={`${totals.wasteKg.toLocaleString('pt-BR')} kg`} />
+        <StatCard
+          label="Ocorrências graves"
+          value={totals.severeOccurrences}
+          hint={totals.severeOccurrences > 0 ? 'exigem tratativa' : 'nenhuma no mês'}
+        />
       </div>
 
       {/* Tabela por unidade */}
@@ -91,10 +93,26 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
               </tr>
             ))}
           </tbody>
+          {/* Totais da rede: mesma coluna que detalha por unidade. */}
+          <tfoot>
+            <tr className="border-t-2 border-line-strong font-semibold">
+              <td className="p-2 text-ink-900">Rede</td>
+              <td className="p-2 text-right tabular-nums text-ink-900">{totals.metaAvg}%</td>
+              <td className="p-2 text-right tabular-nums text-ink-900">{totals.usageAvg}%</td>
+              <td className="p-2 text-right tabular-nums text-ink-900">{totals.wasteKg.toLocaleString('pt-BR')} kg</td>
+              <td className="p-2 text-right tabular-nums text-ink-900">{totals.certDays > 0 ? `${totals.certDays}d` : '—'}</td>
+              <td className={cn('p-2 text-right tabular-nums', totals.cashDivergent > 0 ? 'text-danger' : 'text-ink-900')}>
+                {totals.cashDivergent > 0 ? `${totals.cashDivergent} · ${brl(totals.cashDivergenceTotal)}` : '—'}
+              </td>
+              <td className="p-2 text-right tabular-nums text-ink-900">{totals.maintenanceCost > 0 ? brl(totals.maintenanceCost) : '—'}</td>
+              <td className={cn('p-2 text-right tabular-nums', totals.severeOccurrences > 0 ? 'text-danger' : 'text-ink-900')}>{totals.severeOccurrences || '—'}</td>
+              <td className="p-2 text-right tabular-nums text-ink-900">{totals.visitsDone || '—'}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
-      <p className="text-xs text-muted-foreground print:hidden">
-        Ordenado pela meta. Bolinha = uso do sistema (🟢 ≥80% · 🟡 ≥50% · 🔴 &lt;50%). Absenteísmo = dias de atestado ÷ (headcount × dias do mês). Detalhes nos módulos.
+      <p className="text-[12px] text-ink-500 print:hidden">
+        Ordenado pela meta. A bolinha indica o uso do sistema: verde ≥80%, âmbar ≥50%, vermelho abaixo de 50%. Absenteísmo = dias de atestado ÷ (headcount × dias do mês). Detalhes nos módulos.
       </p>
     </div>
   );
