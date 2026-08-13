@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { useTheme } from '@/components/theme/theme-provider';
+import { ComponentsGallery } from './components-gallery';
 
 /* ------------------------------------------------------------------ dados */
 
@@ -311,6 +312,8 @@ export function DevUiClient() {
             )}
           </div>
         </Section>
+
+        <ComponentsGallery />
 
         <Section title="Foco (anel duplo)">
           <div className="flex flex-wrap gap-4 rounded-card border border-line bg-sgo-surface p-4">
