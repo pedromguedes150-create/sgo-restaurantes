@@ -6,6 +6,14 @@ import { currentOperationalDate } from '@/lib/date/operational';
 import { getUnitCommandState } from '@/lib/commands/query';
 import { getActiveSequence } from '@/lib/commands/active';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LargeTitle } from '@/components/layout/page-chrome';
+import { Button } from '@/components/ui/ds/button';
+import { StatCard } from '@/components/ui/ds/stat-card';
+import { StatusBadge } from '@/components/ui/ds/status-badge';
+import { List, ListRow } from '@/components/ui/ds/list-row';
+import { EmptyState } from '@/components/ui/ds/empty-state';
+import { shortUnitName } from '@/lib/unit-name';
+import { ScanLine, ShieldAlert, ClipboardList } from 'lucide-react';
 import { CommandsClient } from '@/components/commands/commands-client';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
@@ -40,43 +48,36 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-bold text-brand">Contagem de Comandas</h1>
-          <p className="text-sm text-muted-foreground">Dia operacional {operationalDate}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/modulos/comandas/conferencia?unit=${selected.id}`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent">📷 Conferir com leitor</Link>
-          {canResolve && (
-            <Link href="/modulos/comandas/analise-aberto" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent">🛡️ Análise de comandas em aberto</Link>
-          )}
-        </div>
-      </div>
+      <LargeTitle
+        title="Contagem de Comandas"
+        subtitle={`Dia operacional ${operationalDate}`}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/modulos/comandas/conferencia?unit=${selected.id}`}>
+              <Button size="sm" variant="secondary"><ScanLine className="h-4 w-4" /> Conferir com leitor</Button>
+            </Link>
+            {canResolve && (
+              <Link href="/modulos/comandas/analise-aberto">
+                <Button size="sm" variant="secondary"><ShieldAlert className="h-4 w-4" /> Análise de comandas em aberto</Button>
+              </Link>
+            )}
+          </div>
+        }
+      />
 
       {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
 
       {state.config && (
-        <Card>
-          <CardContent className="grid grid-cols-3 gap-2 py-3 text-center text-sm">
-            <div>
-              <p className="text-xl font-black text-brand">{state.activeCount}</p>
-              <p className="text-xs text-muted-foreground">ativas</p>
-            </div>
-            <div>
-              <p className="text-xl font-black text-brand">{state.replacementCount}</p>
-              <p className="text-xs text-muted-foreground">reposições</p>
-            </div>
-            <div>
-              <p className="text-xl font-black text-critical">{state.lostCount}</p>
-              <p className="text-xs text-muted-foreground">baixas</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard label="Ativas" value={state.activeCount} />
+          <StatCard label="Reposições" value={state.replacementCount} />
+          <StatCard label="Baixas" value={state.lostCount} />
+        </div>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle>{selected.name}</CardTitle>
+          <CardTitle>{shortUnitName(selected.name)}</CardTitle>
         </CardHeader>
         <CardContent>
           <CommandsClient
@@ -104,30 +105,45 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Contagens diárias</p>
-              {recentCounts.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma contagem.</p>}
-              {recentCounts.map((c) => (
-                <div key={c.id} className="flex items-center justify-between rounded-lg border bg-card p-2.5">
-                  <div>
-                    <p className="text-sm font-semibold text-brand">{c.operationalDate}</p>
-                    <p className="text-xs text-muted-foreground">{c.allPresent ? 'todas presentes' : `${c.absentCount} ausente(s)`}{c.createdBy ? ` · ${c.createdBy.name}` : ''}</p>
-                  </div>
-                  <DeleteOpButton entity="commandCount" id={c.id} label={`a contagem de ${c.operationalDate}`} />
-                </div>
-              ))}
+              <p className="sgo-type-11 mb-2 text-ink-400">Contagens diárias</p>
+              {recentCounts.length === 0 ? (
+                <EmptyState size="sm" icon={ClipboardList} title="Nenhuma contagem" />
+              ) : (
+                <List>
+                  {recentCounts.map((c) => (
+                    <ListRow
+                      key={c.id}
+                      title={c.operationalDate}
+                      subtitle={`${c.allPresent ? 'todas presentes' : `${c.absentCount} ausente(s)`}${c.createdBy ? ` · ${c.createdBy.name}` : ''}`}
+                      trailing={<DeleteOpButton entity="commandCount" id={c.id} label={`a contagem de ${c.operationalDate}`} />}
+                    />
+                  ))}
+                </List>
+              )}
             </div>
             <div>
-              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Divergências</p>
-              {recentDivs.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma divergência.</p>}
-              {recentDivs.map((d) => (
-                <div key={d.id} className="flex items-center justify-between rounded-lg border bg-card p-2.5">
-                  <div>
-                    <p className="text-sm font-semibold text-brand">Comanda nº {d.number}</p>
-                    <p className="text-xs text-muted-foreground">{d.status}{d.observation ? ` · ${d.observation}` : ''}</p>
-                  </div>
-                  <DeleteOpButton entity="commandDivergence" id={d.id} label={`a divergência da comanda ${d.number}`} />
-                </div>
-              ))}
+              <p className="sgo-type-11 mb-2 text-ink-400">Divergências</p>
+              {recentDivs.length === 0 ? (
+                <EmptyState size="sm" icon={ClipboardList} title="Nenhuma divergência" />
+              ) : (
+                <List>
+                  {recentDivs.map((d) => (
+                    <ListRow
+                      key={d.id}
+                      title={`Comanda nº ${d.number}`}
+                      subtitle={d.observation ?? undefined}
+                      trailing={
+                        <>
+                          <StatusBadge tone={d.status === 'CLOSED' ? 'success' : d.status === 'INVESTIGATING' ? 'warning' : 'danger'} dot>
+                            {d.status === 'CLOSED' ? 'Encerrada' : d.status === 'INVESTIGATING' ? 'Em apuração' : 'Aberta'}
+                          </StatusBadge>
+                          <DeleteOpButton entity="commandDivergence" id={d.id} label={`a divergência da comanda ${d.number}`} />
+                        </>
+                      }
+                    />
+                  ))}
+                </List>
+              )}
             </div>
           </CardContent>
         </Card>
