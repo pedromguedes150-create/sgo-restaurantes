@@ -6,6 +6,7 @@ import { Button, IconButton } from '@/components/ui/ds/button';
 import { Input, Textarea, SearchField, CurrencyField } from '@/components/ui/ds/field';
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 
 /* Helpers da galeria (compartilhados pelas seções que entram a cada commit). */
 
@@ -164,6 +165,48 @@ export function ChoiceSection() {
   );
 }
 
+/* ------------------------------------------------- SegmentedControl */
+
+export function SegmentedSection() {
+  const [aba, setAba] = useState<'notas' | 'venc' | 'analise'>('notas');
+  const [periodo, setPeriodo] = useState<'7' | '30' | '90'>('30');
+
+  return (
+    <GallerySection
+      title="SegmentedControl"
+      hint="A pílula desliza entre os segmentos com --ease-spring — nunca fade. Setas ←/→ movem e já selecionam."
+    >
+      <Panel>
+        <Row label="com badge">
+          <SegmentedControl
+            aria-label="Abas de notas"
+            value={aba}
+            onValueChange={setAba}
+            options={[
+              { value: 'notas', label: 'Notas' },
+              { value: 'venc', label: 'Vencimentos', badge: 12 },
+              { value: 'analise', label: 'Análise' },
+            ]}
+          />
+        </Row>
+        <Row label="sm">
+          <SegmentedControl
+            size="sm"
+            aria-label="Período"
+            value={periodo}
+            onValueChange={setPeriodo}
+            options={[
+              { value: '7', label: '7 dias' },
+              { value: '30', label: '30 dias' },
+              { value: '90', label: '90 dias' },
+            ]}
+          />
+        </Row>
+      </Panel>
+    </GallerySection>
+  );
+}
+
 /* --------------------------------------------------------------- Galeria */
 
 export function ComponentsGallery() {
@@ -176,6 +219,7 @@ export function ComponentsGallery() {
       <ButtonSection />
       <FieldsSection />
       <ChoiceSection />
+      <SegmentedSection />
     </div>
   );
 }
