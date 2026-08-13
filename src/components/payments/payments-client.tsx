@@ -11,6 +11,10 @@ import { formatBRL, cn } from '@/lib/utils';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { Button as DsButton } from '@/components/ui/ds/button';
 import { Banner } from '@/components/ui/ds/banner';
+import { List as DsList, ListRow } from '@/components/ui/ds/list-row';
+import { StatusBadge as DsStatusBadge, type Tone as DsTone } from '@/components/ui/ds/status-badge';
+import { Sheet } from '@/components/ui/ds/sheet';
+import { shortUnitName } from '@/lib/unit-name';
 
 export interface PayDetail {
   workDate: string | null; shift: string | null; workStartTime: string | null; workEndTime: string | null;
@@ -53,6 +57,11 @@ const STATUS: Record<PayReq['status'], { label: string; tone: StatusTone }> = {
   APPROVED: { label: 'Aprovada', tone: 'success' },
   REJECTED: { label: 'Rejeitada', tone: 'critical' },
   PAID: { label: 'Paga', tone: 'success' },
+};
+
+/** Semáforo legado das solicitações → tons do design system. */
+const DS_STATUS: Record<PayReq['status'], DsTone> = {
+  PENDING: 'warning', APPROVED: 'info', REJECTED: 'danger', PAID: 'success',
 };
 
 type Tab = 'nova' | 'minhas' | 'aprovar' | 'pagar' | 'historico';
@@ -333,47 +342,44 @@ function DetailView({ r }: { r: PayReq }) {
   );
 }
 
-function Row({ r, open, onToggle, actions, selected, onSelect }: { r: PayReq; open: boolean; onToggle: () => void; actions?: (r: PayReq) => React.ReactNode; selected?: boolean; onSelect?: () => void }) {
+/**
+ * Uma solicitação = uma LINHA; o detalhe abre num Sheet (Onda 4). Antes o
+ * detalhe expandia dentro do cartão e empurrava a lista inteira para baixo —
+ * conferir um item fazia o gestor perder a posição de leitura dos outros.
+ */
+function Row({ r, onOpen, selected, onSelect }: { r: PayReq; onOpen: () => void; selected?: boolean; onSelect?: () => void }) {
+  const marks = [
+    r.divergent ? `Divergência: padrão ${r.standardValue != null ? formatBRL(r.standardValue) : '—'}` : null,
+    r.dateEdited ? 'Data corrigida — desconta na meta' : null,
+  ].filter(Boolean).join(' · ');
+
   return (
-    <div className={cn('rounded-lg border bg-card p-3', selected && 'border-sgo-brand bg-sgo-brand-tint')}>
-      {onSelect && (
-        <label className="mb-2 flex cursor-pointer items-center gap-2 text-[13px] font-medium text-ink-700">
-          <input
-            type="checkbox"
-            checked={!!selected}
-            onChange={onSelect}
-            style={{ accentColor: 'var(--sgo-brand)' }}
-            className="h-4 w-4 rounded outline-none focus-visible:shadow-sgo-focus"
-          />
-          Selecionar para aprovação em lote
-        </label>
-      )}
-      <button onClick={onToggle} className="flex w-full items-start justify-between gap-2 text-left">
-        <span className="min-w-0">
-          <span className="block font-semibold text-brand">{TYPE_LABEL[r.type]} · {r.title}</span>
-          <span className="block text-xs text-muted-foreground">
-            {formatBRL(r.amount)}{r.requestedBy ? ` · por ${r.requestedBy}` : ''}
-            {r.requestedAt ? ` · solicitado ${new Date(r.requestedAt).toLocaleDateString('pt-BR')}` : ''}
-          </span>
-        </span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          <StatusBadge tone={STATUS[r.status].tone}>{STATUS[r.status].label}</StatusBadge>
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
-        </span>
-      </button>
-      {r.dateEdited && (
-        <p className="mt-0.5 text-xs font-semibold text-critical">
-          Data corrigida{r.entryDate ? ` p/ ${new Date(r.entryDate).toLocaleDateString('pt-BR')}` : ''}{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta
-        </p>
-      )}
-      {r.divergent && (
-        <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-medium">
-          <AlertTriangle className="h-3.5 w-3.5" /> Divergência: padrão {r.standardValue != null ? formatBRL(r.standardValue) : '—'}
-        </p>
-      )}
-      {open && <DetailView r={r} />}
-      {actions && <div className="mt-2">{actions(r)}</div>}
-    </div>
+    <ListRow
+      onClick={onOpen}
+      title={`${TYPE_LABEL[r.type]} · ${r.title}`}
+      subtitle={[
+        formatBRL(r.amount),
+        r.requestedBy ? `por ${r.requestedBy}` : null,
+        r.requestedAt ? `solicitado ${new Date(r.requestedAt).toLocaleDateString('pt-BR')}` : null,
+        marks || null,
+      ].filter(Boolean).join(' · ')}
+      trailing={
+        <>
+          {r.divergent && <DsStatusBadge tone="warning" dot>Divergência</DsStatusBadge>}
+          <DsStatusBadge tone={DS_STATUS[r.status]} dot>{STATUS[r.status].label}</DsStatusBadge>
+        </>
+      }
+      selectionSlot={onSelect ? (
+        <input
+          type="checkbox"
+          checked={!!selected}
+          onChange={onSelect}
+          aria-label={`Selecionar ${TYPE_LABEL[r.type]} de ${r.title} para aprovação em lote`}
+          style={{ accentColor: 'var(--sgo-brand)' }}
+          className="h-4 w-4 rounded outline-none focus-visible:shadow-sgo-focus"
+        />
+      ) : undefined}
+    />
   );
 }
 
@@ -383,8 +389,8 @@ function List({ items, actions, selection }: {
   /** Quando presente, cada linha ganha caixa de seleção (aprovação em lote). */
   selection?: { ids: Set<string>; onToggle: (id: string) => void };
 }) {
-  const [open, setOpen] = useState<Set<string>>(new Set());
-  const toggle = (id: string) => setOpen((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const detail = items.find((i) => i.id === detailId) ?? null;
   if (items.length === 0) return <p className="text-sm text-muted-foreground">Nada por aqui.</p>;
 
   // Agrupa por DIA (mais recente primeiro) e, dentro do dia, por UNIDADE (pedido 16/07)
@@ -408,23 +414,55 @@ function List({ items, actions, selection }: {
             </div>
             {unitNames.map((u) => (
               <div key={u} className="space-y-1.5">
-                {unitNames.length > 1 && <p className="pt-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{u} <span className="font-normal">({byUnit.get(u)!.length})</span></p>}
-                {byUnit.get(u)!.map((r) => (
-                  <Row
-                    key={r.id}
-                    r={r}
-                    open={open.has(r.id)}
-                    onToggle={() => toggle(r.id)}
-                    actions={actions}
-                    selected={selection?.ids.has(r.id)}
-                    onSelect={selection ? () => selection.onToggle(r.id) : undefined}
-                  />
-                ))}
+                {unitNames.length > 1 && <p className="sgo-type-11 pt-0.5 text-ink-400">{shortUnitName(u)} <span className="font-normal">({byUnit.get(u)!.length})</span></p>}
+                <DsList>
+                  {byUnit.get(u)!.map((r) => (
+                    <Row
+                      key={r.id}
+                      r={r}
+                      onOpen={() => setDetailId(r.id)}
+                      selected={selection?.ids.has(r.id)}
+                      onSelect={selection ? () => selection.onToggle(r.id) : undefined}
+                    />
+                  ))}
+                </DsList>
               </div>
             ))}
           </div>
         );
       })}
+
+      {/* Detalhe fora do fluxo: a lista não se mexe quando se abre um item. */}
+      <Sheet
+        open={!!detail}
+        onClose={() => setDetailId(null)}
+        title={detail ? `${TYPE_LABEL[detail.type]} · ${detail.title}` : ''}
+        description={detail ? `${formatBRL(detail.amount)} · ${shortUnitName(detail.unit)}` : undefined}
+        footer={detail && actions ? actions(detail) : undefined}
+      >
+        {detail && (
+          <>
+            {detail.dateEdited && (
+              <Banner
+                tone="warning"
+                title="Data corrigida — desconta na meta"
+                description={[
+                  detail.entryDate ? `Para ${new Date(detail.entryDate).toLocaleDateString('pt-BR')}` : null,
+                  detail.dateEditedByName ? `por ${detail.dateEditedByName}` : null,
+                ].filter(Boolean).join(' ')}
+              />
+            )}
+            {detail.divergent && (
+              <Banner
+                tone="warning"
+                title="Valor fora do padrão"
+                description={`Padrão cadastrado: ${detail.standardValue != null ? formatBRL(detail.standardValue) : '—'}`}
+              />
+            )}
+            <DetailView r={detail} />
+          </>
+        )}
+      </Sheet>
     </div>
   );
 }

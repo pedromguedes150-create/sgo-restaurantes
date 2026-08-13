@@ -38,10 +38,16 @@ export interface ListRowProps {
   href?: string;
   onClick?: () => void;
   disabled?: boolean;
+  /**
+   * Conteúdo à esquerda FORA do elemento interativo (ex.: caixa de seleção).
+   * Precisa ficar fora porque um <input> dentro de um <button> é HTML inválido
+   * e o clique de um roubaria o do outro.
+   */
+  selectionSlot?: React.ReactNode;
   className?: string;
 }
 
-export function ListRow({ title, subtitle, leading, trailing, href, onClick, disabled, className }: ListRowProps) {
+export function ListRow({ title, subtitle, leading, trailing, href, onClick, disabled, selectionSlot, className }: ListRowProps) {
   const interactive = !!(href || onClick) && !disabled;
 
   const inner = (
@@ -57,24 +63,32 @@ export function ListRow({ title, subtitle, leading, trailing, href, onClick, dis
   );
 
   // Divisor recuado: pseudo-elemento a 16px da esquerda; some na última linha.
+  // Com caixa de seleção, o divisor vai no <li> (o interativo não ocupa a linha toda).
   const base = cn(
-    'relative flex h-16 w-full items-center gap-3 px-4 text-left outline-none',
-    "after:absolute after:bottom-0 after:left-4 after:right-0 after:h-px after:bg-line after:content-['']",
-    'last:after:hidden',
+    'relative flex h-16 w-full items-center gap-3 text-left outline-none',
+    selectionSlot ? 'pr-4' : 'px-4',
+    !selectionSlot && "after:absolute after:bottom-0 after:left-4 after:right-0 after:h-px after:bg-line after:content-[''] last:after:hidden",
     interactive && 'transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus motion-reduce:transition-none',
     disabled && 'opacity-40',
     className,
   );
 
-  return (
-    <li className="[&:last-child>*]:after:hidden">
-      {href && !disabled ? (
-        <Link href={href} className={base}>{inner}</Link>
-      ) : onClick && !disabled ? (
-        <button type="button" onClick={onClick} className={base}>{inner}</button>
-      ) : (
-        <div className={base}>{inner}</div>
-      )}
-    </li>
+  const control = href && !disabled ? (
+    <Link href={href} className={base}>{inner}</Link>
+  ) : onClick && !disabled ? (
+    <button type="button" onClick={onClick} className={base}>{inner}</button>
+  ) : (
+    <div className={base}>{inner}</div>
   );
+
+  if (selectionSlot) {
+    return (
+      <li className="relative flex items-center gap-2 pl-4 after:absolute after:bottom-0 after:left-4 after:right-0 after:h-px after:bg-line after:content-[''] last:after:hidden">
+        <span className="shrink-0">{selectionSlot}</span>
+        <span className="min-w-0 flex-1">{control}</span>
+      </li>
+    );
+  }
+
+  return <li className="[&:last-child>*]:after:hidden">{control}</li>;
 }
