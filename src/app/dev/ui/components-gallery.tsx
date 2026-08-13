@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, Check } from 'lucide-react';
+import { Plus, Trash2, Check, Inbox, Receipt } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/ds/button';
 import { Input, Textarea, SearchField, CurrencyField } from '@/components/ui/ds/field';
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
+import { List, ListRow, Avatar } from '@/components/ui/ds/list-row';
+import { EmptyState } from '@/components/ui/ds/empty-state';
 
 /* Helpers da galeria (compartilhados pelas seções que entram a cada commit). */
 
@@ -207,6 +209,52 @@ export function SegmentedSection() {
   );
 }
 
+/* --------------------------------------------- ListRow e EmptyState */
+
+export function ListSection() {
+  return (
+    <GallerySection
+      title="ListRow e EmptyState"
+      hint="Linha de 64px, avatar de 32 e divisor recuado 16px (alinha com o texto). Substitui os cartões-por-registro das telas atuais. O vazio sempre diz o próximo passo."
+    >
+      <div className="grid gap-4 lg:grid-cols-2">
+        <List>
+          <ListRow
+            leading={<Avatar name="César Alcides" />}
+            title="César Alcides Vilaça Coelho"
+            subtitle="Freelancer · solicitado 01/08"
+            trailing={<span className="text-[14px] font-semibold tabular-nums text-ink-900">R$ 120,00</span>}
+            href="#"
+          />
+          <ListRow
+            leading={<Avatar name="Diogo Vinicius" />}
+            title="Diogo Vinicius Vieira"
+            subtitle="Divergência: padrão R$ 100,00"
+            trailing={<span className="text-[14px] font-semibold tabular-nums text-ink-900">R$ 85,00</span>}
+            href="#"
+          />
+          <ListRow
+            leading={<Receipt className="h-8 w-8 rounded-control bg-sunken p-2 text-ink-500" />}
+            title="Froneri Brasil"
+            subtitle="Nova União · nº 611293"
+            trailing={<span className="text-[14px] font-semibold tabular-nums text-ink-900">R$ 2.841,61</span>}
+          />
+          <ListRow title="Linha desabilitada" subtitle="Sem interação" disabled />
+        </List>
+
+        <div className="rounded-card border border-line bg-sgo-surface">
+          <EmptyState
+            icon={Inbox}
+            title="Nenhuma nota neste período"
+            description="Ajuste os filtros ou registre a primeira nota do mês."
+            action={<Button size="sm"><Plus className="h-4 w-4" /> Registrar nota</Button>}
+          />
+        </div>
+      </div>
+    </GallerySection>
+  );
+}
+
 /* --------------------------------------------------------------- Galeria */
 
 export function ComponentsGallery() {
@@ -220,6 +268,7 @@ export function ComponentsGallery() {
       <FieldsSection />
       <ChoiceSection />
       <SegmentedSection />
+      <ListSection />
     </div>
   );
 }
