@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 import { compressImage } from '@/lib/image-compress';
 import { CERT_TYPE_LABELS } from '@/lib/certificates/labels';
 import type { CertListItem, CertReport } from '@/lib/certificates/query';
@@ -21,7 +24,6 @@ const TYPE_OPTS: { v: CertificateType; label: string }[] = [
   { v: 'COMPANION', label: 'Acompanhamento de familiar' },
 ];
 
-const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 function daysBetween(start: string, end: string): number {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return 1;
   const a = Date.parse(start + 'T00:00:00Z'), b = Date.parse(end + 'T00:00:00Z');
@@ -159,24 +161,36 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>Unidade</Label><select className={sel} value={unitId} onChange={(e) => { setUnitId(e.target.value); setCollaboratorId(''); }}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>
-        <div><Label>Colaborador</Label><select className={`${sel} ${ring('collaboratorName')}`} value={collaboratorId} onChange={(e) => setCollaboratorId(e.target.value)}><option value="">Selecione…</option>{collabs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+        <Select
+          label="Unidade" value={unitId}
+          onValueChange={(v) => { setUnitId(v); setCollaboratorId(''); }}
+          options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+        />
+        <Select
+          label="Colaborador" placeholder="Selecione…" className={ring('collaboratorName')}
+          value={collaboratorId} onValueChange={setCollaboratorId}
+          options={collabs.map((c) => ({ value: c.id, label: c.name }))}
+        />
       </div>
 
-      <div><Label>Tipo</Label><select className={`${sel} ${ring('type')}`} value={type} onChange={(e) => setType(e.target.value as CertificateType)}>{TYPE_OPTS.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}</select></div>
+      <Select
+        label="Tipo" className={ring('type')} value={type}
+        onValueChange={(v) => setType(v as CertificateType)}
+        options={TYPE_OPTS.map((t) => ({ value: t.v, label: t.label }))}
+      />
 
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>Início do afastamento</Label><Input type="date" className={ring('startDate')} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div>
+        <DatePicker label="Início do afastamento" className={ring('startDate')} value={startDate || null} onValueChange={(v) => setStartDate(v ?? '')} />
         {type === 'HOURS'
           ? <div><Label>Horas</Label><Input inputMode="decimal" className={ring('hours')} value={hours} onChange={(e) => setHours(e.target.value)} placeholder="ex: 2" /></div>
-          : <div><Label>Fim do afastamento</Label><Input type="date" className={ring('endDate')} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div>}
+          : <DatePicker label="Fim do afastamento" className={ring('endDate')} min={startDate || undefined} value={endDate || null} onValueChange={(v) => setEndDate(v ?? '')} />}
       </div>
       {type !== 'HOURS' && startDate && endDate && (
         <p className="text-xs font-semibold text-brand">{days} dia(s) de afastamento — serão marcados como “Atestado” na Escala.</p>
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>Data de emissão</Label><Input type="date" className={ring('issueDate')} value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></div>
+        <DatePicker label="Data de emissão" className={ring('issueDate')} value={issueDate || null} onValueChange={(v) => setIssueDate(v ?? '')} />
         <div><Label>Médico (CRM)</Label><Input className={ring('doctorCrm')} value={doctorCrm} onChange={(e) => setDoctorCrm(e.target.value)} placeholder="CRM" /></div>
       </div>
       <div><Label>Nome do médico</Label><Input className={ring('doctorName')} value={doctorName} onChange={(e) => setDoctorName(e.target.value)} /></div>
