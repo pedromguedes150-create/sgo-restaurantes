@@ -263,7 +263,6 @@ function HistoryTab({ items, actions }: { items: PayReq[]; actions?: (r: PayReq)
     (status === 'ALL' || i.status === status) &&
     (!q.trim() || i.title.toLowerCase().includes(q.trim().toLowerCase()) || (i.requestedBy ?? '').toLowerCase().includes(q.trim().toLowerCase()))
   ), [items, type, unit, status, q]);
-  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-sgo-surface p-3">
@@ -517,7 +516,6 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
   const [err, setErr] = useState<string | null>(null);
 
   const unitFreelancers = useMemo(() => freelancers.filter((f) => f.unitIds.includes(unitId)), [freelancers, unitId]);
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   const selectedFreelancer = useMemo(() => freelancers.find((f) => f.id === freelancerId), [freelancers, freelancerId]);
   const amt = parseFloat((amount || '0').replace(',', '.'));

@@ -7,6 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { SearchField } from '@/components/ui/ds/field';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 import { QrScanner } from '@/components/notes/qr-scanner';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
@@ -77,22 +81,27 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
   };
   const months: string[] = [];
   { const d = new Date(); for (let i = 0; i < 12; i++) { months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); d.setMonth(d.getMonth() - 1); } }
-  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
-        <select value={f.unitId} onChange={(e) => nav({ unitId: e.target.value })} className={sel}>
-          <option value="">Todas as unidades</option>
-          {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
-        <select value={f.supplierId} onChange={(e) => nav({ supplierId: e.target.value })} className={sel}>
-          <option value="">Todos os fornecedores</option>
-          {suppliers.map((sp) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
-        </select>
-        <select value={f.mes} onChange={(e) => nav({ mes: e.target.value })} className={sel}>
-          <option value="">Todos os meses</option>
-          {months.map((m) => <option key={m} value={m}>{m.split('-').reverse().join('/')}</option>)}
-        </select>
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-sgo-surface p-3">
+        <div className="min-w-[10rem] flex-1">
+          <Select
+            label="Unidade" size="sm" value={f.unitId} onValueChange={(v) => nav({ unitId: v })}
+            options={[{ value: '', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))]}
+          />
+        </div>
+        <div className="min-w-[10rem] flex-1">
+          <Select
+            label="Fornecedor" size="sm" value={f.supplierId} onValueChange={(v) => nav({ supplierId: v })}
+            options={[{ value: '', label: 'Todos os fornecedores' }, ...suppliers.map((sp) => ({ value: sp.id, label: sp.name }))]}
+          />
+        </div>
+        <div className="min-w-[10rem] flex-1">
+          <Select
+            label="Mês" size="sm" value={f.mes} onValueChange={(v) => nav({ mes: v })}
+            options={[{ value: '', label: 'Todos os meses' }, ...months.map((m) => ({ value: m, label: m.split('-').reverse().join('/') }))]}
+          />
+        </div>
       </div>
       {purchased && (
         <div className="grid grid-cols-3 gap-2">
@@ -135,7 +144,6 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ unitId: '', supplierId: '', startDate: '', endDate: '', quantityKg: '', pricePerKg: '', initialUsedKg: '', note: '' });
   const set = (k: keyof typeof form, v: string) => setForm((s2) => ({ ...s2, [k]: v }));
-  const sel = 'h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   // Edição de um contrato existente (unidade/fornecedor não mudam — são a identidade).
   const [editId, setEditId] = useState<string | null>(null);
@@ -166,18 +174,18 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Novo contrato</p>
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
-              <select className={sel} value={form.unitId} onChange={(e) => set('unitId', e.target.value)}>
-                <option value="">Unidade…</option>
-                {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-              <select className={sel} value={form.supplierId} onChange={(e) => set('supplierId', e.target.value)}>
-                <option value="">Fornecedor…</option>
-                {suppliers.map((sp) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
-              </select>
+              <Select
+                label="Unidade" size="sm" placeholder="Unidade…" value={form.unitId} onValueChange={(v) => set('unitId', v)}
+                options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+              />
+              <Select
+                label="Fornecedor" size="sm" placeholder="Fornecedor…" value={form.supplierId} onValueChange={(v) => set('supplierId', v)}
+                options={suppliers.map((sp) => ({ value: sp.id, label: sp.name }))}
+              />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div><Label className="text-xs">Início</Label><Input type="date" value={form.startDate} onChange={(e) => set('startDate', e.target.value)} className="h-10 text-sm" /></div>
-              <div><Label className="text-xs">Fim</Label><Input type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} className="h-10 text-sm" /></div>
+              <DatePicker label="Início" size="sm" value={form.startDate || null} onValueChange={(v) => set('startDate', v ?? '')} />
+              <DatePicker label="Fim" size="sm" value={form.endDate || null} onValueChange={(v) => set('endDate', v ?? '')} min={form.startDate || undefined} />
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div><Label className="text-xs">Quantidade (kg)</Label><Input inputMode="decimal" value={form.quantityKg} onChange={(e) => set('quantityKg', e.target.value)} placeholder="ex.: 12000" className="h-10 text-sm" /></div>
@@ -213,8 +221,8 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
               <div className="mt-2 space-y-2 rounded-lg border border-dashed p-2">
                 <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Editar contrato</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><Label className="text-xs">Início</Label><Input type="date" value={ef.startDate} onChange={(e) => setE('startDate', e.target.value)} className="h-9 text-sm" /></div>
-                  <div><Label className="text-xs">Fim</Label><Input type="date" value={ef.endDate} onChange={(e) => setE('endDate', e.target.value)} className="h-9 text-sm" /></div>
+                  <DatePicker label="Início" size="sm" value={ef.startDate || null} onValueChange={(v) => setE('startDate', v ?? '')} />
+                  <DatePicker label="Fim" size="sm" value={ef.endDate || null} onValueChange={(v) => setE('endDate', v ?? '')} min={ef.startDate || undefined} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div><Label className="text-xs">Quantidade (kg)</Label><Input inputMode="decimal" value={ef.quantityKg} onChange={(e) => setE('quantityKg', e.target.value)} className="h-9 text-sm" /></div>
@@ -267,7 +275,6 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   const q = parseFloat((qty || '0').replace(',', '.'));
   const price = parseFloat((unitPrice || '0').replace(',', '.'));
@@ -313,7 +320,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
   return (
     <div className="space-y-3">
       {units.length > 1 && (
-        <div><Label>Unidade</Label><select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>
+        <Select label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
       )}
       <div>
         <Label htmlFor="k"><ScanLine className="mr-1 inline h-4 w-4" /> Chave da nota (QR/código de barras)</Label>
@@ -323,14 +330,14 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
         </div>
         {noteNumber && <p className="mt-1 text-xs text-muted-foreground">Nota nº {noteNumber}</p>}
       </div>
-      <div>
-        <Label>Fornecedor</Label>
-        <select className={sel} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
-          <option value="">— sem fornecedor —</option>
-          {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-        {suppliers.length === 0 && <p className="mt-1 text-xs text-medium">Nenhum fornecedor cadastrado. Peça ao Admin/Supervisor para cadastrar em Configurações → Fornecedores.</p>}
-      </div>
+      <Select
+        label="Fornecedor"
+        placeholder="— sem fornecedor —"
+        value={supplierId}
+        onValueChange={setSupplierId}
+        options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+        hint={suppliers.length === 0 ? 'Nenhum fornecedor cadastrado. Peça ao Admin/Supervisor para cadastrar em Configurações → Fornecedores.' : undefined}
+      />
       {/* Forma de recebimento */}
       <div>
         <Label>Forma de recebimento</Label>
@@ -492,23 +499,27 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
       if (res.ok) { setEditId(null); router.refresh(); } else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
     } finally { setEBusy(false); }
   }
-
-  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar data/quem/kg/valor…" className="h-9 w-44 text-sm" />
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-sgo-surface p-3">
+        <div className="min-w-[12rem] flex-1">
+          <SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="data, quem lançou, kg, valor…" />
+        </div>
         {unitNames.length > 1 && (
-          <select value={unit} onChange={(e) => setUnit(e.target.value)} className={sel}>
-            <option value="">Todas as unidades</option>
-            {unitNames.map((u) => <option key={u} value={u}>{u}</option>)}
-          </select>
+          <div className="min-w-[10rem] flex-1">
+            <Select
+              label="Unidade" size="sm" value={unit} onValueChange={setUnit}
+              options={[{ value: '', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
+            />
+          </div>
         )}
-        <select value={supplier} onChange={(e) => setSupplier(e.target.value)} className={sel}>
-          <option value="">Todos os fornecedores</option>
-          {supplierNames.map((sp2) => <option key={sp2} value={sp2}>{sp2}</option>)}
-        </select>
-        <span className="ml-auto text-xs text-muted-foreground">{shown.length} de {rows.length}</span>
+        <div className="min-w-[10rem] flex-1">
+          <Select
+            label="Fornecedor" size="sm" value={supplier} onValueChange={setSupplier}
+            options={[{ value: '', label: 'Todos os fornecedores' }, ...supplierNames.map((sp2) => ({ value: sp2, label: sp2 }))]}
+          />
+        </div>
+        <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{shown.length} de {rows.length}</span>
       </div>
       {shown.map((r) => {
         const tone: StatusTone = r.variation == null ? 'neutral' : r.variation > 0 ? (r.alerted ? 'critical' : 'medium') : 'success';

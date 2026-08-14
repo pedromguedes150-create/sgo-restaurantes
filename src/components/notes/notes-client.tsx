@@ -159,7 +159,6 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
     );
   }, [notes, q, supplier, unit, st]);
   const total = filtered.reduce((s, n) => s + n.value, 0);
-  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
   const exportHref = `/api/notes/export?dias=${sinceDays}${unit !== 'ALL' ? `&unidade=${encodeURIComponent(unit)}` : ''}${supplier !== 'ALL' ? `&fornecedor=${encodeURIComponent(supplier)}` : ''}${st !== 'ALL' ? `&status=${st}` : ''}`;
 
   return (
