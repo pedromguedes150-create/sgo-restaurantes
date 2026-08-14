@@ -3,16 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Save, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/ds/button';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { Banner } from '@/components/ui/ds/banner';
 
 /**
  * Editor de data de lançamento (Notas/Pagamentos/Gás/Óleo) — substitui o antigo
- * prompt() de "AAAA-MM-DD". Calendário nativo: dá para CLICAR ou DIGITAR; em
- * navegador pt-BR exibe DD/MM/AAAA. `max=hoje` bloqueia data futura (e datas
- * impossíveis não são aceitas pelo controle). Envia AAAA-MM-DD para /api/entry-date,
- * mantendo a regra de negócio (desconto de % na meta do gerente).
+ * prompt() de "AAAA-MM-DD". Onda 6: usa o DatePicker do design system (o
+ * calendário nativo saiu, regra 6), com `max=hoje` bloqueando data futura.
+ * Envia AAAA-MM-DD para /api/entry-date, mantendo a regra de negócio
+ * (desconto de % na meta do gerente).
  */
 export function InlineDateEdit({ module, id, current, onClose }: {
   module: 'payment' | 'note' | 'gas' | 'oil';
@@ -22,7 +22,7 @@ export function InlineDateEdit({ module, id, current, onClose }: {
 }) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
-  const [val, setVal] = useState((current || today).slice(0, 10));
+  const [val, setVal] = useState<string | null>((current || today).slice(0, 10));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -37,15 +37,21 @@ export function InlineDateEdit({ module, id, current, onClose }: {
   }
 
   return (
-    <div className="mt-2 rounded-lg border-2 border-accent/40 bg-card p-3 print:hidden">
-      <Label className="text-xs">Data correta do lançamento</Label>
-      <div className="mt-1 flex flex-wrap items-center gap-2">
-        <Input type="date" max={today} value={val} onChange={(e) => { setVal(e.target.value); setErr(null); }} className="h-9 w-44 text-sm" />
-        <Button size="sm" disabled={busy} onClick={() => void submit()}><Save className="h-4 w-4" /> Salvar</Button>
+    <div className="mt-2 rounded-card border border-line bg-sgo-surface p-3 print:hidden">
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="w-44">
+          <DatePicker
+            label="Data correta do lançamento"
+            max={today}
+            value={val}
+            onValueChange={(d) => { setVal(d); setErr(null); }}
+            hint="A edição desconta % na meta do gerente."
+          />
+        </div>
+        <Button size="sm" loading={busy} onClick={() => void submit()}><Save className="h-4 w-4" /> Salvar</Button>
         <Button size="sm" variant="ghost" disabled={busy} onClick={onClose}><X className="h-4 w-4" /> Cancelar</Button>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">Clique no calendário ou digite (DD/MM/AAAA). A edição desconta % na meta do gerente.</p>
-      {err && <p className="mt-1 text-xs font-medium text-critical">{err}</p>}
+      {err && <Banner tone="danger" title={err} className="mt-2" />}
     </div>
   );
 }

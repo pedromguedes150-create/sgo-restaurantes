@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { FilterBar, FilterField, FilterSelect, FilterInput } from '@/components/ui/filter-bar';
+import { FilterBar, FilterSelect, FilterInput, FilterDate } from '@/components/ui/filter-bar';
 import { Button as DsButton } from '@/components/ui/ds/button';
 import { List, ListRow } from '@/components/ui/ds/list-row';
 import { Banner } from '@/components/ui/ds/banner';
@@ -462,20 +462,33 @@ function VaultHistory({ unitId }: { unitId: string }) {
   return (
     <div className="space-y-3">
       <FilterBar active={activeCount} onClear={clear}>
-        <FilterField label="Tipo"><FilterSelect value={type} onChange={(e) => setType(e.target.value)}><option value="">Todos</option>{MOVEMENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</FilterSelect></FilterField>
-        <FilterField label="Usuário"><FilterSelect value={userId} onChange={(e) => setUserId(e.target.value)}><option value="">Todos</option>{users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</FilterSelect></FilterField>
-        <FilterField label="De"><FilterInput type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></FilterField>
-        <FilterField label="Até"><FilterInput type="date" value={to} onChange={(e) => setTo(e.target.value)} /></FilterField>
-        <FilterField label="Valor mín."><FilterInput inputMode="decimal" value={minValue} onChange={(e) => setMinValue(e.target.value)} placeholder="0,00" /></FilterField>
-        <FilterField label="Valor máx."><FilterInput inputMode="decimal" value={maxValue} onChange={(e) => setMaxValue(e.target.value)} placeholder="0,00" /></FilterField>
-        <FilterField label="Ordenar">
-          <FilterSelect value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="date_desc">Mais recentes</option>
-            <option value="date_asc">Mais antigos</option>
-            <option value="value_desc">Maior valor</option>
-            <option value="value_asc">Menor valor</option>
-          </FilterSelect>
-        </FilterField>
+        <FilterSelect
+          label="Tipo"
+          value={type}
+          onValueChange={setType}
+          options={[{ value: '', label: 'Todos' }, ...MOVEMENT_TYPES.map((t) => ({ value: t.value, label: t.label }))]}
+        />
+        <FilterSelect
+          label="Usuário"
+          value={userId}
+          onValueChange={setUserId}
+          options={[{ value: '', label: 'Todos' }, ...users.map((u) => ({ value: u.id, label: u.name }))]}
+        />
+        <FilterDate label="De" value={from || null} onValueChange={(v) => setFrom(v ?? '')} />
+        <FilterDate label="Até" value={to || null} onValueChange={(v) => setTo(v ?? '')} min={from || undefined} />
+        <FilterInput label="Valor mín." inputMode="decimal" value={minValue} onChange={(e) => setMinValue(e.target.value)} placeholder="0,00" />
+        <FilterInput label="Valor máx." inputMode="decimal" value={maxValue} onChange={(e) => setMaxValue(e.target.value)} placeholder="0,00" />
+        <FilterSelect
+          label="Ordenar"
+          value={sort}
+          onValueChange={setSort}
+          options={[
+            { value: 'date_desc', label: 'Mais recentes' },
+            { value: 'date_asc', label: 'Mais antigos' },
+            { value: 'value_desc', label: 'Maior valor' },
+            { value: 'value_asc', label: 'Menor valor' },
+          ]}
+        />
       </FilterBar>
 
       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">

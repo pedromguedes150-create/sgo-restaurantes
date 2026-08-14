@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
-import { FilterBar, FilterField, FilterSelect } from '@/components/ui/filter-bar';
+import { FilterBar, FilterSelect } from '@/components/ui/filter-bar';
 import { QrScanner } from '@/components/notes/qr-scanner';
 import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
@@ -359,11 +359,31 @@ function DueTracking({ units }: { units: Unit[] }) {
       </p>
       <FilterBar active={activeCount} onClear={clear}>
         {units.length > 1 && (
-          <FilterField label="Unidade"><FilterSelect value={unitId} onChange={(e) => setUnitId(e.target.value)}><option value="">Todas</option>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</FilterSelect></FilterField>
+          <FilterSelect
+            label="Unidade"
+            value={unitId}
+            onValueChange={setUnitId}
+            options={[{ value: '', label: 'Todas' }, ...units.map((u) => ({ value: u.id, label: u.name }))]}
+          />
         )}
-        <FilterField label="Fornecedor"><FilterSelect value={supplier} onChange={(e) => setSupplier(e.target.value)}><option value="">Todos</option>{suppliers.map((s) => <option key={s} value={s}>{s}</option>)}</FilterSelect></FilterField>
-        <FilterField label="Janela"><FilterSelect value={dias} onChange={(e) => setDias(e.target.value)}><option value="7">7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option><option value="60">60 dias</option><option value="90">90 dias</option></FilterSelect></FilterField>
-        <FilterField label="Vencidos"><FilterSelect value={vencidos} onChange={(e) => setVencidos(e.target.value)}><option value="0">Só a vencer</option><option value="1">Incluir vencidos</option></FilterSelect></FilterField>
+        <FilterSelect
+          label="Fornecedor"
+          value={supplier}
+          onValueChange={setSupplier}
+          options={[{ value: '', label: 'Todos' }, ...suppliers.map((s) => ({ value: s, label: s }))]}
+        />
+        <FilterSelect
+          label="Janela"
+          value={dias}
+          onValueChange={setDias}
+          options={[7, 15, 30, 60, 90].map((d) => ({ value: String(d), label: `${d} dias` }))}
+        />
+        <FilterSelect
+          label="Vencidos"
+          value={vencidos}
+          onValueChange={setVencidos}
+          options={[{ value: '0', label: 'Só a vencer' }, { value: '1', label: 'Incluir vencidos' }]}
+        />
       </FilterBar>
 
       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">

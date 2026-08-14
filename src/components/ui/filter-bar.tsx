@@ -3,17 +3,23 @@
 import * as React from 'react';
 import { Filter, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Select, type SelectOption } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { Input } from '@/components/ui/ds/field';
 
 /**
  * Barra de filtros PADRÃO do sistema — compacta, responsiva e consistente.
- * Antes cada tela montava filtros à mão com alturas/estilos diferentes (botões
- * "desfigurados"). Aqui os campos têm rótulo pequeno em cima, mesma altura (h-9),
- * quebram de linha no mobile e ocupam largura mínima confortável.
+ *
+ * Onda 6: os controles passaram a ser os do design system. O FilterSelect era
+ * um <select> NATIVO (regra 6) e recebia <option> como filhos; agora recebe
+ * `options` e cada controle traz o próprio rótulo, com a associação
+ * label↔campo feita pelo <Field> (antes o <label> envolvia o controle, o que
+ * não associa quando o controle é um botão).
  *
  * Uso:
- *   <FilterBar onClear={...}>
- *     <FilterField label="Período"><FilterSelect .../></FilterField>
- *     <FilterField label="De"><FilterInput type="date" .../></FilterField>
+ *   <FilterBar onClear={...} active={2}>
+ *     <FilterSelect label="Período" options={[...]} value={v} onValueChange={setV} />
+ *     <FilterDate label="De" value={de} onValueChange={setDe} />
  *   </FilterBar>
  */
 export function FilterBar({
@@ -28,15 +34,19 @@ export function FilterBar({
   title?: string;
 }) {
   return (
-    <div className={cn('rounded-lg border bg-card p-3', className)}>
+    <div className={cn('rounded-card border border-line bg-sgo-surface p-3', className)}>
       <div className="mb-2 flex items-center justify-between">
-        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-          <Filter className="h-3.5 w-3.5" /> {title}
-          {active ? <span className="rounded-full bg-accent/15 px-1.5 text-[11px] font-bold text-accent">{active}</span> : null}
+        <p className="sgo-type-11 flex items-center gap-1.5 text-ink-400">
+          <Filter className="h-3.5 w-3.5" aria-hidden /> {title}
+          {active ? <span className="rounded-pill bg-sgo-brand-tint-2 px-1.5 text-[11px] font-bold tabular-nums text-sgo-brand">{active}</span> : null}
         </p>
         {onClear && active ? (
-          <button type="button" onClick={onClear} className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-critical">
-            <X className="h-3.5 w-3.5" /> Limpar
+          <button
+            type="button"
+            onClick={onClear}
+            className="flex items-center gap-1 rounded-control px-1.5 py-0.5 text-[12px] font-semibold text-ink-500 outline-none hover:text-danger focus-visible:shadow-sgo-focus"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden /> Limpar
           </button>
         ) : null}
       </div>
@@ -45,25 +55,60 @@ export function FilterBar({
   );
 }
 
-/** Um campo de filtro: rótulo pequeno + controle. Largura mínima confortável. */
-export function FilterField({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+/** Envelope de largura mínima confortável (o rótulo vem do próprio controle). */
+function Slot({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn('min-w-[8.5rem] flex-1', className)}>{children}</div>;
+}
+
+export function FilterSelect({
+  label, options, value, onValueChange, className,
+}: {
+  label: string;
+  options: SelectOption[];
+  value: string;
+  onValueChange: (v: string) => void;
+  className?: string;
+}) {
   return (
-    <label className={cn('flex min-w-[8.5rem] flex-1 flex-col gap-0.5', className)}>
-      <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
-      {children}
-    </label>
+    <Slot className={className}>
+      <Select label={label} options={options} value={value} onValueChange={onValueChange} size="sm" />
+    </Slot>
   );
 }
 
-const controlCls =
-  'h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50';
+export function FilterDate({
+  label, value, onValueChange, min, max, className,
+}: {
+  label: string;
+  value: string | null;
+  onValueChange: (v: string | null) => void;
+  min?: string;
+  max?: string;
+  className?: string;
+}) {
+  return (
+    <Slot className={className}>
+      <DatePicker label={label} value={value} onValueChange={onValueChange} min={min} max={max} size="sm" />
+    </Slot>
+  );
+}
 
-export const FilterSelect = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
-  ({ className, ...props }, ref) => <select ref={ref} className={cn(controlCls, 'font-medium', className)} {...props} />,
-);
-FilterSelect.displayName = 'FilterSelect';
+export function FilterInput({
+  label, className, ...props
+}: { label: string } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>) {
+  return (
+    <Slot className={className}>
+      <Input label={label} inputSize="sm" className="tabular-nums" {...props} />
+    </Slot>
+  );
+}
 
-export const FilterInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, ...props }, ref) => <input ref={ref} className={cn(controlCls, 'tabular-nums', className)} {...props} />,
-);
-FilterInput.displayName = 'FilterInput';
+/** Mantido para blocos que precisam de um rótulo solto acima de conteúdo livre. */
+export function FilterField({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn('flex min-w-[8.5rem] flex-1 flex-col gap-0.5', className)}>
+      <span className="text-[11px] font-semibold text-ink-500">{label}</span>
+      {children}
+    </div>
+  );
+}
