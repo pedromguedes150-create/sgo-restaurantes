@@ -9,7 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
+import { shortUnitName } from '@/lib/unit-name';
 import { formatBRL } from '@/lib/utils';
 
 interface UnitDTO { id: string; name: string }
@@ -116,29 +119,25 @@ function NewTicket({ units, equipment, suppliers, onDone }: { units: UnitDTO[]; 
       <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Novo chamado de manutenção</h2>
       <div className="space-y-2">
         {units.length > 1 && (
-          <div><Label>Unidade</Label>
-            <select className="h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={unitId} onChange={(e) => { setUnitId(e.target.value); setEquipmentId(''); }}>
-              {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </div>
+          <Select
+            label="Unidade" value={unitId}
+            onValueChange={(v) => { setUnitId(v); setEquipmentId(''); }}
+            options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+          />
         )}
         <div><Label>O que precisa de manutenção?</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Câmara fria não gela" /></div>
         <div><Label>Detalhes (opcional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div><Label>Equipamento (opcional)</Label>
-            <select className="h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={equipmentId} onChange={(e) => setEquipmentId(e.target.value)}>
-              <option value="">— nenhum —</option>
-              {equipForUnit.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </select>
-          </div>
-          <div><Label>Prestador (opcional)</Label>
-            <select className="h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
-              <option value="">— a definir —</option>
-              {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
+          <Select
+            label="Equipamento (opcional)" placeholder="— nenhum —" value={equipmentId} onValueChange={setEquipmentId}
+            options={equipForUnit.map((e) => ({ value: e.id, label: e.name }))}
+          />
+          <Select
+            label="Prestador (opcional)" placeholder="— a definir —" value={supplierId} onValueChange={setSupplierId}
+            options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+          />
         </div>
-        <div><Label>Prazo (opcional)</Label><Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="max-w-[200px]" /></div>
+        <div className="max-w-[200px]"><DatePicker label="Prazo (opcional)" value={deadline || null} onValueChange={(v) => setDeadline(v ?? '')} /></div>
         {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
         <div className="flex gap-2">
           <Button onClick={submit} disabled={busy} className="flex-1">Abrir chamado</Button>
@@ -184,13 +183,11 @@ function TicketCard({ t, isAdmin, suppliers, onDone }: { t: TicketDTO; isAdmin: 
       {editing && (t.status === 'OPEN' || t.status === 'IN_PROGRESS') && (
         <div className="mt-2 space-y-2 rounded-lg bg-muted/40 p-2">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div><Label className="text-xs">Prestador</Label>
-              <select className="h-9 w-full rounded-lg border-2 border-input bg-background px-2 text-sm" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
-                <option value="">— a definir —</option>
-                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-            <div><Label className="text-xs">Prazo</Label><Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="h-9 text-sm" /></div>
+            <Select
+              label="Prestador" size="sm" placeholder="— a definir —" value={supplierId} onValueChange={setSupplierId}
+              options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+            />
+            <DatePicker label="Prazo" size="sm" value={deadline || null} onValueChange={(v) => setDeadline(v ?? '')} />
           </div>
           <Button size="sm" disabled={busy} onClick={() => act({ supplierId, deadline })}>Salvar</Button>
         </div>
@@ -260,22 +257,20 @@ function NewPlan({ units, equipment, onDone }: { units: UnitDTO[]; equipment: Eq
       <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Novo plano preventivo</h2>
       <div className="space-y-2">
         {units.length > 1 && (
-          <div><Label>Unidade</Label>
-            <select className="h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={unitId} onChange={(e) => { setUnitId(e.target.value); setEquipmentId(''); }}>
-              {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </div>
+          <Select
+            label="Unidade" value={unitId}
+            onValueChange={(v) => { setUnitId(v); setEquipmentId(''); }}
+            options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+          />
         )}
         <div><Label>Manutenção</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Limpeza da coifa" /></div>
-        <div><Label>Equipamento (opcional)</Label>
-          <select className="h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={equipmentId} onChange={(e) => setEquipmentId(e.target.value)}>
-            <option value="">— nenhum —</option>
-            {equipForUnit.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-          </select>
-        </div>
+        <Select
+          label="Equipamento (opcional)" placeholder="— nenhum —" value={equipmentId} onValueChange={setEquipmentId}
+          options={equipForUnit.map((e) => ({ value: e.id, label: e.name }))}
+        />
         <div className="grid grid-cols-2 gap-2">
           <div><Label>A cada (dias)</Label><Input inputMode="numeric" value={frequencyDays} onChange={(e) => setFrequencyDays(e.target.value.replace(/\D/g, ''))} /></div>
-          <div><Label>1ª data (opcional)</Label><Input type="date" value={firstDueAt} onChange={(e) => setFirstDueAt(e.target.value)} /></div>
+          <DatePicker label="1ª data (opcional)" value={firstDueAt || null} onValueChange={(v) => setFirstDueAt(v ?? '')} />
         </div>
         {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
         <div className="flex gap-2">
