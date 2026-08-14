@@ -11,6 +11,8 @@ import { FilterBar, FilterSelect, FilterInput, FilterDate } from '@/components/u
 import { Button as DsButton } from '@/components/ui/ds/button';
 import { List, ListRow } from '@/components/ui/ds/list-row';
 import { Banner } from '@/components/ui/ds/banner';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 import { cn } from '@/lib/utils';
 
 type Bal = Record<string, number>;
@@ -127,9 +129,15 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
   return (
     <div className="space-y-4">
       {units.length > 1 && (
-        <select className="h-9 rounded-md border bg-card px-2 text-sm font-semibold" value={selectedUnitId} onChange={(e) => router.push(`/modulos/troco?unit=${e.target.value}`)}>
-          {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
+        <div className="max-w-xs">
+          <Select
+            aria-label="Unidade"
+            size="sm"
+            value={selectedUnitId}
+            onValueChange={(id) => router.push(`/modulos/troco?unit=${id}`)}
+            options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+          />
+        </div>
       )}
 
       {/* Destaque: solicitações de troco abertas em OUTRAS unidades (supervisão) */}
@@ -305,10 +313,15 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
           {action === 'refill' && (
             <div className="rounded-lg border border-dashed p-3">
               <p className="mb-1 text-sm font-bold text-brand">Repor balde (troca 1:1)</p>
-              <select className="mb-2 h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={bucketId} onChange={(e) => setBucketId(e.target.value)}>
-                <option value="">Qual balde…</option>
-                {activeBuckets.map((b) => <option key={b.id} value={b.id}>{b.name} (alvo {brl(b.targetValue)})</option>)}
-              </select>
+              <div className="mb-2">
+                <Select
+                  aria-label="Balde do caixa"
+                  placeholder="Qual balde…"
+                  value={bucketId}
+                  onValueChange={setBucketId}
+                  options={activeBuckets.map((b) => ({ value: b.id, label: b.name, hint: `alvo ${brl(b.targetValue)}` }))}
+                />
+              </div>
               <p className="mb-1 text-xs font-bold text-critical">SAIU do cofre (miúdos p/ o balde):</p>
               <DenomForm list={smallDenoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <p className="mb-1 mt-3 text-xs font-bold text-success">ENTROU no cofre (notas grandes do balde):</p>

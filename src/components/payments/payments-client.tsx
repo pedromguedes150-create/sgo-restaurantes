@@ -14,6 +14,9 @@ import { Banner } from '@/components/ui/ds/banner';
 import { List as DsList, ListRow } from '@/components/ui/ds/list-row';
 import { StatusBadge as DsStatusBadge, type Tone as DsTone } from '@/components/ui/ds/status-badge';
 import { Sheet } from '@/components/ui/ds/sheet';
+import { Select as DsSelect } from '@/components/ui/ds/select';
+import { SearchField } from '@/components/ui/ds/field';
+import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
 
 export interface PayDetail {
@@ -263,28 +266,51 @@ function HistoryTab({ items, actions }: { items: PayReq[]; actions?: (r: PayReq)
   const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
-        <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className={sel}>
-          <option value="ALL">Todos os tipos</option>
-          <option value="FREELANCER">Freelancer</option>
-          <option value="OVERTIME">Hora Extra</option>
-          <option value="MISC">Avulso</option>
-        </select>
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-sgo-surface p-3">
+        <div className="min-w-[9rem] flex-1">
+          <DsSelect
+            label="Tipo"
+            size="sm"
+            value={type}
+            onValueChange={(v) => setType(v as typeof type)}
+            options={[
+              { value: 'ALL', label: 'Todos os tipos' },
+              { value: 'FREELANCER', label: 'Freelancer' },
+              { value: 'OVERTIME', label: 'Hora Extra' },
+              { value: 'MISC', label: 'Avulso' },
+            ]}
+          />
+        </div>
         {unitNames.length > 1 && (
-          <select value={unit} onChange={(e) => setUnit(e.target.value)} className={sel}>
-            <option value="ALL">Todas as unidades</option>
-            {unitNames.map((u) => <option key={u} value={u}>{u}</option>)}
-          </select>
+          <div className="min-w-[9rem] flex-1">
+            <DsSelect
+              label="Unidade"
+              size="sm"
+              value={unit}
+              onValueChange={setUnit}
+              options={[{ value: 'ALL', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
+            />
+          </div>
         )}
-        <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className={sel}>
-          <option value="ALL">Todos os status</option>
-          <option value="PENDING">Pendente</option>
-          <option value="APPROVED">Aprovada</option>
-          <option value="PAID">Paga</option>
-          <option value="REJECTED">Rejeitada</option>
-        </select>
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar prestador/beneficiário…" className="h-9 w-48 text-sm" />
-        <span className="ml-auto text-xs text-muted-foreground">{filtered.length} de {items.length}</span>
+        <div className="min-w-[9rem] flex-1">
+          <DsSelect
+            label="Status"
+            size="sm"
+            value={status}
+            onValueChange={(v) => setStatus(v as typeof status)}
+            options={[
+              { value: 'ALL', label: 'Todos os status' },
+              { value: 'PENDING', label: 'Pendente' },
+              { value: 'APPROVED', label: 'Aprovada' },
+              { value: 'PAID', label: 'Paga' },
+              { value: 'REJECTED', label: 'Rejeitada' },
+            ]}
+          />
+        </div>
+        <div className="min-w-[12rem] flex-1">
+          <SearchField label="Busca" value={q} onValueChange={setQ} placeholder="prestador ou beneficiário…" inputSize="sm" />
+        </div>
+        <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{filtered.length} de {items.length}</span>
       </div>
       <List items={filtered} actions={actions} />
     </div>
@@ -532,32 +558,34 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label>Tipo</Label>
-        <select className={sel} value={type} onChange={(e) => setType(e.target.value as typeof type)}>
-          <option value="FREELANCER">Freelancer</option>
-          <option value="OVERTIME">Hora Extra</option>
-          <option value="MISC">Pagamento Avulso</option>
-        </select>
-      </div>
+      <DsSelect
+        label="Tipo"
+        value={type}
+        onValueChange={(v) => setType(v as typeof type)}
+        options={[
+          { value: 'FREELANCER', label: 'Freelancer' },
+          { value: 'OVERTIME', label: 'Hora Extra' },
+          { value: 'MISC', label: 'Pagamento Avulso' },
+        ]}
+      />
       {units.length > 1 && (
-        <div>
-          <Label>Unidade</Label>
-          <select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
+        <DsSelect
+          label="Unidade"
+          value={unitId}
+          onValueChange={setUnitId}
+          options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+        />
       )}
 
       {type === 'FREELANCER' && (
         <>
-          <div>
-            <Label>Freelancer</Label>
-            <select className={sel} value={freelancerId} onChange={(e) => { setFreelancerId(e.target.value); const f = unitFreelancers.find((x) => x.id === e.target.value); if (f) setAmount(String(f.defaultValue)); }}>
-              <option value="">Selecione…</option>
-              {unitFreelancers.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-          </div>
+          <DsSelect
+            label="Freelancer"
+            placeholder="Selecione…"
+            value={freelancerId}
+            onValueChange={(v) => { setFreelancerId(v); const f = unitFreelancers.find((x) => x.id === v); if (f) setAmount(String(f.defaultValue)); }}
+            options={unitFreelancers.map((f) => ({ value: f.id, label: f.name }))}
+          />
           {(selectedFreelancer?.sectorRates?.length ?? 0) > 0 && (
             <label className="flex items-center gap-2 rounded-lg border border-dashed p-2 text-sm">
               <input type="checkbox" checked={coverage} onChange={(e) => { setCoverage(e.target.checked); setCoverageSector(''); }} />
@@ -567,16 +595,19 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
           {coverage && (
             <div>
               <Label>Setor coberto</Label>
-              <select className={sel} value={coverageSector} onChange={(e) => setCoverageSector(e.target.value)}>
-                <option value="">Selecione o setor…</option>
-                {(selectedFreelancer?.sectorRates ?? []).map((r) => <option key={r.sectorName} value={r.sectorName}>{r.sectorName} — {formatBRL(r.dayValue)}/dia</option>)}
-              </select>
+              <DsSelect
+                aria-label="Setor coberto"
+                placeholder="Selecione o setor…"
+                value={coverageSector}
+                onValueChange={setCoverageSector}
+                options={(selectedFreelancer?.sectorRates ?? []).map((r) => ({ value: r.sectorName, label: r.sectorName, hint: `${formatBRL(r.dayValue)}/dia` }))}
+              />
               {coverageSector && (
                 <p className="mt-1 text-xs text-muted-foreground">Valor do dia: <b>{formatBRL((selectedFreelancer?.sectorRates ?? []).find((r) => r.sectorName === coverageSector)?.dayValue ?? 0)}</b>{transportValue ? ' + VT' : ''} (calculado automaticamente).</p>
               )}
             </div>
           )}
-          <div><Label>Dia do trabalho</Label><Input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} /></div>
+          <DatePicker label="Dia do trabalho" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Hora início</Label><Input type="time" value={workStartTime} onChange={(e) => setWorkStartTime(e.target.value)} /></div>
             <div><Label>Hora fim</Label><Input type="time" value={workEndTime} onChange={(e) => setWorkEndTime(e.target.value)} /></div>
@@ -601,7 +632,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
         <>
           <div><Label>Colaborador</Label><Input value={collaboratorName} onChange={(e) => setCollaboratorName(e.target.value)} placeholder="nome (via RH)" /></div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Data</Label><Input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} /></div>
+            <DatePicker label="Data" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
             <div><Label>Horas</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} /></div>
           </div>
           <div><Label>Motivo</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} /></div>
@@ -614,18 +645,24 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
         <>
           <div>
             <Label>Tipo de pagamento</Label>
-            <select className={sel} value={miscTypeId} onChange={(e) => setMiscTypeId(e.target.value)}>
-              <option value="">Selecione…</option>
-              {miscTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            <DsSelect
+              aria-label="Tipo de pagamento"
+              placeholder="Selecione…"
+              value={miscTypeId}
+              onValueChange={setMiscTypeId}
+              options={miscTypes.map((t) => ({ value: t.id, label: t.name }))}
+            />
           </div>
           {suppliers.length > 0 && (
             <div>
               <Label>Fornecedor (opcional)</Label>
-              <select className={sel} value={supplierId} onChange={(e) => { const s = suppliers.find((x) => x.id === e.target.value); setSupplierId(e.target.value); if (s) setBeneficiary(s.name); }}>
-                <option value="">— nenhum / digitar abaixo —</option>
-                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <DsSelect
+                aria-label="Fornecedor"
+                placeholder="— nenhum / digitar abaixo —"
+                value={supplierId}
+                onValueChange={(v) => { const s = suppliers.find((x) => x.id === v); setSupplierId(v); if (s) setBeneficiary(s.name); }}
+                options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+              />
             </div>
           )}
           <div><Label>Beneficiário</Label><Input value={beneficiary} onChange={(e) => { setBeneficiary(e.target.value); setSupplierId(''); }} /></div>

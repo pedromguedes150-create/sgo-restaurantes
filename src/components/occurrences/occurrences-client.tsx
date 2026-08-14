@@ -2,7 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Search, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { SearchField } from '@/components/ui/ds/field';
+import { Select } from '@/components/ui/ds/select';
+import { EmptyState } from '@/components/ui/ds/empty-state';
+import { shortUnitName } from '@/lib/unit-name';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { GRAVITY_META, STATUS_META } from '@/lib/occurrences/labels';
@@ -67,7 +71,6 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
   }, [filtered]);
 
-  const sel = 'h-10 rounded-lg border-2 border-input bg-background px-2 text-sm';
 
   const card = (o: OccItem) => (
     <Link key={o.id} href={`/modulos/ocorrencias/${o.id}`}>
@@ -93,36 +96,47 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
   return (
     <div className="space-y-3">
       {/* Barra superior: busca + filtros */}
-      <div className="space-y-2 rounded-lg border bg-card p-2.5">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por nº, tipo, categoria, descrição…"
-            className="h-10 w-full rounded-lg border-2 border-input bg-background pl-9 pr-3 text-sm"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><SlidersHorizontal className="h-3.5 w-3.5" /> Filtros:</span>
+      <div className="space-y-2 rounded-card border border-line bg-sgo-surface p-3">
+        <SearchField
+          value={q}
+          onValueChange={setQ}
+          placeholder="Buscar por nº, tipo, categoria, descrição…"
+          label="Busca"
+        />
+        <div className="flex flex-wrap items-end gap-2">
           {unitNames.length > 1 && (
-            <select value={unit} onChange={(e) => setUnit(e.target.value)} className={sel} aria-label="Unidade">
-              <option value="ALL">Todas as unidades</option>
-              {unitNames.map((u) => <option key={u} value={u}>{u}</option>)}
-            </select>
+            <div className="min-w-[10rem] flex-1">
+              <Select
+                label="Unidade"
+                size="sm"
+                value={unit}
+                onValueChange={setUnit}
+                options={[{ value: 'ALL', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
+              />
+            </div>
           )}
-          <select value={gravity} onChange={(e) => setGravity(e.target.value as 'ALL' | OccurrenceGravity)} className={sel} aria-label="Gravidade">
-            <option value="ALL">Todas as gravidades</option>
-            <option value="LOW">🟢 Baixa</option>
-            <option value="MEDIUM">🟡 Média</option>
-            <option value="HIGH">🔴 Alta</option>
-            <option value="CRITICAL">⚫ Crítica</option>
-          </select>
-          <span className="ml-auto text-xs text-muted-foreground">{filtered.length} ocorrência(s)</span>
+          <div className="min-w-[10rem] flex-1">
+            <Select
+              label="Gravidade"
+              size="sm"
+              value={gravity}
+              onValueChange={(v) => setGravity(v as 'ALL' | OccurrenceGravity)}
+              options={[
+                { value: 'ALL', label: 'Todas as gravidades' },
+                { value: 'LOW', label: 'Baixa' },
+                { value: 'MEDIUM', label: 'Média' },
+                { value: 'HIGH', label: 'Alta' },
+                { value: 'CRITICAL', label: 'Crítica' },
+              ]}
+            />
+          </div>
+          <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{filtered.length} ocorrência(s)</span>
         </div>
       </div>
 
-      {filtered.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma ocorrência encontrada.</p>}
+      {filtered.length === 0 && (
+        <EmptyState icon={SlidersHorizontal} title="Nenhuma ocorrência encontrada" description="Limpe a busca ou troque os filtros." />
+      )}
 
       {/* Uma unidade: lista direta. Várias: cada unidade recolhida (fechada por padrão). */}
       {groups.length === 1 && <div className="space-y-2">{groups[0][1].map(card)}</div>}
