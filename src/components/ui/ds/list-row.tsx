@@ -11,8 +11,12 @@ import { cn } from '@/lib/utils';
  * Substitui os "cartões por registro" das telas legadas (Onda 3).
  */
 
-export function List({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <ul className={cn('overflow-hidden rounded-card border border-line bg-sgo-surface', className)}>{children}</ul>;
+export function List({ children, stagger = true, className }: { children: React.ReactNode; stagger?: boolean; className?: string }) {
+  return (
+    <ul className={cn('overflow-hidden rounded-card border border-line bg-sgo-surface', stagger && 'sgo-stagger', className)}>
+      {children}
+    </ul>
+  );
 }
 
 /** Avatar circular de 32px com iniciais. */
