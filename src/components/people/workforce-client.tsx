@@ -6,6 +6,8 @@ import { Plus, X, Pencil, Trash2, Save, Clock, LayoutGrid, List } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
 import { cn } from '@/lib/utils';
 import { UnitFloorplan } from '@/components/people/unit-floorplan';
 
@@ -113,7 +115,7 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
         {/* Seletor de dia + horário: histórico (passado) e projeção (futuro), pela Escala */}
         <div className="space-y-2 rounded-lg border bg-card p-2">
           <div className="flex flex-wrap items-end gap-2">
-            <div><Label className="text-xs">Dia</Label><Input type="date" value={mapDate} onChange={(e) => navTo(e.target.value, mapTime)} className="h-10 text-sm" /></div>
+            <div className="w-44"><DatePicker label="Dia" value={mapDate || null} onValueChange={(v) => navTo(v ?? '', mapTime)} /></div>
             <div><Label className="text-xs">Horário</Label><Input type="time" value={mapTime} onChange={(e) => navTo(mapDate, e.target.value)} className="h-10 w-32 text-sm" /></div>
           </div>
           <div className="flex flex-wrap gap-1">
@@ -191,7 +193,6 @@ function FreelancersPanel({ freelancers, sectors, isToday, post, busy }: {
   post: (p: Record<string, unknown>) => Promise<boolean>; busy: boolean;
 }) {
   if (freelancers.length === 0) return null;
-  const selCls = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-xs';
   return (
     <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
       <p className="mb-2 text-xs font-bold uppercase tracking-wide text-accent">Freelancers do dia ({freelancers.length})</p>
@@ -202,10 +203,17 @@ function FreelancersPanel({ freelancers, sectors, isToday, post, busy }: {
               <span className="block truncate text-sm font-semibold text-brand">{f.name}{isToday && !f.present ? <span className="ml-1 text-xs font-normal text-muted-foreground">(fora do horário agora)</span> : ''}</span>
               <span className="block text-xs text-muted-foreground">{f.startTime && f.endTime ? `${f.startTime}-${f.endTime}` : 'sem horário'}{f.sectorName ? ` · ${f.sectorName}` : ''}</span>
             </span>
-            <select className={selCls} value={f.sectorId ?? ''} disabled={busy} onChange={(e) => post({ action: 'assignFreelancerSector', requestId: f.requestId, sectorId: e.target.value || null })}>
-              <option value="">Sem setor…</option>
-              {sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <div className="w-44">
+              <Select
+                aria-label={`Setor de ${f.name}`}
+                size="sm"
+                placeholder="Sem setor…"
+                disabled={busy}
+                value={f.sectorId ?? ''}
+                onValueChange={(v) => post({ action: 'assignFreelancerSector', requestId: f.requestId, sectorId: v || null })}
+                options={sectors.map((s) => ({ value: s.id, label: s.name }))}
+              />
+            </div>
           </div>
         ))}
       </div>
@@ -218,7 +226,6 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
   unitId: string; board: AllocBoard; grid: Grid; activeTurnos: Turno[];
   post: (p: Record<string, unknown>) => Promise<boolean>; busy: boolean;
 }) {
-  const selCls = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
   const turnoLabel = (t: Turno) => `${t.name}${t.startTime && t.endTime ? ` ${t.startTime}-${t.endTime}` : ''}`;
 
   // Form de alocação (escolhe quem falta + setor + turno)
@@ -258,13 +265,17 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
           <p className="text-sm text-critical">Cadastre {noSectors ? 'um setor' : ''}{noSectors && noTurnos ? ' e ' : ''}{noTurnos ? 'um turno' : ''} antes de alocar.</p>
         ) : (
           <div className="space-y-2">
-            <select className={selCls} value={collabVal} onChange={(e) => setCollaboratorId(e.target.value)}>
-              <option value="">Selecione quem alocar…</option>
-              {board.toAllocate.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <Select
+              aria-label="Quem alocar"
+              size="sm"
+              placeholder="Selecione quem alocar…"
+              value={collabVal}
+              onValueChange={setCollaboratorId}
+              options={board.toAllocate.map((c) => ({ value: c.id, label: c.name }))}
+            />
             <div className="grid grid-cols-2 gap-2">
-              <select className={selCls} value={secVal} onChange={(e) => setSectorId(e.target.value)}>{grid.sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-              <select className={selCls} value={turVal} onChange={(e) => setTurnoId(e.target.value)}>{activeTurnos.map((t) => <option key={t.id} value={t.id}>{turnoLabel(t)}</option>)}</select>
+              <Select aria-label="Setor" size="sm" value={secVal} onValueChange={setSectorId} options={grid.sectors.map((s) => ({ value: s.id, label: s.name }))} />
+              <Select aria-label="Turno" size="sm" value={turVal} onValueChange={setTurnoId} options={activeTurnos.map((t) => ({ value: t.id, label: turnoLabel(t) }))} />
             </div>
             <Button className="w-full" disabled={busy || !collabVal || !secVal || !turVal}
               onClick={async () => { if (await post({ action: 'allocate', unitId, sectorId: secVal, shiftId: turVal, collaboratorId: collabVal })) setCollaboratorId(''); }}>
@@ -285,8 +296,8 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
               <div key={a.allocationId} className="rounded-md border bg-card p-2">
                 <p className="mb-1 text-sm font-semibold text-brand">{a.name}</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <select className={selCls} value={eSector} onChange={(e) => setESector(e.target.value)}>{grid.sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-                  <select className={selCls} value={eTurno} onChange={(e) => setETurno(e.target.value)}>{activeTurnos.map((t) => <option key={t.id} value={t.id}>{turnoLabel(t)}</option>)}</select>
+                  <Select aria-label="Setor" size="sm" value={eSector} onValueChange={setESector} options={grid.sectors.map((s) => ({ value: s.id, label: s.name }))} />
+                  <Select aria-label="Turno" size="sm" value={eTurno} onValueChange={setETurno} options={activeTurnos.map((t) => ({ value: t.id, label: turnoLabel(t) }))} />
                 </div>
                 <div className="mt-2">
                   <Label className="text-xs">Função (cargo) — mudar avisa o RH</Label>
@@ -450,13 +461,15 @@ function SimulationPanel({ unitId, date, working, board, sectors, saved, post, b
           {base.map((a) => (
             <div key={a.collaboratorId} className="flex items-center justify-between gap-2">
               <span className="min-w-0 truncate text-sm">{a.name}</span>
-              <select
-                value={assign[a.collaboratorId] ?? a.sectorId}
-                onChange={(e) => setAssign((s) => ({ ...s, [a.collaboratorId]: e.target.value }))}
-                className="h-9 w-44 shrink-0 rounded-lg border-2 border-input bg-background px-2 text-sm"
-              >
-                {sectors.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <div className="w-44 shrink-0">
+                <Select
+                  aria-label={`Setor simulado de ${a.name}`}
+                  size="sm"
+                  value={assign[a.collaboratorId] ?? a.sectorId}
+                  onValueChange={(v) => setAssign((s) => ({ ...s, [a.collaboratorId]: v }))}
+                  options={sectors.map((s) => ({ value: s.id, label: s.name }))}
+                />
+              </div>
             </div>
           ))}
           <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação da simulação (opcional)" className="h-9 text-sm" />
