@@ -1,11 +1,23 @@
-import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { listCollaborators, listVacations, listSchedule } from '@/lib/people';
 import { Card, CardContent } from '@/components/ui/card';
 import { PeopleClient } from '@/components/people/people-client';
+import { LargeTitle } from '@/components/layout/page-chrome';
+import { List, ListRow } from '@/components/ui/ds/list-row';
 import { Grid3x3, CalendarDays, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft, HandCoins } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
+
+const DESTINOS = [
+  { href: '/modulos/escala', icon: CalendarDays, title: 'Escala de funcionários', subtitle: 'Presença mensal, planejado × realizado' },
+  { href: '/modulos/pessoas/mapa', icon: Grid3x3, title: 'Mapa de Funções', subtitle: 'Setor × turno, alocação do dia' },
+  { href: '/modulos/atestados', icon: Stethoscope, title: 'Central de Atestados', subtitle: 'Lançar por foto, absenteísmo e ranking' },
+  { href: '/modulos/desligamentos', icon: UserMinus, title: 'Desligamentos', subtitle: 'Solicitar, aprovar e enviar ao RH' },
+  { href: '/modulos/pessoas/experiencia', icon: UserCheck, title: 'Período de Experiência', subtitle: 'Avaliações dentro dos 90 dias' },
+  { href: '/modulos/pessoas/avaliacao', icon: Star, title: 'Avaliação do colaborador', subtitle: 'Observações e nota mensal' },
+  { href: '/modulos/pessoas/mudancas', icon: ArrowRightLeft, title: 'Mudanças de função/setor', subtitle: 'Solicitações enviadas ao RH' },
+  { href: '/modulos/pessoas/comissoes', icon: HandCoins, title: 'Comissões & Mobilidade', subtitle: 'Lançamentos e tendência do mês' },
+];
 
 function d(date: Date) { return new Date(date).toLocaleDateString('pt-BR'); }
 
@@ -15,34 +27,26 @@ export default async function PessoasModulePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-brand">Gestão de Pessoas</h1>
-      <p className="text-sm text-muted-foreground">Fonte primária: API do RH · fallback manual. Escala é somente leitura (registre variações).</p>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Link href="/modulos/escala" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
-          <CalendarDays className="h-5 w-5 text-accent" /> Escala de funcionários (presença mensal)
-        </Link>
-        <Link href="/modulos/pessoas/mapa" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
-          <Grid3x3 className="h-5 w-5 text-accent" /> Mapa de Funções (Setor × Turno)
-        </Link>
-        <Link href="/modulos/atestados" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
-          <Stethoscope className="h-5 w-5 text-accent" /> Central de Atestados
-        </Link>
-        <Link href="/modulos/desligamentos" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
-          <UserMinus className="h-5 w-5 text-accent" /> Desligamentos
-        </Link>
-        <Link href="/modulos/pessoas/experiencia" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
-          <UserCheck className="h-5 w-5 text-accent" /> Período de Experiência (≤90 dias)
-        </Link>
-        <Link href="/modulos/pessoas/avaliacao" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
-          <Star className="h-5 w-5 text-accent" /> Avaliação do colaborador
-        </Link>
-        <Link href="/modulos/pessoas/mudancas" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
-          <ArrowRightLeft className="h-5 w-5 text-accent" /> Mudanças de função/setor (RH)
-        </Link>
-        <Link href="/modulos/pessoas/comissoes" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
-          <HandCoins className="h-5 w-5 text-accent" /> Comissões &amp; Mobilidade
-        </Link>
-      </div>
+      <LargeTitle
+        title="Gestão de Pessoas"
+        subtitle="Fonte primária: API do RH · fallback manual. Escala é somente leitura (registre variações)."
+      />
+
+      {/* Destinos do módulo: uma lista em duas colunas, com o subtítulo dizendo
+          o que cada tela resolve — antes eram 8 blocos só com o nome. */}
+      {/* Destinos do módulo numa lista só, com o subtítulo dizendo o que cada
+          tela resolve — antes eram 8 blocos soltos só com o nome. */}
+      <List>
+        {DESTINOS.map((d) => (
+          <ListRow
+            key={d.href}
+            href={d.href}
+            title={d.title}
+            subtitle={d.subtitle}
+            leading={<d.icon className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
+          />
+        ))}
+      </List>
       <Card>
         <CardContent className="pt-4">
           <PeopleClient
