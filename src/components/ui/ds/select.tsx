@@ -23,17 +23,24 @@ export interface SelectProps {
   className?: string;
   /** Nome acessível quando não há rótulo visível (ex.: seletor compacto). */
   'aria-label'?: string;
+  /** Já nasce aberto — para edição inline, em que o clique na célula abre. */
+  defaultOpen?: boolean;
+  /** Avisa quando fecha (escolha, Esc ou clique fora) — encerra a edição inline. */
+  onClose?: () => void;
 }
 
 export function Select({
   options, value, onValueChange, placeholder = 'Selecione…',
   label, hint, error, required, disabled, size = 'md', className,
-  'aria-label': ariaLabel,
+  'aria-label': ariaLabel, defaultOpen = false, onClose,
 }: SelectProps) {
   const id = React.useId();
   const listId = `${id}-list`;
   const { descId, describedBy } = useDescribedBy(id, hint, error);
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(defaultOpen);
+
+  // Um só caminho de fechamento, para o onClose nunca ficar de fora.
+  const close = React.useCallback(() => { setOpen(false); onClose?.(); }, [onClose]);
   const [active, setActive] = React.useState(0);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const listRef = React.useRef<HTMLUListElement>(null);
@@ -44,10 +51,10 @@ export function Select({
   React.useEffect(() => {
     if (!open) return;
     setActive(selectedIdx >= 0 ? selectedIdx : 0);
-    const onDown = (e: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false); };
+    const onDown = (e: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(e.target as Node)) close(); };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
-  }, [open, selectedIdx]);
+  }, [open, selectedIdx, close]);
 
   React.useEffect(() => {
     if (open) listRef.current?.querySelector<HTMLElement>(`[data-idx="${active}"]`)?.scrollIntoView({ block: 'nearest' });
@@ -68,7 +75,7 @@ export function Select({
     const o = options[i];
     if (!o || o.disabled) return;
     onValueChange(o.value);
-    setOpen(false);
+    close();
   };
 
   function onKeyDown(e: React.KeyboardEvent) {
@@ -82,7 +89,7 @@ export function Select({
     else if (e.key === 'Home') { e.preventDefault(); setActive(options.findIndex((o) => !o.disabled)); }
     else if (e.key === 'End') { e.preventDefault(); for (let i = options.length - 1; i >= 0; i--) if (!options[i].disabled) { setActive(i); break; } }
     else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(active); }
-    else if (e.key === 'Escape') { e.preventDefault(); setOpen(false); }
+    else if (e.key === 'Escape') { e.preventDefault(); close(); }
   }
 
   return (

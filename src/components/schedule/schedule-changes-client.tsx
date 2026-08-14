@@ -6,6 +6,9 @@ import { Plus, Trash2, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 
 export interface ChangeRowUI {
   id: string; unitName: string; collaboratorAName: string; dateA: string;
@@ -27,7 +30,6 @@ export function ScheduleChangesClient({ rows, units, selectedUnitId, collabs, ca
   const [bId, setBId] = useState('');
   const [dateB, setDateB] = useState('');
   const [reason, setReason] = useState('');
-  const selCls = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   async function create() {
     setBusy(true);
@@ -57,31 +59,33 @@ export function ScheduleChangesClient({ rows, units, selectedUnitId, collabs, ca
   return (
     <div className="space-y-4">
       {units.length > 1 && (
-        <select className="h-9 rounded-md border bg-card px-2 text-sm font-semibold" value={selectedUnitId} onChange={(e) => router.push(`/modulos/escala/trocas?unit=${e.target.value}`)}>
-          {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
+        <div className="max-w-xs">
+          <Select
+            aria-label="Unidade" size="sm" value={selectedUnitId}
+            onValueChange={(v) => router.push(`/modulos/escala/trocas?unit=${v}`)}
+            options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+          />
+        </div>
       )}
 
       {canCreate && (
         <div className="rounded-lg border border-dashed p-3">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Registrar troca (avisa o RH)</p>
           <div className="space-y-2">
-            <div>
-              <Label className="text-xs">Colaborador</Label>
-              <select className={selCls} value={aId} onChange={(e) => setAId(e.target.value)}>
-                <option value="">Selecione…</option>
-                {collabs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div><Label className="text-xs">Dia original</Label><Input type="date" value={dateA} onChange={(e) => setDateA(e.target.value)} className="h-10 text-sm" /></div>
-            <div>
-              <Label className="text-xs">Trocou com (opcional — deixe vazio se só mudou de dia)</Label>
-              <select className={selCls} value={bId} onChange={(e) => setBId(e.target.value)}>
-                <option value="">Ninguém — só mudou de dia</option>
-                {collabs.filter((c) => c.id !== aId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div><Label className="text-xs">Novo dia / dia do outro colaborador {bId ? '(opcional)' : ''}</Label><Input type="date" value={dateB} onChange={(e) => setDateB(e.target.value)} className="h-10 text-sm" /></div>
+            <Select
+              label="Colaborador" size="sm" placeholder="Selecione…" value={aId} onValueChange={setAId}
+              options={collabs.map((c) => ({ value: c.id, label: c.name }))}
+            />
+            <DatePicker label="Dia original" size="sm" value={dateA || null} onValueChange={(v) => setDateA(v ?? '')} />
+            <Select
+              label="Trocou com" hint="Deixe vazio se a pessoa só mudou de dia."
+              size="sm" placeholder="Ninguém — só mudou de dia" value={bId} onValueChange={setBId}
+              options={collabs.filter((c) => c.id !== aId).map((c) => ({ value: c.id, label: c.name }))}
+            />
+            <DatePicker
+              label={`Novo dia / dia do outro colaborador${bId ? ' (opcional)' : ''}`}
+              size="sm" value={dateB || null} onValueChange={(v) => setDateB(v ?? '')}
+            />
             <div><Label className="text-xs">Motivo (opcional)</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ex.: consulta médica" className="h-10 text-sm" /></div>
             <Button className="w-full" disabled={busy || !aId || !dateA || (!bId && !dateB)} onClick={create}><Plus className="h-4 w-4" /> Registrar troca</Button>
           </div>

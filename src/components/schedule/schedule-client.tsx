@@ -6,6 +6,9 @@ import { Wand2, CopyCheck, FileSpreadsheet, Printer, CalendarPlus, Settings2 } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 import { cn } from '@/lib/utils';
 
 type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'ATRASO';
@@ -37,7 +40,6 @@ const TYPE_OPTIONS: { value: ScheduleType; label: string }[] = [
 ];
 const WD = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-const SEL = 'h-10 rounded-lg border-2 border-input bg-background px-2 text-sm';
 
 export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns }: {
   units: Unit[]; selectedUnitId: string; year: number; month: number; grid: Grid; collaborators: Unit[]; turnos: Turno[]; patterns: Pattern[];
@@ -81,9 +83,9 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
       {/* Filtros + ações */}
       <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
         <div className="flex flex-wrap items-end gap-2">
-          <div><Label className="text-xs">Unidade</Label><select className={cn(SEL, 'w-44')} value={selectedUnitId} onChange={(e) => nav({ unit: e.target.value })}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>
-          <div><Label className="text-xs">Mês</Label><select className={SEL} value={month} onChange={(e) => nav({ month: e.target.value })}>{MONTHS.map((mn, i) => <option key={mn} value={i + 1}>{mn}</option>)}</select></div>
-          <div><Label className="text-xs">Ano</Label><select className={SEL} value={year} onChange={(e) => nav({ year: e.target.value })}>{[year - 1, year, year + 1].map((y) => <option key={y} value={y}>{y}</option>)}</select></div>
+          <div className="w-44"><Select label="Unidade" size="sm" value={selectedUnitId} onValueChange={(v) => nav({ unit: v })} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} /></div>
+          <div className="w-36"><Select label="Mês" size="sm" value={String(month)} onValueChange={(v) => nav({ month: v })} options={MONTHS.map((mn, i) => ({ value: String(i + 1), label: mn }))} /></div>
+          <div className="w-28"><Select label="Ano" size="sm" value={String(year)} onValueChange={(v) => nav({ year: v })} options={[year - 1, year, year + 1].map((y) => ({ value: String(y), label: String(y) }))} /></div>
         </div>
         <div className="flex flex-wrap gap-2">
           <a href={exportUrl(mode === 'planejado' ? 'planejado' : 'realizado')}><Button size="sm" variant="outline"><FileSpreadsheet className="h-4 w-4" /> Excel</Button></a>
@@ -172,10 +174,19 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                         if (mode === 'realizado' && edit === key) {
                           return (
                             <td key={day} className="px-0.5 py-0.5">
-                              <select autoFocus className="h-7 w-12 rounded border text-[11px]" defaultValue={cell.actual ?? ''} onChange={(e) => setCell(row.collaboratorId, day, (e.target.value || 'CLEAR') as DayStatus | 'CLEAR')} onBlur={() => setEdit(null)}>
-                                <option value="">—</option>
-                                {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS[s].code}</option>)}
-                              </select>
+                              {/* Editor da célula: abre já aberto (o clique na
+                                  célula é que abriu) e fecha ao escolher/sair. */}
+                              <div className="w-16">
+                                <Select
+                                  aria-label={`Status de ${row.name} no dia ${day}`}
+                                  size="sm"
+                                  defaultOpen
+                                  onClose={() => setEdit(null)}
+                                  value={cell.actual ?? ''}
+                                  onValueChange={(v) => setCell(row.collaboratorId, day, (v || 'CLEAR') as DayStatus | 'CLEAR')}
+                                  options={[{ value: '', label: '—' }, ...STATUS_ORDER.map((s) => ({ value: s, label: STATUS[s].code }))]}
+                                />
+                              </div>
                             </td>
                           );
                         }
@@ -234,10 +245,19 @@ function AbsencePanel({ unitId, collaborators, onDone }: { unitId: string; colla
     <div className="rounded-lg border bg-card p-3 print:hidden">
       <h3 className="mb-2 text-sm font-bold text-brand">Registrar ausência</h3>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-        <div className="col-span-2 md:col-span-1"><Label className="text-xs">Colaborador</Label><select className={cn(SEL, 'w-full')} value={collaboratorId} onChange={(e) => setCollaboratorId(e.target.value)}><option value="">Selecione…</option>{collaborators.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-        <div><Label className="text-xs">Tipo</Label><select className={cn(SEL, 'w-full')} value={status} onChange={(e) => setStatus(e.target.value as DayStatus)}>{ABSENCE.map((s) => <option key={s} value={s}>{STATUS[s].code} — {s === 'FALTA_INJUST' ? 'Falta injust.' : s === 'FALTA_JUST' ? 'Falta just.' : s === 'ATESTADO' ? 'Atestado' : 'Férias'}</option>)}</select></div>
-        <div><Label className="text-xs">Início</Label><Input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="h-10 text-sm" /></div>
-        <div><Label className="text-xs">Fim</Label><Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="h-10 text-sm" /></div>
+        <div className="col-span-2 md:col-span-1">
+          <Select label="Colaborador" size="sm" placeholder="Selecione…" value={collaboratorId} onValueChange={setCollaboratorId} options={collaborators.map((c) => ({ value: c.id, label: c.name }))} />
+        </div>
+        <Select
+          label="Tipo" size="sm" value={status} onValueChange={(v) => setStatus(v as DayStatus)}
+          options={ABSENCE.map((s) => ({
+            value: s,
+            label: s === 'FALTA_INJUST' ? 'Falta injustificada' : s === 'FALTA_JUST' ? 'Falta justificada' : s === 'ATESTADO' ? 'Atestado' : 'Férias',
+            hint: STATUS[s].code,
+          }))}
+        />
+        <DatePicker label="Início" size="sm" value={start || null} onValueChange={(v) => setStart(v ?? '')} />
+        <DatePicker label="Fim" size="sm" value={end || null} onValueChange={(v) => setEnd(v ?? '')} min={start || undefined} />
         <div className="col-span-2 md:col-span-1"><Label className="text-xs">Motivo (opcional)</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} className="h-10 text-sm" /></div>
         <div className="col-span-2"><Label className="text-xs">Observações (opcional)</Label><Input value={note} onChange={(e) => setNote(e.target.value)} className="h-10 text-sm" /></div>
         <div className="col-span-2 md:col-span-1"><Label className="text-xs">Anexo (foto/PDF do atestado)</Label><Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="h-10 text-sm" /></div>
@@ -277,10 +297,18 @@ function PatternPanel({ unitId, collaborators, turnos, patterns, post, busy }: {
       <h3 className="mb-2 text-sm font-bold text-brand">Cadastrar / editar escala do colaborador</h3>
       <p className="mb-2 text-xs text-muted-foreground">O padrão gera o <b>Planejado</b>. 12x36 usa dias pares/ímpares do mês; 6x1/5x2/personalizada usam a data de início do ciclo.</p>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-        <div className="col-span-2 md:col-span-1"><Label className="text-xs">Colaborador</Label><select className={cn(SEL, 'w-full')} value={collaboratorId} onChange={(e) => load(e.target.value)}><option value="">Selecione…</option>{collaborators.map((c) => <option key={c.id} value={c.id}>{c.name}{existing.has(c.id) ? ' ✓' : ''}</option>)}</select></div>
-        <div><Label className="text-xs">Tipo de escala</Label><select className={cn(SEL, 'w-full')} value={type} onChange={(e) => setType(e.target.value as ScheduleType)}>{TYPE_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</select></div>
-        <div><Label className="text-xs">Turno (opcional)</Label><select className={cn(SEL, 'w-full')} value={shiftId} onChange={(e) => setShiftId(e.target.value)}><option value="">—</option>{turnos.map((t) => <option key={t.id} value={t.id}>{t.name}{t.startTime && t.endTime ? ` ${t.startTime}-${t.endTime}` : ''}</option>)}</select></div>
-        {needsAnchor && <div><Label className="text-xs">Início do ciclo</Label><Input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} className="h-10 text-sm" /></div>}
+        <div className="col-span-2 md:col-span-1">
+          <Select
+            label="Colaborador" size="sm" placeholder="Selecione…" value={collaboratorId} onValueChange={load}
+            options={collaborators.map((c) => ({ value: c.id, label: c.name, hint: existing.has(c.id) ? 'já tem padrão' : undefined }))}
+          />
+        </div>
+        <Select label="Tipo de escala" size="sm" value={type} onValueChange={(v) => setType(v as ScheduleType)} options={TYPE_OPTIONS.map((t) => ({ value: t.value, label: t.label }))} />
+        <Select
+          label="Turno (opcional)" size="sm" placeholder="—" value={shiftId} onValueChange={setShiftId}
+          options={turnos.map((t) => ({ value: t.id, label: t.name, hint: t.startTime && t.endTime ? `${t.startTime}-${t.endTime}` : undefined }))}
+        />
+        {needsAnchor && <DatePicker label="Início do ciclo" size="sm" value={anchor || null} onValueChange={(v) => setAnchor(v ?? '')} />}
         {type === 'CUSTOM' && <div className="col-span-2"><Label className="text-xs">Padrão (T=trabalha, F=folga)</Label><Input value={mask} onChange={(e) => setMask(e.target.value.toUpperCase())} placeholder="ex: TTTTTFF" className="h-10 text-sm" /></div>}
       </div>
       <div className="mt-2 flex gap-2">
