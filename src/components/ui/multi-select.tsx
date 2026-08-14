@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, Check, X, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +35,7 @@ export function MultiSelect({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const ref = useRef<HTMLDivElement>(null);
+  const listId = `${useId()}-list`;
 
   useEffect(() => {
     if (!open) return;
@@ -66,6 +67,7 @@ export function MultiSelect({
         role="combobox"
         aria-expanded={open}
         aria-haspopup="listbox"
+        aria-controls={open ? listId : undefined}
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
         className={cn(
@@ -122,7 +124,7 @@ export function MultiSelect({
               {allOn ? 'Limpar seleção' : `Selecionar ${allLabel}`}
             </button>
           )}
-          <ul role="listbox" aria-multiselectable className="max-h-52 overflow-y-auto py-1">
+          <ul id={listId} role="listbox" aria-multiselectable className="max-h-52 overflow-y-auto py-1">
             {filtered.length === 0 && <li className="px-3 py-2 text-[14px] text-ink-500">{emptyLabel}</li>}
             {filtered.map((o) => {
               const on = sel.has(o.value);

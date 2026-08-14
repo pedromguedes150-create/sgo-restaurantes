@@ -9,6 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { FilterBar, FilterSelect } from '@/components/ui/filter-bar';
+import { Select as DsSelect } from '@/components/ui/ds/select';
+import { SearchField } from '@/components/ui/ds/field';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 import { QrScanner } from '@/components/notes/qr-scanner';
 import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
@@ -160,29 +164,44 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2 print:hidden">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar fornecedor, nº, CNPJ, produto, obs., valor…" className="h-9 w-56 text-sm" />
-        <select value={supplier} onChange={(e) => setSupplier(e.target.value)} className={sel}>
-          <option value="ALL">Todos os fornecedores</option>
-          {supplierNames.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-sgo-surface p-3 print:hidden">
+        <div className="min-w-[14rem] flex-1">
+          <SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="fornecedor, nº, CNPJ, produto, valor…" />
+        </div>
+        <div className="min-w-[10rem] flex-1">
+          <DsSelect
+            label="Fornecedor" size="sm" value={supplier} onValueChange={setSupplier}
+            options={[{ value: 'ALL', label: 'Todos os fornecedores' }, ...supplierNames.map((s) => ({ value: s, label: s }))]}
+          />
+        </div>
         {units.length > 1 && (
-          <select value={unit} onChange={(e) => setUnit(e.target.value)} className={sel}>
-            <option value="ALL">Todas as unidades</option>
-            {units.map((u) => <option key={u.id} value={u.name}>{u.name}</option>)}
-          </select>
+          <div className="min-w-[10rem] flex-1">
+            <DsSelect
+              label="Unidade" size="sm" value={unit} onValueChange={setUnit}
+              options={[{ value: 'ALL', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.name, label: shortUnitName(u.name) }))]}
+            />
+          </div>
         )}
-        <select value={st} onChange={(e) => setStatus(e.target.value as typeof st)} className={sel}>
-          <option value="ALL">Todos os status</option>
-          <option value="RECEIVED">Recebida</option>
-          <option value="PROBLEM">Com problema</option>
-          <option value="RETURNED">Devolvida</option>
-          <option value="PAID">Paga (legado)</option>
-        </select>
-        <select value={sinceDays} onChange={(e) => router.push(`/modulos/notas?dias=${e.target.value}`)} className={sel}>
-          {PERIODS.map((p) => <option key={p.dias} value={p.dias}>{p.label}</option>)}
-        </select>
-        <span className="ml-auto text-xs text-muted-foreground">{filtered.length} de {notes.length}</span>
+        <div className="min-w-[10rem] flex-1">
+          <DsSelect
+            label="Status" size="sm" value={st} onValueChange={(v) => setStatus(v as typeof st)}
+            options={[
+              { value: 'ALL', label: 'Todos os status' },
+              { value: 'RECEIVED', label: 'Recebida' },
+              { value: 'PROBLEM', label: 'Com problema' },
+              { value: 'RETURNED', label: 'Devolvida' },
+              { value: 'PAID', label: 'Paga (legado)' },
+            ]}
+          />
+        </div>
+        <div className="min-w-[10rem] flex-1">
+          <DsSelect
+            label="Período" size="sm" value={String(sinceDays)}
+            onValueChange={(v) => router.push(`/modulos/notas?dias=${v}`)}
+            options={PERIODS.map((p) => ({ value: String(p.dias), label: p.label }))}
+          />
+        </div>
+        <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{filtered.length} de {notes.length}</span>
       </div>
 
       {full && (
@@ -255,8 +274,8 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
             <div><Label className="text-xs">Número</Label><Input value={f.number} onChange={(e) => set('number', e.target.value)} className="h-9 text-sm" /></div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label className="text-xs">Emissão</Label><Input type="date" value={f.issueDate} onChange={(e) => set('issueDate', e.target.value)} className="h-9 text-sm" /></div>
-            <div><Label className="text-xs">Vencimento</Label><Input type="date" value={f.dueDate} onChange={(e) => set('dueDate', e.target.value)} className="h-9 text-sm" /></div>
+            <DatePicker label="Emissão" size="sm" value={f.issueDate || null} onValueChange={(v) => set('issueDate', v ?? '')} />
+            <DatePicker label="Vencimento" size="sm" value={f.dueDate || null} onValueChange={(v) => set('dueDate', v ?? '')} min={f.issueDate || undefined} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Valor (R$)</Label><Input inputMode="decimal" value={f.totalValue} onChange={(e) => set('totalValue', e.target.value)} className="h-9 text-sm" /></div>
@@ -505,11 +524,12 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
   return (
     <div className="space-y-3">
       {units.length > 1 && (
-        <div><Label>Unidade</Label>
-          <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
+        <DsSelect
+          label="Unidade"
+          value={unitId}
+          onValueChange={setUnitId}
+          options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+        />
       )}
       <div>
         <Label htmlFor="key"><ScanLine className="mr-1 inline h-4 w-4" /> Chave de acesso (44 dígitos — QR/DANFE)</Label>
@@ -519,19 +539,19 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
         </div>
         {prefilled && <p className="mt-1 text-xs text-warning">Campos preenchidos pela chave — confira em amarelo.</p>}
       </div>
-      <div>
-        <Label>Fornecedor (da lista de cadastrados)</Label>
-        <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={supplierId} onChange={(e) => {
-          const s = suppliers.find((x) => x.id === e.target.value);
-          setSupplierId(e.target.value);
+      <DsSelect
+        label="Fornecedor (da lista de cadastrados)"
+        placeholder="Selecione o fornecedor…"
+        hint="Fornecedor não está na lista? Peça à Supervisão/Admin para cadastrar em Configurações → Fornecedores."
+        value={supplierId}
+        onValueChange={(v) => {
+          const s = suppliers.find((x) => x.id === v);
+          setSupplierId(v);
           setSupplierName(s?.name ?? '');
           setSupplierCnpj(s?.cnpj ?? supplierCnpj);
-        }}>
-          <option value="">Selecione o fornecedor…</option>
-          {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}{s.isGas ? ' (gás)' : ''}</option>)}
-        </select>
-        <p className="mt-1 text-xs text-muted-foreground">Fornecedor não está na lista? Peça à Supervisão/Admin para cadastrar em Configurações → Fornecedores.</p>
-      </div>
+        }}
+        options={suppliers.map((s) => ({ value: s.id, label: s.name, hint: s.isGas ? 'fornecedor de gás' : undefined }))}
+      />
 
       {isGas && (
         <p className="rounded-md bg-accent/10 px-3 py-2 text-xs font-semibold text-accent">Fornecedor de gás — preencha os dados do recebimento de gás. Isso alimenta a Análise de gás (dashboard, contratos e variação).</p>
@@ -542,8 +562,8 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
         <div><Label>Número</Label><Input className={hl} value={number} onChange={(e) => setNumber(e.target.value)} /></div>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>{isGas ? 'Emissão' : 'Emissão'}</Label><Input className={hl} type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></div>
-        <div><Label>Vencimento do boleto</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+        <DatePicker label="Emissão" value={issueDate || null} onValueChange={(v) => setIssueDate(v ?? '')} className={hl} />
+        <DatePicker label="Vencimento do boleto" value={dueDate || null} onValueChange={(v) => setDueDate(v ?? '')} min={issueDate || undefined} />
       </div>
 
       {isGas ? (
