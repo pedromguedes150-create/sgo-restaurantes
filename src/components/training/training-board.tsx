@@ -69,7 +69,7 @@ export function TrainingBoard({ board, isAdmin, weight }: { board: Group[]; isAd
                   </span>
                   <span className="flex items-center gap-1 text-xs">
                     {c.missed > 0 && <span className="rounded-full bg-critical/15 px-2 py-0.5 font-bold text-critical">{c.missed} vencido(s)</span>}
-                    {c.pending > 0 && <span className="rounded-full bg-medium/20 px-2 py-0.5 font-bold text-[#92600A]">{c.pending} pendente(s)</span>}
+                    {c.pending > 0 && <span className="rounded-full bg-medium/20 px-2 py-0.5 font-bold text-warning">{c.pending} pendente(s)</span>}
                     {c.done > 0 && <span className="rounded-full bg-success/15 px-2 py-0.5 font-bold text-success">{c.done} ok</span>}
                   </span>
                 </button>

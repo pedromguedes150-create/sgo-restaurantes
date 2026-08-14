@@ -11,7 +11,7 @@ import { ArrowLeft, ClipboardCheck } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-function tone(pct: number): string { return pct >= 80 ? 'text-success' : pct >= 50 ? 'text-[#92600A]' : 'text-critical'; }
+function tone(pct: number): string { return pct >= 80 ? 'text-success' : pct >= 50 ? 'text-warning' : 'text-critical'; }
 function toneBg(pct: number): string { return pct >= 80 ? 'bg-success' : pct >= 50 ? 'bg-medium' : 'bg-critical'; }
 
 /** Painel resumo da unidade para a reunião supervisor×gerente (20/07). Imprimível. */

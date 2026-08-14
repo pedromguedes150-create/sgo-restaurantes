@@ -35,7 +35,7 @@ export function ChecklistCoverageMatrix({ units, rows }: { units: UnitCol[]; row
     <div className="space-y-3">
       <div>
         <h2 className="text-sm font-bold text-brand">Resumo: checklists habilitados por unidade</h2>
-        <p className="text-xs text-muted-foreground">✓ = habilitado. Célula <span className="font-semibold text-[#92600A]">âmbar</span> = checklist presente na maioria das unidades mas <b>faltando</b> nesta (possível esquecimento).</p>
+        <p className="text-xs text-muted-foreground">✓ = habilitado. Célula <span className="font-semibold text-warning">âmbar</span> = checklist presente na maioria das unidades mas <b>faltando</b> nesta (possível esquecimento).</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar checklist…" className="h-9 w-48 rounded-lg border-2 border-input bg-background px-3 text-sm" />
@@ -62,13 +62,13 @@ export function ChecklistCoverageMatrix({ units, rows }: { units: UnitCol[]; row
               <tr key={r.name} className="border-t">
                 <td className="sticky left-0 z-10 bg-card p-2 font-medium text-brand">
                   {r.name}
-                  {r.common && r.gaps > 0 && <span className="ml-1 rounded-full bg-[#92600A]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#92600A]">falta em {r.gaps}</span>}
+                  {r.common && r.gaps > 0 && <span className="ml-1 rounded-full bg-warning-bg px-1.5 py-0.5 text-[10px] font-semibold text-warning">falta em {r.gaps}</span>}
                 </td>
                 {units.map((u) => {
                   const has = r.set.has(u.id);
                   const gap = !has && r.common;
                   return (
-                    <td key={u.id} className={`p-1 text-center ${has ? 'bg-success/70 font-bold text-white' : gap ? 'bg-medium/40 text-[#92600A]' : 'text-muted-foreground/40'}`} title={`${r.name} · ${u.name}`}>
+                    <td key={u.id} className={`p-1 text-center ${has ? 'bg-success/70 font-bold text-white' : gap ? 'bg-medium/40 text-warning' : 'text-muted-foreground/40'}`} title={`${r.name} · ${u.name}`}>
                       {has ? '✓' : gap ? '!' : '·'}
                     </td>
                   );

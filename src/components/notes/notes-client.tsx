@@ -497,7 +497,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
           <Input id="key" inputMode="numeric" value={accessKey} onChange={(e) => onKey(e.target.value)} placeholder="cole, digite ou escaneie" className="flex-1" />
           <QrScanner onResult={(chave) => onKey(chave)} />
         </div>
-        {prefilled && <p className="mt-1 text-xs text-[#92600A]">Campos preenchidos pela chave — confira em amarelo.</p>}
+        {prefilled && <p className="mt-1 text-xs text-warning">Campos preenchidos pela chave — confira em amarelo.</p>}
       </div>
       <div>
         <Label>Fornecedor (da lista de cadastrados)</Label>

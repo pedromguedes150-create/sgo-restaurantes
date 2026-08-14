@@ -106,7 +106,7 @@ export function CommandsClient({
 
   if (!hasConfig) {
     return (
-      <p className="rounded-lg bg-medium/10 px-3 py-2 text-sm font-medium text-[#92600A]">
+      <p className="rounded-lg bg-medium/10 px-3 py-2 text-sm font-medium text-warning">
         Sequência de comandas ainda não configurada para esta unidade (Admin → Configurações).
       </p>
     );
@@ -252,7 +252,7 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
       <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><Grid3x3 className="h-4 w-4" /> Conferência em grade</h2>
       <p className="mb-2 text-xs text-muted-foreground">Toque 1× = <b className="text-success">conferida</b> · 2× = <b className="text-blue-600">em uso</b> (com cliente — conta como presente) · 3× = limpa. As <b>não marcadas</b> viram apuração.</p>
       {underReview.length > 0 && (
-        <p className="mb-2 rounded-md bg-medium/10 px-2 py-1 text-xs font-semibold text-[#92600A]">{underReview.length} comanda(s) já em apuração — fora da grade (trate no bloco Divergências abaixo).</p>
+        <p className="mb-2 rounded-md bg-medium/10 px-2 py-1 text-xs font-semibold text-warning">{underReview.length} comanda(s) já em apuração — fora da grade (trate no bloco Divergências abaixo).</p>
       )}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <button onClick={() => { setSelected(new Set(gridNumbers)); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Marcar todas</button>

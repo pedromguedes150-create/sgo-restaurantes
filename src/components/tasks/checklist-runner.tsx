@@ -14,7 +14,7 @@ interface Answer { status: ItemStatus; note?: string }
 
 const ST: Record<ItemStatus, { label: string; short: string; cls: string }> = {
   OK:            { label: 'De acordo',    short: '🟢', cls: 'bg-success text-white border-success' },
-  EM_CORRECAO:   { label: 'Em correção',  short: '🟡', cls: 'bg-medium text-[#3b2a00] border-medium' },
+  EM_CORRECAO:   { label: 'Em correção',  short: '🟡', cls: 'bg-warning-bg text-warning border-warning' },
   A_CORRIGIR:    { label: 'A corrigir',   short: '🔴', cls: 'bg-critical text-white border-critical' },
   NAO_SE_APLICA: { label: 'Não se aplica', short: '⚪', cls: 'bg-muted text-muted-foreground border-input' },
 };
@@ -121,7 +121,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
   if (done) {
     return (
       <div className="space-y-4">
-        <p className={cn('rounded-lg px-3 py-2 text-sm font-semibold', lateStatus ? 'bg-medium/15 text-[#92600A]' : 'bg-success/10 text-success')}>
+        <p className={cn('rounded-lg px-3 py-2 text-sm font-semibold', lateStatus ? 'bg-medium/15 text-warning' : 'bg-success/10 text-success')}>
           {lateStatus ? 'Concluído fora do prazo (não conta na meta).' : 'Concluído no prazo.'}
         </p>
         {/* Visão completa a partir do SNAPSHOT das respostas (sobrevive a edições do checklist). */}
@@ -217,7 +217,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                         ai[it.id].configured === false ? <p className="mt-1 text-xs text-muted-foreground">IA não configurada no servidor.</p>
                         : ai[it.id].error ? <p className="mt-1 text-xs text-critical">{ai[it.id].error}</p>
                         : ai[it.id].verdict ? (
-                          <p className={cn('mt-1 text-xs font-medium', ai[it.id].verdict === 'COMPATIVEL' ? 'text-success' : ai[it.id].verdict === 'DIVERGENTE' ? 'text-critical' : 'text-[#92600A]')}>
+                          <p className={cn('mt-1 text-xs font-medium', ai[it.id].verdict === 'COMPATIVEL' ? 'text-success' : ai[it.id].verdict === 'DIVERGENTE' ? 'text-critical' : 'text-warning')}>
                             {ai[it.id].verdict === 'COMPATIVEL' ? '🟢 Compatível' : ai[it.id].verdict === 'DIVERGENTE' ? '🔴 Divergente' : '🟡 Incerto'}{ai[it.id].observations ? ` — ${ai[it.id].observations}` : ''}
                           </p>
                         ) : null

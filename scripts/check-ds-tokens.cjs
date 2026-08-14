@@ -10,7 +10,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { TSX_SCOPE_DIRS, TOKENS_FILE } = require('./ds-scope.cjs');
+const { TSX_SCOPE_DIRS, TSX_EXCEPTIONS, TOKENS_FILE } = require('./ds-scope.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 const HEX = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/;
@@ -30,9 +30,8 @@ function walk(dir) {
   return out;
 }
 
-const files = [...new Set(TSX_SCOPE_DIRS.flatMap(walk))].filter(
-  (f) => f !== TOKENS_FILE,
-);
+const exceptions = new Set([TOKENS_FILE, ...TSX_EXCEPTIONS]);
+const files = [...new Set(TSX_SCOPE_DIRS.flatMap(walk))].filter((f) => !exceptions.has(f));
 
 const violations = [];
 for (const file of files) {

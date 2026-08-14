@@ -23,7 +23,7 @@ const fmtMonthLong = (ym: string) => {
   return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 };
 const TONE = { success: 'bg-success', medium: 'bg-medium', critical: 'bg-critical' } as const;
-const pctCls = (v: number) => (v >= 80 ? 'text-success' : v >= 50 ? 'text-[#92600A]' : 'text-critical');
+const pctCls = (v: number) => (v >= 80 ? 'text-success' : v >= 50 ? 'text-warning' : 'text-critical');
 
 export function ExecutiveClient({ rows, totals, yearMonth, months }: {
   rows: ExecRowUI[]; totals: ExecTotalsUI; yearMonth: string; months: string[];

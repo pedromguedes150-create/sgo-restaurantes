@@ -591,7 +591,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
             </div>
           )}
           {calc && !calc.configured && workDate && workStartTime && workEndTime && (
-            <p className="rounded-lg bg-medium/10 px-3 py-2 text-xs text-[#92600A]">Sem valor/hora cadastrado para este dia nesta unidade. Informe o valor manualmente abaixo (o Admin pode cadastrar em Configurações → Valor do freelancer).</p>
+            <p className="rounded-lg bg-medium/10 px-3 py-2 text-xs text-warning">Sem valor/hora cadastrado para este dia nesta unidade. Informe o valor manualmente abaixo (o Admin pode cadastrar em Configurações → Valor do freelancer).</p>
           )}
           <div><Label>Observações (opcional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex: cobriu falta, evento…" /></div>
         </>

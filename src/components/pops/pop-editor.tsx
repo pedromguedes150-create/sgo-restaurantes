@@ -65,7 +65,7 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
         contentEditable
         suppressContentEditableWarning
         onInput={() => onChange(ref.current?.innerHTML ?? '')}
-        className="pop-rich min-h-[90px] p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="pop-rich min-h-[88px] p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
     </div>
   );

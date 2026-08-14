@@ -59,7 +59,7 @@ export function CancellationAnalysisClient({ unitId, analyses }: { unitId: strin
               {a.data.flags.length > 0 && (
                 <div className="space-y-1.5">
                   {a.data.flags.map((f, i) => (
-                    <p key={i} className={`flex items-start gap-2 rounded-lg px-3 py-2 text-sm font-medium ${f.level === 'high' ? 'bg-critical/10 text-critical' : 'bg-medium/20 text-[#92600A]'}`}>
+                    <p key={i} className={`flex items-start gap-2 rounded-lg px-3 py-2 text-sm font-medium ${f.level === 'high' ? 'bg-critical/10 text-critical' : 'bg-medium/20 text-warning'}`}>
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {f.text}
                     </p>
                   ))}

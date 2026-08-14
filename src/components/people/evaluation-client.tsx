@@ -75,7 +75,7 @@ export function EvaluationClient({ rows, yearMonth, months, canEvaluate, isAdmin
           {months.map((m) => <option key={m} value={m}>{fmtMonth(m)}</option>)}
         </select>
         {unitOptions.length > 1 && (
-          <select value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)} className="h-9 max-w-[220px] rounded-md border bg-card px-2 text-sm font-semibold">
+          <select value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)} className="h-9 max-w-56 rounded-md border bg-card px-2 text-sm font-semibold">
             <option value="ALL">Todas as unidades</option>
             {unitOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>

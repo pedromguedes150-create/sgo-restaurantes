@@ -12,7 +12,7 @@ interface Req { id: string; origin: string; number: number; status: string; crea
 const ORIGIN = { FABRICA: { label: 'Fábrica', icon: Factory }, CD: { label: 'CD', icon: Warehouse } } as const;
 const STATUS: Record<string, { label: string; cls: string }> = {
   NEW: { label: 'Novo', cls: 'bg-critical/15 text-critical' },
-  SEPARATING: { label: 'Em separação', cls: 'bg-medium/30 text-[#92600A]' },
+  SEPARATING: { label: 'Em separação', cls: 'bg-medium/30 text-warning' },
   SENT: { label: 'Enviado', cls: 'bg-accent/15 text-accent' },
   RECEIVED: { label: 'Recebido', cls: 'bg-success/15 text-success' },
 };
@@ -86,7 +86,7 @@ function NewOrder({ units, selUnitId, products, post, busy }: { units: { id: str
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar produto (ignora acento)…" className="h-11 w-full rounded-lg border-2 border-input bg-background pl-9 pr-3 text-sm" />
       </div>
 
-      {products.length === 0 && <p className="rounded-lg bg-medium/10 px-3 py-2 text-sm text-[#92600A]">Catálogo vazio. Peça ao Admin para cadastrar/importar produtos em Configurações → Produtos.</p>}
+      {products.length === 0 && <p className="rounded-lg bg-medium/10 px-3 py-2 text-sm text-warning">Catálogo vazio. Peça ao Admin para cadastrar/importar produtos em Configurações → Produtos.</p>}
 
       <div className="space-y-3">
         {byCat.map(([cat, list]) => (

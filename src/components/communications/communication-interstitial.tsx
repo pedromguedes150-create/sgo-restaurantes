@@ -12,7 +12,7 @@ interface Item {
 
 const PRIO: Record<string, { label: string; cls: string }> = {
   URGENT: { label: 'Urgente', cls: 'bg-critical text-white' },
-  IMPORTANT: { label: 'Importante', cls: 'bg-medium text-[#3b2a00]' },
+  IMPORTANT: { label: 'Importante', cls: 'bg-warning-bg text-warning' },
   NORMAL: { label: 'Comunicado', cls: 'bg-primary text-primary-foreground' },
 };
 

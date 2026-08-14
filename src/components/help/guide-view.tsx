@@ -80,7 +80,7 @@ export function GuideView({ sections }: { sections: Section[] }) {
                             {g.steps.map((step, i) => <li key={i}>{step}</li>)}
                           </ol>
                           {g.tips?.map((tip, i) => (
-                            <p key={i} className={cn('flex items-start gap-2 rounded-lg bg-medium/10 p-2 text-xs text-[#92600A]')}>
+                            <p key={i} className={cn('flex items-start gap-2 rounded-lg bg-medium/10 p-2 text-xs text-warning')}>
                               <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" /> {tip}
                             </p>
                           ))}

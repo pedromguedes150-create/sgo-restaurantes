@@ -77,7 +77,7 @@ export default async function DesperdiciosPage({
         </CardHeader>
         <CardContent className="space-y-3">
           <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} />
-          {isBackdated && <p className="rounded-lg bg-medium/10 px-3 py-2 text-xs font-medium text-[#92600A]">Lançando para um dia anterior ({operationalDate}).</p>}
+          {isBackdated && <p className="rounded-lg bg-medium/10 px-3 py-2 text-xs font-medium text-warning">Lançando para um dia anterior ({operationalDate}).</p>}
           {entry?.createdBy && (
             <p className="mb-3 text-xs text-muted-foreground">
               Registrado por {entry.createdBy} · total atual {entry.total.toFixed(2)} KG

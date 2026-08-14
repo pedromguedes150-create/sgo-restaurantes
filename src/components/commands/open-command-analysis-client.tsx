@@ -84,7 +84,7 @@ export function OpenCommandAnalysisClient({ unitId, unitName, today, analyses }:
                         <tr key={i} className={`border-b align-top ${s.daysOpen >= 2 ? 'bg-critical/5' : ''}`}>
                           <td className="p-1.5 font-mono font-semibold">{s.number}</td>
                           <td className="p-1.5 whitespace-nowrap">{fmtDT(s.openedAt)}</td>
-                          <td className={`p-1.5 text-center font-bold ${s.daysOpen >= 2 ? 'text-critical' : 'text-[#92600A]'}`}>{s.daysOpen}</td>
+                          <td className={`p-1.5 text-center font-bold ${s.daysOpen >= 2 ? 'text-critical' : 'text-warning'}`}>{s.daysOpen}</td>
                           <td className="p-1.5 text-right font-semibold">{formatBRL(s.value)}</td>
                           <td className="p-1.5 text-muted-foreground">{s.items.map((it) => `${it.qty}× ${it.name}`).join('; ')}</td>
                         </tr>

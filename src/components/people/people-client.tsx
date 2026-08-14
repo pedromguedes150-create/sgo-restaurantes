@@ -98,7 +98,7 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
                 <StatusBadge tone={VAC_ST[v.status].tone}>{VAC_ST[v.status].label}</StatusBadge>
               </div>
               <p className="text-xs text-muted-foreground">{v.unit} · {v.start} a {v.end}</p>
-              {v.changeNote && <p className="mt-1 text-xs text-[#92600A]">Alteração: {v.changeNote}</p>}
+              {v.changeNote && <p className="mt-1 text-xs text-warning">Alteração: {v.changeNote}</p>}
               {v.status === 'CONFIRMED' && <Button size="sm" variant="outline" className="mt-2" disabled={busy} onClick={() => vacChange(v.id)}>Solicitar alteração</Button>}
             </div>
           ))}

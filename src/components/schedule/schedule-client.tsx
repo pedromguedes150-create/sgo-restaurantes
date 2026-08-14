@@ -21,10 +21,10 @@ const STATUS: Record<DayStatus, { code: string; cls: string }> = {
   WORK:         { code: 'T',  cls: 'bg-brand text-white' },
   OFF:          { code: 'F',  cls: 'border border-input text-muted-foreground' },
   FALTA_INJUST: { code: 'FI', cls: 'bg-critical/15 text-critical border border-critical/40' },
-  FALTA_JUST:   { code: 'FJ', cls: 'bg-medium/25 text-[#92600A] border border-medium/50' },
+  FALTA_JUST:   { code: 'FJ', cls: 'bg-medium/25 text-warning border border-medium/50' },
   ATESTADO:     { code: 'A',  cls: 'bg-blue-100 text-blue-700 border border-blue-300' },
   FERIAS:       { code: 'FE', cls: 'bg-success/15 text-success border border-success/40' },
-  ATRASO:       { code: 'AT', cls: 'bg-medium/15 text-[#92600A] border border-medium/40' },
+  ATRASO:       { code: 'AT', cls: 'bg-medium/15 text-warning border border-medium/40' },
 };
 const STATUS_ORDER: DayStatus[] = ['WORK', 'ATRASO', 'OFF', 'FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
 const ABSENCE: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
@@ -131,7 +131,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
           <table className="min-w-full border-collapse text-center text-xs">
             <thead>
               <tr className="bg-brand text-white">
-                <th className="sticky left-0 z-10 min-w-[180px] bg-brand px-2 py-2 text-left">Colaborador</th>
+                <th className="sticky left-0 z-10 min-w-[184px] bg-brand px-2 py-2 text-left">Colaborador</th>
                 {Array.from({ length: grid.daysCount }, (_, i) => i + 1).map((d) => (
                   <th key={d} className={cn('px-1 py-1 font-medium', isWeekend(d) && 'bg-white/10')}>
                     <div className="text-[10px] opacity-80">{wdOf(d)}</div>
@@ -151,7 +151,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                       </tr>
                     )}
                     <tr className="border-t">
-                      <td className="sticky left-0 z-10 min-w-[180px] bg-card px-2 py-1.5 text-left">
+                      <td className="sticky left-0 z-10 min-w-[184px] bg-card px-2 py-1.5 text-left">
                         <div className="font-semibold text-brand">{row.name}</div>
                         <div className="text-[10px] text-muted-foreground">{row.jobTitle ?? ''}{row.shiftLabel ? ` · ${row.shiftLabel}` : ''}</div>
                       </td>
