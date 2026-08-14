@@ -21,11 +21,14 @@ export interface SelectProps {
   disabled?: boolean;
   size?: keyof typeof controlSize;
   className?: string;
+  /** Nome acessível quando não há rótulo visível (ex.: seletor compacto). */
+  'aria-label'?: string;
 }
 
 export function Select({
   options, value, onValueChange, placeholder = 'Selecione…',
   label, hint, error, required, disabled, size = 'md', className,
+  'aria-label': ariaLabel,
 }: SelectProps) {
   const id = React.useId();
   const listId = `${id}-list`;
@@ -89,6 +92,7 @@ export function Select({
           id={id}
           type="button"
           role="combobox"
+          aria-label={ariaLabel}
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-controls={open ? listId : undefined}
@@ -110,7 +114,7 @@ export function Select({
             id={listId}
             ref={listRef}
             role="listbox"
-            aria-label={label}
+            aria-label={label ?? ariaLabel}
             className="absolute left-0 top-full z-40 mt-1 max-h-64 w-full overflow-auto rounded-card border border-line bg-sgo-surface p-1 shadow-lg"
           >
             {options.map((o, i) => {

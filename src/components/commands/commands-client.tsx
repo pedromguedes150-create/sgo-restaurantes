@@ -257,15 +257,15 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <button onClick={() => { setSelected(new Set(gridNumbers)); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Marcar todas</button>
         <button onClick={() => { setSelected(new Set()); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Limpar</button>
-        <Input inputMode="numeric" value={filter} onChange={(e) => setFilter(e.target.value.replace(/\D/g, ''))} placeholder="filtrar nº" className="h-8 w-24 text-sm" />
+        <Input inputMode="numeric" value={filter} onChange={(e) => setFilter(e.target.value.replace(/\D/g, ''))} aria-label="Filtrar comandas pelo número" placeholder="filtrar nº" className="h-8 w-24 text-sm" />
         <span className="ml-auto text-xs font-semibold"><span className="text-success">{conferidas} ok</span>{emUso > 0 && <> · <span className="text-blue-600">{emUso} em uso</span></>} · <span className={faltando > 0 ? 'text-critical' : 'text-muted-foreground'}>{faltando} faltando</span> / {total}</span>
       </div>
       {/* Seleção em lote por faixa (ex.: comandas guardadas) */}
       <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-md border border-dashed p-2">
         <span className="text-xs font-semibold text-muted-foreground">Faixa:</span>
-        <Input inputMode="numeric" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value.replace(/\D/g, ''))} placeholder="de" className="h-8 w-16 text-sm" />
+        <Input inputMode="numeric" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value.replace(/\D/g, ''))} aria-label="Início da faixa de comandas" placeholder="de" className="h-8 w-16 text-sm" />
         <span className="text-xs text-muted-foreground">até</span>
-        <Input inputMode="numeric" value={rangeTo} onChange={(e) => setRangeTo(e.target.value.replace(/\D/g, ''))} placeholder="até" className="h-8 w-16 text-sm" />
+        <Input inputMode="numeric" value={rangeTo} onChange={(e) => setRangeTo(e.target.value.replace(/\D/g, ''))} aria-label="Fim da faixa de comandas" placeholder="até" className="h-8 w-16 text-sm" />
         <button onClick={() => applyRange(true)} className="rounded-full border border-success/50 px-2.5 py-1 text-xs font-semibold text-success">Marcar faixa</button>
         <button onClick={() => applyRange(false)} className="rounded-full border border-critical/50 px-2.5 py-1 text-xs font-semibold text-critical">Desmarcar faixa</button>
       </div>
@@ -277,7 +277,7 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
         </div>
         {shown.length === 0 && <p className="p-2 text-xs text-muted-foreground">Nenhum número com esse filtro.</p>}
       </div>
-      {faltando > 0 && <Input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Observação (o que houve com as que faltam)" className="mt-2" />}
+      {faltando > 0 && <Input value={obs} onChange={(e) => setObs(e.target.value)} aria-label="Observação sobre as comandas que faltam" placeholder="Observação (o que houve com as que faltam)" className="mt-2" />}
       <Button onClick={confirmConf} disabled={busy} className="mt-2 w-full" variant="gold"><Check className="h-4 w-4" /> Confirmar conferência</Button>
     </div>
   );
@@ -310,8 +310,8 @@ function ReplacementForm({ unitId, onDone }: { unitId: string; onDone: () => voi
     <div className="rounded-lg border border-dashed p-3">
       <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Reposição (Admin)</h2>
       <div className="flex gap-2">
-        <Input inputMode="numeric" placeholder="nº" value={number} onChange={(e) => setNumber(e.target.value)} className="w-24" />
-        <Input placeholder="observação" value={note} onChange={(e) => setNote(e.target.value)} />
+        <Input inputMode="numeric" aria-label="Número da comanda" placeholder="nº" value={number} onChange={(e) => setNumber(e.target.value)} className="w-24" />
+        <Input aria-label="Observação da comanda" placeholder="observação" value={note} onChange={(e) => setNote(e.target.value)} />
         <Button onClick={submit} disabled={busy} size="icon" aria-label="Repor">
           <Plus className="h-5 w-5" />
         </Button>

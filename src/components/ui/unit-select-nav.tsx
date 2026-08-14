@@ -1,19 +1,25 @@
 'use client';
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { Select } from '@/components/ui/ds/select';
 
 /**
- * Seletor de unidade ÚNICO e compacto (dropdown) para telas que mostram uma
- * unidade por vez. Navega via query param (padrão `unit`), preservando os demais.
- * Substitui as listas largas de "pills" que ocupavam muito espaço.
+ * Seletor ÚNICO e compacto (dropdown) para telas que mostram uma unidade — ou
+ * um mês — por vez. Navega via query param (padrão `unit`), preservando os demais.
+ *
+ * Onda 5: era um <select> NATIVO, o último do sistema (regra 6). Passou a usar
+ * o Select do design system, o que corrige de uma vez todas as telas que o
+ * consomem (Comandas, Metas, Desperdícios, Troco, Inventário…).
  */
 export function UnitSelectNav({
-  units, selected, paramName = 'unit', className,
+  units, selected, paramName = 'unit', className, label,
 }: {
   units: { id: string; name: string }[];
   selected: string;
   paramName?: string;
   className?: string;
+  /** Nome acessível do controle; o rótulo fica invisível por ser compacto. */
+  label?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -26,12 +32,13 @@ export function UnitSelectNav({
   }
 
   return (
-    <select
-      value={selected}
-      onChange={(e) => onChange(e.target.value)}
-      className={className ?? 'h-10 w-full max-w-sm rounded-lg border-2 border-input bg-background px-3 text-sm font-medium'}
-    >
-      {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-    </select>
+    <div className={className ?? 'w-full max-w-sm'}>
+      <Select
+        aria-label={label ?? (paramName === 'month' ? 'Mês de referência' : 'Unidade')}
+        options={units.map((u) => ({ value: u.id, label: u.name }))}
+        value={selected}
+        onValueChange={onChange}
+      />
+    </div>
   );
 }
