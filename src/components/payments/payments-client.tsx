@@ -185,7 +185,7 @@ export function PaymentsClient({
             }
           >
             {t.label}
-            {t.badge ? <span className="ml-1 rounded-full bg-danger px-1.5 text-xs text-white">{t.badge}</span> : null}
+            {t.badge ? <span className="ml-1 rounded-full bg-danger px-1.5 text-xs text-on-brand">{t.badge}</span> : null}
           </button>
         ))}
       </div>

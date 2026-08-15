@@ -125,7 +125,7 @@ export function QrScanner({ onResult }: { onResult: (chave: string) => void }) {
             <video ref={videoRef} playsInline muted className="w-full" />
             <div className="pointer-events-none absolute inset-x-6 inset-y-16 rounded-lg border-2 border-white/80" />
           </div>
-          <p className="mt-3 text-center text-sm text-white">Aponte para o <strong>QR code</strong> ou o <strong>código de barras</strong> da nota.</p>
+          <p className="mt-3 text-center text-sm text-on-brand">Aponte para o <strong>QR code</strong> ou o <strong>código de barras</strong> da nota.</p>
           {error && <p className="mt-2 text-center text-sm font-medium text-red-300">{error}</p>}
           <Button type="button" variant="outline" className="mt-4" onClick={() => { cleanup(); setOpen(false); }}>
             <X className="h-4 w-4" /> Fechar

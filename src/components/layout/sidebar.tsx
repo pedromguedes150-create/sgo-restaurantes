@@ -93,7 +93,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
                 <GIcon className={cn('h-5 w-5 shrink-0', gActive ? 'text-sgo-brand' : 'text-ink-400')} />
                 <span className="flex-1 text-left">{g.title}</span>
                 {gb > 0 && !gOpen && (
-                  <span className="rounded-pill bg-danger px-1.5 text-[11px] font-bold tabular-nums text-white">{gb}</span>
+                  <span className="rounded-pill bg-danger px-1.5 text-[11px] font-bold tabular-nums text-on-brand">{gb}</span>
                 )}
                 <ChevronRight className={cn('h-4 w-4 shrink-0 text-ink-400 transition-transform duration-sgo-2 ease-sgo-std motion-reduce:transition-none', gOpen && 'rotate-90')} />
               </button>
@@ -115,7 +115,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
                           <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-on-brand' : 'text-ink-400')} />
                           <span className="flex-1">{label}</span>
                           {b ? (
-                            <span className="rounded-pill bg-danger px-1.5 text-[11px] font-bold tabular-nums text-white">{b}</span>
+                            <span className="rounded-pill bg-danger px-1.5 text-[11px] font-bold tabular-nums text-on-brand">{b}</span>
                           ) : null}
                         </Link>
                       </li>

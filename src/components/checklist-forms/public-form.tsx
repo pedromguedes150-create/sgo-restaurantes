@@ -106,7 +106,7 @@ export function ChecklistPublicForm({ token, data }: { token: string; data: Data
       </div>
 
       {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
-      <button onClick={submit} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-sgo-brand py-3 text-sm font-bold text-white disabled:opacity-60">
+      <button onClick={submit} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-sgo-brand py-3 text-sm font-bold text-on-brand disabled:opacity-60">
         <Send className="h-4 w-4" /> {busy ? 'Enviando…' : 'Enviar'}
       </button>
     </div>

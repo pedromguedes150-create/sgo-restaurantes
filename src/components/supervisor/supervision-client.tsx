@@ -239,8 +239,8 @@ function UpcomingVisit({ v, checklists, canOperate, busy, post }: {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm">{item}</span>
                       <div className="flex gap-1">
-                        <button onClick={() => setResults((s) => ({ ...s, [item]: { ...r, ok: true } }))} className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', r.ok ? 'bg-sgo-success text-white' : 'border')}>OK</button>
-                        <button onClick={() => setResults((s) => ({ ...s, [item]: { ...r, ok: false } }))} className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', !r.ok && results[item] !== undefined ? 'bg-danger text-white' : 'border')}>Não</button>
+                        <button onClick={() => setResults((s) => ({ ...s, [item]: { ...r, ok: true } }))} className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', r.ok ? 'bg-sgo-success text-on-brand' : 'border')}>OK</button>
+                        <button onClick={() => setResults((s) => ({ ...s, [item]: { ...r, ok: false } }))} className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', !r.ok && results[item] !== undefined ? 'bg-danger text-on-brand' : 'border')}>Não</button>
                       </div>
                     </div>
                     {results[item] !== undefined && !r.ok && (

@@ -68,7 +68,7 @@ export function ChecklistCoverageMatrix({ units, rows }: { units: UnitCol[]; row
                   const has = r.set.has(u.id);
                   const gap = !has && r.common;
                   return (
-                    <td key={u.id} className={`p-1 text-center ${has ? 'bg-sgo-success/70 font-bold text-white' : gap ? 'bg-warning/40 text-warning' : 'text-ink-500'}`} title={`${r.name} · ${u.name}`}>
+                    <td key={u.id} className={`p-1 text-center ${has ? 'bg-sgo-success/70 font-bold text-on-brand' : gap ? 'bg-warning/40 text-warning' : 'text-ink-500'}`} title={`${r.name} · ${u.name}`}>
                       {has ? '✓' : gap ? '!' : '·'}
                     </td>
                   );

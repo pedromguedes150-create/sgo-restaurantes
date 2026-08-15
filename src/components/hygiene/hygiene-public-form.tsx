@@ -51,7 +51,7 @@ export function HygienePublicForm({ unitId, locations, preselect }: { unitId: st
         <p className="mb-1.5 text-sm font-semibold text-sgo-brand">O que está faltando? <span className="font-normal text-ink-500">(opcional)</span></p>
         <div className="flex flex-wrap gap-2">
           {ISSUES.map((it) => (
-            <button key={it} onClick={() => setIssue(issue === it ? null : it)} className={`rounded-full border px-3 py-2 text-sm ${issue === it ? 'bg-sgo-brand text-white border-sgo-brand' : ''}`}>{it}</button>
+            <button key={it} onClick={() => setIssue(issue === it ? null : it)} className={`rounded-full border px-3 py-2 text-sm ${issue === it ? 'bg-sgo-brand text-on-brand border-sgo-brand' : ''}`}>{it}</button>
           ))}
         </div>
       </div>
@@ -70,7 +70,7 @@ export function HygienePublicForm({ unitId, locations, preselect }: { unitId: st
       <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} placeholder="Comentário (opcional)" className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-2 text-sm" />
 
       {err && <p className="text-sm font-medium text-danger">{err}</p>}
-      <button onClick={submit} disabled={busy} className="w-full rounded-xl bg-sgo-brand py-3 text-base font-bold text-white disabled:opacity-60">{busy ? 'Enviando…' : 'Avisar a equipe'}</button>
+      <button onClick={submit} disabled={busy} className="w-full rounded-xl bg-sgo-brand py-3 text-base font-bold text-on-brand disabled:opacity-60">{busy ? 'Enviando…' : 'Avisar a equipe'}</button>
     </div>
   );
 }

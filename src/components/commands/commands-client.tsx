@@ -250,7 +250,7 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
   return (
     <div className="rounded-lg border-2 border-sgo-brand/30 bg-sgo-brand/5 p-3">
       <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-sgo-brand"><Grid3x3 className="h-4 w-4" /> Conferência em grade</h2>
-      <p className="mb-2 text-xs text-ink-500">Toque 1× = <b className="text-sgo-success">conferida</b> · 2× = <b className="text-blue-600">em uso</b> (com cliente — conta como presente) · 3× = limpa. As <b>não marcadas</b> viram apuração.</p>
+      <p className="mb-2 text-xs text-ink-500">Toque 1× = <b className="text-sgo-success">conferida</b> · 2× = <b className="text-info">em uso</b> (com cliente — conta como presente) · 3× = limpa. As <b>não marcadas</b> viram apuração.</p>
       {underReview.length > 0 && (
         <p className="mb-2 rounded-md bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">{underReview.length} comanda(s) já em apuração — fora da grade (trate no bloco Divergências abaixo).</p>
       )}
@@ -258,7 +258,7 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
         <button onClick={() => { setSelected(new Set(gridNumbers)); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Marcar todas</button>
         <button onClick={() => { setSelected(new Set()); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Limpar</button>
         <Input inputMode="numeric" value={filter} onChange={(e) => setFilter(e.target.value.replace(/\D/g, ''))} aria-label="Filtrar comandas pelo número" placeholder="filtrar nº" className="h-8 w-24 text-sm" />
-        <span className="ml-auto text-xs font-semibold"><span className="text-sgo-success">{conferidas} ok</span>{emUso > 0 && <> · <span className="text-blue-600">{emUso} em uso</span></>} · <span className={faltando > 0 ? 'text-danger' : 'text-ink-500'}>{faltando} faltando</span> / {total}</span>
+        <span className="ml-auto text-xs font-semibold"><span className="text-sgo-success">{conferidas} ok</span>{emUso > 0 && <> · <span className="text-info">{emUso} em uso</span></>} · <span className={faltando > 0 ? 'text-danger' : 'text-ink-500'}>{faltando} faltando</span> / {total}</span>
       </div>
       {/* Seleção em lote por faixa (ex.: comandas guardadas) */}
       <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-md border border-dashed p-2">
@@ -272,7 +272,7 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
       <div className="max-h-72 overflow-y-auto rounded-md border bg-sgo-surface p-2">
         <div className="grid grid-cols-6 gap-1 sm:grid-cols-10">
           {shown.map((n) => (
-            <button key={n} onClick={() => toggle(n)} className={`rounded px-1 py-1 text-xs font-semibold ${selected.has(n) ? 'bg-sgo-success text-white' : inUse.has(n) ? 'bg-blue-600 text-white' : 'border text-ink-500'}`}>{n}</button>
+            <button key={n} onClick={() => toggle(n)} className={`rounded px-1 py-1 text-xs font-semibold ${selected.has(n) ? 'bg-sgo-success text-on-brand' : inUse.has(n) ? 'bg-info text-on-brand' : 'border text-ink-500'}`}>{n}</button>
           ))}
         </div>
         {shown.length === 0 && <p className="p-2 text-xs text-ink-500">Nenhum número com esse filtro.</p>}

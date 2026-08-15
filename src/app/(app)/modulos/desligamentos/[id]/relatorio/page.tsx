@@ -17,7 +17,7 @@ export default async function TerminationReportPage({ params }: { params: { id: 
   if (!t) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 bg-white p-2 text-black print:p-0">
+    <div className="sgo-print mx-auto max-w-3xl space-y-4 bg-sgo-surface p-2 text-ink-900 print:p-0">
       <div className="flex items-center justify-between gap-2 print:hidden">
         <Link href="/modulos/desligamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
         <PrintButton />
@@ -26,7 +26,7 @@ export default async function TerminationReportPage({ params }: { params: { id: 
       <div className="border-b-2 border-sgo-brand pb-3">
         <p className="text-xs font-bold uppercase tracking-wide text-sgo-brand">Solicitação de Desligamento — SGO Beija Flor</p>
         <h1 className="text-2xl font-black text-sgo-brand">{t.collaboratorName}</h1>
-        <p className="text-sm text-gray-600">{t.unit.name} · {STAT[t.status]}</p>
+        <p className="text-sm text-ink-500">{t.unit.name} · {STAT[t.status]}</p>
       </div>
 
       <table className="w-full text-sm">
@@ -44,21 +44,21 @@ export default async function TerminationReportPage({ params }: { params: { id: 
       </table>
 
       <div>
-        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Motivo do desligamento</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Motivo do desligamento</p>
         <p className="whitespace-pre-wrap text-sm">{t.reason}</p>
       </div>
 
-      <div className="rounded border border-gray-300 p-2">
-        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Parecer do supervisor</p>
+      <div className="rounded border border-line-strong p-2">
+        <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Parecer do supervisor</p>
         <p className="text-sm">{t.status === 'PENDING' ? 'Aguardando.' : `${STAT[t.status]} por ${t.approvedBy?.name ?? '—'} em ${fmt(t.approvedAt)}.`}</p>
         {t.rejectionReason && <p className="mt-1 text-sm"><b>Motivo da recusa:</b> {t.rejectionReason}</p>}
       </div>
 
-      <p className="pt-4 text-center text-[10px] text-gray-400">Gerado pelo SGO Beija Flor · {fmt(new Date())} · Encaminhar ao RH após aprovação.</p>
+      <p className="pt-4 text-center text-[10px] text-ink-500">Gerado pelo SGO Beija Flor · {fmt(new Date())} · Encaminhar ao RH após aprovação.</p>
     </div>
   );
 }
 
 function Row({ k, v }: { k: string; v: string }) {
-  return <tr className="border-b border-gray-200"><td className="py-1 pr-4 align-top font-semibold text-gray-600">{k}</td><td className="py-1 align-top">{v}</td></tr>;
+  return <tr className="border-b border-line"><td className="py-1 pr-4 align-top font-semibold text-ink-500">{k}</td><td className="py-1 align-top">{v}</td></tr>;
 }

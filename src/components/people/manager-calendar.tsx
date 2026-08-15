@@ -104,7 +104,7 @@ function WeeklyTimetable({ managers }: { managers: CalManager[] }) {
               {WD_FULL.map((_, wd) => {
                 const names = coverFor(wd, h);
                 return (
-                  <td key={wd} className={`border p-1 ${names.length ? 'bg-sgo-success/70 text-white' : 'bg-danger/15 text-danger'}`} title={names.length ? names.join(', ') : 'sem gerente'}>
+                  <td key={wd} className={`border p-1 ${names.length ? 'bg-sgo-success/70 text-on-brand' : 'bg-danger/15 text-danger'}`} title={names.length ? names.join(', ') : 'sem gerente'}>
                     {names.length ? names.join(', ') : '—'}
                   </td>
                 );
@@ -125,10 +125,10 @@ function UnitCalendar({ unit, year, month, isAdmin = false }: { unit: CalUnit; y
   const anySchedule = unit.managers.some((m) => m.hasSchedule);
 
   function cellClass(d: CalDay): string {
-    if (d.working.length > 0) return 'bg-sgo-success/80 text-white';
+    if (d.working.length > 0) return 'bg-sgo-success/80 text-on-brand';
     if (d.onLeave.length > 0 && !anySchedule) return 'bg-sgo-brand/30';
     if (!anySchedule) return 'bg-sunken text-ink-500';
-    return 'bg-danger/80 text-white'; // gap
+    return 'bg-danger/80 text-on-brand'; // gap
   }
 
   return (

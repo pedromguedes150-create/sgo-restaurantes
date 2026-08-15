@@ -13,9 +13,9 @@ interface AiState { loading?: boolean; configured?: boolean; verdict?: 'COMPATIV
 interface Answer { status: ItemStatus; note?: string }
 
 const ST: Record<ItemStatus, { label: string; short: string; cls: string }> = {
-  OK:            { label: 'De acordo',    short: '🟢', cls: 'bg-sgo-success text-white border-sgo-success' },
+  OK:            { label: 'De acordo',    short: '🟢', cls: 'bg-sgo-success text-on-brand border-sgo-success' },
   EM_CORRECAO:   { label: 'Em correção',  short: '🟡', cls: 'bg-warning-bg text-warning border-warning' },
-  A_CORRIGIR:    { label: 'A corrigir',   short: '🔴', cls: 'bg-danger text-white border-danger' },
+  A_CORRIGIR:    { label: 'A corrigir',   short: '🔴', cls: 'bg-danger text-on-brand border-danger' },
   NAO_SE_APLICA: { label: 'Não se aplica', short: '⚪', cls: 'bg-sunken text-ink-500 border-line-strong' },
 };
 const STATUSES: ItemStatus[] = ['OK', 'EM_CORRECAO', 'A_CORRIGIR', 'NAO_SE_APLICA'];
@@ -246,7 +246,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                         {photoEntries.map((e, idx) => ({ e, idx })).filter((x) => x.e.itemId === it.id).map(({ e, idx }) => (
                           <div key={idx} className="relative">
                             <img src={URL.createObjectURL(e.file)} alt="" className="h-16 w-16 rounded-lg border object-cover" />
-                            <button onClick={() => removePhoto(idx)} className="absolute -right-1 -top-1 rounded-full bg-danger p-0.5 text-white"><X className="h-3 w-3" /></button>
+                            <button onClick={() => removePhoto(idx)} className="absolute -right-1 -top-1 rounded-full bg-danger p-0.5 text-on-brand"><X className="h-3 w-3" /></button>
                           </div>
                         ))}
                         {photoEntries.length < 5 && (
@@ -272,7 +272,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
           {photoEntries.map((e, i) => ({ e, i })).filter((x) => x.e.itemId === null).map(({ e, i }) => (
             <div key={i} className="relative">
               <img src={URL.createObjectURL(e.file)} alt="" className="h-20 w-20 rounded-lg border object-cover" />
-              <button onClick={() => removePhoto(i)} className="absolute -right-1 -top-1 rounded-full bg-danger p-0.5 text-white"><X className="h-3 w-3" /></button>
+              <button onClick={() => removePhoto(i)} className="absolute -right-1 -top-1 rounded-full bg-danger p-0.5 text-on-brand"><X className="h-3 w-3" /></button>
             </div>
           ))}
           {photoEntries.length < 5 && (

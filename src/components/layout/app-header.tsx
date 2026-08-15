@@ -91,7 +91,7 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
           <Link href="/modulos/comunicacao" aria-label="Comunicação" className={`${iconBtn} relative`}>
             <Inbox className="h-5 w-5" />
             {commPending > 0 && (
-              <span className="absolute right-1.5 top-1.5 inline-flex min-w-5 items-center justify-center rounded-pill bg-danger px-1 text-[10px] font-bold leading-4 tabular-nums text-white">
+              <span className="absolute right-1.5 top-1.5 inline-flex min-w-5 items-center justify-center rounded-pill bg-danger px-1 text-[10px] font-bold leading-4 tabular-nums text-on-brand">
                 {commPending > 99 ? '99+' : commPending}
               </span>
             )}
@@ -102,7 +102,7 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
           <Link href="/notificacoes" aria-label="Notificações" className={`${iconBtn} relative`}>
             <Bell className="h-5 w-5" />
             {unread > 0 && (
-              <span className="absolute right-1.5 top-1.5 inline-flex min-w-5 items-center justify-center rounded-pill bg-danger px-1 text-[10px] font-bold leading-4 tabular-nums text-white">
+              <span className="absolute right-1.5 top-1.5 inline-flex min-w-5 items-center justify-center rounded-pill bg-danger px-1 text-[10px] font-bold leading-4 tabular-nums text-on-brand">
                 {unread > 99 ? '99+' : unread}
               </span>
             )}

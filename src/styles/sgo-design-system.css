@@ -454,3 +454,60 @@
     min-height: var(--sgo-touch);
   }
 }
+
+/* =============================================================================
+   Escopo de IMPRESSÃO — relatórios em PDF/papel.
+   Estas telas não seguem o tema: papel é sempre branco, e um relatório impresso
+   no modo escuro sairia ilegível (ou gastaria um cartucho). Aqui os tokens são
+   repinados nos valores claros, então o conteúdo pode usar as MESMAS classes do
+   resto do sistema em vez de cinzas crus do Tailwind.
+   ========================================================================== */
+.sgo-print {
+  --sgo-ink-900-rgb: 26 22 20;
+  --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
+  --sgo-ink-700-rgb: 71 64 60;
+  --sgo-ink-700: rgb(var(--sgo-ink-700-rgb));
+  --sgo-ink-500-rgb: 82 76 70;
+  --sgo-ink-500: rgb(var(--sgo-ink-500-rgb));
+  --sgo-ink-400-rgb: 122 115 110;
+  --sgo-ink-400: rgb(var(--sgo-ink-400-rgb));
+  --sgo-line-rgb: 232 227 223;
+  --sgo-line: rgb(var(--sgo-line-rgb));
+  --sgo-line-strong-rgb: 216 210 205;
+  --sgo-line-strong: rgb(var(--sgo-line-strong-rgb));
+  --sgo-canvas-rgb: 247 245 243;
+  --sgo-canvas: rgb(var(--sgo-canvas-rgb));
+  --sgo-surface-rgb: 255 255 255;
+  --sgo-surface: rgb(var(--sgo-surface-rgb));
+  --sgo-sunken-rgb: 237 233 230;
+  --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+  --sgo-glass: rgba(255, 255, 255, 0.72);
+  --sgo-brand-rgb: 124 26 43;
+  --sgo-brand: rgb(var(--sgo-brand-rgb));
+  --sgo-brand-hover-rgb: 151 48 63;
+  --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+  --sgo-brand-tint-rgb: 253 246 247;
+  --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
+  --sgo-brand-tint-2-rgb: 246 228 231;
+  --sgo-brand-tint-2: rgb(var(--sgo-brand-tint-2-rgb));
+  --sgo-on-brand-rgb: 255 255 255;
+  --sgo-on-brand: rgb(var(--sgo-on-brand-rgb));
+  --sgo-success-rgb: 10 88 50;
+  --sgo-success: rgb(var(--sgo-success-rgb));
+  --sgo-success-bg-rgb: 237 247 241;
+  --sgo-success-bg: rgb(var(--sgo-success-bg-rgb));
+  --sgo-warning-rgb: 117 63 0;
+  --sgo-warning: rgb(var(--sgo-warning-rgb));
+  --sgo-warning-bg-rgb: 252 241 225;
+  --sgo-warning-bg: rgb(var(--sgo-warning-bg-rgb));
+  --sgo-danger-rgb: 153 20 20;
+  --sgo-danger: rgb(var(--sgo-danger-rgb));
+  --sgo-danger-bg-rgb: 254 243 242;
+  --sgo-danger-bg: rgb(var(--sgo-danger-bg-rgb));
+  --sgo-info-rgb: 17 78 128;
+  --sgo-info: rgb(var(--sgo-info-rgb));
+  --sgo-info-bg-rgb: 234 242 250;
+  --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
+  background-color: var(--sgo-surface);
+  color: var(--sgo-ink-900);
+}

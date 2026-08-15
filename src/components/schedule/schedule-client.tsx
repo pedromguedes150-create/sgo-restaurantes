@@ -20,14 +20,20 @@ interface Unit { id: string; name: string }
 interface Turno { id: string; name: string; startTime: string | null; endTime: string | null }
 interface Pattern { collaboratorId: string; scheduleType: ScheduleType; anchorDate: string; shiftId: string | null; customMask: string | null }
 
+/**
+ * Fundo pelos tokens `-bg`, não por tinta da própria cor: a 15-25% o par
+ * texto/fundo ficava em 5,57-6,63:1, abaixo do AAA. Atestado usava
+ * bg-blue-100/text-blue-700 — cor crua do Tailwind, fora do sistema — e passou
+ * a usar `info`, que é o token para o que é informativo e não é alerta.
+ */
 const STATUS: Record<DayStatus, { code: string; cls: string }> = {
-  WORK:         { code: 'T',  cls: 'bg-sgo-brand text-white' },
+  WORK:         { code: 'T',  cls: 'bg-sgo-brand text-on-brand' },
   OFF:          { code: 'F',  cls: 'border border-line-strong text-ink-500' },
-  FALTA_INJUST: { code: 'FI', cls: 'bg-danger/15 text-danger border border-danger/40' },
-  FALTA_JUST:   { code: 'FJ', cls: 'bg-warning/25 text-warning border border-warning/50' },
-  ATESTADO:     { code: 'A',  cls: 'bg-blue-100 text-blue-700 border border-blue-300' },
-  FERIAS:       { code: 'FE', cls: 'bg-sgo-success/15 text-sgo-success border border-sgo-success/40' },
-  ATRASO:       { code: 'AT', cls: 'bg-warning/15 text-warning border border-warning/40' },
+  FALTA_INJUST: { code: 'FI', cls: 'bg-danger-bg text-danger border border-danger/40' },
+  FALTA_JUST:   { code: 'FJ', cls: 'bg-warning-bg text-warning border border-warning/50' },
+  ATESTADO:     { code: 'A',  cls: 'bg-info-bg text-info border border-info/40' },
+  FERIAS:       { code: 'FE', cls: 'bg-sgo-success-bg text-sgo-success border border-sgo-success/40' },
+  ATRASO:       { code: 'AT', cls: 'bg-warning-bg text-warning border border-warning/40' },
 };
 const STATUS_ORDER: DayStatus[] = ['WORK', 'ATRASO', 'OFF', 'FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
 const ABSENCE: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
@@ -132,7 +138,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
         <div className="overflow-x-auto rounded-lg border">
           <table className="min-w-full border-collapse text-center text-xs">
             <thead>
-              <tr className="bg-sgo-brand text-white">
+              <tr className="bg-sgo-brand text-on-brand">
                 <th className="sticky left-0 z-10 min-w-[184px] bg-sgo-brand px-2 py-2 text-left">Colaborador</th>
                 {Array.from({ length: grid.daysCount }, (_, i) => i + 1).map((d) => (
                   <th key={d} className={cn('px-1 py-1 font-medium', isWeekend(d) && 'bg-white/10')}>
