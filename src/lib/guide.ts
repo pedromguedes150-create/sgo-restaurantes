@@ -39,6 +39,8 @@ export const GUIDE: GuideSection[] = [
           'O capelo 🎓 no topo (ao lado do sino) abre o "Treinamento da Plataforma" — os guias do SEU perfil, em qualquer aparelho.',
           'Ao entrar em uma tela, use o link "← Voltar" para retornar.',
           'Se você cuida de mais de uma unidade, escolha a unidade nos botões/lista no topo de cada tela.',
+          'CAMPOS DE ESCOLHA, DATA E HORA: as listas, o calendário e o relógio agora são do próprio sistema, iguais em qualquer aparelho — antes cada celular abria o seu. Toque no campo para abrir; no computador dá para usar só o teclado (setas para andar, Enter para escolher, Esc para fechar).',
+          'Campo opcional que você preencheu por engano: reabra a lista e escolha a primeira opção ("— nenhum —", "Todas as unidades"…) para deixar em branco de novo. No calendário e no relógio, o botão "Limpar".',
         ],
         tips: ['O sistema usa a "data operacional" (o dia vira após o horário de corte, ex.: 04:00). Lançamentos da madrugada contam no dia anterior.'],
       },
@@ -49,7 +51,7 @@ export const GUIDE: GuideSection[] = [
         summary: 'Seu espaço pessoal — tarefas, notas e folgas.',
         steps: [
           'A aba MINHA ÁREA aparece para todos os usuários, individualmente (é sua, ninguém mais vê).',
-          'Tarefas pessoais: crie lembretes com data e hora (a hora é escolhida de 30 em 30 min). Dá para editar (✏️) e excluir (🗑️) cada tarefa; o sistema avisa por notificação na hora marcada.',
+          'Tarefas pessoais: crie lembretes com data e hora (a hora é escolhida de 30 em 30 min no lembrete; nos demais campos de hora, de 5 em 5). Dá para editar (✏️) e excluir (🗑️) cada tarefa; o sistema avisa por notificação na hora marcada.',
           'Bloco de notas: dê um título, escreva com formatação (negrito, itálico, sublinhado, listas, link) e edite quando quiser.',
           'Folgas/férias: registre seus dias de folga/férias.',
           'Gestores (Supervisão/Admin): na aba Folgas há o botão "Consolidado da equipe" — veja folgas/férias por unidade num período. Quem enxerga isso é definido em Configurações → Perfis de acesso.',
