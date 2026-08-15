@@ -32,7 +32,9 @@ export const metadata: Metadata = {
 
 // PWA / mobile-first: viewport adequado e cor de tema da marca
 export const viewport: Viewport = {
-  themeColor: '#6E1423',
+  // Metadata do navegador (barra do sistema no PWA), lida antes de qualquer
+  // CSS: var(--sgo-brand) não é resolvido aqui.
+  themeColor: '#6E1423', // ds-allow-hex: metadata de PWA, fora do alcance do CSS
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

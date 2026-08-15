@@ -10,7 +10,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { TSX_SCOPE_DIRS, TSX_EXCEPTIONS, TOKENS_FILE } = require('./ds-scope.cjs');
+const { TSX_SCOPE_DIRS, TOKENS_FILE, ALLOW_MARK } = require('./ds-scope.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 const HEX = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/;
@@ -30,15 +30,25 @@ function walk(dir) {
   return out;
 }
 
-const exceptions = new Set([TOKENS_FILE, ...TSX_EXCEPTIONS]);
-const files = [...new Set(TSX_SCOPE_DIRS.flatMap(walk))].filter((f) => !exceptions.has(f));
+const files = [...new Set(TSX_SCOPE_DIRS.flatMap(walk))].filter((f) => f !== TOKENS_FILE);
+
+/**
+ * Dispensa por LINHA, não por arquivo: a linha traz `ds-allow-hex: <motivo>`.
+ * Isentar o arquivo inteiro (como era até a Onda 6) deixava o resto dele sem
+ * proteção nenhuma — bastava alguém acrescentar um hex ali embaixo. Aqui a
+ * dispensa fica visível no ponto de uso e o motivo é obrigatório: sem texto
+ * depois dos dois-pontos, a linha continua sendo violação.
+ */
+const ALLOW_RE = new RegExp(ALLOW_MARK + ':\\s*\\S');
+const allowed = (line) => ALLOW_RE.test(line);
 
 const violations = [];
 for (const file of files) {
   const lines = fs.readFileSync(path.join(ROOT, file), 'utf8').split('\n');
   lines.forEach((line, i) => {
     const hex = line.match(HEX);
-    if (hex) violations.push({ file, line: i + 1, msg: `hex literal ${hex[0]} — use var(--sgo-*)` });
+    if (hex && !allowed(line))
+      violations.push({ file, line: i + 1, msg: `hex literal ${hex[0]} — use var(--sgo-*) ou justifique com ${ALLOW_MARK}: <motivo>` });
     let m;
     SPACE_ARB.lastIndex = 0;
     while ((m = SPACE_ARB.exec(line))) {
