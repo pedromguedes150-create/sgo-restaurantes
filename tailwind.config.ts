@@ -82,42 +82,43 @@ const config: Config = {
          * limpeza — por isso ganhou onda própria, com auditoria de contraste.
          * ------------------------------------------------------------- */
         ink: {
-          900: 'var(--sgo-ink-900)',
-          700: 'var(--sgo-ink-700)',
-          500: 'var(--sgo-ink-500)',
-          400: 'var(--sgo-ink-400)',
+          900: 'rgb(var(--sgo-ink-900-rgb) / <alpha-value>)',
+          700: 'rgb(var(--sgo-ink-700-rgb) / <alpha-value>)',
+          500: 'rgb(var(--sgo-ink-500-rgb) / <alpha-value>)',
+          400: 'rgb(var(--sgo-ink-400-rgb) / <alpha-value>)',
         },
         line: {
-          DEFAULT: 'var(--sgo-line)',
-          strong: 'var(--sgo-line-strong)',
+          DEFAULT: 'rgb(var(--sgo-line-rgb) / <alpha-value>)',
+          strong: 'rgb(var(--sgo-line-strong-rgb) / <alpha-value>)',
         },
-        canvas: 'var(--sgo-canvas)',
-        sunken: 'var(--sgo-sunken)',
+        canvas: 'rgb(var(--sgo-canvas-rgb) / <alpha-value>)',
+        sunken: 'rgb(var(--sgo-sunken-rgb) / <alpha-value>)',
+        // glass ja NASCE translucido (rgba fixo); nao vira canal nem aceita alfa.
         glass: 'var(--sgo-glass)',
-        'on-brand': 'var(--sgo-on-brand)',
+        'on-brand': 'rgb(var(--sgo-on-brand-rgb) / <alpha-value>)',
         danger: {
-          DEFAULT: 'var(--sgo-danger)',
-          bg: 'var(--sgo-danger-bg)',
+          DEFAULT: 'rgb(var(--sgo-danger-rgb) / <alpha-value>)',
+          bg: 'rgb(var(--sgo-danger-bg-rgb) / <alpha-value>)',
         },
         warning: {
-          DEFAULT: 'var(--sgo-warning)',
-          bg: 'var(--sgo-warning-bg)',
+          DEFAULT: 'rgb(var(--sgo-warning-rgb) / <alpha-value>)',
+          bg: 'rgb(var(--sgo-warning-bg-rgb) / <alpha-value>)',
         },
         info: {
-          DEFAULT: 'var(--sgo-info)',
-          bg: 'var(--sgo-info-bg)',
+          DEFAULT: 'rgb(var(--sgo-info-rgb) / <alpha-value>)',
+          bg: 'rgb(var(--sgo-info-bg-rgb) / <alpha-value>)',
         },
         // Colididos com o legado → prefixo sgo- (removido por onda, 3-5).
         'sgo-brand': {
-          DEFAULT: 'var(--sgo-brand)',
-          hover: 'var(--sgo-brand-hover)',
-          tint: 'var(--sgo-brand-tint)',
-          'tint-2': 'var(--sgo-brand-tint-2)',
+          DEFAULT: 'rgb(var(--sgo-brand-rgb) / <alpha-value>)',
+          hover: 'rgb(var(--sgo-brand-hover-rgb) / <alpha-value>)',
+          tint: 'rgb(var(--sgo-brand-tint-rgb) / <alpha-value>)',
+          'tint-2': 'rgb(var(--sgo-brand-tint-2-rgb) / <alpha-value>)',
         },
-        'sgo-surface': 'var(--sgo-surface)',
+        'sgo-surface': 'rgb(var(--sgo-surface-rgb) / <alpha-value>)',
         'sgo-success': {
-          DEFAULT: 'var(--sgo-success)',
-          bg: 'var(--sgo-success-bg)',
+          DEFAULT: 'rgb(var(--sgo-success-rgb) / <alpha-value>)',
+          bg: 'rgb(var(--sgo-success-bg-rgb) / <alpha-value>)',
         },
       },
       borderRadius: {

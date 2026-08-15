@@ -29,40 +29,62 @@
      onde a regra do WCAG é 3:1 de não-texto (e desabilitado é isento). Não dá
      para escurecê-lo até 7:1 sem que ele vire o 500 — o intervalo entre "7:1
      sobre sunken" e o preto não comporta quatro degraus distinguíveis. */
-  --sgo-ink-900: #1a1614;
-  --sgo-ink-700: #47403c;
-  --sgo-ink-500: #524c46;
-  --sgo-ink-400: #7a736e;
+  --sgo-ink-900-rgb: 26 22 20;
+  --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
+  --sgo-ink-700-rgb: 71 64 60;
+  --sgo-ink-700: rgb(var(--sgo-ink-700-rgb));
+  --sgo-ink-500-rgb: 82 76 70;
+  --sgo-ink-500: rgb(var(--sgo-ink-500-rgb));
+  --sgo-ink-400-rgb: 122 115 110;
+  --sgo-ink-400: rgb(var(--sgo-ink-400-rgb));
 
   /* ---- Cor · linhas e superfícies (light) ---- */
-  --sgo-line: #e8e3df;
-  --sgo-line-strong: #d8d2cd;
-  --sgo-canvas: #f7f5f3;
-  --sgo-surface: #ffffff;
-  --sgo-sunken: #ede9e6;
+  --sgo-line-rgb: 232 227 223;
+  --sgo-line: rgb(var(--sgo-line-rgb));
+  --sgo-line-strong-rgb: 216 210 205;
+  --sgo-line-strong: rgb(var(--sgo-line-strong-rgb));
+  --sgo-canvas-rgb: 247 245 243;
+  --sgo-canvas: rgb(var(--sgo-canvas-rgb));
+  --sgo-surface-rgb: 255 255 255;
+  --sgo-surface: rgb(var(--sgo-surface-rgb));
+  --sgo-sunken-rgb: 237 233 230;
+  --sgo-sunken: rgb(var(--sgo-sunken-rgb));
   /* Superfície translúcida (barras com backdrop-blur). */
   --sgo-glass: rgba(255, 255, 255, 0.72);
 
   /* ---- Cor · marca (light) ---- */
-  --sgo-brand: #7c1a2b;
-  --sgo-brand-hover: #97303f;
-  --sgo-brand-tint: #fdf6f7;
-  --sgo-brand-tint-2: #f6e4e7;
-  --sgo-on-brand: #ffffff;
+  --sgo-brand-rgb: 124 26 43;
+  --sgo-brand: rgb(var(--sgo-brand-rgb));
+  --sgo-brand-hover-rgb: 151 48 63;
+  --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+  --sgo-brand-tint-rgb: 253 246 247;
+  --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
+  --sgo-brand-tint-2-rgb: 246 228 231;
+  --sgo-brand-tint-2: rgb(var(--sgo-brand-tint-2-rgb));
+  --sgo-on-brand-rgb: 255 255 255;
+  --sgo-on-brand: rgb(var(--sgo-on-brand-rgb));
 
   /* ---- Cor · status (light) ----
      Ajustados na Onda 7 para passar AAA sobre TODAS as superfícies, não só
      sobre a tinta própria: nos valores anteriores caíam para 6,50-6,71 sobre
      sunken. Escurecer um pouco custa menos que uma regra de "não use status
      sobre sunken", que ninguém lembraria. */
-  --sgo-success: #0a5832;
-  --sgo-success-bg: #edf7f1;
-  --sgo-warning: #753f00;
-  --sgo-warning-bg: #fcf1e1;
-  --sgo-danger: #991414;
-  --sgo-danger-bg: #fef3f2;
-  --sgo-info: #114e80;
-  --sgo-info-bg: #eaf2fa;
+  --sgo-success-rgb: 10 88 50;
+  --sgo-success: rgb(var(--sgo-success-rgb));
+  --sgo-success-bg-rgb: 237 247 241;
+  --sgo-success-bg: rgb(var(--sgo-success-bg-rgb));
+  --sgo-warning-rgb: 117 63 0;
+  --sgo-warning: rgb(var(--sgo-warning-rgb));
+  --sgo-warning-bg-rgb: 252 241 225;
+  --sgo-warning-bg: rgb(var(--sgo-warning-bg-rgb));
+  --sgo-danger-rgb: 153 20 20;
+  --sgo-danger: rgb(var(--sgo-danger-rgb));
+  --sgo-danger-bg-rgb: 254 243 242;
+  --sgo-danger-bg: rgb(var(--sgo-danger-bg-rgb));
+  --sgo-info-rgb: 17 78 128;
+  --sgo-info: rgb(var(--sgo-info-rgb));
+  --sgo-info-bg-rgb: 234 242 250;
+  --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
 
   /* ---- Espaço · grid 8pt (4px é a única meia-parada) ---- */
   --sgo-space-4: 4px;
@@ -115,64 +137,113 @@
 /* Dark automático — SOMENTE para quem optou por "Sistema" (data-theme=system) */
 @media (prefers-color-scheme: dark) {
   :root[data-theme='system'] {
-    --sgo-ink-900: #f5f2f0;
-    --sgo-ink-700: #d6d0cc;
-    --sgo-ink-500: #b8b0ab;
-    --sgo-ink-400: #8f8781;
+    --sgo-ink-900-rgb: 245 242 240;
+    --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
+    --sgo-ink-700-rgb: 214 208 204;
+    --sgo-ink-700: rgb(var(--sgo-ink-700-rgb));
+    --sgo-ink-500-rgb: 184 176 171;
+    --sgo-ink-500: rgb(var(--sgo-ink-500-rgb));
+    --sgo-ink-400-rgb: 143 135 129;
+    --sgo-ink-400: rgb(var(--sgo-ink-400-rgb));
 
-    --sgo-line: #332e2c;
-    --sgo-line-strong: #403a37;
-    --sgo-canvas: #151312;
-    --sgo-surface: #1f1c1b;
-    --sgo-sunken: #2a2624;
+    --sgo-line-rgb: 51 46 44;
+
+    --sgo-line: rgb(var(--sgo-line-rgb));
+    --sgo-line-strong-rgb: 64 58 55;
+    --sgo-line-strong: rgb(var(--sgo-line-strong-rgb));
+    --sgo-canvas-rgb: 21 19 18;
+    --sgo-canvas: rgb(var(--sgo-canvas-rgb));
+    --sgo-surface-rgb: 31 28 27;
+    --sgo-surface: rgb(var(--sgo-surface-rgb));
+    --sgo-sunken-rgb: 42 38 36;
+    --sgo-sunken: rgb(var(--sgo-sunken-rgb));
     --sgo-glass: rgba(31, 28, 27, 0.72);
 
-    --sgo-brand: #f0a7b1;
-    --sgo-brand-hover: #f7bfc7;
-    --sgo-brand-tint: #2a1b1e;
-    --sgo-brand-tint-2: #3a2429;
-    --sgo-on-brand: #2a0a11;
+    --sgo-brand-rgb: 240 167 177;
+
+    --sgo-brand: rgb(var(--sgo-brand-rgb));
+    --sgo-brand-hover-rgb: 247 191 199;
+    --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+    --sgo-brand-tint-rgb: 42 27 30;
+    --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
+    --sgo-brand-tint-2-rgb: 58 36 41;
+    --sgo-brand-tint-2: rgb(var(--sgo-brand-tint-2-rgb));
+    --sgo-on-brand-rgb: 42 10 17;
+    --sgo-on-brand: rgb(var(--sgo-on-brand-rgb));
 
     /* status: texto conforme §3; os *-bg do dark não constam no contrato,
        derivados como tintas escuras coerentes (baixo croma sobre surface). */
-    --sgo-success: #5fd39a;
-    --sgo-success-bg: #16281f;
-    --sgo-warning: #f0b360;
-    --sgo-warning-bg: #2c2013;
-    --sgo-danger: #ff9a93;
-    --sgo-danger-bg: #2e1a18;
-    --sgo-info: #8fbeea;
-    --sgo-info-bg: #16222e;
+    --sgo-success-rgb: 95 211 154;
+    --sgo-success: rgb(var(--sgo-success-rgb));
+    --sgo-success-bg-rgb: 22 40 31;
+    --sgo-success-bg: rgb(var(--sgo-success-bg-rgb));
+    --sgo-warning-rgb: 240 179 96;
+    --sgo-warning: rgb(var(--sgo-warning-rgb));
+    --sgo-warning-bg-rgb: 44 32 19;
+    --sgo-warning-bg: rgb(var(--sgo-warning-bg-rgb));
+    --sgo-danger-rgb: 255 154 147;
+    --sgo-danger: rgb(var(--sgo-danger-rgb));
+    --sgo-danger-bg-rgb: 46 26 24;
+    --sgo-danger-bg: rgb(var(--sgo-danger-bg-rgb));
+    --sgo-info-rgb: 143 190 234;
+    --sgo-info: rgb(var(--sgo-info-rgb));
+    --sgo-info-bg-rgb: 22 34 46;
+    --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
   }
 }
 
 /* Dark — escolha explícita vence em qualquer sistema */
 :root[data-theme='dark'] {
-  --sgo-ink-900: #f5f2f0;
-  --sgo-ink-700: #d6d0cc;
-  --sgo-ink-500: #b8b0ab;
-  --sgo-ink-400: #8f8781;
+  --sgo-ink-900-rgb: 245 242 240;
+  --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
+  --sgo-ink-700-rgb: 214 208 204;
+  --sgo-ink-700: rgb(var(--sgo-ink-700-rgb));
+  --sgo-ink-500-rgb: 184 176 171;
+  --sgo-ink-500: rgb(var(--sgo-ink-500-rgb));
+  --sgo-ink-400-rgb: 143 135 129;
+  --sgo-ink-400: rgb(var(--sgo-ink-400-rgb));
 
-  --sgo-line: #332e2c;
-  --sgo-line-strong: #403a37;
-  --sgo-canvas: #151312;
-  --sgo-surface: #1f1c1b;
-  --sgo-sunken: #2a2624;
+  --sgo-line-rgb: 51 46 44;
 
-  --sgo-brand: #f0a7b1;
-  --sgo-brand-hover: #f7bfc7;
-  --sgo-brand-tint: #2a1b1e;
-  --sgo-brand-tint-2: #3a2429;
-  --sgo-on-brand: #2a0a11;
+  --sgo-line: rgb(var(--sgo-line-rgb));
+  --sgo-line-strong-rgb: 64 58 55;
+  --sgo-line-strong: rgb(var(--sgo-line-strong-rgb));
+  --sgo-canvas-rgb: 21 19 18;
+  --sgo-canvas: rgb(var(--sgo-canvas-rgb));
+  --sgo-surface-rgb: 31 28 27;
+  --sgo-surface: rgb(var(--sgo-surface-rgb));
+  --sgo-sunken-rgb: 42 38 36;
+  --sgo-sunken: rgb(var(--sgo-sunken-rgb));
 
-  --sgo-success: #5fd39a;
-  --sgo-success-bg: #16281f;
-  --sgo-warning: #f0b360;
-  --sgo-warning-bg: #2c2013;
-  --sgo-danger: #ff9a93;
-  --sgo-danger-bg: #2e1a18;
-  --sgo-info: #8fbeea;
-  --sgo-info-bg: #16222e;
+  --sgo-brand-rgb: 240 167 177;
+
+  --sgo-brand: rgb(var(--sgo-brand-rgb));
+  --sgo-brand-hover-rgb: 247 191 199;
+  --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+  --sgo-brand-tint-rgb: 42 27 30;
+  --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
+  --sgo-brand-tint-2-rgb: 58 36 41;
+  --sgo-brand-tint-2: rgb(var(--sgo-brand-tint-2-rgb));
+  --sgo-on-brand-rgb: 42 10 17;
+  --sgo-on-brand: rgb(var(--sgo-on-brand-rgb));
+
+  --sgo-success-rgb: 95 211 154;
+
+  --sgo-success: rgb(var(--sgo-success-rgb));
+  --sgo-success-bg-rgb: 22 40 31;
+  --sgo-success-bg: rgb(var(--sgo-success-bg-rgb));
+  --sgo-warning-rgb: 240 179 96;
+  --sgo-warning: rgb(var(--sgo-warning-rgb));
+  --sgo-warning-bg-rgb: 44 32 19;
+  --sgo-warning-bg: rgb(var(--sgo-warning-bg-rgb));
+  --sgo-danger-rgb: 255 154 147;
+  --sgo-danger: rgb(var(--sgo-danger-rgb));
+  --sgo-danger-bg-rgb: 46 26 24;
+  --sgo-danger-bg: rgb(var(--sgo-danger-bg-rgb));
+  --sgo-info-rgb: 143 190 234;
+  --sgo-info: rgb(var(--sgo-info-rgb));
+  --sgo-info-bg-rgb: 22 34 46;
+  --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
 }
 
 /* =============================================================================
