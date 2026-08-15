@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/ui/ds/empty-state';
 import { shortUnitName } from '@/lib/unit-name';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
 import { ListChecks, AlertTriangle, ScrollText, Trophy, ChevronRight, Building2 } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 /** Semáforo legado (success/medium/critical) → tons do design system. */
 function dsTone(t: 'success' | 'medium' | 'critical' | 'neutral'): DsToneName {
@@ -35,7 +36,7 @@ export default async function DashboardPage() {
     return (
       <div className="space-y-4">
         <AutoRefresh />
-        <h1 className="text-xl font-bold text-brand">Olá, {user.name.split(' ')[0]} 👋</h1>
+        <LargeTitle title={`Olá, ${user.name.split(' ')[0]} 👋`} />
         <Card>
           <CardContent className="py-6 text-sm text-ink-500">
             Seu perfil (Financeiro) recebe demandas aprovadas para pagamento.
@@ -111,12 +112,10 @@ export default async function DashboardPage() {
     <div className="space-y-5">
       <AutoRefresh seconds={60} />
       <section>
-        <h1 className="text-xl font-bold text-brand">Olá, {user.name.split(' ')[0]} 👋</h1>
-        <p className="text-sm text-ink-500">
-          {user.seesAllUnits
-            ? 'Visão consolidada da rede.'
-            : `${overviews.length} unidade(s) sob sua gestão.`}
-        </p>
+        <LargeTitle
+          title={`Olá, ${user.name.split(' ')[0]} 👋`}
+          subtitle={user.seesAllUnits ? 'Visão consolidada da rede.' : `${overviews.length} unidade(s) sob sua gestão.`}
+        />
       </section>
 
       <AttentionCard items={attention} emptyText="Tudo em dia — nenhuma pendência agora." />
