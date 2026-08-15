@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProfileClient } from '@/components/profile/profile-client';
 import { PushClient } from '@/components/push/push-client';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +15,7 @@ export default async function PerfilPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><UserCircle2 className="h-5 w-5 text-brand" /> Meu Perfil</h1>
-        <p className="text-sm text-ink-500">Complete seus dados (nome completo e CPF) e troque sua senha. Supervisão/Admin visualizam esses dados.</p>
+        <LargeTitle title="Meu Perfil" subtitle="Complete seus dados (nome completo e CPF) e troque sua senha. Supervisão/Admin visualizam esses dados." />
       </div>
       <Card><CardContent className="pt-4">
         <ProfileClient name={me?.name ?? ''} cpf={me?.cpf ?? ''} email={me?.email ?? ''} />

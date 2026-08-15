@@ -6,6 +6,7 @@ import { canAuthorCommunications } from '@/lib/communications/create';
 import { getCommunicationWeight } from '@/lib/communications/meta';
 import { Card, CardContent } from '@/components/ui/card';
 import { CommunicationsClient, type InboxItem, type AuthoredItem } from '@/components/communications/communications-client';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,8 +56,7 @@ export default async function ComunicacaoPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-brand">Central de Comunicação</h1>
-        <p className="text-sm text-ink-500">Comunicados oficiais com confirmação de leitura — substitui a cobrança por WhatsApp.</p>
+        <LargeTitle title="Central de Comunicação" subtitle="Comunicados oficiais com confirmação de leitura — substitui a cobrança por WhatsApp." />
       </div>
       <Card><CardContent className="pt-4">
         <CommunicationsClient

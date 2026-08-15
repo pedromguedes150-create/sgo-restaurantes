@@ -11,6 +11,7 @@ import { ensureDefaultModels, listChecklistModels } from '@/lib/checklist-models
 import { listSupervisorChecklists } from '@/lib/supervisor/visits';
 import { getChecklistToleranceMin } from '@/lib/tasks/tolerance';
 import { ArrowLeft } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +61,7 @@ export default async function ChecklistsAdminPage({ searchParams }: { searchPara
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Checklists</h1>
+      <LargeTitle title="Checklists" />
       <div className="flex flex-wrap gap-2">
         {TABS.map((t) => (
           <Link key={t.key} href={`/configuracoes/checklists?tab=${t.key}`} className={tab === t.key ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>

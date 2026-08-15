@@ -7,6 +7,7 @@ import type { CancelAnalysisData } from '@/lib/cancellations/fraud-analysis';
 import { Card, CardContent } from '@/components/ui/card';
 import { CancellationAnalysisClient } from '@/components/cancellations/cancellation-analysis-client';
 import { ArrowLeft, ShieldAlert } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,7 @@ export default async function CancelAnalisePage({ searchParams }: { searchParams
         <Link href="/modulos/cancelamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Cancelamentos</Link>
       </div>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ShieldAlert className="h-5 w-5 text-brand" /> Análise antifraude de cancelamentos</h1>
+        <LargeTitle title="Análise antifraude de cancelamentos" />
         <p className="text-sm text-ink-500">Suba o <b>PDF</b> do relatório &quot;Vendas/Itens Cancelados no Período&quot; (Teknisa). O SGO analisa por caixa, por autorizador, horário e valor, e aponta possíveis fraudes.</p>
       </div>
 

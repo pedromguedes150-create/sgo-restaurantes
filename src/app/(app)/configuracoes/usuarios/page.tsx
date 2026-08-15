@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { UsersAdmin } from '@/components/admin/users-admin';
 import { ArrowLeft } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,8 +27,7 @@ export default async function UsuariosAdminPage() {
     return (
       <div className="space-y-4">
         <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-        <h1 className="text-xl font-bold text-brand">Usuários (visualização)</h1>
-        <p className="text-sm text-ink-500">Dados preenchidos por cada usuário no Meu Perfil. Edição é restrita ao Administrador.</p>
+        <LargeTitle title="Usuários (visualização)" subtitle="Dados preenchidos por cada usuário no Meu Perfil. Edição é restrita ao Administrador." />
         <Card><CardContent className="space-y-2 pt-4">
           {users.map((u) => (
             <div key={u.id} className="rounded-lg border bg-surface p-3">
@@ -47,7 +47,7 @@ export default async function UsuariosAdminPage() {
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Usuários</h1>
+      <LargeTitle title="Usuários" />
       <p className="text-sm text-ink-500">CPF e nome completo cada usuário preenche no próprio <Link href="/perfil" className="font-semibold text-brand">Meu Perfil</Link> (avatar no topo).</p>
       <Card><CardContent className="pt-4">
         <UsersAdmin users={usersRows} units={units} meId={user.id} />

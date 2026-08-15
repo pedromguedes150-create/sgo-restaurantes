@@ -6,6 +6,7 @@ import {
   Megaphone, Droplets, Banknote, NotebookPen, CalendarOff, GraduationCap, Eye, BarChart3, LifeBuoy, Sparkles, PackagePlus,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,7 +62,7 @@ export default async function ModulosPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-brand">Módulos</h1>
+      <LargeTitle title="Módulos" />
       {GROUPS.map((g) => {
         const items = g.items.filter((it) => viewable.has(it.href));
         if (items.length === 0) return null;

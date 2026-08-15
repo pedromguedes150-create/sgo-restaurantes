@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { listPayouts, getPayoutDashboard, listPayoutCollaborators } from '@/lib/people/payouts';
 import { Card, CardContent } from '@/components/ui/card';
 import { PayoutsClient } from '@/components/people/payouts-client';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,8 +34,7 @@ export default async function ComissoesPage({ searchParams }: { searchParams: { 
     <div className="space-y-4">
       <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><HandCoins className="h-5 w-5 text-brand" /> Comissões &amp; Mobilidade</h1>
-        <p className="text-sm text-ink-500">Supervisão/Admin lançam os valores (comissão do Teknisa / mobilidade) por colaborador. Dashboard e histórico mensal.</p>
+        <LargeTitle title="Comissões &amp; Mobilidade" subtitle="Supervisão/Admin lançam os valores (comissão do Teknisa / mobilidade) por colaborador. Dashboard e histórico mensal." />
       </div>
       <Card>
         <CardContent className="pt-4">

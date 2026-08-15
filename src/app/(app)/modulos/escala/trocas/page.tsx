@@ -6,6 +6,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listScheduleChanges } from '@/lib/schedule-changes';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScheduleChangesClient } from '@/components/schedule/schedule-changes-client';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,8 +25,7 @@ export default async function TrocasPage({ searchParams }: { searchParams: { uni
     <div className="space-y-4">
       <Link href="/modulos/escala" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Escala</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ArrowRightLeft className="h-5 w-5 text-brand" /> Trocas de escala (RH)</h1>
-        <p className="text-sm text-ink-500">Registre as trocas para informar o RH — os Admins são avisados a cada registro. (A troca em si você lança na Escala, aba Realizado.)</p>
+        <LargeTitle title="Trocas de escala (RH)" subtitle="Registre as trocas para informar o RH — os Admins são avisados a cada registro. (A troca em si você lança na Escala, aba Realizado.)" />
       </div>
       <Card>
         <CardContent className="pt-4">

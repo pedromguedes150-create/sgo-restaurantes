@@ -8,6 +8,7 @@ import { WasteForm } from '@/components/waste/waste-form';
 import { WasteDatePicker } from '@/components/waste/waste-date-picker';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,7 +62,7 @@ export default async function DesperdiciosPage({
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold text-brand">Desperdícios</h1>
+          <LargeTitle title="Desperdícios" />
           <p className="text-sm text-ink-500">Dia operacional {operationalDate}</p>
         </div>
         <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">Exportar (Excel)</a>

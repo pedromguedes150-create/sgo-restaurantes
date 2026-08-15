@@ -6,6 +6,7 @@ import { listOpenCommandAnalyses } from '@/lib/commands/open-analysis';
 import { Card, CardContent } from '@/components/ui/card';
 import { OpenCommandAnalysisClient } from '@/components/commands/open-command-analysis-client';
 import { ArrowLeft, ShieldAlert } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,7 @@ export default async function AnaliseAbertoPage({ searchParams }: { searchParams
         <Link href="/modulos/comandas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Comandas</Link>
       </div>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ShieldAlert className="h-5 w-5 text-brand" /> Análise de comandas em aberto</h1>
+        <LargeTitle title="Análise de comandas em aberto" />
         <p className="text-sm text-ink-500">Suba o relatório do Teknisa; o SGO destaca comandas <b>abertas com valor e data anterior ao corte</b> (possível fraude das 2 comandas) para o monitoramento buscar as câmeras.</p>
       </div>
 

@@ -6,6 +6,7 @@ import { listChecklistForms } from '@/lib/checklist-forms/config';
 import { listChecklistSubmissions } from '@/lib/checklist-forms/history';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChecklistSubmissions } from '@/components/checklist-forms/checklist-submissions';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,8 +29,7 @@ export default async function FichasHistoryPage({ searchParams }: { searchParams
         <Link href="/configuracoes/fichas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><Settings className="h-4 w-4" /> Configurar fichas</Link>
       </div>
       <div>
-        <h1 className="text-xl font-bold text-brand">Fichas — histórico de envios</h1>
-        <p className="text-sm text-ink-500">Preenchimentos recebidos pelas fichas por link (quem, quando e as respostas).</p>
+        <LargeTitle title="Fichas — histórico de envios" subtitle="Preenchimentos recebidos pelas fichas por link (quem, quando e as respostas)." />
       </div>
       <Card><CardContent className="pt-4">
         <ChecklistSubmissions forms={(forms ?? []).map((f) => ({ id: f.id, title: f.title }))} submissions={submissions ?? []} ficha={ficha} days={days} />

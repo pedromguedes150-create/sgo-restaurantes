@@ -4,6 +4,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listTerminations } from '@/lib/terminations';
 import { Card, CardContent } from '@/components/ui/card';
 import { TerminationsClient, type TermRow } from '@/components/terminations/terminations-client';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,8 +31,7 @@ export default async function DesligamentosPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-brand">Desligamentos</h1>
-        <p className="text-sm text-ink-500">Solicitação do gerente → aprovação do supervisor → encaminhar ao RH.</p>
+        <LargeTitle title="Desligamentos" subtitle="Solicitação do gerente → aprovação do supervisor → encaminhar ao RH." />
       </div>
       <Card><CardContent className="pt-4">
         <TerminationsClient canRequest={canRequest} canDecide={canDecide} units={units} collaboratorsByUnit={collaboratorsByUnit} rows={rows} />

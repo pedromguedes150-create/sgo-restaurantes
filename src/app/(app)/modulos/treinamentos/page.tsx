@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { TrainingBoard } from '@/components/training/training-board';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { ArrowLeft } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export default async function TreinamentosPage({ searchParams }: { searchParams:
   return (
     <div className="space-y-4">
       <Link href="/modulos/pops" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> POPs</Link>
-      <h1 className="text-xl font-bold text-brand">Treinamentos</h1>
+      <LargeTitle title="Treinamentos" />
       <p className="text-sm text-ink-500">Acompanhe por setor quem está com treinamento pendente, realizado ou vencido. Conta na meta (peso {weight}).</p>
 
       {units.length > 1 && <UnitSelectNav units={units} selected={selected.id} />}

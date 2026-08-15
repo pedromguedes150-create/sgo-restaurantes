@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { PaymentsAdmin } from '@/components/admin/payments-admin';
 import { ArrowLeft } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,7 @@ export default async function PagamentosAdminPage() {
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Cadastros de Pagamentos</h1>
+      <LargeTitle title="Cadastros de Pagamentos" />
       <Card><CardContent className="pt-4">
         <PaymentsAdmin
           units={units}

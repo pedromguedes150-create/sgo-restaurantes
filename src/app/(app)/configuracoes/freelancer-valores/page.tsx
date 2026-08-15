@@ -5,6 +5,7 @@ import { listRatesByUnit, listHolidays } from '@/lib/freelancer/pricing';
 import { Card, CardContent } from '@/components/ui/card';
 import { FreelancerRatesConfig } from '@/components/admin/freelancer-rates-config';
 import { ArrowLeft } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export default async function FreelancerValoresPage() {
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Valor do freelancer (por hora)</h1>
+      <LargeTitle title="Valor do freelancer (por hora)" />
       <Card><CardContent className="pt-4">
         <FreelancerRatesConfig units={units} rates={rates} holidays={holidays.map((h) => ({ id: h.id, date: h.date, name: h.name }))} />
       </CardContent></Card>

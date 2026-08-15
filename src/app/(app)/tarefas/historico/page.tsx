@@ -7,6 +7,7 @@ import { ChecklistHistoryList, type HistGroup } from '@/components/tasks/checkli
 import { UnitFilter } from '@/components/ui/unit-filter';
 import { ArrowLeft } from 'lucide-react';
 import { subDays, format } from 'date-fns';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +50,7 @@ export default async function HistoricoTarefasPage({ searchParams }: { searchPar
   return (
     <div className="space-y-4">
       <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
-      <h1 className="text-xl font-bold text-brand">Histórico de checklists</h1>
+      <LargeTitle title="Histórico de checklists" />
 
       <div className="flex flex-wrap items-center gap-2">
         {[7, 15, 30].map((d) => (

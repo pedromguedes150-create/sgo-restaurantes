@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { getNetworkLockConsolidation } from '@/lib/commands/open-analysis';
 import { PrintButton } from '@/components/ui/print-button';
 import { formatBRL } from '@/lib/utils';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ export default async function ConsolidadoPage() {
 
       <div className="rounded-lg border p-4 print:border-0 print:p-0">
         <div className="mb-3 border-b pb-2">
-          <h1 className="text-lg font-black text-brand">Comandas a travar — Consolidado da rede</h1>
+          <LargeTitle title="Comandas a travar — Consolidado da rede" />
           <p className="text-sm text-ink-500">Para o Administrativo · gerado {new Date().toLocaleString('pt-BR')} · baseado na análise mais recente de cada unidade</p>
           <p className="text-sm"><b>{totalCmds}</b> comanda(s) a travar em <b>{rows.length}</b> unidade(s) · valor total <b>{formatBRL(totalValue)}</b></p>
         </div>

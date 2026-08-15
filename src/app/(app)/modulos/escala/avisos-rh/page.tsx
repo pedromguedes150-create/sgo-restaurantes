@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { FormSelect, FormDatePicker } from '@/components/ui/ds/form-controls';
 import { shortUnitName } from '@/lib/unit-name';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,8 +40,7 @@ export default async function AvisosRhPage({ searchParams }: { searchParams: { d
     <div className="space-y-4">
       <Link href="/modulos/escala" className="inline-flex items-center gap-1 text-sm font-semibold text-brand print:hidden"><ArrowLeft className="h-4 w-4" /> Escala</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><BellRing className="h-5 w-5 text-brand" /> Avisos ao RH (Escala)</h1>
-        <p className="text-sm text-ink-500">Toda variação lançada no Realizado (falta, atestado, férias…) gera um aviso automático. Quando a API do RH aceitar estes eventos, eles passam a ser enviados na hora.</p>
+        <LargeTitle title="Avisos ao RH (Escala)" subtitle="Toda variação lançada no Realizado (falta, atestado, férias…) gera um aviso automático. Quando a API do RH aceitar estes eventos, eles passam a ser enviados na hora." />
       </div>
 
       <form className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-2 print:hidden" method="get">

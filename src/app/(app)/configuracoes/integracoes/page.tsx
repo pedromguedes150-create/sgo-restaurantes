@@ -6,6 +6,7 @@ import { rhConfigured } from '@/lib/rh/client';
 import { feriasWebhookConfigured } from '@/lib/rh/webhook';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +36,7 @@ export default async function IntegracoesPage() {
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><Plug className="h-5 w-5 text-brand" /> APIs &amp; Integrações</h1>
+        <LargeTitle title="APIs &amp; Integrações" />
         <p className="text-sm text-ink-500">Tudo que o SGO consome e expõe. Toda nova API entra aqui. Os valores completos dos tokens ficam no <code>.env</code> do servidor.</p>
       </div>
 

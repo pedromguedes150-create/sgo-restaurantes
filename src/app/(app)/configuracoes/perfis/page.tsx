@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PermissionsAdmin } from '@/components/admin/permissions-admin';
 import { MODULES, permissionMatrix } from '@/lib/permissions';
 import { ArrowLeft } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,8 +16,7 @@ export default async function PerfisAdminPage() {
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Perfis de acesso</h1>
-      <p className="text-sm text-ink-500">Defina o que cada perfil pode ver e editar em cada módulo.</p>
+      <LargeTitle title="Perfis de acesso" subtitle="Defina o que cada perfil pode ver e editar em cada módulo." />
       <Card><CardContent className="pt-4">
         <PermissionsAdmin modules={MODULES.map((m) => ({ key: m.key, label: m.label }))} matrix={matrix} />
       </CardContent></Card>

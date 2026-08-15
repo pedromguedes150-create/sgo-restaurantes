@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { PopEditor } from '@/components/pops/pop-editor';
 import { BookOpen, GraduationCap } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export default async function PopsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><BookOpen className="h-5 w-5 text-brand" /> POPs</h1>
+      <LargeTitle title="POPs" />
       <Link href="/modulos/treinamentos" className="flex items-center gap-2 rounded-lg border bg-surface px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-brand">
         <GraduationCap className="h-5 w-5 text-brand" /> Treinamentos (acompanhar por setor)
       </Link>

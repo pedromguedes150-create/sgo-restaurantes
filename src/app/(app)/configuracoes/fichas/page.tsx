@@ -7,6 +7,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listChecklistForms } from '@/lib/checklist-forms/config';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChecklistFormsAdmin } from '@/components/admin/checklist-forms-admin';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,8 +29,7 @@ export default async function FichasConfigPage() {
         <Link href="/tarefas/fichas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><History className="h-4 w-4" /> Histórico de envios</Link>
       </div>
       <div>
-        <h1 className="text-xl font-bold text-brand">Fichas (checklists por link)</h1>
-        <p className="text-sm text-ink-500">Monte fichas por unidade e gere um link para a equipe preencher (sem login). Os envios ficam no histórico.</p>
+        <LargeTitle title="Fichas (checklists por link)" subtitle="Monte fichas por unidade e gere um link para a equipe preencher (sem login). Os envios ficam no histórico." />
       </div>
       {units.length === 0 ? (
         <Card><CardContent className="py-6 text-sm text-ink-500">Nenhuma unidade no seu escopo.</CardContent></Card>

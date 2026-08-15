@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { listRoleChanges } from '@/lib/people/role-change';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,7 @@ export default async function MudancasPage() {
     <div className="space-y-4">
       <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ArrowRightLeft className="h-5 w-5 text-brand" /> Mudanças de função/setor</h1>
+        <LargeTitle title="Mudanças de função/setor" />
         <p className="text-sm text-ink-500">
           Registro consolidado para informar o RH. Mudança de <strong>setor</strong> vale no SGO na hora (Mapa de Funções);
           mudança de <strong>função</strong> é solicitação — efetiva no RH e o cargo atualiza no próximo sync.

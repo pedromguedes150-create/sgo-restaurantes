@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { OccurrencesConfigAdmin } from '@/components/admin/occurrences-config-admin';
 import { ArrowLeft } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ export default async function OcorrenciasConfigPage() {
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Ocorrências — tipos e categorias</h1>
+      <LargeTitle title="Ocorrências — tipos e categorias" />
       <Card><CardContent className="pt-4">
         <OccurrencesConfigAdmin types={types} />
       </CardContent></Card>

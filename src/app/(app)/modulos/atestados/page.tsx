@@ -5,6 +5,7 @@ import { listCertificates, getCertificatesReport } from '@/lib/certificates/quer
 import { canSeeCid } from '@/lib/certificates/labels';
 import { Card, CardContent } from '@/components/ui/card';
 import { CertificatesClient } from '@/components/certificates/certificates-client';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,8 +42,7 @@ export default async function AtestadosPage({ searchParams }: { searchParams: { 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-brand">Central de Atestados</h1>
-        <p className="text-sm text-ink-500">Lance o atestado por foto (a IA lê e pré-preenche), acompanhe quantidade e dias por unidade.</p>
+        <LargeTitle title="Central de Atestados" subtitle="Lance o atestado por foto (a IA lê e pré-preenche), acompanhe quantidade e dias por unidade." />
       </div>
       <Card><CardContent className="pt-4">
         <CertificatesClient

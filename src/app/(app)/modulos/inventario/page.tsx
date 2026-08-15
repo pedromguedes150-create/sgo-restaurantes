@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InventoryClient } from '@/components/inventory/inventory-client';
 import { EquipmentInventory } from '@/components/inventory/equipment-inventory';
 import { ClipboardList, Wrench } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,7 @@ export default async function InventarioPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-brand">Inventário</h1>
+      <LargeTitle title="Inventário" />
 
       {/* Seção 1: inventário do Teknisa (acompanhamento da tarefa) */}
       <Card>

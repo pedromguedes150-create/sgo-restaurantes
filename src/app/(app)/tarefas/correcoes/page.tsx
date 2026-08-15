@@ -10,6 +10,7 @@ import { PrintButton } from '@/components/ui/print-button';
 import { UnitFilter } from '@/components/ui/unit-filter';
 import { ArrowLeft } from 'lucide-react';
 import { FormDatePicker } from '@/components/ui/ds/form-controls';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,8 +37,7 @@ export default async function CorrecoesPage({ searchParams }: { searchParams: { 
         <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
         <PrintButton label="Imprimir / PDF" />
       </div>
-      <h1 className="text-xl font-bold text-brand">Relatório de correções</h1>
-      <p className="text-sm text-ink-500">Itens marcados como 🟡 Em correção e 🔴 A corrigir nos checklists. Escolha o período e as unidades.</p>
+      <LargeTitle title="Relatório de correções" subtitle="Itens marcados como 🟡 Em correção e 🔴 A corrigir nos checklists. Escolha o período e as unidades." />
 
       <div className="space-y-2 print:hidden">
         {multi && <UnitFilter units={units.map((u) => ({ id: u.id, name: u.name }))} selected={unitFilter.all ? [] : unitFilter.ids} />}

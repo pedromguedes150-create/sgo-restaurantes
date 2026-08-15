@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CancellationsClient } from '@/components/cancellations/cancellations-client';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { formatBRL } from '@/lib/utils';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,7 @@ export default async function CancelamentosPage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-brand">Cancelamento de Cupons</h1>
+        <LargeTitle title="Cancelamento de Cupons" />
         <div className="flex flex-wrap gap-2">
           {['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role) && <Link href="/modulos/cancelamentos/analise" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🛡️ Análise antifraude (PDF)</Link>}
           <Link href="/modulos/cancelamentos/relatorio" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-sunken"><FileText className="h-4 w-4" /> Relatório</Link>

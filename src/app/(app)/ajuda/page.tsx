@@ -5,6 +5,7 @@ import { guidesForRole } from '@/lib/guide';
 import { Card, CardContent } from '@/components/ui/card';
 import { GuideView } from '@/components/help/guide-view';
 import { GraduationCap, Eye, User } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +17,7 @@ export default async function AjudaPage({ searchParams }: { searchParams: { all?
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><GraduationCap className="h-5 w-5 text-brand" /> Treinamento da Plataforma</h1>
-        <p className="text-sm text-ink-500">Como usar o sistema, passo a passo, de acordo com o seu perfil.</p>
+        <LargeTitle title="Treinamento da Plataforma" subtitle="Como usar o sistema, passo a passo, de acordo com o seu perfil." />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

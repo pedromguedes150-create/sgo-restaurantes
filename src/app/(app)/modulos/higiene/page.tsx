@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { HygieneManageClient } from '@/components/hygiene/hygiene-manage-client';
 import { Sparkles } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,8 +27,7 @@ export default async function HigienePage({ searchParams }: { searchParams: { un
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><Sparkles className="h-5 w-5 text-brand" /> Higiene dos banheiros</h1>
-        <p className="text-sm text-ink-500">Solicitações do QR dos banheiros, com aviso ao gerente e análise. (WhatsApp em fase futura.)</p>
+        <LargeTitle title="Higiene dos banheiros" subtitle="Solicitações do QR dos banheiros, com aviso ao gerente e análise. (WhatsApp em fase futura.)" />
       </div>
 
       {units.length > 1 && <UnitSelectNav units={units} selected={selUnit.id} />}

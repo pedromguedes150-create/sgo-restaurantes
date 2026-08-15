@@ -9,6 +9,7 @@ import { PrintButton } from '@/components/ui/print-button';
 import { ArrowLeft, ClipboardCheck } from 'lucide-react';
 import { FormSelect } from '@/components/ui/ds/form-controls';
 import { shortUnitName } from '@/lib/unit-name';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +52,7 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
         <Link href="/modulos/supervisao" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Supervisão</Link>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ClipboardCheck className="h-5 w-5 text-brand" /> Painel da unidade</h1>
+        <LargeTitle title="Painel da unidade" />
         <PrintButton />
       </div>
 

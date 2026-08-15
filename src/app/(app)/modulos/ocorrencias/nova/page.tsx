@@ -6,6 +6,7 @@ import { getOccurrenceTypes } from '@/lib/occurrences/query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { OccurrenceForm } from '@/components/occurrences/occurrence-form';
 import { ArrowLeft } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export default async function NovaOcorrenciaPage() {
       <Link href="/modulos/ocorrencias" className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
-      <h1 className="text-xl font-bold text-brand">Nova ocorrência</h1>
+      <LargeTitle title="Nova ocorrência" />
       <Card>
         <CardHeader>
           <CardTitle>Registro</CardTitle>

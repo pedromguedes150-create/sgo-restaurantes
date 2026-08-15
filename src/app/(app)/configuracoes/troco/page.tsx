@@ -6,6 +6,7 @@ import { canEditModule } from '@/lib/permissions';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { Card, CardContent } from '@/components/ui/card';
 import { CashDenominationsAdmin } from '@/components/admin/cash-denominations-admin';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,7 @@ export default async function TrocoConfigPage() {
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Troco — denominações por unidade</h1>
+      <LargeTitle title="Troco — denominações por unidade" />
       {units.length === 0 ? (
         <Card><CardContent className="py-6 text-sm text-ink-500">Nenhuma unidade no seu escopo.</CardContent></Card>
       ) : (

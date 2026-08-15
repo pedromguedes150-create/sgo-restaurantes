@@ -8,6 +8,7 @@ import { getVisitBoard, listSupervisorChecklists } from '@/lib/supervisor/visits
 import { listVisitPlans } from '@/lib/supervisor/visit-plans';
 import { Card, CardContent } from '@/components/ui/card';
 import { SupervisionClient } from '@/components/supervisor/supervision-client';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,8 +39,7 @@ export default async function SupervisaoPage({ searchParams }: { searchParams: {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><Eye className="h-5 w-5 text-brand" /> Rotina do Supervisor</h1>
-          <p className="text-sm text-ink-500">Painel de uso dos gerentes, visitas com feedback e checklists de visita.</p>
+          <LargeTitle title="Rotina do Supervisor" subtitle="Painel de uso dos gerentes, visitas com feedback e checklists de visita." />
         </div>
         <Link href="/modulos/painel-unidade" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">📋 Painel da unidade (reunião)</Link>
       </div>
