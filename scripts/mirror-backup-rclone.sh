@@ -45,6 +45,20 @@ REMOTE_NOME="${BACKUP_REMOTE%%:*}"
 rclone listremotes | grep -qx "${REMOTE_NOME}:" \
   || erro "remote '${REMOTE_NOME}' não existe. Configure com: rclone config"
 
+# --- Trava de conta ----------------------------------------------------------
+# O droplet é compartilhado com a plataforma do CEO e já tem um remote `gdrive:`
+# apontando para a conta pessoal dele. Ficou DECIDIDO que o SGO usa conta
+# separada: dado de funcionário (CPF, PIX, CID) não passa pela conta do CEO.
+# Um erro de digitação no .env mandaria tudo para lá sem avisar — então a regra
+# vira código, não memória de quem configurou.
+case "$REMOTE_NOME" in
+  gdrive|drive|gdrive-ceo|bjf|bjf-drive)
+    erro "BACKUP_REMOTE aponta para '${REMOTE_NOME}:', que é o remote do CEO.
+      O SGO usa conta separada (decidido em 15/08/2026). Crie o remote próprio:
+        rclone config   →  novo remote, nome sugerido: sgo-drive
+      e ajuste BACKUP_REMOTE em $ENV_FILE." ;;
+esac
+
 # --- 1. Prepara cópias cifradas numa área à parte ----------------------------
 # O espelho NÃO mexe no backup local do droplet: os arquivos originais ficam
 # como estão, porque são eles que o procedimento de restauração usa. O que sobe
