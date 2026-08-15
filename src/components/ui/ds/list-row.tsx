@@ -69,7 +69,11 @@ export function ListRow({ title, subtitle, leading, trailing, href, onClick, dis
   // Divisor recuado: pseudo-elemento a 16px da esquerda; some na última linha.
   // Com caixa de seleção, o divisor vai no <li> (o interativo não ocupa a linha toda).
   const base = cn(
-    'relative flex h-16 w-full items-center gap-3 text-left outline-none',
+    // Altura ADAPTATIVA (Onda 8), não fixa em 64px: no iOS a linha simples tem
+    // 44pt e só cresce quando ganha segunda linha. Com altura travada, uma lista
+    // de linhas sem subtítulo desperdiçava 20px por item — em 20 itens, uma tela
+    // inteira de rolagem. O mínimo de 44px é também o alvo de toque (regra 8).
+    'relative flex min-h-11 w-full items-center gap-3 py-2 text-left outline-none',
     selectionSlot ? 'pr-4' : 'px-4',
     !selectionSlot && "after:absolute after:bottom-0 after:left-4 after:right-0 after:h-px after:bg-line after:content-[''] last:after:hidden",
     interactive && 'transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus motion-reduce:transition-none',
