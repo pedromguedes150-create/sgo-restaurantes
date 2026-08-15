@@ -71,9 +71,15 @@ const config: Config = {
         /* ---------------------------------------------------------------
          * DESIGN SYSTEM (Onda 0+). Backed por var(--sgo-*) (fonte de verdade
          * em src/styles/sgo-design-system.css). Aditivo: a paleta legada acima
-         * segue intacta e será migrada/removida nas Ondas 3-5.
-         * Colisões de nome com o legado (brand/surface/success) usam prefixo
-         * `sgo-` até a onda que renomeia aquela tela.
+         * segue intacta.
+         *
+         * O prefixo `sgo-` existe só onde o nome colide com o legado
+         * (brand/surface/success) e SAI NA ONDA 7 — ver docs/redesign-onda-7.md.
+         * Atenção: tirar o prefixo não é renomear. Os valores diferem
+         * (brand #6E1423 fixo × var(--sgo-brand) #7c1a2b claro / #f0a7b1
+         * escuro), então trocar o nome troca a cor renderizada E torna a tela
+         * sensível ao tema. É a migração que destrava o modo escuro, não uma
+         * limpeza — por isso ganhou onda própria, com auditoria de contraste.
          * ------------------------------------------------------------- */
         ink: {
           900: 'var(--sgo-ink-900)',
