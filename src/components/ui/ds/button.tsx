@@ -13,10 +13,14 @@ import { cn } from '@/lib/utils';
 const buttonVariants = cva(
   [
     'relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control',
-    'font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std',
+    'font-medium outline-none',
+    // Recuo ao toque (Onda 8): o gesto que identifica o iOS. Ida rápida e seca,
+    // volta em mola. Mesmo valor do botão legado, para o sistema ter UM gesto só.
+    'transition-[transform,background-color,border-color,color,opacity] duration-sgo-1 ease-sgo-spring',
+    'active:scale-[0.96] active:duration-[80ms]',
     'focus-visible:shadow-sgo-focus',
-    'disabled:pointer-events-none disabled:opacity-40',
-    'motion-reduce:transition-none',
+    'disabled:pointer-events-none disabled:opacity-40 disabled:active:scale-100',
+    'motion-reduce:transition-none motion-reduce:active:scale-100',
   ].join(' '),
   {
     variants: {

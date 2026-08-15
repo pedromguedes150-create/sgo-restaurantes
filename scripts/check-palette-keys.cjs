@@ -73,9 +73,12 @@ for (const f of arquivos(path.join(ROOT, 'src'))) {
   const linhas = texto.split('\n');
   linhas.forEach((linha, i) => {
     if (eComentario(linha)) return;
+    // Valor arbitrário entre colchetes não é utilitário de cor: dentro de
+    // `transition-[…,border-color,…]` o "border-color" é nome de propriedade CSS.
+    const semArbitrario = linha.replace(/\[[^\]]*\]/g, '[]');
     UTIL.lastIndex = 0;
     let m;
-    while ((m = UTIL.exec(linha))) {
+    while ((m = UTIL.exec(semArbitrario))) {
       const [, util] = m;
       const nome = semOffset(m[2]);
       if (NAO_COR.has(nome) || /^\d/.test(nome) || chaves.has(nome)) continue;

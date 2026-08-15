@@ -576,3 +576,31 @@
   --sgo-info-bg-rgb: 22 34 46;
   --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
 }
+
+/* =============================================================================
+   RECUO AO TOQUE — o gesto do iOS, no sistema inteiro (Onda 8)
+   O app tem 189 <button> escritos à mão, além dos 345 que passam pelo
+   componente. Tratar só o componente deixaria um terço da interface com um
+   gesto diferente. Uma regra só resolve o presente e o que for escrito depois.
+   O encolhimento é DE PROPÓSITO mais rápido na ida (80ms, seco) que na volta
+   (mola): é assim que o original responde — firme ao apertar, macio ao soltar.
+   ========================================================================== */
+button:not(:disabled):not(.sgo-no-press):active,
+[role='button']:not([aria-disabled='true']):not(.sgo-no-press):active {
+  transform: scale(0.96);
+  transition-duration: 80ms;
+}
+button:not(:disabled):not(.sgo-no-press),
+[role='button']:not([aria-disabled='true']):not(.sgo-no-press) {
+  transition-property: transform, background-color, border-color, color, opacity;
+  transition-duration: var(--sgo-dur-1);
+  transition-timing-function: var(--sgo-ease-spring);
+}
+
+/* Regra 9 do contrato: quem pediu menos movimento não recebe o recuo. */
+@media (prefers-reduced-motion: reduce) {
+  button:active,
+  [role='button']:active {
+    transform: none;
+  }
+}
