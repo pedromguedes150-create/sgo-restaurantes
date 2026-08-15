@@ -37,10 +37,10 @@ export function OccurrenceProgress({ occurrenceId, updates, closed, types, curre
   return (
     <div className="space-y-3">
       {/* Timeline do andamento */}
-      <div className="rounded-lg border bg-sgo-surface p-3">
+      <div className="rounded-lg border bg-surface p-3">
         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Andamento ({updates.length})</p>
         {updates.length === 0 && <p className="text-sm text-ink-500">Nenhuma fase registrada ainda.</p>}
-        <ol className="space-y-2 border-l-2 border-sgo-brand/30 pl-3">
+        <ol className="space-y-2 border-l-2 border-brand/30 pl-3">
           {updates.map((u) => (
             <li key={u.id}>
               <p className="text-sm">{u.text}</p>

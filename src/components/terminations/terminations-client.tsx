@@ -32,8 +32,8 @@ export function TerminationsClient({ canRequest, canDecide, units, collaborators
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1">
-        {canRequest && <button onClick={() => setTab('solicitar')} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === 'solicitar' ? 'bg-sgo-brand text-on-brand' : 'border'}`}><Plus className="h-4 w-4" /> Solicitar</button>}
-        <button onClick={() => setTab('lista')} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === 'lista' ? 'bg-sgo-brand text-on-brand' : 'border'}`}><UserMinus className="h-4 w-4" /> Solicitações</button>
+        {canRequest && <button onClick={() => setTab('solicitar')} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === 'solicitar' ? 'bg-brand text-on-brand' : 'border'}`}><Plus className="h-4 w-4" /> Solicitar</button>}
+        <button onClick={() => setTab('lista')} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === 'lista' ? 'bg-brand text-on-brand' : 'border'}`}><UserMinus className="h-4 w-4" /> Solicitações</button>
       </div>
       {tab === 'solicitar' && canRequest && <RequestForm units={units} collaboratorsByUnit={collaboratorsByUnit} onDone={() => { setTab('lista'); router.refresh(); }} />}
       {tab === 'lista' && <List rows={rows} canDecide={canDecide} onChanged={() => router.refresh()} />}
@@ -79,10 +79,10 @@ function RequestForm({ units, collaboratorsByUnit, onDone }: { units: Unit[]; co
       </div>
 
       {ctx && (
-        <div className="grid grid-cols-3 gap-2 rounded-lg border bg-sgo-surface p-2 text-center text-xs">
-          <div><p className="text-ink-500">Tempo de empresa</p><p className="font-bold text-sgo-brand">{ctx.tenure ?? '—'}</p></div>
-          <div><p className="text-ink-500">Atestados</p><p className="font-bold text-sgo-brand">{ctx.certCount}</p></div>
-          <div><p className="text-ink-500">Dias afastado</p><p className="font-bold text-sgo-brand">{ctx.certDays}</p></div>
+        <div className="grid grid-cols-3 gap-2 rounded-lg border bg-surface p-2 text-center text-xs">
+          <div><p className="text-ink-500">Tempo de empresa</p><p className="font-bold text-brand">{ctx.tenure ?? '—'}</p></div>
+          <div><p className="text-ink-500">Atestados</p><p className="font-bold text-brand">{ctx.certCount}</p></div>
+          <div><p className="text-ink-500">Dias afastado</p><p className="font-bold text-brand">{ctx.certDays}</p></div>
         </div>
       )}
 
@@ -91,7 +91,7 @@ function RequestForm({ units, collaboratorsByUnit, onDone }: { units: Unit[]; co
         <div><Label>Idade (informe)</Label><Input inputMode="numeric" value={age} onChange={(e) => setAge(e.target.value.replace(/\D/g, ''))} placeholder="ex: 34" /></div>
       </div>
       <div><Label>Justificativa do tipo de aviso</Label><Input value={noticeJustification} onChange={(e) => setNoticeJust(e.target.value)} placeholder="por que trabalhado/indenizado" /></div>
-      <div><Label>Motivo do desligamento</Label><textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-2 text-sm" placeholder="explique o motivo" /></div>
+      <div><Label>Motivo do desligamento</Label><textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="w-full rounded-lg border-2 border-line-strong bg-surface p-2 text-sm" placeholder="explique o motivo" /></div>
 
       {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
       <Button onClick={submit} disabled={busy || !collaboratorId} size="lg" className="w-full"><UserMinus className="h-5 w-5" /> Enviar ao supervisor</Button>
@@ -116,10 +116,10 @@ function List({ rows, canDecide, onChanged }: { rows: TermRow[]; canDecide: bool
   return (
     <div className="space-y-2">
       {rows.map((r) => (
-        <div key={r.id} className="rounded-lg border bg-sgo-surface p-3">
+        <div key={r.id} className="rounded-lg border bg-surface p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-sgo-brand">{r.collaboratorName}</p>
+              <p className="truncate text-sm font-semibold text-brand">{r.collaboratorName}</p>
               <p className="text-xs text-ink-500">{r.unit} · {NOTICE[r.noticeType]}{r.by ? ` · ${r.by}` : ''}</p>
             </div>
             <StatusBadge tone={STw[r.status].tone}>{STw[r.status].label}</StatusBadge>
@@ -128,7 +128,7 @@ function List({ rows, canDecide, onChanged }: { rows: TermRow[]; canDecide: bool
           <p className="mt-1 text-sm">{r.reason}</p>
           {r.rejectionReason && <p className="mt-1 text-xs text-danger">Recusado: {r.rejectionReason}</p>}
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <a href={`/modulos/desligamentos/${r.id}/relatorio`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold text-sgo-brand"><FileText className="h-4 w-4" /> Relatório (PDF)</a>
+            <a href={`/modulos/desligamentos/${r.id}/relatorio`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand"><FileText className="h-4 w-4" /> Relatório (PDF)</a>
             {canDecide && r.status === 'PENDING' && (
               <>
                 <Button size="sm" variant="gold" disabled={busy === r.id} onClick={() => decide(r.id, true)}><Check className="h-4 w-4" /> Aprovar</Button>

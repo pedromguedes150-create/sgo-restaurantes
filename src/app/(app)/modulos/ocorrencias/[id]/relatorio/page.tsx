@@ -18,16 +18,16 @@ export default async function OcorrenciaRelatorioPage({ params }: { params: { id
   const images = o.attachments.filter((a) => a.mimeType.startsWith('image/'));
 
   return (
-    <div className="sgo-print mx-auto max-w-3xl space-y-4 bg-sgo-surface p-2 print:p-0 text-ink-900">
+    <div className="sgo-print mx-auto max-w-3xl space-y-4 bg-surface p-2 print:p-0 text-ink-900">
       <div className="flex items-center justify-between gap-2 print:hidden">
-        <Link href={`/modulos/ocorrencias/${o.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+        <Link href={`/modulos/ocorrencias/${o.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
         <PrintButton />
       </div>
 
       {/* Cabeçalho do relatório */}
-      <div className="border-b-2 border-sgo-brand pb-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-sgo-brand">Relatório de Ocorrência — SGO Beija Flor</p>
-        <h1 className="text-2xl font-black text-sgo-brand">#{o.unit.code}-{String(o.number).padStart(4, '0')} · {o.typeName}</h1>
+      <div className="border-b-2 border-brand pb-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-brand">Relatório de Ocorrência — SGO Beija Flor</p>
+        <h1 className="text-2xl font-black text-brand">#{o.unit.code}-{String(o.number).padStart(4, '0')} · {o.typeName}</h1>
         <p className="text-sm text-ink-500">{o.unit.name} · {GRAVITY_META[o.gravity].emoji} {GRAVITY_META[o.gravity].label} · {STATUS_META[o.status].label}</p>
       </div>
 

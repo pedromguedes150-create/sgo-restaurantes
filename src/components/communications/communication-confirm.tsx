@@ -30,11 +30,11 @@ export function CommunicationConfirm({ id, requiresResponse }: { id: string; req
   }
 
   return (
-    <div className="space-y-2 rounded-lg border-2 border-sgo-brand/40 bg-sgo-brand/5 p-3">
-      <p className="text-sm font-semibold text-sgo-brand">Confirme que leu este comunicado</p>
+    <div className="space-y-2 rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
+      <p className="text-sm font-semibold text-brand">Confirme que leu este comunicado</p>
       <div>
         <Label className="text-xs">Resposta {requiresResponse ? '(obrigatória)' : '(opcional)'}</Label>
-        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface px-3 py-2 text-sm" placeholder="Comentário (ex.: feito, segue foto)" />
+        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="w-full rounded-lg border-2 border-line-strong bg-surface px-3 py-2 text-sm" placeholder="Comentário (ex.: feito, segue foto)" />
       </div>
       <div>
         <Label className="text-xs">Foto {requiresResponse ? '(prova de execução)' : '(opcional)'}</Label>

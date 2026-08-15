@@ -45,8 +45,8 @@ export function MetaConfigClient({ components, canEdit }: { components: MetaComp
         const items = components.filter((c) => c.kind === g.kind);
         if (items.length === 0) return null;
         return (
-          <div key={g.kind} className="rounded-lg border bg-sgo-surface p-3">
-            <p className="text-sm font-bold text-sgo-brand">{g.title}</p>
+          <div key={g.kind} className="rounded-lg border bg-surface p-3">
+            <p className="text-sm font-bold text-brand">{g.title}</p>
             <p className="mb-2 text-xs text-ink-500">{g.desc}</p>
             <div className="space-y-1.5">
               {items.map((c) => (

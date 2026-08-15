@@ -21,12 +21,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-sgo-brand text-on-brand hover:bg-sgo-brand-hover',
-        secondary: 'border border-line-strong bg-sgo-surface text-ink-900 hover:bg-sunken',
+        primary: 'bg-brand text-on-brand hover:bg-brand-hover',
+        secondary: 'border border-line-strong bg-surface text-ink-900 hover:bg-sunken',
         ghost: 'text-ink-700 hover:bg-sunken hover:text-ink-900',
         // Destrutivo: sem bloco vermelho (princípio 4).
         danger: 'text-danger hover:bg-danger-bg',
-        link: 'text-sgo-brand underline-offset-4 hover:underline',
+        link: 'text-brand underline-offset-4 hover:underline',
       },
       size: {
         // Alvo de 44px no sm: pseudo-elemento invisível, não ocupa espaço.

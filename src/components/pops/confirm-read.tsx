@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 export function ConfirmRead({ popId, confirmed, trainingRecordId = null }: { popId: string; confirmed: boolean; trainingRecordId?: string | null }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  if (confirmed && !trainingRecordId) return <p className="rounded-lg bg-sgo-success/10 px-3 py-2 text-sm font-semibold text-sgo-success">✓ Leitura confirmada</p>;
+  if (confirmed && !trainingRecordId) return <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-semibold text-success">✓ Leitura confirmada</p>;
   return (
     <Button
       size="lg"

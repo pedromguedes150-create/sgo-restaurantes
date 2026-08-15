@@ -9,14 +9,14 @@ export default async function HigienePublicPage({ params, searchParams }: { para
   if (!data) {
     return (
       <div className="mx-auto max-w-md p-6 text-center">
-        <p className="text-lg font-bold text-sgo-brand">Local não encontrado</p>
+        <p className="text-lg font-bold text-brand">Local não encontrado</p>
         <p className="text-sm text-ink-500">Confira o QR Code com a equipe.</p>
       </div>
     );
   }
   return (
     <div className="mx-auto min-h-dvh max-w-md bg-canvas p-4">
-      <div className="mb-4 rounded-2xl bg-sgo-brand p-5 text-center text-on-brand">
+      <div className="mb-4 rounded-2xl bg-brand p-5 text-center text-on-brand">
         <p className="text-xs uppercase tracking-wide opacity-90">Beija Flor</p>
         <h1 className="text-xl font-black">Este local precisa de higienização?</h1>
         <p className="mt-1 text-sm opacity-90">{data.unit.name}</p>

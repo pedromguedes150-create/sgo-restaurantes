@@ -42,7 +42,7 @@ export function Row({ label, children }: { label: string; children: React.ReactN
 }
 
 export function Panel({ children }: { children: React.ReactNode }) {
-  return <div className="overflow-hidden rounded-card border border-line bg-sgo-surface">{children}</div>;
+  return <div className="overflow-hidden rounded-card border border-line bg-surface">{children}</div>;
 }
 
 /* ------------------------------------------------------------------ Button */
@@ -260,7 +260,7 @@ export function ListSection() {
           <ListRow title="Linha desabilitada" subtitle="Sem interação" disabled />
         </List>
 
-        <div className="rounded-card border border-line bg-sgo-surface">
+        <div className="rounded-card border border-line bg-surface">
           <EmptyState
             icon={Inbox}
             title="Nenhuma nota neste período"
@@ -303,7 +303,7 @@ export function DataSection() {
           </Row>
         </Panel>
 
-        <div className="space-y-4 rounded-card border border-line bg-sgo-surface p-4">
+        <div className="space-y-4 rounded-card border border-line bg-surface p-4">
           <ProgressBar label="Checklists de hoje" value={15} max={29} valueLabel="15/29" />
           <ProgressBar label="Meta do mês" value={82} tone="success" />
           <ProgressBar label="Cobertura de desperdício" value={41} tone="warning" />
@@ -472,7 +472,7 @@ export function SkeletonSection() {
             <SkeletonStatCard />
             <SkeletonStatCard />
           </div>
-          <div className="rounded-card border border-line bg-sgo-surface p-4">
+          <div className="rounded-card border border-line bg-surface p-4">
             <SkeletonText lines={3} />
             <Skeleton className="mt-4 h-10 w-32" />
           </div>

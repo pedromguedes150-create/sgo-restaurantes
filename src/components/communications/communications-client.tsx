@@ -49,7 +49,7 @@ export function CommunicationsClient({ canAuthor, isAdmin, weight, units, people
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {tabs.filter((t) => t.show).map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
+          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
             {t.label}{t.badge ? <span className="ml-1 rounded-full bg-danger px-1.5 text-xs text-on-brand">{t.badge}</span> : null}
           </button>
         ))}
@@ -71,7 +71,7 @@ function Inbox({ items }: { items: InboxItem[] }) {
     <div className="space-y-4">
       <section className="space-y-2">
         <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">A confirmar ({pending.length})</h2>
-        {pending.length === 0 && <p className="text-sm text-sgo-success">Tudo confirmado. 🎉</p>}
+        {pending.length === 0 && <p className="text-sm text-success">Tudo confirmado. 🎉</p>}
         {pending.map((i) => <InboxCard key={i.recipientId} i={i} />)}
       </section>
       {done.length > 0 && (
@@ -92,9 +92,9 @@ function InboxCard({ i }: { i: InboxItem }) {
   const prio = PRIO[i.priority];
   return (
     <Link href={`/modulos/comunicacao/${i.communicationId}`}>
-      <div className="rounded-lg border bg-sgo-surface p-3 transition-colors hover:border-sgo-brand">
+      <div className="rounded-lg border bg-surface p-3 transition-colors hover:border-brand">
         <div className="flex items-start justify-between gap-2">
-          <p className="flex items-center gap-1.5 font-semibold text-sgo-brand">
+          <p className="flex items-center gap-1.5 font-semibold text-brand">
             {i.pinned && <Pin className="h-4 w-4 text-ink-700" />}{i.title}
           </p>
           <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
@@ -132,13 +132,13 @@ function Panel({ items, isAdmin, weight }: { items: AuthoredItem[]; isAdmin: boo
         const prio = PRIO[c.priority];
         return (
           <Link key={c.id} href={`/modulos/comunicacao/${c.id}`}>
-            <div className="rounded-lg border bg-sgo-surface p-3 transition-colors hover:border-sgo-brand">
+            <div className="rounded-lg border bg-surface p-3 transition-colors hover:border-brand">
               <div className="flex items-start justify-between gap-2">
-                <p className="flex items-center gap-1.5 font-semibold text-sgo-brand">{c.pinned && <Pin className="h-4 w-4 text-ink-700" />}{c.title}</p>
-                <span className="text-sm font-bold text-sgo-brand">{c.confirmed}/{c.total}</span>
+                <p className="flex items-center gap-1.5 font-semibold text-brand">{c.pinned && <Pin className="h-4 w-4 text-ink-700" />}{c.title}</p>
+                <span className="text-sm font-bold text-brand">{c.confirmed}/{c.total}</span>
               </div>
               <p className="mt-0.5 text-xs text-ink-500">{prio && <span className="font-semibold text-warning">{prio.label} · </span>}prazo {fmt(c.dueAt)} · {c.units.length ? c.units.join(', ') : 'destinatários avulsos'}</p>
-              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-sgo-success" style={{ width: `${pct}%` }} /></div>
+              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} /></div>
               {c.pending > 0 && <p className="mt-1 text-xs text-warning">{c.pending} pendente(s)</p>}
             </div>
           </Link>
@@ -165,7 +165,7 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
   const [err, setErr] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
 
-  const sel = 'h-11 w-full rounded-lg border-2 border-line-strong bg-sgo-surface px-3 text-sm';
+  const sel = 'h-11 w-full rounded-lg border-2 border-line-strong bg-surface px-3 text-sm';
 
   async function submit() {
     setErr(null); setOkMsg(null);
@@ -193,7 +193,7 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
   return (
     <div className="space-y-3">
       <div><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ex: Padrão da vitrine para o fim de semana" /></div>
-      <div><Label>Mensagem</Label><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface px-3 py-2 text-sm" placeholder="Escreva o comunicado…" /></div>
+      <div><Label>Mensagem</Label><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="w-full rounded-lg border-2 border-line-strong bg-surface px-3 py-2 text-sm" placeholder="Escreva o comunicado…" /></div>
 
       <div className="grid grid-cols-2 gap-2">
         <Select label="Prioridade" value={priority} onValueChange={(v) => setPriority(v as Priority)} options={PRIORIDADES} />
@@ -236,7 +236,7 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
       </div>
 
       {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
-      {okMsg && <p className="rounded-lg bg-sgo-success/10 px-3 py-2 text-sm font-medium text-sgo-success">{okMsg}</p>}
+      {okMsg && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{okMsg}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Megaphone className="h-5 w-5" /> Publicar comunicado</Button>
     </div>
   );

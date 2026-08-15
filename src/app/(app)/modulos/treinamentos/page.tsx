@@ -20,8 +20,8 @@ export default async function TreinamentosPage({ searchParams }: { searchParams:
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/pops" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> POPs</Link>
-      <h1 className="text-xl font-bold text-sgo-brand">Treinamentos</h1>
+      <Link href="/modulos/pops" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> POPs</Link>
+      <h1 className="text-xl font-bold text-brand">Treinamentos</h1>
       <p className="text-sm text-ink-500">Acompanhe por setor quem está com treinamento pendente, realizado ou vencido. Conta na meta (peso {weight}).</p>
 
       {units.length > 1 && <UnitSelectNav units={units} selected={selected.id} />}

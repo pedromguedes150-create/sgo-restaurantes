@@ -74,9 +74,9 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
   }
 
   const SessionCard = ({ s }: { s: SessionUI }) => (
-    <div className={`rounded-lg border p-2.5 ${hasDiv(s) ? 'border-danger/50 bg-danger/5' : 'bg-sgo-surface'}`}>
+    <div className={`rounded-lg border p-2.5 ${hasDiv(s) ? 'border-danger/50 bg-danger/5' : 'bg-surface'}`}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-sgo-brand">Caixa {s.seq} · {fmtBR(s.operationalDate)}</p>
+        <p className="text-sm font-semibold text-brand">Caixa {s.seq} · {fmtBR(s.operationalDate)}</p>
         {s.closingAmount == null
           ? <StatusBadge tone="medium">Aberto</StatusBadge>
           : hasDiv(s)
@@ -114,23 +114,23 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
         )}
         <a
           href={`/api/cash/export?unit=${selectedUnitId}&year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border bg-sgo-surface px-3 py-1.5 text-xs font-semibold text-sgo-brand hover:border-sgo-brand"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"
         >
-          <FileSpreadsheet className="h-3.5 w-3.5 text-sgo-brand" /> Excel do mês
+          <FileSpreadsheet className="h-3.5 w-3.5 text-brand" /> Excel do mês
         </a>
       </div>
 
       {/* Estatística do mês (unidade) */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg border bg-sgo-surface p-2.5 text-center">
+        <div className="rounded-lg border bg-surface p-2.5 text-center">
           <p className="text-lg font-bold tabular-nums">{month.sessions}</p>
           <p className="text-xs text-ink-500">caixas no mês</p>
         </div>
-        <div className={`rounded-lg border p-2.5 text-center ${month.divergent > 0 ? 'border-danger/50 bg-danger/5' : 'bg-sgo-surface'}`}>
+        <div className={`rounded-lg border p-2.5 text-center ${month.divergent > 0 ? 'border-danger/50 bg-danger/5' : 'bg-surface'}`}>
           <p className={`text-lg font-bold tabular-nums ${month.divergent > 0 ? 'text-danger' : ''}`}>{month.divergent}</p>
           <p className="text-xs text-ink-500">divergências</p>
         </div>
-        <div className="rounded-lg border bg-sgo-surface p-2.5 text-center">
+        <div className="rounded-lg border bg-surface p-2.5 text-center">
           <p className="text-lg font-bold tabular-nums">{brl(month.divergenceTotal)}</p>
           <p className="text-xs text-ink-500">soma divergida</p>
         </div>
@@ -138,8 +138,8 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
 
       {/* Caixa aberto → fechar · sem caixa aberto → abrir */}
       {canOperate && (openSession ? (
-        <div className="rounded-lg border-2 border-sgo-brand/50 p-3">
-          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-sgo-brand"><Unlock className="h-4 w-4 text-sgo-brand" /> Caixa {openSession.seq} aberto — {brl(openSession.openingAmount)} na abertura</p>
+        <div className="rounded-lg border-2 border-brand/50 p-3">
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><Unlock className="h-4 w-4 text-brand" /> Caixa {openSession.seq} aberto — {brl(openSession.openingAmount)} na abertura</p>
           <p className="mb-2 text-xs text-ink-500">Aberto por {openSession.openedByName} às {new Date(openSession.openedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Conte o troco e feche — o valor vira a abertura esperada do próximo caixa.</p>
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Valor contado (R$)</Label><Input inputMode="decimal" value={closeAmount} onChange={(e) => setCloseAmount(e.target.value)} placeholder="0,00" className="h-10 text-sm" /></div>
@@ -149,7 +149,7 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
         </div>
       ) : (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-sgo-brand"><Unlock className="h-4 w-4 text-sgo-brand" /> Abrir caixa</p>
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><Unlock className="h-4 w-4 text-brand" /> Abrir caixa</p>
           {lastClosing != null ? (
             <p className="mb-2 text-xs text-ink-500">Abertura esperada (fechamento anterior): <strong className="tabular-nums">{brl(lastClosing)}</strong>. Conte o troco e digite o valor real — diferença gera alerta à supervisão.</p>
           ) : (
@@ -172,14 +172,14 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
 
       {/* Dashboard entre unidades (Supervisão/Admin/CEO) */}
       {dash && dash.length > 1 && (
-        <div className="rounded-lg border bg-sgo-surface p-3">
+        <div className="rounded-lg border bg-surface p-3">
           <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><AlertTriangle className="h-3.5 w-3.5" /> Divergências do mês por unidade</p>
           <div className="space-y-1">
             {dash.map((d) => (
               <div key={d.unitId} className="flex items-center justify-between gap-2 text-sm">
                 <span className="min-w-0 truncate">{d.unitName}</span>
                 <span className="shrink-0 text-xs tabular-nums">
-                  {d.sessions} caixa(s) · <span className={d.divergent > 0 ? 'font-bold text-danger' : 'font-semibold text-sgo-success'}>{d.divergent} div.</span> · {brl(d.divergenceTotal)}
+                  {d.sessions} caixa(s) · <span className={d.divergent > 0 ? 'font-bold text-danger' : 'font-semibold text-success'}>{d.divergent} div.</span> · {brl(d.divergenceTotal)}
                 </span>
               </div>
             ))}

@@ -117,7 +117,7 @@ export function CommandsClient({
       {/* Contagem do dia */}
       <div className="space-y-3">
         {todayDone && (
-          <p className="rounded-lg bg-sgo-success/10 px-3 py-2 text-sm font-medium text-sgo-success">
+          <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">
             Contagem de hoje já registrada (pode reenviar para corrigir).
           </p>
         )}
@@ -141,7 +141,7 @@ export function CommandsClient({
         </details>
 
         {msg && (
-          <p className={msg.t === 'ok' ? 'text-sm font-medium text-sgo-success' : 'text-sm font-medium text-danger'}>{msg.m}</p>
+          <p className={msg.t === 'ok' ? 'text-sm font-medium text-success' : 'text-sm font-medium text-danger'}>{msg.m}</p>
         )}
       </div>
 
@@ -152,9 +152,9 @@ export function CommandsClient({
         </h2>
         {openDivergences.length === 0 && <p className="text-sm text-ink-500">Nenhuma divergência aberta. 🟢</p>}
         {openDivergences.map((d) => (
-          <div key={d.id} className="rounded-lg border bg-sgo-surface p-3">
+          <div key={d.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-sgo-brand">Comanda nº {d.number}</p>
+              <p className="font-semibold text-brand">Comanda nº {d.number}</p>
               <StatusBadge tone={d.status === 'OPEN' ? 'critical' : 'medium'}>
                 {d.status === 'OPEN' ? '🔴 Aberta' : '🟡 Em apuração'}
               </StatusBadge>
@@ -248,9 +248,9 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
 
   if (total === 0) return null;
   return (
-    <div className="rounded-lg border-2 border-sgo-brand/30 bg-sgo-brand/5 p-3">
-      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-sgo-brand"><Grid3x3 className="h-4 w-4" /> Conferência em grade</h2>
-      <p className="mb-2 text-xs text-ink-500">Toque 1× = <b className="text-sgo-success">conferida</b> · 2× = <b className="text-info">em uso</b> (com cliente — conta como presente) · 3× = limpa. As <b>não marcadas</b> viram apuração.</p>
+    <div className="rounded-lg border-2 border-brand/30 bg-brand/5 p-3">
+      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><Grid3x3 className="h-4 w-4" /> Conferência em grade</h2>
+      <p className="mb-2 text-xs text-ink-500">Toque 1× = <b className="text-success">conferida</b> · 2× = <b className="text-info">em uso</b> (com cliente — conta como presente) · 3× = limpa. As <b>não marcadas</b> viram apuração.</p>
       {underReview.length > 0 && (
         <p className="mb-2 rounded-md bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">{underReview.length} comanda(s) já em apuração — fora da grade (trate no bloco Divergências abaixo).</p>
       )}
@@ -258,7 +258,7 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
         <button onClick={() => { setSelected(new Set(gridNumbers)); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Marcar todas</button>
         <button onClick={() => { setSelected(new Set()); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Limpar</button>
         <Input inputMode="numeric" value={filter} onChange={(e) => setFilter(e.target.value.replace(/\D/g, ''))} aria-label="Filtrar comandas pelo número" placeholder="filtrar nº" className="h-8 w-24 text-sm" />
-        <span className="ml-auto text-xs font-semibold"><span className="text-sgo-success">{conferidas} ok</span>{emUso > 0 && <> · <span className="text-info">{emUso} em uso</span></>} · <span className={faltando > 0 ? 'text-danger' : 'text-ink-500'}>{faltando} faltando</span> / {total}</span>
+        <span className="ml-auto text-xs font-semibold"><span className="text-success">{conferidas} ok</span>{emUso > 0 && <> · <span className="text-info">{emUso} em uso</span></>} · <span className={faltando > 0 ? 'text-danger' : 'text-ink-500'}>{faltando} faltando</span> / {total}</span>
       </div>
       {/* Seleção em lote por faixa (ex.: comandas guardadas) */}
       <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-md border border-dashed p-2">
@@ -266,13 +266,13 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
         <Input inputMode="numeric" value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value.replace(/\D/g, ''))} aria-label="Início da faixa de comandas" placeholder="de" className="h-8 w-16 text-sm" />
         <span className="text-xs text-ink-500">até</span>
         <Input inputMode="numeric" value={rangeTo} onChange={(e) => setRangeTo(e.target.value.replace(/\D/g, ''))} aria-label="Fim da faixa de comandas" placeholder="até" className="h-8 w-16 text-sm" />
-        <button onClick={() => applyRange(true)} className="rounded-full border border-sgo-success/50 px-2.5 py-1 text-xs font-semibold text-sgo-success">Marcar faixa</button>
+        <button onClick={() => applyRange(true)} className="rounded-full border border-success/50 px-2.5 py-1 text-xs font-semibold text-success">Marcar faixa</button>
         <button onClick={() => applyRange(false)} className="rounded-full border border-danger/50 px-2.5 py-1 text-xs font-semibold text-danger">Desmarcar faixa</button>
       </div>
-      <div className="max-h-72 overflow-y-auto rounded-md border bg-sgo-surface p-2">
+      <div className="max-h-72 overflow-y-auto rounded-md border bg-surface p-2">
         <div className="grid grid-cols-6 gap-1 sm:grid-cols-10">
           {shown.map((n) => (
-            <button key={n} onClick={() => toggle(n)} className={`rounded px-1 py-1 text-xs font-semibold ${selected.has(n) ? 'bg-sgo-success text-on-brand' : inUse.has(n) ? 'bg-info text-on-brand' : 'border text-ink-500'}`}>{n}</button>
+            <button key={n} onClick={() => toggle(n)} className={`rounded px-1 py-1 text-xs font-semibold ${selected.has(n) ? 'bg-success text-on-brand' : inUse.has(n) ? 'bg-info text-on-brand' : 'border text-ink-500'}`}>{n}</button>
           ))}
         </div>
         {shown.length === 0 && <p className="p-2 text-xs text-ink-500">Nenhum número com esse filtro.</p>}

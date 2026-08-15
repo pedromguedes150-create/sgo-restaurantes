@@ -25,7 +25,7 @@ interface Initial {
   confirmedCount: number; total: number;
 }
 
-const sel = 'h-11 w-full rounded-lg border-2 border-line-strong bg-sgo-surface px-3 text-sm';
+const sel = 'h-11 w-full rounded-lg border-2 border-line-strong bg-surface px-3 text-sm';
 
 /** ISO → valor de <input type="datetime-local"> em horário local. */
 function toLocalInput(iso: string): string {
@@ -116,7 +116,7 @@ export function CommunicationEdit({ id, initial, units, people }: { id: string; 
           </p>
 
           <div><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
-          <div><Label>Mensagem</Label><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface px-3 py-2 text-sm" /></div>
+          <div><Label>Mensagem</Label><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="w-full rounded-lg border-2 border-line-strong bg-surface px-3 py-2 text-sm" /></div>
 
           <div className="grid grid-cols-2 gap-2">
             <Select label="Prioridade" value={priority} onValueChange={(v) => setPriority(v as Priority)} options={PRIORIDADES} />

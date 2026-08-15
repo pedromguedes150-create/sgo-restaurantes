@@ -54,7 +54,7 @@ export function TemplatesAdmin({ units, templates, examples = [] }: { units: Uni
         </div>
       )}
 
-      <p className="text-xs text-ink-500">Soma dos pesos (ativos, na meta): <span className={sumWeight === 100 ? 'font-bold text-sgo-success' : 'font-bold text-warning'}>{sumWeight}</span> {sumWeight !== 100 && '(ideal: 100)'}</p>
+      <p className="text-xs text-ink-500">Soma dos pesos (ativos, na meta): <span className={sumWeight === 100 ? 'font-bold text-success' : 'font-bold text-warning'}>{sumWeight}</span> {sumWeight !== 100 && '(ideal: 100)'}</p>
 
       <div className="space-y-2">
         {list.map((t) => <TplItemRow key={t.id} t={t} units={units} onChange={() => router.refresh()} />)}
@@ -91,7 +91,7 @@ function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: {
     <div className="space-y-2 rounded-lg border border-dashed p-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Modelos de checklist</h2>
-        {available.length > 0 && <button className="text-xs font-semibold text-sgo-brand" onClick={() => setSel(sel.size === available.length ? new Set() : new Set(available.map((e) => e.id)))}>{sel.size === available.length ? 'Limpar' : 'Selecionar todos'}</button>}
+        {available.length > 0 && <button className="text-xs font-semibold text-brand" onClick={() => setSel(sel.size === available.length ? new Set() : new Set(available.map((e) => e.id)))}>{sel.size === available.length ? 'Limpar' : 'Selecionar todos'}</button>}
       </div>
       <p className="text-xs text-ink-500">Marque os que quer criar nesta unidade (você edita depois). Os que já existem ficam sinalizados.</p>
       <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar modelo…" className="h-9 text-sm" />
@@ -99,17 +99,17 @@ function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: {
       <div className="max-h-[28rem] space-y-2 overflow-y-auto">
         {[...groups.entries()].map(([cat, list]) => (
           <div key={cat}>
-            <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-sgo-brand">{cat}</p>
+            <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-brand">{cat}</p>
             <div className="space-y-1">
               {list.map((e) => {
                 const exists = existingNames.has(e.name);
                 const checked = sel.has(e.id);
                 return (
                   <button key={e.id} type="button" disabled={exists} onClick={() => toggle(e.id)}
-                    className={`flex w-full items-start gap-2 rounded-lg border p-2 text-left ${exists ? 'cursor-not-allowed opacity-50' : checked ? 'border-sgo-brand bg-sgo-brand/5' : 'bg-sgo-surface hover:border-sgo-brand'}`}>
-                    {exists ? <Check className="mt-0.5 h-5 w-5 shrink-0 text-sgo-success" /> : checked ? <CheckSquare className="mt-0.5 h-5 w-5 shrink-0 text-sgo-brand" /> : <Square className="mt-0.5 h-5 w-5 shrink-0 text-ink-500" />}
+                    className={`flex w-full items-start gap-2 rounded-lg border p-2 text-left ${exists ? 'cursor-not-allowed opacity-50' : checked ? 'border-brand bg-brand/5' : 'bg-surface hover:border-brand'}`}>
+                    {exists ? <Check className="mt-0.5 h-5 w-5 shrink-0 text-success" /> : checked ? <CheckSquare className="mt-0.5 h-5 w-5 shrink-0 text-brand" /> : <Square className="mt-0.5 h-5 w-5 shrink-0 text-ink-500" />}
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-sgo-brand">{e.moment ?? e.name}{exists && <span className="ml-1 text-xs font-normal text-sgo-success">já existe</span>}</span>
+                      <span className="block text-sm font-semibold text-brand">{e.moment ?? e.name}{exists && <span className="ml-1 text-xs font-normal text-success">já existe</span>}</span>
                       <span className="block text-xs text-ink-500">{e.itemCount} item(ns) · {e.limitTime ? `limite ${e.limitTime}` : 'sem horário'} · peso {e.weight}{e.requiresEvidence ? ' · foto' : ''}</span>
                     </span>
                   </button>
@@ -206,10 +206,10 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
   }
 
   return (
-    <div className="rounded-lg border bg-sgo-surface p-3">
+    <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="font-semibold text-sgo-brand">{t.name}</p>
+          <p className="font-semibold text-brand">{t.name}</p>
           <p className="text-xs text-ink-500">
             {t.limitTime ? `limite ${t.limitTime}` : 'sem horário'} · peso {t.weight} · {t.scope === 'MANAGER' ? 'individual' : 'da unidade'}
             {t.items.length > 0 ? ` · ${t.items.length} item(ns)` : ''}{t.requiresEvidence ? ' · foto' : ''}{t.entersMeta ? ' · meta' : ''}
@@ -317,7 +317,7 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
           <label className="flex items-center gap-2"><input type="checkbox" checked={requiresEvidence} onChange={(e) => setRequiresEvidence(e.target.checked)} /> Exige foto</label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={entersMeta} onChange={(e) => setEntersMeta(e.target.checked)} /> Entra na meta</label>
         </div>
-        <div className="rounded-lg bg-sgo-surface/60 p-2">
+        <div className="rounded-lg bg-surface/60 p-2">
           <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-500">Programação (opcional)</p>
           <div className="grid grid-cols-2 gap-2">
             <DatePicker label="Início" size="sm" value={startDate || null} onValueChange={(v) => setStartDate(v ?? '')} />
@@ -327,15 +327,15 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
         </div>
 
         {/* Itens/etapas */}
-        <div className="rounded-lg bg-sgo-surface/60 p-2">
+        <div className="rounded-lg bg-surface/60 p-2">
           <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Itens / etapas (opcional)</p>
           <p className="mb-2 text-[11px] text-ink-500">Cada item é verificado pelo gerente como 🟢 De acordo / 🟡 Em correção / 🔴 A corrigir. Use ↑ ↓ para ordenar.</p>
           <div className="space-y-2">
             {items.map((it, i) => (
-              <div key={i} className="flex items-start gap-1 rounded-md border bg-sgo-surface p-1.5">
+              <div key={i} className="flex items-start gap-1 rounded-md border bg-surface p-1.5">
                 <div className="flex shrink-0 flex-col">
-                  <button type="button" onClick={() => moveItem(i, -1)} disabled={i === 0} aria-label="Mover para cima" className="text-ink-500 hover:text-sgo-brand disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => moveItem(i, 1)} disabled={i === items.length - 1} aria-label="Mover para baixo" className="text-ink-500 hover:text-sgo-brand disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => moveItem(i, -1)} disabled={i === 0} aria-label="Mover para cima" className="text-ink-500 hover:text-brand disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => moveItem(i, 1)} disabled={i === items.length - 1} aria-label="Mover para baixo" className="text-ink-500 hover:text-brand disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
                 </div>
                 <div className="grid flex-1 grid-cols-12 gap-1">
                   <Input value={it.section ?? ''} onChange={(e) => setItem(i, { section: e.target.value || null })} placeholder="Seção (ex.: Cozinha)" className="col-span-4 h-9 text-sm" />

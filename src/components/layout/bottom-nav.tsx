@@ -31,7 +31,7 @@ export function BottomNav() {
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
-                  active ? 'text-sgo-brand' : 'text-ink-500',
+                  active ? 'text-brand' : 'text-ink-500',
                 )}
               >
                 <Icon className="h-5 w-5" />

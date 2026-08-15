@@ -96,7 +96,7 @@ export function DatePicker({
             role="dialog"
             aria-label="Escolher data"
             onKeyDown={onKeyDown}
-            className="absolute left-0 top-full z-40 mt-1 w-[17.5rem] rounded-card border border-line bg-sgo-surface p-3 shadow-lg"
+            className="absolute left-0 top-full z-40 mt-1 w-[17.5rem] rounded-card border border-line bg-surface p-3 shadow-lg"
           >
             <div className="mb-2 flex items-center justify-between">
               <button type="button" aria-label="Mês anterior" onClick={() => setCursor((c) => addMonths(c, -1))}
@@ -138,9 +138,9 @@ export function DatePicker({
                     className={cn(
                       'flex h-9 items-center justify-center rounded-control text-[13px] tabular-nums outline-none transition-colors duration-sgo-1 focus-visible:shadow-sgo-focus motion-reduce:transition-none',
                       off ? 'cursor-not-allowed text-ink-400 opacity-40'
-                        : isSel ? 'bg-sgo-brand font-semibold text-on-brand'
+                        : isSel ? 'bg-brand font-semibold text-on-brand'
                         : 'text-ink-700 hover:bg-sunken',
-                      isToday && !isSel && 'font-bold text-sgo-brand ring-1 ring-inset ring-sgo-brand',
+                      isToday && !isSel && 'font-bold text-brand ring-1 ring-inset ring-brand',
                     )}
                   >
                     {d}
@@ -151,7 +151,7 @@ export function DatePicker({
 
             <div className="mt-2 flex items-center justify-between border-t border-line pt-2">
               <button type="button" onClick={() => { if (!blocked(today)) { onValueChange(today); setOpen(false); } }}
-                className="rounded-control px-2 py-1 text-[13px] font-medium text-sgo-brand outline-none hover:bg-sgo-brand-tint focus-visible:shadow-sgo-focus">
+                className="rounded-control px-2 py-1 text-[13px] font-medium text-brand outline-none hover:bg-brand-tint focus-visible:shadow-sgo-focus">
                 Hoje
               </button>
               {value && (

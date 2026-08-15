@@ -22,8 +22,8 @@ const fmtMonthLong = (ym: string) => {
   const [y, m] = ym.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 };
-const TONE = { success: 'bg-sgo-success', medium: 'bg-warning', critical: 'bg-danger' } as const;
-const pctCls = (v: number) => (v >= 80 ? 'text-sgo-success' : v >= 50 ? 'text-warning' : 'text-danger');
+const TONE = { success: 'bg-success', medium: 'bg-warning', critical: 'bg-danger' } as const;
+const pctCls = (v: number) => (v >= 80 ? 'text-success' : v >= 50 ? 'text-warning' : 'text-danger');
 
 export function ExecutiveClient({ rows, totals, yearMonth, months }: {
   rows: ExecRowUI[]; totals: ExecTotalsUI; yearMonth: string; months: string[];
@@ -79,7 +79,7 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
           <tbody>
             {rows.map((r) => (
               <tr key={r.unitId} className="border-t">
-                <td className="p-2 font-semibold text-sgo-brand">
+                <td className="p-2 font-semibold text-brand">
                   <span className="flex items-center gap-1.5"><span className={cn('h-2 w-2 shrink-0 rounded-full', TONE[r.usageTone])} />{r.unitName}</span>
                 </td>
                 <td className={cn('p-2 text-right font-bold tabular-nums', pctCls(r.metaPct))}>{r.metaPct}%</td>

@@ -24,11 +24,11 @@ export default async function FichasHistoryPage({ searchParams }: { searchParams
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
-        <Link href="/configuracoes/fichas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><Settings className="h-4 w-4" /> Configurar fichas</Link>
+        <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
+        <Link href="/configuracoes/fichas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><Settings className="h-4 w-4" /> Configurar fichas</Link>
       </div>
       <div>
-        <h1 className="text-xl font-bold text-sgo-brand">Fichas — histórico de envios</h1>
+        <h1 className="text-xl font-bold text-brand">Fichas — histórico de envios</h1>
         <p className="text-sm text-ink-500">Preenchimentos recebidos pelas fichas por link (quem, quando e as respostas).</p>
       </div>
       <Card><CardContent className="pt-4">

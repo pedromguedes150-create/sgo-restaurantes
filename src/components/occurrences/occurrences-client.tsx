@@ -74,10 +74,10 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
 
   const card = (o: OccItem) => (
     <Link key={o.id} href={`/modulos/ocorrencias/${o.id}`}>
-      <Card className="transition-colors hover:border-sgo-brand">
+      <Card className="transition-colors hover:border-brand">
         <CardContent className="flex items-start justify-between gap-3 py-3">
           <div className="min-w-0">
-            <p className="font-semibold text-sgo-brand">
+            <p className="font-semibold text-brand">
               {GRAVITY_META[o.gravity].emoji} #{o.unitCode}-{String(o.number).padStart(4, '0')} · {o.typeName}
             </p>
             <p className="truncate text-sm text-ink-500">{o.categoryName} — {o.description}</p>
@@ -96,7 +96,7 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
   return (
     <div className="space-y-3">
       {/* Barra superior: busca + filtros */}
-      <div className="space-y-2 rounded-card border border-line bg-sgo-surface p-3">
+      <div className="space-y-2 rounded-card border border-line bg-surface p-3">
         <SearchField
           value={q}
           onValueChange={setQ}
@@ -143,7 +143,7 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
       {groups.length > 1 && (
         <div className="space-y-2">
           {groups.map(([unitName, list]) => (
-            <details key={unitName} className="group rounded-lg border bg-sgo-surface">
+            <details key={unitName} className="group rounded-lg border bg-surface">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5">
                 <span className="text-sm font-bold uppercase tracking-wide text-ink-500">
                   {unitName} <span className="font-normal">({list.length})</span>

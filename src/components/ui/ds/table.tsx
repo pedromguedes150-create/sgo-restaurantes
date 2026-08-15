@@ -40,15 +40,15 @@ const EMPTY = <span className="text-ink-500">–</span>;
 
 export function Table<T>({ columns, rows, getRowKey, onRowClick, empty, caption, className }: TableProps<T>) {
   if (rows.length === 0 && empty) {
-    return <div className={cn('rounded-card border border-line bg-sgo-surface', className)}>{empty}</div>;
+    return <div className={cn('rounded-card border border-line bg-surface', className)}>{empty}</div>;
   }
 
   return (
     // Contêiner com rolagem própria: conteúdo largo nunca faz a página rolar.
-    <div className={cn('max-h-[70vh] overflow-auto rounded-card border border-line bg-sgo-surface', className)}>
+    <div className={cn('max-h-[70vh] overflow-auto rounded-card border border-line bg-surface', className)}>
       <table className="w-full border-collapse text-[14px]">
         {caption && <caption className="sr-only">{caption}</caption>}
-        <thead className="sticky top-0 z-10 bg-sgo-surface">
+        <thead className="sticky top-0 z-10 bg-surface">
           <tr>
             {columns.map((c) => (
               <th

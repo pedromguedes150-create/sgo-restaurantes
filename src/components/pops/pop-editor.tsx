@@ -52,7 +52,7 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
   }
   const btn = 'rounded border px-2 py-1 text-sm hover:bg-sunken';
   return (
-    <div className="rounded-lg border-2 border-line-strong bg-sgo-surface">
+    <div className="rounded-lg border-2 border-line-strong bg-surface">
       <div className="flex flex-wrap gap-1 border-b p-1">
         <button type="button" className={btn} title="Negrito" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('bold')}><Bold className="h-4 w-4" /></button>
         <button type="button" className={btn} title="Itálico" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('italic')}><Italic className="h-4 w-4" /></button>
@@ -66,7 +66,7 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
         contentEditable
         suppressContentEditableWarning
         onInput={() => onChange(ref.current?.innerHTML ?? '')}
-        className="pop-rich min-h-[88px] p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand"
+        className="pop-rich min-h-[88px] p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       />
     </div>
   );
@@ -169,13 +169,13 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
             <Label className="text-xs">Ou setorial — só os setores abaixo {isInitial && <span className="text-danger">(desmarque a opção Inicial para usar)</span>}</Label>
             <div className="mt-1 flex flex-wrap gap-1">
               {sectors.map((s) => (
-                <span key={s} className="inline-flex items-center gap-1 rounded-full bg-sgo-brand px-2.5 py-1 text-xs font-semibold text-on-brand">{s}<button onClick={() => removeSector(s)} aria-label="Remover"><X className="h-3 w-3" /></button></span>
+                <span key={s} className="inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-on-brand">{s}<button onClick={() => removeSector(s)} aria-label="Remover"><X className="h-3 w-3" /></button></span>
               ))}
               {sectors.length === 0 && <span className="text-xs text-ink-500">Nenhum setor — será só inicial/geral.</span>}
             </div>
             {suggest.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
-                {suggest.map((s) => <button key={s} type="button" onClick={() => addSector(s)} className="rounded-full border px-2 py-0.5 text-xs hover:border-sgo-brand">+ {s}</button>)}
+                {suggest.map((s) => <button key={s} type="button" onClick={() => addSector(s)} className="rounded-full border px-2 py-0.5 text-xs hover:border-brand">+ {s}</button>)}
               </div>
             )}
             <div className="mt-1 flex gap-1">
@@ -208,7 +208,7 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
                 onDragStart={() => setDragKey(b.key)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => onDrop(b.key)}
-                className={`rounded-lg border bg-sgo-surface p-2 ${dragKey === b.key ? 'opacity-50' : ''}`}
+                className={`rounded-lg border bg-surface p-2 ${dragKey === b.key ? 'opacity-50' : ''}`}
               >
                 <div className="mb-1 flex items-center gap-2">
                   <span className="cursor-grab text-ink-500" title="Arraste para reordenar"><GripVertical className="h-4 w-4" /></span>
@@ -221,7 +221,7 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
                 </div>
                 {b.type === 'text' && <RichText value={b.text} onChange={(html) => updateBlock(b.key, { text: html })} />}
                 {b.type === 'checklist' && (
-                  <textarea rows={3} className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand" placeholder="Um item por linha" value={b.items} onChange={(e) => updateBlock(b.key, { items: e.target.value })} />
+                  <textarea rows={3} className="w-full rounded-lg border-2 border-line-strong bg-surface p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" placeholder="Um item por linha" value={b.items} onChange={(e) => updateBlock(b.key, { items: e.target.value })} />
                 )}
                 {b.type === 'image' && (
                   <Input value={b.url} onChange={(e) => updateBlock(b.key, { url: e.target.value })} placeholder="URL da imagem (https://...)" className="h-9 text-sm" />

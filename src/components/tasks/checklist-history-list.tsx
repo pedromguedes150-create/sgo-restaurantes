@@ -66,10 +66,10 @@ export function ChecklistHistoryList({ groups, isAdmin, groupByUnit = false }: {
           const sub = `${showUnit ? i.unit : ''}${showUnit && (i.by || i.time) ? ' · ' : ''}${i.by ?? ''}${i.by && i.time ? ' · ' : ''}${i.time ?? ''}`;
           if (selecting) {
             return (
-              <button key={i.id} onClick={() => toggle(i.id)} className={`flex w-full items-center gap-2 rounded-lg border p-2.5 text-left transition-colors ${checked ? 'border-danger bg-danger/5' : 'bg-sgo-surface hover:border-sgo-brand'}`}>
+              <button key={i.id} onClick={() => toggle(i.id)} className={`flex w-full items-center gap-2 rounded-lg border p-2.5 text-left transition-colors ${checked ? 'border-danger bg-danger/5' : 'bg-surface hover:border-brand'}`}>
                 {checked ? <CheckSquare className="h-5 w-5 shrink-0 text-danger" /> : <Square className="h-5 w-5 shrink-0 text-ink-500" />}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-sgo-brand">{i.name}</span>
+                  <span className="block truncate text-sm font-semibold text-brand">{i.name}</span>
                   <span className="block text-xs text-ink-500">{sub || '—'}</span>
                 </span>
                 <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
@@ -77,9 +77,9 @@ export function ChecklistHistoryList({ groups, isAdmin, groupByUnit = false }: {
             );
           }
           return (
-            <Link key={i.id} href={`/tarefas/${i.id}`} className="flex items-center gap-2 rounded-lg border bg-sgo-surface p-2.5 transition-colors hover:border-sgo-brand">
+            <Link key={i.id} href={`/tarefas/${i.id}`} className="flex items-center gap-2 rounded-lg border bg-surface p-2.5 transition-colors hover:border-brand">
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold text-sgo-brand">{i.name}</span>
+                <span className="block truncate text-sm font-semibold text-brand">{i.name}</span>
                 <span className="block text-xs text-ink-500">{sub || '—'}</span>
               </span>
               <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
@@ -106,7 +106,7 @@ export function ChecklistHistoryList({ groups, isAdmin, groupByUnit = false }: {
                   {useUnitGroups
                     ? [...byUnit.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR')).map(([unit, items]) => (
                         <div key={unit} className="space-y-1.5">
-                          <p className="pt-1 text-xs font-semibold text-sgo-brand">{unit} <span className="font-normal text-ink-500">({items.length})</span></p>
+                          <p className="pt-1 text-xs font-semibold text-brand">{unit} <span className="font-normal text-ink-500">({items.length})</span></p>
                           {items.map((i) => renderItem(i, false))}
                         </div>
                       ))
@@ -120,7 +120,7 @@ export function ChecklistHistoryList({ groups, isAdmin, groupByUnit = false }: {
 
       {/* Barra fixa de ação (seleção) */}
       {selecting && sel.size > 0 && (
-        <div className="sticky bottom-20 z-30 flex items-center justify-between gap-2 rounded-xl border bg-sgo-surface/95 p-3 shadow-lg backdrop-blur md:bottom-4">
+        <div className="sticky bottom-20 z-30 flex items-center justify-between gap-2 rounded-xl border bg-surface/95 p-3 shadow-lg backdrop-blur md:bottom-4">
           <span className="text-sm font-semibold">{sel.size} selecionado(s)</span>
           <Button size="sm" variant="destructive" disabled={busy} onClick={removeSelected}><Trash2 className="h-4 w-4" /> Excluir selecionados</Button>
         </div>

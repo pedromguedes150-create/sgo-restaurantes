@@ -31,18 +31,18 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand print:hidden"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
+      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand print:hidden"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
       <div className="flex flex-wrap items-end justify-between gap-2 print:hidden">
         <div>
-          <h1 className="text-xl font-bold text-sgo-brand">Escala de funcionários</h1>
+          <h1 className="text-xl font-bold text-brand">Escala de funcionários</h1>
           <p className="text-sm text-ink-500">Controle de presença mensal — Planejado, Realizado e Comparação.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/modulos/escala/trocas?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-sgo-surface px-3 py-2 text-sm font-semibold text-sgo-brand transition-colors hover:border-sgo-brand">
-            <ArrowRightLeft className="h-4 w-4 text-sgo-brand" /> Trocas de escala (RH)
+          <Link href={`/modulos/escala/trocas?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-brand">
+            <ArrowRightLeft className="h-4 w-4 text-brand" /> Trocas de escala (RH)
           </Link>
-          <Link href={`/modulos/escala/avisos-rh?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-sgo-surface px-3 py-2 text-sm font-semibold text-sgo-brand transition-colors hover:border-sgo-brand">
-            <BellRing className="h-4 w-4 text-sgo-brand" /> Avisos ao RH
+          <Link href={`/modulos/escala/avisos-rh?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-brand">
+            <BellRing className="h-4 w-4 text-brand" /> Avisos ao RH
           </Link>
         </div>
       </div>

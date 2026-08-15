@@ -52,7 +52,7 @@ export function ChecklistSubmissions({ forms, submissions, ficha, days }: { form
             ]}
           />
         </div>
-        <span className="text-xs text-ink-500"><strong className="text-sgo-brand">{submissions.length}</strong> envio(s)</span>
+        <span className="text-xs text-ink-500"><strong className="text-brand">{submissions.length}</strong> envio(s)</span>
       </div>
 
       {submissions.length === 0 ? (
@@ -60,10 +60,10 @@ export function ChecklistSubmissions({ forms, submissions, ficha, days }: { form
       ) : (
         <div className="space-y-1.5">
           {submissions.map((s) => (
-            <div key={s.id} className="rounded-lg border bg-sgo-surface">
+            <div key={s.id} className="rounded-lg border bg-surface">
               <button onClick={() => setOpenId((id) => (id === s.id ? null : s.id))} className="flex w-full items-center justify-between gap-2 p-3 text-left">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-sgo-brand"><FileText className="mr-1 inline h-4 w-4 text-sgo-brand" />{s.formTitle}</p>
+                  <p className="truncate text-sm font-semibold text-brand"><FileText className="mr-1 inline h-4 w-4 text-brand" />{s.formTitle}</p>
                   <p className="text-xs text-ink-500">{s.respondentName} · {s.unitName} · {dt(s.createdAt)}</p>
                 </div>
                 {openId === s.id ? <ChevronUp className="h-4 w-4 shrink-0 text-ink-500" /> : <ChevronDown className="h-4 w-4 shrink-0 text-ink-500" />}
@@ -75,7 +75,7 @@ export function ChecklistSubmissions({ forms, submissions, ficha, days }: { form
                   ) : (
                     <div key={i} className="flex justify-between gap-3 text-sm">
                       <span className="text-ink-500">{a.label}</span>
-                      <span className="font-medium text-sgo-brand">{showValue(a)}</span>
+                      <span className="font-medium text-brand">{showValue(a)}</span>
                     </div>
                   ))}
                 </div>

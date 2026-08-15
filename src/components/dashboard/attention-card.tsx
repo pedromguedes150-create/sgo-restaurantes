@@ -32,8 +32,8 @@ export function AttentionCard({ items, emptyText }: { items: AttentionItem[]; em
     // Sem pendência: confirmação calma (ou nada, se a tela não quiser ruído).
     if (!emptyText) return null;
     return (
-      <section className="flex items-center gap-2 rounded-card border border-line bg-sgo-success-bg px-4 py-3">
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-sgo-success" aria-hidden />
+      <section className="flex items-center gap-2 rounded-card border border-line bg-success-bg px-4 py-3">
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden />
         <p className="text-[14px] font-medium text-ink-900">{emptyText}</p>
       </section>
     );
@@ -41,7 +41,7 @@ export function AttentionCard({ items, emptyText }: { items: AttentionItem[]; em
   const ordered = [...items].sort((a, b) => RANK[a.tone] - RANK[b.tone]);
 
   return (
-    <section className="overflow-hidden rounded-card border border-line bg-sgo-surface">
+    <section className="overflow-hidden rounded-card border border-line bg-surface">
       <div className="flex items-baseline justify-between gap-2 px-4 pb-2 pt-3">
         <h2 className="text-[15px] font-semibold text-ink-900">Precisa da sua atenção</h2>
         <span className="text-[13px] tabular-nums text-ink-500">

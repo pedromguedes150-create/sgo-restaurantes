@@ -23,8 +23,8 @@ export default async function TrocoConfigPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-sgo-brand">Troco — denominações por unidade</h1>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <h1 className="text-xl font-bold text-brand">Troco — denominações por unidade</h1>
       {units.length === 0 ? (
         <Card><CardContent className="py-6 text-sm text-ink-500">Nenhuma unidade no seu escopo.</CardContent></Card>
       ) : (

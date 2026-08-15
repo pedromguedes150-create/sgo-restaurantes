@@ -114,8 +114,8 @@ export function TimePicker({
               className={cn(
                 'flex w-full items-center justify-center rounded-control py-2 text-[14px] tabular-nums outline-none transition-colors duration-sgo-1 motion-reduce:transition-none',
                 off ? 'cursor-not-allowed text-ink-400 opacity-40'
-                  : isSel ? 'bg-sgo-brand font-semibold text-on-brand'
-                  : isCursor ? 'bg-sgo-brand-tint text-sgo-brand'
+                  : isSel ? 'bg-brand font-semibold text-on-brand'
+                  : isCursor ? 'bg-brand-tint text-brand'
                   : 'text-ink-700 hover:bg-sunken',
               )}
             >
@@ -152,7 +152,7 @@ export function TimePicker({
             role="dialog"
             aria-label="Escolher horário"
             onKeyDown={onKeyDown}
-            className="absolute left-0 top-full z-40 mt-1 w-40 rounded-card border border-line bg-sgo-surface p-2 shadow-lg"
+            className="absolute left-0 top-full z-40 mt-1 w-40 rounded-card border border-line bg-surface p-2 shadow-lg"
           >
             <div className="mb-1 flex gap-1 text-[11px] font-semibold uppercase text-ink-500">
               <span className="flex-1 text-center">Hora</span>

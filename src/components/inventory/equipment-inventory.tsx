@@ -49,7 +49,7 @@ export function EquipmentInventory({ canEdit, isAdmin, units, suppliers, items, 
       </div>
 
       <div className="flex flex-wrap items-center gap-2 print:hidden">
-        {tabs.map((t) => <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>)}
+        {tabs.map((t) => <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>)}
         {multi && (
           <div className="ml-auto w-44">
             <Select aria-label="Unidade" size="sm" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
@@ -67,7 +67,7 @@ export function EquipmentInventory({ canEdit, isAdmin, units, suppliers, items, 
 }
 
 function Cell({ label, value, tone }: { label: string; value: string; tone?: 'critical' }) {
-  return <div className="rounded-lg border bg-sgo-surface py-3 text-center"><p className={tone === 'critical' && value !== '0' ? 'text-xl font-black text-danger' : 'text-xl font-black text-sgo-brand'}>{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
+  return <div className="rounded-lg border bg-surface py-3 text-center"><p className={tone === 'critical' && value !== '0' ? 'text-xl font-black text-danger' : 'text-xl font-black text-brand'}>{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
 }
 
 /* ───────── Estoque (lista + novo + editar) ───────── */
@@ -86,14 +86,14 @@ function Estoque({ items, canEdit, isAdmin, suppliers, unitId }: { items: EquipI
 function ItemRow({ i, canEdit, isAdmin, suppliers, onChange }: { i: EquipItem; canEdit: boolean; isAdmin: boolean; suppliers: Supplier[]; onChange: () => void }) {
   const [editing, setEditing] = useState(false);
   return (
-    <div className="rounded-lg border bg-sgo-surface p-3">
+    <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-semibold text-sgo-brand">{i.name}{i.low && <span className="ml-1 inline-flex items-center gap-0.5 rounded bg-danger/10 px-1.5 py-0.5 text-[10px] font-bold text-danger"><AlertTriangle className="h-3 w-3" /> baixo</span>}</p>
+          <p className="font-semibold text-brand">{i.name}{i.low && <span className="ml-1 inline-flex items-center gap-0.5 rounded bg-danger/10 px-1.5 py-0.5 text-[10px] font-bold text-danger"><AlertTriangle className="h-3 w-3" /> baixo</span>}</p>
           <p className="text-xs text-ink-500">{i.category ? `${i.category} · ` : ''}{i.supplier ? `${i.supplier} · ` : ''}{i.location ? `local: ${i.location} · ` : ''}{formatBRL(i.unitValue)}/{i.unitLabel}</p>
         </div>
         <div className="text-right">
-          <p className="text-lg font-black text-sgo-brand">{i.currentQty.toLocaleString('pt-BR')} <span className="text-xs font-normal text-ink-500">{i.unitLabel}</span></p>
+          <p className="text-lg font-black text-brand">{i.currentQty.toLocaleString('pt-BR')} <span className="text-xs font-normal text-ink-500">{i.unitLabel}</span></p>
           <p className="text-xs text-ink-500">{formatBRL(i.totalValue)}</p>
         </div>
       </div>
@@ -182,7 +182,7 @@ function Movimentar({ items }: { items: EquipItem[] }) {
     <div className="space-y-3">
       <Select label="Item" placeholder="— selecione —" value={itemId} onValueChange={setItemId} options={items.map((i) => ({ value: i.id, label: i.name, hint: `${i.currentQty} ${i.unitLabel} em estoque` }))} />
       <div className="flex gap-2">
-        <button onClick={() => setType('IN')} className={type === 'IN' ? 'flex flex-1 items-center justify-center gap-1 rounded-lg bg-sgo-success/15 px-3 py-2 text-sm font-bold text-sgo-success' : 'flex flex-1 items-center justify-center gap-1 rounded-lg border px-3 py-2 text-sm'}><ArrowDownCircle className="h-4 w-4" /> Entrada</button>
+        <button onClick={() => setType('IN')} className={type === 'IN' ? 'flex flex-1 items-center justify-center gap-1 rounded-lg bg-success/15 px-3 py-2 text-sm font-bold text-success' : 'flex flex-1 items-center justify-center gap-1 rounded-lg border px-3 py-2 text-sm'}><ArrowDownCircle className="h-4 w-4" /> Entrada</button>
         <button onClick={() => setType('OUT')} className={type === 'OUT' ? 'flex flex-1 items-center justify-center gap-1 rounded-lg bg-danger/15 px-3 py-2 text-sm font-bold text-danger' : 'flex flex-1 items-center justify-center gap-1 rounded-lg border px-3 py-2 text-sm'}><ArrowUpCircle className="h-4 w-4" /> Saída</button>
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -224,9 +224,9 @@ function Contagem({ items, canEdit, unitName }: { items: EquipItem[]; canEdit: b
       <div className="hidden print:block"><h2 className="text-lg font-bold">Folha de contagem — {unitName}</h2></div>
       <div className="space-y-1">
         {items.map((i) => (
-          <div key={i.id} className="flex items-center justify-between gap-2 rounded-lg border bg-sgo-surface px-3 py-2 text-sm">
+          <div key={i.id} className="flex items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-2 text-sm">
             <div className="min-w-0">
-              <p className="truncate font-semibold text-sgo-brand">{i.name}</p>
+              <p className="truncate font-semibold text-brand">{i.name}</p>
               <p className="text-xs text-ink-500">{i.category ?? ''}{i.location ? ` · ${i.location}` : ''} · sistema: {i.currentQty} {i.unitLabel}</p>
             </div>
             {canEdit ? (
@@ -249,9 +249,9 @@ function Historico({ moves }: { moves: EquipMove[] }) {
   return (
     <div className="space-y-1">
       {moves.map((m) => (
-        <div key={m.id} className="flex items-center justify-between gap-2 rounded-lg border bg-sgo-surface px-3 py-2 text-sm">
+        <div key={m.id} className="flex items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-2 text-sm">
           <div className="min-w-0">
-            <p className="truncate font-semibold text-sgo-brand">{m.item}</p>
+            <p className="truncate font-semibold text-brand">{m.item}</p>
             <p className="text-xs text-ink-500">{m.date} · {m.unit}{m.note ? ` · ${m.note}` : ''}{m.by ? ` · ${m.by}` : ''}</p>
           </div>
           <div className="text-right">

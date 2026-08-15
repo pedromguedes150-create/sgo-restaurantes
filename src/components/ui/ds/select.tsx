@@ -122,7 +122,7 @@ export function Select({
             ref={listRef}
             role="listbox"
             aria-label={label ?? ariaLabel}
-            className="absolute left-0 top-full z-40 mt-1 max-h-64 w-full overflow-auto rounded-card border border-line bg-sgo-surface p-1 shadow-lg"
+            className="absolute left-0 top-full z-40 mt-1 max-h-64 w-full overflow-auto rounded-card border border-line bg-surface p-1 shadow-lg"
           >
             {options.map((o, i) => {
               const isSel = o.value === value;
@@ -136,10 +136,10 @@ export function Select({
                     onMouseMove={() => !o.disabled && setActive(i)}
                     className={cn(
                       'flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-[14px] outline-none',
-                      o.disabled ? 'cursor-not-allowed text-ink-400' : i === active ? 'bg-sgo-brand-tint text-sgo-brand' : 'text-ink-700',
+                      o.disabled ? 'cursor-not-allowed text-ink-400' : i === active ? 'bg-brand-tint text-brand' : 'text-ink-700',
                     )}
                   >
-                    <Check className={cn('h-4 w-4 shrink-0', isSel ? 'text-sgo-brand' : 'text-transparent')} aria-hidden />
+                    <Check className={cn('h-4 w-4 shrink-0', isSel ? 'text-brand' : 'text-transparent')} aria-hidden />
                     <span className="flex-1">
                       <span className="block">{o.label}</span>
                       {o.hint && <span className="block text-[11px] text-ink-500">{o.hint}</span>}

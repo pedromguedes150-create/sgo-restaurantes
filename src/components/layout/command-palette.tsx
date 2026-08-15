@@ -90,7 +90,7 @@ export function CommandPalette({ units = [], viewable, isAdmin = false }: { unit
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[12vh]" onClick={() => setOpen(false)} role="dialog" aria-modal="true" aria-label="Buscar e navegar">
-      <div className="w-full max-w-xl overflow-hidden rounded-sheet border border-line bg-sgo-surface shadow-2xl" onClick={(e) => e.stopPropagation()} onKeyDown={onListKey}>
+      <div className="w-full max-w-xl overflow-hidden rounded-sheet border border-line bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()} onKeyDown={onListKey}>
         <div className="flex items-center gap-2 border-b border-line px-3">
           <Search className="h-4 w-4 shrink-0 text-ink-400" />
           <input
@@ -115,10 +115,10 @@ export function CommandPalette({ units = [], viewable, isAdmin = false }: { unit
                   type="button"
                   onClick={() => run(c)}
                   onMouseMove={() => setActive(i)}
-                  className={cn('flex w-full items-center gap-2.5 rounded-control px-2.5 py-2 text-left outline-none', isActive ? 'bg-sgo-brand-tint' : '')}
+                  className={cn('flex w-full items-center gap-2.5 rounded-control px-2.5 py-2 text-left outline-none', isActive ? 'bg-brand-tint' : '')}
                 >
-                  <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-sgo-brand' : 'text-ink-400')} />
-                  <span className={cn('flex-1 text-[14px]', isActive ? 'font-medium text-sgo-brand' : 'text-ink-700')}>{c.label}</span>
+                  <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-brand' : 'text-ink-400')} />
+                  <span className={cn('flex-1 text-[14px]', isActive ? 'font-medium text-brand' : 'text-ink-700')}>{c.label}</span>
                   <span className="text-[11px] text-ink-500">{c.group}</span>
                   {isActive && <CornerDownLeft className="h-3.5 w-3.5 text-ink-400" />}
                 </button>

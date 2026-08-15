@@ -33,17 +33,17 @@ export default async function CancelamentosPage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-sgo-brand">Cancelamento de Cupons</h1>
+        <h1 className="text-xl font-bold text-brand">Cancelamento de Cupons</h1>
         <div className="flex flex-wrap gap-2">
-          {['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role) && <Link href="/modulos/cancelamentos/analise" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-sgo-brand">🛡️ Análise antifraude (PDF)</Link>}
+          {['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role) && <Link href="/modulos/cancelamentos/analise" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🛡️ Análise antifraude (PDF)</Link>}
           <Link href="/modulos/cancelamentos/relatorio" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-sunken"><FileText className="h-4 w-4" /> Relatório</Link>
         </div>
       </div>
 
       {/* Resumo do mês */}
       <div className="grid grid-cols-3 gap-2">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-sgo-brand">{summary.monthTotal}</p><p className="text-xs text-ink-500">no mês</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-sgo-success">{summary.justifiedPct}%</p><p className="text-xs text-ink-500">justificados</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{summary.monthTotal}</p><p className="text-xs text-ink-500">no mês</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-success">{summary.justifiedPct}%</p><p className="text-xs text-ink-500">justificados</p></CardContent></Card>
         <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.pending}</p><p className="text-xs text-ink-500">pendentes</p></CardContent></Card>
       </div>
 
@@ -66,9 +66,9 @@ export default async function CancelamentosPage() {
               <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Importações</p>
               {imports.length === 0 && <p className="text-sm text-ink-500">Nenhuma importação.</p>}
               {imports.map((imp) => (
-                <div key={imp.id} className="flex items-center justify-between rounded-lg border bg-sgo-surface p-2.5">
+                <div key={imp.id} className="flex items-center justify-between rounded-lg border bg-surface p-2.5">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-sgo-brand">{imp.fileName}</p>
+                    <p className="truncate text-sm font-semibold text-brand">{imp.fileName}</p>
                     <p className="text-xs text-ink-500">{imp.unit.name} · {imp.operationalDate} · {imp._count.cancellations} cupom(ns)</p>
                   </div>
                   <DeleteOpButton entity="cancellationImport" id={imp.id} label={`a importação "${imp.fileName}" e seus cupons`} />
@@ -79,9 +79,9 @@ export default async function CancelamentosPage() {
               <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Cupons (recentes)</p>
               {recentCanc.length === 0 && <p className="text-sm text-ink-500">Nenhum cupom.</p>}
               {recentCanc.map((c) => (
-                <div key={c.id} className="flex items-center justify-between rounded-lg border bg-sgo-surface p-2.5">
+                <div key={c.id} className="flex items-center justify-between rounded-lg border bg-surface p-2.5">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-sgo-brand">Cupom {c.couponNumber} · {formatBRL(Number(c.value))}</p>
+                    <p className="text-sm font-semibold text-brand">Cupom {c.couponNumber} · {formatBRL(Number(c.value))}</p>
                     <p className="text-xs text-ink-500">{c.unit.name} · {c.operationalDate} · {c.status}{c.cashOperator ? ` · ${c.cashOperator}` : ''}</p>
                   </div>
                   <DeleteOpButton entity="cancellation" id={c.id} label={`o cupom ${c.couponNumber}`} />
@@ -99,7 +99,7 @@ export default async function CancelamentosPage() {
             {summary.byOperator.map((o, i) => (
               <div key={o.operator} className="flex justify-between text-sm">
                 <span>{i + 1}. {o.operator}</span>
-                <span className="font-semibold text-sgo-brand">{o.count}</span>
+                <span className="font-semibold text-brand">{o.count}</span>
               </div>
             ))}
           </CardContent>

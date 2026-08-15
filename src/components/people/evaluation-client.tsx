@@ -85,7 +85,7 @@ export function EvaluationClient({ rows, yearMonth, months, canEvaluate, isAdmin
           </div>
         )}
         {(['PENDING', 'ALL'] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)} className={filter === f ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>
+          <button key={f} onClick={() => setFilter(f)} className={filter === f ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>
             {f === 'PENDING' ? 'A avaliar' : 'Todos'}
           </button>
         ))}
@@ -112,7 +112,7 @@ function Stars({ value, onChange, disabled }: { value: number; onChange?: (v: nu
           className={cn('rounded p-0.5', onChange && !disabled ? 'cursor-pointer' : 'cursor-default')}
           aria-label={`${n} de 5`}
         >
-          <Star className={cn('h-5 w-5', n <= value ? 'fill-sgo-brand text-sgo-brand' : 'text-ink-400')} />
+          <Star className={cn('h-5 w-5', n <= value ? 'fill-brand text-brand' : 'text-ink-400')} />
         </button>
       ))}
     </div>
@@ -182,12 +182,12 @@ function EvalCard({ r, yearMonth, canEvaluate }: { r: EvalRow; yearMonth: string
   }
 
   return (
-    <div className="rounded-lg border bg-sgo-surface">
+    <div className="rounded-lg border bg-surface">
       <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between gap-2 p-3 text-left">
         <span className="flex min-w-0 items-center gap-2">
           {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
           <span className="min-w-0">
-            <span className="block truncate font-semibold text-sgo-brand">{r.name}</span>
+            <span className="block truncate font-semibold text-brand">{r.name}</span>
             <span className="block truncate text-xs text-ink-500">{r.jobTitle || 'Sem função'} · {r.unitName}</span>
           </span>
         </span>
@@ -206,7 +206,7 @@ function EvalCard({ r, yearMonth, canEvaluate }: { r: EvalRow; yearMonth: string
               <button
                 key={t}
                 onClick={() => { setTab(t); if (t === 'OBS' && obs === null) void loadObs(); if (t === 'HIST' && hist === null) void loadHist(); }}
-                className={tab === t ? 'rounded-full bg-sgo-brand px-3 py-1 text-xs font-semibold text-on-brand' : 'rounded-full border px-3 py-1 text-xs'}
+                className={tab === t ? 'rounded-full bg-brand px-3 py-1 text-xs font-semibold text-on-brand' : 'rounded-full border px-3 py-1 text-xs'}
               >
                 {t === 'OBS' ? <span className="flex items-center gap-1"><MessageSquarePlus className="h-3.5 w-3.5" />{label}</span>
                   : t === 'HIST' ? <span className="flex items-center gap-1"><History className="h-3.5 w-3.5" />{label}</span>

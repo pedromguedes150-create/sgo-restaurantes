@@ -18,7 +18,7 @@ const icons: Record<ToastTone, React.ComponentType<{ className?: string }>> = {
   info: Info, success: CheckCircle2, warning: AlertTriangle, danger: OctagonAlert,
 };
 const iconTone: Record<ToastTone, string> = {
-  info: 'text-info', success: 'text-sgo-success', warning: 'text-warning', danger: 'text-danger',
+  info: 'text-info', success: 'text-success', warning: 'text-warning', danger: 'text-danger',
 };
 
 interface ToastContextValue {
@@ -59,7 +59,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             <div
               key={t.id}
               role={t.tone === 'danger' ? 'alert' : 'status'}
-              className="sgo-page-enter pointer-events-auto flex items-start gap-2.5 rounded-card border border-line bg-sgo-surface p-3 shadow-lg"
+              className="sgo-page-enter pointer-events-auto flex items-start gap-2.5 rounded-card border border-line bg-surface p-3 shadow-lg"
             >
               <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', iconTone[t.tone])} aria-hidden />
               <div className="min-w-0 flex-1">

@@ -43,7 +43,7 @@ function TypeRow({ t, onChange }: { t: OccTypeRow; onChange: () => void }) {
   }
 
   return (
-    <div className="rounded-lg border bg-sgo-surface p-2.5">
+    <div className="rounded-lg border bg-surface p-2.5">
       <div className="flex items-center justify-between gap-2">
         {editing ? (
           <div className="flex flex-1 flex-col gap-1">
@@ -53,7 +53,7 @@ function TypeRow({ t, onChange }: { t: OccTypeRow; onChange: () => void }) {
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-sgo-brand">{t.name}</p>
+            <p className="text-sm font-semibold text-brand">{t.name}</p>
             {t.isMaintenance && <span className="inline-flex items-center gap-0.5 rounded bg-ink-700/10 px-1.5 py-0.5 text-[10px] font-bold text-ink-700"><Wrench className="h-3 w-3" /> Manutenção</span>}
             {t.isIT && <span className="inline-flex items-center gap-0.5 rounded bg-ink-700/10 px-1.5 py-0.5 text-[10px] font-bold text-ink-700"><MonitorSmartphone className="h-3 w-3" /> TI</span>}
           </div>

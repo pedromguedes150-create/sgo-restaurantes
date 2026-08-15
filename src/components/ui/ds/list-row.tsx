@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 
 export function List({ children, stagger = true, className }: { children: React.ReactNode; stagger?: boolean; className?: string }) {
   return (
-    <ul className={cn('overflow-hidden rounded-card border border-line bg-sgo-surface', stagger && 'sgo-stagger', className)}>
+    <ul className={cn('overflow-hidden rounded-card border border-line bg-surface', stagger && 'sgo-stagger', className)}>
       {children}
     </ul>
   );
@@ -25,7 +25,7 @@ export function Avatar({ name, className }: { name: string; className?: string }
   return (
     <span
       aria-hidden
-      className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-sgo-brand-tint-2 text-[12px] font-bold text-sgo-brand', className)}
+      className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-brand-tint-2 text-[12px] font-bold text-brand', className)}
     >
       {initials}
     </span>

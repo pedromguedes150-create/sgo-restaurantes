@@ -37,7 +37,7 @@ export function InlineDateEdit({ module, id, current, onClose }: {
   }
 
   return (
-    <div className="mt-2 rounded-card border border-line bg-sgo-surface p-3 print:hidden">
+    <div className="mt-2 rounded-card border border-line bg-surface p-3 print:hidden">
       <div className="flex flex-wrap items-end gap-2">
         <div className="w-44">
           <DatePicker

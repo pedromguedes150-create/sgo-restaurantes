@@ -39,7 +39,7 @@ export function SkeletonListRow() {
 /** Espelha o StatCard (rótulo 11 / número 34 / apoio 13). */
 export function SkeletonStatCard() {
   return (
-    <div className="rounded-card border border-line bg-sgo-surface p-4">
+    <div className="rounded-card border border-line bg-surface p-4">
       <Skeleton className="h-2.5 w-20" />
       <Skeleton className="mt-2 h-8 w-24" />
       <Skeleton className="mt-2 h-3 w-16" />
@@ -50,7 +50,7 @@ export function SkeletonStatCard() {
 /** Lista de esqueletos com o aria-busy no lugar certo. */
 export function SkeletonList({ rows = 4 }: { rows?: number }) {
   return (
-    <ul aria-busy="true" aria-label="Carregando" className="overflow-hidden rounded-card border border-line bg-sgo-surface">
+    <ul aria-busy="true" aria-label="Carregando" className="overflow-hidden rounded-card border border-line bg-surface">
       {Array.from({ length: rows }).map((_, i) => <SkeletonListRow key={i} />)}
     </ul>
   );

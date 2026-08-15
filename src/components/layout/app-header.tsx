@@ -109,7 +109,7 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
           </Link>
           {/* Avatar + nome levam ao Meu Perfil. */}
           <Link href="/perfil" className="ml-1 flex items-center gap-2 rounded-control py-1 pl-1 pr-2 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus" aria-label="Meu Perfil">
-            <span className="flex h-9 w-9 items-center justify-center rounded-control bg-sgo-brand text-[13px] font-bold text-on-brand">{initials}</span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-control bg-brand text-[13px] font-bold text-on-brand">{initials}</span>
             <span className="hidden leading-tight lg:block">
               <span className="block text-[13px] font-semibold text-ink-900">{userName}</span>
               <span className="block text-[11px] text-ink-500">{roleLabel}</span>

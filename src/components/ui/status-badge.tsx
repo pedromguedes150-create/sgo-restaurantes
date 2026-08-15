@@ -12,10 +12,10 @@ export type StatusTone = 'success' | 'medium' | 'critical' | 'black' | 'neutral'
  * para este pareamento e dão 7,22+.
  */
 const tones: Record<StatusTone, string> = {
-  success: 'bg-sgo-success-bg text-sgo-success',
+  success: 'bg-success-bg text-success',
   medium: 'bg-warning-bg text-warning',
   critical: 'bg-danger-bg text-danger',
-  black: 'bg-ink-900 text-sgo-surface',
+  black: 'bg-ink-900 text-surface',
   neutral: 'bg-sunken text-ink-500',
 };
 

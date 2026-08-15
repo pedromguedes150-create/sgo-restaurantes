@@ -18,10 +18,10 @@ export default async function NovaOcorrenciaPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/ocorrencias" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand">
+      <Link href="/modulos/ocorrencias" className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
-      <h1 className="text-xl font-bold text-sgo-brand">Nova ocorrência</h1>
+      <h1 className="text-xl font-bold text-brand">Nova ocorrência</h1>
       <Card>
         <CardHeader>
           <CardTitle>Registro</CardTitle>

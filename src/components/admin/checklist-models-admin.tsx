@@ -39,7 +39,7 @@ export function ChecklistModelsAdmin({ models }: { models: ModelRow[] }) {
 
       {groups.map(([cat, list]) => (
         <div key={cat}>
-          <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-sgo-brand">{cat} ({list.length})</p>
+          <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-brand">{cat} ({list.length})</p>
           <div className="space-y-2">
             {list.map((m) => <ModelItemRow key={m.id} m={m} onChange={() => router.refresh()} />)}
           </div>
@@ -71,13 +71,13 @@ function Toolbar() {
   return (
     <div className="rounded-lg border border-dashed p-2">
       <div className="flex flex-wrap items-center gap-2">
-        <a href="/api/checklist-models/export" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-sgo-brand"><Download className="h-4 w-4" /> Exportar (Excel)</a>
-        <Link href="/configuracoes/modelos/imprimir" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-sgo-brand"><Printer className="h-4 w-4" /> Imprimir (PDF)</Link>
+        <a href="/api/checklist-models/export" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><Download className="h-4 w-4" /> Exportar (Excel)</a>
+        <Link href="/configuracoes/modelos/imprimir" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><Printer className="h-4 w-4" /> Imprimir (PDF)</Link>
         <Button size="sm" variant="outline" disabled={busy} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {busy ? 'Importando…' : 'Importar (Excel)'}</Button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onImport(f); }} />
       </div>
       <p className="mt-1 text-[11px] text-ink-500">Exporte, edite a planilha (altere/adicione modelos e etapas) e importe de volta — a biblioteca é atualizada em lote (casamento por nome do modelo; não exclui ausentes).</p>
-      {msg && <p className="mt-1 text-sm font-medium text-sgo-success">{msg}</p>}
+      {msg && <p className="mt-1 text-sm font-medium text-success">{msg}</p>}
     </div>
   );
 }
@@ -95,10 +95,10 @@ function ModelItemRow({ m, onChange }: { m: ModelRow; onChange: () => void }) {
     if (r.ok) onChange(); else alert(r.error ?? 'Falha');
   }
   return (
-    <div className="rounded-lg border bg-sgo-surface p-3">
+    <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <button type="button" onClick={() => { if (!editing) setViewing((v) => !v); }} className="min-w-0 flex-1 text-left">
-          <p className="flex items-center gap-1 font-semibold text-sgo-brand">{m.moment ?? m.name}{!editing && <Eye className="h-3.5 w-3.5 text-ink-500" />}</p>
+          <p className="flex items-center gap-1 font-semibold text-brand">{m.moment ?? m.name}{!editing && <Eye className="h-3.5 w-3.5 text-ink-500" />}</p>
           <p className="text-xs text-ink-500">{m.scope === 'MANAGER' ? 'individual' : 'da unidade'} · peso {m.weight} · {m.limitTime ? `limite ${m.limitTime}` : 'sem horário'} · {m.items.length} item(ns){m.requiresEvidence ? ' · foto' : ''}</p>
         </button>
         <div className="flex items-center gap-1">
@@ -110,7 +110,7 @@ function ModelItemRow({ m, onChange }: { m: ModelRow; onChange: () => void }) {
 
       {viewing && !editing && (
         <div className="mt-2 rounded-lg bg-sunken/40 p-2">
-          {m.category && <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-sgo-brand">{m.category}{m.moment ? ` · ${m.moment}` : ''}</p>}
+          {m.category && <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-brand">{m.category}{m.moment ? ` · ${m.moment}` : ''}</p>}
           <ul className="space-y-1">
             {m.items.map((it, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
@@ -181,14 +181,14 @@ function ModelForm({ edit, onDone, onCancel }: { edit?: ModelRow; onDone: () => 
         <label className="flex items-center gap-2"><input type="checkbox" checked={requiresEvidence} onChange={(e) => setRequiresEvidence(e.target.checked)} /> Exige foto</label>
       </div>
 
-      <div className="rounded-lg bg-sgo-surface/60 p-2">
+      <div className="rounded-lg bg-surface/60 p-2">
         <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-500">Itens / etapas — use ↑ ↓ para ordenar</p>
         <div className="space-y-1.5">
           {items.map((it, i) => (
-            <div key={i} className="flex items-start gap-1 rounded-md border bg-sgo-surface p-1.5">
+            <div key={i} className="flex items-start gap-1 rounded-md border bg-surface p-1.5">
               <div className="flex shrink-0 flex-col">
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-ink-500 hover:text-sgo-brand disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="text-ink-500 hover:text-sgo-brand disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-ink-500 hover:text-brand disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="text-ink-500 hover:text-brand disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
               </div>
               <div className="flex-1 space-y-1">
                 <Input value={it.text} onChange={(e) => setItem(i, { text: e.target.value })} placeholder="O que verificar" className="h-9 text-sm" />

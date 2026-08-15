@@ -48,7 +48,7 @@ export function Sheet({ open, onClose, title, description, children, footer }: S
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          'sgo-sheet-enter flex max-h-[90vh] w-full flex-col rounded-t-sheet border border-line bg-sgo-surface pb-[env(safe-area-inset-bottom)] shadow-2xl outline-none sm:max-w-lg',
+          'sgo-sheet-enter flex max-h-[90vh] w-full flex-col rounded-t-sheet border border-line bg-surface pb-[env(safe-area-inset-bottom)] shadow-2xl outline-none sm:max-w-lg',
         )}
       >
         {/* Puxador: afordância de arrastar (decorativo). */}

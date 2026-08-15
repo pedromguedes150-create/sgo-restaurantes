@@ -97,11 +97,11 @@ export function ScheduleChangesClient({ rows, units, selectedUnitId, collabs, ca
         {rows.length === 0 && <p className="text-sm text-ink-500">Nenhuma troca registrada ainda.</p>}
         <div className="space-y-1.5">
           {rows.map((r) => (
-            <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border bg-sgo-surface p-2.5">
+            <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border bg-surface p-2.5">
               <div className="min-w-0">
-                <p className="flex items-center gap-1 text-sm font-semibold text-sgo-brand">
+                <p className="flex items-center gap-1 text-sm font-semibold text-brand">
                   <span className="truncate">{r.collaboratorAName} ({fmtBR(r.dateA)})</span>
-                  {(r.collaboratorBName || r.dateB) && <ArrowRightLeft className="h-3.5 w-3.5 shrink-0 text-sgo-brand" />}
+                  {(r.collaboratorBName || r.dateB) && <ArrowRightLeft className="h-3.5 w-3.5 shrink-0 text-brand" />}
                   {r.collaboratorBName
                     ? <span className="truncate">{r.collaboratorBName}{r.dateB ? ` (${fmtBR(r.dateB)})` : ''}</span>
                     : r.dateB ? <span>{fmtBR(r.dateB)}</span> : null}

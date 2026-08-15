@@ -9,19 +9,19 @@ export type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'bran
 
 const tones: Record<Tone, string> = {
   neutral: 'bg-sunken text-ink-700',
-  success: 'bg-sgo-success-bg text-sgo-success',
+  success: 'bg-success-bg text-success',
   warning: 'bg-warning-bg text-warning',
   danger: 'bg-danger-bg text-danger',
   info: 'bg-info-bg text-info',
-  brand: 'bg-sgo-brand-tint-2 text-sgo-brand',
+  brand: 'bg-brand-tint-2 text-brand',
 };
 const dots: Record<Tone, string> = {
   neutral: 'bg-ink-400',
-  success: 'bg-sgo-success',
+  success: 'bg-success',
   warning: 'bg-warning',
   danger: 'bg-danger',
   info: 'bg-info',
-  brand: 'bg-sgo-brand',
+  brand: 'bg-brand',
 };
 
 export function StatusBadge({

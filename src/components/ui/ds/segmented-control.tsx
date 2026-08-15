@@ -45,7 +45,7 @@ export function SegmentedControl<T extends string>({
       {/* Pílula que desliza. aria-hidden: é decoração; o estado vive no radio. */}
       <span
         aria-hidden
-        className="absolute inset-y-1 left-1 rounded-pill bg-sgo-surface shadow-sm transition-transform duration-sgo-3 ease-sgo-spring motion-reduce:transition-none"
+        className="absolute inset-y-1 left-1 rounded-pill bg-surface shadow-sm transition-transform duration-sgo-3 ease-sgo-spring motion-reduce:transition-none"
         style={{ width: `calc((100% - 0.5rem) / ${options.length})`, transform: `translateX(${idx * 100}%)` }}
       />
       {options.map((o, i) => {
@@ -67,7 +67,7 @@ export function SegmentedControl<T extends string>({
           >
             {o.label}
             {o.badge != null && o.badge > 0 && (
-              <span className={cn('rounded-pill px-1.5 text-[11px] font-bold tabular-nums', active ? 'bg-sgo-brand text-on-brand' : 'bg-line-strong text-ink-700')}>
+              <span className={cn('rounded-pill px-1.5 text-[11px] font-bold tabular-nums', active ? 'bg-brand text-on-brand' : 'bg-line-strong text-ink-700')}>
                 {o.badge}
               </span>
             )}

@@ -14,8 +14,8 @@ export default async function PerfisAdminPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-sgo-brand">Perfis de acesso</h1>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <h1 className="text-xl font-bold text-brand">Perfis de acesso</h1>
       <p className="text-sm text-ink-500">Defina o que cada perfil pode ver e editar em cada módulo.</p>
       <Card><CardContent className="pt-4">
         <PermissionsAdmin modules={MODULES.map((m) => ({ key: m.key, label: m.label }))} matrix={matrix} />

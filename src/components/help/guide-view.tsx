@@ -43,11 +43,11 @@ export function GuideView({ sections }: { sections: Section[] }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar um assunto (ex.: comanda, troco, atestado)…"
-          className="h-11 w-full rounded-lg border-2 border-line-strong bg-sgo-surface pl-9 pr-9 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand"
+          className="h-11 w-full rounded-lg border-2 border-line-strong bg-surface pl-9 pr-9 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           aria-label="Buscar nos guias"
         />
         {q && (
-          <button onClick={() => setQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-ink-500 hover:text-sgo-brand" aria-label="Limpar busca">
+          <button onClick={() => setQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-ink-500 hover:text-brand" aria-label="Limpar busca">
             <X className="h-4 w-4" />
           </button>
         )}
@@ -66,13 +66,13 @@ export function GuideView({ sections }: { sections: Section[] }) {
                   // ao buscar, tudo já vem expandido (poucos resultados); senão, acordeão normal
                   const expanded = searching || open === g.id;
                   return (
-                    <div key={g.id} className="rounded-lg border bg-sgo-surface">
+                    <div key={g.id} className="rounded-lg border bg-surface">
                       <button onClick={() => setOpen(open === g.id ? null : g.id)} className="flex w-full items-center justify-between gap-2 p-3 text-left">
                         <span>
-                          <span className="block font-semibold text-sgo-brand">{g.title}</span>
+                          <span className="block font-semibold text-brand">{g.title}</span>
                           <span className="block text-xs text-ink-500">{g.summary}</span>
                         </span>
-                        {expanded ? <ChevronDown className="h-5 w-5 shrink-0 text-sgo-brand" /> : <ChevronRight className="h-5 w-5 shrink-0 text-ink-500" />}
+                        {expanded ? <ChevronDown className="h-5 w-5 shrink-0 text-brand" /> : <ChevronRight className="h-5 w-5 shrink-0 text-ink-500" />}
                       </button>
                       {expanded && (
                         <div className="space-y-3 border-t p-3">

@@ -13,8 +13,8 @@ import { shortUnitName } from '@/lib/unit-name';
 export const dynamic = 'force-dynamic';
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-function tone(pct: number): string { return pct >= 80 ? 'text-sgo-success' : pct >= 50 ? 'text-warning' : 'text-danger'; }
-function toneBg(pct: number): string { return pct >= 80 ? 'bg-sgo-success' : pct >= 50 ? 'bg-warning' : 'bg-danger'; }
+function tone(pct: number): string { return pct >= 80 ? 'text-success' : pct >= 50 ? 'text-warning' : 'text-danger'; }
+function toneBg(pct: number): string { return pct >= 80 ? 'bg-success' : pct >= 50 ? 'bg-warning' : 'bg-danger'; }
 
 /** Painel resumo da unidade para a reunião supervisor×gerente (20/07). Imprimível. */
 export default async function PainelUnidadePage({ searchParams }: { searchParams: { unit?: string; mes?: string } }) {
@@ -48,10 +48,10 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
   return (
     <div className="space-y-4">
       <div className="print:hidden">
-        <Link href="/modulos/supervisao" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Supervisão</Link>
+        <Link href="/modulos/supervisao" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Supervisão</Link>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><ClipboardCheck className="h-5 w-5 text-sgo-brand" /> Painel da unidade</h1>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ClipboardCheck className="h-5 w-5 text-brand" /> Painel da unidade</h1>
         <PrintButton />
       </div>
 
@@ -64,11 +64,11 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
           name="mes" label="Mês" defaultValue={ym} className="w-44"
           options={months.map((mm) => { const [yy, m2] = mm.split('-'); return { value: mm, label: `${MONTHS[Number(m2) - 1]}/${yy}` }; })}
         />
-        <button type="submit" className="h-10 rounded-lg bg-sgo-brand px-4 text-sm font-semibold text-on-brand">Ver</button>
+        <button type="submit" className="h-10 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand">Ver</button>
       </form>
 
-      <div className="rounded-xl border bg-sgo-surface p-4">
-        <p className="text-lg font-bold text-sgo-brand">{selUnit.name}</p>
+      <div className="rounded-xl border bg-surface p-4">
+        <p className="text-lg font-bold text-brand">{selUnit.name}</p>
         <p className="text-sm text-ink-500">Resumo de {MONTHS[m - 1]}/{y} · gerado em {now.toLocaleDateString('pt-BR')}</p>
       </div>
 
@@ -103,7 +103,7 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
         <div className="space-y-1.5">
           {breakdown.map((b, i) => (
             <div key={i} className="flex items-center justify-between gap-2 border-b pb-1.5 text-sm">
-              <span className="min-w-0"><span className="block font-medium text-sgo-brand">{b.name}</span><span className="block text-xs text-ink-500">{b.done}/{b.resolved} realizadas</span></span>
+              <span className="min-w-0"><span className="block font-medium text-brand">{b.name}</span><span className="block text-xs text-ink-500">{b.done}/{b.resolved} realizadas</span></span>
               <span className={`shrink-0 font-bold tabular-nums ${tone(b.scorePct)}`}>{b.scorePct}%<span className="ml-1 text-xs font-normal text-ink-500">peso {b.weight}</span></span>
             </div>
           ))}
@@ -127,7 +127,7 @@ function Kpi({ label, pct }: { label: string; pct: number }) {
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-lg border p-2.5">
-      <p className="text-lg font-bold text-sgo-brand">{value}</p>
+      <p className="text-lg font-bold text-brand">{value}</p>
       <p className="text-xs text-ink-500">{label}</p>
       {sub && <p className="text-[11px] text-ink-500">{sub}</p>}
     </div>

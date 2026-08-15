@@ -104,7 +104,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
       {units.length > 1 && <UnitSelectNav units={units} selected={selected?.id ?? ''} />}
 
       {selected && score && (
-        <section className="rounded-card border border-line bg-sgo-surface p-4">
+        <section className="rounded-card border border-line bg-surface p-4">
           <ProgressBar
             label={isAdminView ? shortUnitName(selected.name) : 'Minha Meta do Mês'}
             value={score.scorePct}

@@ -61,10 +61,10 @@ export default async function DesperdiciosPage({
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold text-sgo-brand">Desperdícios</h1>
+          <h1 className="text-xl font-bold text-brand">Desperdícios</h1>
           <p className="text-sm text-ink-500">Dia operacional {operationalDate}</p>
         </div>
-        <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-sgo-brand hover:border-sgo-brand">Exportar (Excel)</a>
+        <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">Exportar (Excel)</a>
       </div>
 
       {/* Seletor de unidade (compacto) */}
@@ -106,17 +106,17 @@ export default async function DesperdiciosPage({
             {recent.map((e) => {
               const total = e.items.reduce((s, i) => s + Number(i.kg), 0);
               return (
-                <div key={e.id} className="rounded-lg border bg-sgo-surface p-2.5">
+                <div key={e.id} className="rounded-lg border bg-surface p-2.5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-sgo-brand">{e.operationalDate}</p>
+                      <p className="text-sm font-semibold text-brand">{e.operationalDate}</p>
                       <p className="text-xs text-ink-500">{total.toFixed(2)} KG · {e.items.length} categoria(s){e.createdBy ? ` · ${e.createdBy.name}` : ''}</p>
                     </div>
                     <DeleteOpButton entity="waste" id={e.id} label={`o desperdício de ${e.operationalDate}`} />
                   </div>
                   {e.items.length > 0 && (
                     <details className="mt-1">
-                      <summary className="cursor-pointer text-xs font-medium text-sgo-brand">Ver itens lançados</summary>
+                      <summary className="cursor-pointer text-xs font-medium text-brand">Ver itens lançados</summary>
                       <ul className="mt-1 space-y-0.5">
                         {e.items.map((i, idx) => (
                           <li key={idx} className="flex justify-between text-xs">
@@ -144,7 +144,7 @@ export default async function DesperdiciosPage({
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-ink-500">Total no período</span>
-            <span className="font-bold text-sgo-brand">{series.grandTotal.toFixed(2)} KG</span>
+            <span className="font-bold text-brand">{series.grandTotal.toFixed(2)} KG</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-ink-500">Dias com registro</span>
@@ -163,7 +163,7 @@ export default async function DesperdiciosPage({
                   <span className="font-semibold">{c.total.toFixed(1)} KG</span>
                 </div>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-sunken">
-                  <div className="h-full rounded-full bg-sgo-brand" style={{ width: `${(c.total / maxCat) * 100}%` }} />
+                  <div className="h-full rounded-full bg-brand" style={{ width: `${(c.total / maxCat) * 100}%` }} />
                 </div>
               </div>
             ))}

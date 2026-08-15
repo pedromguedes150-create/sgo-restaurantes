@@ -99,8 +99,8 @@ function toHex([r, g, b]: number[]): string {
   return `#${[r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
 }
 function rate(ratio: number): { label: string; chip: string } {
-  if (ratio >= 7) return { label: 'AAA', chip: 'bg-sgo-success-bg text-sgo-success' };
-  if (ratio >= 4.5) return { label: 'AA', chip: 'bg-sgo-success-bg text-sgo-success' };
+  if (ratio >= 7) return { label: 'AAA', chip: 'bg-success-bg text-success' };
+  if (ratio >= 4.5) return { label: 'AA', chip: 'bg-success-bg text-success' };
   if (ratio >= 3) return { label: 'AA grande', chip: 'bg-warning-bg text-warning' };
   return { label: 'baixo', chip: 'bg-danger-bg text-danger' };
 }
@@ -159,7 +159,7 @@ function ColorCard({ s, tokens }: { s: Swatch; tokens: Record<string, number[]> 
   const ratio = rgb && onRgb ? contrast(rgb, onRgb) : undefined;
   const r = ratio ? rate(ratio) : undefined;
   return (
-    <div className="overflow-hidden rounded-card border border-line bg-sgo-surface">
+    <div className="overflow-hidden rounded-card border border-line bg-surface">
       <div
         className="flex h-16 items-center justify-center border-b border-line"
         style={{ background: `var(${s.cssVar})` }}
@@ -236,7 +236,7 @@ export function DevUiClient() {
         </header>
 
         <Section title="Tipografia">
-          <div className="divide-y divide-line rounded-card border border-line bg-sgo-surface">
+          <div className="divide-y divide-line rounded-card border border-line bg-surface">
             {TYPE.map((t) => (
               <div key={t.cls} className="flex flex-wrap items-baseline justify-between gap-2 p-4">
                 <span className={`${t.cls} text-ink-900`}>Churrascaria Beija-Flor</span>
@@ -269,11 +269,11 @@ export function DevUiClient() {
         </Section>
 
         <Section title="Espaçamento (grid 8pt)">
-          <div className="space-y-2 rounded-card border border-line bg-sgo-surface p-4">
+          <div className="space-y-2 rounded-card border border-line bg-surface p-4">
             {SPACE.map((n) => (
               <div key={n} className="flex items-center gap-3">
                 <span className="sgo-type-12 sgo-nums w-10 text-right text-ink-500">{n}</span>
-                <span className="h-4 rounded-control bg-sgo-brand" style={{ width: `${n}px` }} />
+                <span className="h-4 rounded-control bg-brand" style={{ width: `${n}px` }} />
               </div>
             ))}
           </div>
@@ -283,7 +283,7 @@ export function DevUiClient() {
           <div className="flex flex-wrap gap-4">
             {RADII.map((r) => (
               <div key={r.name} className="text-center">
-                <div className={`h-20 w-20 border border-line bg-sgo-brand-tint-2 ${r.cls}`} />
+                <div className={`h-20 w-20 border border-line bg-brand-tint-2 ${r.cls}`} />
                 <div className="sgo-type-13 mt-2 font-semibold text-ink-900">{r.name}</div>
                 <div className="sgo-type-11 sgo-nums text-ink-500">{r.px}</div>
               </div>
@@ -292,7 +292,7 @@ export function DevUiClient() {
         </Section>
 
         <Section title="Movimento (durações 120 / 200 / 340 / 400ms)">
-          <div className="space-y-4 rounded-card border border-line bg-sgo-surface p-4">
+          <div className="space-y-4 rounded-card border border-line bg-surface p-4">
             {EASES.map((e) => (
               <div key={e.name} className="flex items-center gap-3">
                 <span className="sgo-type-12 w-20 text-ink-500">
@@ -300,7 +300,7 @@ export function DevUiClient() {
                 </span>
                 <div className="relative h-8 flex-1 rounded-pill bg-sunken">
                   <span
-                    className={`absolute top-1 h-6 w-6 rounded-pill bg-sgo-brand transition-transform duration-sgo-4 ${e.cls}`}
+                    className={`absolute top-1 h-6 w-6 rounded-pill bg-brand transition-transform duration-sgo-4 ${e.cls}`}
                     style={{ transform: motionOn ? 'translateX(calc(100% + 0.25rem))' : 'translateX(0.25rem)' }}
                   />
                 </div>
@@ -317,11 +317,11 @@ export function DevUiClient() {
         <ComponentsGallery />
 
         <Section title="Foco (anel duplo)">
-          <div className="flex flex-wrap gap-4 rounded-card border border-line bg-sgo-surface p-4">
-            <button className="h-10 rounded-control bg-sgo-brand px-4 text-on-brand outline-none focus-visible:shadow-sgo-focus">
+          <div className="flex flex-wrap gap-4 rounded-card border border-line bg-surface p-4">
+            <button className="h-10 rounded-control bg-brand px-4 text-on-brand outline-none focus-visible:shadow-sgo-focus">
               Botão (Tab p/ focar)
             </button>
-            <button className="h-10 rounded-control border border-line-strong bg-sgo-surface px-4 text-ink-900 outline-none focus-visible:shadow-sgo-focus">
+            <button className="h-10 rounded-control border border-line-strong bg-surface px-4 text-ink-900 outline-none focus-visible:shadow-sgo-focus">
               Secundário
             </button>
           </div>

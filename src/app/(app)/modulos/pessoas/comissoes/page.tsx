@@ -31,9 +31,9 @@ export default async function ComissoesPage({ searchParams }: { searchParams: { 
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
+      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><HandCoins className="h-5 w-5 text-sgo-brand" /> Comissões &amp; Mobilidade</h1>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><HandCoins className="h-5 w-5 text-brand" /> Comissões &amp; Mobilidade</h1>
         <p className="text-sm text-ink-500">Supervisão/Admin lançam os valores (comissão do Teknisa / mobilidade) por colaborador. Dashboard e histórico mensal.</p>
       </div>
       <Card>

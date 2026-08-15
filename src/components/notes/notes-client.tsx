@@ -81,12 +81,12 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         {tabs.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
+          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
             {t.label}
           </button>
         ))}
         {canManage && (
-          <button onClick={() => setShowImport(true)} className="ml-auto inline-flex items-center gap-1.5 rounded-full border-2 border-sgo-brand px-3 py-1.5 text-sm font-semibold text-sgo-brand transition-colors hover:bg-sgo-brand/10">
+          <button onClick={() => setShowImport(true)} className="ml-auto inline-flex items-center gap-1.5 rounded-full border-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10">
             <FileSpreadsheet className="h-4 w-4" /> Importar em lote (XLSX)
           </button>
         )}
@@ -163,7 +163,7 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-sgo-surface p-3 print:hidden">
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3 print:hidden">
         <div className="min-w-[14rem] flex-1">
           <SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="fornecedor, nº, CNPJ, produto, valor…" />
         </div>
@@ -206,12 +206,12 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
       {full && (
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <div className="grid flex-1 grid-cols-2 gap-2">
-            <div className="rounded-lg border bg-sgo-surface p-3 text-center"><p className="text-2xl font-black text-sgo-brand">{filtered.length}</p><p className="text-xs text-ink-500">notas</p></div>
-            <div className="rounded-lg border bg-sgo-surface p-3 text-center"><p className="text-xl font-black text-sgo-brand">{formatBRL(total)}</p><p className="text-xs text-ink-500">valor total</p></div>
+            <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-2xl font-black text-brand">{filtered.length}</p><p className="text-xs text-ink-500">notas</p></div>
+            <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-xl font-black text-brand">{formatBRL(total)}</p><p className="text-xs text-ink-500">valor total</p></div>
           </div>
           <div className="flex flex-col gap-1.5">
-            <a href={exportHref} className="inline-flex items-center gap-1.5 rounded-lg border bg-sgo-surface px-3 py-1.5 text-xs font-semibold text-sgo-brand hover:border-sgo-brand"><FileSpreadsheet className="h-3.5 w-3.5 text-sgo-brand" /> Excel</a>
-            <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border bg-sgo-surface px-3 py-1.5 text-xs font-semibold text-sgo-brand hover:border-sgo-brand"><Printer className="h-3.5 w-3.5 text-sgo-brand" /> Imprimir/PDF</button>
+            <a href={exportHref} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"><FileSpreadsheet className="h-3.5 w-3.5 text-brand" /> Excel</a>
+            <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"><Printer className="h-3.5 w-3.5 text-brand" /> Imprimir/PDF</button>
           </div>
         </div>
       )}
@@ -265,7 +265,7 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
 
   if (editing) {
     return (
-      <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-surface p-3">
+      <div className="rounded-lg border-2 border-brand/40 bg-surface p-3">
         <div className="grid grid-cols-1 gap-2">
           <div><Label className="text-xs">Fornecedor</Label><Input value={f.supplierName} onChange={(e) => set('supplierName', e.target.value)} className="h-9 text-sm" /></div>
           <div className="grid grid-cols-2 gap-2">
@@ -292,9 +292,9 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
   }
 
   return (
-    <div className="rounded-lg border bg-sgo-surface p-3">
+    <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-center justify-between">
-        <p className="font-semibold text-sgo-brand">{n.supplier}</p>
+        <p className="font-semibold text-brand">{n.supplier}</p>
         <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
       </div>
       <p className="text-xs text-ink-500">
@@ -372,7 +372,7 @@ function DueTracking({ units }: { units: Unit[] }) {
 
   return (
     <div className="space-y-3">
-      <p className="rounded-md bg-sgo-brand/10 px-3 py-2 text-xs text-ink-500">
+      <p className="rounded-md bg-brand/10 px-3 py-2 text-xs text-ink-500">
         Foco nos boletos <strong>a vencer</strong> — a supervisão e o financeiro são avisados automaticamente dos próximos vencimentos (o pagamento em si é controlado pelo financeiro). Inclui notas comuns e recebimentos de gás.
       </p>
       <FilterBar active={activeCount} onClear={clear}>
@@ -405,8 +405,8 @@ function DueTracking({ units }: { units: Unit[] }) {
       </FilterBar>
 
       <div className="flex flex-wrap gap-3 text-xs text-ink-500">
-        <span><strong className="text-sgo-brand">{rows.length}</strong> boleto(s)</span>
-        <span>total <strong className="text-sgo-brand">{formatBRL(total)}</strong></span>
+        <span><strong className="text-brand">{rows.length}</strong> boleto(s)</span>
+        <span>total <strong className="text-brand">{formatBRL(total)}</strong></span>
       </div>
 
       {loading ? (
@@ -416,9 +416,9 @@ function DueTracking({ units }: { units: Unit[] }) {
       ) : (
         <div className="space-y-1.5">
           {rows.map((r) => (
-            <div key={`${r.kind}-${r.id}`} className={`rounded-lg border p-2.5 ${r.daysToDue <= 3 ? 'border-danger/40 bg-danger/5' : 'bg-sgo-surface'}`}>
+            <div key={`${r.kind}-${r.id}`} className={`rounded-lg border p-2.5 ${r.daysToDue <= 3 ? 'border-danger/40 bg-danger/5' : 'bg-surface'}`}>
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-sgo-brand">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-sgo-brand/15 px-1 text-[10px] font-bold text-sgo-brand">GÁS</span> : null}</p>
+                <p className="text-sm font-semibold text-brand">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-brand/15 px-1 text-[10px] font-bold text-brand">GÁS</span> : null}</p>
                 <StatusBadge tone={tone(r.daysToDue)}>{dueLabel(r.daysToDue)}</StatusBadge>
               </div>
               <p className="text-xs text-ink-500">{r.unit} · {formatBRL(r.value)}{r.number ? ` · nº ${r.number}` : ''} · vence {fmtBR(r.dueDate)}</p>
@@ -553,7 +553,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
       />
 
       {isGas && (
-        <p className="rounded-md bg-sgo-brand/10 px-3 py-2 text-xs font-semibold text-sgo-brand">Fornecedor de gás — preencha os dados do recebimento de gás. Isso alimenta a Análise de gás (dashboard, contratos e variação).</p>
+        <p className="rounded-md bg-brand/10 px-3 py-2 text-xs font-semibold text-brand">Fornecedor de gás — preencha os dados do recebimento de gás. Isso alimenta a Análise de gás (dashboard, contratos e variação).</p>
       )}
 
       <div className="grid grid-cols-2 gap-2">
@@ -566,12 +566,12 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
       </div>
 
       {isGas ? (
-        <div className="space-y-2 rounded-lg border-2 border-sgo-brand/30 bg-sgo-brand/5 p-3">
+        <div className="space-y-2 rounded-lg border-2 border-brand/30 bg-brand/5 p-3">
           <div>
             <Label>Forma de recebimento</Label>
             <div className="flex gap-1">
-              <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-sgo-brand text-on-brand' : ''}`}>Granel (kg)</button>
-              <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-sgo-brand text-on-brand' : ''}`}>Botijão (P45)</button>
+              <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-brand text-on-brand' : ''}`}>Granel (kg)</button>
+              <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-brand text-on-brand' : ''}`}>Botijão (P45)</button>
             </div>
           </div>
           {kind === 'BULK' ? (
@@ -580,7 +580,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
                 <div><Label>Quantidade (kg)</Label><Input inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="ex: 45" /></div>
                 <div><Label>Valor por kg (R$)</Label><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0,0000" /></div>
               </div>
-              {gasTotal > 0 && <p className="text-center text-sm font-bold text-sgo-brand">Valor total: {formatBRL(gasTotal)}</p>}
+              {gasTotal > 0 && <p className="text-center text-sm font-bold text-brand">Valor total: {formatBRL(gasTotal)}</p>}
             </>
           ) : (
             <>
@@ -590,7 +590,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
                 <div><Label>Valor total (R$)</Label><Input inputMode="decimal" value={cylTotal} onChange={(e) => setCylTotal(e.target.value)} placeholder="0,00" /></div>
               </div>
               <div><Label>Botijões vazios devolvidos</Label><Input inputMode="numeric" value={cylReturned} onChange={(e) => setCylReturned(e.target.value.replace(/\D/g, ''))} placeholder="ex: 4" /></div>
-              {cKg > 0 && cTotal > 0 && <p className="text-center text-sm font-bold text-sgo-brand">{cc} × {ck}kg = {cKg}kg · R$ {cPricePerKg.toFixed(4).replace('.', ',')}/kg</p>}
+              {cKg > 0 && cTotal > 0 && <p className="text-center text-sm font-bold text-brand">{cc} × {ck}kg = {cKg}kg · R$ {cPricePerKg.toFixed(4).replace('.', ',')}/kg</p>}
             </>
           )}
         </div>
@@ -602,7 +602,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
       )}
 
       {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
-      {ok && <p className="rounded-lg bg-sgo-success/10 px-3 py-2 text-sm font-medium text-sgo-success">{ok}</p>}
+      {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Save className="h-5 w-5" /> {isGas ? 'Registrar recebimento de gás' : 'Confirmar e salvar'}</Button>
     </div>
   );

@@ -183,7 +183,7 @@ export function PushClient() {
       <div className="flex flex-wrap items-center gap-2">
         {thisDeviceOn ? (
           <>
-            <span className="flex items-center gap-1.5 rounded-md bg-sgo-success/10 px-2 py-1 text-sm font-semibold text-sgo-success">
+            <span className="flex items-center gap-1.5 rounded-md bg-success/10 px-2 py-1 text-sm font-semibold text-success">
               <BellRing className="h-4 w-4" /> Ativas neste aparelho
             </span>
             <Button size="sm" variant="outline" disabled={busy} onClick={() => void test()}>
@@ -207,7 +207,7 @@ export function PushClient() {
       )}
 
       {devices.length > 0 && (
-        <div className="rounded-lg border bg-sgo-surface p-3">
+        <div className="rounded-lg border bg-surface p-3">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Meus aparelhos</p>
           <ul className="space-y-1.5">
             {devices.map((d) => (
@@ -229,7 +229,7 @@ export function PushClient() {
         </div>
       )}
 
-      <div className="rounded-lg border bg-sgo-surface p-3">
+      <div className="rounded-lg border bg-surface p-3">
         <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">O que quero receber no celular</p>
         <p className="mb-2 text-xs text-ink-500">Desmarcar não apaga nada — o aviso continua aparecendo no sino, só não vira notificação no aparelho. Avisos críticos são sempre enviados.</p>
         <ul className="space-y-2">
@@ -251,7 +251,7 @@ export function PushClient() {
         </ul>
       </div>
 
-      {msg && <p className={`text-sm font-semibold ${msg.includes('✓') ? 'text-sgo-success' : 'text-danger'}`}>{msg}</p>}
+      {msg && <p className={`text-sm font-semibold ${msg.includes('✓') ? 'text-success' : 'text-danger'}`}>{msg}</p>}
     </div>
   );
 }

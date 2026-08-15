@@ -18,9 +18,9 @@ export default async function MudancasPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
+      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><ArrowRightLeft className="h-5 w-5 text-sgo-brand" /> Mudanças de função/setor</h1>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ArrowRightLeft className="h-5 w-5 text-brand" /> Mudanças de função/setor</h1>
         <p className="text-sm text-ink-500">
           Registro consolidado para informar o RH. Mudança de <strong>setor</strong> vale no SGO na hora (Mapa de Funções);
           mudança de <strong>função</strong> é solicitação — efetiva no RH e o cargo atualiza no próximo sync.
@@ -31,10 +31,10 @@ export default async function MudancasPage() {
           {rows.length === 0 && <p className="text-sm text-ink-500">Nenhuma mudança registrada ainda. Edite função/setor no Mapa de Funções.</p>}
           <div className="space-y-2">
             {rows.map((r) => (
-              <div key={r.id} className="rounded-lg border bg-sgo-surface p-3">
+              <div key={r.id} className="rounded-lg border bg-surface p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-sgo-brand">{r.collaboratorName}</p>
+                    <p className="truncate font-semibold text-brand">{r.collaboratorName}</p>
                     <p className="text-sm">
                       <span className="text-ink-500">{r.fromValue || 'sem registro'}</span>
                       {' → '}

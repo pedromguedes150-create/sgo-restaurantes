@@ -25,7 +25,7 @@ export function StatCard({ label, value, hint, delta, invertDelta, icon: Icon, c
   const good = delta == null ? null : invertDelta ? delta <= 0 : delta >= 0;
 
   return (
-    <div className={cn('rounded-card border border-line bg-sgo-surface p-4', className)}>
+    <div className={cn('rounded-card border border-line bg-surface p-4', className)}>
       <div className="flex items-start justify-between gap-2">
         <p className="sgo-type-11 text-ink-500">{label}</p>
         {Icon && <Icon className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />}
@@ -35,7 +35,7 @@ export function StatCard({ label, value, hint, delta, invertDelta, icon: Icon, c
       </p>
       <div className="mt-1 flex items-center gap-1.5">
         {delta != null && (
-          <span className={cn('inline-flex items-center gap-0.5 text-[13px] font-semibold tabular-nums', good ? 'text-sgo-success' : 'text-danger')}>
+          <span className={cn('inline-flex items-center gap-0.5 text-[13px] font-semibold tabular-nums', good ? 'text-success' : 'text-danger')}>
             {delta >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" aria-hidden /> : <ArrowDownRight className="h-3.5 w-3.5" aria-hidden />}
             {Math.abs(delta).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
           </span>

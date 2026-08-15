@@ -83,7 +83,7 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
         <Banner
           tone="info"
           title="Chamados e planos preventivos ficam no módulo Manutenção"
-          action={<Link href="/modulos/manutencao" className="text-[13px] font-semibold text-sgo-brand hover:underline">Abrir Manutenção →</Link>}
+          action={<Link href="/modulos/manutencao" className="text-[13px] font-semibold text-brand hover:underline">Abrir Manutenção →</Link>}
         />
       )}
 

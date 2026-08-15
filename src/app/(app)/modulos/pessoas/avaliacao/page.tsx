@@ -27,9 +27,9 @@ export default async function AvaliacaoPage({ searchParams }: { searchParams: { 
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
+      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><Star className="h-5 w-5 text-sgo-brand" /> Avaliação do colaborador</h1>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><Star className="h-5 w-5 text-brand" /> Avaliação do colaborador</h1>
         <p className="text-sm text-ink-500">
           Observações do dia a dia + avaliação mensal (o cadastro continua vindo do RH).{' '}
           {pendentes > 0 ? `${pendentes} a avaliar no mês.` : 'Todos avaliados no mês.'}

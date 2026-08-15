@@ -23,8 +23,8 @@ export default async function PagamentosAdminPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-sgo-brand">Cadastros de Pagamentos</h1>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <h1 className="text-xl font-bold text-brand">Cadastros de Pagamentos</h1>
       <Card><CardContent className="pt-4">
         <PaymentsAdmin
           units={units}

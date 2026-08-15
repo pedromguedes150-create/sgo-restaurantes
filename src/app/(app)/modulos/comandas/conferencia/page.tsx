@@ -28,15 +28,15 @@ export default async function ConferenciaPage({ searchParams }: { searchParams: 
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand">
-            <ScanLine className="h-5 w-5 text-sgo-brand" /> Conferência por leitor
+          <h1 className="flex items-center gap-2 text-xl font-bold text-brand">
+            <ScanLine className="h-5 w-5 text-brand" /> Conferência por leitor
           </h1>
           <p className="text-sm text-ink-500">
             {r.ok ? `${selected.name} — dia operacional ${r.ctx.operationalDate}` : selected.name}
           </p>
         </div>
         {!isCashier && (
-          <Link href="/modulos/comandas" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-sgo-brand">
+          <Link href="/modulos/comandas" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
             ← Contagem manual
           </Link>
         )}

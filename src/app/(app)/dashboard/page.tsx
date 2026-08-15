@@ -35,7 +35,7 @@ export default async function DashboardPage() {
     return (
       <div className="space-y-4">
         <AutoRefresh />
-        <h1 className="text-xl font-bold text-sgo-brand">Olá, {user.name.split(' ')[0]} 👋</h1>
+        <h1 className="text-xl font-bold text-brand">Olá, {user.name.split(' ')[0]} 👋</h1>
         <Card>
           <CardContent className="py-6 text-sm text-ink-500">
             Seu perfil (Financeiro) recebe demandas aprovadas para pagamento.
@@ -43,9 +43,9 @@ export default async function DashboardPage() {
         </Card>
         <Link
           href="/modulos/pagamentos"
-          className="flex items-center gap-2 rounded-lg border bg-sgo-surface px-4 py-3 text-sm font-semibold text-sgo-brand"
+          className="flex items-center gap-2 rounded-lg border bg-surface px-4 py-3 text-sm font-semibold text-brand"
         >
-          <ScrollText className="h-5 w-5 text-sgo-brand" /> Pagamentos a processar
+          <ScrollText className="h-5 w-5 text-brand" /> Pagamentos a processar
         </Link>
       </div>
     );
@@ -111,7 +111,7 @@ export default async function DashboardPage() {
     <div className="space-y-5">
       <AutoRefresh seconds={60} />
       <section>
-        <h1 className="text-xl font-bold text-sgo-brand">Olá, {user.name.split(' ')[0]} 👋</h1>
+        <h1 className="text-xl font-bold text-brand">Olá, {user.name.split(' ')[0]} 👋</h1>
         <p className="text-sm text-ink-500">
           {user.seesAllUnits
             ? 'Visão consolidada da rede.'
@@ -151,7 +151,7 @@ function ManagerDashboard({
         <CardContent className="flex items-center gap-5 py-5">
           <ProgressRing value={agg.progressPct} sublabel="do dia" />
           <div className="space-y-1 text-sm">
-            <p className="font-semibold text-sgo-brand">
+            <p className="font-semibold text-brand">
               {agg.done} de {agg.total} tarefas concluídas
             </p>
             {agg.overdue > 0 && (
@@ -163,9 +163,9 @@ function ManagerDashboard({
               <p className="text-danger">✖ {agg.missed} não realizada(s)</p>
             )}
             {agg.overdue === 0 && agg.missed === 0 && (
-              <p className="text-sgo-success">No prazo 🎉</p>
+              <p className="text-success">No prazo 🎉</p>
             )}
-            <Link href="/tarefas" className="inline-block pt-1 font-semibold text-sgo-brand underline">
+            <Link href="/tarefas" className="inline-block pt-1 font-semibold text-brand underline">
               Ir para as tarefas →
             </Link>
           </div>
@@ -179,11 +179,11 @@ function ManagerDashboard({
         </CardHeader>
         <CardContent>
           <div className="mb-1 flex items-center justify-between text-sm">
-            <span className="font-semibold text-sgo-brand">{metaPct}%</span>
+            <span className="font-semibold text-brand">{metaPct}%</span>
             <span className="text-ink-500">{doneW}/{resW} pts</span>
           </div>
           <div className="h-3 w-full overflow-hidden rounded-full bg-sunken">
-            <div className="h-full rounded-full bg-sgo-brand" style={{ width: `${metaPct}%` }} />
+            <div className="h-full rounded-full bg-brand" style={{ width: `${metaPct}%` }} />
           </div>
         </CardContent>
       </Card>
@@ -265,11 +265,11 @@ function ConsolidatedDashboard({
 
       {canSeeAudit && (
         <div className="grid grid-cols-2 gap-3 lg:col-span-2">
-          <Link href="/auditoria" className="flex items-center gap-2 rounded-lg border bg-sgo-surface px-4 py-3 text-sm font-semibold text-sgo-brand">
-            <ScrollText className="h-5 w-5 text-sgo-brand" /> Auditoria
+          <Link href="/auditoria" className="flex items-center gap-2 rounded-lg border bg-surface px-4 py-3 text-sm font-semibold text-brand">
+            <ScrollText className="h-5 w-5 text-brand" /> Auditoria
           </Link>
-          <Link href="/modulos/metas" className="flex items-center gap-2 rounded-lg border bg-sgo-surface px-4 py-3 text-sm font-semibold text-sgo-brand">
-            <Trophy className="h-5 w-5 text-sgo-brand" /> Metas
+          <Link href="/modulos/metas" className="flex items-center gap-2 rounded-lg border bg-surface px-4 py-3 text-sm font-semibold text-brand">
+            <Trophy className="h-5 w-5 text-brand" /> Metas
           </Link>
         </div>
       )}
@@ -282,11 +282,11 @@ function Shortcuts() {
   // (inerte fora de um grid).
   return (
     <div className="grid grid-cols-2 gap-3 lg:col-span-2">
-      <Link href="/tarefas" className="flex items-center gap-2 rounded-lg border bg-sgo-surface px-4 py-3 text-sm font-semibold text-sgo-brand">
-        <ListChecks className="h-5 w-5 text-sgo-brand" /> Tarefas
+      <Link href="/tarefas" className="flex items-center gap-2 rounded-lg border bg-surface px-4 py-3 text-sm font-semibold text-brand">
+        <ListChecks className="h-5 w-5 text-brand" /> Tarefas
       </Link>
-      <Link href="/modulos" className="flex items-center gap-2 rounded-lg border bg-sgo-surface px-4 py-3 text-sm font-semibold text-sgo-brand">
-        <ScrollText className="h-5 w-5 text-sgo-brand" /> Módulos
+      <Link href="/modulos" className="flex items-center gap-2 rounded-lg border bg-surface px-4 py-3 text-sm font-semibold text-brand">
+        <ScrollText className="h-5 w-5 text-brand" /> Módulos
       </Link>
     </div>
   );

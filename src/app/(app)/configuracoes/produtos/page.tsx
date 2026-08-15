@@ -13,9 +13,9 @@ export default async function ProdutosConfigPage() {
   const products = await listAllProducts();
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
       <div>
-        <h1 className="text-xl font-bold text-sgo-brand">Catálogo de Produtos</h1>
+        <h1 className="text-xl font-bold text-brand">Catálogo de Produtos</h1>
         <p className="text-sm text-ink-500">Produtos da <b>Fábrica</b> e do <b>CD</b> que os gerentes podem pedir. Importe sua lista por Excel.</p>
       </div>
       <Card><CardContent className="pt-4">

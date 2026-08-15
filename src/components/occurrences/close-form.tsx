@@ -50,7 +50,7 @@ export function CloseForm({ occurrenceId }: { occurrenceId: string }) {
         <textarea
           id="just"
           rows={3}
-          className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand"
+          className="w-full rounded-lg border-2 border-line-strong bg-surface p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           value={justification}
           onChange={(e) => setJustification(e.target.value)}
         />
@@ -60,7 +60,7 @@ export function CloseForm({ occurrenceId }: { occurrenceId: string }) {
         <textarea
           id="ca"
           rows={3}
-          className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand"
+          className="w-full rounded-lg border-2 border-line-strong bg-surface p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           value={correctiveAction}
           onChange={(e) => setCorrectiveAction(e.target.value)}
         />

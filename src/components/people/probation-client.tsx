@@ -26,7 +26,7 @@ export function ProbationClient({ rows, canReview }: { rows: ProbRow[]; canRevie
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         {(['PENDING', 'ALL'] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)} className={filter === f ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>
+          <button key={f} onClick={() => setFilter(f)} className={filter === f ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>
             {f === 'PENDING' ? 'A avaliar' : 'Todos (≤90 dias)'}
           </button>
         ))}
@@ -59,10 +59,10 @@ function ProbCard({ r, canReview }: { r: ProbRow; canReview: boolean }) {
 
   const showForm = canReview && (editing || r.status === 'PENDING');
   return (
-    <div className="rounded-lg border bg-sgo-surface p-3">
+    <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold text-sgo-brand">{r.name}</p>
+          <p className="font-semibold text-brand">{r.name}</p>
           <p className="text-xs text-ink-500">{r.jobTitle || 'Sem função'} · {r.unit} · admitido {fmtBR(r.hireDate)}</p>
         </div>
         <StatusBadge tone={ST[r.status].tone}>{ST[r.status].label}</StatusBadge>
@@ -73,7 +73,7 @@ function ProbCard({ r, canReview }: { r: ProbRow; canReview: boolean }) {
           <span className={nearEnd && r.status === 'PENDING' ? 'font-semibold text-danger' : ''}>{r.daysLeft} dia(s) restante(s)</span>
         </div>
         <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken">
-          <div className={`h-full rounded-full ${nearEnd ? 'bg-danger' : 'bg-sgo-brand'}`} style={{ width: `${pct}%` }} />
+          <div className={`h-full rounded-full ${nearEnd ? 'bg-danger' : 'bg-brand'}`} style={{ width: `${pct}%` }} />
         </div>
       </div>
 

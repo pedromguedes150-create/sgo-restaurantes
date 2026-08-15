@@ -32,7 +32,7 @@ const fmtMonthLong = (ym: string) => {
   const [y, m] = ym.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 };
-const TONE_DOT = { success: 'bg-sgo-success', medium: 'bg-warning', critical: 'bg-danger' } as const;
+const TONE_DOT = { success: 'bg-success', medium: 'bg-warning', critical: 'bg-danger' } as const;
 
 export function SupervisionClient({ usage, yearMonth, months, board, units, checklists, plans, canOperate, isAdmin }: {
   usage: UsageRowUI[]; yearMonth: string; months: string[];
@@ -60,7 +60,7 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
     <div className="space-y-4">
       <div className="flex gap-2">
         {([['PAINEL', 'Painel de uso'], ['VISITAS', 'Visitas & Feedbacks']] as const).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} className={tab === t ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>{label}</button>
+          <button key={t} onClick={() => setTab(t)} className={tab === t ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>{label}</button>
         ))}
       </div>
 
@@ -75,9 +75,9 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
           </div>
           <p className="text-xs text-ink-500">Uso correto = média de checklists concluídos, dias com desperdício lançado e dias com comandas conferidas. Piores primeiro.</p>
           {usage.map((u) => (
-            <div key={u.unitId} className="rounded-lg border bg-sgo-surface p-3">
+            <div key={u.unitId} className="rounded-lg border bg-surface p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="flex items-center gap-2 font-semibold text-sgo-brand"><span className={cn('h-2.5 w-2.5 rounded-full', TONE_DOT[u.tone])} /> {u.unitName}</p>
+                <p className="flex items-center gap-2 font-semibold text-brand"><span className={cn('h-2.5 w-2.5 rounded-full', TONE_DOT[u.tone])} /> {u.unitName}</p>
                 <span className="text-sm font-bold tabular-nums">{u.usagePct}% de uso</span>
               </div>
               <div className="mt-2 grid grid-cols-3 gap-2 text-center sm:grid-cols-6">
@@ -106,15 +106,15 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
           <div className="flex justify-end">
             <a
               href={`/api/supervision/export?year=${yearMonth.split('-')[0]}&month=${Number(yearMonth.split('-')[1])}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border bg-sgo-surface px-3 py-1.5 text-xs font-semibold text-sgo-brand hover:border-sgo-brand"
+              className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"
             >
-              <FileSpreadsheet className="h-3.5 w-3.5 text-sgo-brand" /> Excel do mês
+              <FileSpreadsheet className="h-3.5 w-3.5 text-brand" /> Excel do mês
             </a>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-lg border bg-sgo-surface p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.done}</p><p className="text-xs text-ink-500">feitas no mês</p></div>
-            <div className="rounded-lg border bg-sgo-surface p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.planned}</p><p className="text-xs text-ink-500">agendadas</p></div>
-            <div className={cn('rounded-lg border p-2.5', board.month.overdue > 0 ? 'border-danger/50 bg-danger/5' : 'bg-sgo-surface')}><p className={cn('text-lg font-bold tabular-nums', board.month.overdue > 0 && 'text-danger')}>{board.month.overdue}</p><p className="text-xs text-ink-500">atrasadas</p></div>
+            <div className="rounded-lg border bg-surface p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.done}</p><p className="text-xs text-ink-500">feitas no mês</p></div>
+            <div className="rounded-lg border bg-surface p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.planned}</p><p className="text-xs text-ink-500">agendadas</p></div>
+            <div className={cn('rounded-lg border p-2.5', board.month.overdue > 0 ? 'border-danger/50 bg-danger/5' : 'bg-surface')}><p className={cn('text-lg font-bold tabular-nums', board.month.overdue > 0 && 'text-danger')}>{board.month.overdue}</p><p className="text-xs text-ink-500">atrasadas</p></div>
           </div>
 
           {canOperate && <PlansEditor plans={plans} busy={busy} post={post} />}
@@ -171,7 +171,7 @@ function PlansEditor({ plans, busy, post }: { plans: PlanRowUI[]; busy: boolean;
           {plans.map((p) => (
             <div key={p.unitId} className="flex items-center justify-between gap-2 rounded-md bg-canvas p-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-sgo-brand">{p.unitName}{p.overdue && <span className="ml-1.5 text-xs font-bold text-danger">VENCIDA</span>}</p>
+                <p className="truncate text-sm font-semibold text-brand">{p.unitName}{p.overdue && <span className="ml-1.5 text-xs font-bold text-danger">VENCIDA</span>}</p>
                 <p className="text-xs text-ink-500">
                   {p.active ? `a cada ${p.frequencyDays}d · próxima ${new Date(p.nextDueAt).toLocaleDateString('pt-BR')}` : 'sem recorrência'}
                   {p.lastVisitAt ? ` · última ${new Date(p.lastVisitAt).toLocaleDateString('pt-BR')}` : ''}
@@ -200,10 +200,10 @@ function UpcomingVisit({ v, checklists, canOperate, busy, post }: {
   const cl = checklists.find((c) => c.id === clId);
 
   return (
-    <div className={cn('rounded-lg border p-2.5', v.overdue ? 'border-danger/50 bg-danger/5' : 'bg-sgo-surface')}>
+    <div className={cn('rounded-lg border p-2.5', v.overdue ? 'border-danger/50 bg-danger/5' : 'bg-surface')}>
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-sgo-brand">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
+          <p className="truncate text-sm font-semibold text-brand">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
           <p className="text-xs text-ink-500">{v.supervisorName}</p>
         </div>
         <span className="flex shrink-0 items-center gap-1.5">
@@ -221,7 +221,7 @@ function UpcomingVisit({ v, checklists, canOperate, busy, post }: {
         <div className="mt-2 space-y-2 border-t pt-2">
           <div>
             <Label className="text-xs">Feedback da visita (obrigatório)</Label>
-            <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="O que foi visto, orientações ao gerente, combinados…" className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-2 text-sm" />
+            <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="O que foi visto, orientações ao gerente, combinados…" className="w-full rounded-lg border-2 border-line-strong bg-surface p-2 text-sm" />
           </div>
           {checklists.length > 0 && (
             <Select
@@ -239,7 +239,7 @@ function UpcomingVisit({ v, checklists, canOperate, busy, post }: {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm">{item}</span>
                       <div className="flex gap-1">
-                        <button onClick={() => setResults((s) => ({ ...s, [item]: { ...r, ok: true } }))} className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', r.ok ? 'bg-sgo-success text-on-brand' : 'border')}>OK</button>
+                        <button onClick={() => setResults((s) => ({ ...s, [item]: { ...r, ok: true } }))} className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', r.ok ? 'bg-success text-on-brand' : 'border')}>OK</button>
                         <button onClick={() => setResults((s) => ({ ...s, [item]: { ...r, ok: false } }))} className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', !r.ok && results[item] !== undefined ? 'bg-danger text-on-brand' : 'border')}>Não</button>
                       </div>
                     </div>
@@ -269,10 +269,10 @@ function HistoryVisit({ v, isAdmin, busy, onDelete }: { v: VisitRowUI; isAdmin: 
   const [open, setOpen] = useState(false);
   const notOk = v.checklistResults?.filter((r) => !r.ok).length ?? 0;
   return (
-    <div className="rounded-lg border bg-sgo-surface p-2.5">
+    <div className="rounded-lg border bg-surface p-2.5">
       <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between gap-2 text-left">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-sgo-brand">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
+          <p className="truncate text-sm font-semibold text-brand">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
           <p className="truncate text-xs text-ink-500">{v.supervisorName}{v.checklistName ? ` · ${v.checklistName}${notOk > 0 ? ` (${notOk} item(ns) não OK)` : ' (tudo OK)'}` : ''}</p>
         </div>
         <span className="flex shrink-0 items-center gap-1.5">

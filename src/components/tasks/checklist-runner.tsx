@@ -13,7 +13,7 @@ interface AiState { loading?: boolean; configured?: boolean; verdict?: 'COMPATIV
 interface Answer { status: ItemStatus; note?: string }
 
 const ST: Record<ItemStatus, { label: string; short: string; cls: string }> = {
-  OK:            { label: 'De acordo',    short: '🟢', cls: 'bg-sgo-success text-on-brand border-sgo-success' },
+  OK:            { label: 'De acordo',    short: '🟢', cls: 'bg-success text-on-brand border-success' },
   EM_CORRECAO:   { label: 'Em correção',  short: '🟡', cls: 'bg-warning-bg text-warning border-warning' },
   A_CORRIGIR:    { label: 'A corrigir',   short: '🔴', cls: 'bg-danger text-on-brand border-danger' },
   NAO_SE_APLICA: { label: 'Não se aplica', short: '⚪', cls: 'bg-sunken text-ink-500 border-line-strong' },
@@ -121,7 +121,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
   if (done) {
     return (
       <div className="space-y-4">
-        <p className={cn('rounded-lg px-3 py-2 text-sm font-semibold', lateStatus ? 'bg-warning/15 text-warning' : 'bg-sgo-success/10 text-sgo-success')}>
+        <p className={cn('rounded-lg px-3 py-2 text-sm font-semibold', lateStatus ? 'bg-warning/15 text-warning' : 'bg-success/10 text-success')}>
           {lateStatus ? 'Concluído fora do prazo (não conta na meta).' : 'Concluído no prazo.'}
         </p>
         {/* Visão completa a partir do SNAPSHOT das respostas (sobrevive a edições do checklist). */}
@@ -162,7 +162,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
               <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Fotos</p>
               {ordered.map(([k, ps]) => (
                 <div key={k}>
-                  <p className="mb-1 text-xs font-medium text-sgo-brand">{k === '_' ? 'Gerais' : (textById.get(k) ?? 'Item')}</p>
+                  <p className="mb-1 text-xs font-medium text-brand">{k === '_' ? 'Gerais' : (textById.get(k) ?? 'Item')}</p>
                   <div className="flex flex-wrap gap-2">
                     {ps.map((p, i) => <a key={i} href={p.path} target="_blank" rel="noreferrer"><img src={p.path} alt="" className="h-24 w-24 rounded-lg border object-cover" /></a>)}
                   </div>
@@ -187,7 +187,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
             {g.items.map((it) => {
               const a = answers[it.id];
               return (
-                <div key={it.id} className={cn('rounded-lg border bg-sgo-surface p-2.5', openIssues[it.id] && 'border-danger/50')}>
+                <div key={it.id} className={cn('rounded-lg border bg-surface p-2.5', openIssues[it.id] && 'border-danger/50')}>
                   <p className="text-sm font-medium">{it.text}{it.requiresPhoto && <span className="ml-1 text-xs text-ink-900">(foto)</span>}</p>
                   {openIssues[it.id] && (
                     <p className="mt-1 rounded-md bg-danger/10 px-2 py-1 text-xs font-semibold text-danger">
@@ -202,14 +202,14 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                     ))}
                   </div>
                   {a && (a.status === 'EM_CORRECAO' || a.status === 'A_CORRIGIR') && (
-                    <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Observação (o que corrigir)" className="mt-2 h-9 w-full rounded-md border-2 border-line-strong bg-sgo-surface px-2 text-sm" />
+                    <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Observação (o que corrigir)" className="mt-2 h-9 w-full rounded-md border-2 border-line-strong bg-surface px-2 text-sm" />
                   )}
                   {a && a.status === 'NAO_SE_APLICA' && (
-                    <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Motivo (opcional)" className="mt-2 h-9 w-full rounded-md border-2 border-line-strong bg-sgo-surface px-2 text-sm" />
+                    <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Motivo (opcional)" className="mt-2 h-9 w-full rounded-md border-2 border-line-strong bg-surface px-2 text-sm" />
                   )}
                   {it.aiCheck && (
-                    <div className="mt-2 rounded-md border border-dashed bg-sgo-surface/60 p-2">
-                      <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-sgo-brand">
+                    <div className="mt-2 rounded-md border border-dashed bg-surface/60 p-2">
+                      <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-brand">
                         <Sparkles className="h-4 w-4" /> {ai[it.id]?.loading ? 'Analisando com IA…' : 'Conferir a foto com IA'}
                         <input type="file" accept="image/*" capture="environment" hidden disabled={ai[it.id]?.loading} onChange={(e) => { const f = e.target.files?.[0]; if (f) analyzeAi(it.id, f); e.target.value = ''; }} />
                       </label>
@@ -217,7 +217,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                         ai[it.id].configured === false ? <p className="mt-1 text-xs text-ink-500">IA não configurada no servidor.</p>
                         : ai[it.id].error ? <p className="mt-1 text-xs text-danger">{ai[it.id].error}</p>
                         : ai[it.id].verdict ? (
-                          <p className={cn('mt-1 text-xs font-medium', ai[it.id].verdict === 'COMPATIVEL' ? 'text-sgo-success' : ai[it.id].verdict === 'DIVERGENTE' ? 'text-danger' : 'text-warning')}>
+                          <p className={cn('mt-1 text-xs font-medium', ai[it.id].verdict === 'COMPATIVEL' ? 'text-success' : ai[it.id].verdict === 'DIVERGENTE' ? 'text-danger' : 'text-warning')}>
                             {ai[it.id].verdict === 'COMPATIVEL' ? '🟢 Compatível' : ai[it.id].verdict === 'DIVERGENTE' ? '🔴 Divergente' : '🟡 Incerto'}{ai[it.id].observations ? ` — ${ai[it.id].observations}` : ''}
                           </p>
                         ) : null
@@ -225,8 +225,8 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                     </div>
                   )}
                   {it.aiCheck && (
-                    <div className="mt-2 rounded-md border border-dashed bg-sgo-surface/60 p-2">
-                      <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-sgo-brand">
+                    <div className="mt-2 rounded-md border border-dashed bg-surface/60 p-2">
+                      <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-brand">
                         <Sparkles className="h-4 w-4" /> {ps[it.id]?.loading ? 'Conferindo o padrão…' : 'Conferir padrão de produtos (IA)'}
                         <input type="file" accept="image/*" capture="environment" hidden disabled={ps[it.id]?.loading} onChange={(e) => { const f = e.target.files?.[0]; if (f) analyzeProductStd(it.id, f); e.target.value = ''; }} />
                       </label>
@@ -235,7 +235,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                         : ps[it.id].error ? <p className="mt-1 text-xs text-danger">{ps[it.id].error}</p>
                         : (ps[it.id].offStandard && ps[it.id].offStandard!.length > 0)
                           ? <p className="mt-1 text-xs font-medium text-danger">🔴 Fora do padrão: {ps[it.id].offStandard!.join(', ')}{ps[it.id].observations ? ` — ${ps[it.id].observations}` : ''}</p>
-                          : ps[it.id].verdict ? <p className="mt-1 text-xs font-medium text-sgo-success">🟢 Tudo no padrão{ps[it.id].observations ? ` — ${ps[it.id].observations}` : ''}</p> : null
+                          : ps[it.id].verdict ? <p className="mt-1 text-xs font-medium text-success">🟢 Tudo no padrão{ps[it.id].observations ? ` — ${ps[it.id].observations}` : ''}</p> : null
                       )}
                     </div>
                   )}

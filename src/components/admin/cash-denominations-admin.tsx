@@ -106,7 +106,7 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
 
       {loading && <p className="flex items-center gap-2 text-sm text-ink-500"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p>}
       {msg && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{msg}</p>}
-      {ok && <p className="rounded-lg bg-sgo-success/10 px-3 py-2 text-sm font-medium text-sgo-success">{ok}</p>}
+      {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
 
       {data && (
         <>
@@ -120,7 +120,7 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
 
           <div className="space-y-2">
             {data.denominations.map((r, idx) => (
-              <div key={r.key} className={`rounded-lg border bg-sgo-surface p-2.5 ${r.active ? '' : 'opacity-60'}`}>
+              <div key={r.key} className={`rounded-lg border bg-surface p-2.5 ${r.active ? '' : 'opacity-60'}`}>
                 <div className="grid grid-cols-12 items-center gap-2">
                   <div className="col-span-12 sm:col-span-4">
                     <div className="flex items-center gap-2">
@@ -132,7 +132,7 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
                         <StatusBadge tone={r.active ? 'success' : 'critical'}>{r.active ? 'Ativa' : 'Inativa'}</StatusBadge>
                       </button>
                       <div>
-                        <p className="text-sm font-semibold text-sgo-brand">{rowLabel(r)}</p>
+                        <p className="text-sm font-semibold text-brand">{rowLabel(r)}</p>
                         {r.system
                           ? <p className="text-xs text-ink-500">Linha de sistema (PIX/caixinha)</p>
                           : r.balance !== 0 && <p className="text-xs text-ink-500">no cofre: {brl(r.balance)}</p>}

@@ -42,11 +42,11 @@ export function ProductCatalogAdmin({ products }: { products: Prod[] }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" size="sm" disabled={busy} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> Importar Excel</Button>
-        <a href="/api/products/export" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-sgo-brand"><Download className="h-4 w-4" /> Exportar Excel</a>
+        <a href="/api/products/export" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><Download className="h-4 w-4" /> Exportar Excel</a>
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void importFile(f); e.target.value = ''; }} />
         <span className="text-xs text-ink-500">Colunas: Nome, Origem (Fábrica/CD), Categoria, Medida</span>
       </div>
-      {msg && <p className="rounded-lg bg-sgo-brand/10 px-3 py-2 text-sm font-medium text-sgo-brand">{msg}</p>}
+      {msg && <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm font-medium text-brand">{msg}</p>}
 
       {/* Novo produto */}
       <div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3">
@@ -59,19 +59,19 @@ export function ProductCatalogAdmin({ products }: { products: Prod[] }) {
 
       <div className="relative">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar no catálogo…" className="h-10 w-full rounded-lg border-2 border-line-strong bg-sgo-surface pl-9 pr-3 text-sm" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar no catálogo…" className="h-10 w-full rounded-lg border-2 border-line-strong bg-surface pl-9 pr-3 text-sm" />
       </div>
 
       <p className="text-xs text-ink-500">{filtered.length} de {products.length} produto(s)</p>
       <div className="space-y-1.5">
         {filtered.map((p) => (
-          <div key={p.id} className={`flex items-center justify-between gap-2 rounded-lg border p-2 ${p.active ? 'bg-sgo-surface' : 'bg-canvas opacity-60'}`}>
+          <div key={p.id} className={`flex items-center justify-between gap-2 rounded-lg border p-2 ${p.active ? 'bg-surface' : 'bg-canvas opacity-60'}`}>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-sgo-brand">{p.name}</p>
+              <p className="truncate text-sm font-medium text-brand">{p.name}</p>
               <p className="text-[11px] text-ink-500">{p.origin === 'CD' ? 'CD' : 'Fábrica'} · {p.category} · {p.measure}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <button onClick={() => post({ action: 'catToggle', id: p.id, active: !p.active })} disabled={busy} className="text-xs text-sgo-brand underline">{p.active ? 'desativar' : 'ativar'}</button>
+              <button onClick={() => post({ action: 'catToggle', id: p.id, active: !p.active })} disabled={busy} className="text-xs text-brand underline">{p.active ? 'desativar' : 'ativar'}</button>
               <button onClick={() => { if (confirm(`Excluir "${p.name}"?`)) post({ action: 'catDelete', id: p.id }); }} disabled={busy} className="text-danger"><Trash2 className="h-4 w-4" /></button>
             </div>
           </div>

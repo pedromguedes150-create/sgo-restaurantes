@@ -46,9 +46,9 @@ export default async function TarefaExecPage({ params }: { params: { id: string 
 
   return (
     <div className="space-y-4">
-      <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
+      <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
       <div>
-        <h1 className="text-xl font-bold text-sgo-brand">{inst.template.name}</h1>
+        <h1 className="text-xl font-bold text-brand">{inst.template.name}</h1>
         <p className="text-xs text-ink-500">
           {inst.template.limitTime ? `limite ${inst.template.limitTime}` : 'sem horário'} · {inst.operationalDate}
           {done && inst.completedBy ? ` · concluído por ${inst.completedBy.name}` : ''}

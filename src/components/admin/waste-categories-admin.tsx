@@ -66,13 +66,13 @@ function CatRow({ c, onChange }: { c: WasteCatRow; onChange: () => void }) {
   }
 
   return (
-    <div className="rounded-lg border bg-sgo-surface p-2.5">
+    <div className="rounded-lg border bg-surface p-2.5">
       <div className="flex items-center justify-between gap-2">
         {editing ? (
           <span className="flex flex-1 items-center gap-1.5"><Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 text-sm" />
           <SegmentedControl aria-label="Medida da categoria" size="sm" value={mEdit} onValueChange={setMEdit} options={MEDIDAS} /></span>
         ) : (
-          <span className="font-medium text-sgo-brand">{c.name} <span className="text-xs text-ink-500">({c.measure})</span></span>
+          <span className="font-medium text-brand">{c.name} <span className="text-xs text-ink-500">({c.measure})</span></span>
         )}
         <div className="flex items-center gap-1">
           <button onClick={() => call({ entity: 'wasteCategory', action: 'toggle', id: c.id, active: !c.active })}><StatusBadge tone={c.active ? 'success' : 'critical'}>{c.active ? 'Ativa' : 'Inativa'}</StatusBadge></button>

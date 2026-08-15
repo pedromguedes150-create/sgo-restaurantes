@@ -42,9 +42,9 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-sgo-brand px-4 py-10">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-brand px-4 py-10">
       <div className="mb-8 text-center">
-        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-on-brand text-2xl font-black text-sgo-brand">
+        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-on-brand text-2xl font-black text-brand">
           BF
         </div>
         <h1 className="text-2xl font-bold text-on-brand">SGO Beija Flor</h1>

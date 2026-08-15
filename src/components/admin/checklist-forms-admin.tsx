@@ -65,10 +65,10 @@ export function ChecklistFormsAdmin({ units, forms }: { units: Unit[]; forms: Fo
         {forms.map((f) => {
           const unitName = units.find((u) => u.id === f.unitId)?.name ?? '—';
           return (
-            <div key={f.id} className="rounded-lg border bg-sgo-surface">
+            <div key={f.id} className="rounded-lg border bg-surface">
               <button onClick={() => setOpenId((id) => (id === f.id ? null : f.id))} className="flex w-full items-center justify-between gap-2 p-3 text-left">
                 <div>
-                  <p className="text-sm font-semibold text-sgo-brand">{f.title}</p>
+                  <p className="text-sm font-semibold text-brand">{f.title}</p>
                   <p className="text-xs text-ink-500">{unitName} · {f.fields} campo(s) · {f.submissions} envio(s)</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -160,7 +160,7 @@ function FormEditor({ id, onChanged }: { id: string; onChanged: () => void }) {
         <NewField templateId={id} onSaved={() => run({}, true)} />
       </div>
 
-      {msg && <p className="text-xs font-medium text-sgo-brand">{msg}</p>}
+      {msg && <p className="text-xs font-medium text-brand">{msg}</p>}
     </div>
   );
 }
@@ -171,13 +171,13 @@ function FieldRow({ field, idx, total, busy, onMove, onDelete, onSave }: {
 }) {
   const [editing, setEditing] = useState(false);
   return (
-    <div className="rounded-lg border bg-sgo-surface p-2">
+    <div className="rounded-lg border bg-surface p-2">
       {editing ? (
         <FieldForm initial={field} onCancel={() => setEditing(false)} onSubmit={(patch) => { onSave(patch); setEditing(false); }} />
       ) : (
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-sgo-brand">{field.kind === 'SECTION' ? `— ${field.label} —` : field.label} {field.required && <span className="text-danger">*</span>}</p>
+            <p className="truncate text-sm font-medium text-brand">{field.kind === 'SECTION' ? `— ${field.label} —` : field.label} {field.required && <span className="text-danger">*</span>}</p>
             <p className="text-xs text-ink-500">{kindLabel(field.kind)}{field.options.length ? ` · ${field.options.join(', ')}` : ''}{field.section ? ` · seção: ${field.section}` : ''}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -231,7 +231,7 @@ function FieldForm({ initial, onCancel, onSubmit }: { initial?: Field; onCancel:
         </div>
         <div className="col-span-12 sm:col-span-8"><Label className="text-xs">{isSection ? 'Texto do subtítulo' : 'Rótulo da pergunta'}</Label><Input value={label} onChange={(e) => setLabel(e.target.value)} className="h-9 text-sm" /></div>
       </div>
-      {isSelect && <div><Label className="text-xs">Opções (uma por linha)</Label><textarea value={optionsText} onChange={(e) => setOptionsText(e.target.value)} rows={3} className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface px-3 py-2 text-sm" placeholder={'380g\n300g'} /></div>}
+      {isSelect && <div><Label className="text-xs">Opções (uma por linha)</Label><textarea value={optionsText} onChange={(e) => setOptionsText(e.target.value)} rows={3} className="w-full rounded-lg border-2 border-line-strong bg-surface px-3 py-2 text-sm" placeholder={'380g\n300g'} /></div>}
       {!isSection && (
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} /> Obrigatório</label>

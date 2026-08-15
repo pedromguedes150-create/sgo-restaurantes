@@ -55,7 +55,7 @@ export function UnitSwitcher({ units, selectedId }: { units: UnitOption[]; selec
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line-strong bg-sgo-surface px-2.5 text-[13px] font-medium text-ink-900 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus"
+        className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line-strong bg-surface px-2.5 text-[13px] font-medium text-ink-900 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus"
       >
         <Building2 className="h-4 w-4 shrink-0 text-ink-400" />
         <span className="max-w-[9rem] truncate">{shortUnitName(selected.name)}</span>
@@ -65,7 +65,7 @@ export function UnitSwitcher({ units, selectedId }: { units: UnitOption[]; selec
       {open && (
         <ul
           role="listbox"
-          className="absolute left-0 top-full z-40 mt-1 max-h-[60vh] w-64 overflow-auto rounded-card border border-line bg-sgo-surface p-1 shadow-lg"
+          className="absolute left-0 top-full z-40 mt-1 max-h-[60vh] w-64 overflow-auto rounded-card border border-line bg-surface p-1 shadow-lg"
         >
           {units.map((u) => {
             const active = u.id === selected.id;
@@ -78,10 +78,10 @@ export function UnitSwitcher({ units, selectedId }: { units: UnitOption[]; selec
                   onClick={() => choose(u.id)}
                   className={cn(
                     'flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-[14px] outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
-                    active ? 'bg-sgo-brand-tint text-sgo-brand' : 'text-ink-700 hover:bg-sunken',
+                    active ? 'bg-brand-tint text-brand' : 'text-ink-700 hover:bg-sunken',
                   )}
                 >
-                  <Check className={cn('h-4 w-4 shrink-0', active ? 'text-sgo-brand' : 'text-transparent')} />
+                  <Check className={cn('h-4 w-4 shrink-0', active ? 'text-brand' : 'text-transparent')} />
                   <span className="flex-1">
                     <span className="block font-medium">{shortUnitName(u.name)}</span>
                     <span className="block text-[11px] text-ink-500">{u.name}</span>

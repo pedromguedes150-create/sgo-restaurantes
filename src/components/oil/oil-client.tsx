@@ -37,7 +37,7 @@ export function OilClient({ canLaunch, isAdmin, canEditDate = false, units, supp
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {tabs.filter((t) => t.show).map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>
+          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>
         ))}
       </div>
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
@@ -92,9 +92,9 @@ function Launch({ units, suppliers }: { units: Unit[]; suppliers: Supplier[] }) 
         <div><Label>Valor por litro (R$)</Label><Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" /></div>
       </div>
       {total > 0 && (
-        <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-brand/5 p-3 text-center">
+        <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
           <p className="text-xs text-ink-500">Valor total a receber</p>
-          <p className="text-2xl font-black text-sgo-brand">{formatBRL(total)}</p>
+          <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
         </div>
       )}
       <Select
@@ -103,7 +103,7 @@ function Launch({ units, suppliers }: { units: Unit[]; suppliers: Supplier[] }) 
       />
       <div><Label>Observação (opcional)</Label><Input value={obs} onChange={(e) => setObs(e.target.value)} /></div>
       {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
-      {ok && <p className="rounded-lg bg-sgo-success/10 px-3 py-2 text-sm font-medium text-sgo-success">{ok}</p>}
+      {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Save className="h-5 w-5" /> Registrar coleta</Button>
     </div>
   );
@@ -124,9 +124,9 @@ function Dashboard({ d }: { d: OilDash }) {
         <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Por unidade</h2>
         <div className="space-y-2">
           {d.byUnit.map((u) => (
-            <div key={u.key} className="rounded-lg border bg-sgo-surface p-2.5">
-              <div className="flex items-center justify-between text-sm"><span className="font-semibold text-sgo-brand">{u.name}</span><span className="font-bold">{formatBRL(u.total)}</span></div>
-              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-sgo-brand" style={{ width: `${(u.total / maxU) * 100}%` }} /></div>
+            <div key={u.key} className="rounded-lg border bg-surface p-2.5">
+              <div className="flex items-center justify-between text-sm"><span className="font-semibold text-brand">{u.name}</span><span className="font-bold">{formatBRL(u.total)}</span></div>
+              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-brand" style={{ width: `${(u.total / maxU) * 100}%` }} /></div>
               <p className="mt-1 text-xs text-ink-500">{u.liters.toLocaleString('pt-BR')} L · {perL(u.liters > 0 ? u.total / u.liters : 0)}</p>
             </div>
           ))}
@@ -136,7 +136,7 @@ function Dashboard({ d }: { d: OilDash }) {
         <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Como recebemos</h2>
         <div className="space-y-1">
           {d.byMethod.map((m) => (
-            <div key={m.key} className="flex items-center justify-between rounded-lg border bg-sgo-surface px-3 py-1.5 text-sm">
+            <div key={m.key} className="flex items-center justify-between rounded-lg border bg-surface px-3 py-1.5 text-sm">
               <span>{m.name}</span><span className="font-semibold">{formatBRL(m.total)} <span className="text-xs font-normal text-ink-500">· {m.liters.toLocaleString('pt-BR')} L</span></span>
             </div>
           ))}
@@ -144,11 +144,11 @@ function Dashboard({ d }: { d: OilDash }) {
       </div>
       <div>
         <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Tendência mensal (R$ recebido)</h2>
-        <div className="flex items-end gap-2 rounded-lg border bg-sgo-surface p-3" style={{ height: 140 }}>
+        <div className="flex items-end gap-2 rounded-lg border bg-surface p-3" style={{ height: 140 }}>
           {d.monthly.map((m) => (
             <div key={m.month} className="flex flex-1 flex-col items-center justify-end gap-1">
-              <span className="text-[10px] font-semibold text-sgo-brand">{Math.round(m.total)}</span>
-              <div className="w-full rounded-t bg-sgo-brand" style={{ height: `${Math.max(4, (m.total / maxM) * 90)}px` }} />
+              <span className="text-[10px] font-semibold text-brand">{Math.round(m.total)}</span>
+              <div className="w-full rounded-t bg-brand" style={{ height: `${Math.max(4, (m.total / maxM) * 90)}px` }} />
               <span className="text-[10px] text-ink-500">{mlabel(m.month)}</span>
             </div>
           ))}
@@ -159,7 +159,7 @@ function Dashboard({ d }: { d: OilDash }) {
 }
 
 function Cell({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border bg-sgo-surface py-3 text-center"><p className="text-base font-black text-sgo-brand">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
+  return <div className="rounded-lg border bg-surface py-3 text-center"><p className="text-base font-black text-brand">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
 }
 
 function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdmin: boolean; canEditDate?: boolean }) {
@@ -180,10 +180,10 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdm
         </div>
       )}
       {shown.map((r) => (
-        <div key={r.id} className="rounded-lg border bg-sgo-surface p-3">
+        <div key={r.id} className="rounded-lg border bg-surface p-3">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="flex items-center gap-1 font-semibold text-sgo-brand"><Droplets className="h-4 w-4 text-sgo-brand" /> {r.liters.toLocaleString('pt-BR')} L · {formatBRL(r.total)}</p>
+              <p className="flex items-center gap-1 font-semibold text-brand"><Droplets className="h-4 w-4 text-brand" /> {r.liters.toLocaleString('pt-BR')} L · {formatBRL(r.total)}</p>
               <p className="text-xs text-ink-500">{r.date} · {r.unit} · {perL(r.price)}{r.method ? ` · ${r.method}` : ''}{r.supplier !== 'Sem fornecedor' ? ` · ${r.supplier}` : ''}{r.by ? ` · ${r.by}` : ''}</p>
             </div>
           </div>

@@ -50,7 +50,7 @@ export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, supp
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {tabs.filter((t) => t.show).map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>
+          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>
         ))}
       </div>
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
@@ -83,7 +83,7 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
   { const d = new Date(); for (let i = 0; i < 12; i++) { months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); d.setMonth(d.getMonth() - 1); } }
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-sgo-surface p-3">
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3">
         <div className="min-w-[10rem] flex-1">
           <Select
             label="Unidade" size="sm" value={f.unitId} onValueChange={(v) => nav({ unitId: v })}
@@ -105,9 +105,9 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
       </div>
       {purchased && (
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border bg-sgo-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-sgo-brand">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-ink-500">comprado no filtro</p></div>
-          <div className="rounded-lg border bg-sgo-surface p-2.5 text-center"><p className="text-base font-black tabular-nums text-sgo-brand">{formatBRL(purchased.total)}</p><p className="text-xs text-ink-500">valor no filtro</p></div>
-          <div className="rounded-lg border bg-sgo-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-sgo-brand">{purchased.count}</p><p className="text-xs text-ink-500">recebimentos</p></div>
+          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-brand">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-ink-500">comprado no filtro</p></div>
+          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-base font-black tabular-nums text-brand">{formatBRL(purchased.total)}</p><p className="text-xs text-ink-500">valor no filtro</p></div>
+          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-brand">{purchased.count}</p><p className="text-xs text-ink-500">recebimentos</p></div>
         </div>
       )}
     </div>
@@ -118,17 +118,17 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
 function ContractProgress({ contracts, compact = false }: { contracts: GasContractUI[]; compact?: boolean }) {
   if (contracts.length === 0) return null;
   return (
-    <div className="rounded-lg border bg-sgo-surface p-3">
+    <div className="rounded-lg border bg-surface p-3">
       <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Contratos vigentes — % cumprido</p>
       <div className="space-y-2.5">
         {contracts.map((c) => (
           <div key={c.id}>
             <div className="flex items-center justify-between text-sm">
-              <span className="min-w-0 truncate font-medium text-sgo-brand">{c.unitName} · {c.supplierName}</span>
+              <span className="min-w-0 truncate font-medium text-brand">{c.unitName} · {c.supplierName}</span>
               <span className="shrink-0 text-xs tabular-nums"><b>{c.progressPct}%</b> · {c.usedKg.toLocaleString('pt-BR')}/{c.quantityKg.toLocaleString('pt-BR')} kg</span>
             </div>
             <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken">
-              <div className={`h-full rounded-full ${c.progressPct >= 100 ? 'bg-danger' : c.progressPct >= 80 ? 'bg-warning' : 'bg-sgo-success'}`} style={{ width: `${Math.min(100, c.progressPct)}%` }} />
+              <div className={`h-full rounded-full ${c.progressPct >= 100 ? 'bg-danger' : c.progressPct >= 80 ? 'bg-warning' : 'bg-success'}`} style={{ width: `${Math.min(100, c.progressPct)}%` }} />
             </div>
             {!compact && <p className="mt-0.5 text-xs text-ink-500">{c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {kg(c.pricePerKg)} acordado · restam {c.remainingKg.toLocaleString('pt-BR')} kg</p>}
           </div>
@@ -207,9 +207,9 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
 
       <div className="space-y-1.5">
         {contracts.map((c) => (
-          <div key={c.id} className={`rounded-lg border p-2.5 ${c.expired || !c.active ? 'opacity-70' : 'bg-sgo-surface'}`}>
+          <div key={c.id} className={`rounded-lg border p-2.5 ${c.expired || !c.active ? 'opacity-70' : 'bg-surface'}`}>
             <div className="flex items-center justify-between gap-2">
-              <p className="min-w-0 truncate text-sm font-semibold text-sgo-brand">{c.unitName} · {c.supplierName}</p>
+              <p className="min-w-0 truncate text-sm font-semibold text-brand">{c.unitName} · {c.supplierName}</p>
               <span className="shrink-0 text-xs font-bold tabular-nums">{c.progressPct}%{c.expired ? ' · vencido' : !c.active ? ' · inativo' : ''}</span>
             </div>
             <p className="text-xs text-ink-500 tabular-nums">
@@ -341,8 +341,8 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
       <div>
         <Label>Forma de recebimento</Label>
         <div className="flex gap-1">
-          <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-sgo-brand text-on-brand' : ''}`}>Granel (kg)</button>
-          <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-sgo-brand text-on-brand' : ''}`}>Botijão (P45)</button>
+          <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-brand text-on-brand' : ''}`}>Granel (kg)</button>
+          <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-brand text-on-brand' : ''}`}>Botijão (P45)</button>
         </div>
       </div>
 
@@ -353,9 +353,9 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
             <div><Label>Valor por kg (R$)</Label><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0,0000" /></div>
           </div>
           {total > 0 && (
-            <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-brand/5 p-3 text-center">
+            <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
               <p className="text-xs text-ink-500">Valor total (calculado)</p>
-              <p className="text-2xl font-black text-sgo-brand">{formatBRL(total)}</p>
+              <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
               <p className="text-xs text-ink-500">{kg(price)}</p>
             </div>
           )}
@@ -369,9 +369,9 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
           </div>
           <div><Label>Botijões vazios devolvidos (troca)</Label><Input inputMode="numeric" value={cylReturned} onChange={(e) => setCylReturned(e.target.value.replace(/\D/g, ''))} placeholder="ex: 4" /></div>
           {cKg > 0 && cTotal > 0 && (
-            <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-brand/5 p-3 text-center">
+            <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
               <p className="text-xs text-ink-500">{cc} botijão(ões) × {ck}kg = {cKg}kg · valor total {formatBRL(cTotal)}</p>
-              <p className="text-2xl font-black text-sgo-brand">{kg(cPricePerKg)}</p>
+              <p className="text-2xl font-black text-brand">{kg(cPricePerKg)}</p>
             </div>
           )}
         </>
@@ -380,7 +380,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
       <div><Label>Observação (opcional)</Label><Input value={obs} onChange={(e) => setObs(e.target.value)} /></div>
 
       {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
-      {ok && <p className="rounded-lg bg-sgo-success/10 px-3 py-2 text-sm font-medium text-sgo-success">{ok}</p>}
+      {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Save className="h-5 w-5" /> Registrar recebimento</Button>
     </div>
   );
@@ -419,13 +419,13 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
         <MonthlyBars points={d.monthly} />
       </div>
 
-      <a href="/modulos/gas/relatorio" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-sgo-brand"><TrendingUp className="h-4 w-4 text-sgo-brand" /> Relatório de variação (imprimir/PDF)</a>
+      <a href="/modulos/gas/relatorio" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><TrendingUp className="h-4 w-4 text-brand" /> Relatório de variação (imprimir/PDF)</a>
     </div>
   );
 }
 
 function Cell({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border bg-sgo-surface py-3 text-center"><p className="text-base font-black text-sgo-brand">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
+  return <div className="rounded-lg border bg-surface py-3 text-center"><p className="text-base font-black text-brand">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
 }
 
 function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
@@ -436,13 +436,13 @@ function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
       <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">{title}</h2>
       <div className="space-y-2">
         {rows.map((r) => (
-          <div key={r.key} className="rounded-lg border bg-sgo-surface p-2.5">
+          <div key={r.key} className="rounded-lg border bg-surface p-2.5">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-sgo-brand">{r.name}</span>
+              <span className="font-semibold text-brand">{r.name}</span>
               <span className="font-bold">{kg(r.avg)} <span className="text-xs font-normal text-ink-500">méd</span></span>
             </div>
-            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-sgo-brand" style={{ width: `${(r.avg / max) * 100}%` }} /></div>
-            <p className="mt-1 text-xs text-ink-500">{r.count} compra(s) · <b className="text-sgo-brand">{r.kg.toLocaleString('pt-BR')} kg</b> · último {kg(r.last)} · mín {kg(r.min)} · máx {kg(r.max)}</p>
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-brand" style={{ width: `${(r.avg / max) * 100}%` }} /></div>
+            <p className="mt-1 text-xs text-ink-500">{r.count} compra(s) · <b className="text-brand">{r.kg.toLocaleString('pt-BR')} kg</b> · último {kg(r.last)} · mín {kg(r.min)} · máx {kg(r.max)}</p>
           </div>
         ))}
       </div>
@@ -454,11 +454,11 @@ function MonthlyBars({ points }: { points: MonthPoint[] }) {
   if (points.length === 0) return <p className="text-sm text-ink-500">Sem dados.</p>;
   const max = Math.max(...points.map((p) => p.avg), 0.0001);
   return (
-    <div className="flex items-end gap-2 rounded-lg border bg-sgo-surface p-3" style={{ height: 140 }}>
+    <div className="flex items-end gap-2 rounded-lg border bg-surface p-3" style={{ height: 140 }}>
       {points.map((p) => (
         <div key={p.month} className="flex flex-1 flex-col items-center justify-end gap-1">
-          <span className="text-[10px] font-semibold text-sgo-brand">{p.avg.toFixed(2).replace('.', ',')}</span>
-          <div className="w-full rounded-t bg-sgo-brand" style={{ height: `${Math.max(4, (p.avg / max) * 90)}px` }} />
+          <span className="text-[10px] font-semibold text-brand">{p.avg.toFixed(2).replace('.', ',')}</span>
+          <div className="w-full rounded-t bg-brand" style={{ height: `${Math.max(4, (p.avg / max) * 90)}px` }} />
           <span className="text-[10px] text-ink-500">{mlabel(p.month)}</span>
         </div>
       ))}
@@ -500,7 +500,7 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
   }
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-sgo-surface p-3">
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3">
         <div className="min-w-[12rem] flex-1">
           <SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="data, quem lançou, kg, valor…" />
         </div>
@@ -523,10 +523,10 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
       {shown.map((r) => {
         const tone: StatusTone = r.variation == null ? 'neutral' : r.variation > 0 ? (r.alerted ? 'critical' : 'medium') : 'success';
         return (
-          <div key={r.id} className="rounded-lg border bg-sgo-surface p-3">
+          <div key={r.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-sgo-brand">{kg(r.price)} <span className="text-xs font-normal text-ink-500">· {r.unit}</span></p>
+                <p className="font-semibold text-brand">{kg(r.price)} <span className="text-xs font-normal text-ink-500">· {r.unit}</span></p>
                 <p className="text-xs text-ink-500">{r.date} · {r.supplier} · {r.qty.toLocaleString('pt-BR')} kg · {formatBRL(r.total)}{r.by ? ` · ${r.by}` : ''}</p>
               </div>
               {r.variation != null && (

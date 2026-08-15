@@ -169,7 +169,7 @@ export default async function ConfiguracoesPage() {
 
       <section>
         <h2 className="sgo-type-11 mb-2 text-ink-500">LGPD</h2>
-        <div className="rounded-card border border-line bg-sgo-surface p-4">
+        <div className="rounded-card border border-line bg-surface p-4">
           <dl className="space-y-1.5 text-[14px]">
             <div className="flex justify-between gap-2">
               <dt className="text-ink-500">Versão do termo</dt>

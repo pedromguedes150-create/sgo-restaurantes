@@ -15,8 +15,8 @@ const ORIGIN = { FABRICA: { label: 'Fábrica', icon: Factory }, CD: { label: 'CD
 const STATUS: Record<string, { label: string; cls: string }> = {
   NEW: { label: 'Novo', cls: 'bg-danger/15 text-danger' },
   SEPARATING: { label: 'Em separação', cls: 'bg-warning/30 text-warning' },
-  SENT: { label: 'Enviado', cls: 'bg-sgo-brand/15 text-sgo-brand' },
-  RECEIVED: { label: 'Recebido', cls: 'bg-sgo-success/15 text-sgo-success' },
+  SENT: { label: 'Enviado', cls: 'bg-brand/15 text-brand' },
+  RECEIVED: { label: 'Recebido', cls: 'bg-success/15 text-success' },
 };
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -42,7 +42,7 @@ export function ProductsClient({ units, selUnitId, isOps, products, myRequests, 
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
-          <button key={t.k} onClick={() => setTab(t.k as typeof tab)} className={tab === t.k ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.l}</button>
+          <button key={t.k} onClick={() => setTab(t.k as typeof tab)} className={tab === t.k ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.l}</button>
         ))}
       </div>
 
@@ -83,7 +83,7 @@ function NewOrder({ units, selUnitId, products, post, busy }: { units: { id: str
       )}
       <div className="relative">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar produto (ignora acento)…" className="h-11 w-full rounded-lg border-2 border-line-strong bg-sgo-surface pl-9 pr-3 text-sm" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar produto (ignora acento)…" className="h-11 w-full rounded-lg border-2 border-line-strong bg-surface pl-9 pr-3 text-sm" />
       </div>
 
       {products.length === 0 && <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">Catálogo vazio. Peça ao Admin para cadastrar/importar produtos em Configurações → Produtos.</p>}
@@ -97,14 +97,14 @@ function NewOrder({ units, selUnitId, products, post, busy }: { units: { id: str
                 const O = ORIGIN[p.origin as keyof typeof ORIGIN];
                 const qty = cart[p.id] ?? 0;
                 return (
-                  <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border bg-sgo-surface p-2">
+                  <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border bg-surface p-2">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-sgo-brand">{p.name}</p>
+                      <p className="truncate text-sm font-medium text-brand">{p.name}</p>
                       <p className="text-[11px] text-ink-500"><O.icon className="mr-0.5 inline h-3 w-3" />{O.label} · {p.measure}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
                       <button onClick={() => setQty(p.id, Math.max(0, Math.round((qty - 1) * 100) / 100))} className="rounded-md border p-1.5"><Minus className="h-3.5 w-3.5" /></button>
-                      <input inputMode="decimal" value={qty || ''} onChange={(e) => setQty(p.id, parseFloat(e.target.value.replace(',', '.')) || 0)} placeholder="0" className="h-8 w-14 rounded-md border-2 border-line-strong bg-sgo-surface text-center text-sm" />
+                      <input inputMode="decimal" value={qty || ''} onChange={(e) => setQty(p.id, parseFloat(e.target.value.replace(',', '.')) || 0)} placeholder="0" className="h-8 w-14 rounded-md border-2 border-line-strong bg-surface text-center text-sm" />
                       <button onClick={() => setQty(p.id, Math.round((qty + 1) * 100) / 100)} className="rounded-md border p-1.5"><Plus className="h-3.5 w-3.5" /></button>
                     </div>
                   </div>
@@ -117,14 +117,14 @@ function NewOrder({ units, selUnitId, products, post, busy }: { units: { id: str
 
       {/* Carrinho */}
       {totalItems > 0 && (
-        <div className="sticky bottom-20 z-20 rounded-xl border-2 border-sgo-brand/40 bg-sgo-surface/95 p-3 shadow-lg backdrop-blur md:bottom-2">
-          <p className="mb-1 text-sm font-bold text-sgo-brand">Resumo do pedido ({totalItems} itens)</p>
+        <div className="sticky bottom-20 z-20 rounded-xl border-2 border-brand/40 bg-surface/95 p-3 shadow-lg backdrop-blur md:bottom-2">
+          <p className="mb-1 text-sm font-bold text-brand">Resumo do pedido ({totalItems} itens)</p>
           {(['FABRICA', 'CD'] as const).map((o) => cartByOrigin[o].length > 0 && (
             <div key={o} className="mb-1">
-              <p className="text-xs font-semibold text-sgo-brand">{ORIGIN[o].label}: {cartByOrigin[o].map((x) => `${x.qty}× ${x.p.name}`).join(', ')}</p>
+              <p className="text-xs font-semibold text-brand">{ORIGIN[o].label}: {cartByOrigin[o].map((x) => `${x.qty}× ${x.p.name}`).join(', ')}</p>
             </div>
           ))}
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-1 h-9 w-full rounded-md border-2 border-line-strong bg-sgo-surface px-2 text-sm" />
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-1 h-9 w-full rounded-md border-2 border-line-strong bg-surface px-2 text-sm" />
           <Button onClick={submit} disabled={busy} size="lg" className="mt-2 w-full"><Send className="h-4 w-4" /> Enviar pedido (separa Fábrica/CD)</Button>
         </div>
       )}
@@ -139,9 +139,9 @@ function RequestList({ requests, onReceive, busy, showUnit }: { requests: Req[];
       {requests.map((r) => {
         const O = ORIGIN[r.origin as keyof typeof ORIGIN]; const st = STATUS[r.status] ?? STATUS.NEW;
         return (
-          <div key={r.id} className="rounded-lg border bg-sgo-surface p-3">
+          <div key={r.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-sgo-brand"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number}{showUnit && r.unitName ? ` · ${r.unitName}` : ''}</p>
+              <p className="text-sm font-bold text-brand"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number}{showUnit && r.unitName ? ` · ${r.unitName}` : ''}</p>
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.cls}`}>{st.label}</span>
             </div>
             <p className="mt-1 text-xs text-ink-500">{new Date(r.createdAt).toLocaleString('pt-BR')} · {r.createdByName}{r.note ? ` · ${r.note}` : ''}</p>
@@ -163,9 +163,9 @@ function OpsView({ requests, post, busy }: { requests: Req[]; post: (b: Record<s
       {requests.map((r) => {
         const O = ORIGIN[r.origin as keyof typeof ORIGIN]; const st = STATUS[r.status] ?? STATUS.NEW;
         return (
-          <div key={r.id} className="rounded-lg border bg-sgo-surface p-3">
+          <div key={r.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-sgo-brand"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number} · {r.unitName ?? ''}</p>
+              <p className="text-sm font-bold text-brand"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number} · {r.unitName ?? ''}</p>
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.cls}`}>{st.label}</span>
             </div>
             <p className="mt-1 text-xs text-ink-500">{new Date(r.createdAt).toLocaleString('pt-BR')} · {r.createdByName}{r.note ? ` · ${r.note}` : ''}</p>

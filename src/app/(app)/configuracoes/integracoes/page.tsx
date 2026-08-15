@@ -33,15 +33,15 @@ export default async function IntegracoesPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><Plug className="h-5 w-5 text-sgo-brand" /> APIs &amp; Integrações</h1>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><Plug className="h-5 w-5 text-brand" /> APIs &amp; Integrações</h1>
         <p className="text-sm text-ink-500">Tudo que o SGO consome e expõe. Toda nova API entra aqui. Os valores completos dos tokens ficam no <code>.env</code> do servidor.</p>
       </div>
 
       {/* 1. API do RH (consumo/pull) */}
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ArrowDownToLine className="h-4 w-4 text-sgo-brand" /> API do RH (consumo — colaboradores/financeiro)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ArrowDownToLine className="h-4 w-4 text-brand" /> API do RH (consumo — colaboradores/financeiro)</CardTitle></CardHeader>
         <CardContent className="space-y-1 text-sm">
           <Row k="Base" v={rhBase} />
           <Row k="Autenticação" v={`header x-api-key = ${mask(process.env.RH_API_KEY)}`} />
@@ -52,7 +52,7 @@ export default async function IntegracoesPage() {
 
       {/* 2. Recepção RH→SGO (exposição) */}
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ArrowDownToLine className="h-4 w-4 text-sgo-brand" /> Recepção RH→SGO (envio automático do RH)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ArrowDownToLine className="h-4 w-4 text-brand" /> Recepção RH→SGO (envio automático do RH)</CardTitle></CardHeader>
         <CardContent className="space-y-1 text-sm">
           <p className="text-xs text-ink-500">Configure estas URLs no painel do RH (Integração SGO), com <code>Authorization: Bearer &lt;token&gt;</code>:</p>
           <Row k="Admissão" v={`${baseUrl}/api/integracoes/rh/inclusao`} mono />
@@ -66,7 +66,7 @@ export default async function IntegracoesPage() {
 
       {/* 3. Webhook de férias SGO→RH (saída) */}
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ArrowUpFromLine className="h-4 w-4 text-sgo-brand" /> Webhook de férias SGO→RH (saída)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ArrowUpFromLine className="h-4 w-4 text-brand" /> Webhook de férias SGO→RH (saída)</CardTitle></CardHeader>
         <CardContent className="space-y-1 text-sm">
           <Row k="Destino" v={webhookUrl} mono />
           <Row k="Token (SGO_WEBHOOK_TOKEN)" v={mask(webhookToken)} ok={feriasWebhookConfigured()} />
@@ -83,7 +83,7 @@ export default async function IntegracoesPage() {
           {events.map((e) => (
             <div key={e.id} className="flex items-start justify-between gap-2 rounded-md bg-canvas p-2 text-xs">
               <div className="min-w-0">
-                <p className="font-semibold text-sgo-brand">{e.event}</p>
+                <p className="font-semibold text-brand">{e.event}</p>
                 {e.message && <p className="truncate text-ink-500">{e.message}</p>}
                 <p className="text-ink-500">{e.createdAt.toLocaleString('pt-BR')}</p>
               </div>
@@ -101,7 +101,7 @@ function Row({ k, v, ok, mono }: { k: string; v: string; ok?: boolean; mono?: bo
     <div className="flex items-start justify-between gap-3">
       <span className="shrink-0 text-ink-500">{k}</span>
       <span className={`flex min-w-0 items-center gap-1 text-right font-medium ${mono ? 'break-all font-mono text-xs' : ''}`}>
-        {ok === true && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-sgo-success" />}
+        {ok === true && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />}
         {ok === false && <XCircle className="h-3.5 w-3.5 shrink-0 text-danger" />}
         {v}
       </span>

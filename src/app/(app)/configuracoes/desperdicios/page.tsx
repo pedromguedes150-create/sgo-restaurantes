@@ -14,8 +14,8 @@ export default async function DesperdiciosConfigPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-sgo-brand">Desperdícios — categorias</h1>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <h1 className="text-xl font-bold text-brand">Desperdícios — categorias</h1>
       <Card><CardContent className="pt-4"><WasteCategoriesAdmin categories={categories.map((c) => ({ ...c, measure: (c.measure === 'un' ? 'un' : 'kg') as 'kg' | 'un' }))} /></CardContent></Card>
     </div>
   );

@@ -27,7 +27,7 @@ export function UnitTasksSection({ unitName, summary, showSummary, defaultOpen, 
   const pct = (n: number) => (total ? (n / total) * 100 : 0);
 
   return (
-    <section className="rounded-card border border-line bg-sgo-surface">
+    <section className="rounded-card border border-line bg-surface">
       <button
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
@@ -38,13 +38,13 @@ export function UnitTasksSection({ unitName, summary, showSummary, defaultOpen, 
           {showSummary && (
             <>
               <span className="flex items-baseline justify-between gap-2">
-                <span className={cn('text-[15px] font-semibold', todo > 0 ? 'text-ink-900' : 'text-sgo-success')}>
+                <span className={cn('text-[15px] font-semibold', todo > 0 ? 'text-ink-900' : 'text-success')}>
                   {todo > 0 ? `${todo} a fazer` : 'Tudo realizado'}
                 </span>
                 <span className="text-[13px] tabular-nums text-ink-500">{done + late} de {total} feitos</span>
               </span>
               <span className="flex h-1 w-full overflow-hidden rounded-pill bg-sunken">
-                <span className="h-full bg-sgo-success" style={{ width: `${pct(done)}%` }} />
+                <span className="h-full bg-success" style={{ width: `${pct(done)}%` }} />
                 <span className="h-full bg-warning" style={{ width: `${pct(late)}%` }} />
                 <span className="h-full bg-danger" style={{ width: `${pct(missed)}%` }} />
               </span>

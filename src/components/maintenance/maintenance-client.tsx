@@ -48,12 +48,12 @@ export function MaintenanceClient({ view, isAdmin, units, equipment, suppliers, 
   const router = useRouter();
   const [tab, setTab] = useState<'chamados' | 'preventiva'>(view);
   const tabClass = (t: string) => t === tab
-    ? 'inline-flex items-center gap-1 rounded-full bg-sgo-brand px-3.5 py-1.5 text-sm font-semibold text-on-brand'
+    ? 'inline-flex items-center gap-1 rounded-full bg-brand px-3.5 py-1.5 text-sm font-semibold text-on-brand'
     : 'inline-flex items-center gap-1 rounded-full border px-3.5 py-1.5 text-sm font-medium';
 
   return (
     <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><Wrench className="h-5 w-5 text-sgo-brand" /> Manutenção</h1>
+      <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><Wrench className="h-5 w-5 text-brand" /> Manutenção</h1>
       <div className="flex flex-wrap gap-2">
         <button className={tabClass('chamados')} onClick={() => setTab('chamados')}><Wrench className="h-4 w-4" /> Chamados</button>
         <button className={tabClass('preventiva')} onClick={() => setTab('preventiva')}><CalendarClock className="h-4 w-4" /> Preventiva</button>
@@ -73,12 +73,12 @@ function TicketsTab({ isAdmin, units, equipment, suppliers, summary, tickets, on
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-sgo-brand">{summary.open}</p><p className="text-xs text-ink-500">abertos</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-sgo-brand">{summary.inProgress}</p><p className="text-xs text-ink-500">em andamento</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{summary.open}</p><p className="text-xs text-ink-500">abertos</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{summary.inProgress}</p><p className="text-xs text-ink-500">em andamento</p></CardContent></Card>
         <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.overdue}</p><p className="text-xs text-ink-500">atrasados</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-sgo-success">{summary.doneMonth}</p><p className="text-xs text-ink-500">feitos no mês</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-success">{summary.doneMonth}</p><p className="text-xs text-ink-500">feitos no mês</p></CardContent></Card>
       </div>
-      {summary.costMonth > 0 && <p className="text-sm text-ink-500">Custo de manutenção no mês: <b className="text-sgo-brand">{formatBRL(summary.costMonth)}</b></p>}
+      {summary.costMonth > 0 && <p className="text-sm text-ink-500">Custo de manutenção no mês: <b className="text-brand">{formatBRL(summary.costMonth)}</b></p>}
 
       <NewTicket units={units} equipment={equipment} suppliers={suppliers} onDone={onDone} />
 
@@ -168,14 +168,14 @@ function TicketCard({ t, isAdmin, suppliers, onDone }: { t: TicketDTO; isAdmin: 
   }
 
   return (
-    <div className="rounded-lg border bg-sgo-surface p-3">
+    <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold text-sgo-brand">#{t.number} · {t.title}</p>
+          <p className="font-semibold text-brand">#{t.number} · {t.title}</p>
           <p className="text-xs text-ink-500">{t.unit}{t.equipmentName ? ` · ${t.equipmentName}` : ''}{t.supplierName ? ` · ${t.supplierName}` : ''}</p>
           {t.description && <p className="mt-1 text-sm">{t.description}</p>}
           {t.deadline && <p className={`mt-1 text-xs ${isOverdue(t.deadline) && t.status !== 'DONE' && t.status !== 'CANCELED' ? 'font-semibold text-danger' : 'text-ink-500'}`}>Prazo: {fmtDate(t.deadline)}{isOverdue(t.deadline) && t.status !== 'DONE' && t.status !== 'CANCELED' ? ' (atrasado)' : ''}</p>}
-          {t.status === 'DONE' && <p className="mt-1 text-xs text-sgo-success">Concluído {fmtDate(t.doneAt)}{t.doneByName ? ` por ${t.doneByName}` : ''}{t.cost != null ? ` · ${formatBRL(t.cost)}` : ''}{t.resolutionNote ? ` · ${t.resolutionNote}` : ''}</p>}
+          {t.status === 'DONE' && <p className="mt-1 text-xs text-success">Concluído {fmtDate(t.doneAt)}{t.doneByName ? ` por ${t.doneByName}` : ''}{t.cost != null ? ` · ${formatBRL(t.cost)}` : ''}{t.resolutionNote ? ` · ${t.resolutionNote}` : ''}</p>}
         </div>
         <StatusBadge tone={meta.tone}>{meta.label}</StatusBadge>
       </div>
@@ -298,10 +298,10 @@ function PlanCard({ p, isAdmin, onDone }: { p: PlanDTO; isAdmin: boolean; onDone
   }
 
   return (
-    <div className={`rounded-lg border bg-sgo-surface p-3 ${!p.active ? 'opacity-60' : ''}`}>
+    <div className={`rounded-lg border bg-surface p-3 ${!p.active ? 'opacity-60' : ''}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold text-sgo-brand">{p.title}</p>
+          <p className="font-semibold text-brand">{p.title}</p>
           <p className="text-xs text-ink-500">{p.unit}{p.equipmentName ? ` · ${p.equipmentName}` : ''} · a cada {p.frequencyDays} dias</p>
           <p className={`mt-1 text-xs ${due && p.active ? 'font-semibold text-danger' : 'text-ink-500'}`}>Próxima: {fmtDate(p.nextDueAt)}{due && p.active ? ' (vencida)' : ''}{p.lastDoneAt ? ` · última: ${fmtDate(p.lastDoneAt)}` : ''}</p>
           {p.logs.length > 0 && <p className="mt-1 text-xs text-ink-500">Histórico: {p.logs.map((l) => fmtDate(l.doneAt)).join(', ')}</p>}

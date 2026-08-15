@@ -61,12 +61,12 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
   return (
     <div className="space-y-4">
       <div className="print:hidden">
-        <Link href="/modulos/pagamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Pagamentos</Link>
+        <Link href="/modulos/pagamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pagamentos</Link>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-sgo-brand">Consolidação de Freelancers — {label}</h1>
+        <h1 className="text-xl font-bold text-brand">Consolidação de Freelancers — {label}</h1>
         <div className="flex gap-2 print:hidden">
-          <a href={exportHref} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-sgo-brand"><Download className="h-4 w-4" /> Exportar (Excel)</a>
+          <a href={exportHref} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><Download className="h-4 w-4" /> Exportar (Excel)</a>
           <PrintButton />
         </div>
       </div>
@@ -76,7 +76,7 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
       <div className="flex flex-wrap items-end gap-3 print:hidden">
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500">Mês</p>
-          <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" className="h-10 w-56 rounded-lg border-2 border-line-strong bg-sgo-surface px-3 text-sm font-medium" />
+          <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" className="h-10 w-56 rounded-lg border-2 border-line-strong bg-surface px-3 text-sm font-medium" />
         </div>
         <form method="get" className="flex items-end gap-1.5">
           <div>
@@ -84,13 +84,13 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
             <FormDatePicker name="semana" aria-label="Início da semana" defaultValue={weekFrom ?? ''} className="w-44" />
             {selectedUnit && <input type="hidden" name="unit" value={selectedUnit} />}
           </div>
-          <button type="submit" className="h-10 rounded-lg bg-sgo-brand px-3 text-sm font-semibold text-on-brand">Ver semana</button>
+          <button type="submit" className="h-10 rounded-lg bg-brand px-3 text-sm font-semibold text-on-brand">Ver semana</button>
           {weekFrom && <Link href={`/modulos/pagamentos/relatorio-freelancers?month=${ym}${selectedUnit ? `&unit=${selectedUnit}` : ''}`} className="h-10 rounded-lg border px-3 py-2 text-sm font-semibold">Voltar ao mês</Link>}
         </form>
         {units.length > 1 && (
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500">Unidade</p>
-            <UnitSelectNav units={[{ id: '', name: 'Todas as unidades' }, ...units]} selected={selectedUnit ?? ''} paramName="unit" className="h-10 w-56 rounded-lg border-2 border-line-strong bg-sgo-surface px-3 text-sm font-medium" />
+            <UnitSelectNav units={[{ id: '', name: 'Todas as unidades' }, ...units]} selected={selectedUnit ?? ''} paramName="unit" className="h-10 w-56 rounded-lg border-2 border-line-strong bg-surface px-3 text-sm font-medium" />
           </div>
         )}
       </div>
@@ -99,7 +99,7 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
       <Card>
         <CardContent className="flex items-center justify-between py-3">
           <span className="text-sm text-ink-500">{data.grandCount} pagamento(s) · {data.groups.length} freelancer(s)</span>
-          <span className="text-lg font-black text-sgo-brand">{formatBRL(data.grandTotal)}</span>
+          <span className="text-lg font-black text-brand">{formatBRL(data.grandTotal)}</span>
         </CardContent>
       </Card>
 
@@ -110,11 +110,11 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
           <CardContent className="space-y-1.5 pt-4">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="font-semibold text-sgo-brand">{g.name}</p>
+                <p className="font-semibold text-brand">{g.name}</p>
                 <p className="text-xs text-ink-500">PIX: {g.pixKey || <span className="text-danger">não cadastrada</span>}</p>
               </div>
               <span className="text-right">
-                <span className="block font-black text-sgo-brand">{formatBRL(g.total)}</span>
+                <span className="block font-black text-brand">{formatBRL(g.total)}</span>
                 <span className="text-xs text-ink-500">{g.count} pagto(s)</span>
               </span>
             </div>

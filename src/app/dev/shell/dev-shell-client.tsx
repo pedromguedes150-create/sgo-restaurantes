@@ -10,12 +10,12 @@ import { BottomNav } from '@/components/layout/bottom-nav';
 function Toolbar() {
   const { collapsed, toggle } = useSidebarState();
   return (
-    <div className="flex items-center gap-3 border-b border-line bg-sgo-surface px-4 py-2">
+    <div className="flex items-center gap-3 border-b border-line bg-surface px-4 py-2">
       <span className="sgo-type-13 font-semibold text-ink-900">Harness do shell</span>
       <button
         type="button"
         onClick={toggle}
-        className="h-8 rounded-control border border-line-strong bg-sgo-surface px-3 text-[13px] font-medium text-ink-700 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus"
+        className="h-8 rounded-control border border-line-strong bg-surface px-3 text-[13px] font-medium text-ink-700 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus"
       >
         {collapsed ? 'Expandir' : 'Recolher'} sidebar
       </button>
@@ -53,7 +53,7 @@ export function DevShellClient() {
               </p>
               <div className="mt-6 space-y-3">
                 {Array.from({ length: 40 }).map((_, i) => (
-                  <div key={i} className="rounded-card border border-line bg-sgo-surface p-4 text-[14px] text-ink-700">
+                  <div key={i} className="rounded-card border border-line bg-surface p-4 text-[14px] text-ink-700">
                     Linha de conteúdo {i + 1}
                   </div>
                 ))}

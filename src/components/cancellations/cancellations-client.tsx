@@ -64,12 +64,12 @@ export function CancellationsClient({
           Pendentes de justificativa ({pending.length})
         </h2>
         {pending.length === 0 && <p className="text-sm text-ink-500">Nenhuma pendência. 🟢</p>}
-        {msg && <p className={msg.t === 'ok' ? 'text-sm text-sgo-success' : 'text-sm text-danger'}>{msg.m}</p>}
+        {msg && <p className={msg.t === 'ok' ? 'text-sm text-success' : 'text-sm text-danger'}>{msg.m}</p>}
 
         {pending.map((c) => (
-          <div key={c.id} className="rounded-lg border bg-sgo-surface p-3">
+          <div key={c.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-sgo-brand">Cupom {c.coupon}</p>
+              <p className="font-semibold text-brand">Cupom {c.coupon}</p>
               <span className="font-bold text-danger">{formatBRL(c.value)}</span>
             </div>
             <p className="text-xs text-ink-500">

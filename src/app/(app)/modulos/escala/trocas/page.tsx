@@ -22,9 +22,9 @@ export default async function TrocasPage({ searchParams }: { searchParams: { uni
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/escala" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Escala</Link>
+      <Link href="/modulos/escala" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Escala</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><ArrowRightLeft className="h-5 w-5 text-sgo-brand" /> Trocas de escala (RH)</h1>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ArrowRightLeft className="h-5 w-5 text-brand" /> Trocas de escala (RH)</h1>
         <p className="text-sm text-ink-500">Registre as trocas para informar o RH — os Admins são avisados a cada registro. (A troca em si você lança na Escala, aba Realizado.)</p>
       </div>
       <Card>

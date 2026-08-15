@@ -49,9 +49,9 @@ export function SupervisorChecklistsAdmin({ checklists }: { checklists: SupCheck
       <div className="space-y-2">
         {checklists.length === 0 && <p className="text-sm text-ink-500">Nenhum checklist criado. Eles são usados pelo supervisor na visita às unidades.</p>}
         {checklists.map((c) => (
-          <div key={c.id} className="rounded-lg border bg-sgo-surface p-3">
+          <div key={c.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="font-semibold text-sgo-brand">{c.name}</p>
+              <p className="font-semibold text-brand">{c.name}</p>
               <span className="flex items-center gap-1.5">
                 <StatusBadge tone={c.active ? 'success' : 'neutral'}>{c.active ? 'Ativo' : 'Inativo'}</StatusBadge>
                 <Button size="sm" variant="ghost" onClick={() => { setCreating(false); setEditing(c); }} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>

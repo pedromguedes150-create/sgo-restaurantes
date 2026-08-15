@@ -81,19 +81,19 @@ export function GasImportModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-3 print:hidden" onClick={onClose}>
-      <div className="my-4 w-full max-w-3xl rounded-2xl border bg-sgo-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="my-4 w-full max-w-3xl rounded-2xl border bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-sgo-brand"><FileSpreadsheet className="h-5 w-5 text-sgo-brand" /> Importar notas de gás em lote (XLSX)</h2>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-brand"><FileSpreadsheet className="h-5 w-5 text-brand" /> Importar notas de gás em lote (XLSX)</h2>
           <button onClick={onClose} aria-label="Fechar" className="rounded-md p-1 text-ink-500 hover:bg-sunken"><X className="h-5 w-5" /></button>
         </div>
 
         {(phase === 'idle' || phase === 'parsing') && (
           <div className="space-y-3">
             <p className="text-sm text-ink-500">Envie o arquivo <strong>.xlsx</strong> no layout do modelo. Nada é gravado antes da sua confirmação na prévia.</p>
-            <a href="/Modelo_Importacao_Notas_Gas_SGO.xlsx" download className="inline-flex items-center gap-1.5 text-sm font-semibold text-sgo-brand hover:underline"><Download className="h-4 w-4" /> Baixar modelo</a>
-            <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed p-6 text-center hover:border-sgo-brand">
-              {phase === 'parsing' ? <Loader2 className="h-6 w-6 animate-spin text-sgo-brand" /> : <Upload className="h-6 w-6 text-sgo-brand" />}
-              <span className="text-sm font-semibold text-sgo-brand">{phase === 'parsing' ? `Lendo ${fileName}…` : 'Clique para escolher o arquivo .xlsx'}</span>
+            <a href="/Modelo_Importacao_Notas_Gas_SGO.xlsx" download className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"><Download className="h-4 w-4" /> Baixar modelo</a>
+            <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed p-6 text-center hover:border-brand">
+              {phase === 'parsing' ? <Loader2 className="h-6 w-6 animate-spin text-brand" /> : <Upload className="h-6 w-6 text-brand" />}
+              <span className="text-sm font-semibold text-brand">{phase === 'parsing' ? `Lendo ${fileName}…` : 'Clique para escolher o arquivo .xlsx'}</span>
               <input type="file" accept=".xlsx" className="hidden" disabled={phase === 'parsing'} onChange={(e) => { const f = e.target.files?.[0]; if (f) void onFile(f); e.currentTarget.value = ''; }} />
             </label>
             {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
@@ -110,7 +110,7 @@ export function GasImportModal({ onClose }: { onClose: () => void }) {
             </div>
 
             {phase === 'done' && committed && (
-              <p className="rounded-lg bg-sgo-success/10 px-3 py-2 text-sm font-semibold text-sgo-success">
+              <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-semibold text-success">
                 <CheckCircle2 className="mr-1 inline h-4 w-4" /> {committed.imported} nota(s) importada(s). {committed.duplicadas} ignorada(s) (duplicadas), {committed.erros} com erro.
               </p>
             )}

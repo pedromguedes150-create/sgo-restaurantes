@@ -62,18 +62,18 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
         }
         actions={
           onlyOverdue ? (
-            <Link href={withUnit('/tarefas')} className="text-[14px] font-semibold text-sgo-brand hover:underline">Ver todas</Link>
+            <Link href={withUnit('/tarefas')} className="text-[14px] font-semibold text-brand hover:underline">Ver todas</Link>
           ) : (
             <span className="flex gap-4">
-              <Link href={withUnit('/tarefas/correcoes')} className="text-[14px] font-semibold text-sgo-brand hover:underline">Correções do dia</Link>
-              <Link href={withUnit('/tarefas/historico')} className="text-[14px] font-semibold text-sgo-brand hover:underline">Histórico</Link>
+              <Link href={withUnit('/tarefas/correcoes')} className="text-[14px] font-semibold text-brand hover:underline">Correções do dia</Link>
+              <Link href={withUnit('/tarefas/historico')} className="text-[14px] font-semibold text-brand hover:underline">Histórico</Link>
             </span>
           )
         }
       />
 
       {filteredNames.length > 0 && units.length > 1 && (
-        <Link href={onlyOverdue ? '/tarefas?filter=atrasadas' : '/tarefas'} className="inline-block text-[13px] font-semibold text-sgo-brand hover:underline">
+        <Link href={onlyOverdue ? '/tarefas?filter=atrasadas' : '/tarefas'} className="inline-block text-[13px] font-semibold text-brand hover:underline">
           Ver todas as unidades
         </Link>
       )}
@@ -87,7 +87,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
           tone="info"
           title={`Você está de ${leave.kind === 'FERIAS' ? 'férias' : 'folga'} hoje`}
           description="Seus checklists não aparecem hoje. Bom descanso!"
-          action={<Link href="/minha-area" className="text-[13px] font-semibold text-sgo-brand hover:underline">Gerenciar folgas</Link>}
+          action={<Link href="/minha-area" className="text-[13px] font-semibold text-brand hover:underline">Gerenciar folgas</Link>}
         />
       )}
 

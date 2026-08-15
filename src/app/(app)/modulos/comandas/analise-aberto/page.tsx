@@ -25,17 +25,17 @@ export default async function AnaliseAbertoPage({ searchParams }: { searchParams
   return (
     <div className="space-y-4">
       <div className="print:hidden">
-        <Link href="/modulos/comandas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Comandas</Link>
+        <Link href="/modulos/comandas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Comandas</Link>
       </div>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><ShieldAlert className="h-5 w-5 text-sgo-brand" /> Análise de comandas em aberto</h1>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ShieldAlert className="h-5 w-5 text-brand" /> Análise de comandas em aberto</h1>
         <p className="text-sm text-ink-500">Suba o relatório do Teknisa; o SGO destaca comandas <b>abertas com valor e data anterior ao corte</b> (possível fraude das 2 comandas) para o monitoramento buscar as câmeras.</p>
       </div>
 
       {units.length > 1 && (
         <div className="flex flex-wrap gap-2 print:hidden">
           {units.map((u) => (
-            <Link key={u.id} href={`/modulos/comandas/analise-aberto?unit=${u.id}`} className={u.id === selUnit.id ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</Link>
+            <Link key={u.id} href={`/modulos/comandas/analise-aberto?unit=${u.id}`} className={u.id === selUnit.id ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</Link>
           ))}
         </div>
       )}

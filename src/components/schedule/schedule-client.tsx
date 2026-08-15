@@ -27,12 +27,12 @@ interface Pattern { collaboratorId: string; scheduleType: ScheduleType; anchorDa
  * a usar `info`, que é o token para o que é informativo e não é alerta.
  */
 const STATUS: Record<DayStatus, { code: string; cls: string }> = {
-  WORK:         { code: 'T',  cls: 'bg-sgo-brand text-on-brand' },
+  WORK:         { code: 'T',  cls: 'bg-brand text-on-brand' },
   OFF:          { code: 'F',  cls: 'border border-line-strong text-ink-500' },
   FALTA_INJUST: { code: 'FI', cls: 'bg-danger-bg text-danger border border-danger/40' },
   FALTA_JUST:   { code: 'FJ', cls: 'bg-warning-bg text-warning border border-warning/50' },
   ATESTADO:     { code: 'A',  cls: 'bg-info-bg text-info border border-info/40' },
-  FERIAS:       { code: 'FE', cls: 'bg-sgo-success-bg text-sgo-success border border-sgo-success/40' },
+  FERIAS:       { code: 'FE', cls: 'bg-success-bg text-success border border-success/40' },
   ATRASO:       { code: 'AT', cls: 'bg-warning-bg text-warning border border-warning/40' },
 };
 const STATUS_ORDER: DayStatus[] = ['WORK', 'ATRASO', 'OFF', 'FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
@@ -102,7 +102,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
       {/* Modo */}
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         {(['planejado', 'realizado', 'comparacao'] as const).map((m) => (
-          <button key={m} onClick={() => setMode(m)} className={cn('rounded-full px-3 py-1.5 text-sm font-semibold', mode === m ? 'bg-sgo-brand text-on-brand' : 'border')}>
+          <button key={m} onClick={() => setMode(m)} className={cn('rounded-full px-3 py-1.5 text-sm font-semibold', mode === m ? 'bg-brand text-on-brand' : 'border')}>
             {m === 'planejado' ? 'Planejado' : m === 'realizado' ? 'Realizado' : 'Comparação'}
           </button>
         ))}
@@ -138,8 +138,8 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
         <div className="overflow-x-auto rounded-lg border">
           <table className="min-w-full border-collapse text-center text-xs">
             <thead>
-              <tr className="bg-sgo-brand text-on-brand">
-                <th className="sticky left-0 z-10 min-w-[184px] bg-sgo-brand px-2 py-2 text-left">Colaborador</th>
+              <tr className="bg-brand text-on-brand">
+                <th className="sticky left-0 z-10 min-w-[184px] bg-brand px-2 py-2 text-left">Colaborador</th>
                 {Array.from({ length: grid.daysCount }, (_, i) => i + 1).map((d) => (
                   <th key={d} className={cn('px-1 py-1 font-medium', isWeekend(d) && 'bg-white/10')}>
                     <div className="text-[10px] opacity-80">{wdOf(d)}</div>
@@ -159,8 +159,8 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                       </tr>
                     )}
                     <tr className="border-t">
-                      <td className="sticky left-0 z-10 min-w-[184px] bg-sgo-surface px-2 py-1.5 text-left">
-                        <div className="font-semibold text-sgo-brand">{row.name}</div>
+                      <td className="sticky left-0 z-10 min-w-[184px] bg-surface px-2 py-1.5 text-left">
+                        <div className="font-semibold text-brand">{row.name}</div>
                         <div className="text-[10px] text-ink-500">{row.jobTitle ?? ''}{row.shiftLabel ? ` · ${row.shiftLabel}` : ''}</div>
                       </td>
                       {row.days.map((cell, i) => {
@@ -201,7 +201,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                             <button
                               disabled={mode !== 'realizado'}
                               onClick={() => mode === 'realizado' && setEdit(key)}
-                              className={cn('mx-auto flex h-6 w-7 items-center justify-center rounded text-[11px] font-bold', st ? STATUS[st].cls : 'border border-dashed border-line-strong text-ink-500', mode === 'realizado' && 'cursor-pointer hover:ring-2 hover:ring-sgo-brand')}
+                              className={cn('mx-auto flex h-6 w-7 items-center justify-center rounded text-[11px] font-bold', st ? STATUS[st].cls : 'border border-dashed border-line-strong text-ink-500', mode === 'realizado' && 'cursor-pointer hover:ring-2 hover:ring-brand')}
                             >
                               {st ? STATUS[st].code : ''}
                             </button>
@@ -248,8 +248,8 @@ function AbsencePanel({ unitId, collaborators, onDone }: { unitId: string; colla
   }
 
   return (
-    <div className="rounded-lg border bg-sgo-surface p-3 print:hidden">
-      <h3 className="mb-2 text-sm font-bold text-sgo-brand">Registrar ausência</h3>
+    <div className="rounded-lg border bg-surface p-3 print:hidden">
+      <h3 className="mb-2 text-sm font-bold text-brand">Registrar ausência</h3>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
         <div className="col-span-2 md:col-span-1">
           <Select label="Colaborador" size="sm" placeholder="Selecione…" value={collaboratorId} onValueChange={setCollaboratorId} options={collaborators.map((c) => ({ value: c.id, label: c.name }))} />
@@ -299,8 +299,8 @@ function PatternPanel({ unitId, collaborators, turnos, patterns, post, busy }: {
   }
 
   return (
-    <div className="rounded-lg border bg-sgo-surface p-3 print:hidden">
-      <h3 className="mb-2 text-sm font-bold text-sgo-brand">Cadastrar / editar escala do colaborador</h3>
+    <div className="rounded-lg border bg-surface p-3 print:hidden">
+      <h3 className="mb-2 text-sm font-bold text-brand">Cadastrar / editar escala do colaborador</h3>
       <p className="mb-2 text-xs text-ink-500">O padrão gera o <b>Planejado</b>. 12x36 usa dias pares/ímpares do mês; 6x1/5x2/personalizada usam a data de início do ciclo.</p>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
         <div className="col-span-2 md:col-span-1">

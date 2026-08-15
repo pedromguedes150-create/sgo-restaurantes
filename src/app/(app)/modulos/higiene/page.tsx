@@ -26,7 +26,7 @@ export default async function HigienePage({ searchParams }: { searchParams: { un
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><Sparkles className="h-5 w-5 text-sgo-brand" /> Higiene dos banheiros</h1>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><Sparkles className="h-5 w-5 text-brand" /> Higiene dos banheiros</h1>
         <p className="text-sm text-ink-500">Solicitações do QR dos banheiros, com aviso ao gerente e análise. (WhatsApp em fase futura.)</p>
       </div>
 
@@ -50,7 +50,7 @@ export default async function HigienePage({ searchParams }: { searchParams: { un
               return (
                 <div key={l.name}>
                   <div className="mb-0.5 flex justify-between text-xs"><span>{l.name}</span><span className="font-semibold">{l.count}</span></div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-sgo-brand" style={{ width: `${(l.count / max) * 100}%` }} /></div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-brand" style={{ width: `${(l.count / max) * 100}%` }} /></div>
                 </div>
               );
             })}
@@ -71,7 +71,7 @@ export default async function HigienePage({ searchParams }: { searchParams: { un
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: 'critical' | 'ok' }) {
   return (
     <Card><CardContent className="py-3 text-center">
-      <p className={`text-2xl font-black ${tone === 'critical' ? 'text-danger' : 'text-sgo-brand'}`}>{value}</p>
+      <p className={`text-2xl font-black ${tone === 'critical' ? 'text-danger' : 'text-brand'}`}>{value}</p>
       <p className="text-xs text-ink-500">{label}</p>
     </CardContent></Card>
   );

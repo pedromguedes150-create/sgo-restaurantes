@@ -20,13 +20,13 @@ export default async function ConsolidadoPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 print:max-w-none">
       <div className="flex items-center justify-between gap-2 print:hidden">
-        <Link href="/modulos/comandas/analise-aberto" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+        <Link href="/modulos/comandas/analise-aberto" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
         <PrintButton label="Imprimir / PDF" />
       </div>
 
       <div className="rounded-lg border p-4 print:border-0 print:p-0">
         <div className="mb-3 border-b pb-2">
-          <h1 className="text-lg font-black text-sgo-brand">Comandas a travar — Consolidado da rede</h1>
+          <h1 className="text-lg font-black text-brand">Comandas a travar — Consolidado da rede</h1>
           <p className="text-sm text-ink-500">Para o Administrativo · gerado {new Date().toLocaleString('pt-BR')} · baseado na análise mais recente de cada unidade</p>
           <p className="text-sm"><b>{totalCmds}</b> comanda(s) a travar em <b>{rows.length}</b> unidade(s) · valor total <b>{formatBRL(totalValue)}</b></p>
         </div>
@@ -36,7 +36,7 @@ export default async function ConsolidadoPage() {
         <div className="space-y-4">
           {rows.map((r) => (
             <div key={r.unitId} className="break-inside-avoid">
-              <p className="text-sm font-bold text-sgo-brand">{r.unitName} <span className="font-normal text-ink-500">· corte {fmt(r.cutDate)} · {r.suspects.length} comanda(s) · {formatBRL(r.suspectValue)}</span></p>
+              <p className="text-sm font-bold text-brand">{r.unitName} <span className="font-normal text-ink-500">· corte {fmt(r.cutDate)} · {r.suspects.length} comanda(s) · {formatBRL(r.suspectValue)}</span></p>
               <table className="mt-1 w-full border-collapse text-xs">
                 <thead><tr className="border-b text-left text-ink-500"><th className="p-1">Comanda (travar)</th><th className="p-1">Aberta em</th><th className="p-1 text-center">Dias</th><th className="p-1 text-right">Valor</th></tr></thead>
                 <tbody>

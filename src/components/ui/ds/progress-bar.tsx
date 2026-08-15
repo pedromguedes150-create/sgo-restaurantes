@@ -8,8 +8,8 @@ import type { Tone } from './status-badge';
  * sozinha não comunica (DoD: nada só por cor).
  */
 const fills: Record<Exclude<Tone, 'neutral' | 'info'>, string> = {
-  brand: 'bg-sgo-brand',
-  success: 'bg-sgo-success',
+  brand: 'bg-brand',
+  success: 'bg-success',
   warning: 'bg-warning',
   danger: 'bg-danger',
 };

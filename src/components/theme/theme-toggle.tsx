@@ -17,7 +17,7 @@ export function ThemeToggle() {
     <div
       role="radiogroup"
       aria-label="Tema"
-      className="inline-flex items-center gap-1 rounded-pill border border-line bg-sgo-surface p-1"
+      className="inline-flex items-center gap-1 rounded-pill border border-line bg-surface p-1"
     >
       {OPTIONS.map(({ value, label, Icon }) => {
         const active = theme === value;
@@ -31,7 +31,7 @@ export function ThemeToggle() {
             onClick={() => setTheme(value)}
             className={`inline-flex h-8 items-center gap-1 rounded-pill px-2 text-[13px] font-medium leading-none outline-none transition-colors duration-sgo-2 ease-sgo-std focus-visible:shadow-sgo-focus ${
               active
-                ? 'bg-sgo-brand text-on-brand'
+                ? 'bg-brand text-on-brand'
                 : 'text-ink-500 hover:text-ink-900'
             }`}
           >

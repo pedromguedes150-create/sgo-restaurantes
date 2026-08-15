@@ -78,7 +78,7 @@ export function ManagerAreaClient({ tasks, notes, leaves, schedule = null, canSe
 }
 
 function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
-  return <button onClick={onClick} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${active ? 'bg-sgo-brand text-on-brand' : 'border'}`}>{icon}{children}</button>;
+  return <button onClick={onClick} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${active ? 'bg-brand text-on-brand' : 'border'}`}>{icon}{children}</button>;
 }
 
 type Post = (b: Record<string, unknown>) => Promise<boolean>;
@@ -125,7 +125,7 @@ function TaskRow({ t, busy, post }: { t: MTask; busy: boolean; post: Post }) {
 
   if (editing) {
     return (
-      <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-surface p-2.5">
+      <div className="rounded-lg border-2 border-brand/40 bg-surface p-2.5">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} className="mb-2 text-sm" />
         <DueAtPicker date={date} time={time} onDate={setDate} onTime={setTime} />
         <div className="mt-2 flex gap-1.5">
@@ -136,15 +136,15 @@ function TaskRow({ t, busy, post }: { t: MTask; busy: boolean; post: Post }) {
     );
   }
   return (
-    <div className={`flex items-center gap-2 rounded-lg border bg-sgo-surface p-2.5 ${t.done ? 'opacity-60' : ''}`}>
+    <div className={`flex items-center gap-2 rounded-lg border bg-surface p-2.5 ${t.done ? 'opacity-60' : ''}`}>
       <button onClick={() => post({ entity: 'task', action: 'toggle', id: t.id, done: !t.done })} disabled={busy} aria-label="Concluir">
-        {t.done ? <CheckSquare className="h-5 w-5 text-sgo-success" /> : <Square className="h-5 w-5 text-ink-500" />}
+        {t.done ? <CheckSquare className="h-5 w-5 text-success" /> : <Square className="h-5 w-5 text-ink-500" />}
       </button>
       <span className="min-w-0 flex-1">
-        <span className={`block text-sm font-medium ${t.done ? 'line-through' : 'text-sgo-brand'}`}>{t.title}</span>
+        <span className={`block text-sm font-medium ${t.done ? 'line-through' : 'text-brand'}`}>{t.title}</span>
         {t.dueAt && <span className={`block text-xs ${overdue ? 'font-semibold text-danger' : 'text-ink-500'}`}><Clock className="mr-0.5 inline h-3 w-3" />{fmtDateTime(t.dueAt)}</span>}
       </span>
-      {!t.done && <button onClick={() => setEditing(true)} disabled={busy} className="text-ink-500 hover:text-sgo-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>}
+      {!t.done && <button onClick={() => setEditing(true)} disabled={busy} className="text-ink-500 hover:text-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>}
       <button onClick={() => post({ entity: 'task', action: 'delete', id: t.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
     </div>
   );
@@ -177,7 +177,7 @@ function NoteCard({ n, busy, post }: { n: MNote; busy: boolean; post: Post }) {
 
   if (editing) {
     return (
-      <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-surface p-2.5 space-y-2">
+      <div className="rounded-lg border-2 border-brand/40 bg-surface p-2.5 space-y-2">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título (opcional)" className="text-sm" />
         <RichText value={content} onChange={setContent} />
         <div className="flex gap-1.5">
@@ -188,13 +188,13 @@ function NoteCard({ n, busy, post }: { n: MNote; busy: boolean; post: Post }) {
     );
   }
   return (
-    <div className="rounded-lg border bg-sgo-surface p-2.5">
-      {n.title && <p className="mb-1 font-semibold text-sgo-brand">{n.title}</p>}
+    <div className="rounded-lg border bg-surface p-2.5">
+      {n.title && <p className="mb-1 font-semibold text-brand">{n.title}</p>}
       <div className="pop-rich text-sm" dangerouslySetInnerHTML={{ __html: n.content }} />
       <div className="mt-1 flex items-center justify-between">
         <span className="text-[11px] text-ink-500">{fmtDateTime(n.createdAt)}</span>
         <div className="flex gap-2">
-          <button onClick={() => setEditing(true)} disabled={busy} className="text-ink-500 hover:text-sgo-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>
+          <button onClick={() => setEditing(true)} disabled={busy} className="text-ink-500 hover:text-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>
           <button onClick={() => post({ entity: 'note', action: 'delete', id: n.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
         </div>
       </div>
@@ -212,14 +212,14 @@ function WorkScheduleEditor({ schedule, busy, post }: { schedule: MWorkSchedule 
   const [saved, setSaved] = useState(false);
   const toggle = (d: number) => setDays((s) => (s.includes(d) ? s.filter((x) => x !== d) : [...s, d].sort((a, b) => a - b)));
   return (
-    <div className="rounded-lg border-2 border-sgo-brand/30 bg-sgo-brand/5 p-3">
-      <p className="text-sm font-bold text-sgo-brand">🕒 Meu horário de trabalho (padrão semanal)</p>
+    <div className="rounded-lg border-2 border-brand/30 bg-brand/5 p-3">
+      <p className="text-sm font-bold text-brand">🕒 Meu horário de trabalho (padrão semanal)</p>
       <p className="mb-2 text-xs text-ink-500">Marque os dias que você trabalha e o horário. Serve para o supervisor ver a cobertura de gerência de cada unidade.</p>
       <div className="flex flex-wrap items-center gap-1">
         {WD_LABEL.map((w, i) => (
-          <button key={i} type="button" onClick={() => toggle(i)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${days.includes(i) ? 'bg-sgo-brand text-on-brand border-sgo-brand' : 'text-ink-500'}`}>{w}</button>
+          <button key={i} type="button" onClick={() => toggle(i)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${days.includes(i) ? 'bg-brand text-on-brand border-brand' : 'text-ink-500'}`}>{w}</button>
         ))}
-        <button type="button" onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])} className="ml-1 rounded-full border border-dashed px-3 py-1.5 text-xs font-semibold text-sgo-brand">Todos os dias</button>
+        <button type="button" onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])} className="ml-1 rounded-full border border-dashed px-3 py-1.5 text-xs font-semibold text-brand">Todos os dias</button>
       </div>
       <p className="mt-1 text-[11px] text-ink-500">Sem folga fixa? Toque em <b>Todos os dias</b> — depois marque cada folga na agenda abaixo (7 dias sem folga gera aviso ao supervisor).</p>
       <div className="mt-2 grid grid-cols-2 gap-2">
@@ -228,7 +228,7 @@ function WorkScheduleEditor({ schedule, busy, post }: { schedule: MWorkSchedule 
       </div>
       <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-2 h-10 text-sm" />
       <Button size="sm" className="mt-2" disabled={busy} onClick={async () => { if (await post({ entity: 'workSchedule', action: 'set', weekdays: days, startTime: start || null, endTime: end || null, note })) { setSaved(true); setTimeout(() => setSaved(false), 2500); } }}>Salvar horário</Button>
-      {saved && <span className="ml-2 text-xs font-semibold text-sgo-success">Salvo ✓</span>}
+      {saved && <span className="ml-2 text-xs font-semibold text-success">Salvo ✓</span>}
     </div>
   );
 }
@@ -241,9 +241,9 @@ function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam }: { leaves
     <div className="space-y-3">
       <WorkScheduleEditor schedule={schedule} busy={busy} post={post} />
       {canSeeTeam && (
-        <a href="/modulos/folgas-equipe" className="flex items-center justify-between gap-2 rounded-lg border border-sgo-brand/40 bg-sgo-brand/5 p-3 text-sm hover:bg-sgo-brand/10">
-          <span className="flex items-center gap-2 font-semibold text-sgo-brand"><CalendarOff className="h-4 w-4" /> Controle de gerentes (consolidado + calendário)</span>
-          <span className="text-sgo-brand">→</span>
+        <a href="/modulos/folgas-equipe" className="flex items-center justify-between gap-2 rounded-lg border border-brand/40 bg-brand/5 p-3 text-sm hover:bg-brand/10">
+          <span className="flex items-center gap-2 font-semibold text-brand"><CalendarOff className="h-4 w-4" /> Controle de gerentes (consolidado + calendário)</span>
+          <span className="text-brand">→</span>
         </a>
       )}
       <div className="rounded-lg border border-dashed p-3">
@@ -261,8 +261,8 @@ function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam }: { leaves
       {leaves.length === 0 && <p className="text-sm text-ink-500">Nenhuma folga/férias agendada.</p>}
       <div className="space-y-1.5">
         {leaves.map((l) => (
-          <div key={l.id} className="flex items-center justify-between rounded-lg border bg-sgo-surface p-2.5 text-sm">
-            <span><b className={l.kind === 'FERIAS' ? 'text-sgo-brand' : 'text-sgo-brand'}>{l.kind === 'FERIAS' ? 'Férias' : 'Folga'}</b> · {l.startDate === l.endDate ? fmtBR(l.startDate) : `${fmtBR(l.startDate)} a ${fmtBR(l.endDate)}`}</span>
+          <div key={l.id} className="flex items-center justify-between rounded-lg border bg-surface p-2.5 text-sm">
+            <span><b className={l.kind === 'FERIAS' ? 'text-brand' : 'text-brand'}>{l.kind === 'FERIAS' ? 'Férias' : 'Folga'}</b> · {l.startDate === l.endDate ? fmtBR(l.startDate) : `${fmtBR(l.startDate)} a ${fmtBR(l.endDate)}`}</span>
             <button onClick={() => post({ entity: 'leave', action: 'delete', id: l.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
           </div>
         ))}

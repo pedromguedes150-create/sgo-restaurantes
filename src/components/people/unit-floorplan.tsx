@@ -14,7 +14,7 @@ interface Grid {
 
 // Cores da "sala" por cobertura (combinam com o tema bordô/grafite)
 const ROOM: Record<Coverage, { floor: string; wall: string; dot: string; label: string }> = {
-  ok:      { floor: 'bg-sgo-success/15', wall: 'shadow-[6px_6px_0_0_rgba(22,163,74,0.45)]', dot: 'bg-sgo-success', label: 'Coberto' },
+  ok:      { floor: 'bg-success/15', wall: 'shadow-[6px_6px_0_0_rgba(22,163,74,0.45)]', dot: 'bg-success', label: 'Coberto' },
   partial: { floor: 'bg-warning/20',  wall: 'shadow-[6px_6px_0_0_rgba(202,138,4,0.45)]', dot: 'bg-warning',  label: 'Parcial' },
   none:    { floor: 'bg-danger/10', wall: 'shadow-[6px_6px_0_0_rgba(185,28,28,0.4)]', dot: 'bg-danger', label: 'Sem cobertura' },
 };
@@ -54,28 +54,28 @@ export function UnitFloorplan({ grid }: { grid: Grid }) {
             <span key={c} className="inline-flex items-center gap-1"><span className={cn('h-2.5 w-2.5 rounded-full', ROOM[c].dot)} /> {ROOM[c].label}</span>
           ))}
         </div>
-        <button onClick={() => setTilt((v) => !v)} className="rounded-full border px-3 py-1 text-xs font-medium hover:border-sgo-brand">
+        <button onClick={() => setTilt((v) => !v)} className="rounded-full border px-3 py-1 text-xs font-medium hover:border-brand">
           {tilt ? 'Ver de cima' : 'Visão 3D'}
         </button>
       </div>
 
       {/* "Terreno" da unidade (blueprint) */}
-      <div className="overflow-x-auto rounded-xl border-2 border-sgo-brand/20 bg-[linear-gradient(0deg,rgba(110,20,35,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(110,20,35,0.04)_1px,transparent_1px)] bg-[size:22px_22px] p-4">
+      <div className="overflow-x-auto rounded-xl border-2 border-brand/20 bg-[linear-gradient(0deg,rgba(110,20,35,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(110,20,35,0.04)_1px,transparent_1px)] bg-[size:22px_22px] p-4">
         <div
           className="origin-top transition-transform duration-300"
           style={tilt ? { transform: 'perspective(1400px) rotateX(20deg)', transformStyle: 'preserve-3d' } : undefined}
         >
-          <div className="mb-3 flex items-center gap-1 text-xs font-semibold text-sgo-brand">
+          <div className="mb-3 flex items-center gap-1 text-xs font-semibold text-brand">
             <DoorOpen className="h-4 w-4" /> Entrada
           </div>
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
             {rooms.map((r) => (
               <div
                 key={r.id}
-                className={cn('rounded-lg border-2 border-sgo-brand/30 p-2.5', ROOM[r.coverage].floor, ROOM[r.coverage].wall)}
+                className={cn('rounded-lg border-2 border-brand/30 p-2.5', ROOM[r.coverage].floor, ROOM[r.coverage].wall)}
               >
                 <div className="flex items-start justify-between gap-1">
-                  <p className="text-sm font-bold leading-tight text-sgo-brand">{r.name}</p>
+                  <p className="text-sm font-bold leading-tight text-brand">{r.name}</p>
                   <span className={cn('mt-0.5 h-3 w-3 shrink-0 rounded-full', ROOM[r.coverage].dot)} title={ROOM[r.coverage].label} />
                 </div>
                 <p className="mt-1 inline-flex items-center gap-1 text-xs text-ink-500">
@@ -83,7 +83,7 @@ export function UnitFloorplan({ grid }: { grid: Grid }) {
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-1">
                   {r.names.slice(0, 6).map((n, i) => (
-                    <span key={i} className="truncate rounded bg-white/70 px-1.5 py-0.5 text-[10px] font-medium text-sgo-brand">{n.split(' ')[0]}</span>
+                    <span key={i} className="truncate rounded bg-white/70 px-1.5 py-0.5 text-[10px] font-medium text-brand">{n.split(' ')[0]}</span>
                   ))}
                   {r.names.length > 6 && <span className="text-[10px] text-ink-500">+{r.names.length - 6}</span>}
                   {r.count === 0 && <span className="text-[10px] font-semibold text-danger">vazio</span>}

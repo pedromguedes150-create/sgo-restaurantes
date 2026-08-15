@@ -180,7 +180,7 @@ export function PaymentsClient({
             onClick={() => setTab(t.key)}
             className={
               tab === t.key
-                ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand'
+                ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand'
                 : 'rounded-full border px-3 py-1.5 text-sm font-medium'
             }
           >
@@ -266,7 +266,7 @@ function HistoryTab({ items, actions }: { items: PayReq[]; actions?: (r: PayReq)
   ), [items, type, unit, status, q]);
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-sgo-surface p-3">
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3">
         <div className="min-w-[9rem] flex-1">
           <DsSelect
             label="Tipo"
@@ -362,7 +362,7 @@ function DetailView({ r }: { r: PayReq }) {
         </div>
       ))}
       {d?.hasAttachment && d.attachmentPath && (
-        <a href={`/${d.attachmentPath}`} target="_blank" rel="noreferrer" className="block pt-1 text-xs font-semibold text-sgo-brand underline">Ver anexo</a>
+        <a href={`/${d.attachmentPath}`} target="_blank" rel="noreferrer" className="block pt-1 text-xs font-semibold text-brand underline">Ver anexo</a>
       )}
     </div>
   );
@@ -435,7 +435,7 @@ function List({ items, actions, selection }: {
         return (
           <div key={day} className="space-y-2">
             <div className="flex items-center justify-between border-b pb-1">
-              <p className="text-sm font-bold text-sgo-brand">📅 {fmtDay(day)}</p>
+              <p className="text-sm font-bold text-brand">📅 {fmtDay(day)}</p>
               <span className="text-xs text-ink-500">{dayItems.length} lançamento(s) · {formatBRL(dayTotal)}</span>
             </div>
             {unitNames.map((u) => (
@@ -614,9 +614,9 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
           <p className="text-xs text-ink-500">Com o dia e a hora preenchidos, o freelancer fica disponível para alocar no Mapa da unidade naquele dia/horário.</p>
           <div><Label>Vale transporte (R$, opcional)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>
           {calc?.configured && (
-            <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-brand/5 p-3">
+            <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
               <p className="text-xs text-ink-500">Valor calculado ({calc.dayTypeLabel})</p>
-              <p className="text-2xl font-black text-sgo-brand">{formatBRL(calc.amount)}</p>
+              <p className="text-2xl font-black text-brand">{formatBRL(calc.amount)}</p>
               <p className="text-xs text-ink-500">{calc.hours}h × {formatBRL(calc.rate ?? 0)}/h{calc.transport > 0 ? ` + ${formatBRL(calc.transport)} VT` : ''}</p>
             </div>
           )}

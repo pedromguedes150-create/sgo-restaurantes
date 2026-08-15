@@ -29,19 +29,19 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/ocorrencias" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand">
+      <Link href="/modulos/ocorrencias" className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
       <div className="flex items-start justify-between gap-3">
-        <h1 className="text-xl font-bold text-sgo-brand">
+        <h1 className="text-xl font-bold text-brand">
           #{o.unit.code}-{String(o.number).padStart(4, '0')}
         </h1>
         <StatusBadge tone={STATUS_META[o.status].tone}>{STATUS_META[o.status].label}</StatusBadge>
       </div>
 
-      <Link href={`/modulos/ocorrencias/${o.id}/relatorio`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold text-sgo-brand hover:border-sgo-brand">
-        <FileText className="h-4 w-4 text-sgo-brand" /> Gerar relatório (PDF) para compartilhar
+      <Link href={`/modulos/ocorrencias/${o.id}/relatorio`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold text-brand hover:border-brand">
+        <FileText className="h-4 w-4 text-brand" /> Gerar relatório (PDF) para compartilhar
       </Link>
 
       <Card>
@@ -84,9 +84,9 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
       )}
 
       {o.status === 'CLOSED' && (
-        <Card className="border-sgo-success/40">
+        <Card className="border-success/40">
           <CardHeader>
-            <CardTitle className="text-sgo-success">Encerramento</CardTitle>
+            <CardTitle className="text-success">Encerramento</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 py-2 text-sm">
             <Row label="Encerrada por" value={o.closedBy?.name ?? '—'} />

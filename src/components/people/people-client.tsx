@@ -53,7 +53,7 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
   }
 
   const tabBtn = (k: typeof tab, label: string) => (
-    <button onClick={() => setTab(k)} className={tab === k ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{label}</button>
+    <button onClick={() => setTab(k)} className={tab === k ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{label}</button>
   );
 
   return (
@@ -64,8 +64,8 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
         <div className="space-y-2">
           {collaborators.length === 0 && <p className="text-sm text-ink-500">Nenhum colaborador.</p>}
           {collaborators.map((c) => (
-            <div key={c.id} className="rounded-lg border bg-sgo-surface p-3">
-              <p className="font-semibold text-sgo-brand">{c.name}</p>
+            <div key={c.id} className="rounded-lg border bg-surface p-3">
+              <p className="font-semibold text-brand">{c.name}</p>
               <p className="text-xs text-ink-500">{c.jobTitle ?? '—'} · {c.units.join(', ')}</p>
             </div>
           ))}
@@ -94,9 +94,9 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
           )}
           {vacations.length === 0 && <p className="text-sm text-ink-500">Sem férias programadas.</p>}
           {vacations.map((v) => (
-            <div key={v.id} className="rounded-lg border bg-sgo-surface p-3">
+            <div key={v.id} className="rounded-lg border bg-surface p-3">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-sgo-brand">{v.collaborator}</p>
+                <p className="font-semibold text-brand">{v.collaborator}</p>
                 <StatusBadge tone={VAC_ST[v.status].tone}>{VAC_ST[v.status].label}</StatusBadge>
               </div>
               <p className="text-xs text-ink-500">{v.unit} · {v.start} a {v.end}</p>
@@ -111,9 +111,9 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
         <div className="space-y-2">
           {schedule.length === 0 && <p className="text-sm text-ink-500">Sem escala importada.</p>}
           {schedule.map((s) => (
-            <div key={s.id} className="rounded-lg border bg-sgo-surface p-3">
+            <div key={s.id} className="rounded-lg border bg-surface p-3">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-sgo-brand">{s.collaborator}</p>
+                <p className="font-semibold text-brand">{s.collaborator}</p>
                 <StatusBadge tone={s.variation === 'NONE' ? 'neutral' : 'medium'}>{VAR_LABEL[s.variation]}</StatusBadge>
               </div>
               <p className="text-xs text-ink-500">{s.unit} · {s.date} · planejado {s.planned}{s.note ? ` · ${s.note}` : ''}</p>

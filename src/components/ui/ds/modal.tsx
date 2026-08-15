@@ -88,7 +88,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         aria-labelledby={titleId}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className={cn('sgo-page-enter max-h-[85vh] w-full overflow-hidden rounded-sheet border border-line bg-sgo-surface shadow-2xl outline-none', sizes[size])}
+        className={cn('sgo-page-enter max-h-[85vh] w-full overflow-hidden rounded-sheet border border-line bg-surface shadow-2xl outline-none', sizes[size])}
       >
         <div className="flex items-start justify-between gap-3 border-b border-line p-4">
           <div className="min-w-0">

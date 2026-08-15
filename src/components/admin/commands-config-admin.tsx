@@ -35,7 +35,7 @@ export function CommandsConfigAdmin({ units, sequences }: { units: Unit[]; seque
       </div>
 
       <NewSeq unitId={unitId} onDone={() => router.refresh()} />
-      <p className="text-xs text-ink-500">Total de comandas ativas nesta unidade: <span className="font-bold text-sgo-brand">{total}</span></p>
+      <p className="text-xs text-ink-500">Total de comandas ativas nesta unidade: <span className="font-bold text-brand">{total}</span></p>
     </div>
   );
 }
@@ -57,7 +57,7 @@ function SeqRow({ s, onChange }: { s: CmdSeqRow; onChange: () => void }) {
   }
 
   return (
-    <div className="rounded-lg border bg-sgo-surface p-2.5">
+    <div className="rounded-lg border bg-surface p-2.5">
       <div className="flex items-center justify-between gap-2">
         {editing ? (
           <div className="grid flex-1 grid-cols-12 gap-1">
@@ -67,7 +67,7 @@ function SeqRow({ s, onChange }: { s: CmdSeqRow; onChange: () => void }) {
           </div>
         ) : (
           <div>
-            <p className="text-sm font-semibold text-sgo-brand">{s.name}</p>
+            <p className="text-sm font-semibold text-brand">{s.name}</p>
             <p className="text-xs text-ink-500">{s.rangeStart}–{s.rangeEnd} · {Math.max(0, s.rangeEnd - s.rangeStart + 1)} comandas</p>
           </div>
         )}

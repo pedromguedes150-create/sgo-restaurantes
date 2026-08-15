@@ -36,7 +36,7 @@ export function ChecklistToleranceConfig({ current }: { current: number }) {
           <Input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, ''))} className="h-10 w-24 text-sm" />
         </div>
         <Button size="sm" disabled={busy} onClick={save}><Save className="h-4 w-4" /> Salvar</Button>
-        {msg && <span className={`text-sm ${msg === 'Salvo!' ? 'text-sgo-success' : 'text-danger'}`}>{msg}</span>}
+        {msg && <span className={`text-sm ${msg === 'Salvo!' ? 'text-success' : 'text-danger'}`}>{msg}</span>}
       </div>
     </div>
   );

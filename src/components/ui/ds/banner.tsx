@@ -13,7 +13,7 @@ export type BannerTone = 'info' | 'success' | 'warning' | 'danger';
 
 const styles: Record<BannerTone, { box: string; icon: string; Icon: React.ComponentType<{ className?: string }> }> = {
   info: { box: 'bg-info-bg border-info/20', icon: 'text-info', Icon: Info },
-  success: { box: 'bg-sgo-success-bg border-sgo-success/20', icon: 'text-sgo-success', Icon: CheckCircle2 },
+  success: { box: 'bg-success-bg border-success/20', icon: 'text-success', Icon: CheckCircle2 },
   warning: { box: 'bg-warning-bg border-warning/20', icon: 'text-warning', Icon: AlertTriangle },
   danger: { box: 'bg-danger-bg border-danger/20', icon: 'text-danger', Icon: OctagonAlert },
 };

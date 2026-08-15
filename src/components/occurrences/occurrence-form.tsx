@@ -115,7 +115,7 @@ export function OccurrenceForm({ units, types }: { units: UnitOpt[]; types: Type
         <textarea
           id="desc"
           rows={4}
-          className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand"
+          className="w-full rounded-lg border-2 border-line-strong bg-surface p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Descreva o que aconteceu…"

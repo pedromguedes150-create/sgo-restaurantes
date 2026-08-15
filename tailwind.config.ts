@@ -20,66 +20,14 @@ const config: Config = {
     },
     extend: {
       colors: {
-        // Tokens da marca (uso direto: bg-brand, text-gold...)
-        brand: {
-          DEFAULT: '#6E1423', // bordô
-          light: '#8C2233',
-          dark: '#470B14',
-        },
-        gold: {
-          // grafite (cinza escuro) — nome mantido por compatibilidade
-          DEFAULT: '#3F3F46',
-          light: '#5B5B64',
-          dark: '#27272A',
-        },
-        surface: '#F5F5F5',
-        // Severidades (gravidade de ocorrências / alertas)
-        critical: '#DC2626',
-        medium: '#F59E0B',
-        success: '#16A34A',
-        // Tokens semânticos (shadcn/ui via CSS vars)
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
-        },
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
-        },
-
         /* ---------------------------------------------------------------
-         * DESIGN SYSTEM (Onda 0+). Backed por var(--sgo-*) (fonte de verdade
-         * em src/styles/sgo-design-system.css). Aditivo: a paleta legada acima
-         * segue intacta.
+         * ÚNICA paleta do sistema. Toda cor vem de var(--sgo-*-rgb), definido
+         * em src/styles/sgo-design-system.css. A paleta legada (bordô fixo,
+         * gold, semáforos do Tailwind, vars HSL do shadcn) saiu na Onda 7,
+         * junto com o prefixo `sgo-` que existia só para não colidir com ela.
          *
-         * O prefixo `sgo-` existe só onde o nome colide com o legado
-         * (brand/surface/success) e SAI NA ONDA 7 — ver docs/redesign-onda-7.md.
-         * Atenção: tirar o prefixo não é renomear. Os valores diferem
-         * (brand #6E1423 fixo × var(--sgo-brand) #7c1a2b claro / #f0a7b1
-         * escuro), então trocar o nome troca a cor renderizada E torna a tela
-         * sensível ao tema. É a migração que destrava o modo escuro, não uma
-         * limpeza — por isso ganhou onda própria, com auditoria de contraste.
+         * O valor vem em CANAL (r g b), não em hex, porque é o que permite o
+         * <alpha-value>: sem isso, `bg-brand/15` computa transparente.
          * ------------------------------------------------------------- */
         ink: {
           900: 'rgb(var(--sgo-ink-900-rgb) / <alpha-value>)',
@@ -109,14 +57,14 @@ const config: Config = {
           bg: 'rgb(var(--sgo-info-bg-rgb) / <alpha-value>)',
         },
         // Colididos com o legado → prefixo sgo- (removido por onda, 3-5).
-        'sgo-brand': {
+        brand: {
           DEFAULT: 'rgb(var(--sgo-brand-rgb) / <alpha-value>)',
           hover: 'rgb(var(--sgo-brand-hover-rgb) / <alpha-value>)',
           tint: 'rgb(var(--sgo-brand-tint-rgb) / <alpha-value>)',
           'tint-2': 'rgb(var(--sgo-brand-tint-2-rgb) / <alpha-value>)',
         },
-        'sgo-surface': 'rgb(var(--sgo-surface-rgb) / <alpha-value>)',
-        'sgo-success': {
+        surface: 'rgb(var(--sgo-surface-rgb) / <alpha-value>)',
+        success: {
           DEFAULT: 'rgb(var(--sgo-success-rgb) / <alpha-value>)',
           bg: 'rgb(var(--sgo-success-bg-rgb) / <alpha-value>)',
         },

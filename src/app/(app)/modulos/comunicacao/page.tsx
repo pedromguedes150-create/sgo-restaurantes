@@ -55,7 +55,7 @@ export default async function ComunicacaoPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-sgo-brand">Central de Comunicação</h1>
+        <h1 className="text-xl font-bold text-brand">Central de Comunicação</h1>
         <p className="text-sm text-ink-500">Comunicados oficiais com confirmação de leitura — substitui a cobrança por WhatsApp.</p>
       </div>
       <Card><CardContent className="pt-4">
