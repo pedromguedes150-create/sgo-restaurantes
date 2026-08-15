@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 import { formatBRL } from '@/lib/utils';
 
 interface Unit { id: string; name: string }
@@ -57,7 +59,6 @@ function Launch({ units, suppliers }: { units: Unit[]; suppliers: Supplier[] }) 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   const l = parseFloat((liters || '0').replace(',', '.'));
   const p = parseFloat((price || '0').replace(',', '.'));
@@ -79,14 +80,13 @@ function Launch({ units, suppliers }: { units: Unit[]; suppliers: Supplier[] }) 
 
   return (
     <div className="space-y-3">
-      {units.length > 1 && <div><Label>Unidade</Label><select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>}
-      <div>
-        <Label>Empresa coletora (fornecedor)</Label>
-        <select className={sel} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
-          <option value="">— opcional —</option>
-          {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-      </div>
+      {units.length > 1 && (
+        <Select label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
+      )}
+      <Select
+        label="Empresa coletora (fornecedor)" value={supplierId} onValueChange={setSupplierId}
+        options={[{ value: '', label: '— nenhuma —' }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
+      />
       <div className="grid grid-cols-2 gap-2">
         <div><Label>Litros coletados</Label><Input inputMode="decimal" value={liters} onChange={(e) => setLiters(e.target.value)} placeholder="ex: 80" /></div>
         <div><Label>Valor por litro (R$)</Label><Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" /></div>
@@ -97,13 +97,10 @@ function Launch({ units, suppliers }: { units: Unit[]; suppliers: Supplier[] }) 
           <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
         </div>
       )}
-      <div>
-        <Label>Como recebemos</Label>
-        <select className={sel} value={method} onChange={(e) => setMethod(e.target.value)}>
-          <option value="">— selecione —</option>
-          {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
-      </div>
+      <Select
+        label="Como recebemos" value={method} onValueChange={setMethod}
+        options={[{ value: '', label: '— não informado —' }, ...METHODS.map((m) => ({ value: m, label: m }))]}
+      />
       <div><Label>Observação (opcional)</Label><Input value={obs} onChange={(e) => setObs(e.target.value)} /></div>
       {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
       {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
@@ -175,10 +172,12 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdm
   return (
     <div className="space-y-2">
       {unitNames.length > 1 && (
-        <select value={unit} onChange={(e) => setUnit(e.target.value)} className="h-10 w-full max-w-sm rounded-lg border-2 border-input bg-background px-3 text-sm font-medium">
-          <option value="">Todas as unidades</option>
-          {unitNames.map((u) => <option key={u} value={u}>{u}</option>)}
-        </select>
+        <div className="max-w-sm">
+          <Select
+            aria-label="Filtrar por unidade" value={unit} onValueChange={setUnit}
+            options={[{ value: '', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
+          />
+        </div>
       )}
       {shown.map((r) => (
         <div key={r.id} className="rounded-lg border bg-card p-3">

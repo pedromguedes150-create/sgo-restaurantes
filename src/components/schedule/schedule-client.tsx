@@ -305,8 +305,8 @@ function PatternPanel({ unitId, collaborators, turnos, patterns, post, busy }: {
         </div>
         <Select label="Tipo de escala" size="sm" value={type} onValueChange={(v) => setType(v as ScheduleType)} options={TYPE_OPTIONS.map((t) => ({ value: t.value, label: t.label }))} />
         <Select
-          label="Turno (opcional)" size="sm" placeholder="—" value={shiftId} onValueChange={setShiftId}
-          options={turnos.map((t) => ({ value: t.id, label: t.name, hint: t.startTime && t.endTime ? `${t.startTime}-${t.endTime}` : undefined }))}
+          label="Turno (opcional)" size="sm" value={shiftId} onValueChange={setShiftId}
+          options={[{ value: '', label: 'Sem turno' }, ...turnos.map((t) => ({ value: t.id, label: t.name, hint: t.startTime && t.endTime ? `${t.startTime}-${t.endTime}` : undefined }))]}
         />
         {needsAnchor && <DatePicker label="Início do ciclo" size="sm" value={anchor || null} onValueChange={(v) => setAnchor(v ?? '')} />}
         {type === 'CUSTOM' && <div className="col-span-2"><Label className="text-xs">Padrão (T=trabalha, F=folga)</Label><Input value={mask} onChange={(e) => setMask(e.target.value.toUpperCase())} placeholder="ex: TTTTTFF" className="h-10 text-sm" /></div>}

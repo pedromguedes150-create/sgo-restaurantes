@@ -207,11 +207,10 @@ function FreelancersPanel({ freelancers, sectors, isToday, post, busy }: {
               <Select
                 aria-label={`Setor de ${f.name}`}
                 size="sm"
-                placeholder="Sem setor…"
                 disabled={busy}
                 value={f.sectorId ?? ''}
                 onValueChange={(v) => post({ action: 'assignFreelancerSector', requestId: f.requestId, sectorId: v || null })}
-                options={sectors.map((s) => ({ value: s.id, label: s.name }))}
+                options={[{ value: '', label: 'Sem setor' }, ...sectors.map((s) => ({ value: s.id, label: s.name }))]}
               />
             </div>
           </div>

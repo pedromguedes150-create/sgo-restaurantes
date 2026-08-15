@@ -656,10 +656,9 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
               <Label>Fornecedor (opcional)</Label>
               <DsSelect
                 aria-label="Fornecedor"
-                placeholder="— nenhum / digitar abaixo —"
                 value={supplierId}
                 onValueChange={(v) => { const s = suppliers.find((x) => x.id === v); setSupplierId(v); if (s) setBeneficiary(s.name); }}
-                options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                options={[{ value: '', label: '— nenhum / digitar abaixo —' }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
               />
             </div>
           )}

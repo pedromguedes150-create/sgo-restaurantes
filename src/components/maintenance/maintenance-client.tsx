@@ -129,12 +129,12 @@ function NewTicket({ units, equipment, suppliers, onDone }: { units: UnitDTO[]; 
         <div><Label>Detalhes (opcional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Select
-            label="Equipamento (opcional)" placeholder="— nenhum —" value={equipmentId} onValueChange={setEquipmentId}
-            options={equipForUnit.map((e) => ({ value: e.id, label: e.name }))}
+            label="Equipamento (opcional)" value={equipmentId} onValueChange={setEquipmentId}
+            options={[{ value: '', label: '— nenhum —' }, ...equipForUnit.map((e) => ({ value: e.id, label: e.name }))]}
           />
           <Select
-            label="Prestador (opcional)" placeholder="— a definir —" value={supplierId} onValueChange={setSupplierId}
-            options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+            label="Prestador (opcional)" value={supplierId} onValueChange={setSupplierId}
+            options={[{ value: '', label: '— a definir —' }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
           />
         </div>
         <div className="max-w-[200px]"><DatePicker label="Prazo (opcional)" value={deadline || null} onValueChange={(v) => setDeadline(v ?? '')} /></div>
@@ -184,8 +184,8 @@ function TicketCard({ t, isAdmin, suppliers, onDone }: { t: TicketDTO; isAdmin: 
         <div className="mt-2 space-y-2 rounded-lg bg-muted/40 p-2">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Select
-              label="Prestador" size="sm" placeholder="— a definir —" value={supplierId} onValueChange={setSupplierId}
-              options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+              label="Prestador" size="sm" value={supplierId} onValueChange={setSupplierId}
+              options={[{ value: '', label: '— a definir —' }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
             />
             <DatePicker label="Prazo" size="sm" value={deadline || null} onValueChange={(v) => setDeadline(v ?? '')} />
           </div>
@@ -265,8 +265,8 @@ function NewPlan({ units, equipment, onDone }: { units: UnitDTO[]; equipment: Eq
         )}
         <div><Label>Manutenção</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Limpeza da coifa" /></div>
         <Select
-          label="Equipamento (opcional)" placeholder="— nenhum —" value={equipmentId} onValueChange={setEquipmentId}
-          options={equipForUnit.map((e) => ({ value: e.id, label: e.name }))}
+          label="Equipamento (opcional)" value={equipmentId} onValueChange={setEquipmentId}
+          options={[{ value: '', label: '— nenhum —' }, ...equipForUnit.map((e) => ({ value: e.id, label: e.name }))]}
         />
         <div className="grid grid-cols-2 gap-2">
           <div><Label>A cada (dias)</Label><Input inputMode="numeric" value={frequencyDays} onChange={(e) => setFrequencyDays(e.target.value.replace(/\D/g, ''))} /></div>

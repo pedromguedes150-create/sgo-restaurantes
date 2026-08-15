@@ -332,10 +332,9 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
       </div>
       <Select
         label="Fornecedor"
-        placeholder="— sem fornecedor —"
         value={supplierId}
         onValueChange={setSupplierId}
-        options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+        options={[{ value: '', label: '— sem fornecedor —' }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
         hint={suppliers.length === 0 ? 'Nenhum fornecedor cadastrado. Peça ao Admin/Supervisor para cadastrar em Configurações → Fornecedores.' : undefined}
       />
       {/* Forma de recebimento */}

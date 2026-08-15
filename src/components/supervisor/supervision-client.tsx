@@ -225,9 +225,9 @@ function UpcomingVisit({ v, checklists, canOperate, busy, post }: {
           </div>
           {checklists.length > 0 && (
             <Select
-              label="Checklist da visita (opcional)" size="sm" placeholder="Sem checklist"
+              label="Checklist da visita (opcional)" size="sm"
               value={clId} onValueChange={(v) => { setClId(v); setResults({}); }}
-              options={checklists.map((c) => ({ value: c.id, label: c.name }))}
+              options={[{ value: '', label: 'Sem checklist' }, ...checklists.map((c) => ({ value: c.id, label: c.name }))]}
             />
           )}
           {cl && (

@@ -79,8 +79,8 @@ export function ScheduleChangesClient({ rows, units, selectedUnitId, collabs, ca
             <DatePicker label="Dia original" size="sm" value={dateA || null} onValueChange={(v) => setDateA(v ?? '')} />
             <Select
               label="Trocou com" hint="Deixe vazio se a pessoa só mudou de dia."
-              size="sm" placeholder="Ninguém — só mudou de dia" value={bId} onValueChange={setBId}
-              options={collabs.filter((c) => c.id !== aId).map((c) => ({ value: c.id, label: c.name }))}
+              size="sm" value={bId} onValueChange={setBId}
+              options={[{ value: '', label: 'Ninguém — só mudou de dia' }, ...collabs.filter((c) => c.id !== aId).map((c) => ({ value: c.id, label: c.name }))]}
             />
             <DatePicker
               label={`Novo dia / dia do outro colaborador${bId ? ' (opcional)' : ''}`}
