@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 import { FORM_FIELD_KINDS } from '@/lib/checklist-forms/types';
 
 interface Unit { id: string; name: string }
@@ -17,7 +19,6 @@ interface Detail {
   publicToken: string | null; expiresAt: string | null; maxPerDay: number; notifyRole: string | null; fields: Field[]; submissions: number;
 }
 
-const sel = 'h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 const kindLabel = (k: string) => FORM_FIELD_KINDS.find((f) => f.kind === k)?.label ?? k;
 
 async function post(payload: Record<string, unknown>): Promise<{ ok: boolean; error?: string; id?: string; token?: string }> {
@@ -51,7 +52,9 @@ export function ChecklistFormsAdmin({ units, forms }: { units: Unit[]; forms: Fo
         <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Nova ficha</p>
         <div className="grid grid-cols-12 items-end gap-1.5">
           <div className="col-span-12 sm:col-span-6"><Label className="text-xs">Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ex.: Ficha de Controle de Massas" className="h-9 text-sm" /></div>
-          <div className="col-span-9 sm:col-span-5"><Label className="text-xs">Unidade</Label><select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>
+          <div className="col-span-9 sm:col-span-5">
+            <Select label="Unidade" size="sm" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
+          </div>
           <div className="col-span-3 sm:col-span-1 flex justify-end"><Button size="sm" disabled={busy} onClick={createForm} aria-label="Criar"><Plus className="h-4 w-4" /></Button></div>
         </div>
         {msg && <p className="mt-1 text-xs font-medium text-critical">{msg}</p>}
@@ -115,11 +118,13 @@ function FormEditor({ id, onChanged }: { id: string; onChanged: () => void }) {
         <div className="sm:col-span-2"><Label className="text-xs">Título</Label><Input defaultValue={d.title} onBlur={(e) => e.target.value.trim() && e.target.value !== d.title && run({ action: 'update', id, title: e.target.value })} className="h-9 text-sm" /></div>
         <div className="sm:col-span-2"><Label className="text-xs">Descrição (opcional)</Label><Input defaultValue={d.description ?? ''} onBlur={(e) => e.target.value !== (d.description ?? '') && run({ action: 'update', id, description: e.target.value })} className="h-9 text-sm" /></div>
         <div><Label className="text-xs">Teto de envios/dia (0 = sem limite)</Label><Input inputMode="numeric" defaultValue={String(d.maxPerDay)} onBlur={(e) => Number(e.target.value) !== d.maxPerDay && run({ action: 'update', id, maxPerDay: Number(e.target.value) || 0 })} className="h-9 text-sm" /></div>
-        <div><Label className="text-xs">Avisar ao receber envio</Label>
-          <select className={sel} defaultValue={d.notifyRole ?? ''} onChange={(e) => run({ action: 'update', id, notifyRole: e.target.value })}>
-            <option value="">Ninguém</option><option value="MANAGER">Gerente</option><option value="SUPERVISOR">Supervisor</option>
-          </select>
-        </div>
+        <Select
+          label="Avisar ao receber envio" size="sm" value={d.notifyRole ?? ''}
+          // Atualiza a tela na hora e só depois confirma no servidor — o run()
+          // recarrega o detalhe inteiro, o que deixaria o campo parado até voltar.
+          onValueChange={(v) => { setD({ ...d, notifyRole: v || null }); void run({ action: 'update', id, notifyRole: v }); }}
+          options={[{ value: '', label: 'Ninguém' }, { value: 'MANAGER', label: 'Gerente' }, { value: 'SUPERVISOR', label: 'Supervisor' }]}
+        />
       </div>
 
       <div className="flex flex-wrap gap-4 text-sm">
@@ -218,10 +223,11 @@ function FieldForm({ initial, onCancel, onSubmit }: { initial?: Field; onCancel:
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-12 gap-1.5">
-        <div className="col-span-12 sm:col-span-4"><Label className="text-xs">Tipo</Label>
-          <select className={sel} value={kind} onChange={(e) => setKind(e.target.value)}>
-            {FORM_FIELD_KINDS.map((f) => <option key={f.kind} value={f.kind}>{f.label}</option>)}
-          </select>
+        <div className="col-span-12 sm:col-span-4">
+          <Select
+            label="Tipo" size="sm" value={kind} onValueChange={setKind}
+            options={FORM_FIELD_KINDS.map((f) => ({ value: f.kind, label: f.label }))}
+          />
         </div>
         <div className="col-span-12 sm:col-span-8"><Label className="text-xs">{isSection ? 'Texto do subtítulo' : 'Rótulo da pergunta'}</Label><Input value={label} onChange={(e) => setLabel(e.target.value)} className="h-9 text-sm" /></div>
       </div>

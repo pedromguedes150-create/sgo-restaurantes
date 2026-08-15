@@ -8,12 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { Select } from '@/components/ui/ds/select';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 
 export interface UserRow { id: string; name: string; email: string; role: string; active: boolean; unitIds: string[] }
 interface Unit { id: string; name: string }
 
-const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 function roleNeedsUnits(role: string) { return role !== 'ADMIN' && role !== 'CEO' && role !== 'FINANCE'; }
 
 export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Unit[]; meId: string }) {
@@ -48,7 +48,7 @@ export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Un
           <div><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div><Label>E-mail</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Perfil</Label><select className={sel} value={role} onChange={(e) => setRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</select></div>
+            <Select label="Perfil" value={role} onValueChange={setRole} options={ROLE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))} />
             <div><Label>Senha (mín. 6)</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
           </div>
           {needsUnits && (
@@ -120,7 +120,7 @@ function UserItem({ u, units, meId, onChange, onToggle }: { u: UserRow; units: U
         <div className="mt-2 space-y-2 rounded-lg bg-muted/40 p-2">
           <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label className="text-xs">Perfil</Label><select className={sel} value={role} disabled={isSelf} onChange={(e) => setRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</select></div>
+            <Select label="Perfil" size="sm" value={role} disabled={isSelf} onValueChange={setRole} options={ROLE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))} />
             <div><Label className="text-xs">Nova senha (opcional)</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="deixe em branco p/ manter" className="h-10 text-sm" /></div>
           </div>
           {needsUnits && (

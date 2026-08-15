@@ -6,6 +6,7 @@ import { Save, Trash2, Plus, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/ds/date-picker';
 
 type DayType = 'WEEKDAY' | 'WEEKEND' | 'HOLIDAY';
 const DAY_TYPES: { key: DayType; label: string }[] = [
@@ -72,7 +73,7 @@ export function FreelancerRatesConfig({ units, rates, holidays }: {
         <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-muted-foreground"><CalendarDays className="h-4 w-4" /> Feriados</h2>
         <p className="mb-2 text-xs text-muted-foreground">Datas marcadas como feriado usam o valor/hora de <b>Feriado</b>.</p>
         <div className="mb-2 flex flex-wrap items-end gap-2">
-          <div><Label className="text-xs">Data</Label><Input type="date" value={hDate} onChange={(e) => setHDate(e.target.value)} className="h-9 text-sm" /></div>
+          <DatePicker label="Data" size="sm" value={hDate || null} onValueChange={(v) => setHDate(v ?? '')} />
           <div className="flex-1"><Label className="text-xs">Nome</Label><Input value={hName} onChange={(e) => setHName(e.target.value)} placeholder="ex: Independência" className="h-9 text-sm" /></div>
           <Button size="sm" disabled={busy || !hDate || !hName.trim()} onClick={async () => { if (await post({ entity: 'holiday', action: 'add', date: hDate, name: hName })) { setHDate(''); setHName(''); } }}><Plus className="h-4 w-4" /> Adicionar</Button>
         </div>

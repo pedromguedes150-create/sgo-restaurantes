@@ -7,12 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 import { postAdmin } from '@/lib/admin-client';
 
 export interface CmdSeqRow { id: string; unitId: string; name: string; rangeStart: number; rangeEnd: number; active: boolean }
 interface Unit { id: string; name: string }
 
-const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
 export function CommandsConfigAdmin({ units, sequences }: { units: Unit[]; sequences: CmdSeqRow[] }) {
   const router = useRouter();
@@ -23,10 +24,10 @@ export function CommandsConfigAdmin({ units, sequences }: { units: Unit[]; seque
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">Cada unidade pode ter várias faixas de comandas (ex.: 1–200 e 500–650). São a base da contagem diária e das divergências.</p>
-      <div>
-        <Label>Unidade</Label>
-        <select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
-      </div>
+      <Select
+        label="Unidade" value={unitId} onValueChange={setUnitId}
+        options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+      />
 
       <div className="space-y-2">
         {list.map((s) => <SeqRow key={s.id} s={s} onChange={() => router.refresh()} />)}

@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 import { formatBRL } from '@/lib/utils';
 
@@ -21,7 +23,6 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
   units: Unit[]; users: UserOpt[]; freelancers: FreelancerRow[]; miscTypes: MiscTypeRow[]; delegations: DelegationRow[];
 }) {
   const router = useRouter();
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   // Freelancer
   const [fName, setFName] = useState('');
@@ -85,7 +86,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
         <div className="rounded-lg border border-dashed p-3 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Nome</Label><Input value={mName} onChange={(e) => setMName(e.target.value)} /></div>
-            <div><Label>Aprovador</Label><select className={sel} value={mRole} onChange={(e) => setMRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</select></div>
+            <Select label="Aprovador" value={mRole} onValueChange={setMRole} options={ROLE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))} />
           </div>
           <Button disabled={busy} className="w-full" onClick={async () => { if (await run({ entity: 'miscType', action: 'create', name: mName, approverRole: mRole })) setMName(''); }}><Plus className="h-4 w-4" /> Adicionar tipo</Button>
         </div>
@@ -99,10 +100,10 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
         <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Delegação de aprovação (por período)</h2>
         <div className="rounded-lg border border-dashed p-3 space-y-2">
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>De (aprovador)</Label><select className={sel} value={dFrom} onChange={(e) => setDFrom(e.target.value)}><option value="">Selecione…</option>{users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>
-            <div><Label>Para (substituto)</Label><select className={sel} value={dTo} onChange={(e) => setDTo(e.target.value)}><option value="">Selecione…</option>{users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>
-            <div><Label>Início</Label><Input type="date" value={dStart} onChange={(e) => setDStart(e.target.value)} /></div>
-            <div><Label>Fim</Label><Input type="date" value={dEnd} onChange={(e) => setDEnd(e.target.value)} /></div>
+            <Select label="De (aprovador)" placeholder="Selecione…" value={dFrom} onValueChange={setDFrom} options={users.map((u) => ({ value: u.id, label: u.name }))} />
+            <Select label="Para (substituto)" placeholder="Selecione…" value={dTo} onValueChange={setDTo} options={users.map((u) => ({ value: u.id, label: u.name }))} />
+            <DatePicker label="Início" value={dStart || null} onValueChange={(v) => setDStart(v ?? '')} />
+            <DatePicker label="Fim" min={dStart || undefined} value={dEnd || null} onValueChange={(v) => setDEnd(v ?? '')} />
           </div>
           <Button disabled={busy} className="w-full" onClick={async () => { if (await run({ entity: 'delegation', action: 'create', fromUserId: dFrom, toUserId: dTo, startsAt: dStart, endsAt: dEnd })) { setDFrom(''); setDTo(''); setDStart(''); setDEnd(''); } }}><Plus className="h-4 w-4" /> Criar delegação</Button>
         </div>
@@ -118,7 +119,6 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
   );
 }
 
-const SEL = 'h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
 function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[]; onChange: () => void }) {
   const [editing, setEditing] = useState(false);
@@ -213,7 +213,7 @@ function MiscTypeItem({ m, onChange }: { m: MiscTypeRow; onChange: () => void })
       {editing && (
         <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-2">
           <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
-          <div><Label className="text-xs">Aprovador</Label><select className={SEL} value={role} onChange={(e) => setRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</select></div>
+          <Select label="Aprovador" size="sm" value={role} onValueChange={setRole} options={ROLE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))} />
           <Button size="sm" className="col-span-2" disabled={busy} onClick={() => call({ entity: 'miscType', action: 'update', id: m.id, name, approverRole: role }, () => setEditing(false))}><Save className="h-4 w-4" /> Salvar alterações</Button>
         </div>
       )}

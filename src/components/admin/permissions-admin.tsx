@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Select } from '@/components/ui/ds/select';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 
 type Perm = { canView: boolean; canEdit: boolean };
@@ -29,12 +30,12 @@ export function PermissionsAdmin({ modules, matrix }: { modules: { key: string; 
 
   return (
     <div className="space-y-3">
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">Perfil</label>
-        <select className="ml-2 h-10 rounded-lg border-2 border-input bg-background px-3 text-sm" value={role} onChange={(e) => setRole(e.target.value)}>
-          {EDITABLE_ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
-        </select>
-        <p className="mt-1 text-xs text-muted-foreground">CEO e Administrador têm acesso total e não podem ser restringidos. Sem marcar “Ver”, o módulo some do menu do perfil.</p>
+      <div className="max-w-xs">
+        <Select
+          label="Perfil" value={role} onValueChange={setRole}
+          hint="CEO e Administrador têm acesso total e não podem ser restringidos. Sem marcar “Ver”, o módulo some do menu do perfil."
+          options={EDITABLE_ROLES.map((r) => ({ value: r, label: roleLabel(r) }))}
+        />
       </div>
 
       <div className="overflow-hidden rounded-lg border">

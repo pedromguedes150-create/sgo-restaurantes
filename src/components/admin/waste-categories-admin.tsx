@@ -6,9 +6,13 @@ import { Plus, Pencil, Trash2, X, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { postAdmin } from '@/lib/admin-client';
 
 export interface WasteCatRow { id: string; name: string; active: boolean; measure: 'kg' | 'un' }
+
+/** Escolha binária: pílula deslizante mostra as duas medidas de uma vez. */
+const MEDIDAS = [{ value: 'kg' as const, label: 'kg' }, { value: 'un' as const, label: 'un' }];
 
 export function WasteCategoriesAdmin({ categories }: { categories: WasteCatRow[] }) {
   const router = useRouter();
@@ -31,10 +35,10 @@ export function WasteCategoriesAdmin({ categories }: { categories: WasteCatRow[]
       <p className="text-sm text-muted-foreground">Categorias do lançamento de desperdícios. Medida <b>kg</b> = peso; <b>un</b> = unidades com sub-itens por produto (ex.: lanchonete).</p>
       <div className="flex gap-2">
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nova categoria (ex.: Carne, Salada, Sobremesa)" />
-        <select value={measure} onChange={(e) => setMeasure(e.target.value as 'kg' | 'un')} className="h-11 rounded-lg border-2 border-input bg-background px-2 text-sm">
-          <option value="kg">kg</option>
-          <option value="un">un</option>
-        </select>
+        <SegmentedControl
+          aria-label="Medida da categoria" value={measure} onValueChange={setMeasure}
+          options={MEDIDAS}
+        />
         <Button disabled={busy} onClick={create}><Plus className="h-4 w-4" /> Adicionar</Button>
       </div>
       {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
@@ -66,7 +70,7 @@ function CatRow({ c, onChange }: { c: WasteCatRow; onChange: () => void }) {
       <div className="flex items-center justify-between gap-2">
         {editing ? (
           <span className="flex flex-1 items-center gap-1.5"><Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 text-sm" />
-          <select value={mEdit} onChange={(e) => setMEdit(e.target.value as 'kg' | 'un')} className="h-9 rounded-lg border-2 border-input bg-background px-1.5 text-sm"><option value="kg">kg</option><option value="un">un</option></select></span>
+          <SegmentedControl aria-label="Medida da categoria" size="sm" value={mEdit} onValueChange={setMEdit} options={MEDIDAS} /></span>
         ) : (
           <span className="font-medium text-brand">{c.name} <span className="text-xs text-muted-foreground">({c.measure})</span></span>
         )}

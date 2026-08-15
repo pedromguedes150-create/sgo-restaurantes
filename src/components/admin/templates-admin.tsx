@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 import { postAdmin } from '@/lib/admin-client';
 
 export interface TplItem { section: string | null; text: string; requiresPhoto: boolean; aiCheck: boolean; standardDescription: string | null }
@@ -19,7 +22,6 @@ export interface TplRow {
 interface Unit { id: string; name: string }
 export interface ExampleOpt { id: string; name: string; category: string | null; moment: string | null; scope: 'UNIT' | 'MANAGER'; limitTime: string | null; requiresEvidence: boolean; weight: number; itemCount: number }
 
-const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
 export function TemplatesAdmin({ units, templates, examples = [] }: { units: Unit[]; templates: TplRow[]; examples?: ExampleOpt[] }) {
   const router = useRouter();
@@ -36,10 +38,10 @@ export function TemplatesAdmin({ units, templates, examples = [] }: { units: Uni
 
   return (
     <div className="space-y-4">
-      <div>
-        <Label>Unidade (para ver os checklists)</Label>
-        <select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
-      </div>
+      <Select
+        label="Unidade (para ver os checklists)" value={unitId} onValueChange={setUnitId}
+        options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+      />
 
       {creating ? (
         <ChecklistForm units={units} defaultUnitId={unitId} onDone={() => { setCreating(false); router.refresh(); }} onCancel={() => setCreating(false)} />
@@ -298,13 +300,13 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
       <div className="space-y-2">
         <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
         <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-xs">Escopo</Label>
-            <select className={sel} value={scope} onChange={(e) => setScope(e.target.value as 'UNIT' | 'MANAGER')}>
-              <option value="UNIT">Da unidade (qualquer gerente conclui)</option>
-              <option value="MANAGER">Individual (1 por gerente/dia)</option>
-            </select>
-          </div>
+          <Select
+            label="Escopo" size="sm" value={scope} onValueChange={(v) => setScope(v as 'UNIT' | 'MANAGER')}
+            options={[
+              { value: 'UNIT', label: 'Da unidade', hint: 'qualquer gerente conclui' },
+              { value: 'MANAGER', label: 'Individual', hint: '1 por gerente/dia' },
+            ]}
+          />
           <div><Label className="text-xs">Peso na meta</Label><Input inputMode="numeric" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-10 text-sm" /></div>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -318,8 +320,8 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
         <div className="rounded-lg bg-background/60 p-2">
           <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Programação (opcional)</p>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label className="text-xs">Início</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9 text-sm" /></div>
-            <div><Label className="text-xs">Encerramento</Label><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9 text-sm" /></div>
+            <DatePicker label="Início" size="sm" value={startDate || null} onValueChange={(v) => setStartDate(v ?? '')} />
+            <DatePicker label="Encerramento" size="sm" min={startDate || undefined} value={endDate || null} onValueChange={(v) => setEndDate(v ?? '')} />
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">Sem início = vale desde já. Sem encerramento = sem fim. O checklist só é gerado dentro do período.</p>
         </div>

@@ -8,12 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
 import { postAdmin } from '@/lib/admin-client';
 
 interface MItem { section: string | null; text: string; requiresPhoto: boolean }
 export interface ModelRow { id: string; name: string; category: string | null; moment: string | null; scope: 'UNIT' | 'MANAGER'; limitTime: string | null; weight: number; requiresEvidence: boolean; active: boolean; builtin: boolean; items: MItem[] }
 
-const sel = 'h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
 export function ChecklistModelsAdmin({ models }: { models: ModelRow[] }) {
   const router = useRouter();
@@ -168,12 +168,11 @@ function ModelForm({ edit, onDone, onCancel }: { edit?: ModelRow; onDone: () => 
         <div className="col-span-2"><Label className="text-xs">Nome do modelo</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" placeholder="ex: Cozinha — Abertura" /></div>
         <div><Label className="text-xs">Setor</Label><Input value={category} onChange={(e) => setCategory(e.target.value)} className="h-10 text-sm" placeholder="ex: Cozinha" /></div>
         <div><Label className="text-xs">Momento</Label><Input value={moment} onChange={(e) => setMoment(e.target.value)} className="h-10 text-sm" placeholder="Abertura / Fechamento…" /></div>
-        <div>
-          <Label className="text-xs">Escopo</Label>
-          <select className={sel} value={scope} onChange={(e) => setScope(e.target.value as 'UNIT' | 'MANAGER')}>
-            <option value="UNIT">Da unidade</option><option value="MANAGER">Individual</option>
-          </select>
-        </div>
+        <Select
+          label="Escopo" size="sm" value={scope}
+          onValueChange={(v) => setScope(v as 'UNIT' | 'MANAGER')}
+          options={[{ value: 'UNIT', label: 'Da unidade' }, { value: 'MANAGER', label: 'Individual' }]}
+        />
         <div><Label className="text-xs">Peso na meta</Label><Input inputMode="numeric" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-10 text-sm" /></div>
       </div>
       <div className="flex flex-wrap items-center gap-4 text-sm">

@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronUp, ChevronDown, Plus, Copy, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 
 interface Unit { id: string; name: string }
 interface Row {
@@ -15,7 +16,6 @@ interface Row {
 }
 interface Data { denominations: Row[]; available: { key: string; label: string }[] }
 
-const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 const brl = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const rowLabel = (r: { label: string | null; kind: string; value: number | null }) =>
   r.label ?? (r.kind === 'OTHER' || r.value == null ? 'Outros (PIX/caixinha)' : `${r.kind === 'COIN' ? 'Moeda' : 'Nota'} ${brl(r.value)}`);
@@ -99,12 +99,10 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
         Defina, por unidade, quais notas/moedas existem no cofre e em quais blocos aparecem. O <strong>indicador ≥50%</strong> é separado das notas grandes (você escolhe o que conta nele).
       </p>
 
-      <div>
-        <Label>Unidade</Label>
-        <select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-          {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
-      </div>
+      <Select
+        label="Unidade" value={unitId} onValueChange={setUnitId}
+        options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+      />
 
       {loading && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p>}
       {msg && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{msg}</p>}
@@ -196,9 +194,12 @@ function AddFromCatalog({ available, onAdd, busy }: { available: { key: string; 
     <div className="rounded-lg border border-dashed p-2.5">
       <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Adicionar denominação do catálogo</p>
       <div className="flex items-end gap-2">
-        <select className={`${sel} flex-1`} value={key} onChange={(e) => setKey(e.target.value)}>
-          {available.map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}
-        </select>
+        <div className="flex-1">
+          <Select
+            aria-label="Denominação do catálogo" value={key} onValueChange={setKey}
+            options={available.map((a) => ({ value: a.key, label: a.label }))}
+          />
+        </div>
         <Button size="sm" disabled={busy || !key} onClick={() => onAdd(key)} aria-label="Adicionar"><Plus className="h-4 w-4" /></Button>
       </div>
     </div>
