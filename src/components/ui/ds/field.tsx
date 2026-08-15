@@ -13,7 +13,8 @@ import { cn } from '@/lib/utils';
 
 /** Classe base dos controles — reaproveitada por Select e DatePicker. */
 export const controlBase = [
-  'w-full rounded-control border bg-sgo-surface text-ink-900',
+  // .sgo-control só carrega o mínimo de 44px em ponteiro grosso (regra 8).
+  'sgo-control w-full rounded-control border bg-sgo-surface text-ink-900',
   'placeholder:text-ink-400',
   'outline-none transition-colors duration-sgo-1 ease-sgo-std',
   'focus-visible:shadow-sgo-focus',

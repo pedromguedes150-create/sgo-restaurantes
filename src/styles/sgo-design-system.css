@@ -76,6 +76,7 @@
   --sgo-control-sm: 32px;
   --sgo-control-md: 40px;
   --sgo-control-lg: 48px;
+  --sgo-touch: 44px;
   --sgo-row: 64px;
   --sgo-content: 1152px;
   --sgo-content-wide: 1408px;
@@ -356,5 +357,16 @@
   }
   [data-sheet-scales] {
     transition: none;
+  }
+}
+
+/* Regra 8 do contrato: alvo de toque de no mínimo 44px. Os tamanhos compactos
+   (sm 32px, md 40px) existem para o mouse, onde a mira é precisa; num aparelho
+   de toque eles ficam abaixo do dedo. Em vez de proibir o compacto, o próprio
+   controle cresce quando o ponteiro é grosso — assim a tela continua densa no
+   desktop sem custar acerto no celular. */
+@media (pointer: coarse) {
+  .sgo-control {
+    min-height: var(--sgo-touch);
   }
 }
