@@ -50,12 +50,16 @@
   --sgo-brand-tint-2: #f6e4e7;
   --sgo-on-brand: #ffffff;
 
-  /* ---- Cor · status (light) ---- */
-  --sgo-success: #0a5c34;
+  /* ---- Cor · status (light) ----
+     Ajustados na Onda 7 para passar AAA sobre TODAS as superfícies, não só
+     sobre a tinta própria: nos valores anteriores caíam para 6,50-6,71 sobre
+     sunken. Escurecer um pouco custa menos que uma regra de "não use status
+     sobre sunken", que ninguém lembraria. */
+  --sgo-success: #0a5832;
   --sgo-success-bg: #edf7f1;
-  --sgo-warning: #7a4200;
+  --sgo-warning: #753f00;
   --sgo-warning-bg: #fcf1e1;
-  --sgo-danger: #a31515;
+  --sgo-danger: #991414;
   --sgo-danger-bg: #fef3f2;
   --sgo-info: #114e80;
   --sgo-info-bg: #eaf2fa;
