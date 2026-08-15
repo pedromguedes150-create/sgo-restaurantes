@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { TimePicker } from '@/components/ui/ds/time-picker';
 import type { ManagerCalendar, CalUnit, CalDay, CalManager } from '@/lib/manager-schedule';
 
 const WD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
@@ -49,9 +50,9 @@ function AdminScheduleEditor({ m }: { m: CalManager }) {
         <button type="button" onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])} className="ml-1 rounded-full border border-dashed px-2 py-1 text-[10px] font-semibold text-accent">Todos os dias</button>
       </div>
       <div className="mt-1.5 flex items-center gap-1.5">
-        <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="h-8 rounded border-2 border-input bg-background px-1.5 text-xs" />
+        <TimePicker aria-label="Hora de início" size="sm" className="w-24" value={start || null} onValueChange={(v) => setStart(v ?? '')} />
         <span className="text-xs text-muted-foreground">até</span>
-        <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="h-8 rounded border-2 border-input bg-background px-1.5 text-xs" />
+        <TimePicker aria-label="Hora de fim" size="sm" className="w-24" value={end || null} onValueChange={(v) => setEnd(v ?? '')} />
         <button onClick={() => void save()} disabled={busy} className="rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-60">Salvar</button>
         <button onClick={() => setOpen(false)} className="rounded border px-2 py-1 text-xs">Cancelar</button>
       </div>

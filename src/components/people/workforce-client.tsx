@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/ds/select';
+import { TimePicker } from '@/components/ui/ds/time-picker';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { cn } from '@/lib/utils';
 import { UnitFloorplan } from '@/components/people/unit-floorplan';
@@ -116,7 +117,7 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
         <div className="space-y-2 rounded-lg border bg-card p-2">
           <div className="flex flex-wrap items-end gap-2">
             <div className="w-44"><DatePicker label="Dia" value={mapDate || null} onValueChange={(v) => navTo(v ?? '', mapTime)} /></div>
-            <div><Label className="text-xs">Horário</Label><Input type="time" value={mapTime} onChange={(e) => navTo(mapDate, e.target.value)} className="h-10 w-32 text-sm" /></div>
+            <div className="w-32"><TimePicker label="Horário" value={mapTime || null} onValueChange={(v) => navTo(mapDate, v ?? '')} /></div>
           </div>
           <div className="flex flex-wrap gap-1">
             <button onClick={() => navTo('', '')} className={`rounded-full px-3 py-1 text-xs font-semibold ${isNow ? 'bg-primary text-primary-foreground' : 'border'}`}>Agora</button>

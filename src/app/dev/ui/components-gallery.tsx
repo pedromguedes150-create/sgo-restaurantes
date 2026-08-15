@@ -6,6 +6,7 @@ import { Button, IconButton } from '@/components/ui/ds/button';
 import { Input, Textarea, SearchField, CurrencyField } from '@/components/ui/ds/field';
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
+import { TimePicker } from '@/components/ui/ds/time-picker';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { List, ListRow, Avatar } from '@/components/ui/ds/list-row';
 import { EmptyState } from '@/components/ui/ds/empty-state';
@@ -152,11 +153,13 @@ export function ChoiceSection() {
   const [categoria, setCategoria] = useState<string | null>(null);
   const [data, setData] = useState<string | null>('2026-08-11');
   const [vazia, setVazia] = useState<string | null>(null);
+  const [hora, setHora] = useState<string | null>('09:30');
+  const [horaVazia, setHoraVazia] = useState<string | null>(null);
 
   return (
     <GallerySection
-      title="Select e DatePicker"
-      hint="Ambos custom — nenhum <select> ou <input type=date> nativo chega em produção (regra 6). Teclado completo: setas, Enter, Esc; no calendário, PageUp/PageDown troca o mês."
+      title="Select, DatePicker e TimePicker"
+      hint="Todos custom — nenhum <select>, <input type=date> ou <input type=time> nativo chega em produção (regra 6). Teclado completo: setas, Enter, Esc; no calendário, PageUp/PageDown troca o mês; no relógio, ←/→ trocam de coluna."
     >
       <Panel>
         <Grid>
@@ -169,6 +172,12 @@ export function ChoiceSection() {
           <Grid>
             <DatePicker label="Data do lançamento" value={data} onValueChange={setData} hint="Hoje fica marcado com anel; dias fora do limite são bloqueados." />
             <DatePicker label="Vencimento" value={vazia} onValueChange={setVazia} min="2026-08-01" max="2026-08-31" placeholder="dd/mm/aaaa" />
+          </Grid>
+        </div>
+        <div className="border-t border-line">
+          <Grid>
+            <TimePicker label="Hora de início" value={hora} onValueChange={setHora} hint="Passo de 5 min por padrão; ←/→ trocam entre hora e minuto." />
+            <TimePicker label="Só de hora em hora" value={horaVazia} onValueChange={setHoraVazia} minuteStep={60} min="08:00" max="18:00" />
           </Grid>
         </div>
       </Panel>

@@ -15,6 +15,7 @@ import { List as DsList, ListRow } from '@/components/ui/ds/list-row';
 import { StatusBadge as DsStatusBadge, type Tone as DsTone } from '@/components/ui/ds/status-badge';
 import { Sheet } from '@/components/ui/ds/sheet';
 import { Select as DsSelect } from '@/components/ui/ds/select';
+import { TimePicker } from '@/components/ui/ds/time-picker';
 import { SearchField } from '@/components/ui/ds/field';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
@@ -607,8 +608,8 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
           )}
           <DatePicker label="Dia do trabalho" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Hora início</Label><Input type="time" value={workStartTime} onChange={(e) => setWorkStartTime(e.target.value)} /></div>
-            <div><Label>Hora fim</Label><Input type="time" value={workEndTime} onChange={(e) => setWorkEndTime(e.target.value)} /></div>
+            <TimePicker label="Hora início" value={workStartTime || null} onValueChange={(v) => setWorkStartTime(v ?? '')} />
+            <TimePicker label="Hora fim" value={workEndTime || null} onValueChange={(v) => setWorkEndTime(v ?? '')} />
           </div>
           <p className="text-xs text-muted-foreground">Com o dia e a hora preenchidos, o freelancer fica disponível para alocar no Mapa da unidade naquele dia/horário.</p>
           <div><Label>Vale transporte (R$, opcional)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>

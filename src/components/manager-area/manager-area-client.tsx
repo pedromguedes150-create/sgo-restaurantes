@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RichText } from '@/components/ui/rich-text';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { TimePicker } from '@/components/ui/ds/time-picker';
 
 export interface MTask { id: string; title: string; notes: string | null; dueAt: string | null; done: boolean }
 export interface MNote { id: string; title: string | null; content: string; createdAt: string }
@@ -29,14 +32,16 @@ function splitDue(iso: string | null): { date: string; time: string } {
   return { date, time };
 }
 
-function TimePicker({ date, time, onDate, onTime }: { date: string; time: string; onDate: (v: string) => void; onTime: (v: string) => void }) {
+/** Data + horário do lembrete da tarefa pessoal — não confundir com o TimePicker do DS. */
+function DueAtPicker({ date, time, onDate, onTime }: { date: string; time: string; onDate: (v: string) => void; onTime: (v: string) => void }) {
   return (
     <div className="flex flex-wrap items-end gap-2">
-      <div><Label className="text-xs">Data</Label><Input type="date" value={date} onChange={(e) => onDate(e.target.value)} className="h-10 text-sm" /></div>
-      <div><Label className="text-xs">Hora</Label>
-        <select value={time || '09:00'} onChange={(e) => onTime(e.target.value)} disabled={!date} className="h-10 rounded-lg border-2 border-input bg-background px-2 text-sm disabled:opacity-50">
-          {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
+      <DatePicker label="Data" value={date || null} onValueChange={(v) => onDate(v ?? '')} />
+      <div className="w-28">
+        <Select
+          label="Hora" value={time || '09:00'} onValueChange={onTime} disabled={!date}
+          options={TIME_SLOTS.map((t) => ({ value: t, label: t }))}
+        />
       </div>
     </div>
   );
@@ -90,7 +95,7 @@ function TasksTab({ tasks, busy, post }: { tasks: MTask[]; busy: boolean; post: 
         <Label className="text-xs">Nova tarefa</Label>
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ex: ligar para o fornecedor X" className="mt-1" />
         <div className="mt-2 flex flex-wrap items-end gap-2">
-          <TimePicker date={date} time={time} onDate={setDate} onTime={setTime} />
+          <DueAtPicker date={date} time={time} onDate={setDate} onTime={setTime} />
           <Button size="sm" disabled={busy || !title.trim()} onClick={async () => { if (await post({ entity: 'task', action: 'create', title, dueAt: combine(date, time) || undefined })) { setTitle(''); setDate(''); setTime('09:00'); } }}><Plus className="h-4 w-4" /> Adicionar</Button>
         </div>
         <p className="mt-1 text-[11px] text-muted-foreground">Com data/hora, o sistema te lembra por notificação quando chegar.</p>
@@ -122,7 +127,7 @@ function TaskRow({ t, busy, post }: { t: MTask; busy: boolean; post: Post }) {
     return (
       <div className="rounded-lg border-2 border-accent/40 bg-card p-2.5">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} className="mb-2 text-sm" />
-        <TimePicker date={date} time={time} onDate={setDate} onTime={setTime} />
+        <DueAtPicker date={date} time={time} onDate={setDate} onTime={setTime} />
         <div className="mt-2 flex gap-1.5">
           <Button size="sm" disabled={busy || !title.trim()} onClick={async () => { if (await post({ entity: 'task', action: 'update', id: t.id, title, dueAt: date ? combine(date, time) : null })) setEditing(false); }}><Save className="h-4 w-4" /> Salvar</Button>
           <Button size="sm" variant="ghost" onClick={() => { setTitle(t.title); setDate(init.date); setTime(init.time || '09:00'); setEditing(false); }}><X className="h-4 w-4" /> Cancelar</Button>
@@ -218,8 +223,8 @@ function WorkScheduleEditor({ schedule, busy, post }: { schedule: MWorkSchedule 
       </div>
       <p className="mt-1 text-[11px] text-muted-foreground">Sem folga fixa? Toque em <b>Todos os dias</b> — depois marque cada folga na agenda abaixo (7 dias sem folga gera aviso ao supervisor).</p>
       <div className="mt-2 grid grid-cols-2 gap-2">
-        <div><Label className="text-xs">Início</Label><Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="h-10 text-sm" /></div>
-        <div><Label className="text-xs">Fim</Label><Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="h-10 text-sm" /></div>
+        <TimePicker label="Início" value={start || null} onValueChange={(v) => setStart(v ?? '')} />
+        <TimePicker label="Fim" value={end || null} onValueChange={(v) => setEnd(v ?? '')} />
       </div>
       <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-2 h-10 text-sm" />
       <Button size="sm" className="mt-2" disabled={busy} onClick={async () => { if (await post({ entity: 'workSchedule', action: 'set', weekdays: days, startTime: start || null, endTime: end || null, note })) { setSaved(true); setTimeout(() => setSaved(false), 2500); } }}>Salvar horário</Button>
@@ -244,15 +249,12 @@ function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam }: { leaves
       <div className="rounded-lg border border-dashed p-3">
         <p className="mb-2 text-xs text-muted-foreground">Nos dias de folga/férias, seus checklists e tarefas do dia não aparecem para você (você ainda pode entrar no sistema).</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <div>
-            <Label className="text-xs">Tipo</Label>
-            <select value={kind} onChange={(e) => setKind(e.target.value as 'FOLGA' | 'FERIAS')} className="h-10 w-full rounded-lg border-2 border-input bg-background px-2 text-sm">
-              <option value="FOLGA">Folga</option>
-              <option value="FERIAS">Férias</option>
-            </select>
-          </div>
-          <div><Label className="text-xs">Início</Label><Input type="date" value={start} onChange={(e) => { setStart(e.target.value); if (!end) setEnd(e.target.value); }} className="h-10 text-sm" /></div>
-          <div><Label className="text-xs">Fim</Label><Input type="date" value={end} min={start} onChange={(e) => setEnd(e.target.value)} className="h-10 text-sm" /></div>
+          <Select
+            label="Tipo" value={kind} onValueChange={(v) => setKind(v as 'FOLGA' | 'FERIAS')}
+            options={[{ value: 'FOLGA', label: 'Folga' }, { value: 'FERIAS', label: 'Férias' }]}
+          />
+          <DatePicker label="Início" value={start || null} onValueChange={(v) => { setStart(v ?? ''); if (!end) setEnd(v ?? ''); }} />
+          <DatePicker label="Fim" min={start || undefined} value={end || null} onValueChange={(v) => setEnd(v ?? '')} />
         </div>
         <Button size="sm" className="mt-2" disabled={busy || !start || !end} onClick={async () => { if (await post({ entity: 'leave', action: 'add', kind, startDate: start, endDate: end })) { setStart(''); setEnd(''); } }}><Plus className="h-4 w-4" /> Agendar</Button>
       </div>
