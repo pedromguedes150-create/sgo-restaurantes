@@ -26,11 +26,14 @@ export interface DatePickerProps {
   size?: keyof typeof controlSize;
   placeholder?: string;
   className?: string;
+  /** Nome acessível quando não há rótulo visível (ex.: campo em linha num filtro). */
+  'aria-label'?: string;
 }
 
 export function DatePicker({
   value, onValueChange, min, max,
   label, hint, error, required, disabled, size = 'md', placeholder = 'dd/mm/aaaa', className,
+  'aria-label': ariaLabel,
 }: DatePickerProps) {
   const id = React.useId();
   const { descId, describedBy } = useDescribedBy(id, hint, error);
@@ -75,6 +78,7 @@ export function DatePicker({
           id={id}
           type="button"
           disabled={disabled}
+          aria-label={ariaLabel}
           aria-haspopup="dialog"
           aria-expanded={open}
           // Num <button> puro, aria-invalid não é suportado: o erro é anunciado

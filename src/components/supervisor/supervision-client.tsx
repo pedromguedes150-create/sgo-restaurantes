@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 import { cn } from '@/lib/utils';
 
 export interface UsageRowUI {
@@ -63,9 +66,13 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
 
       {tab === 'PAINEL' && (
         <div className="space-y-3">
-          <select value={yearMonth} onChange={(e) => router.push(`/modulos/supervisao?mes=${e.target.value}`)} className="h-9 rounded-md border bg-card px-2 text-sm font-semibold capitalize">
-            {months.map((m) => <option key={m} value={m}>{fmtMonthLong(m)}</option>)}
-          </select>
+          <div className="max-w-[224px]">
+            <Select
+              aria-label="Mês" size="sm" className="capitalize" value={yearMonth}
+              onValueChange={(v) => router.push(`/modulos/supervisao?mes=${v}`)}
+              options={months.map((m) => ({ value: m, label: fmtMonthLong(m) }))}
+            />
+          </div>
           <p className="text-xs text-muted-foreground">Uso correto = média de checklists concluídos, dias com desperdício lançado e dias com comandas conferidas. Piores primeiro.</p>
           {usage.map((u) => (
             <div key={u.unitId} className="rounded-lg border bg-card p-3">
@@ -116,11 +123,11 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
             <div className="rounded-lg border border-dashed p-3">
               <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Agendar visita</p>
               <div className="grid grid-cols-2 gap-2">
-                <select className="h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={vUnit} onChange={(e) => setVUnit(e.target.value)}>
-                  <option value="">Unidade…</option>
-                  {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
-                <Input type="date" value={vDate} onChange={(e) => setVDate(e.target.value)} className="h-10 text-sm" />
+                <Select
+                  aria-label="Unidade da visita" placeholder="Unidade…" value={vUnit} onValueChange={setVUnit}
+                  options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+                />
+                <DatePicker aria-label="Data da visita" value={vDate || null} onValueChange={(v) => setVDate(v ?? '')} />
               </div>
               <Button className="mt-2 w-full" disabled={busy || !vUnit || !vDate} onClick={async () => { if (await post({ action: 'schedule', unitId: vUnit, scheduledDate: vDate })) { setVUnit(''); setVDate(''); } }}><Plus className="h-4 w-4" /> Agendar</Button>
             </div>
@@ -217,13 +224,11 @@ function UpcomingVisit({ v, checklists, canOperate, busy, post }: {
             <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="O que foi visto, orientações ao gerente, combinados…" className="w-full rounded-lg border-2 border-input bg-background p-2 text-sm" />
           </div>
           {checklists.length > 0 && (
-            <div>
-              <Label className="text-xs">Checklist da visita (opcional)</Label>
-              <select className="h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={clId} onChange={(e) => { setClId(e.target.value); setResults({}); }}>
-                <option value="">Sem checklist</option>
-                {checklists.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
+            <Select
+              label="Checklist da visita (opcional)" size="sm" placeholder="Sem checklist"
+              value={clId} onValueChange={(v) => { setClId(v); setResults({}); }}
+              options={checklists.map((c) => ({ value: c.id, label: c.name }))}
+            />
           )}
           {cl && (
             <div className="space-y-1.5">
