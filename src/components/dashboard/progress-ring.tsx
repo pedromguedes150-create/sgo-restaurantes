@@ -18,7 +18,7 @@ export function ProgressRing({
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (pct / 100) * circ;
-  const tone = pct >= 100 ? 'text-success' : pct >= 60 ? 'text-accent' : 'text-critical';
+  const tone = pct >= 100 ? 'text-sgo-success' : pct >= 60 ? 'text-warning' : 'text-danger';
 
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
@@ -38,8 +38,8 @@ export function ProgressRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-black text-brand">{label ?? `${pct}%`}</span>
-        {sublabel && <span className="text-xs text-muted-foreground">{sublabel}</span>}
+        <span className="text-2xl font-black text-sgo-brand">{label ?? `${pct}%`}</span>
+        {sublabel && <span className="text-xs text-ink-500">{sublabel}</span>}
       </div>
     </div>
   );

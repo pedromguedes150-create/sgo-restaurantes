@@ -13,10 +13,10 @@ interface AiState { loading?: boolean; configured?: boolean; verdict?: 'COMPATIV
 interface Answer { status: ItemStatus; note?: string }
 
 const ST: Record<ItemStatus, { label: string; short: string; cls: string }> = {
-  OK:            { label: 'De acordo',    short: '🟢', cls: 'bg-success text-white border-success' },
+  OK:            { label: 'De acordo',    short: '🟢', cls: 'bg-sgo-success text-white border-sgo-success' },
   EM_CORRECAO:   { label: 'Em correção',  short: '🟡', cls: 'bg-warning-bg text-warning border-warning' },
-  A_CORRIGIR:    { label: 'A corrigir',   short: '🔴', cls: 'bg-critical text-white border-critical' },
-  NAO_SE_APLICA: { label: 'Não se aplica', short: '⚪', cls: 'bg-muted text-muted-foreground border-input' },
+  A_CORRIGIR:    { label: 'A corrigir',   short: '🔴', cls: 'bg-danger text-white border-danger' },
+  NAO_SE_APLICA: { label: 'Não se aplica', short: '⚪', cls: 'bg-sunken text-ink-500 border-line-strong' },
 };
 const STATUSES: ItemStatus[] = ['OK', 'EM_CORRECAO', 'A_CORRIGIR', 'NAO_SE_APLICA'];
 
@@ -121,7 +121,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
   if (done) {
     return (
       <div className="space-y-4">
-        <p className={cn('rounded-lg px-3 py-2 text-sm font-semibold', lateStatus ? 'bg-medium/15 text-warning' : 'bg-success/10 text-success')}>
+        <p className={cn('rounded-lg px-3 py-2 text-sm font-semibold', lateStatus ? 'bg-warning/15 text-warning' : 'bg-sgo-success/10 text-sgo-success')}>
           {lateStatus ? 'Concluído fora do prazo (não conta na meta).' : 'Concluído no prazo.'}
         </p>
         {/* Visão completa a partir do SNAPSHOT das respostas (sobrevive a edições do checklist). */}
@@ -129,7 +129,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
           <div className="space-y-1">
             {responses.map((r, i) => (
               <div key={i} className="flex items-start justify-between gap-2 rounded-md border p-2 text-sm">
-                <span>{r.itemText}{r.note ? <span className="block text-xs text-muted-foreground">{r.note}</span> : null}</span>
+                <span>{r.itemText}{r.note ? <span className="block text-xs text-ink-500">{r.note}</span> : null}</span>
                 <span className={cn('shrink-0 rounded px-2 py-0.5 text-xs font-bold', ST[r.status].cls)}>{ST[r.status].label}</span>
               </div>
             ))}
@@ -137,13 +137,13 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
         ) : (
           groups.map((g) => (
             <div key={g.section ?? '_'}>
-              {g.section && <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{g.section}</p>}
+              {g.section && <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">{g.section}</p>}
               <div className="space-y-1">
                 {g.items.map((it) => {
                   const a = answers[it.id];
                   return (
                     <div key={it.id} className="flex items-start justify-between gap-2 rounded-md border p-2 text-sm">
-                      <span>{it.text}{a?.note ? <span className="block text-xs text-muted-foreground">{a.note}</span> : null}</span>
+                      <span>{it.text}{a?.note ? <span className="block text-xs text-ink-500">{a.note}</span> : null}</span>
                       {a && <span className={cn('shrink-0 rounded px-2 py-0.5 text-xs font-bold', ST[a.status].cls)}>{ST[a.status].label}</span>}
                     </div>
                   );
@@ -159,10 +159,10 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
           const ordered = [...groups2.entries()].sort((a, b) => (a[0] === '_' ? 1 : b[0] === '_' ? -1 : 0));
           return (
             <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Fotos</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Fotos</p>
               {ordered.map(([k, ps]) => (
                 <div key={k}>
-                  <p className="mb-1 text-xs font-medium text-brand">{k === '_' ? 'Gerais' : (textById.get(k) ?? 'Item')}</p>
+                  <p className="mb-1 text-xs font-medium text-sgo-brand">{k === '_' ? 'Gerais' : (textById.get(k) ?? 'Item')}</p>
                   <div className="flex flex-wrap gap-2">
                     {ps.map((p, i) => <a key={i} href={p.path} target="_blank" rel="noreferrer"><img src={p.path} alt="" className="h-24 w-24 rounded-lg border object-cover" /></a>)}
                   </div>
@@ -171,7 +171,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
             </div>
           );
         })()}
-        {items.length === 0 && photos.length === 0 && <p className="text-sm text-muted-foreground">Tarefa concluída.</p>}
+        {items.length === 0 && photos.length === 0 && <p className="text-sm text-ink-500">Tarefa concluída.</p>}
       </div>
     );
   }
@@ -179,45 +179,45 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
   /* ───── Execução ───── */
   return (
     <div className="space-y-4">
-      {items.length === 0 && <p className="text-sm text-muted-foreground">Este checklist não tem itens — basta anexar foto (se exigida) e concluir.</p>}
+      {items.length === 0 && <p className="text-sm text-ink-500">Este checklist não tem itens — basta anexar foto (se exigida) e concluir.</p>}
       {groups.map((g) => (
         <div key={g.section ?? '_'}>
-          {g.section && <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{g.section}</p>}
+          {g.section && <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">{g.section}</p>}
           <div className="space-y-2">
             {g.items.map((it) => {
               const a = answers[it.id];
               return (
-                <div key={it.id} className={cn('rounded-lg border bg-card p-2.5', openIssues[it.id] && 'border-critical/50')}>
-                  <p className="text-sm font-medium">{it.text}{it.requiresPhoto && <span className="ml-1 text-xs text-gold-dark">(foto)</span>}</p>
+                <div key={it.id} className={cn('rounded-lg border bg-sgo-surface p-2.5', openIssues[it.id] && 'border-danger/50')}>
+                  <p className="text-sm font-medium">{it.text}{it.requiresPhoto && <span className="ml-1 text-xs text-ink-900">(foto)</span>}</p>
                   {openIssues[it.id] && (
-                    <p className="mt-1 rounded-md bg-critical/10 px-2 py-1 text-xs font-semibold text-critical">
+                    <p className="mt-1 rounded-md bg-danger/10 px-2 py-1 text-xs font-semibold text-danger">
                       ⚠ Problema em aberto desde {openIssues[it.id].since} (ocorrência nº {openIssues[it.id].number}) — some daqui quando a ocorrência for encerrada; não gera pendência nova.
                     </p>
                   )}
                   <div className="mt-2 grid grid-cols-2 gap-1">
                     {STATUSES.map((s) => (
-                      <button key={s} onClick={() => setItem(it.id, { status: s })} className={cn('rounded-md border px-2 py-1.5 text-xs font-semibold', a?.status === s ? ST[s].cls : 'border-input text-muted-foreground')}>
+                      <button key={s} onClick={() => setItem(it.id, { status: s })} className={cn('rounded-md border px-2 py-1.5 text-xs font-semibold', a?.status === s ? ST[s].cls : 'border-line-strong text-ink-500')}>
                         {ST[s].short} {ST[s].label}
                       </button>
                     ))}
                   </div>
                   {a && (a.status === 'EM_CORRECAO' || a.status === 'A_CORRIGIR') && (
-                    <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Observação (o que corrigir)" className="mt-2 h-9 w-full rounded-md border-2 border-input bg-background px-2 text-sm" />
+                    <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Observação (o que corrigir)" className="mt-2 h-9 w-full rounded-md border-2 border-line-strong bg-sgo-surface px-2 text-sm" />
                   )}
                   {a && a.status === 'NAO_SE_APLICA' && (
-                    <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Motivo (opcional)" className="mt-2 h-9 w-full rounded-md border-2 border-input bg-background px-2 text-sm" />
+                    <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Motivo (opcional)" className="mt-2 h-9 w-full rounded-md border-2 border-line-strong bg-sgo-surface px-2 text-sm" />
                   )}
                   {it.aiCheck && (
-                    <div className="mt-2 rounded-md border border-dashed bg-background/60 p-2">
-                      <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-accent">
+                    <div className="mt-2 rounded-md border border-dashed bg-sgo-surface/60 p-2">
+                      <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-sgo-brand">
                         <Sparkles className="h-4 w-4" /> {ai[it.id]?.loading ? 'Analisando com IA…' : 'Conferir a foto com IA'}
                         <input type="file" accept="image/*" capture="environment" hidden disabled={ai[it.id]?.loading} onChange={(e) => { const f = e.target.files?.[0]; if (f) analyzeAi(it.id, f); e.target.value = ''; }} />
                       </label>
                       {ai[it.id] && !ai[it.id].loading && (
-                        ai[it.id].configured === false ? <p className="mt-1 text-xs text-muted-foreground">IA não configurada no servidor.</p>
-                        : ai[it.id].error ? <p className="mt-1 text-xs text-critical">{ai[it.id].error}</p>
+                        ai[it.id].configured === false ? <p className="mt-1 text-xs text-ink-500">IA não configurada no servidor.</p>
+                        : ai[it.id].error ? <p className="mt-1 text-xs text-danger">{ai[it.id].error}</p>
                         : ai[it.id].verdict ? (
-                          <p className={cn('mt-1 text-xs font-medium', ai[it.id].verdict === 'COMPATIVEL' ? 'text-success' : ai[it.id].verdict === 'DIVERGENTE' ? 'text-critical' : 'text-warning')}>
+                          <p className={cn('mt-1 text-xs font-medium', ai[it.id].verdict === 'COMPATIVEL' ? 'text-sgo-success' : ai[it.id].verdict === 'DIVERGENTE' ? 'text-danger' : 'text-warning')}>
                             {ai[it.id].verdict === 'COMPATIVEL' ? '🟢 Compatível' : ai[it.id].verdict === 'DIVERGENTE' ? '🔴 Divergente' : '🟡 Incerto'}{ai[it.id].observations ? ` — ${ai[it.id].observations}` : ''}
                           </p>
                         ) : null
@@ -225,32 +225,32 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                     </div>
                   )}
                   {it.aiCheck && (
-                    <div className="mt-2 rounded-md border border-dashed bg-background/60 p-2">
-                      <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-accent">
+                    <div className="mt-2 rounded-md border border-dashed bg-sgo-surface/60 p-2">
+                      <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-sgo-brand">
                         <Sparkles className="h-4 w-4" /> {ps[it.id]?.loading ? 'Conferindo o padrão…' : 'Conferir padrão de produtos (IA)'}
                         <input type="file" accept="image/*" capture="environment" hidden disabled={ps[it.id]?.loading} onChange={(e) => { const f = e.target.files?.[0]; if (f) analyzeProductStd(it.id, f); e.target.value = ''; }} />
                       </label>
                       {ps[it.id] && !ps[it.id].loading && (
-                        ps[it.id].configured === false ? <p className="mt-1 text-xs text-muted-foreground">IA não configurada / sem padrão cadastrado.</p>
-                        : ps[it.id].error ? <p className="mt-1 text-xs text-critical">{ps[it.id].error}</p>
+                        ps[it.id].configured === false ? <p className="mt-1 text-xs text-ink-500">IA não configurada / sem padrão cadastrado.</p>
+                        : ps[it.id].error ? <p className="mt-1 text-xs text-danger">{ps[it.id].error}</p>
                         : (ps[it.id].offStandard && ps[it.id].offStandard!.length > 0)
-                          ? <p className="mt-1 text-xs font-medium text-critical">🔴 Fora do padrão: {ps[it.id].offStandard!.join(', ')}{ps[it.id].observations ? ` — ${ps[it.id].observations}` : ''}</p>
-                          : ps[it.id].verdict ? <p className="mt-1 text-xs font-medium text-success">🟢 Tudo no padrão{ps[it.id].observations ? ` — ${ps[it.id].observations}` : ''}</p> : null
+                          ? <p className="mt-1 text-xs font-medium text-danger">🔴 Fora do padrão: {ps[it.id].offStandard!.join(', ')}{ps[it.id].observations ? ` — ${ps[it.id].observations}` : ''}</p>
+                          : ps[it.id].verdict ? <p className="mt-1 text-xs font-medium text-sgo-success">🟢 Tudo no padrão{ps[it.id].observations ? ` — ${ps[it.id].observations}` : ''}</p> : null
                       )}
                     </div>
                   )}
                   {it.requiresPhoto && (
                     <div className="mt-2">
-                      <p className="mb-1 text-xs font-semibold text-gold-dark">Foto deste item</p>
+                      <p className="mb-1 text-xs font-semibold text-ink-900">Foto deste item</p>
                       <div className="flex flex-wrap gap-2">
                         {photoEntries.map((e, idx) => ({ e, idx })).filter((x) => x.e.itemId === it.id).map(({ e, idx }) => (
                           <div key={idx} className="relative">
                             <img src={URL.createObjectURL(e.file)} alt="" className="h-16 w-16 rounded-lg border object-cover" />
-                            <button onClick={() => removePhoto(idx)} className="absolute -right-1 -top-1 rounded-full bg-critical p-0.5 text-white"><X className="h-3 w-3" /></button>
+                            <button onClick={() => removePhoto(idx)} className="absolute -right-1 -top-1 rounded-full bg-danger p-0.5 text-white"><X className="h-3 w-3" /></button>
                           </div>
                         ))}
                         {photoEntries.length < 5 && (
-                          <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed text-[10px] text-muted-foreground">
+                          <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed text-[10px] text-ink-500">
                             <Camera className="h-4 w-4" /> foto
                             <input type="file" accept="image/*" capture="environment" hidden multiple onChange={(ev) => { addFiles(it.id, ev.target.files); ev.target.value = ''; }} />
                           </label>
@@ -267,16 +267,16 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
 
       {/* Fotos gerais (não ligadas a um item específico) — até 5 no total */}
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Outras fotos {requiresEvidence && <span className="text-gold-dark">(exige ao menos 1)</span>} — {photoEntries.length}/5</p>
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Outras fotos {requiresEvidence && <span className="text-ink-900">(exige ao menos 1)</span>} — {photoEntries.length}/5</p>
         <div className="flex flex-wrap gap-2">
           {photoEntries.map((e, i) => ({ e, i })).filter((x) => x.e.itemId === null).map(({ e, i }) => (
             <div key={i} className="relative">
               <img src={URL.createObjectURL(e.file)} alt="" className="h-20 w-20 rounded-lg border object-cover" />
-              <button onClick={() => removePhoto(i)} className="absolute -right-1 -top-1 rounded-full bg-critical p-0.5 text-white"><X className="h-3 w-3" /></button>
+              <button onClick={() => removePhoto(i)} className="absolute -right-1 -top-1 rounded-full bg-danger p-0.5 text-white"><X className="h-3 w-3" /></button>
             </div>
           ))}
           {photoEntries.length < 5 && (
-            <button onClick={() => fileRef.current?.click()} disabled={processing} className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 border-dashed text-xs text-muted-foreground disabled:opacity-60">
+            <button onClick={() => fileRef.current?.click()} disabled={processing} className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 border-dashed text-xs text-ink-500 disabled:opacity-60">
               <Camera className="h-5 w-5" /> {processing ? 'aguarde…' : 'foto'}
             </button>
           )}
@@ -284,8 +284,8 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
         <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden multiple onChange={(e) => { addFiles(null, e.target.files); e.target.value = ''; }} />
       </div>
 
-      {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
-      <p className="text-[11px] text-muted-foreground">Seu preenchimento é salvo automaticamente — se for interrompido, retoma de onde parou.</p>
+      {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
+      <p className="text-[11px] text-ink-500">Seu preenchimento é salvo automaticamente — se for interrompido, retoma de onde parou.</p>
       <Button onClick={submit} disabled={busy} size="lg" className="w-full md:w-auto md:px-10"><Check className="h-5 w-5" /> {busy ? 'Concluindo…' : 'Concluir checklist'}</Button>
     </div>
   );
