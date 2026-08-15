@@ -42,12 +42,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // Tema lido do cookie no servidor e carimbado no <html> antes do 1º paint
-  // (sem flash). Sem cookie, o padrão é CLARO — e não "system" — enquanto o
-  // conteúdo legado não usa os tokens do DS: escurecer só as superfícies
-  // deixaria textos de cor fixa (ex.: bordô) ilegíveis. Ver comentário em
-  // sgo-design-system.css; na Onda 3 o padrão volta a ser 'system'.
+  // (sem flash). Sem cookie, o padrão é 'system' — o app segue o aparelho.
+  // Isso só passou a ser possível na Onda 7: até ali o conteúdo usava cores
+  // FIXAS que não reagiam ao tema, e escurecer as superfícies deixava, por
+  // exemplo, o bordô sobre card escuro em ~1,3:1.
   const cookieTheme = cookies().get(THEME_COOKIE)?.value;
-  const theme: ThemeChoice = isThemeChoice(cookieTheme) ? cookieTheme : 'light';
+  const theme: ThemeChoice = isThemeChoice(cookieTheme) ? cookieTheme : 'system';
 
   return (
     <html

@@ -9,11 +9,11 @@
      2) data-theme="system" → segue prefers-color-scheme
      3) data-theme="light" (padrão do app) → claro
 
-   POR QUE o padrão é claro e não "system" (transitório, até a Onda 3):
-   o conteúdo legado tem ~880 usos de cores FIXAS (text-brand, text-critical…)
-   que não reagem ao tema. Escurecer só as superfícies deixaria, por exemplo,
-   o bordô #6E1423 sobre card escuro (~1.3:1, ilegível). Quando o conteúdo
-   estiver migrado, basta o padrão voltar a ser "system".
+   O padrão é "system" desde a Onda 7. Antes era claro à força: o conteúdo
+   usava ~2.100 cores FIXAS (text-brand, text-critical…) que não reagiam ao
+   tema, e escurecer só as superfícies deixava o bordô #6E1423 sobre card
+   escuro em ~1,3:1 — ilegível. Com tudo migrado para estes tokens, o escuro
+   passou a ser seguro (auditado com scripts/audit-contrast.js).
    Tokens não-cromáticos (espaço, raio, medida, movimento, tipografia) são
    definidos uma vez em :root (não mudam por tema).
    ========================================================================== */
@@ -214,6 +214,10 @@
   --sgo-surface: rgb(var(--sgo-surface-rgb));
   --sgo-sunken-rgb: 42 38 36;
   --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+  /* Faltava aqui na Onda 0: o bloco 'system' tinha, o 'dark' explícito não.
+     Sem isto, quem escolhe Escuro à mão fica com as barras de desfoque BRANCAS
+     sobre a página escura — e o texto claro do tema em cima delas. */
+  --sgo-glass: rgba(31, 28, 27, 0.72);
 
   --sgo-brand-rgb: 240 167 177;
 
