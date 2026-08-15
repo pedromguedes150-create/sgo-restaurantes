@@ -15,23 +15,23 @@ function fmt(iso: string | null): string { if (!iso) return '—'; if (iso.lengt
 export default async function MonitoramentoRelatorioPage({ params }: { params: { id: string } }) {
   const user = (await getSessionUser())!;
   const a = await getOpenCommandAnalysis(user, params.id);
-  if (!a) return <p className="text-sm text-muted-foreground">Análise não encontrada.</p>;
+  if (!a) return <p className="text-sm text-ink-500">Análise não encontrada.</p>;
   const unit = await prisma.unit.findUnique({ where: { id: a.unitId }, select: { name: true, code: true } });
   const suspects = (a.suspects as unknown as Suspect[]) ?? [];
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 print:max-w-none">
       <div className="flex items-center justify-between gap-2 print:hidden">
-        <Link href={`/modulos/comandas/analise-aberto?unit=${a.unitId}`} className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+        <Link href={`/modulos/comandas/analise-aberto?unit=${a.unitId}`} className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
         <PrintButton label="Imprimir / PDF" />
       </div>
 
       <div className="rounded-lg border p-4 print:border-0 print:p-0">
         <div className="mb-3 border-b pb-2">
-          <h1 className="text-lg font-black text-brand">Comandas em aberto — Monitoramento</h1>
-          <p className="text-sm text-muted-foreground">{unit?.name} ({unit?.code}) · corte {fmt(a.cutDate)} · gerado {new Date(a.createdAt).toLocaleString('pt-BR')}</p>
+          <h1 className="text-lg font-black text-sgo-brand">Comandas em aberto — Monitoramento</h1>
+          <p className="text-sm text-ink-500">{unit?.name} ({unit?.code}) · corte {fmt(a.cutDate)} · gerado {new Date(a.createdAt).toLocaleString('pt-BR')}</p>
           <p className="text-sm">Suspeitas: <b>{a.suspectCount}</b> · valor total <b>{formatBRL(Number(a.suspectValue))}</b></p>
-          <p className="mt-1 text-xs text-muted-foreground">Comandas abertas com valor e data de abertura anterior ao corte. Buscar as câmeras pela data/hora.</p>
+          <p className="mt-1 text-xs text-ink-500">Comandas abertas com valor e data de abertura anterior ao corte. Buscar as câmeras pela data/hora.</p>
         </div>
         <table className="w-full border-collapse text-xs">
           <thead><tr className="border-b text-left"><th className="p-1.5">Comanda</th><th className="p-1.5">Aberta em</th><th className="p-1.5 text-center">Dias</th><th className="p-1.5 text-right">Valor</th><th className="p-1.5">Itens</th></tr></thead>

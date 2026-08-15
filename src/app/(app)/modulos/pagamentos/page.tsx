@@ -91,9 +91,9 @@ export default async function PagamentosPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-brand">Pagamentos</h1>
+        <h1 className="text-xl font-bold text-sgo-brand">Pagamentos</h1>
         {isFinanceView && (
-          <Link href="/modulos/pagamentos/relatorio-freelancers" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent">
+          <Link href="/modulos/pagamentos/relatorio-freelancers" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-sgo-brand">
             <FileText className="h-4 w-4" /> Consolidação de freelancers
           </Link>
         )}

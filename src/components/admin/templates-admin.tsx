@@ -54,11 +54,11 @@ export function TemplatesAdmin({ units, templates, examples = [] }: { units: Uni
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">Soma dos pesos (ativos, na meta): <span className={sumWeight === 100 ? 'font-bold text-success' : 'font-bold text-medium'}>{sumWeight}</span> {sumWeight !== 100 && '(ideal: 100)'}</p>
+      <p className="text-xs text-ink-500">Soma dos pesos (ativos, na meta): <span className={sumWeight === 100 ? 'font-bold text-sgo-success' : 'font-bold text-warning'}>{sumWeight}</span> {sumWeight !== 100 && '(ideal: 100)'}</p>
 
       <div className="space-y-2">
         {list.map((t) => <TplItemRow key={t.id} t={t} units={units} onChange={() => router.refresh()} />)}
-        {list.length === 0 && <p className="text-sm text-muted-foreground">Nenhum checklist nesta unidade.</p>}
+        {list.length === 0 && <p className="text-sm text-ink-500">Nenhum checklist nesta unidade.</p>}
       </div>
     </div>
   );
@@ -90,27 +90,27 @@ function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: {
   return (
     <div className="space-y-2 rounded-lg border border-dashed p-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Modelos de checklist</h2>
-        {available.length > 0 && <button className="text-xs font-semibold text-accent" onClick={() => setSel(sel.size === available.length ? new Set() : new Set(available.map((e) => e.id)))}>{sel.size === available.length ? 'Limpar' : 'Selecionar todos'}</button>}
+        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Modelos de checklist</h2>
+        {available.length > 0 && <button className="text-xs font-semibold text-sgo-brand" onClick={() => setSel(sel.size === available.length ? new Set() : new Set(available.map((e) => e.id)))}>{sel.size === available.length ? 'Limpar' : 'Selecionar todos'}</button>}
       </div>
-      <p className="text-xs text-muted-foreground">Marque os que quer criar nesta unidade (você edita depois). Os que já existem ficam sinalizados.</p>
+      <p className="text-xs text-ink-500">Marque os que quer criar nesta unidade (você edita depois). Os que já existem ficam sinalizados.</p>
       <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar modelo…" className="h-9 text-sm" />
 
       <div className="max-h-[28rem] space-y-2 overflow-y-auto">
         {[...groups.entries()].map(([cat, list]) => (
           <div key={cat}>
-            <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-accent">{cat}</p>
+            <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-sgo-brand">{cat}</p>
             <div className="space-y-1">
               {list.map((e) => {
                 const exists = existingNames.has(e.name);
                 const checked = sel.has(e.id);
                 return (
                   <button key={e.id} type="button" disabled={exists} onClick={() => toggle(e.id)}
-                    className={`flex w-full items-start gap-2 rounded-lg border p-2 text-left ${exists ? 'cursor-not-allowed opacity-50' : checked ? 'border-primary bg-primary/5' : 'bg-card hover:border-accent'}`}>
-                    {exists ? <Check className="mt-0.5 h-5 w-5 shrink-0 text-success" /> : checked ? <CheckSquare className="mt-0.5 h-5 w-5 shrink-0 text-primary" /> : <Square className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />}
+                    className={`flex w-full items-start gap-2 rounded-lg border p-2 text-left ${exists ? 'cursor-not-allowed opacity-50' : checked ? 'border-sgo-brand bg-sgo-brand/5' : 'bg-sgo-surface hover:border-sgo-brand'}`}>
+                    {exists ? <Check className="mt-0.5 h-5 w-5 shrink-0 text-sgo-success" /> : checked ? <CheckSquare className="mt-0.5 h-5 w-5 shrink-0 text-sgo-brand" /> : <Square className="mt-0.5 h-5 w-5 shrink-0 text-ink-500" />}
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-brand">{e.moment ?? e.name}{exists && <span className="ml-1 text-xs font-normal text-success">já existe</span>}</span>
-                      <span className="block text-xs text-muted-foreground">{e.itemCount} item(ns) · {e.limitTime ? `limite ${e.limitTime}` : 'sem horário'} · peso {e.weight}{e.requiresEvidence ? ' · foto' : ''}</span>
+                      <span className="block text-sm font-semibold text-sgo-brand">{e.moment ?? e.name}{exists && <span className="ml-1 text-xs font-normal text-sgo-success">já existe</span>}</span>
+                      <span className="block text-xs text-ink-500">{e.itemCount} item(ns) · {e.limitTime ? `limite ${e.limitTime}` : 'sem horário'} · peso {e.weight}{e.requiresEvidence ? ' · foto' : ''}</span>
                     </span>
                   </button>
                 );
@@ -118,10 +118,10 @@ function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: {
             </div>
           </div>
         ))}
-        {shown.length === 0 && <p className="text-sm text-muted-foreground">Nenhum modelo encontrado.</p>}
+        {shown.length === 0 && <p className="text-sm text-ink-500">Nenhum modelo encontrado.</p>}
       </div>
 
-      {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+      {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
       <div className="flex gap-2">
         <Button size="sm" className="flex-1" disabled={busy || sel.size === 0} onClick={create}><Plus className="h-4 w-4" /> Criar selecionados ({sel.size})</Button>
         <Button size="sm" variant="outline" onClick={onCancel}>Cancelar</Button>
@@ -148,13 +148,13 @@ function ChecklistForm({ units, defaultUnitId, onDone, onCancel }: { units: Unit
 
   return (
     <div className="rounded-lg border border-dashed p-3 space-y-3">
-      <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Novo checklist</h2>
+      <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Novo checklist</h2>
       {f.fields}
       <div>
         <Label className="text-xs">Replicar para unidades</Label>
         <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={targetUnits} onChange={setTargetUnits} placeholder="Escolha as unidades…" searchable={units.length > 6} />
       </div>
-      {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+      {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
       <div className="flex gap-2">
         <Button onClick={submit} disabled={busy} className="flex-1">Publicar</Button>
         <Button variant="outline" onClick={onCancel}>Cancelar</Button>
@@ -206,11 +206,11 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
   }
 
   return (
-    <div className="rounded-lg border bg-card p-3">
+    <div className="rounded-lg border bg-sgo-surface p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="font-semibold text-brand">{t.name}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="font-semibold text-sgo-brand">{t.name}</p>
+          <p className="text-xs text-ink-500">
             {t.limitTime ? `limite ${t.limitTime}` : 'sem horário'} · peso {t.weight} · {t.scope === 'MANAGER' ? 'individual' : 'da unidade'}
             {t.items.length > 0 ? ` · ${t.items.length} item(ns)` : ''}{t.requiresEvidence ? ' · foto' : ''}{t.entersMeta ? ' · meta' : ''}
             {t.startDate || t.endDate ? ` · 📅 ${t.startDate ?? '…'} → ${t.endDate ?? 'sem fim'}` : ''}
@@ -220,18 +220,18 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
           <button onClick={toggle}><StatusBadge tone={t.active ? 'success' : 'critical'}>{t.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
           <Button size="sm" variant="ghost" disabled={busy} onClick={duplicate} aria-label="Duplicar" title="Duplicar"><Copy className="h-4 w-4" /></Button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
-          <Button size="sm" variant="ghost" disabled={busy} onClick={remove} aria-label="Excluir" className="text-critical"><Trash2 className="h-4 w-4" /></Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={remove} aria-label="Excluir" className="text-danger"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
       {editing && (
-        <div className="mt-2 space-y-3 rounded-lg bg-muted/40 p-2">
+        <div className="mt-2 space-y-3 rounded-lg bg-sunken/40 p-2">
           {f.fields}
           <Button size="sm" className="w-full" disabled={busy} onClick={save}><Save className="h-4 w-4" /> Salvar alterações</Button>
-          <p className="text-[11px] text-muted-foreground">As alterações acima valem para este checklist nesta unidade. Para mudar em quais unidades ele aparece, use abaixo.</p>
+          <p className="text-[11px] text-ink-500">As alterações acima valem para este checklist nesta unidade. Para mudar em quais unidades ele aparece, use abaixo.</p>
           <UnitsEditor t={t} units={units} onChange={onChange} />
         </div>
       )}
-      {msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}
+      {msg && <p className="mt-1 text-sm font-medium text-danger">{msg}</p>}
     </div>
   );
 }
@@ -254,9 +254,9 @@ function UnitsEditor({ t, units, onChange }: { t: TplRow; units: Unit[]; onChang
     <div className="rounded-lg border border-dashed p-2">
       <Label className="text-xs">Unidades onde este checklist aparece</Label>
       <div className="mt-1"><MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={sel} onChange={setSel} placeholder="Escolha as unidades…" searchable={units.length > 6} /></div>
-      <p className="mt-1 text-[11px] text-muted-foreground">Ao remover uma unidade com histórico, o checklist é inativado nela (preserva métricas); sem histórico, é excluído.</p>
+      <p className="mt-1 text-[11px] text-ink-500">Ao remover uma unidade com histórico, o checklist é inativado nela (preserva métricas); sem histórico, é excluído.</p>
       <Button size="sm" variant="outline" className="mt-2 w-full" disabled={busy} onClick={save}><Save className="h-4 w-4" /> Salvar unidades</Button>
-      {msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}
+      {msg && <p className="mt-1 text-sm font-medium text-danger">{msg}</p>}
     </div>
   );
 }
@@ -317,25 +317,25 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
           <label className="flex items-center gap-2"><input type="checkbox" checked={requiresEvidence} onChange={(e) => setRequiresEvidence(e.target.checked)} /> Exige foto</label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={entersMeta} onChange={(e) => setEntersMeta(e.target.checked)} /> Entra na meta</label>
         </div>
-        <div className="rounded-lg bg-background/60 p-2">
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Programação (opcional)</p>
+        <div className="rounded-lg bg-sgo-surface/60 p-2">
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-500">Programação (opcional)</p>
           <div className="grid grid-cols-2 gap-2">
             <DatePicker label="Início" size="sm" value={startDate || null} onValueChange={(v) => setStartDate(v ?? '')} />
             <DatePicker label="Encerramento" size="sm" min={startDate || undefined} value={endDate || null} onValueChange={(v) => setEndDate(v ?? '')} />
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">Sem início = vale desde já. Sem encerramento = sem fim. O checklist só é gerado dentro do período.</p>
+          <p className="mt-1 text-[11px] text-ink-500">Sem início = vale desde já. Sem encerramento = sem fim. O checklist só é gerado dentro do período.</p>
         </div>
 
         {/* Itens/etapas */}
-        <div className="rounded-lg bg-background/60 p-2">
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Itens / etapas (opcional)</p>
-          <p className="mb-2 text-[11px] text-muted-foreground">Cada item é verificado pelo gerente como 🟢 De acordo / 🟡 Em correção / 🔴 A corrigir. Use ↑ ↓ para ordenar.</p>
+        <div className="rounded-lg bg-sgo-surface/60 p-2">
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Itens / etapas (opcional)</p>
+          <p className="mb-2 text-[11px] text-ink-500">Cada item é verificado pelo gerente como 🟢 De acordo / 🟡 Em correção / 🔴 A corrigir. Use ↑ ↓ para ordenar.</p>
           <div className="space-y-2">
             {items.map((it, i) => (
-              <div key={i} className="flex items-start gap-1 rounded-md border bg-card p-1.5">
+              <div key={i} className="flex items-start gap-1 rounded-md border bg-sgo-surface p-1.5">
                 <div className="flex shrink-0 flex-col">
-                  <button type="button" onClick={() => moveItem(i, -1)} disabled={i === 0} aria-label="Mover para cima" className="text-muted-foreground hover:text-brand disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => moveItem(i, 1)} disabled={i === items.length - 1} aria-label="Mover para baixo" className="text-muted-foreground hover:text-brand disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => moveItem(i, -1)} disabled={i === 0} aria-label="Mover para cima" className="text-ink-500 hover:text-sgo-brand disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => moveItem(i, 1)} disabled={i === items.length - 1} aria-label="Mover para baixo" className="text-ink-500 hover:text-sgo-brand disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
                 </div>
                 <div className="grid flex-1 grid-cols-12 gap-1">
                   <Input value={it.section ?? ''} onChange={(e) => setItem(i, { section: e.target.value || null })} placeholder="Seção (ex.: Cozinha)" className="col-span-4 h-9 text-sm" />
@@ -344,7 +344,7 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
                   <label className="col-span-12 flex items-center gap-2 text-xs"><input type="checkbox" checked={it.aiCheck} onChange={(e) => setItem(i, { aiCheck: e.target.checked })} /> Checar a foto com IA (compara com o padrão)</label>
                   {it.aiCheck && <Input value={it.standardDescription ?? ''} onChange={(e) => setItem(i, { standardDescription: e.target.value || null })} placeholder="Padrão esperado (ex.: vitrine cheia, produtos alinhados por tipo, etiquetas visíveis)" className="col-span-12 h-9 text-sm" />}
                 </div>
-                <Button size="sm" variant="ghost" className="text-critical" onClick={() => removeItem(i)} aria-label="Remover item"><X className="h-4 w-4" /></Button>
+                <Button size="sm" variant="ghost" className="text-danger" onClick={() => removeItem(i)} aria-label="Remover item"><X className="h-4 w-4" /></Button>
               </div>
             ))}
           </div>

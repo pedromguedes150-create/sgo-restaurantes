@@ -61,7 +61,7 @@ export function EvaluationClient({ rows, yearMonth, months, canEvaluate, isAdmin
       {isAdmin && (
         <div className="flex items-end gap-2 rounded-lg border border-dashed p-2">
           <div>
-            <label className="text-xs text-muted-foreground">Peso das Avaliações na meta (0 = não conta)</label>
+            <label className="text-xs text-ink-500">Peso das Avaliações na meta (0 = não conta)</label>
             <Input inputMode="numeric" value={w} onChange={(e) => setW(e.target.value)} className="h-9 w-24 text-sm" />
           </div>
           <Button size="sm" variant="outline" disabled={busy} onClick={saveWeight}>Salvar peso</Button>
@@ -85,15 +85,15 @@ export function EvaluationClient({ rows, yearMonth, months, canEvaluate, isAdmin
           </div>
         )}
         {(['PENDING', 'ALL'] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)} className={filter === f ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>
+          <button key={f} onClick={() => setFilter(f)} className={filter === f ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>
             {f === 'PENDING' ? 'A avaliar' : 'Todos'}
           </button>
         ))}
-        <span className="ml-auto text-xs text-muted-foreground">{done}/{inUnit.length} avaliado(s)</span>
+        <span className="ml-auto text-xs text-ink-500">{done}/{inUnit.length} avaliado(s)</span>
       </div>
 
       {shown.length === 0 && (
-        <p className="text-sm text-muted-foreground">{filter === 'PENDING' ? 'Todos os colaboradores do mês já foram avaliados. 🎉' : 'Nenhum colaborador no seu escopo.'}</p>
+        <p className="text-sm text-ink-500">{filter === 'PENDING' ? 'Todos os colaboradores do mês já foram avaliados. 🎉' : 'Nenhum colaborador no seu escopo.'}</p>
       )}
       <div className="space-y-2">
         {shown.map((r) => <EvalCard key={r.collaboratorId} r={r} yearMonth={yearMonth} canEvaluate={canEvaluate} />)}
@@ -112,7 +112,7 @@ function Stars({ value, onChange, disabled }: { value: number; onChange?: (v: nu
           className={cn('rounded p-0.5', onChange && !disabled ? 'cursor-pointer' : 'cursor-default')}
           aria-label={`${n} de 5`}
         >
-          <Star className={cn('h-5 w-5', n <= value ? 'fill-accent text-accent' : 'text-muted-foreground/40')} />
+          <Star className={cn('h-5 w-5', n <= value ? 'fill-sgo-brand text-sgo-brand' : 'text-ink-400')} />
         </button>
       ))}
     </div>
@@ -182,17 +182,17 @@ function EvalCard({ r, yearMonth, canEvaluate }: { r: EvalRow; yearMonth: string
   }
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="rounded-lg border bg-sgo-surface">
       <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between gap-2 p-3 text-left">
         <span className="flex min-w-0 items-center gap-2">
           {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
           <span className="min-w-0">
-            <span className="block truncate font-semibold text-brand">{r.name}</span>
-            <span className="block truncate text-xs text-muted-foreground">{r.jobTitle || 'Sem função'} · {r.unitName}</span>
+            <span className="block truncate font-semibold text-sgo-brand">{r.name}</span>
+            <span className="block truncate text-xs text-ink-500">{r.jobTitle || 'Sem função'} · {r.unitName}</span>
           </span>
         </span>
         <span className="flex shrink-0 items-center gap-2">
-          {r.observationCount > 0 && <span className="text-xs text-muted-foreground">{r.observationCount} obs.</span>}
+          {r.observationCount > 0 && <span className="text-xs text-ink-500">{r.observationCount} obs.</span>}
           {r.evaluation
             ? <StatusBadge tone="success">Avaliado · {avg(r.evaluation).toLocaleString('pt-BR')}★</StatusBadge>
             : <StatusBadge tone="medium">A avaliar</StatusBadge>}
@@ -206,7 +206,7 @@ function EvalCard({ r, yearMonth, canEvaluate }: { r: EvalRow; yearMonth: string
               <button
                 key={t}
                 onClick={() => { setTab(t); if (t === 'OBS' && obs === null) void loadObs(); if (t === 'HIST' && hist === null) void loadHist(); }}
-                className={tab === t ? 'rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1 text-xs'}
+                className={tab === t ? 'rounded-full bg-sgo-brand px-3 py-1 text-xs font-semibold text-on-brand' : 'rounded-full border px-3 py-1 text-xs'}
               >
                 {t === 'OBS' ? <span className="flex items-center gap-1"><MessageSquarePlus className="h-3.5 w-3.5" />{label}</span>
                   : t === 'HIST' ? <span className="flex items-center gap-1"><History className="h-3.5 w-3.5" />{label}</span>
@@ -225,7 +225,7 @@ function EvalCard({ r, yearMonth, canEvaluate }: { r: EvalRow; yearMonth: string
               ))}
               <Input value={comments} onChange={(e) => setComments(e.target.value)} placeholder="Comentário do mês (opcional)" className="text-sm" disabled={!canEvaluate} />
               {r.evaluation && (
-                <p className="text-xs text-muted-foreground">Avaliado por {r.evaluation.evaluatorName} em {new Date(r.evaluation.updatedAt).toLocaleDateString('pt-BR')}.</p>
+                <p className="text-xs text-ink-500">Avaliado por {r.evaluation.evaluatorName} em {new Date(r.evaluation.updatedAt).toLocaleDateString('pt-BR')}.</p>
               )}
               {canEvaluate && (
                 <Button size="sm" variant="gold" disabled={busy} onClick={saveEval}>{r.evaluation ? 'Atualizar avaliação' : 'Salvar avaliação'}</Button>
@@ -241,12 +241,12 @@ function EvalCard({ r, yearMonth, canEvaluate }: { r: EvalRow; yearMonth: string
                   <Button size="sm" variant="outline" disabled={busy || !newObs.trim()} onClick={addObs}>Anotar</Button>
                 </div>
               )}
-              {obs === null && <p className="text-xs text-muted-foreground">Carregando…</p>}
-              {obs?.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma observação registrada.</p>}
+              {obs === null && <p className="text-xs text-ink-500">Carregando…</p>}
+              {obs?.length === 0 && <p className="text-sm text-ink-500">Nenhuma observação registrada.</p>}
               {obs?.map((o) => (
-                <div key={o.id} className="rounded-md bg-surface p-2">
+                <div key={o.id} className="rounded-md bg-canvas p-2">
                   <p className="text-sm">{o.text}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{o.authorName} · {new Date(o.createdAt).toLocaleDateString('pt-BR')}</p>
+                  <p className="mt-0.5 text-xs text-ink-500">{o.authorName} · {new Date(o.createdAt).toLocaleDateString('pt-BR')}</p>
                 </div>
               ))}
             </div>
@@ -254,13 +254,13 @@ function EvalCard({ r, yearMonth, canEvaluate }: { r: EvalRow; yearMonth: string
 
           {tab === 'HIST' && (
             <div className="space-y-1.5">
-              {hist === null && <p className="text-xs text-muted-foreground">Carregando…</p>}
-              {hist?.length === 0 && <p className="text-sm text-muted-foreground">Sem avaliações anteriores.</p>}
+              {hist === null && <p className="text-xs text-ink-500">Carregando…</p>}
+              {hist?.length === 0 && <p className="text-sm text-ink-500">Sem avaliações anteriores.</p>}
               {hist?.map((h) => (
-                <div key={h.yearMonth} className="flex items-center justify-between gap-2 rounded-md bg-surface p-2 text-sm">
+                <div key={h.yearMonth} className="flex items-center justify-between gap-2 rounded-md bg-canvas p-2 text-sm">
                   <span className="capitalize">{fmtMonth(h.yearMonth)}</span>
                   <span className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{h.evaluatorName}</span>
+                    <span className="text-xs text-ink-500">{h.evaluatorName}</span>
                     <span className="font-semibold tabular-nums">{avg(h).toLocaleString('pt-BR')}★</span>
                   </span>
                 </div>

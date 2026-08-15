@@ -40,7 +40,7 @@ export function PermissionsAdmin({ modules, matrix }: { modules: { key: string; 
 
       <div className="overflow-hidden rounded-lg border">
         <table className="w-full text-sm">
-          <thead className="bg-secondary text-xs uppercase tracking-wide text-muted-foreground">
+          <thead className="bg-sunken text-xs uppercase tracking-wide text-ink-500">
             <tr><th className="px-3 py-2 text-left">Módulo</th><th className="px-3 py-2 w-20 text-center">Ver</th><th className="px-3 py-2 w-20 text-center">Editar</th></tr>
           </thead>
           <tbody>
@@ -48,7 +48,7 @@ export function PermissionsAdmin({ modules, matrix }: { modules: { key: string; 
               const p = state[role]?.[m.key] ?? { canView: true, canEdit: true };
               return (
                 <tr key={m.key} className="border-t">
-                  <td className="px-3 py-2 font-medium text-brand">{m.label}</td>
+                  <td className="px-3 py-2 font-medium text-sgo-brand">{m.label}</td>
                   <td className="px-3 py-2 text-center"><input type="checkbox" className="h-4 w-4" disabled={busy} checked={p.canView} onChange={(e) => set(m.key, { canView: e.target.checked })} /></td>
                   <td className="px-3 py-2 text-center"><input type="checkbox" className="h-4 w-4" disabled={busy || !p.canView} checked={p.canEdit} onChange={(e) => set(m.key, { canEdit: e.target.checked })} /></td>
                 </tr>

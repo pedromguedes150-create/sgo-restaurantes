@@ -12,10 +12,10 @@ export const dynamic = 'force-dynamic';
 export default async function AnaliseAbertoPage({ searchParams }: { searchParams: { unit?: string } }) {
   const user = (await getSessionUser())!;
   if (!['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role)) {
-    return <p className="text-sm text-muted-foreground">Restrito à Supervisão/Administração.</p>;
+    return <p className="text-sm text-ink-500">Restrito à Supervisão/Administração.</p>;
   }
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
-  if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade no escopo.</p>;
+  if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade no escopo.</p>;
   const selUnit = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const analyses = await listOpenCommandAnalyses(user, selUnit.id);
 
@@ -25,17 +25,17 @@ export default async function AnaliseAbertoPage({ searchParams }: { searchParams
   return (
     <div className="space-y-4">
       <div className="print:hidden">
-        <Link href="/modulos/comandas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Comandas</Link>
+        <Link href="/modulos/comandas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Comandas</Link>
       </div>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ShieldAlert className="h-5 w-5 text-accent" /> Análise de comandas em aberto</h1>
-        <p className="text-sm text-muted-foreground">Suba o relatório do Teknisa; o SGO destaca comandas <b>abertas com valor e data anterior ao corte</b> (possível fraude das 2 comandas) para o monitoramento buscar as câmeras.</p>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><ShieldAlert className="h-5 w-5 text-sgo-brand" /> Análise de comandas em aberto</h1>
+        <p className="text-sm text-ink-500">Suba o relatório do Teknisa; o SGO destaca comandas <b>abertas com valor e data anterior ao corte</b> (possível fraude das 2 comandas) para o monitoramento buscar as câmeras.</p>
       </div>
 
       {units.length > 1 && (
         <div className="flex flex-wrap gap-2 print:hidden">
           {units.map((u) => (
-            <Link key={u.id} href={`/modulos/comandas/analise-aberto?unit=${u.id}`} className={u.id === selUnit.id ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</Link>
+            <Link key={u.id} href={`/modulos/comandas/analise-aberto?unit=${u.id}`} className={u.id === selUnit.id ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</Link>
           ))}
         </div>
       )}

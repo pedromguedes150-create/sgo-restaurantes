@@ -28,7 +28,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
     where: { active: true, ...unitScopeWhere(user, 'id') },
     orderBy: { name: 'asc' },
   });
-  if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
+  if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
 
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const operationalDate = currentOperationalDate({ timezone: selected.timezone, cutoffHour: selected.cutoffHour }, now);

@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function ChecklistsAdminPage({ searchParams }: { searchParams: { tab?: string } }) {
   const user = (await getSessionUser())!;
-  if (user.role !== 'ADMIN' && user.role !== 'CEO') return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
+  if (user.role !== 'ADMIN' && user.role !== 'CEO') return <p className="text-sm text-ink-500">Restrito ao Administrador.</p>;
   await ensureDefaultModels().catch(() => {}); // popula a biblioteca padrão na 1ª vez
   const tab = ['unidades', 'modelos', 'supervisor', 'resumo'].includes(searchParams.tab ?? '') ? (searchParams.tab as string) : 'unidades';
 
@@ -59,11 +59,11 @@ export default async function ChecklistsAdminPage({ searchParams }: { searchPara
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Checklists</h1>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <h1 className="text-xl font-bold text-sgo-brand">Checklists</h1>
       <div className="flex flex-wrap gap-2">
         {TABS.map((t) => (
-          <Link key={t.key} href={`/configuracoes/checklists?tab=${t.key}`} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
+          <Link key={t.key} href={`/configuracoes/checklists?tab=${t.key}`} className={tab === t.key ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
             {t.label}
           </Link>
         ))}

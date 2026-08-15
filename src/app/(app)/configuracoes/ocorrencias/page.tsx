@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function OcorrenciasConfigPage() {
   const user = (await getSessionUser())!;
-  if (user.role !== 'ADMIN') return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
+  if (user.role !== 'ADMIN') return <p className="text-sm text-ink-500">Restrito ao Administrador.</p>;
 
   const types = await prisma.occurrenceType.findMany({
     orderBy: [{ order: 'asc' }, { name: 'asc' }],
@@ -21,8 +21,8 @@ export default async function OcorrenciasConfigPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Ocorrências — tipos e categorias</h1>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <h1 className="text-xl font-bold text-sgo-brand">Ocorrências — tipos e categorias</h1>
       <Card><CardContent className="pt-4">
         <OccurrencesConfigAdmin types={types} />
       </CardContent></Card>

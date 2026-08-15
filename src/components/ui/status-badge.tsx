@@ -6,11 +6,16 @@ import { cn } from '@/lib/utils';
  */
 export type StatusTone = 'success' | 'medium' | 'critical' | 'black' | 'neutral';
 
+/**
+ * Fundo pelos tokens `-bg`, não por opacidade da própria cor: a tinta de 15%
+ * deixava o par em 6,48-6,67:1, logo abaixo do AAA. Os `-bg` foram escolhidos
+ * para este pareamento e dão 7,22+.
+ */
 const tones: Record<StatusTone, string> = {
-  success: 'bg-sgo-success/15 text-sgo-success',
-  medium: 'bg-warning/15 text-warning',
-  critical: 'bg-danger/15 text-danger',
-  black: 'bg-zinc-800 text-white',
+  success: 'bg-sgo-success-bg text-sgo-success',
+  medium: 'bg-warning-bg text-warning',
+  critical: 'bg-danger-bg text-danger',
+  black: 'bg-ink-900 text-sgo-surface',
   neutral: 'bg-sunken text-ink-500',
 };
 

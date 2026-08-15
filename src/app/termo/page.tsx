@@ -12,8 +12,8 @@ export default async function TermoPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-4 px-4 py-8">
-      <h1 className="text-xl font-bold text-brand">Termo de Uso e Privacidade</h1>
-      <div className="whitespace-pre-wrap rounded-xl border bg-card p-4 text-sm leading-relaxed">{TERMS_TEXT}</div>
+      <h1 className="text-xl font-bold text-sgo-brand">Termo de Uso e Privacidade</h1>
+      <div className="whitespace-pre-wrap rounded-xl border bg-sgo-surface p-4 text-sm leading-relaxed">{TERMS_TEXT}</div>
       <AcceptTerms />
     </main>
   );

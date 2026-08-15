@@ -50,7 +50,7 @@ export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, supp
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {tabs.filter((t) => t.show).map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>
+          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>
         ))}
       </div>
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
@@ -105,9 +105,9 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
       </div>
       {purchased && (
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border bg-card p-2.5 text-center"><p className="text-lg font-black tabular-nums text-brand">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-muted-foreground">comprado no filtro</p></div>
-          <div className="rounded-lg border bg-card p-2.5 text-center"><p className="text-base font-black tabular-nums text-brand">{formatBRL(purchased.total)}</p><p className="text-xs text-muted-foreground">valor no filtro</p></div>
-          <div className="rounded-lg border bg-card p-2.5 text-center"><p className="text-lg font-black tabular-nums text-brand">{purchased.count}</p><p className="text-xs text-muted-foreground">recebimentos</p></div>
+          <div className="rounded-lg border bg-sgo-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-sgo-brand">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-ink-500">comprado no filtro</p></div>
+          <div className="rounded-lg border bg-sgo-surface p-2.5 text-center"><p className="text-base font-black tabular-nums text-sgo-brand">{formatBRL(purchased.total)}</p><p className="text-xs text-ink-500">valor no filtro</p></div>
+          <div className="rounded-lg border bg-sgo-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-sgo-brand">{purchased.count}</p><p className="text-xs text-ink-500">recebimentos</p></div>
         </div>
       )}
     </div>
@@ -118,19 +118,19 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
 function ContractProgress({ contracts, compact = false }: { contracts: GasContractUI[]; compact?: boolean }) {
   if (contracts.length === 0) return null;
   return (
-    <div className="rounded-lg border bg-card p-3">
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Contratos vigentes — % cumprido</p>
+    <div className="rounded-lg border bg-sgo-surface p-3">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Contratos vigentes — % cumprido</p>
       <div className="space-y-2.5">
         {contracts.map((c) => (
           <div key={c.id}>
             <div className="flex items-center justify-between text-sm">
-              <span className="min-w-0 truncate font-medium text-brand">{c.unitName} · {c.supplierName}</span>
+              <span className="min-w-0 truncate font-medium text-sgo-brand">{c.unitName} · {c.supplierName}</span>
               <span className="shrink-0 text-xs tabular-nums"><b>{c.progressPct}%</b> · {c.usedKg.toLocaleString('pt-BR')}/{c.quantityKg.toLocaleString('pt-BR')} kg</span>
             </div>
-            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary">
-              <div className={`h-full rounded-full ${c.progressPct >= 100 ? 'bg-critical' : c.progressPct >= 80 ? 'bg-medium' : 'bg-success'}`} style={{ width: `${Math.min(100, c.progressPct)}%` }} />
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken">
+              <div className={`h-full rounded-full ${c.progressPct >= 100 ? 'bg-danger' : c.progressPct >= 80 ? 'bg-warning' : 'bg-sgo-success'}`} style={{ width: `${Math.min(100, c.progressPct)}%` }} />
             </div>
-            {!compact && <p className="mt-0.5 text-xs text-muted-foreground">{c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {kg(c.pricePerKg)} acordado · restam {c.remainingKg.toLocaleString('pt-BR')} kg</p>}
+            {!compact && <p className="mt-0.5 text-xs text-ink-500">{c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {kg(c.pricePerKg)} acordado · restam {c.remainingKg.toLocaleString('pt-BR')} kg</p>}
           </div>
         ))}
       </div>
@@ -171,7 +171,7 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
     <div className="space-y-4">
       {canManage && (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Novo contrato</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Novo contrato</p>
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <Select
@@ -193,7 +193,7 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
               <div><Label className="text-xs">Já comprado (kg)</Label><Input inputMode="decimal" value={form.initialUsedKg} onChange={(e) => set('initialUsedKg', e.target.value)} placeholder="posição atual" className="h-10 text-sm" /></div>
             </div>
             <Input value={form.note} onChange={(e) => set('note', e.target.value)} placeholder="Observação (opcional)" className="h-10 text-sm" />
-            <p className="text-xs text-muted-foreground">&quot;Já comprado&quot; = posição de contrato que já estava andando antes do SGO; os recebimentos lançados daqui em diante abatem sozinhos.</p>
+            <p className="text-xs text-ink-500">&quot;Já comprado&quot; = posição de contrato que já estava andando antes do SGO; os recebimentos lançados daqui em diante abatem sozinhos.</p>
             <Button className="w-full" disabled={busy || !form.unitId || !form.supplierId || !form.startDate || !form.endDate || !form.quantityKg || !form.pricePerKg}
               onClick={async () => {
                 const ok = await post({ action: 'create', unitId: form.unitId, supplierId: form.supplierId, startDate: form.startDate, endDate: form.endDate, quantityKg: num(form.quantityKg), pricePerKg: num(form.pricePerKg), initialUsedKg: form.initialUsedKg ? num(form.initialUsedKg) : undefined, note: form.note });
@@ -207,19 +207,19 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
 
       <div className="space-y-1.5">
         {contracts.map((c) => (
-          <div key={c.id} className={`rounded-lg border p-2.5 ${c.expired || !c.active ? 'opacity-70' : 'bg-card'}`}>
+          <div key={c.id} className={`rounded-lg border p-2.5 ${c.expired || !c.active ? 'opacity-70' : 'bg-sgo-surface'}`}>
             <div className="flex items-center justify-between gap-2">
-              <p className="min-w-0 truncate text-sm font-semibold text-brand">{c.unitName} · {c.supplierName}</p>
+              <p className="min-w-0 truncate text-sm font-semibold text-sgo-brand">{c.unitName} · {c.supplierName}</p>
               <span className="shrink-0 text-xs font-bold tabular-nums">{c.progressPct}%{c.expired ? ' · vencido' : !c.active ? ' · inativo' : ''}</span>
             </div>
-            <p className="text-xs text-muted-foreground tabular-nums">
+            <p className="text-xs text-ink-500 tabular-nums">
               {c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {c.quantityKg.toLocaleString('pt-BR')} kg a {kg(c.pricePerKg)} ·
               comprado {c.purchasedKg.toLocaleString('pt-BR')} kg{c.initialUsedKg > 0 ? ` (+${c.initialUsedKg.toLocaleString('pt-BR')} kg posição inicial)` : ''} · restam {c.remainingKg.toLocaleString('pt-BR')} kg
             </p>
-            {c.note && <p className="text-xs text-muted-foreground">Obs.: {c.note}</p>}
+            {c.note && <p className="text-xs text-ink-500">Obs.: {c.note}</p>}
             {canManage && (editId === c.id ? (
               <div className="mt-2 space-y-2 rounded-lg border border-dashed p-2">
-                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Editar contrato</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Editar contrato</p>
                 <div className="grid grid-cols-2 gap-2">
                   <DatePicker label="Início" size="sm" value={ef.startDate || null} onValueChange={(v) => setE('startDate', v ?? '')} />
                   <DatePicker label="Fim" size="sm" value={ef.endDate || null} onValueChange={(v) => setE('endDate', v ?? '')} min={ef.startDate || undefined} />
@@ -245,12 +245,12 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
                   void post({ action: 'update', id: c.id, initialUsedKg: num(v) });
                 }}>Ajustar posição</Button>
                 <Button size="sm" variant="ghost" disabled={busy} onClick={() => void post({ action: 'update', id: c.id, active: !c.active })}>{c.active ? 'Inativar' : 'Reativar'}</Button>
-                {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm('Excluir este contrato? (auditado)')) void post({ action: 'delete', id: c.id }); }}>Excluir</Button>}
+                {isAdmin && <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm('Excluir este contrato? (auditado)')) void post({ action: 'delete', id: c.id }); }}>Excluir</Button>}
               </div>
             ))}
           </div>
         ))}
-        {contracts.length === 0 && <p className="text-sm text-muted-foreground">Nenhum contrato cadastrado.</p>}
+        {contracts.length === 0 && <p className="text-sm text-ink-500">Nenhum contrato cadastrado.</p>}
       </div>
     </div>
   );
@@ -328,7 +328,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
           <Input id="k" inputMode="numeric" value={accessKey} onChange={(e) => onKey(e.target.value)} placeholder="cole, digite ou escaneie" className="flex-1" />
           <QrScanner onResult={(chave) => onKey(chave)} />
         </div>
-        {noteNumber && <p className="mt-1 text-xs text-muted-foreground">Nota nº {noteNumber}</p>}
+        {noteNumber && <p className="mt-1 text-xs text-ink-500">Nota nº {noteNumber}</p>}
       </div>
       <Select
         label="Fornecedor"
@@ -341,8 +341,8 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
       <div>
         <Label>Forma de recebimento</Label>
         <div className="flex gap-1">
-          <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-primary text-primary-foreground' : ''}`}>Granel (kg)</button>
-          <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-primary text-primary-foreground' : ''}`}>Botijão (P45)</button>
+          <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-sgo-brand text-on-brand' : ''}`}>Granel (kg)</button>
+          <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-sgo-brand text-on-brand' : ''}`}>Botijão (P45)</button>
         </div>
       </div>
 
@@ -353,10 +353,10 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
             <div><Label>Valor por kg (R$)</Label><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0,0000" /></div>
           </div>
           {total > 0 && (
-            <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 text-center">
-              <p className="text-xs text-muted-foreground">Valor total (calculado)</p>
-              <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
-              <p className="text-xs text-muted-foreground">{kg(price)}</p>
+            <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-brand/5 p-3 text-center">
+              <p className="text-xs text-ink-500">Valor total (calculado)</p>
+              <p className="text-2xl font-black text-sgo-brand">{formatBRL(total)}</p>
+              <p className="text-xs text-ink-500">{kg(price)}</p>
             </div>
           )}
         </>
@@ -369,9 +369,9 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
           </div>
           <div><Label>Botijões vazios devolvidos (troca)</Label><Input inputMode="numeric" value={cylReturned} onChange={(e) => setCylReturned(e.target.value.replace(/\D/g, ''))} placeholder="ex: 4" /></div>
           {cKg > 0 && cTotal > 0 && (
-            <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 text-center">
-              <p className="text-xs text-muted-foreground">{cc} botijão(ões) × {ck}kg = {cKg}kg · valor total {formatBRL(cTotal)}</p>
-              <p className="text-2xl font-black text-brand">{kg(cPricePerKg)}</p>
+            <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-brand/5 p-3 text-center">
+              <p className="text-xs text-ink-500">{cc} botijão(ões) × {ck}kg = {cKg}kg · valor total {formatBRL(cTotal)}</p>
+              <p className="text-2xl font-black text-sgo-brand">{kg(cPricePerKg)}</p>
             </div>
           )}
         </>
@@ -379,8 +379,8 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
 
       <div><Label>Observação (opcional)</Label><Input value={obs} onChange={(e) => setObs(e.target.value)} /></div>
 
-      {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
-      {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
+      {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
+      {ok && <p className="rounded-lg bg-sgo-success/10 px-3 py-2 text-sm font-medium text-sgo-success">{ok}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Save className="h-5 w-5" /> Registrar recebimento</Button>
     </div>
   );
@@ -393,7 +393,7 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
   const [busy, setBusy] = useState(false);
   async function savePct() { setBusy(true); const r = await postAdmin({ entity: 'gas', action: 'setAlertPct', pct: Number(pct) }); setBusy(false); if (r.ok) router.refresh(); else alert(r.error ?? 'Falha'); }
 
-  if (d.totalReceipts === 0) return <p className="text-sm text-muted-foreground">Ainda não há recebimentos de gás no período. Lance o primeiro para ver os comparativos.</p>;
+  if (d.totalReceipts === 0) return <p className="text-sm text-ink-500">Ainda não há recebimentos de gás no período. Lance o primeiro para ver os comparativos.</p>;
 
   return (
     <div className="space-y-4">
@@ -406,7 +406,7 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
 
       {isAdmin && (
         <div className="flex items-end gap-2 rounded-lg border border-dashed p-2">
-          <div><label className="text-xs text-muted-foreground">Alertar acima de (%)</label><Input inputMode="numeric" value={pct} onChange={(e) => setPct(e.target.value)} className="h-9 w-24 text-sm" /></div>
+          <div><label className="text-xs text-ink-500">Alertar acima de (%)</label><Input inputMode="numeric" value={pct} onChange={(e) => setPct(e.target.value)} className="h-9 w-24 text-sm" /></div>
           <Button size="sm" variant="outline" disabled={busy} onClick={savePct}>Salvar limite</Button>
         </div>
       )}
@@ -415,17 +415,17 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
       <Compare title="Por fornecedor" rows={d.bySupplier} />
 
       <div>
-        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">Tendência mensal (preço médio/kg)</h2>
+        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Tendência mensal (preço médio/kg)</h2>
         <MonthlyBars points={d.monthly} />
       </div>
 
-      <a href="/modulos/gas/relatorio" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><TrendingUp className="h-4 w-4 text-accent" /> Relatório de variação (imprimir/PDF)</a>
+      <a href="/modulos/gas/relatorio" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-sgo-brand"><TrendingUp className="h-4 w-4 text-sgo-brand" /> Relatório de variação (imprimir/PDF)</a>
     </div>
   );
 }
 
 function Cell({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border bg-card py-3 text-center"><p className="text-base font-black text-brand">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div>;
+  return <div className="rounded-lg border bg-sgo-surface py-3 text-center"><p className="text-base font-black text-sgo-brand">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
 }
 
 function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
@@ -433,16 +433,16 @@ function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
   const max = Math.max(...rows.map((r) => r.avg), 0.0001);
   return (
     <div>
-      <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">{title}</h2>
+      <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">{title}</h2>
       <div className="space-y-2">
         {rows.map((r) => (
-          <div key={r.key} className="rounded-lg border bg-card p-2.5">
+          <div key={r.key} className="rounded-lg border bg-sgo-surface p-2.5">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-brand">{r.name}</span>
-              <span className="font-bold">{kg(r.avg)} <span className="text-xs font-normal text-muted-foreground">méd</span></span>
+              <span className="font-semibold text-sgo-brand">{r.name}</span>
+              <span className="font-bold">{kg(r.avg)} <span className="text-xs font-normal text-ink-500">méd</span></span>
             </div>
-            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${(r.avg / max) * 100}%` }} /></div>
-            <p className="mt-1 text-xs text-muted-foreground">{r.count} compra(s) · <b className="text-brand">{r.kg.toLocaleString('pt-BR')} kg</b> · último {kg(r.last)} · mín {kg(r.min)} · máx {kg(r.max)}</p>
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-sgo-brand" style={{ width: `${(r.avg / max) * 100}%` }} /></div>
+            <p className="mt-1 text-xs text-ink-500">{r.count} compra(s) · <b className="text-sgo-brand">{r.kg.toLocaleString('pt-BR')} kg</b> · último {kg(r.last)} · mín {kg(r.min)} · máx {kg(r.max)}</p>
           </div>
         ))}
       </div>
@@ -451,15 +451,15 @@ function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
 }
 
 function MonthlyBars({ points }: { points: MonthPoint[] }) {
-  if (points.length === 0) return <p className="text-sm text-muted-foreground">Sem dados.</p>;
+  if (points.length === 0) return <p className="text-sm text-ink-500">Sem dados.</p>;
   const max = Math.max(...points.map((p) => p.avg), 0.0001);
   return (
-    <div className="flex items-end gap-2 rounded-lg border bg-card p-3" style={{ height: 140 }}>
+    <div className="flex items-end gap-2 rounded-lg border bg-sgo-surface p-3" style={{ height: 140 }}>
       {points.map((p) => (
         <div key={p.month} className="flex flex-1 flex-col items-center justify-end gap-1">
-          <span className="text-[10px] font-semibold text-brand">{p.avg.toFixed(2).replace('.', ',')}</span>
-          <div className="w-full rounded-t bg-accent" style={{ height: `${Math.max(4, (p.avg / max) * 90)}px` }} />
-          <span className="text-[10px] text-muted-foreground">{mlabel(p.month)}</span>
+          <span className="text-[10px] font-semibold text-sgo-brand">{p.avg.toFixed(2).replace('.', ',')}</span>
+          <div className="w-full rounded-t bg-sgo-brand" style={{ height: `${Math.max(4, (p.avg / max) * 90)}px` }} />
+          <span className="text-[10px] text-ink-500">{mlabel(p.month)}</span>
         </div>
       ))}
     </div>
@@ -485,7 +485,7 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
     (!unit || r.unit === unit) && (!supplier || r.supplier === supplier) &&
     (!q.trim() || r.date.includes(q.trim()) || r.by.toLowerCase().includes(q.trim().toLowerCase()) || String(r.qty).includes(q.trim()) || String(r.total).includes(q.trim())),
   ), [rows, q, unit, supplier]);
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhum recebimento registrado.</p>;
+  if (rows.length === 0) return <p className="text-sm text-ink-500">Nenhum recebimento registrado.</p>;
 
   function startEdit(r: GasRow) { setEditId(r.id); setEKg(String(r.qty).replace('.', ',')); setETotal(String(r.total).replace('.', ',')); }
   async function saveEdit(r: GasRow) {
@@ -523,25 +523,25 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
       {shown.map((r) => {
         const tone: StatusTone = r.variation == null ? 'neutral' : r.variation > 0 ? (r.alerted ? 'critical' : 'medium') : 'success';
         return (
-          <div key={r.id} className="rounded-lg border bg-card p-3">
+          <div key={r.id} className="rounded-lg border bg-sgo-surface p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-brand">{kg(r.price)} <span className="text-xs font-normal text-muted-foreground">· {r.unit}</span></p>
-                <p className="text-xs text-muted-foreground">{r.date} · {r.supplier} · {r.qty.toLocaleString('pt-BR')} kg · {formatBRL(r.total)}{r.by ? ` · ${r.by}` : ''}</p>
+                <p className="font-semibold text-sgo-brand">{kg(r.price)} <span className="text-xs font-normal text-ink-500">· {r.unit}</span></p>
+                <p className="text-xs text-ink-500">{r.date} · {r.supplier} · {r.qty.toLocaleString('pt-BR')} kg · {formatBRL(r.total)}{r.by ? ` · ${r.by}` : ''}</p>
               </div>
               {r.variation != null && (
                 <StatusBadge tone={tone}>{r.variation > 0 ? <TrendingUp className="mr-0.5 inline h-3 w-3" /> : <TrendingDown className="mr-0.5 inline h-3 w-3" />}{r.variation > 0 ? '+' : ''}{r.variation}%</StatusBadge>
               )}
             </div>
-            {r.alerted && <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-critical"><AlertTriangle className="h-3.5 w-3.5" /> Alta acima do limite</p>}
-            {r.dateEdited && <p className="mt-1 text-xs font-semibold text-critical">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
+            {r.alerted && <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-danger"><AlertTriangle className="h-3.5 w-3.5" /> Alta acima do limite</p>}
+            {r.dateEdited && <p className="mt-1 text-xs font-semibold text-danger">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
             {editId === r.id ? (
               <div className="mt-2 flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-2">
-                <div><span className="block text-[11px] text-muted-foreground">Quantidade (kg)</span><Input value={eKg} onChange={(e) => setEKg(e.target.value)} inputMode="decimal" className="h-9 w-28 text-sm" /></div>
-                <div><span className="block text-[11px] text-muted-foreground">Valor total (R$)</span><Input value={eTotal} onChange={(e) => setETotal(e.target.value)} inputMode="decimal" className="h-9 w-28 text-sm" /></div>
+                <div><span className="block text-[11px] text-ink-500">Quantidade (kg)</span><Input value={eKg} onChange={(e) => setEKg(e.target.value)} inputMode="decimal" className="h-9 w-28 text-sm" /></div>
+                <div><span className="block text-[11px] text-ink-500">Valor total (R$)</span><Input value={eTotal} onChange={(e) => setETotal(e.target.value)} inputMode="decimal" className="h-9 w-28 text-sm" /></div>
                 <Button size="sm" disabled={eBusy} onClick={() => void saveEdit(r)}>Salvar</Button>
                 <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>Cancelar</Button>
-                <span className="w-full text-[11px] text-muted-foreground">Correção de erro de lançamento — recalcula o preço/kg. Não interfere na meta do gerente.</span>
+                <span className="w-full text-[11px] text-ink-500">Correção de erro de lançamento — recalcula o preço/kg. Não interfere na meta do gerente.</span>
               </div>
             ) : (isAdmin || canEditDate) && (
               <div className="mt-2 flex flex-wrap gap-2">

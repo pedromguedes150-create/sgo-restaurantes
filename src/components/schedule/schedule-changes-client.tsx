@@ -70,7 +70,7 @@ export function ScheduleChangesClient({ rows, units, selectedUnitId, collabs, ca
 
       {canCreate && (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Registrar troca (avisa o RH)</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Registrar troca (avisa o RH)</p>
           <div className="space-y-2">
             <Select
               label="Colaborador" size="sm" placeholder="Selecione…" value={aId} onValueChange={setAId}
@@ -93,24 +93,24 @@ export function ScheduleChangesClient({ rows, units, selectedUnitId, collabs, ca
       )}
 
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Registro de trocas ({rows.length})</p>
-        {rows.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma troca registrada ainda.</p>}
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Registro de trocas ({rows.length})</p>
+        {rows.length === 0 && <p className="text-sm text-ink-500">Nenhuma troca registrada ainda.</p>}
         <div className="space-y-1.5">
           {rows.map((r) => (
-            <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2.5">
+            <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border bg-sgo-surface p-2.5">
               <div className="min-w-0">
-                <p className="flex items-center gap-1 text-sm font-semibold text-brand">
+                <p className="flex items-center gap-1 text-sm font-semibold text-sgo-brand">
                   <span className="truncate">{r.collaboratorAName} ({fmtBR(r.dateA)})</span>
-                  {(r.collaboratorBName || r.dateB) && <ArrowRightLeft className="h-3.5 w-3.5 shrink-0 text-accent" />}
+                  {(r.collaboratorBName || r.dateB) && <ArrowRightLeft className="h-3.5 w-3.5 shrink-0 text-sgo-brand" />}
                   {r.collaboratorBName
                     ? <span className="truncate">{r.collaboratorBName}{r.dateB ? ` (${fmtBR(r.dateB)})` : ''}</span>
                     : r.dateB ? <span>{fmtBR(r.dateB)}</span> : null}
                 </p>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-xs text-ink-500">
                   {r.unitName} · {r.createdByName} · {new Date(r.createdAt).toLocaleDateString('pt-BR')}{r.reason ? ` · ${r.reason}` : ''}
                 </p>
               </div>
-              {isAdmin && <Button size="sm" variant="ghost" className="shrink-0 text-critical" disabled={busy} onClick={() => remove(r.id)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
+              {isAdmin && <Button size="sm" variant="ghost" className="shrink-0 text-danger" disabled={busy} onClick={() => remove(r.id)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
             </div>
           ))}
         </div>

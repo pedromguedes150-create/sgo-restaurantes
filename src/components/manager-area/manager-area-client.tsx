@@ -78,7 +78,7 @@ export function ManagerAreaClient({ tasks, notes, leaves, schedule = null, canSe
 }
 
 function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
-  return <button onClick={onClick} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${active ? 'bg-primary text-primary-foreground' : 'border'}`}>{icon}{children}</button>;
+  return <button onClick={onClick} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${active ? 'bg-sgo-brand text-on-brand' : 'border'}`}>{icon}{children}</button>;
 }
 
 type Post = (b: Record<string, unknown>) => Promise<boolean>;
@@ -98,16 +98,16 @@ function TasksTab({ tasks, busy, post }: { tasks: MTask[]; busy: boolean; post: 
           <DueAtPicker date={date} time={time} onDate={setDate} onTime={setTime} />
           <Button size="sm" disabled={busy || !title.trim()} onClick={async () => { if (await post({ entity: 'task', action: 'create', title, dueAt: combine(date, time) || undefined })) { setTitle(''); setDate(''); setTime('09:00'); } }}><Plus className="h-4 w-4" /> Adicionar</Button>
         </div>
-        <p className="mt-1 text-[11px] text-muted-foreground">Com data/hora, o sistema te lembra por notificação quando chegar.</p>
+        <p className="mt-1 text-[11px] text-ink-500">Com data/hora, o sistema te lembra por notificação quando chegar.</p>
       </div>
 
-      {pending.length === 0 && done.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma tarefa. Adicione acima.</p>}
+      {pending.length === 0 && done.length === 0 && <p className="text-sm text-ink-500">Nenhuma tarefa. Adicione acima.</p>}
       <div className="space-y-1.5">
         {pending.map((t) => <TaskRow key={t.id} t={t} busy={busy} post={post} />)}
       </div>
       {done.length > 0 && (
         <details>
-          <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">Concluídas ({done.length})</summary>
+          <summary className="cursor-pointer text-xs font-semibold text-ink-500">Concluídas ({done.length})</summary>
           <div className="mt-1 space-y-1.5">{done.map((t) => <TaskRow key={t.id} t={t} busy={busy} post={post} />)}</div>
         </details>
       )}
@@ -125,7 +125,7 @@ function TaskRow({ t, busy, post }: { t: MTask; busy: boolean; post: Post }) {
 
   if (editing) {
     return (
-      <div className="rounded-lg border-2 border-accent/40 bg-card p-2.5">
+      <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-surface p-2.5">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} className="mb-2 text-sm" />
         <DueAtPicker date={date} time={time} onDate={setDate} onTime={setTime} />
         <div className="mt-2 flex gap-1.5">
@@ -136,16 +136,16 @@ function TaskRow({ t, busy, post }: { t: MTask; busy: boolean; post: Post }) {
     );
   }
   return (
-    <div className={`flex items-center gap-2 rounded-lg border bg-card p-2.5 ${t.done ? 'opacity-60' : ''}`}>
+    <div className={`flex items-center gap-2 rounded-lg border bg-sgo-surface p-2.5 ${t.done ? 'opacity-60' : ''}`}>
       <button onClick={() => post({ entity: 'task', action: 'toggle', id: t.id, done: !t.done })} disabled={busy} aria-label="Concluir">
-        {t.done ? <CheckSquare className="h-5 w-5 text-success" /> : <Square className="h-5 w-5 text-muted-foreground" />}
+        {t.done ? <CheckSquare className="h-5 w-5 text-sgo-success" /> : <Square className="h-5 w-5 text-ink-500" />}
       </button>
       <span className="min-w-0 flex-1">
-        <span className={`block text-sm font-medium ${t.done ? 'line-through' : 'text-brand'}`}>{t.title}</span>
-        {t.dueAt && <span className={`block text-xs ${overdue ? 'font-semibold text-critical' : 'text-muted-foreground'}`}><Clock className="mr-0.5 inline h-3 w-3" />{fmtDateTime(t.dueAt)}</span>}
+        <span className={`block text-sm font-medium ${t.done ? 'line-through' : 'text-sgo-brand'}`}>{t.title}</span>
+        {t.dueAt && <span className={`block text-xs ${overdue ? 'font-semibold text-danger' : 'text-ink-500'}`}><Clock className="mr-0.5 inline h-3 w-3" />{fmtDateTime(t.dueAt)}</span>}
       </span>
-      {!t.done && <button onClick={() => setEditing(true)} disabled={busy} className="text-muted-foreground hover:text-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>}
-      <button onClick={() => post({ entity: 'task', action: 'delete', id: t.id })} disabled={busy} className="text-critical" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
+      {!t.done && <button onClick={() => setEditing(true)} disabled={busy} className="text-ink-500 hover:text-sgo-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>}
+      <button onClick={() => post({ entity: 'task', action: 'delete', id: t.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
     </div>
   );
 }
@@ -161,7 +161,7 @@ function NotesTab({ notes, busy, post }: { notes: MNote[]; busy: boolean; post: 
         <div><Label className="text-xs">Anotação</Label><div className="mt-1"><RichText value={content} onChange={setContent} placeholder="anote aqui… (use negrito, itálico, listas)" /></div></div>
         <Button size="sm" disabled={busy || empty} onClick={async () => { if (await post({ entity: 'note', action: 'add', title, content })) { setTitle(''); setContent(''); } }}><Plus className="h-4 w-4" /> Salvar nota</Button>
       </div>
-      {notes.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma anotação.</p>}
+      {notes.length === 0 && <p className="text-sm text-ink-500">Nenhuma anotação.</p>}
       <div className="space-y-2">
         {notes.map((n) => <NoteCard key={n.id} n={n} busy={busy} post={post} />)}
       </div>
@@ -177,7 +177,7 @@ function NoteCard({ n, busy, post }: { n: MNote; busy: boolean; post: Post }) {
 
   if (editing) {
     return (
-      <div className="rounded-lg border-2 border-accent/40 bg-card p-2.5 space-y-2">
+      <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-surface p-2.5 space-y-2">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título (opcional)" className="text-sm" />
         <RichText value={content} onChange={setContent} />
         <div className="flex gap-1.5">
@@ -188,14 +188,14 @@ function NoteCard({ n, busy, post }: { n: MNote; busy: boolean; post: Post }) {
     );
   }
   return (
-    <div className="rounded-lg border bg-card p-2.5">
-      {n.title && <p className="mb-1 font-semibold text-brand">{n.title}</p>}
+    <div className="rounded-lg border bg-sgo-surface p-2.5">
+      {n.title && <p className="mb-1 font-semibold text-sgo-brand">{n.title}</p>}
       <div className="pop-rich text-sm" dangerouslySetInnerHTML={{ __html: n.content }} />
       <div className="mt-1 flex items-center justify-between">
-        <span className="text-[11px] text-muted-foreground">{fmtDateTime(n.createdAt)}</span>
+        <span className="text-[11px] text-ink-500">{fmtDateTime(n.createdAt)}</span>
         <div className="flex gap-2">
-          <button onClick={() => setEditing(true)} disabled={busy} className="text-muted-foreground hover:text-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>
-          <button onClick={() => post({ entity: 'note', action: 'delete', id: n.id })} disabled={busy} className="text-critical" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
+          <button onClick={() => setEditing(true)} disabled={busy} className="text-ink-500 hover:text-sgo-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>
+          <button onClick={() => post({ entity: 'note', action: 'delete', id: n.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
         </div>
       </div>
     </div>
@@ -212,23 +212,23 @@ function WorkScheduleEditor({ schedule, busy, post }: { schedule: MWorkSchedule 
   const [saved, setSaved] = useState(false);
   const toggle = (d: number) => setDays((s) => (s.includes(d) ? s.filter((x) => x !== d) : [...s, d].sort((a, b) => a - b)));
   return (
-    <div className="rounded-lg border-2 border-accent/30 bg-accent/5 p-3">
-      <p className="text-sm font-bold text-brand">🕒 Meu horário de trabalho (padrão semanal)</p>
-      <p className="mb-2 text-xs text-muted-foreground">Marque os dias que você trabalha e o horário. Serve para o supervisor ver a cobertura de gerência de cada unidade.</p>
+    <div className="rounded-lg border-2 border-sgo-brand/30 bg-sgo-brand/5 p-3">
+      <p className="text-sm font-bold text-sgo-brand">🕒 Meu horário de trabalho (padrão semanal)</p>
+      <p className="mb-2 text-xs text-ink-500">Marque os dias que você trabalha e o horário. Serve para o supervisor ver a cobertura de gerência de cada unidade.</p>
       <div className="flex flex-wrap items-center gap-1">
         {WD_LABEL.map((w, i) => (
-          <button key={i} type="button" onClick={() => toggle(i)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${days.includes(i) ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground'}`}>{w}</button>
+          <button key={i} type="button" onClick={() => toggle(i)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${days.includes(i) ? 'bg-sgo-brand text-on-brand border-sgo-brand' : 'text-ink-500'}`}>{w}</button>
         ))}
-        <button type="button" onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])} className="ml-1 rounded-full border border-dashed px-3 py-1.5 text-xs font-semibold text-accent">Todos os dias</button>
+        <button type="button" onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])} className="ml-1 rounded-full border border-dashed px-3 py-1.5 text-xs font-semibold text-sgo-brand">Todos os dias</button>
       </div>
-      <p className="mt-1 text-[11px] text-muted-foreground">Sem folga fixa? Toque em <b>Todos os dias</b> — depois marque cada folga na agenda abaixo (7 dias sem folga gera aviso ao supervisor).</p>
+      <p className="mt-1 text-[11px] text-ink-500">Sem folga fixa? Toque em <b>Todos os dias</b> — depois marque cada folga na agenda abaixo (7 dias sem folga gera aviso ao supervisor).</p>
       <div className="mt-2 grid grid-cols-2 gap-2">
         <TimePicker label="Início" value={start || null} onValueChange={(v) => setStart(v ?? '')} />
         <TimePicker label="Fim" value={end || null} onValueChange={(v) => setEnd(v ?? '')} />
       </div>
       <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-2 h-10 text-sm" />
       <Button size="sm" className="mt-2" disabled={busy} onClick={async () => { if (await post({ entity: 'workSchedule', action: 'set', weekdays: days, startTime: start || null, endTime: end || null, note })) { setSaved(true); setTimeout(() => setSaved(false), 2500); } }}>Salvar horário</Button>
-      {saved && <span className="ml-2 text-xs font-semibold text-success">Salvo ✓</span>}
+      {saved && <span className="ml-2 text-xs font-semibold text-sgo-success">Salvo ✓</span>}
     </div>
   );
 }
@@ -241,13 +241,13 @@ function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam }: { leaves
     <div className="space-y-3">
       <WorkScheduleEditor schedule={schedule} busy={busy} post={post} />
       {canSeeTeam && (
-        <a href="/modulos/folgas-equipe" className="flex items-center justify-between gap-2 rounded-lg border border-accent/40 bg-accent/5 p-3 text-sm hover:bg-accent/10">
-          <span className="flex items-center gap-2 font-semibold text-brand"><CalendarOff className="h-4 w-4" /> Controle de gerentes (consolidado + calendário)</span>
-          <span className="text-accent">→</span>
+        <a href="/modulos/folgas-equipe" className="flex items-center justify-between gap-2 rounded-lg border border-sgo-brand/40 bg-sgo-brand/5 p-3 text-sm hover:bg-sgo-brand/10">
+          <span className="flex items-center gap-2 font-semibold text-sgo-brand"><CalendarOff className="h-4 w-4" /> Controle de gerentes (consolidado + calendário)</span>
+          <span className="text-sgo-brand">→</span>
         </a>
       )}
       <div className="rounded-lg border border-dashed p-3">
-        <p className="mb-2 text-xs text-muted-foreground">Nos dias de folga/férias, seus checklists e tarefas do dia não aparecem para você (você ainda pode entrar no sistema).</p>
+        <p className="mb-2 text-xs text-ink-500">Nos dias de folga/férias, seus checklists e tarefas do dia não aparecem para você (você ainda pode entrar no sistema).</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Select
             label="Tipo" value={kind} onValueChange={(v) => setKind(v as 'FOLGA' | 'FERIAS')}
@@ -258,12 +258,12 @@ function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam }: { leaves
         </div>
         <Button size="sm" className="mt-2" disabled={busy || !start || !end} onClick={async () => { if (await post({ entity: 'leave', action: 'add', kind, startDate: start, endDate: end })) { setStart(''); setEnd(''); } }}><Plus className="h-4 w-4" /> Agendar</Button>
       </div>
-      {leaves.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma folga/férias agendada.</p>}
+      {leaves.length === 0 && <p className="text-sm text-ink-500">Nenhuma folga/férias agendada.</p>}
       <div className="space-y-1.5">
         {leaves.map((l) => (
-          <div key={l.id} className="flex items-center justify-between rounded-lg border bg-card p-2.5 text-sm">
-            <span><b className={l.kind === 'FERIAS' ? 'text-accent' : 'text-brand'}>{l.kind === 'FERIAS' ? 'Férias' : 'Folga'}</b> · {l.startDate === l.endDate ? fmtBR(l.startDate) : `${fmtBR(l.startDate)} a ${fmtBR(l.endDate)}`}</span>
-            <button onClick={() => post({ entity: 'leave', action: 'delete', id: l.id })} disabled={busy} className="text-critical" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
+          <div key={l.id} className="flex items-center justify-between rounded-lg border bg-sgo-surface p-2.5 text-sm">
+            <span><b className={l.kind === 'FERIAS' ? 'text-sgo-brand' : 'text-sgo-brand'}>{l.kind === 'FERIAS' ? 'Férias' : 'Folga'}</b> · {l.startDate === l.endDate ? fmtBR(l.startDate) : `${fmtBR(l.startDate)} a ${fmtBR(l.endDate)}`}</span>
+            <button onClick={() => post({ entity: 'leave', action: 'delete', id: l.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
           </div>
         ))}
       </div>

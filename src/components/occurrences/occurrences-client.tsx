@@ -74,14 +74,14 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
 
   const card = (o: OccItem) => (
     <Link key={o.id} href={`/modulos/ocorrencias/${o.id}`}>
-      <Card className="transition-colors hover:border-accent">
+      <Card className="transition-colors hover:border-sgo-brand">
         <CardContent className="flex items-start justify-between gap-3 py-3">
           <div className="min-w-0">
-            <p className="font-semibold text-brand">
+            <p className="font-semibold text-sgo-brand">
               {GRAVITY_META[o.gravity].emoji} #{o.unitCode}-{String(o.number).padStart(4, '0')} · {o.typeName}
             </p>
-            <p className="truncate text-sm text-muted-foreground">{o.categoryName} — {o.description}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="truncate text-sm text-ink-500">{o.categoryName} — {o.description}</p>
+            <p className="mt-0.5 text-xs text-ink-500">
               🕒 {fmtDateTime(o.createdAt)}
               {o.isRecurrence && ' · ♻ reincidência'}
               {o.attachments > 0 && ` · ${o.attachments} anexo(s)`}
@@ -143,12 +143,12 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
       {groups.length > 1 && (
         <div className="space-y-2">
           {groups.map(([unitName, list]) => (
-            <details key={unitName} className="group rounded-lg border bg-card">
+            <details key={unitName} className="group rounded-lg border bg-sgo-surface">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5">
-                <span className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                <span className="text-sm font-bold uppercase tracking-wide text-ink-500">
                   {unitName} <span className="font-normal">({list.length})</span>
                 </span>
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                <ChevronDown className="h-4 w-4 shrink-0 text-ink-500 transition-transform group-open:rotate-180" />
               </summary>
               <div className="space-y-2 border-t p-2">{list.map(card)}</div>
             </details>

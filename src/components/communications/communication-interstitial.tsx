@@ -11,9 +11,9 @@ interface Item {
 }
 
 const PRIO: Record<string, { label: string; cls: string }> = {
-  URGENT: { label: 'Urgente', cls: 'bg-critical text-white' },
+  URGENT: { label: 'Urgente', cls: 'bg-danger text-white' },
   IMPORTANT: { label: 'Importante', cls: 'bg-warning-bg text-warning' },
-  NORMAL: { label: 'Comunicado', cls: 'bg-primary text-primary-foreground' },
+  NORMAL: { label: 'Comunicado', cls: 'bg-sgo-brand text-on-brand' },
 };
 
 /**
@@ -60,40 +60,40 @@ export function CommunicationInterstitial() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-background p-5 shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-sgo-surface p-5 shadow-2xl">
         <div className="mb-3 flex items-center justify-between gap-2">
           <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${prio.cls}`}>
             <Megaphone className="h-3.5 w-3.5" /> {cur.pinned ? '📌 ' : ''}{prio.label}
           </span>
           <div className="flex items-center gap-2">
-            {queue.length > 1 && <span className="text-xs text-muted-foreground">{i + 1}/{queue.length}</span>}
-            <button onClick={() => { if (i + 1 >= queue.length) setQueue([]); else setI(i + 1); }} className="text-muted-foreground" aria-label="Ver depois"><X className="h-5 w-5" /></button>
+            {queue.length > 1 && <span className="text-xs text-ink-500">{i + 1}/{queue.length}</span>}
+            <button onClick={() => { if (i + 1 >= queue.length) setQueue([]); else setI(i + 1); }} className="text-ink-500" aria-label="Ver depois"><X className="h-5 w-5" /></button>
           </div>
         </div>
 
-        <h2 className="text-lg font-bold text-brand">{cur.title}</h2>
-        <p className="mb-1 text-xs text-muted-foreground">Por {cur.authorName} · {new Date(cur.createdAt).toLocaleString('pt-BR')}</p>
-        <div className="prose prose-sm mt-2 max-w-none whitespace-pre-wrap text-sm text-foreground" dangerouslySetInnerHTML={{ __html: cur.body }} />
+        <h2 className="text-lg font-bold text-sgo-brand">{cur.title}</h2>
+        <p className="mb-1 text-xs text-ink-500">Por {cur.authorName} · {new Date(cur.createdAt).toLocaleString('pt-BR')}</p>
+        <div className="prose prose-sm mt-2 max-w-none whitespace-pre-wrap text-sm text-ink-900" dangerouslySetInnerHTML={{ __html: cur.body }} />
 
         {cur.attachments.length > 0 && (
           <div className="mt-3 space-y-2">
             {cur.attachments.map((a, idx) => a.isImage
               ? <a key={idx} href={`/${a.path}`} target="_blank" rel="noreferrer"><img src={`/${a.path}`} alt={a.name} className="max-h-56 rounded-lg border object-contain" /></a>
-              : <a key={idx} href={`/${a.path}`} target="_blank" rel="noreferrer" className="block text-sm font-semibold text-accent underline">📎 {a.name}</a>)}
+              : <a key={idx} href={`/${a.path}`} target="_blank" rel="noreferrer" className="block text-sm font-semibold text-sgo-brand underline">📎 {a.name}</a>)}
           </div>
         )}
 
         {cur.requiresResponse && (
           <div className="mt-3">
-            <label className="mb-1 block text-xs font-semibold text-muted-foreground">Este comunicado exige uma resposta:</label>
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Escreva um comentário para confirmar…" className="w-full rounded-lg border-2 border-input bg-background p-2 text-sm" />
+            <label className="mb-1 block text-xs font-semibold text-ink-500">Este comunicado exige uma resposta:</label>
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Escreva um comentário para confirmar…" className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-2 text-sm" />
           </div>
         )}
 
-        {err && <p className="mt-2 text-sm font-medium text-critical">{err}</p>}
+        {err && <p className="mt-2 text-sm font-medium text-danger">{err}</p>}
 
         <div className="mt-4 flex items-center justify-between gap-2">
-          <button onClick={() => { if (i + 1 >= queue.length) setQueue([]); else setI(i + 1); }} className="text-xs text-muted-foreground underline">ver depois</button>
+          <button onClick={() => { if (i + 1 >= queue.length) setQueue([]); else setI(i + 1); }} className="text-xs text-ink-500 underline">ver depois</button>
           <Button onClick={confirm} disabled={busy} size="lg"><Check className="h-5 w-5" /> {busy ? 'Confirmando…' : 'Li e confirmo'}</Button>
         </div>
       </div>

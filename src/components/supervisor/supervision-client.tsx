@@ -32,7 +32,7 @@ const fmtMonthLong = (ym: string) => {
   const [y, m] = ym.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 };
-const TONE_DOT = { success: 'bg-success', medium: 'bg-medium', critical: 'bg-critical' } as const;
+const TONE_DOT = { success: 'bg-sgo-success', medium: 'bg-warning', critical: 'bg-danger' } as const;
 
 export function SupervisionClient({ usage, yearMonth, months, board, units, checklists, plans, canOperate, isAdmin }: {
   usage: UsageRowUI[]; yearMonth: string; months: string[];
@@ -60,7 +60,7 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
     <div className="space-y-4">
       <div className="flex gap-2">
         {([['PAINEL', 'Painel de uso'], ['VISITAS', 'Visitas & Feedbacks']] as const).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} className={tab === t ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{label}</button>
+          <button key={t} onClick={() => setTab(t)} className={tab === t ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>{label}</button>
         ))}
       </div>
 
@@ -73,11 +73,11 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
               options={months.map((m) => ({ value: m, label: fmtMonthLong(m) }))}
             />
           </div>
-          <p className="text-xs text-muted-foreground">Uso correto = média de checklists concluídos, dias com desperdício lançado e dias com comandas conferidas. Piores primeiro.</p>
+          <p className="text-xs text-ink-500">Uso correto = média de checklists concluídos, dias com desperdício lançado e dias com comandas conferidas. Piores primeiro.</p>
           {usage.map((u) => (
-            <div key={u.unitId} className="rounded-lg border bg-card p-3">
+            <div key={u.unitId} className="rounded-lg border bg-sgo-surface p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="flex items-center gap-2 font-semibold text-brand"><span className={cn('h-2.5 w-2.5 rounded-full', TONE_DOT[u.tone])} /> {u.unitName}</p>
+                <p className="flex items-center gap-2 font-semibold text-sgo-brand"><span className={cn('h-2.5 w-2.5 rounded-full', TONE_DOT[u.tone])} /> {u.unitName}</p>
                 <span className="text-sm font-bold tabular-nums">{u.usagePct}% de uso</span>
               </div>
               <div className="mt-2 grid grid-cols-3 gap-2 text-center sm:grid-cols-6">
@@ -89,15 +89,15 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
                   ['Notas', String(u.notes)],
                   ['Meta', `${u.metaPct}%`],
                 ] as const).map(([label, val]) => (
-                  <div key={label} className="rounded-md bg-surface p-1.5">
+                  <div key={label} className="rounded-md bg-canvas p-1.5">
                     <p className="text-sm font-bold tabular-nums">{val}</p>
-                    <p className="text-[10px] text-muted-foreground">{label}</p>
+                    <p className="text-[10px] text-ink-500">{label}</p>
                   </div>
                 ))}
               </div>
             </div>
           ))}
-          {usage.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma unidade no seu escopo.</p>}
+          {usage.length === 0 && <p className="text-sm text-ink-500">Nenhuma unidade no seu escopo.</p>}
         </div>
       )}
 
@@ -106,22 +106,22 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
           <div className="flex justify-end">
             <a
               href={`/api/supervision/export?year=${yearMonth.split('-')[0]}&month=${Number(yearMonth.split('-')[1])}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"
+              className="inline-flex items-center gap-1.5 rounded-lg border bg-sgo-surface px-3 py-1.5 text-xs font-semibold text-sgo-brand hover:border-sgo-brand"
             >
-              <FileSpreadsheet className="h-3.5 w-3.5 text-accent" /> Excel do mês
+              <FileSpreadsheet className="h-3.5 w-3.5 text-sgo-brand" /> Excel do mês
             </a>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-lg border bg-card p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.done}</p><p className="text-xs text-muted-foreground">feitas no mês</p></div>
-            <div className="rounded-lg border bg-card p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.planned}</p><p className="text-xs text-muted-foreground">agendadas</p></div>
-            <div className={cn('rounded-lg border p-2.5', board.month.overdue > 0 ? 'border-critical/50 bg-critical/5' : 'bg-card')}><p className={cn('text-lg font-bold tabular-nums', board.month.overdue > 0 && 'text-critical')}>{board.month.overdue}</p><p className="text-xs text-muted-foreground">atrasadas</p></div>
+            <div className="rounded-lg border bg-sgo-surface p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.done}</p><p className="text-xs text-ink-500">feitas no mês</p></div>
+            <div className="rounded-lg border bg-sgo-surface p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.planned}</p><p className="text-xs text-ink-500">agendadas</p></div>
+            <div className={cn('rounded-lg border p-2.5', board.month.overdue > 0 ? 'border-danger/50 bg-danger/5' : 'bg-sgo-surface')}><p className={cn('text-lg font-bold tabular-nums', board.month.overdue > 0 && 'text-danger')}>{board.month.overdue}</p><p className="text-xs text-ink-500">atrasadas</p></div>
           </div>
 
           {canOperate && <PlansEditor plans={plans} busy={busy} post={post} />}
 
           {canOperate && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> Agendar visita</p>
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><CalendarDays className="h-3.5 w-3.5" /> Agendar visita</p>
               <div className="grid grid-cols-2 gap-2">
                 <Select
                   aria-label="Unidade da visita" placeholder="Unidade…" value={vUnit} onValueChange={setVUnit}
@@ -134,16 +134,16 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
           )}
 
           <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Próximas ({board.upcoming.length})</p>
-            {board.upcoming.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma visita agendada.</p>}
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Próximas ({board.upcoming.length})</p>
+            {board.upcoming.length === 0 && <p className="text-sm text-ink-500">Nenhuma visita agendada.</p>}
             <div className="space-y-1.5">
               {board.upcoming.map((v) => <UpcomingVisit key={v.id} v={v} checklists={checklists} canOperate={canOperate} busy={busy} post={post} />)}
             </div>
           </div>
 
           <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Histórico ({board.history.length})</p>
-            {board.history.length === 0 && <p className="text-sm text-muted-foreground">Sem visitas concluídas.</p>}
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Histórico ({board.history.length})</p>
+            {board.history.length === 0 && <p className="text-sm text-ink-500">Sem visitas concluídas.</p>}
             <div className="space-y-1.5">
               {board.history.map((v) => <HistoryVisit key={v.id} v={v} isAdmin={isAdmin} busy={busy} onDelete={async (id) => { if (confirm('Excluir esta visita? (auditado)')) await post({ entity: 'supervisorVisit', action: 'delete', id }, '/api/admin/ops'); }} />)}
             </div>
@@ -160,19 +160,19 @@ function PlansEditor({ plans, busy, post }: { plans: PlanRowUI[]; busy: boolean;
   const overdueCount = plans.filter((p) => p.overdue).length;
 
   return (
-    <div className={cn('rounded-lg border p-3', overdueCount > 0 ? 'border-critical/50 bg-critical/5' : 'border-dashed')}>
+    <div className={cn('rounded-lg border p-3', overdueCount > 0 ? 'border-danger/50 bg-danger/5' : 'border-dashed')}>
       <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left">
-        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground"><Repeat className="h-3.5 w-3.5" /> Recorrência de visitas</p>
-        <span className="text-xs font-semibold">{overdueCount > 0 ? <span className="text-critical">{overdueCount} unidade(s) vencida(s)</span> : `${plans.filter((p) => p.active).length} plano(s) ativo(s)`}</span>
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><Repeat className="h-3.5 w-3.5" /> Recorrência de visitas</p>
+        <span className="text-xs font-semibold">{overdueCount > 0 ? <span className="text-danger">{overdueCount} unidade(s) vencida(s)</span> : `${plans.filter((p) => p.active).length} plano(s) ativo(s)`}</span>
       </button>
       {open && (
         <div className="mt-2 space-y-1.5 border-t pt-2">
-          <p className="text-xs text-muted-foreground">Visitar a cada N dias (0 = sem recorrência). Concluir uma visita reagenda a próxima; vencida gera aviso diário.</p>
+          <p className="text-xs text-ink-500">Visitar a cada N dias (0 = sem recorrência). Concluir uma visita reagenda a próxima; vencida gera aviso diário.</p>
           {plans.map((p) => (
-            <div key={p.unitId} className="flex items-center justify-between gap-2 rounded-md bg-surface p-2">
+            <div key={p.unitId} className="flex items-center justify-between gap-2 rounded-md bg-canvas p-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-brand">{p.unitName}{p.overdue && <span className="ml-1.5 text-xs font-bold text-critical">VENCIDA</span>}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="truncate text-sm font-semibold text-sgo-brand">{p.unitName}{p.overdue && <span className="ml-1.5 text-xs font-bold text-danger">VENCIDA</span>}</p>
+                <p className="text-xs text-ink-500">
                   {p.active ? `a cada ${p.frequencyDays}d · próxima ${new Date(p.nextDueAt).toLocaleDateString('pt-BR')}` : 'sem recorrência'}
                   {p.lastVisitAt ? ` · última ${new Date(p.lastVisitAt).toLocaleDateString('pt-BR')}` : ''}
                 </p>
@@ -200,18 +200,18 @@ function UpcomingVisit({ v, checklists, canOperate, busy, post }: {
   const cl = checklists.find((c) => c.id === clId);
 
   return (
-    <div className={cn('rounded-lg border p-2.5', v.overdue ? 'border-critical/50 bg-critical/5' : 'bg-card')}>
+    <div className={cn('rounded-lg border p-2.5', v.overdue ? 'border-danger/50 bg-danger/5' : 'bg-sgo-surface')}>
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-brand">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
-          <p className="text-xs text-muted-foreground">{v.supervisorName}</p>
+          <p className="truncate text-sm font-semibold text-sgo-brand">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
+          <p className="text-xs text-ink-500">{v.supervisorName}</p>
         </div>
         <span className="flex shrink-0 items-center gap-1.5">
           {v.overdue && <StatusBadge tone="critical">Atrasada</StatusBadge>}
           {canOperate && !completing && (
             <>
               <Button size="sm" variant="gold" disabled={busy} onClick={() => setCompleting(true)}><Check className="h-4 w-4" /> Concluir</Button>
-              <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm('Cancelar esta visita?')) void post({ action: 'cancel', id: v.id }); }} aria-label="Cancelar"><X className="h-4 w-4" /></Button>
+              <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm('Cancelar esta visita?')) void post({ action: 'cancel', id: v.id }); }} aria-label="Cancelar"><X className="h-4 w-4" /></Button>
             </>
           )}
         </span>
@@ -221,7 +221,7 @@ function UpcomingVisit({ v, checklists, canOperate, busy, post }: {
         <div className="mt-2 space-y-2 border-t pt-2">
           <div>
             <Label className="text-xs">Feedback da visita (obrigatório)</Label>
-            <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="O que foi visto, orientações ao gerente, combinados…" className="w-full rounded-lg border-2 border-input bg-background p-2 text-sm" />
+            <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} placeholder="O que foi visto, orientações ao gerente, combinados…" className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-2 text-sm" />
           </div>
           {checklists.length > 0 && (
             <Select
@@ -235,12 +235,12 @@ function UpcomingVisit({ v, checklists, canOperate, busy, post }: {
               {cl.items.map((item) => {
                 const r = results[item] ?? { ok: false, note: '' };
                 return (
-                  <div key={item} className="rounded-md bg-surface p-2">
+                  <div key={item} className="rounded-md bg-canvas p-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm">{item}</span>
                       <div className="flex gap-1">
-                        <button onClick={() => setResults((s) => ({ ...s, [item]: { ...r, ok: true } }))} className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', r.ok ? 'bg-success text-white' : 'border')}>OK</button>
-                        <button onClick={() => setResults((s) => ({ ...s, [item]: { ...r, ok: false } }))} className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', !r.ok && results[item] !== undefined ? 'bg-critical text-white' : 'border')}>Não</button>
+                        <button onClick={() => setResults((s) => ({ ...s, [item]: { ...r, ok: true } }))} className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', r.ok ? 'bg-sgo-success text-white' : 'border')}>OK</button>
+                        <button onClick={() => setResults((s) => ({ ...s, [item]: { ...r, ok: false } }))} className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', !r.ok && results[item] !== undefined ? 'bg-danger text-white' : 'border')}>Não</button>
                       </div>
                     </div>
                     {results[item] !== undefined && !r.ok && (
@@ -269,15 +269,15 @@ function HistoryVisit({ v, isAdmin, busy, onDelete }: { v: VisitRowUI; isAdmin: 
   const [open, setOpen] = useState(false);
   const notOk = v.checklistResults?.filter((r) => !r.ok).length ?? 0;
   return (
-    <div className="rounded-lg border bg-card p-2.5">
+    <div className="rounded-lg border bg-sgo-surface p-2.5">
       <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between gap-2 text-left">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-brand">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
-          <p className="truncate text-xs text-muted-foreground">{v.supervisorName}{v.checklistName ? ` · ${v.checklistName}${notOk > 0 ? ` (${notOk} item(ns) não OK)` : ' (tudo OK)'}` : ''}</p>
+          <p className="truncate text-sm font-semibold text-sgo-brand">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
+          <p className="truncate text-xs text-ink-500">{v.supervisorName}{v.checklistName ? ` · ${v.checklistName}${notOk > 0 ? ` (${notOk} item(ns) não OK)` : ' (tudo OK)'}` : ''}</p>
         </div>
         <span className="flex shrink-0 items-center gap-1.5">
           <StatusBadge tone={v.status === 'DONE' ? 'success' : 'neutral'}>{v.status === 'DONE' ? 'Concluída' : 'Cancelada'}</StatusBadge>
-          {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={(e) => { e.stopPropagation(); void onDelete(v.id); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
+          {isAdmin && <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={(e) => { e.stopPropagation(); void onDelete(v.id); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
         </span>
       </button>
       {open && v.status === 'DONE' && (
@@ -287,7 +287,7 @@ function HistoryVisit({ v, isAdmin, busy, onDelete }: { v: VisitRowUI; isAdmin: 
             <div className="space-y-1">
               {v.checklistResults.map((r) => (
                 <p key={r.item} className="text-xs">
-                  {r.ok ? '✅' : '❌'} {r.item}{r.note ? <span className="text-muted-foreground"> — {r.note}</span> : null}
+                  {r.ok ? '✅' : '❌'} {r.item}{r.note ? <span className="text-ink-500"> — {r.note}</span> : null}
                 </p>
               ))}
             </div>

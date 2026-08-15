@@ -52,30 +52,30 @@ export function ChecklistSubmissions({ forms, submissions, ficha, days }: { form
             ]}
           />
         </div>
-        <span className="text-xs text-muted-foreground"><strong className="text-brand">{submissions.length}</strong> envio(s)</span>
+        <span className="text-xs text-ink-500"><strong className="text-sgo-brand">{submissions.length}</strong> envio(s)</span>
       </div>
 
       {submissions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum envio no período.</p>
+        <p className="text-sm text-ink-500">Nenhum envio no período.</p>
       ) : (
         <div className="space-y-1.5">
           {submissions.map((s) => (
-            <div key={s.id} className="rounded-lg border bg-card">
+            <div key={s.id} className="rounded-lg border bg-sgo-surface">
               <button onClick={() => setOpenId((id) => (id === s.id ? null : s.id))} className="flex w-full items-center justify-between gap-2 p-3 text-left">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-brand"><FileText className="mr-1 inline h-4 w-4 text-accent" />{s.formTitle}</p>
-                  <p className="text-xs text-muted-foreground">{s.respondentName} · {s.unitName} · {dt(s.createdAt)}</p>
+                  <p className="truncate text-sm font-semibold text-sgo-brand"><FileText className="mr-1 inline h-4 w-4 text-sgo-brand" />{s.formTitle}</p>
+                  <p className="text-xs text-ink-500">{s.respondentName} · {s.unitName} · {dt(s.createdAt)}</p>
                 </div>
-                {openId === s.id ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                {openId === s.id ? <ChevronUp className="h-4 w-4 shrink-0 text-ink-500" /> : <ChevronDown className="h-4 w-4 shrink-0 text-ink-500" />}
               </button>
               {openId === s.id && (
                 <div className="space-y-1 border-t px-3 py-2">
                   {s.answers.map((a, i) => a.kind === 'SECTION' ? (
-                    <p key={i} className="pt-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{a.label}</p>
+                    <p key={i} className="pt-1 text-xs font-bold uppercase tracking-wide text-ink-500">{a.label}</p>
                   ) : (
                     <div key={i} className="flex justify-between gap-3 text-sm">
-                      <span className="text-muted-foreground">{a.label}</span>
-                      <span className="font-medium text-brand">{showValue(a)}</span>
+                      <span className="text-ink-500">{a.label}</span>
+                      <span className="font-medium text-sgo-brand">{showValue(a)}</span>
                     </div>
                   ))}
                 </div>

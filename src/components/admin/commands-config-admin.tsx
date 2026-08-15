@@ -23,7 +23,7 @@ export function CommandsConfigAdmin({ units, sequences }: { units: Unit[]; seque
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Cada unidade pode ter várias faixas de comandas (ex.: 1–200 e 500–650). São a base da contagem diária e das divergências.</p>
+      <p className="text-sm text-ink-500">Cada unidade pode ter várias faixas de comandas (ex.: 1–200 e 500–650). São a base da contagem diária e das divergências.</p>
       <Select
         label="Unidade" value={unitId} onValueChange={setUnitId}
         options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
@@ -31,11 +31,11 @@ export function CommandsConfigAdmin({ units, sequences }: { units: Unit[]; seque
 
       <div className="space-y-2">
         {list.map((s) => <SeqRow key={s.id} s={s} onChange={() => router.refresh()} />)}
-        {list.length === 0 && <p className="text-sm text-critical">Nenhuma sequência — o módulo de comandas fica bloqueado até cadastrar pelo menos uma.</p>}
+        {list.length === 0 && <p className="text-sm text-danger">Nenhuma sequência — o módulo de comandas fica bloqueado até cadastrar pelo menos uma.</p>}
       </div>
 
       <NewSeq unitId={unitId} onDone={() => router.refresh()} />
-      <p className="text-xs text-muted-foreground">Total de comandas ativas nesta unidade: <span className="font-bold text-brand">{total}</span></p>
+      <p className="text-xs text-ink-500">Total de comandas ativas nesta unidade: <span className="font-bold text-sgo-brand">{total}</span></p>
     </div>
   );
 }
@@ -57,7 +57,7 @@ function SeqRow({ s, onChange }: { s: CmdSeqRow; onChange: () => void }) {
   }
 
   return (
-    <div className="rounded-lg border bg-card p-2.5">
+    <div className="rounded-lg border bg-sgo-surface p-2.5">
       <div className="flex items-center justify-between gap-2">
         {editing ? (
           <div className="grid flex-1 grid-cols-12 gap-1">
@@ -67,8 +67,8 @@ function SeqRow({ s, onChange }: { s: CmdSeqRow; onChange: () => void }) {
           </div>
         ) : (
           <div>
-            <p className="text-sm font-semibold text-brand">{s.name}</p>
-            <p className="text-xs text-muted-foreground">{s.rangeStart}–{s.rangeEnd} · {Math.max(0, s.rangeEnd - s.rangeStart + 1)} comandas</p>
+            <p className="text-sm font-semibold text-sgo-brand">{s.name}</p>
+            <p className="text-xs text-ink-500">{s.rangeStart}–{s.rangeEnd} · {Math.max(0, s.rangeEnd - s.rangeStart + 1)} comandas</p>
           </div>
         )}
         <div className="flex items-center gap-1">
@@ -78,10 +78,10 @@ function SeqRow({ s, onChange }: { s: CmdSeqRow; onChange: () => void }) {
             : <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>}
           {editing
             ? <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setName(s.name); setStart(String(s.rangeStart)); setEnd(String(s.rangeEnd)); }} aria-label="Cancelar"><X className="h-4 w-4" /></Button>
-            : <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Excluir a sequência "${s.name}" (${s.rangeStart}–${s.rangeEnd})?`)) call({ entity: 'commandSequence', action: 'delete', id: s.id }); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
+            : <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm(`Excluir a sequência "${s.name}" (${s.rangeStart}–${s.rangeEnd})?`)) call({ entity: 'commandSequence', action: 'delete', id: s.id }); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
         </div>
       </div>
-      {msg && <p className="mt-1 text-xs font-medium text-critical">{msg}</p>}
+      {msg && <p className="mt-1 text-xs font-medium text-danger">{msg}</p>}
     </div>
   );
 }
@@ -104,14 +104,14 @@ function NewSeq({ unitId, onDone }: { unitId: string; onDone: () => void }) {
 
   return (
     <div className="rounded-lg border border-dashed p-2.5">
-      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Nova sequência</p>
+      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Nova sequência</p>
       <div className="grid grid-cols-12 items-end gap-1">
         <div className="col-span-5"><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Salão" className="h-9 text-sm" /></div>
         <div className="col-span-3"><Label className="text-xs">Início</Label><Input inputMode="numeric" value={start} onChange={(e) => setStart(e.target.value)} placeholder="1" className="h-9 text-sm" /></div>
         <div className="col-span-3"><Label className="text-xs">Fim</Label><Input inputMode="numeric" value={end} onChange={(e) => setEnd(e.target.value)} placeholder="200" className="h-9 text-sm" /></div>
         <div className="col-span-1 flex justify-end"><Button size="sm" disabled={busy} onClick={add} aria-label="Adicionar"><Plus className="h-4 w-4" /></Button></div>
       </div>
-      {msg && <p className="mt-1 text-xs font-medium text-critical">{msg}</p>}
+      {msg && <p className="mt-1 text-xs font-medium text-danger">{msg}</p>}
     </div>
   );
 }

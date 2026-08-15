@@ -27,9 +27,9 @@ interface AllocBoard {
 interface DayFreela { requestId: string; name: string; sectorId: string | null; sectorName: string | null; startTime: string | null; endTime: string | null; present: boolean; status: string }
 
 const COV: Record<Coverage, { dot: string; label: string }> = {
-  ok: { dot: 'bg-success', label: 'Coberto' },
-  partial: { dot: 'bg-medium', label: 'Parcial' },
-  none: { dot: 'bg-critical', label: 'Sem cobertura' },
+  ok: { dot: 'bg-sgo-success', label: 'Coberto' },
+  partial: { dot: 'bg-warning', label: 'Parcial' },
+  none: { dot: 'bg-danger', label: 'Sem cobertura' },
 };
 
 function fmtDateBR(iso: string): string { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
@@ -77,7 +77,7 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
 
       {/* Quadro padrão: A alocar × Alocados */}
       <AllocationBoardEditor unitId={unitId} board={board} grid={grid} activeTurnos={activeTurnos} post={post} busy={busy} />
-      {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+      {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
 
       {/* Simulação de alocação para dia FUTURO (16/07): rascunho salvável */}
       {isFuture && (
@@ -95,11 +95,11 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Mapa da unidade</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Mapa da unidade</h2>
+            <p className="text-xs text-ink-500">
               {isNow
-                ? <span className="font-semibold text-success">● Na unidade agora</span>
-                : <span className={isFuture ? 'font-semibold text-accent' : 'font-semibold text-brand'}>
+                ? <span className="font-semibold text-sgo-success">● Na unidade agora</span>
+                : <span className={isFuture ? 'font-semibold text-sgo-brand' : 'font-semibold text-sgo-brand'}>
                     {isFuture ? 'Projeção' : isToday ? 'Hoje' : 'Histórico'} — {fmtDateBR(mapDate)}{mapTime ? ` às ${mapTime}` : ' (dia todo)'}
                   </span>}
               {' · '}{availability ? `${availability.working.length} escalado(s) no dia` : ''}
@@ -107,31 +107,31 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
           </div>
           {!historical && (
             <div className="flex gap-1">
-              <button onClick={() => setView('planta')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'planta' ? 'bg-primary text-primary-foreground' : 'border')}><LayoutGrid className="h-3.5 w-3.5" /> Planta</button>
-              <button onClick={() => setView('lista')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'lista' ? 'bg-primary text-primary-foreground' : 'border')}><List className="h-3.5 w-3.5" /> Lista</button>
+              <button onClick={() => setView('planta')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'planta' ? 'bg-sgo-brand text-on-brand' : 'border')}><LayoutGrid className="h-3.5 w-3.5" /> Planta</button>
+              <button onClick={() => setView('lista')} className={cn('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold', view === 'lista' ? 'bg-sgo-brand text-on-brand' : 'border')}><List className="h-3.5 w-3.5" /> Lista</button>
             </div>
           )}
         </div>
 
         {/* Seletor de dia + horário: histórico (passado) e projeção (futuro), pela Escala */}
-        <div className="space-y-2 rounded-lg border bg-card p-2">
+        <div className="space-y-2 rounded-lg border bg-sgo-surface p-2">
           <div className="flex flex-wrap items-end gap-2">
             <div className="w-44"><DatePicker label="Dia" value={mapDate || null} onValueChange={(v) => navTo(v ?? '', mapTime)} /></div>
             <div className="w-32"><TimePicker label="Horário" value={mapTime || null} onValueChange={(v) => navTo(mapDate, v ?? '')} /></div>
           </div>
           <div className="flex flex-wrap gap-1">
-            <button onClick={() => navTo('', '')} className={`rounded-full px-3 py-1 text-xs font-semibold ${isNow ? 'bg-primary text-primary-foreground' : 'border'}`}>Agora</button>
+            <button onClick={() => navTo('', '')} className={`rounded-full px-3 py-1 text-xs font-semibold ${isNow ? 'bg-sgo-brand text-on-brand' : 'border'}`}>Agora</button>
             <button onClick={() => navTo(addDaysISO(todayISO, 1), '')} className="rounded-full border px-3 py-1 text-xs font-semibold">Amanhã</button>
             <button onClick={() => navTo(addDaysISO(todayISO, 2), '')} className="rounded-full border px-3 py-1 text-xs font-semibold">Depois de amanhã</button>
-            {mapTime && <button onClick={() => navTo(mapDate, '')} className="rounded-full border px-3 py-1 text-xs font-semibold text-accent">Dia inteiro</button>}
+            {mapTime && <button onClick={() => navTo(mapDate, '')} className="rounded-full border px-3 py-1 text-xs font-semibold text-sgo-brand">Dia inteiro</button>}
           </div>
-          <p className="text-[11px] text-muted-foreground">Escolha um dia futuro para <b>projetar</b> a equipe (pela escala planejada) ou um dia passado para o <b>histórico</b>. Deixe o horário em branco para o dia todo.</p>
+          <p className="text-[11px] text-ink-500">Escolha um dia futuro para <b>projetar</b> a equipe (pela escala planejada) ou um dia passado para o <b>histórico</b>. Deixe o horário em branco para o dia todo.</p>
         </div>
         {isFuture && (
-          <p className="rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">Projeção baseada na <b>escala planejada</b> — pode mudar se houver ajustes, faltas ou freelancers.</p>
+          <p className="rounded-lg bg-sgo-brand/10 px-3 py-2 text-xs text-sgo-brand">Projeção baseada na <b>escala planejada</b> — pode mudar se houver ajustes, faltas ou freelancers.</p>
         )}
         {grid.sectors.every((s) => grid.shifts.every((c) => (grid.cells[s.id]?.[c.label]?.length ?? 0) === 0)) && (
-          <div className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+          <div className="rounded-lg bg-sunken/50 px-3 py-2 text-sm text-ink-500">
             <p>{isNow ? 'Ninguém trabalhando na unidade neste momento.' : `Ninguém ${isFuture ? 'previsto' : 'registrado'} para ${fmtDateBR(mapDate)}${mapTime ? ` às ${mapTime}` : ''}.`}</p>
             {!historical && board.allocated.length > 0
               ? <p className="mt-1">Você já tem <b>{board.allocated.length}</b> pessoa(s) no quadro padrão, mas o mapa só mostra quem está <b>escalado para trabalhar</b> neste dia/horário. Cadastre a <b>Escala</b> em Pessoas → Escala para o mapa preencher.</p>
@@ -142,29 +142,29 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
         {/* Freelancers do dia: alocar em um setor (ficam disponíveis após o pedido de pagamento) */}
         <FreelancersPanel freelancers={freelancers ?? []} sectors={grid.sectors} isToday={isToday} post={post} busy={busy} />
 
-        {historical && <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">Foto do dia (histórico congelado) — somente leitura.</p>}
+        {historical && <p className="rounded-lg bg-sunken/40 px-3 py-2 text-xs text-ink-500">Foto do dia (histórico congelado) — somente leitura.</p>}
         {!historical && view === 'planta' && <UnitFloorplan grid={grid} />}
 
-        {(historical || view === 'lista') && grid.sectors.length === 0 && <p className="text-sm text-muted-foreground">Sem registro para este dia.</p>}
+        {(historical || view === 'lista') && grid.sectors.length === 0 && <p className="text-sm text-ink-500">Sem registro para este dia.</p>}
         {(historical || view === 'lista') && grid.sectors.map((s) => (
-          <div key={s.id} className="rounded-lg border bg-card p-3">
-            <p className="font-semibold text-brand">{s.name} <span className="text-xs font-normal text-muted-foreground">(mín. {s.minHeadcount}/turno)</span></p>
-            {grid.shifts.length === 0 && <p className="mt-1 text-xs text-muted-foreground">Sem turnos cadastrados ainda.</p>}
+          <div key={s.id} className="rounded-lg border bg-sgo-surface p-3">
+            <p className="font-semibold text-sgo-brand">{s.name} <span className="text-xs font-normal text-ink-500">(mín. {s.minHeadcount}/turno)</span></p>
+            {grid.shifts.length === 0 && <p className="mt-1 text-xs text-ink-500">Sem turnos cadastrados ainda.</p>}
             <div className="mt-2 space-y-2">
               {grid.shifts.map((col) => {
                 const people = grid.cells[s.id]?.[col.label] ?? [];
                 const cov = grid.coverage[s.id]?.[col.label] ?? 'none';
                 return (
-                  <div key={col.label} className="rounded-md bg-surface p-2">
+                  <div key={col.label} className="rounded-md bg-canvas p-2">
                     <div className="flex items-center gap-2">
                       <span className={cn('h-2.5 w-2.5 rounded-full', COV[cov].dot)} title={COV[cov].label} />
                       <span className="text-sm font-medium">{col.label}</span>
-                      <span className="text-xs text-muted-foreground">({people.length})</span>
+                      <span className="text-xs text-ink-500">({people.length})</span>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1">
-                      {people.length === 0 && <span className="text-xs text-muted-foreground">—</span>}
+                      {people.length === 0 && <span className="text-xs text-ink-500">—</span>}
                       {people.map((p) => (
-                        <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs">{p.name}</span>
+                        <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-sunken px-2 py-0.5 text-xs">{p.name}</span>
                       ))}
                     </div>
                   </div>
@@ -172,11 +172,11 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
               })}
             </div>
             {(freelancers ?? []).filter((f) => f.sectorId === s.id && (isToday ? f.present : true)).length > 0 && (
-              <div className="mt-2 rounded-md bg-accent/5 p-2">
-                <p className="text-xs font-bold text-accent">Freelancers</p>
+              <div className="mt-2 rounded-md bg-sgo-brand/5 p-2">
+                <p className="text-xs font-bold text-sgo-brand">Freelancers</p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {(freelancers ?? []).filter((f) => f.sectorId === s.id && (isToday ? f.present : true)).map((f) => (
-                    <span key={f.requestId} className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs">{f.name}{f.startTime && f.endTime ? ` (${f.startTime}-${f.endTime})` : ''}</span>
+                    <span key={f.requestId} className="inline-flex items-center gap-1 rounded-full bg-sgo-brand/15 px-2 py-0.5 text-xs">{f.name}{f.startTime && f.endTime ? ` (${f.startTime}-${f.endTime})` : ''}</span>
                   ))}
                 </div>
               </div>
@@ -195,14 +195,14 @@ function FreelancersPanel({ freelancers, sectors, isToday, post, busy }: {
 }) {
   if (freelancers.length === 0) return null;
   return (
-    <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-accent">Freelancers do dia ({freelancers.length})</p>
+    <div className="rounded-lg border border-sgo-brand/30 bg-sgo-brand/5 p-3">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-sgo-brand">Freelancers do dia ({freelancers.length})</p>
       <div className="space-y-1.5">
         {freelancers.map((f) => (
-          <div key={f.requestId} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-card p-2">
+          <div key={f.requestId} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-sgo-surface p-2">
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold text-brand">{f.name}{isToday && !f.present ? <span className="ml-1 text-xs font-normal text-muted-foreground">(fora do horário agora)</span> : ''}</span>
-              <span className="block text-xs text-muted-foreground">{f.startTime && f.endTime ? `${f.startTime}-${f.endTime}` : 'sem horário'}{f.sectorName ? ` · ${f.sectorName}` : ''}</span>
+              <span className="block truncate text-sm font-semibold text-sgo-brand">{f.name}{isToday && !f.present ? <span className="ml-1 text-xs font-normal text-ink-500">(fora do horário agora)</span> : ''}</span>
+              <span className="block text-xs text-ink-500">{f.startTime && f.endTime ? `${f.startTime}-${f.endTime}` : 'sem horário'}{f.sectorName ? ` · ${f.sectorName}` : ''}</span>
             </span>
             <div className="w-44">
               <Select
@@ -253,16 +253,16 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Quadro padrão da equipe</h2>
-      <p className="mb-3 text-xs text-muted-foreground">Defina uma vez onde cada um trabalha. O mapa do dia mostra automaticamente só quem está escalado (folga/falta/atestado não aparecem no dia).</p>
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Quadro padrão da equipe</h2>
+      <p className="mb-3 text-xs text-ink-500">Defina uma vez onde cada um trabalha. O mapa do dia mostra automaticamente só quem está escalado (folga/falta/atestado não aparecem no dia).</p>
 
       {/* Alocar quem falta */}
-      <div className="rounded-md bg-surface p-2">
-        <p className="mb-1 text-xs font-bold text-brand">A alocar ({board.toAllocate.length})</p>
+      <div className="rounded-md bg-canvas p-2">
+        <p className="mb-1 text-xs font-bold text-sgo-brand">A alocar ({board.toAllocate.length})</p>
         {board.toAllocate.length === 0 ? (
-          <p className="text-sm font-medium text-success">Quadro completo ✅ — todos os colaboradores estão alocados.</p>
+          <p className="text-sm font-medium text-sgo-success">Quadro completo ✅ — todos os colaboradores estão alocados.</p>
         ) : (noSectors || noTurnos) ? (
-          <p className="text-sm text-critical">Cadastre {noSectors ? 'um setor' : ''}{noSectors && noTurnos ? ' e ' : ''}{noTurnos ? 'um turno' : ''} antes de alocar.</p>
+          <p className="text-sm text-danger">Cadastre {noSectors ? 'um setor' : ''}{noSectors && noTurnos ? ' e ' : ''}{noTurnos ? 'um turno' : ''} antes de alocar.</p>
         ) : (
           <div className="space-y-2">
             <Select
@@ -287,14 +287,14 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
 
       {/* Já alocados (editável) */}
       <div className="mt-3">
-        <p className="mb-1 text-xs font-bold text-brand">Alocados ({board.allocated.length})</p>
+        <p className="mb-1 text-xs font-bold text-sgo-brand">Alocados ({board.allocated.length})</p>
         {board.allocated.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Ninguém alocado ainda.</p>
+          <p className="text-sm text-ink-500">Ninguém alocado ainda.</p>
         ) : (
           <div className="space-y-1.5">
             {board.allocated.map((a) => editId === a.allocationId ? (
-              <div key={a.allocationId} className="rounded-md border bg-card p-2">
-                <p className="mb-1 text-sm font-semibold text-brand">{a.name}</p>
+              <div key={a.allocationId} className="rounded-md border bg-sgo-surface p-2">
+                <p className="mb-1 text-sm font-semibold text-sgo-brand">{a.name}</p>
                 <div className="grid grid-cols-2 gap-2">
                   <Select aria-label="Setor" size="sm" value={eSector} onValueChange={setESector} options={grid.sectors.map((s) => ({ value: s.id, label: s.name }))} />
                   <Select aria-label="Turno" size="sm" value={eTurno} onValueChange={setETurno} options={activeTurnos.map((t) => ({ value: t.id, label: turnoLabel(t) }))} />
@@ -303,7 +303,7 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
                   <Label className="text-xs">Função (cargo) — mudar avisa o RH</Label>
                   <Input value={eTitle} onChange={(e) => setETitle(e.target.value)} placeholder="Ex.: Churrasqueiro" className="h-10 text-sm" />
                   {eTitle.trim() !== eTitleOrig.trim() && eTitle.trim() !== '' && (
-                    <p className="mt-1 text-xs text-accent">A mudança de função vira uma solicitação ao RH (os Admins são avisados). O cargo atualiza no SGO quando o RH efetivar.</p>
+                    <p className="mt-1 text-xs text-sgo-brand">A mudança de função vira uma solicitação ao RH (os Admins são avisados). O cargo atualiza no SGO quando o RH efetivar.</p>
                   )}
                 </div>
                 <div className="mt-2 flex justify-end gap-1">
@@ -320,14 +320,14 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
                 </div>
               </div>
             ) : (
-              <div key={a.allocationId} className="flex items-center justify-between gap-2 rounded-md border bg-card p-2">
+              <div key={a.allocationId} className="flex items-center justify-between gap-2 rounded-md border bg-sgo-surface p-2">
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-brand">{a.name}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{a.jobTitle ? `${a.jobTitle} · ` : ''}{a.sectorName} · {a.shiftLabel}</span>
+                  <span className="block truncate text-sm font-semibold text-sgo-brand">{a.name}</span>
+                  <span className="block truncate text-xs text-ink-500">{a.jobTitle ? `${a.jobTitle} · ` : ''}{a.sectorName} · {a.shiftLabel}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1">
                   <Button size="sm" variant="ghost" onClick={() => openEdit(a)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Remover ${a.name} do quadro?`)) post({ action: 'removeAllocation', id: a.allocationId }); }} aria-label="Remover"><X className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm(`Remover ${a.name} do quadro?`)) post({ action: 'removeAllocation', id: a.allocationId }); }} aria-label="Remover"><X className="h-4 w-4" /></Button>
                 </span>
               </div>
             ))}
@@ -350,22 +350,22 @@ function TurnosManager({ unitId, turnos, post, busy }: { unitId: string; turnos:
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground"><Clock className="mr-1 inline h-4 w-4" /> Turnos da unidade (Admin)</h2>
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500"><Clock className="mr-1 inline h-4 w-4" /> Turnos da unidade (Admin)</h2>
       <div className="space-y-2">
-        {turnos.length === 0 && <p className="text-xs text-muted-foreground">Nenhum turno. Cadastre os turnos/horários desta unidade.</p>}
+        {turnos.length === 0 && <p className="text-xs text-ink-500">Nenhum turno. Cadastre os turnos/horários desta unidade.</p>}
         {turnos.map((t) => editId === t.id ? (
-          <div key={t.id} className="grid grid-cols-12 items-end gap-1 rounded-md bg-muted/40 p-2">
+          <div key={t.id} className="grid grid-cols-12 items-end gap-1 rounded-md bg-sunken/40 p-2">
             <div className="col-span-5"><Label className="text-xs">Nome</Label><Input value={eName} onChange={(e) => setEName(e.target.value)} className="h-9 text-sm" /></div>
             <div className="col-span-3"><Label className="text-xs">Início</Label><Input value={eStart} onChange={(e) => setEStart(e.target.value)} placeholder="06:00" className="h-9 text-sm" /></div>
             <div className="col-span-3"><Label className="text-xs">Fim</Label><Input value={eEnd} onChange={(e) => setEEnd(e.target.value)} placeholder="14:00" className="h-9 text-sm" /></div>
             <div className="col-span-1 flex justify-end"><Button size="sm" variant="ghost" disabled={busy} onClick={async () => { if (await post({ action: 'updateShift', id: t.id, name: eName, startTime: eStart, endTime: eEnd })) setEditId(null); }} aria-label="Salvar"><Save className="h-4 w-4" /></Button></div>
           </div>
         ) : (
-          <div key={t.id} className="flex items-center justify-between rounded-md bg-surface p-2">
-            <span className="text-sm font-medium">{t.name}{t.startTime && t.endTime ? <span className="text-xs text-muted-foreground"> · {t.startTime}-{t.endTime}</span> : ''}{!t.active && <span className="ml-1 text-xs text-critical">(inativo)</span>}</span>
+          <div key={t.id} className="flex items-center justify-between rounded-md bg-canvas p-2">
+            <span className="text-sm font-medium">{t.name}{t.startTime && t.endTime ? <span className="text-xs text-ink-500"> · {t.startTime}-{t.endTime}</span> : ''}{!t.active && <span className="ml-1 text-xs text-danger">(inativo)</span>}</span>
             <div className="flex items-center gap-1">
               <Button size="sm" variant="ghost" onClick={() => openEdit(t)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
-              <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm(`Excluir o turno "${t.name}"? As alocações nele perdem a referência (mantêm o rótulo).`)) post({ action: 'deleteShift', id: t.id }); }} aria-label="Excluir" className="text-critical"><Trash2 className="h-4 w-4" /></Button>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm(`Excluir o turno "${t.name}"? As alocações nele perdem a referência (mantêm o rótulo).`)) post({ action: 'deleteShift', id: t.id }); }} aria-label="Excluir" className="text-danger"><Trash2 className="h-4 w-4" /></Button>
             </div>
           </div>
         ))}
@@ -391,30 +391,30 @@ function SectorsManager({ unitId, sectors, suggested, post, busy }: { unitId: st
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Setores da unidade (Admin)</h2>
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Setores da unidade (Admin)</h2>
       <div className="space-y-2">
         {sectors.map((s) => editId === s.id ? (
-          <div key={s.id} className="grid grid-cols-12 items-end gap-1 rounded-md bg-muted/40 p-2">
+          <div key={s.id} className="grid grid-cols-12 items-end gap-1 rounded-md bg-sunken/40 p-2">
             <div className="col-span-8"><Label className="text-xs">Nome</Label><Input value={eName} onChange={(e) => setEName(e.target.value)} className="h-9 text-sm" /></div>
             <div className="col-span-3"><Label className="text-xs">Mín./turno</Label><Input inputMode="numeric" value={eMin} onChange={(e) => setEMin(e.target.value)} className="h-9 text-sm" /></div>
             <div className="col-span-1 flex justify-end"><Button size="sm" variant="ghost" disabled={busy} onClick={async () => { if (await post({ action: 'updateSector', id: s.id, name: eName, minHeadcount: Number(eMin) })) setEditId(null); }} aria-label="Salvar"><Save className="h-4 w-4" /></Button></div>
           </div>
         ) : (
-          <div key={s.id} className="flex items-center justify-between rounded-md bg-surface p-2">
-            <span className="text-sm font-medium">{s.name} <span className="text-xs text-muted-foreground">(mín. {s.minHeadcount})</span></span>
+          <div key={s.id} className="flex items-center justify-between rounded-md bg-canvas p-2">
+            <span className="text-sm font-medium">{s.name} <span className="text-xs text-ink-500">(mín. {s.minHeadcount})</span></span>
             <div className="flex items-center gap-1">
               <Button size="sm" variant="ghost" onClick={() => openEdit(s)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
-              <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm(`Excluir o setor "${s.name}"? As alocações desse setor também serão removidas.`)) post({ action: 'deleteSector', id: s.id }); }} aria-label="Excluir" className="text-critical"><Trash2 className="h-4 w-4" /></Button>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm(`Excluir o setor "${s.name}"? As alocações desse setor também serão removidas.`)) post({ action: 'deleteSector', id: s.id }); }} aria-label="Excluir" className="text-danger"><Trash2 className="h-4 w-4" /></Button>
             </div>
           </div>
         ))}
         {/* Setores de referência (clique para criar rápido) */}
         {suggested.length > 0 && (
           <div className="pt-1">
-            <p className="mb-1 text-xs text-muted-foreground">Referência — clique para criar nesta unidade:</p>
+            <p className="mb-1 text-xs text-ink-500">Referência — clique para criar nesta unidade:</p>
             <div className="flex flex-wrap gap-1">
               {suggested.map((n) => (
-                <button key={n} type="button" disabled={busy} onClick={() => post({ action: 'createSector', unitId, name: n, minHeadcount: 1 })} className="rounded-full border px-2.5 py-1 text-xs hover:border-accent disabled:opacity-50">+ {n}</button>
+                <button key={n} type="button" disabled={busy} onClick={() => post({ action: 'createSector', unitId, name: n, minHeadcount: 1 })} className="rounded-full border px-2.5 py-1 text-xs hover:border-sgo-brand disabled:opacity-50">+ {n}</button>
               ))}
             </div>
           </div>
@@ -450,14 +450,14 @@ function SimulationPanel({ unitId, date, working, board, sectors, saved, post, b
 
   if (base.length === 0) return null;
   return (
-    <div className="rounded-lg border border-dashed border-accent/50 p-3">
+    <div className="rounded-lg border border-dashed border-sgo-brand/50 p-3">
       <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left">
-        <p className="text-sm font-bold text-brand">🧪 Simulação de alocação — {date.split('-').reverse().join('/')}</p>
-        <span className="text-xs font-semibold text-accent">{saved ? `salva por ${saved.by} em ${new Date(saved.at).toLocaleDateString('pt-BR')}` : open ? 'fechar' : 'simular'}</span>
+        <p className="text-sm font-bold text-sgo-brand">🧪 Simulação de alocação — {date.split('-').reverse().join('/')}</p>
+        <span className="text-xs font-semibold text-sgo-brand">{saved ? `salva por ${saved.by} em ${new Date(saved.at).toLocaleDateString('pt-BR')}` : open ? 'fechar' : 'simular'}</span>
       </button>
       {open && (
         <div className="mt-2 space-y-1.5">
-          <p className="text-xs text-muted-foreground">Monte como a equipe ficaria neste dia (não altera o quadro padrão). Salve para revisitar/compartilhar.</p>
+          <p className="text-xs text-ink-500">Monte como a equipe ficaria neste dia (não altera o quadro padrão). Salve para revisitar/compartilhar.</p>
           {base.map((a) => (
             <div key={a.collaboratorId} className="flex items-center justify-between gap-2">
               <span className="min-w-0 truncate text-sm">{a.name}</span>

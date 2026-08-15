@@ -49,13 +49,13 @@ export function DeleteOpButton({
 
   if (size === 'icon') {
     return (
-      <button onClick={remove} disabled={busy} aria-label={`Excluir ${label}`} className="text-critical disabled:opacity-50">
+      <button onClick={remove} disabled={busy} aria-label={`Excluir ${label}`} className="text-danger disabled:opacity-50">
         <Trash2 className="h-4 w-4" />
       </button>
     );
   }
   return (
-    <Button size="sm" variant="ghost" onClick={remove} disabled={busy} aria-label={`Excluir ${label}`} className="text-critical">
+    <Button size="sm" variant="ghost" onClick={remove} disabled={busy} aria-label={`Excluir ${label}`} className="text-danger">
       <Trash2 className="h-4 w-4" /> Excluir
     </Button>
   );

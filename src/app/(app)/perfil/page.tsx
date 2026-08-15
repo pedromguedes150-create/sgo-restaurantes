@@ -14,16 +14,16 @@ export default async function PerfilPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><UserCircle2 className="h-5 w-5 text-accent" /> Meu Perfil</h1>
-        <p className="text-sm text-muted-foreground">Complete seus dados (nome completo e CPF) e troque sua senha. Supervisão/Admin visualizam esses dados.</p>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><UserCircle2 className="h-5 w-5 text-sgo-brand" /> Meu Perfil</h1>
+        <p className="text-sm text-ink-500">Complete seus dados (nome completo e CPF) e troque sua senha. Supervisão/Admin visualizam esses dados.</p>
       </div>
       <Card><CardContent className="pt-4">
         <ProfileClient name={me?.name ?? ''} cpf={me?.cpf ?? ''} email={me?.email ?? ''} />
       </CardContent></Card>
 
       <div>
-        <h2 className="flex items-center gap-2 text-lg font-bold text-brand"><BellRing className="h-5 w-5 text-accent" /> Notificações no celular</h2>
-        <p className="text-sm text-muted-foreground">Receba os avisos do SGO mesmo com o app fechado. É preciso ativar em cada aparelho que você usa.</p>
+        <h2 className="flex items-center gap-2 text-lg font-bold text-sgo-brand"><BellRing className="h-5 w-5 text-sgo-brand" /> Notificações no celular</h2>
+        <p className="text-sm text-ink-500">Receba os avisos do SGO mesmo com o app fechado. É preciso ativar em cada aparelho que você usa.</p>
       </div>
       <Card><CardContent className="pt-4">
         <PushClient />

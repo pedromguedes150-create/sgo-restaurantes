@@ -95,7 +95,7 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-ink-500">
         Defina, por unidade, quais notas/moedas existem no cofre e em quais blocos aparecem. O <strong>indicador ≥50%</strong> é separado das notas grandes (você escolhe o que conta nele).
       </p>
 
@@ -104,13 +104,13 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
         options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
       />
 
-      {loading && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p>}
-      {msg && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{msg}</p>}
-      {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
+      {loading && <p className="flex items-center gap-2 text-sm text-ink-500"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</p>}
+      {msg && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{msg}</p>}
+      {ok && <p className="rounded-lg bg-sgo-success/10 px-3 py-2 text-sm font-medium text-sgo-success">{ok}</p>}
 
       {data && (
         <>
-          <div className="hidden grid-cols-12 gap-2 px-2 text-xs font-bold uppercase tracking-wide text-muted-foreground sm:grid">
+          <div className="hidden grid-cols-12 gap-2 px-2 text-xs font-bold uppercase tracking-wide text-ink-500 sm:grid">
             <div className="col-span-4">Denominação</div>
             <div className="col-span-2 text-center">Miúdos</div>
             <div className="col-span-2 text-center">Notas grandes</div>
@@ -120,7 +120,7 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
 
           <div className="space-y-2">
             {data.denominations.map((r, idx) => (
-              <div key={r.key} className={`rounded-lg border bg-card p-2.5 ${r.active ? '' : 'opacity-60'}`}>
+              <div key={r.key} className={`rounded-lg border bg-sgo-surface p-2.5 ${r.active ? '' : 'opacity-60'}`}>
                 <div className="grid grid-cols-12 items-center gap-2">
                   <div className="col-span-12 sm:col-span-4">
                     <div className="flex items-center gap-2">
@@ -132,16 +132,16 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
                         <StatusBadge tone={r.active ? 'success' : 'critical'}>{r.active ? 'Ativa' : 'Inativa'}</StatusBadge>
                       </button>
                       <div>
-                        <p className="text-sm font-semibold text-brand">{rowLabel(r)}</p>
+                        <p className="text-sm font-semibold text-sgo-brand">{rowLabel(r)}</p>
                         {r.system
-                          ? <p className="text-xs text-muted-foreground">Linha de sistema (PIX/caixinha)</p>
-                          : r.balance !== 0 && <p className="text-xs text-muted-foreground">no cofre: {brl(r.balance)}</p>}
+                          ? <p className="text-xs text-ink-500">Linha de sistema (PIX/caixinha)</p>
+                          : r.balance !== 0 && <p className="text-xs text-ink-500">no cofre: {brl(r.balance)}</p>}
                       </div>
                     </div>
                   </div>
 
                   {r.system ? (
-                    <div className="col-span-8 hidden text-center text-xs text-muted-foreground sm:block sm:col-span-6">Não participa dos blocos</div>
+                    <div className="col-span-8 hidden text-center text-xs text-ink-500 sm:block sm:col-span-6">Não participa dos blocos</div>
                   ) : (
                     <>
                       <BlockCell label="Miúdos" checked={r.isSmall} disabled={busyKey === r.key || !r.active} onChange={(v) => save(r.key, { isSmall: v })} />
@@ -153,7 +153,7 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
                   <div className="col-span-12 flex justify-end gap-1 sm:col-span-2">
                     <Button size="sm" variant="ghost" aria-label="Subir" disabled={idx === 0 || busyKey != null} onClick={() => move(idx, -1)}><ChevronUp className="h-4 w-4" /></Button>
                     <Button size="sm" variant="ghost" aria-label="Descer" disabled={idx === data.denominations.length - 1 || busyKey != null} onClick={() => move(idx, 1)}><ChevronDown className="h-4 w-4" /></Button>
-                    {isAdmin && !r.system && <Button size="sm" variant="ghost" className="text-critical" aria-label="Excluir" disabled={busyKey != null} onClick={() => del(r)}><Trash2 className="h-4 w-4" /></Button>}
+                    {isAdmin && !r.system && <Button size="sm" variant="ghost" className="text-danger" aria-label="Excluir" disabled={busyKey != null} onClick={() => del(r)}><Trash2 className="h-4 w-4" /></Button>}
                   </div>
                 </div>
               </div>
@@ -169,7 +169,7 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
             </Button>
           </div>
 
-          <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <p className="rounded-lg bg-sunken/40 px-3 py-2 text-xs text-ink-500">
             As telas de operação do cofre (conferir, repor balde, troca, retirada) só passam a ler esta configuração no próximo passo. Por enquanto, elas seguem com a lista atual.
           </p>
         </>
@@ -182,7 +182,7 @@ function BlockCell({ label, checked, disabled, onChange }: { label: string; chec
   return (
     <label className="col-span-4 flex cursor-pointer items-center justify-center gap-1.5 sm:col-span-2">
       <input type="checkbox" className="h-4 w-4 accent-accent" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
-      <span className="text-xs text-muted-foreground sm:hidden">{label}</span>
+      <span className="text-xs text-ink-500 sm:hidden">{label}</span>
     </label>
   );
 }
@@ -192,7 +192,7 @@ function AddFromCatalog({ available, onAdd, busy }: { available: { key: string; 
   useEffect(() => { if (!available.some((a) => a.key === key)) setKey(available[0]?.key ?? ''); }, [available, key]);
   return (
     <div className="rounded-lg border border-dashed p-2.5">
-      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Adicionar denominação do catálogo</p>
+      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Adicionar denominação do catálogo</p>
       <div className="flex items-end gap-2">
         <div className="flex-1">
           <Select

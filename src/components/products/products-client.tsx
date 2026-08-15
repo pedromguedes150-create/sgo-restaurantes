@@ -13,10 +13,10 @@ interface Req { id: string; origin: string; number: number; status: string; crea
 
 const ORIGIN = { FABRICA: { label: 'Fábrica', icon: Factory }, CD: { label: 'CD', icon: Warehouse } } as const;
 const STATUS: Record<string, { label: string; cls: string }> = {
-  NEW: { label: 'Novo', cls: 'bg-critical/15 text-critical' },
-  SEPARATING: { label: 'Em separação', cls: 'bg-medium/30 text-warning' },
-  SENT: { label: 'Enviado', cls: 'bg-accent/15 text-accent' },
-  RECEIVED: { label: 'Recebido', cls: 'bg-success/15 text-success' },
+  NEW: { label: 'Novo', cls: 'bg-danger/15 text-danger' },
+  SEPARATING: { label: 'Em separação', cls: 'bg-warning/30 text-warning' },
+  SENT: { label: 'Enviado', cls: 'bg-sgo-brand/15 text-sgo-brand' },
+  RECEIVED: { label: 'Recebido', cls: 'bg-sgo-success/15 text-sgo-success' },
 };
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -42,7 +42,7 @@ export function ProductsClient({ units, selUnitId, isOps, products, myRequests, 
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
-          <button key={t.k} onClick={() => setTab(t.k as typeof tab)} className={tab === t.k ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.l}</button>
+          <button key={t.k} onClick={() => setTab(t.k as typeof tab)} className={tab === t.k ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.l}</button>
         ))}
       </div>
 
@@ -82,29 +82,29 @@ function NewOrder({ units, selUnitId, products, post, busy }: { units: { id: str
         <Select aria-label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
       )}
       <div className="relative">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar produto (ignora acento)…" className="h-11 w-full rounded-lg border-2 border-input bg-background pl-9 pr-3 text-sm" />
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar produto (ignora acento)…" className="h-11 w-full rounded-lg border-2 border-line-strong bg-sgo-surface pl-9 pr-3 text-sm" />
       </div>
 
-      {products.length === 0 && <p className="rounded-lg bg-medium/10 px-3 py-2 text-sm text-warning">Catálogo vazio. Peça ao Admin para cadastrar/importar produtos em Configurações → Produtos.</p>}
+      {products.length === 0 && <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">Catálogo vazio. Peça ao Admin para cadastrar/importar produtos em Configurações → Produtos.</p>}
 
       <div className="space-y-3">
         {byCat.map(([cat, list]) => (
           <div key={cat}>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{cat}</p>
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">{cat}</p>
             <div className="space-y-1.5">
               {list.map((p) => {
                 const O = ORIGIN[p.origin as keyof typeof ORIGIN];
                 const qty = cart[p.id] ?? 0;
                 return (
-                  <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2">
+                  <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border bg-sgo-surface p-2">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-brand">{p.name}</p>
-                      <p className="text-[11px] text-muted-foreground"><O.icon className="mr-0.5 inline h-3 w-3" />{O.label} · {p.measure}</p>
+                      <p className="truncate text-sm font-medium text-sgo-brand">{p.name}</p>
+                      <p className="text-[11px] text-ink-500"><O.icon className="mr-0.5 inline h-3 w-3" />{O.label} · {p.measure}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
                       <button onClick={() => setQty(p.id, Math.max(0, Math.round((qty - 1) * 100) / 100))} className="rounded-md border p-1.5"><Minus className="h-3.5 w-3.5" /></button>
-                      <input inputMode="decimal" value={qty || ''} onChange={(e) => setQty(p.id, parseFloat(e.target.value.replace(',', '.')) || 0)} placeholder="0" className="h-8 w-14 rounded-md border-2 border-input bg-background text-center text-sm" />
+                      <input inputMode="decimal" value={qty || ''} onChange={(e) => setQty(p.id, parseFloat(e.target.value.replace(',', '.')) || 0)} placeholder="0" className="h-8 w-14 rounded-md border-2 border-line-strong bg-sgo-surface text-center text-sm" />
                       <button onClick={() => setQty(p.id, Math.round((qty + 1) * 100) / 100)} className="rounded-md border p-1.5"><Plus className="h-3.5 w-3.5" /></button>
                     </div>
                   </div>
@@ -117,14 +117,14 @@ function NewOrder({ units, selUnitId, products, post, busy }: { units: { id: str
 
       {/* Carrinho */}
       {totalItems > 0 && (
-        <div className="sticky bottom-20 z-20 rounded-xl border-2 border-accent/40 bg-background/95 p-3 shadow-lg backdrop-blur md:bottom-2">
-          <p className="mb-1 text-sm font-bold text-brand">Resumo do pedido ({totalItems} itens)</p>
+        <div className="sticky bottom-20 z-20 rounded-xl border-2 border-sgo-brand/40 bg-sgo-surface/95 p-3 shadow-lg backdrop-blur md:bottom-2">
+          <p className="mb-1 text-sm font-bold text-sgo-brand">Resumo do pedido ({totalItems} itens)</p>
           {(['FABRICA', 'CD'] as const).map((o) => cartByOrigin[o].length > 0 && (
             <div key={o} className="mb-1">
-              <p className="text-xs font-semibold text-accent">{ORIGIN[o].label}: {cartByOrigin[o].map((x) => `${x.qty}× ${x.p.name}`).join(', ')}</p>
+              <p className="text-xs font-semibold text-sgo-brand">{ORIGIN[o].label}: {cartByOrigin[o].map((x) => `${x.qty}× ${x.p.name}`).join(', ')}</p>
             </div>
           ))}
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-1 h-9 w-full rounded-md border-2 border-input bg-background px-2 text-sm" />
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-1 h-9 w-full rounded-md border-2 border-line-strong bg-sgo-surface px-2 text-sm" />
           <Button onClick={submit} disabled={busy} size="lg" className="mt-2 w-full"><Send className="h-4 w-4" /> Enviar pedido (separa Fábrica/CD)</Button>
         </div>
       )}
@@ -133,19 +133,19 @@ function NewOrder({ units, selUnitId, products, post, busy }: { units: { id: str
 }
 
 function RequestList({ requests, onReceive, busy, showUnit }: { requests: Req[]; onReceive?: (id: string) => void; busy: boolean; showUnit: boolean }) {
-  if (requests.length === 0) return <p className="text-sm text-muted-foreground">Nenhum pedido.</p>;
+  if (requests.length === 0) return <p className="text-sm text-ink-500">Nenhum pedido.</p>;
   return (
     <div className="space-y-2">
       {requests.map((r) => {
         const O = ORIGIN[r.origin as keyof typeof ORIGIN]; const st = STATUS[r.status] ?? STATUS.NEW;
         return (
-          <div key={r.id} className="rounded-lg border bg-card p-3">
+          <div key={r.id} className="rounded-lg border bg-sgo-surface p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-brand"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number}{showUnit && r.unitName ? ` · ${r.unitName}` : ''}</p>
+              <p className="text-sm font-bold text-sgo-brand"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number}{showUnit && r.unitName ? ` · ${r.unitName}` : ''}</p>
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.cls}`}>{st.label}</span>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleString('pt-BR')} · {r.createdByName}{r.note ? ` · ${r.note}` : ''}</p>
-            <ul className="mt-1 text-sm">{r.items.map((it, i) => <li key={i}>• {it.qty}× {it.name} <span className="text-xs text-muted-foreground">({it.measure})</span></li>)}</ul>
+            <p className="mt-1 text-xs text-ink-500">{new Date(r.createdAt).toLocaleString('pt-BR')} · {r.createdByName}{r.note ? ` · ${r.note}` : ''}</p>
+            <ul className="mt-1 text-sm">{r.items.map((it, i) => <li key={i}>• {it.qty}× {it.name} <span className="text-xs text-ink-500">({it.measure})</span></li>)}</ul>
             {onReceive && r.status !== 'RECEIVED' && <Button size="sm" variant="outline" className="mt-2" disabled={busy} onClick={() => onReceive(r.id)}><Check className="h-4 w-4" /> Confirmar recebimento</Button>}
           </div>
         );
@@ -155,7 +155,7 @@ function RequestList({ requests, onReceive, busy, showUnit }: { requests: Req[];
 }
 
 function OpsView({ requests, post, busy }: { requests: Req[]; post: (b: Record<string, unknown>) => Promise<boolean>; busy: boolean }) {
-  if (requests.length === 0) return <p className="text-sm text-muted-foreground">Nenhum pedido pendente da Fábrica/CD.</p>;
+  if (requests.length === 0) return <p className="text-sm text-ink-500">Nenhum pedido pendente da Fábrica/CD.</p>;
   const next: Record<string, string> = { NEW: 'SEPARATING', SEPARATING: 'SENT', SENT: 'RECEIVED' };
   const nextLabel: Record<string, string> = { NEW: 'Iniciar separação', SEPARATING: 'Marcar enviado', SENT: 'Marcar recebido' };
   return (
@@ -163,13 +163,13 @@ function OpsView({ requests, post, busy }: { requests: Req[]; post: (b: Record<s
       {requests.map((r) => {
         const O = ORIGIN[r.origin as keyof typeof ORIGIN]; const st = STATUS[r.status] ?? STATUS.NEW;
         return (
-          <div key={r.id} className="rounded-lg border bg-card p-3">
+          <div key={r.id} className="rounded-lg border bg-sgo-surface p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-brand"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number} · {r.unitName ?? ''}</p>
+              <p className="text-sm font-bold text-sgo-brand"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number} · {r.unitName ?? ''}</p>
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.cls}`}>{st.label}</span>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleString('pt-BR')} · {r.createdByName}{r.note ? ` · ${r.note}` : ''}</p>
-            <ul className="mt-1 text-sm">{r.items.map((it, i) => <li key={i}>• {it.qty}× {it.name} <span className="text-xs text-muted-foreground">({it.measure})</span></li>)}</ul>
+            <p className="mt-1 text-xs text-ink-500">{new Date(r.createdAt).toLocaleString('pt-BR')} · {r.createdByName}{r.note ? ` · ${r.note}` : ''}</p>
+            <ul className="mt-1 text-sm">{r.items.map((it, i) => <li key={i}>• {it.qty}× {it.name} <span className="text-xs text-ink-500">({it.measure})</span></li>)}</ul>
             <div className="mt-2 flex flex-wrap gap-2">
               {next[r.status] && <Button size="sm" disabled={busy} onClick={() => post({ action: 'status', id: r.id, status: next[r.status] })}>{nextLabel[r.status]}</Button>}
               <Button size="sm" variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> Imprimir</Button>

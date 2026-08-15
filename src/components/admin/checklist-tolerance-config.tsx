@@ -28,15 +28,15 @@ export function ChecklistToleranceConfig({ current }: { current: number }) {
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-muted-foreground"><Clock className="h-4 w-4" /> Tolerância de tempo</h2>
-      <p className="mb-2 text-xs text-muted-foreground">Concluir um checklist até <b>{value || 0} min</b> após o horário-limite ainda conta <b>no prazo</b>. Vale para todos os checklists.</p>
+      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-ink-500"><Clock className="h-4 w-4" /> Tolerância de tempo</h2>
+      <p className="mb-2 text-xs text-ink-500">Concluir um checklist até <b>{value || 0} min</b> após o horário-limite ainda conta <b>no prazo</b>. Vale para todos os checklists.</p>
       <div className="flex items-end gap-2">
         <div>
-          <label className="block text-xs font-medium text-muted-foreground">Minutos</label>
+          <label className="block text-xs font-medium text-ink-500">Minutos</label>
           <Input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/\D/g, ''))} className="h-10 w-24 text-sm" />
         </div>
         <Button size="sm" disabled={busy} onClick={save}><Save className="h-4 w-4" /> Salvar</Button>
-        {msg && <span className={`text-sm ${msg === 'Salvo!' ? 'text-success' : 'text-critical'}`}>{msg}</span>}
+        {msg && <span className={`text-sm ${msg === 'Salvo!' ? 'text-sgo-success' : 'text-danger'}`}>{msg}</span>}
       </div>
     </div>
   );

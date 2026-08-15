@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function FreelancerValoresPage() {
   const user = (await getSessionUser())!;
-  if (user.role !== 'ADMIN') return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
+  if (user.role !== 'ADMIN') return <p className="text-sm text-ink-500">Restrito ao Administrador.</p>;
 
   const [units, rates, holidays] = await Promise.all([
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
@@ -20,8 +20,8 @@ export default async function FreelancerValoresPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Valor do freelancer (por hora)</h1>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <h1 className="text-xl font-bold text-sgo-brand">Valor do freelancer (por hora)</h1>
       <Card><CardContent className="pt-4">
         <FreelancerRatesConfig units={units} rates={rates} holidays={holidays.map((h) => ({ id: h.id, date: h.date, name: h.name }))} />
       </CardContent></Card>

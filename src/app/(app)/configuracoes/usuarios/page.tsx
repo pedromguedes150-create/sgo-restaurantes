@@ -11,7 +11,7 @@ export default async function UsuariosAdminPage() {
   const user = (await getSessionUser())!;
   const isAdmin = user.role === 'ADMIN';
   const isViewer = user.role === 'SUPERVISOR' || user.role === 'CEO'; // 16/07: supervisão visualiza dados (CPF etc.)
-  if (!isAdmin && !isViewer) return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
+  if (!isAdmin && !isViewer) return <p className="text-sm text-ink-500">Restrito ao Administrador.</p>;
   const [users, units] = await Promise.all([
     prisma.user.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, cpf: true, email: true, role: true, active: true, memberships: { select: { unitId: true } } } }),
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
@@ -25,18 +25,18 @@ export default async function UsuariosAdminPage() {
     const fmtCpf = (c: string | null) => (c && c.length === 11 ? `${c.slice(0, 3)}.${c.slice(3, 6)}.${c.slice(6, 9)}-${c.slice(9)}` : '—');
     return (
       <div className="space-y-4">
-        <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-        <h1 className="text-xl font-bold text-brand">Usuários (visualização)</h1>
-        <p className="text-sm text-muted-foreground">Dados preenchidos por cada usuário no Meu Perfil. Edição é restrita ao Administrador.</p>
+        <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+        <h1 className="text-xl font-bold text-sgo-brand">Usuários (visualização)</h1>
+        <p className="text-sm text-ink-500">Dados preenchidos por cada usuário no Meu Perfil. Edição é restrita ao Administrador.</p>
         <Card><CardContent className="space-y-2 pt-4">
           {users.map((u) => (
-            <div key={u.id} className="rounded-lg border bg-card p-3">
+            <div key={u.id} className="rounded-lg border bg-sgo-surface p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold text-brand">{u.name}{!u.active && <span className="ml-1 text-xs text-critical">(inativo)</span>}</p>
-                <span className="text-xs text-muted-foreground">{roleLabel(u.role)}</span>
+                <p className="font-semibold text-sgo-brand">{u.name}{!u.active && <span className="ml-1 text-xs text-danger">(inativo)</span>}</p>
+                <span className="text-xs text-ink-500">{roleLabel(u.role)}</span>
               </div>
-              <p className="text-xs text-muted-foreground">CPF {fmtCpf(u.cpf)} · {u.email}</p>
-              <p className="text-xs text-muted-foreground">{u.memberships.map((m) => unitBy.get(m.unitId)).filter(Boolean).join(', ') || 'Sem unidade'}</p>
+              <p className="text-xs text-ink-500">CPF {fmtCpf(u.cpf)} · {u.email}</p>
+              <p className="text-xs text-ink-500">{u.memberships.map((m) => unitBy.get(m.unitId)).filter(Boolean).join(', ') || 'Sem unidade'}</p>
             </div>
           ))}
         </CardContent></Card>
@@ -46,9 +46,9 @@ export default async function UsuariosAdminPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Usuários</h1>
-      <p className="text-sm text-muted-foreground">CPF e nome completo cada usuário preenche no próprio <Link href="/perfil" className="font-semibold text-accent">Meu Perfil</Link> (avatar no topo).</p>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <h1 className="text-xl font-bold text-sgo-brand">Usuários</h1>
+      <p className="text-sm text-ink-500">CPF e nome completo cada usuário preenche no próprio <Link href="/perfil" className="font-semibold text-sgo-brand">Meu Perfil</Link> (avatar no topo).</p>
       <Card><CardContent className="pt-4">
         <UsersAdmin users={usersRows} units={units} meId={user.id} />
       </CardContent></Card>

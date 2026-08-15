@@ -156,7 +156,7 @@ export function PaymentsClient({
             act(r.id, 'adminEdit', { amount });
           }} aria-label="Editar valor"><Pencil className="h-4 w-4" /> Editar valor</Button>}
           {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setDateEditId((id) => (id === r.id ? null : r.id))} aria-label="Editar data"><Pencil className="h-4 w-4" /> Editar data</Button>}
-          {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Excluir este pagamento (${TYPE_LABEL[r.type]} · ${formatBRL(r.amount)})? Registrado na Auditoria.`)) act(r.id, 'adminDelete'); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /> Excluir</Button>}
+          {isAdmin && <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm(`Excluir este pagamento (${TYPE_LABEL[r.type]} · ${formatBRL(r.amount)})? Registrado na Auditoria.`)) act(r.id, 'adminDelete'); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /> Excluir</Button>}
         </div>
         {dateEditId === r.id && <InlineDateEdit module="payment" id={r.id} current={(r.entryDate ?? r.requestedAt ?? '').slice(0, 10)} onClose={() => setDateEditId(null)} />}
       </>
@@ -180,12 +180,12 @@ export function PaymentsClient({
             onClick={() => setTab(t.key)}
             className={
               tab === t.key
-                ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground'
+                ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand'
                 : 'rounded-full border px-3 py-1.5 text-sm font-medium'
             }
           >
             {t.label}
-            {t.badge ? <span className="ml-1 rounded-full bg-critical px-1.5 text-xs text-white">{t.badge}</span> : null}
+            {t.badge ? <span className="ml-1 rounded-full bg-danger px-1.5 text-xs text-white">{t.badge}</span> : null}
           </button>
         ))}
       </div>
@@ -354,15 +354,15 @@ function DetailView({ r }: { r: PayReq }) {
   if (d?.paidBy) rows.push(['Pago por', `${d.paidBy}${d.paidAt ? ` em ${fmtDate(d.paidAt)}` : ''}`]);
   if (r.rejectionReason) rows.push(['Rejeição', r.rejectionReason]);
   return (
-    <div className="mt-2 space-y-1 rounded-md bg-surface p-2">
+    <div className="mt-2 space-y-1 rounded-md bg-canvas p-2">
       {rows.map(([k, v], i) => (
         <div key={i} className="flex justify-between gap-3 text-xs">
-          <span className="shrink-0 text-muted-foreground">{k}</span>
-          <span className="text-right font-medium text-foreground">{v}</span>
+          <span className="shrink-0 text-ink-500">{k}</span>
+          <span className="text-right font-medium text-ink-900">{v}</span>
         </div>
       ))}
       {d?.hasAttachment && d.attachmentPath && (
-        <a href={`/${d.attachmentPath}`} target="_blank" rel="noreferrer" className="block pt-1 text-xs font-semibold text-accent underline">Ver anexo</a>
+        <a href={`/${d.attachmentPath}`} target="_blank" rel="noreferrer" className="block pt-1 text-xs font-semibold text-sgo-brand underline">Ver anexo</a>
       )}
     </div>
   );
@@ -417,7 +417,7 @@ function List({ items, actions, selection }: {
 }) {
   const [detailId, setDetailId] = useState<string | null>(null);
   const detail = items.find((i) => i.id === detailId) ?? null;
-  if (items.length === 0) return <p className="text-sm text-muted-foreground">Nada por aqui.</p>;
+  if (items.length === 0) return <p className="text-sm text-ink-500">Nada por aqui.</p>;
 
   // Agrupa por DIA (mais recente primeiro) e, dentro do dia, por UNIDADE (pedido 16/07)
   const byDay = new Map<string, PayReq[]>();
@@ -435,8 +435,8 @@ function List({ items, actions, selection }: {
         return (
           <div key={day} className="space-y-2">
             <div className="flex items-center justify-between border-b pb-1">
-              <p className="text-sm font-bold text-brand">📅 {fmtDay(day)}</p>
-              <span className="text-xs text-muted-foreground">{dayItems.length} lançamento(s) · {formatBRL(dayTotal)}</span>
+              <p className="text-sm font-bold text-sgo-brand">📅 {fmtDay(day)}</p>
+              <span className="text-xs text-ink-500">{dayItems.length} lançamento(s) · {formatBRL(dayTotal)}</span>
             </div>
             {unitNames.map((u) => (
               <div key={u} className="space-y-1.5">
@@ -602,7 +602,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
                 options={(selectedFreelancer?.sectorRates ?? []).map((r) => ({ value: r.sectorName, label: r.sectorName, hint: `${formatBRL(r.dayValue)}/dia` }))}
               />
               {coverageSector && (
-                <p className="mt-1 text-xs text-muted-foreground">Valor do dia: <b>{formatBRL((selectedFreelancer?.sectorRates ?? []).find((r) => r.sectorName === coverageSector)?.dayValue ?? 0)}</b>{transportValue ? ' + VT' : ''} (calculado automaticamente).</p>
+                <p className="mt-1 text-xs text-ink-500">Valor do dia: <b>{formatBRL((selectedFreelancer?.sectorRates ?? []).find((r) => r.sectorName === coverageSector)?.dayValue ?? 0)}</b>{transportValue ? ' + VT' : ''} (calculado automaticamente).</p>
               )}
             </div>
           )}
@@ -611,17 +611,17 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
             <TimePicker label="Hora início" value={workStartTime || null} onValueChange={(v) => setWorkStartTime(v ?? '')} />
             <TimePicker label="Hora fim" value={workEndTime || null} onValueChange={(v) => setWorkEndTime(v ?? '')} />
           </div>
-          <p className="text-xs text-muted-foreground">Com o dia e a hora preenchidos, o freelancer fica disponível para alocar no Mapa da unidade naquele dia/horário.</p>
+          <p className="text-xs text-ink-500">Com o dia e a hora preenchidos, o freelancer fica disponível para alocar no Mapa da unidade naquele dia/horário.</p>
           <div><Label>Vale transporte (R$, opcional)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>
           {calc?.configured && (
-            <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3">
-              <p className="text-xs text-muted-foreground">Valor calculado ({calc.dayTypeLabel})</p>
-              <p className="text-2xl font-black text-brand">{formatBRL(calc.amount)}</p>
-              <p className="text-xs text-muted-foreground">{calc.hours}h × {formatBRL(calc.rate ?? 0)}/h{calc.transport > 0 ? ` + ${formatBRL(calc.transport)} VT` : ''}</p>
+            <div className="rounded-lg border-2 border-sgo-brand/40 bg-sgo-brand/5 p-3">
+              <p className="text-xs text-ink-500">Valor calculado ({calc.dayTypeLabel})</p>
+              <p className="text-2xl font-black text-sgo-brand">{formatBRL(calc.amount)}</p>
+              <p className="text-xs text-ink-500">{calc.hours}h × {formatBRL(calc.rate ?? 0)}/h{calc.transport > 0 ? ` + ${formatBRL(calc.transport)} VT` : ''}</p>
             </div>
           )}
           {calc && !calc.configured && workDate && workStartTime && workEndTime && (
-            <p className="rounded-lg bg-medium/10 px-3 py-2 text-xs text-warning">Sem valor/hora cadastrado para este dia nesta unidade. Informe o valor manualmente abaixo (o Admin pode cadastrar em Configurações → Valor do freelancer).</p>
+            <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">Sem valor/hora cadastrado para este dia nesta unidade. Informe o valor manualmente abaixo (o Admin pode cadastrar em Configurações → Valor do freelancer).</p>
           )}
           <div><Label>Observações (opcional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex: cobriu falta, evento…" /></div>
         </>
@@ -636,7 +636,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
           </div>
           <div><Label>Motivo</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} /></div>
           <div><Label>Vale transporte (R$, opcional — soma ao total)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>
-          <p className="text-xs text-muted-foreground">Valor é estimativa para aprovação; o cálculo final (50%/100%, reflexos) é do RH/folha.</p>
+          <p className="text-xs text-ink-500">Valor é estimativa para aprovação; o cálculo final (50%/100%, reflexos) é do RH/folha.</p>
         </>
       )}
 
@@ -671,13 +671,13 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
       {!autoPriced && <div><Label>Valor (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" /></div>}
 
       {freelaDivergent && selectedFreelancer && (
-        <p className="flex items-center gap-2 rounded-lg bg-medium/10 px-3 py-2 text-sm font-medium text-medium">
+        <p className="flex items-center gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm font-medium text-warning">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           Valor diferente do padrão cadastrado ({formatBRL(selectedFreelancer.defaultValue)}). Você pode prosseguir — o aprovador será avisado da divergência.
         </p>
       )}
 
-      {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
+      {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Plus className="h-5 w-5" /> Enviar solicitação</Button>
     </div>
   );

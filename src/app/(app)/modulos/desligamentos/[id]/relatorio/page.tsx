@@ -19,13 +19,13 @@ export default async function TerminationReportPage({ params }: { params: { id: 
   return (
     <div className="mx-auto max-w-3xl space-y-4 bg-white p-2 text-black print:p-0">
       <div className="flex items-center justify-between gap-2 print:hidden">
-        <Link href="/modulos/desligamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+        <Link href="/modulos/desligamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
         <PrintButton />
       </div>
 
-      <div className="border-b-2 border-brand pb-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-brand">Solicitação de Desligamento — SGO Beija Flor</p>
-        <h1 className="text-2xl font-black text-brand">{t.collaboratorName}</h1>
+      <div className="border-b-2 border-sgo-brand pb-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-sgo-brand">Solicitação de Desligamento — SGO Beija Flor</p>
+        <h1 className="text-2xl font-black text-sgo-brand">{t.collaboratorName}</h1>
         <p className="text-sm text-gray-600">{t.unit.name} · {STAT[t.status]}</p>
       </div>
 

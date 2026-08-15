@@ -61,19 +61,19 @@ export default async function ModulosPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-brand">Módulos</h1>
+      <h1 className="text-xl font-bold text-sgo-brand">Módulos</h1>
       {GROUPS.map((g) => {
         const items = g.items.filter((it) => viewable.has(it.href));
         if (items.length === 0) return null;
         return (
           <div key={g.title} className="space-y-2">
-            <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{g.title}</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wide text-ink-500">{g.title}</h2>
             <div className="grid grid-cols-2 gap-3">
               {items.map(({ href, label, icon: Icon }) => (
                 <Link key={href} href={href}>
-                  <Card className="h-full transition-colors hover:border-accent">
+                  <Card className="h-full transition-colors hover:border-sgo-brand">
                     <CardContent className="flex h-full flex-col items-center justify-center gap-2 py-5 text-center">
-                      <Icon className="h-7 w-7 text-brand" />
+                      <Icon className="h-7 w-7 text-sgo-brand" />
                       <span className="text-sm font-semibold">{label}</span>
                     </CardContent>
                   </Card>

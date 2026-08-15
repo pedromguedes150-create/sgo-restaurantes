@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
 export default async function TrocoPage({ searchParams }: { searchParams: { unit?: string } }) {
   const user = (await getSessionUser())!;
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
-  if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
+  if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
 
   const now = new Date();
@@ -32,7 +32,7 @@ export default async function TrocoPage({ searchParams }: { searchParams: { unit
     wide ? getVaultAlerts(user, ym) : Promise.resolve(null),
     wide ? getOpenChangeRequests(user) : Promise.resolve([]),
   ]);
-  if (!vault) return <p className="text-sm text-muted-foreground">Sem acesso a esta unidade.</p>;
+  if (!vault) return <p className="text-sm text-ink-500">Sem acesso a esta unidade.</p>;
 
   return (
     <div className="space-y-4">

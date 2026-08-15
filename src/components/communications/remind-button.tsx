@@ -25,7 +25,7 @@ export function RemindButton({ id, pending }: { id: string; pending: number }) {
   return (
     <div className="flex items-center gap-2">
       <Button size="sm" variant="outline" disabled={busy || pending === 0} onClick={remind}><BellRing className="h-4 w-4" /> Cobrar pendentes ({pending})</Button>
-      {msg && <span className="text-xs font-medium text-success">{msg}</span>}
+      {msg && <span className="text-xs font-medium text-sgo-success">{msg}</span>}
     </div>
   );
 }

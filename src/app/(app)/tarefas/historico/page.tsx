@@ -48,12 +48,12 @@ export default async function HistoricoTarefasPage({ searchParams }: { searchPar
 
   return (
     <div className="space-y-4">
-      <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
-      <h1 className="text-xl font-bold text-brand">Histórico de checklists</h1>
+      <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
+      <h1 className="text-xl font-bold text-sgo-brand">Histórico de checklists</h1>
 
       <div className="flex flex-wrap items-center gap-2">
         {[7, 15, 30].map((d) => (
-          <Link key={d} href={linkForDays(d)} className={d === days ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{d} dias</Link>
+          <Link key={d} href={linkForDays(d)} className={d === days ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>{d} dias</Link>
         ))}
         {units.length > 1 && <UnitFilter units={units} selected={unitFilter.all ? [] : unitFilter.ids} />}
       </div>

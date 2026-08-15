@@ -12,25 +12,25 @@ export const dynamic = 'force-dynamic';
 
 export default async function CancelAnalisePage({ searchParams }: { searchParams: { unit?: string } }) {
   const user = (await getSessionUser())!;
-  if (!['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role)) return <p className="text-sm text-muted-foreground">Restrito à Supervisão/Administração.</p>;
+  if (!['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role)) return <p className="text-sm text-ink-500">Restrito à Supervisão/Administração.</p>;
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
-  if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade no escopo.</p>;
+  if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade no escopo.</p>;
   const selUnit = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const analyses = await listCancellationAnalyses(user, selUnit.id);
 
   return (
     <div className="space-y-4">
       <div className="print:hidden">
-        <Link href="/modulos/cancelamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Cancelamentos</Link>
+        <Link href="/modulos/cancelamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Cancelamentos</Link>
       </div>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><ShieldAlert className="h-5 w-5 text-accent" /> Análise antifraude de cancelamentos</h1>
-        <p className="text-sm text-muted-foreground">Suba o <b>PDF</b> do relatório &quot;Vendas/Itens Cancelados no Período&quot; (Teknisa). O SGO analisa por caixa, por autorizador, horário e valor, e aponta possíveis fraudes.</p>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><ShieldAlert className="h-5 w-5 text-sgo-brand" /> Análise antifraude de cancelamentos</h1>
+        <p className="text-sm text-ink-500">Suba o <b>PDF</b> do relatório &quot;Vendas/Itens Cancelados no Período&quot; (Teknisa). O SGO analisa por caixa, por autorizador, horário e valor, e aponta possíveis fraudes.</p>
       </div>
 
       {units.length > 1 && (
         <div className="flex flex-wrap gap-2 print:hidden">
-          {units.map((u) => <Link key={u.id} href={`/modulos/cancelamentos/analise?unit=${u.id}`} className={u.id === selUnit.id ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</Link>)}
+          {units.map((u) => <Link key={u.id} href={`/modulos/cancelamentos/analise?unit=${u.id}`} className={u.id === selUnit.id ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</Link>)}
         </div>
       )}
 

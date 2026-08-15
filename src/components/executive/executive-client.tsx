@@ -22,8 +22,8 @@ const fmtMonthLong = (ym: string) => {
   const [y, m] = ym.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 };
-const TONE = { success: 'bg-success', medium: 'bg-medium', critical: 'bg-critical' } as const;
-const pctCls = (v: number) => (v >= 80 ? 'text-success' : v >= 50 ? 'text-warning' : 'text-critical');
+const TONE = { success: 'bg-sgo-success', medium: 'bg-warning', critical: 'bg-danger' } as const;
+const pctCls = (v: number) => (v >= 80 ? 'text-sgo-success' : v >= 50 ? 'text-warning' : 'text-danger');
 
 export function ExecutiveClient({ rows, totals, yearMonth, months }: {
   rows: ExecRowUI[]; totals: ExecTotalsUI; yearMonth: string; months: string[];
@@ -64,7 +64,7 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
-            <tr className="bg-surface text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <tr className="bg-canvas text-left text-xs uppercase tracking-wide text-ink-500">
               <th className="p-2">Unidade</th>
               <th className="p-2 text-right">Meta</th>
               <th className="p-2 text-right">Uso</th>
@@ -79,16 +79,16 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
           <tbody>
             {rows.map((r) => (
               <tr key={r.unitId} className="border-t">
-                <td className="p-2 font-semibold text-brand">
+                <td className="p-2 font-semibold text-sgo-brand">
                   <span className="flex items-center gap-1.5"><span className={cn('h-2 w-2 shrink-0 rounded-full', TONE[r.usageTone])} />{r.unitName}</span>
                 </td>
                 <td className={cn('p-2 text-right font-bold tabular-nums', pctCls(r.metaPct))}>{r.metaPct}%</td>
                 <td className={cn('p-2 text-right tabular-nums', pctCls(r.usagePct))}>{r.usagePct}%</td>
                 <td className="p-2 text-right tabular-nums">{r.wasteKg.toLocaleString('pt-BR')} kg</td>
                 <td className="p-2 text-right tabular-nums">{r.absenteeismPct.toLocaleString('pt-BR')}%{r.certDays > 0 ? ` (${r.certDays}d)` : ''}</td>
-                <td className={cn('p-2 text-right tabular-nums', r.cashDivergent > 0 && 'font-semibold text-critical')}>{r.cashDivergent > 0 ? `${r.cashDivergent} · ${brl(r.cashDivergenceTotal)}` : '—'}</td>
+                <td className={cn('p-2 text-right tabular-nums', r.cashDivergent > 0 && 'font-semibold text-danger')}>{r.cashDivergent > 0 ? `${r.cashDivergent} · ${brl(r.cashDivergenceTotal)}` : '—'}</td>
                 <td className="p-2 text-right tabular-nums">{r.maintenanceCost > 0 ? brl(r.maintenanceCost) : '—'}{r.maintenanceOpen > 0 ? ` (${r.maintenanceOpen} aberto)` : ''}</td>
-                <td className={cn('p-2 text-right tabular-nums', r.severeOccurrences > 0 && 'font-semibold text-critical')}>{r.severeOccurrences || '—'}</td>
+                <td className={cn('p-2 text-right tabular-nums', r.severeOccurrences > 0 && 'font-semibold text-danger')}>{r.severeOccurrences || '—'}</td>
                 <td className="p-2 text-right tabular-nums">{r.visitsDone || '—'}</td>
               </tr>
             ))}

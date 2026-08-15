@@ -21,20 +21,20 @@ export default async function PopsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><BookOpen className="h-5 w-5 text-accent" /> POPs</h1>
-      <Link href="/modulos/treinamentos" className="flex items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-accent">
-        <GraduationCap className="h-5 w-5 text-accent" /> Treinamentos (acompanhar por setor)
+      <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><BookOpen className="h-5 w-5 text-sgo-brand" /> POPs</h1>
+      <Link href="/modulos/treinamentos" className="flex items-center gap-2 rounded-lg border bg-sgo-surface px-4 py-3 text-sm font-semibold text-sgo-brand transition-colors hover:border-sgo-brand">
+        <GraduationCap className="h-5 w-5 text-sgo-brand" /> Treinamentos (acompanhar por setor)
       </Link>
       {isAdmin && <PopEditor units={units} standardSectors={STANDARD_SECTORS} />}
       <div className="space-y-2">
-        {pops.length === 0 && <p className="text-sm text-muted-foreground">Nenhum POP publicado.</p>}
+        {pops.length === 0 && <p className="text-sm text-ink-500">Nenhum POP publicado.</p>}
         {pops.map((p) => (
           <Link key={p.id} href={`/modulos/pops/${p.id}`}>
-            <Card className="transition-colors hover:border-accent">
+            <Card className="transition-colors hover:border-sgo-brand">
               <CardContent className="flex items-center justify-between py-3">
                 <div>
-                  <p className="font-semibold text-brand">{p.title} <span className="text-xs font-normal text-muted-foreground">v{p.version}</span></p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="font-semibold text-sgo-brand">{p.title} <span className="text-xs font-normal text-ink-500">v{p.version}</span></p>
+                  <p className="text-xs text-ink-500">
                     {[p.category, p.isInitial ? 'Inicial' : null, p.recurrence === 'MONTHLY' ? 'Mensal' : null].filter(Boolean).join(' · ') || 'Geral'}
                   </p>
                 </div>

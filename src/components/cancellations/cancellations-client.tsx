@@ -60,19 +60,19 @@ export function CancellationsClient({
       {isAdmin && <ImportForm units={units} onDone={() => router.refresh()} />}
 
       <div className="space-y-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">
           Pendentes de justificativa ({pending.length})
         </h2>
-        {pending.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma pendência. 🟢</p>}
-        {msg && <p className={msg.t === 'ok' ? 'text-sm text-success' : 'text-sm text-critical'}>{msg.m}</p>}
+        {pending.length === 0 && <p className="text-sm text-ink-500">Nenhuma pendência. 🟢</p>}
+        {msg && <p className={msg.t === 'ok' ? 'text-sm text-sgo-success' : 'text-sm text-danger'}>{msg.m}</p>}
 
         {pending.map((c) => (
-          <div key={c.id} className="rounded-lg border bg-card p-3">
+          <div key={c.id} className="rounded-lg border bg-sgo-surface p-3">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-brand">Cupom {c.coupon}</p>
-              <span className="font-bold text-critical">{formatBRL(c.value)}</span>
+              <p className="font-semibold text-sgo-brand">Cupom {c.coupon}</p>
+              <span className="font-bold text-danger">{formatBRL(c.value)}</span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-ink-500">
               {c.unit}
               {c.operator && ` · operador ${c.operator}`}
             </p>
@@ -128,13 +128,13 @@ function ImportForm({ units, onDone }: { units: Unit[]; onDone: () => void }) {
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Importar Teknisa (Excel/CSV) — Admin</h2>
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Importar Teknisa (Excel/CSV) — Admin</h2>
       <div className="space-y-2">
         <Select label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
         <input type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="block w-full text-sm" />
-        <p className="text-[11px] text-muted-foreground">Relatório Relação de Cupons SAT/NFC-e (Teknisa). Traz nº do cupom e valor; linhas de total são ignoradas.</p>
+        <p className="text-[11px] text-ink-500">Relatório Relação de Cupons SAT/NFC-e (Teknisa). Traz nº do cupom e valor; linhas de total são ignoradas.</p>
         <Button onClick={submit} disabled={busy} className="w-full"><Upload className="h-4 w-4" /> Importar</Button>
-        {msg && <p className="text-sm font-medium text-muted-foreground">{msg}</p>}
+        {msg && <p className="text-sm font-medium text-ink-500">{msg}</p>}
       </div>
     </div>
   );

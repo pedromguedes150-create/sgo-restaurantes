@@ -53,7 +53,7 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
   }
 
   const tabBtn = (k: typeof tab, label: string) => (
-    <button onClick={() => setTab(k)} className={tab === k ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{label}</button>
+    <button onClick={() => setTab(k)} className={tab === k ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{label}</button>
   );
 
   return (
@@ -62,11 +62,11 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
 
       {tab === 'col' && (
         <div className="space-y-2">
-          {collaborators.length === 0 && <p className="text-sm text-muted-foreground">Nenhum colaborador.</p>}
+          {collaborators.length === 0 && <p className="text-sm text-ink-500">Nenhum colaborador.</p>}
           {collaborators.map((c) => (
-            <div key={c.id} className="rounded-lg border bg-card p-3">
-              <p className="font-semibold text-brand">{c.name}</p>
-              <p className="text-xs text-muted-foreground">{c.jobTitle ?? '—'} · {c.units.join(', ')}</p>
+            <div key={c.id} className="rounded-lg border bg-sgo-surface p-3">
+              <p className="font-semibold text-sgo-brand">{c.name}</p>
+              <p className="text-xs text-ink-500">{c.jobTitle ?? '—'} · {c.units.join(', ')}</p>
             </div>
           ))}
         </div>
@@ -76,7 +76,7 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
         <div className="space-y-2">
           {canRequestVacation && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Solicitar férias ao RH</p>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Solicitar férias ao RH</p>
               <div className="space-y-2">
                 <Select
                   aria-label="Colaborador" placeholder="Selecione o colaborador…" value={vCollab} onValueChange={setVCollab}
@@ -88,18 +88,18 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
                 </div>
                 <Input value={vNote} onChange={(e) => setVNote(e.target.value)} placeholder="Observação (opcional)" className="h-10 text-sm" />
                 <Button className="w-full" disabled={busy || !vCollab || !vStart || !vEnd} onClick={vacRequest}><Plus className="h-4 w-4" /> Pedir ao RH</Button>
-                <p className="text-xs text-muted-foreground">O pedido avisa os Admins para levar ao RH. Quando o RH confirmar, o status muda aqui.</p>
+                <p className="text-xs text-ink-500">O pedido avisa os Admins para levar ao RH. Quando o RH confirmar, o status muda aqui.</p>
               </div>
             </div>
           )}
-          {vacations.length === 0 && <p className="text-sm text-muted-foreground">Sem férias programadas.</p>}
+          {vacations.length === 0 && <p className="text-sm text-ink-500">Sem férias programadas.</p>}
           {vacations.map((v) => (
-            <div key={v.id} className="rounded-lg border bg-card p-3">
+            <div key={v.id} className="rounded-lg border bg-sgo-surface p-3">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-brand">{v.collaborator}</p>
+                <p className="font-semibold text-sgo-brand">{v.collaborator}</p>
                 <StatusBadge tone={VAC_ST[v.status].tone}>{VAC_ST[v.status].label}</StatusBadge>
               </div>
-              <p className="text-xs text-muted-foreground">{v.unit} · {v.start} a {v.end}</p>
+              <p className="text-xs text-ink-500">{v.unit} · {v.start} a {v.end}</p>
               {v.changeNote && <p className="mt-1 text-xs text-warning">Alteração: {v.changeNote}</p>}
               {v.status === 'CONFIRMED' && <Button size="sm" variant="outline" className="mt-2" disabled={busy} onClick={() => vacChange(v.id)}>Solicitar alteração</Button>}
             </div>
@@ -109,14 +109,14 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
 
       {tab === 'esc' && (
         <div className="space-y-2">
-          {schedule.length === 0 && <p className="text-sm text-muted-foreground">Sem escala importada.</p>}
+          {schedule.length === 0 && <p className="text-sm text-ink-500">Sem escala importada.</p>}
           {schedule.map((s) => (
-            <div key={s.id} className="rounded-lg border bg-card p-3">
+            <div key={s.id} className="rounded-lg border bg-sgo-surface p-3">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-brand">{s.collaborator}</p>
+                <p className="font-semibold text-sgo-brand">{s.collaborator}</p>
                 <StatusBadge tone={s.variation === 'NONE' ? 'neutral' : 'medium'}>{VAR_LABEL[s.variation]}</StatusBadge>
               </div>
-              <p className="text-xs text-muted-foreground">{s.unit} · {s.date} · planejado {s.planned}{s.note ? ` · ${s.note}` : ''}</p>
+              <p className="text-xs text-ink-500">{s.unit} · {s.date} · planejado {s.planned}{s.note ? ` · ${s.note}` : ''}</p>
               <div className="mt-2 flex flex-wrap gap-1">
                 {(['ABSENCE', 'LATE', 'SWAP', 'NONE'] as const).map((vv) => (
                   <button key={vv} disabled={busy} onClick={() => setVar(s.id, vv)} className="rounded border px-2 py-1 text-xs">{VAR_LABEL[vv]}</button>

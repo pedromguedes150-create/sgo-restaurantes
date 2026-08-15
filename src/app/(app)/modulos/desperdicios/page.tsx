@@ -25,7 +25,7 @@ export default async function DesperdiciosPage({
   });
 
   if (units.length === 0) {
-    return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
+    return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
   }
 
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
@@ -61,10 +61,10 @@ export default async function DesperdiciosPage({
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h1 className="text-xl font-bold text-brand">Desperdícios</h1>
-          <p className="text-sm text-muted-foreground">Dia operacional {operationalDate}</p>
+          <h1 className="text-xl font-bold text-sgo-brand">Desperdícios</h1>
+          <p className="text-sm text-ink-500">Dia operacional {operationalDate}</p>
         </div>
-        <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent">Exportar (Excel)</a>
+        <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-sgo-brand hover:border-sgo-brand">Exportar (Excel)</a>
       </div>
 
       {/* Seletor de unidade (compacto) */}
@@ -77,9 +77,9 @@ export default async function DesperdiciosPage({
         </CardHeader>
         <CardContent className="space-y-3">
           <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} />
-          {isBackdated && <p className="rounded-lg bg-medium/10 px-3 py-2 text-xs font-medium text-warning">Lançando para um dia anterior ({operationalDate}).</p>}
+          {isBackdated && <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs font-medium text-warning">Lançando para um dia anterior ({operationalDate}).</p>}
           {entry?.createdBy && (
-            <p className="mb-3 text-xs text-muted-foreground">
+            <p className="mb-3 text-xs text-ink-500">
               Registrado por {entry.createdBy} · total atual {entry.total.toFixed(2)} KG
             </p>
           )}
@@ -102,21 +102,21 @@ export default async function DesperdiciosPage({
             <CardTitle>Histórico de lançamentos (admin)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {recent.length === 0 && <p className="text-sm text-muted-foreground">Nenhum lançamento.</p>}
+            {recent.length === 0 && <p className="text-sm text-ink-500">Nenhum lançamento.</p>}
             {recent.map((e) => {
               const total = e.items.reduce((s, i) => s + Number(i.kg), 0);
               return (
-                <div key={e.id} className="rounded-lg border bg-card p-2.5">
+                <div key={e.id} className="rounded-lg border bg-sgo-surface p-2.5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-brand">{e.operationalDate}</p>
-                      <p className="text-xs text-muted-foreground">{total.toFixed(2)} KG · {e.items.length} categoria(s){e.createdBy ? ` · ${e.createdBy.name}` : ''}</p>
+                      <p className="text-sm font-semibold text-sgo-brand">{e.operationalDate}</p>
+                      <p className="text-xs text-ink-500">{total.toFixed(2)} KG · {e.items.length} categoria(s){e.createdBy ? ` · ${e.createdBy.name}` : ''}</p>
                     </div>
                     <DeleteOpButton entity="waste" id={e.id} label={`o desperdício de ${e.operationalDate}`} />
                   </div>
                   {e.items.length > 0 && (
                     <details className="mt-1">
-                      <summary className="cursor-pointer text-xs font-medium text-accent">Ver itens lançados</summary>
+                      <summary className="cursor-pointer text-xs font-medium text-sgo-brand">Ver itens lançados</summary>
                       <ul className="mt-1 space-y-0.5">
                         {e.items.map((i, idx) => (
                           <li key={idx} className="flex justify-between text-xs">
@@ -125,13 +125,13 @@ export default async function DesperdiciosPage({
                           </li>
                         ))}
                       </ul>
-                      {e.observation && <p className="mt-1 text-xs text-muted-foreground">Obs.: {e.observation}</p>}
+                      {e.observation && <p className="mt-1 text-xs text-ink-500">Obs.: {e.observation}</p>}
                     </details>
                   )}
                 </div>
               );
             })}
-            <p className="pt-1 text-xs text-muted-foreground">Para lançar/corrigir um dia específico, escolha a data no formulário acima.</p>
+            <p className="pt-1 text-xs text-ink-500">Para lançar/corrigir um dia específico, escolha a data no formulário acima.</p>
           </CardContent>
         </Card>
       )}
@@ -143,18 +143,18 @@ export default async function DesperdiciosPage({
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Total no período</span>
-            <span className="font-bold text-brand">{series.grandTotal.toFixed(2)} KG</span>
+            <span className="text-ink-500">Total no período</span>
+            <span className="font-bold text-sgo-brand">{series.grandTotal.toFixed(2)} KG</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Dias com registro</span>
+            <span className="text-ink-500">Dias com registro</span>
             <span className="font-semibold">
               {series.daysWithRecord}/{series.windowDays} ({series.recordRatePct}%)
             </span>
           </div>
           <div className="space-y-2 pt-1">
             {series.byCategory.length === 0 && (
-              <p className="text-sm text-muted-foreground">Sem dados no período.</p>
+              <p className="text-sm text-ink-500">Sem dados no período.</p>
             )}
             {series.byCategory.map((c) => (
               <div key={c.categoryId}>
@@ -162,8 +162,8 @@ export default async function DesperdiciosPage({
                   <span>{c.name}</span>
                   <span className="font-semibold">{c.total.toFixed(1)} KG</span>
                 </div>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
-                  <div className="h-full rounded-full bg-brand" style={{ width: `${(c.total / maxCat) * 100}%` }} />
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-sunken">
+                  <div className="h-full rounded-full bg-sgo-brand" style={{ width: `${(c.total / maxCat) * 100}%` }} />
                 </div>
               </div>
             ))}
@@ -181,7 +181,7 @@ export default async function DesperdiciosPage({
             {cross.map((u) => (
               <div key={u.unitId} className="flex items-center justify-between text-sm">
                 <span className="font-medium">{u.name}</span>
-                <span className="text-muted-foreground">
+                <span className="text-ink-500">
                   {u.total.toFixed(1)} KG · {u.recordRatePct}% dias
                 </span>
               </div>

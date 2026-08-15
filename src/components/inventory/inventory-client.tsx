@@ -45,16 +45,16 @@ export function InventoryClient({ items, units, isAdmin }: { items: InvItem[]; u
       {isAdmin && <ScheduleForm units={units} onDone={() => router.refresh()} />}
 
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum inventário agendado.</p>
+        <p className="text-sm text-ink-500">Nenhum inventário agendado.</p>
       ) : (
         <div className="space-y-2">
           {items.map((i) => (
-            <div key={i.id} className="rounded-lg border bg-card p-3">
+            <div key={i.id} className="rounded-lg border bg-sgo-surface p-3">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-brand">{i.category}</p>
+                <p className="font-semibold text-sgo-brand">{i.category}</p>
                 <StatusBadge tone={ST[i.status].tone}>{ST[i.status].label}</StatusBadge>
               </div>
-              <p className="text-xs text-muted-foreground">{i.unit} · {i.date}{i.responsible ? ` · resp. ${i.responsible}` : ''}{i.confirmedBy ? ` · por ${i.confirmedBy}` : ''}</p>
+              <p className="text-xs text-ink-500">{i.unit} · {i.date}{i.responsible ? ` · resp. ${i.responsible}` : ''}{i.confirmedBy ? ` · por ${i.confirmedBy}` : ''}</p>
               <div className="mt-2 flex items-center gap-2">
                 {i.status === 'PENDING' && (
                   <Button size="sm" disabled={busy} onClick={() => confirm(i.id)}><Check className="h-4 w-4" /> Confirmar realização</Button>
@@ -91,7 +91,7 @@ function ScheduleForm({ units, onDone }: { units: { id: string; name: string }[]
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Agendar inventário (Admin)</h2>
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Agendar inventário (Admin)</h2>
       <div className="space-y-2">
         <Select label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
         <div className="grid grid-cols-2 gap-2">
@@ -99,7 +99,7 @@ function ScheduleForm({ units, onDone }: { units: { id: string; name: string }[]
           <DatePicker label="Data" value={scheduledDate || null} onValueChange={(v) => setScheduledDate(v ?? '')} />
         </div>
         <Button onClick={submit} disabled={busy} className="w-full"><Plus className="h-4 w-4" /> Agendar</Button>
-        {msg && <p className="text-sm font-medium text-muted-foreground">{msg}</p>}
+        {msg && <p className="text-sm font-medium text-ink-500">{msg}</p>}
       </div>
     </div>
   );

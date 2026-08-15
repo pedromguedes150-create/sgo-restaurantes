@@ -44,12 +44,12 @@ export function FreelancerRatesConfig({ units, rates, holidays }: {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">Valor da hora do freelancer</h2>
-        <p className="mb-3 text-xs text-muted-foreground">Por unidade e tipo de dia. No pedido, o sistema calcula <b>horas × valor/hora do dia + vale transporte</b> automaticamente.</p>
+        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Valor da hora do freelancer</h2>
+        <p className="mb-3 text-xs text-ink-500">Por unidade e tipo de dia. No pedido, o sistema calcula <b>horas × valor/hora do dia + vale transporte</b> automaticamente.</p>
         <div className="space-y-3">
           {units.map((u) => (
-            <div key={u.id} className="rounded-lg border bg-card p-3">
-              <p className="mb-2 text-sm font-semibold text-brand">{u.name}</p>
+            <div key={u.id} className="rounded-lg border bg-sgo-surface p-3">
+              <p className="mb-2 text-sm font-semibold text-sgo-brand">{u.name}</p>
               <div className="grid grid-cols-3 gap-2">
                 {DAY_TYPES.map((t) => (
                   <div key={t.key}>
@@ -70,19 +70,19 @@ export function FreelancerRatesConfig({ units, rates, holidays }: {
       </div>
 
       <div>
-        <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-muted-foreground"><CalendarDays className="h-4 w-4" /> Feriados</h2>
-        <p className="mb-2 text-xs text-muted-foreground">Datas marcadas como feriado usam o valor/hora de <b>Feriado</b>.</p>
+        <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-ink-500"><CalendarDays className="h-4 w-4" /> Feriados</h2>
+        <p className="mb-2 text-xs text-ink-500">Datas marcadas como feriado usam o valor/hora de <b>Feriado</b>.</p>
         <div className="mb-2 flex flex-wrap items-end gap-2">
           <DatePicker label="Data" size="sm" value={hDate || null} onValueChange={(v) => setHDate(v ?? '')} />
           <div className="flex-1"><Label className="text-xs">Nome</Label><Input value={hName} onChange={(e) => setHName(e.target.value)} placeholder="ex: Independência" className="h-9 text-sm" /></div>
           <Button size="sm" disabled={busy || !hDate || !hName.trim()} onClick={async () => { if (await post({ entity: 'holiday', action: 'add', date: hDate, name: hName })) { setHDate(''); setHName(''); } }}><Plus className="h-4 w-4" /> Adicionar</Button>
         </div>
         <div className="space-y-1">
-          {holidays.length === 0 && <p className="text-xs text-muted-foreground">Nenhum feriado cadastrado.</p>}
+          {holidays.length === 0 && <p className="text-xs text-ink-500">Nenhum feriado cadastrado.</p>}
           {holidays.map((h) => (
-            <div key={h.id} className="flex items-center justify-between rounded-md border bg-card px-3 py-1.5 text-sm">
+            <div key={h.id} className="flex items-center justify-between rounded-md border bg-sgo-surface px-3 py-1.5 text-sm">
               <span><b>{fmtBR(h.date)}</b> · {h.name}</span>
-              <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => post({ entity: 'holiday', action: 'delete', id: h.id })} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
+              <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => post({ entity: 'holiday', action: 'delete', id: h.id })} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
             </div>
           ))}
         </div>

@@ -34,10 +34,10 @@ export function HygieneManageClient({ unitId, canManage, requests, locations }: 
       {/* QR / link público */}
       {canManage && (
         <Card><CardContent className="pt-4">
-          <p className="mb-1 flex items-center gap-1 text-sm font-bold text-brand"><QrCode className="h-4 w-4" /> Link do QR do banheiro (desta unidade)</p>
-          <p className="mb-2 text-xs text-muted-foreground">Gere o QR Code apontando para este endereço e cole no banheiro. Sem login — o cliente só toca e envia.</p>
+          <p className="mb-1 flex items-center gap-1 text-sm font-bold text-sgo-brand"><QrCode className="h-4 w-4" /> Link do QR do banheiro (desta unidade)</p>
+          <p className="mb-2 text-xs text-ink-500">Gere o QR Code apontando para este endereço e cole no banheiro. Sem login — o cliente só toca e envia.</p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 truncate rounded-lg border bg-surface px-2 py-1.5 text-xs">{publicUrl}</code>
+            <code className="flex-1 truncate rounded-lg border bg-canvas px-2 py-1.5 text-xs">{publicUrl}</code>
             <Button size="sm" variant="outline" onClick={() => { navigator.clipboard?.writeText(publicUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}><Copy className="h-4 w-4" /> {copied ? 'Copiado' : 'Copiar'}</Button>
           </div>
         </CardContent></Card>
@@ -46,14 +46,14 @@ export function HygieneManageClient({ unitId, canManage, requests, locations }: 
       {/* Locais (banheiros) */}
       {canManage && (
         <Card><CardContent className="pt-4">
-          <p className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Banheiros cadastrados</p>
+          <p className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Banheiros cadastrados</p>
           <div className="mb-2 flex flex-wrap gap-2">
-            {locations.length === 0 && <span className="text-sm text-muted-foreground">Nenhum — cadastre abaixo (ex.: Masculino, Feminino, PCD).</span>}
+            {locations.length === 0 && <span className="text-sm text-ink-500">Nenhum — cadastre abaixo (ex.: Masculino, Feminino, PCD).</span>}
             {locations.map((l) => (
-              <span key={l.id} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${l.active ? 'font-semibold' : 'text-muted-foreground line-through'}`}>
+              <span key={l.id} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${l.active ? 'font-semibold' : 'text-ink-500 line-through'}`}>
                 {l.name}
-                <button onClick={() => post({ action: 'locToggle', id: l.id, active: !l.active })} disabled={busy} className="text-xs text-accent underline">{l.active ? 'desativar' : 'ativar'}</button>
-                <button onClick={() => { if (confirm(`Excluir "${l.name}"?`)) post({ action: 'locDelete', id: l.id }); }} disabled={busy} className="text-critical"><Trash2 className="h-3.5 w-3.5" /></button>
+                <button onClick={() => post({ action: 'locToggle', id: l.id, active: !l.active })} disabled={busy} className="text-xs text-sgo-brand underline">{l.active ? 'desativar' : 'ativar'}</button>
+                <button onClick={() => { if (confirm(`Excluir "${l.name}"?`)) post({ action: 'locDelete', id: l.id }); }} disabled={busy} className="text-danger"><Trash2 className="h-3.5 w-3.5" /></button>
               </span>
             ))}
           </div>
@@ -66,14 +66,14 @@ export function HygieneManageClient({ unitId, canManage, requests, locations }: 
 
       {/* Solicitações */}
       <div>
-        <p className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Em aberto ({open.length})</p>
-        {open.length === 0 && <p className="text-sm text-success">Nenhuma solicitação em aberto 🎉</p>}
+        <p className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Em aberto ({open.length})</p>
+        {open.length === 0 && <p className="text-sm text-sgo-success">Nenhuma solicitação em aberto 🎉</p>}
         <div className="space-y-2">
           {open.map((r) => (
-            <div key={r.id} className="flex items-start justify-between gap-2 rounded-lg border border-critical/30 bg-critical/5 p-3">
+            <div key={r.id} className="flex items-start justify-between gap-2 rounded-lg border border-danger/30 bg-danger/5 p-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-brand">🚻 {r.locationName}{r.issue ? ` · ${r.issue}` : ''}</p>
-                <p className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleString('pt-BR')}{r.rating ? ` · ${r.rating}★` : ''}{r.comment ? ` · "${r.comment}"` : ''}</p>
+                <p className="text-sm font-semibold text-sgo-brand">🚻 {r.locationName}{r.issue ? ` · ${r.issue}` : ''}</p>
+                <p className="text-xs text-ink-500">{new Date(r.createdAt).toLocaleString('pt-BR')}{r.rating ? ` · ${r.rating}★` : ''}{r.comment ? ` · "${r.comment}"` : ''}</p>
               </div>
               <Button size="sm" disabled={busy} onClick={() => post({ action: 'resolve', id: r.id })}><Check className="h-4 w-4" /> Resolver</Button>
             </div>
@@ -83,12 +83,12 @@ export function HygieneManageClient({ unitId, canManage, requests, locations }: 
 
       {resolved.length > 0 && (
         <details>
-          <summary className="cursor-pointer text-sm font-semibold text-accent">Resolvidas ({resolved.length})</summary>
+          <summary className="cursor-pointer text-sm font-semibold text-sgo-brand">Resolvidas ({resolved.length})</summary>
           <div className="mt-2 space-y-1.5">
             {resolved.map((r) => (
-              <div key={r.id} className="rounded-lg border bg-card p-2.5 text-xs">
-                <span className="font-semibold text-brand">{r.locationName}</span>{r.issue ? ` · ${r.issue}` : ''} · <span className="text-muted-foreground">{new Date(r.createdAt).toLocaleString('pt-BR')}</span>
-                {r.resolvedByName && <span className="text-success"> · resolvido por {r.resolvedByName}</span>}
+              <div key={r.id} className="rounded-lg border bg-sgo-surface p-2.5 text-xs">
+                <span className="font-semibold text-sgo-brand">{r.locationName}</span>{r.issue ? ` · ${r.issue}` : ''} · <span className="text-ink-500">{new Date(r.createdAt).toLocaleString('pt-BR')}</span>
+                {r.resolvedByName && <span className="text-sgo-success"> · resolvido por {r.resolvedByName}</span>}
               </div>
             ))}
           </div>

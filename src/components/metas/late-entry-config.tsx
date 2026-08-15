@@ -20,11 +20,11 @@ export function LateEntryConfig({ current }: { current: number }) {
   return (
     <div className="flex items-end gap-2 rounded-lg border border-dashed p-2 print:hidden">
       <div>
-        <label className="text-xs text-muted-foreground">Desconto por lançamento fora do prazo (% na meta)</label>
+        <label className="text-xs text-ink-500">Desconto por lançamento fora do prazo (% na meta)</label>
         <Input inputMode="decimal" value={v} onChange={(e) => setV(e.target.value)} className="h-9 w-24 text-sm" />
       </div>
       <Button size="sm" variant="outline" disabled={busy} onClick={save}>Salvar</Button>
-      <p className="pb-1 text-xs text-muted-foreground">Aplicado quando Admin/Supervisor corrige a data de Pagamentos, Notas, Gás ou Óleo.</p>
+      <p className="pb-1 text-xs text-ink-500">Aplicado quando Admin/Supervisor corrige a data de Pagamentos, Notas, Gás ou Óleo.</p>
     </div>
   );
 }

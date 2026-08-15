@@ -50,7 +50,7 @@ export function CloseForm({ occurrenceId }: { occurrenceId: string }) {
         <textarea
           id="just"
           rows={3}
-          className="w-full rounded-lg border-2 border-input bg-background p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand"
           value={justification}
           onChange={(e) => setJustification(e.target.value)}
         />
@@ -60,14 +60,14 @@ export function CloseForm({ occurrenceId }: { occurrenceId: string }) {
         <textarea
           id="ca"
           rows={3}
-          className="w-full rounded-lg border-2 border-input bg-background p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand"
           value={correctiveAction}
           onChange={(e) => setCorrectiveAction(e.target.value)}
         />
       </div>
       <DatePicker label="Data de revisão" value={reviewDate || null} onValueChange={(v) => setReviewDate(v ?? '')} />
 
-      {error && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{error}</p>}
+      {error && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{error}</p>}
 
       <Button onClick={submit} disabled={loading} size="lg" className="w-full" variant="default">
         {loading ? 'Encerrando…' : (<><CheckCircle2 className="h-5 w-5" /> Encerrar ocorrência</>)}

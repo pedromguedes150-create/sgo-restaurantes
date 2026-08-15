@@ -43,7 +43,7 @@ export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Un
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-dashed p-3">
-        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Novo usuário</h2>
+        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Novo usuário</h2>
         <div className="space-y-2">
           <div><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div><Label>E-mail</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
@@ -57,7 +57,7 @@ export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Un
               <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
             </div>
           )}
-          {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+          {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
           <Button onClick={create} disabled={busy} className="w-full"><Plus className="h-4 w-4" /> Criar usuário</Button>
         </div>
       </div>
@@ -101,23 +101,23 @@ function UserItem({ u, units, meId, onChange, onToggle }: { u: UserRow; units: U
   }
 
   return (
-    <div className="rounded-lg border bg-card p-3">
+    <div className="rounded-lg border bg-sgo-surface p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="font-semibold text-brand">{u.name}{isSelf && <span className="ml-1 text-xs text-muted-foreground">(você)</span>}</p>
-          <p className="text-xs text-muted-foreground">{u.email} · {ROLE_OPTIONS.find((r) => r.value === u.role)?.label ?? u.role}</p>
+          <p className="font-semibold text-sgo-brand">{u.name}{isSelf && <span className="ml-1 text-xs text-ink-500">(você)</span>}</p>
+          <p className="text-xs text-ink-500">{u.email} · {ROLE_OPTIONS.find((r) => r.value === u.role)?.label ?? u.role}</p>
         </div>
         <div className="flex items-center gap-1">
           <button onClick={onToggle} disabled={isSelf}>
             <StatusBadge tone={u.active ? 'success' : 'critical'}>{u.active ? 'Ativo' : 'Inativo'}</StatusBadge>
           </button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
-          <Button size="sm" variant="ghost" disabled={busy || isSelf} onClick={remove} aria-label="Excluir" className="text-critical"><Trash2 className="h-4 w-4" /></Button>
+          <Button size="sm" variant="ghost" disabled={busy || isSelf} onClick={remove} aria-label="Excluir" className="text-danger"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
 
       {editing && (
-        <div className="mt-2 space-y-2 rounded-lg bg-muted/40 p-2">
+        <div className="mt-2 space-y-2 rounded-lg bg-sunken/40 p-2">
           <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
           <div className="grid grid-cols-2 gap-2">
             <Select label="Perfil" size="sm" value={role} disabled={isSelf} onValueChange={setRole} options={ROLE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))} />
@@ -129,11 +129,11 @@ function UserItem({ u, units, meId, onChange, onToggle }: { u: UserRow; units: U
               <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
             </div>
           )}
-          {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+          {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
           <Button size="sm" className="w-full" disabled={busy} onClick={save}><Save className="h-4 w-4" /> Salvar alterações</Button>
         </div>
       )}
-      {!editing && msg && <p className="mt-1 text-sm font-medium text-critical">{msg}</p>}
+      {!editing && msg && <p className="mt-1 text-sm font-medium text-danger">{msg}</p>}
     </div>
   );
 }

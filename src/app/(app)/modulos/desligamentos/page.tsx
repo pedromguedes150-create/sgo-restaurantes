@@ -30,8 +30,8 @@ export default async function DesligamentosPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-brand">Desligamentos</h1>
-        <p className="text-sm text-muted-foreground">Solicitação do gerente → aprovação do supervisor → encaminhar ao RH.</p>
+        <h1 className="text-xl font-bold text-sgo-brand">Desligamentos</h1>
+        <p className="text-sm text-ink-500">Solicitação do gerente → aprovação do supervisor → encaminhar ao RH.</p>
       </div>
       <Card><CardContent className="pt-4">
         <TerminationsClient canRequest={canRequest} canDecide={canDecide} units={units} collaboratorsByUnit={collaboratorsByUnit} rows={rows} />

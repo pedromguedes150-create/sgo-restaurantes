@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 export default async function MetaConfigPage() {
   const user = (await getSessionUser())!;
   if (!['ADMIN', 'SUPERVISOR', 'CEO'].includes(user.role)) {
-    return <p className="text-sm text-muted-foreground">Restrito à Supervisão/Administração.</p>;
+    return <p className="text-sm text-ink-500">Restrito à Supervisão/Administração.</p>;
   }
   const [training, communication, evaluation, penalty, waste, commands] = await Promise.all([
     getTrainingWeight(), getCommunicationWeight(), getEvaluationWeight(), getLateEntryPenaltyPct(), getWasteMetaWeight(), getCommandsMetaWeight(),
@@ -33,10 +33,10 @@ export default async function MetaConfigPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/metas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Metas</Link>
+      <Link href="/modulos/metas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Metas</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><SlidersHorizontal className="h-5 w-5 text-accent" /> Configuração da Meta</h1>
-        <p className="text-sm text-muted-foreground">Tudo que pode contar na meta do gerente, num lugar só. Pesos novos nascem em 0 (desligados) — ligue quando a equipe estiver pronta.</p>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><SlidersHorizontal className="h-5 w-5 text-sgo-brand" /> Configuração da Meta</h1>
+        <p className="text-sm text-ink-500">Tudo que pode contar na meta do gerente, num lugar só. Pesos novos nascem em 0 (desligados) — ligue quando a equipe estiver pronta.</p>
       </div>
       <Card><CardContent className="pt-4">
         <MetaConfigClient components={components} canEdit={user.role === 'ADMIN'} />

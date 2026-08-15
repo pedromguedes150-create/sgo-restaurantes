@@ -103,35 +103,35 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
         </div>
         <a
           href={`/api/people/payouts/export?year=${yearMonth.split('-')[0]}&month=${Number(yearMonth.split('-')[1])}`}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border bg-sgo-surface px-3 py-1.5 text-xs font-semibold text-sgo-brand hover:border-sgo-brand"
         >
-          <FileSpreadsheet className="h-3.5 w-3.5 text-accent" /> Excel do mês
+          <FileSpreadsheet className="h-3.5 w-3.5 text-sgo-brand" /> Excel do mês
         </a>
       </div>
 
       {/* Dashboard do mês */}
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded-lg border bg-card p-3">
-          <p className="text-xs text-muted-foreground">Comissões no mês</p>
-          <p className="text-lg font-bold text-success tabular-nums">{brl(dash.totalCommission)}</p>
+        <div className="rounded-lg border bg-sgo-surface p-3">
+          <p className="text-xs text-ink-500">Comissões no mês</p>
+          <p className="text-lg font-bold text-sgo-success tabular-nums">{brl(dash.totalCommission)}</p>
         </div>
-        <div className="rounded-lg border bg-card p-3">
-          <p className="text-xs text-muted-foreground">Mobilidade no mês</p>
-          <p className="text-lg font-bold text-brand tabular-nums">{brl(dash.totalMobility)}</p>
+        <div className="rounded-lg border bg-sgo-surface p-3">
+          <p className="text-xs text-ink-500">Mobilidade no mês</p>
+          <p className="text-lg font-bold text-sgo-brand tabular-nums">{brl(dash.totalMobility)}</p>
         </div>
       </div>
 
       {dash.byUnit.length > 0 && (
-        <div className="rounded-lg border bg-card p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Por unidade</p>
+        <div className="rounded-lg border bg-sgo-surface p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Por unidade</p>
           <div className="space-y-1.5">
             {dash.byUnit.map((u) => (
               <div key={u.unitName} className="flex items-center justify-between gap-2 text-sm">
                 <span className="min-w-0 truncate">{u.unitName}</span>
                 <span className="shrink-0 text-xs tabular-nums">
-                  <span className="font-semibold text-success">{brl(u.commission)}</span>
+                  <span className="font-semibold text-sgo-success">{brl(u.commission)}</span>
                   {' · '}
-                  <span className="font-semibold text-brand">{brl(u.mobility)}</span>
+                  <span className="font-semibold text-sgo-brand">{brl(u.mobility)}</span>
                 </span>
               </div>
             ))}
@@ -140,17 +140,17 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
       )}
 
       {/* Tendência 12 meses */}
-      <div className="rounded-lg border bg-card p-3">
-        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Tendência (12 meses) — comissão + mobilidade</p>
+      <div className="rounded-lg border bg-sgo-surface p-3">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Tendência (12 meses) — comissão + mobilidade</p>
         <div className="flex items-end gap-1" style={{ height: 90 }}>
           {dash.trend.map((t) => {
             const total = t.commission + t.mobility;
             return (
               <div key={t.yearMonth} className="flex flex-1 flex-col items-center gap-1" title={`${fmtMonth(t.yearMonth)}: ${brl(total)}`}>
                 <div className="flex w-full flex-col justify-end" style={{ height: 64 }}>
-                  <div className="w-full rounded-t bg-accent/80" style={{ height: `${Math.round((total / maxTrend) * 100)}%`, minHeight: total > 0 ? 3 : 0 }} />
+                  <div className="w-full rounded-t bg-sgo-brand/80" style={{ height: `${Math.round((total / maxTrend) * 100)}%`, minHeight: total > 0 ? 3 : 0 }} />
                 </div>
-                <span className="text-[9px] text-muted-foreground">{fmtMonth(t.yearMonth)}</span>
+                <span className="text-[9px] text-ink-500">{fmtMonth(t.yearMonth)}</span>
               </div>
             );
           })}
@@ -158,8 +158,8 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
       </div>
 
       {dash.topCollaborators.length > 0 && (
-        <div className="rounded-lg border bg-card p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Maiores do mês</p>
+        <div className="rounded-lg border bg-sgo-surface p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Maiores do mês</p>
           <div className="space-y-1">
             {dash.topCollaborators.map((c, i) => (
               <div key={c.name} className="flex items-center justify-between text-sm">
@@ -174,7 +174,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
       {/* Lançamento (Supervisão/Admin) */}
       {canCreate && (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Lançar no mês selecionado</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Lançar no mês selecionado</p>
           <div className="space-y-2">
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar colaborador…" className="h-10 text-sm" />
             <Select
@@ -182,8 +182,8 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
               options={filteredCollabs.map((c) => ({ value: c.id, label: c.name, hint: [c.jobTitle, c.units].filter(Boolean).join(' · ') || undefined }))}
             />
             {collaboratorId && collabHistory && collabHistory.length > 0 && (
-              <div className="rounded-md bg-surface p-2">
-                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Histórico do colaborador (variação)</p>
+              <div className="rounded-md bg-canvas p-2">
+                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Histórico do colaborador (variação)</p>
                 <div className="space-y-0.5">
                   {collabHistory.map((h, i) => {
                     const prev = collabHistory.slice(i + 1).find((x) => x.type === h.type);
@@ -194,7 +194,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
                         <span>
                           <strong>{brl(h.amount)}</strong>
                           {diff != null && Math.abs(diff) >= 0.01 && (
-                            <span className={diff > 0 ? 'ml-1 text-success' : 'ml-1 text-critical'}>({diff > 0 ? '+' : ''}{brl(diff)})</span>
+                            <span className={diff > 0 ? 'ml-1 text-sgo-success' : 'ml-1 text-danger'}>({diff > 0 ? '+' : ''}{brl(diff)})</span>
                           )}
                         </span>
                       </p>
@@ -204,11 +204,11 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
               </div>
             )}
             {collaboratorId && collabHistory && collabHistory.length === 0 && (
-              <p className="text-xs text-muted-foreground">Primeiro lançamento deste colaborador.</p>
+              <p className="text-xs text-ink-500">Primeiro lançamento deste colaborador.</p>
             )}
             <div className="flex gap-1.5">
               {(['COMMISSION', 'MOBILITY'] as const).map((t) => (
-                <button key={t} onClick={() => setType(t)} className={type === t ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>
+                <button key={t} onClick={() => setType(t)} className={type === t ? 'rounded-full bg-sgo-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>
                   {TYPE[t].label}
                 </button>
               ))}
@@ -224,21 +224,21 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
 
       {/* Histórico do mês */}
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Lançamentos do mês ({rows.length})</p>
-        {rows.length === 0 && <p className="text-sm text-muted-foreground">Nenhum lançamento neste mês.</p>}
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Lançamentos do mês ({rows.length})</p>
+        {rows.length === 0 && <p className="text-sm text-ink-500">Nenhum lançamento neste mês.</p>}
         <div className="space-y-1.5">
           {rows.map((r) => (
-            <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2.5">
+            <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border bg-sgo-surface p-2.5">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-brand">{r.collaboratorName}</p>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-sm font-semibold text-sgo-brand">{r.collaboratorName}</p>
+                <p className="truncate text-xs text-ink-500">
                   {r.unitName} · {r.createdByName} · {new Date(r.createdAt).toLocaleDateString('pt-BR')}{r.note ? ` · ${r.note}` : ''}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <StatusBadge tone={TYPE[r.type].tone}>{TYPE[r.type].label}</StatusBadge>
                 <span className="font-semibold tabular-nums">{brl(r.amount)}</span>
-                {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => remove(r.id, r.collaboratorName)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
+                {isAdmin && <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => remove(r.id, r.collaboratorName)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
               </div>
             </div>
           ))}

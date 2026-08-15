@@ -115,7 +115,7 @@ export function OccurrenceForm({ units, types }: { units: UnitOpt[]; types: Type
         <textarea
           id="desc"
           rows={4}
-          className="w-full rounded-lg border-2 border-input bg-background p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Descreva o que aconteceu…"
@@ -134,7 +134,7 @@ export function OccurrenceForm({ units, types }: { units: UnitOpt[]; types: Type
         />
       </div>
 
-      {error && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{error}</p>}
+      {error && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{error}</p>}
 
       <Button onClick={submit} disabled={loading} size="lg" className="w-full">
         {loading ? 'Registrando…' : (<><Save className="h-5 w-5" /> Registrar ocorrência</>)}

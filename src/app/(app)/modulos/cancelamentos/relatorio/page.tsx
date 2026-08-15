@@ -28,37 +28,37 @@ export default async function CancelamentosRelatorioPage({ searchParams }: { sea
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <Link href="/modulos/cancelamentos" className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-brand"><ArrowLeft className="h-4 w-4" /> Cancelamentos</Link>
+        <Link href="/modulos/cancelamentos" className="inline-flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Cancelamentos</Link>
         <div className="flex gap-2">
-          <a href={exportHref} className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-muted"><Download className="h-4 w-4" /> Excel</a>
+          <a href={exportHref} className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-sunken"><Download className="h-4 w-4" /> Excel</a>
           <PrintButton label="PDF" />
         </div>
       </div>
 
       {units.length > 1 && (
         <div className="print:hidden">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Filtrar unidade</p>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500">Filtrar unidade</p>
           <UnitSelectNav units={[{ id: '', name: 'Todas as unidades' }, ...units]} selected={unitId ?? ''} />
         </div>
       )}
 
       <div>
-        <h1 className="text-xl font-bold text-brand">Relatório de Cancelamento de Cupons</h1>
-        <p className="text-sm text-muted-foreground">Competência {mm}/{yy}{unitId ? ` · ${units.find((u) => u.id === unitId)?.name ?? ''}` : ' · todas as unidades'}</p>
+        <h1 className="text-xl font-bold text-sgo-brand">Relatório de Cancelamento de Cupons</h1>
+        <p className="text-sm text-ink-500">Competência {mm}/{yy}{unitId ? ` · ${units.find((u) => u.id === unitId)?.name ?? ''}` : ' · todas as unidades'}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{summary.monthTotal}</p><p className="text-xs text-muted-foreground">cupons no mês</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-success">{summary.justifiedPct}%</p><p className="text-xs text-muted-foreground">justificados</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-critical">{summary.pending}</p><p className="text-xs text-muted-foreground">pendentes</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{formatBRL(totalValue)}</p><p className="text-xs text-muted-foreground">valor total</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-sgo-brand">{summary.monthTotal}</p><p className="text-xs text-ink-500">cupons no mês</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-sgo-success">{summary.justifiedPct}%</p><p className="text-xs text-ink-500">justificados</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.pending}</p><p className="text-xs text-ink-500">pendentes</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-sgo-brand">{formatBRL(totalValue)}</p><p className="text-xs text-ink-500">valor total</p></CardContent></Card>
       </div>
 
       <Card className="break-inside-avoid">
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <tr className="border-b bg-sunken/40 text-left text-xs uppercase tracking-wide text-ink-500">
                 <th className="px-3 py-2">Data</th>
                 <th className="px-3 py-2">Unidade</th>
                 <th className="px-3 py-2">Cupom</th>
@@ -69,7 +69,7 @@ export default async function CancelamentosRelatorioPage({ searchParams }: { sea
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-4 text-center text-muted-foreground">Nenhum cupom no período.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-4 text-center text-ink-500">Nenhum cupom no período.</td></tr>}
               {rows.map((r, i) => (
                 <tr key={i} className="border-b last:border-0">
                   <td className="px-3 py-1.5 tabular-nums">{r.operationalDate.split('-').reverse().join('/')}</td>
@@ -89,12 +89,12 @@ export default async function CancelamentosRelatorioPage({ searchParams }: { sea
       {summary.byOperator.length > 0 && (
         <Card className="break-inside-avoid">
           <CardContent className="pt-4">
-            <p className="mb-2 text-sm font-bold text-brand">Ranking por operador</p>
+            <p className="mb-2 text-sm font-bold text-sgo-brand">Ranking por operador</p>
             <div className="space-y-1">
               {summary.byOperator.map((o, i) => (
                 <div key={o.operator} className="flex justify-between text-sm">
                   <span>{i + 1}. {o.operator}</span>
-                  <span className="font-semibold text-brand tabular-nums">{o.count}</span>
+                  <span className="font-semibold text-sgo-brand tabular-nums">{o.count}</span>
                 </div>
               ))}
             </div>

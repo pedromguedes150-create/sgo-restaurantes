@@ -29,8 +29,8 @@ export default async function OleoPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-brand">Coleta de Óleo</h1>
-        <p className="text-sm text-muted-foreground">Controle da coleta de óleo usado (recebemos por ela): litros, valor/litro, total e forma de recebimento.</p>
+        <h1 className="text-xl font-bold text-sgo-brand">Coleta de Óleo</h1>
+        <p className="text-sm text-ink-500">Controle da coleta de óleo usado (recebemos por ela): litros, valor/litro, total e forma de recebimento.</p>
       </div>
       <Card><CardContent className="pt-4">
         <OilClient

@@ -38,15 +38,15 @@ export default async function PopDetailPage({ params, searchParams }: { params: 
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/pops" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+      <Link href="/modulos/pops" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
       <div>
-        <h1 className="text-xl font-bold text-brand">{pop.title}</h1>
-        <p className="text-xs text-muted-foreground">v{pop.version} · {[pop.category, pop.sector].filter(Boolean).join(' · ') || 'Geral'}</p>
+        <h1 className="text-xl font-bold text-sgo-brand">{pop.title}</h1>
+        <p className="text-xs text-ink-500">v{pop.version} · {[pop.category, pop.sector].filter(Boolean).join(' · ') || 'Geral'}</p>
       </div>
 
       <Card>
         <CardContent className="space-y-3 py-4 text-sm">
-          {blocks.length === 0 && <p className="text-muted-foreground">Sem conteúdo.</p>}
+          {blocks.length === 0 && <p className="text-ink-500">Sem conteúdo.</p>}
           {blocks.map((b, i) => {
             if (b.type === 'text') return <div key={i} className="pop-rich" dangerouslySetInnerHTML={{ __html: sanitizePopHtml(b.text ?? '') }} />;
             if (b.type === 'checklist') return (
@@ -68,7 +68,7 @@ export default async function PopDetailPage({ params, searchParams }: { params: 
                   </div>
                 );
               }
-              return <a key={i} href={b.url} className="text-accent underline">Abrir vídeo</a>;
+              return <a key={i} href={b.url} className="text-sgo-brand underline">Abrir vídeo</a>;
             }
             return null;
           })}

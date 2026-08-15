@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export default async function AuditoriaPage() {
   const user = (await getSessionUser())!;
   if (!canViewAudit(user)) {
-    return <p className="text-sm text-muted-foreground">Acesso restrito ao Administrador e à Diretoria.</p>;
+    return <p className="text-sm text-ink-500">Acesso restrito ao Administrador e à Diretoria.</p>;
   }
 
   // Busca e filtros acontecem no cliente sobre esta janela — resposta imediata,

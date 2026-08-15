@@ -41,8 +41,8 @@ export default async function AtestadosPage({ searchParams }: { searchParams: { 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-brand">Central de Atestados</h1>
-        <p className="text-sm text-muted-foreground">Lance o atestado por foto (a IA lê e pré-preenche), acompanhe quantidade e dias por unidade.</p>
+        <h1 className="text-xl font-bold text-sgo-brand">Central de Atestados</h1>
+        <p className="text-sm text-ink-500">Lance o atestado por foto (a IA lê e pré-preenche), acompanhe quantidade e dias por unidade.</p>
       </div>
       <Card><CardContent className="pt-4">
         <CertificatesClient

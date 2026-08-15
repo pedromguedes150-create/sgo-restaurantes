@@ -39,7 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const badges: Record<string, number> = {};
 
   return (
-    <div className="min-h-dvh bg-surface print:min-h-0 print:bg-white">
+    <div className="min-h-dvh bg-canvas print:min-h-0 print:bg-white">
       {/* O provider envolve header e sidebar: o botão de recolher mora no
           header e a largura muda na sidebar, então os dois dividem o estado. */}
       <SidebarStateProvider defaultCollapsed={sidebarCollapsed}>

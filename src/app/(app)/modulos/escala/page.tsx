@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function EscalaPage({ searchParams }: { searchParams: { unit?: string; year?: string; month?: string } }) {
   const user = (await getSessionUser())!;
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
-  if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
+  if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
 
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const now = new Date();
@@ -31,18 +31,18 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent print:hidden"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
+      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand print:hidden"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
       <div className="flex flex-wrap items-end justify-between gap-2 print:hidden">
         <div>
-          <h1 className="text-xl font-bold text-brand">Escala de funcionários</h1>
-          <p className="text-sm text-muted-foreground">Controle de presença mensal — Planejado, Realizado e Comparação.</p>
+          <h1 className="text-xl font-bold text-sgo-brand">Escala de funcionários</h1>
+          <p className="text-sm text-ink-500">Controle de presença mensal — Planejado, Realizado e Comparação.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/modulos/escala/trocas?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-accent">
-            <ArrowRightLeft className="h-4 w-4 text-accent" /> Trocas de escala (RH)
+          <Link href={`/modulos/escala/trocas?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-sgo-surface px-3 py-2 text-sm font-semibold text-sgo-brand transition-colors hover:border-sgo-brand">
+            <ArrowRightLeft className="h-4 w-4 text-sgo-brand" /> Trocas de escala (RH)
           </Link>
-          <Link href={`/modulos/escala/avisos-rh?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-accent">
-            <BellRing className="h-4 w-4 text-accent" /> Avisos ao RH
+          <Link href={`/modulos/escala/avisos-rh?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-sgo-surface px-3 py-2 text-sm font-semibold text-sgo-brand transition-colors hover:border-sgo-brand">
+            <BellRing className="h-4 w-4 text-sgo-brand" /> Avisos ao RH
           </Link>
         </div>
       </div>

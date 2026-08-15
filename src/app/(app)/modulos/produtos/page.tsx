@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export default async function ProdutosPage({ searchParams }: { searchParams: { unit?: string } }) {
   const user = (await getSessionUser())!;
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
-  if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
+  if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
   const selUnit = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const isOps = ['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role);
 
@@ -32,8 +32,8 @@ export default async function ProdutosPage({ searchParams }: { searchParams: { u
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><PackagePlus className="h-5 w-5 text-accent" /> Solicitação de Produtos</h1>
-        <p className="text-sm text-muted-foreground">Peça à <b>Fábrica</b> e ao <b>Centro de Distribuição</b> num pedido só — o sistema separa por destino.</p>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-sgo-brand"><PackagePlus className="h-5 w-5 text-sgo-brand" /> Solicitação de Produtos</h1>
+        <p className="text-sm text-ink-500">Peça à <b>Fábrica</b> e ao <b>Centro de Distribuição</b> num pedido só — o sistema separa por destino.</p>
       </div>
       <Card><CardContent className="pt-4">
         <ProductsClient

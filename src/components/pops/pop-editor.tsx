@@ -50,9 +50,9 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
     const url = window.prompt('Endereço do link (https://...)');
     if (url && /^(https?:|mailto:)/i.test(url)) exec('createLink', url);
   }
-  const btn = 'rounded border px-2 py-1 text-sm hover:bg-muted';
+  const btn = 'rounded border px-2 py-1 text-sm hover:bg-sunken';
   return (
-    <div className="rounded-lg border-2 border-input bg-background">
+    <div className="rounded-lg border-2 border-line-strong bg-sgo-surface">
       <div className="flex flex-wrap gap-1 border-b p-1">
         <button type="button" className={btn} title="Negrito" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('bold')}><Bold className="h-4 w-4" /></button>
         <button type="button" className={btn} title="Itálico" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('italic')}><Italic className="h-4 w-4" /></button>
@@ -66,7 +66,7 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
         contentEditable
         suppressContentEditableWarning
         onInput={() => onChange(ref.current?.innerHTML ?? '')}
-        className="pop-rich min-h-[88px] p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="pop-rich min-h-[88px] p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand"
       />
     </div>
   );
@@ -153,29 +153,29 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">{editing ? 'Editar POP' : 'Novo POP (Admin)'}</h2>
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">{editing ? 'Editar POP' : 'Novo POP (Admin)'}</h2>
       <div className="space-y-2">
         <div><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
         <div><Label>Categoria</Label><Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Função/Equipamento/Processo" /></div>
 
         {/* Treinamento */}
-        <div className="rounded-lg bg-muted/40 p-2">
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Treinamento — escolha UM tipo</p>
+        <div className="rounded-lg bg-sunken/40 p-2">
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Treinamento — escolha UM tipo</p>
           <label className={`flex items-center gap-2 text-sm ${sectors.length > 0 ? 'opacity-50' : ''}`}>
             <input type="checkbox" checked={isInitial} disabled={sectors.length > 0} onChange={(e) => { setIsInitial(e.target.checked); if (e.target.checked) setSectors([]); }} />
             Inicial — TODO colaborador da unidade faz (independe do setor)
           </label>
           <div className="mt-2">
-            <Label className="text-xs">Ou setorial — só os setores abaixo {isInitial && <span className="text-critical">(desmarque a opção Inicial para usar)</span>}</Label>
+            <Label className="text-xs">Ou setorial — só os setores abaixo {isInitial && <span className="text-danger">(desmarque a opção Inicial para usar)</span>}</Label>
             <div className="mt-1 flex flex-wrap gap-1">
               {sectors.map((s) => (
-                <span key={s} className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">{s}<button onClick={() => removeSector(s)} aria-label="Remover"><X className="h-3 w-3" /></button></span>
+                <span key={s} className="inline-flex items-center gap-1 rounded-full bg-sgo-brand px-2.5 py-1 text-xs font-semibold text-on-brand">{s}<button onClick={() => removeSector(s)} aria-label="Remover"><X className="h-3 w-3" /></button></span>
               ))}
-              {sectors.length === 0 && <span className="text-xs text-muted-foreground">Nenhum setor — será só inicial/geral.</span>}
+              {sectors.length === 0 && <span className="text-xs text-ink-500">Nenhum setor — será só inicial/geral.</span>}
             </div>
             {suggest.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
-                {suggest.map((s) => <button key={s} type="button" onClick={() => addSector(s)} className="rounded-full border px-2 py-0.5 text-xs hover:border-accent">+ {s}</button>)}
+                {suggest.map((s) => <button key={s} type="button" onClick={() => addSector(s)} className="rounded-full border px-2 py-0.5 text-xs hover:border-sgo-brand">+ {s}</button>)}
               </div>
             )}
             <div className="mt-1 flex gap-1">
@@ -199,7 +199,7 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
         {/* Blocos de conteúdo */}
         <div>
           <Label>Conteúdo</Label>
-          <p className="mb-1 text-xs text-muted-foreground">Monte o POP em blocos. Arraste pelo <GripVertical className="inline h-3 w-3" /> (ou use ▲▼) para reordenar.</p>
+          <p className="mb-1 text-xs text-ink-500">Monte o POP em blocos. Arraste pelo <GripVertical className="inline h-3 w-3" /> (ou use ▲▼) para reordenar.</p>
           <div className="space-y-2">
             {blocks.map((b) => (
               <div
@@ -208,20 +208,20 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
                 onDragStart={() => setDragKey(b.key)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => onDrop(b.key)}
-                className={`rounded-lg border bg-card p-2 ${dragKey === b.key ? 'opacity-50' : ''}`}
+                className={`rounded-lg border bg-sgo-surface p-2 ${dragKey === b.key ? 'opacity-50' : ''}`}
               >
                 <div className="mb-1 flex items-center gap-2">
-                  <span className="cursor-grab text-muted-foreground" title="Arraste para reordenar"><GripVertical className="h-4 w-4" /></span>
-                  <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{BLOCK_LABEL[b.type]}</span>
+                  <span className="cursor-grab text-ink-500" title="Arraste para reordenar"><GripVertical className="h-4 w-4" /></span>
+                  <span className="text-xs font-bold uppercase tracking-wide text-ink-500">{BLOCK_LABEL[b.type]}</span>
                   <div className="ml-auto flex items-center gap-1">
-                    <button type="button" className="rounded border px-1.5 py-1 hover:bg-muted" title="Subir" onClick={() => move(b.key, -1)}><ChevronUp className="h-4 w-4" /></button>
-                    <button type="button" className="rounded border px-1.5 py-1 hover:bg-muted" title="Descer" onClick={() => move(b.key, 1)}><ChevronDown className="h-4 w-4" /></button>
-                    <button type="button" className="rounded border px-1.5 py-1 text-critical hover:bg-muted" title="Remover bloco" onClick={() => removeBlock(b.key)}><Trash2 className="h-4 w-4" /></button>
+                    <button type="button" className="rounded border px-1.5 py-1 hover:bg-sunken" title="Subir" onClick={() => move(b.key, -1)}><ChevronUp className="h-4 w-4" /></button>
+                    <button type="button" className="rounded border px-1.5 py-1 hover:bg-sunken" title="Descer" onClick={() => move(b.key, 1)}><ChevronDown className="h-4 w-4" /></button>
+                    <button type="button" className="rounded border px-1.5 py-1 text-danger hover:bg-sunken" title="Remover bloco" onClick={() => removeBlock(b.key)}><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
                 {b.type === 'text' && <RichText value={b.text} onChange={(html) => updateBlock(b.key, { text: html })} />}
                 {b.type === 'checklist' && (
-                  <textarea rows={3} className="w-full rounded-lg border-2 border-input bg-background p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder="Um item por linha" value={b.items} onChange={(e) => updateBlock(b.key, { items: e.target.value })} />
+                  <textarea rows={3} className="w-full rounded-lg border-2 border-line-strong bg-sgo-surface p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand" placeholder="Um item por linha" value={b.items} onChange={(e) => updateBlock(b.key, { items: e.target.value })} />
                 )}
                 {b.type === 'image' && (
                   <Input value={b.url} onChange={(e) => updateBlock(b.key, { url: e.target.value })} placeholder="URL da imagem (https://...)" className="h-9 text-sm" />
@@ -231,7 +231,7 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
                 )}
               </div>
             ))}
-            {blocks.length === 0 && <p className="rounded-lg border border-dashed p-3 text-center text-sm text-muted-foreground">Nenhum bloco ainda. Adicione abaixo.</p>}
+            {blocks.length === 0 && <p className="rounded-lg border border-dashed p-3 text-center text-sm text-ink-500">Nenhum bloco ainda. Adicione abaixo.</p>}
           </div>
           <div className="mt-2 flex flex-wrap gap-1">
             <Button type="button" size="sm" variant="outline" onClick={() => addBlock('text')}><Type className="h-4 w-4" /> Texto</Button>
@@ -245,12 +245,12 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
           <Label>Unidades</Label>
           <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
         </div>
-        {editing && <p className="text-xs text-muted-foreground">Editar o conteúdo gera uma nova versão e os colaboradores precisarão refazer o treinamento.</p>}
-        {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+        {editing && <p className="text-xs text-ink-500">Editar o conteúdo gera uma nova versão e os colaboradores precisarão refazer o treinamento.</p>}
+        {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
         <div className="flex gap-2">
           <Button onClick={submit} disabled={busy} className="flex-1">{editing ? 'Salvar' : 'Publicar'}</Button>
           {!editing && <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>}
-          {editing && <Button variant="ghost" className="text-critical" onClick={remove} disabled={busy}><Trash2 className="h-4 w-4" /> Excluir</Button>}
+          {editing && <Button variant="ghost" className="text-danger" onClick={remove} disabled={busy}><Trash2 className="h-4 w-4" /> Excluir</Button>}
         </div>
       </div>
     </div>

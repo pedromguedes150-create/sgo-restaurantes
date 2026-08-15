@@ -16,10 +16,10 @@ export function OccurrencesConfigAdmin({ types }: { types: OccTypeRow[] }) {
   const router = useRouter();
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Tipos e categorias usados ao registrar uma ocorrência. Marque <strong>Manutenção</strong> ou <strong>TI</strong> para que ocorrências do tipo apareçam na sub-aba correspondente. A gravidade segue fixa em 4 níveis.</p>
+      <p className="text-sm text-ink-500">Tipos e categorias usados ao registrar uma ocorrência. Marque <strong>Manutenção</strong> ou <strong>TI</strong> para que ocorrências do tipo apareçam na sub-aba correspondente. A gravidade segue fixa em 4 níveis.</p>
       <div className="space-y-2">
         {types.map((t) => <TypeRow key={t.id} t={t} onChange={() => router.refresh()} />)}
-        {types.length === 0 && <p className="text-sm text-muted-foreground">Nenhum tipo cadastrado.</p>}
+        {types.length === 0 && <p className="text-sm text-ink-500">Nenhum tipo cadastrado.</p>}
       </div>
       <NewType onDone={() => router.refresh()} />
     </div>
@@ -43,7 +43,7 @@ function TypeRow({ t, onChange }: { t: OccTypeRow; onChange: () => void }) {
   }
 
   return (
-    <div className="rounded-lg border bg-card p-2.5">
+    <div className="rounded-lg border bg-sgo-surface p-2.5">
       <div className="flex items-center justify-between gap-2">
         {editing ? (
           <div className="flex flex-1 flex-col gap-1">
@@ -53,9 +53,9 @@ function TypeRow({ t, onChange }: { t: OccTypeRow; onChange: () => void }) {
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-brand">{t.name}</p>
-            {t.isMaintenance && <span className="inline-flex items-center gap-0.5 rounded bg-gold/10 px-1.5 py-0.5 text-[10px] font-bold text-gold"><Wrench className="h-3 w-3" /> Manutenção</span>}
-            {t.isIT && <span className="inline-flex items-center gap-0.5 rounded bg-gold/10 px-1.5 py-0.5 text-[10px] font-bold text-gold"><MonitorSmartphone className="h-3 w-3" /> TI</span>}
+            <p className="text-sm font-semibold text-sgo-brand">{t.name}</p>
+            {t.isMaintenance && <span className="inline-flex items-center gap-0.5 rounded bg-ink-700/10 px-1.5 py-0.5 text-[10px] font-bold text-ink-700"><Wrench className="h-3 w-3" /> Manutenção</span>}
+            {t.isIT && <span className="inline-flex items-center gap-0.5 rounded bg-ink-700/10 px-1.5 py-0.5 text-[10px] font-bold text-ink-700"><MonitorSmartphone className="h-3 w-3" /> TI</span>}
           </div>
         )}
         <div className="flex items-center gap-1">
@@ -65,10 +65,10 @@ function TypeRow({ t, onChange }: { t: OccTypeRow; onChange: () => void }) {
             : <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>}
           {editing
             ? <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setName(t.name); setMaint(t.isMaintenance); setIt(t.isIT); }} aria-label="Cancelar"><X className="h-4 w-4" /></Button>
-            : <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Excluir o tipo "${t.name}" e suas categorias?`)) call({ entity: 'occType', action: 'delete', id: t.id }); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
+            : <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm(`Excluir o tipo "${t.name}" e suas categorias?`)) call({ entity: 'occType', action: 'delete', id: t.id }); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
         </div>
       </div>
-      {msg && <p className="mt-1 text-xs font-medium text-critical">{msg}</p>}
+      {msg && <p className="mt-1 text-xs font-medium text-danger">{msg}</p>}
 
       <div className="mt-2 space-y-1 border-l-2 border-muted pl-3">
         {t.categories.map((c) => <CategoryRow key={c.id} c={c} onChange={onChange} />)}
@@ -94,7 +94,7 @@ function CategoryRow({ c, onChange }: { c: OccCategoryRow; onChange: () => void 
     <div className="flex items-center justify-between gap-2">
       {editing
         ? <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 flex-1 text-sm" />
-        : <span className="text-sm">{c.name}{!c.active && <span className="ml-1 text-xs text-muted-foreground">(inativa)</span>}</span>}
+        : <span className="text-sm">{c.name}{!c.active && <span className="ml-1 text-xs text-ink-500">(inativa)</span>}</span>}
       <div className="flex items-center gap-1">
         <button onClick={() => call({ entity: 'occCategory', action: 'toggle', id: c.id, active: !c.active })}><StatusBadge tone={c.active ? 'success' : 'critical'}>{c.active ? 'Ativa' : 'Inativa'}</StatusBadge></button>
         {editing
@@ -102,7 +102,7 @@ function CategoryRow({ c, onChange }: { c: OccCategoryRow; onChange: () => void 
           : <Button size="sm" variant="ghost" onClick={() => setEditing(true)} aria-label="Editar"><Pencil className="h-3.5 w-3.5" /></Button>}
         {editing
           ? <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setName(c.name); }} aria-label="Cancelar"><X className="h-3.5 w-3.5" /></Button>
-          : <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Excluir a categoria "${c.name}"?`)) call({ entity: 'occCategory', action: 'delete', id: c.id }); }} aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>}
+          : <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm(`Excluir a categoria "${c.name}"?`)) call({ entity: 'occCategory', action: 'delete', id: c.id }); }} aria-label="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>}
       </div>
     </div>
   );
@@ -142,7 +142,7 @@ function NewType({ onDone }: { onDone: () => void }) {
   }
   return (
     <div className="rounded-lg border border-dashed p-2.5">
-      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Novo tipo</p>
+      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Novo tipo</p>
       <div className="flex flex-col gap-2">
         <div className="flex items-end gap-2">
           <div className="flex-1"><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Manutenção predial" className="h-9 text-sm" /></div>
@@ -151,7 +151,7 @@ function NewType({ onDone }: { onDone: () => void }) {
         <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={maint} onChange={(e) => setMaint(e.target.checked)} /> É tipo de manutenção (aparece na sub-aba Manutenção)</label>
         <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={it} onChange={(e) => setIt(e.target.checked)} /> É tipo de TI (aparece na sub-aba TI)</label>
       </div>
-      {msg && <p className="mt-1 text-xs font-medium text-critical">{msg}</p>}
+      {msg && <p className="mt-1 text-xs font-medium text-danger">{msg}</p>}
     </div>
   );
 }

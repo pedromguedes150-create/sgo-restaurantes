@@ -31,14 +31,14 @@ export function UnitsAdmin({ units }: { units: UnitRow[] }) {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-dashed p-3">
-        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Nova unidade</h2>
+        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Nova unidade</h2>
         <div className="grid grid-cols-2 gap-2">
           <div><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div><Label>Sigla (code)</Label><Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="ex: KM13" /></div>
           <div className="col-span-2"><Label>Endereço</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} /></div>
           <div><Label>Hora de corte (0-23)</Label><Input inputMode="numeric" value={cutoffHour} onChange={(e) => setCutoffHour(e.target.value)} /></div>
         </div>
-        {msg && <p className="mt-2 text-sm font-medium text-critical">{msg}</p>}
+        {msg && <p className="mt-2 text-sm font-medium text-danger">{msg}</p>}
         <Button onClick={create} disabled={busy} className="mt-2 w-full"><Plus className="h-4 w-4" /> Criar unidade</Button>
       </div>
 
@@ -96,19 +96,19 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
   }
 
   return (
-    <div className="rounded-lg border bg-card p-3">
+    <div className="rounded-lg border bg-sgo-surface p-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="font-semibold text-brand">{unit.name} <span className="text-xs font-normal text-muted-foreground">({unit.code})</span></p>
+        <p className="font-semibold text-sgo-brand">{unit.name} <span className="text-xs font-normal text-ink-500">({unit.code})</span></p>
         <div className="flex items-center gap-1">
           <button onClick={toggle}><StatusBadge tone={unit.active ? 'success' : 'critical'}>{unit.active ? 'Ativa' : 'Inativa'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
-          <Button size="sm" variant="ghost" disabled={busy} onClick={remove} aria-label="Excluir" className="text-critical"><Trash2 className="h-4 w-4" /></Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={remove} aria-label="Excluir" className="text-danger"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">corte {String(unit.cutoffHour).padStart(2, '0')}:00 · {unit.timezone}</p>
+      <p className="text-xs text-ink-500">corte {String(unit.cutoffHour).padStart(2, '0')}:00 · {unit.timezone}</p>
 
       {editing && (
-        <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-2">
+        <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-sunken/40 p-2">
           <div className="col-span-2"><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
           <div className="col-span-2"><Label className="text-xs">Endereço</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} className="h-10 text-sm" /></div>
           <div><Label className="text-xs">Hora de corte (0-23)</Label><Input inputMode="numeric" value={cutoffHour} onChange={(e) => setCutoffHour(e.target.value)} className="h-10 text-sm" /></div>
@@ -124,7 +124,7 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
           <Button size="sm" variant="outline" disabled={busy} onClick={saveRh} aria-label="Salvar"><Save className="h-4 w-4" /></Button>
           <Button size="sm" disabled={busy || !unit.rhUnitName} onClick={sync} aria-label="Sincronizar"><RefreshCw className="h-4 w-4" /> Sincronizar</Button>
         </div>
-        {msg && <p className="mt-1 text-xs font-medium text-muted-foreground">{msg}</p>}
+        {msg && <p className="mt-1 text-xs font-medium text-ink-500">{msg}</p>}
       </div>
     </div>
   );

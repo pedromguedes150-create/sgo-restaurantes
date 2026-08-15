@@ -23,16 +23,16 @@ export default async function AtestadosRelatorioPage({ searchParams }: { searchP
   return (
     <div className="mx-auto max-w-3xl space-y-4 bg-white p-2 text-black print:p-0">
       <div className="flex items-center justify-between gap-2 print:hidden">
-        <Link href={`/modulos/atestados?mes=${ym}`} className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+        <Link href={`/modulos/atestados?mes=${ym}`} className="inline-flex items-center gap-1 text-sm font-semibold text-sgo-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
         <div className="flex gap-2">
-          <a href={`/api/certificates/export?mes=${ym}`} className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-semibold text-accent"><Download className="h-4 w-4" /> Excel/CSV</a>
+          <a href={`/api/certificates/export?mes=${ym}`} className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-semibold text-sgo-brand"><Download className="h-4 w-4" /> Excel/CSV</a>
           <PrintButton />
         </div>
       </div>
 
-      <div className="border-b-2 border-brand pb-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-brand">Relatório de Atestados — SGO Beija Flor</p>
-        <h1 className="text-2xl font-black text-brand">{ym}</h1>
+      <div className="border-b-2 border-sgo-brand pb-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-sgo-brand">Relatório de Atestados — SGO Beija Flor</p>
+        <h1 className="text-2xl font-black text-sgo-brand">{ym}</h1>
         <p className="text-sm text-gray-600">{report.totals.count} atestado(s) · {report.totals.days} dia(s) perdido(s)</p>
       </div>
 

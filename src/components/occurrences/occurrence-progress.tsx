@@ -37,14 +37,14 @@ export function OccurrenceProgress({ occurrenceId, updates, closed, types, curre
   return (
     <div className="space-y-3">
       {/* Timeline do andamento */}
-      <div className="rounded-lg border bg-card p-3">
-        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Andamento ({updates.length})</p>
-        {updates.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma fase registrada ainda.</p>}
-        <ol className="space-y-2 border-l-2 border-accent/30 pl-3">
+      <div className="rounded-lg border bg-sgo-surface p-3">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Andamento ({updates.length})</p>
+        {updates.length === 0 && <p className="text-sm text-ink-500">Nenhuma fase registrada ainda.</p>}
+        <ol className="space-y-2 border-l-2 border-sgo-brand/30 pl-3">
           {updates.map((u) => (
             <li key={u.id}>
               <p className="text-sm">{u.text}</p>
-              <p className="text-xs text-muted-foreground">{u.authorName} · {new Date(u.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+              <p className="text-xs text-ink-500">{u.authorName} · {new Date(u.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
             </li>
           ))}
         </ol>
@@ -59,7 +59,7 @@ export function OccurrenceProgress({ occurrenceId, updates, closed, types, curre
       {/* Reclassificar (move para Manutenção/TI conforme o tipo) */}
       {!closed && (
         <div className="rounded-lg border border-dashed p-3">
-          <button onClick={() => setReclass(!reclass)} className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <button onClick={() => setReclass(!reclass)} className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500">
             <Tags className="h-3.5 w-3.5" /> Reclassificar (tipo atual: {currentType})
           </button>
           {reclass && (
@@ -75,7 +75,7 @@ export function OccurrenceProgress({ occurrenceId, updates, closed, types, curre
                   options={[{ value: '', label: '— sem categoria —' }, ...type.categories.map((c) => ({ value: c.id, label: c.name }))]}
                 />
               )}
-              <p className="text-xs text-muted-foreground">Tipos marcados como Manutenção/TI movem a ocorrência para a sub-aba correspondente.</p>
+              <p className="text-xs text-ink-500">Tipos marcados como Manutenção/TI movem a ocorrência para a sub-aba correspondente.</p>
               <Button size="sm" disabled={busy || !typeId} onClick={() => void post({ action: 'reclassify', typeId, categoryId: categoryId || undefined })}>Aplicar</Button>
             </div>
           )}
