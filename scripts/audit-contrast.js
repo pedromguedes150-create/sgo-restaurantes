@@ -10,6 +10,18 @@
  * Uso: cole o conteúdo no console (ou injete via ferramenta de navegador).
  * Devolve JSON: { total, reprovados, piores[], porClasse{} }.
  *
+ * ⚠ AO TROCAR DE TEMA NA MESMA SESSÃO, force uma repintura antes de medir:
+ *
+ *     document.documentElement.setAttribute('data-theme', 'dark');
+ *     document.documentElement.style.display = 'none';
+ *     void document.documentElement.offsetHeight;
+ *     document.documentElement.style.display = '';
+ *
+ * Sem isso o Chrome devolve `background-color` velho em elementos com
+ * `backdrop-filter` (as barras `bg-glass`): a variável já resolve na cor nova,
+ * mas o computed style continua na antiga. Isso rendeu 18 "reprovações"
+ * fantasma numa tela que estava correta — o valor lido era o do tema anterior.
+ *
  * A matemática é a mesma de src/lib/ds/contrast.ts (que tem testes). Está
  * duplicada aqui de propósito: este arquivo precisa ser autossuficiente para
  * ser colado no console, sem bundler no meio.

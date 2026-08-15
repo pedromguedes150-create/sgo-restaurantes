@@ -1,6 +1,6 @@
 # Redesign — Onda 7: migração de cores e modo escuro
 
-> Aberta ao fim da Onda 6 (fase E). **Nada aqui foi feito ainda.**
+> Aberta ao fim da Onda 6 (fase E). **CONCLUÍDA em 15/08/2026** — ver o resumo no fim.
 > Regra permanente do redesign: trabalho em `redesign/onda-7`, nunca na `main`;
 > PR só sai de rascunho com a frase literal "liberar para produção".
 
@@ -57,3 +57,46 @@ do shadcn em `globals.css`; tirar o prefixo `sgo-`.
 É o item mais arriscado do redesign: mexe na cor de todas as telas de uma vez.
 O maior perigo é uma regressão de contraste passar despercebida numa tela pouco
 visitada — daí o auditor vir antes, e não depois.
+
+---
+
+## Resultado
+
+Os cinco passos foram executados na ordem proposta. O que o plano não previa e
+apareceu no caminho:
+
+**O auditor reprovou a própria base.** Antes de qualquer migração, 8 de 36
+elementos de /tarefas falhavam — todos tokens das Ondas 0-6.  passava só
+sobre branco;  não tinha valor que servisse e virou token não-textual
+(ícone, desabilitado); os três status caíam sobre .
+
+**O modificador de opacidade não funcionava nos tokens do DS.** computava transparente. Migrar os 198 usos de opacidade da paleta legada teria
+apagado todas as caixas tingidas do sistema — e passaria numa auditoria de
+contraste, porque fundo transparente mede contra o pai. Os tokens passaram a ser
+definidos em canal RGB (), que é o que permite o . De
+quebra, isso consertou 6 usos invisíveis desde a Onda 0.
+
+**Relatórios em PDF precisaram sair do tema.** Usavam  de
+propósito; convertê-los a tokens sem mais nada os quebraria no escuro. Ganharam
+o escopo , que repina os tokens nos valores claros.
+
+**O mapeamento em bloco de  colidiu uma vez:** no login o quadrado BF
+era  sobre , e os dois viraram a mesma cor. O auditor não
+pega esse caso — o texto continua contrastando, só o quadrado some.
+
+**Faltava  no bloco .** Quem escolhesse Escuro à
+mão ficava com as barras de desfoque brancas sobre a página escura. Bug da Onda
+0 que nunca apareceu porque o escuro nunca foi usado.
+
+## Auditoria final
+
+| Tela | Claro | Escuro |
+|---|---|---|
+| /tarefas | 0/26 | 0/36 |
+| /modulos/pagamentos | 0/44 | 0/44 |
+| /modulos/troco | 0/66 | 0/83 |
+| /modulos/escala | 0/110 | 0/116 |
+| /configuracoes | 0/88 | 0/88 |
+| /modulos/pessoas | 0/45 | 0/45 |
+| /modulos/notas | 0/53 | — |
+| /login | 0/7 | — |
