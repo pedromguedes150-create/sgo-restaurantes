@@ -34,7 +34,7 @@ export function UnitTasksSection({ unitName, summary, showSummary, defaultOpen, 
         className="flex w-full items-start gap-2 rounded-card p-4 text-left outline-none focus-visible:shadow-sgo-focus"
       >
         <span className="min-w-0 flex-1 space-y-1.5">
-          {unitName && <span className="sgo-type-11 block text-ink-400">{unitName}</span>}
+          {unitName && <span className="sgo-type-11 block text-ink-500">{unitName}</span>}
           {showSummary && (
             <>
               <span className="flex items-baseline justify-between gap-2">

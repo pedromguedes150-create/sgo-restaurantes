@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 export const controlBase = [
   // .sgo-control só carrega o mínimo de 44px em ponteiro grosso (regra 8).
   'sgo-control w-full rounded-control border bg-sgo-surface text-ink-900',
-  'placeholder:text-ink-400',
+  'placeholder:text-ink-500',
   'outline-none transition-colors duration-sgo-1 ease-sgo-std',
   'focus-visible:shadow-sgo-focus',
   'disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-400',
@@ -198,7 +198,7 @@ export function CurrencyField({ value, onValueChange, inputSize = 'md', classNam
   return (
     <Field label={label} hint={hint} error={error} required={required} htmlFor={fieldId} descId={descId}>
       <div className="relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-medium text-ink-400">R$</span>
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-medium text-ink-500">R$</span>
         <input
           id={fieldId}
           inputMode="decimal"

@@ -36,7 +36,7 @@ export function FilterBar({
   return (
     <div className={cn('rounded-card border border-line bg-sgo-surface p-3', className)}>
       <div className="mb-2 flex items-center justify-between">
-        <p className="sgo-type-11 flex items-center gap-1.5 text-ink-400">
+        <p className="sgo-type-11 flex items-center gap-1.5 text-ink-500">
           <Filter className="h-3.5 w-3.5" aria-hidden /> {title}
           {active ? <span className="rounded-pill bg-sgo-brand-tint-2 px-1.5 text-[11px] font-bold tabular-nums text-sgo-brand">{active}</span> : null}
         </p>

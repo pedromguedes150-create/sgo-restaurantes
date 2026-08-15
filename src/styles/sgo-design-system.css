@@ -19,10 +19,19 @@
    ========================================================================== */
 
 :root {
-  /* ---- Cor · texto (light) ---- */
+  /* ---- Cor · texto (light) ----
+     900/700/500 são para TEXTO e passam AAA (≥7:1) sobre as três superfícies
+     — surface, canvas e sunken. O 500 foi de #5e5751 para cá na Onda 7: no
+     valor antigo passava só sobre o branco (7,10) e reprovava sobre canvas
+     (6,53) e sunken (5,88).
+
+     400 NÃO é token de texto. É para ícone, estado desabilitado e decoração,
+     onde a regra do WCAG é 3:1 de não-texto (e desabilitado é isento). Não dá
+     para escurecê-lo até 7:1 sem que ele vire o 500 — o intervalo entre "7:1
+     sobre sunken" e o preto não comporta quatro degraus distinguíveis. */
   --sgo-ink-900: #1a1614;
   --sgo-ink-700: #47403c;
-  --sgo-ink-500: #5e5751;
+  --sgo-ink-500: #524c46;
   --sgo-ink-400: #7a736e;
 
   /* ---- Cor · linhas e superfícies (light) ---- */
@@ -104,7 +113,7 @@
   :root[data-theme='system'] {
     --sgo-ink-900: #f5f2f0;
     --sgo-ink-700: #d6d0cc;
-    --sgo-ink-500: #b5ada7;
+    --sgo-ink-500: #b8b0ab;
     --sgo-ink-400: #8f8781;
 
     --sgo-line: #332e2c;
@@ -137,7 +146,7 @@
 :root[data-theme='dark'] {
   --sgo-ink-900: #f5f2f0;
   --sgo-ink-700: #d6d0cc;
-  --sgo-ink-500: #b5ada7;
+  --sgo-ink-500: #b8b0ab;
   --sgo-ink-400: #8f8781;
 
   --sgo-line: #332e2c;

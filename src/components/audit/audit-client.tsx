@@ -91,7 +91,7 @@ export function AuditClient({ rows }: { rows: AuditRow[] }) {
               trailing={
                 <>
                   <StatusBadge tone="neutral">{r.modLabel}</StatusBadge>
-                  <span className="hidden text-[12px] tabular-nums text-ink-400 sm:inline">
+                  <span className="hidden text-[12px] tabular-nums text-ink-500 sm:inline">
                     {new Date(r.createdAt).toLocaleString('pt-BR')}
                   </span>
                 </>

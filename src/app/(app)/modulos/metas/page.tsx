@@ -77,7 +77,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
 
       {/* Mês de referência (histórico) */}
       <div className="max-w-xs print:hidden">
-        <p className="sgo-type-11 mb-1 text-ink-400">Mês de referência</p>
+        <p className="sgo-type-11 mb-1 text-ink-500">Mês de referência</p>
         <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" />
       </div>
 

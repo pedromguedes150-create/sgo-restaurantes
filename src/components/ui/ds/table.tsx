@@ -36,7 +36,7 @@ export interface TableProps<T> {
   className?: string;
 }
 
-const EMPTY = <span className="text-ink-400">–</span>;
+const EMPTY = <span className="text-ink-500">–</span>;
 
 export function Table<T>({ columns, rows, getRowKey, onRowClick, empty, caption, className }: TableProps<T>) {
   if (rows.length === 0 && empty) {
@@ -56,7 +56,7 @@ export function Table<T>({ columns, rows, getRowKey, onRowClick, empty, caption,
                 scope="col"
                 style={c.width ? { width: c.width } : undefined}
                 className={cn(
-                  'whitespace-nowrap border-b border-line px-3 py-2 text-[12px] font-semibold uppercase tracking-wide text-ink-400',
+                  'whitespace-nowrap border-b border-line px-3 py-2 text-[12px] font-semibold uppercase tracking-wide text-ink-500',
                   c.numeric ? 'text-right' : 'text-left',
                   c.hideOnMobile && 'hidden md:table-cell',
                 )}

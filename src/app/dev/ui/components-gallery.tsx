@@ -35,7 +35,7 @@ export function GallerySection({ title, hint, children }: { title: string; hint?
 export function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 last:border-b-0">
-      <span className="sgo-type-12 w-28 shrink-0 text-ink-400">{label}</span>
+      <span className="sgo-type-12 w-28 shrink-0 text-ink-500">{label}</span>
       {children}
     </div>
   );

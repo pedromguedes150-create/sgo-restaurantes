@@ -105,7 +105,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="sgo-type-11 mb-2 text-ink-400">Contagens diárias</p>
+              <p className="sgo-type-11 mb-2 text-ink-500">Contagens diárias</p>
               {recentCounts.length === 0 ? (
                 <EmptyState size="sm" icon={ClipboardList} title="Nenhuma contagem" />
               ) : (
@@ -122,7 +122,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
               )}
             </div>
             <div>
-              <p className="sgo-type-11 mb-2 text-ink-400">Divergências</p>
+              <p className="sgo-type-11 mb-2 text-ink-500">Divergências</p>
               {recentDivs.length === 0 ? (
                 <EmptyState size="sm" icon={ClipboardList} title="Nenhuma divergência" />
               ) : (

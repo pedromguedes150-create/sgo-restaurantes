@@ -19,7 +19,7 @@ function Toolbar() {
       >
         {collapsed ? 'Expandir' : 'Recolher'} sidebar
       </button>
-      <span className="sgo-type-12 text-ink-400">Sem banco/login — só valida a navegação.</span>
+      <span className="sgo-type-12 text-ink-500">Sem banco/login — só valida a navegação.</span>
     </div>
   );
 }

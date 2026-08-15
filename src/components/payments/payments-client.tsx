@@ -440,7 +440,7 @@ function List({ items, actions, selection }: {
             </div>
             {unitNames.map((u) => (
               <div key={u} className="space-y-1.5">
-                {unitNames.length > 1 && <p className="sgo-type-11 pt-0.5 text-ink-400">{shortUnitName(u)} <span className="font-normal">({byUnit.get(u)!.length})</span></p>}
+                {unitNames.length > 1 && <p className="sgo-type-11 pt-0.5 text-ink-500">{shortUnitName(u)} <span className="font-normal">({byUnit.get(u)!.length})</span></p>}
                 <DsList>
                   {byUnit.get(u)!.map((r) => (
                     <Row

@@ -76,7 +76,7 @@ export function MultiSelect({
           'disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-400',
         )}
       >
-        <span className={cn('flex-1 truncate', selected.length === 0 ? 'text-ink-400' : 'font-medium text-ink-900')}>{resumo}</span>
+        <span className={cn('flex-1 truncate', selected.length === 0 ? 'text-ink-500' : 'font-medium text-ink-900')}>{resumo}</span>
         <ChevronDown className={cn('h-4 w-4 shrink-0 text-ink-400 transition-transform duration-sgo-1 motion-reduce:transition-none', open && 'rotate-180')} aria-hidden />
       </button>
 
@@ -111,7 +111,7 @@ export function MultiSelect({
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Buscar…"
                 aria-label="Buscar opções"
-                className="h-9 w-full bg-transparent text-[14px] text-ink-900 outline-none placeholder:text-ink-400"
+                className="h-9 w-full bg-transparent text-[14px] text-ink-900 outline-none placeholder:text-ink-500"
               />
             </div>
           )}

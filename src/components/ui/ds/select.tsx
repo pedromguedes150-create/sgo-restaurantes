@@ -112,7 +112,7 @@ export function Select({
           onKeyDown={onKeyDown}
           className={cn(controlBase, controlSize[size], controlTone(!!error), 'flex items-center justify-between gap-2 text-left', className)}
         >
-          <span className={cn('truncate', !selected && 'text-ink-400')}>{selected?.label ?? placeholder}</span>
+          <span className={cn('truncate', !selected && 'text-ink-500')}>{selected?.label ?? placeholder}</span>
           <ChevronDown className={cn('h-4 w-4 shrink-0 text-ink-400 transition-transform duration-sgo-1 motion-reduce:transition-none', open && 'rotate-180')} aria-hidden />
         </button>
 
@@ -142,7 +142,7 @@ export function Select({
                     <Check className={cn('h-4 w-4 shrink-0', isSel ? 'text-sgo-brand' : 'text-transparent')} aria-hidden />
                     <span className="flex-1">
                       <span className="block">{o.label}</span>
-                      {o.hint && <span className="block text-[11px] text-ink-400">{o.hint}</span>}
+                      {o.hint && <span className="block text-[11px] text-ink-500">{o.hint}</span>}
                     </span>
                   </button>
                 </li>

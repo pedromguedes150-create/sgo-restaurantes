@@ -175,7 +175,7 @@ function ColorCard({ s, tokens }: { s: Swatch; tokens: Record<string, number[]> 
       </div>
       <div className="p-2">
         <div className="sgo-type-13 font-semibold text-ink-900">{s.name}</div>
-        <div className="sgo-type-11 sgo-nums text-ink-400">
+        <div className="sgo-type-11 sgo-nums text-ink-500">
           {rgb ? toHex(rgb) : '—'}
         </div>
         {r && ratio && (
@@ -225,7 +225,7 @@ export function DevUiClient() {
       <div className="mx-auto max-w-5xl px-6 py-16">
         <header className="mb-16 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="sgo-type-11 mb-1 text-ink-400">SGO · Redesign · Onda 0</p>
+            <p className="sgo-type-11 mb-1 text-ink-500">SGO · Redesign · Onda 0</p>
             <h1 className="sgo-type-34 font-bold text-ink-900">Design System</h1>
             <p className="sgo-body mt-2 text-ink-500">
               Tokens, tipografia, espaço, raios e movimento. Contraste medido no
@@ -240,14 +240,14 @@ export function DevUiClient() {
             {TYPE.map((t) => (
               <div key={t.cls} className="flex flex-wrap items-baseline justify-between gap-2 p-4">
                 <span className={`${t.cls} text-ink-900`}>Churrascaria Beija-Flor</span>
-                <span className="sgo-type-12 sgo-nums text-ink-400">{t.spec}</span>
+                <span className="sgo-type-12 sgo-nums text-ink-500">{t.spec}</span>
               </div>
             ))}
             <div className="flex flex-wrap items-baseline justify-between gap-2 p-4">
               <span className="sgo-body text-ink-900">
                 Corpo responsivo — 17px no mobile, 15px acima de 1024px.
               </span>
-              <span className="sgo-type-12 text-ink-400">.sgo-body</span>
+              <span className="sgo-type-12 text-ink-500">.sgo-body</span>
             </div>
           </div>
         </Section>
@@ -272,7 +272,7 @@ export function DevUiClient() {
           <div className="space-y-2 rounded-card border border-line bg-sgo-surface p-4">
             {SPACE.map((n) => (
               <div key={n} className="flex items-center gap-3">
-                <span className="sgo-type-12 sgo-nums w-10 text-right text-ink-400">{n}</span>
+                <span className="sgo-type-12 sgo-nums w-10 text-right text-ink-500">{n}</span>
                 <span className="h-4 rounded-control bg-sgo-brand" style={{ width: `${n}px` }} />
               </div>
             ))}
@@ -285,7 +285,7 @@ export function DevUiClient() {
               <div key={r.name} className="text-center">
                 <div className={`h-20 w-20 border border-line bg-sgo-brand-tint-2 ${r.cls}`} />
                 <div className="sgo-type-13 mt-2 font-semibold text-ink-900">{r.name}</div>
-                <div className="sgo-type-11 sgo-nums text-ink-400">{r.px}</div>
+                <div className="sgo-type-11 sgo-nums text-ink-500">{r.px}</div>
               </div>
             ))}
           </div>
@@ -295,7 +295,7 @@ export function DevUiClient() {
           <div className="space-y-4 rounded-card border border-line bg-sgo-surface p-4">
             {EASES.map((e) => (
               <div key={e.name} className="flex items-center gap-3">
-                <span className="sgo-type-12 w-20 text-ink-400">
+                <span className="sgo-type-12 w-20 text-ink-500">
                   {e.name} <span className="text-ink-500">· {e.hint}</span>
                 </span>
                 <div className="relative h-8 flex-1 rounded-pill bg-sunken">
@@ -307,7 +307,7 @@ export function DevUiClient() {
               </div>
             ))}
             {reduced && (
-              <p className="sgo-type-12 text-ink-400">
+              <p className="sgo-type-12 text-ink-500">
                 prefers-reduced-motion ativo — animação desligada.
               </p>
             )}

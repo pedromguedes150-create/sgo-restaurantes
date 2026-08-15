@@ -27,10 +27,10 @@ export function StatCard({ label, value, hint, delta, invertDelta, icon: Icon, c
   return (
     <div className={cn('rounded-card border border-line bg-sgo-surface p-4', className)}>
       <div className="flex items-start justify-between gap-2">
-        <p className="sgo-type-11 text-ink-400">{label}</p>
+        <p className="sgo-type-11 text-ink-500">{label}</p>
         {Icon && <Icon className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />}
       </div>
-      <p className={cn('sgo-type-34 mt-1 font-bold tabular-nums', empty ? 'text-ink-400' : 'text-ink-900')}>
+      <p className={cn('sgo-type-34 mt-1 font-bold tabular-nums', empty ? 'text-ink-500' : 'text-ink-900')}>
         {empty ? '–' : value}
       </p>
       <div className="mt-1 flex items-center gap-1.5">

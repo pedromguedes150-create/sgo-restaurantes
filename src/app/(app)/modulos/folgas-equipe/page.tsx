@@ -95,7 +95,7 @@ export default async function FolgasEquipePage({ searchParams }: { searchParams:
       )}
       {data.groups.map((g) => (
         <section key={g.unit}>
-          <p className="sgo-type-11 mb-2 text-ink-400">{shortUnitName(g.unit)} <span className="font-normal">({g.items.length})</span></p>
+          <p className="sgo-type-11 mb-2 text-ink-500">{shortUnitName(g.unit)} <span className="font-normal">({g.items.length})</span></p>
           <List>
             {g.items.map((it, i) => (
               <ListRow

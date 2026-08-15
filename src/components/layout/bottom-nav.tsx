@@ -31,7 +31,7 @@ export function BottomNav() {
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
-                  active ? 'text-sgo-brand' : 'text-ink-400',
+                  active ? 'text-sgo-brand' : 'text-ink-500',
                 )}
               >
                 <Icon className="h-5 w-5" />
@@ -45,7 +45,7 @@ export function BottomNav() {
             type="button"
             onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_EVENT))}
             aria-label="Buscar"
-            className="flex h-14 w-full flex-col items-center justify-center gap-1 text-[11px] font-medium text-ink-400 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:text-ink-700 focus-visible:shadow-sgo-focus"
+            className="flex h-14 w-full flex-col items-center justify-center gap-1 text-[11px] font-medium text-ink-500 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:text-ink-700 focus-visible:shadow-sgo-focus"
           >
             <Search className="h-5 w-5" />
             Buscar

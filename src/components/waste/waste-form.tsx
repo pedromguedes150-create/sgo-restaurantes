@@ -112,7 +112,7 @@ export function WasteForm({
     <div className="space-y-6">
       {kgCats.length > 0 && (
         <section>
-          <h3 className="sgo-type-11 mb-2 text-ink-400">Pesagem (kg)</h3>
+          <h3 className="sgo-type-11 mb-2 text-ink-500">Pesagem (kg)</h3>
           {/* 2 colunas a partir de sm: o formulário deixa de ser uma coluna longa. */}
           <div className="grid gap-3 sm:grid-cols-2">
             {kgCats.map((c) => (
@@ -132,7 +132,7 @@ export function WasteForm({
 
       {unCats.length > 0 && (
         <section>
-          <h3 className="sgo-type-11 mb-2 text-ink-400">Contagem (unidades)</h3>
+          <h3 className="sgo-type-11 mb-2 text-ink-500">Contagem (unidades)</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             {unCats.map((c) => (
               <div key={c.id} className="rounded-card border border-line p-3">

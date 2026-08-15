@@ -85,8 +85,8 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
             className="inline-flex h-11 items-center gap-2 rounded-control px-2 text-ink-500 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken hover:text-ink-900 focus-visible:shadow-sgo-focus md:h-9 lg:border lg:border-line-strong lg:pl-2.5 lg:pr-2"
           >
             <Search className="h-5 w-5 md:h-4 md:w-4" />
-            <span className="hidden text-[13px] font-medium text-ink-400 lg:inline">Buscar</span>
-            <kbd className="hidden rounded border border-line-strong px-1 text-[11px] font-medium text-ink-400 lg:inline">⌘K</kbd>
+            <span className="hidden text-[13px] font-medium text-ink-500 lg:inline">Buscar</span>
+            <kbd className="hidden rounded border border-line-strong px-1 text-[11px] font-medium text-ink-500 lg:inline">⌘K</kbd>
           </button>
           <Link href="/modulos/comunicacao" aria-label="Comunicação" className={`${iconBtn} relative`}>
             <Inbox className="h-5 w-5" />

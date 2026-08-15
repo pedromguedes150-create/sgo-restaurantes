@@ -84,7 +84,7 @@ export function UnitSwitcher({ units, selectedId }: { units: UnitOption[]; selec
                   <Check className={cn('h-4 w-4 shrink-0', active ? 'text-sgo-brand' : 'text-transparent')} />
                   <span className="flex-1">
                     <span className="block font-medium">{shortUnitName(u.name)}</span>
-                    <span className="block text-[11px] text-ink-400">{u.name}</span>
+                    <span className="block text-[11px] text-ink-500">{u.name}</span>
                   </span>
                 </button>
               </li>

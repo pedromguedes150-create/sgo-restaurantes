@@ -127,7 +127,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
           );
         })}
       </nav>
-      {!collapsed && <p className="mt-4 px-2.5 text-[11px] font-medium text-ink-400">SGO {APP_VERSION_LABEL}</p>}
+      {!collapsed && <p className="mt-4 px-2.5 text-[11px] font-medium text-ink-500">SGO {APP_VERSION_LABEL}</p>}
     </aside>
   );
 }

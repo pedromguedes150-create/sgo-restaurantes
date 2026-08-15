@@ -117,7 +117,7 @@ export default async function ConfiguracoesPage() {
           varrer uma grade plana lendo rótulo por rótulo. */}
       {SECOES.map((s) => (
         <section key={s.titulo}>
-          <h2 className="sgo-type-11 mb-2 text-ink-400">{s.titulo}</h2>
+          <h2 className="sgo-type-11 mb-2 text-ink-500">{s.titulo}</h2>
           <List>
             {s.itens.map((it) => (
               <ListRow
@@ -133,7 +133,7 @@ export default async function ConfiguracoesPage() {
       ))}
 
       <section>
-        <h2 className="sgo-type-11 mb-2 text-ink-400">Unidades ({units.length})</h2>
+        <h2 className="sgo-type-11 mb-2 text-ink-500">Unidades ({units.length})</h2>
         <List>
           {units.map((u) => (
             <ListRow
@@ -148,7 +148,7 @@ export default async function ConfiguracoesPage() {
       </section>
 
       <section>
-        <h2 className="sgo-type-11 mb-2 text-ink-400">Usuários ({users.length})</h2>
+        <h2 className="sgo-type-11 mb-2 text-ink-500">Usuários ({users.length})</h2>
         <List>
           {users.map((u) => (
             <ListRow
@@ -168,7 +168,7 @@ export default async function ConfiguracoesPage() {
       </section>
 
       <section>
-        <h2 className="sgo-type-11 mb-2 text-ink-400">LGPD</h2>
+        <h2 className="sgo-type-11 mb-2 text-ink-500">LGPD</h2>
         <div className="rounded-card border border-line bg-sgo-surface p-4">
           <dl className="space-y-1.5 text-[14px]">
             <div className="flex justify-between gap-2">

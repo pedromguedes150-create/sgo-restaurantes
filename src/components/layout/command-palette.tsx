@@ -98,14 +98,14 @@ export function CommandPalette({ units = [], viewable, isAdmin = false }: { unit
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar módulo, atalho ou unidade…"
-            className="h-12 w-full bg-transparent text-[15px] text-ink-900 outline-none placeholder:text-ink-400"
+            className="h-12 w-full bg-transparent text-[15px] text-ink-900 outline-none placeholder:text-ink-500"
             aria-label="Buscar"
           />
-          <kbd className="hidden rounded-control border border-line-strong px-1.5 py-0.5 text-[11px] font-medium text-ink-400 sm:inline">Esc</kbd>
+          <kbd className="hidden rounded-control border border-line-strong px-1.5 py-0.5 text-[11px] font-medium text-ink-500 sm:inline">Esc</kbd>
         </div>
 
         <ul ref={listRef} className="max-h-[52vh] overflow-auto p-1.5" role="listbox">
-          {filtered.length === 0 && <li className="px-3 py-6 text-center text-[14px] text-ink-400">Nada encontrado.</li>}
+          {filtered.length === 0 && <li className="px-3 py-6 text-center text-[14px] text-ink-500">Nada encontrado.</li>}
           {filtered.map((c, i) => {
             const Icon = c.icon;
             const isActive = i === active;
@@ -119,7 +119,7 @@ export function CommandPalette({ units = [], viewable, isAdmin = false }: { unit
                 >
                   <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-sgo-brand' : 'text-ink-400')} />
                   <span className={cn('flex-1 text-[14px]', isActive ? 'font-medium text-sgo-brand' : 'text-ink-700')}>{c.label}</span>
-                  <span className="text-[11px] text-ink-400">{c.group}</span>
+                  <span className="text-[11px] text-ink-500">{c.group}</span>
                   {isActive && <CornerDownLeft className="h-3.5 w-3.5 text-ink-400" />}
                 </button>
               </li>

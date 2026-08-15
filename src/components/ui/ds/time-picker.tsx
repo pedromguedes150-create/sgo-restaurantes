@@ -144,7 +144,7 @@ export function TimePicker({
           className={cn(controlBase, controlSize[size], controlTone(!!error), 'flex items-center gap-2 text-left tabular-nums', className)}
         >
           <Clock className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />
-          <span className={cn('flex-1', !value && 'text-ink-400')}>{value ?? placeholder}</span>
+          <span className={cn('flex-1', !value && 'text-ink-500')}>{value ?? placeholder}</span>
         </button>
 
         {open && (
@@ -154,7 +154,7 @@ export function TimePicker({
             onKeyDown={onKeyDown}
             className="absolute left-0 top-full z-40 mt-1 w-40 rounded-card border border-line bg-sgo-surface p-2 shadow-lg"
           >
-            <div className="mb-1 flex gap-1 text-[11px] font-semibold uppercase text-ink-400">
+            <div className="mb-1 flex gap-1 text-[11px] font-semibold uppercase text-ink-500">
               <span className="flex-1 text-center">Hora</span>
               <span className="flex-1 text-center">Min</span>
             </div>
