@@ -4,16 +4,17 @@ import { cn } from '@/lib/utils';
 
 // Alvos de toque grandes (mobile-first, baixo letramento digital)
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-brand-light active:bg-brand-dark',
-        gold: 'bg-accent text-accent-foreground hover:bg-gold-light active:bg-gold-dark',
-        destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
-        outline: 'border-2 border-input bg-background hover:bg-secondary',
-        ghost: 'hover:bg-secondary',
-        link: 'text-primary underline-offset-4 hover:underline',
+        default: 'bg-sgo-brand text-on-brand hover:bg-sgo-brand-hover active:bg-sgo-brand',
+        // Preenchimento em grafite — o 'gold' legado sempre foi cinza-escuro.
+        gold: 'bg-ink-700 text-on-brand hover:bg-ink-500 active:bg-ink-900',
+        destructive: 'bg-danger text-on-brand hover:opacity-90',
+        outline: 'border-2 border-line-strong bg-sgo-surface hover:bg-sunken',
+        ghost: 'hover:bg-sunken',
+        link: 'text-sgo-brand underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-12 px-5 py-3', // 48px — alvo de toque confortável

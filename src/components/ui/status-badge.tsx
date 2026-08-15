@@ -7,11 +7,11 @@ import { cn } from '@/lib/utils';
 export type StatusTone = 'success' | 'medium' | 'critical' | 'black' | 'neutral';
 
 const tones: Record<StatusTone, string> = {
-  success: 'bg-success/15 text-success',
-  medium: 'bg-medium/15 text-warning',
-  critical: 'bg-critical/15 text-critical',
+  success: 'bg-sgo-success/15 text-sgo-success',
+  medium: 'bg-warning/15 text-warning',
+  critical: 'bg-danger/15 text-danger',
   black: 'bg-zinc-800 text-white',
-  neutral: 'bg-secondary text-muted-foreground',
+  neutral: 'bg-sunken text-ink-500',
 };
 
 export function StatusBadge({

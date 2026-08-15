@@ -24,9 +24,9 @@ export function RichText({ value, onChange, minHeight = 90, placeholder }: {
     const url = window.prompt('Endereço do link (https://...)');
     if (url && /^(https?:|mailto:)/i.test(url)) exec('createLink', url);
   }
-  const btn = 'rounded border px-2 py-1 text-sm hover:bg-muted';
+  const btn = 'rounded border px-2 py-1 text-sm hover:bg-sunken';
   return (
-    <div className="rounded-lg border-2 border-input bg-background">
+    <div className="rounded-lg border-2 border-line-strong bg-sgo-surface">
       <div className="flex flex-wrap gap-1 border-b p-1">
         <button type="button" className={btn} title="Negrito" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('bold')}><Bold className="h-4 w-4" /></button>
         <button type="button" className={btn} title="Itálico" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('italic')}><Italic className="h-4 w-4" /></button>
@@ -42,7 +42,7 @@ export function RichText({ value, onChange, minHeight = 90, placeholder }: {
         suppressContentEditableWarning
         data-placeholder={placeholder ?? 'Escreva o conteúdo…'}
         onInput={() => onChange(ref.current?.innerHTML ?? '')}
-        className="pop-rich p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="pop-rich p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sgo-brand"
         style={{ minHeight }}
       />
     </div>

@@ -59,25 +59,25 @@ export function NotificationsList({ items }: { items: NotifItem[] }) {
         {CAT_LABEL.map((c) => {
           const n = c.key === 'ALL' ? items.length : (counts[c.key] ?? 0);
           return (
-            <button key={c.key} onClick={() => setCat(c.key)} className={cn('rounded-full border px-3 py-1.5 text-sm font-medium', cat === c.key ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground')}>
+            <button key={c.key} onClick={() => setCat(c.key)} className={cn('rounded-full border px-3 py-1.5 text-sm font-medium', cat === c.key ? 'bg-sgo-brand text-on-brand border-sgo-brand' : 'text-ink-500')}>
               {c.label} <span className="text-xs opacity-80">({n})</span>
             </button>
           );
         })}
         <Button size="sm" variant="outline" className="ml-auto" onClick={() => read()}><CheckCheck className="h-4 w-4" /> Marcar todas como lidas</Button>
       </div>
-      {filtered.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma notificação nesta categoria.</p>}
+      {filtered.length === 0 && <p className="text-sm text-ink-500">Nenhuma notificação nesta categoria.</p>}
       {filtered.map((n) => (
-        <div key={n.id} className={cn('rounded-lg border bg-card p-3', !n.read && 'border-accent/50 bg-accent/5', n.critical && 'border-critical/50 bg-critical/5')}>
+        <div key={n.id} className={cn('rounded-lg border bg-sgo-surface p-3', !n.read && 'border-sgo-brand/50 bg-sgo-brand/5', n.critical && 'border-danger/50 bg-danger/5')}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className={cn('font-semibold', n.read ? 'text-foreground' : 'text-brand')}>{n.title}</p>
-              {n.body && <p className="text-sm text-muted-foreground">{n.body}</p>}
-              <p className="mt-1 text-xs text-muted-foreground">{new Date(n.createdAt).toLocaleString('pt-BR')}</p>
-              {n.link && <Link href={n.link} className="text-xs font-semibold text-accent underline">Abrir</Link>}
+              <p className={cn('font-semibold', n.read ? 'text-ink-900' : 'text-sgo-brand')}>{n.title}</p>
+              {n.body && <p className="text-sm text-ink-500">{n.body}</p>}
+              <p className="mt-1 text-xs text-ink-500">{new Date(n.createdAt).toLocaleString('pt-BR')}</p>
+              {n.link && <Link href={n.link} className="text-xs font-semibold text-sgo-brand underline">Abrir</Link>}
             </div>
             {!n.read && (
-              <button onClick={() => read(n.id)} aria-label="Marcar como lida" className="shrink-0 text-success"><Check className="h-5 w-5" /></button>
+              <button onClick={() => read(n.id)} aria-label="Marcar como lida" className="shrink-0 text-sgo-success"><Check className="h-5 w-5" /></button>
             )}
           </div>
         </div>
