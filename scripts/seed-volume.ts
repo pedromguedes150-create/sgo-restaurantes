@@ -136,7 +136,7 @@ async function main() {
         if (jaTem === 0) {
           for (const [ci, c] of cats.entries()) {
             await prisma.wasteEntryItem.create({
-              data: { entryId: e.id, categoryId: c.id, quantity: +(1 + ((d * (ci + 2)) % 7) * 0.8).toFixed(2) },
+              data: { entryId: e.id, categoryId: c.id, kg: +(1 + ((d * (ci + 2)) % 7) * 0.8).toFixed(2) },
             });
           }
         }
