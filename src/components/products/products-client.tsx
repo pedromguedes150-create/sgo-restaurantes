@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Plus, Minus, Send, Printer, Factory, Warehouse, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 
 interface Prod { id: string; name: string; origin: string; category: string; measure: string }
 interface ReqItem { name: string; category: string; measure: string; qty: number }
@@ -77,9 +79,7 @@ function NewOrder({ units, selUnitId, products, post, busy }: { units: { id: str
   return (
     <div className="space-y-3">
       {units.length > 1 && (
-        <select value={unitId} onChange={(e) => setUnitId(e.target.value)} className="h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm">
-          {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
+        <Select aria-label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
       )}
       <div className="relative">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

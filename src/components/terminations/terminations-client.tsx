@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 
 type Unit = { id: string; name: string };
 type Collab = { id: string; name: string };
@@ -40,7 +42,6 @@ export function TerminationsClient({ canRequest, canDecide, units, collaborators
 }
 
 function RequestForm({ units, collaboratorsByUnit, onDone }: { units: Unit[]; collaboratorsByUnit: Record<string, Collab[]>; onDone: () => void }) {
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
   const [collaboratorId, setCollaboratorId] = useState('');
   const [ctx, setCtx] = useState<{ tenure: string | null; certCount: number; certDays: number } | null>(null);
@@ -73,8 +74,8 @@ function RequestForm({ units, collaboratorsByUnit, onDone }: { units: Unit[]; co
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>Empresa</Label><select className={sel} value={unitId} onChange={(e) => { setUnitId(e.target.value); pickCollab(''); }}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>
-        <div><Label>Colaborador</Label><select className={sel} value={collaboratorId} onChange={(e) => pickCollab(e.target.value)}><option value="">Selecione…</option>{collabs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+        <Select label="Empresa" value={unitId} onValueChange={(v) => { setUnitId(v); pickCollab(''); }} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
+        <Select label="Colaborador" placeholder="Selecione…" value={collaboratorId} onValueChange={pickCollab} options={collabs.map((c) => ({ value: c.id, label: c.name }))} />
       </div>
 
       {ctx && (
@@ -86,7 +87,7 @@ function RequestForm({ units, collaboratorsByUnit, onDone }: { units: Unit[]; co
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>Tipo de aviso</Label><select className={sel} value={noticeType} onChange={(e) => setNoticeType(e.target.value as 'WORKED' | 'INDEMNIFIED')}><option value="WORKED">Trabalhado</option><option value="INDEMNIFIED">Indenizado</option></select></div>
+        <Select label="Tipo de aviso" value={noticeType} onValueChange={(v) => setNoticeType(v as 'WORKED' | 'INDEMNIFIED')} options={[{ value: 'WORKED', label: 'Trabalhado' }, { value: 'INDEMNIFIED', label: 'Indenizado' }]} />
         <div><Label>Idade (informe)</Label><Input inputMode="numeric" value={age} onChange={(e) => setAge(e.target.value.replace(/\D/g, ''))} placeholder="ex: 34" /></div>
       </div>
       <div><Label>Justificativa do tipo de aviso</Label><Input value={noticeJustification} onChange={(e) => setNoticeJust(e.target.value)} placeholder="por que trabalhado/indenizado" /></div>

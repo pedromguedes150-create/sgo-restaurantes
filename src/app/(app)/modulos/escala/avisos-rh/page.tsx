@@ -5,6 +5,8 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { FormSelect, FormDatePicker } from '@/components/ui/ds/form-controls';
+import { shortUnitName } from '@/lib/unit-name';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,16 +44,13 @@ export default async function AvisosRhPage({ searchParams }: { searchParams: { d
       </div>
 
       <form className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-2 print:hidden" method="get">
-        <div><label className="text-xs text-muted-foreground">De</label><input type="date" name="de" defaultValue={de} className="block h-10 rounded-lg border-2 border-input bg-background px-3 text-sm" /></div>
-        <div><label className="text-xs text-muted-foreground">Até</label><input type="date" name="ate" defaultValue={ate} className="block h-10 rounded-lg border-2 border-input bg-background px-3 text-sm" /></div>
+        <FormDatePicker name="de" label="De" defaultValue={de} className="w-40" />
+        <FormDatePicker name="ate" label="Até" defaultValue={ate} min={de} className="w-40" />
         {units.length > 1 && (
-          <div>
-            <label className="text-xs text-muted-foreground">Unidade</label>
-            <select name="unit" defaultValue={unitId ?? ''} className="block h-10 rounded-lg border-2 border-input bg-background px-3 text-sm">
-              <option value="">Todas</option>
-              {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </div>
+          <FormSelect
+            name="unit" label="Unidade" defaultValue={unitId ?? ''} className="w-52"
+            options={[{ value: '', label: 'Todas' }, ...units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))]}
+          />
         )}
         <button type="submit" className="h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground">Filtrar</button>
         <span className="ml-auto text-xs text-muted-foreground">{rows.length} aviso(s) no período</span>

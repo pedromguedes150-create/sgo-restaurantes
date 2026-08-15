@@ -7,6 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { Select } from '@/components/ui/ds/select';
+import { DateTimePicker } from '@/components/ui/ds/date-time-picker';
+
+const PRIORIDADES = [
+  { value: 'NORMAL', label: 'Normal' },
+  { value: 'IMPORTANT', label: 'Importante' },
+  { value: 'URGENT', label: 'Urgente' },
+];
 
 type Priority = 'NORMAL' | 'IMPORTANT' | 'URGENT';
 interface Unit { id: string; name: string }
@@ -111,12 +119,8 @@ export function CommunicationEdit({ id, initial, units, people }: { id: string; 
           <div><Label>Mensagem</Label><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="w-full rounded-lg border-2 border-input bg-background px-3 py-2 text-sm" /></div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Prioridade</Label>
-              <select className={sel} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-                <option value="NORMAL">Normal</option><option value="IMPORTANT">Importante</option><option value="URGENT">Urgente</option>
-              </select>
-            </div>
-            <div><Label>Prazo de confirmação</Label><Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></div>
+            <Select label="Prioridade" value={priority} onValueChange={(v) => setPriority(v as Priority)} options={PRIORIDADES} />
+            <DateTimePicker label="Prazo de confirmação" value={dueAt} onValueChange={setDueAt} />
           </div>
 
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={requiresResponse} onChange={(e) => setRequiresResponse(e.target.checked)} /> Exigir resposta (foto/comentário)</label>

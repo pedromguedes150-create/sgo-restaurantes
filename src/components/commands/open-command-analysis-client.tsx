@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Upload, Printer, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatBRL } from '@/lib/utils';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+
+
 
 interface Suspect { number: string; openedAt: string | null; openedDate: string | null; value: number; daysOpen: number; items: { name: string; qty: number; value: number }[] }
 interface Analysis { id: string; cutDate: string; fileName: string | null; createdByName: string; createdAt: string; totalCommands: number; suspectCount: number; suspectValue: number; suspects: Suspect[] }
@@ -42,9 +45,10 @@ export function OpenCommandAnalysisClient({ unitId, unitName, today, analyses }:
       {/* Upload */}
       <div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3 print:hidden">
         <div>
-          <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">Data de corte</label>
-          <input type="date" value={cutDate} max={today} onChange={(e) => setCutDate(e.target.value)} className="h-10 rounded-lg border-2 border-input bg-background px-2 text-sm" />
-          <p className="mt-0.5 text-[11px] text-muted-foreground">comandas abertas antes desta data = suspeitas</p>
+          <DatePicker
+            label="Data de corte" max={today} value={cutDate || null} onValueChange={(v) => setCutDate(v ?? '')}
+            hint="comandas abertas antes desta data = suspeitas"
+          />
         </div>
         <Button disabled={busy} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {busy ? 'Analisando…' : 'Subir relatório (.xlsx/.csv)'}</Button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ''; }} />

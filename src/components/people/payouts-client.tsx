@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
 
 export interface PayoutRowUI {
   id: string; collaboratorName: string; unitName: string; type: 'COMMISSION' | 'MOBILITY';
@@ -93,9 +94,13 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <select value={yearMonth} onChange={(e) => router.push(`/modulos/pessoas/comissoes?mes=${e.target.value}`)} className="h-9 rounded-md border bg-card px-2 text-sm font-semibold capitalize">
-          {months.map((m) => <option key={m} value={m}>{fmtMonthLong(m)}</option>)}
-        </select>
+        <div className="w-56">
+          <Select
+            aria-label="Mês" size="sm" className="capitalize" value={yearMonth}
+            onValueChange={(v) => router.push(`/modulos/pessoas/comissoes?mes=${v}`)}
+            options={months.map((m) => ({ value: m, label: fmtMonthLong(m) }))}
+          />
+        </div>
         <a
           href={`/api/people/payouts/export?year=${yearMonth.split('-')[0]}&month=${Number(yearMonth.split('-')[1])}`}
           className="ml-auto inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"
@@ -172,10 +177,10 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Lançar no mês selecionado</p>
           <div className="space-y-2">
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar colaborador…" className="h-10 text-sm" />
-            <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={collaboratorId} onChange={(e) => setCollaboratorId(e.target.value)}>
-              <option value="">Selecione o colaborador…</option>
-              {filteredCollabs.map((c) => <option key={c.id} value={c.id}>{c.name}{c.jobTitle ? ` — ${c.jobTitle}` : ''} ({c.units})</option>)}
-            </select>
+            <Select
+              aria-label="Colaborador" placeholder="Selecione o colaborador…" value={collaboratorId} onValueChange={setCollaboratorId}
+              options={filteredCollabs.map((c) => ({ value: c.id, label: c.name, hint: [c.jobTitle, c.units].filter(Boolean).join(' · ') || undefined }))}
+            />
             {collaboratorId && collabHistory && collabHistory.length > 0 && (
               <div className="rounded-md bg-surface p-2">
                 <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Histórico do colaborador (variação)</p>

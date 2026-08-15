@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
 
 export interface Collab { id: string; name: string; jobTitle: string | null; units: string[] }
 export interface Vac { id: string; collaborator: string; unit: string; start: string; end: string; status: 'CONFIRMED' | 'CHANGE_REQUESTED' | 'APPROVED' | 'REQUESTED'; changeNote: string | null }
@@ -76,13 +78,13 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
             <div className="rounded-lg border border-dashed p-3">
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Solicitar férias ao RH</p>
               <div className="space-y-2">
-                <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={vCollab} onChange={(e) => setVCollab(e.target.value)}>
-                  <option value="">Selecione o colaborador…</option>
-                  {collaborators.map((c) => <option key={c.id} value={c.id}>{c.name}{c.jobTitle ? ` — ${c.jobTitle}` : ''}</option>)}
-                </select>
+                <Select
+                  aria-label="Colaborador" placeholder="Selecione o colaborador…" value={vCollab} onValueChange={setVCollab}
+                  options={collaborators.map((c) => ({ value: c.id, label: c.name, hint: c.jobTitle ?? undefined }))}
+                />
                 <div className="grid grid-cols-2 gap-2">
-                  <div><Label className="text-xs">Início</Label><Input type="date" value={vStart} onChange={(e) => setVStart(e.target.value)} className="h-10 text-sm" /></div>
-                  <div><Label className="text-xs">Fim</Label><Input type="date" value={vEnd} onChange={(e) => setVEnd(e.target.value)} className="h-10 text-sm" /></div>
+                  <DatePicker label="Início" value={vStart || null} onValueChange={(v) => setVStart(v ?? '')} />
+                  <DatePicker label="Fim" min={vStart || undefined} value={vEnd || null} onValueChange={(v) => setVEnd(v ?? '')} />
                 </div>
                 <Input value={vNote} onChange={(e) => setVNote(e.target.value)} placeholder="Observação (opcional)" className="h-10 text-sm" />
                 <Button className="w-full" disabled={busy || !vCollab || !vStart || !vEnd} onClick={vacRequest}><Plus className="h-4 w-4" /> Pedir ao RH</Button>

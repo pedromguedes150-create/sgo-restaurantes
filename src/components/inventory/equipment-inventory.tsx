@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 import { formatBRL } from '@/lib/utils';
 
 interface Unit { id: string; name: string }
@@ -48,7 +50,11 @@ export function EquipmentInventory({ canEdit, isAdmin, units, suppliers, items, 
 
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         {tabs.map((t) => <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>)}
-        {multi && <select className="ml-auto h-9 rounded-lg border-2 border-input bg-background px-2 text-sm" value={unitId} onChange={(e) => setUnitId(e.target.value)}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>}
+        {multi && (
+          <div className="ml-auto w-44">
+            <Select aria-label="Unidade" size="sm" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
+          </div>
+        )}
       </div>
 
       {tab === 'estoque' && <Estoque items={shown} canEdit={canEdit} isAdmin={isAdmin} suppliers={suppliers} unitId={multi ? unitId : units[0]?.id ?? ''} />}
@@ -133,7 +139,7 @@ function ItemForm({ suppliers, unitId, edit, onDone, onCancel }: { suppliers: Su
       <div className="grid grid-cols-2 gap-2">
         <div className="col-span-2"><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
         <div><Label className="text-xs">Categoria</Label><Input value={category} onChange={(e) => setCategory(e.target.value)} className="h-10 text-sm" placeholder="ex: Cozinha" /></div>
-        <div><Label className="text-xs">Fornecedor</Label><select className="h-10 w-full rounded-lg border-2 border-input bg-background px-2 text-sm" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}><option value="">—</option>{suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+        <Select label="Fornecedor" size="sm" value={supplierId} onValueChange={setSupplierId} options={[{ value: '', label: '— nenhum —' }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]} />
         <div><Label className="text-xs">Unidade (un/cx/kg/L)</Label><Input value={unitLabel} onChange={(e) => setUnitLabel(e.target.value)} className="h-10 text-sm" /></div>
         <div><Label className="text-xs">Valor unitário (R$)</Label><Input inputMode="decimal" value={unitValue} onChange={(e) => setUnitValue(e.target.value)} className="h-10 text-sm" /></div>
         <div><Label className="text-xs">Estoque mínimo</Label><Input inputMode="decimal" value={minQty} onChange={(e) => setMinQty(e.target.value)} className="h-10 text-sm" placeholder="opcional" /></div>
@@ -174,7 +180,7 @@ function Movimentar({ items }: { items: EquipItem[] }) {
   if (items.length === 0) return <p className="text-sm text-muted-foreground">Cadastre itens antes de movimentar.</p>;
   return (
     <div className="space-y-3">
-      <div><Label>Item</Label><select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={itemId} onChange={(e) => setItemId(e.target.value)}><option value="">— selecione —</option>{items.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.currentQty} {i.unitLabel})</option>)}</select></div>
+      <Select label="Item" placeholder="— selecione —" value={itemId} onValueChange={setItemId} options={items.map((i) => ({ value: i.id, label: i.name, hint: `${i.currentQty} ${i.unitLabel} em estoque` }))} />
       <div className="flex gap-2">
         <button onClick={() => setType('IN')} className={type === 'IN' ? 'flex flex-1 items-center justify-center gap-1 rounded-lg bg-success/15 px-3 py-2 text-sm font-bold text-success' : 'flex flex-1 items-center justify-center gap-1 rounded-lg border px-3 py-2 text-sm'}><ArrowDownCircle className="h-4 w-4" /> Entrada</button>
         <button onClick={() => setType('OUT')} className={type === 'OUT' ? 'flex flex-1 items-center justify-center gap-1 rounded-lg bg-critical/15 px-3 py-2 text-sm font-bold text-critical' : 'flex flex-1 items-center justify-center gap-1 rounded-lg border px-3 py-2 text-sm'}><ArrowUpCircle className="h-4 w-4" /> Saída</button>

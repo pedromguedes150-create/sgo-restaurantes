@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { Select } from '@/components/ui/ds/select';
 
 interface Answer { itemId: string; label: string; kind: string; value: string | number | boolean | null }
 interface SubmissionRow { id: string; templateId: string; formTitle: string; unitName: string; respondentName: string; createdAt: string; answers: Answer[] }
 interface FormOpt { id: string; title: string }
 
-const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
 const dt = (s: string) => new Date(s).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 function showValue(a: Answer): string {
@@ -35,16 +35,23 @@ export function ChecklistSubmissions({ forms, submissions, ficha, days }: { form
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
-        <select className={sel} value={ficha} onChange={(e) => nav({ ficha: e.target.value })}>
-          <option value="">Todas as fichas</option>
-          {forms.map((f) => <option key={f.id} value={f.id}>{f.title}</option>)}
-        </select>
-        <select className={sel} value={days} onChange={(e) => nav({ dias: Number(e.target.value) })}>
-          <option value={7}>Últimos 7 dias</option>
-          <option value={30}>Últimos 30 dias</option>
-          <option value={90}>Últimos 90 dias</option>
-          <option value={365}>Último ano</option>
-        </select>
+        <div className="w-56">
+          <Select
+            aria-label="Ficha" size="sm" value={ficha} onValueChange={(v) => nav({ ficha: v })}
+            options={[{ value: '', label: 'Todas as fichas' }, ...forms.map((f) => ({ value: f.id, label: f.title }))]}
+          />
+        </div>
+        <div className="w-44">
+          <Select
+            aria-label="Período" size="sm" value={String(days)} onValueChange={(v) => nav({ dias: Number(v) })}
+            options={[
+              { value: '7', label: 'Últimos 7 dias' },
+              { value: '30', label: 'Últimos 30 dias' },
+              { value: '90', label: 'Últimos 90 dias' },
+              { value: '365', label: 'Último ano' },
+            ]}
+          />
+        </div>
         <span className="text-xs text-muted-foreground"><strong className="text-brand">{submissions.length}</strong> envio(s)</span>
       </div>
 

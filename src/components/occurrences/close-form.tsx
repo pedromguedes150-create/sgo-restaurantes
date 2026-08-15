@@ -6,6 +6,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/ds/date-picker';
 
 /** Encerramento de ocorrência (Supervisor/Admin): justificativa + ação corretiva + data de revisão. */
 export function CloseForm({ occurrenceId }: { occurrenceId: string }) {
@@ -64,10 +65,7 @@ export function CloseForm({ occurrenceId }: { occurrenceId: string }) {
           onChange={(e) => setCorrectiveAction(e.target.value)}
         />
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="rev">Data de revisão</Label>
-        <Input id="rev" type="date" value={reviewDate} onChange={(e) => setReviewDate(e.target.value)} />
-      </div>
+      <DatePicker label="Data de revisão" value={reviewDate || null} onValueChange={(v) => setReviewDate(v ?? '')} />
 
       {error && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{error}</p>}
 

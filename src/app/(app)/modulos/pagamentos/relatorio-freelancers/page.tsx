@@ -8,6 +8,7 @@ import { PrintButton } from '@/components/ui/print-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { formatBRL } from '@/lib/utils';
 import { ArrowLeft, Download, AlertTriangle } from 'lucide-react';
+import { FormDatePicker } from '@/components/ui/ds/form-controls';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,7 +81,7 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
         <form method="get" className="flex items-end gap-1.5">
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ou fechamento semanal</p>
-            <input type="date" name="semana" defaultValue={weekFrom ?? ''} className="h-10 rounded-lg border-2 border-input bg-background px-3 text-sm font-medium" />
+            <FormDatePicker name="semana" aria-label="Início da semana" defaultValue={weekFrom ?? ''} className="w-44" />
             {selectedUnit && <input type="hidden" name="unit" value={selectedUnit} />}
           </div>
           <button type="submit" className="h-10 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground">Ver semana</button>

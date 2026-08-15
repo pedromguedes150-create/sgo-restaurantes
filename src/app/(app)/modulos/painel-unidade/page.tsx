@@ -7,6 +7,8 @@ import { getMetaBreakdown } from '@/lib/metas/query';
 import { Card, CardContent } from '@/components/ui/card';
 import { PrintButton } from '@/components/ui/print-button';
 import { ArrowLeft, ClipboardCheck } from 'lucide-react';
+import { FormSelect } from '@/components/ui/ds/form-controls';
+import { shortUnitName } from '@/lib/unit-name';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,18 +56,14 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
       </div>
 
       <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3 print:hidden">
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">Unidade</label>
-          <select name="unit" defaultValue={selUnit.id} className="h-10 rounded-lg border-2 border-input bg-background px-2 text-sm">
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">Mês</label>
-          <select name="mes" defaultValue={ym} className="h-10 rounded-lg border-2 border-input bg-background px-2 text-sm">
-            {months.map((mm) => { const [yy, m2] = mm.split('-'); return <option key={mm} value={mm}>{MONTHS[Number(m2) - 1]}/{yy}</option>; })}
-          </select>
-        </div>
+        <FormSelect
+          name="unit" label="Unidade" defaultValue={selUnit.id} className="w-52"
+          options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+        />
+        <FormSelect
+          name="mes" label="Mês" defaultValue={ym} className="w-44"
+          options={months.map((mm) => { const [yy, m2] = mm.split('-'); return { value: mm, label: `${MONTHS[Number(m2) - 1]}/${yy}` }; })}
+        />
         <button type="submit" className="h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground">Ver</button>
       </form>
 

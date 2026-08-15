@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { postAdmin } from '@/lib/admin-client';
 import { cn } from '@/lib/utils';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 
 export interface EvalRow {
   collaboratorId: string; name: string; jobTitle: string | null; unitId: string; unitName: string; observationCount: number;
@@ -67,18 +69,20 @@ export function EvaluationClient({ rows, yearMonth, months, canEvaluate, isAdmin
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={yearMonth}
-          onChange={(e) => router.push(`/modulos/pessoas/avaliacao?mes=${e.target.value}`)}
-          className="h-9 rounded-md border bg-card px-2 text-sm font-semibold"
-        >
-          {months.map((m) => <option key={m} value={m}>{fmtMonth(m)}</option>)}
-        </select>
+        <div className="w-56">
+          <Select
+            aria-label="Mês" size="sm" className="capitalize" value={yearMonth}
+            onValueChange={(v) => router.push(`/modulos/pessoas/avaliacao?mes=${v}`)}
+            options={months.map((m) => ({ value: m, label: fmtMonth(m) }))}
+          />
+        </div>
         {unitOptions.length > 1 && (
-          <select value={unitFilter} onChange={(e) => setUnitFilter(e.target.value)} className="h-9 max-w-56 rounded-md border bg-card px-2 text-sm font-semibold">
-            <option value="ALL">Todas as unidades</option>
-            {unitOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-          </select>
+          <div className="w-56">
+            <Select
+              aria-label="Filtrar por unidade" size="sm" value={unitFilter} onValueChange={setUnitFilter}
+              options={[{ value: 'ALL', label: 'Todas as unidades' }, ...unitOptions.map(([id, name]) => ({ value: id, label: shortUnitName(name) }))]}
+            />
+          </div>
         )}
         {(['PENDING', 'ALL'] as const).map((f) => (
           <button key={f} onClick={() => setFilter(f)} className={filter === f ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>

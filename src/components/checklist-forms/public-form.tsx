@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { CheckCircle2, Send } from 'lucide-react';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { TimePicker } from '@/components/ui/ds/time-picker';
 
 interface Field { id: string; kind: string; label: string; section: string | null; required: boolean; options: string[]; order: number }
 interface Data { title: string; description: string | null; unitName: string; fields: Field[]; collaborators: { id: string; name: string }[] }
@@ -55,10 +58,10 @@ export function ChecklistPublicForm({ token, data }: { token: string; data: Data
 
       <div className="rounded-xl border bg-card p-3">
         <label className="mb-1 block text-sm font-semibold text-brand">Seu nome <span className="text-critical">*</span></label>
-        <select className={box} value={collaboratorId} onChange={(e) => setCollaboratorId(e.target.value)}>
-          <option value="">Selecione…</option>
-          {data.collaborators.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <Select
+          aria-label="Seu nome" placeholder="Selecione…" value={collaboratorId} onValueChange={setCollaboratorId}
+          options={data.collaborators.map((c) => ({ value: c.id, label: c.name }))}
+        />
         {data.collaborators.length === 0 && <p className="mt-1 text-xs text-critical">Nenhum funcionário cadastrado nesta unidade. Avise a gestão.</p>}
       </div>
 
@@ -80,14 +83,18 @@ export function ChecklistPublicForm({ token, data }: { token: string; data: Data
               {f.kind === 'TEXTAREA' ? (
                 <textarea rows={3} className="w-full rounded-lg border-2 border-input bg-background px-3 py-2 text-sm" value={(v as string) ?? ''} onChange={(e) => set(f.id, e.target.value)} />
               ) : f.kind === 'SELECT' ? (
-                <select className={box} value={(v as string) ?? ''} onChange={(e) => set(f.id, e.target.value)}>
-                  <option value="">Selecione…</option>
-                  {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
+                <Select
+                  aria-label={f.label} placeholder="Selecione…" value={(v as string) ?? ''} onValueChange={(nv) => set(f.id, nv)}
+                  options={f.options.map((o) => ({ value: o, label: o }))}
+                />
+              ) : f.kind === 'DATE' ? (
+                <DatePicker aria-label={f.label} value={(v as string) || null} onValueChange={(nv) => set(f.id, nv ?? '')} />
+              ) : f.kind === 'TIME' ? (
+                <TimePicker aria-label={f.label} value={(v as string) || null} onValueChange={(nv) => set(f.id, nv ?? '')} />
               ) : (
                 <input
                   className={box}
-                  type={f.kind === 'NUMBER' ? 'number' : f.kind === 'TIME' ? 'time' : f.kind === 'DATE' ? 'date' : 'text'}
+                  type={f.kind === 'NUMBER' ? 'number' : 'text'}
                   inputMode={f.kind === 'NUMBER' ? 'decimal' : undefined}
                   value={(v as string) ?? ''}
                   onChange={(e) => set(f.id, e.target.value)}

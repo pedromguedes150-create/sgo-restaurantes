@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PrintButton } from '@/components/ui/print-button';
 import { UnitFilter } from '@/components/ui/unit-filter';
 import { ArrowLeft } from 'lucide-react';
+import { FormDatePicker } from '@/components/ui/ds/form-controls';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,8 +43,8 @@ export default async function CorrecoesPage({ searchParams }: { searchParams: { 
         {multi && <UnitFilter units={units.map((u) => ({ id: u.id, name: u.name }))} selected={unitFilter.all ? [] : unitFilter.ids} />}
         <form className="flex flex-wrap items-end gap-2">
           {!unitFilter.all && <input type="hidden" name="unit" value={unitFilter.ids.join(',')} />}
-          <div><label className="block text-xs font-medium text-muted-foreground">De</label><input type="date" name="from" defaultValue={from} max={to} className="h-9 rounded-lg border-2 border-input bg-background px-2 text-sm" /></div>
-          <div><label className="block text-xs font-medium text-muted-foreground">Até</label><input type="date" name="to" defaultValue={to} className="h-9 rounded-lg border-2 border-input bg-background px-2 text-sm" /></div>
+          <FormDatePicker name="from" label="De" size="sm" defaultValue={from} max={to} className="w-36" />
+          <FormDatePicker name="to" label="Até" size="sm" defaultValue={to} min={from} className="w-36" />
           <button className="h-9 rounded-lg border px-3 text-sm font-semibold hover:border-accent">Ver</button>
         </form>
       </div>

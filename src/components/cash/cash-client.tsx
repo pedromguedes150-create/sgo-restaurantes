@@ -7,6 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
+
+
 
 export interface SessionUI {
   id: string; operationalDate: string; seq: number;
@@ -100,9 +104,13 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         {units.length > 1 && (
-          <select className="h-9 rounded-md border bg-card px-2 text-sm font-semibold" value={selectedUnitId} onChange={(e) => router.push(`/modulos/troco?unit=${e.target.value}`)}>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
+          <div className="w-52">
+            <Select
+              aria-label="Unidade" size="sm" value={selectedUnitId}
+              onValueChange={(v) => router.push(`/modulos/troco?unit=${v}`)}
+              options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+            />
+          </div>
         )}
         <a
           href={`/api/cash/export?unit=${selectedUnitId}&year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`}

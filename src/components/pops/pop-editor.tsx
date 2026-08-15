@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MultiSelect } from '@/components/ui/multi-select';
 import type { PopBlock } from '@/lib/pops';
+import { Select } from '@/components/ui/ds/select';
 
 export interface PopEdit {
   id: string; title: string; category: string | null;
@@ -183,11 +184,15 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
             </div>
           </div>
           <div className="mt-2">
-            <Label className="text-xs">Recorrência</Label>
-            <select className="ml-2 h-9 rounded-lg border-2 border-input bg-background px-2 text-sm" value={recurrence} onChange={(e) => setRecurrence(e.target.value as 'ONCE' | 'MONTHLY')}>
-              <option value="ONCE">Único (faz uma vez)</option>
-              <option value="MONTHLY">Mensal (reciclagem todo mês)</option>
-            </select>
+            <div className="w-56">
+              <Select
+                label="Recorrência" size="sm" value={recurrence} onValueChange={(v) => setRecurrence(v as 'ONCE' | 'MONTHLY')}
+                options={[
+                  { value: 'ONCE', label: 'Único', hint: 'faz uma vez' },
+                  { value: 'MONTHLY', label: 'Mensal', hint: 'reciclagem todo mês' },
+                ]}
+              />
+            </div>
           </div>
         </div>
 

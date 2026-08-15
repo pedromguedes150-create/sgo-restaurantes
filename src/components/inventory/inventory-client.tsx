@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 
 export interface InvItem {
   id: string;
@@ -90,15 +93,10 @@ function ScheduleForm({ units, onDone }: { units: { id: string; name: string }[]
     <div className="rounded-lg border border-dashed p-3">
       <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Agendar inventário (Admin)</h2>
       <div className="space-y-2">
-        <div>
-          <Label>Unidade</Label>
-          <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
+        <Select label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
         <div className="grid grid-cols-2 gap-2">
           <div><Label>Categoria</Label><Input value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="ex: Bebidas" /></div>
-          <div><Label>Data</Label><Input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} /></div>
+          <DatePicker label="Data" value={scheduledDate || null} onValueChange={(v) => setScheduledDate(v ?? '')} />
         </div>
         <Button onClick={submit} disabled={busy} className="w-full"><Plus className="h-4 w-4" /> Agendar</Button>
         {msg && <p className="text-sm font-medium text-muted-foreground">{msg}</p>}

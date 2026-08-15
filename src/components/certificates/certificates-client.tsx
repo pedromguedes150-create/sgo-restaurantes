@@ -15,6 +15,16 @@ import { CERT_TYPE_LABELS } from '@/lib/certificates/labels';
 import type { CertListItem, CertReport } from '@/lib/certificates/query';
 import type { CertificateType } from '@prisma/client';
 
+/** Últimos 12 meses a partir do selecionado — o <input type="month"> abria qualquer mês, mas o painel só tem dado recente. */
+function ultimosMeses(atual: string) {
+  const [y, m] = atual.split('-').map(Number);
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(y, m - 1 - i, 1);
+    const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return { value: v, label: d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) };
+  });
+}
+
 type Unit = { id: string; name: string };
 type Collab = { id: string; name: string };
 
@@ -267,7 +277,13 @@ function Panel({ report, ym }: { report: CertReport; ym: string }) {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <Label className="text-xs">Mês</Label>
-          <Input type="month" value={ym} onChange={(e) => { if (e.target.value) router.push(`/modulos/atestados?mes=${e.target.value}`); }} className="h-10 w-44 text-sm" />
+          <div className="w-52">
+            <Select
+              aria-label="Mês" className="capitalize" value={ym}
+              onValueChange={(v) => router.push(`/modulos/atestados?mes=${v}`)}
+              options={ultimosMeses(ym)}
+            />
+          </div>
         </div>
         <a href={`/modulos/atestados/relatorio?mes=${ym}`} className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-semibold text-accent"><Printer className="h-4 w-4" /> Relatório (PDF)</a>
       </div>

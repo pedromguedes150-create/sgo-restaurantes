@@ -10,6 +10,14 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { postAdmin } from '@/lib/admin-client';
+import { Select } from '@/components/ui/ds/select';
+import { DateTimePicker } from '@/components/ui/ds/date-time-picker';
+
+const PRIORIDADES = [
+  { value: 'NORMAL', label: 'Normal' },
+  { value: 'IMPORTANT', label: 'Importante' },
+  { value: 'URGENT', label: 'Urgente' },
+];
 
 type Priority = 'NORMAL' | 'IMPORTANT' | 'URGENT';
 export interface InboxItem { recipientId: string; communicationId: string; status: 'PENDING' | 'CONFIRMED'; late: boolean; dueAt: string; title: string; priority: Priority; pinned: boolean; author: string; attachments: number }
@@ -188,12 +196,8 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
       <div><Label>Mensagem</Label><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="w-full rounded-lg border-2 border-input bg-background px-3 py-2 text-sm" placeholder="Escreva o comunicado…" /></div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>Prioridade</Label>
-          <select className={sel} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-            <option value="NORMAL">Normal</option><option value="IMPORTANT">Importante</option><option value="URGENT">Urgente</option>
-          </select>
-        </div>
-        <div><Label>Prazo de confirmação</Label><Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></div>
+        <Select label="Prioridade" value={priority} onValueChange={(v) => setPriority(v as Priority)} options={PRIORIDADES} />
+        <DateTimePicker label="Prazo de confirmação" value={dueAt} onValueChange={setDueAt} />
       </div>
 
       <div className="flex flex-wrap gap-4 text-sm">

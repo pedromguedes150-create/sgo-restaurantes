@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Upload, Download, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/ds/select';
 
 interface Prod { id: string; name: string; origin: string; category: string; measure: string; active: boolean }
 const MEASURES = ['un', 'kg', 'cx', 'pct', 'L', 'dz'];
@@ -50,9 +51,9 @@ export function ProductCatalogAdmin({ products }: { products: Prod[] }) {
       {/* Novo produto */}
       <div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3">
         <div className="flex-1 min-w-[8rem]"><label className="text-xs">Nome</label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 text-sm" /></div>
-        <div><label className="text-xs">Origem</label><select value={origin} onChange={(e) => setOrigin(e.target.value)} className="h-9 rounded-lg border-2 border-input bg-background px-2 text-sm"><option value="FABRICA">Fábrica</option><option value="CD">CD</option></select></div>
+        <div className="w-32"><Select label="Origem" size="sm" value={origin} onValueChange={setOrigin} options={[{ value: 'FABRICA', label: 'Fábrica' }, { value: 'CD', label: 'CD' }]} /></div>
         <div><label className="text-xs">Categoria</label><Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Geral" className="h-9 w-28 text-sm" /></div>
-        <div><label className="text-xs">Medida</label><select value={measure} onChange={(e) => setMeasure(e.target.value)} className="h-9 rounded-lg border-2 border-input bg-background px-2 text-sm">{MEASURES.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
+        <div className="w-24"><Select label="Medida" size="sm" value={measure} onValueChange={setMeasure} options={MEASURES.map((m) => ({ value: m, label: m }))} /></div>
         <Button size="sm" disabled={busy || !name.trim()} onClick={async () => { await post({ action: 'catUpsert', name: name.trim(), origin, category: category.trim() || 'Geral', measure }); setName(''); setCategory(''); }}><Plus className="h-4 w-4" /></Button>
       </div>
 
