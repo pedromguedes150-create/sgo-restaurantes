@@ -515,3 +515,56 @@
   background-color: var(--sgo-surface);
   color: var(--sgo-ink-900);
 }
+
+/* =============================================================================
+   Escopo SEMPRE ESCURO — visor da câmera e afins.
+   Simétrico ao .sgo-print: ali o fundo é papel e sempre claro, aqui é a imagem
+   da câmera e sempre preta. Nos dois casos o tema do app não se aplica, e sem
+   isto o texto seguiria o tema e sumiria contra o fundo fixo.
+   ========================================================================== */
+.sgo-on-dark {
+  --sgo-ink-900-rgb: 245 242 240;
+  --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
+  --sgo-ink-700-rgb: 214 208 204;
+  --sgo-ink-700: rgb(var(--sgo-ink-700-rgb));
+  --sgo-ink-500-rgb: 184 176 171;
+  --sgo-ink-500: rgb(var(--sgo-ink-500-rgb));
+  --sgo-ink-400-rgb: 143 135 129;
+  --sgo-ink-400: rgb(var(--sgo-ink-400-rgb));
+  --sgo-line-rgb: 51 46 44;
+  --sgo-line: rgb(var(--sgo-line-rgb));
+  --sgo-line-strong-rgb: 64 58 55;
+  --sgo-line-strong: rgb(var(--sgo-line-strong-rgb));
+  --sgo-canvas-rgb: 21 19 18;
+  --sgo-canvas: rgb(var(--sgo-canvas-rgb));
+  --sgo-surface-rgb: 31 28 27;
+  --sgo-surface: rgb(var(--sgo-surface-rgb));
+  --sgo-sunken-rgb: 42 38 36;
+  --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+  --sgo-brand-rgb: 240 167 177;
+  --sgo-brand: rgb(var(--sgo-brand-rgb));
+  --sgo-brand-hover-rgb: 247 191 199;
+  --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+  --sgo-brand-tint-rgb: 42 27 30;
+  --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
+  --sgo-brand-tint-2-rgb: 58 36 41;
+  --sgo-brand-tint-2: rgb(var(--sgo-brand-tint-2-rgb));
+  --sgo-on-brand-rgb: 42 10 17;
+  --sgo-on-brand: rgb(var(--sgo-on-brand-rgb));
+  --sgo-success-rgb: 95 211 154;
+  --sgo-success: rgb(var(--sgo-success-rgb));
+  --sgo-success-bg-rgb: 22 40 31;
+  --sgo-success-bg: rgb(var(--sgo-success-bg-rgb));
+  --sgo-warning-rgb: 240 179 96;
+  --sgo-warning: rgb(var(--sgo-warning-rgb));
+  --sgo-warning-bg-rgb: 44 32 19;
+  --sgo-warning-bg: rgb(var(--sgo-warning-bg-rgb));
+  --sgo-danger-rgb: 255 154 147;
+  --sgo-danger: rgb(var(--sgo-danger-rgb));
+  --sgo-danger-bg-rgb: 46 26 24;
+  --sgo-danger-bg: rgb(var(--sgo-danger-bg-rgb));
+  --sgo-info-rgb: 143 190 234;
+  --sgo-info: rgb(var(--sgo-info-rgb));
+  --sgo-info-bg-rgb: 22 34 46;
+  --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
+}

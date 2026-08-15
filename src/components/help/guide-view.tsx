@@ -43,7 +43,7 @@ export function GuideView({ sections }: { sections: Section[] }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar um assunto (ex.: comanda, troco, atestado)…"
-          className="h-11 w-full rounded-lg border-2 border-line-strong bg-surface pl-9 pr-9 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="h-11 w-full rounded-lg border-2 border-line-strong bg-surface pl-9 pr-9 text-base ring-offset-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           aria-label="Buscar nos guias"
         />
         {q && (

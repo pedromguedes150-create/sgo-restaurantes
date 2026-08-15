@@ -23,7 +23,10 @@ export function ProgressRing({
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-secondary" />
+        {/* Trilho do anel. Usava text-secondary, token que saiu com a paleta
+            legada na Onda 7 — sem ele o stroke herdava a cor do texto e o
+            trilho virava um anel escuro cheio. */}
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-sunken" />
         <circle
           cx={size / 2}
           cy={size / 2}

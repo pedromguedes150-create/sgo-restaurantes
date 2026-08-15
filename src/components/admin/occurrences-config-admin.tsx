@@ -70,7 +70,7 @@ function TypeRow({ t, onChange }: { t: OccTypeRow; onChange: () => void }) {
       </div>
       {msg && <p className="mt-1 text-xs font-medium text-danger">{msg}</p>}
 
-      <div className="mt-2 space-y-1 border-l-2 border-muted pl-3">
+      <div className="mt-2 space-y-1 border-l-2 border-line pl-3">
         {t.categories.map((c) => <CategoryRow key={c.id} c={c} onChange={onChange} />)}
         <NewCategory typeId={t.id} onDone={onChange} />
       </div>

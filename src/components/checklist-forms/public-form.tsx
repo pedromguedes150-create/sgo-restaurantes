@@ -73,7 +73,7 @@ export function ChecklistPublicForm({ token, data }: { token: string; data: Data
           if (f.kind === 'BOOLEAN') {
             return (
               <label key={f.id} className="flex items-center gap-2 rounded-xl border bg-surface p-3 text-sm font-semibold text-brand">
-                <input type="checkbox" className="h-5 w-5 accent-accent" checked={v === true} onChange={(e) => set(f.id, e.target.checked)} /> {f.label}{f.required && <span className="text-danger">*</span>}
+                <input type="checkbox" className="h-5 w-5 accent-brand" checked={v === true} onChange={(e) => set(f.id, e.target.checked)} /> {f.label}{f.required && <span className="text-danger">*</span>}
               </label>
             );
           }

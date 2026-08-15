@@ -120,13 +120,13 @@ export function QrScanner({ onResult }: { onResult: (chave: string) => void }) {
       </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4">
+        <div className="sgo-on-dark fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4">
           <div className="relative w-full max-w-sm overflow-hidden rounded-xl bg-black">
             <video ref={videoRef} playsInline muted className="w-full" />
             <div className="pointer-events-none absolute inset-x-6 inset-y-16 rounded-lg border-2 border-white/80" />
           </div>
-          <p className="mt-3 text-center text-sm text-on-brand">Aponte para o <strong>QR code</strong> ou o <strong>código de barras</strong> da nota.</p>
-          {error && <p className="mt-2 text-center text-sm font-medium text-red-300">{error}</p>}
+          <p className="mt-3 text-center text-sm text-ink-900">Aponte para o <strong>QR code</strong> ou o <strong>código de barras</strong> da nota.</p>
+          {error && <p className="mt-2 text-center text-sm font-medium text-danger">{error}</p>}
           <Button type="button" variant="outline" className="mt-4" onClick={() => { cleanup(); setOpen(false); }}>
             <X className="h-4 w-4" /> Fechar
           </Button>

@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start -p 3100",
     "lint": "next lint",
-    "lint:ds": "stylelint \"src/**/*.css\" && node scripts/check-ds-tokens.cjs",
+    "lint:ds": "stylelint \"src/**/*.css\" && node scripts/check-ds-tokens.cjs && node scripts/check-palette-keys.cjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

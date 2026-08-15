@@ -181,7 +181,7 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
 function BlockCell({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="col-span-4 flex cursor-pointer items-center justify-center gap-1.5 sm:col-span-2">
-      <input type="checkbox" className="h-4 w-4 accent-accent" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <input type="checkbox" className="h-4 w-4 accent-brand" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       <span className="text-xs text-ink-500 sm:hidden">{label}</span>
     </label>
   );
