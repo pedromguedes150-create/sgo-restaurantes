@@ -2,12 +2,10 @@ import type { Config } from 'tailwindcss';
 
 /**
  * Design System SGO Beija Flor (churrascarias).
- * Cores institucionais (atualizado 2026-06-11 a pedido do usuário):
- *  - Primária: BORDÔ #6E1423 · Acento/secundária: CINZA ESCURO #3F3F46
- *  - Fundo: #FFFFFF · Superfície: #F5F5F5
- *  - Semáforos (status, não-marca): Crítico #DC2626 · Médio #F59E0B · Sucesso #16A34A
- * Obs.: o token "gold" foi mantido por compatibilidade de classes, mas agora
- * representa o cinza-grafite (acento).
+ * Os VALORES não moram aqui — só os nomes. A fonte de verdade é
+ * src/styles/sgo-design-system.css, que define cada token por tema.
+ * Identidade: bordô (brand) + grafite (ink-700), semáforos em success/warning/
+ * danger e o informativo em info.
  */
 const config: Config = {
   darkMode: ['class'],
@@ -56,10 +54,10 @@ const config: Config = {
           DEFAULT: 'rgb(var(--sgo-info-rgb) / <alpha-value>)',
           bg: 'rgb(var(--sgo-info-bg-rgb) / <alpha-value>)',
         },
-        // Colididos com o legado → prefixo sgo- (removido por onda, 3-5).
         brand: {
           DEFAULT: 'rgb(var(--sgo-brand-rgb) / <alpha-value>)',
           hover: 'rgb(var(--sgo-brand-hover-rgb) / <alpha-value>)',
+          active: 'rgb(var(--sgo-brand-active-rgb) / <alpha-value>)',
           tint: 'rgb(var(--sgo-brand-tint-rgb) / <alpha-value>)',
           'tint-2': 'rgb(var(--sgo-brand-tint-2-rgb) / <alpha-value>)',
         },

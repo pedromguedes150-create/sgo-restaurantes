@@ -8,7 +8,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-brand text-on-brand hover:bg-brand-hover active:bg-brand',
+        // active precisa ser MAIS ESCURO que o repouso — o brand-dark legado nao
+        // tinha destino no DS e o pressionado tinha virado igual ao normal.
+        default: 'bg-brand text-on-brand hover:bg-brand-hover active:bg-brand-active',
         // Preenchimento em grafite — o 'gold' legado sempre foi cinza-escuro.
         gold: 'bg-ink-700 text-on-brand hover:bg-ink-500 active:bg-ink-900',
         destructive: 'bg-danger text-on-brand hover:opacity-90',

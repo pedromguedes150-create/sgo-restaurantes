@@ -57,6 +57,8 @@
   --sgo-brand: rgb(var(--sgo-brand-rgb));
   --sgo-brand-hover-rgb: 151 48 63;
   --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+  --sgo-brand-active-rgb: 94 20 32;
+  --sgo-brand-active: rgb(var(--sgo-brand-active-rgb));
   --sgo-brand-tint-rgb: 253 246 247;
   --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
   --sgo-brand-tint-2-rgb: 246 228 231;
@@ -164,6 +166,8 @@
     --sgo-brand: rgb(var(--sgo-brand-rgb));
     --sgo-brand-hover-rgb: 247 191 199;
     --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+    --sgo-brand-active-rgb: 224 141 153;
+    --sgo-brand-active: rgb(var(--sgo-brand-active-rgb));
     --sgo-brand-tint-rgb: 42 27 30;
     --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
     --sgo-brand-tint-2-rgb: 58 36 41;
@@ -224,6 +228,8 @@
   --sgo-brand: rgb(var(--sgo-brand-rgb));
   --sgo-brand-hover-rgb: 247 191 199;
   --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+  --sgo-brand-active-rgb: 224 141 153;
+  --sgo-brand-active: rgb(var(--sgo-brand-active-rgb));
   --sgo-brand-tint-rgb: 42 27 30;
   --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
   --sgo-brand-tint-2-rgb: 58 36 41;
@@ -545,6 +551,8 @@
   --sgo-brand: rgb(var(--sgo-brand-rgb));
   --sgo-brand-hover-rgb: 247 191 199;
   --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+  --sgo-brand-active-rgb: 224 141 153;
+  --sgo-brand-active: rgb(var(--sgo-brand-active-rgb));
   --sgo-brand-tint-rgb: 42 27 30;
   --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
   --sgo-brand-tint-2-rgb: 58 36 41;

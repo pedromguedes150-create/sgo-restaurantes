@@ -418,7 +418,7 @@ function DueTracking({ units }: { units: Unit[] }) {
           {rows.map((r) => (
             <div key={`${r.kind}-${r.id}`} className={`rounded-lg border p-2.5 ${r.daysToDue <= 3 ? 'border-danger/40 bg-danger/5' : 'bg-surface'}`}>
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-brand">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-brand/15 px-1 text-[10px] font-bold text-brand">GÁS</span> : null}</p>
+                <p className="text-sm font-semibold text-brand">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-info-bg px-1 text-[10px] font-bold text-info">GÁS</span> : null}</p>
                 <StatusBadge tone={tone(r.daysToDue)}>{dueLabel(r.daysToDue)}</StatusBadge>
               </div>
               <p className="text-xs text-ink-500">{r.unit} · {formatBRL(r.value)}{r.number ? ` · nº ${r.number}` : ''} · vence {fmtBR(r.dueDate)}</p>

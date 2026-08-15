@@ -99,7 +99,7 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
             <p className="text-xs text-ink-500">
               {isNow
                 ? <span className="font-semibold text-success">● Na unidade agora</span>
-                : <span className={isFuture ? 'font-semibold text-brand' : 'font-semibold text-brand'}>
+                : <span className={isFuture ? 'font-semibold text-info' : 'font-semibold text-brand'}>
                     {isFuture ? 'Projeção' : isToday ? 'Hoje' : 'Histórico'} — {fmtDateBR(mapDate)}{mapTime ? ` às ${mapTime}` : ' (dia todo)'}
                   </span>}
               {' · '}{availability ? `${availability.working.length} escalado(s) no dia` : ''}

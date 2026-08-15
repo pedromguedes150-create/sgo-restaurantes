@@ -262,7 +262,7 @@ function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam }: { leaves
       <div className="space-y-1.5">
         {leaves.map((l) => (
           <div key={l.id} className="flex items-center justify-between rounded-lg border bg-surface p-2.5 text-sm">
-            <span><b className={l.kind === 'FERIAS' ? 'text-brand' : 'text-brand'}>{l.kind === 'FERIAS' ? 'Férias' : 'Folga'}</b> · {l.startDate === l.endDate ? fmtBR(l.startDate) : `${fmtBR(l.startDate)} a ${fmtBR(l.endDate)}`}</span>
+            <span><b className={l.kind === 'FERIAS' ? 'text-info' : 'text-brand'}>{l.kind === 'FERIAS' ? 'Férias' : 'Folga'}</b> · {l.startDate === l.endDate ? fmtBR(l.startDate) : `${fmtBR(l.startDate)} a ${fmtBR(l.endDate)}`}</span>
             <button onClick={() => post({ entity: 'leave', action: 'delete', id: l.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
           </div>
         ))}
