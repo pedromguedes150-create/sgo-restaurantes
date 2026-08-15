@@ -327,22 +327,56 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Entrada de página (Onda 1): crossfade + leve deslize (aprox. do push).
+/* Entrada de página (Onda 8) — empurrão do iOS no celular, discreto no desktop.
    A paralaxe da página que SAI exige AnimatePresence (lib externa, fora do
-   escopo), então animamos só a entrada. Respeita prefers-reduced-motion. */
-@keyframes sgo-page-enter {
+   contrato), então animamos só a entrada. */
+.sgo-page-clip {
+  /* `clip` e NÃO `hidden`: hidden forçaria o eixo Y a virar contêiner de
+     rolagem e quebraria o position:sticky do cabeçalho. */
+  overflow-x: clip;
+}
+
+/* Celular: a tela nova entra pela direita, como no push do iOS. */
+@keyframes sgo-page-push {
+  from {
+    opacity: 0.6;
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Desktop: com a sidebar parada ao lado, empurrar a página inteira faria só
+   metade da tela se mexer. Aqui a entrada é a do iPadOS: surgir crescendo. */
+@keyframes sgo-page-emerge {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: scale(0.985);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
+
 .sgo-page-enter {
-  animation: sgo-page-enter var(--sgo-dur-2) var(--sgo-ease-nav) both;
+  animation: sgo-page-push var(--sgo-dur-3) var(--sgo-ease-nav) both;
+  /* Sem isto o texto tremula no meio do deslize em telas de baixa densidade. */
+  backface-visibility: hidden;
 }
+
+/* 768px é a fronteira do PRÓPRIO app: é onde a barra inferior some (`md:hidden`)
+   e o painel lateral aparece (`md:block`). Trocar a animação em outro ponto
+   deixaria uma faixa de larguras com a sidebar parada e a página inteira
+   deslizando ao lado — só metade da tela se mexendo. */
+@media (min-width: 768px) {
+  .sgo-page-enter {
+    animation: sgo-page-emerge var(--sgo-dur-2) var(--sgo-ease-std) both;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sgo-page-enter {
     animation: none;
