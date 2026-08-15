@@ -66,27 +66,31 @@ Os cinco passos foram executados na ordem proposta. O que o plano não previa e
 apareceu no caminho:
 
 **O auditor reprovou a própria base.** Antes de qualquer migração, 8 de 36
-elementos de /tarefas falhavam — todos tokens das Ondas 0-6.  passava só
-sobre branco;  não tinha valor que servisse e virou token não-textual
-(ícone, desabilitado); os três status caíam sobre .
+elementos de /tarefas falhavam — todos tokens das Ondas 0-6. `ink-500` passava
+só sobre branco; `ink-400` não tinha valor que servisse (a 7:1 ele vira o
+`ink-500`) e foi reclassificado como token não-textual — ícone, desabilitado,
+decoração; os três status caíam sobre `sunken`.
 
-**O modificador de opacidade não funcionava nos tokens do DS.** computava transparente. Migrar os 198 usos de opacidade da paleta legada teria
+**O modificador de opacidade não funcionava nos tokens do DS.** `bg-brand/15`
+computava transparente. Migrar os 198 usos de opacidade da paleta legada teria
 apagado todas as caixas tingidas do sistema — e passaria numa auditoria de
 contraste, porque fundo transparente mede contra o pai. Os tokens passaram a ser
-definidos em canal RGB (), que é o que permite o . De
-quebra, isso consertou 6 usos invisíveis desde a Onda 0.
+definidos em canal RGB (`r g b`), que é o que permite o `<alpha-value>`. De
+quebra, isso consertou 6 usos invisíveis desde a Onda 0 (as bordas dos Banners).
 
-**Relatórios em PDF precisaram sair do tema.** Usavam  de
-propósito; convertê-los a tokens sem mais nada os quebraria no escuro. Ganharam
-o escopo , que repina os tokens nos valores claros.
+**Relatórios em PDF precisaram sair do tema.** Usavam `bg-white text-black` de
+propósito; convertê-los a tokens sem mais nada os quebraria no escuro (texto
+claro sobre fundo branco). Ganharam o escopo `.sgo-print`, que repina os tokens
+nos valores claros.
 
-**O mapeamento em bloco de  colidiu uma vez:** no login o quadrado BF
-era  sobre , e os dois viraram a mesma cor. O auditor não
-pega esse caso — o texto continua contrastando, só o quadrado some.
+**O mapeamento em bloco de `accent` colidiu uma vez:** no login o quadrado "BF"
+era `bg-accent` sobre `bg-brand`, e os dois viraram a mesma cor. O auditor não
+pega esse caso — o texto continua contrastando com o fundo composto, só o
+quadrado some.
 
-**Faltava  no bloco .** Quem escolhesse Escuro à
-mão ficava com as barras de desfoque brancas sobre a página escura. Bug da Onda
-0 que nunca apareceu porque o escuro nunca foi usado.
+**Faltava `--sgo-glass` no bloco `:root[data-theme='dark']`.** Quem escolhesse
+Escuro à mão ficava com as barras de desfoque brancas sobre a página escura.
+Bug da Onda 0 que nunca apareceu porque o escuro nunca foi usado.
 
 ## Auditoria final
 
