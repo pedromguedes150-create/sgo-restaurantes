@@ -23,9 +23,15 @@ import { Group, GroupLabel } from '@/components/ui/ds/group';
 
 /* Helpers da galeria (compartilhados pelas seções que entram a cada commit). */
 
+/** Slug do título → âncora. A galeria é longa; sem isto não há como mandar
+ *  alguém direto numa seção ("veja o Group") a não ser pedindo que role. */
+const slug = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
 export function GallerySection({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="mb-16">
+    <section id={slug(title)} className="mb-16 scroll-mt-24">
       <h2 className="sgo-type-22 font-semibold text-ink-900">{title}</h2>
       {hint && <p className="sgo-type-13 mb-4 mt-1 text-ink-500">{hint}</p>}
       <div className={hint ? '' : 'mt-4'}>{children}</div>
