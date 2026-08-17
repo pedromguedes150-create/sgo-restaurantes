@@ -35,12 +35,23 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (b.action === 'reclassify') {
     const type = b.typeId ? await prisma.occurrenceType.findUnique({ where: { id: String(b.typeId) }, include: { categories: true } }) : null;
     if (!type) return NextResponse.json({ error: 'Escolha o tipo' }, { status: 400 });
-    const category = b.categoryId ? type.categories.find((c) => c.id === String(b.categoryId)) : null;
+    const ativas = type.categories.filter((c) => c.active);
+    const category = b.categoryId ? ativas.find((c) => c.id === String(b.categoryId)) : null;
+    // O tipo novo TEM categorias? Então escolher uma é obrigatório aqui também.
+    if (!category && ativas.length > 0) {
+      return NextResponse.json({ error: 'Escolha a categoria do novo tipo' }, { status: 400 });
+    }
     await prisma.occurrence.update({
       where: { id: params.id },
       data: {
         typeId: type.id, typeName: type.name,
-        ...(category ? { categoryId: category.id, categoryName: category.name } : {}),
+        // Escreve SEMPRE, inclusive null. Antes o campo era omitido quando não
+        // havia categoria, e a categoria ANTIGA continuava colada no tipo novo
+        // — dava "Manutenção e obras — Atendimento" na tela, uma categoria que
+        // não pertence ao tipo. Só deu para corrigir porque `categoryName`
+        // deixou de ser NOT NULL nesta mudança.
+        categoryId: category?.id ?? null,
+        categoryName: category?.name ?? null,
       },
     });
     await audit({ userId: user.id, unitId: occ.unitId, action: 'OCCURRENCE_RECLASSIFIED', module: 'OCCURRENCES', entity: 'occurrence', entityId: params.id, metadata: { number: occ.number, type: type.name, category: category?.name }, ...ctx });

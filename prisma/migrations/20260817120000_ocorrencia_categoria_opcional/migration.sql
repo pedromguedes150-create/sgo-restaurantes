@@ -1,0 +1,11 @@
+-- Categoria da ocorrência passa a ser opcional também no NOME.
+--
+-- `categoryId` já era opcional; `categoryName` (o snapshot para histórico) era
+-- NOT NULL, e a incoerência travava o formulário: um tipo sem categoria
+-- cadastrada — era o caso de "Manutenção e obras" — não tinha como ser
+-- registrado, porque gravar o snapshot exigia uma categoria que não existia.
+--
+-- Mudança PERMISSIVA (solta a restrição), sem perda de dado e compatível com o
+-- código anterior: linhas existentes continuam com o nome preenchido.
+-- AlterTable
+ALTER TABLE "occurrences" ALTER COLUMN "categoryName" DROP NOT NULL;

@@ -531,7 +531,11 @@ model Occurrence {
   categoryId      String?
   /// snapshots para preservar histórico mesmo se tipo/categoria mudarem
   typeName        String
-  categoryName    String
+  /// Opcional: há tipos SEM categoria cadastrada (o formulário não exige uma
+  /// quando o tipo não tem nenhuma). Acompanha `categoryId`, que já era
+  /// opcional — a coluna era NOT NULL só por descuido, e a incoerência já
+  /// deixava rastro: `onDelete: SetNull` zerava o id e deixava o nome pendurado.
+  categoryName    String?
   gravity         OccurrenceGravity
   customerName    String?
   description     String

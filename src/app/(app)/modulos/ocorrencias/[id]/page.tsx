@@ -47,7 +47,7 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
       <Card>
         <CardContent className="space-y-2 py-4 text-sm">
           <Row label="Unidade" value={o.unit.name} />
-          <Row label="Tipo / Categoria" value={`${o.typeName} — ${o.categoryName}`} />
+          <Row label={o.categoryName ? 'Tipo / Categoria' : 'Tipo'} value={o.categoryName ? `${o.typeName} — ${o.categoryName}` : o.typeName} />
           <Row label="Gravidade" value={`${GRAVITY_META[o.gravity].emoji} ${GRAVITY_META[o.gravity].label}`} />
           {o.isRecurrence && <Row label="Reincidência" value="♻ Sim (mesmo tipo+categoria em <30 dias)" />}
           <Row label="Ocorrido em" value={fmt(o.occurredAt)} />

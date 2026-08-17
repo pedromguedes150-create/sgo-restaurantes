@@ -14,28 +14,56 @@ export async function getOccurrenceTypes() {
   });
 }
 
+export interface OccurrenceScope {
+  unitId?: string;
+  status?: OccurrenceStatus;
+  gravity?: OccurrenceGravity;
+  maintenance?: boolean;
+  it?: boolean;
+}
+
+/** WHERE compartilhado entre a lista e o resumo — para os dois contarem A MESMA coisa. */
+function occurrenceWhere(user: SessionUser, f: OccurrenceScope) {
+  return {
+    ...unitScopeWhere(user, 'unitId'),
+    ...(f.unitId ? { unitId: f.unitId } : {}),
+    ...(f.status ? { status: f.status } : {}),
+    ...(f.gravity ? { gravity: f.gravity } : {}),
+    ...(f.maintenance !== undefined ? { type: { isMaintenance: f.maintenance } } : {}),
+    ...(f.it !== undefined ? { type: { isIT: f.it } } : {}),
+  };
+}
+
+/**
+ * Lista paginada. Devolve `total` junto porque a tela PRECISA dizer quantas
+ * existem: antes vinha um `take: 50` mudo, e com 124 abertas o gerente via
+ * cinquenta linhas sem nenhum sinal de que 74 ficaram de fora.
+ */
 export async function listOccurrences(
   user: SessionUser,
-  filters: { unitId?: string; status?: OccurrenceStatus; gravity?: OccurrenceGravity; maintenance?: boolean; it?: boolean; limit?: number } = {},
+  filters: OccurrenceScope & { limit?: number; page?: number } = {},
 ) {
-  return prisma.occurrence.findMany({
-    where: {
-      ...unitScopeWhere(user, 'unitId'),
-      ...(filters.unitId ? { unitId: filters.unitId } : {}),
-      ...(filters.status ? { status: filters.status } : {}),
-      ...(filters.gravity ? { gravity: filters.gravity } : {}),
-      ...(filters.maintenance !== undefined ? { type: { isMaintenance: filters.maintenance } } : {}),
-      ...(filters.it !== undefined ? { type: { isIT: filters.it } } : {}),
-    },
-    orderBy: [{ createdAt: 'desc' }],
-    take: filters.limit ?? 50,
-    include: {
-      unit: { select: { name: true, code: true } },
-      reportedBy: { select: { name: true } },
-      type: { select: { name: true, isMaintenance: true } },
-      _count: { select: { attachments: true } },
-    },
-  });
+  const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
+  const page = Math.max(filters.page ?? 1, 1);
+  const where = occurrenceWhere(user, filters);
+
+  const [items, total] = await Promise.all([
+    prisma.occurrence.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }],
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        unit: { select: { name: true, code: true } },
+        reportedBy: { select: { name: true } },
+        type: { select: { name: true, isMaintenance: true } },
+        _count: { select: { attachments: true } },
+      },
+    }),
+    prisma.occurrence.count({ where }),
+  ]);
+
+  return { items, total, page, limit, hasMore: page * limit < total };
 }
 
 export async function getOccurrence(user: SessionUser, id: string) {
@@ -77,11 +105,20 @@ export interface OccurrenceSummary {
   byGravity: Record<OccurrenceGravity, number>;
 }
 
-/** Resumo para dashboards (respeita escopo por unidade). */
-export async function getOccurrenceSummary(user: SessionUser): Promise<OccurrenceSummary> {
-  const scope = unitScopeWhere(user, 'unitId');
+/**
+ * Resumo para dashboards (respeita escopo por unidade).
+ *
+ * `scope` foi acrescentado porque os cartões da tela de Ocorrências contavam a
+ * rede INTEIRA mesmo dentro das abas Manutenção e TI: trocar de aba não mudava
+ * nenhum número, o que fazia a tela parecer quebrada. O parâmetro é opcional —
+ * o dashboard continua chamando sem nada e recebe o total, como antes.
+ */
+export async function getOccurrenceSummary(
+  user: SessionUser,
+  scope: Pick<OccurrenceScope, 'maintenance' | 'it' | 'unitId'> = {},
+): Promise<OccurrenceSummary> {
   const all = await prisma.occurrence.findMany({
-    where: scope,
+    where: occurrenceWhere(user, scope),
     select: { status: true, gravity: true, createdAt: true, isRecurrence: true },
   });
 

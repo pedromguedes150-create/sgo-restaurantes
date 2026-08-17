@@ -10,7 +10,8 @@ import type { OccurrenceGravity, Prisma } from '@prisma/client';
 export interface CreateOccurrenceInput {
   unitId: string;
   typeId: string;
-  categoryId: string;
+  /** Opcional: exigida só quando o tipo escolhido tem categorias cadastradas. */
+  categoryId?: string;
   gravity: OccurrenceGravity;
   description: string;
   customerName?: string;
@@ -36,16 +37,42 @@ export async function createOccurrence(
   }
 
   const GRAVITIES: OccurrenceGravity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-  if (!input.description?.trim() || !input.typeId || !input.categoryId || !GRAVITIES.includes(input.gravity)) {
+  if (!input.description?.trim() || !input.typeId || !GRAVITIES.includes(input.gravity)) {
     return { ok: false, reason: 'INVALID' };
   }
 
   const unit = await prisma.unit.findUnique({ where: { id: input.unitId } });
   const type = await prisma.occurrenceType.findUnique({ where: { id: input.typeId } });
-  const category = await prisma.occurrenceCategory.findUnique({ where: { id: input.categoryId } });
-  if (!unit || !type || !category || category.typeId !== type.id) {
+  if (!unit || !type) return { ok: false, reason: 'INVALID' };
+
+  /**
+   * Categoria é exigida SÓ quando o tipo tem alguma cadastrada.
+   *
+   * Antes era obrigatória sempre, e `Occurrence.categoryId` é opcional no banco
+   * — a exigência era só daqui. O efeito: um tipo sem categoria (era o caso de
+   * "Manutenção e obras") virava beco sem saída, com o campo aberto vazio e o
+   * registro recusado sem explicação. Quem cadastra os tipos em Configurações
+   * não tem como saber que deixar um sem categoria trava o formulário.
+   */
+  const disponiveis = await prisma.occurrenceCategory.count({
+    where: { typeId: type.id, active: true },
+  });
+  let category: { id: string; typeId: string; name: string } | null = null;
+  if (input.categoryId) {
+    category = await prisma.occurrenceCategory.findUnique({
+      where: { id: input.categoryId },
+      select: { id: true, typeId: true, name: true },
+    });
+    // Categoria informada tem de pertencer ao tipo — isso continua valendo.
+    if (!category || category.typeId !== type.id) return { ok: false, reason: 'INVALID' };
+  } else if (disponiveis > 0) {
+    // O tipo TEM categorias: escolher uma continua obrigatório.
     return { ok: false, reason: 'INVALID' };
   }
+
+  /** Rótulo das notificações. Sem categoria, mostra só o tipo — em vez de um
+   *  "Manutenção e obras — undefined" chegando no celular do supervisor. */
+  const classificacao = category ? `${type.name} — ${category.name}` : type.name;
 
   const occurredAt = input.occurredAt ?? new Date();
   const operationalDate = currentOperationalDate(
@@ -55,11 +82,14 @@ export async function createOccurrence(
 
   // Reincidência: mesmo tipo+categoria na mesma unidade em < 30 dias,
   // comparando pela data do FATO (occurredAt), não pela data de registro.
+  // Sem categoria, a reincidência é por TIPO — senão `categoryId: null` casaria
+  // com qualquer outra sem categoria daquele tipo, o que é o que queremos, mas
+  // deixado explícito para não parecer descuido.
   const recurrence = await prisma.occurrence.findFirst({
     where: {
       unitId: unit.id,
       typeId: type.id,
-      categoryId: category.id,
+      categoryId: category ? category.id : null,
       occurredAt: { gte: subDays(occurredAt, 30), lt: occurredAt },
     },
     select: { id: true },
@@ -84,9 +114,9 @@ export async function createOccurrence(
           operationalDate,
           reportedById: user.id,
           typeId: type.id,
-          categoryId: category.id,
+          categoryId: category?.id ?? null,
           typeName: type.name,
-          categoryName: category.name,
+          categoryName: category?.name ?? null,
           gravity: input.gravity,
           customerName: input.customerName?.trim() || null,
           description: input.description.trim(),
@@ -138,7 +168,7 @@ export async function createOccurrence(
     const critical = input.gravity === 'CRITICAL';
     const payload = {
       title: critical ? '⚫ Ocorrência CRÍTICA' : '🔴 Ocorrência de gravidade alta',
-      body: `${unit.name} #${created.number}: ${type.name} — ${category.name}${isRecurrence ? ' (reincidência <30d)' : ''}.`,
+      body: `${unit.name} #${created.number}: ${classificacao}${isRecurrence ? ' (reincidência <30d)' : ''}.`,
       link: `/modulos/ocorrencias/${created.id}`,
       module: 'OCCURRENCES',
       critical,
@@ -150,7 +180,7 @@ export async function createOccurrence(
   if (isRecurrence && input.gravity !== 'HIGH' && input.gravity !== 'CRITICAL') {
     const payload = {
       title: '♻ Reincidência de ocorrência',
-      body: `${unit.name} #${created.number}: ${type.name} — ${category.name} se repetiu em menos de 30 dias.`,
+      body: `${unit.name} #${created.number}: ${classificacao} se repetiu em menos de 30 dias.`,
       link: `/modulos/ocorrencias/${created.id}`,
       module: 'OCCURRENCES',
     };

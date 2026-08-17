@@ -9,6 +9,24 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.43.0 — 2026-08-17 (Ocorrências: destrava o registro e separa os dois eixos)
+
+### Corrigido
+- **Tipo sem categoria travava o registro.** Escolhendo um tipo sem categorias cadastradas (era o caso de "Manutenção e obras"), o campo Categoria abria **vazio** e a ocorrência era recusada sem explicação — beco sem saída. `Occurrence.categoryId` sempre foi opcional no banco; a obrigatoriedade era artificial, imposta pelo formulário e pelo `create.ts`. Agora a exigência acompanha o cadastro: tipo **com** categorias continua exigindo uma, tipo **sem** categorias registra sem ela e a tela explica por quê.
+- **Os cartões do topo ignoravam a aba.** `getOccurrenceSummary` não recebia escopo, então nas abas Manutenção e TI os três números eram os da rede inteira — trocar de aba não mudava nada. Agora contam o assunto selecionado.
+- **A lista cortava em 50 sem avisar.** Os cartões diziam 124 abertas e a tela mostrava 50 linhas, sem paginação e sem indicar que 74 tinham ficado de fora.
+- **Reclassificar deixava categoria órfã.** Ao mover para um tipo sem escolher categoria nova, a **antiga** continuava colada — resultando em pares impossíveis como "Manutenção e obras — Atendimento". Corrigível só depois de `categoryName` aceitar nulo.
+- O banner vermelho **repetia** o cartão ao lado; com 123 de 124 acima de 48h, "priorize estas antes das demais" não priorizava nada.
+
+### Alterado
+- **Os dois filtros deixaram de parecer a mesma coisa.** Eram trilhos de abas idênticos e empilhados, perguntando coisas diferentes: agora rotulados **ASSUNTO** (Geral / Manutenção / TI) e **SITUAÇÃO** (Todas / Abertas / Em andamento / Encerradas). A paginação preserva os dois ao navegar.
+- **Lista paginada** (50 por página) com o rodapé dizendo o total: "Mostrando 1–50 de 124".
+- **Formulário didático:** cada campo diz o que **decide** — o tipo mostra em qual aba a ocorrência vai cair, a gravidade diz quem ela avisa (Alta → supervisão; Crítica → supervisão **e** diretoria), a categoria explica que serve para detectar reincidência. O que falta aparece **antes** do clique, nomeando o campo.
+- Cartão "Há mais de 48h" ganhou a proporção ("de N abertas"), que evita ler 123 como alarme quando é quase tudo o que está aberto.
+
+### Banco
+- Migração `20260817120000_ocorrencia_categoria_opcional`: `occurrences.categoryName` deixa de ser `NOT NULL`, acompanhando `categoryId`, que já era opcional. **Permissiva** (`DROP NOT NULL`), sem perda de dado e compatível com o código anterior.
+
 ## v1.42.0 — 2026-08-17 (Redesign Onda 8: a cara de iOS · seletor de tema)
 
 > Onda visual. **Nada de funcionamento mudou**: sem alteração de banco, de rota

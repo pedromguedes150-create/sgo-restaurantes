@@ -75,4 +75,46 @@ describe('Ocorrências (Módulo 6)', () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('FORBIDDEN');
   });
+
+  /**
+   * O beco sem saída: um tipo sem NENHUMA categoria cadastrada — era o caso de
+   * "Manutenção e obras" em produção — recusava o registro sem explicação,
+   * porque a categoria era exigida sempre embora `categoryId` seja opcional no
+   * banco. Agora a exigência acompanha o cadastro: se o tipo tem categorias,
+   * escolher continua obrigatório; se não tem, registra sem.
+   */
+  it('registra sem categoria quando o tipo não tem nenhuma cadastrada', async () => {
+    const semCat = await prisma.occurrenceType.create({ data: { code: `TSC-${sfx}`, name: 'Tipo Sem Categoria' } });
+    try {
+      const r = await createOccurrence(mgr(), { unitId, typeId: semCat.id, gravity: 'LOW', description: 'sem categoria' });
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        const fresh = await prisma.occurrence.findUnique({ where: { id: r.id } });
+        expect(fresh?.categoryId).toBeNull();
+        expect(fresh?.categoryName).toBeNull();
+        expect(fresh?.typeName).toBe('Tipo Sem Categoria');
+      }
+    } finally {
+      await prisma.occurrence.deleteMany({ where: { typeId: semCat.id } });
+      await prisma.occurrenceType.delete({ where: { id: semCat.id } }).catch(() => {});
+    }
+  });
+
+  it('continua exigindo categoria quando o tipo TEM categorias', async () => {
+    const r = await createOccurrence(mgr(), { unitId, typeId, gravity: 'LOW', description: 'faltou categoria' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('INVALID');
+  });
+
+  it('recusa categoria que pertence a outro tipo', async () => {
+    const outro = await prisma.occurrenceType.create({ data: { code: `TO-${sfx}`, name: 'Outro Tipo' } });
+    const catDoOutro = await prisma.occurrenceCategory.create({ data: { typeId: outro.id, name: 'Cat do outro' } });
+    try {
+      const r = await createOccurrence(mgr(), { unitId, typeId, categoryId: catDoOutro.id, gravity: 'LOW', description: 'trocada' });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.reason).toBe('INVALID');
+    } finally {
+      await prisma.occurrenceType.delete({ where: { id: outro.id } }).catch(() => {});
+    }
+  });
 });

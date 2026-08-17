@@ -18,7 +18,7 @@ export interface OccItem {
   unitName: string;
   unitCode: string;
   typeName: string;
-  categoryName: string;
+  categoryName: string | null;
   description: string;
   gravity: OccurrenceGravity;
   status: OccurrenceStatus;
@@ -54,7 +54,7 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
       return (
         num.includes(t) ||
         o.typeName.toLowerCase().includes(t) ||
-        o.categoryName.toLowerCase().includes(t) ||
+        (o.categoryName ?? '').toLowerCase().includes(t) ||
         (o.description ?? '').toLowerCase().includes(t) ||
         o.unitName.toLowerCase().includes(t)
       );
@@ -80,7 +80,7 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
             <p className="font-semibold text-ink-900">
               {GRAVITY_META[o.gravity].emoji} #{o.unitCode}-{String(o.number).padStart(4, '0')} · {o.typeName}
             </p>
-            <p className="truncate text-sm text-ink-500">{o.categoryName} — {o.description}</p>
+            <p className="truncate text-sm text-ink-500">{o.categoryName ? `${o.categoryName} — ` : ''}{o.description}</p>
             <p className="mt-0.5 text-xs text-ink-500">
               🕒 {fmtDateTime(o.createdAt)}
               {o.isRecurrence && ' · ♻ reincidência'}
