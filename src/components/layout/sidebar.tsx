@@ -50,7 +50,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
                 onClick={() => { toggle(); setGroup(g.id, true); }}
                 className={cn(
                   'relative flex h-11 w-full items-center justify-center rounded-control outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
-                  gActive ? 'bg-brand text-on-brand' : 'text-ink-500 hover:bg-sunken hover:text-ink-900',
+                  gActive ? 'bg-brand-tint-2 font-semibold text-brand' : 'text-ink-500 hover:bg-sunken hover:text-ink-900',
                 )}
               >
                 <GIcon className="h-5 w-5" />
@@ -69,7 +69,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
                 href={only.href}
                 className={cn(
                   'flex h-10 items-center gap-2.5 rounded-control px-2.5 text-[14px] font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
-                  active ? 'bg-brand text-on-brand' : 'text-ink-700 hover:bg-sunken hover:text-ink-900',
+                  active ? 'bg-brand-tint-2 font-semibold text-brand' : 'text-ink-700 hover:bg-sunken hover:text-ink-900',
                 )}
               >
                 <GIcon className={cn('h-5 w-5 shrink-0', active ? 'text-on-brand' : 'text-ink-400')} />
@@ -109,7 +109,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
                           href={href}
                           className={cn(
                             'flex h-10 items-center gap-2.5 rounded-control py-2 pl-9 pr-2.5 text-[14px] font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
-                            active ? 'bg-brand text-on-brand' : 'text-ink-700 hover:bg-sunken hover:text-ink-900',
+                            active ? 'bg-brand-tint-2 font-semibold text-brand' : 'text-ink-700 hover:bg-sunken hover:text-ink-900',
                           )}
                         >
                           <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-on-brand' : 'text-ink-400')} />

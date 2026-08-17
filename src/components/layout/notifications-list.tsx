@@ -71,7 +71,11 @@ export function NotificationsList({ items }: { items: NotifItem[] }) {
         <div key={n.id} className={cn('rounded-lg border bg-surface p-3', !n.read && 'border-brand/50 bg-brand/5', n.critical && 'border-danger/50 bg-danger/5')}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className={cn('font-semibold', n.read ? 'text-ink-900' : 'text-brand')}>{n.title}</p>
+              {/* Título sempre em tinta cheia. Era bordô quando não lida, mas
+                  bordô virou cor de coisa TOCÁVEL na Onda 7 e o título não é.
+                  Não-lida já se distingue três vezes na linha 71 e na 80:
+                  borda da marca, fundo tingido e o botão de marcar como lida. */}
+              <p className="font-semibold text-ink-900">{n.title}</p>
               {n.body && <p className="text-sm text-ink-500">{n.body}</p>}
               <p className="mt-1 text-xs text-ink-500">{new Date(n.createdAt).toLocaleString('pt-BR')}</p>
               {n.link && <Link href={n.link} className="text-xs font-semibold text-brand underline">Abrir</Link>}
