@@ -39,7 +39,7 @@ export function ChecklistModelsAdmin({ models }: { models: ModelRow[] }) {
 
       {groups.map(([cat, list]) => (
         <div key={cat}>
-          <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-brand">{cat} ({list.length})</p>
+          <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-900">{cat} ({list.length})</p>
           <div className="space-y-2">
             {list.map((m) => <ModelItemRow key={m.id} m={m} onChange={() => router.refresh()} />)}
           </div>
@@ -98,7 +98,7 @@ function ModelItemRow({ m, onChange }: { m: ModelRow; onChange: () => void }) {
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <button type="button" onClick={() => { if (!editing) setViewing((v) => !v); }} className="min-w-0 flex-1 text-left">
-          <p className="flex items-center gap-1 font-semibold text-brand">{m.moment ?? m.name}{!editing && <Eye className="h-3.5 w-3.5 text-ink-500" />}</p>
+          <p className="flex items-center gap-1 font-semibold text-ink-900">{m.moment ?? m.name}{!editing && <Eye className="h-3.5 w-3.5 text-ink-500" />}</p>
           <p className="text-xs text-ink-500">{m.scope === 'MANAGER' ? 'individual' : 'da unidade'} · peso {m.weight} · {m.limitTime ? `limite ${m.limitTime}` : 'sem horário'} · {m.items.length} item(ns){m.requiresEvidence ? ' · foto' : ''}</p>
         </button>
         <div className="flex items-center gap-1">
@@ -110,7 +110,7 @@ function ModelItemRow({ m, onChange }: { m: ModelRow; onChange: () => void }) {
 
       {viewing && !editing && (
         <div className="mt-2 rounded-lg bg-sunken/40 p-2">
-          {m.category && <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-brand">{m.category}{m.moment ? ` · ${m.moment}` : ''}</p>}
+          {m.category && <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-900">{m.category}{m.moment ? ` · ${m.moment}` : ''}</p>}
           <ul className="space-y-1">
             {m.items.map((it, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">

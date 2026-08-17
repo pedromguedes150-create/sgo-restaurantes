@@ -84,7 +84,7 @@ export default async function IntegracoesPage() {
           {events.map((e) => (
             <div key={e.id} className="flex items-start justify-between gap-2 rounded-md bg-canvas p-2 text-xs">
               <div className="min-w-0">
-                <p className="font-semibold text-brand">{e.event}</p>
+                <p className="font-semibold text-ink-900">{e.event}</p>
                 {e.message && <p className="truncate text-ink-500">{e.message}</p>}
                 <p className="text-ink-500">{e.createdAt.toLocaleString('pt-BR')}</p>
               </div>

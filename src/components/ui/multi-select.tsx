@@ -84,7 +84,7 @@ export function MultiSelect({
       {!allOn && selected.length > 0 && selected.length <= 4 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
           {selected.map((v) => (
-            <span key={v} className="inline-flex items-center gap-1 rounded-pill bg-brand-tint-2 py-0.5 pl-2 pr-1 text-[12px] font-medium text-brand">
+            <span key={v} className="inline-flex items-center gap-1 rounded-pill bg-brand-tint-2 py-0.5 pl-2 pr-1 text-[12px] font-medium text-ink-900">
               {labelFor(v)}
               <button
                 type="button"

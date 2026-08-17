@@ -26,8 +26,8 @@ export default async function OcorrenciaRelatorioPage({ params }: { params: { id
 
       {/* Cabeçalho do relatório */}
       <div className="border-b-2 border-brand pb-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-brand">Relatório de Ocorrência — SGO Beija Flor</p>
-        <h1 className="text-2xl font-black text-brand">#{o.unit.code}-{String(o.number).padStart(4, '0')} · {o.typeName}</h1>
+        <p className="text-xs font-bold uppercase tracking-wide text-ink-900">Relatório de Ocorrência — SGO Beija Flor</p>
+        <h1 className="text-2xl font-black text-ink-900">#{o.unit.code}-{String(o.number).padStart(4, '0')} · {o.typeName}</h1>
         <p className="text-sm text-ink-500">{o.unit.name} · {GRAVITY_META[o.gravity].emoji} {GRAVITY_META[o.gravity].label} · {STATUS_META[o.status].label}</p>
       </div>
 

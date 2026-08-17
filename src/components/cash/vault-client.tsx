@@ -143,7 +143,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
       {/* Destaque: solicitações de troco abertas em OUTRAS unidades (supervisão) */}
       {canResolve && networkOpen.length > 0 && (
         <div className="rounded-lg border-2 border-brand/50 bg-brand/5 p-3">
-          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><HandCoins className="h-4 w-4 text-brand" /> {networkOpen.length} solicitação(ões) de troco em aberto na rede</p>
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink-900"><HandCoins className="h-4 w-4 text-ink-900" /> {networkOpen.length} solicitação(ões) de troco em aberto na rede</p>
           <div className="space-y-1">
             {networkOpen.slice(0, 6).map((r) => (
               <button key={r.id} onClick={() => router.push(`/modulos/troco?unit=${r.unitId}`)} className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-brand/10">
@@ -170,7 +170,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
           {(openRequests.length > 0 || canOperate) && (
             <div className={cn('rounded-lg border p-3', openRequests.length > 0 ? 'border-brand/50 bg-brand/5' : 'bg-surface')}>
               <div className="mb-1 flex items-center justify-between">
-                <p className="flex items-center gap-1.5 text-sm font-bold text-brand"><HandCoins className="h-4 w-4 text-brand" /> Solicitações de troco{openRequests.length > 0 ? ` (${openRequests.length} aberta(s))` : ''}</p>
+                <p className="flex items-center gap-1.5 text-sm font-bold text-ink-900"><HandCoins className="h-4 w-4 text-ink-900" /> Solicitações de troco{openRequests.length > 0 ? ` (${openRequests.length} aberta(s))` : ''}</p>
                 {canOperate && action !== 'request' && <Button size="sm" variant="outline" onClick={() => setAction('request')}>Solicitar troco</Button>}
               </div>
               {action === 'request' && (
@@ -212,8 +212,8 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
           {/* Saldo do cofre (como a folha) */}
           <div className="rounded-lg border-2 border-brand/30 bg-brand/5 p-3">
             <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-sm font-bold text-brand"><Landmark className="h-4 w-4 text-brand" /> Cofre da unidade</p>
-              <p className="text-lg font-black tabular-nums text-brand">{brl(vault.total)}</p>
+              <p className="flex items-center gap-1.5 text-sm font-bold text-ink-900"><Landmark className="h-4 w-4 text-ink-900" /> Cofre da unidade</p>
+              <p className="text-lg font-black tabular-nums text-ink-900">{brl(vault.total)}</p>
             </div>
             <p className="text-xs text-ink-500">
               {vault.lastCountAt ? `Última conferência: ${new Date(vault.lastCountAt).toLocaleDateString('pt-BR')}` : 'Nenhuma conferência ainda — lance a posição inicial em "Conferir cofre".'}
@@ -299,7 +299,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
           {action === 'count' && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-1 text-sm font-bold text-brand">Conferência do cofre (rotina diária)</p>
+              <p className="mb-1 text-sm font-bold text-ink-900">Conferência do cofre (rotina diária)</p>
               <p className="mb-2 text-xs text-ink-500">Lance o VALOR EM R$ contado de cada denominação (como na folha). Isso substitui o saldo do cofre.</p>
               <DenomForm list={denoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-2 h-9 text-sm" />
@@ -312,7 +312,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
           {action === 'refill' && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-1 text-sm font-bold text-brand">Repor balde (troca 1:1)</p>
+              <p className="mb-1 text-sm font-bold text-ink-900">Repor balde (troca 1:1)</p>
               <div className="mb-2">
                 <Select
                   aria-label="Balde do caixa"
@@ -336,7 +336,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
           {action === 'register' && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-1 text-sm font-bold text-brand">Troca de dinheiro direto no caixa</p>
+              <p className="mb-1 text-sm font-bold text-ink-900">Troca de dinheiro direto no caixa</p>
               <p className="mb-2 text-xs text-ink-500">Para unidades sem baldes (ex.: Nova União): o caixa troca notas por moedas/miúdos direto no cofre. Fica registrado no histórico.</p>
               <Input value={registerName} onChange={(e) => setRegisterName(e.target.value)} placeholder="Qual caixa (ex.: Caixa 1)" className="mb-2 h-9 text-sm" />
               <p className="mb-1 text-xs font-bold text-danger">SAIU do cofre (para o caixa):</p>
@@ -353,7 +353,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
           {action === 'swap' && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-1 text-sm font-bold text-brand">Troca com o escritório</p>
+              <p className="mb-1 text-sm font-bold text-ink-900">Troca com o escritório</p>
               <p className="mb-1 text-xs font-bold text-danger">ENVIADO ao escritório (notas grandes):</p>
               <DenomForm list={bigDenoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <p className="mb-1 mt-3 text-xs font-bold text-success">RECEBIDO do escritório (moedas/miúdos):</p>
@@ -409,7 +409,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
                 return (
                   <div key={m.id} className={cn('rounded-lg border p-2.5', m.type === 'WITHDRAWAL' ? 'border-danger/50 bg-danger/5' : 'bg-surface')}>
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-brand">{t.label}{m.bucketName ? ` — ${m.bucketName}` : ''}</p>
+                      <p className="text-sm font-semibold text-ink-900">{t.label}{m.bucketName ? ` — ${m.bucketName}` : ''}</p>
                       <StatusBadge tone={t.tone}>{m.totalIn > 0 && m.totalOut > 0 ? `↔ ${brl(m.totalIn)}` : m.totalIn > 0 ? `+ ${brl(m.totalIn)}` : `− ${brl(m.totalOut)}`}</StatusBadge>
                     </div>
                     <p className="text-xs text-ink-500">{m.createdByName} · {dt(m.createdAt)}{m.note ? ` · ${m.note}` : ''}</p>
@@ -521,7 +521,7 @@ function VaultHistory({ unitId }: { unitId: string }) {
             return (
               <div key={m.id} className={cn('rounded-lg border p-2.5', m.type === 'WITHDRAWAL' ? 'border-danger/50 bg-danger/5' : 'bg-surface')}>
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-brand">{t.label}{m.bucketName ? ` — ${m.bucketName}` : ''}</p>
+                  <p className="text-sm font-semibold text-ink-900">{t.label}{m.bucketName ? ` — ${m.bucketName}` : ''}</p>
                   <StatusBadge tone={t.tone}>{m.totalIn > 0 && m.totalOut > 0 ? `↔ ${brl(Math.max(m.totalIn, m.totalOut))}` : m.totalIn > 0 ? `+ ${brl(m.totalIn)}` : `− ${brl(m.totalOut)}`}</StatusBadge>
                 </div>
                 <p className="text-xs text-ink-500">{m.createdByName} · {dt(m.createdAt)}{m.note ? ` · ${m.note}` : ''}</p>

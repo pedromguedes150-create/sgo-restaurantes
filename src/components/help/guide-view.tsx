@@ -69,7 +69,7 @@ export function GuideView({ sections }: { sections: Section[] }) {
                     <div key={g.id} className="rounded-lg border bg-surface">
                       <button onClick={() => setOpen(open === g.id ? null : g.id)} className="flex w-full items-center justify-between gap-2 p-3 text-left">
                         <span>
-                          <span className="block font-semibold text-brand">{g.title}</span>
+                          <span className="block font-semibold text-ink-900">{g.title}</span>
                           <span className="block text-xs text-ink-500">{g.summary}</span>
                         </span>
                         {expanded ? <ChevronDown className="h-5 w-5 shrink-0 text-brand" /> : <ChevronRight className="h-5 w-5 shrink-0 text-ink-500" />}

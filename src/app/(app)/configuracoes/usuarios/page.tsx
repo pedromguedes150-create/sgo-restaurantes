@@ -32,7 +32,7 @@ export default async function UsuariosAdminPage() {
           {users.map((u) => (
             <div key={u.id} className="rounded-lg border bg-surface p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold text-brand">{u.name}{!u.active && <span className="ml-1 text-xs text-danger">(inativo)</span>}</p>
+                <p className="font-semibold text-ink-900">{u.name}{!u.active && <span className="ml-1 text-xs text-danger">(inativo)</span>}</p>
                 <span className="text-xs text-ink-500">{roleLabel(u.role)}</span>
               </div>
               <p className="text-xs text-ink-500">CPF {fmtCpf(u.cpf)} · {u.email}</p>

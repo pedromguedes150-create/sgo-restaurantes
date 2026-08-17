@@ -40,9 +40,9 @@ export default async function NotasPage({ searchParams }: { searchParams: { dias
     <div className="space-y-5">
       <LargeTitle title="Notas Recebidas" />
       <div className="grid grid-cols-3 gap-2">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{summary.received}</p><p className="text-xs text-ink-500">a pagar</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.received}</p><p className="text-xs text-ink-500">a pagar</p></CardContent></Card>
         <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.problem}</p><p className="text-xs text-ink-500">c/ problema</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-base font-black text-brand">{formatBRL(summary.monthValue)}</p><p className="text-xs text-ink-500">no mês</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-base font-black text-ink-900">{formatBRL(summary.monthValue)}</p><p className="text-xs text-ink-500">no mês</p></CardContent></Card>
       </div>
       <Card>
         <CardContent className="pt-4">

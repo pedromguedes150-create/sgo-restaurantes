@@ -64,7 +64,7 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
         <Link href="/modulos/pagamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pagamentos</Link>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-brand">Consolidação de Freelancers — {label}</h1>
+        <h1 className="text-xl font-bold text-ink-900">Consolidação de Freelancers — {label}</h1>
         <div className="flex gap-2 print:hidden">
           <a href={exportHref} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><Download className="h-4 w-4" /> Exportar (Excel)</a>
           <PrintButton />
@@ -99,7 +99,7 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
       <Card>
         <CardContent className="flex items-center justify-between py-3">
           <span className="text-sm text-ink-500">{data.grandCount} pagamento(s) · {data.groups.length} freelancer(s)</span>
-          <span className="text-lg font-black text-brand">{formatBRL(data.grandTotal)}</span>
+          <span className="text-lg font-black text-ink-900">{formatBRL(data.grandTotal)}</span>
         </CardContent>
       </Card>
 
@@ -110,11 +110,11 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
           <CardContent className="space-y-1.5 pt-4">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="font-semibold text-brand">{g.name}</p>
+                <p className="font-semibold text-ink-900">{g.name}</p>
                 <p className="text-xs text-ink-500">PIX: {g.pixKey || <span className="text-danger">não cadastrada</span>}</p>
               </div>
               <span className="text-right">
-                <span className="block font-black text-brand">{formatBRL(g.total)}</span>
+                <span className="block font-black text-ink-900">{formatBRL(g.total)}</span>
                 <span className="text-xs text-ink-500">{g.count} pagto(s)</span>
               </span>
             </div>

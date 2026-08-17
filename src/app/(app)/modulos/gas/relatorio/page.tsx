@@ -22,7 +22,7 @@ export default async function GasRelatorioPage() {
           <PrintButton label="PDF" />
         </div>
       </div>
-      <h1 className="text-xl font-bold text-brand">Variação do preço do gás (R$/kg)</h1>
+      <h1 className="text-xl font-bold text-ink-900">Variação do preço do gás (R$/kg)</h1>
       <p className="text-sm text-ink-500">Histórico dos recebimentos (12 meses), com a variação do preço unitário a cada compra.</p>
 
       {units.length === 0 && <p className="text-sm text-ink-500">Nenhum recebimento no período.</p>}
@@ -31,7 +31,7 @@ export default async function GasRelatorioPage() {
         <Card key={u.unitId} className="break-inside-avoid">
           <CardContent className="space-y-2 pt-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-bold text-brand">{u.unit}</h2>
+              <h2 className="font-bold text-ink-900">{u.unit}</h2>
               <span className="text-xs text-ink-500">
                 {u.rows.length} compra(s) · 1ª {u.first != null ? kg(u.first) : '—'} · última {u.last != null ? kg(u.last) : '—'} · mín {kg(u.min)} · máx {kg(u.max)} · méd {kg(u.avg)}
               </span>

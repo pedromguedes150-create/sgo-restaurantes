@@ -87,7 +87,7 @@ function SupplierItem({ s, onChange }: { s: SupplierRow; onChange: () => void })
     <div className="p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="font-semibold text-brand">{s.name}{s.category ? <span className="ml-1 text-xs font-normal text-ink-500">· {s.category}</span> : null}{s.isGas ? <span className="ml-1 rounded bg-brand/15 px-1.5 text-[11px] font-bold text-brand">GÁS</span> : null}</p>
+          <p className="font-semibold text-ink-900">{s.name}{s.category ? <span className="ml-1 text-xs font-normal text-ink-500">· {s.category}</span> : null}{s.isGas ? <span className="ml-1 rounded bg-brand/15 px-1.5 text-[11px] font-bold text-ink-900">GÁS</span> : null}</p>
           <p className="text-xs text-ink-500">{s.cnpj ? `CNPJ ${s.cnpj}` : 'sem CNPJ'}{s.pixKey ? ` · PIX ${s.pixKey}` : ''}</p>
         </div>
         <div className="flex items-center gap-1">

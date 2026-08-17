@@ -207,8 +207,8 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
       {full && (
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <div className="grid flex-1 grid-cols-2 gap-2">
-            <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-2xl font-black text-brand">{filtered.length}</p><p className="text-xs text-ink-500">notas</p></div>
-            <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-xl font-black text-brand">{formatBRL(total)}</p><p className="text-xs text-ink-500">valor total</p></div>
+            <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-2xl font-black text-ink-900">{filtered.length}</p><p className="text-xs text-ink-500">notas</p></div>
+            <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-xl font-black text-ink-900">{formatBRL(total)}</p><p className="text-xs text-ink-500">valor total</p></div>
           </div>
           <div className="flex flex-col gap-1.5">
             <a href={exportHref} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"><FileSpreadsheet className="h-3.5 w-3.5 text-brand" /> Excel</a>
@@ -295,7 +295,7 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
   return (
     <div className="p-3">
       <div className="flex items-center justify-between">
-        <p className="font-semibold text-brand">{n.supplier}</p>
+        <p className="font-semibold text-ink-900">{n.supplier}</p>
         <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
       </div>
       <p className="text-xs text-ink-500">
@@ -419,7 +419,7 @@ function DueTracking({ units }: { units: Unit[] }) {
           {rows.map((r) => (
             <div key={`${r.kind}-${r.id}`} className={`rounded-lg border p-2.5 ${r.daysToDue <= 3 ? 'border-danger/40 bg-danger/5' : 'bg-surface'}`}>
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-brand">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-info-bg px-1 text-[10px] font-bold text-info">GÁS</span> : null}</p>
+                <p className="text-sm font-semibold text-ink-900">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-info-bg px-1 text-[10px] font-bold text-info">GÁS</span> : null}</p>
                 <StatusBadge tone={tone(r.daysToDue)}>{dueLabel(r.daysToDue)}</StatusBadge>
               </div>
               <p className="text-xs text-ink-500">{r.unit} · {formatBRL(r.value)}{r.number ? ` · nº ${r.number}` : ''} · vence {fmtBR(r.dueDate)}</p>
@@ -554,7 +554,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
       />
 
       {isGas && (
-        <p className="rounded-md bg-brand/10 px-3 py-2 text-xs font-semibold text-brand">Fornecedor de gás — preencha os dados do recebimento de gás. Isso alimenta a Análise de gás (dashboard, contratos e variação).</p>
+        <p className="rounded-md bg-brand/10 px-3 py-2 text-xs font-semibold text-ink-900">Fornecedor de gás — preencha os dados do recebimento de gás. Isso alimenta a Análise de gás (dashboard, contratos e variação).</p>
       )}
 
       <div className="grid grid-cols-2 gap-2">
@@ -581,7 +581,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
                 <div><Label>Quantidade (kg)</Label><Input inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="ex: 45" /></div>
                 <div><Label>Valor por kg (R$)</Label><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0,0000" /></div>
               </div>
-              {gasTotal > 0 && <p className="text-center text-sm font-bold text-brand">Valor total: {formatBRL(gasTotal)}</p>}
+              {gasTotal > 0 && <p className="text-center text-sm font-bold text-ink-900">Valor total: {formatBRL(gasTotal)}</p>}
             </>
           ) : (
             <>
@@ -591,7 +591,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
                 <div><Label>Valor total (R$)</Label><Input inputMode="decimal" value={cylTotal} onChange={(e) => setCylTotal(e.target.value)} placeholder="0,00" /></div>
               </div>
               <div><Label>Botijões vazios devolvidos</Label><Input inputMode="numeric" value={cylReturned} onChange={(e) => setCylReturned(e.target.value.replace(/\D/g, ''))} placeholder="ex: 4" /></div>
-              {cKg > 0 && cTotal > 0 && <p className="text-center text-sm font-bold text-brand">{cc} × {ck}kg = {cKg}kg · R$ {cPricePerKg.toFixed(4).replace('.', ',')}/kg</p>}
+              {cKg > 0 && cTotal > 0 && <p className="text-center text-sm font-bold text-ink-900">{cc} × {ck}kg = {cKg}kg · R$ {cPricePerKg.toFixed(4).replace('.', ',')}/kg</p>}
             </>
           )}
         </div>

@@ -63,7 +63,7 @@ export default async function FolgasEquipePage({ searchParams }: { searchParams:
         {header}
         <div className="flex items-center justify-between rounded-lg border border-dashed p-2">
           <Link href={`/modulos/folgas-equipe?view=calendario&ano=${prevM.a}&mes=${prevM.m}`} className="rounded-lg border px-3 py-1.5 text-sm font-semibold">← anterior</Link>
-          <span className="text-sm font-bold text-brand">{MONTHS[month - 1]} de {year}</span>
+          <span className="text-sm font-bold text-ink-900">{MONTHS[month - 1]} de {year}</span>
           <Link href={`/modulos/folgas-equipe?view=calendario&ano=${nextM.a}&mes=${nextM.m}`} className="rounded-lg border px-3 py-1.5 text-sm font-semibold">próximo →</Link>
         </div>
         <p className="text-xs text-ink-500">Baseado no horário de trabalho que cada gerente cadastra em <b>Minha área → Folgas / férias</b>, menos folgas e férias. Dias em vermelho = unidade sem gerente (realocar reserva).{user.role === 'ADMIN' || user.role === 'CEO' ? ' Como admin, você pode cadastrar/editar o horário de cada gerente clicando em “Editar horário”.' : ''}</p>

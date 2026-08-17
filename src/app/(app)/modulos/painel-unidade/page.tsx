@@ -69,7 +69,7 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
       </form>
 
       <div className="rounded-xl border bg-surface p-4">
-        <p className="text-lg font-bold text-brand">{selUnit.name}</p>
+        <p className="text-lg font-bold text-ink-900">{selUnit.name}</p>
         <p className="text-sm text-ink-500">Resumo de {MONTHS[m - 1]}/{y} · gerado em {now.toLocaleDateString('pt-BR')}</p>
       </div>
 
@@ -104,7 +104,7 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
         <div className="space-y-1.5">
           {breakdown.map((b, i) => (
             <div key={i} className="flex items-center justify-between gap-2 border-b pb-1.5 text-sm">
-              <span className="min-w-0"><span className="block font-medium text-brand">{b.name}</span><span className="block text-xs text-ink-500">{b.done}/{b.resolved} realizadas</span></span>
+              <span className="min-w-0"><span className="block font-medium text-ink-900">{b.name}</span><span className="block text-xs text-ink-500">{b.done}/{b.resolved} realizadas</span></span>
               <span className={`shrink-0 font-bold tabular-nums ${tone(b.scorePct)}`}>{b.scorePct}%<span className="ml-1 text-xs font-normal text-ink-500">peso {b.weight}</span></span>
             </div>
           ))}
@@ -128,7 +128,7 @@ function Kpi({ label, pct }: { label: string; pct: number }) {
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-lg border p-2.5">
-      <p className="text-lg font-bold text-brand">{value}</p>
+      <p className="text-lg font-bold text-ink-900">{value}</p>
       <p className="text-xs text-ink-500">{label}</p>
       {sub && <p className="text-[11px] text-ink-500">{sub}</p>}
     </div>

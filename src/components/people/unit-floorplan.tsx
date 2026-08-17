@@ -65,7 +65,7 @@ export function UnitFloorplan({ grid }: { grid: Grid }) {
           className="origin-top transition-transform duration-300"
           style={tilt ? { transform: 'perspective(1400px) rotateX(20deg)', transformStyle: 'preserve-3d' } : undefined}
         >
-          <div className="mb-3 flex items-center gap-1 text-xs font-semibold text-brand">
+          <div className="mb-3 flex items-center gap-1 text-xs font-semibold text-ink-900">
             <DoorOpen className="h-4 w-4" /> Entrada
           </div>
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
@@ -75,7 +75,7 @@ export function UnitFloorplan({ grid }: { grid: Grid }) {
                 className={cn('rounded-lg border-2 border-brand/30 p-2.5', ROOM[r.coverage].floor, ROOM[r.coverage].wall)}
               >
                 <div className="flex items-start justify-between gap-1">
-                  <p className="text-sm font-bold leading-tight text-brand">{r.name}</p>
+                  <p className="text-sm font-bold leading-tight text-ink-900">{r.name}</p>
                   <span className={cn('mt-0.5 h-3 w-3 shrink-0 rounded-full', ROOM[r.coverage].dot)} title={ROOM[r.coverage].label} />
                 </div>
                 <p className="mt-1 inline-flex items-center gap-1 text-xs text-ink-500">
@@ -83,7 +83,7 @@ export function UnitFloorplan({ grid }: { grid: Grid }) {
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-1">
                   {r.names.slice(0, 6).map((n, i) => (
-                    <span key={i} className="truncate rounded bg-white/70 px-1.5 py-0.5 text-[10px] font-medium text-brand">{n.split(' ')[0]}</span>
+                    <span key={i} className="truncate rounded bg-white/70 px-1.5 py-0.5 text-[10px] font-medium text-ink-900">{n.split(' ')[0]}</span>
                   ))}
                   {r.names.length > 6 && <span className="text-[10px] text-ink-500">+{r.names.length - 6}</span>}
                   {r.count === 0 && <span className="text-[10px] font-semibold text-danger">vazio</span>}

@@ -77,7 +77,7 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
           {usage.map((u) => (
             <div key={u.unitId} className="rounded-lg border bg-surface p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="flex items-center gap-2 font-semibold text-brand"><span className={cn('h-2.5 w-2.5 rounded-full', TONE_DOT[u.tone])} /> {u.unitName}</p>
+                <p className="flex items-center gap-2 font-semibold text-ink-900"><span className={cn('h-2.5 w-2.5 rounded-full', TONE_DOT[u.tone])} /> {u.unitName}</p>
                 <span className="text-sm font-bold tabular-nums">{u.usagePct}% de uso</span>
               </div>
               <div className="mt-2 grid grid-cols-3 gap-2 text-center sm:grid-cols-6">
@@ -171,7 +171,7 @@ function PlansEditor({ plans, busy, post }: { plans: PlanRowUI[]; busy: boolean;
           {plans.map((p) => (
             <div key={p.unitId} className="flex items-center justify-between gap-2 rounded-md bg-canvas p-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-brand">{p.unitName}{p.overdue && <span className="ml-1.5 text-xs font-bold text-danger">VENCIDA</span>}</p>
+                <p className="truncate text-sm font-semibold text-ink-900">{p.unitName}{p.overdue && <span className="ml-1.5 text-xs font-bold text-danger">VENCIDA</span>}</p>
                 <p className="text-xs text-ink-500">
                   {p.active ? `a cada ${p.frequencyDays}d · próxima ${new Date(p.nextDueAt).toLocaleDateString('pt-BR')}` : 'sem recorrência'}
                   {p.lastVisitAt ? ` · última ${new Date(p.lastVisitAt).toLocaleDateString('pt-BR')}` : ''}
@@ -203,7 +203,7 @@ function UpcomingVisit({ v, checklists, canOperate, busy, post }: {
     <div className={cn('rounded-lg border p-2.5', v.overdue ? 'border-danger/50 bg-danger/5' : 'bg-surface')}>
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-brand">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
+          <p className="truncate text-sm font-semibold text-ink-900">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
           <p className="text-xs text-ink-500">{v.supervisorName}</p>
         </div>
         <span className="flex shrink-0 items-center gap-1.5">
@@ -272,7 +272,7 @@ function HistoryVisit({ v, isAdmin, busy, onDelete }: { v: VisitRowUI; isAdmin: 
     <div className="rounded-lg border bg-surface p-2.5">
       <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between gap-2 text-left">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-brand">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
+          <p className="truncate text-sm font-semibold text-ink-900">{v.unitName} · {fmtBR(v.scheduledDate)}</p>
           <p className="truncate text-xs text-ink-500">{v.supervisorName}{v.checklistName ? ` · ${v.checklistName}${notOk > 0 ? ` (${notOk} item(ns) não OK)` : ' (tudo OK)'}` : ''}</p>
         </div>
         <span className="flex shrink-0 items-center gap-1.5">

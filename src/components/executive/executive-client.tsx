@@ -79,7 +79,7 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
           <tbody>
             {rows.map((r) => (
               <tr key={r.unitId} className="border-t">
-                <td className="p-2 font-semibold text-brand">
+                <td className="p-2 font-semibold text-ink-900">
                   <span className="flex items-center gap-1.5"><span className={cn('h-2 w-2 shrink-0 rounded-full', TONE[r.usageTone])} />{r.unitName}</span>
                 </td>
                 <td className={cn('p-2 text-right font-bold tabular-nums', pctCls(r.metaPct))}>{r.metaPct}%</td>

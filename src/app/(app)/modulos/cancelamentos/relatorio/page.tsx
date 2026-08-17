@@ -43,15 +43,15 @@ export default async function CancelamentosRelatorioPage({ searchParams }: { sea
       )}
 
       <div>
-        <h1 className="text-xl font-bold text-brand">Relatório de Cancelamento de Cupons</h1>
+        <h1 className="text-xl font-bold text-ink-900">Relatório de Cancelamento de Cupons</h1>
         <p className="text-sm text-ink-500">Competência {mm}/{yy}{unitId ? ` · ${units.find((u) => u.id === unitId)?.name ?? ''}` : ' · todas as unidades'}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{summary.monthTotal}</p><p className="text-xs text-ink-500">cupons no mês</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.monthTotal}</p><p className="text-xs text-ink-500">cupons no mês</p></CardContent></Card>
         <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-success">{summary.justifiedPct}%</p><p className="text-xs text-ink-500">justificados</p></CardContent></Card>
         <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.pending}</p><p className="text-xs text-ink-500">pendentes</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{formatBRL(totalValue)}</p><p className="text-xs text-ink-500">valor total</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{formatBRL(totalValue)}</p><p className="text-xs text-ink-500">valor total</p></CardContent></Card>
       </div>
 
       <Card className="break-inside-avoid">
@@ -89,12 +89,12 @@ export default async function CancelamentosRelatorioPage({ searchParams }: { sea
       {summary.byOperator.length > 0 && (
         <Card className="break-inside-avoid">
           <CardContent className="pt-4">
-            <p className="mb-2 text-sm font-bold text-brand">Ranking por operador</p>
+            <p className="mb-2 text-sm font-bold text-ink-900">Ranking por operador</p>
             <div className="space-y-1">
               {summary.byOperator.map((o, i) => (
                 <div key={o.operator} className="flex justify-between text-sm">
                   <span>{i + 1}. {o.operator}</span>
-                  <span className="font-semibold text-brand tabular-nums">{o.count}</span>
+                  <span className="font-semibold text-ink-900 tabular-nums">{o.count}</span>
                 </div>
               ))}
             </div>

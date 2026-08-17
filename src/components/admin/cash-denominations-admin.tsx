@@ -133,7 +133,7 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
                         <StatusBadge tone={r.active ? 'success' : 'critical'}>{r.active ? 'Ativa' : 'Inativa'}</StatusBadge>
                       </button>
                       <div>
-                        <p className="text-sm font-semibold text-brand">{rowLabel(r)}</p>
+                        <p className="text-sm font-semibold text-ink-900">{rowLabel(r)}</p>
                         {r.system
                           ? <p className="text-xs text-ink-500">Linha de sistema (PIX/caixinha)</p>
                           : r.balance !== 0 && <p className="text-xs text-ink-500">no cofre: {brl(r.balance)}</p>}

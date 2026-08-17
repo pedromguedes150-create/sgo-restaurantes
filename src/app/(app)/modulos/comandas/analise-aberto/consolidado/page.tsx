@@ -37,7 +37,7 @@ export default async function ConsolidadoPage() {
         <div className="space-y-4">
           {rows.map((r) => (
             <div key={r.unitId} className="break-inside-avoid">
-              <p className="text-sm font-bold text-brand">{r.unitName} <span className="font-normal text-ink-500">· corte {fmt(r.cutDate)} · {r.suspects.length} comanda(s) · {formatBRL(r.suspectValue)}</span></p>
+              <p className="text-sm font-bold text-ink-900">{r.unitName} <span className="font-normal text-ink-500">· corte {fmt(r.cutDate)} · {r.suspects.length} comanda(s) · {formatBRL(r.suspectValue)}</span></p>
               <table className="mt-1 w-full border-collapse text-xs">
                 <thead><tr className="border-b text-left text-ink-500"><th className="p-1">Comanda (travar)</th><th className="p-1">Aberta em</th><th className="p-1 text-center">Dias</th><th className="p-1 text-right">Valor</th></tr></thead>
                 <tbody>

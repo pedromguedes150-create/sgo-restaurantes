@@ -154,7 +154,7 @@ export function CommandsClient({
         {openDivergences.map((d) => (
           <div key={d.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-brand">Comanda nº {d.number}</p>
+              <p className="font-semibold text-ink-900">Comanda nº {d.number}</p>
               <StatusBadge tone={d.status === 'OPEN' ? 'critical' : 'medium'}>
                 {d.status === 'OPEN' ? '🔴 Aberta' : '🟡 Em apuração'}
               </StatusBadge>
@@ -249,7 +249,7 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
   if (total === 0) return null;
   return (
     <div className="rounded-lg border-2 border-brand/30 bg-brand/5 p-3">
-      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><Grid3x3 className="h-4 w-4" /> Conferência em grade</h2>
+      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink-900"><Grid3x3 className="h-4 w-4" /> Conferência em grade</h2>
       <p className="mb-2 text-xs text-ink-500">Toque 1× = <b className="text-success">conferida</b> · 2× = <b className="text-info">em uso</b> (com cliente — conta como presente) · 3× = limpa. As <b>não marcadas</b> viram apuração.</p>
       {underReview.length > 0 && (
         <p className="mb-2 rounded-md bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">{underReview.length} comanda(s) já em apuração — fora da grade (trate no bloco Divergências abaixo).</p>

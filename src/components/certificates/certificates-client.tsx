@@ -164,7 +164,7 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
           onChange={(e) => { const f = e.target.files?.[0]; if (f) readWithAI(f); }}
           className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-2 file:text-sm file:font-semibold file:text-on-brand"
         />
-        {reading && <p className="mt-2 text-sm text-brand">Lendo o atestado com IA…</p>}
+        {reading && <p className="mt-2 text-sm text-ink-900">Lendo o atestado com IA…</p>}
         {attachmentPath && !reading && (
           <a href={`/${attachmentPath}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand underline"><FileText className="h-3.5 w-3.5" /> Ver anexo</a>
         )}
@@ -197,7 +197,7 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
           : <DatePicker label="Fim do afastamento" className={ring('endDate')} min={startDate || undefined} value={endDate || null} onValueChange={(v) => setEndDate(v ?? '')} />}
       </div>
       {type !== 'HOURS' && startDate && endDate && (
-        <p className="text-xs font-semibold text-brand">{days} dia(s) de afastamento — serão marcados como “Atestado” na Escala.</p>
+        <p className="text-xs font-semibold text-ink-900">{days} dia(s) de afastamento — serão marcados como “Atestado” na Escala.</p>
       )}
 
       <div className="grid grid-cols-2 gap-2">
@@ -217,7 +217,7 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
       )}
       <div><Label>Observação</Label><Input value={observation} onChange={(e) => setObservation(e.target.value)} placeholder="opcional" /></div>
 
-      {msg && <p className={`text-sm font-medium ${msg.kind === 'err' ? 'text-danger' : msg.kind === 'ok' ? 'text-success' : 'text-brand'}`}>{msg.text}</p>}
+      {msg && <p className={`text-sm font-medium ${msg.kind === 'err' ? 'text-danger' : msg.kind === 'ok' ? 'text-success' : 'text-ink-900'}`}>{msg.text}</p>}
       <Button className="w-full" disabled={busy || reading || !unitId || !collaboratorId || !startDate} onClick={save}><Plus className="h-4 w-4" /> Salvar atestado</Button>
     </div>
   );
@@ -244,7 +244,7 @@ function History({ rows, isAdmin, showCid, onChanged }: { rows: CertListItem[]; 
         <div key={r.id} className="p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-brand">{r.collaboratorName}</p>
+              <p className="truncate text-sm font-semibold text-ink-900">{r.collaboratorName}</p>
               <p className="text-xs text-ink-500">{r.unitName} · {r.by ?? '—'}</p>
             </div>
             <StatusBadge tone={r.type === 'COMPANION' ? 'medium' : r.type === 'HOURS' ? 'neutral' : 'success'}>{CERT_TYPE_LABELS[r.type]}</StatusBadge>
@@ -296,7 +296,7 @@ function Panel({ report, ym }: { report: CertReport; ym: string }) {
 
       {/* Ranking por unidade */}
       <div className="rounded-lg border bg-surface p-3">
-        <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-brand"><TrendingUp className="h-4 w-4" /> Por unidade (mais dias perdidos)</h3>
+        <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink-900"><TrendingUp className="h-4 w-4" /> Por unidade (mais dias perdidos)</h3>
         {report.byUnit.length === 0 ? <p className="text-sm text-ink-500">Sem atestados neste mês.</p> : (
           <div className="space-y-1.5">
             {report.byUnit.map((u) => (
@@ -315,7 +315,7 @@ function Panel({ report, ym }: { report: CertReport; ym: string }) {
 
       {/* Tendência mensal */}
       <div className="rounded-lg border bg-surface p-3">
-        <h3 className="mb-2 text-sm font-bold text-brand">Tendência (12 meses) — dias perdidos</h3>
+        <h3 className="mb-2 text-sm font-bold text-ink-900">Tendência (12 meses) — dias perdidos</h3>
         <div className="flex items-end gap-1" style={{ height: 90 }}>
           {report.monthlyTrend.map((t) => (
             <div key={t.ym} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${t.ym}: ${t.days} dia(s)`}>
@@ -329,7 +329,7 @@ function Panel({ report, ym }: { report: CertReport; ym: string }) {
       {/* Por dia da semana + por tipo */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="rounded-lg border bg-surface p-3">
-          <h3 className="mb-2 text-sm font-bold text-brand">Por dia da semana (início)</h3>
+          <h3 className="mb-2 text-sm font-bold text-ink-900">Por dia da semana (início)</h3>
           <div className="flex items-end gap-1" style={{ height: 80 }}>
             {report.byWeekday.map((w) => (
               <div key={w.weekday} className="flex flex-1 flex-col items-center justify-end gap-1" title={`${w.label}: ${w.count}`}>
@@ -340,7 +340,7 @@ function Panel({ report, ym }: { report: CertReport; ym: string }) {
           </div>
         </div>
         <div className="rounded-lg border bg-surface p-3">
-          <h3 className="mb-2 text-sm font-bold text-brand">Por tipo</h3>
+          <h3 className="mb-2 text-sm font-bold text-ink-900">Por tipo</h3>
           {report.byType.length === 0 ? <p className="text-sm text-ink-500">—</p> : (
             <ul className="space-y-1 text-sm">
               {report.byType.map((t) => <li key={t.type} className="flex justify-between"><span>{CERT_TYPE_LABELS[t.type]}</span><span className="text-ink-500">{t.count} · {t.days} dia(s)</span></li>)}
@@ -356,7 +356,7 @@ function KpiCard({ icon, label, value }: { icon: React.ReactNode; label: string;
   return (
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-center gap-2 text-ink-500">{icon}<span className="text-xs font-semibold uppercase tracking-wide">{label}</span></div>
-      <p className="mt-1 text-2xl font-black text-brand">{value}</p>
+      <p className="mt-1 text-2xl font-black text-ink-900">{value}</p>
     </div>
   );
 }

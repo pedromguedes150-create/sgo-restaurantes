@@ -43,7 +43,7 @@ export default async function CancelamentosPage() {
 
       {/* Resumo do mês */}
       <div className="grid grid-cols-3 gap-2">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{summary.monthTotal}</p><p className="text-xs text-ink-500">no mês</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.monthTotal}</p><p className="text-xs text-ink-500">no mês</p></CardContent></Card>
         <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-success">{summary.justifiedPct}%</p><p className="text-xs text-ink-500">justificados</p></CardContent></Card>
         <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.pending}</p><p className="text-xs text-ink-500">pendentes</p></CardContent></Card>
       </div>
@@ -69,7 +69,7 @@ export default async function CancelamentosPage() {
               {imports.map((imp) => (
                 <div key={imp.id} className="flex items-center justify-between rounded-lg border bg-surface p-2.5">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-brand">{imp.fileName}</p>
+                    <p className="truncate text-sm font-semibold text-ink-900">{imp.fileName}</p>
                     <p className="text-xs text-ink-500">{imp.unit.name} · {imp.operationalDate} · {imp._count.cancellations} cupom(ns)</p>
                   </div>
                   <DeleteOpButton entity="cancellationImport" id={imp.id} label={`a importação "${imp.fileName}" e seus cupons`} />
@@ -82,7 +82,7 @@ export default async function CancelamentosPage() {
               {recentCanc.map((c) => (
                 <div key={c.id} className="flex items-center justify-between rounded-lg border bg-surface p-2.5">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-brand">Cupom {c.couponNumber} · {formatBRL(Number(c.value))}</p>
+                    <p className="text-sm font-semibold text-ink-900">Cupom {c.couponNumber} · {formatBRL(Number(c.value))}</p>
                     <p className="text-xs text-ink-500">{c.unit.name} · {c.operationalDate} · {c.status}{c.cashOperator ? ` · ${c.cashOperator}` : ''}</p>
                   </div>
                   <DeleteOpButton entity="cancellation" id={c.id} label={`o cupom ${c.couponNumber}`} />
@@ -100,7 +100,7 @@ export default async function CancelamentosPage() {
             {summary.byOperator.map((o, i) => (
               <div key={o.operator} className="flex justify-between text-sm">
                 <span>{i + 1}. {o.operator}</span>
-                <span className="font-semibold text-brand">{o.count}</span>
+                <span className="font-semibold text-ink-900">{o.count}</span>
               </div>
             ))}
           </CardContent>

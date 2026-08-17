@@ -160,7 +160,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                     )}
                     <tr className="border-t">
                       <td className="sticky left-0 z-10 min-w-[184px] bg-surface px-2 py-1.5 text-left">
-                        <div className="font-semibold text-brand">{row.name}</div>
+                        <div className="font-semibold text-ink-900">{row.name}</div>
                         <div className="text-[10px] text-ink-500">{row.jobTitle ?? ''}{row.shiftLabel ? ` · ${row.shiftLabel}` : ''}</div>
                       </td>
                       {row.days.map((cell, i) => {
@@ -249,7 +249,7 @@ function AbsencePanel({ unitId, collaborators, onDone }: { unitId: string; colla
 
   return (
     <div className="rounded-lg border bg-surface p-3 print:hidden">
-      <h3 className="mb-2 text-sm font-bold text-brand">Registrar ausência</h3>
+      <h3 className="mb-2 text-sm font-bold text-ink-900">Registrar ausência</h3>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
         <div className="col-span-2 md:col-span-1">
           <Select label="Colaborador" size="sm" placeholder="Selecione…" value={collaboratorId} onValueChange={setCollaboratorId} options={collaborators.map((c) => ({ value: c.id, label: c.name }))} />
@@ -300,7 +300,7 @@ function PatternPanel({ unitId, collaborators, turnos, patterns, post, busy }: {
 
   return (
     <div className="rounded-lg border bg-surface p-3 print:hidden">
-      <h3 className="mb-2 text-sm font-bold text-brand">Cadastrar / editar escala do colaborador</h3>
+      <h3 className="mb-2 text-sm font-bold text-ink-900">Cadastrar / editar escala do colaborador</h3>
       <p className="mb-2 text-xs text-ink-500">O padrão gera o <b>Planejado</b>. 12x36 usa dias pares/ímpares do mês; 6x1/5x2/personalizada usam a data de início do ciclo.</p>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
         <div className="col-span-2 md:col-span-1">

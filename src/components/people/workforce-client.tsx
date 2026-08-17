@@ -99,7 +99,7 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
             <p className="text-xs text-ink-500">
               {isNow
                 ? <span className="font-semibold text-success">● Na unidade agora</span>
-                : <span className={isFuture ? 'font-semibold text-info' : 'font-semibold text-brand'}>
+                : <span className={isFuture ? 'font-semibold text-info' : 'font-semibold text-ink-900'}>
                     {isFuture ? 'Projeção' : isToday ? 'Hoje' : 'Histórico'} — {fmtDateBR(mapDate)}{mapTime ? ` às ${mapTime}` : ' (dia todo)'}
                   </span>}
               {' · '}{availability ? `${availability.working.length} escalado(s) no dia` : ''}
@@ -128,7 +128,7 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
           <p className="text-[11px] text-ink-500">Escolha um dia futuro para <b>projetar</b> a equipe (pela escala planejada) ou um dia passado para o <b>histórico</b>. Deixe o horário em branco para o dia todo.</p>
         </div>
         {isFuture && (
-          <p className="rounded-lg bg-brand/10 px-3 py-2 text-xs text-brand">Projeção baseada na <b>escala planejada</b> — pode mudar se houver ajustes, faltas ou freelancers.</p>
+          <p className="rounded-lg bg-brand/10 px-3 py-2 text-xs text-ink-900">Projeção baseada na <b>escala planejada</b> — pode mudar se houver ajustes, faltas ou freelancers.</p>
         )}
         {grid.sectors.every((s) => grid.shifts.every((c) => (grid.cells[s.id]?.[c.label]?.length ?? 0) === 0)) && (
           <div className="rounded-lg bg-sunken/50 px-3 py-2 text-sm text-ink-500">
@@ -148,7 +148,7 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
         {(historical || view === 'lista') && grid.sectors.length === 0 && <p className="text-sm text-ink-500">Sem registro para este dia.</p>}
         {(historical || view === 'lista') && grid.sectors.map((s) => (
           <div key={s.id} className="rounded-lg border bg-surface p-3">
-            <p className="font-semibold text-brand">{s.name} <span className="text-xs font-normal text-ink-500">(mín. {s.minHeadcount}/turno)</span></p>
+            <p className="font-semibold text-ink-900">{s.name} <span className="text-xs font-normal text-ink-500">(mín. {s.minHeadcount}/turno)</span></p>
             {grid.shifts.length === 0 && <p className="mt-1 text-xs text-ink-500">Sem turnos cadastrados ainda.</p>}
             <div className="mt-2 space-y-2">
               {grid.shifts.map((col) => {
@@ -173,7 +173,7 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
             </div>
             {(freelancers ?? []).filter((f) => f.sectorId === s.id && (isToday ? f.present : true)).length > 0 && (
               <div className="mt-2 rounded-md bg-brand/5 p-2">
-                <p className="text-xs font-bold text-brand">Freelancers</p>
+                <p className="text-xs font-bold text-ink-900">Freelancers</p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {(freelancers ?? []).filter((f) => f.sectorId === s.id && (isToday ? f.present : true)).map((f) => (
                     <span key={f.requestId} className="inline-flex items-center gap-1 rounded-full bg-brand/15 px-2 py-0.5 text-xs">{f.name}{f.startTime && f.endTime ? ` (${f.startTime}-${f.endTime})` : ''}</span>
@@ -196,12 +196,12 @@ function FreelancersPanel({ freelancers, sectors, isToday, post, busy }: {
   if (freelancers.length === 0) return null;
   return (
     <div className="rounded-lg border border-brand/30 bg-brand/5 p-3">
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand">Freelancers do dia ({freelancers.length})</p>
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-900">Freelancers do dia ({freelancers.length})</p>
       <div className="space-y-1.5">
         {freelancers.map((f) => (
           <div key={f.requestId} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-surface p-2">
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold text-brand">{f.name}{isToday && !f.present ? <span className="ml-1 text-xs font-normal text-ink-500">(fora do horário agora)</span> : ''}</span>
+              <span className="block truncate text-sm font-semibold text-ink-900">{f.name}{isToday && !f.present ? <span className="ml-1 text-xs font-normal text-ink-500">(fora do horário agora)</span> : ''}</span>
               <span className="block text-xs text-ink-500">{f.startTime && f.endTime ? `${f.startTime}-${f.endTime}` : 'sem horário'}{f.sectorName ? ` · ${f.sectorName}` : ''}</span>
             </span>
             <div className="w-44">
@@ -258,7 +258,7 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
 
       {/* Alocar quem falta */}
       <div className="rounded-md bg-canvas p-2">
-        <p className="mb-1 text-xs font-bold text-brand">A alocar ({board.toAllocate.length})</p>
+        <p className="mb-1 text-xs font-bold text-ink-900">A alocar ({board.toAllocate.length})</p>
         {board.toAllocate.length === 0 ? (
           <p className="text-sm font-medium text-success">Quadro completo ✅ — todos os colaboradores estão alocados.</p>
         ) : (noSectors || noTurnos) ? (
@@ -287,14 +287,14 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
 
       {/* Já alocados (editável) */}
       <div className="mt-3">
-        <p className="mb-1 text-xs font-bold text-brand">Alocados ({board.allocated.length})</p>
+        <p className="mb-1 text-xs font-bold text-ink-900">Alocados ({board.allocated.length})</p>
         {board.allocated.length === 0 ? (
           <p className="text-sm text-ink-500">Ninguém alocado ainda.</p>
         ) : (
           <div className="space-y-1.5">
             {board.allocated.map((a) => editId === a.allocationId ? (
               <div key={a.allocationId} className="rounded-md border bg-surface p-2">
-                <p className="mb-1 text-sm font-semibold text-brand">{a.name}</p>
+                <p className="mb-1 text-sm font-semibold text-ink-900">{a.name}</p>
                 <div className="grid grid-cols-2 gap-2">
                   <Select aria-label="Setor" size="sm" value={eSector} onValueChange={setESector} options={grid.sectors.map((s) => ({ value: s.id, label: s.name }))} />
                   <Select aria-label="Turno" size="sm" value={eTurno} onValueChange={setETurno} options={activeTurnos.map((t) => ({ value: t.id, label: turnoLabel(t) }))} />
@@ -303,7 +303,7 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
                   <Label className="text-xs">Função (cargo) — mudar avisa o RH</Label>
                   <Input value={eTitle} onChange={(e) => setETitle(e.target.value)} placeholder="Ex.: Churrasqueiro" className="h-10 text-sm" />
                   {eTitle.trim() !== eTitleOrig.trim() && eTitle.trim() !== '' && (
-                    <p className="mt-1 text-xs text-brand">A mudança de função vira uma solicitação ao RH (os Admins são avisados). O cargo atualiza no SGO quando o RH efetivar.</p>
+                    <p className="mt-1 text-xs text-ink-900">A mudança de função vira uma solicitação ao RH (os Admins são avisados). O cargo atualiza no SGO quando o RH efetivar.</p>
                   )}
                 </div>
                 <div className="mt-2 flex justify-end gap-1">
@@ -322,7 +322,7 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
             ) : (
               <div key={a.allocationId} className="flex items-center justify-between gap-2 rounded-md border bg-surface p-2">
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-brand">{a.name}</span>
+                  <span className="block truncate text-sm font-semibold text-ink-900">{a.name}</span>
                   <span className="block truncate text-xs text-ink-500">{a.jobTitle ? `${a.jobTitle} · ` : ''}{a.sectorName} · {a.shiftLabel}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1">
@@ -452,8 +452,8 @@ function SimulationPanel({ unitId, date, working, board, sectors, saved, post, b
   return (
     <div className="rounded-lg border border-dashed border-brand/50 p-3">
       <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left">
-        <p className="text-sm font-bold text-brand">🧪 Simulação de alocação — {date.split('-').reverse().join('/')}</p>
-        <span className="text-xs font-semibold text-brand">{saved ? `salva por ${saved.by} em ${new Date(saved.at).toLocaleDateString('pt-BR')}` : open ? 'fechar' : 'simular'}</span>
+        <p className="text-sm font-bold text-ink-900">🧪 Simulação de alocação — {date.split('-').reverse().join('/')}</p>
+        <span className="text-xs font-semibold text-ink-900">{saved ? `salva por ${saved.by} em ${new Date(saved.at).toLocaleDateString('pt-BR')}` : open ? 'fechar' : 'simular'}</span>
       </button>
       {open && (
         <div className="mt-2 space-y-1.5">

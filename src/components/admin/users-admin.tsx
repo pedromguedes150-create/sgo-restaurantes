@@ -104,7 +104,7 @@ function UserItem({ u, units, meId, onChange, onToggle }: { u: UserRow; units: U
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="font-semibold text-brand">{u.name}{isSelf && <span className="ml-1 text-xs text-ink-500">(você)</span>}</p>
+          <p className="font-semibold text-ink-900">{u.name}{isSelf && <span className="ml-1 text-xs text-ink-500">(você)</span>}</p>
           <p className="text-xs text-ink-500">{u.email} · {ROLE_OPTIONS.find((r) => r.value === u.role)?.label ?? u.role}</p>
         </div>
         <div className="flex items-center gap-1">

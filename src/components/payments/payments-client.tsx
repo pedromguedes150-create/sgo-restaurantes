@@ -435,7 +435,7 @@ function List({ items, actions, selection }: {
         return (
           <div key={day} className="space-y-2">
             <div className="flex items-center justify-between border-b pb-1">
-              <p className="text-sm font-bold text-brand">📅 {fmtDay(day)}</p>
+              <p className="text-sm font-bold text-ink-900">📅 {fmtDay(day)}</p>
               <span className="text-xs text-ink-500">{dayItems.length} lançamento(s) · {formatBRL(dayTotal)}</span>
             </div>
             {unitNames.map((u) => (
@@ -616,7 +616,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
           {calc?.configured && (
             <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
               <p className="text-xs text-ink-500">Valor calculado ({calc.dayTypeLabel})</p>
-              <p className="text-2xl font-black text-brand">{formatBRL(calc.amount)}</p>
+              <p className="text-2xl font-black text-ink-900">{formatBRL(calc.amount)}</p>
               <p className="text-xs text-ink-500">{calc.hours}h × {formatBRL(calc.rate ?? 0)}/h{calc.transport > 0 ? ` + ${formatBRL(calc.transport)} VT` : ''}</p>
             </div>
           )}

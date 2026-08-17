@@ -69,7 +69,7 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
           <Group>
             {collaborators.map((c) => (
               <div key={c.id} className="p-3">
-                <p className="font-semibold text-brand">{c.name}</p>
+                <p className="font-semibold text-ink-900">{c.name}</p>
                 <p className="text-xs text-ink-500">{c.jobTitle ?? '—'} · {c.units.join(', ')}</p>
               </div>
             ))}
@@ -101,7 +101,7 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
           {vacations.map((v) => (
             <div key={v.id} className="rounded-lg border bg-surface p-3">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-brand">{v.collaborator}</p>
+                <p className="font-semibold text-ink-900">{v.collaborator}</p>
                 <StatusBadge tone={VAC_ST[v.status].tone}>{VAC_ST[v.status].label}</StatusBadge>
               </div>
               <p className="text-xs text-ink-500">{v.unit} · {v.start} a {v.end}</p>
@@ -118,7 +118,7 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
           {schedule.map((s) => (
             <div key={s.id} className="rounded-lg border bg-surface p-3">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-brand">{s.collaborator}</p>
+                <p className="font-semibold text-ink-900">{s.collaborator}</p>
                 <StatusBadge tone={s.variation === 'NONE' ? 'neutral' : 'medium'}>{VAR_LABEL[s.variation]}</StatusBadge>
               </div>
               <p className="text-xs text-ink-500">{s.unit} · {s.date} · planejado {s.planned}{s.note ? ` · ${s.note}` : ''}</p>

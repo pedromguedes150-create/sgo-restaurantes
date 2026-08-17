@@ -97,7 +97,7 @@ function Launch({ units, suppliers }: { units: Unit[]; suppliers: Supplier[] }) 
       {total > 0 && (
         <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
           <p className="text-xs text-ink-500">Valor total a receber</p>
-          <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
+          <p className="text-2xl font-black text-ink-900">{formatBRL(total)}</p>
         </div>
       )}
       <Select
@@ -128,7 +128,7 @@ function Dashboard({ d }: { d: OilDash }) {
         <div className="space-y-2">
           {d.byUnit.map((u) => (
             <div key={u.key} className="rounded-lg border bg-surface p-2.5">
-              <div className="flex items-center justify-between text-sm"><span className="font-semibold text-brand">{u.name}</span><span className="font-bold">{formatBRL(u.total)}</span></div>
+              <div className="flex items-center justify-between text-sm"><span className="font-semibold text-ink-900">{u.name}</span><span className="font-bold">{formatBRL(u.total)}</span></div>
               <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-brand" style={{ width: `${(u.total / maxU) * 100}%` }} /></div>
               <p className="mt-1 text-xs text-ink-500">{u.liters.toLocaleString('pt-BR')} L · {perL(u.liters > 0 ? u.total / u.liters : 0)}</p>
             </div>
@@ -150,7 +150,7 @@ function Dashboard({ d }: { d: OilDash }) {
         <div className="flex items-end gap-2 rounded-lg border bg-surface p-3" style={{ height: 140 }}>
           {d.monthly.map((m) => (
             <div key={m.month} className="flex flex-1 flex-col items-center justify-end gap-1">
-              <span className="text-[10px] font-semibold text-brand">{Math.round(m.total)}</span>
+              <span className="text-[10px] font-semibold text-ink-900">{Math.round(m.total)}</span>
               <div className="w-full rounded-t bg-brand" style={{ height: `${Math.max(4, (m.total / maxM) * 90)}px` }} />
               <span className="text-[10px] text-ink-500">{mlabel(m.month)}</span>
             </div>
@@ -162,7 +162,7 @@ function Dashboard({ d }: { d: OilDash }) {
 }
 
 function Cell({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border bg-surface py-3 text-center"><p className="text-base font-black text-brand">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
+  return <div className="rounded-lg border bg-surface py-3 text-center"><p className="text-base font-black text-ink-900">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
 }
 
 function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdmin: boolean; canEditDate?: boolean }) {
@@ -187,7 +187,7 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdm
         <div key={r.id} className="p-3">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="flex items-center gap-1 font-semibold text-brand"><Droplets className="h-4 w-4 text-brand" /> {r.liters.toLocaleString('pt-BR')} L · {formatBRL(r.total)}</p>
+              <p className="flex items-center gap-1 font-semibold text-ink-900"><Droplets className="h-4 w-4 text-ink-900" /> {r.liters.toLocaleString('pt-BR')} L · {formatBRL(r.total)}</p>
               <p className="text-xs text-ink-500">{r.date} · {r.unit} · {perL(r.price)}{r.method ? ` · ${r.method}` : ''}{r.supplier !== 'Sem fornecedor' ? ` · ${r.supplier}` : ''}{r.by ? ` · ${r.by}` : ''}</p>
             </div>
           </div>

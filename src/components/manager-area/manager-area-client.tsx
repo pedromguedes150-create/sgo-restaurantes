@@ -142,7 +142,7 @@ function TaskRow({ t, busy, post }: { t: MTask; busy: boolean; post: Post }) {
         {t.done ? <CheckSquare className="h-5 w-5 text-success" /> : <Square className="h-5 w-5 text-ink-500" />}
       </button>
       <span className="min-w-0 flex-1">
-        <span className={`block text-sm font-medium ${t.done ? 'line-through' : 'text-brand'}`}>{t.title}</span>
+        <span className={`block text-sm font-medium ${t.done ? 'line-through' : 'text-ink-900'}`}>{t.title}</span>
         {t.dueAt && <span className={`block text-xs ${overdue ? 'font-semibold text-danger' : 'text-ink-500'}`}><Clock className="mr-0.5 inline h-3 w-3" />{fmtDateTime(t.dueAt)}</span>}
       </span>
       {!t.done && <button onClick={() => setEditing(true)} disabled={busy} className="text-ink-500 hover:text-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>}
@@ -190,7 +190,7 @@ function NoteCard({ n, busy, post }: { n: MNote; busy: boolean; post: Post }) {
   }
   return (
     <div className="rounded-lg border bg-surface p-2.5">
-      {n.title && <p className="mb-1 font-semibold text-brand">{n.title}</p>}
+      {n.title && <p className="mb-1 font-semibold text-ink-900">{n.title}</p>}
       <div className="pop-rich text-sm" dangerouslySetInnerHTML={{ __html: n.content }} />
       <div className="mt-1 flex items-center justify-between">
         <span className="text-[11px] text-ink-500">{fmtDateTime(n.createdAt)}</span>
@@ -214,7 +214,7 @@ function WorkScheduleEditor({ schedule, busy, post }: { schedule: MWorkSchedule 
   const toggle = (d: number) => setDays((s) => (s.includes(d) ? s.filter((x) => x !== d) : [...s, d].sort((a, b) => a - b)));
   return (
     <div className="rounded-lg border-2 border-brand/30 bg-brand/5 p-3">
-      <p className="text-sm font-bold text-brand">🕒 Meu horário de trabalho (padrão semanal)</p>
+      <p className="text-sm font-bold text-ink-900">🕒 Meu horário de trabalho (padrão semanal)</p>
       <p className="mb-2 text-xs text-ink-500">Marque os dias que você trabalha e o horário. Serve para o supervisor ver a cobertura de gerência de cada unidade.</p>
       <div className="flex flex-wrap items-center gap-1">
         {WD_LABEL.map((w, i) => (
@@ -243,8 +243,8 @@ function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam }: { leaves
       <WorkScheduleEditor schedule={schedule} busy={busy} post={post} />
       {canSeeTeam && (
         <a href="/modulos/folgas-equipe" className="flex items-center justify-between gap-2 rounded-lg border border-brand/40 bg-brand/5 p-3 text-sm hover:bg-brand/10">
-          <span className="flex items-center gap-2 font-semibold text-brand"><CalendarOff className="h-4 w-4" /> Controle de gerentes (consolidado + calendário)</span>
-          <span className="text-brand">→</span>
+          <span className="flex items-center gap-2 font-semibold text-ink-900"><CalendarOff className="h-4 w-4" /> Controle de gerentes (consolidado + calendário)</span>
+          <span className="text-ink-900">→</span>
         </a>
       )}
       <div className="rounded-lg border border-dashed p-3">

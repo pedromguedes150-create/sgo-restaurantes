@@ -67,7 +67,7 @@ export function EquipmentInventory({ canEdit, isAdmin, units, suppliers, items, 
 }
 
 function Cell({ label, value, tone }: { label: string; value: string; tone?: 'critical' }) {
-  return <div className="rounded-lg border bg-surface py-3 text-center"><p className={tone === 'critical' && value !== '0' ? 'text-xl font-black text-danger' : 'text-xl font-black text-brand'}>{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
+  return <div className="rounded-lg border bg-surface py-3 text-center"><p className={tone === 'critical' && value !== '0' ? 'text-xl font-black text-danger' : 'text-xl font-black text-ink-900'}>{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
 }
 
 /* ───────── Estoque (lista + novo + editar) ───────── */
@@ -89,11 +89,11 @@ function ItemRow({ i, canEdit, isAdmin, suppliers, onChange }: { i: EquipItem; c
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-semibold text-brand">{i.name}{i.low && <span className="ml-1 inline-flex items-center gap-0.5 rounded bg-danger/10 px-1.5 py-0.5 text-[10px] font-bold text-danger"><AlertTriangle className="h-3 w-3" /> baixo</span>}</p>
+          <p className="font-semibold text-ink-900">{i.name}{i.low && <span className="ml-1 inline-flex items-center gap-0.5 rounded bg-danger/10 px-1.5 py-0.5 text-[10px] font-bold text-danger"><AlertTriangle className="h-3 w-3" /> baixo</span>}</p>
           <p className="text-xs text-ink-500">{i.category ? `${i.category} · ` : ''}{i.supplier ? `${i.supplier} · ` : ''}{i.location ? `local: ${i.location} · ` : ''}{formatBRL(i.unitValue)}/{i.unitLabel}</p>
         </div>
         <div className="text-right">
-          <p className="text-lg font-black text-brand">{i.currentQty.toLocaleString('pt-BR')} <span className="text-xs font-normal text-ink-500">{i.unitLabel}</span></p>
+          <p className="text-lg font-black text-ink-900">{i.currentQty.toLocaleString('pt-BR')} <span className="text-xs font-normal text-ink-500">{i.unitLabel}</span></p>
           <p className="text-xs text-ink-500">{formatBRL(i.totalValue)}</p>
         </div>
       </div>
@@ -226,7 +226,7 @@ function Contagem({ items, canEdit, unitName }: { items: EquipItem[]; canEdit: b
         {items.map((i) => (
           <div key={i.id} className="flex items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-2 text-sm">
             <div className="min-w-0">
-              <p className="truncate font-semibold text-brand">{i.name}</p>
+              <p className="truncate font-semibold text-ink-900">{i.name}</p>
               <p className="text-xs text-ink-500">{i.category ?? ''}{i.location ? ` · ${i.location}` : ''} · sistema: {i.currentQty} {i.unitLabel}</p>
             </div>
             {canEdit ? (
@@ -251,7 +251,7 @@ function Historico({ moves }: { moves: EquipMove[] }) {
       {moves.map((m) => (
         <div key={m.id} className="flex items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-2 text-sm">
           <div className="min-w-0">
-            <p className="truncate font-semibold text-brand">{m.item}</p>
+            <p className="truncate font-semibold text-ink-900">{m.item}</p>
             <p className="text-xs text-ink-500">{m.date} · {m.unit}{m.note ? ` · ${m.note}` : ''}{m.by ? ` · ${m.by}` : ''}</p>
           </div>
           <div className="text-right">

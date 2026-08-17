@@ -109,7 +109,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
         </div>
         {delegations.map((d) => (
           <div key={d.id} className="flex items-center justify-between rounded-lg border bg-surface p-3">
-            <div><p className="font-semibold text-brand">{d.from} → {d.to}</p><p className="text-xs text-ink-500">{d.period}</p></div>
+            <div><p className="font-semibold text-ink-900">{d.from} → {d.to}</p><p className="text-xs text-ink-500">{d.period}</p></div>
             <button onClick={() => run({ entity: 'delegation', action: 'delete', id: d.id })} aria-label="Excluir"><Trash2 className="h-5 w-5 text-danger" /></button>
           </div>
         ))}
@@ -142,7 +142,7 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
   return (
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
-        <div><p className="font-semibold text-brand">{f.name}</p><p className="text-xs text-ink-500">{formatBRL(f.defaultValue)} · PIX: {f.pixKey || <span className="text-danger">não cadastrada</span>} · {f.units.join(', ')}{f.sectorRates.length > 0 ? ` · ${f.sectorRates.length} setor(es) c/ valor-dia` : ''}</p></div>
+        <div><p className="font-semibold text-ink-900">{f.name}</p><p className="text-xs text-ink-500">{formatBRL(f.defaultValue)} · PIX: {f.pixKey || <span className="text-danger">não cadastrada</span>} · {f.units.join(', ')}{f.sectorRates.length > 0 ? ` · ${f.sectorRates.length} setor(es) c/ valor-dia` : ''}</p></div>
         <div className="flex items-center gap-1">
           <button onClick={() => call({ entity: 'freelancer', action: 'toggle', id: f.id, active: !f.active })}><StatusBadge tone={f.active ? 'success' : 'critical'}>{f.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
@@ -203,7 +203,7 @@ function MiscTypeItem({ m, onChange }: { m: MiscTypeRow; onChange: () => void })
   return (
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
-        <div><p className="font-semibold text-brand">{m.name}</p><p className="text-xs text-ink-500">aprova: {ROLE_OPTIONS.find((r) => r.value === m.approverRole)?.label}</p></div>
+        <div><p className="font-semibold text-ink-900">{m.name}</p><p className="text-xs text-ink-500">aprova: {ROLE_OPTIONS.find((r) => r.value === m.approverRole)?.label}</p></div>
         <div className="flex items-center gap-1">
           <button onClick={() => call({ entity: 'miscType', action: 'toggle', id: m.id, active: !m.active })}><StatusBadge tone={m.active ? 'success' : 'critical'}>{m.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>

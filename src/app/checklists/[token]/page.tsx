@@ -9,7 +9,7 @@ export default async function ChecklistPublicPage({ params }: { params: { token:
   if (!data) {
     return (
       <div className="mx-auto max-w-md p-6 text-center">
-        <p className="text-lg font-bold text-brand">Ficha indisponível</p>
+        <p className="text-lg font-bold text-ink-900">Ficha indisponível</p>
         <p className="text-sm text-ink-500">O link pode estar desativado ou incorreto. Confira com a equipe.</p>
       </div>
     );

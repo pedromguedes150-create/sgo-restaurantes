@@ -34,7 +34,7 @@ export function HygieneManageClient({ unitId, canManage, requests, locations }: 
       {/* QR / link público */}
       {canManage && (
         <Card><CardContent className="pt-4">
-          <p className="mb-1 flex items-center gap-1 text-sm font-bold text-brand"><QrCode className="h-4 w-4" /> Link do QR do banheiro (desta unidade)</p>
+          <p className="mb-1 flex items-center gap-1 text-sm font-bold text-ink-900"><QrCode className="h-4 w-4" /> Link do QR do banheiro (desta unidade)</p>
           <p className="mb-2 text-xs text-ink-500">Gere o QR Code apontando para este endereço e cole no banheiro. Sem login — o cliente só toca e envia.</p>
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded-lg border bg-canvas px-2 py-1.5 text-xs">{publicUrl}</code>
@@ -72,7 +72,7 @@ export function HygieneManageClient({ unitId, canManage, requests, locations }: 
           {open.map((r) => (
             <div key={r.id} className="flex items-start justify-between gap-2 rounded-lg border border-danger/30 bg-danger/5 p-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-brand">🚻 {r.locationName}{r.issue ? ` · ${r.issue}` : ''}</p>
+                <p className="text-sm font-semibold text-ink-900">🚻 {r.locationName}{r.issue ? ` · ${r.issue}` : ''}</p>
                 <p className="text-xs text-ink-500">{new Date(r.createdAt).toLocaleString('pt-BR')}{r.rating ? ` · ${r.rating}★` : ''}{r.comment ? ` · "${r.comment}"` : ''}</p>
               </div>
               <Button size="sm" disabled={busy} onClick={() => post({ action: 'resolve', id: r.id })}><Check className="h-4 w-4" /> Resolver</Button>
@@ -87,7 +87,7 @@ export function HygieneManageClient({ unitId, canManage, requests, locations }: 
           <div className="mt-2 space-y-1.5">
             {resolved.map((r) => (
               <div key={r.id} className="rounded-lg border bg-surface p-2.5 text-xs">
-                <span className="font-semibold text-brand">{r.locationName}</span>{r.issue ? ` · ${r.issue}` : ''} · <span className="text-ink-500">{new Date(r.createdAt).toLocaleString('pt-BR')}</span>
+                <span className="font-semibold text-ink-900">{r.locationName}</span>{r.issue ? ` · ${r.issue}` : ''} · <span className="text-ink-500">{new Date(r.createdAt).toLocaleString('pt-BR')}</span>
                 {r.resolvedByName && <span className="text-success"> · resolvido por {r.resolvedByName}</span>}
               </div>
             ))}

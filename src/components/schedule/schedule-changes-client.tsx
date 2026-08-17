@@ -100,7 +100,7 @@ export function ScheduleChangesClient({ rows, units, selectedUnitId, collabs, ca
           {rows.map((r) => (
             <div key={r.id} className="flex items-center justify-between gap-2 p-2.5">
               <div className="min-w-0">
-                <p className="flex items-center gap-1 text-sm font-semibold text-brand">
+                <p className="flex items-center gap-1 text-sm font-semibold text-ink-900">
                   <span className="truncate">{r.collaboratorAName} ({fmtBR(r.dateA)})</span>
                   {(r.collaboratorBName || r.dateB) && <ArrowRightLeft className="h-3.5 w-3.5 shrink-0 text-brand" />}
                   {r.collaboratorBName

@@ -65,7 +65,7 @@ export function TrainingBoard({ board, isAdmin, weight }: { board: Group[]; isAd
                 <button onClick={() => setOpen(expanded ? null : key)} className="flex w-full items-center justify-between p-3 text-left">
                   <span className="flex items-center gap-2">
                     {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    <span className="font-semibold text-brand">{c.name}</span>
+                    <span className="font-semibold text-ink-900">{c.name}</span>
                   </span>
                   <span className="flex items-center gap-1 text-xs">
                     {c.missed > 0 && <span className="rounded-full bg-danger/15 px-2 py-0.5 font-bold text-danger">{c.missed} vencido(s)</span>}

@@ -34,7 +34,7 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
       </Link>
 
       <div className="flex items-start justify-between gap-3">
-        <h1 className="text-xl font-bold text-brand">
+        <h1 className="text-xl font-bold text-ink-900">
           #{o.unit.code}-{String(o.number).padStart(4, '0')}
         </h1>
         <StatusBadge tone={STATUS_META[o.status].tone}>{STATUS_META[o.status].label}</StatusBadge>

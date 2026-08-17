@@ -134,7 +134,7 @@ function UnitCalendar({ unit, year, month, isAdmin = false }: { unit: CalUnit; y
   return (
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-bold text-brand">{unit.unitName}</p>
+        <p className="text-sm font-bold text-ink-900">{unit.unitName}</p>
         <div className="flex flex-wrap gap-1 text-xs">
           {unit.gapDays > 0 && <span className="rounded-full bg-danger/10 px-2 py-0.5 font-semibold text-danger">{unit.gapDays} dia(s) sem gerente</span>}
           {unit.noScheduleCount > 0 && <span className="rounded-full bg-sunken px-2 py-0.5 font-medium text-ink-500">{unit.noScheduleCount} gerente(s) sem horário</span>}
@@ -178,9 +178,9 @@ function UnitCalendar({ unit, year, month, isAdmin = false }: { unit: CalUnit; y
 
       {sel && (
         <div className="mt-2 rounded-lg bg-canvas p-2 text-xs">
-          <p className="font-semibold text-brand">{WD_FULL[sel.weekday]}, dia {sel.day}</p>
+          <p className="font-semibold text-ink-900">{WD_FULL[sel.weekday]}, dia {sel.day}</p>
           {sel.working.length > 0 && <p className="text-success">Trabalhando: {sel.working.join(', ')}</p>}
-          {sel.onLeave.length > 0 && <p className="text-brand">Folga/férias: {sel.onLeave.map((l) => `${l.name} (${l.kind === 'FERIAS' ? 'férias' : 'folga'})`).join(', ')}</p>}
+          {sel.onLeave.length > 0 && <p className="text-ink-900">Folga/férias: {sel.onLeave.map((l) => `${l.name} (${l.kind === 'FERIAS' ? 'férias' : 'folga'})`).join(', ')}</p>}
           {sel.gap && <p className="font-semibold text-danger">⚠ Nenhum gerente nesta unidade neste dia — realocar reserva.</p>}
           {sel.working.length === 0 && !sel.gap && sel.onLeave.length === 0 && <p className="text-ink-500">Sem informação (horário não cadastrado).</p>}
         </div>

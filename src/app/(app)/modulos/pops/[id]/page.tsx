@@ -40,7 +40,7 @@ export default async function PopDetailPage({ params, searchParams }: { params: 
     <div className="space-y-4">
       <Link href="/modulos/pops" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
       <div>
-        <h1 className="text-xl font-bold text-brand">{pop.title}</h1>
+        <h1 className="text-xl font-bold text-ink-900">{pop.title}</h1>
         <p className="text-xs text-ink-500">v{pop.version} · {[pop.category, pop.sector].filter(Boolean).join(' · ') || 'Geral'}</p>
       </div>
 

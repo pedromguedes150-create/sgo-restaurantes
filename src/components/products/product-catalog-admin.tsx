@@ -46,7 +46,7 @@ export function ProductCatalogAdmin({ products }: { products: Prod[] }) {
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void importFile(f); e.target.value = ''; }} />
         <span className="text-xs text-ink-500">Colunas: Nome, Origem (Fábrica/CD), Categoria, Medida</span>
       </div>
-      {msg && <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm font-medium text-brand">{msg}</p>}
+      {msg && <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm font-medium text-ink-900">{msg}</p>}
 
       {/* Novo produto */}
       <div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3">
@@ -67,7 +67,7 @@ export function ProductCatalogAdmin({ products }: { products: Prod[] }) {
         {filtered.map((p) => (
           <div key={p.id} className={`flex items-center justify-between gap-2 rounded-lg border p-2 ${p.active ? 'bg-surface' : 'bg-canvas opacity-60'}`}>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-brand">{p.name}</p>
+              <p className="truncate text-sm font-medium text-ink-900">{p.name}</p>
               <p className="text-[11px] text-ink-500">{p.origin === 'CD' ? 'CD' : 'Fábrica'} · {p.category} · {p.measure}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">

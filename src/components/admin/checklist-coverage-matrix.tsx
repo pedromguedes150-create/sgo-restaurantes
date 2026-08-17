@@ -34,7 +34,7 @@ export function ChecklistCoverageMatrix({ units, rows }: { units: UnitCol[]; row
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-sm font-bold text-brand">Resumo: checklists habilitados por unidade</h2>
+        <h2 className="text-sm font-bold text-ink-900">Resumo: checklists habilitados por unidade</h2>
         <p className="text-xs text-ink-500">✓ = habilitado. Célula <span className="font-semibold text-warning">âmbar</span> = checklist presente na maioria das unidades mas <b>faltando</b> nesta (possível esquecimento).</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -60,7 +60,7 @@ export function ChecklistCoverageMatrix({ units, rows }: { units: UnitCol[]; row
           <tbody>
             {filtered.map((r) => (
               <tr key={r.name} className="border-t">
-                <td className="sticky left-0 z-10 bg-surface p-2 font-medium text-brand">
+                <td className="sticky left-0 z-10 bg-surface p-2 font-medium text-ink-900">
                   {r.name}
                   {r.common && r.gaps > 0 && <span className="ml-1 rounded-full bg-warning-bg px-1.5 py-0.5 text-[10px] font-semibold text-warning">falta em {r.gaps}</span>}
                 </td>
@@ -81,7 +81,7 @@ export function ChecklistCoverageMatrix({ units, rows }: { units: UnitCol[]; row
               <td className="sticky left-0 z-10 bg-surface p-2 text-right font-bold text-ink-500">Total por unidade</td>
               {units.map((u) => {
                 const n = perUnitCount.find((x) => x.id === u.id)?.n ?? 0;
-                return <td key={u.id} className="p-1 text-center font-bold text-brand">{n}</td>;
+                return <td key={u.id} className="p-1 text-center font-bold text-ink-900">{n}</td>;
               })}
             </tr>
           </tfoot>

@@ -9,7 +9,7 @@ export default async function HigienePublicPage({ params, searchParams }: { para
   if (!data) {
     return (
       <div className="mx-auto max-w-md p-6 text-center">
-        <p className="text-lg font-bold text-brand">Local não encontrado</p>
+        <p className="text-lg font-bold text-ink-900">Local não encontrado</p>
         <p className="text-sm text-ink-500">Confira o QR Code com a equipe.</p>
       </div>
     );

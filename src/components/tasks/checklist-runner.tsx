@@ -162,7 +162,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
               <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Fotos</p>
               {ordered.map(([k, ps]) => (
                 <div key={k}>
-                  <p className="mb-1 text-xs font-medium text-brand">{k === '_' ? 'Gerais' : (textById.get(k) ?? 'Item')}</p>
+                  <p className="mb-1 text-xs font-medium text-ink-900">{k === '_' ? 'Gerais' : (textById.get(k) ?? 'Item')}</p>
                   <div className="flex flex-wrap gap-2">
                     {ps.map((p, i) => <a key={i} href={p.path} target="_blank" rel="noreferrer"><img src={p.path} alt="" className="h-24 w-24 rounded-lg border object-cover" /></a>)}
                   </div>

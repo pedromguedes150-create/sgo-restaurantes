@@ -51,7 +51,7 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
       <Card>
         <CardContent className="space-y-3 pt-4">
           <div className="flex items-start justify-between gap-2">
-            <h1 className="flex items-center gap-1.5 text-lg font-bold text-brand">{comm.pinned && <Pin className="h-4 w-4 text-ink-700" />}{comm.title}</h1>
+            <h1 className="flex items-center gap-1.5 text-lg font-bold text-ink-900">{comm.pinned && <Pin className="h-4 w-4 text-ink-700" />}{comm.title}</h1>
             {prio && <StatusBadge tone={prio.tone}>{prio.label}</StatusBadge>}
           </div>
           <p className="text-xs text-ink-500">por {comm.author?.name ?? 'Sistema'} · publicado {fmt(comm.createdAt)} · prazo {fmt(comm.dueAt)}</p>
@@ -107,7 +107,7 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
           <CardContent className="space-y-3 pt-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Confirmações</h2>
-              <span className="text-sm font-bold text-brand">{confirmed.length}/{comm.recipients.length}</span>
+              <span className="text-sm font-bold text-ink-900">{confirmed.length}/{comm.recipients.length}</span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} /></div>
 

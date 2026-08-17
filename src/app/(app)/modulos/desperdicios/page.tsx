@@ -110,7 +110,7 @@ export default async function DesperdiciosPage({
                 <div key={e.id} className="rounded-lg border bg-surface p-2.5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-brand">{e.operationalDate}</p>
+                      <p className="text-sm font-semibold text-ink-900">{e.operationalDate}</p>
                       <p className="text-xs text-ink-500">{total.toFixed(2)} KG · {e.items.length} categoria(s){e.createdBy ? ` · ${e.createdBy.name}` : ''}</p>
                     </div>
                     <DeleteOpButton entity="waste" id={e.id} label={`o desperdício de ${e.operationalDate}`} />
@@ -145,7 +145,7 @@ export default async function DesperdiciosPage({
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-ink-500">Total no período</span>
-            <span className="font-bold text-brand">{series.grandTotal.toFixed(2)} KG</span>
+            <span className="font-bold text-ink-900">{series.grandTotal.toFixed(2)} KG</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-ink-500">Dias com registro</span>

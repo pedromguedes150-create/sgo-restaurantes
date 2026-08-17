@@ -98,7 +98,7 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
   return (
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="font-semibold text-brand">{unit.name} <span className="text-xs font-normal text-ink-500">({unit.code})</span></p>
+        <p className="font-semibold text-ink-900">{unit.name} <span className="text-xs font-normal text-ink-500">({unit.code})</span></p>
         <div className="flex items-center gap-1">
           <button onClick={toggle}><StatusBadge tone={unit.active ? 'success' : 'critical'}>{unit.active ? 'Ativa' : 'Inativa'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>

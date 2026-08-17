@@ -41,7 +41,7 @@ export default async function AuditoriaRelatorioPage({ searchParams }: { searchP
       </div>
 
       <div>
-        <h1 className="text-xl font-bold text-brand">Relatório de Auditoria</h1>
+        <h1 className="text-xl font-bold text-ink-900">Relatório de Auditoria</h1>
         <p className="text-sm text-ink-500">Últimos {days} dias{module ? ` · módulo ${module}` : ' · todos os módulos'} · {rows.length} registro(s)</p>
       </div>
 

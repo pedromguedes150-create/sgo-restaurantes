@@ -99,7 +99,7 @@ function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: {
       <div className="max-h-[28rem] space-y-2 overflow-y-auto">
         {[...groups.entries()].map(([cat, list]) => (
           <div key={cat}>
-            <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-brand">{cat}</p>
+            <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-900">{cat}</p>
             <div className="space-y-1">
               {list.map((e) => {
                 const exists = existingNames.has(e.name);
@@ -109,7 +109,7 @@ function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: {
                     className={`flex w-full items-start gap-2 rounded-lg border p-2 text-left ${exists ? 'cursor-not-allowed opacity-50' : checked ? 'border-brand bg-brand/5' : 'bg-surface hover:border-brand'}`}>
                     {exists ? <Check className="mt-0.5 h-5 w-5 shrink-0 text-success" /> : checked ? <CheckSquare className="mt-0.5 h-5 w-5 shrink-0 text-brand" /> : <Square className="mt-0.5 h-5 w-5 shrink-0 text-ink-500" />}
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-brand">{e.moment ?? e.name}{exists && <span className="ml-1 text-xs font-normal text-success">já existe</span>}</span>
+                      <span className="block text-sm font-semibold text-ink-900">{e.moment ?? e.name}{exists && <span className="ml-1 text-xs font-normal text-success">já existe</span>}</span>
                       <span className="block text-xs text-ink-500">{e.itemCount} item(ns) · {e.limitTime ? `limite ${e.limitTime}` : 'sem horário'} · peso {e.weight}{e.requiresEvidence ? ' · foto' : ''}</span>
                     </span>
                   </button>
@@ -209,7 +209,7 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="font-semibold text-brand">{t.name}</p>
+          <p className="font-semibold text-ink-900">{t.name}</p>
           <p className="text-xs text-ink-500">
             {t.limitTime ? `limite ${t.limitTime}` : 'sem horário'} · peso {t.weight} · {t.scope === 'MANAGER' ? 'individual' : 'da unidade'}
             {t.items.length > 0 ? ` · ${t.items.length} item(ns)` : ''}{t.requiresEvidence ? ' · foto' : ''}{t.entersMeta ? ' · meta' : ''}

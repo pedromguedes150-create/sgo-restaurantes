@@ -49,7 +49,7 @@ export default async function CorrecoesPage({ searchParams }: { searchParams: { 
         </form>
       </div>
 
-      <p className="text-sm font-semibold text-brand">
+      <p className="text-sm font-semibold text-ink-900">
         {unitFilter.all ? 'Todas as unidades' : `${unitFilter.ids.length} unidade(s)`} · {from === to ? fmtBR(from) : `${fmtBR(from)} a ${fmtBR(to)}`}
       </p>
 
@@ -73,7 +73,7 @@ function Section({ title, items, tone, meta }: { title: string; items: Correctio
         <p className={`text-sm font-bold ${tone === 'critical' ? 'text-danger' : 'text-warning'}`}>{title} ({items.length})</p>
         {items.map((it, i) => (
           <div key={i} className="rounded-lg border bg-surface p-2.5 text-sm">
-            <p className="font-medium text-brand">{it.text}</p>
+            <p className="font-medium text-ink-900">{it.text}</p>
             {it.note && <p className="text-xs text-ink-500">Obs.: {it.note}</p>}
             <p className="text-[11px] text-ink-500">{meta(it)}</p>
           </div>

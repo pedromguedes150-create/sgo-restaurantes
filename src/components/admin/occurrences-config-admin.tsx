@@ -53,7 +53,7 @@ function TypeRow({ t, onChange }: { t: OccTypeRow; onChange: () => void }) {
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-brand">{t.name}</p>
+            <p className="text-sm font-semibold text-ink-900">{t.name}</p>
             {t.isMaintenance && <span className="inline-flex items-center gap-0.5 rounded bg-ink-700/10 px-1.5 py-0.5 text-[10px] font-bold text-ink-700"><Wrench className="h-3 w-3" /> Manutenção</span>}
             {t.isIT && <span className="inline-flex items-center gap-0.5 rounded bg-ink-700/10 px-1.5 py-0.5 text-[10px] font-bold text-ink-700"><MonitorSmartphone className="h-3 w-3" /> TI</span>}
           </div>

@@ -41,7 +41,7 @@ export function ProgressRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-black text-brand">{label ?? `${pct}%`}</span>
+        <span className="text-2xl font-black text-ink-900">{label ?? `${pct}%`}</span>
         {sublabel && <span className="text-xs text-ink-500">{sublabel}</span>}
       </div>
     </div>

@@ -24,8 +24,8 @@ export default async function TerminationReportPage({ params }: { params: { id: 
       </div>
 
       <div className="border-b-2 border-brand pb-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-brand">Solicitação de Desligamento — SGO Beija Flor</p>
-        <h1 className="text-2xl font-black text-brand">{t.collaboratorName}</h1>
+        <p className="text-xs font-bold uppercase tracking-wide text-ink-900">Solicitação de Desligamento — SGO Beija Flor</p>
+        <h1 className="text-2xl font-black text-ink-900">{t.collaboratorName}</h1>
         <p className="text-sm text-ink-500">{t.unit.name} · {STAT[t.status]}</p>
       </div>
 

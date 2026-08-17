@@ -62,7 +62,7 @@ function ProbCard({ r, canReview }: { r: ProbRow; canReview: boolean }) {
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold text-brand">{r.name}</p>
+          <p className="font-semibold text-ink-900">{r.name}</p>
           <p className="text-xs text-ink-500">{r.jobTitle || 'Sem função'} · {r.unit} · admitido {fmtBR(r.hireDate)}</p>
         </div>
         <StatusBadge tone={ST[r.status].tone}>{ST[r.status].label}</StatusBadge>

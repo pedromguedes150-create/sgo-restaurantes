@@ -28,7 +28,7 @@ export default async function MonitoramentoRelatorioPage({ params }: { params: {
 
       <div className="rounded-lg border p-4 print:border-0 print:p-0">
         <div className="mb-3 border-b pb-2">
-          <h1 className="text-lg font-black text-brand">Comandas em aberto — Monitoramento</h1>
+          <h1 className="text-lg font-black text-ink-900">Comandas em aberto — Monitoramento</h1>
           <p className="text-sm text-ink-500">{unit?.name} ({unit?.code}) · corte {fmt(a.cutDate)} · gerado {new Date(a.createdAt).toLocaleString('pt-BR')}</p>
           <p className="text-sm">Suspeitas: <b>{a.suspectCount}</b> · valor total <b>{formatBRL(Number(a.suspectValue))}</b></p>
           <p className="mt-1 text-xs text-ink-500">Comandas abertas com valor e data de abertura anterior ao corte. Buscar as câmeras pela data/hora.</p>

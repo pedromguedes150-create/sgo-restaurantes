@@ -62,7 +62,7 @@ export default async function AvisosRhPage({ searchParams }: { searchParams: { d
           <div className="space-y-3">
             {[...byCollab.entries()].map(([name, items]) => (
               <div key={name} className="rounded-lg border bg-surface p-3">
-                <p className="font-semibold text-brand">{name} <span className="text-xs font-normal text-ink-500">({items.length} aviso(s))</span></p>
+                <p className="font-semibold text-ink-900">{name} <span className="text-xs font-normal text-ink-500">({items.length} aviso(s))</span></p>
                 <div className="mt-1 space-y-0.5">
                   {items.map((r) => (
                     <p key={r.id} className="flex items-center justify-between gap-2 text-xs text-ink-500">

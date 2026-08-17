@@ -31,8 +31,8 @@ export default async function AtestadosRelatorioPage({ searchParams }: { searchP
       </div>
 
       <div className="border-b-2 border-brand pb-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-brand">Relatório de Atestados — SGO Beija Flor</p>
-        <h1 className="text-2xl font-black text-brand">{ym}</h1>
+        <p className="text-xs font-bold uppercase tracking-wide text-ink-900">Relatório de Atestados — SGO Beija Flor</p>
+        <h1 className="text-2xl font-black text-ink-900">{ym}</h1>
         <p className="text-sm text-ink-500">{report.totals.count} atestado(s) · {report.totals.days} dia(s) perdido(s)</p>
       </div>
 

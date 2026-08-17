@@ -34,7 +34,7 @@ export default async function PopsPage() {
             <Card className="transition-colors hover:border-brand">
               <CardContent className="flex items-center justify-between py-3">
                 <div>
-                  <p className="font-semibold text-brand">{p.title} <span className="text-xs font-normal text-ink-500">v{p.version}</span></p>
+                  <p className="font-semibold text-ink-900">{p.title} <span className="text-xs font-normal text-ink-500">v{p.version}</span></p>
                   <p className="text-xs text-ink-500">
                     {[p.category, p.isInitial ? 'Inicial' : null, p.recurrence === 'MONTHLY' ? 'Mensal' : null].filter(Boolean).join(' · ') || 'Geral'}
                   </p>

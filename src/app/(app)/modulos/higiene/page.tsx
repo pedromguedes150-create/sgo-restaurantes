@@ -71,7 +71,7 @@ export default async function HigienePage({ searchParams }: { searchParams: { un
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: 'critical' | 'ok' }) {
   return (
     <Card><CardContent className="py-3 text-center">
-      <p className={`text-2xl font-black ${tone === 'critical' ? 'text-danger' : 'text-brand'}`}>{value}</p>
+      <p className={`text-2xl font-black ${tone === 'critical' ? 'text-danger' : 'text-ink-900'}`}>{value}</p>
       <p className="text-xs text-ink-500">{label}</p>
     </CardContent></Card>
   );

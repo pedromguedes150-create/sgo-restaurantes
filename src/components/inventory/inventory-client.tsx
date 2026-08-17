@@ -52,7 +52,7 @@ export function InventoryClient({ items, units, isAdmin }: { items: InvItem[]; u
           {items.map((i) => (
             <div key={i.id} className="p-3">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-brand">{i.category}</p>
+                <p className="font-semibold text-ink-900">{i.category}</p>
                 <StatusBadge tone={ST[i.status].tone}>{ST[i.status].label}</StatusBadge>
               </div>
               <p className="text-xs text-ink-500">{i.unit} · {i.date}{i.responsible ? ` · resp. ${i.responsible}` : ''}{i.confirmedBy ? ` · por ${i.confirmedBy}` : ''}</p>

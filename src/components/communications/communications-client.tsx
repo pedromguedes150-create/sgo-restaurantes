@@ -94,7 +94,7 @@ function InboxCard({ i }: { i: InboxItem }) {
     <Link href={`/modulos/comunicacao/${i.communicationId}`}>
       <div className="rounded-lg border bg-surface p-3 transition-colors hover:border-brand">
         <div className="flex items-start justify-between gap-2">
-          <p className="flex items-center gap-1.5 font-semibold text-brand">
+          <p className="flex items-center gap-1.5 font-semibold text-ink-900">
             {i.pinned && <Pin className="h-4 w-4 text-ink-700" />}{i.title}
           </p>
           <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
@@ -134,8 +134,8 @@ function Panel({ items, isAdmin, weight }: { items: AuthoredItem[]; isAdmin: boo
           <Link key={c.id} href={`/modulos/comunicacao/${c.id}`}>
             <div className="rounded-lg border bg-surface p-3 transition-colors hover:border-brand">
               <div className="flex items-start justify-between gap-2">
-                <p className="flex items-center gap-1.5 font-semibold text-brand">{c.pinned && <Pin className="h-4 w-4 text-ink-700" />}{c.title}</p>
-                <span className="text-sm font-bold text-brand">{c.confirmed}/{c.total}</span>
+                <p className="flex items-center gap-1.5 font-semibold text-ink-900">{c.pinned && <Pin className="h-4 w-4 text-ink-700" />}{c.title}</p>
+                <span className="text-sm font-bold text-ink-900">{c.confirmed}/{c.total}</span>
               </div>
               <p className="mt-0.5 text-xs text-ink-500">{prio && <span className="font-semibold text-warning">{prio.label} · </span>}prazo {fmt(c.dueAt)} · {c.units.length ? c.units.join(', ') : 'destinatários avulsos'}</p>
               <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} /></div>

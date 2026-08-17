@@ -81,9 +81,9 @@ function RequestForm({ units, collaboratorsByUnit, onDone }: { units: Unit[]; co
 
       {ctx && (
         <div className="grid grid-cols-3 gap-2 rounded-lg border bg-surface p-2 text-center text-xs">
-          <div><p className="text-ink-500">Tempo de empresa</p><p className="font-bold text-brand">{ctx.tenure ?? '—'}</p></div>
-          <div><p className="text-ink-500">Atestados</p><p className="font-bold text-brand">{ctx.certCount}</p></div>
-          <div><p className="text-ink-500">Dias afastado</p><p className="font-bold text-brand">{ctx.certDays}</p></div>
+          <div><p className="text-ink-500">Tempo de empresa</p><p className="font-bold text-ink-900">{ctx.tenure ?? '—'}</p></div>
+          <div><p className="text-ink-500">Atestados</p><p className="font-bold text-ink-900">{ctx.certCount}</p></div>
+          <div><p className="text-ink-500">Dias afastado</p><p className="font-bold text-ink-900">{ctx.certDays}</p></div>
         </div>
       )}
 
@@ -120,7 +120,7 @@ function List({ rows, canDecide, onChanged }: { rows: TermRow[]; canDecide: bool
         <div key={r.id} className="p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-brand">{r.collaboratorName}</p>
+              <p className="truncate text-sm font-semibold text-ink-900">{r.collaboratorName}</p>
               <p className="text-xs text-ink-500">{r.unit} · {NOTICE[r.noticeType]}{r.by ? ` · ${r.by}` : ''}</p>
             </div>
             <StatusBadge tone={STw[r.status].tone}>{STw[r.status].label}</StatusBadge>

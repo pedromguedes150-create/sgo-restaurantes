@@ -106,9 +106,9 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
       </div>
       {purchased && (
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-brand">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-ink-500">comprado no filtro</p></div>
-          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-base font-black tabular-nums text-brand">{formatBRL(purchased.total)}</p><p className="text-xs text-ink-500">valor no filtro</p></div>
-          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-brand">{purchased.count}</p><p className="text-xs text-ink-500">recebimentos</p></div>
+          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-ink-900">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-ink-500">comprado no filtro</p></div>
+          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-base font-black tabular-nums text-ink-900">{formatBRL(purchased.total)}</p><p className="text-xs text-ink-500">valor no filtro</p></div>
+          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-ink-900">{purchased.count}</p><p className="text-xs text-ink-500">recebimentos</p></div>
         </div>
       )}
     </div>
@@ -125,7 +125,7 @@ function ContractProgress({ contracts, compact = false }: { contracts: GasContra
         {contracts.map((c) => (
           <div key={c.id}>
             <div className="flex items-center justify-between text-sm">
-              <span className="min-w-0 truncate font-medium text-brand">{c.unitName} · {c.supplierName}</span>
+              <span className="min-w-0 truncate font-medium text-ink-900">{c.unitName} · {c.supplierName}</span>
               <span className="shrink-0 text-xs tabular-nums"><b>{c.progressPct}%</b> · {c.usedKg.toLocaleString('pt-BR')}/{c.quantityKg.toLocaleString('pt-BR')} kg</span>
             </div>
             <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken">
@@ -210,7 +210,7 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
         {contracts.map((c) => (
           <div key={c.id} className={`rounded-lg border p-2.5 ${c.expired || !c.active ? 'opacity-70' : 'bg-surface'}`}>
             <div className="flex items-center justify-between gap-2">
-              <p className="min-w-0 truncate text-sm font-semibold text-brand">{c.unitName} · {c.supplierName}</p>
+              <p className="min-w-0 truncate text-sm font-semibold text-ink-900">{c.unitName} · {c.supplierName}</p>
               <span className="shrink-0 text-xs font-bold tabular-nums">{c.progressPct}%{c.expired ? ' · vencido' : !c.active ? ' · inativo' : ''}</span>
             </div>
             <p className="text-xs text-ink-500 tabular-nums">
@@ -356,7 +356,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
           {total > 0 && (
             <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
               <p className="text-xs text-ink-500">Valor total (calculado)</p>
-              <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
+              <p className="text-2xl font-black text-ink-900">{formatBRL(total)}</p>
               <p className="text-xs text-ink-500">{kg(price)}</p>
             </div>
           )}
@@ -372,7 +372,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
           {cKg > 0 && cTotal > 0 && (
             <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
               <p className="text-xs text-ink-500">{cc} botijão(ões) × {ck}kg = {cKg}kg · valor total {formatBRL(cTotal)}</p>
-              <p className="text-2xl font-black text-brand">{kg(cPricePerKg)}</p>
+              <p className="text-2xl font-black text-ink-900">{kg(cPricePerKg)}</p>
             </div>
           )}
         </>
@@ -426,7 +426,7 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
 }
 
 function Cell({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border bg-surface py-3 text-center"><p className="text-base font-black text-brand">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
+  return <div className="rounded-lg border bg-surface py-3 text-center"><p className="text-base font-black text-ink-900">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
 }
 
 function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
@@ -439,7 +439,7 @@ function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
         {rows.map((r) => (
           <div key={r.key} className="p-2.5">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-brand">{r.name}</span>
+              <span className="font-semibold text-ink-900">{r.name}</span>
               <span className="font-bold">{kg(r.avg)} <span className="text-xs font-normal text-ink-500">méd</span></span>
             </div>
             <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-brand" style={{ width: `${(r.avg / max) * 100}%` }} /></div>
@@ -458,7 +458,7 @@ function MonthlyBars({ points }: { points: MonthPoint[] }) {
     <div className="flex items-end gap-2 rounded-lg border bg-surface p-3" style={{ height: 140 }}>
       {points.map((p) => (
         <div key={p.month} className="flex flex-1 flex-col items-center justify-end gap-1">
-          <span className="text-[10px] font-semibold text-brand">{p.avg.toFixed(2).replace('.', ',')}</span>
+          <span className="text-[10px] font-semibold text-ink-900">{p.avg.toFixed(2).replace('.', ',')}</span>
           <div className="w-full rounded-t bg-brand" style={{ height: `${Math.max(4, (p.avg / max) * 90)}px` }} />
           <span className="text-[10px] text-ink-500">{mlabel(p.month)}</span>
         </div>
@@ -527,7 +527,7 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
           <div key={r.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-brand">{kg(r.price)} <span className="text-xs font-normal text-ink-500">· {r.unit}</span></p>
+                <p className="font-semibold text-ink-900">{kg(r.price)} <span className="text-xs font-normal text-ink-500">· {r.unit}</span></p>
                 <p className="text-xs text-ink-500">{r.date} · {r.supplier} · {r.qty.toLocaleString('pt-BR')} kg · {formatBRL(r.total)}{r.by ? ` · ${r.by}` : ''}</p>
               </div>
               {r.variation != null && (

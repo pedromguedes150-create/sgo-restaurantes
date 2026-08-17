@@ -35,7 +35,7 @@ export default async function MudancasPage() {
               <div key={r.id} className="rounded-lg border bg-surface p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-brand">{r.collaboratorName}</p>
+                    <p className="truncate font-semibold text-ink-900">{r.collaboratorName}</p>
                     <p className="text-sm">
                       <span className="text-ink-500">{r.fromValue || 'sem registro'}</span>
                       {' → '}

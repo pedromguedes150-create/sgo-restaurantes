@@ -69,7 +69,7 @@ export function CancellationsClient({
         {pending.map((c) => (
           <div key={c.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-brand">Cupom {c.coupon}</p>
+              <p className="font-semibold text-ink-900">Cupom {c.coupon}</p>
               <span className="font-bold text-danger">{formatBRL(c.value)}</span>
             </div>
             <p className="text-xs text-ink-500">

@@ -34,7 +34,7 @@ export function CancellationAnalysisClient({ unitId, analyses }: { unitId: strin
         <input ref={fileRef} type="file" accept=".pdf,application/pdf" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ''; }} />
         <span className="text-xs text-ink-500">Relatório &quot;Vendas/Itens Cancelados no Período&quot; (PDF)</span>
       </div>
-      {msg && <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm font-medium text-brand print:hidden">{msg}</p>}
+      {msg && <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm font-medium text-ink-900 print:hidden">{msg}</p>}
 
       {analyses.length === 0 && <p className="text-sm text-ink-500">Nenhuma análise ainda. Suba o PDF de cancelamentos do Teknisa.</p>}
 
@@ -42,7 +42,7 @@ export function CancellationAnalysisClient({ unitId, analyses }: { unitId: strin
         <div key={a.id} className="rounded-lg border bg-surface">
           <button onClick={() => setOpen(open === a.id ? null : a.id)} className="flex w-full items-center justify-between gap-2 p-3 text-left print:hidden">
             <span>
-              <span className="block text-sm font-bold text-brand">{a.totalCount} cancelamentos · {formatBRL(a.totalValue)} · {a.data.flags.length} alerta(s)</span>
+              <span className="block text-sm font-bold text-ink-900">{a.totalCount} cancelamentos · {formatBRL(a.totalValue)} · {a.data.flags.length} alerta(s)</span>
               <span className="block text-xs text-ink-500">{a.period ?? ''}{a.filial ? ` · ${a.filial}` : ''} · por {a.createdByName} em {new Date(a.createdAt).toLocaleString('pt-BR')}</span>
             </span>
             <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${open === a.id ? 'rotate-180' : ''}`} />
@@ -51,7 +51,7 @@ export function CancellationAnalysisClient({ unitId, analyses }: { unitId: strin
           {open === a.id && (
             <div className="space-y-4 border-t p-3">
               <div className="flex items-center justify-between print:mb-2">
-                <p className="text-sm font-bold text-brand">Relatório de cancelamentos {a.period ? `· ${a.period}` : ''}</p>
+                <p className="text-sm font-bold text-ink-900">Relatório de cancelamentos {a.period ? `· ${a.period}` : ''}</p>
                 <Button size="sm" variant="outline" onClick={() => window.print()} className="print:hidden"><Printer className="h-4 w-4" /> Imprimir</Button>
               </div>
 

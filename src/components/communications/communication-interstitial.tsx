@@ -71,7 +71,7 @@ export function CommunicationInterstitial() {
           </div>
         </div>
 
-        <h2 className="text-lg font-bold text-brand">{cur.title}</h2>
+        <h2 className="text-lg font-bold text-ink-900">{cur.title}</h2>
         <p className="mb-1 text-xs text-ink-500">Por {cur.authorName} · {new Date(cur.createdAt).toLocaleString('pt-BR')}</p>
         <div className="prose prose-sm mt-2 max-w-none whitespace-pre-wrap text-sm text-ink-900" dangerouslySetInnerHTML={{ __html: cur.body }} />
 

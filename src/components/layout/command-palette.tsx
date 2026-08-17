@@ -118,7 +118,7 @@ export function CommandPalette({ units = [], viewable, isAdmin = false }: { unit
                   className={cn('flex w-full items-center gap-2.5 rounded-control px-2.5 py-2 text-left outline-none', isActive ? 'bg-brand-tint' : '')}
                 >
                   <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-brand' : 'text-ink-400')} />
-                  <span className={cn('flex-1 text-[14px]', isActive ? 'font-medium text-brand' : 'text-ink-700')}>{c.label}</span>
+                  <span className={cn('flex-1 text-[14px]', isActive ? 'font-medium text-ink-900' : 'text-ink-700')}>{c.label}</span>
                   <span className="text-[11px] text-ink-500">{c.group}</span>
                   {isActive && <CornerDownLeft className="h-3.5 w-3.5 text-ink-400" />}
                 </button>

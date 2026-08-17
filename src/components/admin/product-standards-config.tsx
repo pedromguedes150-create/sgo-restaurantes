@@ -60,7 +60,7 @@ export function ProductStandardsConfig({ items }: { items: PStd[] }) {
 
       {[...byCat.entries()].map(([cat, list]) => (
         <div key={cat}>
-          <p className="mb-1 text-sm font-bold text-brand">{cat}</p>
+          <p className="mb-1 text-sm font-bold text-ink-900">{cat}</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {list.map((p) => (
               <div key={p.id} className="rounded-lg border bg-surface p-2">

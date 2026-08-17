@@ -76,7 +76,7 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
   const SessionCard = ({ s }: { s: SessionUI }) => (
     <div className={`rounded-lg border p-2.5 ${hasDiv(s) ? 'border-danger/50 bg-danger/5' : 'bg-surface'}`}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-brand">Caixa {s.seq} · {fmtBR(s.operationalDate)}</p>
+        <p className="text-sm font-semibold text-ink-900">Caixa {s.seq} · {fmtBR(s.operationalDate)}</p>
         {s.closingAmount == null
           ? <StatusBadge tone="medium">Aberto</StatusBadge>
           : hasDiv(s)
@@ -139,7 +139,7 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
       {/* Caixa aberto → fechar · sem caixa aberto → abrir */}
       {canOperate && (openSession ? (
         <div className="rounded-lg border-2 border-brand/50 p-3">
-          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><Unlock className="h-4 w-4 text-brand" /> Caixa {openSession.seq} aberto — {brl(openSession.openingAmount)} na abertura</p>
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink-900"><Unlock className="h-4 w-4 text-ink-900" /> Caixa {openSession.seq} aberto — {brl(openSession.openingAmount)} na abertura</p>
           <p className="mb-2 text-xs text-ink-500">Aberto por {openSession.openedByName} às {new Date(openSession.openedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Conte o troco e feche — o valor vira a abertura esperada do próximo caixa.</p>
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Valor contado (R$)</Label><Input inputMode="decimal" value={closeAmount} onChange={(e) => setCloseAmount(e.target.value)} placeholder="0,00" className="h-10 text-sm" /></div>
@@ -149,7 +149,7 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
         </div>
       ) : (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><Unlock className="h-4 w-4 text-brand" /> Abrir caixa</p>
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink-900"><Unlock className="h-4 w-4 text-ink-900" /> Abrir caixa</p>
           {lastClosing != null ? (
             <p className="mb-2 text-xs text-ink-500">Abertura esperada (fechamento anterior): <strong className="tabular-nums">{brl(lastClosing)}</strong>. Conte o troco e digite o valor real — diferença gera alerta à supervisão.</p>
           ) : (

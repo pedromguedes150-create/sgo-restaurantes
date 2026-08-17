@@ -77,7 +77,7 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
       <Card className="transition-colors hover:border-brand">
         <CardContent className="flex items-start justify-between gap-3 py-3">
           <div className="min-w-0">
-            <p className="font-semibold text-brand">
+            <p className="font-semibold text-ink-900">
               {GRAVITY_META[o.gravity].emoji} #{o.unitCode}-{String(o.number).padStart(4, '0')} · {o.typeName}
             </p>
             <p className="truncate text-sm text-ink-500">{o.categoryName} — {o.description}</p>

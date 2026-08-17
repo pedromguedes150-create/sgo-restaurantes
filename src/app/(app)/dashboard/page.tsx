@@ -150,7 +150,7 @@ function ManagerDashboard({
         <CardContent className="flex items-center gap-5 py-5">
           <ProgressRing value={agg.progressPct} sublabel="do dia" />
           <div className="space-y-1 text-sm">
-            <p className="font-semibold text-brand">
+            <p className="font-semibold text-ink-900">
               {agg.done} de {agg.total} tarefas concluídas
             </p>
             {agg.overdue > 0 && (
@@ -178,7 +178,7 @@ function ManagerDashboard({
         </CardHeader>
         <CardContent>
           <div className="mb-1 flex items-center justify-between text-sm">
-            <span className="font-semibold text-brand">{metaPct}%</span>
+            <span className="font-semibold text-ink-900">{metaPct}%</span>
             <span className="text-ink-500">{doneW}/{resW} pts</span>
           </div>
           <div className="h-3 w-full overflow-hidden rounded-full bg-sunken">

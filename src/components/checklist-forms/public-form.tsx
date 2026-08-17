@@ -45,7 +45,7 @@ export function ChecklistPublicForm({ token, data }: { token: string; data: Data
     return (
       <div className="rounded-2xl border-2 border-success/40 bg-success/5 p-6 text-center">
         <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
-        <p className="mt-2 text-lg font-bold text-brand">Enviado, obrigado!</p>
+        <p className="mt-2 text-lg font-bold text-ink-900">Enviado, obrigado!</p>
         <p className="text-sm text-ink-500">Seu preenchimento foi registrado.</p>
       </div>
     );

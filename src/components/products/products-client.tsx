@@ -99,7 +99,7 @@ function NewOrder({ units, selUnitId, products, post, busy }: { units: { id: str
                 return (
                   <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border bg-surface p-2">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-brand">{p.name}</p>
+                      <p className="truncate text-sm font-medium text-ink-900">{p.name}</p>
                       <p className="text-[11px] text-ink-500"><O.icon className="mr-0.5 inline h-3 w-3" />{O.label} · {p.measure}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
@@ -118,10 +118,10 @@ function NewOrder({ units, selUnitId, products, post, busy }: { units: { id: str
       {/* Carrinho */}
       {totalItems > 0 && (
         <div className="sticky bottom-20 z-20 rounded-xl border-2 border-brand/40 bg-surface/95 p-3 shadow-lg backdrop-blur md:bottom-2">
-          <p className="mb-1 text-sm font-bold text-brand">Resumo do pedido ({totalItems} itens)</p>
+          <p className="mb-1 text-sm font-bold text-ink-900">Resumo do pedido ({totalItems} itens)</p>
           {(['FABRICA', 'CD'] as const).map((o) => cartByOrigin[o].length > 0 && (
             <div key={o} className="mb-1">
-              <p className="text-xs font-semibold text-brand">{ORIGIN[o].label}: {cartByOrigin[o].map((x) => `${x.qty}× ${x.p.name}`).join(', ')}</p>
+              <p className="text-xs font-semibold text-ink-900">{ORIGIN[o].label}: {cartByOrigin[o].map((x) => `${x.qty}× ${x.p.name}`).join(', ')}</p>
             </div>
           ))}
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-1 h-9 w-full rounded-md border-2 border-line-strong bg-surface px-2 text-sm" />
@@ -141,7 +141,7 @@ function RequestList({ requests, onReceive, busy, showUnit }: { requests: Req[];
         return (
           <div key={r.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-brand"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number}{showUnit && r.unitName ? ` · ${r.unitName}` : ''}</p>
+              <p className="text-sm font-bold text-ink-900"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number}{showUnit && r.unitName ? ` · ${r.unitName}` : ''}</p>
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.cls}`}>{st.label}</span>
             </div>
             <p className="mt-1 text-xs text-ink-500">{new Date(r.createdAt).toLocaleString('pt-BR')} · {r.createdByName}{r.note ? ` · ${r.note}` : ''}</p>
@@ -165,7 +165,7 @@ function OpsView({ requests, post, busy }: { requests: Req[]; post: (b: Record<s
         return (
           <div key={r.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-brand"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number} · {r.unitName ?? ''}</p>
+              <p className="text-sm font-bold text-ink-900"><O.icon className="mr-1 inline h-4 w-4" />{O.label} · #{r.number} · {r.unitName ?? ''}</p>
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st.cls}`}>{st.label}</span>
             </div>
             <p className="mt-1 text-xs text-ink-500">{new Date(r.createdAt).toLocaleString('pt-BR')} · {r.createdByName}{r.note ? ` · ${r.note}` : ''}</p>

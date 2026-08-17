@@ -38,7 +38,7 @@ export function FilterBar({
       <div className="mb-2 flex items-center justify-between">
         <p className="sgo-type-11 flex items-center gap-1.5 text-ink-500">
           <Filter className="h-3.5 w-3.5" aria-hidden /> {title}
-          {active ? <span className="rounded-pill bg-brand-tint-2 px-1.5 text-[11px] font-bold tabular-nums text-brand">{active}</span> : null}
+          {active ? <span className="rounded-pill bg-brand-tint-2 px-1.5 text-[11px] font-bold tabular-nums text-ink-900">{active}</span> : null}
         </p>
         {onClear && active ? (
           <button

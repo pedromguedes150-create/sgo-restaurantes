@@ -22,7 +22,7 @@ export default async function PerfilPage() {
       </CardContent></Card>
 
       <div>
-        <h2 className="flex items-center gap-2 text-lg font-bold text-brand"><BellRing className="h-5 w-5 text-brand" /> Notificações no celular</h2>
+        <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900"><BellRing className="h-5 w-5 text-ink-900" /> Notificações no celular</h2>
         <p className="text-sm text-ink-500">Receba os avisos do SGO mesmo com o app fechado. É preciso ativar em cada aparelho que você usa.</p>
       </div>
       <Card><CardContent className="pt-4">

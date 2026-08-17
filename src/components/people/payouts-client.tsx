@@ -118,7 +118,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
         </div>
         <div className="rounded-lg border bg-surface p-3">
           <p className="text-xs text-ink-500">Mobilidade no mês</p>
-          <p className="text-lg font-bold text-brand tabular-nums">{brl(dash.totalMobility)}</p>
+          <p className="text-lg font-bold text-ink-900 tabular-nums">{brl(dash.totalMobility)}</p>
         </div>
       </div>
 
@@ -132,7 +132,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
                 <span className="shrink-0 text-xs tabular-nums">
                   <span className="font-semibold text-success">{brl(u.commission)}</span>
                   {' · '}
-                  <span className="font-semibold text-brand">{brl(u.mobility)}</span>
+                  <span className="font-semibold text-ink-900">{brl(u.mobility)}</span>
                 </span>
               </div>
             ))}
@@ -231,7 +231,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
           {rows.map((r) => (
             <div key={r.id} className="flex items-center justify-between gap-2 p-2.5">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-brand">{r.collaboratorName}</p>
+                <p className="truncate text-sm font-semibold text-ink-900">{r.collaboratorName}</p>
                 <p className="truncate text-xs text-ink-500">
                   {r.unitName} · {r.createdByName} · {new Date(r.createdAt).toLocaleDateString('pt-BR')}{r.note ? ` · ${r.note}` : ''}
                 </p>

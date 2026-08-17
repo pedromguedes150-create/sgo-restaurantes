@@ -53,7 +53,7 @@ export function MaintenanceClient({ view, isAdmin, units, equipment, suppliers, 
 
   return (
     <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><Wrench className="h-5 w-5 text-brand" /> Manutenção</h1>
+      <h1 className="flex items-center gap-2 text-xl font-bold text-ink-900"><Wrench className="h-5 w-5 text-ink-900" /> Manutenção</h1>
       <div className="flex flex-wrap gap-2">
         <button className={tabClass('chamados')} onClick={() => setTab('chamados')}><Wrench className="h-4 w-4" /> Chamados</button>
         <button className={tabClass('preventiva')} onClick={() => setTab('preventiva')}><CalendarClock className="h-4 w-4" /> Preventiva</button>
@@ -73,8 +73,8 @@ function TicketsTab({ isAdmin, units, equipment, suppliers, summary, tickets, on
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{summary.open}</p><p className="text-xs text-ink-500">abertos</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{summary.inProgress}</p><p className="text-xs text-ink-500">em andamento</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.open}</p><p className="text-xs text-ink-500">abertos</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.inProgress}</p><p className="text-xs text-ink-500">em andamento</p></CardContent></Card>
         <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.overdue}</p><p className="text-xs text-ink-500">atrasados</p></CardContent></Card>
         <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-success">{summary.doneMonth}</p><p className="text-xs text-ink-500">feitos no mês</p></CardContent></Card>
       </div>
@@ -171,7 +171,7 @@ function TicketCard({ t, isAdmin, suppliers, onDone }: { t: TicketDTO; isAdmin: 
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold text-brand">#{t.number} · {t.title}</p>
+          <p className="font-semibold text-ink-900">#{t.number} · {t.title}</p>
           <p className="text-xs text-ink-500">{t.unit}{t.equipmentName ? ` · ${t.equipmentName}` : ''}{t.supplierName ? ` · ${t.supplierName}` : ''}</p>
           {t.description && <p className="mt-1 text-sm">{t.description}</p>}
           {t.deadline && <p className={`mt-1 text-xs ${isOverdue(t.deadline) && t.status !== 'DONE' && t.status !== 'CANCELED' ? 'font-semibold text-danger' : 'text-ink-500'}`}>Prazo: {fmtDate(t.deadline)}{isOverdue(t.deadline) && t.status !== 'DONE' && t.status !== 'CANCELED' ? ' (atrasado)' : ''}</p>}
@@ -301,7 +301,7 @@ function PlanCard({ p, isAdmin, onDone }: { p: PlanDTO; isAdmin: boolean; onDone
     <div className={`rounded-lg border bg-surface p-3 ${!p.active ? 'opacity-60' : ''}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold text-brand">{p.title}</p>
+          <p className="font-semibold text-ink-900">{p.title}</p>
           <p className="text-xs text-ink-500">{p.unit}{p.equipmentName ? ` · ${p.equipmentName}` : ''} · a cada {p.frequencyDays} dias</p>
           <p className={`mt-1 text-xs ${due && p.active ? 'font-semibold text-danger' : 'text-ink-500'}`}>Próxima: {fmtDate(p.nextDueAt)}{due && p.active ? ' (vencida)' : ''}{p.lastDoneAt ? ` · última: ${fmtDate(p.lastDoneAt)}` : ''}</p>
           {p.logs.length > 0 && <p className="mt-1 text-xs text-ink-500">Histórico: {p.logs.map((l) => fmtDate(l.doneAt)).join(', ')}</p>}

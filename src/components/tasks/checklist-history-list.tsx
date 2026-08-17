@@ -69,7 +69,7 @@ export function ChecklistHistoryList({ groups, isAdmin, groupByUnit = false }: {
               <button key={i.id} onClick={() => toggle(i.id)} className={`flex w-full items-center gap-2 rounded-lg border p-2.5 text-left transition-colors ${checked ? 'border-danger bg-danger/5' : 'bg-surface hover:border-brand'}`}>
                 {checked ? <CheckSquare className="h-5 w-5 shrink-0 text-danger" /> : <Square className="h-5 w-5 shrink-0 text-ink-500" />}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-brand">{i.name}</span>
+                  <span className="block truncate text-sm font-semibold text-ink-900">{i.name}</span>
                   <span className="block text-xs text-ink-500">{sub || '—'}</span>
                 </span>
                 <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
@@ -79,7 +79,7 @@ export function ChecklistHistoryList({ groups, isAdmin, groupByUnit = false }: {
           return (
             <Link key={i.id} href={`/tarefas/${i.id}`} className="flex items-center gap-2 rounded-lg border bg-surface p-2.5 transition-colors hover:border-brand">
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold text-brand">{i.name}</span>
+                <span className="block truncate text-sm font-semibold text-ink-900">{i.name}</span>
                 <span className="block text-xs text-ink-500">{sub || '—'}</span>
               </span>
               <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
@@ -106,7 +106,7 @@ export function ChecklistHistoryList({ groups, isAdmin, groupByUnit = false }: {
                   {useUnitGroups
                     ? [...byUnit.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR')).map(([unit, items]) => (
                         <div key={unit} className="space-y-1.5">
-                          <p className="pt-1 text-xs font-semibold text-brand">{unit} <span className="font-normal text-ink-500">({items.length})</span></p>
+                          <p className="pt-1 text-xs font-semibold text-ink-900">{unit} <span className="font-normal text-ink-500">({items.length})</span></p>
                           {items.map((i) => renderItem(i, false))}
                         </div>
                       ))

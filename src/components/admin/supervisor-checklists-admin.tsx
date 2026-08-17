@@ -54,7 +54,7 @@ export function SupervisorChecklistsAdmin({ checklists }: { checklists: SupCheck
         {checklists.map((c) => (
           <div key={c.id} className="p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="font-semibold text-brand">{c.name}</p>
+              <p className="font-semibold text-ink-900">{c.name}</p>
               <span className="flex items-center gap-1.5">
                 <StatusBadge tone={c.active ? 'success' : 'neutral'}>{c.active ? 'Ativo' : 'Inativo'}</StatusBadge>
                 <Button size="sm" variant="ghost" onClick={() => { setCreating(false); setEditing(c); }} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>

@@ -187,7 +187,7 @@ function EvalCard({ r, yearMonth, canEvaluate }: { r: EvalRow; yearMonth: string
         <span className="flex min-w-0 items-center gap-2">
           {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
           <span className="min-w-0">
-            <span className="block truncate font-semibold text-brand">{r.name}</span>
+            <span className="block truncate font-semibold text-ink-900">{r.name}</span>
             <span className="block truncate text-xs text-ink-500">{r.jobTitle || 'Sem função'} · {r.unitName}</span>
           </span>
         </span>
