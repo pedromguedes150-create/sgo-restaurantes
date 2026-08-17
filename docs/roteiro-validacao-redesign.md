@@ -121,7 +121,57 @@ mais o mesmo sistema" — isso é olho humano.*
 
 ---
 
-## 5. Se algo estiver errado
+## 5. Onda 8 — a cara de iOS
+
+Aqui **nada de funcionamento mudou**: sem mudança de banco, de rota ou de corpo
+de requisição. O que mudou é desenho e gesto, e é exatamente por isso que só
+olho humano resolve. Detalhes técnicos em `docs/redesign-onda-8.md`.
+
+**No celular (é onde a maior parte muda):**
+
+- [ ] Navegue entre telas: a nova **entra pela direita**, como num app. Nada
+      deve piscar branco nem "pular" no fim do movimento
+- [ ] Aperte e segure um botão: ele **encolhe** enquanto o dedo está em cima e
+      volta em mola. Em linha de lista, ela **acende** em vez de encolher
+- [ ] Abra **Notas Recebidas** (é o pior caso: 5 abas com nomes longos). A
+      fileira de abas **rola para o lado** com o dedo, sem barra de rolagem
+      aparecendo, e nenhum nome fica cortado
+- [ ] Toque numa aba do fim da fileira: ela deve **entrar no campo de visão**
+      sozinha, não ficar meio escondida na borda
+
+**Abas — o que esperar em toda tela que tem:**
+
+- [ ] A aba escolhida é uma **pílula clara elevada sobre um trilho cinza**, não
+      um bloco bordô/rosa. Se em alguma tela ainda aparecer bloco cheio de cor
+      no topo, me diga qual
+- [ ] Confira as 21 telas com aba pelo menos de relance: Notas, Pagamentos,
+      Gás, Coleta de Óleo, Comunicação, Manutenção, Pessoas, Avaliação,
+      Período de Experiência, Comissões, Rotina do Supervisor, Inventário de
+      equipamentos, Pedidos de produtos, Checklists (Configurações), Histórico
+      de checklists, Relatório de Auditoria, Análise de cancelamentos, Análise
+      de comandas em aberto
+- [ ] **Manutenção** e **Avaliação** perderam os ícones das abas (ficou só
+      texto, que é o padrão do iOS). Se sentir falta, é reversível
+
+**Tema escuro, agora que o acento foi separado:**
+
+- [ ] No escuro, **título e nome não são mais rosa** — são quase brancos. Rosa
+      deve sobrar só no que se **toca**: link, botão, aba de navegação
+- [ ] Se achar rosa num texto que **não** é clicável, me diga onde: é resíduo
+      da separação e a correção é de uma linha
+
+**Duas coisas que deixei para você decidir** (não são esquecimento):
+
+- [ ] Os segmentos das abas têm **36px** de altura. Está acima do mínimo de
+      acessibilidade e é a medida do próprio controle do iOS (32pt), mas é
+      menor que os 44px de um botão solto. Se o dedo errar, eu subo
+- [ ] As células da grade de **Comandas** têm 26px. Levar para 44px faz a grade
+      crescer de ~650px para ~1100px de altura — muda a rotina de conferência,
+      então é sua chamada
+
+---
+
+## 6. Se algo estiver errado
 
 Me diga o módulo e o passo. Reverter é barato: cada tela foi um commit separado,
 então dá para voltar um módulo sem desfazer o resto.
