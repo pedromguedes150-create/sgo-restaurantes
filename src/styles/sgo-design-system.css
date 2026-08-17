@@ -638,3 +638,38 @@ button:not(:disabled):not(.sgo-no-press),
     transform: none;
   }
 }
+
+/* =============================================================================
+   LISTA AGRUPADA (Onda 8) — a silhueta do iOS.
+   Uma caixa só, com fio recuado entre as linhas, em vez de cartões soltos com
+   vão entre eles. O fio vive num ::before do filho porque `border-top` iria de
+   ponta a ponta, e no iOS ele começa alinhado com o texto (16px).
+   ========================================================================== */
+.sgo-group > * {
+  position: relative;
+}
+
+.sgo-group > * + *::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: var(--sgo-space-16);
+  right: 0;
+  height: 1px;
+  background: var(--sgo-line);
+}
+
+/* Fio de ponta a ponta, para grupo sem recuo à esquerda (tabela, grade). */
+.sgo-group-flush > * + *::before {
+  left: 0;
+}
+
+/* Linha tocável dentro do grupo: realce no toque ocupa a linha inteira, sem
+   arredondamento próprio — é o comportamento do iOS. O recuo em escala fica
+   DESLIGADO aqui: encolher uma linha de lista larga fica estranho, o certo é
+   ela acender. */
+.sgo-group > button:active,
+.sgo-group > a:active {
+  transform: none;
+  background-color: var(--sgo-sunken);
+}

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Group } from '@/components/ui/ds/group';
 
 export interface SupplierRow { id: string; name: string; cnpj: string | null; pixKey: string | null; category: string | null; notes: string | null; active: boolean; isGas: boolean }
 
@@ -53,10 +54,13 @@ export function SuppliersAdmin({ suppliers }: { suppliers: SupplierRow[] }) {
         {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
       </div>
 
-      <div className="space-y-2">
-        {suppliers.map((s) => <SupplierItem key={s.id} s={s} onChange={() => router.refresh()} />)}
-        {suppliers.length === 0 && <p className="text-sm text-ink-500">Nenhum fornecedor cadastrado.</p>}
-      </div>
+      {suppliers.length === 0 ? (
+        <p className="text-sm text-ink-500">Nenhum fornecedor cadastrado.</p>
+      ) : (
+        <Group>
+          {suppliers.map((s) => <SupplierItem key={s.id} s={s} onChange={() => router.refresh()} />)}
+        </Group>
+      )}
     </div>
   );
 }
@@ -80,7 +84,7 @@ function SupplierItem({ s, onChange }: { s: SupplierRow; onChange: () => void })
   }
 
   return (
-    <div className="rounded-lg border bg-surface p-3">
+    <div className="p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="font-semibold text-brand">{s.name}{s.category ? <span className="ml-1 text-xs font-normal text-ink-500">· {s.category}</span> : null}{s.isGas ? <span className="ml-1 rounded bg-brand/15 px-1.5 text-[11px] font-bold text-brand">GÁS</span> : null}</p>

@@ -19,6 +19,7 @@ import { Modal } from '@/components/ui/ds/modal';
 import { Sheet } from '@/components/ui/ds/sheet';
 import { Table, type Column } from '@/components/ui/ds/table';
 import { Skeleton, SkeletonText, SkeletonList, SkeletonStatCard } from '@/components/ui/ds/skeleton';
+import { Group, GroupLabel } from '@/components/ui/ds/group';
 
 /* Helpers da galeria (compartilhados pelas seções que entram a cada commit). */
 
@@ -233,7 +234,7 @@ export function ListSection() {
   return (
     <GallerySection
       title="ListRow e EmptyState"
-      hint="Linha de 64px, avatar de 32 e divisor recuado 16px (alinha com o texto). Substitui os cartões-por-registro das telas atuais. O vazio sempre diz o próximo passo."
+      hint="Altura adaptativa (Onda 8): 56px numa linha, 58px com subtítulo — no iOS a linha simples tem 44pt e só cresce com a segunda linha. Avatar de 32 e divisor recuado 16px (alinha com o texto). Substitui os cartões-por-registro das telas atuais. O vazio sempre diz o próximo passo."
     >
       <div className="grid gap-4 lg:grid-cols-2">
         <List>
@@ -484,6 +485,60 @@ export function SkeletonSection() {
 
 /* --------------------------------------------------------------- Galeria */
 
+/* ------------------------------------------------- Group (lista agrupada) */
+
+export function GroupSection() {
+  return (
+    <GallerySection
+      title="Group — lista agrupada"
+      hint="A silhueta do iOS: UMA caixa com fio recuado entre as linhas, em vez de cartões soltos com vão entre eles. Aceita conteúdo livre no filho (ao contrário do ListRow, que pede título/subtítulo), então serve para migrar os cartões-por-registro que já existem. Cartão que usa a borda para SINALIZAR estado não entra aqui — perderia o sinal."
+    >
+      <Panel>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div>
+            <GroupLabel>Agrupado (iOS)</GroupLabel>
+            <Group>
+              <div className="flex items-center justify-between gap-2 p-3">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium text-ink-900">Gás Aliança</p>
+                  <p className="text-[13px] text-ink-500">CNPJ 12.345.678/0001-90 · PIX aliança@gas</p>
+                </div>
+                <StatusBadge tone="success">Ativo</StatusBadge>
+              </div>
+              <div className="flex items-center justify-between gap-2 p-3">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium text-ink-900">Coleta Verde</p>
+                  <p className="text-[13px] text-ink-500">sem CNPJ</p>
+                </div>
+                <StatusBadge tone="success">Ativo</StatusBadge>
+              </div>
+              <div className="flex items-center justify-between gap-2 p-3">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium text-ink-900">Refrigeração Exemplo</p>
+                  <p className="text-[13px] text-ink-500">CNPJ 98.765.432/0001-10</p>
+                </div>
+                <StatusBadge tone="danger">Inativo</StatusBadge>
+              </div>
+            </Group>
+          </div>
+
+          <div>
+            <GroupLabel>Antes — cartões soltos</GroupLabel>
+            <div className="space-y-2">
+              {['Gás Aliança', 'Coleta Verde', 'Refrigeração Exemplo'].map((n) => (
+                <div key={n} className="flex items-center justify-between gap-2 rounded-lg border border-line bg-surface p-3">
+                  <p className="text-[15px] font-medium text-ink-900">{n}</p>
+                  <StatusBadge tone="neutral">—</StatusBadge>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Panel>
+    </GallerySection>
+  );
+}
+
 export function ComponentsGallery() {
   return (
     <div>
@@ -496,6 +551,7 @@ export function ComponentsGallery() {
       <ChoiceSection />
       <SegmentedSection />
       <ListSection />
+      <GroupSection />
       <DataSection />
       <FeedbackSection />
       <OverlaySection />
