@@ -49,6 +49,18 @@
   --sgo-surface: rgb(var(--sgo-surface-rgb));
   --sgo-sunken-rgb: 237 233 230;
   --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+  /* Superfície ELEVADA — o que sobe acima de `sunken`.
+     Existe por causa do segmented control: no claro a pílula eleita é branca
+     sobre trilho cinza, e `surface` já servia. No ESCURO não serve — lá
+     `surface` (31 28 27) é mais ESCURO que `sunken` (42 38 36), então usar
+     `surface` afundaria a pílula em vez de elevá-la, invertendo a leitura.
+     Este token é o único que sobe nos dois temas. */
+  --sgo-raised-rgb: 255 255 255;
+  --sgo-raised: rgb(var(--sgo-raised-rgb));
+  /* No claro a pílula eleita se separa do trilho por SOMBRA, não por
+     contraste de cor — branco sobre cinza claro dá ~1,2:1. É assim no iOS.
+     O estado continua legível porque o texto muda de cor E de peso. */
+  --sgo-shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 1px rgba(0, 0, 0, 0.06);
   /* Superfície translúcida (barras com backdrop-blur). */
   --sgo-glass: rgba(255, 255, 255, 0.72);
 
@@ -159,6 +171,11 @@
     --sgo-surface: rgb(var(--sgo-surface-rgb));
     --sgo-sunken-rgb: 42 38 36;
     --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+    /* Sobe ACIMA de sunken (42 38 36) — ver a nota no bloco claro. */
+    --sgo-raised-rgb: 72 66 62;
+    --sgo-raised: rgb(var(--sgo-raised-rgb));
+    /* Sombra preta some sobre fundo escuro; aqui a elevação vem do tom. */
+    --sgo-shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.4);
     --sgo-glass: rgba(31, 28, 27, 0.72);
 
     --sgo-brand-rgb: 240 167 177;
@@ -218,6 +235,10 @@
   --sgo-surface: rgb(var(--sgo-surface-rgb));
   --sgo-sunken-rgb: 42 38 36;
   --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+  /* Sobe ACIMA de sunken (42 38 36) — ver a nota no bloco claro. */
+  --sgo-raised-rgb: 72 66 62;
+  --sgo-raised: rgb(var(--sgo-raised-rgb));
+  --sgo-shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.4);
   /* Faltava aqui na Onda 0: o bloco 'system' tinha, o 'dark' explícito não.
      Sem isto, quem escolhe Escuro à mão fica com as barras de desfoque BRANCAS
      sobre a página escura — e o texto claro do tema em cima delas. */
@@ -525,6 +546,9 @@
   --sgo-surface: rgb(var(--sgo-surface-rgb));
   --sgo-sunken-rgb: 237 233 230;
   --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+  --sgo-raised-rgb: 255 255 255;
+  --sgo-raised: rgb(var(--sgo-raised-rgb));
+  --sgo-shadow-raised: none;
   --sgo-glass: rgba(255, 255, 255, 0.72);
   --sgo-brand-rgb: 124 26 43;
   --sgo-brand: rgb(var(--sgo-brand-rgb));
@@ -637,6 +661,21 @@ button:not(:disabled):not(.sgo-no-press),
   [role='button']:active {
     transform: none;
   }
+}
+
+/* =============================================================================
+   ROLAGEM SEM BARRA (Onda 8) — fileira que rola mas não mostra barra.
+   Usada pelo segmented control: quando as abas não cabem na largura do
+   celular, o trilho rola. Uma barra de rolagem dentro de uma pílula de 36px
+   de altura come metade dela e não existe no iOS, onde o indicador é
+   transitório. O gesto continua: só o desenho da barra sai.
+   ========================================================================== */
+.sgo-sem-barra {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge legado */
+}
+.sgo-sem-barra::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
 }
 
 /* =============================================================================

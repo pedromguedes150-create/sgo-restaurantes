@@ -39,6 +39,9 @@ const config: Config = {
         },
         canvas: 'rgb(var(--sgo-canvas-rgb) / <alpha-value>)',
         sunken: 'rgb(var(--sgo-sunken-rgb) / <alpha-value>)',
+        // Sobe acima de `sunken` nos DOIS temas — `surface` não faz isso no
+        // escuro. Usado pela pílula eleita do segmented control.
+        raised: 'rgb(var(--sgo-raised-rgb) / <alpha-value>)',
         // glass ja NASCE translucido (rgba fixo); nao vira canal nem aceita alfa.
         glass: 'var(--sgo-glass)',
         'on-brand': 'rgb(var(--sgo-on-brand-rgb) / <alpha-value>)',
@@ -80,6 +83,10 @@ const config: Config = {
       boxShadow: {
         // Anel de foco duplo (2px surface + 2px brand)
         'sgo-focus': 'var(--sgo-focus-ring)',
+        // Elevação da pílula eleita. No claro ela se separa do trilho por
+        // sombra, não por cor (branco sobre cinza claro dá ~1,2:1) — é assim
+        // no iOS. Some na impressão.
+        'sgo-raised': 'var(--sgo-shadow-raised)',
       },
       transitionTimingFunction: {
         'sgo-std': 'var(--sgo-ease-std)',

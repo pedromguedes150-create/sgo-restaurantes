@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Pencil, X, Save, ArrowDownCircle, ArrowUpCircle, ClipboardCheck, Printer, AlertTriangle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -49,7 +50,12 @@ export function EquipmentInventory({ canEdit, isAdmin, units, suppliers, items, 
       </div>
 
       <div className="flex flex-wrap items-center gap-2 print:hidden">
-        {tabs.map((t) => <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>)}
+        <SegmentedControl
+          aria-label="Seções do Inventário de equipamentos"
+          value={tab}
+          onValueChange={setTab}
+          options={tabs.map((t) => ({ value: t.key, label: t.label }))}
+        />
         {multi && (
           <div className="ml-auto w-44">
             <Select aria-label="Unidade" size="sm" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />

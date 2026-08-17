@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Save, Droplets, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
@@ -38,11 +39,12 @@ export function OilClient({ canLaunch, isAdmin, canEditDate = false, units, supp
   ];
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {tabs.filter((t) => t.show).map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>
-        ))}
-      </div>
+      <SegmentedControl
+        aria-label="Seções de Coleta de Óleo"
+        value={tab}
+        onValueChange={setTab}
+        options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label }))}
+      />
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
       {tab === 'painel' && <Dashboard d={dashboard} />}
       {tab === 'historico' && <History rows={rows} isAdmin={isAdmin} canEditDate={canEditDate} />}
