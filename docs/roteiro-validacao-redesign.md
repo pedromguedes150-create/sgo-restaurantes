@@ -107,20 +107,23 @@ cor mudou em toda tela e um erro de cor pode fazer um número parecer outro esta
 
 ## 4. Tema escuro (novidade desta rodada)
 
-O padrão passou a seguir o aparelho. Quem tiver o celular no escuro vai ver o
-sistema escuro pela primeira vez.
+**O SGO abre CLARO para todo mundo** (`THEME_DEFAULT` em `src/lib/theme.ts`). O
+escuro é escolha explícita, em **Meu Perfil → Aparência**: Claro, Escuro, ou
+Aparelho (segue o modo do celular). A escolha vale por aparelho e dura 1 ano.
 
-- [ ] Ponha o celular no modo escuro e abra o sistema
-- [ ] Percorra os módulos que mais usa procurando algo que **sumiu** — não algo
-      ilegível, mas algo que ficou da cor do fundo
+- [ ] Confirme que o sistema abre **claro** mesmo com o celular no modo escuro
+- [ ] Em Meu Perfil → Aparência, marque **Escuro** e percorra os módulos que
+      mais usa procurando algo que **sumiu** — não algo ilegível, mas algo que
+      ficou da cor do fundo
+- [ ] Volte para **Claro** e confirme que ficou salvo ao recarregar
 
-> ⚠️ **Não existe seletor de tema na interface.** Eu havia escrito aqui que dava
-> para forçar Claro em Meu Perfil — é falso, não conferi antes de escrever. O
-> componente `ThemeToggle` existe mas só está montado em `/dev/ui` (a galeria de
-> desenvolvimento). Como o padrão sem cookie é `system` (`src/lib/theme.ts`),
-> **quem tiver o aparelho no escuro vê o sistema escuro e não tem como voltar** —
-> o que contraria a regra 2 do CLAUDE.md ("tema claro"). Pendência aberta, a
-> decidir: montar o seletor em Meu Perfil, ou voltar o padrão para `light`.
+> Histórico, porque a correção nasceu de uma pergunta do Pedro ("porque está em
+> modo escuro?"): a Onda 7 tinha posto o padrão em `system` (seguir o aparelho)
+> e o seletor estava montado só em `/dev/ui`. Quem tivesse o celular no escuro
+> via o SGO escuro **sem ter como voltar** — contra a regra 2 do CLAUDE.md. Duas
+> correções: o seletor entrou em Meu Perfil e o padrão voltou a ser claro.
+> Eu também havia afirmado aqui que "em Meu Perfil dá para forçar Claro" quando
+> não dava — escrevi sem conferir.
 
 *A auditoria automática cobriu contraste de texto e elemento sumido, nos dois
 temas, em ~1.500 elementos. O que ela não pega é "está feio" ou "não parece

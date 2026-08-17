@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { ThemeProvider } from '@/components/theme/theme-provider';
-import { THEME_COOKIE, isThemeChoice, type ThemeChoice } from '@/lib/theme';
+import { THEME_COOKIE, THEME_DEFAULT, isThemeChoice, type ThemeChoice } from '@/lib/theme';
 import '@/styles/sgo-design-system.css';
 import '@/styles/globals.css';
 
@@ -42,12 +42,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // Tema lido do cookie no servidor e carimbado no <html> antes do 1º paint
-  // (sem flash). Sem cookie, o padrão é 'system' — o app segue o aparelho.
-  // Isso só passou a ser possível na Onda 7: até ali o conteúdo usava cores
-  // FIXAS que não reagiam ao tema, e escurecer as superfícies deixava, por
-  // exemplo, o bordô sobre card escuro em ~1,3:1.
+  // (sem flash). Sem cookie vale THEME_DEFAULT — claro; o porquê está lá.
   const cookieTheme = cookies().get(THEME_COOKIE)?.value;
-  const theme: ThemeChoice = isThemeChoice(cookieTheme) ? cookieTheme : 'system';
+  const theme: ThemeChoice = isThemeChoice(cookieTheme) ? cookieTheme : THEME_DEFAULT;
 
   return (
     <html

@@ -241,7 +241,7 @@ export const GUIDE: GuideSection[] = [
           'Mais abaixo, em "Notificações no celular", ative os avisos do SGO no aparelho (ver o guia próprio).',
         ],
         tips: [
-          'O tema vem em "Aparelho" por padrão: se o seu celular está no modo escuro, o SGO abre escuro. Se preferir sempre claro, marque CLARO — a escolha fica salva por 1 ano.',
+          'O SGO abre CLARO para todo mundo. O escuro só aparece se você marcar — ou se marcar APARELHO e o celular estiver no modo escuro. A escolha fica salva por 1 ano.',
           'A escolha é por aparelho, não por usuário: se você usa celular e computador, marque nos dois.',
         ],
       },
