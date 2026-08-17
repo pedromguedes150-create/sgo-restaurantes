@@ -6,7 +6,6 @@ import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadshee
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { Button } from '@/components/ui/button';
 import { ActionMenu, type ActionMenuItem } from '@/components/ui/ds/action-menu';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
@@ -18,19 +17,14 @@ import { shortUnitName } from '@/lib/unit-name';
 import { QrScanner } from '@/components/notes/qr-scanner';
 import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
-import { GasClient, type GasDash, type GasRow, type GasContractUI, type PurchasedUI } from '@/components/gas/gas-client';
 import { GasImportModal } from '@/components/notes/gas-import-modal';
 import { Group } from '@/components/ui/ds/group';
 import { Sheet } from '@/components/ui/ds/sheet';
+import { NotesTabs } from '@/components/notes/notes-tabs';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null; isGas?: boolean }
 
-export interface NotesGasProps {
-  canLaunch: boolean; isAdmin: boolean; canEditDate: boolean; canManageContracts: boolean;
-  dashboard: GasDash; receipts: GasRow[]; contracts: GasContractUI[]; purchased: PurchasedUI;
-  filter: { unitId: string; supplierId: string; mes: string };
-}
 export interface NoteDTO {
   id: string; unit: string; supplier: string; value: number;
   status: 'RECEIVED' | 'PAID' | 'PROBLEM' | 'RETURNED'; number: string | null; problemNote: string | null;
@@ -54,11 +48,12 @@ const PERIODS = [
   { dias: 365, label: 'Último ano' },
 ];
 
-export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false, sinceDays = 60, gas }: {
-  units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean; sinceDays?: number; gas?: NotesGasProps;
+export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false, sinceDays = 60, aba = 'lista' }: {
+  units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean; sinceDays?: number;
+  /** Aba ativa, vinda da URL (`?aba=`). Deixou de ser estado quando o gás ganhou rota própria. */
+  aba?: 'lista' | 'venc';
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'lista' | 'gas' | 'venc'>('lista');
   const [busy, setBusy] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [novaNota, setNovaNota] = useState(false);
@@ -75,7 +70,7 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
   }
 
   /**
-   * Cinco abas viraram três.
+   * Cinco abas viraram três, e agora as três são NAVEGAÇÃO.
    *
    * "Registrar nota" saiu porque era um FORMULÁRIO ocupando uma aba: quem
    * entrava para consultar levava o formulário na cara. Virou o botão "Nova
@@ -85,22 +80,14 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
    * mesmo componente, mudando só um parâmetro de detalhe. O que ela tinha de
    * próprio (totais, export e os campos extras por linha) continua aqui
    * dentro, para o mesmo público de antes.
+   *
+   * "Análise de gás" ganhou rota própria (`/modulos/notas/gas`), então some o
+   * segundo trilho de abas que existia empilhado sob o primeiro.
    */
-  const tabs: { key: typeof tab; label: string }[] = [
-    { key: 'lista', label: 'Notas' },
-    { key: 'venc', label: 'Vencimentos' },
-    ...(gas ? [{ key: 'gas' as const, label: 'Análise de gás' }] : []),
-  ];
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 print:hidden">
-        <SegmentedControl
-          aria-label="Seções de Notas Recebidas"
-          value={tab}
-          onValueChange={setTab}
-          options={tabs.map((t) => ({ value: t.key, label: t.label }))}
-        />
+        <NotesTabs value={aba} sinceDays={sinceDays} />
         <Button size="sm" className="ml-auto" onClick={() => setNovaNota(true)}>
           <Plus className="h-4 w-4" /> Nova nota
         </Button>
@@ -121,24 +108,8 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
         <NewNote units={units} suppliers={suppliers} onDone={() => { setNovaNota(false); router.refresh(); }} />
       </Sheet>
 
-      {tab === 'venc' && <DueTracking units={units} />}
-      {tab === 'gas' && gas && (
-        <GasClient
-          basePath="/modulos/notas"
-          canLaunch={false}
-          isAdmin={gas.isAdmin}
-          canEditDate={gas.canEditDate}
-          canManageContracts={gas.canManageContracts}
-          units={units}
-          suppliers={suppliers.filter((s) => s.isGas).map((s) => ({ id: s.id, name: s.name, cnpj: s.cnpj ?? null }))}
-          dashboard={gas.dashboard}
-          receipts={gas.receipts}
-          contracts={gas.contracts}
-          purchased={gas.purchased}
-          filter={gas.filter}
-        />
-      )}
-      {tab === 'lista' && (
+      {aba === 'venc' && <DueTracking units={units} />}
+      {aba === 'lista' && (
         <FilterableNotes
           notes={notes} units={units} sinceDays={sinceDays}
           canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={status}
