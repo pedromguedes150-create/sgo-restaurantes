@@ -17,6 +17,7 @@ import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { postAdmin } from '@/lib/admin-client';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 import { formatBRL } from '@/lib/utils';
+import { Group } from '@/components/ui/ds/group';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null }
@@ -434,9 +435,9 @@ function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
   return (
     <div>
       <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">{title}</h2>
-      <div className="space-y-2">
+      <Group>
         {rows.map((r) => (
-          <div key={r.key} className="rounded-lg border bg-surface p-2.5">
+          <div key={r.key} className="p-2.5">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-brand">{r.name}</span>
               <span className="font-bold">{kg(r.avg)} <span className="text-xs font-normal text-ink-500">méd</span></span>
@@ -445,7 +446,7 @@ function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
             <p className="mt-1 text-xs text-ink-500">{r.count} compra(s) · <b className="text-brand">{r.kg.toLocaleString('pt-BR')} kg</b> · último {kg(r.last)} · mín {kg(r.min)} · máx {kg(r.max)}</p>
           </div>
         ))}
-      </div>
+      </Group>
     </div>
   );
 }

@@ -37,6 +37,13 @@ export function Group({
   /** Fio recuado 16px à esquerda (padrão do iOS). `false` = fio de ponta a ponta. */
   inset?: boolean;
 }) {
+  // Lista vazia não desenha caixa. Sem isto, `<Group>{itens.map(…)}</Group>` com
+  // zero itens deixava um retângulo com borda e nada dentro na tela — apareceu
+  // em Minha Área, num usuário sem folga registrada. A guarda fica AQUI e não em
+  // cada chamada: são doze e viriam mais.
+  const vazio = React.Children.toArray(children).length === 0;
+  if (vazio) return null;
+
   return (
     <div
       className={cn(

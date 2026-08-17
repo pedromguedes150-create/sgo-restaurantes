@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Select } from '@/components/ui/ds/select';
 import { shortUnitName } from '@/lib/unit-name';
+import { Group } from '@/components/ui/ds/group';
 
 type Unit = { id: string; name: string };
 type Collab = { id: string; name: string };
@@ -114,9 +115,9 @@ function List({ rows, canDecide, onChanged }: { rows: TermRow[]; canDecide: bool
   }
   if (rows.length === 0) return <p className="text-sm text-ink-500">Nenhuma solicitação.</p>;
   return (
-    <div className="space-y-2">
+    <Group>
       {rows.map((r) => (
-        <div key={r.id} className="rounded-lg border bg-surface p-3">
+        <div key={r.id} className="p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-brand">{r.collaboratorName}</p>
@@ -138,6 +139,6 @@ function List({ rows, canDecide, onChanged }: { rows: TermRow[]; canDecide: bool
           </div>
         </div>
       ))}
-    </div>
+    </Group>
   );
 }

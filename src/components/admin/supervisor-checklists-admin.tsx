@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { postAdmin } from '@/lib/admin-client';
+import { Group } from '@/components/ui/ds/group';
 
 export interface SupChecklistUI { id: string; name: string; items: string[]; active: boolean }
 
@@ -46,10 +47,10 @@ export function SupervisorChecklistsAdmin({ checklists }: { checklists: SupCheck
         />
       )}
 
-      <div className="space-y-2">
+      <Group>
         {checklists.length === 0 && <p className="text-sm text-ink-500">Nenhum checklist criado. Eles são usados pelo supervisor na visita às unidades.</p>}
         {checklists.map((c) => (
-          <div key={c.id} className="rounded-lg border bg-surface p-3">
+          <div key={c.id} className="p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="font-semibold text-brand">{c.name}</p>
               <span className="flex items-center gap-1.5">
@@ -64,7 +65,7 @@ export function SupervisorChecklistsAdmin({ checklists }: { checklists: SupCheck
             </ul>
           </div>
         ))}
-      </div>
+      </Group>
     </div>
   );
 }

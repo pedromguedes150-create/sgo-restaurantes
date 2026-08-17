@@ -11,6 +11,7 @@ import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
+import { Group } from '@/components/ui/ds/group';
 
 export interface InvItem {
   id: string;
@@ -47,9 +48,9 @@ export function InventoryClient({ items, units, isAdmin }: { items: InvItem[]; u
       {items.length === 0 ? (
         <p className="text-sm text-ink-500">Nenhum inventário agendado.</p>
       ) : (
-        <div className="space-y-2">
+        <Group>
           {items.map((i) => (
-            <div key={i.id} className="rounded-lg border bg-surface p-3">
+            <div key={i.id} className="p-3">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-brand">{i.category}</p>
                 <StatusBadge tone={ST[i.status].tone}>{ST[i.status].label}</StatusBadge>
@@ -63,7 +64,7 @@ export function InventoryClient({ items, units, isAdmin }: { items: InvItem[]; u
               </div>
             </div>
           ))}
-        </div>
+        </Group>
       )}
     </div>
   );

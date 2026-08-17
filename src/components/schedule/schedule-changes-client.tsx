@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
+import { Group } from '@/components/ui/ds/group';
 
 export interface ChangeRowUI {
   id: string; unitName: string; collaboratorAName: string; dateA: string;
@@ -95,9 +96,9 @@ export function ScheduleChangesClient({ rows, units, selectedUnitId, collabs, ca
       <div>
         <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Registro de trocas ({rows.length})</p>
         {rows.length === 0 && <p className="text-sm text-ink-500">Nenhuma troca registrada ainda.</p>}
-        <div className="space-y-1.5">
+        <Group>
           {rows.map((r) => (
-            <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border bg-surface p-2.5">
+            <div key={r.id} className="flex items-center justify-between gap-2 p-2.5">
               <div className="min-w-0">
                 <p className="flex items-center gap-1 text-sm font-semibold text-brand">
                   <span className="truncate">{r.collaboratorAName} ({fmtBR(r.dateA)})</span>
@@ -113,7 +114,7 @@ export function ScheduleChangesClient({ rows, units, selectedUnitId, collabs, ca
               {isAdmin && <Button size="sm" variant="ghost" className="shrink-0 text-danger" disabled={busy} onClick={() => remove(r.id)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
             </div>
           ))}
-        </div>
+        </Group>
       </div>
     </div>
   );

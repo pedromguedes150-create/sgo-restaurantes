@@ -18,6 +18,7 @@ import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 import { GasClient, type GasDash, type GasRow, type GasContractUI, type PurchasedUI } from '@/components/gas/gas-client';
 import { GasImportModal } from '@/components/notes/gas-import-modal';
+import { Group } from '@/components/ui/ds/group';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null; isGas?: boolean }
@@ -216,12 +217,12 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
         </div>
       )}
 
-      <div className="space-y-2">
-        {filtered.length === 0 && <p className="text-sm text-ink-500">Nenhuma nota com esses filtros no período.</p>}
+      {filtered.length === 0 && <p className="text-sm text-ink-500">Nenhuma nota com esses filtros no período.</p>}
+      <Group>
         {filtered.map((n) => (
           <NoteCard key={n.id} n={n} canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={onStatus} full={full} />
         ))}
-      </div>
+      </Group>
     </div>
   );
 }
@@ -292,7 +293,7 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
   }
 
   return (
-    <div className="rounded-lg border bg-surface p-3">
+    <div className="p-3">
       <div className="flex items-center justify-between">
         <p className="font-semibold text-brand">{n.supplier}</p>
         <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/ds/date-picker';
+import { Group } from '@/components/ui/ds/group';
 
 type DayType = 'WEEKDAY' | 'WEEKEND' | 'HOLIDAY';
 const DAY_TYPES: { key: DayType; label: string }[] = [
@@ -46,9 +47,9 @@ export function FreelancerRatesConfig({ units, rates, holidays }: {
       <div>
         <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Valor da hora do freelancer</h2>
         <p className="mb-3 text-xs text-ink-500">Por unidade e tipo de dia. No pedido, o sistema calcula <b>horas × valor/hora do dia + vale transporte</b> automaticamente.</p>
-        <div className="space-y-3">
+        <Group>
           {units.map((u) => (
-            <div key={u.id} className="rounded-lg border bg-surface p-3">
+            <div key={u.id} className="p-3">
               <p className="mb-2 text-sm font-semibold text-brand">{u.name}</p>
               <div className="grid grid-cols-3 gap-2">
                 {DAY_TYPES.map((t) => (
@@ -66,7 +67,7 @@ export function FreelancerRatesConfig({ units, rates, holidays }: {
               </div>
             </div>
           ))}
-        </div>
+        </Group>
       </div>
 
       <div>

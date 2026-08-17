@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
+import { Group } from '@/components/ui/ds/group';
 
 export interface Collab { id: string; name: string; jobTitle: string | null; units: string[] }
 export interface Vac { id: string; collaborator: string; unit: string; start: string; end: string; status: 'CONFIRMED' | 'CHANGE_REQUESTED' | 'APPROVED' | 'REQUESTED'; changeNote: string | null }
@@ -61,15 +62,15 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
       <div className="flex gap-2">{tabBtn('col', 'Colaboradores')}{tabBtn('fer', 'Férias')}{tabBtn('esc', 'Escala')}</div>
 
       {tab === 'col' && (
-        <div className="space-y-2">
+        <Group>
           {collaborators.length === 0 && <p className="text-sm text-ink-500">Nenhum colaborador.</p>}
           {collaborators.map((c) => (
-            <div key={c.id} className="rounded-lg border bg-surface p-3">
+            <div key={c.id} className="p-3">
               <p className="font-semibold text-brand">{c.name}</p>
               <p className="text-xs text-ink-500">{c.jobTitle ?? '—'} · {c.units.join(', ')}</p>
             </div>
           ))}
-        </div>
+        </Group>
       )}
 
       {tab === 'fer' && (

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Select } from '@/components/ui/ds/select';
 import { shortUnitName } from '@/lib/unit-name';
+import { Group } from '@/components/ui/ds/group';
 
 interface Unit { id: string; name: string }
 interface Row {
@@ -118,9 +119,9 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
             <div className="col-span-2 text-right">Ordem</div>
           </div>
 
-          <div className="space-y-2">
+          <Group>
             {data.denominations.map((r, idx) => (
-              <div key={r.key} className={`rounded-lg border bg-surface p-2.5 ${r.active ? '' : 'opacity-60'}`}>
+              <div key={r.key} className={`p-2.5 ${r.active ? '' : 'opacity-60'}`}>
                 <div className="grid grid-cols-12 items-center gap-2">
                   <div className="col-span-12 sm:col-span-4">
                     <div className="flex items-center gap-2">
@@ -158,7 +159,7 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
                 </div>
               </div>
             ))}
-          </div>
+          </Group>
 
           {data.available.length > 0 && <AddFromCatalog available={data.available} onAdd={(key) => save(key, { active: true })} busy={busyKey != null} />}
 

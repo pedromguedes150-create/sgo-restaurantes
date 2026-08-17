@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Select } from '@/components/ui/ds/select';
+import { Group } from '@/components/ui/ds/group';
 
 export interface PayoutRowUI {
   id: string; collaboratorName: string; unitName: string; type: 'COMMISSION' | 'MOBILITY';
@@ -226,9 +227,9 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
       <div>
         <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Lançamentos do mês ({rows.length})</p>
         {rows.length === 0 && <p className="text-sm text-ink-500">Nenhum lançamento neste mês.</p>}
-        <div className="space-y-1.5">
+        <Group>
           {rows.map((r) => (
-            <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border bg-surface p-2.5">
+            <div key={r.id} className="flex items-center justify-between gap-2 p-2.5">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-brand">{r.collaboratorName}</p>
                 <p className="truncate text-xs text-ink-500">
@@ -242,7 +243,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
               </div>
             </div>
           ))}
-        </div>
+        </Group>
       </div>
     </div>
   );

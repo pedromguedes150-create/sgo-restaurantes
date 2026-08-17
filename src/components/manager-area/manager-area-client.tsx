@@ -10,6 +10,7 @@ import { RichText } from '@/components/ui/rich-text';
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { TimePicker } from '@/components/ui/ds/time-picker';
+import { Group } from '@/components/ui/ds/group';
 
 export interface MTask { id: string; title: string; notes: string | null; dueAt: string | null; done: boolean }
 export interface MNote { id: string; title: string | null; content: string; createdAt: string }
@@ -259,14 +260,14 @@ function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam }: { leaves
         <Button size="sm" className="mt-2" disabled={busy || !start || !end} onClick={async () => { if (await post({ entity: 'leave', action: 'add', kind, startDate: start, endDate: end })) { setStart(''); setEnd(''); } }}><Plus className="h-4 w-4" /> Agendar</Button>
       </div>
       {leaves.length === 0 && <p className="text-sm text-ink-500">Nenhuma folga/férias agendada.</p>}
-      <div className="space-y-1.5">
+      <Group>
         {leaves.map((l) => (
-          <div key={l.id} className="flex items-center justify-between rounded-lg border bg-surface p-2.5 text-sm">
+          <div key={l.id} className="flex items-center justify-between p-2.5 text-sm">
             <span><b className={l.kind === 'FERIAS' ? 'text-info' : 'text-brand'}>{l.kind === 'FERIAS' ? 'Férias' : 'Folga'}</b> · {l.startDate === l.endDate ? fmtBR(l.startDate) : `${fmtBR(l.startDate)} a ${fmtBR(l.endDate)}`}</span>
             <button onClick={() => post({ entity: 'leave', action: 'delete', id: l.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
           </div>
         ))}
-      </div>
+      </Group>
     </div>
   );
 }
