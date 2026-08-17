@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SegmentedNav } from '@/components/ui/ds/segmented-nav';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -53,9 +54,12 @@ export default async function HistoricoTarefasPage({ searchParams }: { searchPar
       <LargeTitle title="Histórico de checklists" />
 
       <div className="flex flex-wrap items-center gap-2">
-        {[7, 15, 30].map((d) => (
-          <Link key={d} href={linkForDays(d)} className={d === days ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>{d} dias</Link>
-        ))}
+        <SegmentedNav
+          aria-label="Período do histórico"
+          size="sm"
+          value={String(days)}
+          options={[7, 15, 30].map((d) => ({ value: String(d), label: `${d} dias`, href: linkForDays(d) }))}
+        />
         {units.length > 1 && <UnitFilter units={units} selected={unitFilter.all ? [] : unitFilter.ids} />}
       </div>
 

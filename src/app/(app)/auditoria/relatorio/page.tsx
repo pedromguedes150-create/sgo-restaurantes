@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SegmentedNav } from '@/components/ui/ds/segmented-nav';
 import { ArrowLeft, Download } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { canViewAudit, getAuditForExport, getAuditModules } from '@/lib/audit-query';
@@ -29,15 +30,23 @@ export default async function AuditoriaRelatorioPage({ searchParams }: { searchP
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 print:hidden">
-        {PERIODS.map((d) => (
-          <Link key={d} href={q(d, mod)} className={days === d ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{d} dias</Link>
-        ))}
-        <span className="mx-1 self-center text-ink-500">·</span>
-        <Link href={q(days)} className={!mod ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>Todos</Link>
-        {modules.map((m) => (
-          <Link key={m} href={q(days, m)} className={mod === m ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{m}</Link>
-        ))}
+      {/* Dois controles, não uma fileira só com "·" no meio: período e módulo
+          são escolhas independentes, e num trilho único a pílula eleita
+          apareceria duas vezes — o que num segmented control significaria
+          duas seleções no mesmo grupo. */}
+      <div className="space-y-2 print:hidden">
+        <SegmentedNav
+          aria-label="Período do relatório"
+          size="sm"
+          value={String(days)}
+          options={PERIODS.map((d) => ({ value: String(d), label: `${d} dias`, href: q(d, mod) }))}
+        />
+        <SegmentedNav
+          aria-label="Módulo do relatório"
+          size="sm"
+          value={mod ?? ''}
+          options={[{ value: '', label: 'Todos', href: q(days) }, ...modules.map((m) => ({ value: m, label: m, href: q(days, m) }))]}
+        />
       </div>
 
       <div>

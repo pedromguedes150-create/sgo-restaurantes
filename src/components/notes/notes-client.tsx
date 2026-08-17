@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock } from 'lucide-react';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
@@ -81,11 +82,12 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 print:hidden">
-        {tabs.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
-            {t.label}
-          </button>
-        ))}
+        <SegmentedControl
+          aria-label="Seções de Notas Recebidas"
+          value={tab}
+          onValueChange={setTab}
+          options={tabs.map((t) => ({ value: t.key, label: t.label }))}
+        />
         {canManage && (
           <button onClick={() => setShowImport(true)} className="ml-auto inline-flex items-center gap-1.5 rounded-full border-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10">
             <FileSpreadsheet className="h-4 w-4" /> Importar em lote (XLSX)

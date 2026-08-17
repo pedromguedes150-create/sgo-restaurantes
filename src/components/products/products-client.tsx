@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Plus, Minus, Send, Printer, Factory, Warehouse, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Select } from '@/components/ui/ds/select';
 import { shortUnitName } from '@/lib/unit-name';
 
@@ -40,11 +41,12 @@ export function ProductsClient({ units, selUnitId, isOps, products, myRequests, 
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {tabs.map((t) => (
-          <button key={t.k} onClick={() => setTab(t.k as typeof tab)} className={tab === t.k ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.l}</button>
-        ))}
-      </div>
+      <SegmentedControl
+        aria-label="Seções de Pedidos de produtos"
+        value={tab}
+        onValueChange={(v) => setTab(v as typeof tab)}
+        options={tabs.map((t) => ({ value: t.k as string, label: t.l }))}
+      />
 
       {tab === 'novo' && <NewOrder units={units} selUnitId={selUnitId} products={products} post={post} busy={busy} />}
       {tab === 'meus' && <RequestList requests={myRequests} onReceive={(id) => post({ action: 'status', id, status: 'RECEIVED' })} busy={busy} showUnit={false} />}

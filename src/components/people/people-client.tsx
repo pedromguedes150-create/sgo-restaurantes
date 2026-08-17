@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,13 +54,14 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
     try { const r = await fetch(`/api/people/schedule/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ variation, note }) }); if (r.ok) router.refresh(); } finally { setBusy(false); }
   }
 
-  const tabBtn = (k: typeof tab, label: string) => (
-    <button onClick={() => setTab(k)} className={tab === k ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{label}</button>
-  );
-
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">{tabBtn('col', 'Colaboradores')}{tabBtn('fer', 'Férias')}{tabBtn('esc', 'Escala')}</div>
+      <SegmentedControl
+        aria-label="Seções de Pessoas"
+        value={tab}
+        onValueChange={setTab}
+        options={[{ value: 'col', label: 'Colaboradores' }, { value: 'fer', label: 'Férias' }, { value: 'esc', label: 'Escala' }]}
+      />
 
       {tab === 'col' && (
         <>

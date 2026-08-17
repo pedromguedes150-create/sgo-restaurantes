@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, X, Banknote, Plus, Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
@@ -173,22 +174,12 @@ export function PaymentsClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {tabs.filter((t) => t.show).map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={
-              tab === t.key
-                ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand'
-                : 'rounded-full border px-3 py-1.5 text-sm font-medium'
-            }
-          >
-            {t.label}
-            {t.badge ? <span className="ml-1 rounded-full bg-danger px-1.5 text-xs text-on-brand">{t.badge}</span> : null}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        aria-label="Seções de Pagamentos"
+        value={tab}
+        onValueChange={setTab}
+        options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label, badge: t.badge, badgeTone: 'danger' as const }))}
+      />
 
       {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} onDone={() => { setTab('minhas'); router.refresh(); }} />}
 

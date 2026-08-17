@@ -169,7 +169,10 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
             <Label className="text-xs">Ou setorial — só os setores abaixo {isInitial && <span className="text-danger">(desmarque a opção Inicial para usar)</span>}</Label>
             <div className="mt-1 flex flex-wrap gap-1">
               {sectors.map((s) => (
-                <span key={s} className="inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-on-brand">{s}<button onClick={() => removeSector(s)} aria-label="Remover"><X className="h-3 w-3" /></button></span>
+                /* Token tingido, não sólido: é o desenho de etiqueta do iOS
+                   (destinatário no Mail). Sólido, uma fileira destas virava
+                   uma faixa de blocos de acento — no escuro, rosa. */
+                <span key={s} className="inline-flex items-center gap-1 rounded-full bg-brand-tint-2 px-2.5 py-1 text-xs font-semibold text-brand">{s}<button onClick={() => removeSector(s)} aria-label="Remover"><X className="h-3 w-3" /></button></span>
               ))}
               {sectors.length === 0 && <span className="text-xs text-ink-500">Nenhum setor — será só inicial/geral.</span>}
             </div>

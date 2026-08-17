@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SegmentedNav } from '@/components/ui/ds/segmented-nav';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -34,10 +35,13 @@ export default async function AnaliseAbertoPage({ searchParams }: { searchParams
       </div>
 
       {units.length > 1 && (
-        <div className="flex flex-wrap gap-2 print:hidden">
-          {units.map((u) => (
-            <Link key={u.id} href={`/modulos/comandas/analise-aberto?unit=${u.id}`} className={u.id === selUnit.id ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>{u.name}</Link>
-          ))}
+        <div className="print:hidden">
+          <SegmentedNav
+            aria-label="Unidade da análise"
+            size="sm"
+            value={selUnit.id}
+            options={units.map((u) => ({ value: u.id, label: u.name, href: `/modulos/comandas/analise-aberto?unit=${u.id}` }))}
+          />
         </div>
       )}
 

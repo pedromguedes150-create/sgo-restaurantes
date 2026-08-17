@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 
@@ -25,11 +26,13 @@ export function ProbationClient({ rows, canReview }: { rows: ProbRow[]; canRevie
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        {(['PENDING', 'ALL'] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)} className={filter === f ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>
-            {f === 'PENDING' ? 'A avaliar' : 'Todos (≤90 dias)'}
-          </button>
-        ))}
+        <SegmentedControl
+          aria-label="Filtro do Período de Experiência"
+          size="sm"
+          value={filter}
+          onValueChange={setFilter}
+          options={[{ value: 'PENDING', label: 'A avaliar' }, { value: 'ALL', label: 'Todos (≤90 dias)' }]}
+        />
         <span className="ml-auto text-xs text-ink-500">{shown.length} colaborador(es)</span>
       </div>
       {shown.length === 0 && <p className="text-sm text-ink-500">Nenhum colaborador em período de experiência {filter === 'PENDING' ? 'a avaliar' : ''}.</p>}

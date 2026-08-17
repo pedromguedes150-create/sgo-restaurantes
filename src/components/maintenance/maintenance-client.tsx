@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Wrench, CalendarClock, Plus, Play, Check, X, RotateCcw, Pencil } from 'lucide-react';
+import { Wrench, Plus, Play, Check, X, RotateCcw, Pencil } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
@@ -47,17 +48,18 @@ export function MaintenanceClient({ view, isAdmin, units, equipment, suppliers, 
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<'chamados' | 'preventiva'>(view);
-  const tabClass = (t: string) => t === tab
-    ? 'inline-flex items-center gap-1 rounded-full bg-brand px-3.5 py-1.5 text-sm font-semibold text-on-brand'
-    : 'inline-flex items-center gap-1 rounded-full border px-3.5 py-1.5 text-sm font-medium';
-
   return (
     <div className="space-y-4">
       <h1 className="flex items-center gap-2 text-xl font-bold text-ink-900"><Wrench className="h-5 w-5 text-ink-900" /> Manutenção</h1>
-      <div className="flex flex-wrap gap-2">
-        <button className={tabClass('chamados')} onClick={() => setTab('chamados')}><Wrench className="h-4 w-4" /> Chamados</button>
-        <button className={tabClass('preventiva')} onClick={() => setTab('preventiva')}><CalendarClock className="h-4 w-4" /> Preventiva</button>
-      </div>
+      {/* Sem ícone nos segmentos: o segmented control do iOS é texto puro OU
+          ícone puro, nunca os dois juntos — e com dois rótulos curtos o ícone
+          não acrescentava informação. */}
+      <SegmentedControl
+        aria-label="Seções de Manutenção"
+        value={tab}
+        onValueChange={setTab}
+        options={[{ value: 'chamados', label: 'Chamados' }, { value: 'preventiva', label: 'Preventiva' }]}
+      />
 
       {tab === 'chamados'
         ? <TicketsTab isAdmin={isAdmin} units={units} equipment={equipment} suppliers={suppliers} summary={summary} tickets={tickets} onDone={() => router.refresh()} />

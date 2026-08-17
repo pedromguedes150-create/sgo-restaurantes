@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronRight, Star, MessageSquarePlus, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { postAdmin } from '@/lib/admin-client';
@@ -84,11 +85,13 @@ export function EvaluationClient({ rows, yearMonth, months, canEvaluate, isAdmin
             />
           </div>
         )}
-        {(['PENDING', 'ALL'] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)} className={filter === f ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>
-            {f === 'PENDING' ? 'A avaliar' : 'Todos'}
-          </button>
-        ))}
+        <SegmentedControl
+          aria-label="Filtro de avaliações"
+          size="sm"
+          value={filter}
+          onValueChange={setFilter}
+          options={[{ value: 'PENDING', label: 'A avaliar' }, { value: 'ALL', label: 'Todos' }]}
+        />
         <span className="ml-auto text-xs text-ink-500">{done}/{inUnit.length} avaliado(s)</span>
       </div>
 
@@ -201,18 +204,15 @@ function EvalCard({ r, yearMonth, canEvaluate }: { r: EvalRow; yearMonth: string
 
       {open && (
         <div className="border-t p-3">
-          <div className="mb-3 flex gap-1.5">
-            {([['AVALIAR', 'Avaliação'], ['OBS', 'Observações'], ['HIST', 'Histórico']] as const).map(([t, label]) => (
-              <button
-                key={t}
-                onClick={() => { setTab(t); if (t === 'OBS' && obs === null) void loadObs(); if (t === 'HIST' && hist === null) void loadHist(); }}
-                className={tab === t ? 'rounded-full bg-brand px-3 py-1 text-xs font-semibold text-on-brand' : 'rounded-full border px-3 py-1 text-xs'}
-              >
-                {t === 'OBS' ? <span className="flex items-center gap-1"><MessageSquarePlus className="h-3.5 w-3.5" />{label}</span>
-                  : t === 'HIST' ? <span className="flex items-center gap-1"><History className="h-3.5 w-3.5" />{label}</span>
-                  : label}
-              </button>
-            ))}
+          {/* Sem ícone nos segmentos — ver a nota em maintenance-client. */}
+          <div className="mb-3">
+            <SegmentedControl
+              aria-label="Seções do colaborador"
+              size="sm"
+              value={tab}
+              onValueChange={(t) => { setTab(t); if (t === 'OBS' && obs === null) void loadObs(); if (t === 'HIST' && hist === null) void loadHist(); }}
+              options={[{ value: 'AVALIAR', label: 'Avaliação' }, { value: 'OBS', label: 'Observações' }, { value: 'HIST', label: 'Histórico' }]}
+            />
           </div>
 
           {tab === 'AVALIAR' && (

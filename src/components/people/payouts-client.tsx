@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -207,13 +208,13 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
             {collaboratorId && collabHistory && collabHistory.length === 0 && (
               <p className="text-xs text-ink-500">Primeiro lançamento deste colaborador.</p>
             )}
-            <div className="flex gap-1.5">
-              {(['COMMISSION', 'MOBILITY'] as const).map((t) => (
-                <button key={t} onClick={() => setType(t)} className={type === t ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>
-                  {TYPE[t].label}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              aria-label="Tipo de lançamento"
+              size="sm"
+              value={type}
+              onValueChange={setType}
+              options={[{ value: 'COMMISSION', label: TYPE.COMMISSION.label }, { value: 'MOBILITY', label: TYPE.MOBILITY.label }]}
+            />
             <div className="grid grid-cols-2 gap-2">
               <div><Label className="text-xs">Valor (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" className="h-10 text-sm" /></div>
               <div><Label className="text-xs">Obs. (opcional)</Label><Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: ref. vendas" className="h-10 text-sm" /></div>

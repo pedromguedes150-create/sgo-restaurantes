@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Check, X, Trash2, CalendarDays, FileSpreadsheet, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -58,11 +59,12 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        {([['PAINEL', 'Painel de uso'], ['VISITAS', 'Visitas & Feedbacks']] as const).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} className={tab === t ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm'}>{label}</button>
-        ))}
-      </div>
+      <SegmentedControl
+        aria-label="Seções da Rotina do Supervisor"
+        value={tab}
+        onValueChange={setTab}
+        options={[{ value: 'PAINEL', label: 'Painel de uso' }, { value: 'VISITAS', label: 'Visitas & Feedbacks' }]}
+      />
 
       {tab === 'PAINEL' && (
         <div className="space-y-3">

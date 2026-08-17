@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SegmentedNav } from '@/components/ui/ds/segmented-nav';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
@@ -62,13 +63,11 @@ export default async function ChecklistsAdminPage({ searchParams }: { searchPara
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
       <LargeTitle title="Checklists" />
-      <div className="flex flex-wrap gap-2">
-        {TABS.map((t) => (
-          <Link key={t.key} href={`/configuracoes/checklists?tab=${t.key}`} className={tab === t.key ? 'rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
-            {t.label}
-          </Link>
-        ))}
-      </div>
+      <SegmentedNav
+        aria-label="Seções de Checklists"
+        value={tab}
+        options={TABS.map((t) => ({ value: t.key, label: t.label, href: `/configuracoes/checklists?tab=${t.key}` }))}
+      />
 
       {tab === 'unidades' && (
         <>
