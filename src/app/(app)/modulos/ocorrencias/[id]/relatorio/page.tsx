@@ -33,7 +33,7 @@ export default async function OcorrenciaRelatorioPage({ params }: { params: { id
 
       <table className="w-full text-sm">
         <tbody>
-          <Row k="Tipo / Categoria" v={`${o.typeName} — ${o.categoryName}`} />
+          <Row k={o.categoryName ? 'Tipo / Categoria' : 'Tipo'} v={o.categoryName ? `${o.typeName} — ${o.categoryName}` : o.typeName} />
           <Row k="Gravidade" v={`${GRAVITY_META[o.gravity].emoji} ${GRAVITY_META[o.gravity].label}`} />
           <Row k="Ocorrido em" v={fmt(o.occurredAt)} />
           <Row k="Registrado por" v={o.reportedBy?.name ?? '—'} />

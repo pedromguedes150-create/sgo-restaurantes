@@ -203,6 +203,14 @@ export const GUIDE: GuideSection[] = [
           'Na ocorrência, "Gerar relatório (PDF)" abre uma versão A4 para imprimir/salvar e compartilhar no WhatsApp.',
           'A sub-aba "Manutenção" lista só as ocorrências de tipos marcados como manutenção e leva ao módulo Manutenção (chamados e planos preventivos).',
           'O Admin cria/edita/exclui tipos e categorias em Configurações → Ocorrências (a gravidade segue fixa em 4 níveis).',
+          'A tela tem DOIS filtros, e eles perguntam coisas diferentes: ASSUNTO (Geral / Manutenção / TI) é sobre o que a ocorrência trata; SITUAÇÃO (Todas / Abertas / Em andamento / Encerradas) é o ponto do fluxo em que ela está.',
+          'Os três cartões do topo contam o ASSUNTO selecionado — na aba Manutenção eles mostram só as de manutenção, não a rede inteira.',
+          'A lista mostra 50 por página e o rodapé diz quantas existem ao todo ("Mostrando 1–50 de 124"). Use Anterior/Próxima para ver o resto.',
+        ],
+        tips: [
+          'Se um tipo não tiver categorias cadastradas, o campo Categoria simplesmente não aparece e você registra sem ela — não é erro. Para separar por categoria, o Admin cadastra em Configurações → Ocorrências.',
+          'A gravidade não é só um rótulo: Alta avisa a supervisão na hora, e Crítica avisa a supervisão E a diretoria. Baixa e Média ficam só no histórico.',
+          'A categoria é o que detecta REINCIDÊNCIA: mesmo tipo e categoria, mesma unidade, menos de 30 dias, e o sistema alerta sozinho.',
         ],
       },
       {

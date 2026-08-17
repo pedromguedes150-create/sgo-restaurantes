@@ -33,7 +33,16 @@ export default async function NovaOcorrenciaPage() {
           ) : (
             <OccurrenceForm
               units={units}
-              types={types.map((t) => ({ id: t.id, name: t.name, categories: t.categories }))}
+              // isMaintenance/isIT vão para o formulário poder dizer em qual aba
+              // a ocorrência vai aparecer — o tipo decide isso, e antes nada
+              // na tela contava.
+              types={types.map((t) => ({
+                id: t.id,
+                name: t.name,
+                isMaintenance: t.isMaintenance,
+                isIT: t.isIT,
+                categories: t.categories,
+              }))}
             />
           )}
         </CardContent>
