@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/ds/field';
  */
 export function FilterBar({
   children, onClear, active, className, title = 'Filtros',
+  collapsible = false, search, summary, result,
 }: {
   children: React.ReactNode;
   /** callback do botão "limpar"; se ausente, o botão não aparece */
@@ -32,26 +33,74 @@ export function FilterBar({
   active?: number;
   className?: string;
   title?: string;
+  /**
+   * Recolhe os controles atrás de um botão, deixando à vista só a busca, o
+   * resumo do que está filtrado e o resultado. Numa lista longa, cinco
+   * controles sempre abertos empurram o conteúdo para fora da tela — e a
+   * pergunta de quem chega é "quantas notas tem", não "quais são os filtros".
+   * Opt-in: as telas que já usavam a barra continuam abertas como estavam.
+   */
+  collapsible?: boolean;
+  /** Fica SEMPRE visível, antes de tudo (a busca é o filtro mais usado). */
+  search?: React.ReactNode;
+  /** Resumo do que está filtrado — aparece quando recolhida, para o filtro
+   *  ativo nunca ficar escondido explicando sozinho uma lista curta. */
+  summary?: React.ReactNode;
+  /** Contagem do resultado. Sempre visível: é o que a pessoa veio ver. */
+  result?: React.ReactNode;
 }) {
+  const [aberto, setAberto] = React.useState(!collapsible);
+  const mostrarControles = !collapsible || aberto;
+
   return (
     <div className={cn('rounded-card border border-line bg-surface p-3', className)}>
-      <div className="mb-2 flex items-center justify-between">
-        <p className="sgo-type-11 flex items-center gap-1.5 text-ink-500">
-          <Filter className="h-3.5 w-3.5" aria-hidden /> {title}
-          {active ? <span className="rounded-pill bg-brand-tint-2 px-1.5 text-[11px] font-bold tabular-nums text-ink-900">{active}</span> : null}
-        </p>
+      <div className={cn('flex flex-wrap items-center gap-x-3 gap-y-2', mostrarControles && 'mb-2')}>
+        {search && <div className="min-w-[12rem] flex-1">{search}</div>}
+
+        {collapsible ? (
+          <button
+            type="button"
+            onClick={() => setAberto((v) => !v)}
+            aria-expanded={aberto}
+            className="sgo-control inline-flex items-center gap-1.5 rounded-control border border-line-strong px-2.5 py-1 text-[13px] font-semibold text-ink-700 outline-none transition-colors duration-sgo-2 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus"
+          >
+            <Filter className="h-3.5 w-3.5" aria-hidden /> {title}
+            {active ? <span className="rounded-pill bg-brand-tint-2 px-1.5 text-[11px] font-bold tabular-nums text-brand">{active}</span> : null}
+          </button>
+        ) : (
+          <p className="sgo-type-11 flex items-center gap-1.5 text-ink-500">
+            <Filter className="h-3.5 w-3.5" aria-hidden /> {title}
+            {active ? <span className="rounded-pill bg-brand-tint-2 px-1.5 text-[11px] font-bold tabular-nums text-ink-900">{active}</span> : null}
+          </p>
+        )}
+
+        {!mostrarControles && summary}
+
+        {result && <span className="ml-auto text-[13px] font-semibold tabular-nums text-ink-900">{result}</span>}
+
         {onClear && active ? (
           <button
             type="button"
             onClick={onClear}
-            className="flex items-center gap-1 rounded-control px-1.5 py-0.5 text-[12px] font-semibold text-ink-500 outline-none hover:text-danger focus-visible:shadow-sgo-focus"
+            className={cn(
+              'flex items-center gap-1 rounded-control px-1.5 py-0.5 text-[12px] font-semibold text-ink-500 outline-none hover:text-danger focus-visible:shadow-sgo-focus',
+              !result && 'ml-auto',
+            )}
           >
             <X className="h-3.5 w-3.5" aria-hidden /> Limpar
           </button>
         ) : null}
       </div>
-      <div className="flex flex-wrap items-end gap-2">{children}</div>
+
+      {mostrarControles && <div className="flex flex-wrap items-end gap-2">{children}</div>}
     </div>
+  );
+}
+
+/** Etiqueta do resumo: o que está filtrado, quando a barra está recolhida. */
+export function FilterChip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-pill bg-sunken px-2 py-0.5 text-[12px] font-medium text-ink-700">{children}</span>
   );
 }
 

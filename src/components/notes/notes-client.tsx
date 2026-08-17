@@ -9,7 +9,7 @@ import { ActionMenu, type ActionMenuItem } from '@/components/ui/ds/action-menu'
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
-import { FilterBar, FilterSelect } from '@/components/ui/filter-bar';
+import { FilterBar, FilterSelect, FilterChip } from '@/components/ui/filter-bar';
 import { Select as DsSelect } from '@/components/ui/ds/select';
 import { SearchField } from '@/components/ui/ds/field';
 import { DatePicker } from '@/components/ui/ds/date-picker';
@@ -155,50 +155,59 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
         (n.createdByName ?? '').toLowerCase().includes(t) || String(n.value).includes(t)),
     );
   }, [notes, q, supplier, unit, st]);
+  /* Conta só o que a pessoa escolheu ativamente. O período NÃO entra: ele
+     sempre tem um valor (60 dias por padrão), então contá-lo faria a barra
+     nascer marcando "1 filtro" sem ninguém ter filtrado nada. */
+  const ativos = (q.trim() ? 1 : 0) + (supplier !== 'ALL' ? 1 : 0) + (unit !== 'ALL' ? 1 : 0) + (st !== 'ALL' ? 1 : 0);
+  const limpar = () => { setQ(''); setSupplier('ALL'); setUnit('ALL'); setStatus('ALL'); };
+
   const total = filtered.reduce((s, n) => s + n.value, 0);
   const exportHref = `/api/notes/export?dias=${sinceDays}${unit !== 'ALL' ? `&unidade=${encodeURIComponent(unit)}` : ''}${supplier !== 'ALL' ? `&fornecedor=${encodeURIComponent(supplier)}` : ''}${st !== 'ALL' ? `&status=${st}` : ''}`;
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3 print:hidden">
-        <div className="min-w-[14rem] flex-1">
-          <SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="fornecedor, nº, CNPJ, produto, valor…" />
-        </div>
-        <div className="min-w-[10rem] flex-1">
-          <DsSelect
-            label="Fornecedor" size="sm" value={supplier} onValueChange={setSupplier}
-            options={[{ value: 'ALL', label: 'Todos os fornecedores' }, ...supplierNames.map((s) => ({ value: s, label: s }))]}
-          />
-        </div>
+      <FilterBar
+        collapsible
+        active={ativos}
+        onClear={ativos ? limpar : undefined}
+        className="print:hidden"
+        search={<SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="fornecedor, nº, CNPJ, produto, valor…" />}
+        summary={
+          <>
+            <FilterChip>{PERIODS.find((p) => p.dias === sinceDays)?.label ?? `${sinceDays} dias`}</FilterChip>
+            {supplier !== 'ALL' && <FilterChip>{supplier}</FilterChip>}
+            {unit !== 'ALL' && <FilterChip>{shortUnitName(unit)}</FilterChip>}
+            {st !== 'ALL' && <FilterChip>{ST[st].label}</FilterChip>}
+          </>
+        }
+        result={<>{filtered.length} de {notes.length}</>}
+      >
+        <FilterSelect
+          label="Fornecedor" value={supplier} onValueChange={setSupplier}
+          options={[{ value: 'ALL', label: 'Todos os fornecedores' }, ...supplierNames.map((s) => ({ value: s, label: s }))]}
+        />
         {units.length > 1 && (
-          <div className="min-w-[10rem] flex-1">
-            <DsSelect
-              label="Unidade" size="sm" value={unit} onValueChange={setUnit}
-              options={[{ value: 'ALL', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.name, label: shortUnitName(u.name) }))]}
-            />
-          </div>
+          <FilterSelect
+            label="Unidade" value={unit} onValueChange={setUnit}
+            options={[{ value: 'ALL', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.name, label: shortUnitName(u.name) }))]}
+          />
         )}
-        <div className="min-w-[10rem] flex-1">
-          <DsSelect
-            label="Status" size="sm" value={st} onValueChange={(v) => setStatus(v as typeof st)}
-            options={[
-              { value: 'ALL', label: 'Todos os status' },
-              { value: 'RECEIVED', label: 'Recebida' },
-              { value: 'PROBLEM', label: 'Com problema' },
-              { value: 'RETURNED', label: 'Devolvida' },
-              { value: 'PAID', label: 'Paga (legado)' },
-            ]}
-          />
-        </div>
-        <div className="min-w-[10rem] flex-1">
-          <DsSelect
-            label="Período" size="sm" value={String(sinceDays)}
-            onValueChange={(v) => router.push(`/modulos/notas?dias=${v}`)}
-            options={PERIODS.map((p) => ({ value: String(p.dias), label: p.label }))}
-          />
-        </div>
-        <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{filtered.length} de {notes.length}</span>
-      </div>
+        <FilterSelect
+          label="Status" value={st} onValueChange={(v) => setStatus(v as typeof st)}
+          options={[
+            { value: 'ALL', label: 'Todos os status' },
+            { value: 'RECEIVED', label: 'Recebida' },
+            { value: 'PROBLEM', label: 'Com problema' },
+            { value: 'RETURNED', label: 'Devolvida' },
+            { value: 'PAID', label: 'Paga (legado)' },
+          ]}
+        />
+        <FilterSelect
+          label="Período" value={String(sinceDays)}
+          onValueChange={(v) => router.push(`/modulos/notas?dias=${v}`)}
+          options={PERIODS.map((p) => ({ value: String(p.dias), label: p.label }))}
+        />
+      </FilterBar>
 
       {/* O que era a aba "Análise": totais, export e o detalhe por linha.
           Mesmo público de antes (canManage) — só deixou de custar uma aba. */}
@@ -400,7 +409,20 @@ function DueTracking({ units }: { units: Unit[] }) {
       <p className="rounded-md bg-brand/10 px-3 py-2 text-xs text-ink-500">
         Foco nos boletos <strong>a vencer</strong> — a supervisão e o financeiro são avisados automaticamente dos próximos vencimentos (o pagamento em si é controlado pelo financeiro). Inclui notas comuns e recebimentos de gás.
       </p>
-      <FilterBar active={activeCount} onClear={clear}>
+      <FilterBar
+        collapsible
+        active={activeCount}
+        onClear={clear}
+        summary={
+          <>
+            <FilterChip>{`${dias} dias`}</FilterChip>
+            <FilterChip>{vencidos === '1' ? 'Incluir vencidos' : 'Só a vencer'}</FilterChip>
+            {unitId && <FilterChip>{shortUnitName(units.find((u) => u.id === unitId)?.name ?? unitId)}</FilterChip>}
+            {supplier && <FilterChip>{supplier}</FilterChip>}
+          </>
+        }
+        result={<>{rows.length} boleto(s) · {formatBRL(total)}</>}
+      >
         {units.length > 1 && (
           <FilterSelect
             label="Unidade"
@@ -429,11 +451,9 @@ function DueTracking({ units }: { units: Unit[] }) {
         />
       </FilterBar>
 
-      <div className="flex flex-wrap gap-3 text-xs text-ink-500">
-        <span><strong className="text-brand">{rows.length}</strong> boleto(s)</span>
-        <span>total <strong className="text-brand">{formatBRL(total)}</strong></span>
-      </div>
-
+      {/* A contagem e o total saíram daqui: agora vivem na própria barra de
+          filtro, junto do que os produziu. Repetir logo abaixo era dizer o
+          mesmo número duas vezes com duas aparências. */}
       {loading ? (
         <p className="text-sm text-ink-500">Carregando…</p>
       ) : rows.length === 0 ? (

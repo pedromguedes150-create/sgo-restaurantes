@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { Select } from '@/components/ui/ds/select';
 import { SearchField } from '@/components/ui/ds/field';
+import { FilterBar, FilterSelect, FilterChip } from '@/components/ui/filter-bar';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
 import { QrScanner } from '@/components/notes/qr-scanner';
@@ -86,26 +87,33 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
   { const d = new Date(); for (let i = 0; i < 12; i++) { months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); d.setMonth(d.getMonth() - 1); } }
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3">
-        <div className="min-w-[10rem] flex-1">
-          <Select
-            label="Unidade" size="sm" value={f.unitId} onValueChange={(v) => nav({ unitId: v })}
-            options={[{ value: '', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))]}
-          />
-        </div>
-        <div className="min-w-[10rem] flex-1">
-          <Select
-            label="Fornecedor" size="sm" value={f.supplierId} onValueChange={(v) => nav({ supplierId: v })}
-            options={[{ value: '', label: 'Todos os fornecedores' }, ...suppliers.map((sp) => ({ value: sp.id, label: sp.name }))]}
-          />
-        </div>
-        <div className="min-w-[10rem] flex-1">
-          <Select
-            label="Mês" size="sm" value={f.mes} onValueChange={(v) => nav({ mes: v })}
-            options={[{ value: '', label: 'Todos os meses' }, ...months.map((m) => ({ value: m, label: m.split('-').reverse().join('/') }))]}
-          />
-        </div>
-      </div>
+      <FilterBar
+        collapsible
+        active={(f.unitId ? 1 : 0) + (f.supplierId ? 1 : 0) + (f.mes ? 1 : 0)}
+        onClear={f.unitId || f.supplierId || f.mes ? () => router.push(basePath) : undefined}
+        summary={
+          <>
+            {f.unitId && <FilterChip>{shortUnitName(units.find((u) => u.id === f.unitId)?.name ?? '')}</FilterChip>}
+            {f.supplierId && <FilterChip>{suppliers.find((s) => s.id === f.supplierId)?.name ?? ''}</FilterChip>}
+            {f.mes && <FilterChip>{f.mes.split('-').reverse().join('/')}</FilterChip>}
+            {!f.unitId && !f.supplierId && !f.mes && <FilterChip>Tudo</FilterChip>}
+          </>
+        }
+        result={purchased ? <>{purchased.count} recebimento(s)</> : undefined}
+      >
+        <FilterSelect
+          label="Unidade" value={f.unitId} onValueChange={(v) => nav({ unitId: v })}
+          options={[{ value: '', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))]}
+        />
+        <FilterSelect
+          label="Fornecedor" value={f.supplierId} onValueChange={(v) => nav({ supplierId: v })}
+          options={[{ value: '', label: 'Todos os fornecedores' }, ...suppliers.map((sp) => ({ value: sp.id, label: sp.name }))]}
+        />
+        <FilterSelect
+          label="Mês" value={f.mes} onValueChange={(v) => nav({ mes: v })}
+          options={[{ value: '', label: 'Todos os meses' }, ...months.map((m) => ({ value: m, label: m.split('-').reverse().join('/') }))]}
+        />
+      </FilterBar>
       {purchased && (
         <div className="grid grid-cols-3 gap-2">
           <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-ink-900">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-ink-500">comprado no filtro</p></div>
@@ -503,26 +511,30 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
   }
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3">
-        <div className="min-w-[12rem] flex-1">
-          <SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="data, quem lançou, kg, valor…" />
-        </div>
+      <FilterBar
+        collapsible
+        active={(q.trim() ? 1 : 0) + (unit ? 1 : 0) + (supplier ? 1 : 0)}
+        onClear={q.trim() || unit || supplier ? () => { setQ(''); setUnit(''); setSupplier(''); } : undefined}
+        search={<SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="data, quem lançou, kg, valor…" />}
+        summary={
+          <>
+            {unit && <FilterChip>{shortUnitName(unit)}</FilterChip>}
+            {supplier && <FilterChip>{supplier}</FilterChip>}
+          </>
+        }
+        result={<>{shown.length} de {rows.length}</>}
+      >
         {unitNames.length > 1 && (
-          <div className="min-w-[10rem] flex-1">
-            <Select
-              label="Unidade" size="sm" value={unit} onValueChange={setUnit}
-              options={[{ value: '', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
-            />
-          </div>
-        )}
-        <div className="min-w-[10rem] flex-1">
-          <Select
-            label="Fornecedor" size="sm" value={supplier} onValueChange={setSupplier}
-            options={[{ value: '', label: 'Todos os fornecedores' }, ...supplierNames.map((sp2) => ({ value: sp2, label: sp2 }))]}
+          <FilterSelect
+            label="Unidade" value={unit} onValueChange={setUnit}
+            options={[{ value: '', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
           />
-        </div>
-        <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{shown.length} de {rows.length}</span>
-      </div>
+        )}
+        <FilterSelect
+          label="Fornecedor" value={supplier} onValueChange={setSupplier}
+          options={[{ value: '', label: 'Todos os fornecedores' }, ...supplierNames.map((sp2) => ({ value: sp2, label: sp2 }))]}
+        />
+      </FilterBar>
       {shown.map((r) => {
         const tone: StatusTone = r.variation == null ? 'neutral' : r.variation > 0 ? (r.alerted ? 'critical' : 'medium') : 'success';
         return (

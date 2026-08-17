@@ -480,7 +480,7 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Toque em "Nova nota" (botão no topo) — abre uma janela por cima da lista. Use "Escanear" para ler o QR code OU o código de barras (DANFE) e a chave preenche sozinha; sem câmera, cole a chave de 44 dígitos.',
           'Escolha o fornecedor NA LISTA de cadastrados (não dá mais para digitar — falta algum? peça ao Admin em Configurações → Fornecedores).',
-          'A lista mostra as notas por data de lançamento (mais novas primeiro), últimos 60 dias — mude o período e use os filtros/busca.',
+          'A lista mostra as notas por data de lançamento (mais novas primeiro), últimos 60 dias. A busca fica sempre à vista; os demais filtros ficam atrás do botão FILTROS, que mostra quantos estão ativos. Ao lado, o total do que a lista está mostrando.',
           'CADA NOTA tem um botão "···" no fim da linha: é ali que ficam Ver/editar, Corrigir data, Marcar problema, Devolver e Excluir. As ações são as mesmas de antes, só saíram de cima da lista.',
           'O pagamento é controlado no Teknisa — aqui marque só "Problema" ou "Devolver" (com o motivo).',
           'Atenção à meta: se a Supervisão corrigir a data OU precisar lançar uma nota que era sua, desconta % na sua meta do mês.',
