@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X, Trash2, CalendarClock, Plus } from 'lucide-react';
+import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X, Trash2, CalendarClock, Plus, Scale, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
@@ -263,15 +263,33 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
                 </div>
               </div>
             ) : (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /> Editar</Button>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
-                  const v = prompt('Ajustar posição inicial (kg já comprados antes do SGO):', String(c.initialUsedKg).replace('.', ','));
-                  if (v === null) return;
-                  void post({ action: 'update', id: c.id, initialUsedKg: num(v) });
-                }}>Ajustar posição</Button>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => void post({ action: 'update', id: c.id, active: !c.active })}>{c.active ? 'Inativar' : 'Reativar'}</Button>
-                {isAdmin && <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm('Excluir este contrato? (auditado)')) void post({ action: 'delete', id: c.id }); }}>Excluir</Button>}
+              /* Quatro botões rotulados por contrato viravam uma faixa cinza
+                 sob cada linha. Mesmo menu das notas e do histórico. */
+              <div className="mt-1.5 flex justify-end">
+                <ActionMenu
+                  label={`Ações do contrato ${c.unitName} · ${c.supplierName}`}
+                  items={[
+                    { label: 'Editar contrato', icon: <Pencil />, disabled: busy, onSelect: () => openEdit(c) },
+                    {
+                      label: 'Ajustar posição inicial',
+                      icon: <Scale />,
+                      disabled: busy,
+                      onSelect: () => {
+                        const v = prompt('Ajustar posição inicial (kg já comprados antes do SGO):', String(c.initialUsedKg).replace('.', ','));
+                        if (v === null) return;
+                        void post({ action: 'update', id: c.id, initialUsedKg: num(v) });
+                      },
+                    },
+                    { label: c.active ? 'Inativar contrato' : 'Reativar contrato', icon: <Power />, disabled: busy, onSelect: () => void post({ action: 'update', id: c.id, active: !c.active }) },
+                    ...(isAdmin ? [{
+                      label: 'Excluir contrato',
+                      icon: <Trash2 />,
+                      destructive: true,
+                      disabled: busy,
+                      onSelect: () => { if (confirm('Excluir este contrato? (auditado)')) void post({ action: 'delete', id: c.id }); },
+                    }] : []),
+                  ]}
+                />
               </div>
             ))}
           </div>
