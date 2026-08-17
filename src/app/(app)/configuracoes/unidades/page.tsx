@@ -18,7 +18,7 @@ export default async function UnidadesAdminPage() {
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
       <LargeTitle title="Unidades" />
       <Card><CardContent className="pt-4">
-        <UnitsAdmin units={units.map((u) => ({ id: u.id, name: u.name, code: u.code, address: u.address, cutoffHour: u.cutoffHour, timezone: u.timezone, active: u.active, rhUnitName: u.rhUnitName }))} />
+        <UnitsAdmin units={units.map((u) => ({ id: u.id, name: u.name, code: u.code, address: u.address, cutoffHour: u.cutoffHour, timezone: u.timezone, active: u.active, rhUnitName: u.rhUnitName, cnpj: u.cnpj }))} />
       </CardContent></Card>
     </div>
   );

@@ -9,7 +9,14 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { postAdmin } from '@/lib/admin-client';
 
-export interface UnitRow { id: string; name: string; code: string; address: string | null; cutoffHour: number; timezone: string; active: boolean; rhUnitName: string | null }
+export interface UnitRow { id: string; name: string; code: string; address: string | null; cutoffHour: number; timezone: string; active: boolean; rhUnitName: string | null; cnpj: string | null }
+
+/** Formata 14 dígitos como CNPJ; devolve o valor cru se não tiver 14 dígitos. */
+function formatCnpj(d: string | null): string | null {
+  if (!d) return null;
+  const s = d.replace(/\D/g, '');
+  return s.length === 14 ? s.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : d;
+}
 
 export function UnitsAdmin({ units }: { units: UnitRow[] }) {
   const router = useRouter();
@@ -17,15 +24,16 @@ export function UnitsAdmin({ units }: { units: UnitRow[] }) {
   const [code, setCode] = useState('');
   const [address, setAddress] = useState('');
   const [cutoffHour, setCutoffHour] = useState('4');
+  const [cnpj, setCnpj] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   async function create() {
     setBusy(true); setMsg(null);
-    const r = await postAdmin({ entity: 'unit', action: 'create', name, code, address, cutoffHour: Number(cutoffHour) });
+    const r = await postAdmin({ entity: 'unit', action: 'create', name, code, address, cutoffHour: Number(cutoffHour), cnpj });
     setBusy(false);
-    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
-    setName(''); setCode(''); setAddress(''); router.refresh();
+    if (!r.ok) { setMsg(r.error === 'INVALID' ? 'Verifique os campos (CNPJ, se preenchido, precisa ter 14 dígitos).' : (r.error ?? 'Falha')); return; }
+    setName(''); setCode(''); setAddress(''); setCnpj(''); router.refresh();
   }
 
   return (
@@ -37,6 +45,7 @@ export function UnitsAdmin({ units }: { units: UnitRow[] }) {
           <div><Label>Sigla (code)</Label><Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="ex: KM13" /></div>
           <div className="col-span-2"><Label>Endereço</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} /></div>
           <div><Label>Hora de corte (0-23)</Label><Input inputMode="numeric" value={cutoffHour} onChange={(e) => setCutoffHour(e.target.value)} /></div>
+          <div><Label>CNPJ <span className="font-normal text-ink-500">(casa notas de gás)</span></Label><Input inputMode="numeric" value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" /></div>
         </div>
         {msg && <p className="mt-2 text-sm font-medium text-danger">{msg}</p>}
         <Button onClick={create} disabled={busy} className="mt-2 w-full"><Plus className="h-4 w-4" /> Criar unidade</Button>
@@ -58,6 +67,7 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
   const [address, setAddress] = useState(unit.address ?? '');
   const [cutoffHour, setCutoffHour] = useState(String(unit.cutoffHour));
   const [timezone, setTimezone] = useState(unit.timezone);
+  const [cnpj, setCnpj] = useState(unit.cnpj ?? '');
 
   async function saveRh() {
     setBusy(true); setMsg(null);
@@ -68,9 +78,9 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
   }
   async function saveEdit() {
     setBusy(true); setMsg(null);
-    const r = await postAdmin({ entity: 'unit', action: 'update', id: unit.id, name, address, cutoffHour: Number(cutoffHour), timezone });
+    const r = await postAdmin({ entity: 'unit', action: 'update', id: unit.id, name, address, cutoffHour: Number(cutoffHour), timezone, cnpj });
     setBusy(false);
-    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    if (!r.ok) { setMsg(r.error === 'INVALID' ? 'CNPJ, se preenchido, precisa ter 14 dígitos.' : (r.error ?? 'Falha')); return; }
     setEditing(false); onChange();
   }
   async function toggle() {
@@ -106,6 +116,7 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
         </div>
       </div>
       <p className="text-xs text-ink-500">corte {String(unit.cutoffHour).padStart(2, '0')}:00 · {unit.timezone}</p>
+      <p className="text-xs">{unit.cnpj ? <span className="text-ink-500">CNPJ {formatCnpj(unit.cnpj)}</span> : <span className="font-medium text-danger">Sem CNPJ — necessário para importar notas de gás</span>}</p>
 
       {editing && (
         <div className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-sunken/40 p-2">
@@ -113,6 +124,7 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
           <div className="col-span-2"><Label className="text-xs">Endereço</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} className="h-10 text-sm" /></div>
           <div><Label className="text-xs">Hora de corte (0-23)</Label><Input inputMode="numeric" value={cutoffHour} onChange={(e) => setCutoffHour(e.target.value)} className="h-10 text-sm" /></div>
           <div><Label className="text-xs">Fuso</Label><Input value={timezone} onChange={(e) => setTimezone(e.target.value)} className="h-10 text-sm" /></div>
+          <div className="col-span-2"><Label className="text-xs">CNPJ <span className="font-normal text-ink-500">(casa notas de gás por CNPJ)</span></Label><Input inputMode="numeric" value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" className="h-10 text-sm" /></div>
           <Button size="sm" className="col-span-2" disabled={busy} onClick={saveEdit}><Save className="h-4 w-4" /> Salvar alterações</Button>
         </div>
       )}
