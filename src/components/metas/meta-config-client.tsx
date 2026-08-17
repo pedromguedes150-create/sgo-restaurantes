@@ -45,24 +45,24 @@ export function MetaConfigClient({ components, canEdit }: { components: MetaComp
         const items = components.filter((c) => c.kind === g.kind);
         if (items.length === 0) return null;
         return (
-          <div key={g.kind} className="rounded-lg border bg-card p-3">
-            <p className="text-sm font-bold text-brand">{g.title}</p>
-            <p className="mb-2 text-xs text-muted-foreground">{g.desc}</p>
+          <div key={g.kind} className="rounded-lg border bg-surface p-3">
+            <p className="text-sm font-bold text-ink-900">{g.title}</p>
+            <p className="mb-2 text-xs text-ink-500">{g.desc}</p>
             <div className="space-y-1.5">
               {items.map((c) => (
-                <div key={c.name} className="flex items-center justify-between gap-2 rounded-md bg-surface p-2">
+                <div key={c.name} className="flex items-center justify-between gap-2 rounded-md bg-canvas p-2">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{c.name}</p>
-                    <p className="text-xs text-muted-foreground">{c.hint}</p>
+                    <p className="text-xs text-ink-500">{c.hint}</p>
                   </div>
                   {c.key ? (
                     <span className="flex shrink-0 items-center gap-1.5">
                       <Input inputMode="decimal" value={values[c.key] ?? ''} onChange={(e) => setValues((s) => ({ ...s, [c.key]: e.target.value }))} disabled={!canEdit} className="h-9 w-20 text-right text-sm tabular-nums" />
-                      <span className="text-xs text-muted-foreground">{c.kind === 'PENALIDADE' ? '%/lanç.' : 'peso'}</span>
+                      <span className="text-xs text-ink-500">{c.kind === 'PENALIDADE' ? '%/lanç.' : 'peso'}</span>
                       {canEdit && <Button size="sm" variant="outline" disabled={busy} onClick={() => void save(c)}><Save className="h-4 w-4" /></Button>}
                     </span>
                   ) : (
-                    <span className="shrink-0 text-xs font-semibold text-muted-foreground">por checklist</span>
+                    <span className="shrink-0 text-xs font-semibold text-ink-500">por checklist</span>
                   )}
                 </div>
               ))}
@@ -70,7 +70,7 @@ export function MetaConfigClient({ components, canEdit }: { components: MetaComp
           </div>
         );
       })}
-      {!canEdit && <p className="text-xs text-muted-foreground">Visualização — a edição dos pesos é do Administrador.</p>}
+      {!canEdit && <p className="text-xs text-ink-500">Visualização — a edição dos pesos é do Administrador.</p>}
     </div>
   );
 }

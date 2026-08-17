@@ -113,28 +113,28 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
         <Card>
           <CardContent className="space-y-2 py-5 text-center">
             <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
-            <p className="text-lg font-bold text-brand">Conferência registrada</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-lg font-bold text-ink-900">Conferência registrada</p>
+            <p className="text-sm text-ink-500">
               {unitName} — {operationalDate} · {done.scanned} conferida(s) · <strong>{done.absent.length} faltante(s)</strong>
             </p>
             {done.absent.length > 0 && (
-              <p className="mx-auto max-w-lg break-words rounded-md bg-critical/10 p-2 text-sm text-critical">
+              <p className="mx-auto max-w-lg break-words rounded-md bg-danger/10 p-2 text-sm text-danger">
                 Faltantes: {done.absent.join(', ')}
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-ink-500">
               {done.absent.length > 0 ? 'O supervisor da unidade já foi avisado.' : 'Todas as comandas presentes ✓'}
             </p>
           </CardContent>
         </Card>
 
         {done.crossed.length > 0 && (
-          <Card className="border-critical">
+          <Card className="border-danger">
             <CardContent className="space-y-2 py-4">
-              <p className="flex items-center gap-2 font-bold text-critical">
+              <p className="flex items-center gap-2 font-bold text-danger">
                 <ShieldAlert className="h-5 w-5" /> Atenção: {done.crossed.length} comanda(s) faltante(s) estão ABERTAS com valor no sistema
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-ink-500">
                 Cruzamento com a última análise de comandas em aberto{done.cutDate ? ` (corte ${done.cutDate})` : ''}. Sumir da bandeja E continuar aberta com
                 consumo é o padrão da fraude das &quot;2 comandas&quot; — leve estes números e horários ao monitoramento.
               </p>
@@ -142,7 +142,7 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
                 {done.crossed.map((c) => (
                   <li key={c.number} className="flex flex-wrap justify-between gap-2 border-b py-1 last:border-0">
                     <span className="font-semibold">Comanda {c.number}</span>
-                    <span className="text-muted-foreground">
+                    <span className="text-ink-500">
                       aberta {c.openedAt?.replace('T', ' ') ?? '—'} · {c.daysOpen} dia(s) · R$ {c.value.toFixed(2).replace('.', ',')}
                     </span>
                   </li>
@@ -158,7 +158,7 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
   return (
     <div className="space-y-4" onClick={keepFocus}>
       {alreadyCounted && (
-        <p className="rounded-md bg-medium/10 p-2 text-sm text-medium">
+        <p className="rounded-md bg-warning/10 p-2 text-sm text-warning">
           Já existe uma contagem registrada hoje nesta unidade. Se você concluir, ela será <strong>substituída</strong> por esta conferência.
         </p>
       )}
@@ -167,15 +167,15 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
         <CardContent className="grid grid-cols-3 gap-2 py-3 text-center">
           <div>
             <p className="text-2xl font-black text-success">{scanned.size}</p>
-            <p className="text-xs text-muted-foreground">conferidas</p>
+            <p className="text-xs text-ink-500">conferidas</p>
           </div>
           <div>
-            <p className="text-2xl font-black text-brand">{activeNumbers.length}</p>
-            <p className="text-xs text-muted-foreground">ativas</p>
+            <p className="text-2xl font-black text-ink-900">{activeNumbers.length}</p>
+            <p className="text-xs text-ink-500">ativas</p>
           </div>
           <div>
-            <p className={`text-2xl font-black ${missing.length ? 'text-critical' : 'text-success'}`}>{missing.length}</p>
-            <p className="text-xs text-muted-foreground">faltando</p>
+            <p className={`text-2xl font-black ${missing.length ? 'text-danger' : 'text-success'}`}>{missing.length}</p>
+            <p className="text-xs text-ink-500">faltando</p>
           </div>
         </CardContent>
       </Card>
@@ -203,7 +203,7 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
               setValue('');
             }}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-ink-500">
             O leitor funciona como teclado: ele digita o código e dá Enter sozinho. Mantenha esta tela aberta e vá passando as comandas. Dá para digitar o
             número à mão e apertar Enter.
           </p>
@@ -221,14 +221,14 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
       {confirming && (
         <Card className="border-brand">
           <CardContent className="space-y-3 py-4">
-            <p className="font-bold text-brand">Concluir a conferência de {unitName}?</p>
+            <p className="font-bold text-ink-900">Concluir a conferência de {unitName}?</p>
             <p className="text-sm">
-              {scanned.size} conferida(s) · <strong className={missing.length ? 'text-critical' : 'text-success'}>{missing.length} faltante(s)</strong>
-              {missing.length > 0 && missing.length <= 40 && <span className="block break-words text-xs text-muted-foreground">Faltantes: {missing.join(', ')}</span>}
+              {scanned.size} conferida(s) · <strong className={missing.length ? 'text-danger' : 'text-success'}>{missing.length} faltante(s)</strong>
+              {missing.length > 0 && missing.length <= 40 && <span className="block break-words text-xs text-ink-500">Faltantes: {missing.join(', ')}</span>}
             </p>
             {missing.length > 0 && (
-              <p className="flex items-start gap-2 text-xs text-muted-foreground">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-medium" />
+              <p className="flex items-start gap-2 text-xs text-ink-500">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                 Cada faltante vira uma divergência e o supervisor da unidade é avisado na hora. Confira se não sobrou comanda fora da bandeja antes de concluir.
               </p>
             )}
@@ -241,22 +241,22 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
                 Voltar e continuar bipando
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Registrando como {userName}.</p>
+            <p className="text-xs text-ink-500">Registrando como {userName}.</p>
           </CardContent>
         </Card>
       )}
 
-      {error && <p className="text-sm font-semibold text-critical">{error}</p>}
+      {error && <p className="text-sm font-semibold text-danger">{error}</p>}
 
       {log.length > 0 && (
         <Card>
           <CardContent className="pt-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Últimas leituras</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Últimas leituras</p>
             <ul className="space-y-1 text-sm">
               {log.slice(0, 12).map((l) => (
                 <li key={l.id} className="flex items-center justify-between gap-2 border-b py-1 last:border-0">
                   <span className="font-semibold">{l.number ?? l.raw}</span>
-                  <span className={l.reason === 'OK' ? 'text-success' : l.reason === 'DUPLICATE' ? 'text-muted-foreground' : 'text-critical'}>
+                  <span className={l.reason === 'OK' ? 'text-success' : l.reason === 'DUPLICATE' ? 'text-ink-500' : 'text-danger'}>
                     {REASON_TEXT[l.reason]}
                     {l.reason === 'NOT_ACTIVE' && <span className="block text-xs">código lido: {l.raw}</span>}
                   </span>

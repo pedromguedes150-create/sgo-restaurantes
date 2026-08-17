@@ -44,11 +44,11 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-brand px-4 py-10">
       <div className="mb-8 text-center">
-        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent text-2xl font-black text-white">
+        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-on-brand text-2xl font-black text-ink-900">
           BF
         </div>
-        <h1 className="text-2xl font-bold text-white">SGO Beija Flor</h1>
-        <p className="text-sm text-white/70">Sistema de Gestão Operacional</p>
+        <h1 className="text-2xl font-bold text-on-brand">SGO Beija Flor</h1>
+        <p className="text-sm text-on-brand/80">Sistema de Gestão Operacional</p>
       </div>
 
       <Card className="w-full max-w-sm">
@@ -81,7 +81,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">
+              <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
                 {error}
               </p>
             )}
@@ -93,7 +93,7 @@ export default function LoginPage() {
         </CardContent>
       </Card>
 
-      <p className="mt-6 text-center text-xs text-white/50">Rede Beija Flor · Acesso restrito · SGO {APP_VERSION_LABEL}</p>
+      <p className="mt-6 text-center text-xs text-on-brand/80">Rede Beija Flor · Acesso restrito · SGO {APP_VERSION_LABEL}</p>
     </main>
   );
 }

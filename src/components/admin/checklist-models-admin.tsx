@@ -8,12 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
 import { postAdmin } from '@/lib/admin-client';
 
 interface MItem { section: string | null; text: string; requiresPhoto: boolean }
 export interface ModelRow { id: string; name: string; category: string | null; moment: string | null; scope: 'UNIT' | 'MANAGER'; limitTime: string | null; weight: number; requiresEvidence: boolean; active: boolean; builtin: boolean; items: MItem[] }
 
-const sel = 'h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
 export function ChecklistModelsAdmin({ models }: { models: ModelRow[] }) {
   const router = useRouter();
@@ -39,13 +39,13 @@ export function ChecklistModelsAdmin({ models }: { models: ModelRow[] }) {
 
       {groups.map(([cat, list]) => (
         <div key={cat}>
-          <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-accent">{cat} ({list.length})</p>
+          <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-900">{cat} ({list.length})</p>
           <div className="space-y-2">
             {list.map((m) => <ModelItemRow key={m.id} m={m} onChange={() => router.refresh()} />)}
           </div>
         </div>
       ))}
-      {models.length === 0 && <p className="text-sm text-muted-foreground">Nenhum modelo cadastrado.</p>}
+      {models.length === 0 && <p className="text-sm text-ink-500">Nenhum modelo cadastrado.</p>}
     </div>
   );
 }
@@ -71,12 +71,12 @@ function Toolbar() {
   return (
     <div className="rounded-lg border border-dashed p-2">
       <div className="flex flex-wrap items-center gap-2">
-        <a href="/api/checklist-models/export" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><Download className="h-4 w-4" /> Exportar (Excel)</a>
-        <Link href="/configuracoes/modelos/imprimir" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><Printer className="h-4 w-4" /> Imprimir (PDF)</Link>
+        <a href="/api/checklist-models/export" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><Download className="h-4 w-4" /> Exportar (Excel)</a>
+        <Link href="/configuracoes/modelos/imprimir" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><Printer className="h-4 w-4" /> Imprimir (PDF)</Link>
         <Button size="sm" variant="outline" disabled={busy} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {busy ? 'Importando…' : 'Importar (Excel)'}</Button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onImport(f); }} />
       </div>
-      <p className="mt-1 text-[11px] text-muted-foreground">Exporte, edite a planilha (altere/adicione modelos e etapas) e importe de volta — a biblioteca é atualizada em lote (casamento por nome do modelo; não exclui ausentes).</p>
+      <p className="mt-1 text-[11px] text-ink-500">Exporte, edite a planilha (altere/adicione modelos e etapas) e importe de volta — a biblioteca é atualizada em lote (casamento por nome do modelo; não exclui ausentes).</p>
       {msg && <p className="mt-1 text-sm font-medium text-success">{msg}</p>}
     </div>
   );
@@ -95,30 +95,30 @@ function ModelItemRow({ m, onChange }: { m: ModelRow; onChange: () => void }) {
     if (r.ok) onChange(); else alert(r.error ?? 'Falha');
   }
   return (
-    <div className="rounded-lg border bg-card p-3">
+    <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <button type="button" onClick={() => { if (!editing) setViewing((v) => !v); }} className="min-w-0 flex-1 text-left">
-          <p className="flex items-center gap-1 font-semibold text-brand">{m.moment ?? m.name}{!editing && <Eye className="h-3.5 w-3.5 text-muted-foreground" />}</p>
-          <p className="text-xs text-muted-foreground">{m.scope === 'MANAGER' ? 'individual' : 'da unidade'} · peso {m.weight} · {m.limitTime ? `limite ${m.limitTime}` : 'sem horário'} · {m.items.length} item(ns){m.requiresEvidence ? ' · foto' : ''}</p>
+          <p className="flex items-center gap-1 font-semibold text-ink-900">{m.moment ?? m.name}{!editing && <Eye className="h-3.5 w-3.5 text-ink-500" />}</p>
+          <p className="text-xs text-ink-500">{m.scope === 'MANAGER' ? 'individual' : 'da unidade'} · peso {m.weight} · {m.limitTime ? `limite ${m.limitTime}` : 'sem horário'} · {m.items.length} item(ns){m.requiresEvidence ? ' · foto' : ''}</p>
         </button>
         <div className="flex items-center gap-1">
           <button onClick={toggle}><StatusBadge tone={m.active ? 'success' : 'critical'}>{m.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => { setEditing((v) => !v); setViewing(false); }} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
-          <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={remove} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
+          <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={remove} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
 
       {viewing && !editing && (
-        <div className="mt-2 rounded-lg bg-muted/40 p-2">
-          {m.category && <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-accent">{m.category}{m.moment ? ` · ${m.moment}` : ''}</p>}
+        <div className="mt-2 rounded-lg bg-sunken/40 p-2">
+          {m.category && <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-900">{m.category}{m.moment ? ` · ${m.moment}` : ''}</p>}
           <ul className="space-y-1">
             {m.items.map((it, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="mt-0.5 inline-block h-4 w-4 shrink-0 rounded border-2 border-input" />
-                <span>{it.text}{it.requiresPhoto && <Camera className="ml-1 inline h-3.5 w-3.5 text-gold-dark" />}</span>
+                <span className="mt-0.5 inline-block h-4 w-4 shrink-0 rounded border-2 border-line-strong" />
+                <span>{it.text}{it.requiresPhoto && <Camera className="ml-1 inline h-3.5 w-3.5 text-ink-900" />}</span>
               </li>
             ))}
-            {m.items.length === 0 && <li className="text-xs text-muted-foreground">Sem itens.</li>}
+            {m.items.length === 0 && <li className="text-xs text-ink-500">Sem itens.</li>}
           </ul>
         </div>
       )}
@@ -168,12 +168,11 @@ function ModelForm({ edit, onDone, onCancel }: { edit?: ModelRow; onDone: () => 
         <div className="col-span-2"><Label className="text-xs">Nome do modelo</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" placeholder="ex: Cozinha — Abertura" /></div>
         <div><Label className="text-xs">Setor</Label><Input value={category} onChange={(e) => setCategory(e.target.value)} className="h-10 text-sm" placeholder="ex: Cozinha" /></div>
         <div><Label className="text-xs">Momento</Label><Input value={moment} onChange={(e) => setMoment(e.target.value)} className="h-10 text-sm" placeholder="Abertura / Fechamento…" /></div>
-        <div>
-          <Label className="text-xs">Escopo</Label>
-          <select className={sel} value={scope} onChange={(e) => setScope(e.target.value as 'UNIT' | 'MANAGER')}>
-            <option value="UNIT">Da unidade</option><option value="MANAGER">Individual</option>
-          </select>
-        </div>
+        <Select
+          label="Escopo" size="sm" value={scope}
+          onValueChange={(v) => setScope(v as 'UNIT' | 'MANAGER')}
+          options={[{ value: 'UNIT', label: 'Da unidade' }, { value: 'MANAGER', label: 'Individual' }]}
+        />
         <div><Label className="text-xs">Peso na meta</Label><Input inputMode="numeric" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-10 text-sm" /></div>
       </div>
       <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -182,27 +181,27 @@ function ModelForm({ edit, onDone, onCancel }: { edit?: ModelRow; onDone: () => 
         <label className="flex items-center gap-2"><input type="checkbox" checked={requiresEvidence} onChange={(e) => setRequiresEvidence(e.target.checked)} /> Exige foto</label>
       </div>
 
-      <div className="rounded-lg bg-background/60 p-2">
-        <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Itens / etapas — use ↑ ↓ para ordenar</p>
+      <div className="rounded-lg bg-surface/60 p-2">
+        <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-500">Itens / etapas — use ↑ ↓ para ordenar</p>
         <div className="space-y-1.5">
           {items.map((it, i) => (
-            <div key={i} className="flex items-start gap-1 rounded-md border bg-card p-1.5">
+            <div key={i} className="flex items-start gap-1 rounded-md border bg-surface p-1.5">
               <div className="flex shrink-0 flex-col">
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-muted-foreground hover:text-brand disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="text-muted-foreground hover:text-brand disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="text-ink-500 hover:text-brand disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="text-ink-500 hover:text-brand disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
               </div>
               <div className="flex-1 space-y-1">
                 <Input value={it.text} onChange={(e) => setItem(i, { text: e.target.value })} placeholder="O que verificar" className="h-9 text-sm" />
                 <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={it.requiresPhoto} onChange={(e) => setItem(i, { requiresPhoto: e.target.checked })} /> <Camera className="h-3.5 w-3.5" /> Exige foto neste item</label>
               </div>
-              <Button size="sm" variant="ghost" className="text-critical" onClick={() => removeItem(i)} aria-label="Remover"><X className="h-4 w-4" /></Button>
+              <Button size="sm" variant="ghost" className="text-danger" onClick={() => removeItem(i)} aria-label="Remover"><X className="h-4 w-4" /></Button>
             </div>
           ))}
         </div>
         <Button size="sm" variant="outline" className="mt-2" onClick={addItem}><Plus className="h-4 w-4" /> Adicionar item</Button>
       </div>
 
-      {msg && <p className="text-sm font-medium text-critical">{msg}</p>}
+      {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
       <div className="flex gap-2">
         <Button size="sm" className="flex-1" disabled={busy} onClick={submit}><Save className="h-4 w-4" /> {edit ? 'Salvar' : 'Criar modelo'}</Button>
         <Button size="sm" variant="outline" onClick={onCancel}>Cancelar</Button>

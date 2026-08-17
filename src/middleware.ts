@@ -13,7 +13,9 @@ import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/auth/cookies';
 // token Bearer DENTRO da rota (RH_INBOUND_TOKEN) — sem cookie de sessão.
 // '/checklists' e '/api/checklists/public' = fichas preenchidas por link, SEM login
 // (a config em /configuracoes/fichas e a API /api/checklist-forms seguem protegidas).
-const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health', '/api/integracoes', '/higiene', '/api/higiene', '/checklists', '/api/checklists/public'];
+// '/dev' = páginas de referência do design system (dev-only; cada página faz
+// notFound() em produção, então liberá-las do login não expõe nada em prod).
+const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health', '/api/integracoes', '/higiene', '/api/higiene', '/checklists', '/api/checklists/public', '/dev'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

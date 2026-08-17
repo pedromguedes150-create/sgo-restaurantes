@@ -8,6 +8,7 @@ import { PrintButton } from '@/components/ui/print-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { formatBRL } from '@/lib/utils';
 import { ArrowLeft, Download, AlertTriangle } from 'lucide-react';
+import { FormDatePicker } from '@/components/ui/ds/form-controls';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ function addDaysISO(iso: string, n: number): string {
 export default async function RelatorioFreelancersPage({ searchParams }: { searchParams: { month?: string; unit?: string; semana?: string } }) {
   const user = (await getSessionUser())!;
   const canSee = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO' || user.role === 'SUPERVISOR';
-  if (!canSee) return <p className="text-sm text-muted-foreground">Relatório restrito a Financeiro/Supervisão/Admin.</p>;
+  if (!canSee) return <p className="text-sm text-ink-500">Relatório restrito a Financeiro/Supervisão/Admin.</p>;
 
   const months = lastMonths(12);
   const ym = /^\d{4}-\d{2}$/.test(searchParams.month ?? '') ? searchParams.month! : months[0].value;
@@ -60,36 +61,36 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
   return (
     <div className="space-y-4">
       <div className="print:hidden">
-        <Link href="/modulos/pagamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Pagamentos</Link>
+        <Link href="/modulos/pagamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pagamentos</Link>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-brand">Consolidação de Freelancers — {label}</h1>
+        <h1 className="text-xl font-bold text-ink-900">Consolidação de Freelancers — {label}</h1>
         <div className="flex gap-2 print:hidden">
-          <a href={exportHref} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><Download className="h-4 w-4" /> Exportar (Excel)</a>
+          <a href={exportHref} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><Download className="h-4 w-4" /> Exportar (Excel)</a>
           <PrintButton />
         </div>
       </div>
-      <p className="text-sm text-muted-foreground">Pagamentos de freelancers <strong>aprovados e pagos</strong> no período — base para envio ao Financeiro. Fechamento semanal: segunda → domingo (pago na segunda), pelo dia do trabalho.</p>
+      <p className="text-sm text-ink-500">Pagamentos de freelancers <strong>aprovados e pagos</strong> no período — base para envio ao Financeiro. Fechamento semanal: segunda → domingo (pago na segunda), pelo dia do trabalho.</p>
 
       {/* Filtros (listas suspensas) */}
       <div className="flex flex-wrap items-end gap-3 print:hidden">
         <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mês</p>
-          <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" className="h-10 w-56 rounded-lg border-2 border-input bg-background px-3 text-sm font-medium" />
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500">Mês</p>
+          <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" className="h-10 w-56 rounded-lg border-2 border-line-strong bg-surface px-3 text-sm font-medium" />
         </div>
         <form method="get" className="flex items-end gap-1.5">
           <div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ou fechamento semanal</p>
-            <input type="date" name="semana" defaultValue={weekFrom ?? ''} className="h-10 rounded-lg border-2 border-input bg-background px-3 text-sm font-medium" />
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500">Ou fechamento semanal</p>
+            <FormDatePicker name="semana" aria-label="Início da semana" defaultValue={weekFrom ?? ''} className="w-44" />
             {selectedUnit && <input type="hidden" name="unit" value={selectedUnit} />}
           </div>
-          <button type="submit" className="h-10 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground">Ver semana</button>
+          <button type="submit" className="h-10 rounded-lg bg-brand px-3 text-sm font-semibold text-on-brand">Ver semana</button>
           {weekFrom && <Link href={`/modulos/pagamentos/relatorio-freelancers?month=${ym}${selectedUnit ? `&unit=${selectedUnit}` : ''}`} className="h-10 rounded-lg border px-3 py-2 text-sm font-semibold">Voltar ao mês</Link>}
         </form>
         {units.length > 1 && (
           <div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unidade</p>
-            <UnitSelectNav units={[{ id: '', name: 'Todas as unidades' }, ...units]} selected={selectedUnit ?? ''} paramName="unit" className="h-10 w-56 rounded-lg border-2 border-input bg-background px-3 text-sm font-medium" />
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500">Unidade</p>
+            <UnitSelectNav units={[{ id: '', name: 'Todas as unidades' }, ...units]} selected={selectedUnit ?? ''} paramName="unit" className="h-10 w-56 rounded-lg border-2 border-line-strong bg-surface px-3 text-sm font-medium" />
           </div>
         )}
       </div>
@@ -97,32 +98,32 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
       {/* Total geral */}
       <Card>
         <CardContent className="flex items-center justify-between py-3">
-          <span className="text-sm text-muted-foreground">{data.grandCount} pagamento(s) · {data.groups.length} freelancer(s)</span>
-          <span className="text-lg font-black text-brand">{formatBRL(data.grandTotal)}</span>
+          <span className="text-sm text-ink-500">{data.grandCount} pagamento(s) · {data.groups.length} freelancer(s)</span>
+          <span className="text-lg font-black text-ink-900">{formatBRL(data.grandTotal)}</span>
         </CardContent>
       </Card>
 
-      {data.groups.length === 0 && <p className="text-sm text-muted-foreground">Nenhum pagamento de freelancer aprovado/pago neste mês.</p>}
+      {data.groups.length === 0 && <p className="text-sm text-ink-500">Nenhum pagamento de freelancer aprovado/pago neste mês.</p>}
 
       {data.groups.map((g) => (
         <Card key={g.freelancerId}>
           <CardContent className="space-y-1.5 pt-4">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="font-semibold text-brand">{g.name}</p>
-                <p className="text-xs text-muted-foreground">PIX: {g.pixKey || <span className="text-critical">não cadastrada</span>}</p>
+                <p className="font-semibold text-ink-900">{g.name}</p>
+                <p className="text-xs text-ink-500">PIX: {g.pixKey || <span className="text-danger">não cadastrada</span>}</p>
               </div>
               <span className="text-right">
-                <span className="block font-black text-brand">{formatBRL(g.total)}</span>
-                <span className="text-xs text-muted-foreground">{g.count} pagto(s)</span>
+                <span className="block font-black text-ink-900">{formatBRL(g.total)}</span>
+                <span className="text-xs text-ink-500">{g.count} pagto(s)</span>
               </span>
             </div>
             <div className="divide-y border-t pt-1">
               {g.lines.map((l) => (
                 <div key={l.id} className="flex items-center justify-between gap-2 py-1 text-sm">
-                  <span className="text-muted-foreground">{l.date} · {l.unit} · {l.status}</span>
+                  <span className="text-ink-500">{l.date} · {l.unit} · {l.status}</span>
                   <span className="flex items-center gap-2">
-                    {l.divergent && <span className="flex items-center gap-0.5 text-xs font-semibold text-medium"><AlertTriangle className="h-3 w-3" /> padrão {l.standardValue != null ? formatBRL(l.standardValue) : '—'}</span>}
+                    {l.divergent && <span className="flex items-center gap-0.5 text-xs font-semibold text-warning"><AlertTriangle className="h-3 w-3" /> padrão {l.standardValue != null ? formatBRL(l.standardValue) : '—'}</span>}
                     <span className="font-semibold">{formatBRL(l.amount)}</span>
                   </span>
                 </div>

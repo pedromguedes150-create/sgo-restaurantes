@@ -4,9 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { Group } from '@/components/ui/ds/group';
 
 export interface PayoutRowUI {
   id: string; collaboratorName: string; unitName: string; type: 'COMMISSION' | 'MOBILITY';
@@ -93,32 +96,36 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <select value={yearMonth} onChange={(e) => router.push(`/modulos/pessoas/comissoes?mes=${e.target.value}`)} className="h-9 rounded-md border bg-card px-2 text-sm font-semibold capitalize">
-          {months.map((m) => <option key={m} value={m}>{fmtMonthLong(m)}</option>)}
-        </select>
+        <div className="w-56">
+          <Select
+            aria-label="Mês" size="sm" className="capitalize" value={yearMonth}
+            onValueChange={(v) => router.push(`/modulos/pessoas/comissoes?mes=${v}`)}
+            options={months.map((m) => ({ value: m, label: fmtMonthLong(m) }))}
+          />
+        </div>
         <a
           href={`/api/people/payouts/export?year=${yearMonth.split('-')[0]}&month=${Number(yearMonth.split('-')[1])}`}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"
         >
-          <FileSpreadsheet className="h-3.5 w-3.5 text-accent" /> Excel do mês
+          <FileSpreadsheet className="h-3.5 w-3.5 text-brand" /> Excel do mês
         </a>
       </div>
 
       {/* Dashboard do mês */}
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded-lg border bg-card p-3">
-          <p className="text-xs text-muted-foreground">Comissões no mês</p>
+        <div className="rounded-lg border bg-surface p-3">
+          <p className="text-xs text-ink-500">Comissões no mês</p>
           <p className="text-lg font-bold text-success tabular-nums">{brl(dash.totalCommission)}</p>
         </div>
-        <div className="rounded-lg border bg-card p-3">
-          <p className="text-xs text-muted-foreground">Mobilidade no mês</p>
-          <p className="text-lg font-bold text-brand tabular-nums">{brl(dash.totalMobility)}</p>
+        <div className="rounded-lg border bg-surface p-3">
+          <p className="text-xs text-ink-500">Mobilidade no mês</p>
+          <p className="text-lg font-bold text-ink-900 tabular-nums">{brl(dash.totalMobility)}</p>
         </div>
       </div>
 
       {dash.byUnit.length > 0 && (
-        <div className="rounded-lg border bg-card p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Por unidade</p>
+        <div className="rounded-lg border bg-surface p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Por unidade</p>
           <div className="space-y-1.5">
             {dash.byUnit.map((u) => (
               <div key={u.unitName} className="flex items-center justify-between gap-2 text-sm">
@@ -126,7 +133,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
                 <span className="shrink-0 text-xs tabular-nums">
                   <span className="font-semibold text-success">{brl(u.commission)}</span>
                   {' · '}
-                  <span className="font-semibold text-brand">{brl(u.mobility)}</span>
+                  <span className="font-semibold text-ink-900">{brl(u.mobility)}</span>
                 </span>
               </div>
             ))}
@@ -135,17 +142,17 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
       )}
 
       {/* Tendência 12 meses */}
-      <div className="rounded-lg border bg-card p-3">
-        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Tendência (12 meses) — comissão + mobilidade</p>
+      <div className="rounded-lg border bg-surface p-3">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Tendência (12 meses) — comissão + mobilidade</p>
         <div className="flex items-end gap-1" style={{ height: 90 }}>
           {dash.trend.map((t) => {
             const total = t.commission + t.mobility;
             return (
               <div key={t.yearMonth} className="flex flex-1 flex-col items-center gap-1" title={`${fmtMonth(t.yearMonth)}: ${brl(total)}`}>
                 <div className="flex w-full flex-col justify-end" style={{ height: 64 }}>
-                  <div className="w-full rounded-t bg-accent/80" style={{ height: `${Math.round((total / maxTrend) * 100)}%`, minHeight: total > 0 ? 3 : 0 }} />
+                  <div className="w-full rounded-t bg-brand/80" style={{ height: `${Math.round((total / maxTrend) * 100)}%`, minHeight: total > 0 ? 3 : 0 }} />
                 </div>
-                <span className="text-[9px] text-muted-foreground">{fmtMonth(t.yearMonth)}</span>
+                <span className="text-[9px] text-ink-500">{fmtMonth(t.yearMonth)}</span>
               </div>
             );
           })}
@@ -153,8 +160,8 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
       </div>
 
       {dash.topCollaborators.length > 0 && (
-        <div className="rounded-lg border bg-card p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Maiores do mês</p>
+        <div className="rounded-lg border bg-surface p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Maiores do mês</p>
           <div className="space-y-1">
             {dash.topCollaborators.map((c, i) => (
               <div key={c.name} className="flex items-center justify-between text-sm">
@@ -169,16 +176,16 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
       {/* Lançamento (Supervisão/Admin) */}
       {canCreate && (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Lançar no mês selecionado</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Lançar no mês selecionado</p>
           <div className="space-y-2">
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar colaborador…" className="h-10 text-sm" />
-            <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={collaboratorId} onChange={(e) => setCollaboratorId(e.target.value)}>
-              <option value="">Selecione o colaborador…</option>
-              {filteredCollabs.map((c) => <option key={c.id} value={c.id}>{c.name}{c.jobTitle ? ` — ${c.jobTitle}` : ''} ({c.units})</option>)}
-            </select>
+            <Select
+              aria-label="Colaborador" placeholder="Selecione o colaborador…" value={collaboratorId} onValueChange={setCollaboratorId}
+              options={filteredCollabs.map((c) => ({ value: c.id, label: c.name, hint: [c.jobTitle, c.units].filter(Boolean).join(' · ') || undefined }))}
+            />
             {collaboratorId && collabHistory && collabHistory.length > 0 && (
-              <div className="rounded-md bg-surface p-2">
-                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Histórico do colaborador (variação)</p>
+              <div className="rounded-md bg-canvas p-2">
+                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Histórico do colaborador (variação)</p>
                 <div className="space-y-0.5">
                   {collabHistory.map((h, i) => {
                     const prev = collabHistory.slice(i + 1).find((x) => x.type === h.type);
@@ -189,7 +196,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
                         <span>
                           <strong>{brl(h.amount)}</strong>
                           {diff != null && Math.abs(diff) >= 0.01 && (
-                            <span className={diff > 0 ? 'ml-1 text-success' : 'ml-1 text-critical'}>({diff > 0 ? '+' : ''}{brl(diff)})</span>
+                            <span className={diff > 0 ? 'ml-1 text-success' : 'ml-1 text-danger'}>({diff > 0 ? '+' : ''}{brl(diff)})</span>
                           )}
                         </span>
                       </p>
@@ -199,15 +206,15 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
               </div>
             )}
             {collaboratorId && collabHistory && collabHistory.length === 0 && (
-              <p className="text-xs text-muted-foreground">Primeiro lançamento deste colaborador.</p>
+              <p className="text-xs text-ink-500">Primeiro lançamento deste colaborador.</p>
             )}
-            <div className="flex gap-1.5">
-              {(['COMMISSION', 'MOBILITY'] as const).map((t) => (
-                <button key={t} onClick={() => setType(t)} className={type === t ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm'}>
-                  {TYPE[t].label}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              aria-label="Tipo de lançamento"
+              size="sm"
+              value={type}
+              onValueChange={setType}
+              options={[{ value: 'COMMISSION', label: TYPE.COMMISSION.label }, { value: 'MOBILITY', label: TYPE.MOBILITY.label }]}
+            />
             <div className="grid grid-cols-2 gap-2">
               <div><Label className="text-xs">Valor (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" className="h-10 text-sm" /></div>
               <div><Label className="text-xs">Obs. (opcional)</Label><Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: ref. vendas" className="h-10 text-sm" /></div>
@@ -219,25 +226,25 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
 
       {/* Histórico do mês */}
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Lançamentos do mês ({rows.length})</p>
-        {rows.length === 0 && <p className="text-sm text-muted-foreground">Nenhum lançamento neste mês.</p>}
-        <div className="space-y-1.5">
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Lançamentos do mês ({rows.length})</p>
+        {rows.length === 0 && <p className="text-sm text-ink-500">Nenhum lançamento neste mês.</p>}
+        <Group>
           {rows.map((r) => (
-            <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2.5">
+            <div key={r.id} className="flex items-center justify-between gap-2 p-2.5">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-brand">{r.collaboratorName}</p>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-sm font-semibold text-ink-900">{r.collaboratorName}</p>
+                <p className="truncate text-xs text-ink-500">
                   {r.unitName} · {r.createdByName} · {new Date(r.createdAt).toLocaleDateString('pt-BR')}{r.note ? ` · ${r.note}` : ''}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <StatusBadge tone={TYPE[r.type].tone}>{TYPE[r.type].label}</StatusBadge>
                 <span className="font-semibold tabular-nums">{brl(r.amount)}</span>
-                {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => remove(r.id, r.collaboratorName)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
+                {isAdmin && <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => remove(r.id, r.collaboratorName)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>}
               </div>
             </div>
           ))}
-        </div>
+        </Group>
       </div>
     </div>
   );

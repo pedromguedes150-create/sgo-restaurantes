@@ -2,10 +2,10 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Camera, Save, Plus, X } from 'lucide-react';
+import { Button, IconButton } from '@/components/ui/ds/button';
+import { Input } from '@/components/ui/ds/field';
+import { Banner } from '@/components/ui/ds/banner';
 
 interface Category {
   id: string;
@@ -103,77 +103,109 @@ export function WasteForm({
     }
   }
 
-  return (
-    <div className="space-y-4">
-      {categories.map((c) => c.measure === 'un' ? (
-        <div key={c.id} className="space-y-1.5 rounded-lg border border-dashed p-2">
-          <div className="flex items-center justify-between">
-            <Label>{c.name} (UNIDADES)</Label>
-            <span className="text-xs font-bold tabular-nums">Total: {subTotal(c.id)} un</span>
-          </div>
-          {(subs[c.id] ?? []).map((si, i) => (
-            <div key={i} className="flex gap-1.5">
-              <Input value={si.name} onChange={(e) => setSubs((s) => ({ ...s, [c.id]: s[c.id].map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) }))} placeholder="Produto (ex.: coxinha)" className="h-10 flex-1 text-sm" />
-              <Input inputMode="numeric" value={si.qty} onChange={(e) => setSubs((s) => ({ ...s, [c.id]: s[c.id].map((x, j) => (j === i ? { ...x, qty: e.target.value.replace(/D/g, '') } : x)) }))} placeholder="qtd" className="h-10 w-20 text-sm" />
-              <button type="button" onClick={() => setSubs((s) => ({ ...s, [c.id]: s[c.id].length > 1 ? s[c.id].filter((_, j) => j !== i) : s[c.id] }))} className="px-1 text-critical" aria-label="Remover">×</button>
-            </div>
-          ))}
-          <button type="button" onClick={() => setSubs((s) => ({ ...s, [c.id]: [...(s[c.id] ?? []), { name: '', qty: '' }] }))} className="rounded-full border px-3 py-1 text-xs font-semibold">+ Adicionar produto</button>
-        </div>
-      ) : (
-        <div key={c.id} className="space-y-1.5">
-          <Label htmlFor={`kg-${c.id}`}>{c.name} (KG)</Label>
-          <Input
-            id={`kg-${c.id}`}
-            type="text"
-            inputMode="decimal"
-            placeholder="0,000"
-            value={kg[c.id] ?? ''}
-            onChange={(e) => setKg((s) => ({ ...s, [c.id]: e.target.value }))}
-          />
-        </div>
-      ))}
+  // Agrupa por UNIDADE DE MEDIDA: pesagem (kg) e contagem (un) são gestos
+  // diferentes — misturá-las obrigava o gerente a trocar de raciocínio a cada campo.
+  const kgCats = categories.filter((c) => c.measure !== 'un');
+  const unCats = categories.filter((c) => c.measure === 'un');
 
-      <div className="space-y-1.5">
-        <Label htmlFor="obs">Observação (opcional)</Label>
-        <Input id="obs" value={observation} onChange={(e) => setObservation(e.target.value)} />
-      </div>
+  return (
+    <div className="space-y-6">
+      {kgCats.length > 0 && (
+        <section>
+          <h3 className="sgo-type-11 mb-2 text-ink-500">Pesagem (kg)</h3>
+          {/* 2 colunas a partir de sm: o formulário deixa de ser uma coluna longa. */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {kgCats.map((c) => (
+              <Input
+                key={c.id}
+                label={c.name}
+                inputMode="decimal"
+                placeholder="0,000"
+                className="text-right tabular-nums"
+                value={kg[c.id] ?? ''}
+                onChange={(e) => setKg((s) => ({ ...s, [c.id]: e.target.value }))}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {unCats.length > 0 && (
+        <section>
+          <h3 className="sgo-type-11 mb-2 text-ink-500">Contagem (unidades)</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {unCats.map((c) => (
+              <div key={c.id} className="rounded-card border border-line p-3">
+                <div className="mb-2 flex items-baseline justify-between gap-2">
+                  <span className="text-[13px] font-medium text-ink-700">{c.name}</span>
+                  <span className="text-[13px] font-semibold tabular-nums text-ink-900">Total: {subTotal(c.id)} un</span>
+                </div>
+                <div className="space-y-2">
+                  {(subs[c.id] ?? []).map((si, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <Input
+                        aria-label={`Produto ${i + 1} de ${c.name}`}
+                        value={si.name}
+                        onChange={(e) => setSubs((s) => ({ ...s, [c.id]: s[c.id].map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) }))}
+                        placeholder="Produto (ex.: coxinha)"
+                        className="flex-1"
+                      />
+                      <Input
+                        aria-label={`Quantidade do produto ${i + 1} de ${c.name}`}
+                        inputMode="numeric"
+                        value={si.qty}
+                        // Só dígitos (antes o regex era /D/ — a LETRA D — e não filtrava nada).
+                        onChange={(e) => setSubs((s) => ({ ...s, [c.id]: s[c.id].map((x, j) => (j === i ? { ...x, qty: e.target.value.replace(/\D/g, '') } : x)) }))}
+                        placeholder="qtd"
+                        className="w-20 text-right tabular-nums"
+                      />
+                      <IconButton
+                        variant="danger"
+                        aria-label={`Remover produto ${i + 1}`}
+                        onClick={() => setSubs((s) => ({ ...s, [c.id]: s[c.id].length > 1 ? s[c.id].filter((_, j) => j !== i) : s[c.id] }))}
+                      >
+                        <X className="h-4 w-4" />
+                      </IconButton>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="mt-2"
+                  onClick={() => setSubs((s) => ({ ...s, [c.id]: [...(s[c.id] ?? []), { name: '', qty: '' }] }))}
+                >
+                  <Plus className="h-4 w-4" /> Adicionar produto
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <Input label="Observação (opcional)" value={observation} onChange={(e) => setObservation(e.target.value)} />
 
       {requiresEvidence && (
-        <p className="text-xs text-gold-dark">
-          <Camera className="mr-1 inline h-3.5 w-3.5" />
-          {hasEvidence && !file
-            ? 'Foto da balança já anexada (envie outra para substituir).'
-            : 'Esta tarefa exige a foto do visor da balança.'}
-          {file && ` Selecionada: ${file.name}`}
-        </p>
+        <Banner
+          tone="info"
+          title={hasEvidence && !file ? 'Foto da balança já anexada' : 'Esta tarefa exige a foto do visor da balança'}
+          description={file ? `Selecionada: ${file.name}` : hasEvidence && !file ? 'Envie outra para substituir.' : undefined}
+        />
       )}
 
       {msg && (
-        <p
-          className={
-            msg.type === 'ok'
-              ? 'rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success'
-              : msg.type === 'alert'
-                ? 'rounded-lg bg-medium/10 px-3 py-2 text-sm font-medium text-[#92600A]'
-                : 'rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical'
-          }
-        >
-          {msg.text}
-        </p>
+        <Banner
+          tone={msg.type === 'ok' ? 'success' : msg.type === 'alert' ? 'warning' : 'danger'}
+          title={msg.text}
+        />
       )}
 
-      <Button onClick={save} disabled={loading} size="lg" className="w-full" variant={requiresEvidence ? 'gold' : 'default'}>
-        {loading ? (
-          'Salvando…'
-        ) : requiresEvidence && !file && !hasEvidence ? (
-          <>
-            <Camera className="h-5 w-5" /> Tirar foto da balança
-          </>
+      {/* Único primário da tela. */}
+      <Button onClick={save} loading={loading} size="lg" className="w-full">
+        {loading ? 'Salvando…' : requiresEvidence && !file && !hasEvidence ? (
+          <><Camera className="h-5 w-5" /> Tirar foto da balança</>
         ) : (
-          <>
-            <Save className="h-5 w-5" /> Salvar lançamento
-          </>
+          <><Save className="h-5 w-5" /> Salvar lançamento</>
         )}
       </Button>
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Select } from '@/components/ui/ds/select';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 
 type Perm = { canView: boolean; canEdit: boolean };
@@ -29,17 +30,17 @@ export function PermissionsAdmin({ modules, matrix }: { modules: { key: string; 
 
   return (
     <div className="space-y-3">
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">Perfil</label>
-        <select className="ml-2 h-10 rounded-lg border-2 border-input bg-background px-3 text-sm" value={role} onChange={(e) => setRole(e.target.value)}>
-          {EDITABLE_ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
-        </select>
-        <p className="mt-1 text-xs text-muted-foreground">CEO e Administrador têm acesso total e não podem ser restringidos. Sem marcar “Ver”, o módulo some do menu do perfil.</p>
+      <div className="max-w-xs">
+        <Select
+          label="Perfil" value={role} onValueChange={setRole}
+          hint="CEO e Administrador têm acesso total e não podem ser restringidos. Sem marcar “Ver”, o módulo some do menu do perfil."
+          options={EDITABLE_ROLES.map((r) => ({ value: r, label: roleLabel(r) }))}
+        />
       </div>
 
       <div className="overflow-hidden rounded-lg border">
         <table className="w-full text-sm">
-          <thead className="bg-secondary text-xs uppercase tracking-wide text-muted-foreground">
+          <thead className="bg-sunken text-xs uppercase tracking-wide text-ink-500">
             <tr><th className="px-3 py-2 text-left">Módulo</th><th className="px-3 py-2 w-20 text-center">Ver</th><th className="px-3 py-2 w-20 text-center">Editar</th></tr>
           </thead>
           <tbody>
@@ -47,7 +48,7 @@ export function PermissionsAdmin({ modules, matrix }: { modules: { key: string; 
               const p = state[role]?.[m.key] ?? { canView: true, canEdit: true };
               return (
                 <tr key={m.key} className="border-t">
-                  <td className="px-3 py-2 font-medium text-brand">{m.label}</td>
+                  <td className="px-3 py-2 font-medium text-ink-900">{m.label}</td>
                   <td className="px-3 py-2 text-center"><input type="checkbox" className="h-4 w-4" disabled={busy} checked={p.canView} onChange={(e) => set(m.key, { canView: e.target.checked })} /></td>
                   <td className="px-3 py-2 text-center"><input type="checkbox" className="h-4 w-4" disabled={busy || !p.canView} checked={p.canEdit} onChange={(e) => set(m.key, { canEdit: e.target.checked })} /></td>
                 </tr>

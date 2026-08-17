@@ -1,10 +1,11 @@
-import { Banknote } from 'lucide-react';
+
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getVaultOverview, getVaultAlerts, getOpenChangeRequests } from '@/lib/cash-vault';
 import { isSupervisory } from '@/lib/roles';
 import { Card, CardContent } from '@/components/ui/card';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { VaultClient } from '@/components/cash/vault-client';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,7 @@ export const dynamic = 'force-dynamic';
 export default async function TrocoPage({ searchParams }: { searchParams: { unit?: string } }) {
   const user = (await getSessionUser())!;
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
-  if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
+  if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
 
   const now = new Date();
@@ -31,14 +32,14 @@ export default async function TrocoPage({ searchParams }: { searchParams: { unit
     wide ? getVaultAlerts(user, ym) : Promise.resolve(null),
     wide ? getOpenChangeRequests(user) : Promise.resolve([]),
   ]);
-  if (!vault) return <p className="text-sm text-muted-foreground">Sem acesso a esta unidade.</p>;
+  if (!vault) return <p className="text-sm text-ink-500">Sem acesso a esta unidade.</p>;
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><Banknote className="h-5 w-5 text-accent" /> Gestão de Troco</h1>
-        <p className="text-sm text-muted-foreground">Cofre da unidade por denominação: confira diariamente, reponha os baldes dos caixas com miúdos e troque as notas grandes com o escritório.</p>
-      </div>
+      <LargeTitle
+        title="Gestão de Troco"
+        subtitle="Cofre da unidade por denominação: confira diariamente, reponha os baldes dos caixas com miúdos e troque as notas grandes com o escritório."
+      />
       <Card>
         <CardContent className="pt-4">
           <VaultClient

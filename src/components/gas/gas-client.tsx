@@ -4,15 +4,21 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { SearchField } from '@/components/ui/ds/field';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 import { QrScanner } from '@/components/notes/qr-scanner';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { postAdmin } from '@/lib/admin-client';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 import { formatBRL } from '@/lib/utils';
+import { Group } from '@/components/ui/ds/group';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null }
@@ -44,11 +50,12 @@ export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, supp
   ];
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {tabs.filter((t) => t.show).map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>
-        ))}
-      </div>
+      <SegmentedControl
+        aria-label="Seções de Recebimento de Gás"
+        value={tab}
+        onValueChange={setTab}
+        options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label }))}
+      />
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
       {tab === 'painel' && (
         <>
@@ -77,28 +84,33 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
   };
   const months: string[] = [];
   { const d = new Date(); for (let i = 0; i < 12; i++) { months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); d.setMonth(d.getMonth() - 1); } }
-  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
-        <select value={f.unitId} onChange={(e) => nav({ unitId: e.target.value })} className={sel}>
-          <option value="">Todas as unidades</option>
-          {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
-        <select value={f.supplierId} onChange={(e) => nav({ supplierId: e.target.value })} className={sel}>
-          <option value="">Todos os fornecedores</option>
-          {suppliers.map((sp) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
-        </select>
-        <select value={f.mes} onChange={(e) => nav({ mes: e.target.value })} className={sel}>
-          <option value="">Todos os meses</option>
-          {months.map((m) => <option key={m} value={m}>{m.split('-').reverse().join('/')}</option>)}
-        </select>
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3">
+        <div className="min-w-[10rem] flex-1">
+          <Select
+            label="Unidade" size="sm" value={f.unitId} onValueChange={(v) => nav({ unitId: v })}
+            options={[{ value: '', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))]}
+          />
+        </div>
+        <div className="min-w-[10rem] flex-1">
+          <Select
+            label="Fornecedor" size="sm" value={f.supplierId} onValueChange={(v) => nav({ supplierId: v })}
+            options={[{ value: '', label: 'Todos os fornecedores' }, ...suppliers.map((sp) => ({ value: sp.id, label: sp.name }))]}
+          />
+        </div>
+        <div className="min-w-[10rem] flex-1">
+          <Select
+            label="Mês" size="sm" value={f.mes} onValueChange={(v) => nav({ mes: v })}
+            options={[{ value: '', label: 'Todos os meses' }, ...months.map((m) => ({ value: m, label: m.split('-').reverse().join('/') }))]}
+          />
+        </div>
       </div>
       {purchased && (
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border bg-card p-2.5 text-center"><p className="text-lg font-black tabular-nums text-brand">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-muted-foreground">comprado no filtro</p></div>
-          <div className="rounded-lg border bg-card p-2.5 text-center"><p className="text-base font-black tabular-nums text-brand">{formatBRL(purchased.total)}</p><p className="text-xs text-muted-foreground">valor no filtro</p></div>
-          <div className="rounded-lg border bg-card p-2.5 text-center"><p className="text-lg font-black tabular-nums text-brand">{purchased.count}</p><p className="text-xs text-muted-foreground">recebimentos</p></div>
+          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-ink-900">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-ink-500">comprado no filtro</p></div>
+          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-base font-black tabular-nums text-ink-900">{formatBRL(purchased.total)}</p><p className="text-xs text-ink-500">valor no filtro</p></div>
+          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-ink-900">{purchased.count}</p><p className="text-xs text-ink-500">recebimentos</p></div>
         </div>
       )}
     </div>
@@ -109,19 +121,19 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
 function ContractProgress({ contracts, compact = false }: { contracts: GasContractUI[]; compact?: boolean }) {
   if (contracts.length === 0) return null;
   return (
-    <div className="rounded-lg border bg-card p-3">
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Contratos vigentes — % cumprido</p>
+    <div className="rounded-lg border bg-surface p-3">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Contratos vigentes — % cumprido</p>
       <div className="space-y-2.5">
         {contracts.map((c) => (
           <div key={c.id}>
             <div className="flex items-center justify-between text-sm">
-              <span className="min-w-0 truncate font-medium text-brand">{c.unitName} · {c.supplierName}</span>
+              <span className="min-w-0 truncate font-medium text-ink-900">{c.unitName} · {c.supplierName}</span>
               <span className="shrink-0 text-xs tabular-nums"><b>{c.progressPct}%</b> · {c.usedKg.toLocaleString('pt-BR')}/{c.quantityKg.toLocaleString('pt-BR')} kg</span>
             </div>
-            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary">
-              <div className={`h-full rounded-full ${c.progressPct >= 100 ? 'bg-critical' : c.progressPct >= 80 ? 'bg-medium' : 'bg-success'}`} style={{ width: `${Math.min(100, c.progressPct)}%` }} />
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken">
+              <div className={`h-full rounded-full ${c.progressPct >= 100 ? 'bg-danger' : c.progressPct >= 80 ? 'bg-warning' : 'bg-success'}`} style={{ width: `${Math.min(100, c.progressPct)}%` }} />
             </div>
-            {!compact && <p className="mt-0.5 text-xs text-muted-foreground">{c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {kg(c.pricePerKg)} acordado · restam {c.remainingKg.toLocaleString('pt-BR')} kg</p>}
+            {!compact && <p className="mt-0.5 text-xs text-ink-500">{c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {kg(c.pricePerKg)} acordado · restam {c.remainingKg.toLocaleString('pt-BR')} kg</p>}
           </div>
         ))}
       </div>
@@ -135,7 +147,6 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ unitId: '', supplierId: '', startDate: '', endDate: '', quantityKg: '', pricePerKg: '', initialUsedKg: '', note: '' });
   const set = (k: keyof typeof form, v: string) => setForm((s2) => ({ ...s2, [k]: v }));
-  const sel = 'h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   // Edição de um contrato existente (unidade/fornecedor não mudam — são a identidade).
   const [editId, setEditId] = useState<string | null>(null);
@@ -163,21 +174,21 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
     <div className="space-y-4">
       {canManage && (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Novo contrato</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Novo contrato</p>
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
-              <select className={sel} value={form.unitId} onChange={(e) => set('unitId', e.target.value)}>
-                <option value="">Unidade…</option>
-                {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
-              <select className={sel} value={form.supplierId} onChange={(e) => set('supplierId', e.target.value)}>
-                <option value="">Fornecedor…</option>
-                {suppliers.map((sp) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
-              </select>
+              <Select
+                label="Unidade" size="sm" placeholder="Unidade…" value={form.unitId} onValueChange={(v) => set('unitId', v)}
+                options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+              />
+              <Select
+                label="Fornecedor" size="sm" placeholder="Fornecedor…" value={form.supplierId} onValueChange={(v) => set('supplierId', v)}
+                options={suppliers.map((sp) => ({ value: sp.id, label: sp.name }))}
+              />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div><Label className="text-xs">Início</Label><Input type="date" value={form.startDate} onChange={(e) => set('startDate', e.target.value)} className="h-10 text-sm" /></div>
-              <div><Label className="text-xs">Fim</Label><Input type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} className="h-10 text-sm" /></div>
+              <DatePicker label="Início" size="sm" value={form.startDate || null} onValueChange={(v) => set('startDate', v ?? '')} />
+              <DatePicker label="Fim" size="sm" value={form.endDate || null} onValueChange={(v) => set('endDate', v ?? '')} min={form.startDate || undefined} />
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div><Label className="text-xs">Quantidade (kg)</Label><Input inputMode="decimal" value={form.quantityKg} onChange={(e) => set('quantityKg', e.target.value)} placeholder="ex.: 12000" className="h-10 text-sm" /></div>
@@ -185,7 +196,7 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
               <div><Label className="text-xs">Já comprado (kg)</Label><Input inputMode="decimal" value={form.initialUsedKg} onChange={(e) => set('initialUsedKg', e.target.value)} placeholder="posição atual" className="h-10 text-sm" /></div>
             </div>
             <Input value={form.note} onChange={(e) => set('note', e.target.value)} placeholder="Observação (opcional)" className="h-10 text-sm" />
-            <p className="text-xs text-muted-foreground">&quot;Já comprado&quot; = posição de contrato que já estava andando antes do SGO; os recebimentos lançados daqui em diante abatem sozinhos.</p>
+            <p className="text-xs text-ink-500">&quot;Já comprado&quot; = posição de contrato que já estava andando antes do SGO; os recebimentos lançados daqui em diante abatem sozinhos.</p>
             <Button className="w-full" disabled={busy || !form.unitId || !form.supplierId || !form.startDate || !form.endDate || !form.quantityKg || !form.pricePerKg}
               onClick={async () => {
                 const ok = await post({ action: 'create', unitId: form.unitId, supplierId: form.supplierId, startDate: form.startDate, endDate: form.endDate, quantityKg: num(form.quantityKg), pricePerKg: num(form.pricePerKg), initialUsedKg: form.initialUsedKg ? num(form.initialUsedKg) : undefined, note: form.note });
@@ -199,22 +210,22 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
 
       <div className="space-y-1.5">
         {contracts.map((c) => (
-          <div key={c.id} className={`rounded-lg border p-2.5 ${c.expired || !c.active ? 'opacity-70' : 'bg-card'}`}>
+          <div key={c.id} className={`rounded-lg border p-2.5 ${c.expired || !c.active ? 'opacity-70' : 'bg-surface'}`}>
             <div className="flex items-center justify-between gap-2">
-              <p className="min-w-0 truncate text-sm font-semibold text-brand">{c.unitName} · {c.supplierName}</p>
+              <p className="min-w-0 truncate text-sm font-semibold text-ink-900">{c.unitName} · {c.supplierName}</p>
               <span className="shrink-0 text-xs font-bold tabular-nums">{c.progressPct}%{c.expired ? ' · vencido' : !c.active ? ' · inativo' : ''}</span>
             </div>
-            <p className="text-xs text-muted-foreground tabular-nums">
+            <p className="text-xs text-ink-500 tabular-nums">
               {c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {c.quantityKg.toLocaleString('pt-BR')} kg a {kg(c.pricePerKg)} ·
               comprado {c.purchasedKg.toLocaleString('pt-BR')} kg{c.initialUsedKg > 0 ? ` (+${c.initialUsedKg.toLocaleString('pt-BR')} kg posição inicial)` : ''} · restam {c.remainingKg.toLocaleString('pt-BR')} kg
             </p>
-            {c.note && <p className="text-xs text-muted-foreground">Obs.: {c.note}</p>}
+            {c.note && <p className="text-xs text-ink-500">Obs.: {c.note}</p>}
             {canManage && (editId === c.id ? (
               <div className="mt-2 space-y-2 rounded-lg border border-dashed p-2">
-                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Editar contrato</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Editar contrato</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><Label className="text-xs">Início</Label><Input type="date" value={ef.startDate} onChange={(e) => setE('startDate', e.target.value)} className="h-9 text-sm" /></div>
-                  <div><Label className="text-xs">Fim</Label><Input type="date" value={ef.endDate} onChange={(e) => setE('endDate', e.target.value)} className="h-9 text-sm" /></div>
+                  <DatePicker label="Início" size="sm" value={ef.startDate || null} onValueChange={(v) => setE('startDate', v ?? '')} />
+                  <DatePicker label="Fim" size="sm" value={ef.endDate || null} onValueChange={(v) => setE('endDate', v ?? '')} min={ef.startDate || undefined} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div><Label className="text-xs">Quantidade (kg)</Label><Input inputMode="decimal" value={ef.quantityKg} onChange={(e) => setE('quantityKg', e.target.value)} className="h-9 text-sm" /></div>
@@ -237,12 +248,12 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
                   void post({ action: 'update', id: c.id, initialUsedKg: num(v) });
                 }}>Ajustar posição</Button>
                 <Button size="sm" variant="ghost" disabled={busy} onClick={() => void post({ action: 'update', id: c.id, active: !c.active })}>{c.active ? 'Inativar' : 'Reativar'}</Button>
-                {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm('Excluir este contrato? (auditado)')) void post({ action: 'delete', id: c.id }); }}>Excluir</Button>}
+                {isAdmin && <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm('Excluir este contrato? (auditado)')) void post({ action: 'delete', id: c.id }); }}>Excluir</Button>}
               </div>
             ))}
           </div>
         ))}
-        {contracts.length === 0 && <p className="text-sm text-muted-foreground">Nenhum contrato cadastrado.</p>}
+        {contracts.length === 0 && <p className="text-sm text-ink-500">Nenhum contrato cadastrado.</p>}
       </div>
     </div>
   );
@@ -267,7 +278,6 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   const q = parseFloat((qty || '0').replace(',', '.'));
   const price = parseFloat((unitPrice || '0').replace(',', '.'));
@@ -313,7 +323,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
   return (
     <div className="space-y-3">
       {units.length > 1 && (
-        <div><Label>Unidade</Label><select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>
+        <Select label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
       )}
       <div>
         <Label htmlFor="k"><ScanLine className="mr-1 inline h-4 w-4" /> Chave da nota (QR/código de barras)</Label>
@@ -321,22 +331,21 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
           <Input id="k" inputMode="numeric" value={accessKey} onChange={(e) => onKey(e.target.value)} placeholder="cole, digite ou escaneie" className="flex-1" />
           <QrScanner onResult={(chave) => onKey(chave)} />
         </div>
-        {noteNumber && <p className="mt-1 text-xs text-muted-foreground">Nota nº {noteNumber}</p>}
+        {noteNumber && <p className="mt-1 text-xs text-ink-500">Nota nº {noteNumber}</p>}
       </div>
-      <div>
-        <Label>Fornecedor</Label>
-        <select className={sel} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
-          <option value="">— sem fornecedor —</option>
-          {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-        {suppliers.length === 0 && <p className="mt-1 text-xs text-medium">Nenhum fornecedor cadastrado. Peça ao Admin/Supervisor para cadastrar em Configurações → Fornecedores.</p>}
-      </div>
+      <Select
+        label="Fornecedor"
+        value={supplierId}
+        onValueChange={setSupplierId}
+        options={[{ value: '', label: '— sem fornecedor —' }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
+        hint={suppliers.length === 0 ? 'Nenhum fornecedor cadastrado. Peça ao Admin/Supervisor para cadastrar em Configurações → Fornecedores.' : undefined}
+      />
       {/* Forma de recebimento */}
       <div>
         <Label>Forma de recebimento</Label>
         <div className="flex gap-1">
-          <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-primary text-primary-foreground' : ''}`}>Granel (kg)</button>
-          <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-primary text-primary-foreground' : ''}`}>Botijão (P45)</button>
+          <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-brand text-on-brand' : ''}`}>Granel (kg)</button>
+          <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-brand text-on-brand' : ''}`}>Botijão (P45)</button>
         </div>
       </div>
 
@@ -347,10 +356,10 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
             <div><Label>Valor por kg (R$)</Label><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0,0000" /></div>
           </div>
           {total > 0 && (
-            <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 text-center">
-              <p className="text-xs text-muted-foreground">Valor total (calculado)</p>
-              <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
-              <p className="text-xs text-muted-foreground">{kg(price)}</p>
+            <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
+              <p className="text-xs text-ink-500">Valor total (calculado)</p>
+              <p className="text-2xl font-black text-ink-900">{formatBRL(total)}</p>
+              <p className="text-xs text-ink-500">{kg(price)}</p>
             </div>
           )}
         </>
@@ -363,9 +372,9 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
           </div>
           <div><Label>Botijões vazios devolvidos (troca)</Label><Input inputMode="numeric" value={cylReturned} onChange={(e) => setCylReturned(e.target.value.replace(/\D/g, ''))} placeholder="ex: 4" /></div>
           {cKg > 0 && cTotal > 0 && (
-            <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 text-center">
-              <p className="text-xs text-muted-foreground">{cc} botijão(ões) × {ck}kg = {cKg}kg · valor total {formatBRL(cTotal)}</p>
-              <p className="text-2xl font-black text-brand">{kg(cPricePerKg)}</p>
+            <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
+              <p className="text-xs text-ink-500">{cc} botijão(ões) × {ck}kg = {cKg}kg · valor total {formatBRL(cTotal)}</p>
+              <p className="text-2xl font-black text-ink-900">{kg(cPricePerKg)}</p>
             </div>
           )}
         </>
@@ -373,7 +382,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
 
       <div><Label>Observação (opcional)</Label><Input value={obs} onChange={(e) => setObs(e.target.value)} /></div>
 
-      {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
+      {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
       {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Save className="h-5 w-5" /> Registrar recebimento</Button>
     </div>
@@ -387,7 +396,7 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
   const [busy, setBusy] = useState(false);
   async function savePct() { setBusy(true); const r = await postAdmin({ entity: 'gas', action: 'setAlertPct', pct: Number(pct) }); setBusy(false); if (r.ok) router.refresh(); else alert(r.error ?? 'Falha'); }
 
-  if (d.totalReceipts === 0) return <p className="text-sm text-muted-foreground">Ainda não há recebimentos de gás no período. Lance o primeiro para ver os comparativos.</p>;
+  if (d.totalReceipts === 0) return <p className="text-sm text-ink-500">Ainda não há recebimentos de gás no período. Lance o primeiro para ver os comparativos.</p>;
 
   return (
     <div className="space-y-4">
@@ -400,7 +409,7 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
 
       {isAdmin && (
         <div className="flex items-end gap-2 rounded-lg border border-dashed p-2">
-          <div><label className="text-xs text-muted-foreground">Alertar acima de (%)</label><Input inputMode="numeric" value={pct} onChange={(e) => setPct(e.target.value)} className="h-9 w-24 text-sm" /></div>
+          <div><label className="text-xs text-ink-500">Alertar acima de (%)</label><Input inputMode="numeric" value={pct} onChange={(e) => setPct(e.target.value)} className="h-9 w-24 text-sm" /></div>
           <Button size="sm" variant="outline" disabled={busy} onClick={savePct}>Salvar limite</Button>
         </div>
       )}
@@ -409,17 +418,17 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
       <Compare title="Por fornecedor" rows={d.bySupplier} />
 
       <div>
-        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">Tendência mensal (preço médio/kg)</h2>
+        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Tendência mensal (preço médio/kg)</h2>
         <MonthlyBars points={d.monthly} />
       </div>
 
-      <a href="/modulos/gas/relatorio" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><TrendingUp className="h-4 w-4 text-accent" /> Relatório de variação (imprimir/PDF)</a>
+      <a href="/modulos/gas/relatorio" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><TrendingUp className="h-4 w-4 text-brand" /> Relatório de variação (imprimir/PDF)</a>
     </div>
   );
 }
 
 function Cell({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border bg-card py-3 text-center"><p className="text-base font-black text-brand">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div>;
+  return <div className="rounded-lg border bg-surface py-3 text-center"><p className="text-base font-black text-ink-900">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
 }
 
 function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
@@ -427,33 +436,33 @@ function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
   const max = Math.max(...rows.map((r) => r.avg), 0.0001);
   return (
     <div>
-      <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">{title}</h2>
-      <div className="space-y-2">
+      <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">{title}</h2>
+      <Group>
         {rows.map((r) => (
-          <div key={r.key} className="rounded-lg border bg-card p-2.5">
+          <div key={r.key} className="p-2.5">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-brand">{r.name}</span>
-              <span className="font-bold">{kg(r.avg)} <span className="text-xs font-normal text-muted-foreground">méd</span></span>
+              <span className="font-semibold text-ink-900">{r.name}</span>
+              <span className="font-bold">{kg(r.avg)} <span className="text-xs font-normal text-ink-500">méd</span></span>
             </div>
-            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${(r.avg / max) * 100}%` }} /></div>
-            <p className="mt-1 text-xs text-muted-foreground">{r.count} compra(s) · <b className="text-brand">{r.kg.toLocaleString('pt-BR')} kg</b> · último {kg(r.last)} · mín {kg(r.min)} · máx {kg(r.max)}</p>
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-brand" style={{ width: `${(r.avg / max) * 100}%` }} /></div>
+            <p className="mt-1 text-xs text-ink-500">{r.count} compra(s) · <b className="text-brand">{r.kg.toLocaleString('pt-BR')} kg</b> · último {kg(r.last)} · mín {kg(r.min)} · máx {kg(r.max)}</p>
           </div>
         ))}
-      </div>
+      </Group>
     </div>
   );
 }
 
 function MonthlyBars({ points }: { points: MonthPoint[] }) {
-  if (points.length === 0) return <p className="text-sm text-muted-foreground">Sem dados.</p>;
+  if (points.length === 0) return <p className="text-sm text-ink-500">Sem dados.</p>;
   const max = Math.max(...points.map((p) => p.avg), 0.0001);
   return (
-    <div className="flex items-end gap-2 rounded-lg border bg-card p-3" style={{ height: 140 }}>
+    <div className="flex items-end gap-2 rounded-lg border bg-surface p-3" style={{ height: 140 }}>
       {points.map((p) => (
         <div key={p.month} className="flex flex-1 flex-col items-center justify-end gap-1">
-          <span className="text-[10px] font-semibold text-brand">{p.avg.toFixed(2).replace('.', ',')}</span>
-          <div className="w-full rounded-t bg-accent" style={{ height: `${Math.max(4, (p.avg / max) * 90)}px` }} />
-          <span className="text-[10px] text-muted-foreground">{mlabel(p.month)}</span>
+          <span className="text-[10px] font-semibold text-ink-900">{p.avg.toFixed(2).replace('.', ',')}</span>
+          <div className="w-full rounded-t bg-brand" style={{ height: `${Math.max(4, (p.avg / max) * 90)}px` }} />
+          <span className="text-[10px] text-ink-500">{mlabel(p.month)}</span>
         </div>
       ))}
     </div>
@@ -479,7 +488,7 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
     (!unit || r.unit === unit) && (!supplier || r.supplier === supplier) &&
     (!q.trim() || r.date.includes(q.trim()) || r.by.toLowerCase().includes(q.trim().toLowerCase()) || String(r.qty).includes(q.trim()) || String(r.total).includes(q.trim())),
   ), [rows, q, unit, supplier]);
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhum recebimento registrado.</p>;
+  if (rows.length === 0) return <p className="text-sm text-ink-500">Nenhum recebimento registrado.</p>;
 
   function startEdit(r: GasRow) { setEditId(r.id); setEKg(String(r.qty).replace('.', ',')); setETotal(String(r.total).replace('.', ',')); }
   async function saveEdit(r: GasRow) {
@@ -492,46 +501,50 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
       if (res.ok) { setEditId(null); router.refresh(); } else { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha'); }
     } finally { setEBusy(false); }
   }
-
-  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar data/quem/kg/valor…" className="h-9 w-44 text-sm" />
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3">
+        <div className="min-w-[12rem] flex-1">
+          <SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="data, quem lançou, kg, valor…" />
+        </div>
         {unitNames.length > 1 && (
-          <select value={unit} onChange={(e) => setUnit(e.target.value)} className={sel}>
-            <option value="">Todas as unidades</option>
-            {unitNames.map((u) => <option key={u} value={u}>{u}</option>)}
-          </select>
+          <div className="min-w-[10rem] flex-1">
+            <Select
+              label="Unidade" size="sm" value={unit} onValueChange={setUnit}
+              options={[{ value: '', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
+            />
+          </div>
         )}
-        <select value={supplier} onChange={(e) => setSupplier(e.target.value)} className={sel}>
-          <option value="">Todos os fornecedores</option>
-          {supplierNames.map((sp2) => <option key={sp2} value={sp2}>{sp2}</option>)}
-        </select>
-        <span className="ml-auto text-xs text-muted-foreground">{shown.length} de {rows.length}</span>
+        <div className="min-w-[10rem] flex-1">
+          <Select
+            label="Fornecedor" size="sm" value={supplier} onValueChange={setSupplier}
+            options={[{ value: '', label: 'Todos os fornecedores' }, ...supplierNames.map((sp2) => ({ value: sp2, label: sp2 }))]}
+          />
+        </div>
+        <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{shown.length} de {rows.length}</span>
       </div>
       {shown.map((r) => {
         const tone: StatusTone = r.variation == null ? 'neutral' : r.variation > 0 ? (r.alerted ? 'critical' : 'medium') : 'success';
         return (
-          <div key={r.id} className="rounded-lg border bg-card p-3">
+          <div key={r.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-brand">{kg(r.price)} <span className="text-xs font-normal text-muted-foreground">· {r.unit}</span></p>
-                <p className="text-xs text-muted-foreground">{r.date} · {r.supplier} · {r.qty.toLocaleString('pt-BR')} kg · {formatBRL(r.total)}{r.by ? ` · ${r.by}` : ''}</p>
+                <p className="font-semibold text-ink-900">{kg(r.price)} <span className="text-xs font-normal text-ink-500">· {r.unit}</span></p>
+                <p className="text-xs text-ink-500">{r.date} · {r.supplier} · {r.qty.toLocaleString('pt-BR')} kg · {formatBRL(r.total)}{r.by ? ` · ${r.by}` : ''}</p>
               </div>
               {r.variation != null && (
                 <StatusBadge tone={tone}>{r.variation > 0 ? <TrendingUp className="mr-0.5 inline h-3 w-3" /> : <TrendingDown className="mr-0.5 inline h-3 w-3" />}{r.variation > 0 ? '+' : ''}{r.variation}%</StatusBadge>
               )}
             </div>
-            {r.alerted && <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-critical"><AlertTriangle className="h-3.5 w-3.5" /> Alta acima do limite</p>}
-            {r.dateEdited && <p className="mt-1 text-xs font-semibold text-critical">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
+            {r.alerted && <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-danger"><AlertTriangle className="h-3.5 w-3.5" /> Alta acima do limite</p>}
+            {r.dateEdited && <p className="mt-1 text-xs font-semibold text-danger">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
             {editId === r.id ? (
               <div className="mt-2 flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-2">
-                <div><span className="block text-[11px] text-muted-foreground">Quantidade (kg)</span><Input value={eKg} onChange={(e) => setEKg(e.target.value)} inputMode="decimal" className="h-9 w-28 text-sm" /></div>
-                <div><span className="block text-[11px] text-muted-foreground">Valor total (R$)</span><Input value={eTotal} onChange={(e) => setETotal(e.target.value)} inputMode="decimal" className="h-9 w-28 text-sm" /></div>
+                <div><span className="block text-[11px] text-ink-500">Quantidade (kg)</span><Input value={eKg} onChange={(e) => setEKg(e.target.value)} inputMode="decimal" className="h-9 w-28 text-sm" /></div>
+                <div><span className="block text-[11px] text-ink-500">Valor total (R$)</span><Input value={eTotal} onChange={(e) => setETotal(e.target.value)} inputMode="decimal" className="h-9 w-28 text-sm" /></div>
                 <Button size="sm" disabled={eBusy} onClick={() => void saveEdit(r)}>Salvar</Button>
                 <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>Cancelar</Button>
-                <span className="w-full text-[11px] text-muted-foreground">Correção de erro de lançamento — recalcula o preço/kg. Não interfere na meta do gerente.</span>
+                <span className="w-full text-[11px] text-ink-500">Correção de erro de lançamento — recalcula o preço/kg. Não interfere na meta do gerente.</span>
               </div>
             ) : (isAdmin || canEditDate) && (
               <div className="mt-2 flex flex-wrap gap-2">

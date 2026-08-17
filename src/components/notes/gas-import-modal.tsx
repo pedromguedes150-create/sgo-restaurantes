@@ -81,29 +81,29 @@ export function GasImportModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-3 print:hidden" onClick={onClose}>
-      <div className="my-4 w-full max-w-3xl rounded-2xl border bg-card p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="my-4 w-full max-w-3xl rounded-2xl border bg-surface p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-brand"><FileSpreadsheet className="h-5 w-5 text-accent" /> Importar notas de gás em lote (XLSX)</h2>
-          <button onClick={onClose} aria-label="Fechar" className="rounded-md p-1 text-muted-foreground hover:bg-secondary"><X className="h-5 w-5" /></button>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-ink-900"><FileSpreadsheet className="h-5 w-5 text-ink-900" /> Importar notas de gás em lote (XLSX)</h2>
+          <button onClick={onClose} aria-label="Fechar" className="rounded-md p-1 text-ink-500 hover:bg-sunken"><X className="h-5 w-5" /></button>
         </div>
 
         {(phase === 'idle' || phase === 'parsing') && (
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Envie o arquivo <strong>.xlsx</strong> no layout do modelo. Nada é gravado antes da sua confirmação na prévia.</p>
-            <a href="/Modelo_Importacao_Notas_Gas_SGO.xlsx" download className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline"><Download className="h-4 w-4" /> Baixar modelo</a>
-            <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed p-6 text-center hover:border-accent">
-              {phase === 'parsing' ? <Loader2 className="h-6 w-6 animate-spin text-accent" /> : <Upload className="h-6 w-6 text-accent" />}
-              <span className="text-sm font-semibold text-brand">{phase === 'parsing' ? `Lendo ${fileName}…` : 'Clique para escolher o arquivo .xlsx'}</span>
+            <p className="text-sm text-ink-500">Envie o arquivo <strong>.xlsx</strong> no layout do modelo. Nada é gravado antes da sua confirmação na prévia.</p>
+            <a href="/Modelo_Importacao_Notas_Gas_SGO.xlsx" download className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"><Download className="h-4 w-4" /> Baixar modelo</a>
+            <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed p-6 text-center hover:border-brand">
+              {phase === 'parsing' ? <Loader2 className="h-6 w-6 animate-spin text-brand" /> : <Upload className="h-6 w-6 text-brand" />}
+              <span className="text-sm font-semibold text-ink-900">{phase === 'parsing' ? `Lendo ${fileName}…` : 'Clique para escolher o arquivo .xlsx'}</span>
               <input type="file" accept=".xlsx" className="hidden" disabled={phase === 'parsing'} onChange={(e) => { const f = e.target.files?.[0]; if (f) void onFile(f); e.currentTarget.value = ''; }} />
             </label>
-            {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
+            {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
           </div>
         )}
 
         {(phase === 'preview' || phase === 'committing' || phase === 'done') && summary && (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-muted-foreground">{fileName} · {summary.total} linha(s):</span>
+              <span className="text-ink-500">{fileName} · {summary.total} linha(s):</span>
               <StatusBadge tone="success">{committed ? committed.imported : summary.ok} {committed ? 'importadas' : 'OK'}</StatusBadge>
               <StatusBadge tone="neutral">{committed ? committed.duplicadas : summary.duplicadas} duplicada(s)</StatusBadge>
               <StatusBadge tone="critical">{committed ? committed.erros : summary.erros} erro(s)</StatusBadge>
@@ -117,7 +117,7 @@ export function GasImportModal({ onClose }: { onClose: () => void }) {
 
             <div className="max-h-[46vh] overflow-auto rounded-lg border">
               <table className="w-full text-left text-xs tabular-nums">
-                <thead className="sticky top-0 bg-secondary text-muted-foreground">
+                <thead className="sticky top-0 bg-sunken text-ink-500">
                   <tr>
                     <th className="px-2 py-1.5">Linha</th><th className="px-2 py-1.5">Status</th><th className="px-2 py-1.5">Empresa</th>
                     <th className="px-2 py-1.5">Nº</th><th className="px-2 py-1.5">Emissão</th><th className="px-2 py-1.5 text-right">Qtd</th>
@@ -127,21 +127,21 @@ export function GasImportModal({ onClose }: { onClose: () => void }) {
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.line} className="border-t">
-                      <td className="px-2 py-1 text-muted-foreground">{r.line}</td>
+                      <td className="px-2 py-1 text-ink-500">{r.line}</td>
                       <td className="px-2 py-1"><StatusBadge tone={TONE[r.status]}>{STLABEL[r.status]}</StatusBadge></td>
                       <td className="px-2 py-1 max-w-[10rem] truncate">{r.preview.empresa}</td>
                       <td className="px-2 py-1">{r.preview.numero}</td>
                       <td className="px-2 py-1">{r.preview.emissao ? String(r.preview.emissao).split('-').reverse().join('/') : ''}</td>
                       <td className="px-2 py-1 text-right">{r.preview.quantidade}</td>
                       <td className="px-2 py-1 text-right">{r.preview.preco}</td>
-                      <td className="px-2 py-1 text-muted-foreground">{r.motivo ?? (r.aviso ? `⚠ ${r.aviso}` : '')}</td>
+                      <td className="px-2 py-1 text-ink-500">{r.motivo ?? (r.aviso ? `⚠ ${r.aviso}` : '')}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
+            {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
 
             <div className="flex flex-wrap justify-end gap-2">
               {errosOuDup > 0 && <Button size="sm" variant="outline" onClick={downloadErrors}><Download className="h-4 w-4" /> Relatório de erros (XLSX)</Button>}

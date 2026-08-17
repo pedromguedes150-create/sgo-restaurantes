@@ -4,12 +4,13 @@ import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { CommandsConfigAdmin } from '@/components/admin/commands-config-admin';
 import { ArrowLeft } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ComandasConfigPage() {
   const user = (await getSessionUser())!;
-  if (user.role !== 'ADMIN') return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
+  if (user.role !== 'ADMIN') return <p className="text-sm text-ink-500">Restrito ao Administrador.</p>;
 
   const [units, sequences] = await Promise.all([
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
@@ -18,8 +19,8 @@ export default async function ComandasConfigPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Comandas — sequências por unidade</h1>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <LargeTitle title="Comandas — sequências por unidade" />
       <Card><CardContent className="pt-4">
         <CommandsConfigAdmin units={units} sequences={sequences} />
       </CardContent></Card>

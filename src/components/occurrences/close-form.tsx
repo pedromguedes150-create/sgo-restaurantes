@@ -6,6 +6,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DatePicker } from '@/components/ui/ds/date-picker';
 
 /** Encerramento de ocorrência (Supervisor/Admin): justificativa + ação corretiva + data de revisão. */
 export function CloseForm({ occurrenceId }: { occurrenceId: string }) {
@@ -49,7 +50,7 @@ export function CloseForm({ occurrenceId }: { occurrenceId: string }) {
         <textarea
           id="just"
           rows={3}
-          className="w-full rounded-lg border-2 border-input bg-background p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full rounded-lg border-2 border-line-strong bg-surface p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           value={justification}
           onChange={(e) => setJustification(e.target.value)}
         />
@@ -59,17 +60,14 @@ export function CloseForm({ occurrenceId }: { occurrenceId: string }) {
         <textarea
           id="ca"
           rows={3}
-          className="w-full rounded-lg border-2 border-input bg-background p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full rounded-lg border-2 border-line-strong bg-surface p-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           value={correctiveAction}
           onChange={(e) => setCorrectiveAction(e.target.value)}
         />
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="rev">Data de revisão</Label>
-        <Input id="rev" type="date" value={reviewDate} onChange={(e) => setReviewDate(e.target.value)} />
-      </div>
+      <DatePicker label="Data de revisão" value={reviewDate || null} onValueChange={(v) => setReviewDate(v ?? '')} />
 
-      {error && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{error}</p>}
+      {error && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{error}</p>}
 
       <Button onClick={submit} disabled={loading} size="lg" className="w-full" variant="default">
         {loading ? 'Encerrando…' : (<><CheckCircle2 className="h-5 w-5" /> Encerrar ocorrência</>)}

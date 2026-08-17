@@ -5,11 +5,20 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Megaphone, Plus, X, Paperclip, LinkIcon, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { postAdmin } from '@/lib/admin-client';
+import { Select } from '@/components/ui/ds/select';
+import { DateTimePicker } from '@/components/ui/ds/date-time-picker';
+
+const PRIORIDADES = [
+  { value: 'NORMAL', label: 'Normal' },
+  { value: 'IMPORTANT', label: 'Importante' },
+  { value: 'URGENT', label: 'Urgente' },
+];
 
 type Priority = 'NORMAL' | 'IMPORTANT' | 'URGENT';
 export interface InboxItem { recipientId: string; communicationId: string; status: 'PENDING' | 'CONFIRMED'; late: boolean; dueAt: string; title: string; priority: Priority; pinned: boolean; author: string; attachments: number }
@@ -39,13 +48,12 @@ export function CommunicationsClient({ canAuthor, isAdmin, weight, units, people
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {tabs.filter((t) => t.show).map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
-            {t.label}{t.badge ? <span className="ml-1 rounded-full bg-critical px-1.5 text-xs text-white">{t.badge}</span> : null}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        aria-label="Seções da Central de Comunicação"
+        value={tab}
+        onValueChange={setTab}
+        options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label, badge: t.badge, badgeTone: 'danger' as const }))}
+      />
 
       {tab === 'recebidos' && <Inbox items={inbox} />}
       {tab === 'novo' && canAuthor && <Compose units={units} people={people} />}
@@ -56,19 +64,19 @@ export function CommunicationsClient({ canAuthor, isAdmin, weight, units, people
 
 /* ───────── Caixa de entrada (gerente) ───────── */
 function Inbox({ items }: { items: InboxItem[] }) {
-  if (items.length === 0) return <p className="text-sm text-muted-foreground">Nenhum comunicado para você.</p>;
+  if (items.length === 0) return <p className="text-sm text-ink-500">Nenhum comunicado para você.</p>;
   const pending = items.filter((i) => i.status === 'PENDING');
   const done = items.filter((i) => i.status === 'CONFIRMED');
   return (
     <div className="space-y-4">
       <section className="space-y-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">A confirmar ({pending.length})</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">A confirmar ({pending.length})</h2>
         {pending.length === 0 && <p className="text-sm text-success">Tudo confirmado. 🎉</p>}
         {pending.map((i) => <InboxCard key={i.recipientId} i={i} />)}
       </section>
       {done.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Confirmados ({done.length})</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Confirmados ({done.length})</h2>
           {done.map((i) => <InboxCard key={i.recipientId} i={i} />)}
         </section>
       )}
@@ -84,15 +92,15 @@ function InboxCard({ i }: { i: InboxItem }) {
   const prio = PRIO[i.priority];
   return (
     <Link href={`/modulos/comunicacao/${i.communicationId}`}>
-      <div className="rounded-lg border bg-card p-3 transition-colors hover:border-accent">
+      <div className="rounded-lg border bg-surface p-3 transition-colors hover:border-brand">
         <div className="flex items-start justify-between gap-2">
-          <p className="flex items-center gap-1.5 font-semibold text-brand">
-            {i.pinned && <Pin className="h-4 w-4 text-gold" />}{i.title}
+          <p className="flex items-center gap-1.5 font-semibold text-ink-900">
+            {i.pinned && <Pin className="h-4 w-4 text-ink-700" />}{i.title}
           </p>
           <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
         </div>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {prio && <span className="font-semibold text-medium">{prio.label} · </span>}por {i.author} · prazo {fmt(i.dueAt)}{i.attachments > 0 ? ` · ${i.attachments} anexo(s)` : ''}
+        <p className="mt-0.5 text-xs text-ink-500">
+          {prio && <span className="font-semibold text-warning">{prio.label} · </span>}por {i.author} · prazo {fmt(i.dueAt)}{i.attachments > 0 ? ` · ${i.attachments} anexo(s)` : ''}
         </p>
       </div>
     </Link>
@@ -114,24 +122,24 @@ function Panel({ items, isAdmin, weight }: { items: AuthoredItem[]; isAdmin: boo
     <div className="space-y-3">
       {isAdmin && (
         <div className="flex items-end gap-2 rounded-lg border border-dashed p-2">
-          <div><label className="text-xs text-muted-foreground">Peso de Comunicados na meta</label><Input inputMode="numeric" value={w} onChange={(e) => setW(e.target.value)} className="h-9 w-24 text-sm" /></div>
+          <div><label className="text-xs text-ink-500">Peso de Comunicados na meta</label><Input inputMode="numeric" value={w} onChange={(e) => setW(e.target.value)} className="h-9 w-24 text-sm" /></div>
           <Button size="sm" variant="outline" disabled={busy} onClick={saveWeight}>Salvar peso</Button>
         </div>
       )}
-      {items.length === 0 && <p className="text-sm text-muted-foreground">Nenhum comunicado publicado ainda.</p>}
+      {items.length === 0 && <p className="text-sm text-ink-500">Nenhum comunicado publicado ainda.</p>}
       {items.map((c) => {
         const pct = c.total === 0 ? 0 : Math.round((c.confirmed / c.total) * 100);
         const prio = PRIO[c.priority];
         return (
           <Link key={c.id} href={`/modulos/comunicacao/${c.id}`}>
-            <div className="rounded-lg border bg-card p-3 transition-colors hover:border-accent">
+            <div className="rounded-lg border bg-surface p-3 transition-colors hover:border-brand">
               <div className="flex items-start justify-between gap-2">
-                <p className="flex items-center gap-1.5 font-semibold text-brand">{c.pinned && <Pin className="h-4 w-4 text-gold" />}{c.title}</p>
-                <span className="text-sm font-bold text-brand">{c.confirmed}/{c.total}</span>
+                <p className="flex items-center gap-1.5 font-semibold text-ink-900">{c.pinned && <Pin className="h-4 w-4 text-ink-700" />}{c.title}</p>
+                <span className="text-sm font-bold text-ink-900">{c.confirmed}/{c.total}</span>
               </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">{prio && <span className="font-semibold text-medium">{prio.label} · </span>}prazo {fmt(c.dueAt)} · {c.units.length ? c.units.join(', ') : 'destinatários avulsos'}</p>
-              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} /></div>
-              {c.pending > 0 && <p className="mt-1 text-xs text-medium">{c.pending} pendente(s)</p>}
+              <p className="mt-0.5 text-xs text-ink-500">{prio && <span className="font-semibold text-warning">{prio.label} · </span>}prazo {fmt(c.dueAt)} · {c.units.length ? c.units.join(', ') : 'destinatários avulsos'}</p>
+              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} /></div>
+              {c.pending > 0 && <p className="mt-1 text-xs text-warning">{c.pending} pendente(s)</p>}
             </div>
           </Link>
         );
@@ -157,7 +165,7 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
   const [err, setErr] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
 
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
+  const sel = 'h-11 w-full rounded-lg border-2 border-line-strong bg-surface px-3 text-sm';
 
   async function submit() {
     setErr(null); setOkMsg(null);
@@ -185,15 +193,11 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
   return (
     <div className="space-y-3">
       <div><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ex: Padrão da vitrine para o fim de semana" /></div>
-      <div><Label>Mensagem</Label><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="w-full rounded-lg border-2 border-input bg-background px-3 py-2 text-sm" placeholder="Escreva o comunicado…" /></div>
+      <div><Label>Mensagem</Label><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="w-full rounded-lg border-2 border-line-strong bg-surface px-3 py-2 text-sm" placeholder="Escreva o comunicado…" /></div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>Prioridade</Label>
-          <select className={sel} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-            <option value="NORMAL">Normal</option><option value="IMPORTANT">Importante</option><option value="URGENT">Urgente</option>
-          </select>
-        </div>
-        <div><Label>Prazo de confirmação</Label><Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></div>
+        <Select label="Prioridade" value={priority} onValueChange={(v) => setPriority(v as Priority)} options={PRIORIDADES} />
+        <DateTimePicker label="Prazo de confirmação" value={dueAt} onValueChange={setDueAt} />
       </div>
 
       <div className="flex flex-wrap gap-4 text-sm">
@@ -218,7 +222,7 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
           <div key={idx} className="mt-1 grid grid-cols-12 gap-1">
             <Input value={l.label} onChange={(e) => setLinks(links.map((x, i) => i === idx ? { ...x, label: e.target.value } : x))} placeholder="Rótulo" className="col-span-4 h-9 text-sm" />
             <Input value={l.url} onChange={(e) => setLinks(links.map((x, i) => i === idx ? { ...x, url: e.target.value } : x))} placeholder="https://…" className="col-span-7 h-9 text-sm" />
-            <Button size="sm" variant="ghost" className="col-span-1 text-critical" onClick={() => setLinks(links.filter((_, i) => i !== idx))} aria-label="Remover link"><X className="h-4 w-4" /></Button>
+            <Button size="sm" variant="ghost" className="col-span-1 text-danger" onClick={() => setLinks(links.filter((_, i) => i !== idx))} aria-label="Remover link"><X className="h-4 w-4" /></Button>
           </div>
         ))}
         <Button size="sm" variant="outline" className="mt-1" onClick={() => setLinks([...links, { label: '', url: '' }])}><Plus className="h-4 w-4" /> Adicionar link</Button>
@@ -228,10 +232,10 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
       <div>
         <Label className="flex items-center gap-1"><Paperclip className="h-4 w-4" /> Anexos (fotos/PDF)</Label>
         <input type="file" multiple accept="image/*,application/pdf" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} className="block w-full text-sm" />
-        {files.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{files.length} arquivo(s) selecionado(s)</p>}
+        {files.length > 0 && <p className="mt-1 text-xs text-ink-500">{files.length} arquivo(s) selecionado(s)</p>}
       </div>
 
-      {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
+      {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
       {okMsg && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{okMsg}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Megaphone className="h-5 w-5" /> Publicar comunicado</Button>
     </div>

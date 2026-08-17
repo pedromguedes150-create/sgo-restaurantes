@@ -8,6 +8,7 @@ import { getLateEntryPenaltyPct } from '@/lib/late-entry';
 import { getWasteMetaWeight, getCommandsMetaWeight } from '@/lib/metas/config';
 import { Card, CardContent } from '@/components/ui/card';
 import { MetaConfigClient, type MetaComponentUI } from '@/components/metas/meta-config-client';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ export const dynamic = 'force-dynamic';
 export default async function MetaConfigPage() {
   const user = (await getSessionUser())!;
   if (!['ADMIN', 'SUPERVISOR', 'CEO'].includes(user.role)) {
-    return <p className="text-sm text-muted-foreground">Restrito à Supervisão/Administração.</p>;
+    return <p className="text-sm text-ink-500">Restrito à Supervisão/Administração.</p>;
   }
   const [training, communication, evaluation, penalty, waste, commands] = await Promise.all([
     getTrainingWeight(), getCommunicationWeight(), getEvaluationWeight(), getLateEntryPenaltyPct(), getWasteMetaWeight(), getCommandsMetaWeight(),
@@ -33,10 +34,9 @@ export default async function MetaConfigPage() {
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/metas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Metas</Link>
+      <Link href="/modulos/metas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Metas</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><SlidersHorizontal className="h-5 w-5 text-accent" /> Configuração da Meta</h1>
-        <p className="text-sm text-muted-foreground">Tudo que pode contar na meta do gerente, num lugar só. Pesos novos nascem em 0 (desligados) — ligue quando a equipe estiver pronta.</p>
+        <LargeTitle title="Configuração da Meta" subtitle="Tudo que pode contar na meta do gerente, num lugar só. Pesos novos nascem em 0 (desligados) — ligue quando a equipe estiver pronta." />
       </div>
       <Card><CardContent className="pt-4">
         <MetaConfigClient components={components} canEdit={user.role === 'ADMIN'} />

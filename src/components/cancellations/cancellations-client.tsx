@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatBRL } from '@/lib/utils';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 
 interface Reason { id: string; name: string }
 interface Unit { id: string; name: string }
@@ -52,40 +54,38 @@ export function CancellationsClient({
     }
   }
 
-  const selectClass = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   return (
     <div className="space-y-5">
       {isAdmin && <ImportForm units={units} onDone={() => router.refresh()} />}
 
       <div className="space-y-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">
           Pendentes de justificativa ({pending.length})
         </h2>
-        {pending.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma pendência. 🟢</p>}
-        {msg && <p className={msg.t === 'ok' ? 'text-sm text-success' : 'text-sm text-critical'}>{msg.m}</p>}
+        {pending.length === 0 && <p className="text-sm text-ink-500">Nenhuma pendência. 🟢</p>}
+        {msg && <p className={msg.t === 'ok' ? 'text-sm text-success' : 'text-sm text-danger'}>{msg.m}</p>}
 
         {pending.map((c) => (
-          <div key={c.id} className="rounded-lg border bg-card p-3">
+          <div key={c.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-brand">Cupom {c.coupon}</p>
-              <span className="font-bold text-critical">{formatBRL(c.value)}</span>
+              <p className="font-semibold text-ink-900">Cupom {c.coupon}</p>
+              <span className="font-bold text-danger">{formatBRL(c.value)}</span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-ink-500">
               {c.unit}
               {c.operator && ` · operador ${c.operator}`}
             </p>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <select
-                className={selectClass}
-                value={sel[c.id]?.reasonId ?? ''}
-                onChange={(e) => setSel((s) => ({ ...s, [c.id]: { reasonId: e.target.value, note: s[c.id]?.note ?? '' } }))}
-              >
-                <option value="">Motivo…</option>
-                {reasons.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
+              <div className="flex-1">
+                <Select
+                  aria-label={`Motivo do cancelamento do cupom ${c.coupon}`}
+                  placeholder="Motivo…"
+                  value={sel[c.id]?.reasonId ?? ''}
+                  onValueChange={(v) => setSel((s) => ({ ...s, [c.id]: { reasonId: v, note: s[c.id]?.note ?? '' } }))}
+                  options={reasons.map((r) => ({ value: r.id, label: r.name }))}
+                />
+              </div>
               <Input
                 placeholder="observação (opcional)"
                 value={sel[c.id]?.note ?? ''}
@@ -128,18 +128,13 @@ function ImportForm({ units, onDone }: { units: Unit[]; onDone: () => void }) {
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Importar Teknisa (Excel/CSV) — Admin</h2>
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Importar Teknisa (Excel/CSV) — Admin</h2>
       <div className="space-y-2">
-        <div>
-          <Label htmlFor="iu">Unidade</Label>
-          <select id="iu" className="mt-1 h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
+        <Select label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
         <input type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="block w-full text-sm" />
-        <p className="text-[11px] text-muted-foreground">Relatório Relação de Cupons SAT/NFC-e (Teknisa). Traz nº do cupom e valor; linhas de total são ignoradas.</p>
+        <p className="text-[11px] text-ink-500">Relatório Relação de Cupons SAT/NFC-e (Teknisa). Traz nº do cupom e valor; linhas de total são ignoradas.</p>
         <Button onClick={submit} disabled={busy} className="w-full"><Upload className="h-4 w-4" /> Importar</Button>
-        {msg && <p className="text-sm font-medium text-muted-foreground">{msg}</p>}
+        {msg && <p className="text-sm font-medium text-ink-500">{msg}</p>}
       </div>
     </div>
   );

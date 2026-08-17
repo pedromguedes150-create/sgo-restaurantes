@@ -9,6 +9,7 @@ import { isSupervisory } from '@/lib/roles';
 import { Card, CardContent } from '@/components/ui/card';
 import { NotesClient } from '@/components/notes/notes-client';
 import { formatBRL } from '@/lib/utils';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,11 +38,11 @@ export default async function NotasPage({ searchParams }: { searchParams: { dias
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-brand">Notas Recebidas</h1>
+      <LargeTitle title="Notas Recebidas" />
       <div className="grid grid-cols-3 gap-2">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{summary.received}</p><p className="text-xs text-muted-foreground">a pagar</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-critical">{summary.problem}</p><p className="text-xs text-muted-foreground">c/ problema</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-base font-black text-brand">{formatBRL(summary.monthValue)}</p><p className="text-xs text-muted-foreground">no mês</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.received}</p><p className="text-xs text-ink-500">a pagar</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.problem}</p><p className="text-xs text-ink-500">c/ problema</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-base font-black text-ink-900">{formatBRL(summary.monthValue)}</p><p className="text-xs text-ink-500">no mês</p></CardContent></Card>
       </div>
       <Card>
         <CardContent className="pt-4">

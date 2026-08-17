@@ -5,15 +5,21 @@ import { useRouter } from 'next/navigation';
 import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock } from 'lucide-react';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
-import { FilterBar, FilterField, FilterSelect } from '@/components/ui/filter-bar';
+import { FilterBar, FilterSelect } from '@/components/ui/filter-bar';
+import { Select as DsSelect } from '@/components/ui/ds/select';
+import { SearchField } from '@/components/ui/ds/field';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 import { QrScanner } from '@/components/notes/qr-scanner';
 import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 import { GasClient, type GasDash, type GasRow, type GasContractUI, type PurchasedUI } from '@/components/gas/gas-client';
 import { GasImportModal } from '@/components/notes/gas-import-modal';
+import { Group } from '@/components/ui/ds/group';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null; isGas?: boolean }
@@ -76,13 +82,14 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 print:hidden">
-        {tabs.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
-            {t.label}
-          </button>
-        ))}
+        <SegmentedControl
+          aria-label="Seções de Notas Recebidas"
+          value={tab}
+          onValueChange={setTab}
+          options={tabs.map((t) => ({ value: t.key, label: t.label }))}
+        />
         {canManage && (
-          <button onClick={() => setShowImport(true)} className="ml-auto inline-flex items-center gap-1.5 rounded-full border-2 border-accent px-3 py-1.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/10">
+          <button onClick={() => setShowImport(true)} className="ml-auto inline-flex items-center gap-1.5 rounded-full border-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10">
             <FileSpreadsheet className="h-4 w-4" /> Importar em lote (XLSX)
           </button>
         )}
@@ -155,55 +162,69 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
     );
   }, [notes, q, supplier, unit, st]);
   const total = filtered.reduce((s, n) => s + n.value, 0);
-  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
   const exportHref = `/api/notes/export?dias=${sinceDays}${unit !== 'ALL' ? `&unidade=${encodeURIComponent(unit)}` : ''}${supplier !== 'ALL' ? `&fornecedor=${encodeURIComponent(supplier)}` : ''}${st !== 'ALL' ? `&status=${st}` : ''}`;
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2 print:hidden">
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar fornecedor, nº, CNPJ, produto, obs., valor…" className="h-9 w-56 text-sm" />
-        <select value={supplier} onChange={(e) => setSupplier(e.target.value)} className={sel}>
-          <option value="ALL">Todos os fornecedores</option>
-          {supplierNames.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3 print:hidden">
+        <div className="min-w-[14rem] flex-1">
+          <SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="fornecedor, nº, CNPJ, produto, valor…" />
+        </div>
+        <div className="min-w-[10rem] flex-1">
+          <DsSelect
+            label="Fornecedor" size="sm" value={supplier} onValueChange={setSupplier}
+            options={[{ value: 'ALL', label: 'Todos os fornecedores' }, ...supplierNames.map((s) => ({ value: s, label: s }))]}
+          />
+        </div>
         {units.length > 1 && (
-          <select value={unit} onChange={(e) => setUnit(e.target.value)} className={sel}>
-            <option value="ALL">Todas as unidades</option>
-            {units.map((u) => <option key={u.id} value={u.name}>{u.name}</option>)}
-          </select>
+          <div className="min-w-[10rem] flex-1">
+            <DsSelect
+              label="Unidade" size="sm" value={unit} onValueChange={setUnit}
+              options={[{ value: 'ALL', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.name, label: shortUnitName(u.name) }))]}
+            />
+          </div>
         )}
-        <select value={st} onChange={(e) => setStatus(e.target.value as typeof st)} className={sel}>
-          <option value="ALL">Todos os status</option>
-          <option value="RECEIVED">Recebida</option>
-          <option value="PROBLEM">Com problema</option>
-          <option value="RETURNED">Devolvida</option>
-          <option value="PAID">Paga (legado)</option>
-        </select>
-        <select value={sinceDays} onChange={(e) => router.push(`/modulos/notas?dias=${e.target.value}`)} className={sel}>
-          {PERIODS.map((p) => <option key={p.dias} value={p.dias}>{p.label}</option>)}
-        </select>
-        <span className="ml-auto text-xs text-muted-foreground">{filtered.length} de {notes.length}</span>
+        <div className="min-w-[10rem] flex-1">
+          <DsSelect
+            label="Status" size="sm" value={st} onValueChange={(v) => setStatus(v as typeof st)}
+            options={[
+              { value: 'ALL', label: 'Todos os status' },
+              { value: 'RECEIVED', label: 'Recebida' },
+              { value: 'PROBLEM', label: 'Com problema' },
+              { value: 'RETURNED', label: 'Devolvida' },
+              { value: 'PAID', label: 'Paga (legado)' },
+            ]}
+          />
+        </div>
+        <div className="min-w-[10rem] flex-1">
+          <DsSelect
+            label="Período" size="sm" value={String(sinceDays)}
+            onValueChange={(v) => router.push(`/modulos/notas?dias=${v}`)}
+            options={PERIODS.map((p) => ({ value: String(p.dias), label: p.label }))}
+          />
+        </div>
+        <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{filtered.length} de {notes.length}</span>
       </div>
 
       {full && (
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <div className="grid flex-1 grid-cols-2 gap-2">
-            <div className="rounded-lg border bg-card p-3 text-center"><p className="text-2xl font-black text-brand">{filtered.length}</p><p className="text-xs text-muted-foreground">notas</p></div>
-            <div className="rounded-lg border bg-card p-3 text-center"><p className="text-xl font-black text-brand">{formatBRL(total)}</p><p className="text-xs text-muted-foreground">valor total</p></div>
+            <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-2xl font-black text-ink-900">{filtered.length}</p><p className="text-xs text-ink-500">notas</p></div>
+            <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-xl font-black text-ink-900">{formatBRL(total)}</p><p className="text-xs text-ink-500">valor total</p></div>
           </div>
           <div className="flex flex-col gap-1.5">
-            <a href={exportHref} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"><FileSpreadsheet className="h-3.5 w-3.5 text-accent" /> Excel</a>
-            <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"><Printer className="h-3.5 w-3.5 text-accent" /> Imprimir/PDF</button>
+            <a href={exportHref} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"><FileSpreadsheet className="h-3.5 w-3.5 text-brand" /> Excel</a>
+            <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"><Printer className="h-3.5 w-3.5 text-brand" /> Imprimir/PDF</button>
           </div>
         </div>
       )}
 
-      <div className="space-y-2">
-        {filtered.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma nota com esses filtros no período.</p>}
+      {filtered.length === 0 && <p className="text-sm text-ink-500">Nenhuma nota com esses filtros no período.</p>}
+      <Group>
         {filtered.map((n) => (
           <NoteCard key={n.id} n={n} canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={onStatus} full={full} />
         ))}
-      </div>
+      </Group>
     </div>
   );
 }
@@ -247,7 +268,7 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
 
   if (editing) {
     return (
-      <div className="rounded-lg border-2 border-accent/40 bg-card p-3">
+      <div className="rounded-lg border-2 border-brand/40 bg-surface p-3">
         <div className="grid grid-cols-1 gap-2">
           <div><Label className="text-xs">Fornecedor</Label><Input value={f.supplierName} onChange={(e) => set('supplierName', e.target.value)} className="h-9 text-sm" /></div>
           <div className="grid grid-cols-2 gap-2">
@@ -255,15 +276,15 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
             <div><Label className="text-xs">Número</Label><Input value={f.number} onChange={(e) => set('number', e.target.value)} className="h-9 text-sm" /></div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label className="text-xs">Emissão</Label><Input type="date" value={f.issueDate} onChange={(e) => set('issueDate', e.target.value)} className="h-9 text-sm" /></div>
-            <div><Label className="text-xs">Vencimento</Label><Input type="date" value={f.dueDate} onChange={(e) => set('dueDate', e.target.value)} className="h-9 text-sm" /></div>
+            <DatePicker label="Emissão" size="sm" value={f.issueDate || null} onValueChange={(v) => set('issueDate', v ?? '')} />
+            <DatePicker label="Vencimento" size="sm" value={f.dueDate || null} onValueChange={(v) => set('dueDate', v ?? '')} min={f.issueDate || undefined} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Valor (R$)</Label><Input inputMode="decimal" value={f.totalValue} onChange={(e) => set('totalValue', e.target.value)} className="h-9 text-sm" /></div>
             <div><Label className="text-xs">Produto</Label><Input value={f.productType} onChange={(e) => set('productType', e.target.value)} className="h-9 text-sm" /></div>
           </div>
           <div><Label className="text-xs">Observação</Label><Input value={f.observation} onChange={(e) => set('observation', e.target.value)} className="h-9 text-sm" /></div>
-          {err && <p className="text-sm font-medium text-critical">{err}</p>}
+          {err && <p className="text-sm font-medium text-danger">{err}</p>}
           <div className="flex justify-end gap-1">
             <Button size="sm" variant="ghost" onClick={() => setEditing(false)}><X className="h-4 w-4" /> Cancelar</Button>
             <Button size="sm" disabled={saving} onClick={save}><Save className="h-4 w-4" /> Salvar</Button>
@@ -274,31 +295,31 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
   }
 
   return (
-    <div className="rounded-lg border bg-card p-3">
+    <div className="p-3">
       <div className="flex items-center justify-between">
-        <p className="font-semibold text-brand">{n.supplier}</p>
+        <p className="font-semibold text-ink-900">{n.supplier}</p>
         <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-ink-500">
         {n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${fmtBR(n.dueDate)}` : ''}
         {n.requestedAt ? ` · lançada ${new Date(n.requestedAt).toLocaleDateString('pt-BR')}` : ''}
         {n.createdByName ? ` por ${n.createdByName}` : ''}
       </p>
       {full && (
-        <p className="mt-0.5 text-xs text-muted-foreground">
+        <p className="mt-0.5 text-xs text-ink-500">
           {n.cnpj ? `CNPJ ${n.cnpj} · ` : ''}{n.issueDate ? `emissão ${fmtBR(n.issueDate)} · ` : ''}{n.productType ? `produto: ${n.productType}` : 'sem tipo de produto'}
         </p>
       )}
       {n.supervisorLaunched && (
-        <p className="mt-0.5 text-xs font-semibold text-critical">Lançada pela supervisão (gerente não lançou) — desconta na meta</p>
+        <p className="mt-0.5 text-xs font-semibold text-danger">Lançada pela supervisão (gerente não lançou) — desconta na meta</p>
       )}
       {n.dateEdited && (
-        <p className="mt-0.5 text-xs font-semibold text-critical">
+        <p className="mt-0.5 text-xs font-semibold text-danger">
           Data corrigida{n.entryDate ? ` p/ ${new Date(n.entryDate).toLocaleDateString('pt-BR')}` : ''}{n.dateEditedByName ? ` por ${n.dateEditedByName}` : ''} — desconta na meta
         </p>
       )}
-      {n.observation && <p className="mt-1 text-xs text-muted-foreground">Obs.: {n.observation}</p>}
-      {n.problemNote && <p className="mt-1 text-xs text-critical">{n.status === 'RETURNED' ? 'Devolução' : 'Problema'}: {n.problemNote}</p>}
+      {n.observation && <p className="mt-1 text-xs text-ink-500">Obs.: {n.observation}</p>}
+      {n.problemNote && <p className="mt-1 text-xs text-danger">{n.status === 'RETURNED' ? 'Devolução' : 'Problema'}: {n.problemNote}</p>}
       <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
         {canManage && <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Ver/Editar</Button>}
         {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setDateEditing((v) => !v)}><Pencil className="h-4 w-4" /> Editar data</Button>}
@@ -354,36 +375,56 @@ function DueTracking({ units }: { units: Unit[] }) {
 
   return (
     <div className="space-y-3">
-      <p className="rounded-md bg-accent/10 px-3 py-2 text-xs text-muted-foreground">
+      <p className="rounded-md bg-brand/10 px-3 py-2 text-xs text-ink-500">
         Foco nos boletos <strong>a vencer</strong> — a supervisão e o financeiro são avisados automaticamente dos próximos vencimentos (o pagamento em si é controlado pelo financeiro). Inclui notas comuns e recebimentos de gás.
       </p>
       <FilterBar active={activeCount} onClear={clear}>
         {units.length > 1 && (
-          <FilterField label="Unidade"><FilterSelect value={unitId} onChange={(e) => setUnitId(e.target.value)}><option value="">Todas</option>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</FilterSelect></FilterField>
+          <FilterSelect
+            label="Unidade"
+            value={unitId}
+            onValueChange={setUnitId}
+            options={[{ value: '', label: 'Todas' }, ...units.map((u) => ({ value: u.id, label: u.name }))]}
+          />
         )}
-        <FilterField label="Fornecedor"><FilterSelect value={supplier} onChange={(e) => setSupplier(e.target.value)}><option value="">Todos</option>{suppliers.map((s) => <option key={s} value={s}>{s}</option>)}</FilterSelect></FilterField>
-        <FilterField label="Janela"><FilterSelect value={dias} onChange={(e) => setDias(e.target.value)}><option value="7">7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option><option value="60">60 dias</option><option value="90">90 dias</option></FilterSelect></FilterField>
-        <FilterField label="Vencidos"><FilterSelect value={vencidos} onChange={(e) => setVencidos(e.target.value)}><option value="0">Só a vencer</option><option value="1">Incluir vencidos</option></FilterSelect></FilterField>
+        <FilterSelect
+          label="Fornecedor"
+          value={supplier}
+          onValueChange={setSupplier}
+          options={[{ value: '', label: 'Todos' }, ...suppliers.map((s) => ({ value: s, label: s }))]}
+        />
+        <FilterSelect
+          label="Janela"
+          value={dias}
+          onValueChange={setDias}
+          options={[7, 15, 30, 60, 90].map((d) => ({ value: String(d), label: `${d} dias` }))}
+        />
+        <FilterSelect
+          label="Vencidos"
+          value={vencidos}
+          onValueChange={setVencidos}
+          options={[{ value: '0', label: 'Só a vencer' }, { value: '1', label: 'Incluir vencidos' }]}
+        />
       </FilterBar>
 
-      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-3 text-xs text-ink-500">
         <span><strong className="text-brand">{rows.length}</strong> boleto(s)</span>
         <span>total <strong className="text-brand">{formatBRL(total)}</strong></span>
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Carregando…</p>
+        <p className="text-sm text-ink-500">Carregando…</p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum boleto a vencer nesta janela.</p>
+        <p className="text-sm text-ink-500">Nenhum boleto a vencer nesta janela.</p>
       ) : (
         <div className="space-y-1.5">
           {rows.map((r) => (
-            <div key={`${r.kind}-${r.id}`} className={`rounded-lg border p-2.5 ${r.daysToDue <= 3 ? 'border-critical/40 bg-critical/5' : 'bg-card'}`}>
+            <div key={`${r.kind}-${r.id}`} className={`rounded-lg border p-2.5 ${r.daysToDue <= 3 ? 'border-danger/40 bg-danger/5' : 'bg-surface'}`}>
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-brand">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-accent/15 px-1 text-[10px] font-bold text-accent">GÁS</span> : null}</p>
+                <p className="text-sm font-semibold text-ink-900">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-info-bg px-1 text-[10px] font-bold text-info">GÁS</span> : null}</p>
                 <StatusBadge tone={tone(r.daysToDue)}>{dueLabel(r.daysToDue)}</StatusBadge>
               </div>
-              <p className="text-xs text-muted-foreground">{r.unit} · {formatBRL(r.value)}{r.number ? ` · nº ${r.number}` : ''} · vence {fmtBR(r.dueDate)}</p>
+              <p className="text-xs text-ink-500">{r.unit} · {formatBRL(r.value)}{r.number ? ` · nº ${r.number}` : ''} · vence {fmtBR(r.dueDate)}</p>
             </div>
           ))}
         </div>
@@ -481,15 +522,16 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
     } finally { setBusy(false); }
   }
 
-  const hl = prefilled ? 'border-medium bg-medium/5' : '';
+  const hl = prefilled ? 'border-warning bg-warning/5' : '';
   return (
     <div className="space-y-3">
       {units.length > 1 && (
-        <div><Label>Unidade</Label>
-          <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
+        <DsSelect
+          label="Unidade"
+          value={unitId}
+          onValueChange={setUnitId}
+          options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+        />
       )}
       <div>
         <Label htmlFor="key"><ScanLine className="mr-1 inline h-4 w-4" /> Chave de acesso (44 dígitos — QR/DANFE)</Label>
@@ -497,24 +539,24 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
           <Input id="key" inputMode="numeric" value={accessKey} onChange={(e) => onKey(e.target.value)} placeholder="cole, digite ou escaneie" className="flex-1" />
           <QrScanner onResult={(chave) => onKey(chave)} />
         </div>
-        {prefilled && <p className="mt-1 text-xs text-[#92600A]">Campos preenchidos pela chave — confira em amarelo.</p>}
+        {prefilled && <p className="mt-1 text-xs text-warning">Campos preenchidos pela chave — confira em amarelo.</p>}
       </div>
-      <div>
-        <Label>Fornecedor (da lista de cadastrados)</Label>
-        <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={supplierId} onChange={(e) => {
-          const s = suppliers.find((x) => x.id === e.target.value);
-          setSupplierId(e.target.value);
+      <DsSelect
+        label="Fornecedor (da lista de cadastrados)"
+        placeholder="Selecione o fornecedor…"
+        hint="Fornecedor não está na lista? Peça à Supervisão/Admin para cadastrar em Configurações → Fornecedores."
+        value={supplierId}
+        onValueChange={(v) => {
+          const s = suppliers.find((x) => x.id === v);
+          setSupplierId(v);
           setSupplierName(s?.name ?? '');
           setSupplierCnpj(s?.cnpj ?? supplierCnpj);
-        }}>
-          <option value="">Selecione o fornecedor…</option>
-          {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}{s.isGas ? ' (gás)' : ''}</option>)}
-        </select>
-        <p className="mt-1 text-xs text-muted-foreground">Fornecedor não está na lista? Peça à Supervisão/Admin para cadastrar em Configurações → Fornecedores.</p>
-      </div>
+        }}
+        options={suppliers.map((s) => ({ value: s.id, label: s.name, hint: s.isGas ? 'fornecedor de gás' : undefined }))}
+      />
 
       {isGas && (
-        <p className="rounded-md bg-accent/10 px-3 py-2 text-xs font-semibold text-accent">Fornecedor de gás — preencha os dados do recebimento de gás. Isso alimenta a Análise de gás (dashboard, contratos e variação).</p>
+        <p className="rounded-md bg-brand/10 px-3 py-2 text-xs font-semibold text-ink-900">Fornecedor de gás — preencha os dados do recebimento de gás. Isso alimenta a Análise de gás (dashboard, contratos e variação).</p>
       )}
 
       <div className="grid grid-cols-2 gap-2">
@@ -522,17 +564,17 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
         <div><Label>Número</Label><Input className={hl} value={number} onChange={(e) => setNumber(e.target.value)} /></div>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>{isGas ? 'Emissão' : 'Emissão'}</Label><Input className={hl} type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></div>
-        <div><Label>Vencimento do boleto</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+        <DatePicker label="Emissão" value={issueDate || null} onValueChange={(v) => setIssueDate(v ?? '')} className={hl} />
+        <DatePicker label="Vencimento do boleto" value={dueDate || null} onValueChange={(v) => setDueDate(v ?? '')} min={issueDate || undefined} />
       </div>
 
       {isGas ? (
-        <div className="space-y-2 rounded-lg border-2 border-accent/30 bg-accent/5 p-3">
+        <div className="space-y-2 rounded-lg border-2 border-brand/30 bg-brand/5 p-3">
           <div>
             <Label>Forma de recebimento</Label>
             <div className="flex gap-1">
-              <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-primary text-primary-foreground' : ''}`}>Granel (kg)</button>
-              <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-primary text-primary-foreground' : ''}`}>Botijão (P45)</button>
+              <button type="button" onClick={() => setKind('BULK')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'BULK' ? 'bg-brand text-on-brand' : ''}`}>Granel (kg)</button>
+              <button type="button" onClick={() => setKind('CYLINDER')} className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${kind === 'CYLINDER' ? 'bg-brand text-on-brand' : ''}`}>Botijão (P45)</button>
             </div>
           </div>
           {kind === 'BULK' ? (
@@ -541,7 +583,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
                 <div><Label>Quantidade (kg)</Label><Input inputMode="decimal" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="ex: 45" /></div>
                 <div><Label>Valor por kg (R$)</Label><Input inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="0,0000" /></div>
               </div>
-              {gasTotal > 0 && <p className="text-center text-sm font-bold text-brand">Valor total: {formatBRL(gasTotal)}</p>}
+              {gasTotal > 0 && <p className="text-center text-sm font-bold text-ink-900">Valor total: {formatBRL(gasTotal)}</p>}
             </>
           ) : (
             <>
@@ -551,7 +593,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
                 <div><Label>Valor total (R$)</Label><Input inputMode="decimal" value={cylTotal} onChange={(e) => setCylTotal(e.target.value)} placeholder="0,00" /></div>
               </div>
               <div><Label>Botijões vazios devolvidos</Label><Input inputMode="numeric" value={cylReturned} onChange={(e) => setCylReturned(e.target.value.replace(/\D/g, ''))} placeholder="ex: 4" /></div>
-              {cKg > 0 && cTotal > 0 && <p className="text-center text-sm font-bold text-brand">{cc} × {ck}kg = {cKg}kg · R$ {cPricePerKg.toFixed(4).replace('.', ',')}/kg</p>}
+              {cKg > 0 && cTotal > 0 && <p className="text-center text-sm font-bold text-ink-900">{cc} × {ck}kg = {cKg}kg · R$ {cPricePerKg.toFixed(4).replace('.', ',')}/kg</p>}
             </>
           )}
         </div>
@@ -562,7 +604,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
         </div>
       )}
 
-      {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
+      {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
       {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Save className="h-5 w-5" /> {isGas ? 'Registrar recebimento de gás' : 'Confirmar e salvar'}</Button>
     </div>

@@ -7,6 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
+
+
 
 export interface SessionUI {
   id: string; operationalDate: string; seq: number;
@@ -70,27 +74,27 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
   }
 
   const SessionCard = ({ s }: { s: SessionUI }) => (
-    <div className={`rounded-lg border p-2.5 ${hasDiv(s) ? 'border-critical/50 bg-critical/5' : 'bg-card'}`}>
+    <div className={`rounded-lg border p-2.5 ${hasDiv(s) ? 'border-danger/50 bg-danger/5' : 'bg-surface'}`}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-brand">Caixa {s.seq} · {fmtBR(s.operationalDate)}</p>
+        <p className="text-sm font-semibold text-ink-900">Caixa {s.seq} · {fmtBR(s.operationalDate)}</p>
         {s.closingAmount == null
           ? <StatusBadge tone="medium">Aberto</StatusBadge>
           : hasDiv(s)
             ? <StatusBadge tone="critical">Divergente {brl(s.divergence!)}</StatusBadge>
             : <StatusBadge tone="success">OK</StatusBadge>}
       </div>
-      <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+      <p className="mt-1 text-xs text-ink-500 tabular-nums">
         Abertura {brl(s.openingAmount)}{s.expectedOpening != null ? ` (esperado ${brl(s.expectedOpening)})` : ' (1º caixa)'}
         {s.closingAmount != null ? ` → Fechamento ${brl(s.closingAmount)}` : ''}
       </p>
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-ink-500">
         {s.openedByName} às {new Date(s.openedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
         {s.closedByName ? ` · fechado por ${s.closedByName} às ${new Date(s.closedAt!).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
         {s.note ? ` · ${s.note}` : ''}
       </p>
       {isAdmin && (
         <div className="mt-1 flex justify-end">
-          <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => remove(s.id)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
+          <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => remove(s.id)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
         </div>
       )}
     </div>
@@ -100,39 +104,43 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         {units.length > 1 && (
-          <select className="h-9 rounded-md border bg-card px-2 text-sm font-semibold" value={selectedUnitId} onChange={(e) => router.push(`/modulos/troco?unit=${e.target.value}`)}>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
+          <div className="w-52">
+            <Select
+              aria-label="Unidade" size="sm" value={selectedUnitId}
+              onValueChange={(v) => router.push(`/modulos/troco?unit=${v}`)}
+              options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+            />
+          </div>
         )}
         <a
           href={`/api/cash/export?unit=${selectedUnitId}&year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-1.5 text-xs font-semibold text-brand hover:border-accent"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"
         >
-          <FileSpreadsheet className="h-3.5 w-3.5 text-accent" /> Excel do mês
+          <FileSpreadsheet className="h-3.5 w-3.5 text-brand" /> Excel do mês
         </a>
       </div>
 
       {/* Estatística do mês (unidade) */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg border bg-card p-2.5 text-center">
+        <div className="rounded-lg border bg-surface p-2.5 text-center">
           <p className="text-lg font-bold tabular-nums">{month.sessions}</p>
-          <p className="text-xs text-muted-foreground">caixas no mês</p>
+          <p className="text-xs text-ink-500">caixas no mês</p>
         </div>
-        <div className={`rounded-lg border p-2.5 text-center ${month.divergent > 0 ? 'border-critical/50 bg-critical/5' : 'bg-card'}`}>
-          <p className={`text-lg font-bold tabular-nums ${month.divergent > 0 ? 'text-critical' : ''}`}>{month.divergent}</p>
-          <p className="text-xs text-muted-foreground">divergências</p>
+        <div className={`rounded-lg border p-2.5 text-center ${month.divergent > 0 ? 'border-danger/50 bg-danger/5' : 'bg-surface'}`}>
+          <p className={`text-lg font-bold tabular-nums ${month.divergent > 0 ? 'text-danger' : ''}`}>{month.divergent}</p>
+          <p className="text-xs text-ink-500">divergências</p>
         </div>
-        <div className="rounded-lg border bg-card p-2.5 text-center">
+        <div className="rounded-lg border bg-surface p-2.5 text-center">
           <p className="text-lg font-bold tabular-nums">{brl(month.divergenceTotal)}</p>
-          <p className="text-xs text-muted-foreground">soma divergida</p>
+          <p className="text-xs text-ink-500">soma divergida</p>
         </div>
       </div>
 
       {/* Caixa aberto → fechar · sem caixa aberto → abrir */}
       {canOperate && (openSession ? (
-        <div className="rounded-lg border-2 border-accent/50 p-3">
-          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><Unlock className="h-4 w-4 text-accent" /> Caixa {openSession.seq} aberto — {brl(openSession.openingAmount)} na abertura</p>
-          <p className="mb-2 text-xs text-muted-foreground">Aberto por {openSession.openedByName} às {new Date(openSession.openedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Conte o troco e feche — o valor vira a abertura esperada do próximo caixa.</p>
+        <div className="rounded-lg border-2 border-brand/50 p-3">
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink-900"><Unlock className="h-4 w-4 text-ink-900" /> Caixa {openSession.seq} aberto — {brl(openSession.openingAmount)} na abertura</p>
+          <p className="mb-2 text-xs text-ink-500">Aberto por {openSession.openedByName} às {new Date(openSession.openedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Conte o troco e feche — o valor vira a abertura esperada do próximo caixa.</p>
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Valor contado (R$)</Label><Input inputMode="decimal" value={closeAmount} onChange={(e) => setCloseAmount(e.target.value)} placeholder="0,00" className="h-10 text-sm" /></div>
             <div><Label className="text-xs">Obs. (opcional)</Label><Input value={closeNote} onChange={(e) => setCloseNote(e.target.value)} className="h-10 text-sm" /></div>
@@ -141,11 +149,11 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
         </div>
       ) : (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><Unlock className="h-4 w-4 text-accent" /> Abrir caixa</p>
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink-900"><Unlock className="h-4 w-4 text-ink-900" /> Abrir caixa</p>
           {lastClosing != null ? (
-            <p className="mb-2 text-xs text-muted-foreground">Abertura esperada (fechamento anterior): <strong className="tabular-nums">{brl(lastClosing)}</strong>. Conte o troco e digite o valor real — diferença gera alerta à supervisão.</p>
+            <p className="mb-2 text-xs text-ink-500">Abertura esperada (fechamento anterior): <strong className="tabular-nums">{brl(lastClosing)}</strong>. Conte o troco e digite o valor real — diferença gera alerta à supervisão.</p>
           ) : (
-            <p className="mb-2 text-xs text-muted-foreground">Primeiro caixa da unidade — digite o valor contado do troco inicial.</p>
+            <p className="mb-2 text-xs text-ink-500">Primeiro caixa da unidade — digite o valor contado do troco inicial.</p>
           )}
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Valor contado (R$)</Label><Input inputMode="decimal" value={openAmount} onChange={(e) => setOpenAmount(e.target.value)} placeholder="0,00" className="h-10 text-sm" /></div>
@@ -157,21 +165,21 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
 
       {/* Hoje */}
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Hoje ({today.length})</p>
-        {today.length === 0 && <p className="text-sm text-muted-foreground">Nenhum caixa aberto hoje ainda.</p>}
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Hoje ({today.length})</p>
+        {today.length === 0 && <p className="text-sm text-ink-500">Nenhum caixa aberto hoje ainda.</p>}
         <div className="space-y-1.5">{today.map((s) => <SessionCard key={s.id} s={s} />)}</div>
       </div>
 
       {/* Dashboard entre unidades (Supervisão/Admin/CEO) */}
       {dash && dash.length > 1 && (
-        <div className="rounded-lg border bg-card p-3">
-          <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground"><AlertTriangle className="h-3.5 w-3.5" /> Divergências do mês por unidade</p>
+        <div className="rounded-lg border bg-surface p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><AlertTriangle className="h-3.5 w-3.5" /> Divergências do mês por unidade</p>
           <div className="space-y-1">
             {dash.map((d) => (
               <div key={d.unitId} className="flex items-center justify-between gap-2 text-sm">
                 <span className="min-w-0 truncate">{d.unitName}</span>
                 <span className="shrink-0 text-xs tabular-nums">
-                  {d.sessions} caixa(s) · <span className={d.divergent > 0 ? 'font-bold text-critical' : 'font-semibold text-success'}>{d.divergent} div.</span> · {brl(d.divergenceTotal)}
+                  {d.sessions} caixa(s) · <span className={d.divergent > 0 ? 'font-bold text-danger' : 'font-semibold text-success'}>{d.divergent} div.</span> · {brl(d.divergenceTotal)}
                 </span>
               </div>
             ))}
@@ -181,8 +189,8 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
 
       {/* Histórico */}
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Histórico ({history.length})</p>
-        {history.length === 0 && <p className="text-sm text-muted-foreground">Sem sessões anteriores.</p>}
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Histórico ({history.length})</p>
+        {history.length === 0 && <p className="text-sm text-ink-500">Sem sessões anteriores.</p>}
         <div className="space-y-1.5">{history.map((s) => <SessionCard key={s.id} s={s} />)}</div>
       </div>
     </div>

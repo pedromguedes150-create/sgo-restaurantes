@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -6,10 +5,14 @@ import { getMetaBreakdown, getMetaRanking } from '@/lib/metas/query';
 import { getUnitMonthScore } from '@/lib/tasks/summary';
 import { getLateEntryPenaltyPct } from '@/lib/late-entry';
 import { LateEntryConfig } from '@/components/metas/late-entry-config';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PrintButton } from '@/components/ui/print-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
-import { Trophy, Download } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
+import { Button as DsButton } from '@/components/ui/ds/button';
+import { List, ListRow } from '@/components/ui/ds/list-row';
+import { ProgressBar } from '@/components/ui/ds/progress-bar';
+import { shortUnitName } from '@/lib/unit-name';
+import { Trophy, Download, Settings } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,67 +50,83 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-brand">Metas e Performance</h1>
-        <div className="flex gap-2 print:hidden">
-          <a href={exportHref} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent"><Download className="h-4 w-4" /> Excel</a>
-          <PrintButton label="PDF" />
-        </div>
-      </div>
+      <LargeTitle
+        title="Metas e Performance"
+        subtitle={`Mês ${monthLabel}`}
+        actions={
+          <div className="flex gap-2 print:hidden">
+            <a href={exportHref}><DsButton size="sm" variant="secondary"><Download className="h-4 w-4" /> Excel</DsButton></a>
+            <PrintButton label="PDF" />
+          </div>
+        }
+      />
 
       {(user.role === 'ADMIN' || user.role === 'SUPERVISOR') && (
-        <Link href="/modulos/metas/config" className="inline-flex items-center gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-accent print:hidden">
-          ⚙️ Configuração da Meta (todos os componentes e pesos)
-        </Link>
+        <div className="print:hidden">
+          <List>
+            <ListRow
+              href="/modulos/metas/config"
+              leading={<Settings className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
+              title="Configuração da Meta"
+              subtitle="Todos os componentes e seus pesos"
+            />
+          </List>
+        </div>
       )}
       {lateEntryPct != null && <LateEntryConfig current={lateEntryPct} />}
-      <p className="text-sm text-muted-foreground">Mês {monthLabel}</p>
 
-      {/* Histórico: seletor de mês (lista suspensa) */}
+      {/* Mês de referência (histórico) */}
       <div className="max-w-xs print:hidden">
-        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mês de referência</p>
+        <p className="sgo-type-11 mb-1 text-ink-500">Mês de referência</p>
         <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" />
       </div>
 
       {isAdminView && ranking.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-accent" /> Ranking de metas</CardTitle></CardHeader>
-          <CardContent className="space-y-1">
+        <section>
+          <h2 className="mb-2 flex items-center gap-2 text-[15px] font-semibold text-ink-900">
+            <Trophy className="h-4 w-4 text-ink-400" aria-hidden /> Ranking de metas
+          </h2>
+          <List>
             {ranking.map((r, i) => (
-              <div key={r.unitId} className="flex justify-between text-sm">
-                <span>{i + 1}. {r.name}</span>
-                <span className="font-bold text-brand">{r.scorePct}%</span>
-              </div>
+              <ListRow
+                key={r.unitId}
+                leading={
+                  <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-sunken text-[13px] font-bold tabular-nums text-ink-700">{i + 1}</span>
+                }
+                title={shortUnitName(r.name)}
+                trailing={<span className="text-[15px] font-bold tabular-nums text-ink-900">{r.scorePct}%</span>}
+              />
             ))}
-          </CardContent>
-        </Card>
+          </List>
+        </section>
       )}
 
       {units.length > 1 && <UnitSelectNav units={units} selected={selected?.id ?? ''} />}
 
       {selected && score && (
-        <Card>
-          <CardHeader><CardTitle>{isAdminView ? selected.name : 'Minha Meta do Mês'} — {score.scorePct}%</CardTitle></CardHeader>
-          <CardContent>
-            <div className="mb-3 h-3 w-full overflow-hidden rounded-full bg-secondary">
-              <div className="h-full rounded-full bg-accent" style={{ width: `${score.scorePct}%` }} />
-            </div>
-            <div className="space-y-2">
-              {breakdown.length === 0 && <p className="text-sm text-muted-foreground">Sem tarefas resolvidas no mês ainda.</p>}
-              {breakdown.map((t) => (
-                <div key={t.name}>
-                  <div className="flex justify-between text-sm">
-                    <span>{t.name} <span className="text-xs text-muted-foreground">(peso {t.weight})</span></span>
-                    <span className="font-semibold">{t.done}/{t.resolved} · {t.scorePct}%</span>
-                  </div>
-                  <div className="mt-0.5 h-2 w-full overflow-hidden rounded-full bg-secondary">
-                    <div className="h-full rounded-full bg-success" style={{ width: `${t.scorePct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <section className="rounded-card border border-line bg-surface p-4">
+          <ProgressBar
+            label={isAdminView ? shortUnitName(selected.name) : 'Minha Meta do Mês'}
+            value={score.scorePct}
+            valueLabel={`${score.scorePct}%`}
+            tone={score.scorePct >= 80 ? 'success' : score.scorePct >= 50 ? 'warning' : 'danger'}
+          />
+
+          {/* Composição: cada componente com seu peso e o quanto rendeu. */}
+          <div className="mt-4 space-y-3">
+            {breakdown.length === 0 && (
+              <p className="text-[14px] text-ink-500">Sem tarefas resolvidas no mês ainda.</p>
+            )}
+            {breakdown.map((t) => (
+              <ProgressBar
+                key={t.name}
+                label={`${t.name} (peso ${t.weight})`}
+                value={t.scorePct}
+                valueLabel={`${t.done}/${t.resolved} · ${t.scorePct}%`}
+              />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

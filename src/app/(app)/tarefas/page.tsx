@@ -7,6 +7,11 @@ import { getTasksTodayForUser } from '@/lib/tasks/query';
 import { leaveOnDate } from '@/lib/manager-area';
 import { TaskItem, type TaskItemData } from '@/components/tasks/task-item';
 import { UnitTasksSection } from '@/components/tasks/unit-tasks-section';
+import { LargeTitle } from '@/components/layout/page-chrome';
+import { Banner } from '@/components/ui/ds/banner';
+import { EmptyState } from '@/components/ui/ds/empty-state';
+import { shortUnitName } from '@/lib/unit-name';
+import { Building2 } from 'lucide-react';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
 
 export const dynamic = 'force-dynamic';
@@ -48,46 +53,50 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
   return (
     <div className="space-y-6">
       <AutoRefresh seconds={60} />
-      <div className="space-y-1">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-xl font-bold text-brand">{onlyOverdue ? 'Tarefas atrasadas' : 'Tarefas de hoje'}</h1>
-          {onlyOverdue
-            ? <Link href={withUnit('/tarefas')} className="text-sm font-semibold text-accent underline">Ver todas</Link>
-            : <span className="flex gap-3"><Link href={withUnit('/tarefas/correcoes')} className="text-sm font-semibold text-accent underline">Correções do dia</Link><Link href={withUnit('/tarefas/historico')} className="text-sm font-semibold text-accent underline">Histórico</Link></span>}
-        </div>
-        {filteredNames.length > 0 && (
-          <p className="text-sm text-muted-foreground">
-            Unidade: <span className="font-semibold text-brand">{filteredNames.join(', ')}</span>
-            {units.length > 1 && (
-              <>
-                {' · '}
-                <Link href={onlyOverdue ? '/tarefas?filter=atrasadas' : '/tarefas'} className="font-semibold text-accent underline">
-                  Ver todas as unidades
-                </Link>
-              </>
-            )}
-          </p>
-        )}
-      </div>
+      <LargeTitle
+        title={onlyOverdue ? 'Tarefas atrasadas' : 'Tarefas de hoje'}
+        subtitle={
+          filteredNames.length > 0
+            ? `Unidade: ${filteredNames.map(shortUnitName).join(', ')}`
+            : undefined
+        }
+        actions={
+          onlyOverdue ? (
+            <Link href={withUnit('/tarefas')} className="text-[14px] font-semibold text-brand hover:underline">Ver todas</Link>
+          ) : (
+            <span className="flex gap-4">
+              <Link href={withUnit('/tarefas/correcoes')} className="text-[14px] font-semibold text-brand hover:underline">Correções do dia</Link>
+              <Link href={withUnit('/tarefas/historico')} className="text-[14px] font-semibold text-brand hover:underline">Histórico</Link>
+            </span>
+          )
+        }
+      />
+
+      {filteredNames.length > 0 && units.length > 1 && (
+        <Link href={onlyOverdue ? '/tarefas?filter=atrasadas' : '/tarefas'} className="inline-block text-[13px] font-semibold text-brand hover:underline">
+          Ver todas as unidades
+        </Link>
+      )}
 
       {unitDenied && (
-        <p className="rounded-lg bg-medium/10 px-3 py-2 text-sm font-medium text-[#92600A]">
-          Unidade não encontrada ou sem acesso — mostrando as suas unidades.
-        </p>
+        <Banner tone="warning" title="Unidade não encontrada ou sem acesso" description="Mostrando as suas unidades." />
       )}
 
       {leave && (
-        <p className="rounded-lg bg-accent/10 px-3 py-3 text-sm font-medium text-accent">
-          🌴 Você está de {leave.kind === 'FERIAS' ? 'férias' : 'folga'} hoje — seus checklists não aparecem. Bom descanso! <Link href="/minha-area" className="underline">Gerenciar folgas</Link>
-        </p>
+        <Banner
+          tone="info"
+          title={`Você está de ${leave.kind === 'FERIAS' ? 'férias' : 'folga'} hoje`}
+          description="Seus checklists não aparecem hoje. Bom descanso!"
+          action={<Link href="/minha-area" className="text-[13px] font-semibold text-brand hover:underline">Gerenciar folgas</Link>}
+        />
       )}
 
       {!leave && groups.length === 0 && (
-        <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>
+        <EmptyState icon={Building2} title="Nenhuma unidade vinculada" description="Peça ao Administrador para vincular você a uma unidade." />
       )}
 
       {onlyOverdue && overdueCount === 0 && groups.length > 0 && (
-        <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">Nenhuma tarefa atrasada agora 🎉</p>
+        <Banner tone="success" title="Nenhuma tarefa atrasada agora" />
       )}
 
       {groups.map((g) => {
@@ -103,7 +112,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
         return (
           <UnitTasksSection
             key={g.unit.id}
-            unitName={groups.length > 1 ? g.unit.name : null}
+            unitName={groups.length > 1 ? shortUnitName(g.unit.name) : null}
             summary={summary}
             showSummary={!onlyOverdue}
             defaultOpen={onlyOverdue || groups.length === 1}
@@ -121,7 +130,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
               };
               return <TaskItem key={t.id} task={data} />;
             })}
-            {tasks.length === 0 && <p className="text-sm text-muted-foreground">Sem tarefas para hoje.</p>}
+            {tasks.length === 0 && <li className="px-4 py-6 text-center text-[14px] text-ink-500">Sem tarefas para hoje.</li>}
           </UnitTasksSection>
         );
       })}

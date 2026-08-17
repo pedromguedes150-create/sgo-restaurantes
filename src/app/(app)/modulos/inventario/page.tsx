@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InventoryClient } from '@/components/inventory/inventory-client';
 import { EquipmentInventory } from '@/components/inventory/equipment-inventory';
 import { ClipboardList, Wrench } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,13 +25,13 @@ export default async function InventarioPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-bold text-brand">Inventário</h1>
+      <LargeTitle title="Inventário" />
 
       {/* Seção 1: inventário do Teknisa (acompanhamento da tarefa) */}
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ClipboardList className="h-5 w-5 text-accent" /> Inventário Teknisa (tarefa do gerente)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ClipboardList className="h-5 w-5 text-brand" /> Inventário Teknisa (tarefa do gerente)</CardTitle></CardHeader>
         <CardContent>
-          <p className="mb-3 text-sm text-muted-foreground">O inventário detalhado é feito no Teknisa; aqui acompanhamos a execução da tarefa e fazemos a conferência.</p>
+          <p className="mb-3 text-sm text-ink-500">O inventário detalhado é feito no Teknisa; aqui acompanhamos a execução da tarefa e fazemos a conferência.</p>
           <InventoryClient
             isAdmin={user.role === 'ADMIN'}
             units={units}
@@ -41,7 +42,7 @@ export default async function InventarioPage() {
 
       {/* Seção 2: inventário de equipamentos (fora do Teknisa) */}
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Wrench className="h-5 w-5 text-accent" /> Inventário de Equipamentos</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Wrench className="h-5 w-5 text-brand" /> Inventário de Equipamentos</CardTitle></CardHeader>
         <CardContent>
           <EquipmentInventory
             canEdit={canEditEquip(user)}

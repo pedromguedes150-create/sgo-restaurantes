@@ -29,8 +29,8 @@ export function ProfileClient({ name, cpf, email }: { name: string; cpf: string;
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border bg-card p-3">
-        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Meus dados</p>
+      <div className="rounded-lg border bg-surface p-3">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Meus dados</p>
         <div className="space-y-2">
           <div><Label className="text-xs">E-mail (login)</Label><Input value={email} disabled className="h-10 text-sm" /></div>
           <div><Label className="text-xs">Nome completo</Label><Input value={n} onChange={(e) => setN(e.target.value)} className="h-10 text-sm" /></div>
@@ -39,8 +39,8 @@ export function ProfileClient({ name, cpf, email }: { name: string; cpf: string;
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-3">
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground"><KeyRound className="h-3.5 w-3.5" /> Trocar senha</p>
+      <div className="rounded-lg border bg-surface p-3">
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><KeyRound className="h-3.5 w-3.5" /> Trocar senha</p>
         <div className="space-y-2">
           <div><Label className="text-xs">Senha atual</Label><Input type="password" value={cur} onChange={(e) => setCur(e.target.value)} className="h-10 text-sm" /></div>
           <div className="grid grid-cols-2 gap-2">
@@ -50,10 +50,10 @@ export function ProfileClient({ name, cpf, email }: { name: string; cpf: string;
           <Button size="sm" disabled={busy || !cur || !nova || nova !== nova2} onClick={async () => {
             if (await post({ action: 'password', currentPassword: cur, newPassword: nova }, 'Senha alterada ✓')) { setCur(''); setNova(''); setNova2(''); }
           }}><KeyRound className="h-4 w-4" /> Alterar senha</Button>
-          {nova && nova2 && nova !== nova2 && <p className="text-xs text-critical">As senhas não conferem.</p>}
+          {nova && nova2 && nova !== nova2 && <p className="text-xs text-danger">As senhas não conferem.</p>}
         </div>
       </div>
-      {msg && <p className={`text-sm font-semibold ${msg.includes('✓') ? 'text-success' : 'text-critical'}`}>{msg}</p>}
+      {msg && <p className={`text-sm font-semibold ${msg.includes('✓') ? 'text-success' : 'text-danger'}`}>{msg}</p>}
     </div>
   );
 }

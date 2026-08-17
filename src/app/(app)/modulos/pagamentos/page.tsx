@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PaymentsClient, type PayReq } from '@/components/payments/payments-client';
 import { FileText } from 'lucide-react';
 import type { PaymentRequest } from '@prisma/client';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,9 +92,9 @@ export default async function PagamentosPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-brand">Pagamentos</h1>
+        <LargeTitle title="Pagamentos" />
         {isFinanceView && (
-          <Link href="/modulos/pagamentos/relatorio-freelancers" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent">
+          <Link href="/modulos/pagamentos/relatorio-freelancers" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
             <FileText className="h-4 w-4" /> Consolidação de freelancers
           </Link>
         )}

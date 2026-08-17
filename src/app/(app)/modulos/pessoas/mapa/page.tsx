@@ -8,13 +8,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { WorkforceClient } from '@/components/people/workforce-client';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { ArrowLeft } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MapaFuncoesPage({ searchParams }: { searchParams: { unit?: string; date?: string; hora?: string } }) {
   const user = (await getSessionUser())!;
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true, timezone: true } });
-  if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
+  if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
 
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const tz = selected.timezone || 'America/Sao_Paulo';
@@ -61,9 +62,9 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
-      <h1 className="text-xl font-bold text-brand">Mapa de Funções</h1>
-      <p className="text-sm text-muted-foreground">Monte o <b>quadro padrão</b> uma vez; o <b>mapa da unidade</b> mostra automaticamente quem está trabalhando agora (segue a Escala). Cobertura 🟢 ok · 🟡 parcial · 🔴 sem cobertura.</p>
+      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
+      <LargeTitle title="Mapa de Funções" />
+      <p className="text-sm text-ink-500">Monte o <b>quadro padrão</b> uma vez; o <b>mapa da unidade</b> mostra automaticamente quem está trabalhando agora (segue a Escala). Cobertura 🟢 ok · 🟡 parcial · 🔴 sem cobertura.</p>
 
       {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
 

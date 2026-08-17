@@ -4,11 +4,17 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Save, Droplets, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 import { formatBRL } from '@/lib/utils';
+// Apelido: este arquivo ja tem uma `interface Group` (agrupamento de dados do
+// dashboard). Sem o alias, o mesmo nome ficaria em dois papeis no mesmo escopo.
+import { Group as ListGroup } from '@/components/ui/ds/group';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string }
@@ -33,11 +39,12 @@ export function OilClient({ canLaunch, isAdmin, canEditDate = false, units, supp
   ];
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {tabs.filter((t) => t.show).map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>{t.label}</button>
-        ))}
-      </div>
+      <SegmentedControl
+        aria-label="Seções de Coleta de Óleo"
+        value={tab}
+        onValueChange={setTab}
+        options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label }))}
+      />
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
       {tab === 'painel' && <Dashboard d={dashboard} />}
       {tab === 'historico' && <History rows={rows} isAdmin={isAdmin} canEditDate={canEditDate} />}
@@ -57,7 +64,6 @@ function Launch({ units, suppliers }: { units: Unit[]; suppliers: Supplier[] }) 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   const l = parseFloat((liters || '0').replace(',', '.'));
   const p = parseFloat((price || '0').replace(',', '.'));
@@ -79,33 +85,29 @@ function Launch({ units, suppliers }: { units: Unit[]; suppliers: Supplier[] }) 
 
   return (
     <div className="space-y-3">
-      {units.length > 1 && <div><Label>Unidade</Label><select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>}
-      <div>
-        <Label>Empresa coletora (fornecedor)</Label>
-        <select className={sel} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
-          <option value="">— opcional —</option>
-          {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-      </div>
+      {units.length > 1 && (
+        <Select label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
+      )}
+      <Select
+        label="Empresa coletora (fornecedor)" value={supplierId} onValueChange={setSupplierId}
+        options={[{ value: '', label: '— nenhuma —' }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
+      />
       <div className="grid grid-cols-2 gap-2">
         <div><Label>Litros coletados</Label><Input inputMode="decimal" value={liters} onChange={(e) => setLiters(e.target.value)} placeholder="ex: 80" /></div>
         <div><Label>Valor por litro (R$)</Label><Input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" /></div>
       </div>
       {total > 0 && (
-        <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3 text-center">
-          <p className="text-xs text-muted-foreground">Valor total a receber</p>
-          <p className="text-2xl font-black text-brand">{formatBRL(total)}</p>
+        <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
+          <p className="text-xs text-ink-500">Valor total a receber</p>
+          <p className="text-2xl font-black text-ink-900">{formatBRL(total)}</p>
         </div>
       )}
-      <div>
-        <Label>Como recebemos</Label>
-        <select className={sel} value={method} onChange={(e) => setMethod(e.target.value)}>
-          <option value="">— selecione —</option>
-          {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
-      </div>
+      <Select
+        label="Como recebemos" value={method} onValueChange={setMethod}
+        options={[{ value: '', label: '— não informado —' }, ...METHODS.map((m) => ({ value: m, label: m }))]}
+      />
       <div><Label>Observação (opcional)</Label><Input value={obs} onChange={(e) => setObs(e.target.value)} /></div>
-      {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
+      {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
       {ok && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">{ok}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Save className="h-5 w-5" /> Registrar coleta</Button>
     </div>
@@ -113,7 +115,7 @@ function Launch({ units, suppliers }: { units: Unit[]; suppliers: Supplier[] }) 
 }
 
 function Dashboard({ d }: { d: OilDash }) {
-  if (d.totalLiters === 0) return <p className="text-sm text-muted-foreground">Ainda não há coletas no período.</p>;
+  if (d.totalLiters === 0) return <p className="text-sm text-ink-500">Ainda não há coletas no período.</p>;
   const maxU = Math.max(...d.byUnit.map((u) => u.total), 1);
   const maxM = Math.max(...d.monthly.map((m) => m.total), 1);
   return (
@@ -124,35 +126,35 @@ function Dashboard({ d }: { d: OilDash }) {
         <Cell label="Médio/litro" value={perL(d.avgPricePerLiter)} />
       </div>
       <div>
-        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">Por unidade</h2>
+        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Por unidade</h2>
         <div className="space-y-2">
           {d.byUnit.map((u) => (
-            <div key={u.key} className="rounded-lg border bg-card p-2.5">
-              <div className="flex items-center justify-between text-sm"><span className="font-semibold text-brand">{u.name}</span><span className="font-bold">{formatBRL(u.total)}</span></div>
-              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${(u.total / maxU) * 100}%` }} /></div>
-              <p className="mt-1 text-xs text-muted-foreground">{u.liters.toLocaleString('pt-BR')} L · {perL(u.liters > 0 ? u.total / u.liters : 0)}</p>
+            <div key={u.key} className="rounded-lg border bg-surface p-2.5">
+              <div className="flex items-center justify-between text-sm"><span className="font-semibold text-ink-900">{u.name}</span><span className="font-bold">{formatBRL(u.total)}</span></div>
+              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-brand" style={{ width: `${(u.total / maxU) * 100}%` }} /></div>
+              <p className="mt-1 text-xs text-ink-500">{u.liters.toLocaleString('pt-BR')} L · {perL(u.liters > 0 ? u.total / u.liters : 0)}</p>
             </div>
           ))}
         </div>
       </div>
       <div>
-        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">Como recebemos</h2>
+        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Como recebemos</h2>
         <div className="space-y-1">
           {d.byMethod.map((m) => (
-            <div key={m.key} className="flex items-center justify-between rounded-lg border bg-card px-3 py-1.5 text-sm">
-              <span>{m.name}</span><span className="font-semibold">{formatBRL(m.total)} <span className="text-xs font-normal text-muted-foreground">· {m.liters.toLocaleString('pt-BR')} L</span></span>
+            <div key={m.key} className="flex items-center justify-between rounded-lg border bg-surface px-3 py-1.5 text-sm">
+              <span>{m.name}</span><span className="font-semibold">{formatBRL(m.total)} <span className="text-xs font-normal text-ink-500">· {m.liters.toLocaleString('pt-BR')} L</span></span>
             </div>
           ))}
         </div>
       </div>
       <div>
-        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">Tendência mensal (R$ recebido)</h2>
-        <div className="flex items-end gap-2 rounded-lg border bg-card p-3" style={{ height: 140 }}>
+        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Tendência mensal (R$ recebido)</h2>
+        <div className="flex items-end gap-2 rounded-lg border bg-surface p-3" style={{ height: 140 }}>
           {d.monthly.map((m) => (
             <div key={m.month} className="flex flex-1 flex-col items-center justify-end gap-1">
-              <span className="text-[10px] font-semibold text-brand">{Math.round(m.total)}</span>
-              <div className="w-full rounded-t bg-accent" style={{ height: `${Math.max(4, (m.total / maxM) * 90)}px` }} />
-              <span className="text-[10px] text-muted-foreground">{mlabel(m.month)}</span>
+              <span className="text-[10px] font-semibold text-ink-900">{Math.round(m.total)}</span>
+              <div className="w-full rounded-t bg-brand" style={{ height: `${Math.max(4, (m.total / maxM) * 90)}px` }} />
+              <span className="text-[10px] text-ink-500">{mlabel(m.month)}</span>
             </div>
           ))}
         </div>
@@ -162,7 +164,7 @@ function Dashboard({ d }: { d: OilDash }) {
 }
 
 function Cell({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border bg-card py-3 text-center"><p className="text-base font-black text-brand">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div>;
+  return <div className="rounded-lg border bg-surface py-3 text-center"><p className="text-base font-black text-ink-900">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
 }
 
 function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdmin: boolean; canEditDate?: boolean }) {
@@ -170,25 +172,28 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdm
   const [dateEditId, setDateEditId] = useState<string | null>(null);
   const unitNames = [...new Set(rows.map((r) => r.unit))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   const shown = unit ? rows.filter((r) => r.unit === unit) : rows;
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma coleta registrada.</p>;
+  if (rows.length === 0) return <p className="text-sm text-ink-500">Nenhuma coleta registrada.</p>;
 
   return (
     <div className="space-y-2">
       {unitNames.length > 1 && (
-        <select value={unit} onChange={(e) => setUnit(e.target.value)} className="h-10 w-full max-w-sm rounded-lg border-2 border-input bg-background px-3 text-sm font-medium">
-          <option value="">Todas as unidades</option>
-          {unitNames.map((u) => <option key={u} value={u}>{u}</option>)}
-        </select>
+        <div className="max-w-sm">
+          <Select
+            aria-label="Filtrar por unidade" value={unit} onValueChange={setUnit}
+            options={[{ value: '', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
+          />
+        </div>
       )}
-      {shown.map((r) => (
-        <div key={r.id} className="rounded-lg border bg-card p-3">
+      <ListGroup>
+        {shown.map((r) => (
+        <div key={r.id} className="p-3">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="flex items-center gap-1 font-semibold text-brand"><Droplets className="h-4 w-4 text-accent" /> {r.liters.toLocaleString('pt-BR')} L · {formatBRL(r.total)}</p>
-              <p className="text-xs text-muted-foreground">{r.date} · {r.unit} · {perL(r.price)}{r.method ? ` · ${r.method}` : ''}{r.supplier !== 'Sem fornecedor' ? ` · ${r.supplier}` : ''}{r.by ? ` · ${r.by}` : ''}</p>
+              <p className="flex items-center gap-1 font-semibold text-ink-900"><Droplets className="h-4 w-4 text-ink-900" /> {r.liters.toLocaleString('pt-BR')} L · {formatBRL(r.total)}</p>
+              <p className="text-xs text-ink-500">{r.date} · {r.unit} · {perL(r.price)}{r.method ? ` · ${r.method}` : ''}{r.supplier !== 'Sem fornecedor' ? ` · ${r.supplier}` : ''}{r.by ? ` · ${r.by}` : ''}</p>
             </div>
           </div>
-          {r.dateEdited && <p className="mt-1 text-xs font-semibold text-critical">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
+          {r.dateEdited && <p className="mt-1 text-xs font-semibold text-danger">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
           {(isAdmin || canEditDate) && (
             <div className="mt-2 flex flex-wrap gap-2">
               {canEditDate && <Button size="sm" variant="ghost" onClick={() => setDateEditId((id) => (id === r.id ? null : r.id))}><Pencil className="h-4 w-4" /> Editar data</Button>}
@@ -197,7 +202,8 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdm
           )}
           {dateEditId === r.id && <InlineDateEdit module="oil" id={r.id} current={r.date} onClose={() => setDateEditId(null)} />}
         </div>
-      ))}
+        ))}
+      </ListGroup>
     </div>
   );
 }

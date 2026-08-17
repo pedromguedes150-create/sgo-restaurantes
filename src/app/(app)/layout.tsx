@@ -1,12 +1,17 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/db/prisma';
 import { getSessionUser } from '@/lib/auth/session';
+import { unitScopeWhere } from '@/lib/scope/unit-scope';
+import { getSelectedUnitId } from '@/lib/scope/selected-unit';
 import { SIDEBAR_COOKIE, isSidebarCollapsed } from '@/lib/sidebar-state';
 import { roleLabel } from '@/lib/roles';
 import { AppHeader } from '@/components/layout/app-header';
 import { BottomNav } from '@/components/layout/bottom-nav';
+import { CommandPalette } from '@/components/layout/command-palette';
 import { Sidebar } from '@/components/layout/sidebar';
 import { SidebarStateProvider } from '@/components/layout/sidebar-state-provider';
+import { PageChromeProvider } from '@/components/layout/page-chrome';
 import { unreadCount } from '@/lib/notifications';
 import { viewableNavHrefs } from '@/lib/permissions';
 import { getInboxPendingCount } from '@/lib/communications/query';
@@ -23,16 +28,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // hidratação). O layout já é dinâmico por causa da sessão, então não custa
   // nada em cache.
   const sidebarCollapsed = isSidebarCollapsed(cookies().get(SIDEBAR_COOKIE)?.value);
-  const [unread, viewable, commPending] = await Promise.all([unreadCount(user), viewableNavHrefs(user.role), getInboxPendingCount(user)]);
+  const [unread, viewable, commPending, units] = await Promise.all([
+    unreadCount(user),
+    viewableNavHrefs(user.role),
+    getInboxPendingCount(user),
+    prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+  ]);
+  const selectedUnitId = getSelectedUnitId(units.map((u) => u.id));
+  // Comunicação agora é o inbox do header (não mais item da sidebar).
   const badges: Record<string, number> = {};
-  if (commPending > 0) badges['/modulos/comunicacao'] = commPending;
 
   return (
-    <div className="min-h-dvh bg-surface print:min-h-0 print:bg-white">
+    <div className="min-h-dvh bg-canvas print:min-h-0 print:bg-white">
       {/* O provider envolve header e sidebar: o botão de recolher mora no
           header e a largura muda na sidebar, então os dois dividem o estado. */}
       <SidebarStateProvider defaultCollapsed={sidebarCollapsed}>
-        <AppHeader userName={user.name} roleLabel={roleLabel(user.role)} unread={unread} />
+       <PageChromeProvider>
+        <AppHeader userName={user.name} roleLabel={roleLabel(user.role)} unread={unread} commPending={commPending} units={units} selectedUnitId={selectedUnitId} />
         {/*
           Largura do conteúdo. Mobile-first: `max-w-3xl` (768px) coincide com o
           breakpoint `md`, então os overrides `md:` abaixo NÃO alteram o celular —
@@ -53,8 +65,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Sidebar isAdmin={isAdmin} viewable={viewable} badges={badges} />
           <main className="w-full max-w-3xl flex-1 px-4 pb-24 pt-4 md:max-w-none md:px-6 md:pb-8 print:max-w-none print:p-0">{children}</main>
         </div>
+       </PageChromeProvider>
       </SidebarStateProvider>
       <BottomNav />
+      <CommandPalette units={units} viewable={viewable} isAdmin={isAdmin} />
       <ServiceWorkerRegister />
       {commPending > 0 && <CommunicationInterstitial />}
     </div>

@@ -32,7 +32,48 @@ export async function canApprove(user: SessionUser, requestId: string): Promise<
   return roles.has(req.approverRole);
 }
 
-export async function approveRequest(user: SessionUser, id: string, ctx: Ctx = {}): Promise<PayActionResult> {
+/**
+ * Aprova VÁRIAS solicitações de uma vez (Onda 4). Reusa approveRequest item a
+ * item — cada uma mantém a checagem de permissão, a segregação de funções, a
+ * guarda contra dupla aprovação e o registro de auditoria próprios.
+ *
+ * A diferença está no aviso: aprovar 158 pagamentos não pode virar 158
+ * notificações para o Financeiro. Por isso o aviso ao Financeiro é suprimido
+ * no laço e mandado UMA vez, consolidado. O solicitante segue avisado
+ * individualmente — são pessoas diferentes, cada uma precisa saber da sua.
+ */
+export async function approveManyRequests(
+  user: SessionUser,
+  ids: string[],
+  ctx: Ctx = {},
+): Promise<{ approved: number; failed: { id: string; reason: string }[] }> {
+  const unique = [...new Set(ids)].slice(0, MAX_BATCH);
+  const failed: { id: string; reason: string }[] = [];
+  let approved = 0;
+  let total = 0;
+
+  for (const id of unique) {
+    const before = await prisma.paymentRequest.findUnique({ where: { id }, select: { amount: true } });
+    const r = await approveRequest(user, id, ctx, { skipFinanceNotice: true });
+    if (r.ok) { approved += 1; total += Number(before?.amount ?? 0); }
+    else failed.push({ id, reason: r.reason });
+  }
+
+  if (approved > 0) {
+    await notifyRole('FINANCE', {
+      title: `${approved} pagamento(s) aprovado(s) — processar`,
+      body: `Total de R$ ${total.toFixed(2)} aprovado por ${user.name}.`,
+      link: '/modulos/pagamentos',
+      module: 'PAYMENTS',
+    });
+  }
+  return { approved, failed };
+}
+
+/** Teto por chamada: evita uma requisição gigante segurando o servidor. */
+export const MAX_BATCH = 200;
+
+export async function approveRequest(user: SessionUser, id: string, ctx: Ctx = {}, opts: { skipFinanceNotice?: boolean } = {}): Promise<PayActionResult> {
   const req = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true, status: true, approverRole: true, type: true, amount: true, requestedById: true } });
   if (!req) return { ok: false, reason: 'NOT_FOUND' };
   if (!canAccessUnit(user, req.unitId)) return { ok: false, reason: 'FORBIDDEN' };
@@ -49,13 +90,16 @@ export async function approveRequest(user: SessionUser, id: string, ctx: Ctx = {
   if (res.count === 0) return { ok: false, reason: 'STATE' };
 
   await audit({ userId: user.id, unitId: req.unitId, action: 'PAYMENT_APPROVE', module: 'PAYMENTS', entity: 'payment_request', entityId: id, metadata: { type: req.type, notify: ['FINANCE'] }, ...ctx });
-  // Aprovado → Financeiro processa; solicitante fica sabendo
-  await notifyRole('FINANCE', {
-    title: 'Pagamento aprovado — processar',
-    body: `Solicitação de R$ ${Number(req.amount).toFixed(2)} aprovada por ${user.name}.`,
-    link: '/modulos/pagamentos',
-    module: 'PAYMENTS',
-  });
+  // Aprovado → Financeiro processa; solicitante fica sabendo.
+  // Em lote, o aviso ao Financeiro sai uma vez só (ver approveManyRequests).
+  if (!opts.skipFinanceNotice) {
+    await notifyRole('FINANCE', {
+      title: 'Pagamento aprovado — processar',
+      body: `Solicitação de R$ ${Number(req.amount).toFixed(2)} aprovada por ${user.name}.`,
+      link: '/modulos/pagamentos',
+      module: 'PAYMENTS',
+    });
+  }
   if (req.requestedById) {
     await notifyUsers([req.requestedById], {
       title: 'Sua solicitação foi aprovada',

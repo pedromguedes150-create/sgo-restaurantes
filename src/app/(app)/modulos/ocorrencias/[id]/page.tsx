@@ -29,19 +29,19 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/ocorrencias" className="inline-flex items-center gap-1 text-sm font-semibold text-accent">
+      <Link href="/modulos/ocorrencias" className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
       <div className="flex items-start justify-between gap-3">
-        <h1 className="text-xl font-bold text-brand">
+        <h1 className="text-xl font-bold text-ink-900">
           #{o.unit.code}-{String(o.number).padStart(4, '0')}
         </h1>
         <StatusBadge tone={STATUS_META[o.status].tone}>{STATUS_META[o.status].label}</StatusBadge>
       </div>
 
-      <Link href={`/modulos/ocorrencias/${o.id}/relatorio`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold text-brand hover:border-accent">
-        <FileText className="h-4 w-4 text-accent" /> Gerar relatório (PDF) para compartilhar
+      <Link href={`/modulos/ocorrencias/${o.id}/relatorio`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold text-brand hover:border-brand">
+        <FileText className="h-4 w-4 text-brand" /> Gerar relatório (PDF) para compartilhar
       </Link>
 
       <Card>
@@ -54,15 +54,15 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
           <Row label="Registrado por" value={o.reportedBy?.name ?? '—'} />
           {o.customerName && <Row label="Cliente" value={o.customerName} />}
           <div className="pt-1">
-            <p className="font-semibold text-muted-foreground">Descrição</p>
+            <p className="font-semibold text-ink-500">Descrição</p>
             <p className="whitespace-pre-wrap">{o.description}</p>
           </div>
           {o.attachments.length > 0 && (
             <div className="pt-1">
-              <p className="font-semibold text-muted-foreground">Anexos</p>
+              <p className="font-semibold text-ink-500">Anexos</p>
               <ul className="space-y-1">
                 {o.attachments.map((a) => (
-                  <li key={a.id} className="inline-flex items-center gap-1 text-muted-foreground">
+                  <li key={a.id} className="inline-flex items-center gap-1 text-ink-500">
                     <Paperclip className="h-3.5 w-3.5" /> {a.mimeType}
                   </li>
                 ))}
@@ -93,11 +93,11 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
             <Row label="Em" value={fmt(o.closedAt)} />
             <Row label="Revisão prevista" value={fmt(o.reviewDate)} />
             <div className="pt-1">
-              <p className="font-semibold text-muted-foreground">Justificativa</p>
+              <p className="font-semibold text-ink-500">Justificativa</p>
               <p className="whitespace-pre-wrap">{o.closureJustification}</p>
             </div>
             <div className="pt-1">
-              <p className="font-semibold text-muted-foreground">Ação corretiva</p>
+              <p className="font-semibold text-ink-500">Ação corretiva</p>
               <p className="whitespace-pre-wrap">{o.correctiveAction}</p>
             </div>
           </CardContent>
@@ -118,12 +118,12 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
       )}
 
       {isAdmin && (
-        <Card className="border-critical/30">
+        <Card className="border-danger/30">
           <CardHeader>
-            <CardTitle className="text-critical">Excluir (admin)</CardTitle>
+            <CardTitle className="text-danger">Excluir (admin)</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">Remove a ocorrência e seus anexos. Registrado na Auditoria.</p>
+            <p className="text-xs text-ink-500">Remove a ocorrência e seus anexos. Registrado na Auditoria.</p>
             <DeleteOpButton entity="occurrence" id={o.id} label={`a ocorrência #${o.number}`} redirectTo="/modulos/ocorrencias" />
           </CardContent>
         </Card>
@@ -135,7 +135,7 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-ink-500">{label}</span>
       <span className="text-right font-medium">{value}</span>
     </div>
   );

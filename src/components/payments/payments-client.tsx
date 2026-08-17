@@ -4,11 +4,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, X, Banknote, Plus, Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
-import { formatBRL } from '@/lib/utils';
+import { formatBRL, cn } from '@/lib/utils';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
+import { Button as DsButton } from '@/components/ui/ds/button';
+import { Banner } from '@/components/ui/ds/banner';
+import { List as DsList, ListRow } from '@/components/ui/ds/list-row';
+import { StatusBadge as DsStatusBadge, type Tone as DsTone } from '@/components/ui/ds/status-badge';
+import { Sheet } from '@/components/ui/ds/sheet';
+import { Select as DsSelect } from '@/components/ui/ds/select';
+import { TimePicker } from '@/components/ui/ds/time-picker';
+import { SearchField } from '@/components/ui/ds/field';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 
 export interface PayDetail {
   workDate: string | null; shift: string | null; workStartTime: string | null; workEndTime: string | null;
@@ -53,6 +64,11 @@ const STATUS: Record<PayReq['status'], { label: string; tone: StatusTone }> = {
   PAID: { label: 'Paga', tone: 'success' },
 };
 
+/** Semáforo legado das solicitações → tons do design system. */
+const DS_STATUS: Record<PayReq['status'], DsTone> = {
+  PENDING: 'warning', APPROVED: 'info', REJECTED: 'danger', PAID: 'success',
+};
+
 type Tab = 'nova' | 'minhas' | 'aprovar' | 'pagar' | 'historico';
 
 export function PaymentsClient({
@@ -84,6 +100,36 @@ export function PaymentsClient({
   const [tab, setTab] = useState<Tab>(toApprove.length > 0 ? 'aprovar' : 'nova');
   const [busy, setBusy] = useState(false);
   const [dateEditId, setDateEditId] = useState<string | null>(null);
+  // Seleção para aprovação em lote (aba "Para Aprovar").
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [batchMsg, setBatchMsg] = useState<{ tone: 'success' | 'warning' | 'danger'; title: string; description?: string } | null>(null);
+  const selTotal = useMemo(() => toApprove.filter((r) => sel.has(r.id)).reduce((s, r) => s + r.amount, 0), [toApprove, sel]);
+
+  async function approveSelected() {
+    if (sel.size === 0) return;
+    const ids = [...sel];
+    if (!confirm(`Aprovar ${ids.length} pagamento(s), somando ${formatBRL(selTotal)}?`)) return;
+    setBusy(true);
+    setBatchMsg(null);
+    try {
+      const res = await fetch('/api/payments/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approveMany', ids }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setBatchMsg({ tone: 'danger', title: d.error ?? 'Falha ao aprovar em lote' }); return; }
+      setSel(new Set());
+      setBatchMsg(
+        d.failed?.length
+          ? { tone: 'warning', title: `${d.approved} aprovada(s), ${d.failed.length} não passaram`, description: 'As que falharam podem já ter sido aprovadas por outra pessoa ou estar fora do seu perfil de aprovação.' }
+          : { tone: 'success', title: `${d.approved} pagamento(s) aprovado(s)`, description: 'O Financeiro foi avisado uma única vez, com o total consolidado.' },
+      );
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function act(id: string, action: string, extra?: Record<string, unknown>) {
     setBusy(true);
@@ -111,7 +157,7 @@ export function PaymentsClient({
             act(r.id, 'adminEdit', { amount });
           }} aria-label="Editar valor"><Pencil className="h-4 w-4" /> Editar valor</Button>}
           {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setDateEditId((id) => (id === r.id ? null : r.id))} aria-label="Editar data"><Pencil className="h-4 w-4" /> Editar data</Button>}
-          {isAdmin && <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm(`Excluir este pagamento (${TYPE_LABEL[r.type]} · ${formatBRL(r.amount)})? Registrado na Auditoria.`)) act(r.id, 'adminDelete'); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /> Excluir</Button>}
+          {isAdmin && <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm(`Excluir este pagamento (${TYPE_LABEL[r.type]} · ${formatBRL(r.amount)})? Registrado na Auditoria.`)) act(r.id, 'adminDelete'); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /> Excluir</Button>}
         </div>
         {dateEditId === r.id && <InlineDateEdit module="payment" id={r.id} current={(r.entryDate ?? r.requestedAt ?? '').slice(0, 10)} onClose={() => setDateEditId(null)} />}
       </>
@@ -128,37 +174,59 @@ export function PaymentsClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {tabs.filter((t) => t.show).map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={
-              tab === t.key
-                ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground'
-                : 'rounded-full border px-3 py-1.5 text-sm font-medium'
-            }
-          >
-            {t.label}
-            {t.badge ? <span className="ml-1 rounded-full bg-critical px-1.5 text-xs text-white">{t.badge}</span> : null}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        aria-label="Seções de Pagamentos"
+        value={tab}
+        onValueChange={setTab}
+        options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label, badge: t.badge, badgeTone: 'danger' as const }))}
+      />
 
       {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} onDone={() => { setTab('minhas'); router.refresh(); }} />}
 
       {tab === 'minhas' && <List items={mine} />}
 
       {tab === 'aprovar' && (
-        <List
-          items={toApprove}
-          actions={(r) => (
-            <div className="flex gap-2">
-              <Button size="sm" disabled={busy} onClick={() => act(r.id, 'approve')}><Check className="h-4 w-4" /> Aprovar</Button>
-              <Button size="sm" variant="destructive" disabled={busy} onClick={() => { const m = prompt('Motivo da rejeição:'); if (m) act(r.id, 'reject', { reason: m }); }}><X className="h-4 w-4" /> Rejeitar</Button>
+        <>
+          {toApprove.length > 1 && (
+            // Barra de lote: gruda no topo para o gestor não precisar rolar de
+            // volta depois de marcar dezenas de itens.
+            <div className="sticky top-14 z-20 -mx-1 flex flex-wrap items-center gap-2 rounded-card border border-line bg-glass px-3 py-2 backdrop-blur-xl">
+              <label className="flex cursor-pointer items-center gap-2 text-[13px] font-medium text-ink-700">
+                <input
+                  type="checkbox"
+                  checked={sel.size === toApprove.length && toApprove.length > 0}
+                  ref={(el) => { if (el) el.indeterminate = sel.size > 0 && sel.size < toApprove.length; }}
+                  onChange={() => setSel((s) => (s.size === toApprove.length ? new Set() : new Set(toApprove.map((r) => r.id))))}
+                  style={{ accentColor: 'var(--sgo-brand)' }}
+                  className="h-4 w-4 rounded outline-none focus-visible:shadow-sgo-focus"
+                />
+                Selecionar todas ({toApprove.length})
+              </label>
+              <span className="text-[13px] tabular-nums text-ink-500">
+                {sel.size} selecionada(s) · {formatBRL(selTotal)}
+              </span>
+              <span className="ml-auto flex gap-2">
+                {sel.size > 0 && <DsButton size="sm" variant="ghost" onClick={() => setSel(new Set())}>Limpar</DsButton>}
+                <DsButton size="sm" disabled={sel.size === 0} loading={busy} onClick={approveSelected}>
+                  <Check className="h-4 w-4" /> Aprovar selecionadas
+                </DsButton>
+              </span>
             </div>
           )}
-        />
+          {batchMsg && (
+            <Banner tone={batchMsg.tone} title={batchMsg.title} description={batchMsg.description} onDismiss={() => setBatchMsg(null)} />
+          )}
+          <List
+            items={toApprove}
+            selection={toApprove.length > 1 ? { ids: sel, onToggle: (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }) } : undefined}
+            actions={(r) => (
+              <div className="flex gap-2">
+                <Button size="sm" disabled={busy} onClick={() => act(r.id, 'approve')}><Check className="h-4 w-4" /> Aprovar</Button>
+                <Button size="sm" variant="destructive" disabled={busy} onClick={() => { const m = prompt('Motivo da rejeição:'); if (m) act(r.id, 'reject', { reason: m }); }}><X className="h-4 w-4" /> Rejeitar</Button>
+              </div>
+            )}
+          />
+        </>
       )}
 
       {tab === 'pagar' && (
@@ -187,31 +255,53 @@ function HistoryTab({ items, actions }: { items: PayReq[]; actions?: (r: PayReq)
     (status === 'ALL' || i.status === status) &&
     (!q.trim() || i.title.toLowerCase().includes(q.trim().toLowerCase()) || (i.requestedBy ?? '').toLowerCase().includes(q.trim().toLowerCase()))
   ), [items, type, unit, status, q]);
-  const sel = 'h-9 rounded-lg border-2 border-input bg-background px-2 text-sm';
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
-        <select value={type} onChange={(e) => setType(e.target.value as typeof type)} className={sel}>
-          <option value="ALL">Todos os tipos</option>
-          <option value="FREELANCER">Freelancer</option>
-          <option value="OVERTIME">Hora Extra</option>
-          <option value="MISC">Avulso</option>
-        </select>
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3">
+        <div className="min-w-[9rem] flex-1">
+          <DsSelect
+            label="Tipo"
+            size="sm"
+            value={type}
+            onValueChange={(v) => setType(v as typeof type)}
+            options={[
+              { value: 'ALL', label: 'Todos os tipos' },
+              { value: 'FREELANCER', label: 'Freelancer' },
+              { value: 'OVERTIME', label: 'Hora Extra' },
+              { value: 'MISC', label: 'Avulso' },
+            ]}
+          />
+        </div>
         {unitNames.length > 1 && (
-          <select value={unit} onChange={(e) => setUnit(e.target.value)} className={sel}>
-            <option value="ALL">Todas as unidades</option>
-            {unitNames.map((u) => <option key={u} value={u}>{u}</option>)}
-          </select>
+          <div className="min-w-[9rem] flex-1">
+            <DsSelect
+              label="Unidade"
+              size="sm"
+              value={unit}
+              onValueChange={setUnit}
+              options={[{ value: 'ALL', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
+            />
+          </div>
         )}
-        <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className={sel}>
-          <option value="ALL">Todos os status</option>
-          <option value="PENDING">Pendente</option>
-          <option value="APPROVED">Aprovada</option>
-          <option value="PAID">Paga</option>
-          <option value="REJECTED">Rejeitada</option>
-        </select>
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar prestador/beneficiário…" className="h-9 w-48 text-sm" />
-        <span className="ml-auto text-xs text-muted-foreground">{filtered.length} de {items.length}</span>
+        <div className="min-w-[9rem] flex-1">
+          <DsSelect
+            label="Status"
+            size="sm"
+            value={status}
+            onValueChange={(v) => setStatus(v as typeof status)}
+            options={[
+              { value: 'ALL', label: 'Todos os status' },
+              { value: 'PENDING', label: 'Pendente' },
+              { value: 'APPROVED', label: 'Aprovada' },
+              { value: 'PAID', label: 'Paga' },
+              { value: 'REJECTED', label: 'Rejeitada' },
+            ]}
+          />
+        </div>
+        <div className="min-w-[12rem] flex-1">
+          <SearchField label="Busca" value={q} onValueChange={setQ} placeholder="prestador ou beneficiário…" inputSize="sm" />
+        </div>
+        <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{filtered.length} de {items.length}</span>
       </div>
       <List items={filtered} actions={actions} />
     </div>
@@ -255,56 +345,70 @@ function DetailView({ r }: { r: PayReq }) {
   if (d?.paidBy) rows.push(['Pago por', `${d.paidBy}${d.paidAt ? ` em ${fmtDate(d.paidAt)}` : ''}`]);
   if (r.rejectionReason) rows.push(['Rejeição', r.rejectionReason]);
   return (
-    <div className="mt-2 space-y-1 rounded-md bg-surface p-2">
+    <div className="mt-2 space-y-1 rounded-md bg-canvas p-2">
       {rows.map(([k, v], i) => (
         <div key={i} className="flex justify-between gap-3 text-xs">
-          <span className="shrink-0 text-muted-foreground">{k}</span>
-          <span className="text-right font-medium text-foreground">{v}</span>
+          <span className="shrink-0 text-ink-500">{k}</span>
+          <span className="text-right font-medium text-ink-900">{v}</span>
         </div>
       ))}
       {d?.hasAttachment && d.attachmentPath && (
-        <a href={`/${d.attachmentPath}`} target="_blank" rel="noreferrer" className="block pt-1 text-xs font-semibold text-accent underline">Ver anexo</a>
+        <a href={`/${d.attachmentPath}`} target="_blank" rel="noreferrer" className="block pt-1 text-xs font-semibold text-brand underline">Ver anexo</a>
       )}
     </div>
   );
 }
 
-function Row({ r, open, onToggle, actions }: { r: PayReq; open: boolean; onToggle: () => void; actions?: (r: PayReq) => React.ReactNode }) {
+/**
+ * Uma solicitação = uma LINHA; o detalhe abre num Sheet (Onda 4). Antes o
+ * detalhe expandia dentro do cartão e empurrava a lista inteira para baixo —
+ * conferir um item fazia o gestor perder a posição de leitura dos outros.
+ */
+function Row({ r, onOpen, selected, onSelect }: { r: PayReq; onOpen: () => void; selected?: boolean; onSelect?: () => void }) {
+  const marks = [
+    r.divergent ? `Divergência: padrão ${r.standardValue != null ? formatBRL(r.standardValue) : '—'}` : null,
+    r.dateEdited ? 'Data corrigida — desconta na meta' : null,
+  ].filter(Boolean).join(' · ');
+
   return (
-    <div className="rounded-lg border bg-card p-3">
-      <button onClick={onToggle} className="flex w-full items-start justify-between gap-2 text-left">
-        <span className="min-w-0">
-          <span className="block font-semibold text-brand">{TYPE_LABEL[r.type]} · {r.title}</span>
-          <span className="block text-xs text-muted-foreground">
-            {formatBRL(r.amount)}{r.requestedBy ? ` · por ${r.requestedBy}` : ''}
-            {r.requestedAt ? ` · solicitado ${new Date(r.requestedAt).toLocaleDateString('pt-BR')}` : ''}
-          </span>
-        </span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          <StatusBadge tone={STATUS[r.status].tone}>{STATUS[r.status].label}</StatusBadge>
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
-        </span>
-      </button>
-      {r.dateEdited && (
-        <p className="mt-0.5 text-xs font-semibold text-critical">
-          Data corrigida{r.entryDate ? ` p/ ${new Date(r.entryDate).toLocaleDateString('pt-BR')}` : ''}{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta
-        </p>
-      )}
-      {r.divergent && (
-        <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-medium">
-          <AlertTriangle className="h-3.5 w-3.5" /> Divergência: padrão {r.standardValue != null ? formatBRL(r.standardValue) : '—'}
-        </p>
-      )}
-      {open && <DetailView r={r} />}
-      {actions && <div className="mt-2">{actions(r)}</div>}
-    </div>
+    <ListRow
+      onClick={onOpen}
+      title={`${TYPE_LABEL[r.type]} · ${r.title}`}
+      subtitle={[
+        formatBRL(r.amount),
+        r.requestedBy ? `por ${r.requestedBy}` : null,
+        r.requestedAt ? `solicitado ${new Date(r.requestedAt).toLocaleDateString('pt-BR')}` : null,
+        marks || null,
+      ].filter(Boolean).join(' · ')}
+      trailing={
+        <>
+          {r.divergent && <DsStatusBadge tone="warning" dot>Divergência</DsStatusBadge>}
+          <DsStatusBadge tone={DS_STATUS[r.status]} dot>{STATUS[r.status].label}</DsStatusBadge>
+        </>
+      }
+      selectionSlot={onSelect ? (
+        <input
+          type="checkbox"
+          checked={!!selected}
+          onChange={onSelect}
+          aria-label={`Selecionar ${TYPE_LABEL[r.type]} de ${r.title} para aprovação em lote`}
+          style={{ accentColor: 'var(--sgo-brand)' }}
+          className="h-4 w-4 rounded outline-none focus-visible:shadow-sgo-focus"
+        />
+      ) : undefined}
+    />
   );
 }
 
-function List({ items, actions }: { items: PayReq[]; actions?: (r: PayReq) => React.ReactNode }) {
-  const [open, setOpen] = useState<Set<string>>(new Set());
-  const toggle = (id: string) => setOpen((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  if (items.length === 0) return <p className="text-sm text-muted-foreground">Nada por aqui.</p>;
+function List({ items, actions, selection }: {
+  items: PayReq[];
+  actions?: (r: PayReq) => React.ReactNode;
+  /** Quando presente, cada linha ganha caixa de seleção (aprovação em lote). */
+  selection?: { ids: Set<string>; onToggle: (id: string) => void };
+}) {
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const detail = items.find((i) => i.id === detailId) ?? null;
+  if (items.length === 0) return <p className="text-sm text-ink-500">Nada por aqui.</p>;
 
   // Agrupa por DIA (mais recente primeiro) e, dentro do dia, por UNIDADE (pedido 16/07)
   const byDay = new Map<string, PayReq[]>();
@@ -322,18 +426,60 @@ function List({ items, actions }: { items: PayReq[]; actions?: (r: PayReq) => Re
         return (
           <div key={day} className="space-y-2">
             <div className="flex items-center justify-between border-b pb-1">
-              <p className="text-sm font-bold text-brand">📅 {fmtDay(day)}</p>
-              <span className="text-xs text-muted-foreground">{dayItems.length} lançamento(s) · {formatBRL(dayTotal)}</span>
+              <p className="text-sm font-bold text-ink-900">📅 {fmtDay(day)}</p>
+              <span className="text-xs text-ink-500">{dayItems.length} lançamento(s) · {formatBRL(dayTotal)}</span>
             </div>
             {unitNames.map((u) => (
               <div key={u} className="space-y-1.5">
-                {unitNames.length > 1 && <p className="pt-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{u} <span className="font-normal">({byUnit.get(u)!.length})</span></p>}
-                {byUnit.get(u)!.map((r) => <Row key={r.id} r={r} open={open.has(r.id)} onToggle={() => toggle(r.id)} actions={actions} />)}
+                {unitNames.length > 1 && <p className="sgo-type-11 pt-0.5 text-ink-500">{shortUnitName(u)} <span className="font-normal">({byUnit.get(u)!.length})</span></p>}
+                <DsList>
+                  {byUnit.get(u)!.map((r) => (
+                    <Row
+                      key={r.id}
+                      r={r}
+                      onOpen={() => setDetailId(r.id)}
+                      selected={selection?.ids.has(r.id)}
+                      onSelect={selection ? () => selection.onToggle(r.id) : undefined}
+                    />
+                  ))}
+                </DsList>
               </div>
             ))}
           </div>
         );
       })}
+
+      {/* Detalhe fora do fluxo: a lista não se mexe quando se abre um item. */}
+      <Sheet
+        open={!!detail}
+        onClose={() => setDetailId(null)}
+        title={detail ? `${TYPE_LABEL[detail.type]} · ${detail.title}` : ''}
+        description={detail ? `${formatBRL(detail.amount)} · ${shortUnitName(detail.unit)}` : undefined}
+        footer={detail && actions ? actions(detail) : undefined}
+      >
+        {detail && (
+          <>
+            {detail.dateEdited && (
+              <Banner
+                tone="warning"
+                title="Data corrigida — desconta na meta"
+                description={[
+                  detail.entryDate ? `Para ${new Date(detail.entryDate).toLocaleDateString('pt-BR')}` : null,
+                  detail.dateEditedByName ? `por ${detail.dateEditedByName}` : null,
+                ].filter(Boolean).join(' ')}
+              />
+            )}
+            {detail.divergent && (
+              <Banner
+                tone="warning"
+                title="Valor fora do padrão"
+                description={`Padrão cadastrado: ${detail.standardValue != null ? formatBRL(detail.standardValue) : '—'}`}
+              />
+            )}
+            <DetailView r={detail} />
+          </>
+        )}
+      </Sheet>
     </div>
   );
 }
@@ -362,7 +508,6 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
   const [err, setErr] = useState<string | null>(null);
 
   const unitFreelancers = useMemo(() => freelancers.filter((f) => f.unitIds.includes(unitId)), [freelancers, unitId]);
-  const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
 
   const selectedFreelancer = useMemo(() => freelancers.find((f) => f.id === freelancerId), [freelancers, freelancerId]);
   const amt = parseFloat((amount || '0').replace(',', '.'));
@@ -403,32 +548,34 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label>Tipo</Label>
-        <select className={sel} value={type} onChange={(e) => setType(e.target.value as typeof type)}>
-          <option value="FREELANCER">Freelancer</option>
-          <option value="OVERTIME">Hora Extra</option>
-          <option value="MISC">Pagamento Avulso</option>
-        </select>
-      </div>
+      <DsSelect
+        label="Tipo"
+        value={type}
+        onValueChange={(v) => setType(v as typeof type)}
+        options={[
+          { value: 'FREELANCER', label: 'Freelancer' },
+          { value: 'OVERTIME', label: 'Hora Extra' },
+          { value: 'MISC', label: 'Pagamento Avulso' },
+        ]}
+      />
       {units.length > 1 && (
-        <div>
-          <Label>Unidade</Label>
-          <select className={sel} value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
+        <DsSelect
+          label="Unidade"
+          value={unitId}
+          onValueChange={setUnitId}
+          options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+        />
       )}
 
       {type === 'FREELANCER' && (
         <>
-          <div>
-            <Label>Freelancer</Label>
-            <select className={sel} value={freelancerId} onChange={(e) => { setFreelancerId(e.target.value); const f = unitFreelancers.find((x) => x.id === e.target.value); if (f) setAmount(String(f.defaultValue)); }}>
-              <option value="">Selecione…</option>
-              {unitFreelancers.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-          </div>
+          <DsSelect
+            label="Freelancer"
+            placeholder="Selecione…"
+            value={freelancerId}
+            onValueChange={(v) => { setFreelancerId(v); const f = unitFreelancers.find((x) => x.id === v); if (f) setAmount(String(f.defaultValue)); }}
+            options={unitFreelancers.map((f) => ({ value: f.id, label: f.name }))}
+          />
           {(selectedFreelancer?.sectorRates?.length ?? 0) > 0 && (
             <label className="flex items-center gap-2 rounded-lg border border-dashed p-2 text-sm">
               <input type="checkbox" checked={coverage} onChange={(e) => { setCoverage(e.target.checked); setCoverageSector(''); }} />
@@ -438,31 +585,34 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
           {coverage && (
             <div>
               <Label>Setor coberto</Label>
-              <select className={sel} value={coverageSector} onChange={(e) => setCoverageSector(e.target.value)}>
-                <option value="">Selecione o setor…</option>
-                {(selectedFreelancer?.sectorRates ?? []).map((r) => <option key={r.sectorName} value={r.sectorName}>{r.sectorName} — {formatBRL(r.dayValue)}/dia</option>)}
-              </select>
+              <DsSelect
+                aria-label="Setor coberto"
+                placeholder="Selecione o setor…"
+                value={coverageSector}
+                onValueChange={setCoverageSector}
+                options={(selectedFreelancer?.sectorRates ?? []).map((r) => ({ value: r.sectorName, label: r.sectorName, hint: `${formatBRL(r.dayValue)}/dia` }))}
+              />
               {coverageSector && (
-                <p className="mt-1 text-xs text-muted-foreground">Valor do dia: <b>{formatBRL((selectedFreelancer?.sectorRates ?? []).find((r) => r.sectorName === coverageSector)?.dayValue ?? 0)}</b>{transportValue ? ' + VT' : ''} (calculado automaticamente).</p>
+                <p className="mt-1 text-xs text-ink-500">Valor do dia: <b>{formatBRL((selectedFreelancer?.sectorRates ?? []).find((r) => r.sectorName === coverageSector)?.dayValue ?? 0)}</b>{transportValue ? ' + VT' : ''} (calculado automaticamente).</p>
               )}
             </div>
           )}
-          <div><Label>Dia do trabalho</Label><Input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} /></div>
+          <DatePicker label="Dia do trabalho" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Hora início</Label><Input type="time" value={workStartTime} onChange={(e) => setWorkStartTime(e.target.value)} /></div>
-            <div><Label>Hora fim</Label><Input type="time" value={workEndTime} onChange={(e) => setWorkEndTime(e.target.value)} /></div>
+            <TimePicker label="Hora início" value={workStartTime || null} onValueChange={(v) => setWorkStartTime(v ?? '')} />
+            <TimePicker label="Hora fim" value={workEndTime || null} onValueChange={(v) => setWorkEndTime(v ?? '')} />
           </div>
-          <p className="text-xs text-muted-foreground">Com o dia e a hora preenchidos, o freelancer fica disponível para alocar no Mapa da unidade naquele dia/horário.</p>
+          <p className="text-xs text-ink-500">Com o dia e a hora preenchidos, o freelancer fica disponível para alocar no Mapa da unidade naquele dia/horário.</p>
           <div><Label>Vale transporte (R$, opcional)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>
           {calc?.configured && (
-            <div className="rounded-lg border-2 border-accent/40 bg-accent/5 p-3">
-              <p className="text-xs text-muted-foreground">Valor calculado ({calc.dayTypeLabel})</p>
-              <p className="text-2xl font-black text-brand">{formatBRL(calc.amount)}</p>
-              <p className="text-xs text-muted-foreground">{calc.hours}h × {formatBRL(calc.rate ?? 0)}/h{calc.transport > 0 ? ` + ${formatBRL(calc.transport)} VT` : ''}</p>
+            <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
+              <p className="text-xs text-ink-500">Valor calculado ({calc.dayTypeLabel})</p>
+              <p className="text-2xl font-black text-ink-900">{formatBRL(calc.amount)}</p>
+              <p className="text-xs text-ink-500">{calc.hours}h × {formatBRL(calc.rate ?? 0)}/h{calc.transport > 0 ? ` + ${formatBRL(calc.transport)} VT` : ''}</p>
             </div>
           )}
           {calc && !calc.configured && workDate && workStartTime && workEndTime && (
-            <p className="rounded-lg bg-medium/10 px-3 py-2 text-xs text-[#92600A]">Sem valor/hora cadastrado para este dia nesta unidade. Informe o valor manualmente abaixo (o Admin pode cadastrar em Configurações → Valor do freelancer).</p>
+            <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">Sem valor/hora cadastrado para este dia nesta unidade. Informe o valor manualmente abaixo (o Admin pode cadastrar em Configurações → Valor do freelancer).</p>
           )}
           <div><Label>Observações (opcional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex: cobriu falta, evento…" /></div>
         </>
@@ -472,12 +622,12 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
         <>
           <div><Label>Colaborador</Label><Input value={collaboratorName} onChange={(e) => setCollaboratorName(e.target.value)} placeholder="nome (via RH)" /></div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Data</Label><Input type="date" value={workDate} onChange={(e) => setWorkDate(e.target.value)} /></div>
+            <DatePicker label="Data" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
             <div><Label>Horas</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} /></div>
           </div>
           <div><Label>Motivo</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} /></div>
           <div><Label>Vale transporte (R$, opcional — soma ao total)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>
-          <p className="text-xs text-muted-foreground">Valor é estimativa para aprovação; o cálculo final (50%/100%, reflexos) é do RH/folha.</p>
+          <p className="text-xs text-ink-500">Valor é estimativa para aprovação; o cálculo final (50%/100%, reflexos) é do RH/folha.</p>
         </>
       )}
 
@@ -485,18 +635,23 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
         <>
           <div>
             <Label>Tipo de pagamento</Label>
-            <select className={sel} value={miscTypeId} onChange={(e) => setMiscTypeId(e.target.value)}>
-              <option value="">Selecione…</option>
-              {miscTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            <DsSelect
+              aria-label="Tipo de pagamento"
+              placeholder="Selecione…"
+              value={miscTypeId}
+              onValueChange={setMiscTypeId}
+              options={miscTypes.map((t) => ({ value: t.id, label: t.name }))}
+            />
           </div>
           {suppliers.length > 0 && (
             <div>
               <Label>Fornecedor (opcional)</Label>
-              <select className={sel} value={supplierId} onChange={(e) => { const s = suppliers.find((x) => x.id === e.target.value); setSupplierId(e.target.value); if (s) setBeneficiary(s.name); }}>
-                <option value="">— nenhum / digitar abaixo —</option>
-                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <DsSelect
+                aria-label="Fornecedor"
+                value={supplierId}
+                onValueChange={(v) => { const s = suppliers.find((x) => x.id === v); setSupplierId(v); if (s) setBeneficiary(s.name); }}
+                options={[{ value: '', label: '— nenhum / digitar abaixo —' }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
+              />
             </div>
           )}
           <div><Label>Beneficiário</Label><Input value={beneficiary} onChange={(e) => { setBeneficiary(e.target.value); setSupplierId(''); }} /></div>
@@ -507,13 +662,13 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
       {!autoPriced && <div><Label>Valor (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" /></div>}
 
       {freelaDivergent && selectedFreelancer && (
-        <p className="flex items-center gap-2 rounded-lg bg-medium/10 px-3 py-2 text-sm font-medium text-medium">
+        <p className="flex items-center gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm font-medium text-warning">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           Valor diferente do padrão cadastrado ({formatBRL(selectedFreelancer.defaultValue)}). Você pode prosseguir — o aprovador será avisado da divergência.
         </p>
       )}
 
-      {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
+      {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Plus className="h-5 w-5" /> Enviar solicitação</Button>
     </div>
   );

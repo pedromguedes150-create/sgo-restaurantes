@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { CheckCircle2, Send } from 'lucide-react';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { TimePicker } from '@/components/ui/ds/time-picker';
 
 interface Field { id: string; kind: string; label: string; section: string | null; required: boolean; options: string[]; order: number }
 interface Data { title: string; description: string | null; unitName: string; fields: Field[]; collaborators: { id: string; name: string }[] }
 
-const box = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
+const box = 'h-11 w-full rounded-lg border-2 border-line-strong bg-surface px-3 text-sm';
 
 export function ChecklistPublicForm({ token, data }: { token: string; data: Data }) {
   const [collaboratorId, setCollaboratorId] = useState('');
@@ -42,8 +45,8 @@ export function ChecklistPublicForm({ token, data }: { token: string; data: Data
     return (
       <div className="rounded-2xl border-2 border-success/40 bg-success/5 p-6 text-center">
         <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
-        <p className="mt-2 text-lg font-bold text-brand">Enviado, obrigado!</p>
-        <p className="text-sm text-muted-foreground">Seu preenchimento foi registrado.</p>
+        <p className="mt-2 text-lg font-bold text-ink-900">Enviado, obrigado!</p>
+        <p className="text-sm text-ink-500">Seu preenchimento foi registrado.</p>
       </div>
     );
   }
@@ -53,41 +56,45 @@ export function ChecklistPublicForm({ token, data }: { token: string; data: Data
       {/* honeypot anti-bot (escondido) */}
       <input type="text" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
 
-      <div className="rounded-xl border bg-card p-3">
-        <label className="mb-1 block text-sm font-semibold text-brand">Seu nome <span className="text-critical">*</span></label>
-        <select className={box} value={collaboratorId} onChange={(e) => setCollaboratorId(e.target.value)}>
-          <option value="">Selecione…</option>
-          {data.collaborators.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        {data.collaborators.length === 0 && <p className="mt-1 text-xs text-critical">Nenhum funcionário cadastrado nesta unidade. Avise a gestão.</p>}
+      <div className="rounded-xl border bg-surface p-3">
+        <label className="mb-1 block text-sm font-semibold text-brand">Seu nome <span className="text-danger">*</span></label>
+        <Select
+          aria-label="Seu nome" placeholder="Selecione…" value={collaboratorId} onValueChange={setCollaboratorId}
+          options={data.collaborators.map((c) => ({ value: c.id, label: c.name }))}
+        />
+        {data.collaborators.length === 0 && <p className="mt-1 text-xs text-danger">Nenhum funcionário cadastrado nesta unidade. Avise a gestão.</p>}
       </div>
 
       <div className="space-y-3">
         {data.fields.map((f) => {
-          if (f.kind === 'SECTION') return <p key={f.id} className="pt-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">{f.label}</p>;
+          if (f.kind === 'SECTION') return <p key={f.id} className="pt-2 text-sm font-bold uppercase tracking-wide text-ink-500">{f.label}</p>;
           const v = values[f.id];
-          const lbl = <label className="mb-1 block text-sm font-semibold text-brand">{f.label} {f.required && <span className="text-critical">*</span>}</label>;
+          const lbl = <label className="mb-1 block text-sm font-semibold text-brand">{f.label} {f.required && <span className="text-danger">*</span>}</label>;
           if (f.kind === 'BOOLEAN') {
             return (
-              <label key={f.id} className="flex items-center gap-2 rounded-xl border bg-card p-3 text-sm font-semibold text-brand">
-                <input type="checkbox" className="h-5 w-5 accent-accent" checked={v === true} onChange={(e) => set(f.id, e.target.checked)} /> {f.label}{f.required && <span className="text-critical">*</span>}
+              <label key={f.id} className="flex items-center gap-2 rounded-xl border bg-surface p-3 text-sm font-semibold text-brand">
+                <input type="checkbox" className="h-5 w-5 accent-brand" checked={v === true} onChange={(e) => set(f.id, e.target.checked)} /> {f.label}{f.required && <span className="text-danger">*</span>}
               </label>
             );
           }
           return (
-            <div key={f.id} className="rounded-xl border bg-card p-3">
+            <div key={f.id} className="rounded-xl border bg-surface p-3">
               {lbl}
               {f.kind === 'TEXTAREA' ? (
-                <textarea rows={3} className="w-full rounded-lg border-2 border-input bg-background px-3 py-2 text-sm" value={(v as string) ?? ''} onChange={(e) => set(f.id, e.target.value)} />
+                <textarea rows={3} className="w-full rounded-lg border-2 border-line-strong bg-surface px-3 py-2 text-sm" value={(v as string) ?? ''} onChange={(e) => set(f.id, e.target.value)} />
               ) : f.kind === 'SELECT' ? (
-                <select className={box} value={(v as string) ?? ''} onChange={(e) => set(f.id, e.target.value)}>
-                  <option value="">Selecione…</option>
-                  {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
+                <Select
+                  aria-label={f.label} placeholder="Selecione…" value={(v as string) ?? ''} onValueChange={(nv) => set(f.id, nv)}
+                  options={f.options.map((o) => ({ value: o, label: o }))}
+                />
+              ) : f.kind === 'DATE' ? (
+                <DatePicker aria-label={f.label} value={(v as string) || null} onValueChange={(nv) => set(f.id, nv ?? '')} />
+              ) : f.kind === 'TIME' ? (
+                <TimePicker aria-label={f.label} value={(v as string) || null} onValueChange={(nv) => set(f.id, nv ?? '')} />
               ) : (
                 <input
                   className={box}
-                  type={f.kind === 'NUMBER' ? 'number' : f.kind === 'TIME' ? 'time' : f.kind === 'DATE' ? 'date' : 'text'}
+                  type={f.kind === 'NUMBER' ? 'number' : 'text'}
                   inputMode={f.kind === 'NUMBER' ? 'decimal' : undefined}
                   value={(v as string) ?? ''}
                   onChange={(e) => set(f.id, e.target.value)}
@@ -98,8 +105,8 @@ export function ChecklistPublicForm({ token, data }: { token: string; data: Data
         })}
       </div>
 
-      {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
-      <button onClick={submit} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-bold text-white disabled:opacity-60">
+      {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
+      <button onClick={submit} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 text-sm font-bold text-on-brand disabled:opacity-60">
         <Send className="h-4 w-4" /> {busy ? 'Enviando…' : 'Enviar'}
       </button>
     </div>

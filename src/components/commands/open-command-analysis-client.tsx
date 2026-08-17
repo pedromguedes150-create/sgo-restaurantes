@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Upload, Printer, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatBRL } from '@/lib/utils';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+
+
 
 interface Suspect { number: string; openedAt: string | null; openedDate: string | null; value: number; daysOpen: number; items: { name: string; qty: number; value: number }[] }
 interface Analysis { id: string; cutDate: string; fileName: string | null; createdByName: string; createdAt: string; totalCommands: number; suspectCount: number; suspectValue: number; suspects: Suspect[] }
@@ -42,24 +45,25 @@ export function OpenCommandAnalysisClient({ unitId, unitName, today, analyses }:
       {/* Upload */}
       <div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3 print:hidden">
         <div>
-          <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">Data de corte</label>
-          <input type="date" value={cutDate} max={today} onChange={(e) => setCutDate(e.target.value)} className="h-10 rounded-lg border-2 border-input bg-background px-2 text-sm" />
-          <p className="mt-0.5 text-[11px] text-muted-foreground">comandas abertas antes desta data = suspeitas</p>
+          <DatePicker
+            label="Data de corte" max={today} value={cutDate || null} onValueChange={(v) => setCutDate(v ?? '')}
+            hint="comandas abertas antes desta data = suspeitas"
+          />
         </div>
         <Button disabled={busy} onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" /> {busy ? 'Analisando…' : 'Subir relatório (.xlsx/.csv)'}</Button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ''; }} />
-        <a href="/modulos/comandas/analise-aberto/consolidado" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent">📄 Consolidado da rede (Administrativo)</a>
+        <a href="/modulos/comandas/analise-aberto/consolidado" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">📄 Consolidado da rede (Administrativo)</a>
       </div>
-      {msg && <p className="rounded-lg bg-accent/10 px-3 py-2 text-sm font-medium text-accent print:hidden">{msg}</p>}
+      {msg && <p className="rounded-lg bg-brand/10 px-3 py-2 text-sm font-medium text-ink-900 print:hidden">{msg}</p>}
 
-      {analyses.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma análise ainda. Suba o relatório de comandas em aberto do Teknisa.</p>}
+      {analyses.length === 0 && <p className="text-sm text-ink-500">Nenhuma análise ainda. Suba o relatório de comandas em aberto do Teknisa.</p>}
 
       {analyses.map((a) => (
-        <div key={a.id} className="rounded-lg border bg-card">
+        <div key={a.id} className="rounded-lg border bg-surface">
           <button onClick={() => setOpen(open === a.id ? null : a.id)} className="flex w-full items-center justify-between gap-2 p-3 text-left print:hidden">
             <span>
-              <span className="block text-sm font-bold text-brand">{a.suspectCount} suspeita(s) · {formatBRL(a.suspectValue)}</span>
-              <span className="block text-xs text-muted-foreground">corte {fmtDT(a.cutDate)} · {a.totalCommands} comandas no relatório · por {a.createdByName} em {new Date(a.createdAt).toLocaleString('pt-BR')}</span>
+              <span className="block text-sm font-bold text-ink-900">{a.suspectCount} suspeita(s) · {formatBRL(a.suspectValue)}</span>
+              <span className="block text-xs text-ink-500">corte {fmtDT(a.cutDate)} · {a.totalCommands} comandas no relatório · por {a.createdByName} em {new Date(a.createdAt).toLocaleString('pt-BR')}</span>
             </span>
             <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${open === a.id ? 'rotate-180' : ''}`} />
           </button>
@@ -68,25 +72,25 @@ export function OpenCommandAnalysisClient({ unitId, unitName, today, analyses }:
             <div className="border-t p-3">
               <div className="mb-2 flex items-center justify-between print:mb-4">
                 <div>
-                  <p className="text-sm font-bold text-brand">Comandas suspeitas — {unitName}</p>
-                  <p className="text-xs text-muted-foreground">Abertas com valor e data anterior a {fmtDT(a.cutDate)}. Para o monitoramento buscar câmeras por data/hora.</p>
+                  <p className="text-sm font-bold text-ink-900">Comandas suspeitas — {unitName}</p>
+                  <p className="text-xs text-ink-500">Abertas com valor e data anterior a {fmtDT(a.cutDate)}. Para o monitoramento buscar câmeras por data/hora.</p>
                 </div>
-                <a href={`/modulos/comandas/analise-aberto/${a.id}/relatorio`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-accent print:hidden"><Printer className="h-4 w-4" /> Relatório p/ monitoramento</a>
+                <a href={`/modulos/comandas/analise-aberto/${a.id}/relatorio`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand print:hidden"><Printer className="h-4 w-4" /> Relatório p/ monitoramento</a>
               </div>
               {a.suspects.length === 0 ? <p className="text-sm text-success">Nenhuma comanda suspeita 🎉</p> : (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-xs">
-                    <thead><tr className="border-b text-left text-muted-foreground">
+                    <thead><tr className="border-b text-left text-ink-500">
                       <th className="p-1.5">Comanda</th><th className="p-1.5">Aberta em</th><th className="p-1.5 text-center">Dias</th><th className="p-1.5 text-right">Valor</th><th className="p-1.5">Itens</th>
                     </tr></thead>
                     <tbody>
                       {a.suspects.map((s, i) => (
-                        <tr key={i} className={`border-b align-top ${s.daysOpen >= 2 ? 'bg-critical/5' : ''}`}>
+                        <tr key={i} className={`border-b align-top ${s.daysOpen >= 2 ? 'bg-danger/5' : ''}`}>
                           <td className="p-1.5 font-mono font-semibold">{s.number}</td>
                           <td className="p-1.5 whitespace-nowrap">{fmtDT(s.openedAt)}</td>
-                          <td className={`p-1.5 text-center font-bold ${s.daysOpen >= 2 ? 'text-critical' : 'text-[#92600A]'}`}>{s.daysOpen}</td>
+                          <td className={`p-1.5 text-center font-bold ${s.daysOpen >= 2 ? 'text-danger' : 'text-warning'}`}>{s.daysOpen}</td>
                           <td className="p-1.5 text-right font-semibold">{formatBRL(s.value)}</td>
-                          <td className="p-1.5 text-muted-foreground">{s.items.map((it) => `${it.qty}× ${it.name}`).join('; ')}</td>
+                          <td className="p-1.5 text-ink-500">{s.items.map((it) => `${it.qty}× ${it.name}`).join('; ')}</td>
                         </tr>
                       ))}
                     </tbody>

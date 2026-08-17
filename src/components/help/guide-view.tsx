@@ -31,48 +31,48 @@ export function GuideView({ sections }: { sections: Section[] }) {
   const totalHits = filtered.reduce((n, s) => n + s.guides.length, 0);
   const searching = query.length > 0;
 
-  if (sections.length === 0) return <p className="text-sm text-muted-foreground">Nenhum guia para o seu perfil.</p>;
+  if (sections.length === 0) return <p className="text-sm text-ink-500">Nenhum guia para o seu perfil.</p>;
 
   return (
     <div className="space-y-4">
       {/* Busca inteligente */}
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
         <input
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar um assunto (ex.: comanda, troco, atestado)…"
-          className="h-11 w-full rounded-lg border-2 border-input bg-background pl-9 pr-9 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-11 w-full rounded-lg border-2 border-line-strong bg-surface pl-9 pr-9 text-base ring-offset-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           aria-label="Buscar nos guias"
         />
         {q && (
-          <button onClick={() => setQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-brand" aria-label="Limpar busca">
+          <button onClick={() => setQ('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-ink-500 hover:text-brand" aria-label="Limpar busca">
             <X className="h-4 w-4" />
           </button>
         )}
       </div>
-      {searching && <p className="text-xs text-muted-foreground">{totalHits} guia(s) encontrado(s) para “{q.trim()}”.</p>}
+      {searching && <p className="text-xs text-ink-500">{totalHits} guia(s) encontrado(s) para “{q.trim()}”.</p>}
 
       {searching && totalHits === 0 ? (
-        <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Nenhum guia encontrado. Tente outra palavra (ex.: “gás”, “pagamento”, “escala”).</p>
+        <p className="rounded-lg border border-dashed p-4 text-center text-sm text-ink-500">Nenhum guia encontrado. Tente outra palavra (ex.: “gás”, “pagamento”, “escala”).</p>
       ) : (
         <div className="space-y-5">
           {filtered.map((s) => (
             <div key={s.title}>
-              <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">{s.title}</h2>
+              <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">{s.title}</h2>
               <div className="space-y-2">
                 {s.guides.map((g) => {
                   // ao buscar, tudo já vem expandido (poucos resultados); senão, acordeão normal
                   const expanded = searching || open === g.id;
                   return (
-                    <div key={g.id} className="rounded-lg border bg-card">
+                    <div key={g.id} className="rounded-lg border bg-surface">
                       <button onClick={() => setOpen(open === g.id ? null : g.id)} className="flex w-full items-center justify-between gap-2 p-3 text-left">
                         <span>
-                          <span className="block font-semibold text-brand">{g.title}</span>
-                          <span className="block text-xs text-muted-foreground">{g.summary}</span>
+                          <span className="block font-semibold text-ink-900">{g.title}</span>
+                          <span className="block text-xs text-ink-500">{g.summary}</span>
                         </span>
-                        {expanded ? <ChevronDown className="h-5 w-5 shrink-0 text-accent" /> : <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />}
+                        {expanded ? <ChevronDown className="h-5 w-5 shrink-0 text-brand" /> : <ChevronRight className="h-5 w-5 shrink-0 text-ink-500" />}
                       </button>
                       {expanded && (
                         <div className="space-y-3 border-t p-3">
@@ -80,7 +80,7 @@ export function GuideView({ sections }: { sections: Section[] }) {
                             {g.steps.map((step, i) => <li key={i}>{step}</li>)}
                           </ol>
                           {g.tips?.map((tip, i) => (
-                            <p key={i} className={cn('flex items-start gap-2 rounded-lg bg-medium/10 p-2 text-xs text-[#92600A]')}>
+                            <p key={i} className={cn('flex items-start gap-2 rounded-lg bg-warning/10 p-2 text-xs text-warning')}>
                               <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" /> {tip}
                             </p>
                           ))}

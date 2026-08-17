@@ -5,6 +5,7 @@ import { getOilDashboard, listOilCollections } from '@/lib/oil/query';
 import { listSuppliers } from '@/lib/suppliers';
 import { Card, CardContent } from '@/components/ui/card';
 import { OilClient, type OilDash, type OilRow } from '@/components/oil/oil-client';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,8 +30,7 @@ export default async function OleoPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-brand">Coleta de Óleo</h1>
-        <p className="text-sm text-muted-foreground">Controle da coleta de óleo usado (recebemos por ela): litros, valor/litro, total e forma de recebimento.</p>
+        <LargeTitle title="Coleta de Óleo" subtitle="Controle da coleta de óleo usado (recebemos por ela): litros, valor/litro, total e forma de recebimento." />
       </div>
       <Card><CardContent className="pt-4">
         <OilClient

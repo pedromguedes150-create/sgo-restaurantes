@@ -7,7 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { FilterBar, FilterField, FilterSelect, FilterInput } from '@/components/ui/filter-bar';
+import { FilterBar, FilterSelect, FilterInput, FilterDate } from '@/components/ui/filter-bar';
+import { Button as DsButton } from '@/components/ui/ds/button';
+import { List, ListRow } from '@/components/ui/ds/list-row';
+import { Banner } from '@/components/ui/ds/banner';
+import { Select } from '@/components/ui/ds/select';
+import { shortUnitName } from '@/lib/unit-name';
 import { cn } from '@/lib/utils';
 
 type Bal = Record<string, number>;
@@ -59,7 +64,7 @@ function DenomForm({ list, values, onChange }: { list: DenomView[]; values: Reco
         return (
           <div key={d.key} className="flex items-center gap-2">
             <span className="w-40 shrink-0 text-sm">{d.label}</span>
-            <Input inputMode="decimal" value={values[d.key] ?? ''} onChange={(e) => onChange(d.key, e.target.value)} placeholder="0,00" className={cn('h-9 flex-1 text-right text-sm tabular-nums', badMultiple && 'border-medium')} />
+            <Input inputMode="decimal" value={values[d.key] ?? ''} onChange={(e) => onChange(d.key, e.target.value)} placeholder="0,00" className={cn('h-9 flex-1 text-right text-sm tabular-nums', badMultiple && 'border-warning')} />
           </div>
         );
       })}
@@ -124,20 +129,26 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
   return (
     <div className="space-y-4">
       {units.length > 1 && (
-        <select className="h-9 rounded-md border bg-card px-2 text-sm font-semibold" value={selectedUnitId} onChange={(e) => router.push(`/modulos/troco?unit=${e.target.value}`)}>
-          {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
+        <div className="max-w-xs">
+          <Select
+            aria-label="Unidade"
+            size="sm"
+            value={selectedUnitId}
+            onValueChange={(id) => router.push(`/modulos/troco?unit=${id}`)}
+            options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
+          />
+        </div>
       )}
 
       {/* Destaque: solicitações de troco abertas em OUTRAS unidades (supervisão) */}
       {canResolve && networkOpen.length > 0 && (
-        <div className="rounded-lg border-2 border-accent/50 bg-accent/5 p-3">
-          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-brand"><HandCoins className="h-4 w-4 text-accent" /> {networkOpen.length} solicitação(ões) de troco em aberto na rede</p>
+        <div className="rounded-lg border-2 border-brand/50 bg-brand/5 p-3">
+          <p className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink-900"><HandCoins className="h-4 w-4 text-ink-900" /> {networkOpen.length} solicitação(ões) de troco em aberto na rede</p>
           <div className="space-y-1">
             {networkOpen.slice(0, 6).map((r) => (
-              <button key={r.id} onClick={() => router.push(`/modulos/troco?unit=${r.unitId}`)} className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-accent/10">
+              <button key={r.id} onClick={() => router.push(`/modulos/troco?unit=${r.unitId}`)} className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-brand/10">
                 <span className="min-w-0 truncate"><strong>{r.unitName}</strong> — {r.note}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">{r.amount ? brl(r.amount) : ''} · {r.requestedByName}</span>
+                <span className="shrink-0 text-xs text-ink-500">{r.amount ? brl(r.amount) : ''} · {r.requestedByName}</span>
               </button>
             ))}
           </div>
@@ -147,7 +158,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
       {/* Abas */}
       <div className="flex gap-1 border-b">
         {([['cofre', 'Cofre', Wallet], ['historico', 'Histórico', History]] as const).map(([key, label, Icon]) => (
-          <button key={key} onClick={() => setTab(key)} className={cn('flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold', tab === key ? 'border-accent text-brand' : 'border-transparent text-muted-foreground hover:text-brand')}>
+          <button key={key} onClick={() => setTab(key)} className={cn('flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold', tab === key ? 'border-brand text-brand' : 'border-transparent text-ink-500 hover:text-brand')}>
             <Icon className="h-4 w-4" /> {label}
           </button>
         ))}
@@ -157,14 +168,14 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
         <>
           {/* Solicitações de troco DESTA unidade */}
           {(openRequests.length > 0 || canOperate) && (
-            <div className={cn('rounded-lg border p-3', openRequests.length > 0 ? 'border-accent/50 bg-accent/5' : 'bg-card')}>
+            <div className={cn('rounded-lg border p-3', openRequests.length > 0 ? 'border-brand/50 bg-brand/5' : 'bg-surface')}>
               <div className="mb-1 flex items-center justify-between">
-                <p className="flex items-center gap-1.5 text-sm font-bold text-brand"><HandCoins className="h-4 w-4 text-accent" /> Solicitações de troco{openRequests.length > 0 ? ` (${openRequests.length} aberta(s))` : ''}</p>
+                <p className="flex items-center gap-1.5 text-sm font-bold text-ink-900"><HandCoins className="h-4 w-4 text-ink-900" /> Solicitações de troco{openRequests.length > 0 ? ` (${openRequests.length} aberta(s))` : ''}</p>
                 {canOperate && action !== 'request' && <Button size="sm" variant="outline" onClick={() => setAction('request')}>Solicitar troco</Button>}
               </div>
               {action === 'request' && (
                 <div className="mb-2 space-y-2 rounded-md border border-dashed p-2">
-                  <p className="text-xs text-muted-foreground">A supervisão (supervisor, coordenador e administrador) será avisada na hora.</p>
+                  <p className="text-xs text-ink-500">A supervisão (supervisor, coordenador e administrador) será avisada na hora.</p>
                   <div className="flex flex-wrap items-end gap-2">
                     <div className="w-32"><Label className="text-xs">Valor (opcional)</Label><Input inputMode="decimal" value={reqAmount} onChange={(e) => setReqAmount(e.target.value)} placeholder="0,00" className="h-9 text-sm" /></div>
                     <div className="min-w-[12rem] flex-1"><Label className="text-xs">O que precisa</Label><Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="ex.: R$ 100 em moedas de 0,50 e 0,25" className="h-9 text-sm" /></div>
@@ -175,28 +186,36 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
                   </div>
                 </div>
               )}
-              {openRequests.length === 0 && action !== 'request' && <p className="text-sm text-muted-foreground">Nenhuma solicitação em aberto.</p>}
-              <div className="space-y-1.5">
-                {openRequests.map((r) => (
-                  <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background p-2 text-sm">
-                    <span className="min-w-0"><strong>{r.amount ? brl(r.amount) : 'Troco'}</strong> — {r.note}<span className="block text-xs text-muted-foreground">{r.requestedByName} · {dt(r.createdAt)}</span></span>
-                    <span className="flex gap-1.5">
-                      {canResolve && <Button size="sm" variant="gold" disabled={busy} onClick={() => void post({ action: 'resolveChange', id: r.id })}>Atender</Button>}
-                      <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Cancelar esta solicitação?')) void post({ action: 'resolveChange', id: r.id, cancel: true }); }}>Cancelar</Button>
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {openRequests.length === 0 && action !== 'request' && <p className="text-sm text-ink-500">Nenhuma solicitação em aberto.</p>}
+              {openRequests.length > 0 && (
+                <List>
+                  {openRequests.map((r) => (
+                    <ListRow
+                      key={r.id}
+                      title={`${r.amount ? brl(r.amount) : 'Troco'} — ${r.note}`}
+                      subtitle={`${r.requestedByName} · ${dt(r.createdAt)}`}
+                      trailing={
+                        <>
+                          {canResolve && (
+                            <DsButton size="sm" disabled={busy} onClick={() => void post({ action: 'resolveChange', id: r.id })}>Atender</DsButton>
+                          )}
+                          <DsButton size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Cancelar esta solicitação?')) void post({ action: 'resolveChange', id: r.id, cancel: true }); }}>Cancelar</DsButton>
+                        </>
+                      }
+                    />
+                  ))}
+                </List>
+              )}
             </div>
           )}
 
           {/* Saldo do cofre (como a folha) */}
-          <div className="rounded-lg border-2 border-accent/30 bg-accent/5 p-3">
+          <div className="rounded-lg border-2 border-brand/30 bg-brand/5 p-3">
             <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-sm font-bold text-brand"><Landmark className="h-4 w-4 text-accent" /> Cofre da unidade</p>
-              <p className="text-lg font-black tabular-nums text-brand">{brl(vault.total)}</p>
+              <p className="flex items-center gap-1.5 text-sm font-bold text-ink-900"><Landmark className="h-4 w-4 text-ink-900" /> Cofre da unidade</p>
+              <p className="text-lg font-black tabular-nums text-ink-900">{brl(vault.total)}</p>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-ink-500">
               {vault.lastCountAt ? `Última conferência: ${new Date(vault.lastCountAt).toLocaleDateString('pt-BR')}` : 'Nenhuma conferência ainda — lance a posição inicial em "Conferir cofre".'}
             </p>
             <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-3">
@@ -205,30 +224,44 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
                 const label = d ? (k === 'outros' ? 'Outros' : `R$ ${(d.value ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`) : legacyLabel(k);
                 return (
                   <p key={k} className="flex justify-between text-xs tabular-nums">
-                    <span className={cn('text-muted-foreground', !d && 'italic')}>{label}</span>
-                    <span className={cn('font-semibold', (vault.balances[k] || 0) === 0 && 'text-muted-foreground/50')}>{brl(vault.balances[k] || 0)}</span>
+                    <span className={cn('text-ink-500', !d && 'italic')}>{label}</span>
+                    <span className={cn('font-semibold', (vault.balances[k] || 0) === 0 && 'text-ink-500')}>{brl(vault.balances[k] || 0)}</span>
                   </p>
                 );
               })}
             </div>
-            <div className={cn('mt-2 rounded-md px-2 py-1 text-xs font-semibold', vault.bigNotesPct >= 50 ? 'bg-critical/10 text-critical' : 'bg-surface text-muted-foreground')}>
-              Notas grandes{indicatorLabel ? ` (${indicatorLabel})` : ''}: {brl(vault.bigNotesTotal)} ({vault.bigNotesPct}% do cofre){vault.bigNotesPct >= 50 ? ' — hora de pedir troca ao escritório!' : ''}
+            <div className="mt-2 space-y-2">
+              {vault.bigNotesPct >= 50 ? (
+                <Banner
+                  tone="warning"
+                  title={`Notas grandes${indicatorLabel ? ` (${indicatorLabel})` : ''}: ${brl(vault.bigNotesTotal)} — ${vault.bigNotesPct}% do cofre`}
+                  description="Hora de pedir troca ao escritório."
+                />
+              ) : (
+                <p className="text-[12px] tabular-nums text-ink-500">
+                  Notas grandes{indicatorLabel ? ` (${indicatorLabel})` : ''}: {brl(vault.bigNotesTotal)} ({vault.bigNotesPct}% do cofre)
+                </p>
+              )}
+              {vault.monthWithdrawals > 0 && (
+                <Banner
+                  tone="danger"
+                  title={`${vault.monthWithdrawals} retirada(s) para pagamento neste mês`}
+                  description="Prática proibida — a supervisão foi avisada."
+                />
+              )}
             </div>
-            {vault.monthWithdrawals > 0 && (
-              <p className="mt-1 rounded-md bg-critical/10 px-2 py-1 text-xs font-bold text-critical">🚨 {vault.monthWithdrawals} retirada(s) para pagamento neste mês — prática proibida, supervisão avisada.</p>
-            )}
           </div>
 
           {/* Baldes */}
-          <div className="rounded-lg border bg-card p-3">
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Baldes dos caixas (valor-alvo fixado pela supervisão) — soma {brl(bucketsTotal)}</p>
-            {activeBuckets.length === 0 && <p className="text-sm text-muted-foreground">Nenhum balde cadastrado{canManageBuckets ? ' — cadastre abaixo' : ' (unidade sem baldes: use "Troca no caixa")'}. </p>}
+          <div className="rounded-lg border bg-surface p-3">
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Baldes dos caixas (valor-alvo fixado pela supervisão) — soma {brl(bucketsTotal)}</p>
+            {activeBuckets.length === 0 && <p className="text-sm text-ink-500">Nenhum balde cadastrado{canManageBuckets ? ' — cadastre abaixo' : ' (unidade sem baldes: use "Troca no caixa")'}. </p>}
             <div className="flex flex-wrap gap-2">
               {activeBuckets.map((b) => (
                 editBucketId === b.id ? (
-                  <span key={b.id} className="flex flex-wrap items-end gap-1.5 rounded-lg border-2 border-accent/40 bg-background p-2">
-                    <div><span className="block text-[11px] text-muted-foreground">Nome</span><Input value={ebName} onChange={(e) => setEbName(e.target.value)} className="h-8 w-28 text-sm" /></div>
-                    <div><span className="block text-[11px] text-muted-foreground">Alvo (R$)</span><Input inputMode="decimal" value={ebTarget} onChange={(e) => setEbTarget(e.target.value)} className="h-8 w-24 text-sm" /></div>
+                  <span key={b.id} className="flex flex-wrap items-end gap-1.5 rounded-lg border-2 border-brand/40 bg-surface p-2">
+                    <div><span className="block text-[11px] text-ink-500">Nome</span><Input value={ebName} onChange={(e) => setEbName(e.target.value)} className="h-8 w-28 text-sm" /></div>
+                    <div><span className="block text-[11px] text-ink-500">Alvo (R$)</span><Input inputMode="decimal" value={ebTarget} onChange={(e) => setEbTarget(e.target.value)} className="h-8 w-24 text-sm" /></div>
                     <Button size="sm" disabled={busy || !ebName.trim() || !ebTarget} onClick={async () => { if (await post({ action: 'bucketSet', id: b.id, unitId: selectedUnitId, name: ebName.trim(), targetValue: parseNum(ebTarget) })) setEditBucketId(null); }}>Salvar</Button>
                     <Button size="sm" variant="ghost" onClick={() => setEditBucketId(null)}>Cancelar</Button>
                   </span>
@@ -236,8 +269,8 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
                   <span key={b.id} className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-semibold">{b.name} · {brl(b.targetValue)}
                     {canManageBuckets && (
                       <>
-                        <button className="text-xs text-accent underline" disabled={busy} onClick={() => { setEditBucketId(b.id); setEbName(b.name); setEbTarget(String(b.targetValue).replace('.', ',')); }}>editar</button>
-                        <button className="text-xs text-critical underline" disabled={busy} onClick={() => { if (confirm(`Excluir o balde "${b.name}"? Esta ação não pode ser desfeita (o histórico de movimentos mantém o nome).`)) void post({ action: 'bucketDelete', id: b.id }); }}>excluir</button>
+                        <button className="text-xs text-brand underline" disabled={busy} onClick={() => { setEditBucketId(b.id); setEbName(b.name); setEbTarget(String(b.targetValue).replace('.', ',')); }}>editar</button>
+                        <button className="text-xs text-danger underline" disabled={busy} onClick={() => { if (confirm(`Excluir o balde "${b.name}"? Esta ação não pode ser desfeita (o histórico de movimentos mantém o nome).`)) void post({ action: 'bucketDelete', id: b.id }); }}>excluir</button>
                       </>
                     )}
                   </span>
@@ -260,14 +293,14 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
               <Button variant="outline" disabled={activeBuckets.length === 0} onClick={() => setAction('refill')}><RefreshCw className="h-4 w-4" /> Repor balde</Button>
               <Button variant="outline" onClick={() => setAction('register')}><ArrowLeftRight className="h-4 w-4" /> Troca no caixa</Button>
               <Button variant="outline" onClick={() => setAction('swap')}><Building2 className="h-4 w-4" /> Troca c/ escritório</Button>
-              <Button variant="outline" className="col-span-2 border-critical/50 text-critical" onClick={() => setAction('withdrawal')}><AlertTriangle className="h-4 w-4" /> Retirada (proibida)</Button>
+              <Button variant="outline" className="col-span-2 border-danger/50 text-danger" onClick={() => setAction('withdrawal')}><AlertTriangle className="h-4 w-4" /> Retirada (proibida)</Button>
             </div>
           )}
 
           {action === 'count' && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-1 text-sm font-bold text-brand">Conferência do cofre (rotina diária)</p>
-              <p className="mb-2 text-xs text-muted-foreground">Lance o VALOR EM R$ contado de cada denominação (como na folha). Isso substitui o saldo do cofre.</p>
+              <p className="mb-1 text-sm font-bold text-ink-900">Conferência do cofre (rotina diária)</p>
+              <p className="mb-2 text-xs text-ink-500">Lance o VALOR EM R$ contado de cada denominação (como na folha). Isso substitui o saldo do cofre.</p>
               <DenomForm list={denoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="mt-2 h-9 text-sm" />
               <div className="mt-2 flex justify-end gap-1.5">
@@ -279,16 +312,21 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
           {action === 'refill' && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-1 text-sm font-bold text-brand">Repor balde (troca 1:1)</p>
-              <select className="mb-2 h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={bucketId} onChange={(e) => setBucketId(e.target.value)}>
-                <option value="">Qual balde…</option>
-                {activeBuckets.map((b) => <option key={b.id} value={b.id}>{b.name} (alvo {brl(b.targetValue)})</option>)}
-              </select>
-              <p className="mb-1 text-xs font-bold text-critical">SAIU do cofre (miúdos p/ o balde):</p>
+              <p className="mb-1 text-sm font-bold text-ink-900">Repor balde (troca 1:1)</p>
+              <div className="mb-2">
+                <Select
+                  aria-label="Balde do caixa"
+                  placeholder="Qual balde…"
+                  value={bucketId}
+                  onValueChange={setBucketId}
+                  options={activeBuckets.map((b) => ({ value: b.id, label: b.name, hint: `alvo ${brl(b.targetValue)}` }))}
+                />
+              </div>
+              <p className="mb-1 text-xs font-bold text-danger">SAIU do cofre (miúdos p/ o balde):</p>
               <DenomForm list={smallDenoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <p className="mb-1 mt-3 text-xs font-bold text-success">ENTROU no cofre (notas grandes do balde):</p>
               <DenomForm list={bigDenoms} values={formB} onChange={(k, v) => setFormB((s) => ({ ...s, [k]: v }))} />
-              <p className="mt-1 text-xs text-muted-foreground">Os dois totais devem ser IGUAIS (é uma troca).</p>
+              <p className="mt-1 text-xs text-ink-500">Os dois totais devem ser IGUAIS (é uma troca).</p>
               <div className="mt-2 flex justify-end gap-1.5">
                 <Button size="sm" variant="ghost" onClick={reset}>Cancelar</Button>
                 <Button size="sm" variant="gold" disabled={busy || !bucketId} onClick={async () => { if (await post({ action: 'refill', unitId: selectedUnitId, bucketId, outSmall: toNumbers(allKeys, formA), inBig: toNumbers(allKeys, formB), note })) reset(); }}>Registrar reposição</Button>
@@ -298,14 +336,14 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
           {action === 'register' && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-1 text-sm font-bold text-brand">Troca de dinheiro direto no caixa</p>
-              <p className="mb-2 text-xs text-muted-foreground">Para unidades sem baldes (ex.: Nova União): o caixa troca notas por moedas/miúdos direto no cofre. Fica registrado no histórico.</p>
+              <p className="mb-1 text-sm font-bold text-ink-900">Troca de dinheiro direto no caixa</p>
+              <p className="mb-2 text-xs text-ink-500">Para unidades sem baldes (ex.: Nova União): o caixa troca notas por moedas/miúdos direto no cofre. Fica registrado no histórico.</p>
               <Input value={registerName} onChange={(e) => setRegisterName(e.target.value)} placeholder="Qual caixa (ex.: Caixa 1)" className="mb-2 h-9 text-sm" />
-              <p className="mb-1 text-xs font-bold text-critical">SAIU do cofre (para o caixa):</p>
+              <p className="mb-1 text-xs font-bold text-danger">SAIU do cofre (para o caixa):</p>
               <DenomForm list={denoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <p className="mb-1 mt-3 text-xs font-bold text-success">ENTROU no cofre (do caixa):</p>
               <DenomForm list={denoms} values={formB} onChange={(k, v) => setFormB((s) => ({ ...s, [k]: v }))} />
-              <p className="mt-1 text-xs text-muted-foreground">Os dois totais devem ser IGUAIS (é uma troca).</p>
+              <p className="mt-1 text-xs text-ink-500">Os dois totais devem ser IGUAIS (é uma troca).</p>
               <div className="mt-2 flex justify-end gap-1.5">
                 <Button size="sm" variant="ghost" onClick={reset}>Cancelar</Button>
                 <Button size="sm" variant="gold" disabled={busy || !registerName.trim()} onClick={async () => { if (await post({ action: 'registerChange', unitId: selectedUnitId, registerName, outFromVault: toNumbers(allKeys, formA), inToVault: toNumbers(allKeys, formB), note })) reset(); }}>Registrar troca</Button>
@@ -315,8 +353,8 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
           {action === 'swap' && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-1 text-sm font-bold text-brand">Troca com o escritório</p>
-              <p className="mb-1 text-xs font-bold text-critical">ENVIADO ao escritório (notas grandes):</p>
+              <p className="mb-1 text-sm font-bold text-ink-900">Troca com o escritório</p>
+              <p className="mb-1 text-xs font-bold text-danger">ENVIADO ao escritório (notas grandes):</p>
               <DenomForm list={bigDenoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <p className="mb-1 mt-3 text-xs font-bold text-success">RECEBIDO do escritório (moedas/miúdos):</p>
               <DenomForm list={smallDenoms} values={formB} onChange={(k, v) => setFormB((s) => ({ ...s, [k]: v }))} />
@@ -329,9 +367,9 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
           )}
 
           {action === 'withdrawal' && (
-            <div className="rounded-lg border-2 border-critical/60 bg-critical/5 p-3">
-              <p className="mb-1 text-sm font-bold text-critical">🚨 Retirada do troco para pagamento — PRÁTICA PROIBIDA</p>
-              <p className="mb-2 text-xs text-critical">A supervisão e os administradores serão avisados NA HORA. Use apenas em emergência real e reponha o valor.</p>
+            <div className="rounded-lg border-2 border-danger/60 bg-danger/5 p-3">
+              <p className="mb-1 text-sm font-bold text-danger">🚨 Retirada do troco para pagamento — PRÁTICA PROIBIDA</p>
+              <p className="mb-2 text-xs text-danger">A supervisão e os administradores serão avisados NA HORA. Use apenas em emergência real e reponha o valor.</p>
               <DenomForm list={denoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
               <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Motivo da retirada (obrigatório)" className="mt-2 h-9 text-sm" />
               <div className="mt-2 flex justify-end gap-1.5">
@@ -346,14 +384,14 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
           {/* Alertas por unidade (supervisão) */}
           {alerts && alerts.length > 0 && (
-            <div className="rounded-lg border bg-card p-3">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground"><AlertTriangle className="h-3.5 w-3.5" /> Cofres da rede — retiradas no mês</p>
+            <div className="rounded-lg border bg-surface p-3">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><AlertTriangle className="h-3.5 w-3.5" /> Cofres da rede — retiradas no mês</p>
               <div className="space-y-1">
                 {alerts.map((a) => (
                   <div key={a.unitId} className="flex items-center justify-between gap-2 text-sm">
                     <span className="min-w-0 truncate">{a.unitName}</span>
                     <span className="shrink-0 text-xs tabular-nums">
-                      cofre {brl(a.vaultTotal)} · <span className={a.withdrawals > 0 ? 'font-bold text-critical' : 'font-semibold text-success'}>{a.withdrawals} retirada(s){a.withdrawals > 0 ? ` (${brl(a.withdrawnTotal)})` : ''}</span>
+                      cofre {brl(a.vaultTotal)} · <span className={a.withdrawals > 0 ? 'font-bold text-danger' : 'font-semibold text-success'}>{a.withdrawals} retirada(s){a.withdrawals > 0 ? ` (${brl(a.withdrawnTotal)})` : ''}</span>
                     </span>
                   </div>
                 ))}
@@ -363,23 +401,23 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
           {/* Movimentações recentes */}
           <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Movimentações recentes</p>
-            {vault.recentMovements.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma movimentação ainda.</p>}
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Movimentações recentes</p>
+            {vault.recentMovements.length === 0 && <p className="text-sm text-ink-500">Nenhuma movimentação ainda.</p>}
             <div className="space-y-1.5">
               {vault.recentMovements.map((m) => {
                 const t = TYPE_LABEL[m.type] ?? { label: m.type, tone: 'neutral' as const };
                 return (
-                  <div key={m.id} className={cn('rounded-lg border p-2.5', m.type === 'WITHDRAWAL' ? 'border-critical/50 bg-critical/5' : 'bg-card')}>
+                  <div key={m.id} className={cn('rounded-lg border p-2.5', m.type === 'WITHDRAWAL' ? 'border-danger/50 bg-danger/5' : 'bg-surface')}>
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-brand">{t.label}{m.bucketName ? ` — ${m.bucketName}` : ''}</p>
+                      <p className="text-sm font-semibold text-ink-900">{t.label}{m.bucketName ? ` — ${m.bucketName}` : ''}</p>
                       <StatusBadge tone={t.tone}>{m.totalIn > 0 && m.totalOut > 0 ? `↔ ${brl(m.totalIn)}` : m.totalIn > 0 ? `+ ${brl(m.totalIn)}` : `− ${brl(m.totalOut)}`}</StatusBadge>
                     </div>
-                    <p className="text-xs text-muted-foreground">{m.createdByName} · {dt(m.createdAt)}{m.note ? ` · ${m.note}` : ''}</p>
+                    <p className="text-xs text-ink-500">{m.createdByName} · {dt(m.createdAt)}{m.note ? ` · ${m.note}` : ''}</p>
                   </div>
                 );
               })}
             </div>
-            {vault.recentMovements.length > 0 && <button onClick={() => setTab('historico')} className="mt-2 text-xs font-semibold text-accent hover:underline">Ver histórico completo →</button>}
+            {vault.recentMovements.length > 0 && <button onClick={() => setTab('historico')} className="mt-2 text-xs font-semibold text-brand hover:underline">Ver histórico completo →</button>}
           </div>
         </>
       )}
@@ -437,43 +475,56 @@ function VaultHistory({ unitId }: { unitId: string }) {
   return (
     <div className="space-y-3">
       <FilterBar active={activeCount} onClear={clear}>
-        <FilterField label="Tipo"><FilterSelect value={type} onChange={(e) => setType(e.target.value)}><option value="">Todos</option>{MOVEMENT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</FilterSelect></FilterField>
-        <FilterField label="Usuário"><FilterSelect value={userId} onChange={(e) => setUserId(e.target.value)}><option value="">Todos</option>{users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</FilterSelect></FilterField>
-        <FilterField label="De"><FilterInput type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></FilterField>
-        <FilterField label="Até"><FilterInput type="date" value={to} onChange={(e) => setTo(e.target.value)} /></FilterField>
-        <FilterField label="Valor mín."><FilterInput inputMode="decimal" value={minValue} onChange={(e) => setMinValue(e.target.value)} placeholder="0,00" /></FilterField>
-        <FilterField label="Valor máx."><FilterInput inputMode="decimal" value={maxValue} onChange={(e) => setMaxValue(e.target.value)} placeholder="0,00" /></FilterField>
-        <FilterField label="Ordenar">
-          <FilterSelect value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="date_desc">Mais recentes</option>
-            <option value="date_asc">Mais antigos</option>
-            <option value="value_desc">Maior valor</option>
-            <option value="value_asc">Menor valor</option>
-          </FilterSelect>
-        </FilterField>
+        <FilterSelect
+          label="Tipo"
+          value={type}
+          onValueChange={setType}
+          options={[{ value: '', label: 'Todos' }, ...MOVEMENT_TYPES.map((t) => ({ value: t.value, label: t.label }))]}
+        />
+        <FilterSelect
+          label="Usuário"
+          value={userId}
+          onValueChange={setUserId}
+          options={[{ value: '', label: 'Todos' }, ...users.map((u) => ({ value: u.id, label: u.name }))]}
+        />
+        <FilterDate label="De" value={from || null} onValueChange={(v) => setFrom(v ?? '')} />
+        <FilterDate label="Até" value={to || null} onValueChange={(v) => setTo(v ?? '')} min={from || undefined} />
+        <FilterInput label="Valor mín." inputMode="decimal" value={minValue} onChange={(e) => setMinValue(e.target.value)} placeholder="0,00" />
+        <FilterInput label="Valor máx." inputMode="decimal" value={maxValue} onChange={(e) => setMaxValue(e.target.value)} placeholder="0,00" />
+        <FilterSelect
+          label="Ordenar"
+          value={sort}
+          onValueChange={setSort}
+          options={[
+            { value: 'date_desc', label: 'Mais recentes' },
+            { value: 'date_asc', label: 'Mais antigos' },
+            { value: 'value_desc', label: 'Maior valor' },
+            { value: 'value_asc', label: 'Menor valor' },
+          ]}
+        />
       </FilterBar>
 
-      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-3 text-xs text-ink-500">
         <span><strong className="text-brand">{rows.length}</strong> lançamento(s)</span>
         <span>entradas <strong className="text-success">{brl(totalIn)}</strong></span>
-        <span>saídas <strong className="text-critical">{brl(totalOut)}</strong></span>
+        <span>saídas <strong className="text-danger">{brl(totalOut)}</strong></span>
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Carregando…</p>
+        <p className="text-sm text-ink-500">Carregando…</p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma movimentação com esses filtros.</p>
+        <p className="text-sm text-ink-500">Nenhuma movimentação com esses filtros.</p>
       ) : (
         <div className="space-y-1.5">
           {rows.map((m) => {
             const t = TYPE_LABEL[m.type] ?? { label: m.type, tone: 'neutral' as const };
             return (
-              <div key={m.id} className={cn('rounded-lg border p-2.5', m.type === 'WITHDRAWAL' ? 'border-critical/50 bg-critical/5' : 'bg-card')}>
+              <div key={m.id} className={cn('rounded-lg border p-2.5', m.type === 'WITHDRAWAL' ? 'border-danger/50 bg-danger/5' : 'bg-surface')}>
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-brand">{t.label}{m.bucketName ? ` — ${m.bucketName}` : ''}</p>
+                  <p className="text-sm font-semibold text-ink-900">{t.label}{m.bucketName ? ` — ${m.bucketName}` : ''}</p>
                   <StatusBadge tone={t.tone}>{m.totalIn > 0 && m.totalOut > 0 ? `↔ ${brl(Math.max(m.totalIn, m.totalOut))}` : m.totalIn > 0 ? `+ ${brl(m.totalIn)}` : `− ${brl(m.totalOut)}`}</StatusBadge>
                 </div>
-                <p className="text-xs text-muted-foreground">{m.createdByName} · {dt(m.createdAt)}{m.note ? ` · ${m.note}` : ''}</p>
+                <p className="text-xs text-ink-500">{m.createdByName} · {dt(m.createdAt)}{m.note ? ` · ${m.note}` : ''}</p>
               </div>
             );
           })}

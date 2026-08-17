@@ -7,6 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { Select } from '@/components/ui/ds/select';
+import { DateTimePicker } from '@/components/ui/ds/date-time-picker';
+
+const PRIORIDADES = [
+  { value: 'NORMAL', label: 'Normal' },
+  { value: 'IMPORTANT', label: 'Importante' },
+  { value: 'URGENT', label: 'Urgente' },
+];
 
 type Priority = 'NORMAL' | 'IMPORTANT' | 'URGENT';
 interface Unit { id: string; name: string }
@@ -17,7 +25,7 @@ interface Initial {
   confirmedCount: number; total: number;
 }
 
-const sel = 'h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm';
+const sel = 'h-11 w-full rounded-lg border-2 border-line-strong bg-surface px-3 text-sm';
 
 /** ISO → valor de <input type="datetime-local"> em horário local. */
 function toLocalInput(iso: string): string {
@@ -101,22 +109,18 @@ export function CommunicationEdit({ id, initial, units, people }: { id: string; 
 
       {open && (
         <div className="space-y-3 rounded-lg border border-dashed p-3">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-ink-500">
             {initial.confirmedCount > 0
               ? `${initial.confirmedCount} de ${initial.total} já confirmaram. Mudar o TÍTULO ou a MENSAGEM zera todas as confirmações; mudar prioridade, prazo, links, exigir-resposta ou destinatários que permanecem não zera.`
               : 'Ninguém confirmou ainda — você pode editar livremente.'}
           </p>
 
           <div><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
-          <div><Label>Mensagem</Label><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="w-full rounded-lg border-2 border-input bg-background px-3 py-2 text-sm" /></div>
+          <div><Label>Mensagem</Label><textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} className="w-full rounded-lg border-2 border-line-strong bg-surface px-3 py-2 text-sm" /></div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Prioridade</Label>
-              <select className={sel} value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-                <option value="NORMAL">Normal</option><option value="IMPORTANT">Importante</option><option value="URGENT">Urgente</option>
-              </select>
-            </div>
-            <div><Label>Prazo de confirmação</Label><Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></div>
+            <Select label="Prioridade" value={priority} onValueChange={(v) => setPriority(v as Priority)} options={PRIORIDADES} />
+            <DateTimePicker label="Prazo de confirmação" value={dueAt} onValueChange={setDueAt} />
           </div>
 
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={requiresResponse} onChange={(e) => setRequiresResponse(e.target.checked)} /> Exigir resposta (foto/comentário)</label>
@@ -136,13 +140,13 @@ export function CommunicationEdit({ id, initial, units, people }: { id: string; 
               <div key={idx} className="mt-1 grid grid-cols-12 gap-1">
                 <Input value={l.label} onChange={(e) => setLinks(links.map((x, i) => i === idx ? { ...x, label: e.target.value } : x))} placeholder="Rótulo" className="col-span-4 h-9 text-sm" />
                 <Input value={l.url} onChange={(e) => setLinks(links.map((x, i) => i === idx ? { ...x, url: e.target.value } : x))} placeholder="https://…" className="col-span-7 h-9 text-sm" />
-                <Button size="sm" variant="ghost" className="col-span-1 text-critical" onClick={() => setLinks(links.filter((_, i) => i !== idx))} aria-label="Remover link"><X className="h-4 w-4" /></Button>
+                <Button size="sm" variant="ghost" className="col-span-1 text-danger" onClick={() => setLinks(links.filter((_, i) => i !== idx))} aria-label="Remover link"><X className="h-4 w-4" /></Button>
               </div>
             ))}
             <Button size="sm" variant="outline" className="mt-1" onClick={() => setLinks([...links, { label: '', url: '' }])}><Plus className="h-4 w-4" /> Adicionar link</Button>
           </div>
 
-          {err && <p className="rounded-lg bg-critical/10 px-3 py-2 text-sm font-medium text-critical">{err}</p>}
+          {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button disabled={busy} onClick={submit}><Save className="h-4 w-4" /> Salvar alterações</Button>

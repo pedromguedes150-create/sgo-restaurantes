@@ -6,13 +6,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { HygieneManageClient } from '@/components/hygiene/hygiene-manage-client';
 import { Sparkles } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HigienePage({ searchParams }: { searchParams: { unit?: string } }) {
   const user = (await getSessionUser())!;
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
-  if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
+  if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
   const selUnit = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const canManage = ['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role);
 
@@ -26,8 +27,7 @@ export default async function HigienePage({ searchParams }: { searchParams: { un
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><Sparkles className="h-5 w-5 text-accent" /> Higiene dos banheiros</h1>
-        <p className="text-sm text-muted-foreground">Solicitações do QR dos banheiros, com aviso ao gerente e análise. (WhatsApp em fase futura.)</p>
+        <LargeTitle title="Higiene dos banheiros" subtitle="Solicitações do QR dos banheiros, com aviso ao gerente e análise. (WhatsApp em fase futura.)" />
       </div>
 
       {units.length > 1 && <UnitSelectNav units={units} selected={selUnit.id} />}
@@ -43,14 +43,14 @@ export default async function HigienePage({ searchParams }: { searchParams: { un
 
       {analytics && analytics.byLocation.length > 0 && (
         <Card><CardContent className="pt-4">
-          <p className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Banheiros com mais solicitações (30d)</p>
+          <p className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Banheiros com mais solicitações (30d)</p>
           <div className="space-y-1.5">
             {analytics.byLocation.map((l) => {
               const max = analytics.byLocation[0].count || 1;
               return (
                 <div key={l.name}>
                   <div className="mb-0.5 flex justify-between text-xs"><span>{l.name}</span><span className="font-semibold">{l.count}</span></div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-brand" style={{ width: `${(l.count / max) * 100}%` }} /></div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-brand" style={{ width: `${(l.count / max) * 100}%` }} /></div>
                 </div>
               );
             })}
@@ -71,8 +71,8 @@ export default async function HigienePage({ searchParams }: { searchParams: { un
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: 'critical' | 'ok' }) {
   return (
     <Card><CardContent className="py-3 text-center">
-      <p className={`text-2xl font-black ${tone === 'critical' ? 'text-critical' : 'text-brand'}`}>{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`text-2xl font-black ${tone === 'critical' ? 'text-danger' : 'text-ink-900'}`}>{value}</p>
+      <p className="text-xs text-ink-500">{label}</p>
     </CardContent></Card>
   );
 }

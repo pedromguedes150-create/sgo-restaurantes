@@ -9,6 +9,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PrintButton } from '@/components/ui/print-button';
 import { UnitFilter } from '@/components/ui/unit-filter';
 import { ArrowLeft } from 'lucide-react';
+import { FormDatePicker } from '@/components/ui/ds/form-controls';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +19,7 @@ function fmtBR(iso: string) { const [y, m, d] = iso.split('-'); return `${d}/${m
 export default async function CorrecoesPage({ searchParams }: { searchParams: { unit?: string; from?: string; to?: string } }) {
   const user = (await getSessionUser())!;
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true, timezone: true, cutoffHour: true } });
-  if (units.length === 0) return <p className="text-sm text-muted-foreground">Nenhuma unidade vinculada.</p>;
+  if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
 
   const unitFilter = parseUnitParam(searchParams.unit, units.map((u) => u.id));
   const ref = units[0];
@@ -32,23 +34,22 @@ export default async function CorrecoesPage({ searchParams }: { searchParams: { 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between print:hidden">
-        <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
+        <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
         <PrintButton label="Imprimir / PDF" />
       </div>
-      <h1 className="text-xl font-bold text-brand">Relatório de correções</h1>
-      <p className="text-sm text-muted-foreground">Itens marcados como 🟡 Em correção e 🔴 A corrigir nos checklists. Escolha o período e as unidades.</p>
+      <LargeTitle title="Relatório de correções" subtitle="Itens marcados como 🟡 Em correção e 🔴 A corrigir nos checklists. Escolha o período e as unidades." />
 
       <div className="space-y-2 print:hidden">
         {multi && <UnitFilter units={units.map((u) => ({ id: u.id, name: u.name }))} selected={unitFilter.all ? [] : unitFilter.ids} />}
         <form className="flex flex-wrap items-end gap-2">
           {!unitFilter.all && <input type="hidden" name="unit" value={unitFilter.ids.join(',')} />}
-          <div><label className="block text-xs font-medium text-muted-foreground">De</label><input type="date" name="from" defaultValue={from} max={to} className="h-9 rounded-lg border-2 border-input bg-background px-2 text-sm" /></div>
-          <div><label className="block text-xs font-medium text-muted-foreground">Até</label><input type="date" name="to" defaultValue={to} className="h-9 rounded-lg border-2 border-input bg-background px-2 text-sm" /></div>
-          <button className="h-9 rounded-lg border px-3 text-sm font-semibold hover:border-accent">Ver</button>
+          <FormDatePicker name="from" label="De" size="sm" defaultValue={from} max={to} className="w-36" />
+          <FormDatePicker name="to" label="Até" size="sm" defaultValue={to} min={from} className="w-36" />
+          <button className="h-9 rounded-lg border px-3 text-sm font-semibold hover:border-brand">Ver</button>
         </form>
       </div>
 
-      <p className="text-sm font-semibold text-brand">
+      <p className="text-sm font-semibold text-ink-900">
         {unitFilter.all ? 'Todas as unidades' : `${unitFilter.ids.length} unidade(s)`} · {from === to ? fmtBR(from) : `${fmtBR(from)} a ${fmtBR(to)}`}
       </p>
 
@@ -69,12 +70,12 @@ function Section({ title, items, tone, meta }: { title: string; items: Correctio
   return (
     <Card>
       <CardContent className="space-y-1.5 pt-4">
-        <p className={`text-sm font-bold ${tone === 'critical' ? 'text-critical' : 'text-medium'}`}>{title} ({items.length})</p>
+        <p className={`text-sm font-bold ${tone === 'critical' ? 'text-danger' : 'text-warning'}`}>{title} ({items.length})</p>
         {items.map((it, i) => (
-          <div key={i} className="rounded-lg border bg-card p-2.5 text-sm">
-            <p className="font-medium text-brand">{it.text}</p>
-            {it.note && <p className="text-xs text-muted-foreground">Obs.: {it.note}</p>}
-            <p className="text-[11px] text-muted-foreground">{meta(it)}</p>
+          <div key={i} className="rounded-lg border bg-surface p-2.5 text-sm">
+            <p className="font-medium text-ink-900">{it.text}</p>
+            {it.note && <p className="text-xs text-ink-500">Obs.: {it.note}</p>}
+            <p className="text-[11px] text-ink-500">{meta(it)}</p>
           </div>
         ))}
       </CardContent>

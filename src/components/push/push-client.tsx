@@ -153,12 +153,12 @@ export function PushClient() {
     setBusy(false);
   }
 
-  if (supported === null) return <p className="text-sm text-muted-foreground">Verificando o aparelho…</p>;
+  if (supported === null) return <p className="text-sm text-ink-500">Verificando o aparelho…</p>;
 
   if (!supported) {
     return (
-      <p className="flex items-start gap-2 text-sm text-muted-foreground">
-        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-medium" />
+      <p className="flex items-start gap-2 text-sm text-ink-500">
+        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
         Este navegador não suporta notificações. No iPhone, abra o SGO pelo Safari e use <strong>Compartilhar → Adicionar à Tela de Início</strong>; depois abra pelo ícone e ative aqui.
       </p>
     );
@@ -169,13 +169,13 @@ export function PushClient() {
   return (
     <div className="space-y-4">
       {!configured && (
-        <p className="rounded-md bg-medium/10 p-2 text-sm text-medium">
+        <p className="rounded-md bg-warning/10 p-2 text-sm text-warning">
           O servidor ainda não tem as chaves de push configuradas — avise o Administrador.
         </p>
       )}
 
       {iosNeedsInstall && (
-        <p className="rounded-md bg-surface p-2 text-sm text-muted-foreground">
+        <p className="rounded-md bg-canvas p-2 text-sm text-ink-500">
           No iPhone/iPad é preciso instalar o app antes: <strong>Compartilhar → Adicionar à Tela de Início</strong>. Depois abra o SGO pelo ícone e volte aqui.
         </p>
       )}
@@ -201,26 +201,26 @@ export function PushClient() {
       </div>
 
       {permission === 'denied' && (
-        <p className="text-sm text-critical">
+        <p className="text-sm text-danger">
           As notificações estão <strong>bloqueadas</strong> para este site no navegador. Libere em Configurações do site → Notificações e recarregue a página.
         </p>
       )}
 
       {devices.length > 0 && (
-        <div className="rounded-lg border bg-card p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Meus aparelhos</p>
+        <div className="rounded-lg border bg-surface p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Meus aparelhos</p>
           <ul className="space-y-1.5">
             {devices.map((d) => (
               <li key={d.id} className="flex items-center justify-between gap-2 text-sm">
                 <span className="flex items-center gap-1.5">
-                  <Smartphone className="h-4 w-4 text-muted-foreground" />
+                  <Smartphone className="h-4 w-4 text-ink-500" />
                   {d.deviceLabel}
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-ink-500">
                     · desde {new Date(d.createdAt).toLocaleDateString('pt-BR')}
                     {d.lastSuccessAt ? ` · último aviso ${new Date(d.lastSuccessAt).toLocaleDateString('pt-BR')}` : ''}
                   </span>
                 </span>
-                <button type="button" className="text-critical hover:underline" disabled={busy} onClick={() => void removeDevice(d.id)} aria-label="Remover aparelho">
+                <button type="button" className="text-danger hover:underline" disabled={busy} onClick={() => void removeDevice(d.id)} aria-label="Remover aparelho">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </li>
@@ -229,9 +229,9 @@ export function PushClient() {
         </div>
       )}
 
-      <div className="rounded-lg border bg-card p-3">
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">O que quero receber no celular</p>
-        <p className="mb-2 text-xs text-muted-foreground">Desmarcar não apaga nada — o aviso continua aparecendo no sino, só não vira notificação no aparelho. Avisos críticos são sempre enviados.</p>
+      <div className="rounded-lg border bg-surface p-3">
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">O que quero receber no celular</p>
+        <p className="mb-2 text-xs text-ink-500">Desmarcar não apaga nada — o aviso continua aparecendo no sino, só não vira notificação no aparelho. Avisos críticos são sempre enviados.</p>
         <ul className="space-y-2">
           {PUSH_CATEGORIES.map((c) => (
             <li key={c.key} className="flex items-start gap-2">
@@ -244,14 +244,14 @@ export function PushClient() {
               />
               <label htmlFor={`pref-${c.key}`} className="text-sm">
                 <span className="font-semibold">{c.label}</span>
-                <span className="block text-xs text-muted-foreground">{c.hint}</span>
+                <span className="block text-xs text-ink-500">{c.hint}</span>
               </label>
             </li>
           ))}
         </ul>
       </div>
 
-      {msg && <p className={`text-sm font-semibold ${msg.includes('✓') ? 'text-success' : 'text-critical'}`}>{msg}</p>}
+      {msg && <p className={`text-sm font-semibold ${msg.includes('✓') ? 'text-success' : 'text-danger'}`}>{msg}</p>}
     </div>
   );
 }

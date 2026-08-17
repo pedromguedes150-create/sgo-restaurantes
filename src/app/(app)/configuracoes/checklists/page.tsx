@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SegmentedNav } from '@/components/ui/ds/segmented-nav';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,6 +12,7 @@ import { ensureDefaultModels, listChecklistModels } from '@/lib/checklist-models
 import { listSupervisorChecklists } from '@/lib/supervisor/visits';
 import { getChecklistToleranceMin } from '@/lib/tasks/tolerance';
 import { ArrowLeft } from 'lucide-react';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +22,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function ChecklistsAdminPage({ searchParams }: { searchParams: { tab?: string } }) {
   const user = (await getSessionUser())!;
-  if (user.role !== 'ADMIN' && user.role !== 'CEO') return <p className="text-sm text-muted-foreground">Restrito ao Administrador.</p>;
+  if (user.role !== 'ADMIN' && user.role !== 'CEO') return <p className="text-sm text-ink-500">Restrito ao Administrador.</p>;
   await ensureDefaultModels().catch(() => {}); // popula a biblioteca padrão na 1ª vez
   const tab = ['unidades', 'modelos', 'supervisor', 'resumo'].includes(searchParams.tab ?? '') ? (searchParams.tab as string) : 'unidades';
 
@@ -59,15 +61,13 @@ export default async function ChecklistsAdminPage({ searchParams }: { searchPara
 
   return (
     <div className="space-y-4">
-      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <h1 className="text-xl font-bold text-brand">Checklists</h1>
-      <div className="flex flex-wrap gap-2">
-        {TABS.map((t) => (
-          <Link key={t.key} href={`/configuracoes/checklists?tab=${t.key}`} className={tab === t.key ? 'rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1.5 text-sm font-medium'}>
-            {t.label}
-          </Link>
-        ))}
-      </div>
+      <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
+      <LargeTitle title="Checklists" />
+      <SegmentedNav
+        aria-label="Seções de Checklists"
+        value={tab}
+        options={TABS.map((t) => ({ value: t.key, label: t.label, href: `/configuracoes/checklists?tab=${t.key}` }))}
+      />
 
       {tab === 'unidades' && (
         <>

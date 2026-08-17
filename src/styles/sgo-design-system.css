@@ -1,0 +1,720 @@
+/* =============================================================================
+   SGO — Design System (fonte de verdade dos tokens)
+   Contrato: REDESIGN.md §3. Este é o ÚNICO arquivo onde hex literal é permitido.
+   Componentes SÓ consomem var(--sgo-*). Não escreva hex fora daqui.
+
+   Temas: light por padrão em :root. O <html> SEMPRE recebe data-theme
+   (light | dark | system), carimbado no servidor a partir do cookie:
+     1) data-theme="dark"   → escuro sempre
+     2) data-theme="system" → segue prefers-color-scheme
+     3) data-theme="light" (padrão do app) → claro
+
+   O padrão é "system" desde a Onda 7. Antes era claro à força: o conteúdo
+   usava ~2.100 cores FIXAS (text-brand, text-critical…) que não reagiam ao
+   tema, e escurecer só as superfícies deixava o bordô #6E1423 sobre card
+   escuro em ~1,3:1 — ilegível. Com tudo migrado para estes tokens, o escuro
+   passou a ser seguro (auditado com scripts/audit-contrast.js).
+   Tokens não-cromáticos (espaço, raio, medida, movimento, tipografia) são
+   definidos uma vez em :root (não mudam por tema).
+   ========================================================================== */
+
+:root {
+  /* ---- Cor · texto (light) ----
+     900/700/500 são para TEXTO e passam AAA (≥7:1) sobre as três superfícies
+     — surface, canvas e sunken. O 500 foi de #5e5751 para cá na Onda 7: no
+     valor antigo passava só sobre o branco (7,10) e reprovava sobre canvas
+     (6,53) e sunken (5,88).
+
+     400 NÃO é token de texto. É para ícone, estado desabilitado e decoração,
+     onde a regra do WCAG é 3:1 de não-texto (e desabilitado é isento). Não dá
+     para escurecê-lo até 7:1 sem que ele vire o 500 — o intervalo entre "7:1
+     sobre sunken" e o preto não comporta quatro degraus distinguíveis. */
+  --sgo-ink-900-rgb: 26 22 20;
+  --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
+  --sgo-ink-700-rgb: 71 64 60;
+  --sgo-ink-700: rgb(var(--sgo-ink-700-rgb));
+  --sgo-ink-500-rgb: 82 76 70;
+  --sgo-ink-500: rgb(var(--sgo-ink-500-rgb));
+  --sgo-ink-400-rgb: 122 115 110;
+  --sgo-ink-400: rgb(var(--sgo-ink-400-rgb));
+
+  /* ---- Cor · linhas e superfícies (light) ---- */
+  --sgo-line-rgb: 232 227 223;
+  --sgo-line: rgb(var(--sgo-line-rgb));
+  --sgo-line-strong-rgb: 216 210 205;
+  --sgo-line-strong: rgb(var(--sgo-line-strong-rgb));
+  --sgo-canvas-rgb: 247 245 243;
+  --sgo-canvas: rgb(var(--sgo-canvas-rgb));
+  --sgo-surface-rgb: 255 255 255;
+  --sgo-surface: rgb(var(--sgo-surface-rgb));
+  --sgo-sunken-rgb: 237 233 230;
+  --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+  /* Superfície ELEVADA — o que sobe acima de `sunken`.
+     Existe por causa do segmented control: no claro a pílula eleita é branca
+     sobre trilho cinza, e `surface` já servia. No ESCURO não serve — lá
+     `surface` (31 28 27) é mais ESCURO que `sunken` (42 38 36), então usar
+     `surface` afundaria a pílula em vez de elevá-la, invertendo a leitura.
+     Este token é o único que sobe nos dois temas. */
+  --sgo-raised-rgb: 255 255 255;
+  --sgo-raised: rgb(var(--sgo-raised-rgb));
+  /* No claro a pílula eleita se separa do trilho por SOMBRA, não por
+     contraste de cor — branco sobre cinza claro dá ~1,2:1. É assim no iOS.
+     O estado continua legível porque o texto muda de cor E de peso. */
+  --sgo-shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 1px rgba(0, 0, 0, 0.06);
+  /* Superfície translúcida (barras com backdrop-blur). */
+  --sgo-glass: rgba(255, 255, 255, 0.72);
+
+  /* ---- Cor · marca (light) ---- */
+  --sgo-brand-rgb: 124 26 43;
+  --sgo-brand: rgb(var(--sgo-brand-rgb));
+  --sgo-brand-hover-rgb: 151 48 63;
+  --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+  --sgo-brand-active-rgb: 94 20 32;
+  --sgo-brand-active: rgb(var(--sgo-brand-active-rgb));
+  --sgo-brand-tint-rgb: 253 246 247;
+  --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
+  --sgo-brand-tint-2-rgb: 246 228 231;
+  --sgo-brand-tint-2: rgb(var(--sgo-brand-tint-2-rgb));
+  --sgo-on-brand-rgb: 255 255 255;
+  --sgo-on-brand: rgb(var(--sgo-on-brand-rgb));
+
+  /* ---- Cor · status (light) ----
+     Ajustados na Onda 7 para passar AAA sobre TODAS as superfícies, não só
+     sobre a tinta própria: nos valores anteriores caíam para 6,50-6,71 sobre
+     sunken. Escurecer um pouco custa menos que uma regra de "não use status
+     sobre sunken", que ninguém lembraria. */
+  --sgo-success-rgb: 10 88 50;
+  --sgo-success: rgb(var(--sgo-success-rgb));
+  --sgo-success-bg-rgb: 237 247 241;
+  --sgo-success-bg: rgb(var(--sgo-success-bg-rgb));
+  --sgo-warning-rgb: 117 63 0;
+  --sgo-warning: rgb(var(--sgo-warning-rgb));
+  --sgo-warning-bg-rgb: 252 241 225;
+  --sgo-warning-bg: rgb(var(--sgo-warning-bg-rgb));
+  --sgo-danger-rgb: 153 20 20;
+  --sgo-danger: rgb(var(--sgo-danger-rgb));
+  --sgo-danger-bg-rgb: 254 243 242;
+  --sgo-danger-bg: rgb(var(--sgo-danger-bg-rgb));
+  --sgo-info-rgb: 17 78 128;
+  --sgo-info: rgb(var(--sgo-info-rgb));
+  --sgo-info-bg-rgb: 234 242 250;
+  --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
+
+  /* ---- Espaço · grid 8pt (4px é a única meia-parada) ---- */
+  --sgo-space-4: 4px;
+  --sgo-space-8: 8px;
+  --sgo-space-16: 16px;
+  --sgo-space-24: 24px;
+  --sgo-space-32: 32px;
+  --sgo-space-40: 40px;
+  --sgo-space-48: 48px;
+  --sgo-space-64: 64px;
+  --sgo-space-80: 80px;
+
+  /* ---- Raio ---- */
+  --sgo-radius-control: 10px;
+  --sgo-radius-card: 16px;
+  --sgo-radius-sheet: 20px;
+  --sgo-radius-pill: 999px;
+
+  /* ---- Medidas de layout ---- */
+  --sgo-sidebar: 256px;
+  --sgo-sidebar-collapsed: 72px;
+  --sgo-bar: 56px;
+  --sgo-bar-mobile: 48px;
+  --sgo-control-sm: 32px;
+  --sgo-control-md: 40px;
+  --sgo-control-lg: 48px;
+  --sgo-touch: 44px;
+  --sgo-row: 64px;
+  --sgo-content: 1152px;
+  --sgo-content-wide: 1408px;
+
+  /* ---- Movimento ---- */
+  --sgo-ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+  --sgo-ease-nav: cubic-bezier(0.32, 0.72, 0, 1);
+  --sgo-ease-spring: cubic-bezier(0.34, 1.16, 0.64, 1);
+  --sgo-dur-1: 120ms;
+  --sgo-dur-2: 200ms;
+  --sgo-dur-3: 340ms;
+  --sgo-dur-4: 400ms;
+
+  /* ---- Tipografia ---- */
+  /* --font-inter é injetado no <html> pelo next/font (layout.tsx). */
+  --sgo-font: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Foco: anel duplo (2px surface + 2px brand) */
+  --sgo-focus-ring: 0 0 0 2px var(--sgo-surface), 0 0 0 4px var(--sgo-brand);
+}
+
+/* Dark automático — SOMENTE para quem optou por "Sistema" (data-theme=system) */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] {
+    --sgo-ink-900-rgb: 245 242 240;
+    --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
+    --sgo-ink-700-rgb: 214 208 204;
+    --sgo-ink-700: rgb(var(--sgo-ink-700-rgb));
+    --sgo-ink-500-rgb: 184 176 171;
+    --sgo-ink-500: rgb(var(--sgo-ink-500-rgb));
+    --sgo-ink-400-rgb: 143 135 129;
+    --sgo-ink-400: rgb(var(--sgo-ink-400-rgb));
+
+    --sgo-line-rgb: 51 46 44;
+
+    --sgo-line: rgb(var(--sgo-line-rgb));
+    --sgo-line-strong-rgb: 64 58 55;
+    --sgo-line-strong: rgb(var(--sgo-line-strong-rgb));
+    --sgo-canvas-rgb: 21 19 18;
+    --sgo-canvas: rgb(var(--sgo-canvas-rgb));
+    --sgo-surface-rgb: 31 28 27;
+    --sgo-surface: rgb(var(--sgo-surface-rgb));
+    --sgo-sunken-rgb: 42 38 36;
+    --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+    /* Sobe ACIMA de sunken (42 38 36) — ver a nota no bloco claro. */
+    --sgo-raised-rgb: 72 66 62;
+    --sgo-raised: rgb(var(--sgo-raised-rgb));
+    /* Sombra preta some sobre fundo escuro; aqui a elevação vem do tom. */
+    --sgo-shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --sgo-glass: rgba(31, 28, 27, 0.72);
+
+    --sgo-brand-rgb: 240 167 177;
+
+    --sgo-brand: rgb(var(--sgo-brand-rgb));
+    --sgo-brand-hover-rgb: 247 191 199;
+    --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+    --sgo-brand-active-rgb: 224 141 153;
+    --sgo-brand-active: rgb(var(--sgo-brand-active-rgb));
+    --sgo-brand-tint-rgb: 42 27 30;
+    --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
+    --sgo-brand-tint-2-rgb: 58 36 41;
+    --sgo-brand-tint-2: rgb(var(--sgo-brand-tint-2-rgb));
+    --sgo-on-brand-rgb: 42 10 17;
+    --sgo-on-brand: rgb(var(--sgo-on-brand-rgb));
+
+    /* status: texto conforme §3; os *-bg do dark não constam no contrato,
+       derivados como tintas escuras coerentes (baixo croma sobre surface). */
+    --sgo-success-rgb: 95 211 154;
+    --sgo-success: rgb(var(--sgo-success-rgb));
+    --sgo-success-bg-rgb: 22 40 31;
+    --sgo-success-bg: rgb(var(--sgo-success-bg-rgb));
+    --sgo-warning-rgb: 240 179 96;
+    --sgo-warning: rgb(var(--sgo-warning-rgb));
+    --sgo-warning-bg-rgb: 44 32 19;
+    --sgo-warning-bg: rgb(var(--sgo-warning-bg-rgb));
+    --sgo-danger-rgb: 255 154 147;
+    --sgo-danger: rgb(var(--sgo-danger-rgb));
+    --sgo-danger-bg-rgb: 46 26 24;
+    --sgo-danger-bg: rgb(var(--sgo-danger-bg-rgb));
+    --sgo-info-rgb: 143 190 234;
+    --sgo-info: rgb(var(--sgo-info-rgb));
+    --sgo-info-bg-rgb: 22 34 46;
+    --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
+  }
+}
+
+/* Dark — escolha explícita vence em qualquer sistema */
+:root[data-theme='dark'] {
+  --sgo-ink-900-rgb: 245 242 240;
+  --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
+  --sgo-ink-700-rgb: 214 208 204;
+  --sgo-ink-700: rgb(var(--sgo-ink-700-rgb));
+  --sgo-ink-500-rgb: 184 176 171;
+  --sgo-ink-500: rgb(var(--sgo-ink-500-rgb));
+  --sgo-ink-400-rgb: 143 135 129;
+  --sgo-ink-400: rgb(var(--sgo-ink-400-rgb));
+
+  --sgo-line-rgb: 51 46 44;
+
+  --sgo-line: rgb(var(--sgo-line-rgb));
+  --sgo-line-strong-rgb: 64 58 55;
+  --sgo-line-strong: rgb(var(--sgo-line-strong-rgb));
+  --sgo-canvas-rgb: 21 19 18;
+  --sgo-canvas: rgb(var(--sgo-canvas-rgb));
+  --sgo-surface-rgb: 31 28 27;
+  --sgo-surface: rgb(var(--sgo-surface-rgb));
+  --sgo-sunken-rgb: 42 38 36;
+  --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+  /* Sobe ACIMA de sunken (42 38 36) — ver a nota no bloco claro. */
+  --sgo-raised-rgb: 72 66 62;
+  --sgo-raised: rgb(var(--sgo-raised-rgb));
+  --sgo-shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.4);
+  /* Faltava aqui na Onda 0: o bloco 'system' tinha, o 'dark' explícito não.
+     Sem isto, quem escolhe Escuro à mão fica com as barras de desfoque BRANCAS
+     sobre a página escura — e o texto claro do tema em cima delas. */
+  --sgo-glass: rgba(31, 28, 27, 0.72);
+
+  --sgo-brand-rgb: 240 167 177;
+
+  --sgo-brand: rgb(var(--sgo-brand-rgb));
+  --sgo-brand-hover-rgb: 247 191 199;
+  --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+  --sgo-brand-active-rgb: 224 141 153;
+  --sgo-brand-active: rgb(var(--sgo-brand-active-rgb));
+  --sgo-brand-tint-rgb: 42 27 30;
+  --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
+  --sgo-brand-tint-2-rgb: 58 36 41;
+  --sgo-brand-tint-2: rgb(var(--sgo-brand-tint-2-rgb));
+  --sgo-on-brand-rgb: 42 10 17;
+  --sgo-on-brand: rgb(var(--sgo-on-brand-rgb));
+
+  --sgo-success-rgb: 95 211 154;
+
+  --sgo-success: rgb(var(--sgo-success-rgb));
+  --sgo-success-bg-rgb: 22 40 31;
+  --sgo-success-bg: rgb(var(--sgo-success-bg-rgb));
+  --sgo-warning-rgb: 240 179 96;
+  --sgo-warning: rgb(var(--sgo-warning-rgb));
+  --sgo-warning-bg-rgb: 44 32 19;
+  --sgo-warning-bg: rgb(var(--sgo-warning-bg-rgb));
+  --sgo-danger-rgb: 255 154 147;
+  --sgo-danger: rgb(var(--sgo-danger-rgb));
+  --sgo-danger-bg-rgb: 46 26 24;
+  --sgo-danger-bg: rgb(var(--sgo-danger-bg-rgb));
+  --sgo-info-rgb: 143 190 234;
+  --sgo-info: rgb(var(--sgo-info-rgb));
+  --sgo-info-bg-rgb: 22 34 46;
+  --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
+}
+
+/* =============================================================================
+   Escala tipográfica — tracking varia por tamanho (densidade tipo SF Pro).
+   REDESIGN.md §3. Números sempre tabulares onde a classe for aplicada a dado.
+   ========================================================================== */
+.sgo-type-34 {
+  font-size: 34px;
+  line-height: 40px;
+  letter-spacing: -0.022em;
+}
+.sgo-type-28 {
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: -0.02em;
+}
+.sgo-type-22 {
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.016em;
+}
+.sgo-type-20 {
+  font-size: 20px;
+  line-height: 26px;
+  letter-spacing: -0.014em;
+}
+.sgo-type-17 {
+  font-size: 17px;
+  line-height: 24px;
+  letter-spacing: -0.011em;
+}
+.sgo-type-15 {
+  font-size: 15px;
+  line-height: 20px;
+  letter-spacing: -0.006em;
+}
+.sgo-type-13 {
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: -0.002em;
+}
+.sgo-type-12 {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+}
+/* 11/14 +0.06em — único uso de caixa alta (overline/eyebrow) */
+.sgo-type-11 {
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Corpo responsivo: 17px no mobile, 15px acima de 1024px */
+.sgo-body {
+  font-size: 17px;
+  line-height: 24px;
+  letter-spacing: -0.011em;
+}
+@media (min-width: 1024px) {
+  .sgo-body {
+    font-size: 15px;
+    line-height: 20px;
+    letter-spacing: -0.006em;
+  }
+}
+
+/* Todo número tabular (REDESIGN.md §5) */
+.sgo-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Entrada de página (Onda 8) — empurrão do iOS no celular, discreto no desktop.
+   A paralaxe da página que SAI exige AnimatePresence (lib externa, fora do
+   contrato), então animamos só a entrada. */
+.sgo-page-clip {
+  /* `clip` e NÃO `hidden`: hidden forçaria o eixo Y a virar contêiner de
+     rolagem e quebraria o position:sticky do cabeçalho. */
+  overflow-x: clip;
+}
+
+/* Celular: a tela nova entra pela direita, como no push do iOS. */
+@keyframes sgo-page-push {
+  from {
+    opacity: 0.6;
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Desktop: com a sidebar parada ao lado, empurrar a página inteira faria só
+   metade da tela se mexer. Aqui a entrada é a do iPadOS: surgir crescendo. */
+@keyframes sgo-page-emerge {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sgo-page-enter {
+  animation: sgo-page-push var(--sgo-dur-3) var(--sgo-ease-nav) both;
+  /* Sem isto o texto tremula no meio do deslize em telas de baixa densidade. */
+  backface-visibility: hidden;
+}
+
+/* 768px é a fronteira do PRÓPRIO app: é onde a barra inferior some (`md:hidden`)
+   e o painel lateral aparece (`md:block`). Trocar a animação em outro ponto
+   deixaria uma faixa de larguras com a sidebar parada e a página inteira
+   deslizando ao lado — só metade da tela se mexendo. */
+@media (min-width: 768px) {
+  .sgo-page-enter {
+    animation: sgo-page-emerge var(--sgo-dur-2) var(--sgo-ease-std) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sgo-page-enter {
+    animation: none;
+  }
+}
+
+/* Entrada escalonada de listas (Onda 5): as linhas aparecem em cascata de
+   24ms, dando a leitura de cima para baixo. Só as 8 primeiras escalonam — daí
+   em diante o atraso trava, senão uma lista longa demoraria a "assentar". */
+@keyframes sgo-row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sgo-stagger > * {
+  animation: sgo-row-enter var(--sgo-dur-2) var(--sgo-ease-nav) both;
+  animation-delay: 192ms; /* teto: 8 × 24ms */
+}
+.sgo-stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.sgo-stagger > *:nth-child(2) {
+  animation-delay: 24ms;
+}
+.sgo-stagger > *:nth-child(3) {
+  animation-delay: 48ms;
+}
+.sgo-stagger > *:nth-child(4) {
+  animation-delay: 72ms;
+}
+.sgo-stagger > *:nth-child(5) {
+  animation-delay: 96ms;
+}
+.sgo-stagger > *:nth-child(6) {
+  animation-delay: 120ms;
+}
+.sgo-stagger > *:nth-child(7) {
+  animation-delay: 144ms;
+}
+.sgo-stagger > *:nth-child(8) {
+  animation-delay: 168ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sgo-stagger > * {
+    animation: none;
+  }
+}
+
+/* Skeleton: brilho que atravessa o placeholder (Onda 2). */
+@keyframes sgo-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.sgo-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 25%,
+    var(--sgo-surface) 50%,
+    transparent 75%
+  );
+  background-size: 200% 100%;
+  animation: sgo-shimmer 1.6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sgo-shimmer {
+    animation: none;
+  }
+}
+
+/* Sheet: sobe de baixo (Onda 2). */
+@keyframes sgo-sheet-enter {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+.sgo-sheet-enter {
+  animation: sgo-sheet-enter var(--sgo-dur-3) var(--sgo-ease-nav) both;
+}
+
+/* Enquanto um Sheet está aberto, o conteúdo atrás recua para scale(.94).
+   Opt-in: a tela marca o container com [data-sheet-scales]. */
+[data-sheet-scales] {
+  transition: transform var(--sgo-dur-3) var(--sgo-ease-nav);
+  transform-origin: top center;
+}
+:root[data-sheet-open='true'] [data-sheet-scales] {
+  transform: scale(0.94);
+  border-radius: var(--sgo-radius-sheet);
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sgo-sheet-enter {
+    animation: none;
+  }
+  [data-sheet-scales] {
+    transition: none;
+  }
+}
+
+/* Regra 8 do contrato: alvo de toque de no mínimo 44px. Os tamanhos compactos
+   (sm 32px, md 40px) existem para o mouse, onde a mira é precisa; num aparelho
+   de toque eles ficam abaixo do dedo. Em vez de proibir o compacto, o próprio
+   controle cresce quando o ponteiro é grosso — assim a tela continua densa no
+   desktop sem custar acerto no celular. */
+@media (pointer: coarse) {
+  .sgo-control {
+    min-height: var(--sgo-touch);
+  }
+}
+
+/* =============================================================================
+   Escopo de IMPRESSÃO — relatórios em PDF/papel.
+   Estas telas não seguem o tema: papel é sempre branco, e um relatório impresso
+   no modo escuro sairia ilegível (ou gastaria um cartucho). Aqui os tokens são
+   repinados nos valores claros, então o conteúdo pode usar as MESMAS classes do
+   resto do sistema em vez de cinzas crus do Tailwind.
+   ========================================================================== */
+.sgo-print {
+  --sgo-ink-900-rgb: 26 22 20;
+  --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
+  --sgo-ink-700-rgb: 71 64 60;
+  --sgo-ink-700: rgb(var(--sgo-ink-700-rgb));
+  --sgo-ink-500-rgb: 82 76 70;
+  --sgo-ink-500: rgb(var(--sgo-ink-500-rgb));
+  --sgo-ink-400-rgb: 122 115 110;
+  --sgo-ink-400: rgb(var(--sgo-ink-400-rgb));
+  --sgo-line-rgb: 232 227 223;
+  --sgo-line: rgb(var(--sgo-line-rgb));
+  --sgo-line-strong-rgb: 216 210 205;
+  --sgo-line-strong: rgb(var(--sgo-line-strong-rgb));
+  --sgo-canvas-rgb: 247 245 243;
+  --sgo-canvas: rgb(var(--sgo-canvas-rgb));
+  --sgo-surface-rgb: 255 255 255;
+  --sgo-surface: rgb(var(--sgo-surface-rgb));
+  --sgo-sunken-rgb: 237 233 230;
+  --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+  --sgo-raised-rgb: 255 255 255;
+  --sgo-raised: rgb(var(--sgo-raised-rgb));
+  --sgo-shadow-raised: none;
+  --sgo-glass: rgba(255, 255, 255, 0.72);
+  --sgo-brand-rgb: 124 26 43;
+  --sgo-brand: rgb(var(--sgo-brand-rgb));
+  --sgo-brand-hover-rgb: 151 48 63;
+  --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+  --sgo-brand-tint-rgb: 253 246 247;
+  --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
+  --sgo-brand-tint-2-rgb: 246 228 231;
+  --sgo-brand-tint-2: rgb(var(--sgo-brand-tint-2-rgb));
+  --sgo-on-brand-rgb: 255 255 255;
+  --sgo-on-brand: rgb(var(--sgo-on-brand-rgb));
+  --sgo-success-rgb: 10 88 50;
+  --sgo-success: rgb(var(--sgo-success-rgb));
+  --sgo-success-bg-rgb: 237 247 241;
+  --sgo-success-bg: rgb(var(--sgo-success-bg-rgb));
+  --sgo-warning-rgb: 117 63 0;
+  --sgo-warning: rgb(var(--sgo-warning-rgb));
+  --sgo-warning-bg-rgb: 252 241 225;
+  --sgo-warning-bg: rgb(var(--sgo-warning-bg-rgb));
+  --sgo-danger-rgb: 153 20 20;
+  --sgo-danger: rgb(var(--sgo-danger-rgb));
+  --sgo-danger-bg-rgb: 254 243 242;
+  --sgo-danger-bg: rgb(var(--sgo-danger-bg-rgb));
+  --sgo-info-rgb: 17 78 128;
+  --sgo-info: rgb(var(--sgo-info-rgb));
+  --sgo-info-bg-rgb: 234 242 250;
+  --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
+  background-color: var(--sgo-surface);
+  color: var(--sgo-ink-900);
+}
+
+/* =============================================================================
+   Escopo SEMPRE ESCURO — visor da câmera e afins.
+   Simétrico ao .sgo-print: ali o fundo é papel e sempre claro, aqui é a imagem
+   da câmera e sempre preta. Nos dois casos o tema do app não se aplica, e sem
+   isto o texto seguiria o tema e sumiria contra o fundo fixo.
+   ========================================================================== */
+.sgo-on-dark {
+  --sgo-ink-900-rgb: 245 242 240;
+  --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
+  --sgo-ink-700-rgb: 214 208 204;
+  --sgo-ink-700: rgb(var(--sgo-ink-700-rgb));
+  --sgo-ink-500-rgb: 184 176 171;
+  --sgo-ink-500: rgb(var(--sgo-ink-500-rgb));
+  --sgo-ink-400-rgb: 143 135 129;
+  --sgo-ink-400: rgb(var(--sgo-ink-400-rgb));
+  --sgo-line-rgb: 51 46 44;
+  --sgo-line: rgb(var(--sgo-line-rgb));
+  --sgo-line-strong-rgb: 64 58 55;
+  --sgo-line-strong: rgb(var(--sgo-line-strong-rgb));
+  --sgo-canvas-rgb: 21 19 18;
+  --sgo-canvas: rgb(var(--sgo-canvas-rgb));
+  --sgo-surface-rgb: 31 28 27;
+  --sgo-surface: rgb(var(--sgo-surface-rgb));
+  --sgo-sunken-rgb: 42 38 36;
+  --sgo-sunken: rgb(var(--sgo-sunken-rgb));
+  --sgo-brand-rgb: 240 167 177;
+  --sgo-brand: rgb(var(--sgo-brand-rgb));
+  --sgo-brand-hover-rgb: 247 191 199;
+  --sgo-brand-hover: rgb(var(--sgo-brand-hover-rgb));
+  --sgo-brand-active-rgb: 224 141 153;
+  --sgo-brand-active: rgb(var(--sgo-brand-active-rgb));
+  --sgo-brand-tint-rgb: 42 27 30;
+  --sgo-brand-tint: rgb(var(--sgo-brand-tint-rgb));
+  --sgo-brand-tint-2-rgb: 58 36 41;
+  --sgo-brand-tint-2: rgb(var(--sgo-brand-tint-2-rgb));
+  --sgo-on-brand-rgb: 42 10 17;
+  --sgo-on-brand: rgb(var(--sgo-on-brand-rgb));
+  --sgo-success-rgb: 95 211 154;
+  --sgo-success: rgb(var(--sgo-success-rgb));
+  --sgo-success-bg-rgb: 22 40 31;
+  --sgo-success-bg: rgb(var(--sgo-success-bg-rgb));
+  --sgo-warning-rgb: 240 179 96;
+  --sgo-warning: rgb(var(--sgo-warning-rgb));
+  --sgo-warning-bg-rgb: 44 32 19;
+  --sgo-warning-bg: rgb(var(--sgo-warning-bg-rgb));
+  --sgo-danger-rgb: 255 154 147;
+  --sgo-danger: rgb(var(--sgo-danger-rgb));
+  --sgo-danger-bg-rgb: 46 26 24;
+  --sgo-danger-bg: rgb(var(--sgo-danger-bg-rgb));
+  --sgo-info-rgb: 143 190 234;
+  --sgo-info: rgb(var(--sgo-info-rgb));
+  --sgo-info-bg-rgb: 22 34 46;
+  --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
+}
+
+/* =============================================================================
+   RECUO AO TOQUE — o gesto do iOS, no sistema inteiro (Onda 8)
+   O app tem 189 <button> escritos à mão, além dos 345 que passam pelo
+   componente. Tratar só o componente deixaria um terço da interface com um
+   gesto diferente. Uma regra só resolve o presente e o que for escrito depois.
+   O encolhimento é DE PROPÓSITO mais rápido na ida (80ms, seco) que na volta
+   (mola): é assim que o original responde — firme ao apertar, macio ao soltar.
+   ========================================================================== */
+button:not(:disabled):not(.sgo-no-press):active,
+[role='button']:not([aria-disabled='true']):not(.sgo-no-press):active {
+  transform: scale(0.96);
+  transition-duration: 80ms;
+}
+button:not(:disabled):not(.sgo-no-press),
+[role='button']:not([aria-disabled='true']):not(.sgo-no-press) {
+  transition-property: transform, background-color, border-color, color, opacity;
+  transition-duration: var(--sgo-dur-1);
+  transition-timing-function: var(--sgo-ease-spring);
+}
+
+/* Regra 9 do contrato: quem pediu menos movimento não recebe o recuo. */
+@media (prefers-reduced-motion: reduce) {
+  button:active,
+  [role='button']:active {
+    transform: none;
+  }
+}
+
+/* =============================================================================
+   ROLAGEM SEM BARRA (Onda 8) — fileira que rola mas não mostra barra.
+   Usada pelo segmented control: quando as abas não cabem na largura do
+   celular, o trilho rola. Uma barra de rolagem dentro de uma pílula de 36px
+   de altura come metade dela e não existe no iOS, onde o indicador é
+   transitório. O gesto continua: só o desenho da barra sai.
+   ========================================================================== */
+.sgo-sem-barra {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge legado */
+}
+.sgo-sem-barra::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+/* =============================================================================
+   LISTA AGRUPADA (Onda 8) — a silhueta do iOS.
+   Uma caixa só, com fio recuado entre as linhas, em vez de cartões soltos com
+   vão entre eles. O fio vive num ::before do filho porque `border-top` iria de
+   ponta a ponta, e no iOS ele começa alinhado com o texto (16px).
+   ========================================================================== */
+.sgo-group > * {
+  position: relative;
+}
+
+.sgo-group > * + *::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  /* Alinha com o TEXTO da linha, não com um número decorado. A linha usa `p-3`
+     (12px) em 8 dos 10 casos migrados, então o fio começa onde o conteúdo
+     começa. Com 16px — o número do iOS, que eu havia copiado direto — o fio
+     nascia 4px depois do texto, desalinhado justo onde mais se olha.
+     12px não está na escala de 8pt de propósito: ele não é espaçamento de
+     layout, é o espelho do padding da linha, e `p-3` do Tailwind é 12px. */
+  left: 12px;
+  right: 0;
+  height: 1px;
+  background: var(--sgo-line);
+}
+
+/* Fio de ponta a ponta, para grupo sem recuo à esquerda (tabela, grade). */
+.sgo-group-flush > * + *::before {
+  left: 0;
+}
+
+/* Linha tocável dentro do grupo: realce no toque ocupa a linha inteira, sem
+   arredondamento próprio — é o comportamento do iOS. O recuo em escala fica
+   DESLIGADO aqui: encolher uma linha de lista larga fica estranho, o certo é
+   ela acender. */
+.sgo-group > button:active,
+.sgo-group > a:active {
+  transform: none;
+  background-color: var(--sgo-sunken);
+}

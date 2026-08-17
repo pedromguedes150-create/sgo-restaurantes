@@ -6,6 +6,7 @@ import { Plus, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/ds/select';
 
 export interface UpdateRow { id: string; text: string; authorName: string; createdAt: string }
 export interface TypeOpt { id: string; name: string; categories: { id: string; name: string }[] }
@@ -36,14 +37,14 @@ export function OccurrenceProgress({ occurrenceId, updates, closed, types, curre
   return (
     <div className="space-y-3">
       {/* Timeline do andamento */}
-      <div className="rounded-lg border bg-card p-3">
-        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Andamento ({updates.length})</p>
-        {updates.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma fase registrada ainda.</p>}
-        <ol className="space-y-2 border-l-2 border-accent/30 pl-3">
+      <div className="rounded-lg border bg-surface p-3">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Andamento ({updates.length})</p>
+        {updates.length === 0 && <p className="text-sm text-ink-500">Nenhuma fase registrada ainda.</p>}
+        <ol className="space-y-2 border-l-2 border-brand/30 pl-3">
           {updates.map((u) => (
             <li key={u.id}>
               <p className="text-sm">{u.text}</p>
-              <p className="text-xs text-muted-foreground">{u.authorName} · {new Date(u.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+              <p className="text-xs text-ink-500">{u.authorName} · {new Date(u.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
             </li>
           ))}
         </ol>
@@ -58,28 +59,23 @@ export function OccurrenceProgress({ occurrenceId, updates, closed, types, curre
       {/* Reclassificar (move para Manutenção/TI conforme o tipo) */}
       {!closed && (
         <div className="rounded-lg border border-dashed p-3">
-          <button onClick={() => setReclass(!reclass)} className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <button onClick={() => setReclass(!reclass)} className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500">
             <Tags className="h-3.5 w-3.5" /> Reclassificar (tipo atual: {currentType})
           </button>
           {reclass && (
             <div className="mt-2 space-y-2">
-              <div>
-                <Label className="text-xs">Novo tipo</Label>
-                <select className="h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={typeId} onChange={(e) => { setTypeId(e.target.value); setCategoryId(''); }}>
-                  <option value="">Selecione…</option>
-                  {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </div>
+              <Select
+                label="Novo tipo" size="sm" placeholder="Selecione…" value={typeId}
+                onValueChange={(v) => { setTypeId(v); setCategoryId(''); }}
+                options={types.map((t) => ({ value: t.id, label: t.name }))}
+              />
               {type && type.categories.length > 0 && (
-                <div>
-                  <Label className="text-xs">Categoria</Label>
-                  <select className="h-10 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                    <option value="">—</option>
-                    {type.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
+                <Select
+                  label="Categoria" size="sm" value={categoryId} onValueChange={setCategoryId}
+                  options={[{ value: '', label: '— sem categoria —' }, ...type.categories.map((c) => ({ value: c.id, label: c.name }))]}
+                />
               )}
-              <p className="text-xs text-muted-foreground">Tipos marcados como Manutenção/TI movem a ocorrência para a sub-aba correspondente.</p>
+              <p className="text-xs text-ink-500">Tipos marcados como Manutenção/TI movem a ocorrência para a sub-aba correspondente.</p>
               <Button size="sm" disabled={busy || !typeId} onClick={() => void post({ action: 'reclassify', typeId, categoryId: categoryId || undefined })}>Aplicar</Button>
             </div>
           )}

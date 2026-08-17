@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CancellationsClient } from '@/components/cancellations/cancellations-client';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { formatBRL } from '@/lib/utils';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,18 +34,18 @@ export default async function CancelamentosPage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-brand">Cancelamento de Cupons</h1>
+        <LargeTitle title="Cancelamento de Cupons" />
         <div className="flex flex-wrap gap-2">
-          {['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role) && <Link href="/modulos/cancelamentos/analise" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-accent">🛡️ Análise antifraude (PDF)</Link>}
-          <Link href="/modulos/cancelamentos/relatorio" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-muted"><FileText className="h-4 w-4" /> Relatório</Link>
+          {['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role) && <Link href="/modulos/cancelamentos/analise" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🛡️ Análise antifraude (PDF)</Link>}
+          <Link href="/modulos/cancelamentos/relatorio" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-sunken"><FileText className="h-4 w-4" /> Relatório</Link>
         </div>
       </div>
 
       {/* Resumo do mês */}
       <div className="grid grid-cols-3 gap-2">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-brand">{summary.monthTotal}</p><p className="text-xs text-muted-foreground">no mês</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-success">{summary.justifiedPct}%</p><p className="text-xs text-muted-foreground">justificados</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-critical">{summary.pending}</p><p className="text-xs text-muted-foreground">pendentes</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.monthTotal}</p><p className="text-xs text-ink-500">no mês</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-success">{summary.justifiedPct}%</p><p className="text-xs text-ink-500">justificados</p></CardContent></Card>
+        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.pending}</p><p className="text-xs text-ink-500">pendentes</p></CardContent></Card>
       </div>
 
       <Card>
@@ -63,26 +64,26 @@ export default async function CancelamentosPage() {
           <CardHeader><CardTitle>Gerenciar lançamentos (admin)</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Importações</p>
-              {imports.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma importação.</p>}
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Importações</p>
+              {imports.length === 0 && <p className="text-sm text-ink-500">Nenhuma importação.</p>}
               {imports.map((imp) => (
-                <div key={imp.id} className="flex items-center justify-between rounded-lg border bg-card p-2.5">
+                <div key={imp.id} className="flex items-center justify-between rounded-lg border bg-surface p-2.5">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-brand">{imp.fileName}</p>
-                    <p className="text-xs text-muted-foreground">{imp.unit.name} · {imp.operationalDate} · {imp._count.cancellations} cupom(ns)</p>
+                    <p className="truncate text-sm font-semibold text-ink-900">{imp.fileName}</p>
+                    <p className="text-xs text-ink-500">{imp.unit.name} · {imp.operationalDate} · {imp._count.cancellations} cupom(ns)</p>
                   </div>
                   <DeleteOpButton entity="cancellationImport" id={imp.id} label={`a importação "${imp.fileName}" e seus cupons`} />
                 </div>
               ))}
             </div>
             <div>
-              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Cupons (recentes)</p>
-              {recentCanc.length === 0 && <p className="text-sm text-muted-foreground">Nenhum cupom.</p>}
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Cupons (recentes)</p>
+              {recentCanc.length === 0 && <p className="text-sm text-ink-500">Nenhum cupom.</p>}
               {recentCanc.map((c) => (
-                <div key={c.id} className="flex items-center justify-between rounded-lg border bg-card p-2.5">
+                <div key={c.id} className="flex items-center justify-between rounded-lg border bg-surface p-2.5">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-brand">Cupom {c.couponNumber} · {formatBRL(Number(c.value))}</p>
-                    <p className="text-xs text-muted-foreground">{c.unit.name} · {c.operationalDate} · {c.status}{c.cashOperator ? ` · ${c.cashOperator}` : ''}</p>
+                    <p className="text-sm font-semibold text-ink-900">Cupom {c.couponNumber} · {formatBRL(Number(c.value))}</p>
+                    <p className="text-xs text-ink-500">{c.unit.name} · {c.operationalDate} · {c.status}{c.cashOperator ? ` · ${c.cashOperator}` : ''}</p>
                   </div>
                   <DeleteOpButton entity="cancellation" id={c.id} label={`o cupom ${c.couponNumber}`} />
                 </div>
@@ -99,7 +100,7 @@ export default async function CancelamentosPage() {
             {summary.byOperator.map((o, i) => (
               <div key={o.operator} className="flex justify-between text-sm">
                 <span>{i + 1}. {o.operator}</span>
-                <span className="font-semibold text-brand">{o.count}</span>
+                <span className="font-semibold text-ink-900">{o.count}</span>
               </div>
             ))}
           </CardContent>

@@ -5,6 +5,9 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { FormSelect, FormDatePicker } from '@/components/ui/ds/form-controls';
+import { shortUnitName } from '@/lib/unit-name';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,38 +38,34 @@ export default async function AvisosRhPage({ searchParams }: { searchParams: { d
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/escala" className="inline-flex items-center gap-1 text-sm font-semibold text-accent print:hidden"><ArrowLeft className="h-4 w-4" /> Escala</Link>
+      <Link href="/modulos/escala" className="inline-flex items-center gap-1 text-sm font-semibold text-brand print:hidden"><ArrowLeft className="h-4 w-4" /> Escala</Link>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold text-brand"><BellRing className="h-5 w-5 text-accent" /> Avisos ao RH (Escala)</h1>
-        <p className="text-sm text-muted-foreground">Toda variação lançada no Realizado (falta, atestado, férias…) gera um aviso automático. Quando a API do RH aceitar estes eventos, eles passam a ser enviados na hora.</p>
+        <LargeTitle title="Avisos ao RH (Escala)" subtitle="Toda variação lançada no Realizado (falta, atestado, férias…) gera um aviso automático. Quando a API do RH aceitar estes eventos, eles passam a ser enviados na hora." />
       </div>
 
       <form className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-2 print:hidden" method="get">
-        <div><label className="text-xs text-muted-foreground">De</label><input type="date" name="de" defaultValue={de} className="block h-10 rounded-lg border-2 border-input bg-background px-3 text-sm" /></div>
-        <div><label className="text-xs text-muted-foreground">Até</label><input type="date" name="ate" defaultValue={ate} className="block h-10 rounded-lg border-2 border-input bg-background px-3 text-sm" /></div>
+        <FormDatePicker name="de" label="De" defaultValue={de} className="w-40" />
+        <FormDatePicker name="ate" label="Até" defaultValue={ate} min={de} className="w-40" />
         {units.length > 1 && (
-          <div>
-            <label className="text-xs text-muted-foreground">Unidade</label>
-            <select name="unit" defaultValue={unitId ?? ''} className="block h-10 rounded-lg border-2 border-input bg-background px-3 text-sm">
-              <option value="">Todas</option>
-              {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-          </div>
+          <FormSelect
+            name="unit" label="Unidade" defaultValue={unitId ?? ''} className="w-52"
+            options={[{ value: '', label: 'Todas' }, ...units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))]}
+          />
         )}
-        <button type="submit" className="h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground">Filtrar</button>
-        <span className="ml-auto text-xs text-muted-foreground">{rows.length} aviso(s) no período</span>
+        <button type="submit" className="h-10 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand">Filtrar</button>
+        <span className="ml-auto text-xs text-ink-500">{rows.length} aviso(s) no período</span>
       </form>
 
       <Card>
         <CardContent className="pt-4">
-          {rows.length === 0 && <p className="text-sm text-muted-foreground">Nenhum aviso no período — lance variações na Escala (aba Realizado).</p>}
+          {rows.length === 0 && <p className="text-sm text-ink-500">Nenhum aviso no período — lance variações na Escala (aba Realizado).</p>}
           <div className="space-y-3">
             {[...byCollab.entries()].map(([name, items]) => (
-              <div key={name} className="rounded-lg border bg-card p-3">
-                <p className="font-semibold text-brand">{name} <span className="text-xs font-normal text-muted-foreground">({items.length} aviso(s))</span></p>
+              <div key={name} className="rounded-lg border bg-surface p-3">
+                <p className="font-semibold text-ink-900">{name} <span className="text-xs font-normal text-ink-500">({items.length} aviso(s))</span></p>
                 <div className="mt-1 space-y-0.5">
                   {items.map((r) => (
-                    <p key={r.id} className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <p key={r.id} className="flex items-center justify-between gap-2 text-xs text-ink-500">
                       <span>{fmtBR(r.date)} · <strong>{r.status}</strong> · {unitBy.get(r.unitId) ?? '—'} · por {r.createdByName}</span>
                       <StatusBadge tone={r.sent ? 'success' : 'neutral'}>{r.sent ? 'Enviado ao RH' : 'Registrado'}</StatusBadge>
                     </p>

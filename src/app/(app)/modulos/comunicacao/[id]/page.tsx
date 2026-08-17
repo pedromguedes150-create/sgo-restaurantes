@@ -46,21 +46,21 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/comunicacao" className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Central de Comunicação</Link>
+      <Link href="/modulos/comunicacao" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Central de Comunicação</Link>
 
       <Card>
         <CardContent className="space-y-3 pt-4">
           <div className="flex items-start justify-between gap-2">
-            <h1 className="flex items-center gap-1.5 text-lg font-bold text-brand">{comm.pinned && <Pin className="h-4 w-4 text-gold" />}{comm.title}</h1>
+            <h1 className="flex items-center gap-1.5 text-lg font-bold text-ink-900">{comm.pinned && <Pin className="h-4 w-4 text-ink-700" />}{comm.title}</h1>
             {prio && <StatusBadge tone={prio.tone}>{prio.label}</StatusBadge>}
           </div>
-          <p className="text-xs text-muted-foreground">por {comm.author?.name ?? 'Sistema'} · publicado {fmt(comm.createdAt)} · prazo {fmt(comm.dueAt)}</p>
-          <p className="whitespace-pre-wrap text-sm text-foreground">{comm.body}</p>
+          <p className="text-xs text-ink-500">por {comm.author?.name ?? 'Sistema'} · publicado {fmt(comm.createdAt)} · prazo {fmt(comm.dueAt)}</p>
+          <p className="whitespace-pre-wrap text-sm text-ink-900">{comm.body}</p>
 
           {links.length > 0 && (
             <div className="space-y-1">
               {links.map((l, i) => (
-                <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm font-medium text-accent hover:underline">
+                <a key={i} href={l.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm font-medium text-brand hover:underline">
                   <LinkIcon className="h-4 w-4" /> {l.label || l.url}
                 </a>
               ))}
@@ -69,13 +69,13 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
 
           {comm.attachments.length > 0 && (
             <div className="space-y-2">
-              <p className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-muted-foreground"><Paperclip className="h-3.5 w-3.5" /> Anexos</p>
+              <p className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-ink-500"><Paperclip className="h-3.5 w-3.5" /> Anexos</p>
               <div className="flex flex-wrap gap-2">
                 {comm.attachments.map((a) => isImg(a.mimeType) ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <a key={a.id} href={`/${a.path}`} target="_blank" rel="noopener noreferrer"><img src={`/${a.path}`} alt={a.name ?? 'anexo'} className="h-24 w-24 rounded-lg border object-cover" /></a>
                 ) : (
-                  <a key={a.id} href={`/${a.path}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-accent hover:border-accent"><FileText className="h-4 w-4" /> {a.name ?? 'Documento PDF'}</a>
+                  <a key={a.id} href={`/${a.path}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium text-brand hover:border-brand"><FileText className="h-4 w-4" /> {a.name ?? 'Documento PDF'}</a>
                 ))}
               </div>
             </div>
@@ -106,22 +106,22 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
         <Card>
           <CardContent className="space-y-3 pt-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Confirmações</h2>
-              <span className="text-sm font-bold text-brand">{confirmed.length}/{comm.recipients.length}</span>
+              <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Confirmações</h2>
+              <span className="text-sm font-bold text-ink-900">{confirmed.length}/{comm.recipients.length}</span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} /></div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} /></div>
 
             {pending.length > 0 && (
               <div>
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="flex items-center gap-1 text-xs font-semibold text-medium"><Clock className="h-3.5 w-3.5" /> Pendentes ({pending.length})</p>
+                  <p className="flex items-center gap-1 text-xs font-semibold text-warning"><Clock className="h-3.5 w-3.5" /> Pendentes ({pending.length})</p>
                   <RemindButton id={comm.id} pending={pending.length} />
                 </div>
                 <div className="space-y-1">
                   {pending.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between rounded-lg border bg-card px-3 py-1.5 text-sm">
+                    <div key={r.id} className="flex items-center justify-between rounded-lg border bg-surface px-3 py-1.5 text-sm">
                       <span>{r.user.name}</span>
-                      <span className="text-xs text-muted-foreground">{r.unit?.name ?? '—'}</span>
+                      <span className="text-xs text-ink-500">{r.unit?.name ?? '—'}</span>
                     </div>
                   ))}
                 </div>
@@ -131,17 +131,17 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
             <div>
               <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-success"><CheckCircle2 className="h-3.5 w-3.5" /> Confirmados ({confirmed.length})</p>
               <div className="space-y-1">
-                {confirmed.length === 0 && <p className="text-xs text-muted-foreground">Ninguém confirmou ainda.</p>}
+                {confirmed.length === 0 && <p className="text-xs text-ink-500">Ninguém confirmou ainda.</p>}
                 {confirmed.map((r) => (
-                  <div key={r.id} className="rounded-lg border bg-card px-3 py-1.5 text-sm">
+                  <div key={r.id} className="rounded-lg border bg-surface px-3 py-1.5 text-sm">
                     <div className="flex items-center justify-between">
                       <span>{r.user.name}</span>
-                      <span className="text-xs text-muted-foreground">{r.confirmedAt ? fmt(r.confirmedAt) : ''}{r.late ? ' · atrasado' : ''}</span>
+                      <span className="text-xs text-ink-500">{r.confirmedAt ? fmt(r.confirmedAt) : ''}{r.late ? ' · atrasado' : ''}</span>
                     </div>
                     {(r.responseNote || r.responsePath) && (
-                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="mt-1 flex items-center gap-2 text-xs text-ink-500">
                         {r.responseNote && <span>“{r.responseNote}”</span>}
-                        {r.responsePath && <a href={`/${r.responsePath}`} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">ver foto</a>}
+                        {r.responsePath && <a href={`/${r.responsePath}`} target="_blank" rel="noopener noreferrer" className="font-medium text-brand hover:underline">ver foto</a>}
                       </div>
                     )}
                   </div>

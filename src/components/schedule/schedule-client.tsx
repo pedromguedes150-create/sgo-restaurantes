@@ -6,6 +6,9 @@ import { Wand2, CopyCheck, FileSpreadsheet, Printer, CalendarPlus, Settings2 } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
 import { cn } from '@/lib/utils';
 
 type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'ATRASO';
@@ -17,14 +20,20 @@ interface Unit { id: string; name: string }
 interface Turno { id: string; name: string; startTime: string | null; endTime: string | null }
 interface Pattern { collaboratorId: string; scheduleType: ScheduleType; anchorDate: string; shiftId: string | null; customMask: string | null }
 
+/**
+ * Fundo pelos tokens `-bg`, não por tinta da própria cor: a 15-25% o par
+ * texto/fundo ficava em 5,57-6,63:1, abaixo do AAA. Atestado usava
+ * bg-blue-100/text-blue-700 — cor crua do Tailwind, fora do sistema — e passou
+ * a usar `info`, que é o token para o que é informativo e não é alerta.
+ */
 const STATUS: Record<DayStatus, { code: string; cls: string }> = {
-  WORK:         { code: 'T',  cls: 'bg-brand text-white' },
-  OFF:          { code: 'F',  cls: 'border border-input text-muted-foreground' },
-  FALTA_INJUST: { code: 'FI', cls: 'bg-critical/15 text-critical border border-critical/40' },
-  FALTA_JUST:   { code: 'FJ', cls: 'bg-medium/25 text-[#92600A] border border-medium/50' },
-  ATESTADO:     { code: 'A',  cls: 'bg-blue-100 text-blue-700 border border-blue-300' },
-  FERIAS:       { code: 'FE', cls: 'bg-success/15 text-success border border-success/40' },
-  ATRASO:       { code: 'AT', cls: 'bg-medium/15 text-[#92600A] border border-medium/40' },
+  WORK:         { code: 'T',  cls: 'bg-brand text-on-brand' },
+  OFF:          { code: 'F',  cls: 'border border-line-strong text-ink-500' },
+  FALTA_INJUST: { code: 'FI', cls: 'bg-danger-bg text-danger border border-danger/40' },
+  FALTA_JUST:   { code: 'FJ', cls: 'bg-warning-bg text-warning border border-warning/50' },
+  ATESTADO:     { code: 'A',  cls: 'bg-info-bg text-info border border-info/40' },
+  FERIAS:       { code: 'FE', cls: 'bg-success-bg text-success border border-success/40' },
+  ATRASO:       { code: 'AT', cls: 'bg-warning-bg text-warning border border-warning/40' },
 };
 const STATUS_ORDER: DayStatus[] = ['WORK', 'ATRASO', 'OFF', 'FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
 const ABSENCE: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
@@ -37,7 +46,6 @@ const TYPE_OPTIONS: { value: ScheduleType; label: string }[] = [
 ];
 const WD = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-const SEL = 'h-10 rounded-lg border-2 border-input bg-background px-2 text-sm';
 
 export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns }: {
   units: Unit[]; selectedUnitId: string; year: number; month: number; grid: Grid; collaborators: Unit[]; turnos: Turno[]; patterns: Pattern[];
@@ -81,9 +89,9 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
       {/* Filtros + ações */}
       <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
         <div className="flex flex-wrap items-end gap-2">
-          <div><Label className="text-xs">Unidade</Label><select className={cn(SEL, 'w-44')} value={selectedUnitId} onChange={(e) => nav({ unit: e.target.value })}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></div>
-          <div><Label className="text-xs">Mês</Label><select className={SEL} value={month} onChange={(e) => nav({ month: e.target.value })}>{MONTHS.map((mn, i) => <option key={mn} value={i + 1}>{mn}</option>)}</select></div>
-          <div><Label className="text-xs">Ano</Label><select className={SEL} value={year} onChange={(e) => nav({ year: e.target.value })}>{[year - 1, year, year + 1].map((y) => <option key={y} value={y}>{y}</option>)}</select></div>
+          <div className="w-44"><Select label="Unidade" size="sm" value={selectedUnitId} onValueChange={(v) => nav({ unit: v })} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} /></div>
+          <div className="w-36"><Select label="Mês" size="sm" value={String(month)} onValueChange={(v) => nav({ month: v })} options={MONTHS.map((mn, i) => ({ value: String(i + 1), label: mn }))} /></div>
+          <div className="w-28"><Select label="Ano" size="sm" value={String(year)} onValueChange={(v) => nav({ year: v })} options={[year - 1, year, year + 1].map((y) => ({ value: String(y), label: String(y) }))} /></div>
         </div>
         <div className="flex flex-wrap gap-2">
           <a href={exportUrl(mode === 'planejado' ? 'planejado' : 'realizado')}><Button size="sm" variant="outline"><FileSpreadsheet className="h-4 w-4" /> Excel</Button></a>
@@ -94,7 +102,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
       {/* Modo */}
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         {(['planejado', 'realizado', 'comparacao'] as const).map((m) => (
-          <button key={m} onClick={() => setMode(m)} className={cn('rounded-full px-3 py-1.5 text-sm font-semibold', mode === m ? 'bg-primary text-primary-foreground' : 'border')}>
+          <button key={m} onClick={() => setMode(m)} className={cn('rounded-full px-3 py-1.5 text-sm font-semibold', mode === m ? 'bg-brand text-on-brand' : 'border')}>
             {m === 'planejado' ? 'Planejado' : m === 'realizado' ? 'Realizado' : 'Comparação'}
           </button>
         ))}
@@ -121,17 +129,17 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
       {showAbsence && mode === 'realizado' && <AbsencePanel unitId={selectedUnitId} collaborators={collaborators} onDone={() => { setShowAbsence(false); router.refresh(); }} />}
       {showPattern && <PatternPanel unitId={selectedUnitId} collaborators={collaborators} turnos={turnos} patterns={patterns} onDone={() => router.refresh()} busy={busy} post={postJson} />}
 
-      {mode === 'comparacao' && <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground print:hidden">Em cada dia: <b>linha de cima = Planejado</b>, <b>linha de baixo = Realizado</b>. Células destacadas indicam divergência.</p>}
+      {mode === 'comparacao' && <p className="rounded-lg bg-sunken/50 px-3 py-2 text-xs text-ink-500 print:hidden">Em cada dia: <b>linha de cima = Planejado</b>, <b>linha de baixo = Realizado</b>. Células destacadas indicam divergência.</p>}
 
       {/* Grade */}
       {grid.rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum colaborador com escala cadastrada nesta unidade. Use “Cadastrar escala”.</p>
+        <p className="text-sm text-ink-500">Nenhum colaborador com escala cadastrada nesta unidade. Use “Cadastrar escala”.</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
           <table className="min-w-full border-collapse text-center text-xs">
             <thead>
-              <tr className="bg-brand text-white">
-                <th className="sticky left-0 z-10 min-w-[180px] bg-brand px-2 py-2 text-left">Colaborador</th>
+              <tr className="bg-brand text-on-brand">
+                <th className="sticky left-0 z-10 min-w-[184px] bg-brand px-2 py-2 text-left">Colaborador</th>
                 {Array.from({ length: grid.daysCount }, (_, i) => i + 1).map((d) => (
                   <th key={d} className={cn('px-1 py-1 font-medium', isWeekend(d) && 'bg-white/10')}>
                     <div className="text-[10px] opacity-80">{wdOf(d)}</div>
@@ -146,14 +154,14 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                 return (
                   <Fragment key={row.collaboratorId}>
                     {showGroup && (
-                      <tr className="bg-secondary">
-                        <td colSpan={grid.daysCount + 1} className="px-2 py-1 text-left text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{row.typeLabel}</td>
+                      <tr className="bg-sunken">
+                        <td colSpan={grid.daysCount + 1} className="px-2 py-1 text-left text-[11px] font-bold uppercase tracking-wide text-ink-500">{row.typeLabel}</td>
                       </tr>
                     )}
                     <tr className="border-t">
-                      <td className="sticky left-0 z-10 min-w-[180px] bg-card px-2 py-1.5 text-left">
-                        <div className="font-semibold text-brand">{row.name}</div>
-                        <div className="text-[10px] text-muted-foreground">{row.jobTitle ?? ''}{row.shiftLabel ? ` · ${row.shiftLabel}` : ''}</div>
+                      <td className="sticky left-0 z-10 min-w-[184px] bg-surface px-2 py-1.5 text-left">
+                        <div className="font-semibold text-ink-900">{row.name}</div>
+                        <div className="text-[10px] text-ink-500">{row.jobTitle ?? ''}{row.shiftLabel ? ` · ${row.shiftLabel}` : ''}</div>
                       </td>
                       {row.days.map((cell, i) => {
                         const day = i + 1;
@@ -162,9 +170,9 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                           const act = cell.actual;
                           const diff = act !== null && act !== cell.planned;
                           return (
-                            <td key={day} className={cn('px-0.5 py-0.5', diff && 'bg-critical/10', isWeekend(day) && !diff && 'bg-muted/40')}>
+                            <td key={day} className={cn('px-0.5 py-0.5', diff && 'bg-danger/10', isWeekend(day) && !diff && 'bg-sunken/40')}>
                               <div className={cn('mx-auto flex h-5 w-6 items-center justify-center rounded text-[10px] font-bold', STATUS[cell.planned].cls)}>{STATUS[cell.planned].code}</div>
-                              <div className={cn('mx-auto mt-0.5 flex h-5 w-6 items-center justify-center rounded text-[10px] font-bold', act ? STATUS[act].cls : 'text-muted-foreground')}>{act ? STATUS[act].code : '—'}</div>
+                              <div className={cn('mx-auto mt-0.5 flex h-5 w-6 items-center justify-center rounded text-[10px] font-bold', act ? STATUS[act].cls : 'text-ink-500')}>{act ? STATUS[act].code : '—'}</div>
                             </td>
                           );
                         }
@@ -172,19 +180,28 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                         if (mode === 'realizado' && edit === key) {
                           return (
                             <td key={day} className="px-0.5 py-0.5">
-                              <select autoFocus className="h-7 w-12 rounded border text-[11px]" defaultValue={cell.actual ?? ''} onChange={(e) => setCell(row.collaboratorId, day, (e.target.value || 'CLEAR') as DayStatus | 'CLEAR')} onBlur={() => setEdit(null)}>
-                                <option value="">—</option>
-                                {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS[s].code}</option>)}
-                              </select>
+                              {/* Editor da célula: abre já aberto (o clique na
+                                  célula é que abriu) e fecha ao escolher/sair. */}
+                              <div className="w-16">
+                                <Select
+                                  aria-label={`Status de ${row.name} no dia ${day}`}
+                                  size="sm"
+                                  defaultOpen
+                                  onClose={() => setEdit(null)}
+                                  value={cell.actual ?? ''}
+                                  onValueChange={(v) => setCell(row.collaboratorId, day, (v || 'CLEAR') as DayStatus | 'CLEAR')}
+                                  options={[{ value: '', label: '—' }, ...STATUS_ORDER.map((s) => ({ value: s, label: STATUS[s].code }))]}
+                                />
+                              </div>
                             </td>
                           );
                         }
                         return (
-                          <td key={day} className={cn('px-0.5 py-0.5', isWeekend(day) && 'bg-muted/40')}>
+                          <td key={day} className={cn('px-0.5 py-0.5', isWeekend(day) && 'bg-sunken/40')}>
                             <button
                               disabled={mode !== 'realizado'}
                               onClick={() => mode === 'realizado' && setEdit(key)}
-                              className={cn('mx-auto flex h-6 w-7 items-center justify-center rounded text-[11px] font-bold', st ? STATUS[st].cls : 'border border-dashed border-input text-muted-foreground', mode === 'realizado' && 'cursor-pointer hover:ring-2 hover:ring-accent')}
+                              className={cn('mx-auto flex h-6 w-7 items-center justify-center rounded text-[11px] font-bold', st ? STATUS[st].cls : 'border border-dashed border-line-strong text-ink-500', mode === 'realizado' && 'cursor-pointer hover:ring-2 hover:ring-brand')}
                             >
                               {st ? STATUS[st].code : ''}
                             </button>
@@ -231,18 +248,27 @@ function AbsencePanel({ unitId, collaborators, onDone }: { unitId: string; colla
   }
 
   return (
-    <div className="rounded-lg border bg-card p-3 print:hidden">
-      <h3 className="mb-2 text-sm font-bold text-brand">Registrar ausência</h3>
+    <div className="rounded-lg border bg-surface p-3 print:hidden">
+      <h3 className="mb-2 text-sm font-bold text-ink-900">Registrar ausência</h3>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-        <div className="col-span-2 md:col-span-1"><Label className="text-xs">Colaborador</Label><select className={cn(SEL, 'w-full')} value={collaboratorId} onChange={(e) => setCollaboratorId(e.target.value)}><option value="">Selecione…</option>{collaborators.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-        <div><Label className="text-xs">Tipo</Label><select className={cn(SEL, 'w-full')} value={status} onChange={(e) => setStatus(e.target.value as DayStatus)}>{ABSENCE.map((s) => <option key={s} value={s}>{STATUS[s].code} — {s === 'FALTA_INJUST' ? 'Falta injust.' : s === 'FALTA_JUST' ? 'Falta just.' : s === 'ATESTADO' ? 'Atestado' : 'Férias'}</option>)}</select></div>
-        <div><Label className="text-xs">Início</Label><Input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="h-10 text-sm" /></div>
-        <div><Label className="text-xs">Fim</Label><Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="h-10 text-sm" /></div>
+        <div className="col-span-2 md:col-span-1">
+          <Select label="Colaborador" size="sm" placeholder="Selecione…" value={collaboratorId} onValueChange={setCollaboratorId} options={collaborators.map((c) => ({ value: c.id, label: c.name }))} />
+        </div>
+        <Select
+          label="Tipo" size="sm" value={status} onValueChange={(v) => setStatus(v as DayStatus)}
+          options={ABSENCE.map((s) => ({
+            value: s,
+            label: s === 'FALTA_INJUST' ? 'Falta injustificada' : s === 'FALTA_JUST' ? 'Falta justificada' : s === 'ATESTADO' ? 'Atestado' : 'Férias',
+            hint: STATUS[s].code,
+          }))}
+        />
+        <DatePicker label="Início" size="sm" value={start || null} onValueChange={(v) => setStart(v ?? '')} />
+        <DatePicker label="Fim" size="sm" value={end || null} onValueChange={(v) => setEnd(v ?? '')} min={start || undefined} />
         <div className="col-span-2 md:col-span-1"><Label className="text-xs">Motivo (opcional)</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} className="h-10 text-sm" /></div>
         <div className="col-span-2"><Label className="text-xs">Observações (opcional)</Label><Input value={note} onChange={(e) => setNote(e.target.value)} className="h-10 text-sm" /></div>
         <div className="col-span-2 md:col-span-1"><Label className="text-xs">Anexo (foto/PDF do atestado)</Label><Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="h-10 text-sm" /></div>
       </div>
-      {msg && <p className="mt-2 text-sm font-medium text-critical">{msg}</p>}
+      {msg && <p className="mt-2 text-sm font-medium text-danger">{msg}</p>}
       <Button className="mt-2" size="sm" disabled={busy} onClick={submit}>Salvar ausência</Button>
     </div>
   );
@@ -273,20 +299,28 @@ function PatternPanel({ unitId, collaborators, turnos, patterns, post, busy }: {
   }
 
   return (
-    <div className="rounded-lg border bg-card p-3 print:hidden">
-      <h3 className="mb-2 text-sm font-bold text-brand">Cadastrar / editar escala do colaborador</h3>
-      <p className="mb-2 text-xs text-muted-foreground">O padrão gera o <b>Planejado</b>. 12x36 usa dias pares/ímpares do mês; 6x1/5x2/personalizada usam a data de início do ciclo.</p>
+    <div className="rounded-lg border bg-surface p-3 print:hidden">
+      <h3 className="mb-2 text-sm font-bold text-ink-900">Cadastrar / editar escala do colaborador</h3>
+      <p className="mb-2 text-xs text-ink-500">O padrão gera o <b>Planejado</b>. 12x36 usa dias pares/ímpares do mês; 6x1/5x2/personalizada usam a data de início do ciclo.</p>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-        <div className="col-span-2 md:col-span-1"><Label className="text-xs">Colaborador</Label><select className={cn(SEL, 'w-full')} value={collaboratorId} onChange={(e) => load(e.target.value)}><option value="">Selecione…</option>{collaborators.map((c) => <option key={c.id} value={c.id}>{c.name}{existing.has(c.id) ? ' ✓' : ''}</option>)}</select></div>
-        <div><Label className="text-xs">Tipo de escala</Label><select className={cn(SEL, 'w-full')} value={type} onChange={(e) => setType(e.target.value as ScheduleType)}>{TYPE_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</select></div>
-        <div><Label className="text-xs">Turno (opcional)</Label><select className={cn(SEL, 'w-full')} value={shiftId} onChange={(e) => setShiftId(e.target.value)}><option value="">—</option>{turnos.map((t) => <option key={t.id} value={t.id}>{t.name}{t.startTime && t.endTime ? ` ${t.startTime}-${t.endTime}` : ''}</option>)}</select></div>
-        {needsAnchor && <div><Label className="text-xs">Início do ciclo</Label><Input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} className="h-10 text-sm" /></div>}
+        <div className="col-span-2 md:col-span-1">
+          <Select
+            label="Colaborador" size="sm" placeholder="Selecione…" value={collaboratorId} onValueChange={load}
+            options={collaborators.map((c) => ({ value: c.id, label: c.name, hint: existing.has(c.id) ? 'já tem padrão' : undefined }))}
+          />
+        </div>
+        <Select label="Tipo de escala" size="sm" value={type} onValueChange={(v) => setType(v as ScheduleType)} options={TYPE_OPTIONS.map((t) => ({ value: t.value, label: t.label }))} />
+        <Select
+          label="Turno (opcional)" size="sm" value={shiftId} onValueChange={setShiftId}
+          options={[{ value: '', label: 'Sem turno' }, ...turnos.map((t) => ({ value: t.id, label: t.name, hint: t.startTime && t.endTime ? `${t.startTime}-${t.endTime}` : undefined }))]}
+        />
+        {needsAnchor && <DatePicker label="Início do ciclo" size="sm" value={anchor || null} onValueChange={(v) => setAnchor(v ?? '')} />}
         {type === 'CUSTOM' && <div className="col-span-2"><Label className="text-xs">Padrão (T=trabalha, F=folga)</Label><Input value={mask} onChange={(e) => setMask(e.target.value.toUpperCase())} placeholder="ex: TTTTTFF" className="h-10 text-sm" /></div>}
       </div>
       <div className="mt-2 flex gap-2">
         <Button size="sm" disabled={busy} onClick={save}>Salvar escala</Button>
         {collaboratorId && existing.has(collaboratorId) && (
-          <Button size="sm" variant="ghost" className="text-critical" disabled={busy} onClick={() => { if (confirm('Remover a escala cadastrada deste colaborador?')) post({ action: 'deletePattern', collaboratorId, unitId }); }}>Remover escala</Button>
+          <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm('Remover a escala cadastrada deste colaborador?')) post({ action: 'deletePattern', collaboratorId, unitId }); }}>Remover escala</Button>
         )}
       </div>
     </div>

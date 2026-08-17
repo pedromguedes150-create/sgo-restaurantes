@@ -18,17 +18,17 @@ export default async function OcorrenciaRelatorioPage({ params }: { params: { id
   const images = o.attachments.filter((a) => a.mimeType.startsWith('image/'));
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 bg-white p-2 print:p-0 text-black">
+    <div className="sgo-print mx-auto max-w-3xl space-y-4 bg-surface p-2 print:p-0 text-ink-900">
       <div className="flex items-center justify-between gap-2 print:hidden">
-        <Link href={`/modulos/ocorrencias/${o.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-accent"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+        <Link href={`/modulos/ocorrencias/${o.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
         <PrintButton />
       </div>
 
       {/* Cabeçalho do relatório */}
       <div className="border-b-2 border-brand pb-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-brand">Relatório de Ocorrência — SGO Beija Flor</p>
-        <h1 className="text-2xl font-black text-brand">#{o.unit.code}-{String(o.number).padStart(4, '0')} · {o.typeName}</h1>
-        <p className="text-sm text-gray-600">{o.unit.name} · {GRAVITY_META[o.gravity].emoji} {GRAVITY_META[o.gravity].label} · {STATUS_META[o.status].label}</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-ink-900">Relatório de Ocorrência — SGO Beija Flor</p>
+        <h1 className="text-2xl font-black text-ink-900">#{o.unit.code}-{String(o.number).padStart(4, '0')} · {o.typeName}</h1>
+        <p className="text-sm text-ink-500">{o.unit.name} · {GRAVITY_META[o.gravity].emoji} {GRAVITY_META[o.gravity].label} · {STATUS_META[o.status].label}</p>
       </div>
 
       <table className="w-full text-sm">
@@ -43,13 +43,13 @@ export default async function OcorrenciaRelatorioPage({ params }: { params: { id
       </table>
 
       <div>
-        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Descrição</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Descrição</p>
         <p className="whitespace-pre-wrap text-sm">{o.description}</p>
       </div>
 
       {o.status === 'CLOSED' && (
-        <div className="rounded border border-gray-300 p-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Encerramento</p>
+        <div className="rounded border border-line-strong p-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Encerramento</p>
           <p className="text-sm">Por {o.closedBy?.name ?? '—'} em {fmt(o.closedAt)} · Revisão: {fmt(o.reviewDate)}</p>
           <p className="mt-1 text-sm"><b>Justificativa:</b> {o.closureJustification}</p>
           <p className="text-sm"><b>Ação corretiva:</b> {o.correctiveAction}</p>
@@ -58,22 +58,22 @@ export default async function OcorrenciaRelatorioPage({ params }: { params: { id
 
       {images.length > 0 && (
         <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Anexos</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Anexos</p>
           <div className="flex flex-wrap gap-2">
             {images.map((a) => <img key={a.id} src={`/${a.path}`} alt="" className="max-h-64 rounded border" />)}
           </div>
         </div>
       )}
 
-      <p className="pt-4 text-center text-[10px] text-gray-400">Gerado pelo SGO Beija Flor · {fmt(new Date())}</p>
+      <p className="pt-4 text-center text-[10px] text-ink-500">Gerado pelo SGO Beija Flor · {fmt(new Date())}</p>
     </div>
   );
 }
 
 function Row({ k, v }: { k: string; v: string }) {
   return (
-    <tr className="border-b border-gray-200">
-      <td className="py-1 pr-4 align-top font-semibold text-gray-600">{k}</td>
+    <tr className="border-b border-line">
+      <td className="py-1 pr-4 align-top font-semibold text-ink-500">{k}</td>
       <td className="py-1 align-top">{v}</td>
     </tr>
   );

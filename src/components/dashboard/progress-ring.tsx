@@ -18,12 +18,15 @@ export function ProgressRing({
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (pct / 100) * circ;
-  const tone = pct >= 100 ? 'text-success' : pct >= 60 ? 'text-accent' : 'text-critical';
+  const tone = pct >= 100 ? 'text-success' : pct >= 60 ? 'text-warning' : 'text-danger';
 
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-secondary" />
+        {/* Trilho do anel. Usava text-secondary, token que saiu com a paleta
+            legada na Onda 7 — sem ele o stroke herdava a cor do texto e o
+            trilho virava um anel escuro cheio. */}
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-sunken" />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -38,8 +41,8 @@ export function ProgressRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-black text-brand">{label ?? `${pct}%`}</span>
-        {sublabel && <span className="text-xs text-muted-foreground">{sublabel}</span>}
+        <span className="text-2xl font-black text-ink-900">{label ?? `${pct}%`}</span>
+        {sublabel && <span className="text-xs text-ink-500">{sublabel}</span>}
       </div>
     </div>
   );

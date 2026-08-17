@@ -4,6 +4,7 @@ import { getMyWorkSchedule } from '@/lib/manager-schedule';
 import { effectivePermissions } from '@/lib/permissions';
 import { Card, CardContent } from '@/components/ui/card';
 import { ManagerAreaClient } from '@/components/manager-area/manager-area-client';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,8 +22,7 @@ export default async function MinhaAreaPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-brand">Minha área</h1>
-        <p className="text-sm text-muted-foreground">Sua agenda pessoal, bloco de notas e folgas/férias.</p>
+        <LargeTitle title="Minha área" subtitle="Sua agenda pessoal, bloco de notas e folgas/férias." />
       </div>
       <Card><CardContent className="pt-4">
         <ManagerAreaClient

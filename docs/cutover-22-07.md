@@ -63,6 +63,6 @@ O `cert.pem` do cloudflared local só autoriza a zona do CEO — por isso **não
 
 ## Depois do corte (pendências)
 - Desligar o ingress do SGO no `~/.cloudflared/config.yml` da máquina Windows (só depois de validado).
-- Espelho do backup em nuvem: o droplet já tem `rclone` com remote `gdrive:` (do CEO) — definir se o SGO usa a mesma conta.
+- Espelho do backup em nuvem: **DECIDIDO 15/08/2026 — conta SEPARADA**, não a do CEO. Dado de funcionário (CPF, PIX, CID de atestado) não passa pela conta pessoal dele. Script pronto em `scripts/mirror-backup-rclone.sh`, com trava que aborta se `BACKUP_REMOTE` apontar para o `gdrive:` do CEO. **Ainda NÃO instalado**: falta criar o remote no droplet (`rclone config` — exige autenticação no navegador) e agendar o cron.
 - Trocar as senhas de demonstração (`docs/pendencias-producao.md`).
 - Push: os gerentes precisam instalar o app e ativar em Meu Perfil (guia em `/ajuda`).

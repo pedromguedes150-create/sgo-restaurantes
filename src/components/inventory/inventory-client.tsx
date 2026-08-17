@@ -8,6 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
+import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
+import { shortUnitName } from '@/lib/unit-name';
+import { Group } from '@/components/ui/ds/group';
 
 export interface InvItem {
   id: string;
@@ -42,16 +46,16 @@ export function InventoryClient({ items, units, isAdmin }: { items: InvItem[]; u
       {isAdmin && <ScheduleForm units={units} onDone={() => router.refresh()} />}
 
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum inventário agendado.</p>
+        <p className="text-sm text-ink-500">Nenhum inventário agendado.</p>
       ) : (
-        <div className="space-y-2">
+        <Group>
           {items.map((i) => (
-            <div key={i.id} className="rounded-lg border bg-card p-3">
+            <div key={i.id} className="p-3">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-brand">{i.category}</p>
+                <p className="font-semibold text-ink-900">{i.category}</p>
                 <StatusBadge tone={ST[i.status].tone}>{ST[i.status].label}</StatusBadge>
               </div>
-              <p className="text-xs text-muted-foreground">{i.unit} · {i.date}{i.responsible ? ` · resp. ${i.responsible}` : ''}{i.confirmedBy ? ` · por ${i.confirmedBy}` : ''}</p>
+              <p className="text-xs text-ink-500">{i.unit} · {i.date}{i.responsible ? ` · resp. ${i.responsible}` : ''}{i.confirmedBy ? ` · por ${i.confirmedBy}` : ''}</p>
               <div className="mt-2 flex items-center gap-2">
                 {i.status === 'PENDING' && (
                   <Button size="sm" disabled={busy} onClick={() => confirm(i.id)}><Check className="h-4 w-4" /> Confirmar realização</Button>
@@ -60,7 +64,7 @@ export function InventoryClient({ items, units, isAdmin }: { items: InvItem[]; u
               </div>
             </div>
           ))}
-        </div>
+        </Group>
       )}
     </div>
   );
@@ -88,20 +92,15 @@ function ScheduleForm({ units, onDone }: { units: { id: string; name: string }[]
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Agendar inventário (Admin)</h2>
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Agendar inventário (Admin)</h2>
       <div className="space-y-2">
-        <div>
-          <Label>Unidade</Label>
-          <select className="h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-sm" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-            {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-          </select>
-        </div>
+        <Select label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
         <div className="grid grid-cols-2 gap-2">
           <div><Label>Categoria</Label><Input value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="ex: Bebidas" /></div>
-          <div><Label>Data</Label><Input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} /></div>
+          <DatePicker label="Data" value={scheduledDate || null} onValueChange={(v) => setScheduledDate(v ?? '')} />
         </div>
         <Button onClick={submit} disabled={busy} className="w-full"><Plus className="h-4 w-4" /> Agendar</Button>
-        {msg && <p className="text-sm font-medium text-muted-foreground">{msg}</p>}
+        {msg && <p className="text-sm font-medium text-ink-500">{msg}</p>}
       </div>
     </div>
   );
