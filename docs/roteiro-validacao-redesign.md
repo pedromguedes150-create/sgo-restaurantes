@@ -113,7 +113,14 @@ sistema escuro pela primeira vez.
 - [ ] Ponha o celular no modo escuro e abra o sistema
 - [ ] Percorra os módulos que mais usa procurando algo que **sumiu** — não algo
       ilegível, mas algo que ficou da cor do fundo
-- [ ] Em Meu Perfil dá para forçar Claro, se preferir
+
+> ⚠️ **Não existe seletor de tema na interface.** Eu havia escrito aqui que dava
+> para forçar Claro em Meu Perfil — é falso, não conferi antes de escrever. O
+> componente `ThemeToggle` existe mas só está montado em `/dev/ui` (a galeria de
+> desenvolvimento). Como o padrão sem cookie é `system` (`src/lib/theme.ts`),
+> **quem tiver o aparelho no escuro vê o sistema escuro e não tem como voltar** —
+> o que contraria a regra 2 do CLAUDE.md ("tema claro"). Pendência aberta, a
+> decidir: montar o seletor em Meu Perfil, ou voltar o padrão para `light`.
 
 *A auditoria automática cobriu contraste de texto e elemento sumido, nos dois
 temas, em ~1.500 elementos. O que ela não pega é "está feio" ou "não parece

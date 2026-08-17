@@ -237,7 +237,12 @@ export const GUIDE: GuideSection[] = [
           'Toque no seu nome/avatar no topo da tela para abrir o Meu Perfil.',
           'Complete o nome completo e o CPF — a Supervisão/Admin visualizam esses dados em Configurações → Usuários.',
           'Troque a senha informando a senha atual + a nova (mínimo 8 caracteres).',
+          'Em "Aparência", escolha o tema: CLARO, ESCURO ou APARELHO (segue o que o celular estiver usando).',
           'Mais abaixo, em "Notificações no celular", ative os avisos do SGO no aparelho (ver o guia próprio).',
+        ],
+        tips: [
+          'O tema vem em "Aparelho" por padrão: se o seu celular está no modo escuro, o SGO abre escuro. Se preferir sempre claro, marque CLARO — a escolha fica salva por 1 ano.',
+          'A escolha é por aparelho, não por usuário: se você usa celular e computador, marque nos dois.',
         ],
       },
       {
