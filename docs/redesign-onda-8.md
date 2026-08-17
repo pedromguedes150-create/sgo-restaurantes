@@ -131,6 +131,28 @@ Registrados porque custaram tempo e vão reaparecer:
 Regra que tirei disso: **cor e classe** este painel lê de forma confiável; **animação, transição
 e estilo inline**, não.
 
+## Antes de publicar: um conflito conhecido
+
+O `origin/main` andou **1 commit** depois que esta branch saiu: `be18871`
+(*fix(gas-import): CNPJ da unidade no cadastro*, PR #17). Calculei o merge com
+`git merge-tree` (que não altera nada) e há **um** conflito:
+
+- `src/components/admin/units-admin.tsx` — **conflita**
+- `src/app/(app)/configuracoes/unidades/page.tsx` — resolve sozinho
+
+Os dois lados não se contradizem: o meu é só renomeação de token de cor, o
+deles é a feature de CNPJ. A resolução é **ficar com a feature de CNPJ** e
+aplicar os renomes nas linhas novas dela, que nasceram com os nomes antigos:
+
+| Nas linhas novas do PR #17 | passa a ser |
+|---|---|
+| `text-muted-foreground` | `text-ink-500` |
+| `text-critical` | `text-danger` |
+
+Se alguém esquecer, `node scripts/check-palette-keys.cjs` reprova — é
+exatamente o caso que esse portão existe para pegar. **Não fiz o merge**:
+mudar a base da branch é decisão do Pedro, não minha.
+
 ## Risco de reversão
 
 Baixo e uniforme: a onda é visual. **Zero mudança de schema, zero mudança de rota, zero mudança
