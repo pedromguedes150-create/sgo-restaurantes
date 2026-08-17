@@ -11,6 +11,9 @@ import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { Select } from '@/components/ui/ds/select';
 import { shortUnitName } from '@/lib/unit-name';
 import { formatBRL } from '@/lib/utils';
+// Apelido: este arquivo ja tem uma `interface Group` (agrupamento de dados do
+// dashboard). Sem o alias, o mesmo nome ficaria em dois papeis no mesmo escopo.
+import { Group as ListGroup } from '@/components/ui/ds/group';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string }
@@ -179,8 +182,9 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdm
           />
         </div>
       )}
-      {shown.map((r) => (
-        <div key={r.id} className="rounded-lg border bg-surface p-3">
+      <ListGroup>
+        {shown.map((r) => (
+        <div key={r.id} className="p-3">
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="flex items-center gap-1 font-semibold text-brand"><Droplets className="h-4 w-4 text-brand" /> {r.liters.toLocaleString('pt-BR')} L · {formatBRL(r.total)}</p>
@@ -196,7 +200,8 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdm
           )}
           {dateEditId === r.id && <InlineDateEdit module="oil" id={r.id} current={r.date} onClose={() => setDateEditId(null)} />}
         </div>
-      ))}
+        ))}
+      </ListGroup>
     </div>
   );
 }

@@ -14,6 +14,7 @@ import { compressImage } from '@/lib/image-compress';
 import { CERT_TYPE_LABELS } from '@/lib/certificates/labels';
 import type { CertListItem, CertReport } from '@/lib/certificates/query';
 import type { CertificateType } from '@prisma/client';
+import { Group } from '@/components/ui/ds/group';
 
 /** Últimos 12 meses a partir do selecionado — o <input type="month"> abria qualquer mês, mas o painel só tem dado recente. */
 function ultimosMeses(atual: string) {
@@ -238,9 +239,9 @@ function History({ rows, isAdmin, showCid, onChanged }: { rows: CertListItem[]; 
 
   if (rows.length === 0) return <p className="text-sm text-ink-500">Nenhum atestado registrado ainda.</p>;
   return (
-    <div className="space-y-2">
+    <Group>
       {rows.map((r) => (
-        <div key={r.id} className="rounded-lg border bg-surface p-3">
+        <div key={r.id} className="p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-brand">{r.collaboratorName}</p>
@@ -262,7 +263,7 @@ function History({ rows, isAdmin, showCid, onChanged }: { rows: CertListItem[]; 
           )}
         </div>
       ))}
-    </div>
+    </Group>
   );
 }
 
