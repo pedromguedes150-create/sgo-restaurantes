@@ -171,7 +171,7 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
         active={ativos}
         onClear={ativos ? limpar : undefined}
         className="print:hidden"
-        search={<SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="fornecedor, nº, CNPJ, produto, valor…" />}
+        search={<SearchField aria-label="Buscar notas" inputSize="sm" value={q} onValueChange={setQ} placeholder="Buscar fornecedor, nº, CNPJ, produto…" />}
         summary={
           <>
             <FilterChip>{PERIODS.find((p) => p.dias === sinceDays)?.label ?? `${sinceDays} dias`}</FilterChip>
@@ -290,8 +290,11 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
    * cinco botões soltos na linha.
    */
   const acoes: ActionMenuItem[] = [
+    /* Ícones DIFERENTES de propósito: os dois primeiros eram um lápis cada, e
+       dois lápis iguais em ações diferentes não ajudam a escolher — só enchem
+       a lista. Aqui o ícone diz o QUE muda: o conteúdo da nota, ou a data. */
     ...(canManage ? [{ label: 'Ver e editar', icon: <Pencil />, onSelect: () => setEditing(true) }] : []),
-    ...(canEditDate ? [{ label: 'Corrigir data', icon: <Pencil />, disabled: busy, onSelect: () => setDateEditing((v) => !v) }] : []),
+    ...(canEditDate ? [{ label: 'Corrigir data', icon: <CalendarClock />, disabled: busy, onSelect: () => setDateEditing((v) => !v) }] : []),
     // Pagamento é controlado no Teknisa — aqui só recebimento/problema/devolução (16/07)
     ...(n.status === 'RECEIVED'
       ? [

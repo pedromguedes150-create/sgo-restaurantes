@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X } from 'lucide-react';
+import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X, Trash2, CalendarClock, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
@@ -14,12 +14,13 @@ import { FilterBar, FilterSelect, FilterChip } from '@/components/ui/filter-bar'
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
 import { QrScanner } from '@/components/notes/qr-scanner';
-import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { postAdmin } from '@/lib/admin-client';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 import { formatBRL } from '@/lib/utils';
 import { Group } from '@/components/ui/ds/group';
+import { Sheet } from '@/components/ui/ds/sheet';
+import { ActionMenu } from '@/components/ui/ds/action-menu';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null }
@@ -99,7 +100,9 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
             {!f.unitId && !f.supplierId && !f.mes && <FilterChip>Tudo</FilterChip>}
           </>
         }
-        result={purchased ? <>{purchased.count} recebimento(s)</> : undefined}
+        /* SEM `result` aqui: a fileira de números logo abaixo já É o resultado
+           do filtro. Com ele, "45 recebimentos" aparecia três vezes na mesma
+           tela — na barra, no cartão "no filtro" e no cartão "Recebimentos". */
       >
         <FilterSelect
           label="Unidade" value={f.unitId} onValueChange={(v) => nav({ unitId: v })}
@@ -114,13 +117,12 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
           options={[{ value: '', label: 'Todos os meses' }, ...months.map((m) => ({ value: m, label: m.split('-').reverse().join('/') }))]}
         />
       </FilterBar>
-      {purchased && (
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-ink-900">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-ink-500">comprado no filtro</p></div>
-          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-base font-black tabular-nums text-ink-900">{formatBRL(purchased.total)}</p><p className="text-xs text-ink-500">valor no filtro</p></div>
-          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-ink-900">{purchased.count}</p><p className="text-xs text-ink-500">recebimentos</p></div>
-        </div>
-      )}
+      {/* A fileira de "comprado/valor/recebimentos no filtro" saiu daqui: era a
+          MESMA coisa que os cartões do Dashboard logo abaixo, com outro
+          desenho. Duas fileiras de números empilhadas, dizendo o mesmo, é o
+          que faz a tela parecer poluída — e nenhum dos dois vira hierarquia,
+          porque os dois gritam igual. O valor total, que só existia aqui,
+          virou um cartão do Dashboard. */}
     </div>
   );
 }
@@ -151,6 +153,7 @@ function ContractProgress({ contracts, compact = false }: { contracts: GasContra
 
 /* ───────── Aba Contratos (gestão — Supervisão/Admin) ───────── */
 function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { contracts: GasContractUI[]; units: Unit[]; suppliers: Supplier[]; canManage: boolean; isAdmin: boolean }) {
+  const [novoContrato, setNovoContrato] = useState(false);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ unitId: '', supplierId: '', startDate: '', endDate: '', quantityKg: '', pricePerKg: '', initialUsedKg: '', note: '' });
@@ -180,9 +183,21 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
 
   return (
     <div className="space-y-4">
+      {/* O formulário ocupava a tela inteira ANTES dos contratos: quem entrava
+          para conferir o andamento via primeiro seis campos vazios, e a lista
+          — o motivo da visita — ficava embaixo. Virou folha, atrás do botão. */}
       {canManage && (
-        <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Novo contrato</p>
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setNovoContrato(true)}><Plus className="h-4 w-4" /> Novo contrato</Button>
+        </div>
+      )}
+      {canManage && (
+        <Sheet
+          open={novoContrato}
+          onClose={() => setNovoContrato(false)}
+          title="Novo contrato"
+          description="Período, quantidade contratada e preço/kg. Os recebimentos lançados abatem sozinhos."
+        >
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <Select
@@ -208,10 +223,10 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
             <Button className="w-full" disabled={busy || !form.unitId || !form.supplierId || !form.startDate || !form.endDate || !form.quantityKg || !form.pricePerKg}
               onClick={async () => {
                 const ok = await post({ action: 'create', unitId: form.unitId, supplierId: form.supplierId, startDate: form.startDate, endDate: form.endDate, quantityKg: num(form.quantityKg), pricePerKg: num(form.pricePerKg), initialUsedKg: form.initialUsedKg ? num(form.initialUsedKg) : undefined, note: form.note });
-                if (ok) setForm({ unitId: '', supplierId: '', startDate: '', endDate: '', quantityKg: '', pricePerKg: '', initialUsedKg: '', note: '' });
+                if (ok) { setForm({ unitId: '', supplierId: '', startDate: '', endDate: '', quantityKg: '', pricePerKg: '', initialUsedKg: '', note: '' }); setNovoContrato(false); }
               }}>Criar contrato</Button>
           </div>
-        </div>
+        </Sheet>
       )}
 
       <ContractProgress contracts={contracts.filter((c) => c.active)} />
@@ -408,9 +423,12 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {/* Uma fileira só. O "Valor total" veio da fileira duplicada que existia
+          acima — era o único número dela que não se repetia aqui. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <Cell label="Recebimentos" value={String(d.totalReceipts)} />
         <Cell label="Volume comprado" value={`${d.totalKg.toLocaleString('pt-BR')} kg`} />
+        <Cell label="Valor total" value={formatBRL(d.totalValue)} />
         <Cell label="Preço médio/kg" value={kg(d.avgPrice)} />
         <Cell label="Último preço/kg" value={d.lastPrice != null ? kg(d.lastPrice) : '—'} />
       </div>
@@ -499,6 +517,18 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
   if (rows.length === 0) return <p className="text-sm text-ink-500">Nenhum recebimento registrado.</p>;
 
   function startEdit(r: GasRow) { setEditId(r.id); setEKg(String(r.qty).replace('.', ',')); setETotal(String(r.total).replace('.', ',')); }
+
+  /** Mesma chamada do DeleteOpButton, agora como item de menu (auditado). */
+  async function removeRow(r: GasRow) {
+    if (!confirm(`Excluir o recebimento de gás (${r.date}, ${r.unit})? Esta ação é registrada na Auditoria e não pode ser desfeita.`)) return;
+    const res = await fetch('/api/admin/ops', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entity: 'gas', action: 'delete', id: r.id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(data.error ?? 'Falha ao excluir'); return; }
+    router.refresh();
+  }
   async function saveEdit(r: GasRow) {
     const kgN = parseFloat(eKg.replace(',', '.'));
     const totN = parseFloat(eTotal.replace(',', '.'));
@@ -515,7 +545,7 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
         collapsible
         active={(q.trim() ? 1 : 0) + (unit ? 1 : 0) + (supplier ? 1 : 0)}
         onClear={q.trim() || unit || supplier ? () => { setQ(''); setUnit(''); setSupplier(''); } : undefined}
-        search={<SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="data, quem lançou, kg, valor…" />}
+        search={<SearchField aria-label="Buscar recebimentos" inputSize="sm" value={q} onValueChange={setQ} placeholder="Buscar data, quem lançou, kg, valor…" />}
         summary={
           <>
             {unit && <FilterChip>{shortUnitName(unit)}</FilterChip>}
@@ -547,6 +577,20 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
               {r.variation != null && (
                 <StatusBadge tone={tone}>{r.variation > 0 ? <TrendingUp className="mr-0.5 inline h-3 w-3" /> : <TrendingDown className="mr-0.5 inline h-3 w-3" />}{r.variation > 0 ? '+' : ''}{r.variation}%</StatusBadge>
               )}
+              {/* Mesmo menu das notas. Antes eram três botões soltos por linha,
+                  dois deles com o MESMO lápis — e, com a lista de notas já
+                  usando "···", o módulo ficava metade de um jeito e metade de
+                  outro na mesma tela. */}
+              {(isAdmin || canEditDate) && (
+                <ActionMenu
+                  label={`Ações do recebimento de ${r.date}`}
+                  items={[
+                    ...((isAdmin || canEditDate) ? [{ label: 'Corrigir kg e valor', icon: <Pencil />, onSelect: () => startEdit(r) }] : []),
+                    ...(canEditDate ? [{ label: 'Corrigir data', icon: <CalendarClock />, onSelect: () => setDateEditId((id) => (id === r.id ? null : r.id)) }] : []),
+                    ...(isAdmin ? [{ label: 'Excluir recebimento', icon: <Trash2 />, destructive: true, onSelect: () => void removeRow(r) }] : []),
+                  ]}
+                />
+              )}
             </div>
             {r.alerted && <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-danger"><AlertTriangle className="h-3.5 w-3.5" /> Alta acima do limite</p>}
             {r.dateEdited && <p className="mt-1 text-xs font-semibold text-danger">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
@@ -558,13 +602,7 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
                 <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>Cancelar</Button>
                 <span className="w-full text-[11px] text-ink-500">Correção de erro de lançamento — recalcula o preço/kg. Não interfere na meta do gerente.</span>
               </div>
-            ) : (isAdmin || canEditDate) && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(isAdmin || canEditDate) && <Button size="sm" variant="ghost" onClick={() => startEdit(r)}><Pencil className="h-4 w-4" /> Editar lançamento</Button>}
-                {canEditDate && <Button size="sm" variant="ghost" onClick={() => setDateEditId((id) => (id === r.id ? null : r.id))}><Pencil className="h-4 w-4" /> Editar data</Button>}
-                {isAdmin && <DeleteOpButton entity="gas" id={r.id} label={`o recebimento de gás (${r.date}, ${r.unit})`} />}
-              </div>
-            )}
+            ) : null}
             {dateEditId === r.id && <InlineDateEdit module="gas" id={r.id} current={r.date} onClose={() => setDateEditId(null)} />}
           </div>
         );
