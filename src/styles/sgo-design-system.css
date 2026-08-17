@@ -653,7 +653,13 @@ button:not(:disabled):not(.sgo-no-press),
   content: '';
   position: absolute;
   top: 0;
-  left: var(--sgo-space-16);
+  /* Alinha com o TEXTO da linha, não com um número decorado. A linha usa `p-3`
+     (12px) em 8 dos 10 casos migrados, então o fio começa onde o conteúdo
+     começa. Com 16px — o número do iOS, que eu havia copiado direto — o fio
+     nascia 4px depois do texto, desalinhado justo onde mais se olha.
+     12px não está na escala de 8pt de propósito: ele não é espaçamento de
+     layout, é o espelho do padding da linha, e `p-3` do Tailwind é 12px. */
+  left: 12px;
   right: 0;
   height: 1px;
   background: var(--sgo-line);
