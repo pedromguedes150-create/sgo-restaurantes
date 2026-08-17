@@ -62,15 +62,19 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
       <div className="flex gap-2">{tabBtn('col', 'Colaboradores')}{tabBtn('fer', 'Férias')}{tabBtn('esc', 'Escala')}</div>
 
       {tab === 'col' && (
-        <Group>
+        <>
+          {/* Estado vazio FORA do grupo: dentro, a caixa emolduraria uma frase
+              e o texto ficaria sem respiro, parecendo um item da lista. */}
           {collaborators.length === 0 && <p className="text-sm text-ink-500">Nenhum colaborador.</p>}
-          {collaborators.map((c) => (
-            <div key={c.id} className="p-3">
-              <p className="font-semibold text-brand">{c.name}</p>
-              <p className="text-xs text-ink-500">{c.jobTitle ?? '—'} · {c.units.join(', ')}</p>
-            </div>
-          ))}
-        </Group>
+          <Group>
+            {collaborators.map((c) => (
+              <div key={c.id} className="p-3">
+                <p className="font-semibold text-brand">{c.name}</p>
+                <p className="text-xs text-ink-500">{c.jobTitle ?? '—'} · {c.units.join(', ')}</p>
+              </div>
+            ))}
+          </Group>
+        </>
       )}
 
       {tab === 'fer' && (

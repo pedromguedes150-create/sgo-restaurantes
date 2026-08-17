@@ -47,8 +47,10 @@ export function SupervisorChecklistsAdmin({ checklists }: { checklists: SupCheck
         />
       )}
 
+      {/* Estado vazio FORA do grupo: dentro, viraria uma linha de lista sem
+          respiro, e a caixa desenharia moldura em volta de uma frase. */}
+      {checklists.length === 0 && <p className="text-sm text-ink-500">Nenhum checklist criado. Eles são usados pelo supervisor na visita às unidades.</p>}
       <Group>
-        {checklists.length === 0 && <p className="text-sm text-ink-500">Nenhum checklist criado. Eles são usados pelo supervisor na visita às unidades.</p>}
         {checklists.map((c) => (
           <div key={c.id} className="p-3">
             <div className="flex items-center justify-between gap-2">
