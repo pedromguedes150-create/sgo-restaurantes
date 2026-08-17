@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock } from 'lucide-react';
+import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock, Plus } from 'lucide-react';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { Button } from '@/components/ui/button';
 import { ActionMenu, type ActionMenuItem } from '@/components/ui/ds/action-menu';
@@ -21,6 +21,7 @@ import { parseChaveAcesso } from '@/lib/notes/chave';
 import { GasClient, type GasDash, type GasRow, type GasContractUI, type PurchasedUI } from '@/components/gas/gas-client';
 import { GasImportModal } from '@/components/notes/gas-import-modal';
 import { Group } from '@/components/ui/ds/group';
+import { Sheet } from '@/components/ui/ds/sheet';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null; isGas?: boolean }
@@ -57,9 +58,10 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
   units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean; sinceDays?: number; gas?: NotesGasProps;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'nova' | 'lista' | 'analise' | 'gas' | 'venc'>('lista');
+  const [tab, setTab] = useState<'lista' | 'gas' | 'venc'>('lista');
   const [busy, setBusy] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [novaNota, setNovaNota] = useState(false);
 
   async function status(id: string, st: 'PROBLEM' | 'RETURNED') {
     let problemNote: string | undefined;
@@ -72,11 +74,21 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
     } finally { setBusy(false); }
   }
 
+  /**
+   * Cinco abas viraram três.
+   *
+   * "Registrar nota" saiu porque era um FORMULÁRIO ocupando uma aba: quem
+   * entrava para consultar levava o formulário na cara. Virou o botão "Nova
+   * nota", que abre uma folha por cima e sai quando termina.
+   *
+   * "Análise" saiu porque era a MESMA lista de "Notas" — no código era este
+   * mesmo componente, mudando só um parâmetro de detalhe. O que ela tinha de
+   * próprio (totais, export e os campos extras por linha) continua aqui
+   * dentro, para o mesmo público de antes.
+   */
   const tabs: { key: typeof tab; label: string }[] = [
     { key: 'lista', label: 'Notas' },
-    { key: 'nova', label: 'Registrar nota' },
     { key: 'venc', label: 'Vencimentos' },
-    ...(canManage ? [{ key: 'analise' as const, label: 'Análise' }] : []),
     ...(gas ? [{ key: 'gas' as const, label: 'Análise de gás' }] : []),
   ];
 
@@ -89,15 +101,26 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
           onValueChange={setTab}
           options={tabs.map((t) => ({ value: t.key, label: t.label }))}
         />
+        <Button size="sm" className="ml-auto" onClick={() => setNovaNota(true)}>
+          <Plus className="h-4 w-4" /> Nova nota
+        </Button>
         {canManage && (
-          <button onClick={() => setShowImport(true)} className="ml-auto inline-flex items-center gap-1.5 rounded-full border-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10">
+          <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-1.5 rounded-full border-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10">
             <FileSpreadsheet className="h-4 w-4" /> Importar em lote (XLSX)
           </button>
         )}
       </div>
       {showImport && <GasImportModal onClose={() => setShowImport(false)} />}
 
-      {tab === 'nova' && <NewNote units={units} suppliers={suppliers} onDone={() => { setTab('lista'); router.refresh(); }} />}
+      <Sheet
+        open={novaNota}
+        onClose={() => setNovaNota(false)}
+        title="Nova nota"
+        description="Leia o QR/DANFE ou preencha à mão. A nota entra na lista assim que salvar."
+      >
+        <NewNote units={units} suppliers={suppliers} onDone={() => { setNovaNota(false); router.refresh(); }} />
+      </Sheet>
+
       {tab === 'venc' && <DueTracking units={units} />}
       {tab === 'gas' && gas && (
         <GasClient
@@ -119,14 +142,6 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
         <FilterableNotes
           notes={notes} units={units} sinceDays={sinceDays}
           canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={status}
-          full={false}
-        />
-      )}
-      {tab === 'analise' && (
-        <FilterableNotes
-          notes={notes} units={units} sinceDays={sinceDays}
-          canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={status}
-          full
         />
       )}
     </div>
@@ -135,14 +150,21 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
 
 /**
  * Lista de notas por DATA DE LANÇAMENTO (mais nova → mais antiga) com filtros
- * completos (16/07). `full` = modo Análise (totais + campos completos).
+ * completos (16/07).
+ *
+ * Era usada duas vezes — "Notas" e "Análise" — mudando só o `full`. Agora é uma
+ * lista só, e o `full` virou um interruptor aqui dentro: uma caixa de seleção
+ * custa menos que uma aba inteira para a mesma diferença, e o público não muda
+ * (o detalhe e os totais seguem restritos a quem gerencia).
  */
-function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy, onStatus, full }: {
+function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy, onStatus }: {
   notes: NoteDTO[]; units: Unit[]; sinceDays: number;
   canManage: boolean; canEditDate: boolean; busy: boolean;
-  onStatus: (id: string, st: 'PROBLEM' | 'RETURNED') => void; full: boolean;
+  onStatus: (id: string, st: 'PROBLEM' | 'RETURNED') => void;
 }) {
   const router = useRouter();
+  const [detalhado, setDetalhado] = useState(false);
+  const full = canManage && detalhado;
   const [q, setQ] = useState('');
   const [supplier, setSupplier] = useState('ALL');
   const [unit, setUnit] = useState('ALL');
@@ -207,7 +229,9 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
         <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{filtered.length} de {notes.length}</span>
       </div>
 
-      {full && (
+      {/* O que era a aba "Análise": totais, export e o detalhe por linha.
+          Mesmo público de antes (canManage) — só deixou de custar uma aba. */}
+      {canManage && (
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <div className="grid flex-1 grid-cols-2 gap-2">
             <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-2xl font-black text-ink-900">{filtered.length}</p><p className="text-xs text-ink-500">notas</p></div>
@@ -218,6 +242,18 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
             <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"><Printer className="h-3.5 w-3.5 text-brand" /> Imprimir/PDF</button>
           </div>
         </div>
+      )}
+
+      {canManage && (
+        <label className="inline-flex w-fit cursor-pointer items-center gap-2 text-[13px] text-ink-700 print:hidden">
+          <input
+            type="checkbox"
+            checked={detalhado}
+            onChange={(e) => setDetalhado(e.target.checked)}
+            className="sgo-control-icon h-4 w-4 accent-brand"
+          />
+          Mostrar CNPJ, emissão e produto em cada linha
+        </label>
       )}
 
       {filtered.length === 0 && <p className="text-sm text-ink-500">Nenhuma nota com esses filtros no período.</p>}
