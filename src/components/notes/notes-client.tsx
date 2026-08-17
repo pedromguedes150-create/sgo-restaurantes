@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock } from 'lucide-react';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { Button } from '@/components/ui/button';
+import { ActionMenu, type ActionMenuItem } from '@/components/ui/ds/action-menu';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -266,6 +267,25 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
     } finally { setDeleting(false); }
   }
 
+  /**
+   * As MESMAS ações de antes, nas mesmas condições — só que guardadas.
+   * Nada de permissão muda aqui: `canManage`, `canEditDate` e o status
+   * RECEBIDA continuam decidindo o que aparece, exatamente como quando eram
+   * cinco botões soltos na linha.
+   */
+  const acoes: ActionMenuItem[] = [
+    ...(canManage ? [{ label: 'Ver e editar', icon: <Pencil />, onSelect: () => setEditing(true) }] : []),
+    ...(canEditDate ? [{ label: 'Corrigir data', icon: <Pencil />, disabled: busy, onSelect: () => setDateEditing((v) => !v) }] : []),
+    // Pagamento é controlado no Teknisa — aqui só recebimento/problema/devolução (16/07)
+    ...(n.status === 'RECEIVED'
+      ? [
+          { label: 'Marcar problema', icon: <AlertTriangle />, disabled: busy, onSelect: () => onStatus(n.id, 'PROBLEM') },
+          { label: 'Devolver ao fornecedor', icon: <Undo2 />, disabled: busy, onSelect: () => onStatus(n.id, 'RETURNED') },
+        ]
+      : []),
+    ...(canManage ? [{ label: 'Excluir nota', icon: <Trash2 />, destructive: true, disabled: deleting, onSelect: remove }] : []),
+  ];
+
   if (editing) {
     return (
       <div className="rounded-lg border-2 border-brand/40 bg-surface p-3">
@@ -296,12 +316,20 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
 
   return (
     <div className="p-3">
-      <div className="flex items-center justify-between">
-        <p className="font-semibold text-ink-900">{n.supplier}</p>
+      {/* Cabeçalho da linha: fornecedor, VALOR em coluna própria, situação e o
+          menu. O valor saiu do meio da frase cinza — alinhado e tabular, dá
+          para varrer a coluna sem ler linha por linha, que é o que se faz numa
+          lista de notas. */}
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 flex-1 truncate font-semibold text-ink-900">{n.supplier}</p>
+        <p className="shrink-0 font-semibold tabular-nums text-ink-900">{formatBRL(n.value)}</p>
         <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
+        <div className="print:hidden">
+          <ActionMenu label={`Ações da nota de ${n.supplier}`} items={acoes} />
+        </div>
       </div>
       <p className="text-xs text-ink-500">
-        {n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${fmtBR(n.dueDate)}` : ''}
+        {n.unit}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${fmtBR(n.dueDate)}` : ''}
         {n.requestedAt ? ` · lançada ${new Date(n.requestedAt).toLocaleDateString('pt-BR')}` : ''}
         {n.createdByName ? ` por ${n.createdByName}` : ''}
       </p>
@@ -320,19 +348,6 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
       )}
       {n.observation && <p className="mt-1 text-xs text-ink-500">Obs.: {n.observation}</p>}
       {n.problemNote && <p className="mt-1 text-xs text-danger">{n.status === 'RETURNED' ? 'Devolução' : 'Problema'}: {n.problemNote}</p>}
-      <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
-        {canManage && <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Ver/Editar</Button>}
-        {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setDateEditing((v) => !v)}><Pencil className="h-4 w-4" /> Editar data</Button>}
-        {n.status === 'RECEIVED' && (
-          <>
-            {/* Pagamento é controlado no Teknisa — aqui só recebimento/problema/devolução (16/07) */}
-            <Button size="sm" variant="destructive" disabled={busy} onClick={() => onStatus(n.id, 'PROBLEM')}><AlertTriangle className="h-4 w-4" /> Problema</Button>
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => onStatus(n.id, 'RETURNED')}><Undo2 className="h-4 w-4" /> Devolver</Button>
-          </>
-        )}
-        {canManage && <Button size="sm" variant="destructive" disabled={deleting} onClick={remove}><Trash2 className="h-4 w-4" /> Excluir</Button>}
-      </div>
-
       {dateEditing && (
         <InlineDateEdit module="note" id={n.id} current={(n.entryDate ?? n.requestedAt ?? '').slice(0, 10)} onClose={() => setDateEditing(false)} />
       )}

@@ -518,6 +518,14 @@
   .sgo-control {
     min-height: var(--sgo-touch);
   }
+  /* Botão só de ícone (o "···" das linhas, por exemplo): `min-height` sozinho
+     deixava 36px de LARGURA por 44 de altura — alto o bastante e estreito
+     demais, num alvo que fica colado na borda direita da tela, onde o polegar
+     tem menos precisão. Aqui o alvo fica quadrado. */
+  .sgo-control-icon {
+    min-height: var(--sgo-touch);
+    min-width: var(--sgo-touch);
+  }
 }
 
 /* =============================================================================
@@ -661,6 +669,25 @@ button:not(:disabled):not(.sgo-no-press),
   [role='button']:active {
     transform: none;
   }
+}
+
+/* =============================================================================
+   MENU DE AÇÕES — entrada curta, ancorada no canto de onde ele nasce.
+   Escala a partir do topo-direita porque é ali que fica o botão "···": o menu
+   parece SAIR do botão, e não aparecer solto em cima da lista.
+   ========================================================================== */
+@keyframes sgo-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+[role='menu'] {
+  transform-origin: top right;
 }
 
 /* =============================================================================
