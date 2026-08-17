@@ -9,6 +9,34 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.42.0 — 2026-08-17 (Redesign Onda 8: a cara de iOS · seletor de tema)
+
+> Onda visual. **Nada de funcionamento mudou**: sem alteração de banco, de rota
+> ou de corpo de requisição. Roteiro do que olhar em
+> `docs/roteiro-validacao-redesign.md`; detalhes técnicos em
+> `docs/redesign-onda-8.md`.
+
+### Adicionado
+- **Seletor de tema em Meu Perfil → Aparência** (Claro / Escuro / Aparelho). Existia desde a Onda 0 mas estava montado **só em `/dev/ui`**: quem tinha o celular no modo escuro via o SGO escuro e **não tinha como voltar**. A escolha fica no cookie, por aparelho, e dura 1 ano.
+- **Transição de página** no estilo iOS: no celular a tela entra pela direita; em ≥768px emerge com escala mínima. A fronteira é 768px porque é onde o app troca de barra inferior para barra lateral.
+- **Recuo ao toque** em todo botão (encolhe na pressão, volta em mola). Linhas de lista acendem em vez de encolher.
+- **Lista agrupada** (`Group`) em 13 telas: uma caixa só com fio recuado entre as linhas, em vez de cartões soltos.
+- **Portões de qualidade**: `check-dead-ternary.cjs` (ternário cujos dois lados dão a mesma classe de cor), `check-palette-keys.cjs` (classe apontando para cor inexistente), `check-color-collapse.cjs` (consultivo).
+- Token **`raised`** + `shadow-sgo-raised` — a única superfície que sobe acima de `sunken` nos **dois** temas.
+
+### Alterado
+- **Tema padrão volta a ser CLARO.** A Onda 7 havia posto em "seguir o aparelho"; o escuro passa a ser escolha explícita, como manda a regra de interface do projeto. O escuro continua inteiro para quem escolher.
+- **Abas viraram *segmented control*** (trilho afundado + eleita em pílula elevada) em **21 telas**, no lugar de pílulas escritas à mão com a ativa em bordô sólido. Cada segmento tem a largura do seu texto e o trilho rola quando não couber — antes a largura era forçada igual e rótulos como "Lançar recebimento" vazavam em telas de 375px.
+- **O acento passou a significar só "dá para tocar":** 235 títulos e nomes que usavam a cor da marca viraram tinta (`ink-900`); os 166 usos em elemento tocável ficaram. No tema escuro o bordô abre em rosa, e como a cor servia também de cor de título, cada tela lia como "rosa sobre preto".
+- Item ativo do menu deixou de ser bloco cheio de acento e virou fundo tingido com texto da marca.
+- Em Manutenção e Avaliação as abas perderam os ícones (o controle do iOS é texto puro **ou** ícone puro).
+- Etiqueta de setor no editor de POPs virou cápsula tingida, não bloco sólido.
+
+### Corrigido
+- **Pílula do *segmented control* afundava no tema escuro.** Usava `bg-surface`, e no escuro `surface` (31 28 27) é mais escuro que o trilho `sunken` (42 38 36) — o inverso do que a elevação promete. Bug presente desde a Onda 2, em todos os usos.
+- **Título de notificação não lida** havia ficado com os dois lados do ternário iguais na migração de cor, apagando a distinção lida/não lida. Achado pelo portão novo.
+- Fio da lista agrupada começava a 16px enquanto as linhas usam 12px de recuo — desalinhado em relação ao texto.
+
 ## v1.41.1 — 2026-08-12 (Import de gás: CNPJ da unidade + zero à esquerda)
 ### Corrigido
 - **Import em lote de notas de gás dava "Unidade não encontrada" em todas as linhas.** O import casa a nota à unidade **pelo CNPJ**, mas não havia como cadastrar o CNPJ da unidade (nem tela, nem RH sync, nem seed) — então `Unit.cnpj` era `null` em todas e nada batia.
