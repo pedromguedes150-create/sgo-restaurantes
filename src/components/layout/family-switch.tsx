@@ -1,21 +1,25 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
-import { ActionMenu } from '@/components/ui/ds/action-menu';
+import Link from 'next/link';
 
 /**
- * Troca entre os módulos IRMÃOS de uma família (ex.: Suprimentos → Notas,
- * Inventário, Pedidos).
+ * Mostra a FAMÍLIA do módulo e leva aos irmãos.
  *
- * Por que NÃO é um trilho de abas: cinco dessas páginas — Notas, Pessoas,
- * Inventário, Pedidos e Supervisão — já têm trilho próprio. Uma barra da
- * família em cima recriaria os DOIS TRILHOS EMPILHADOS que acabamos de tirar de
- * Ocorrências e de Notas. Um botão ao lado do título troca de irmão sem
- * acrescentar trilho nenhum, e fica igual nas quinze páginas — com ou sem abas
- * próprias.
+ * Começou como um menu suspenso e voltou atrás por dois motivos, o primeiro
+ * grave:
  *
- * Reusa o ActionMenu: mesmo gesto, mesmo teclado, mesmo desenho do resto.
+ * 1. O menu abria com os itens VAZIOS em produção — sem reproduzir no
+ *    desenvolvimento. A causa provável era aninhamento inválido: o wrapper era
+ *    <span> e o ActionMenu abre com <div>, e cada navegador recupera de HTML
+ *    inválido de um jeito. Não fui capaz de reproduzir para provar, e é
+ *    exatamente por isso que a peça saiu: não dá para deixar navegação
+ *    dependendo de algo que falha e eu não sei explicar.
+ *
+ * 2. Popover para escolher entre DOIS ou TRÊS irmãos não compra nada. Custa um
+ *    toque a mais, some da tela, e traz posicionamento, recorte, foco e teclado
+ *    para resolver. Link é link: aparece, não precisa de estado e não tem o que
+ *    quebrar.
+ *
+ * O peso visual fica baixo de propósito — isto é contexto ("você está em Caixa,
+ * e ao lado tem estes"), não a ação principal da tela.
  */
 export function FamilySwitch({
   familyTitle,
@@ -25,17 +29,20 @@ export function FamilySwitch({
   /** Já filtrados por permissão no servidor, e sem a página atual. */
   siblings: { href: string; tab: string }[];
 }) {
-  const router = useRouter();
   if (siblings.length === 0) return null;
 
   return (
-    <span className="inline-flex items-center gap-1">
-      <span className="sgo-type-13 text-ink-500">{familyTitle}</span>
-      <ChevronDown className="h-3.5 w-3.5 text-ink-400" aria-hidden />
-      <ActionMenu
-        label={`Ir para outra seção de ${familyTitle}`}
-        items={siblings.map((s) => ({ label: s.tab, onSelect: () => router.push(s.href) }))}
-      />
-    </span>
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-500">
+      <span className="font-semibold uppercase tracking-wide">{familyTitle}</span>
+      {siblings.map((s) => (
+        <Link
+          key={s.href}
+          href={s.href}
+          className="rounded-control px-1.5 py-1 font-medium text-brand underline-offset-2 outline-none hover:underline focus-visible:shadow-sgo-focus"
+        >
+          {s.tab}
+        </Link>
+      ))}
+    </p>
   );
 }
