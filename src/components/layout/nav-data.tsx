@@ -1,16 +1,23 @@
 import {
   Home, LayoutGrid, Users, BarChart3, Settings,
-  LayoutDashboard, NotebookPen, Inbox, ListChecks, BookOpen, GraduationCap,
-  ClipboardList, Trash2, AlertOctagon, Banknote, Ticket, Receipt, Boxes, Droplets, Sparkles, PackagePlus,
-  Wallet, CalendarOff, Target, Eye, ScrollText, Bell, UserCircle,
+  LayoutDashboard, NotebookPen, Inbox, ListChecks, GraduationCap,
+  Trash2, AlertOctagon, Banknote, Boxes, Sparkles,
+  Wallet, Target, ScrollText, Bell, UserCircle,
 } from 'lucide-react';
 
 export type IconType = React.ComponentType<{ className?: string }>;
 export interface NavLeaf { href: string; label: string; icon: IconType; adminOnly?: boolean }
 export interface NavGroup { id: string; title: string; icon: IconType; items: NavLeaf[] }
 
-// Onda 1 — arquitetura de informação em 6 grupos (mapa aprovado 2026-08-12).
-// Fonte única consumida pela sidebar, pelo breadcrumb do header e pelo ⌘K.
+// Arquitetura de informação em 6 grupos. Fonte única consumida pela sidebar,
+// pelo breadcrumb do header e pelo ⌘K.
+//
+// 18/08: as entradas caíram de 21 para 11. Cada entrada que virou FAMÍLIA
+// (Caixa, Suprimentos, Rotinas, Treinamentos, Performance, Pessoas) aponta para
+// o primeiro irmão e leva aos outros pelo botão ao lado do título — ver
+// src/lib/nav-families.ts. As ROTAS não se moveram: os links de notificação
+// ficam gravados no banco apontando para /modulos/*, e mover caminho quebraria
+// todo aviso antigo.
 export const NAV_GROUPS: NavGroup[] = [
   {
     id: 'inicio', title: 'Início', icon: Home,
@@ -23,23 +30,17 @@ export const NAV_GROUPS: NavGroup[] = [
     id: 'tarefas', title: 'Tarefas', icon: ListChecks,
     items: [
       { href: '/tarefas', label: 'Tarefas', icon: ListChecks },
-      { href: '/modulos/pops', label: 'POPs', icon: BookOpen },
       { href: '/modulos/treinamentos', label: 'Treinamentos', icon: GraduationCap },
     ],
   },
   {
     id: 'operacao', title: 'Operação', icon: LayoutGrid,
     items: [
-      { href: '/modulos/comandas', label: 'Comandas', icon: ClipboardList },
       { href: '/modulos/desperdicios', label: 'Desperdícios', icon: Trash2 },
       { href: '/modulos/ocorrencias', label: 'Ocorrências', icon: AlertOctagon },
-      { href: '/modulos/troco', label: 'Gestão de Troco', icon: Banknote },
-      { href: '/modulos/cancelamentos', label: 'Cancelamentos', icon: Ticket },
-      { href: '/modulos/notas', label: 'Notas Recebidas', icon: Receipt },
-      { href: '/modulos/inventario', label: 'Inventário', icon: Boxes },
-      { href: '/modulos/oleo', label: 'Coleta de Óleo', icon: Droplets },
-      { href: '/modulos/higiene', label: 'Higiene', icon: Sparkles },
-      { href: '/modulos/produtos', label: 'Solicitação de Produtos', icon: PackagePlus },
+      { href: '/modulos/comandas', label: 'Caixa', icon: Banknote },
+      { href: '/modulos/notas', label: 'Suprimentos', icon: Boxes },
+      { href: '/modulos/oleo', label: 'Rotinas da unidade', icon: Sparkles },
     ],
   },
   {
@@ -47,15 +48,12 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/modulos/pessoas', label: 'Pessoas', icon: Users },
       { href: '/modulos/pagamentos', label: 'Pagamentos', icon: Wallet },
-      { href: '/modulos/folgas-equipe', label: 'Controle de gerentes', icon: CalendarOff },
     ],
   },
   {
     id: 'performance', title: 'Performance', icon: BarChart3,
     items: [
-      { href: '/modulos/metas', label: 'Metas', icon: Target },
-      { href: '/modulos/executivo', label: 'Visão Executiva', icon: BarChart3 },
-      { href: '/modulos/supervisao', label: 'Rotina do Supervisor', icon: Eye },
+      { href: '/modulos/metas', label: 'Metas e indicadores', icon: Target },
       { href: '/auditoria', label: 'Auditoria', icon: ScrollText, adminOnly: true },
     ],
   },

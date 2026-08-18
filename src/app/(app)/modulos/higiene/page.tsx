@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listHygieneRequests, getHygieneAnalytics, listHygieneLocations } from '@/lib/hygiene';
@@ -28,6 +29,7 @@ export default async function HigienePage({ searchParams }: { searchParams: { un
     <div className="space-y-4">
       <div>
         <LargeTitle title="Higiene dos banheiros" subtitle="Solicitações do QR dos banheiros, com aviso ao gerente e análise. (WhatsApp em fase futura.)" />
+        <FamilyTabs active="/modulos/higiene" />
       </div>
 
       {units.length > 1 && <UnitSelectNav units={units} selected={selUnit.id} />}

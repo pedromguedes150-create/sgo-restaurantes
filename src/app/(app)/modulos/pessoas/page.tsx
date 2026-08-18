@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { listCollaborators, listVacations, listSchedule } from '@/lib/people';
 import { Card, CardContent } from '@/components/ui/card';
 import { PeopleClient } from '@/components/people/people-client';
@@ -31,6 +32,7 @@ export default async function PessoasModulePage() {
         title="Gestão de Pessoas"
         subtitle="Fonte primária: API do RH · fallback manual. Escala é somente leitura (registre variações)."
       />
+      <FamilyTabs active="/modulos/pessoas" />
 
       {/* Destinos do módulo: uma lista em duas colunas, com o subtítulo dizendo
           o que cada tela resolve — antes eram 8 blocos só com o nome. */}

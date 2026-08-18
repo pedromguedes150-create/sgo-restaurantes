@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Search, Building2, CornerDownLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NAV_GROUPS, HEADER_DESTINATIONS, type IconType } from '@/components/layout/nav-data';
+import { FAMILIES } from '@/lib/nav-families';
 import { shortUnitName } from '@/lib/unit-name';
 import { UNIT_COOKIE, UNIT_PARAM } from '@/lib/scope/unit-context';
 import type { UnitOption } from '@/components/layout/unit-switcher';
@@ -32,11 +33,27 @@ export function CommandPalette({ units = [], viewable, isAdmin = false }: { unit
         .filter((it) => (!it.adminOnly || isAdmin) && canSee(it.href))
         .map((it) => ({ id: `nav:${it.href}`, label: it.label, group: g.title, icon: it.icon, href: it.href })),
     );
+    /**
+     * Os IRMÃOS das famílias entram aqui à parte.
+     *
+     * O menu encurtou de 21 para 11 juntando módulos em famílias, então Troco,
+     * Cancelamentos, Inventário, Pedidos, POPs, Supervisão, Executivo e
+     * Controle de gerentes saíram do NAV_GROUPS. Sem isto eles deixariam de ser
+     * ENCONTRÁVEIS na busca — e um menu curto que esconde destino é pior que um
+     * menu longo. Aqui quem digita "troco" acha "Troco", com a família como
+     * grupo para dizer onde ele mora.
+     */
+    const naNav = new Set(NAV_GROUPS.flatMap((g) => g.items.map((it) => it.href)));
+    const irmaos: Cmd[] = FAMILIES.flatMap((fam) =>
+      fam.children
+        .filter((c) => !naNav.has(c.href) && canSee(c.href))
+        .map((c) => ({ id: `fam:${c.href}`, label: c.tab, group: fam.title, icon: fam.icon, href: c.href })),
+    );
     const header: Cmd[] = HEADER_DESTINATIONS.map((d) => ({ id: `hdr:${d.href}`, label: d.label, group: 'Atalhos', icon: d.icon, href: d.href }));
     const unitCmds: Cmd[] = units.length > 1
       ? units.map((u) => ({ id: `unit:${u.id}`, label: shortUnitName(u.name), group: 'Trocar unidade', icon: Building2, unitId: u.id }))
       : [];
-    return [...nav, ...header, ...unitCmds];
+    return [...nav, ...irmaos, ...header, ...unitCmds];
   }, [units, isAdmin, canSee]);
 
   const filtered = useMemo(() => {

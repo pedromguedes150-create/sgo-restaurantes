@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { getSessionUser } from '@/lib/auth/session';
 import { effectivePermissions } from '@/lib/permissions';
 import { getTeamLeaves } from '@/lib/manager-area';
@@ -45,6 +46,7 @@ export default async function FolgasEquipePage({ searchParams }: { searchParams:
         title="Controle de gerentes"
         subtitle="Folgas, férias e cobertura de gerência por unidade. Escopo: suas unidades."
       />
+      <FamilyTabs active="/modulos/folgas-equipe" />
       <SegmentedNav
         aria-label="Visão"
         value={isCal ? 'calendario' : 'folgas'}

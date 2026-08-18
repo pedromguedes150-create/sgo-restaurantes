@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getOilDashboard, listOilCollections } from '@/lib/oil/query';
@@ -31,6 +32,7 @@ export default async function OleoPage() {
     <div className="space-y-5">
       <div>
         <LargeTitle title="Coleta de Óleo" subtitle="Controle da coleta de óleo usado (recebemos por ela): litros, valor/litro, total e forma de recebimento." />
+        <FamilyTabs active="/modulos/oleo" />
       </div>
       <Card><CardContent className="pt-4">
         <OilClient
