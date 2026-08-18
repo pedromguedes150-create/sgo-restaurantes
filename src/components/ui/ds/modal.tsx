@@ -22,6 +22,23 @@ export function useBodyPortal(open: boolean) {
 const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export function useDialogBehavior(open: boolean, onClose: () => void, ref: React.RefObject<HTMLElement>) {
+  /**
+   * `onClose` guardado em ref DE PROPÓSITO.
+   *
+   * Quase todo chamador passa uma função inline (`onClose={() => setX(false)}`),
+   * que tem identidade NOVA a cada renderização. Com `onClose` na lista de
+   * dependências, o efeito era desmontado e remontado a cada render do pai — e
+   * em formulário cujo estado vive no pai, isso é A CADA TECLA. O efeito então
+   * chamava `focusFirst()` de novo e o cursor pulava do campo para o primeiro
+   * elemento focável, que é o botão de FECHAR.
+   *
+   * Era exatamente o que acontecia no cadastro de fornecedor: digitar uma letra
+   * jogava o foco no "X". O efeito passa a depender só de `open`, e lê sempre a
+   * versão mais recente de `onClose` pela ref.
+   */
+  const onCloseRef = React.useRef(onClose);
+  React.useEffect(() => { onCloseRef.current = onClose; });
+
   React.useEffect(() => {
     if (!open) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -39,7 +56,7 @@ export function useDialogBehavior(open: boolean, onClose: () => void, ref: React
     const id = window.setTimeout(focusFirst, 0);
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); onCloseRef.current(); return; }
       if (e.key !== 'Tab' || !ref.current) return;
       const items = Array.from(ref.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.offsetParent !== null);
       if (items.length === 0) return;
@@ -57,7 +74,7 @@ export function useDialogBehavior(open: boolean, onClose: () => void, ref: React
       document.body.style.paddingRight = paddingRight;
       previouslyFocused?.focus?.();
     };
-  }, [open, onClose, ref]);
+  }, [open, ref]);
 }
 
 export interface ModalProps {
