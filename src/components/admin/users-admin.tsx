@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { MultiSelect } from '@/components/ui/multi-select';
+import { Sheet } from '@/components/ui/ds/sheet';
 import { Select } from '@/components/ui/ds/select';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 
@@ -25,6 +26,7 @@ export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Un
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [novo, setNovo] = useState(false);
 
   const needsUnits = roleNeedsUnits(role);
 
@@ -33,7 +35,7 @@ export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Un
     const r = await postAdmin({ entity: 'user', action: 'create', name, email, role, password, unitIds: needsUnits ? unitIds : [] });
     setBusy(false);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
-    setName(''); setEmail(''); setPassword(''); setUnitIds([]); router.refresh();
+    setName(''); setEmail(''); setPassword(''); setUnitIds([]); setNovo(false); router.refresh();
   }
   async function toggle(u: UserRow) {
     if (u.id === meId) return;
@@ -42,8 +44,11 @@ export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Un
   }
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-dashed p-3">
-        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Novo usuário</h2>
+      {/* Criar usuário é ocasional; conferir a lista é o que se faz sempre. */}
+      <div className="flex justify-end">
+        <Button size="sm" onClick={() => setNovo(true)}><Plus className="h-4 w-4" /> Novo usuário</Button>
+      </div>
+      <Sheet open={novo} onClose={() => setNovo(false)} title="Novo usuário" description="Perfil e unidades definem o que a pessoa enxerga no sistema.">
         <div className="space-y-2">
           <div><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div><Label>E-mail</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
@@ -60,7 +65,7 @@ export function UsersAdmin({ users, units, meId }: { users: UserRow[]; units: Un
           {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
           <Button onClick={create} disabled={busy} className="w-full"><Plus className="h-4 w-4" /> Criar usuário</Button>
         </div>
-      </div>
+      </Sheet>
 
       <div className="space-y-2">
         {users.map((u) => (

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Group } from '@/components/ui/ds/group';
+import { Sheet } from '@/components/ui/ds/sheet';
 
 export interface SupplierRow { id: string; name: string; cnpj: string | null; pixKey: string | null; category: string | null; notes: string | null; active: boolean; isGas: boolean }
 
@@ -26,6 +27,7 @@ export function SuppliersAdmin({ suppliers }: { suppliers: SupplierRow[] }) {
   const [isGas, setIsGas] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [novo, setNovo] = useState(false);
 
   async function add() {
     if (!name.trim()) { setMsg('Informe o nome do fornecedor.'); return; }
@@ -33,13 +35,19 @@ export function SuppliersAdmin({ suppliers }: { suppliers: SupplierRow[] }) {
     const r = await callSupplier({ action: 'create', name, cnpj, pixKey, category, isGas });
     setBusy(false);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
-    setName(''); setCnpj(''); setPixKey(''); setCategory(''); setIsGas(false); router.refresh();
+    setName(''); setCnpj(''); setPixKey(''); setCategory(''); setIsGas(false); setNovo(false); router.refresh();
   }
 
   return (
     <div className="space-y-3">
       <p className="text-sm text-ink-500">Lista compartilhada de fornecedores — usada em Gás, Notas Recebidas e Pagamentos. Alimentada por Admin, CEO e Supervisão.</p>
-      <div className="rounded-lg border border-dashed p-3 space-y-2">
+      {/* Formulário atrás do botão: a lista de fornecedores é consultada muito
+          mais vezes do que um fornecedor novo é cadastrado. */}
+      <div className="flex justify-end">
+        <Button size="sm" onClick={() => setNovo(true)}><Plus className="h-4 w-4" /> Novo fornecedor</Button>
+      </div>
+      <Sheet open={novo} onClose={() => setNovo(false)} title="Novo fornecedor" description="Nome e categoria bastam; CNPJ e PIX são opcionais.">
+        <div className="space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <div><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Razão social / nome" /></div>
           <div><Label>Categoria</Label><Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="ex: Gás, Carnes, Bebidas" /></div>
@@ -52,7 +60,8 @@ export function SuppliersAdmin({ suppliers }: { suppliers: SupplierRow[] }) {
         </label>
         <Button disabled={busy} className="w-full" onClick={add}><Plus className="h-4 w-4" /> Adicionar fornecedor</Button>
         {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
-      </div>
+        </div>
+      </Sheet>
 
       {suppliers.length === 0 ? (
         <p className="text-sm text-ink-500">Nenhum fornecedor cadastrado.</p>
