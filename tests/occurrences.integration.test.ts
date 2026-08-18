@@ -3,6 +3,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { createOccurrence } from '@/lib/occurrences/create';
 import { closeOccurrence } from '@/lib/occurrences/close';
+import { ensureMaintenanceCategories, DEFAULT_MAINTENANCE_CATEGORIES } from '@/lib/occurrences/maintenance-categories';
 import type { SessionUser } from '@/lib/auth/session';
 
 const sfx = process.pid.toString(36);
@@ -104,6 +105,42 @@ describe('Ocorrências (Módulo 6)', () => {
     const r = await createOccurrence(mgr(), { unitId, typeId, gravity: 'LOW', description: 'faltou categoria' });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('INVALID');
+  });
+
+  it('semeia categorias só em tipo de manutenção que está sem nenhuma', async () => {
+    const vazio = await prisma.occurrenceType.create({ data: { code: `MSEED-${sfx}`, name: 'Manutenção Vazia', isMaintenance: true } });
+    const jaTem = await prisma.occurrenceType.create({ data: { code: `MTEM-${sfx}`, name: 'Manutenção Configurada', isMaintenance: true } });
+    await prisma.occurrenceCategory.create({ data: { typeId: jaTem.id, name: 'Só esta' } });
+    try {
+      await ensureMaintenanceCategories();
+
+      const doVazio = await prisma.occurrenceCategory.findMany({ where: { typeId: vazio.id }, orderBy: { order: 'asc' } });
+      expect(doVazio.length).toBe(DEFAULT_MAINTENANCE_CATEGORIES.length);
+      expect(doVazio[0].name).toBe('Elétrica');
+      expect(doVazio.at(-1)?.name).toBe('Outros');
+
+      // Quem já tinha lista própria NÃO é tocado — é a guarda que importa.
+      const doOutro = await prisma.occurrenceCategory.findMany({ where: { typeId: jaTem.id } });
+      expect(doOutro.length).toBe(1);
+      expect(doOutro[0].name).toBe('Só esta');
+
+      // Idempotente: rodar de novo não duplica.
+      await ensureMaintenanceCategories();
+      const depois = await prisma.occurrenceCategory.count({ where: { typeId: vazio.id } });
+      expect(depois).toBe(DEFAULT_MAINTENANCE_CATEGORIES.length);
+    } finally {
+      await prisma.occurrenceType.deleteMany({ where: { id: { in: [vazio.id, jaTem.id] } } }).catch(() => {});
+    }
+  });
+
+  it('não semeia em tipo que NÃO é de manutenção', async () => {
+    const comum = await prisma.occurrenceType.create({ data: { code: `MNAO-${sfx}`, name: 'Tipo Comum', isMaintenance: false } });
+    try {
+      await ensureMaintenanceCategories();
+      expect(await prisma.occurrenceCategory.count({ where: { typeId: comum.id } })).toBe(0);
+    } finally {
+      await prisma.occurrenceType.delete({ where: { id: comum.id } }).catch(() => {});
+    }
   });
 
   it('recusa categoria que pertence a outro tipo', async () => {
