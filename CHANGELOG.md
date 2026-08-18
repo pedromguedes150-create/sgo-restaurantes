@@ -9,6 +9,32 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.45.2 — 2026-08-18 (Digitar em formulário de folha para de jogar o foco no "X")
+
+### Corrigido
+- **Cadastro de fornecedor (e todas as demais folhas/janelas): cada letra digitada tirava o
+  cursor do campo e o jogava no botão de fechar.** Era impossível preencher o formulário.
+  A causa estava no comportamento compartilhado de diálogo (`useDialogBehavior`): o efeito
+  que leva o foco para dentro da folha tinha o `onClose` na lista de dependências. Como todas
+  as telas passam esse callback escrito na hora (`onClose={() => setAberto(false)}`), ele tem
+  identidade nova a cada renderização — e em formulário cujo estado mora no mesmo componente,
+  isso significa **uma remontagem por tecla**. A cada remontagem o efeito refazia o foco no
+  primeiro elemento focável da folha, que é justamente o botão **Fechar**. Agora o `onClose`
+  fica guardado numa ref: o efeito roda uma vez por abertura, e o Esc continua fechando com a
+  versão mais recente do callback. Atinge de uma vez as folhas de **Fornecedores, Unidades,
+  Usuários, Notas, Gás e Pagamentos**.
+  Verificado no navegador: 27 teclas em dois campos do cadastro de fornecedor e 17 em Unidades,
+  com o foco sempre no próprio campo e nenhuma ida ao "X"; Esc fecha e a rolagem do fundo destrava.
+
+### Manutenção
+- **Portão novo no CI: `scripts/check-dialog-focus.cjs`.** Falha se alguém devolver um callback
+  (`on*`/`handle*`) para as dependências do efeito de diálogo, ou se a `onCloseRef` sumir — os
+  dois jeitos de reintroduzir este bug. Testado contra o defeito real antes de entrar.
+- **`check-dead-ternary` ligado ao `lint:ds`.** Ele existia desde a onda anterior mas não era
+  executado por ninguém — nem no `lint:ds`, nem no CI. Portão que não roda não protege nada.
+
+---
+
 ## v1.45.1 — 2026-08-18 (Troca de família vira link, não menu)
 
 ### Corrigido
