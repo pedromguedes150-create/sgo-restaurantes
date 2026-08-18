@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listActiveProducts, listUnitRequests, listIncomingRequests } from '@/lib/products';
@@ -34,6 +35,7 @@ export default async function ProdutosPage({ searchParams }: { searchParams: { u
     <div className="space-y-4">
       <div>
         <LargeTitle title="Solicitação de Produtos" />
+        <FamilyTabs active="/modulos/produtos" />
         <p className="text-sm text-ink-500">Peça à <b>Fábrica</b> e ao <b>Centro de Distribuição</b> num pedido só — o sistema separa por destino.</p>
       </div>
       <Card><CardContent className="pt-4">

@@ -1,5 +1,6 @@
 
 import { getSessionUser } from '@/lib/auth/session';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getVaultOverview, getVaultAlerts, getOpenChangeRequests } from '@/lib/cash-vault';
@@ -40,6 +41,7 @@ export default async function TrocoPage({ searchParams }: { searchParams: { unit
         title="Gestão de Troco"
         subtitle="Cofre da unidade por denominação: confira diariamente, reponha os baldes dos caixas com miúdos e troque as notas grandes com o escritório."
       />
+      <FamilyTabs active="/modulos/troco" />
       <Card>
         <CardContent className="pt-4">
           <VaultClient

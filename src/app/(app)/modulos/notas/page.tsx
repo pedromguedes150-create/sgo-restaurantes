@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listNotes, getNoteSummary } from '@/lib/notes/query';
@@ -31,6 +32,7 @@ export default async function NotasPage({ searchParams }: { searchParams: { dias
   return (
     <div className="space-y-5">
       <LargeTitle title="Notas Recebidas" />
+      <FamilyTabs active="/modulos/notas" />
       <div className="grid grid-cols-3 gap-2">
         <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.received}</p><p className="text-xs text-ink-500">a pagar</p></CardContent></Card>
         <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.problem}</p><p className="text-xs text-ink-500">c/ problema</p></CardContent></Card>

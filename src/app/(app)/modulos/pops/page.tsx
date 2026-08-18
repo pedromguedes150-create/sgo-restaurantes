@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -23,6 +24,7 @@ export default async function PopsPage() {
   return (
     <div className="space-y-4">
       <LargeTitle title="POPs" />
+      <FamilyTabs active="/modulos/pops" />
       <Link href="/modulos/treinamentos" className="flex items-center gap-2 rounded-lg border bg-surface px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-brand">
         <GraduationCap className="h-5 w-5 text-brand" /> Treinamentos (acompanhar por setor)
       </Link>
