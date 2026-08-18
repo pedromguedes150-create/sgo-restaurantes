@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { createOccurrence } from '@/lib/occurrences/create';
@@ -62,8 +63,7 @@ export async function POST(req: Request) {
   );
 
   if (!result.ok) {
-    const r = REASONS[result.reason];
-    return NextResponse.json({ error: r.msg, reason: result.reason }, { status: r.status });
+    return reasonResponse(REASONS, result.reason);
   }
 
   return NextResponse.json({

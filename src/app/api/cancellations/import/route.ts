@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { reasonResponse } from '@/lib/api/reason';
 import * as XLSX from 'xlsx';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
@@ -45,8 +46,7 @@ export async function POST(req: Request) {
 
   const result = await importCancellations(user, { unitId, operationalDate, fileName: file.name, rows: parsed.rows }, requestContext(req));
   if (!result.ok) {
-    const r = REASONS[result.reason];
-    return NextResponse.json({ error: r.msg, reason: result.reason }, { status: r.status });
+    return reasonResponse(REASONS, result.reason);
   }
   return NextResponse.json({ ok: true, created: result.created, operationalDate: result.operationalDate });
 }

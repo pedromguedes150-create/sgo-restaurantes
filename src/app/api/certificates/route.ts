@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { createCertificate } from '@/lib/certificates/save';
@@ -34,6 +35,6 @@ export async function POST(req: Request) {
     aiExtracted: b.aiExtracted ?? undefined,
   }, requestContext(req));
 
-  if (!r.ok) { const m = REASONS[r.reason]; return NextResponse.json({ error: m.msg, reason: r.reason }, { status: m.status }); }
+  if (!r.ok) return reasonResponse(REASONS, r.reason);
   return NextResponse.json({ ok: true, id: r.id, days: r.days });
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { getScanContext, submitScanCount } from '@/lib/commands/scan';
@@ -21,8 +22,7 @@ export async function GET(req: Request) {
 
   const r = await getScanContext(user, unitId);
   if (!r.ok) {
-    const x = REASONS[r.reason];
-    return NextResponse.json({ error: x.msg, reason: r.reason }, { status: x.status });
+    return reasonResponse(REASONS, r.reason);
   }
   return NextResponse.json(r.ctx);
 }
@@ -40,8 +40,7 @@ export async function POST(req: Request) {
     requestContext(req),
   );
   if (!r.ok) {
-    const x = REASONS[r.reason];
-    return NextResponse.json({ error: x.msg, reason: r.reason }, { status: x.status });
+    return reasonResponse(REASONS, r.reason);
   }
   return NextResponse.json(r);
 }

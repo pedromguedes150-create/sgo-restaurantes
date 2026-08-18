@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma';
+import { Prisma } from '@prisma/client';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { notifyUnitRole, notifyUsers } from '@/lib/notifications';
@@ -28,7 +29,9 @@ export interface CreateGasInput {
 }
 export type CreateGasResult =
   | { ok: true; id: string; pricePerKg: number; variationPct: number | null; alerted: boolean }
-  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' };
+  /** `message` sobrepõe o texto padrão do motivo quando a causa tem detalhe
+   *  útil (ex.: o número da nota que já existe). */
+  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'DUPLICATE'; message?: string };
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
 
@@ -69,7 +72,35 @@ export async function createGasReceipt(user: SessionUser, input: CreateGasInput,
   const threshold = await getGasAlertPct();
   const alerted = variationPct != null && variationPct > threshold;
 
-  const rec = await prisma.gasReceipt.create({
+  /**
+   * O banco tem `@@unique([unitId, supplierId, noteNumber])` — a mesma nota do
+   * mesmo fornecedor não entra duas vezes na mesma unidade, e isso está certo:
+   * recebimento duplicado entra na média de preço/kg e no abatimento do
+   * contrato, estragando o número que o módulo existe para vigiar.
+   *
+   * O que estava errado era a REAÇÃO. O Prisma lança P2002, ninguém pegava, a
+   * rota devolvia 500 sem corpo e o gerente lia só "Falha" — sem saber que o
+   * problema era o número repetido, e sem nada a fazer além de tentar de novo
+   * e falhar igual. Foi assim que o Pedro travou com a nota 5424.
+   */
+  let rec: { id: string };
+  try {
+    rec = await criar();
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      return {
+        ok: false,
+        reason: 'DUPLICATE',
+        message: input.noteNumber
+          ? `Já existe um recebimento com o nº ${input.noteNumber} deste fornecedor nesta unidade. Se for outro recebimento, confira o número da nota; se já lançou este, ele está na aba Histórico.`
+          : 'Este recebimento já foi lançado para este fornecedor nesta unidade. Confira a aba Histórico.',
+      };
+    }
+    throw e;
+  }
+
+  async function criar() {
+    return prisma.gasReceipt.create({
     data: {
       unitId: input.unitId,
       supplierId: input.supplierId || null,
@@ -91,14 +122,35 @@ export async function createGasReceipt(user: SessionUser, input: CreateGasInput,
       createdById: user.id,
     },
     select: { id: true },
-  });
+    });
+  }
 
-  await audit({ userId: user.id, unitId: input.unitId, action: 'GAS_RECEIPT', module: 'GAS', entity: 'gas_receipt', entityId: rec.id, metadata: { pricePerKg, qty, total, variationPct, alerted }, ...ctx });
+  /**
+   * A PARTIR DAQUI o recebimento JÁ ESTÁ GRAVADO.
+   *
+   * Auditoria e aviso são efeitos posteriores, e nenhum deles pode derrubar a
+   * resposta: se um deles estourasse, a rota devolvia 500, o gerente lia
+   * "Falha" e lançava de novo — gravando o MESMO recebimento duas vezes. E
+   * recebimento duplicado não é só sujeira na lista: ele entra na média de
+   * preço/kg e no abatimento do contrato, então estraga justamente o número
+   * que o módulo existe para vigiar.
+   *
+   * Falhar em avisar é um problema menor que fazer o gerente duplicar dado.
+   */
+  try {
+    await audit({ userId: user.id, unitId: input.unitId, action: 'GAS_RECEIPT', module: 'GAS', entity: 'gas_receipt', entityId: rec.id, metadata: { pricePerKg, qty, total, variationPct, alerted }, ...ctx });
+  } catch (e) {
+    console.error('[gas] recebimento gravado, mas a auditoria falhou:', e);
+  }
 
   if (alerted && variationPct != null && prevPrice != null) {
-    const body = `Gás em ${unit.name}: R$ ${pricePerKg.toFixed(4)}/kg (+${variationPct.toFixed(1)}% vs anterior R$ ${prevPrice.toFixed(4)}/kg).`;
-    await notifyUnitRole(input.unitId, 'SUPERVISOR', { title: '⚠ Alta no preço do gás', body, link: '/modulos/gas', module: 'GAS', critical: true });
-    await notifyUsers([user.id], { title: '⚠ Preço do gás acima do normal', body, link: '/modulos/gas', module: 'GAS' });
+    try {
+      const body = `Gás em ${unit.name}: R$ ${pricePerKg.toFixed(4)}/kg (+${variationPct.toFixed(1)}% vs anterior R$ ${prevPrice.toFixed(4)}/kg).`;
+      await notifyUnitRole(input.unitId, 'SUPERVISOR', { title: '⚠ Alta no preço do gás', body, link: '/modulos/notas/gas', module: 'GAS', critical: true });
+      await notifyUsers([user.id], { title: '⚠ Preço do gás acima do normal', body, link: '/modulos/notas/gas', module: 'GAS' });
+    } catch (e) {
+      console.error('[gas] recebimento gravado, mas o alerta de variação falhou:', e);
+    }
   }
 
   return { ok: true, id: rec.id, pricePerKg, variationPct, alerted };

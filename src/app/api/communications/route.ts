@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { createCommunication, canAuthorCommunications, type CommLink } from '@/lib/communications/create';
@@ -63,8 +64,7 @@ export async function POST(req: Request) {
 
   const r = await createCommunication(user, input, requestContext(req));
   if (!r.ok) {
-    const m = REASONS[r.reason];
-    return NextResponse.json({ error: m.msg, reason: r.reason }, { status: m.status });
+    return reasonResponse(REASONS, r.reason);
   }
   return NextResponse.json({ ok: true, id: r.id, recipients: r.recipients });
 }

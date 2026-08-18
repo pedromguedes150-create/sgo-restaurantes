@@ -40,6 +40,20 @@ const ST: Record<NoteDTO['status'], { label: string; tone: StatusTone }> = {
 };
 const fmtBR = (iso: string) => (iso ? iso.split('-').reverse().join('/') : '—');
 
+/**
+ * Mensagem quando o servidor responde erro SEM texto próprio — o caso que
+ * produzia o "Falha" seco na tela do gerente. Cada faixa de código pede uma
+ * ação diferente, e é essa ação que a pessoa precisa saber.
+ */
+function mensagemDeFalha(status: number): string {
+  if (status === 401) return 'Sua sessão expirou. Entre novamente e refaça o lançamento.';
+  if (status === 403) return 'Você não tem acesso a esta unidade.';
+  if (status === 413) return 'O anexo é grande demais.';
+  if (status === 0 || status >= 502) return 'O servidor não respondeu. Confira a internet e tente de novo — se repetir, avise o Admin.';
+  if (status >= 500) return `Erro no servidor ao salvar (${status}). Tente de novo; se repetir, avise o Admin.`;
+  return `Não foi possível salvar (erro ${status}).`;
+}
+
 /** Períodos do filtro (padrão 60 dias — pedido 16/07). */
 const PERIODS = [
   { dias: 60, label: 'Últimos 60 dias' },
@@ -267,7 +281,7 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
         totalValue: parseFloat((f.totalValue || '0').replace('.', '').replace(',', '.')) || parseFloat(f.totalValue), productType: f.productType, observation: f.observation,
       }) });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
+      if (!res.ok) { setErr(data.error ?? mensagemDeFalha(res.status)); return; }
       setEditing(false); router.refresh();
     } finally { setSaving(false); }
   }
@@ -544,7 +558,11 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
       try {
         const res = await fetch('/api/gas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
+        /* Antes era só `?? 'Falha'`. Uma tela que diz "Falha" e nada mais não
+           ajuda quem está no balcão (não sabe se tentar de novo resolve) nem
+           quem vai diagnosticar de longe (não sabe se foi rede, sessão ou
+           servidor). O código HTTP separa esses casos em uma palavra. */
+        if (!res.ok) { setErr(data.error ?? mensagemDeFalha(res.status)); return; }
         const v = data.variationPct;
         setOk(`Recebimento de gás registrado.${v != null ? ` Variação ${v > 0 ? '+' : ''}${v}% vs anterior.` : ''}${data.alerted ? ' ⚠ Acima do limite — supervisão avisada.' : ''}`);
         setTimeout(onDone, 900);
@@ -562,7 +580,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
         body: JSON.stringify({ unitId, source: accessKey ? 'QRCODE' : 'MANUAL', accessKey, supplierId, supplierName, supplierCnpj, number, issueDate, dueDate, totalValue: v, productType }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
+      if (!res.ok) { setErr(data.error ?? mensagemDeFalha(res.status)); return; }
       onDone();
     } finally { setBusy(false); }
   }
