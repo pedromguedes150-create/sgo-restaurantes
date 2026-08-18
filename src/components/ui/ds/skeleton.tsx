@@ -36,12 +36,12 @@ export function SkeletonListRow() {
   );
 }
 
-/** Espelha o StatCard (rótulo 11 / número 34 / apoio 13). */
+/** Espelha o StatCard (rótulo 11 / número 24 / apoio 13). */
 export function SkeletonStatCard() {
   return (
     <div className="rounded-card border border-line bg-surface p-4">
       <Skeleton className="h-2.5 w-20" />
-      <Skeleton className="mt-2 h-8 w-24" />
+      <Skeleton className="mt-2 h-6 w-24" />
       <Skeleton className="mt-2 h-3 w-16" />
     </div>
   );

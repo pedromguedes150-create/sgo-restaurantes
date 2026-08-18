@@ -9,6 +9,27 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.46.0 — 2026-08-18 (Hierarquia, etapa 1: o título da tela volta a ser o primeiro nível)
+
+### Melhorado
+- **O número dos painéis não compete mais com o nome da tela.** O `StatCard` desenhava o número
+  em **34px negrito** — o mesmo tamanho e peso do título da página. Em Ocorrências isso colocava
+  quatro elementos no primeiro nível (o nome da tela e os três contadores), e em Comandas outros
+  quatro: tipograficamente indistinguíveis, sem nada dizendo o que é a tela e o que é dado dentro
+  dela. O número passa a **24px semibold**, um degrau abaixo do título.
+  Medido depois da mudança: Ocorrências, Comandas, Visão Executiva e Início agora têm
+  **exatamente um elemento em 34px** — o título — contra quatro antes em duas delas.
+- **Escala tipográfica ganha o nível 24** (`.sgo-type-24`, 24/29). Com ele a escala usada em
+  produção fica nos seis níveis da proposta: **34 / 24 / 17 / 15 / 13 / 11**. Os níveis 28, 22, 20
+  e 12 só aparecem nas páginas `/dev` e saem nas etapas seguintes.
+- **Rótulo do cartão ganha o peso do nível** (11px semibold, caixa alta), e o esqueleto de
+  carregamento acompanhou a nova altura para a tela não pular ao carregar.
+
+Primeira das quatro etapas do plano de hierarquia. As próximas: unificar as dez grafias do
+número-destaque, colapsar o corpo das listas em 15/13, e padronizar etiquetas e selos.
+
+---
+
 ## v1.45.2 — 2026-08-18 (Digitar em formulário de folha para de jogar o foco no "X")
 
 ### Corrigido

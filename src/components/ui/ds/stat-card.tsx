@@ -3,8 +3,13 @@ import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
- * StatCard do design system (Onda 2). Escala 11 / 34 / 13 (REDESIGN §4):
- * rótulo em caixa alta 11, número 34 tabular, apoio 13.
+ * StatCard do design system. Escala 11 / 24 / 13:
+ * rótulo em caixa alta 11, número 24 tabular, apoio 13.
+ *
+ * O número era 34 — o MESMO tamanho e peso do título da página (LargeTitle).
+ * Em Ocorrências isso punha quatro elementos no primeiro nível (o nome da tela
+ * e os três contadores) e o olho não tinha por onde entrar na tela. O primeiro
+ * nível volta a ser só o título; o número é o segundo.
  * Valor ausente é "–" em ink-400 — nunca 0, que mentiria sobre o dado.
  */
 export interface StatCardProps {
@@ -27,10 +32,10 @@ export function StatCard({ label, value, hint, delta, invertDelta, icon: Icon, c
   return (
     <div className={cn('rounded-card border border-line bg-surface p-4', className)}>
       <div className="flex items-start justify-between gap-2">
-        <p className="sgo-type-11 text-ink-500">{label}</p>
+        <p className="sgo-type-11 font-semibold text-ink-500">{label}</p>
         {Icon && <Icon className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />}
       </div>
-      <p className={cn('sgo-type-34 mt-1 font-bold tabular-nums', empty ? 'text-ink-500' : 'text-ink-900')}>
+      <p className={cn('sgo-type-24 mt-1 font-semibold tabular-nums', empty ? 'text-ink-500' : 'text-ink-900')}>
         {empty ? '–' : value}
       </p>
       <div className="mt-1 flex items-center gap-1.5">
