@@ -34,7 +34,11 @@ export const GUIDE: GuideSection[] = [
         roles: ALL_ROLES,
         summary: 'O básico para se localizar na plataforma.',
         steps: [
-          'No computador, use o MENU LATERAL à esquerda. No celular, use a barra inferior.',
+          'No computador, use o MENU LATERAL à esquerda. No celular, use a barra inferior e o botão MÓDULOS.',
+          'O MENU ENCURTOU: são 11 entradas em vez de 21. Módulos irmãos agora moram juntos — CAIXA (Comandas, Cancelamentos, Troco), SUPRIMENTOS (Notas Recebidas, Inventário, Pedidos), ROTINAS DA UNIDADE (Coleta de Óleo, Higiene), PERFORMANCE (Metas, Supervisão, Executivo), TREINAMENTOS (Treinamentos e POPs) e PESSOAS (Colaboradores e Controle de gerentes).',
+          'Para ir de um irmão a outro, use o botão ao lado do TÍTULO da tela: em Comandas aparece "Caixa ⌄", e ali você salta para Cancelamentos ou Troco sem voltar ao menu.',
+          'No celular, a tela MÓDULOS tem uma BUSCA no topo: digite três letras e a lista filtra. Ignora acento — "oleo" acha "Coleta de Óleo".',
+          'Nada mudou de endereço: se você tem um link salvo ou toca numa notificação antiga, continua caindo na tela certa.',
           'O sino 🔔 no topo mostra suas NOTIFICAÇÕES (alertas e avisos). O número vermelho é o que falta ler.',
           'O capelo 🎓 no topo (ao lado do sino) abre o "Treinamento da Plataforma" — os guias do SEU perfil, em qualquer aparelho.',
           'Ao entrar em uma tela, use o link "← Voltar" para retornar.',
@@ -42,7 +46,10 @@ export const GUIDE: GuideSection[] = [
           'CAMPOS DE ESCOLHA, DATA E HORA: as listas, o calendário e o relógio agora são do próprio sistema, iguais em qualquer aparelho — antes cada celular abria o seu. Toque no campo para abrir; no computador dá para usar só o teclado (setas para andar, Enter para escolher, Esc para fechar).',
           'Campo opcional que você preencheu por engano: reabra a lista e escolha a primeira opção ("— nenhum —", "Todas as unidades"…) para deixar em branco de novo. No calendário e no relógio, o botão "Limpar".',
         ],
-        tips: ['O sistema usa a "data operacional" (o dia vira após o horário de corte, ex.: 04:00). Lançamentos da madrugada contam no dia anterior.'],
+        tips: [
+          'O sistema usa a "data operacional" (o dia vira após o horário de corte, ex.: 04:00). Lançamentos da madrugada contam no dia anterior.',
+          'Não achou um módulo no menu? Ele provavelmente está dentro de uma família. Use a busca da tela Módulos, ou o ⌘K (Ctrl+K) no computador, que encontra qualquer tela pelo nome — inclusive Troco, POPs, Inventário e Executivo.',
+        ],
       },
       {
         id: 'minha-area',
