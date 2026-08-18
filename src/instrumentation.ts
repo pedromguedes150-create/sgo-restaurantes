@@ -8,6 +8,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;
 
   const { ensureTaskMaintenance } = await import('@/lib/tasks/maintenance');
+  const { ensureMaintenanceCategories } = await import('@/lib/occurrences/maintenance-categories');
   const { runDailyRhSync, recentlyAutoSynced } = await import('@/lib/rh/sync');
   const { reconcileAllTraining } = await import('@/lib/training');
   const { notifyDueSoonTasks } = await import('@/lib/tasks/notify');
@@ -64,8 +65,18 @@ export async function register() {
     }
   }
 
+  /* Só no boot, não em intervalo: é dado de REFERÊNCIA, não rotina. É
+     idempotente (só age em tipo de manutenção sem nenhuma categoria), então
+     repetir não faria efeito — e repetir de hora em hora daria a impressão
+     errada de que é algo que precisa ser mantido. */
+  async function semearCategoriasDeManutencao() {
+    try { await ensureMaintenanceCategories(); }
+    catch (e) { console.error('[ocorrencias] falha ao semear categorias de manutenção:', e); }
+  }
+
   // primeira execução logo após o boot (sem bloquear o startup)
   setTimeout(() => {
+    void semearCategoriasDeManutencao();
     void ensureTaskMaintenance(true);
     void maybeSyncRh();
     void maintainTraining();

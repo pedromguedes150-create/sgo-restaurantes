@@ -9,6 +9,30 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.44.0 — 2026-08-18 (Notas Recebidas reorganizado · gás salva com mensagem clara · categorias de manutenção)
+
+### Corrigido
+- **"Falha" ao salvar recebimento de gás.** A causa era **número de nota repetido**: o banco tem `@@unique([unitId, supplierId, noteNumber])`, o Prisma lançava `P2002`, **ninguém tratava**, a rota devolvia 500 sem corpo e a tela mostrava só "Falha" — sem dizer o que fazer. A restrição continua (recebimento duplicado entra na média de preço/kg e no abatimento do contrato), mas agora responde **409** dizendo o número e onde conferir.
+- **Efeitos posteriores derrubavam a gravação.** Auditoria e notificação rodavam sem `try/catch` **depois** do `create`: se uma falhasse, a rota dava 500 com o recebimento **já gravado**, e o gerente lançava de novo — duplicando de verdade.
+- **`REASONS[reason]` direto era armadilha, em 14 rotas.** Motivo fora do mapa dava `undefined.msg` e transformava validação conhecida em 500 sem corpo — o mesmo sintoma esperando acontecer em Desperdícios, Comandas, Ocorrências, Atestados, Óleo e Comunicação. Todas migradas para `reasonResponse()` (`src/lib/api/reason.ts`).
+- **Mensagens de erro no lançamento de nota** deixaram de ser "Falha": cada faixa de código HTTP diz o que fazer (sessão expirada, sem acesso à unidade, servidor fora, anexo grande).
+- **Pílula do *segmented control*, dashboard de gás e menu de ações**: números duplicados removidos (o "no filtro" repetia os cartões do Dashboard) e o item destrutivo do menu voltou a passar AAA no tema escuro (era 4,84:1, ficou 8,06:1).
+
+### Alterado — Notas Recebidas
+- **Cada nota tem um menu `···`** no lugar dos 5 botões soltos por linha. Com 147 notas eram 735 controles competindo com 147 informações. **Nenhuma ação saiu e nenhuma permissão mudou.** O valor ganhou coluna própria com dígitos alinhados.
+- **Cinco abas viraram três** (Notas · Vencimentos · Análise de gás). "Registrar nota" era um formulário ocupando aba — virou o botão **Nova nota**, em folha. "Análise" era a **mesma lista** de "Notas" no código — fundiu, e o detalhe extra virou um interruptor (mesmo público de antes).
+- **Análise de gás ganhou rota própria** (`/modulos/notas/gas`), acabando com os **dois trilhos de abas empilhados**. Efeito colateral relevante: a página de Notas parou de carregar dashboard, contratos e 300 recebimentos de gás **em toda visita** — 4 consultas a menos.
+- **Uma barra de filtro só**, recolhida, com busca e total sempre à vista, nas quatro superfícies do módulo (eram quatro arranjos diferentes). O `FilterBar` existia desde a v1.40.0 para isso e nunca havia sido adotado.
+- Histórico de gás e contratos passaram ao mesmo menu; "Novo contrato" virou folha.
+
+### Alterado — resto do sistema
+- **Formulários de cadastro saíram da frente da lista** em Unidades, Fornecedores e Usuários (viraram folha atrás de um botão). Quem entra nessas telas quase sempre vem conferir, não criar.
+- Menu de ações também em **contratos de gás** e **Pagamentos** (onde dois botões usavam o mesmo ícone de lápis). A última fileira de filtro escrita à mão (Pagamentos) virou `FilterBar`.
+- **Novos componentes/portões**: `ui/ds/action-menu.tsx` (não havia menu suspenso no sistema), `.sgo-control-icon` (alvo de toque quadrado de 44px em botão de ícone) e `scripts/check-row-actions.cjs`, que mede os três padrões que entulham tela.
+
+### Adicionado
+- **13 categorias padrão** para os tipos de ocorrência marcados como manutenção (Elétrica, Hidráulica e esgoto, Climatização, Exaustão e coifa, Instalação de gás, Cobertura e telhado, Estrutura e alvenaria, Piso, Pintura, Portas e fechaduras, Mobiliário, Área externa, Outros). Semeadas no boot, **só em tipo que está sem nenhuma** — quem já organizou a própria lista não é tocado. Sem categoria o sistema perde a detecção de reincidência, que compara tipo + categoria na mesma unidade em menos de 30 dias.
+
 ## v1.43.0 — 2026-08-17 (Ocorrências: destrava o registro e separa os dois eixos)
 
 ### Corrigido

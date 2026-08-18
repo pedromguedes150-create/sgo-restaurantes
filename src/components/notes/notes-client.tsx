@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock } from 'lucide-react';
+import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock, Plus } from 'lucide-react';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { Button } from '@/components/ui/button';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
+import { ActionMenu, type ActionMenuItem } from '@/components/ui/ds/action-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
-import { FilterBar, FilterSelect } from '@/components/ui/filter-bar';
+import { FilterBar, FilterSelect, FilterChip } from '@/components/ui/filter-bar';
 import { Select as DsSelect } from '@/components/ui/ds/select';
 import { SearchField } from '@/components/ui/ds/field';
 import { DatePicker } from '@/components/ui/ds/date-picker';
@@ -17,18 +17,14 @@ import { shortUnitName } from '@/lib/unit-name';
 import { QrScanner } from '@/components/notes/qr-scanner';
 import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
-import { GasClient, type GasDash, type GasRow, type GasContractUI, type PurchasedUI } from '@/components/gas/gas-client';
 import { GasImportModal } from '@/components/notes/gas-import-modal';
 import { Group } from '@/components/ui/ds/group';
+import { Sheet } from '@/components/ui/ds/sheet';
+import { NotesTabs } from '@/components/notes/notes-tabs';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null; isGas?: boolean }
 
-export interface NotesGasProps {
-  canLaunch: boolean; isAdmin: boolean; canEditDate: boolean; canManageContracts: boolean;
-  dashboard: GasDash; receipts: GasRow[]; contracts: GasContractUI[]; purchased: PurchasedUI;
-  filter: { unitId: string; supplierId: string; mes: string };
-}
 export interface NoteDTO {
   id: string; unit: string; supplier: string; value: number;
   status: 'RECEIVED' | 'PAID' | 'PROBLEM' | 'RETURNED'; number: string | null; problemNote: string | null;
@@ -44,6 +40,20 @@ const ST: Record<NoteDTO['status'], { label: string; tone: StatusTone }> = {
 };
 const fmtBR = (iso: string) => (iso ? iso.split('-').reverse().join('/') : '—');
 
+/**
+ * Mensagem quando o servidor responde erro SEM texto próprio — o caso que
+ * produzia o "Falha" seco na tela do gerente. Cada faixa de código pede uma
+ * ação diferente, e é essa ação que a pessoa precisa saber.
+ */
+function mensagemDeFalha(status: number): string {
+  if (status === 401) return 'Sua sessão expirou. Entre novamente e refaça o lançamento.';
+  if (status === 403) return 'Você não tem acesso a esta unidade.';
+  if (status === 413) return 'O anexo é grande demais.';
+  if (status === 0 || status >= 502) return 'O servidor não respondeu. Confira a internet e tente de novo — se repetir, avise o Admin.';
+  if (status >= 500) return `Erro no servidor ao salvar (${status}). Tente de novo; se repetir, avise o Admin.`;
+  return `Não foi possível salvar (erro ${status}).`;
+}
+
 /** Períodos do filtro (padrão 60 dias — pedido 16/07). */
 const PERIODS = [
   { dias: 60, label: 'Últimos 60 dias' },
@@ -52,13 +62,15 @@ const PERIODS = [
   { dias: 365, label: 'Último ano' },
 ];
 
-export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false, sinceDays = 60, gas }: {
-  units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean; sinceDays?: number; gas?: NotesGasProps;
+export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false, sinceDays = 60, aba = 'lista' }: {
+  units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean; sinceDays?: number;
+  /** Aba ativa, vinda da URL (`?aba=`). Deixou de ser estado quando o gás ganhou rota própria. */
+  aba?: 'lista' | 'venc';
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'nova' | 'lista' | 'analise' | 'gas' | 'venc'>('lista');
   const [busy, setBusy] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [novaNota, setNovaNota] = useState(false);
 
   async function status(id: string, st: 'PROBLEM' | 'RETURNED') {
     let problemNote: string | undefined;
@@ -71,61 +83,50 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
     } finally { setBusy(false); }
   }
 
-  const tabs: { key: typeof tab; label: string }[] = [
-    { key: 'lista', label: 'Notas' },
-    { key: 'nova', label: 'Registrar nota' },
-    { key: 'venc', label: 'Vencimentos' },
-    ...(canManage ? [{ key: 'analise' as const, label: 'Análise' }] : []),
-    ...(gas ? [{ key: 'gas' as const, label: 'Análise de gás' }] : []),
-  ];
-
+  /**
+   * Cinco abas viraram três, e agora as três são NAVEGAÇÃO.
+   *
+   * "Registrar nota" saiu porque era um FORMULÁRIO ocupando uma aba: quem
+   * entrava para consultar levava o formulário na cara. Virou o botão "Nova
+   * nota", que abre uma folha por cima e sai quando termina.
+   *
+   * "Análise" saiu porque era a MESMA lista de "Notas" — no código era este
+   * mesmo componente, mudando só um parâmetro de detalhe. O que ela tinha de
+   * próprio (totais, export e os campos extras por linha) continua aqui
+   * dentro, para o mesmo público de antes.
+   *
+   * "Análise de gás" ganhou rota própria (`/modulos/notas/gas`), então some o
+   * segundo trilho de abas que existia empilhado sob o primeiro.
+   */
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 print:hidden">
-        <SegmentedControl
-          aria-label="Seções de Notas Recebidas"
-          value={tab}
-          onValueChange={setTab}
-          options={tabs.map((t) => ({ value: t.key, label: t.label }))}
-        />
+        <NotesTabs value={aba} sinceDays={sinceDays} />
+        <Button size="sm" className="ml-auto" onClick={() => setNovaNota(true)}>
+          <Plus className="h-4 w-4" /> Nova nota
+        </Button>
         {canManage && (
-          <button onClick={() => setShowImport(true)} className="ml-auto inline-flex items-center gap-1.5 rounded-full border-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10">
+          <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-1.5 rounded-full border-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10">
             <FileSpreadsheet className="h-4 w-4" /> Importar em lote (XLSX)
           </button>
         )}
       </div>
       {showImport && <GasImportModal onClose={() => setShowImport(false)} />}
 
-      {tab === 'nova' && <NewNote units={units} suppliers={suppliers} onDone={() => { setTab('lista'); router.refresh(); }} />}
-      {tab === 'venc' && <DueTracking units={units} />}
-      {tab === 'gas' && gas && (
-        <GasClient
-          basePath="/modulos/notas"
-          canLaunch={false}
-          isAdmin={gas.isAdmin}
-          canEditDate={gas.canEditDate}
-          canManageContracts={gas.canManageContracts}
-          units={units}
-          suppliers={suppliers.filter((s) => s.isGas).map((s) => ({ id: s.id, name: s.name, cnpj: s.cnpj ?? null }))}
-          dashboard={gas.dashboard}
-          receipts={gas.receipts}
-          contracts={gas.contracts}
-          purchased={gas.purchased}
-          filter={gas.filter}
-        />
-      )}
-      {tab === 'lista' && (
+      <Sheet
+        open={novaNota}
+        onClose={() => setNovaNota(false)}
+        title="Nova nota"
+        description="Leia o QR/DANFE ou preencha à mão. A nota entra na lista assim que salvar."
+      >
+        <NewNote units={units} suppliers={suppliers} onDone={() => { setNovaNota(false); router.refresh(); }} />
+      </Sheet>
+
+      {aba === 'venc' && <DueTracking units={units} />}
+      {aba === 'lista' && (
         <FilterableNotes
           notes={notes} units={units} sinceDays={sinceDays}
           canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={status}
-          full={false}
-        />
-      )}
-      {tab === 'analise' && (
-        <FilterableNotes
-          notes={notes} units={units} sinceDays={sinceDays}
-          canManage={canManage} canEditDate={canEditDate} busy={busy} onStatus={status}
-          full
         />
       )}
     </div>
@@ -134,14 +135,21 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
 
 /**
  * Lista de notas por DATA DE LANÇAMENTO (mais nova → mais antiga) com filtros
- * completos (16/07). `full` = modo Análise (totais + campos completos).
+ * completos (16/07).
+ *
+ * Era usada duas vezes — "Notas" e "Análise" — mudando só o `full`. Agora é uma
+ * lista só, e o `full` virou um interruptor aqui dentro: uma caixa de seleção
+ * custa menos que uma aba inteira para a mesma diferença, e o público não muda
+ * (o detalhe e os totais seguem restritos a quem gerencia).
  */
-function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy, onStatus, full }: {
+function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy, onStatus }: {
   notes: NoteDTO[]; units: Unit[]; sinceDays: number;
   canManage: boolean; canEditDate: boolean; busy: boolean;
-  onStatus: (id: string, st: 'PROBLEM' | 'RETURNED') => void; full: boolean;
+  onStatus: (id: string, st: 'PROBLEM' | 'RETURNED') => void;
 }) {
   const router = useRouter();
+  const [detalhado, setDetalhado] = useState(false);
+  const full = canManage && detalhado;
   const [q, setQ] = useState('');
   const [supplier, setSupplier] = useState('ALL');
   const [unit, setUnit] = useState('ALL');
@@ -161,52 +169,63 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
         (n.createdByName ?? '').toLowerCase().includes(t) || String(n.value).includes(t)),
     );
   }, [notes, q, supplier, unit, st]);
+  /* Conta só o que a pessoa escolheu ativamente. O período NÃO entra: ele
+     sempre tem um valor (60 dias por padrão), então contá-lo faria a barra
+     nascer marcando "1 filtro" sem ninguém ter filtrado nada. */
+  const ativos = (q.trim() ? 1 : 0) + (supplier !== 'ALL' ? 1 : 0) + (unit !== 'ALL' ? 1 : 0) + (st !== 'ALL' ? 1 : 0);
+  const limpar = () => { setQ(''); setSupplier('ALL'); setUnit('ALL'); setStatus('ALL'); };
+
   const total = filtered.reduce((s, n) => s + n.value, 0);
   const exportHref = `/api/notes/export?dias=${sinceDays}${unit !== 'ALL' ? `&unidade=${encodeURIComponent(unit)}` : ''}${supplier !== 'ALL' ? `&fornecedor=${encodeURIComponent(supplier)}` : ''}${st !== 'ALL' ? `&status=${st}` : ''}`;
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3 print:hidden">
-        <div className="min-w-[14rem] flex-1">
-          <SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="fornecedor, nº, CNPJ, produto, valor…" />
-        </div>
-        <div className="min-w-[10rem] flex-1">
-          <DsSelect
-            label="Fornecedor" size="sm" value={supplier} onValueChange={setSupplier}
-            options={[{ value: 'ALL', label: 'Todos os fornecedores' }, ...supplierNames.map((s) => ({ value: s, label: s }))]}
-          />
-        </div>
+      <FilterBar
+        collapsible
+        active={ativos}
+        onClear={ativos ? limpar : undefined}
+        className="print:hidden"
+        search={<SearchField aria-label="Buscar notas" inputSize="sm" value={q} onValueChange={setQ} placeholder="Buscar fornecedor, nº, CNPJ, produto…" />}
+        summary={
+          <>
+            <FilterChip>{PERIODS.find((p) => p.dias === sinceDays)?.label ?? `${sinceDays} dias`}</FilterChip>
+            {supplier !== 'ALL' && <FilterChip>{supplier}</FilterChip>}
+            {unit !== 'ALL' && <FilterChip>{shortUnitName(unit)}</FilterChip>}
+            {st !== 'ALL' && <FilterChip>{ST[st].label}</FilterChip>}
+          </>
+        }
+        result={<>{filtered.length} de {notes.length}</>}
+      >
+        <FilterSelect
+          label="Fornecedor" value={supplier} onValueChange={setSupplier}
+          options={[{ value: 'ALL', label: 'Todos os fornecedores' }, ...supplierNames.map((s) => ({ value: s, label: s }))]}
+        />
         {units.length > 1 && (
-          <div className="min-w-[10rem] flex-1">
-            <DsSelect
-              label="Unidade" size="sm" value={unit} onValueChange={setUnit}
-              options={[{ value: 'ALL', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.name, label: shortUnitName(u.name) }))]}
-            />
-          </div>
+          <FilterSelect
+            label="Unidade" value={unit} onValueChange={setUnit}
+            options={[{ value: 'ALL', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.name, label: shortUnitName(u.name) }))]}
+          />
         )}
-        <div className="min-w-[10rem] flex-1">
-          <DsSelect
-            label="Status" size="sm" value={st} onValueChange={(v) => setStatus(v as typeof st)}
-            options={[
-              { value: 'ALL', label: 'Todos os status' },
-              { value: 'RECEIVED', label: 'Recebida' },
-              { value: 'PROBLEM', label: 'Com problema' },
-              { value: 'RETURNED', label: 'Devolvida' },
-              { value: 'PAID', label: 'Paga (legado)' },
-            ]}
-          />
-        </div>
-        <div className="min-w-[10rem] flex-1">
-          <DsSelect
-            label="Período" size="sm" value={String(sinceDays)}
-            onValueChange={(v) => router.push(`/modulos/notas?dias=${v}`)}
-            options={PERIODS.map((p) => ({ value: String(p.dias), label: p.label }))}
-          />
-        </div>
-        <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{filtered.length} de {notes.length}</span>
-      </div>
+        <FilterSelect
+          label="Status" value={st} onValueChange={(v) => setStatus(v as typeof st)}
+          options={[
+            { value: 'ALL', label: 'Todos os status' },
+            { value: 'RECEIVED', label: 'Recebida' },
+            { value: 'PROBLEM', label: 'Com problema' },
+            { value: 'RETURNED', label: 'Devolvida' },
+            { value: 'PAID', label: 'Paga (legado)' },
+          ]}
+        />
+        <FilterSelect
+          label="Período" value={String(sinceDays)}
+          onValueChange={(v) => router.push(`/modulos/notas?dias=${v}`)}
+          options={PERIODS.map((p) => ({ value: String(p.dias), label: p.label }))}
+        />
+      </FilterBar>
 
-      {full && (
+      {/* O que era a aba "Análise": totais, export e o detalhe por linha.
+          Mesmo público de antes (canManage) — só deixou de custar uma aba. */}
+      {canManage && (
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <div className="grid flex-1 grid-cols-2 gap-2">
             <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-2xl font-black text-ink-900">{filtered.length}</p><p className="text-xs text-ink-500">notas</p></div>
@@ -217,6 +236,18 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
             <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"><Printer className="h-3.5 w-3.5 text-brand" /> Imprimir/PDF</button>
           </div>
         </div>
+      )}
+
+      {canManage && (
+        <label className="inline-flex w-fit cursor-pointer items-center gap-2 text-[13px] text-ink-700 print:hidden">
+          <input
+            type="checkbox"
+            checked={detalhado}
+            onChange={(e) => setDetalhado(e.target.checked)}
+            className="sgo-control-icon h-4 w-4 accent-brand"
+          />
+          Mostrar CNPJ, emissão e produto em cada linha
+        </label>
       )}
 
       {filtered.length === 0 && <p className="text-sm text-ink-500">Nenhuma nota com esses filtros no período.</p>}
@@ -250,7 +281,7 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
         totalValue: parseFloat((f.totalValue || '0').replace('.', '').replace(',', '.')) || parseFloat(f.totalValue), productType: f.productType, observation: f.observation,
       }) });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
+      if (!res.ok) { setErr(data.error ?? mensagemDeFalha(res.status)); return; }
       setEditing(false); router.refresh();
     } finally { setSaving(false); }
   }
@@ -265,6 +296,28 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
       router.refresh();
     } finally { setDeleting(false); }
   }
+
+  /**
+   * As MESMAS ações de antes, nas mesmas condições — só que guardadas.
+   * Nada de permissão muda aqui: `canManage`, `canEditDate` e o status
+   * RECEBIDA continuam decidindo o que aparece, exatamente como quando eram
+   * cinco botões soltos na linha.
+   */
+  const acoes: ActionMenuItem[] = [
+    /* Ícones DIFERENTES de propósito: os dois primeiros eram um lápis cada, e
+       dois lápis iguais em ações diferentes não ajudam a escolher — só enchem
+       a lista. Aqui o ícone diz o QUE muda: o conteúdo da nota, ou a data. */
+    ...(canManage ? [{ label: 'Ver e editar', icon: <Pencil />, onSelect: () => setEditing(true) }] : []),
+    ...(canEditDate ? [{ label: 'Corrigir data', icon: <CalendarClock />, disabled: busy, onSelect: () => setDateEditing((v) => !v) }] : []),
+    // Pagamento é controlado no Teknisa — aqui só recebimento/problema/devolução (16/07)
+    ...(n.status === 'RECEIVED'
+      ? [
+          { label: 'Marcar problema', icon: <AlertTriangle />, disabled: busy, onSelect: () => onStatus(n.id, 'PROBLEM') },
+          { label: 'Devolver ao fornecedor', icon: <Undo2 />, disabled: busy, onSelect: () => onStatus(n.id, 'RETURNED') },
+        ]
+      : []),
+    ...(canManage ? [{ label: 'Excluir nota', icon: <Trash2 />, destructive: true, disabled: deleting, onSelect: remove }] : []),
+  ];
 
   if (editing) {
     return (
@@ -296,12 +349,20 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
 
   return (
     <div className="p-3">
-      <div className="flex items-center justify-between">
-        <p className="font-semibold text-ink-900">{n.supplier}</p>
+      {/* Cabeçalho da linha: fornecedor, VALOR em coluna própria, situação e o
+          menu. O valor saiu do meio da frase cinza — alinhado e tabular, dá
+          para varrer a coluna sem ler linha por linha, que é o que se faz numa
+          lista de notas. */}
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 flex-1 truncate font-semibold text-ink-900">{n.supplier}</p>
+        <p className="shrink-0 font-semibold tabular-nums text-ink-900">{formatBRL(n.value)}</p>
         <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
+        <div className="print:hidden">
+          <ActionMenu label={`Ações da nota de ${n.supplier}`} items={acoes} />
+        </div>
       </div>
       <p className="text-xs text-ink-500">
-        {n.unit} · {formatBRL(n.value)}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${fmtBR(n.dueDate)}` : ''}
+        {n.unit}{n.number ? ` · nº ${n.number}` : ''}{n.dueDate ? ` · vence ${fmtBR(n.dueDate)}` : ''}
         {n.requestedAt ? ` · lançada ${new Date(n.requestedAt).toLocaleDateString('pt-BR')}` : ''}
         {n.createdByName ? ` por ${n.createdByName}` : ''}
       </p>
@@ -320,19 +381,6 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
       )}
       {n.observation && <p className="mt-1 text-xs text-ink-500">Obs.: {n.observation}</p>}
       {n.problemNote && <p className="mt-1 text-xs text-danger">{n.status === 'RETURNED' ? 'Devolução' : 'Problema'}: {n.problemNote}</p>}
-      <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
-        {canManage && <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Ver/Editar</Button>}
-        {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setDateEditing((v) => !v)}><Pencil className="h-4 w-4" /> Editar data</Button>}
-        {n.status === 'RECEIVED' && (
-          <>
-            {/* Pagamento é controlado no Teknisa — aqui só recebimento/problema/devolução (16/07) */}
-            <Button size="sm" variant="destructive" disabled={busy} onClick={() => onStatus(n.id, 'PROBLEM')}><AlertTriangle className="h-4 w-4" /> Problema</Button>
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => onStatus(n.id, 'RETURNED')}><Undo2 className="h-4 w-4" /> Devolver</Button>
-          </>
-        )}
-        {canManage && <Button size="sm" variant="destructive" disabled={deleting} onClick={remove}><Trash2 className="h-4 w-4" /> Excluir</Button>}
-      </div>
-
       {dateEditing && (
         <InlineDateEdit module="note" id={n.id} current={(n.entryDate ?? n.requestedAt ?? '').slice(0, 10)} onClose={() => setDateEditing(false)} />
       )}
@@ -378,7 +426,20 @@ function DueTracking({ units }: { units: Unit[] }) {
       <p className="rounded-md bg-brand/10 px-3 py-2 text-xs text-ink-500">
         Foco nos boletos <strong>a vencer</strong> — a supervisão e o financeiro são avisados automaticamente dos próximos vencimentos (o pagamento em si é controlado pelo financeiro). Inclui notas comuns e recebimentos de gás.
       </p>
-      <FilterBar active={activeCount} onClear={clear}>
+      <FilterBar
+        collapsible
+        active={activeCount}
+        onClear={clear}
+        summary={
+          <>
+            <FilterChip>{`${dias} dias`}</FilterChip>
+            <FilterChip>{vencidos === '1' ? 'Incluir vencidos' : 'Só a vencer'}</FilterChip>
+            {unitId && <FilterChip>{shortUnitName(units.find((u) => u.id === unitId)?.name ?? unitId)}</FilterChip>}
+            {supplier && <FilterChip>{supplier}</FilterChip>}
+          </>
+        }
+        result={<>{rows.length} boleto(s) · {formatBRL(total)}</>}
+      >
         {units.length > 1 && (
           <FilterSelect
             label="Unidade"
@@ -407,11 +468,9 @@ function DueTracking({ units }: { units: Unit[] }) {
         />
       </FilterBar>
 
-      <div className="flex flex-wrap gap-3 text-xs text-ink-500">
-        <span><strong className="text-brand">{rows.length}</strong> boleto(s)</span>
-        <span>total <strong className="text-brand">{formatBRL(total)}</strong></span>
-      </div>
-
+      {/* A contagem e o total saíram daqui: agora vivem na própria barra de
+          filtro, junto do que os produziu. Repetir logo abaixo era dizer o
+          mesmo número duas vezes com duas aparências. */}
       {loading ? (
         <p className="text-sm text-ink-500">Carregando…</p>
       ) : rows.length === 0 ? (
@@ -499,7 +558,11 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
       try {
         const res = await fetch('/api/gas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
+        /* Antes era só `?? 'Falha'`. Uma tela que diz "Falha" e nada mais não
+           ajuda quem está no balcão (não sabe se tentar de novo resolve) nem
+           quem vai diagnosticar de longe (não sabe se foi rede, sessão ou
+           servidor). O código HTTP separa esses casos em uma palavra. */
+        if (!res.ok) { setErr(data.error ?? mensagemDeFalha(res.status)); return; }
         const v = data.variationPct;
         setOk(`Recebimento de gás registrado.${v != null ? ` Variação ${v > 0 ? '+' : ''}${v}% vs anterior.` : ''}${data.alerted ? ' ⚠ Acima do limite — supervisão avisada.' : ''}`);
         setTimeout(onDone, 900);
@@ -517,7 +580,7 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
         body: JSON.stringify({ unitId, source: accessKey ? 'QRCODE' : 'MANUAL', accessKey, supplierId, supplierName, supplierCnpj, number, issueDate, dueDate, totalValue: v, productType }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
+      if (!res.ok) { setErr(data.error ?? mensagemDeFalha(res.status)); return; }
       onDone();
     } finally { setBusy(false); }
   }

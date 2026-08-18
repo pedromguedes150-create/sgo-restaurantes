@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Sheet } from '@/components/ui/ds/sheet';
 import { postAdmin } from '@/lib/admin-client';
 
 export interface UnitRow { id: string; name: string; code: string; address: string | null; cutoffHour: number; timezone: string; active: boolean; rhUnitName: string | null; cnpj: string | null }
@@ -27,19 +28,24 @@ export function UnitsAdmin({ units }: { units: UnitRow[] }) {
   const [cnpj, setCnpj] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [nova, setNova] = useState(false);
 
   async function create() {
     setBusy(true); setMsg(null);
     const r = await postAdmin({ entity: 'unit', action: 'create', name, code, address, cutoffHour: Number(cutoffHour), cnpj });
     setBusy(false);
     if (!r.ok) { setMsg(r.error === 'INVALID' ? 'Verifique os campos (CNPJ, se preenchido, precisa ter 14 dígitos).' : (r.error ?? 'Falha')); return; }
-    setName(''); setCode(''); setAddress(''); setCnpj(''); router.refresh();
+    setName(''); setCode(''); setAddress(''); setCnpj(''); setNova(false); router.refresh();
   }
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-dashed p-3">
-        <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Nova unidade</h2>
+      {/* O formulário ficava aberto acima da lista: quem entra em Unidades
+          quase sempre vem CONFERIR uma, não criar. Virou folha atrás do botão. */}
+      <div className="flex justify-end">
+        <Button size="sm" onClick={() => setNova(true)}><Plus className="h-4 w-4" /> Nova unidade</Button>
+      </div>
+      <Sheet open={nova} onClose={() => setNova(false)} title="Nova unidade" description="Sigla, hora de corte e CNPJ podem ser ajustados depois.">
         <div className="grid grid-cols-2 gap-2">
           <div><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div><Label>Sigla (code)</Label><Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="ex: KM13" /></div>
@@ -49,7 +55,7 @@ export function UnitsAdmin({ units }: { units: UnitRow[] }) {
         </div>
         {msg && <p className="mt-2 text-sm font-medium text-danger">{msg}</p>}
         <Button onClick={create} disabled={busy} className="mt-2 w-full"><Plus className="h-4 w-4" /> Criar unidade</Button>
-      </div>
+      </Sheet>
 
       <div className="space-y-3">
         {units.map((u) => <UnitItem key={u.id} unit={u} onChange={() => router.refresh()} />)}

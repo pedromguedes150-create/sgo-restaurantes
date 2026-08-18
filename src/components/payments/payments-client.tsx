@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, X, Banknote, Plus, Pencil, Trash2, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Check, X, Banknote, Plus, Pencil, Trash2, AlertTriangle, ChevronDown, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
@@ -15,9 +15,11 @@ import { Banner } from '@/components/ui/ds/banner';
 import { List as DsList, ListRow } from '@/components/ui/ds/list-row';
 import { StatusBadge as DsStatusBadge, type Tone as DsTone } from '@/components/ui/ds/status-badge';
 import { Sheet } from '@/components/ui/ds/sheet';
+import { ActionMenu } from '@/components/ui/ds/action-menu';
 import { Select as DsSelect } from '@/components/ui/ds/select';
 import { TimePicker } from '@/components/ui/ds/time-picker';
 import { SearchField } from '@/components/ui/ds/field';
+import { FilterBar, FilterSelect, FilterChip } from '@/components/ui/filter-bar';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
 
@@ -148,16 +150,32 @@ export function PaymentsClient({
   function adminActions(r: PayReq) {
     return (
       <>
-        <div className="flex flex-wrap gap-2">
-          {isAdmin && <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
-            const v = prompt('Novo valor (R$):', String(r.amount).replace('.', ','));
-            if (v === null) return;
-            const amount = parseFloat(v.replace(/\./g, '').replace(',', '.'));
-            if (!(amount > 0)) { alert('Valor inválido'); return; }
-            act(r.id, 'adminEdit', { amount });
-          }} aria-label="Editar valor"><Pencil className="h-4 w-4" /> Editar valor</Button>}
-          {canEditDate && <Button size="sm" variant="ghost" disabled={busy} onClick={() => setDateEditId((id) => (id === r.id ? null : r.id))} aria-label="Editar data"><Pencil className="h-4 w-4" /> Editar data</Button>}
-          {isAdmin && <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm(`Excluir este pagamento (${TYPE_LABEL[r.type]} · ${formatBRL(r.amount)})? Registrado na Auditoria.`)) act(r.id, 'adminDelete'); }} aria-label="Excluir"><Trash2 className="h-4 w-4" /> Excluir</Button>}
+        {/* Três botões rotulados por lançamento — e dois deles com o MESMO
+            lápis, que era o que confundia nas notas. Mesmo menu do resto. */}
+        <div className="flex justify-end">
+          <ActionMenu
+            label={`Ações do pagamento de ${r.title}`}
+            items={[
+              ...(isAdmin ? [{
+                label: 'Editar valor', icon: <Pencil />, disabled: busy,
+                onSelect: () => {
+                  const v = prompt('Novo valor (R$):', String(r.amount).replace('.', ','));
+                  if (v === null) return;
+                  const amount = parseFloat(v.replace(/\./g, '').replace(',', '.'));
+                  if (!(amount > 0)) { alert('Valor inválido'); return; }
+                  act(r.id, 'adminEdit', { amount });
+                },
+              }] : []),
+              ...(canEditDate ? [{
+                label: 'Corrigir data', icon: <CalendarClock />, disabled: busy,
+                onSelect: () => setDateEditId((id) => (id === r.id ? null : r.id)),
+              }] : []),
+              ...(isAdmin ? [{
+                label: 'Excluir pagamento', icon: <Trash2 />, destructive: true, disabled: busy,
+                onSelect: () => { if (confirm(`Excluir este pagamento (${TYPE_LABEL[r.type]} · ${formatBRL(r.amount)})? Registrado na Auditoria.`)) act(r.id, 'adminDelete'); },
+              }] : []),
+            ]}
+          />
         </div>
         {dateEditId === r.id && <InlineDateEdit module="payment" id={r.id} current={(r.entryDate ?? r.requestedAt ?? '').slice(0, 10)} onClose={() => setDateEditId(null)} />}
       </>
@@ -257,52 +275,52 @@ function HistoryTab({ items, actions }: { items: PayReq[]; actions?: (r: PayReq)
   ), [items, type, unit, status, q]);
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3">
-        <div className="min-w-[9rem] flex-1">
-          <DsSelect
-            label="Tipo"
-            size="sm"
-            value={type}
-            onValueChange={(v) => setType(v as typeof type)}
-            options={[
-              { value: 'ALL', label: 'Todos os tipos' },
-              { value: 'FREELANCER', label: 'Freelancer' },
-              { value: 'OVERTIME', label: 'Hora Extra' },
-              { value: 'MISC', label: 'Avulso' },
-            ]}
-          />
-        </div>
+      <FilterBar
+        collapsible
+        active={(type !== 'ALL' ? 1 : 0) + (unit !== 'ALL' ? 1 : 0) + (status !== 'ALL' ? 1 : 0) + (q.trim() ? 1 : 0)}
+        onClear={type !== 'ALL' || unit !== 'ALL' || status !== 'ALL' || q.trim() ? () => { setType('ALL'); setUnit('ALL'); setStatus('ALL'); setQ(''); } : undefined}
+        search={<SearchField aria-label="Buscar pagamentos" value={q} onValueChange={setQ} placeholder="Buscar prestador ou beneficiário…" inputSize="sm" />}
+        summary={
+          <>
+            {type !== 'ALL' && <FilterChip>{TYPE_LABEL[type as keyof typeof TYPE_LABEL]}</FilterChip>}
+            {unit !== 'ALL' && <FilterChip>{shortUnitName(unit)}</FilterChip>}
+            {status !== 'ALL' && <FilterChip>{STATUS[status as PayReq['status']].label}</FilterChip>}
+          </>
+        }
+        result={<>{filtered.length} de {items.length}</>}
+      >
+        <FilterSelect
+          label="Tipo"
+          value={type}
+          onValueChange={(v) => setType(v as typeof type)}
+          options={[
+            { value: 'ALL', label: 'Todos os tipos' },
+            { value: 'FREELANCER', label: 'Freelancer' },
+            { value: 'OVERTIME', label: 'Hora Extra' },
+            { value: 'MISC', label: 'Avulso' },
+          ]}
+        />
         {unitNames.length > 1 && (
-          <div className="min-w-[9rem] flex-1">
-            <DsSelect
-              label="Unidade"
-              size="sm"
-              value={unit}
-              onValueChange={setUnit}
-              options={[{ value: 'ALL', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
-            />
-          </div>
-        )}
-        <div className="min-w-[9rem] flex-1">
-          <DsSelect
-            label="Status"
-            size="sm"
-            value={status}
-            onValueChange={(v) => setStatus(v as typeof status)}
-            options={[
-              { value: 'ALL', label: 'Todos os status' },
-              { value: 'PENDING', label: 'Pendente' },
-              { value: 'APPROVED', label: 'Aprovada' },
-              { value: 'PAID', label: 'Paga' },
-              { value: 'REJECTED', label: 'Rejeitada' },
-            ]}
+          <FilterSelect
+            label="Unidade"
+            value={unit}
+            onValueChange={setUnit}
+            options={[{ value: 'ALL', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
           />
-        </div>
-        <div className="min-w-[12rem] flex-1">
-          <SearchField label="Busca" value={q} onValueChange={setQ} placeholder="prestador ou beneficiário…" inputSize="sm" />
-        </div>
-        <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{filtered.length} de {items.length}</span>
-      </div>
+        )}
+        <FilterSelect
+          label="Status"
+          value={status}
+          onValueChange={(v) => setStatus(v as typeof status)}
+          options={[
+            { value: 'ALL', label: 'Todos os status' },
+            { value: 'PENDING', label: 'Pendente' },
+            { value: 'APPROVED', label: 'Aprovada' },
+            { value: 'PAID', label: 'Paga' },
+            { value: 'REJECTED', label: 'Rejeitada' },
+          ]}
+        />
+      </FilterBar>
       <List items={filtered} actions={actions} />
     </div>
   );

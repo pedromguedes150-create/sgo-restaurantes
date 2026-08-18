@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X } from 'lucide-react';
+import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X, Trash2, CalendarClock, Plus, Scale, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
@@ -10,15 +10,17 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { Select } from '@/components/ui/ds/select';
 import { SearchField } from '@/components/ui/ds/field';
+import { FilterBar, FilterSelect, FilterChip } from '@/components/ui/filter-bar';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
 import { QrScanner } from '@/components/notes/qr-scanner';
-import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { postAdmin } from '@/lib/admin-client';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 import { formatBRL } from '@/lib/utils';
 import { Group } from '@/components/ui/ds/group';
+import { Sheet } from '@/components/ui/ds/sheet';
+import { ActionMenu } from '@/components/ui/ds/action-menu';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null }
@@ -86,33 +88,41 @@ function DashFilters({ units, suppliers, filter, purchased, basePath = '/modulos
   { const d = new Date(); for (let i = 0; i < 12; i++) { months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); d.setMonth(d.getMonth() - 1); } }
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3">
-        <div className="min-w-[10rem] flex-1">
-          <Select
-            label="Unidade" size="sm" value={f.unitId} onValueChange={(v) => nav({ unitId: v })}
-            options={[{ value: '', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))]}
-          />
-        </div>
-        <div className="min-w-[10rem] flex-1">
-          <Select
-            label="Fornecedor" size="sm" value={f.supplierId} onValueChange={(v) => nav({ supplierId: v })}
-            options={[{ value: '', label: 'Todos os fornecedores' }, ...suppliers.map((sp) => ({ value: sp.id, label: sp.name }))]}
-          />
-        </div>
-        <div className="min-w-[10rem] flex-1">
-          <Select
-            label="Mês" size="sm" value={f.mes} onValueChange={(v) => nav({ mes: v })}
-            options={[{ value: '', label: 'Todos os meses' }, ...months.map((m) => ({ value: m, label: m.split('-').reverse().join('/') }))]}
-          />
-        </div>
-      </div>
-      {purchased && (
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-ink-900">{purchased.kg.toLocaleString('pt-BR')} kg</p><p className="text-xs text-ink-500">comprado no filtro</p></div>
-          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-base font-black tabular-nums text-ink-900">{formatBRL(purchased.total)}</p><p className="text-xs text-ink-500">valor no filtro</p></div>
-          <div className="rounded-lg border bg-surface p-2.5 text-center"><p className="text-lg font-black tabular-nums text-ink-900">{purchased.count}</p><p className="text-xs text-ink-500">recebimentos</p></div>
-        </div>
-      )}
+      <FilterBar
+        collapsible
+        active={(f.unitId ? 1 : 0) + (f.supplierId ? 1 : 0) + (f.mes ? 1 : 0)}
+        onClear={f.unitId || f.supplierId || f.mes ? () => router.push(basePath) : undefined}
+        summary={
+          <>
+            {f.unitId && <FilterChip>{shortUnitName(units.find((u) => u.id === f.unitId)?.name ?? '')}</FilterChip>}
+            {f.supplierId && <FilterChip>{suppliers.find((s) => s.id === f.supplierId)?.name ?? ''}</FilterChip>}
+            {f.mes && <FilterChip>{f.mes.split('-').reverse().join('/')}</FilterChip>}
+            {!f.unitId && !f.supplierId && !f.mes && <FilterChip>Tudo</FilterChip>}
+          </>
+        }
+        /* SEM `result` aqui: a fileira de números logo abaixo já É o resultado
+           do filtro. Com ele, "45 recebimentos" aparecia três vezes na mesma
+           tela — na barra, no cartão "no filtro" e no cartão "Recebimentos". */
+      >
+        <FilterSelect
+          label="Unidade" value={f.unitId} onValueChange={(v) => nav({ unitId: v })}
+          options={[{ value: '', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))]}
+        />
+        <FilterSelect
+          label="Fornecedor" value={f.supplierId} onValueChange={(v) => nav({ supplierId: v })}
+          options={[{ value: '', label: 'Todos os fornecedores' }, ...suppliers.map((sp) => ({ value: sp.id, label: sp.name }))]}
+        />
+        <FilterSelect
+          label="Mês" value={f.mes} onValueChange={(v) => nav({ mes: v })}
+          options={[{ value: '', label: 'Todos os meses' }, ...months.map((m) => ({ value: m, label: m.split('-').reverse().join('/') }))]}
+        />
+      </FilterBar>
+      {/* A fileira de "comprado/valor/recebimentos no filtro" saiu daqui: era a
+          MESMA coisa que os cartões do Dashboard logo abaixo, com outro
+          desenho. Duas fileiras de números empilhadas, dizendo o mesmo, é o
+          que faz a tela parecer poluída — e nenhum dos dois vira hierarquia,
+          porque os dois gritam igual. O valor total, que só existia aqui,
+          virou um cartão do Dashboard. */}
     </div>
   );
 }
@@ -143,6 +153,7 @@ function ContractProgress({ contracts, compact = false }: { contracts: GasContra
 
 /* ───────── Aba Contratos (gestão — Supervisão/Admin) ───────── */
 function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { contracts: GasContractUI[]; units: Unit[]; suppliers: Supplier[]; canManage: boolean; isAdmin: boolean }) {
+  const [novoContrato, setNovoContrato] = useState(false);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ unitId: '', supplierId: '', startDate: '', endDate: '', quantityKg: '', pricePerKg: '', initialUsedKg: '', note: '' });
@@ -172,9 +183,21 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
 
   return (
     <div className="space-y-4">
+      {/* O formulário ocupava a tela inteira ANTES dos contratos: quem entrava
+          para conferir o andamento via primeiro seis campos vazios, e a lista
+          — o motivo da visita — ficava embaixo. Virou folha, atrás do botão. */}
       {canManage && (
-        <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Novo contrato</p>
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setNovoContrato(true)}><Plus className="h-4 w-4" /> Novo contrato</Button>
+        </div>
+      )}
+      {canManage && (
+        <Sheet
+          open={novoContrato}
+          onClose={() => setNovoContrato(false)}
+          title="Novo contrato"
+          description="Período, quantidade contratada e preço/kg. Os recebimentos lançados abatem sozinhos."
+        >
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <Select
@@ -200,10 +223,10 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
             <Button className="w-full" disabled={busy || !form.unitId || !form.supplierId || !form.startDate || !form.endDate || !form.quantityKg || !form.pricePerKg}
               onClick={async () => {
                 const ok = await post({ action: 'create', unitId: form.unitId, supplierId: form.supplierId, startDate: form.startDate, endDate: form.endDate, quantityKg: num(form.quantityKg), pricePerKg: num(form.pricePerKg), initialUsedKg: form.initialUsedKg ? num(form.initialUsedKg) : undefined, note: form.note });
-                if (ok) setForm({ unitId: '', supplierId: '', startDate: '', endDate: '', quantityKg: '', pricePerKg: '', initialUsedKg: '', note: '' });
+                if (ok) { setForm({ unitId: '', supplierId: '', startDate: '', endDate: '', quantityKg: '', pricePerKg: '', initialUsedKg: '', note: '' }); setNovoContrato(false); }
               }}>Criar contrato</Button>
           </div>
-        </div>
+        </Sheet>
       )}
 
       <ContractProgress contracts={contracts.filter((c) => c.active)} />
@@ -240,15 +263,33 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
                 </div>
               </div>
             ) : (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /> Editar</Button>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => {
-                  const v = prompt('Ajustar posição inicial (kg já comprados antes do SGO):', String(c.initialUsedKg).replace('.', ','));
-                  if (v === null) return;
-                  void post({ action: 'update', id: c.id, initialUsedKg: num(v) });
-                }}>Ajustar posição</Button>
-                <Button size="sm" variant="ghost" disabled={busy} onClick={() => void post({ action: 'update', id: c.id, active: !c.active })}>{c.active ? 'Inativar' : 'Reativar'}</Button>
-                {isAdmin && <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => { if (confirm('Excluir este contrato? (auditado)')) void post({ action: 'delete', id: c.id }); }}>Excluir</Button>}
+              /* Quatro botões rotulados por contrato viravam uma faixa cinza
+                 sob cada linha. Mesmo menu das notas e do histórico. */
+              <div className="mt-1.5 flex justify-end">
+                <ActionMenu
+                  label={`Ações do contrato ${c.unitName} · ${c.supplierName}`}
+                  items={[
+                    { label: 'Editar contrato', icon: <Pencil />, disabled: busy, onSelect: () => openEdit(c) },
+                    {
+                      label: 'Ajustar posição inicial',
+                      icon: <Scale />,
+                      disabled: busy,
+                      onSelect: () => {
+                        const v = prompt('Ajustar posição inicial (kg já comprados antes do SGO):', String(c.initialUsedKg).replace('.', ','));
+                        if (v === null) return;
+                        void post({ action: 'update', id: c.id, initialUsedKg: num(v) });
+                      },
+                    },
+                    { label: c.active ? 'Inativar contrato' : 'Reativar contrato', icon: <Power />, disabled: busy, onSelect: () => void post({ action: 'update', id: c.id, active: !c.active }) },
+                    ...(isAdmin ? [{
+                      label: 'Excluir contrato',
+                      icon: <Trash2 />,
+                      destructive: true,
+                      disabled: busy,
+                      onSelect: () => { if (confirm('Excluir este contrato? (auditado)')) void post({ action: 'delete', id: c.id }); },
+                    }] : []),
+                  ]}
+                />
               </div>
             ))}
           </div>
@@ -400,9 +441,12 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {/* Uma fileira só. O "Valor total" veio da fileira duplicada que existia
+          acima — era o único número dela que não se repetia aqui. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <Cell label="Recebimentos" value={String(d.totalReceipts)} />
         <Cell label="Volume comprado" value={`${d.totalKg.toLocaleString('pt-BR')} kg`} />
+        <Cell label="Valor total" value={formatBRL(d.totalValue)} />
         <Cell label="Preço médio/kg" value={kg(d.avgPrice)} />
         <Cell label="Último preço/kg" value={d.lastPrice != null ? kg(d.lastPrice) : '—'} />
       </div>
@@ -491,6 +535,18 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
   if (rows.length === 0) return <p className="text-sm text-ink-500">Nenhum recebimento registrado.</p>;
 
   function startEdit(r: GasRow) { setEditId(r.id); setEKg(String(r.qty).replace('.', ',')); setETotal(String(r.total).replace('.', ',')); }
+
+  /** Mesma chamada do DeleteOpButton, agora como item de menu (auditado). */
+  async function removeRow(r: GasRow) {
+    if (!confirm(`Excluir o recebimento de gás (${r.date}, ${r.unit})? Esta ação é registrada na Auditoria e não pode ser desfeita.`)) return;
+    const res = await fetch('/api/admin/ops', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entity: 'gas', action: 'delete', id: r.id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { alert(data.error ?? 'Falha ao excluir'); return; }
+    router.refresh();
+  }
   async function saveEdit(r: GasRow) {
     const kgN = parseFloat(eKg.replace(',', '.'));
     const totN = parseFloat(eTotal.replace(',', '.'));
@@ -503,26 +559,30 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
   }
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-end gap-2 rounded-card border border-line bg-surface p-3">
-        <div className="min-w-[12rem] flex-1">
-          <SearchField label="Busca" inputSize="sm" value={q} onValueChange={setQ} placeholder="data, quem lançou, kg, valor…" />
-        </div>
+      <FilterBar
+        collapsible
+        active={(q.trim() ? 1 : 0) + (unit ? 1 : 0) + (supplier ? 1 : 0)}
+        onClear={q.trim() || unit || supplier ? () => { setQ(''); setUnit(''); setSupplier(''); } : undefined}
+        search={<SearchField aria-label="Buscar recebimentos" inputSize="sm" value={q} onValueChange={setQ} placeholder="Buscar data, quem lançou, kg, valor…" />}
+        summary={
+          <>
+            {unit && <FilterChip>{shortUnitName(unit)}</FilterChip>}
+            {supplier && <FilterChip>{supplier}</FilterChip>}
+          </>
+        }
+        result={<>{shown.length} de {rows.length}</>}
+      >
         {unitNames.length > 1 && (
-          <div className="min-w-[10rem] flex-1">
-            <Select
-              label="Unidade" size="sm" value={unit} onValueChange={setUnit}
-              options={[{ value: '', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
-            />
-          </div>
-        )}
-        <div className="min-w-[10rem] flex-1">
-          <Select
-            label="Fornecedor" size="sm" value={supplier} onValueChange={setSupplier}
-            options={[{ value: '', label: 'Todos os fornecedores' }, ...supplierNames.map((sp2) => ({ value: sp2, label: sp2 }))]}
+          <FilterSelect
+            label="Unidade" value={unit} onValueChange={setUnit}
+            options={[{ value: '', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
           />
-        </div>
-        <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{shown.length} de {rows.length}</span>
-      </div>
+        )}
+        <FilterSelect
+          label="Fornecedor" value={supplier} onValueChange={setSupplier}
+          options={[{ value: '', label: 'Todos os fornecedores' }, ...supplierNames.map((sp2) => ({ value: sp2, label: sp2 }))]}
+        />
+      </FilterBar>
       {shown.map((r) => {
         const tone: StatusTone = r.variation == null ? 'neutral' : r.variation > 0 ? (r.alerted ? 'critical' : 'medium') : 'success';
         return (
@@ -535,6 +595,20 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
               {r.variation != null && (
                 <StatusBadge tone={tone}>{r.variation > 0 ? <TrendingUp className="mr-0.5 inline h-3 w-3" /> : <TrendingDown className="mr-0.5 inline h-3 w-3" />}{r.variation > 0 ? '+' : ''}{r.variation}%</StatusBadge>
               )}
+              {/* Mesmo menu das notas. Antes eram três botões soltos por linha,
+                  dois deles com o MESMO lápis — e, com a lista de notas já
+                  usando "···", o módulo ficava metade de um jeito e metade de
+                  outro na mesma tela. */}
+              {(isAdmin || canEditDate) && (
+                <ActionMenu
+                  label={`Ações do recebimento de ${r.date}`}
+                  items={[
+                    ...((isAdmin || canEditDate) ? [{ label: 'Corrigir kg e valor', icon: <Pencil />, onSelect: () => startEdit(r) }] : []),
+                    ...(canEditDate ? [{ label: 'Corrigir data', icon: <CalendarClock />, onSelect: () => setDateEditId((id) => (id === r.id ? null : r.id)) }] : []),
+                    ...(isAdmin ? [{ label: 'Excluir recebimento', icon: <Trash2 />, destructive: true, onSelect: () => void removeRow(r) }] : []),
+                  ]}
+                />
+              )}
             </div>
             {r.alerted && <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-danger"><AlertTriangle className="h-3.5 w-3.5" /> Alta acima do limite</p>}
             {r.dateEdited && <p className="mt-1 text-xs font-semibold text-danger">Data corrigida{r.dateEditedByName ? ` por ${r.dateEditedByName}` : ''} — desconta na meta</p>}
@@ -546,13 +620,7 @@ function History({ rows, isAdmin, canEditDate = false }: { rows: GasRow[]; isAdm
                 <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>Cancelar</Button>
                 <span className="w-full text-[11px] text-ink-500">Correção de erro de lançamento — recalcula o preço/kg. Não interfere na meta do gerente.</span>
               </div>
-            ) : (isAdmin || canEditDate) && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(isAdmin || canEditDate) && <Button size="sm" variant="ghost" onClick={() => startEdit(r)}><Pencil className="h-4 w-4" /> Editar lançamento</Button>}
-                {canEditDate && <Button size="sm" variant="ghost" onClick={() => setDateEditId((id) => (id === r.id ? null : r.id))}><Pencil className="h-4 w-4" /> Editar data</Button>}
-                {isAdmin && <DeleteOpButton entity="gas" id={r.id} label={`o recebimento de gás (${r.date}, ${r.unit})`} />}
-              </div>
-            )}
+            ) : null}
             {dateEditId === r.id && <InlineDateEdit module="gas" id={r.id} current={r.date} onClose={() => setDateEditId(null)} />}
           </div>
         );
