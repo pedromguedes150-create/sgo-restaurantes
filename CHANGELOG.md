@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.45.1 — 2026-08-18 (Troca de família vira link, não menu)
+
+### Corrigido
+- **O menu de troca entre módulos irmãos abria com os itens VAZIOS em produção** (visto em Comandas, no botão ao lado de Caixa). Não reproduzi em desenvolvimento — os itens apareciam certos aqui — mas achei no caminho um defeito real de HTML: o wrapper era  e o menu abre com , aninhamento **inválido**, e cada navegador se recupera disso de um jeito.
+- **A peça saiu inteira, em vez de ser remendada.** Um popover para escolher entre dois ou três irmãos não compra nada: custa um toque a mais, some da tela e traz posicionamento, recorte, foco e teclado para resolver. Agora são **links diretos**, visíveis sem clique — não há o que quebrar. Medido: contraste 9,46:1 no claro e 9,58:1 no escuro, e a página que já tinha trilho próprio (Notas) segue com **um** trilho.
+
+> Não deixo navegação dependendo de algo que falha e eu não sei explicar.
+
 ## v1.45.0 — 2026-08-18 (Menu de 21 entradas cai para 11 · hub do celular refeito)
 
 ### Alterado
