@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -64,6 +65,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
           </div>
         }
       />
+      <FamilyTabs active="/modulos/comandas" />
 
       {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
 

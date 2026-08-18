@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listInventory } from '@/lib/inventory';
@@ -26,6 +27,7 @@ export default async function InventarioPage() {
   return (
     <div className="space-y-5">
       <LargeTitle title="Inventário" />
+      <FamilyTabs active="/modulos/inventario" />
 
       {/* Seção 1: inventário do Teknisa (acompanhamento da tarefa) */}
       <Card>

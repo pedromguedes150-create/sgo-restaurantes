@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getMetaBreakdown, getMetaRanking } from '@/lib/metas/query';
@@ -57,6 +58,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
           <div className="flex gap-2 print:hidden">
             <a href={exportHref}><DsButton size="sm" variant="secondary"><Download className="h-4 w-4" /> Excel</DsButton></a>
             <PrintButton label="PDF" />
+      <FamilyTabs active="/modulos/metas" />
           </div>
         }
       />

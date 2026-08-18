@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { Eye } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
@@ -40,6 +41,7 @@ export default async function SupervisaoPage({ searchParams }: { searchParams: {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <LargeTitle title="Rotina do Supervisor" subtitle="Painel de uso dos gerentes, visitas com feedback e checklists de visita." />
+          <FamilyTabs active="/modulos/supervisao" />
         </div>
         <Link href="/modulos/painel-unidade" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">📋 Painel da unidade (reunião)</Link>
       </div>

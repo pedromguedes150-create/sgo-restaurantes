@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { FileText } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
@@ -35,6 +36,7 @@ export default async function CancelamentosPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <LargeTitle title="Cancelamento de Cupons" />
+        <FamilyTabs active="/modulos/cancelamentos" />
         <div className="flex flex-wrap gap-2">
           {['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role) && <Link href="/modulos/cancelamentos/analise" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🛡️ Análise antifraude (PDF)</Link>}
           <Link href="/modulos/cancelamentos/relatorio" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-sunken"><FileText className="h-4 w-4" /> Relatório</Link>

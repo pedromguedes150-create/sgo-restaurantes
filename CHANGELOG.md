@@ -9,6 +9,20 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.45.0 — 2026-08-18 (Menu de 21 entradas cai para 11 · hub do celular refeito)
+
+### Alterado
+- **O menu encurtou de 21 para 11 entradas**, no celular e no desktop. Módulos irmãos passaram a morar juntos em **famílias**: **Caixa** (Comandas · Cancelamentos · Troco), **Suprimentos** (Notas Recebidas · Inventário · Pedidos), **Rotinas da unidade** (Coleta de Óleo · Higiene), **Performance** (Metas · Supervisão · Executivo), **Treinamentos** (Treinamentos + POPs, que no código já eram a mesma coisa) e **Pessoas** (Colaboradores + Controle de gerentes). Fonte única em `src/lib/nav-families.ts`, lida pela sidebar, pelo hub do celular e pelo ⌘K.
+- **Desperdícios, Ocorrências, Pagamentos, Minha área e Comunicação ficaram sozinhos** de propósito: são diários e pesados, e agrupá-los só para reduzir a contagem esconderia o que mais se usa.
+- **Hub do celular refeito.** Eram 21 cartões em grade de 2 colunas: **1.586px** de página (duas telas de rolagem) e cartões com **duas alturas** (98px e 118px), porque cinco rótulos quebravam em duas linhas. Virou lista agrupada de uma coluna, todas as linhas com **44px**, **866px** de página — 1,07 tela. Ganhou **busca** que ignora acento ("oleo" acha "Coleta de Óleo") e casa parcial.
+- **"Treinamento da Plataforma" saiu do hub** — já é o 🎓 fixo no cabeçalho, em qualquer aparelho.
+
+### Decisões de risco registradas
+- **As rotas NÃO se moveram.** Os links de notificação ficam gravados em `Notification.link` apontando para `/modulos/*`; mover caminho quebraria todo aviso antigo (a pessoa toca na notificação e cai em 404). Link salvo e favorito continuam funcionando.
+- **A família não virou trilho de abas.** Notas, Pessoas, Inventário, Pedidos e Supervisão **já têm trilho próprio**, e uma barra da família em cima recriaria os dois trilhos empilhados removidos na v1.44.0. Virou um botão ao lado do título ("Caixa ⌄"), reusando o menu de ações — um padrão só nas quinze páginas, com ou sem abas próprias.
+- **O ⌘K passou a incluir os irmãos das famílias.** Sem isso, Troco, Cancelamentos, Inventário, Pedidos, POPs, Supervisão, Executivo e Controle de gerentes deixariam de ser **encontráveis na busca** — um menu curto que esconde destino é pior que um menu longo.
+- **Permissões intactas:** as 30 chaves da matriz de Perfis seguem, e o botão de família só oferece irmão que o perfil pode ver.
+
 ## v1.44.0 — 2026-08-18 (Notas Recebidas reorganizado · gás salva com mensagem clara · categorias de manutenção)
 
 ### Corrigido

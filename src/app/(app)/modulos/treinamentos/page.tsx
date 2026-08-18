@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { FamilyTabs } from '@/components/layout/family-tabs';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -23,6 +24,7 @@ export default async function TreinamentosPage({ searchParams }: { searchParams:
     <div className="space-y-4">
       <Link href="/modulos/pops" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> POPs</Link>
       <LargeTitle title="Treinamentos" />
+      <FamilyTabs active="/modulos/treinamentos" />
       <p className="text-sm text-ink-500">Acompanhe por setor quem está com treinamento pendente, realizado ou vencido. Conta na meta (peso {weight}).</p>
 
       {units.length > 1 && <UnitSelectNav units={units} selected={selected.id} />}
