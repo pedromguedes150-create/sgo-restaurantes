@@ -34,10 +34,10 @@ export default async function NotasPage({ searchParams }: { searchParams: { dias
     <div className="space-y-5">
       <LargeTitle title="Notas Recebidas" />
       <FamilyTabs active="/modulos/notas" />
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <StatCard label="a pagar" value={summary.received} />
         <StatCard label="c/ problema" value={summary.problem} tone="danger" />
-        <StatCard label="no mês" value={formatBRL(summary.monthValue)} />
+        <StatCard label="no mês" value={formatBRL(summary.monthValue)} className="col-span-2 sm:col-span-1" />
       </div>
       <Card>
         <CardContent className="pt-4">

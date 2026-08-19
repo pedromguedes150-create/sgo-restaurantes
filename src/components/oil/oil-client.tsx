@@ -121,10 +121,10 @@ function Dashboard({ d }: { d: OilDash }) {
   const maxM = Math.max(...d.monthly.map((m) => m.total), 1);
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <Cell label="Litros (6m)" value={d.totalLiters.toLocaleString('pt-BR')} />
-        <Cell label="Recebido (6m)" value={formatBRL(d.totalValue)} />
         <Cell label="Médio/litro" value={perL(d.avgPricePerLiter)} />
+        <Cell label="Recebido (6m)" value={formatBRL(d.totalValue)} className="col-span-2 sm:col-span-1" />
       </div>
       <div>
         <h2 className="mb-1 sgo-type-11 font-semibold text-ink-900">Por unidade</h2>
@@ -164,8 +164,8 @@ function Dashboard({ d }: { d: OilDash }) {
   );
 }
 
-function Cell({ label, value }: { label: string; value: string }) {
-  return <StatCard label="{label}" value={value} />;
+function Cell({ label, value, className }: { label: string; value: string; className?: string }) {
+  return <StatCard label={label} value={value} className={className} />;
 }
 
 function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdmin: boolean; canEditDate?: boolean }) {

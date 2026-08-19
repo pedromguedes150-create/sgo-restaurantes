@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start -p 3100",
     "lint": "next lint",
-    "lint:ds": "stylelint \"src/**/*.css\" && node scripts/check-ds-tokens.cjs && node scripts/check-palette-keys.cjs && node scripts/check-dialog-focus.cjs && node scripts/check-dead-ternary.cjs && node scripts/check-type-scale.cjs",
+    "lint:ds": "stylelint \"src/**/*.css\" && node scripts/check-ds-tokens.cjs && node scripts/check-palette-keys.cjs && node scripts/check-dialog-focus.cjs && node scripts/check-dead-ternary.cjs && node scripts/check-type-scale.cjs && node scripts/check-jsx-props.cjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
