@@ -9,6 +9,34 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.49.1 — 2026-08-19 (A grade mostra TODOS os números, cada um com a cor do seu status)
+
+### Melhorado
+- **As comandas em apuração e as baixadas voltaram para a grade, coloridas.** Antes elas eram
+  removidas: a grade pulava de 6 para 8, de 13 para 15, de 36 para 38 — e o gerente não tinha como
+  saber se aquele número nunca existiu, foi baixado ou está em apuração. **Sumir não é informação.**
+  Agora a grade mostra a sequência inteira, cada número com a sua cor:
+
+  | Cor | Status |
+  |---|---|
+  | verde | conferida |
+  | azul | em uso (com cliente) |
+  | âmbar | **em apuração** — resolve no bloco Divergências |
+  | cinza riscado | **baixada** (perdida, fora da sequência) |
+  | sem cor | ainda não conferida |
+
+- **Âmbar e cinza riscado não são clicáveis**, e o motivo aparece ao passar o mouse. Elas se
+  resolvem no bloco de Divergências, não na contagem do dia. "Marcar todas" e "Marcar faixa"
+  também as respeitam — o contador continua sendo sobre o que dá para conferir.
+- Legenda das duas cores novas no topo da grade, com a contagem de cada uma.
+
+### Acessibilidade
+- A célula de baixada nasceu em `ink-400` e foi medida em **3,86:1** no tema claro e 4,25:1 no
+  escuro — bem abaixo dos 7:1 exigidos para texto de 13px. Passou para `ink-500`: **7,01:1** e
+  **7,02:1**. Os cinco estados foram medidos nos dois temas antes de subir.
+
+---
+
 ## v1.49.0 — 2026-08-19 (A grade abre no status da última contagem, e "em uso" para de virar faltante)
 
 ### Corrigido — defeito sério

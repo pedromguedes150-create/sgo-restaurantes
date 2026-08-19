@@ -32,6 +32,7 @@ export function CommandsClient({
   hasConfig,
   todayDone,
   activeNumbers = [],
+  lostNumbers = [],
   ultimaContagem = null,
   openDivergences,
 }: {
@@ -41,6 +42,8 @@ export function CommandsClient({
   hasConfig: boolean;
   todayDone: boolean;
   activeNumbers?: number[];
+  /** Baixadas (perdidas). Saíram da sequência ativa, mas continuam existindo. */
+  lostNumbers?: number[];
   ultimaContagem?: UltimaContagem | null;
   openDivergences: Divergence[];
 }) {
@@ -134,7 +137,7 @@ export function CommandsClient({
         )}
 
         {/* Conferência em grade: seleciona as presentes; as não marcadas = faltando */}
-        <GridConference unitId={unitId} activeNumbers={activeNumbers} underReview={openDivergences.map((d) => d.number)} ultimaContagem={ultimaContagem} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
+        <GridConference unitId={unitId} activeNumbers={activeNumbers} lostNumbers={lostNumbers} underReview={openDivergences.map((d) => d.number)} ultimaContagem={ultimaContagem} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
 
         <Button onClick={allPresent} disabled={busy} size="lg" className="w-full" variant="default">
           <Check className="h-5 w-5" /> Todas presentes (atalho)
@@ -196,15 +199,28 @@ export function CommandsClient({
   );
 }
 
-function GridConference({ unitId, activeNumbers, underReview = [], ultimaContagem = null, busy, setBusy, onResult }: {
-  unitId: string; activeNumbers: number[]; underReview?: number[];
+function GridConference({ unitId, activeNumbers, lostNumbers = [], underReview = [], ultimaContagem = null, busy, setBusy, onResult }: {
+  unitId: string; activeNumbers: number[]; lostNumbers?: number[]; underReview?: number[];
   ultimaContagem?: UltimaContagem | null;
   busy: boolean; setBusy: (b: boolean) => void; onResult: (m: { t: 'ok' | 'err'; m: string }) => void;
 }) {
   const router = useRouter();
-  // Comandas já em divergência/apuração SAEM da grade (16/07) — são tratadas no bloco abaixo.
   const reviewSet = useMemo(() => new Set(underReview), [underReview]);
-  const gridNumbers = useMemo(() => activeNumbers.filter((n) => !reviewSet.has(n)), [activeNumbers, reviewSet]);
+  const lostSet = useMemo(() => new Set(lostNumbers), [lostNumbers]);
+
+  /* A GRADE MOSTRA TODOS OS NÚMEROS DA SEQUÊNCIA, cada um com o seu status.
+     Antes as em apuração e as baixadas simplesmente sumiam: a grade pulava de 6
+     para 8, de 13 para 15, e o gerente não tinha como saber se aquele número
+     nunca existiu, foi baixado ou está em apuração. Sumir não é informação. */
+  const gridNumbers = useMemo(
+    () => [...new Set([...activeNumbers, ...lostNumbers])].sort((a, b) => a - b),
+    [activeNumbers, lostNumbers],
+  );
+  /** Só estas podem ser marcadas: apuração e baixa se resolvem em outro lugar. */
+  const conferiveis = useMemo(
+    () => activeNumbers.filter((n) => !reviewSet.has(n) && !lostSet.has(n)),
+    [activeNumbers, reviewSet, lostSet],
+  );
   /* A grade abre NO ESTADO DA ÚLTIMA CONTAGEM. Antes começava sempre vazia:
      mesmo com a contagem do dia registrada, aparecia "0 ok · 648 faltando" e
      corrigir exigia remarcar tudo. */
@@ -214,7 +230,7 @@ function GridConference({ unitId, activeNumbers, underReview = [], ultimaContage
   const [obs, setObs] = useState('');
   const [rangeFrom, setRangeFrom] = useState('');
   const [rangeTo, setRangeTo] = useState('');
-  const total = gridNumbers.length;
+  const total = conferiveis.length;
   const conferidas = selected.size;
   const emUso = inUse.size;
   const faltando = total - conferidas - emUso;
@@ -240,7 +256,7 @@ function GridConference({ unitId, activeNumbers, underReview = [], ultimaContage
     const lo = Math.min(a, b), hi = Math.max(a, b);
     setSelected((s) => {
       const x = new Set(s);
-      for (const n of gridNumbers) if (n >= lo && n <= hi) { if (mark) x.add(n); else x.delete(n); }
+      for (const n of conferiveis) if (n >= lo && n <= hi) { if (mark) x.add(n); else x.delete(n); }
       return x;
     });
     if (!mark) setInUse((s) => { const x = new Set(s); const a2 = lo, b2 = hi; for (const n of [...x]) if (n >= a2 && n <= b2) x.delete(n); return x; });
@@ -273,8 +289,23 @@ function GridConference({ unitId, activeNumbers, underReview = [], ultimaContage
     <div className="rounded-lg border-2 border-brand/30 bg-brand/5 p-3">
       <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink-900"><Grid3x3 className="h-4 w-4" /> Conferência em grade</h2>
       <p className="mb-2 text-xs text-ink-500">Toque 1× = <b className="text-success">conferida</b> · 2× = <b className="text-info">em uso</b> (com cliente — conta como presente) · 3× = limpa. As <b>não marcadas</b> viram apuração.</p>
-      {underReview.length > 0 && (
-        <p className="mb-2 rounded-md bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">{underReview.length} comanda(s) já em apuração — fora da grade (trate no bloco Divergências abaixo).</p>
+      {/* Legenda das cores que NÃO se marca: elas estão na grade para o número
+          não sumir do meio da sequência, mas se resolvem em outro lugar. */}
+      {(underReview.length > 0 || lostNumbers.length > 0) && (
+        <p className="mb-2 text-xs text-ink-500">
+          {underReview.length > 0 && (
+            <>
+              <span className="rounded bg-warning-bg px-1.5 py-0.5 font-semibold text-warning">em apuração</span>
+              {' '}({underReview.length}) — resolva no bloco Divergências, abaixo.{' '}
+            </>
+          )}
+          {lostNumbers.length > 0 && (
+            <>
+              <span className="rounded bg-sunken px-1.5 py-0.5 font-semibold text-ink-500 line-through">baixada</span>
+              {' '}({lostNumbers.length}) — perdida, fora da sequência.
+            </>
+          )}
+        </p>
       )}
       {ultimaContagem && (selected.size > 0 || inUse.size > 0) && (
         /* De onde vieram as marcas. Sem isto, uma grade que abre verde vira
@@ -288,7 +319,7 @@ function GridConference({ unitId, activeNumbers, underReview = [], ultimaContage
         </p>
       )}
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <button onClick={() => { setSelected(new Set(gridNumbers)); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Marcar todas</button>
+        <button onClick={() => { setSelected(new Set(conferiveis)); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Marcar todas</button>
         <button onClick={() => { setSelected(new Set()); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Limpar</button>
         <Input inputMode="numeric" value={filter} onChange={(e) => setFilter(e.target.value.replace(/\D/g, ''))} aria-label="Filtrar comandas pelo número" placeholder="filtrar nº" className="h-8 w-24 text-sm" />
         <span className="ml-auto text-xs font-semibold"><span className="text-success">{conferidas} ok</span>{emUso > 0 && <> · <span className="text-info">{emUso} em uso</span></>} · <span className={faltando > 0 ? 'text-danger' : 'text-ink-500'}>{faltando} faltando</span> / {total}</span>
@@ -305,7 +336,21 @@ function GridConference({ unitId, activeNumbers, underReview = [], ultimaContage
       <div className="max-h-72 overflow-y-auto rounded-md border bg-surface p-2">
         <div className="grid grid-cols-6 gap-1 sm:grid-cols-10">
           {shown.map((n) => (
-            <button key={n} onClick={() => toggle(n)} className={`rounded px-1 py-1 text-xs font-semibold ${selected.has(n) ? 'bg-success text-on-brand' : inUse.has(n) ? 'bg-info text-on-brand' : 'border text-ink-500'}`}>{n}</button>
+            <button
+              key={n}
+              onClick={() => toggle(n)}
+              disabled={reviewSet.has(n) || lostSet.has(n)}
+              title={reviewSet.has(n) ? 'Em apuração — resolva no bloco Divergências' : lostSet.has(n) ? 'Baixada (perdida) — fora da sequência' : undefined}
+              className={`rounded px-1 py-1 text-xs font-semibold ${
+                lostSet.has(n) ? 'bg-sunken text-ink-500 line-through'
+                : reviewSet.has(n) ? 'bg-warning-bg text-warning'
+                : selected.has(n) ? 'bg-success text-on-brand'
+                : inUse.has(n) ? 'bg-info text-on-brand'
+                : 'border text-ink-500'
+              }`}
+            >
+              {n}
+            </button>
           ))}
         </div>
         {shown.length === 0 && <p className="p-2 text-xs text-ink-500">Nenhum número com esse filtro.</p>}

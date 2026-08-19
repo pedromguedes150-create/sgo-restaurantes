@@ -177,6 +177,8 @@ export const GUIDE: GuideSection[] = [
           'A GRADE ABRE COMO VOCÊ DEIXOU na última contagem: as conferidas já vêm verdes e as em uso azuis. Para corrigir a contagem do dia, ajuste só o que mudou e reenvie — não precisa marcar tudo de novo.',
           'Se as marcas forem de um dia ANTERIOR, um aviso vermelho diz a data. Nesse caso elas são só ponto de partida: confira a bandeja antes de confirmar, senão você registra o que estava ontem.',
           'Comanda marcada EM USO (azul, com cliente) conta como PRESENTE e não gera divergência — antes ela era enviada como faltante por engano.',
+          'A GRADE MOSTRA TODOS OS NÚMEROS da sequência, cada um com sua cor: verde = conferida · azul = em uso · âmbar = EM APURAÇÃO (resolva no bloco Divergências) · cinza riscado = BAIXADA (perdida, fora da sequência) · sem cor = ainda não conferida. Antes as em apuração e as baixadas sumiam da grade e o número pulava, sem explicar por quê.',
+          'Âmbar e cinza riscado não são clicáveis: elas se resolvem no bloco de Divergências, não na contagem do dia.',
         ],
       },
       {
