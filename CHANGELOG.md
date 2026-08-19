@@ -9,6 +9,27 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.48.4 — 2026-08-19 (Só o leitor físico: sai o caminho por câmera das comandas)
+
+### Removido
+- **Tela de diagnóstico do leitor por câmera** (`/modulos/comandas/diagnostico-leitor`) e o
+  componente `BarcodeDiagnostics`, além do atalho na Conferência por leitor. Decisão do Pedro: a
+  conferência de comandas usa **somente o leitor físico**, que é o que está em uso no balcão.
+- Nada da **calibração** foi perdido: o que a tela descobriu está gravado no parser
+  (`src/lib/commands/barcode.ts`) e nos 23 testes — CODE_128 com o número em 4 dígitos, leitura
+  exata para etiqueta curta, e o QR do cartão reconhecido como não-comanda. A tela era o
+  instrumento de medida; a medida ficou.
+- O leitor por **câmera das Notas Recebidas continua intacto** — ali a câmera lê a NFC-e e é o fluxo
+  principal. O `@zxing` segue no projeto por causa dela.
+
+### Melhorado
+- Central de treinamento (`/ajuda`), guia "Conferência de comandas com leitor": explica que o cartão
+  tem dois códigos e que o QR é ignorado sozinho, que a releitura do leitor apontado não é erro, e
+  que a maioria dos leitores 2D permite **desativar a leitura de QR** no próprio aparelho — o que
+  deixa a bipagem mais rápida.
+
+---
+
 ## v1.48.3 — 2026-08-19 (Conferência por leitor: ignora o QR do cartão e a releitura do leitor de mão)
 
 ### Corrigido
