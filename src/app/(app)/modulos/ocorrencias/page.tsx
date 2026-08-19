@@ -115,7 +115,7 @@ export default async function OcorrenciasPage({
         <Banner
           tone="info"
           title="Chamados e planos preventivos ficam no módulo Manutenção"
-          action={<Link href="/modulos/manutencao" className="text-[13px] font-semibold text-brand hover:underline">Abrir Manutenção →</Link>}
+          action={<Link href="/modulos/manutencao" className="text-xs font-semibold text-brand hover:underline">Abrir Manutenção →</Link>}
         />
       )}
 
@@ -148,7 +148,7 @@ export default async function OcorrenciasPage({
           tone="danger"
           title={`${summary.criticalOpen} ocorrência(s) crítica(s) aberta(s)`}
           description="Gravidade crítica avisa a diretoria na abertura. Encerre com ação corretiva."
-          action={<Link href={link({ status: 'OPEN', pagina: 1 })} className="text-[13px] font-semibold text-brand hover:underline">Ver abertas →</Link>}
+          action={<Link href={link({ status: 'OPEN', pagina: 1 })} className="text-xs font-semibold text-brand hover:underline">Ver abertas →</Link>}
         />
       )}
 

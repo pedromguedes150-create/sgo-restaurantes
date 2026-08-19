@@ -75,7 +75,7 @@ export function AuditClient({ rows }: { rows: AuditRow[] }) {
         />
       </div>
 
-      <p className="text-[13px] tabular-nums text-ink-500">
+      <p className="text-xs tabular-nums text-ink-500">
         {filtered.length} de {rows.length} registro(s).
       </p>
 
@@ -91,7 +91,7 @@ export function AuditClient({ rows }: { rows: AuditRow[] }) {
               trailing={
                 <>
                   <StatusBadge tone="neutral">{r.modLabel}</StatusBadge>
-                  <span className="hidden text-[12px] tabular-nums text-ink-500 sm:inline">
+                  <span className="hidden text-xs tabular-nums text-ink-500 sm:inline">
                     {new Date(r.createdAt).toLocaleString('pt-BR')}
                   </span>
                 </>

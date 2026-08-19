@@ -62,7 +62,7 @@ export function FilterBar({
             type="button"
             onClick={() => setAberto((v) => !v)}
             aria-expanded={aberto}
-            className="sgo-control inline-flex items-center gap-1.5 rounded-control border border-line-strong px-2.5 py-1 text-[13px] font-semibold text-ink-700 outline-none transition-colors duration-sgo-2 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus"
+            className="sgo-control inline-flex items-center gap-1.5 rounded-control border border-line-strong px-2.5 py-1 text-xs font-semibold text-ink-700 outline-none transition-colors duration-sgo-2 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus"
           >
             <Filter className="h-3.5 w-3.5" aria-hidden /> {title}
             {active ? <span className="rounded-pill bg-brand-tint-2 px-1.5 text-[11px] font-bold tabular-nums text-brand">{active}</span> : null}
@@ -76,14 +76,14 @@ export function FilterBar({
 
         {!mostrarControles && summary}
 
-        {result && <span className="ml-auto text-[13px] font-semibold tabular-nums text-ink-900">{result}</span>}
+        {result && <span className="ml-auto text-xs font-semibold tabular-nums text-ink-900">{result}</span>}
 
         {onClear && active ? (
           <button
             type="button"
             onClick={onClear}
             className={cn(
-              'flex items-center gap-1 rounded-control px-1.5 py-0.5 text-[12px] font-semibold text-ink-500 outline-none hover:text-danger focus-visible:shadow-sgo-focus',
+              'flex items-center gap-1 rounded-control px-1.5 py-0.5 text-xs font-semibold text-ink-500 outline-none hover:text-danger focus-visible:shadow-sgo-focus',
               !result && 'ml-auto',
             )}
           >
@@ -100,7 +100,7 @@ export function FilterBar({
 /** Etiqueta do resumo: o que está filtrado, quando a barra está recolhida. */
 export function FilterChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-pill bg-sunken px-2 py-0.5 text-[12px] font-medium text-ink-700">{children}</span>
+    <span className="rounded-pill bg-sunken px-2 py-0.5 text-xs font-medium text-ink-700">{children}</span>
   );
 }
 

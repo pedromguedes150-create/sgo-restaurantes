@@ -24,8 +24,8 @@ export default async function TerminationReportPage({ params }: { params: { id: 
       </div>
 
       <div className="border-b-2 border-brand pb-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-ink-900">Solicitação de Desligamento — SGO Beija Flor</p>
-        <h1 className="text-2xl font-black text-ink-900">{t.collaboratorName}</h1>
+        <p className="sgo-type-11 font-semibold text-ink-900">Solicitação de Desligamento — SGO Beija Flor</p>
+        <h1 className="text-2xl font-bold text-ink-900">{t.collaboratorName}</h1>
         <p className="text-sm text-ink-500">{t.unit.name} · {STAT[t.status]}</p>
       </div>
 
@@ -44,12 +44,12 @@ export default async function TerminationReportPage({ params }: { params: { id: 
       </table>
 
       <div>
-        <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Motivo do desligamento</p>
+        <p className="sgo-type-11 font-semibold text-ink-500">Motivo do desligamento</p>
         <p className="whitespace-pre-wrap text-sm">{t.reason}</p>
       </div>
 
       <div className="rounded border border-line-strong p-2">
-        <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Parecer do supervisor</p>
+        <p className="sgo-type-11 font-semibold text-ink-500">Parecer do supervisor</p>
         <p className="text-sm">{t.status === 'PENDING' ? 'Aguardando.' : `${STAT[t.status]} por ${t.approvedBy?.name ?? '—'} em ${fmt(t.approvedAt)}.`}</p>
         {t.rejectionReason && <p className="mt-1 text-sm"><b>Motivo da recusa:</b> {t.rejectionReason}</p>}
       </div>

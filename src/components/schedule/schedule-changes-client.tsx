@@ -71,7 +71,7 @@ export function ScheduleChangesClient({ rows, units, selectedUnitId, collabs, ca
 
       {canCreate && (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Registrar troca (avisa o RH)</p>
+          <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Registrar troca (avisa o RH)</p>
           <div className="space-y-2">
             <Select
               label="Colaborador" size="sm" placeholder="Selecione…" value={aId} onValueChange={setAId}
@@ -94,7 +94,7 @@ export function ScheduleChangesClient({ rows, units, selectedUnitId, collabs, ca
       )}
 
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Registro de trocas ({rows.length})</p>
+        <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Registro de trocas ({rows.length})</p>
         {rows.length === 0 && <p className="text-sm text-ink-500">Nenhuma troca registrada ainda.</p>}
         <Group>
           {rows.map((r) => (

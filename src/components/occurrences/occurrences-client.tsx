@@ -130,7 +130,7 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
               ]}
             />
           </div>
-          <span className="ml-auto pb-2 text-[13px] tabular-nums text-ink-500">{filtered.length} ocorrência(s)</span>
+          <span className="ml-auto pb-2 text-xs tabular-nums text-ink-500">{filtered.length} ocorrência(s)</span>
         </div>
       </div>
 
@@ -145,7 +145,7 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
           {groups.map(([unitName, list]) => (
             <details key={unitName} className="group rounded-lg border bg-surface">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5">
-                <span className="text-sm font-bold uppercase tracking-wide text-ink-500">
+                <span className="sgo-type-11 font-semibold text-ink-900">
                   {unitName} <span className="font-normal">({list.length})</span>
                 </span>
                 <ChevronDown className="h-4 w-4 shrink-0 text-ink-500 transition-transform group-open:rotate-180" />

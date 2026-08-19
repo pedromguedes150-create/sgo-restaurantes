@@ -31,7 +31,7 @@ export function UnitSwitcher({ units, selectedId }: { units: UnitOption[]; selec
   // Uma unidade só: rótulo estático, sem dropdown.
   if (units.length === 1) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-control px-2 text-[13px] font-medium text-ink-700" title={selected.name}>
+      <span className="inline-flex items-center gap-1.5 rounded-control px-2 text-xs font-medium text-ink-700" title={selected.name}>
         <Building2 className="h-4 w-4 shrink-0 text-ink-400" />
         <span className="max-w-[10rem] truncate">{shortUnitName(selected.name)}</span>
       </span>
@@ -55,7 +55,7 @@ export function UnitSwitcher({ units, selectedId }: { units: UnitOption[]; selec
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line-strong bg-surface px-2.5 text-[13px] font-medium text-ink-900 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus"
+        className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line-strong bg-surface px-2.5 text-xs font-medium text-ink-900 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus"
       >
         <Building2 className="h-4 w-4 shrink-0 text-ink-400" />
         <span className="max-w-[9rem] truncate">{shortUnitName(selected.name)}</span>
@@ -77,7 +77,7 @@ export function UnitSwitcher({ units, selectedId }: { units: UnitOption[]; selec
                   aria-selected={active}
                   onClick={() => choose(u.id)}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-[14px] outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
+                    'flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-sm outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
                     active ? 'bg-brand-tint text-brand' : 'text-ink-700 hover:bg-sunken',
                   )}
                 >

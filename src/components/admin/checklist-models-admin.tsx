@@ -39,7 +39,7 @@ export function ChecklistModelsAdmin({ models }: { models: ModelRow[] }) {
 
       {groups.map(([cat, list]) => (
         <div key={cat}>
-          <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-900">{cat} ({list.length})</p>
+          <p className="mb-1 mt-1 sgo-type-11 font-semibold tracking-wide text-ink-900">{cat} ({list.length})</p>
           <div className="space-y-2">
             {list.map((m) => <ModelItemRow key={m.id} m={m} onChange={() => router.refresh()} />)}
           </div>
@@ -110,7 +110,7 @@ function ModelItemRow({ m, onChange }: { m: ModelRow; onChange: () => void }) {
 
       {viewing && !editing && (
         <div className="mt-2 rounded-lg bg-sunken/40 p-2">
-          {m.category && <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-900">{m.category}{m.moment ? ` · ${m.moment}` : ''}</p>}
+          {m.category && <p className="mb-1 sgo-type-11 font-semibold tracking-wide text-ink-900">{m.category}{m.moment ? ` · ${m.moment}` : ''}</p>}
           <ul className="space-y-1">
             {m.items.map((it, i) => (
               <li key={i} className="flex items-start gap-2 text-sm">
@@ -182,7 +182,7 @@ function ModelForm({ edit, onDone, onCancel }: { edit?: ModelRow; onDone: () => 
       </div>
 
       <div className="rounded-lg bg-surface/60 p-2">
-        <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-500">Itens / etapas — use ↑ ↓ para ordenar</p>
+        <p className="mb-1 sgo-type-11 font-semibold tracking-wide text-ink-500">Itens / etapas — use ↑ ↓ para ordenar</p>
         <div className="space-y-1.5">
           {items.map((it, i) => (
             <div key={i} className="flex items-start gap-1 rounded-md border bg-surface p-1.5">

@@ -74,7 +74,7 @@ export function CancellationAnalysisClient({ unitId, analyses }: { unitId: strin
 
               {/* Por hora */}
               <div>
-                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Cancelamentos por horário</p>
+                <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Cancelamentos por horário</p>
                 <div className="flex items-end gap-0.5" style={{ height: 60 }}>
                   {a.data.byHour.map((h) => { const max = Math.max(1, ...a.data.byHour.map((x) => x.count)); return (
                     <div key={h.hour} className="flex flex-1 flex-col items-center justify-end" title={`${h.hour}h · ${h.count}× · ${formatBRL(h.value)}`}>
@@ -87,7 +87,7 @@ export function CancellationAnalysisClient({ unitId, analyses }: { unitId: strin
 
               {/* Top valor */}
               <div>
-                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Maiores cancelamentos</p>
+                <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Maiores cancelamentos</p>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-xs">
                     <thead><tr className="border-b text-left text-ink-500"><th className="p-1.5">Data</th><th className="p-1.5 text-right">Valor</th><th className="p-1.5">Caixa</th><th className="p-1.5">Autorizador</th><th className="p-1.5">Item</th></tr></thead>
@@ -116,7 +116,7 @@ export function CancellationAnalysisClient({ unitId, analyses }: { unitId: strin
 function GroupTable({ title, rows, highlight }: { title: string; rows: CancelGroup[]; highlight?: boolean }) {
   return (
     <div>
-      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">{title}</p>
+      <p className="mb-1 sgo-type-11 font-semibold text-ink-500">{title}</p>
       <table className="w-full border-collapse text-xs">
         <thead><tr className="border-b text-left text-ink-500"><th className="p-1">Nome</th><th className="p-1 text-center">Qtd</th><th className="p-1 text-right">Valor</th><th className="p-1 text-right">%</th></tr></thead>
         <tbody>

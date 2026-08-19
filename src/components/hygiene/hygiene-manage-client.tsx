@@ -46,7 +46,7 @@ export function HygieneManageClient({ unitId, canManage, requests, locations }: 
       {/* Locais (banheiros) */}
       {canManage && (
         <Card><CardContent className="pt-4">
-          <p className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Banheiros cadastrados</p>
+          <p className="mb-2 sgo-type-11 font-semibold text-ink-900">Banheiros cadastrados</p>
           <div className="mb-2 flex flex-wrap gap-2">
             {locations.length === 0 && <span className="text-sm text-ink-500">Nenhum — cadastre abaixo (ex.: Masculino, Feminino, PCD).</span>}
             {locations.map((l) => (
@@ -66,7 +66,7 @@ export function HygieneManageClient({ unitId, canManage, requests, locations }: 
 
       {/* Solicitações */}
       <div>
-        <p className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Em aberto ({open.length})</p>
+        <p className="mb-2 sgo-type-11 font-semibold text-ink-900">Em aberto ({open.length})</p>
         {open.length === 0 && <p className="text-sm text-success">Nenhuma solicitação em aberto 🎉</p>}
         <div className="space-y-2">
           {open.map((r) => (

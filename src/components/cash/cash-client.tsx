@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
 import { Lock, Unlock, Trash2, AlertTriangle, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -122,18 +123,14 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
 
       {/* Estatística do mês (unidade) */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg border bg-surface p-2.5 text-center">
-          <p className="text-lg font-bold tabular-nums">{month.sessions}</p>
-          <p className="text-xs text-ink-500">caixas no mês</p>
-        </div>
-        <div className={`rounded-lg border p-2.5 text-center ${month.divergent > 0 ? 'border-danger/50 bg-danger/5' : 'bg-surface'}`}>
-          <p className={`text-lg font-bold tabular-nums ${month.divergent > 0 ? 'text-danger' : ''}`}>{month.divergent}</p>
-          <p className="text-xs text-ink-500">divergências</p>
-        </div>
-        <div className="rounded-lg border bg-surface p-2.5 text-center">
-          <p className="text-lg font-bold tabular-nums">{brl(month.divergenceTotal)}</p>
-          <p className="text-xs text-ink-500">soma divergida</p>
-        </div>
+        <StatCard label="caixas no mês" value={month.sessions} />
+        <StatCard
+          label="divergências"
+          value={month.divergent}
+          tone={month.divergent > 0 ? 'danger' : 'default'}
+          className={month.divergent > 0 ? 'border-danger/50 bg-danger/5' : undefined}
+        />
+        <StatCard label="soma divergida" value={brl(month.divergenceTotal)} />
       </div>
 
       {/* Caixa aberto → fechar · sem caixa aberto → abrir */}
@@ -165,7 +162,7 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
 
       {/* Hoje */}
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Hoje ({today.length})</p>
+        <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Hoje ({today.length})</p>
         {today.length === 0 && <p className="text-sm text-ink-500">Nenhum caixa aberto hoje ainda.</p>}
         <div className="space-y-1.5">{today.map((s) => <SessionCard key={s.id} s={s} />)}</div>
       </div>
@@ -173,7 +170,7 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
       {/* Dashboard entre unidades (Supervisão/Admin/CEO) */}
       {dash && dash.length > 1 && (
         <div className="rounded-lg border bg-surface p-3">
-          <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><AlertTriangle className="h-3.5 w-3.5" /> Divergências do mês por unidade</p>
+          <p className="mb-2 flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-500"><AlertTriangle className="h-3.5 w-3.5" /> Divergências do mês por unidade</p>
           <div className="space-y-1">
             {dash.map((d) => (
               <div key={d.unitId} className="flex items-center justify-between gap-2 text-sm">
@@ -189,7 +186,7 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
 
       {/* Histórico */}
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Histórico ({history.length})</p>
+        <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Histórico ({history.length})</p>
         {history.length === 0 && <p className="text-sm text-ink-500">Sem sessões anteriores.</p>}
         <div className="space-y-1.5">{history.map((s) => <SessionCard key={s.id} s={s} />)}</div>
       </div>

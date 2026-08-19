@@ -34,9 +34,9 @@ const buttonVariants = cva(
       },
       size: {
         // Alvo de 44px no sm: pseudo-elemento invisível, não ocupa espaço.
-        sm: "h-8 px-3 text-[13px] after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-['']",
-        md: 'h-10 px-4 text-[14px]',
-        lg: 'h-12 px-5 text-[15px]',
+        sm: "h-8 px-3 text-xs after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-['']",
+        md: 'h-10 px-4 text-sm',
+        lg: 'h-12 px-5 text-sm',
       },
     },
     defaultVariants: { variant: 'primary', size: 'md' },

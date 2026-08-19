@@ -75,7 +75,7 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
 
       {/* Performance */}
       <Card><CardContent className="pt-4">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Performance na plataforma</h2>
+        <h2 className="mb-3 sgo-type-11 font-semibold text-ink-900">Performance na plataforma</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Kpi label="Meta do mês" pct={row?.metaPct ?? 0} />
           <Kpi label="Uso diário" pct={row?.usagePct ?? 0} />
@@ -86,7 +86,7 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
 
       {/* Preenchimento operacional */}
       <Card><CardContent className="pt-4">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Preenchimento operacional</h2>
+        <h2 className="mb-3 sgo-type-11 font-semibold text-ink-900">Preenchimento operacional</h2>
         <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
           <Stat label="Checklists concluídos" value={`${done}`} sub={`${late} fora do prazo · ${missed} não realizados`} />
           <Stat label="Comandas (cobertura)" value={`${row?.commandsPct ?? 0}%`} />
@@ -99,7 +99,7 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
 
       {/* Detalhamento da meta */}
       <Card><CardContent className="pt-4">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Histórico de checklists / componentes da meta</h2>
+        <h2 className="mb-3 sgo-type-11 font-semibold text-ink-900">Histórico de checklists / componentes da meta</h2>
         {breakdown.length === 0 && <p className="text-sm text-ink-500">Sem componentes no período.</p>}
         <div className="space-y-1.5">
           {breakdown.map((b, i) => (
@@ -119,7 +119,7 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
 function Kpi({ label, pct }: { label: string; pct: number }) {
   return (
     <div className="rounded-lg border p-3 text-center">
-      <p className={`text-2xl font-black ${tone(pct)}`}>{pct}%</p>
+      <p className={`sgo-type-24 font-semibold ${tone(pct)}`}>{pct}%</p>
       <p className="text-xs text-ink-500">{label}</p>
       <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-sunken"><div className={`h-full rounded-full ${toneBg(pct)}`} style={{ width: `${pct}%` }} /></div>
     </div>
@@ -128,7 +128,7 @@ function Kpi({ label, pct }: { label: string; pct: number }) {
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-lg border p-2.5">
-      <p className="text-lg font-bold text-ink-900">{value}</p>
+      <p className="sgo-type-24 font-semibold text-ink-900">{value}</p>
       <p className="text-xs text-ink-500">{label}</p>
       {sub && <p className="text-[11px] text-ink-500">{sub}</p>}
     </div>

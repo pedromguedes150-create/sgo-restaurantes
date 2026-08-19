@@ -30,7 +30,7 @@ export function ProfileClient({ name, cpf, email }: { name: string; cpf: string;
   return (
     <div className="space-y-4">
       <div className="rounded-lg border bg-surface p-3">
-        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Meus dados</p>
+        <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Meus dados</p>
         <div className="space-y-2">
           <div><Label className="text-xs">E-mail (login)</Label><Input value={email} disabled className="h-10 text-sm" /></div>
           <div><Label className="text-xs">Nome completo</Label><Input value={n} onChange={(e) => setN(e.target.value)} className="h-10 text-sm" /></div>
@@ -40,7 +40,7 @@ export function ProfileClient({ name, cpf, email }: { name: string; cpf: string;
       </div>
 
       <div className="rounded-lg border bg-surface p-3">
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><KeyRound className="h-3.5 w-3.5" /> Trocar senha</p>
+        <p className="mb-2 flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-500"><KeyRound className="h-3.5 w-3.5" /> Trocar senha</p>
         <div className="space-y-2">
           <div><Label className="text-xs">Senha atual</Label><Input type="password" value={cur} onChange={(e) => setCur(e.target.value)} className="h-10 text-sm" /></div>
           <div className="grid grid-cols-2 gap-2">

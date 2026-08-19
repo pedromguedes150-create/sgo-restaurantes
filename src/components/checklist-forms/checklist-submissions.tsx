@@ -71,7 +71,7 @@ export function ChecklistSubmissions({ forms, submissions, ficha, days }: { form
               {openId === s.id && (
                 <div className="space-y-1 border-t px-3 py-2">
                   {s.answers.map((a, i) => a.kind === 'SECTION' ? (
-                    <p key={i} className="pt-1 text-xs font-bold uppercase tracking-wide text-ink-500">{a.label}</p>
+                    <p key={i} className="pt-1 sgo-type-11 font-semibold text-ink-500">{a.label}</p>
                   ) : (
                     <div key={i} className="flex justify-between gap-3 text-sm">
                       <span className="text-ink-500">{a.label}</span>

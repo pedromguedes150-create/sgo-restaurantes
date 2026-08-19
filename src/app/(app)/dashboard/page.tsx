@@ -222,7 +222,7 @@ function ConsolidatedDashboard({
     <div className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
       {/* Semáforo por unidade */}
       <section>
-        <h2 className="mb-2 text-[15px] font-semibold text-ink-900">Unidades hoje</h2>
+        <h2 className="mb-2 text-sm font-semibold text-ink-900">Unidades hoje</h2>
         {overviews.length === 0 ? (
           <EmptyState size="sm" icon={Building2} title="Nenhuma unidade" description="Cadastre uma unidade em Configurações." />
         ) : (
@@ -242,7 +242,7 @@ function ConsolidatedDashboard({
 
       {/* Ranking mensal de metas */}
       <section>
-        <h2 className="mb-2 flex items-center gap-2 text-[15px] font-semibold text-ink-900">
+        <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink-900">
           <Trophy className="h-4 w-4 text-ink-400" aria-hidden /> Ranking de metas (mês)
         </h2>
         <List>
@@ -251,12 +251,12 @@ function ConsolidatedDashboard({
               key={o.unit.id}
               href={`/tarefas?unit=${o.unit.id}`}
               leading={
-                <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-sunken text-[13px] font-bold tabular-nums text-ink-700">
+                <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-sunken text-xs font-bold tabular-nums text-ink-700">
                   {i + 1}
                 </span>
               }
               title={shortUnitName(o.unit.name)}
-              trailing={<span className="text-[15px] font-bold tabular-nums text-ink-900">{o.monthScore.scorePct}%</span>}
+              trailing={<span className="text-sm font-bold tabular-nums text-ink-900">{o.monthScore.scorePct}%</span>}
             />
           ))}
         </List>

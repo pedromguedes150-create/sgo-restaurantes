@@ -25,7 +25,7 @@ export function Avatar({ name, className }: { name: string; className?: string }
   return (
     <span
       aria-hidden
-      className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-brand-tint-2 text-[12px] font-bold text-brand', className)}
+      className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-brand-tint-2 text-xs font-bold text-brand', className)}
     >
       {initials}
     </span>
@@ -58,8 +58,8 @@ export function ListRow({ title, subtitle, leading, trailing, href, onClick, dis
     <>
       {leading && <span className="shrink-0">{leading}</span>}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[15px] font-medium text-ink-900">{title}</span>
-        {subtitle && <span className="block truncate text-[13px] text-ink-500">{subtitle}</span>}
+        <span className="block truncate text-sm font-medium text-ink-900">{title}</span>
+        {subtitle && <span className="block truncate text-xs text-ink-500">{subtitle}</span>}
       </span>
       {trailing && <span className="flex shrink-0 items-center gap-2">{trailing}</span>}
       {interactive && <ChevronRight className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />}

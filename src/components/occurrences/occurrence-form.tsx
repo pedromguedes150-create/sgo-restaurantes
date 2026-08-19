@@ -153,7 +153,7 @@ export function OccurrenceForm({ units, types }: { units: UnitOpt[]; types: Type
       )}
 
       {semCategorias && (
-        <p className="rounded-lg bg-info/10 px-3 py-2 text-[13px] leading-5 text-ink-700">
+        <p className="rounded-lg bg-info/10 px-3 py-2 text-xs leading-5 text-ink-700">
           <span className="font-semibold text-ink-900">{tipo?.name}</span> não tem categorias cadastradas,
           então este campo não aparece — pode registrar assim mesmo. Para separar por categoria,
           cadastre em{' '}
@@ -180,7 +180,7 @@ export function OccurrenceForm({ units, types }: { units: UnitOpt[]; types: Type
       <div className="space-y-1.5">
         <Label htmlFor="cli">Nome do cliente (opcional)</Label>
         <Input id="cli" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-        <p className="text-[13px] text-ink-500">Preencha se a ocorrência envolveu um cliente específico.</p>
+        <p className="text-xs text-ink-500">Preencha se a ocorrência envolveu um cliente específico.</p>
       </div>
 
       <div className="space-y-1.5">
@@ -193,7 +193,7 @@ export function OccurrenceForm({ units, types }: { units: UnitOpt[]; types: Type
           onChange={(e) => setDescription(e.target.value)}
           placeholder="O que aconteceu, onde, e o que já foi feito…"
         />
-        <p className="text-[13px] text-ink-500">
+        <p className="text-xs text-ink-500">
           Quem for encerrar precisa entender o caso sem te ligar: diga o que aconteceu, onde e o que já foi feito.
         </p>
       </div>
@@ -208,7 +208,7 @@ export function OccurrenceForm({ units, types }: { units: UnitOpt[]; types: Type
           className="block w-full text-sm"
           onChange={(e) => setFiles(e.target.files)}
         />
-        <p className="text-[13px] text-ink-500">Uma foto costuma resolver mais rápido que um parágrafo.</p>
+        <p className="text-xs text-ink-500">Uma foto costuma resolver mais rápido que um parágrafo.</p>
       </div>
 
       {error && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{error}</p>}
@@ -218,7 +218,7 @@ export function OccurrenceForm({ units, types }: { units: UnitOpt[]; types: Type
       </Button>
       {/* Diz o que falta ANTES de tentar, em vez de recusar depois do clique. */}
       {faltando && !error && (
-        <p className="text-center text-[13px] text-ink-500">Falta preencher {faltando}.</p>
+        <p className="text-center text-xs text-ink-500">Falta preencher {faltando}.</p>
       )}
     </div>
   );

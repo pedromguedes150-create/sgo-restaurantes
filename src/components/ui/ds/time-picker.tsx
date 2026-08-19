@@ -112,7 +112,7 @@ export function TimePicker({
               onClick={() => { setCol(tipo); if (!off) { onValueChange(hm); setOpen(false); } }}
               onMouseMove={() => { if (!off) { setCol(tipo); setCursor(hm); } }}
               className={cn(
-                'flex w-full items-center justify-center rounded-control py-2 text-[14px] tabular-nums outline-none transition-colors duration-sgo-1 motion-reduce:transition-none',
+                'flex w-full items-center justify-center rounded-control py-2 text-sm tabular-nums outline-none transition-colors duration-sgo-1 motion-reduce:transition-none',
                 off ? 'cursor-not-allowed text-ink-400 opacity-40'
                   : isSel ? 'bg-brand font-semibold text-on-brand'
                   : isCursor ? 'bg-brand-tint text-brand'
@@ -154,7 +154,7 @@ export function TimePicker({
             onKeyDown={onKeyDown}
             className="absolute left-0 top-full z-40 mt-1 w-40 rounded-card border border-line bg-surface p-2 shadow-lg"
           >
-            <div className="mb-1 flex gap-1 text-[11px] font-semibold uppercase text-ink-500">
+            <div className="mb-1 flex gap-1 sgo-type-11 font-semibold text-ink-500">
               <span className="flex-1 text-center">Hora</span>
               <span className="flex-1 text-center">Min</span>
             </div>
@@ -167,7 +167,7 @@ export function TimePicker({
                 <button
                   type="button"
                   onClick={() => { onValueChange(null); setOpen(false); }}
-                  className="w-full rounded-control px-2 py-1 text-[13px] font-medium text-ink-500 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus"
+                  className="w-full rounded-control px-2 py-1 text-xs font-medium text-ink-500 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus"
                 >
                   Limpar
                 </button>

@@ -21,11 +21,20 @@ export interface StatCardProps {
   delta?: number | null;
   /** Para métricas em que cair é bom (desperdício, custo). */
   invertDelta?: boolean;
+  /** Cor do número. Sinaliza ESTADO (pendência, concluído), nunca importância. */
+  tone?: 'default' | 'danger' | 'success' | 'warning';
   icon?: React.ComponentType<{ className?: string }>;
   className?: string;
 }
 
-export function StatCard({ label, value, hint, delta, invertDelta, icon: Icon, className }: StatCardProps) {
+const tones = {
+  default: 'text-ink-900',
+  danger: 'text-danger',
+  success: 'text-success',
+  warning: 'text-warning',
+} as const;
+
+export function StatCard({ label, value, hint, delta, invertDelta, tone = 'default', icon: Icon, className }: StatCardProps) {
   const empty = value === null || value === undefined || value === '';
   const good = delta == null ? null : invertDelta ? delta <= 0 : delta >= 0;
 
@@ -35,12 +44,12 @@ export function StatCard({ label, value, hint, delta, invertDelta, icon: Icon, c
         <p className="sgo-type-11 font-semibold text-ink-500">{label}</p>
         {Icon && <Icon className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />}
       </div>
-      <p className={cn('sgo-type-24 mt-1 font-semibold tabular-nums', empty ? 'text-ink-500' : 'text-ink-900')}>
+      <p className={cn('sgo-type-24 mt-1 font-semibold tabular-nums', empty ? 'text-ink-500' : tones[tone])}>
         {empty ? '–' : value}
       </p>
       <div className="mt-1 flex items-center gap-1.5">
         {delta != null && (
-          <span className={cn('inline-flex items-center gap-0.5 text-[13px] font-semibold tabular-nums', good ? 'text-success' : 'text-danger')}>
+          <span className={cn('inline-flex items-center gap-0.5 text-xs font-semibold tabular-nums', good ? 'text-success' : 'text-danger')}>
             {delta >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" aria-hidden /> : <ArrowDownRight className="h-3.5 w-3.5" aria-hidden />}
             {Math.abs(delta).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
           </span>

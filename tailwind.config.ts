@@ -17,6 +17,25 @@ const config: Config = {
       screens: { '2xl': '1400px' },
     },
     extend: {
+      /* -----------------------------------------------------------------
+       * O CORPO DA TELA TEM DOIS TAMANHOS: 15 (conteúdo) e 13 (apoio).
+       *
+       * Antes, 85% de todo o texto do sistema caía em 12px ou 14px e o resto
+       * se espalhava por 13, 15 e 16 — seis estilos numa faixa de quatro
+       * pixels, que o olho não consegue ordenar. A diferença acabou virando
+       * negrito, e com 693 trechos em negrito o negrito parou de significar
+       * alguma coisa.
+       *
+       * Redefinir a escala aqui alinha os 1430 usos de uma vez, sem tocar em
+       * 143 arquivos: text-xs vira o nível de apoio (13) e text-sm/text-base o
+       * de conteúdo (15). Os valores batem com .sgo-type-13 e .sgo-type-15 em
+       * src/styles/sgo-design-system.css, que continua sendo a fonte de verdade.
+       * ----------------------------------------------------------------- */
+      fontSize: {
+        xs: ['13px', { lineHeight: '18px', letterSpacing: '-0.002em' }],
+        sm: ['15px', { lineHeight: '20px', letterSpacing: '-0.006em' }],
+        base: ['15px', { lineHeight: '20px', letterSpacing: '-0.006em' }],
+      },
       colors: {
         /* ---------------------------------------------------------------
          * ÚNICA paleta do sistema. Toda cor vem de var(--sgo-*-rgb), definido

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
 import { Plus, Check, X, Trash2, CalendarDays, FileSpreadsheet, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -113,17 +114,22 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
               <FileSpreadsheet className="h-3.5 w-3.5 text-brand" /> Excel do mês
             </a>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-lg border bg-surface p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.done}</p><p className="text-xs text-ink-500">feitas no mês</p></div>
-            <div className="rounded-lg border bg-surface p-2.5"><p className="text-lg font-bold tabular-nums">{board.month.planned}</p><p className="text-xs text-ink-500">agendadas</p></div>
-            <div className={cn('rounded-lg border p-2.5', board.month.overdue > 0 ? 'border-danger/50 bg-danger/5' : 'bg-surface')}><p className={cn('text-lg font-bold tabular-nums', board.month.overdue > 0 && 'text-danger')}>{board.month.overdue}</p><p className="text-xs text-ink-500">atrasadas</p></div>
+          <div className="grid grid-cols-3 gap-2">
+            <StatCard label="feitas no mês" value={board.month.done} />
+            <StatCard label="agendadas" value={board.month.planned} />
+            <StatCard
+              label="atrasadas"
+              value={board.month.overdue}
+              tone={board.month.overdue > 0 ? 'danger' : 'default'}
+              className={cn(board.month.overdue > 0 && 'border-danger/50 bg-danger/5')}
+            />
           </div>
 
           {canOperate && <PlansEditor plans={plans} busy={busy} post={post} />}
 
           {canOperate && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><CalendarDays className="h-3.5 w-3.5" /> Agendar visita</p>
+              <p className="mb-2 flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-500"><CalendarDays className="h-3.5 w-3.5" /> Agendar visita</p>
               <div className="grid grid-cols-2 gap-2">
                 <Select
                   aria-label="Unidade da visita" placeholder="Unidade…" value={vUnit} onValueChange={setVUnit}
@@ -136,7 +142,7 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
           )}
 
           <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Próximas ({board.upcoming.length})</p>
+            <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Próximas ({board.upcoming.length})</p>
             {board.upcoming.length === 0 && <p className="text-sm text-ink-500">Nenhuma visita agendada.</p>}
             <div className="space-y-1.5">
               {board.upcoming.map((v) => <UpcomingVisit key={v.id} v={v} checklists={checklists} canOperate={canOperate} busy={busy} post={post} />)}
@@ -144,7 +150,7 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
           </div>
 
           <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Histórico ({board.history.length})</p>
+            <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Histórico ({board.history.length})</p>
             {board.history.length === 0 && <p className="text-sm text-ink-500">Sem visitas concluídas.</p>}
             <div className="space-y-1.5">
               {board.history.map((v) => <HistoryVisit key={v.id} v={v} isAdmin={isAdmin} busy={busy} onDelete={async (id) => { if (confirm('Excluir esta visita? (auditado)')) await post({ entity: 'supervisorVisit', action: 'delete', id }, '/api/admin/ops'); }} />)}
@@ -164,7 +170,7 @@ function PlansEditor({ plans, busy, post }: { plans: PlanRowUI[]; busy: boolean;
   return (
     <div className={cn('rounded-lg border p-3', overdueCount > 0 ? 'border-danger/50 bg-danger/5' : 'border-dashed')}>
       <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-left">
-        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><Repeat className="h-3.5 w-3.5" /> Recorrência de visitas</p>
+        <p className="flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-500"><Repeat className="h-3.5 w-3.5" /> Recorrência de visitas</p>
         <span className="text-xs font-semibold">{overdueCount > 0 ? <span className="text-danger">{overdueCount} unidade(s) vencida(s)</span> : `${plans.filter((p) => p.active).length} plano(s) ativo(s)`}</span>
       </button>
       {open && (

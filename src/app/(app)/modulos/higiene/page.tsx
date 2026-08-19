@@ -45,7 +45,7 @@ export default async function HigienePage({ searchParams }: { searchParams: { un
 
       {analytics && analytics.byLocation.length > 0 && (
         <Card><CardContent className="pt-4">
-          <p className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Banheiros com mais solicitações (30d)</p>
+          <p className="mb-2 sgo-type-11 font-semibold text-ink-900">Banheiros com mais solicitações (30d)</p>
           <div className="space-y-1.5">
             {analytics.byLocation.map((l) => {
               const max = analytics.byLocation[0].count || 1;
@@ -73,7 +73,7 @@ export default async function HigienePage({ searchParams }: { searchParams: { un
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: 'critical' | 'ok' }) {
   return (
     <Card><CardContent className="py-3 text-center">
-      <p className={`text-2xl font-black ${tone === 'critical' ? 'text-danger' : 'text-ink-900'}`}>{value}</p>
+      <p className={`sgo-type-24 font-semibold ${tone === 'critical' ? 'text-danger' : 'text-ink-900'}`}>{value}</p>
       <p className="text-xs text-ink-500">{label}</p>
     </CardContent></Card>
   );

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { FileText } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
@@ -45,9 +46,9 @@ export default async function CancelamentosPage() {
 
       {/* Resumo do mês */}
       <div className="grid grid-cols-3 gap-2">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.monthTotal}</p><p className="text-xs text-ink-500">no mês</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-success">{summary.justifiedPct}%</p><p className="text-xs text-ink-500">justificados</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.pending}</p><p className="text-xs text-ink-500">pendentes</p></CardContent></Card>
+        <StatCard label="no mês" value={summary.monthTotal} />
+        <StatCard label="justificados" value={`${summary.justifiedPct}%`} tone="success" />
+        <StatCard label="pendentes" value={summary.pending} tone="danger" />
       </div>
 
       <Card>
@@ -66,7 +67,7 @@ export default async function CancelamentosPage() {
           <CardHeader><CardTitle>Gerenciar lançamentos (admin)</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Importações</p>
+              <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Importações</p>
               {imports.length === 0 && <p className="text-sm text-ink-500">Nenhuma importação.</p>}
               {imports.map((imp) => (
                 <div key={imp.id} className="flex items-center justify-between rounded-lg border bg-surface p-2.5">
@@ -79,7 +80,7 @@ export default async function CancelamentosPage() {
               ))}
             </div>
             <div>
-              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Cupons (recentes)</p>
+              <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Cupons (recentes)</p>
               {recentCanc.length === 0 && <p className="text-sm text-ink-500">Nenhum cupom.</p>}
               {recentCanc.map((c) => (
                 <div key={c.id} className="flex items-center justify-between rounded-lg border bg-surface p-2.5">

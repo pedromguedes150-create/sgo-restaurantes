@@ -89,7 +89,7 @@ function WeeklyTimetable({ managers }: { managers: CalManager[] }) {
 
   return (
     <div className="mt-3 overflow-x-auto">
-      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Grade semanal por horário</p>
+      <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Grade semanal por horário</p>
       <table className="w-full border-collapse text-center text-[10px]">
         <thead>
           <tr>
@@ -166,7 +166,7 @@ function UnitCalendar({ unit, year, month, isAdmin = false }: { unit: CalUnit; y
 
       {/* Grade do mês */}
       <div className="mt-3 grid grid-cols-7 gap-1 text-center">
-        {WD.map((w, i) => <div key={i} className="text-[10px] font-bold uppercase text-ink-500">{w}</div>)}
+        {WD.map((w, i) => <div key={i} className="sgo-type-11 font-semibold text-ink-500">{w}</div>)}
         {blanks.map((_, i) => <div key={`b${i}`} />)}
         {unit.days.map((d) => (
           <button key={d.day} onClick={() => setSel(sel?.day === d.day ? null : d)} className={`min-h-[2.4rem] rounded px-0.5 py-0.5 text-xs font-semibold ${cellClass(d)} ${sel?.day === d.day ? 'ring-2 ring-brand' : ''}`} title={d.working.length ? `Gerente(s): ${d.working.join(', ')}` : d.gap ? 'Sem gerente' : ''}>

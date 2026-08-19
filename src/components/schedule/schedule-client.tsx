@@ -155,7 +155,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                   <Fragment key={row.collaboratorId}>
                     {showGroup && (
                       <tr className="bg-sunken">
-                        <td colSpan={grid.daysCount + 1} className="px-2 py-1 text-left text-[11px] font-bold uppercase tracking-wide text-ink-500">{row.typeLabel}</td>
+                        <td colSpan={grid.daysCount + 1} className="px-2 py-1 text-left sgo-type-11 font-semibold tracking-wide text-ink-500">{row.typeLabel}</td>
                       </tr>
                     )}
                     <tr className="border-t">

@@ -3,6 +3,10 @@ import { cn } from '@/lib/utils';
 /**
  * StatusBadge reutilizável — semáforo de gravidade/status (spec: componentes base).
  * Cores conforme regra nº 2 (crítico/médio/sucesso) + neutros.
+ *
+ * Tipografia no nível 6 da escala (11 / 600 / caixa alta): o selo é uma
+ * ETIQUETA, não conteúdo. Estava em 15/600, o mesmo tamanho do nome do item que
+ * ele acompanha — competia com aquilo que deveria apenas qualificar.
  */
 export type StatusTone = 'success' | 'medium' | 'critical' | 'black' | 'neutral';
 
@@ -31,7 +35,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold',
+        'inline-flex items-center rounded-full px-2.5 py-1 sgo-type-11 font-semibold',
         tones[tone],
         className,
       )}

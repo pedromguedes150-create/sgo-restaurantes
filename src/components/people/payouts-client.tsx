@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -113,19 +114,13 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
 
       {/* Dashboard do mês */}
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded-lg border bg-surface p-3">
-          <p className="text-xs text-ink-500">Comissões no mês</p>
-          <p className="text-lg font-bold text-success tabular-nums">{brl(dash.totalCommission)}</p>
-        </div>
-        <div className="rounded-lg border bg-surface p-3">
-          <p className="text-xs text-ink-500">Mobilidade no mês</p>
-          <p className="text-lg font-bold text-ink-900 tabular-nums">{brl(dash.totalMobility)}</p>
-        </div>
+        <StatCard label="Comissões no mês" value={brl(dash.totalCommission)} tone="success" />
+        <StatCard label="Mobilidade no mês" value={brl(dash.totalMobility)} />
       </div>
 
       {dash.byUnit.length > 0 && (
         <div className="rounded-lg border bg-surface p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Por unidade</p>
+          <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Por unidade</p>
           <div className="space-y-1.5">
             {dash.byUnit.map((u) => (
               <div key={u.unitName} className="flex items-center justify-between gap-2 text-sm">
@@ -143,7 +138,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
 
       {/* Tendência 12 meses */}
       <div className="rounded-lg border bg-surface p-3">
-        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Tendência (12 meses) — comissão + mobilidade</p>
+        <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Tendência (12 meses) — comissão + mobilidade</p>
         <div className="flex items-end gap-1" style={{ height: 90 }}>
           {dash.trend.map((t) => {
             const total = t.commission + t.mobility;
@@ -161,7 +156,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
 
       {dash.topCollaborators.length > 0 && (
         <div className="rounded-lg border bg-surface p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Maiores do mês</p>
+          <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Maiores do mês</p>
           <div className="space-y-1">
             {dash.topCollaborators.map((c, i) => (
               <div key={c.name} className="flex items-center justify-between text-sm">
@@ -176,7 +171,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
       {/* Lançamento (Supervisão/Admin) */}
       {canCreate && (
         <div className="rounded-lg border border-dashed p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Lançar no mês selecionado</p>
+          <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Lançar no mês selecionado</p>
           <div className="space-y-2">
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar colaborador…" className="h-10 text-sm" />
             <Select
@@ -185,7 +180,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
             />
             {collaboratorId && collabHistory && collabHistory.length > 0 && (
               <div className="rounded-md bg-canvas p-2">
-                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Histórico do colaborador (variação)</p>
+                <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Histórico do colaborador (variação)</p>
                 <div className="space-y-0.5">
                   {collabHistory.map((h, i) => {
                     const prev = collabHistory.slice(i + 1).find((x) => x.type === h.type);
@@ -226,7 +221,7 @@ export function PayoutsClient({ rows, dash, collabs, yearMonth, months, canCreat
 
       {/* Histórico do mês */}
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Lançamentos do mês ({rows.length})</p>
+        <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Lançamentos do mês ({rows.length})</p>
         {rows.length === 0 && <p className="text-sm text-ink-500">Nenhum lançamento neste mês.</p>}
         <Group>
           {rows.map((r) => (

@@ -85,7 +85,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
 
       {isAdminView && ranking.length > 0 && (
         <section>
-          <h2 className="mb-2 flex items-center gap-2 text-[15px] font-semibold text-ink-900">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink-900">
             <Trophy className="h-4 w-4 text-ink-400" aria-hidden /> Ranking de metas
           </h2>
           <List>
@@ -93,10 +93,10 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
               <ListRow
                 key={r.unitId}
                 leading={
-                  <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-sunken text-[13px] font-bold tabular-nums text-ink-700">{i + 1}</span>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-sunken text-xs font-bold tabular-nums text-ink-700">{i + 1}</span>
                 }
                 title={shortUnitName(r.name)}
-                trailing={<span className="text-[15px] font-bold tabular-nums text-ink-900">{r.scorePct}%</span>}
+                trailing={<span className="text-sm font-bold tabular-nums text-ink-900">{r.scorePct}%</span>}
               />
             ))}
           </List>
@@ -117,7 +117,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
           {/* Composição: cada componente com seu peso e o quanto rendeu. */}
           <div className="mt-4 space-y-3">
             {breakdown.length === 0 && (
-              <p className="text-[14px] text-ink-500">Sem tarefas resolvidas no mês ainda.</p>
+              <p className="text-sm text-ink-500">Sem tarefas resolvidas no mês ainda.</p>
             )}
             {breakdown.map((t) => (
               <ProgressBar

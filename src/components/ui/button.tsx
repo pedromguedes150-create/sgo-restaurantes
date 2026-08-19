@@ -55,7 +55,7 @@ const buttonVariants = cva(base, {
     size: {
       /** 44px: a medida do iOS e exatamente o alvo mínimo de toque (regra 8). */
       default: 'h-11 px-5',
-      sm: 'h-9 px-4 text-[15px]',
+      sm: 'h-9 px-4 text-sm',
       lg: 'h-12 px-6 text-lg',
       icon: 'h-11 w-11',
     },

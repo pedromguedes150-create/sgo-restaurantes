@@ -135,7 +135,7 @@ export function Select({
                     onClick={() => choose(i)}
                     onMouseMove={() => !o.disabled && setActive(i)}
                     className={cn(
-                      'flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-[14px] outline-none',
+                      'flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-sm outline-none',
                       o.disabled ? 'cursor-not-allowed text-ink-400' : i === active ? 'bg-brand-tint text-brand' : 'text-ink-700',
                     )}
                   >

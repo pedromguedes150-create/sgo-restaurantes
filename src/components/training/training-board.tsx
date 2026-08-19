@@ -54,7 +54,7 @@ export function TrainingBoard({ board, isAdmin, weight }: { board: Group[]; isAd
       {board.map((g) => (
         <div key={g.sector} className="space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">{g.sector}</h2>
+            <h2 className="sgo-type-11 font-semibold text-ink-900">{g.sector}</h2>
             <StatusBadge tone={COV[g.coverage].tone}>{COV[g.coverage].label}</StatusBadge>
           </div>
           {g.collaborators.map((c) => {

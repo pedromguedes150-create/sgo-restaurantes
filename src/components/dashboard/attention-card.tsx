@@ -34,7 +34,7 @@ export function AttentionCard({ items, emptyText }: { items: AttentionItem[]; em
     return (
       <section className="flex items-center gap-2 rounded-card border border-line bg-success-bg px-4 py-3">
         <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden />
-        <p className="text-[14px] font-medium text-ink-900">{emptyText}</p>
+        <p className="text-sm font-medium text-ink-900">{emptyText}</p>
       </section>
     );
   }
@@ -43,8 +43,8 @@ export function AttentionCard({ items, emptyText }: { items: AttentionItem[]; em
   return (
     <section className="overflow-hidden rounded-card border border-line bg-surface">
       <div className="flex items-baseline justify-between gap-2 px-4 pb-2 pt-3">
-        <h2 className="text-[15px] font-semibold text-ink-900">Precisa da sua atenção</h2>
-        <span className="text-[13px] tabular-nums text-ink-500">
+        <h2 className="text-sm font-semibold text-ink-900">Precisa da sua atenção</h2>
+        <span className="text-xs tabular-nums text-ink-500">
           {ordered.length} {ordered.length === 1 ? 'item' : 'itens'}
         </span>
       </div>
@@ -63,13 +63,13 @@ export function AttentionCard({ items, emptyText }: { items: AttentionItem[]; em
               <span
                 aria-hidden
                 className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-pill text-[13px] font-bold tabular-nums',
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-pill text-xs font-bold tabular-nums',
                   numberTone[item.tone],
                 )}
               >
                 {i + 1}
               </span>
-              <span className="min-w-0 flex-1 text-[14px] leading-5 text-ink-900">
+              <span className="min-w-0 flex-1 text-sm leading-5 text-ink-900">
                 <span className="sr-only">Prioridade {i + 1}: </span>
                 {item.text}
               </span>

@@ -49,7 +49,7 @@ export function TaskItem({ task }: { task: TaskItemData }) {
       trailing={
         <>
           {task.requiresEvidence && !done && (
-            <span className="inline-flex items-center gap-1 text-[12px] font-medium text-ink-500" title="Exige foto">
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-500" title="Exige foto">
               <Camera className="h-3.5 w-3.5" aria-hidden />
               <span className="sr-only">Exige foto</span>
             </span>

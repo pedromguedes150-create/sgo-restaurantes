@@ -17,8 +17,8 @@ export default async function HigienePublicPage({ params, searchParams }: { para
   return (
     <div className="mx-auto min-h-dvh max-w-md bg-canvas p-4">
       <div className="mb-4 rounded-2xl bg-brand p-5 text-center text-on-brand">
-        <p className="text-xs uppercase tracking-wide opacity-90">Beija Flor</p>
-        <h1 className="text-xl font-black">Este local precisa de higienização?</h1>
+        <p className="sgo-type-11 font-semibold opacity-90">Beija Flor</p>
+        <h1 className="text-xl font-bold">Este local precisa de higienização?</h1>
         <p className="mt-1 text-sm opacity-90">{data.unit.name}</p>
       </div>
       <HygienePublicForm unitId={data.unit.id} locations={data.locations} preselect={searchParams.loc ?? null} />

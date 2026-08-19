@@ -83,7 +83,7 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
         <div className="space-y-2">
           {canRequestVacation && (
             <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Solicitar férias ao RH</p>
+              <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Solicitar férias ao RH</p>
               <div className="space-y-2">
                 <Select
                   aria-label="Colaborador" placeholder="Selecione o colaborador…" value={vCollab} onValueChange={setVCollab}

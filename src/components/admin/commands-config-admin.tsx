@@ -104,7 +104,7 @@ function NewSeq({ unitId, onDone }: { unitId: string; onDone: () => void }) {
 
   return (
     <div className="rounded-lg border border-dashed p-2.5">
-      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Nova sequência</p>
+      <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Nova sequência</p>
       <div className="grid grid-cols-12 items-end gap-1">
         <div className="col-span-5"><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Salão" className="h-9 text-sm" /></div>
         <div className="col-span-3"><Label className="text-xs">Início</Label><Input inputMode="numeric" value={start} onChange={(e) => setStart(e.target.value)} placeholder="1" className="h-9 text-sm" /></div>

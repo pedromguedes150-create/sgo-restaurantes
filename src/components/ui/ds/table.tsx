@@ -46,7 +46,7 @@ export function Table<T>({ columns, rows, getRowKey, onRowClick, empty, caption,
   return (
     // Contêiner com rolagem própria: conteúdo largo nunca faz a página rolar.
     <div className={cn('max-h-[70vh] overflow-auto rounded-card border border-line bg-surface', className)}>
-      <table className="w-full border-collapse text-[14px]">
+      <table className="w-full border-collapse text-sm">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead className="sticky top-0 z-10 bg-surface">
           <tr>
@@ -56,7 +56,7 @@ export function Table<T>({ columns, rows, getRowKey, onRowClick, empty, caption,
                 scope="col"
                 style={c.width ? { width: c.width } : undefined}
                 className={cn(
-                  'whitespace-nowrap border-b border-line px-3 py-2 text-[12px] font-semibold uppercase tracking-wide text-ink-500',
+                  'sgo-type-11 whitespace-nowrap border-b border-line px-3 py-2 font-semibold text-ink-500',
                   c.numeric ? 'text-right' : 'text-left',
                   c.hideOnMobile && 'hidden md:table-cell',
                 )}

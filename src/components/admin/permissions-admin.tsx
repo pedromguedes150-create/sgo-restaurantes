@@ -40,7 +40,7 @@ export function PermissionsAdmin({ modules, matrix }: { modules: { key: string; 
 
       <div className="overflow-hidden rounded-lg border">
         <table className="w-full text-sm">
-          <thead className="bg-sunken text-xs uppercase tracking-wide text-ink-500">
+          <thead className="bg-sunken sgo-type-11 font-semibold text-ink-500">
             <tr><th className="px-3 py-2 text-left">Módulo</th><th className="px-3 py-2 w-20 text-center">Ver</th><th className="px-3 py-2 w-20 text-center">Editar</th></tr>
           </thead>
           <tbody>

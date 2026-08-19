@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -34,9 +35,9 @@ export default async function NotasPage({ searchParams }: { searchParams: { dias
       <LargeTitle title="Notas Recebidas" />
       <FamilyTabs active="/modulos/notas" />
       <div className="grid grid-cols-3 gap-2">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.received}</p><p className="text-xs text-ink-500">a pagar</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.problem}</p><p className="text-xs text-ink-500">c/ problema</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-base font-black text-ink-900">{formatBRL(summary.monthValue)}</p><p className="text-xs text-ink-500">no mês</p></CardContent></Card>
+        <StatCard label="a pagar" value={summary.received} />
+        <StatCard label="c/ problema" value={summary.problem} tone="danger" />
+        <StatCard label="no mês" value={formatBRL(summary.monthValue)} />
       </div>
       <Card>
         <CardContent className="pt-4">

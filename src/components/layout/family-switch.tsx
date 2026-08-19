@@ -32,8 +32,8 @@ export function FamilySwitch({
   if (siblings.length === 0) return null;
 
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-500">
-      <span className="font-semibold uppercase tracking-wide">{familyTitle}</span>
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
+      <span className="sgo-type-11 font-semibold">{familyTitle}</span>
       {siblings.map((s) => (
         <Link
           key={s.href}

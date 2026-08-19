@@ -38,17 +38,17 @@ export function UnitTasksSection({ unitName, summary, showSummary, defaultOpen, 
           {showSummary && (
             <>
               <span className="flex items-baseline justify-between gap-2">
-                <span className={cn('text-[15px] font-semibold', todo > 0 ? 'text-ink-900' : 'text-success')}>
+                <span className={cn('text-sm font-semibold', todo > 0 ? 'text-ink-900' : 'text-success')}>
                   {todo > 0 ? `${todo} a fazer` : 'Tudo realizado'}
                 </span>
-                <span className="text-[13px] tabular-nums text-ink-500">{done + late} de {total} feitos</span>
+                <span className="text-xs tabular-nums text-ink-500">{done + late} de {total} feitos</span>
               </span>
               <span className="flex h-1 w-full overflow-hidden rounded-pill bg-sunken">
                 <span className="h-full bg-success" style={{ width: `${pct(done)}%` }} />
                 <span className="h-full bg-warning" style={{ width: `${pct(late)}%` }} />
                 <span className="h-full bg-danger" style={{ width: `${pct(missed)}%` }} />
               </span>
-              <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] tabular-nums text-ink-500">
+              <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs tabular-nums text-ink-500">
                 <span>{done} no prazo</span>
                 {late > 0 && <span>{late} fora do prazo</span>}
                 {missed > 0 && <span>{missed} não realizada(s)</span>}

@@ -36,8 +36,8 @@ export function Banner({ tone = 'info', title, description, action, onDismiss, c
     >
       <s.Icon className={cn('mt-0.5 h-5 w-5 shrink-0', s.icon)} aria-hidden />
       <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-semibold text-ink-900">{title}</p>
-        {description && <p className="mt-0.5 text-[13px] leading-5 text-ink-700">{description}</p>}
+        <p className="text-sm font-semibold text-ink-900">{title}</p>
+        {description && <p className="mt-0.5 text-xs leading-5 text-ink-700">{description}</p>}
         {action && <div className="mt-2">{action}</div>}
       </div>
       {onDismiss && (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
 import { Save, Droplets, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -99,7 +100,7 @@ function Launch({ units, suppliers }: { units: Unit[]; suppliers: Supplier[] }) 
       {total > 0 && (
         <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
           <p className="text-xs text-ink-500">Valor total a receber</p>
-          <p className="text-2xl font-black text-ink-900">{formatBRL(total)}</p>
+          <p className="sgo-type-24 font-semibold text-ink-900">{formatBRL(total)}</p>
         </div>
       )}
       <Select
@@ -126,7 +127,7 @@ function Dashboard({ d }: { d: OilDash }) {
         <Cell label="Médio/litro" value={perL(d.avgPricePerLiter)} />
       </div>
       <div>
-        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Por unidade</h2>
+        <h2 className="mb-1 sgo-type-11 font-semibold text-ink-900">Por unidade</h2>
         <div className="space-y-2">
           {d.byUnit.map((u) => (
             <div key={u.key} className="rounded-lg border bg-surface p-2.5">
@@ -138,7 +139,7 @@ function Dashboard({ d }: { d: OilDash }) {
         </div>
       </div>
       <div>
-        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Como recebemos</h2>
+        <h2 className="mb-1 sgo-type-11 font-semibold text-ink-900">Como recebemos</h2>
         <div className="space-y-1">
           {d.byMethod.map((m) => (
             <div key={m.key} className="flex items-center justify-between rounded-lg border bg-surface px-3 py-1.5 text-sm">
@@ -148,7 +149,7 @@ function Dashboard({ d }: { d: OilDash }) {
         </div>
       </div>
       <div>
-        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Tendência mensal (R$ recebido)</h2>
+        <h2 className="mb-1 sgo-type-11 font-semibold text-ink-900">Tendência mensal (R$ recebido)</h2>
         <div className="flex items-end gap-2 rounded-lg border bg-surface p-3" style={{ height: 140 }}>
           {d.monthly.map((m) => (
             <div key={m.month} className="flex flex-1 flex-col items-center justify-end gap-1">
@@ -164,7 +165,7 @@ function Dashboard({ d }: { d: OilDash }) {
 }
 
 function Cell({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border bg-surface py-3 text-center"><p className="text-base font-black text-ink-900">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
+  return <StatCard label="{label}" value={value} />;
 }
 
 function History({ rows, isAdmin, canEditDate = false }: { rows: OilRow[]; isAdmin: boolean; canEditDate?: boolean }) {

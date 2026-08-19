@@ -147,7 +147,7 @@ export function CommandsClient({
 
       {/* Divergências em aberto */}
       <div className="space-y-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">
+        <h2 className="sgo-type-11 font-semibold text-ink-900">
           Divergências em aberto ({openDivergences.length})
         </h2>
         {openDivergences.length === 0 && <p className="text-sm text-ink-500">Nenhuma divergência aberta. 🟢</p>}
@@ -308,7 +308,7 @@ function ReplacementForm({ unitId, onDone }: { unitId: string; onDone: () => voi
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Reposição (Admin)</h2>
+      <h2 className="mb-2 sgo-type-11 font-semibold text-ink-900">Reposição (Admin)</h2>
       <div className="flex gap-2">
         <Input inputMode="numeric" aria-label="Número da comanda" placeholder="nº" value={number} onChange={(e) => setNumber(e.target.value)} className="w-24" />
         <Input aria-label="Observação da comanda" placeholder="observação" value={note} onChange={(e) => setNote(e.target.value)} />

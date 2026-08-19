@@ -99,7 +99,7 @@ export function ChecklistHistoryList({ groups, isAdmin, groupByUnit = false }: {
               {/* Dia recolhível — abre o mais recente por padrão; em modo seleção fica aberto (16/07) */}
               <details open={selecting || gi === 0} className="group">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wide text-ink-500">{g.date} <span className="font-normal normal-case">· {g.items.length} checklist(s)</span></span>
+                  <span className="sgo-type-11 font-semibold text-ink-500">{g.date} <span className="font-normal normal-case">· {g.items.length} checklist(s)</span></span>
                   <ChevronDown className="h-4 w-4 shrink-0 text-ink-500 transition-transform group-open:rotate-180" />
                 </summary>
                 <div className="mt-1.5 space-y-1.5">
