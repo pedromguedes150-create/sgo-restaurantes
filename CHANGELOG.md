@@ -9,6 +9,47 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.48.2 — 2026-08-19 (Leitor de comanda calibrado: parser exato, leitura mais leve, Android consertado)
+
+### O padrão da etiqueta, medido
+Diagnóstico rodado num cartão real da rede (iPhone, 19/08/2026): formato **CODE_128**, conteúdo
+**"0346"** — o número da comanda com zero à esquerda, 4 dígitos, **sem prefixo de unidade e sem
+dígito verificador**. O cartão traz também um QR do Instagram, que não é comanda.
+
+### Corrigido
+- **O parser podia marcar presente a comanda ERRADA.** Ele testava janelas de dígitos e aceitava a
+  primeira que existisse na sequência: "0346" gerava os palpites `[346, 34]` e **34 também é uma
+  comanda válida**. Se a 346 não estivesse ativa, a conferência marcava a 34 — uma comanda que não
+  está na mesa. Agora a **leitura exata tem precedência absoluta** e etiqueta de até 6 dígitos é
+  lida só pelo número inteiro. As janelas continuam, mas só para códigos longos de padrão
+  desconhecido, e **apenas quando apontam para UMA comanda ativa** — na ambiguidade, recusa e mostra
+  o código lido. Num EAN de 13 dígitos as janelas chegavam a 1, 5 e 13 ao mesmo tempo e a primeira
+  vencia; isso acabou.
+- **O botão de abrir a câmera não aparecia no Android.** O efeito que inspeciona o leitor chamava
+  `getSupportedFormats()` e um erro **síncrono** dela escapava do `.catch()`, derrubando o
+  componente — e só onde a `BarcodeDetector` existe, que é o Android. No iPhone ela não existe, o
+  `?.` curto-circuitava e nada quebrava: exatamente a assimetria relatada. Agora o efeito é
+  defensivo e qualquer falha aparece como aviso na tela em vez de sumir com a página.
+- **Leitura muito lenta no iPhone.** Três causas, todas medidas: decodificava o **quadro inteiro**
+  (1080×1920, ~2 megapixels) a cada volta; procurava **8 formatos, incluindo QR** — o QR do
+  Instagram do cartão foi lido **227 vezes** numa sessão; e rodava com `TRY_HARDER` ligado a 60
+  tentativas por segundo, sem terminar uma antes de começar a próxima. Agora recorta a **faixa
+  central** (92% da largura × 30% da altura — o código de barras é largo e baixo), procura **só
+  formatos de barras**, desligou o `TRY_HARDER` e faz ~12 tentativas por segundo, cada uma com CPU
+  inteira.
+- A tela passou a mostrar **ms por tentativa** e a **área realmente decodificada**, para a próxima
+  medição comparar. Leitura vazia deixou de entrar na lista.
+- A faixa de indicadores virou 2 colunas no celular e os números quebram em vez de empurrar a
+  página (mesma correção da v1.47.1, aplicada aqui na origem).
+
+### Testes
+20 casos no parser (eram 15): a etiqueta real "0346", sequência que passa de 600, recusa de
+`1346` (não vira 346 por coincidência de sufixo), `candidateNumbers('0346')` = exatamente `[346]`,
+recusa de código longo ambíguo, aceite de código longo sem ambiguidade, e precedência do exato
+sobre a janela em etiqueta com muitos zeros à esquerda. 199 testes no total.
+
+---
+
 ## v1.48.1 — 2026-08-19 (Diagnóstico do leitor de comanda — calibração antes de codar)
 
 ### Novo
