@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   else if (b.action === 'bucketToggle') r = await toggleBucket(user, String(b.id ?? ''), Boolean(b.active), ctx);
   else if (b.action === 'bucketDelete') r = await deleteBucket(user, String(b.id ?? ''), ctx);
   else if (b.action === 'registerChange') r = await registerChange(user, String(b.unitId ?? ''), String(b.registerName ?? ''), b.outFromVault ?? {}, b.inToVault ?? {}, b.note, ctx);
-  else if (b.action === 'requestChange') r = await requestChange(user, String(b.unitId ?? ''), { amount: b.amount != null ? Number(b.amount) : null, note: String(b.note ?? '') }, ctx);
+  else if (b.action === 'requestChange') r = await requestChange(user, String(b.unitId ?? ''), { note: b.note != null ? String(b.note) : undefined, need: b.need ?? {}, give: b.give ?? {} }, ctx);
   else if (b.action === 'resolveChange') r = await resolveChangeRequest(user, String(b.id ?? ''), b.cancel ? 'cancel' : 'resolve', b.resolvedNote, ctx);
   else return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
 

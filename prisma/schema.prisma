@@ -1495,7 +1495,16 @@ model CashChangeRequest {
   id              String              @id @default(cuid())
   unitId          String
   amount          Decimal?            @db.Decimal(12, 2) // valor pedido (opcional)
-  note            String // o que o gerente precisa (ex.: "R$ 100 em moedas")
+  /// Observação livre. Era o ÚNICO campo do pedido ("R$ 100 em moedas de 0,50"):
+  /// o escritório lia prosa, nada era conferido e a conferência do dia era
+  /// digitada de novo. Virou complemento dos dois campos por denominação abaixo.
+  note            String?
+  /// O que a unidade PRECISA RECEBER, por denominação (mesmas chaves da
+  /// conferência: "200".."0.05" e "outros"). Valor em R$, como na folha.
+  needJson        Json?
+  /// O que a unidade ENTREGA em troca (notas grandes). Quando as duas somas
+  /// batem, atender a solicitação aplica a troca no cofre sozinho.
+  giveJson        Json?
   status          ChangeRequestStatus @default(OPEN)
   requestedById   String
   requestedByName String

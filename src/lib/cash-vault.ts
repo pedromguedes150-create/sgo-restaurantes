@@ -246,29 +246,74 @@ export async function registerChange(
 
 /* ───────── Solicitação de troco (gerente → supervisão) ───────── */
 
-/** Gerente (ou quem opera) pede troco à supervisão; SUPERVISOR+COORDINATOR+ADMIN são notificados. */
-export async function requestChange(user: SessionUser, unitId: string, input: { amount?: number | null; note: string }, ctx: Ctx = {}): Promise<Result> {
+/** Descreve um conjunto por denominação em texto curto: "R$ 50,00 em 0,50 · R$ 20,00 em 1". */
+function describeBalances(config: DenomConfig, b: Balances): string {
+  const partes: string[] = [];
+  for (const d of config.denominations) {
+    const v = Number(b[d.key]) || 0;
+    if (v > 0) partes.push(`${v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} em ${denomLabel(d)}`);
+  }
+  return partes.join(' · ');
+}
+
+/**
+ * Gerente (ou quem opera) pede troco à supervisão; SUPERVISOR+COORDINATOR+ADMIN
+ * são notificados.
+ *
+ * O pedido é POR DENOMINAÇÃO, nas mesmas chaves da conferência: `need` é o que a
+ * unidade precisa receber e `give` o que ela entrega em troca. Antes havia só uma
+ * linha de texto livre — o escritório lia prosa, nada era conferido e o que
+ * chegava era digitado de novo na conferência do dia.
+ *
+ * Quando as duas somas batem (troca 1:1, a mesma regra e tolerância da
+ * `officeSwap`), atender a solicitação aplica o movimento no cofre sozinho. Um
+ * pedido só com `need` continua valendo: nesse caso a supervisão registra a
+ * troca à mão, como antes.
+ */
+export async function requestChange(
+  user: SessionUser, unitId: string,
+  input: { amount?: number | null; note?: string; need?: Record<string, unknown>; give?: Record<string, unknown> },
+  ctx: Ctx = {},
+): Promise<Result> {
   if (!canOperate(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN' };
   const note = (input.note ?? '').trim();
-  if (!note) return { ok: false, reason: 'INVALID', detail: 'Descreva o troco que você precisa.' };
-  const amount = input.amount != null && input.amount > 0 ? r2(input.amount) : null;
+  const config = await getDenominations(unitId);
+  const need = sanitizeInput(config, input.need ?? {});
+  const give = sanitizeInput(config, input.give ?? {});
+  const needTotal = sumBalances(need);
+  const giveTotal = sumBalances(give);
+
+  if (needTotal <= 0) return { ok: false, reason: 'INVALID', detail: 'Informe quanto precisa de cada nota ou moeda.' };
+  const bad = [...invalidMultiples(config, need), ...invalidMultiples(config, give)];
+  if (bad.length) {
+    return { ok: false, reason: 'INVALID', detail: `Valor incompatível com a denominação: ${bad.join(', ')}. Cada valor deve ser múltiplo da nota/moeda.` };
+  }
+  if (giveTotal > 0 && Math.abs(giveTotal - needTotal) > 0.011) {
+    return { ok: false, reason: 'INVALID', detail: `Troca desigual: você entrega ${giveTotal.toFixed(2)} e pede ${needTotal.toFixed(2)} — os totais devem ser iguais.` };
+  }
+  const amount = r2(needTotal);
 
   const req = await prisma.cashChangeRequest.create({
-    data: { unitId, amount, note, requestedById: user.id, requestedByName: user.name },
+    data: {
+      unitId, amount, note: note || null,
+      needJson: need as unknown as Prisma.InputJsonValue,
+      giveJson: giveTotal > 0 ? (give as unknown as Prisma.InputJsonValue) : undefined,
+      requestedById: user.id, requestedByName: user.name,
+    },
     select: { id: true },
   });
   const unit = await prisma.unit.findUnique({ where: { id: unitId }, select: { name: true } });
-  const valuePart = amount ? ` (${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})` : '';
+  const brlAmount = amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   await notifySupervisory(
     {
       title: '💱 Solicitação de troco',
-      body: `${user.name} pediu troco em ${unit?.name ?? 'unidade'}${valuePart}: ${note}`,
+      body: `${user.name} pediu ${brlAmount} de troco em ${unit?.name ?? 'unidade'}: ${describeBalances(config, need)}${note ? ` — ${note}` : ''}`,
       link: '/modulos/troco', module: 'CASH',
     },
     unitId,
   ).catch(() => {});
-  await audit({ userId: user.id, unitId, action: 'CASH_CHANGE_REQUEST', module: 'CASH', entity: 'cash_change_request', entityId: req.id, metadata: { amount, note }, ...ctx });
+  await audit({ userId: user.id, unitId, action: 'CASH_CHANGE_REQUEST', module: 'CASH', entity: 'cash_change_request', entityId: req.id, metadata: { amount, note, need, give }, ...ctx });
   return { ok: true };
 }
 
@@ -281,18 +326,42 @@ export async function resolveChangeRequest(user: SessionUser, id: string, action
   if (action === 'resolve' && !isSupervisory(user.role)) return { ok: false, reason: 'FORBIDDEN', detail: 'Só a supervisão pode atender.' };
   if (action === 'cancel' && req.requestedById !== user.id && !isSupervisory(user.role)) return { ok: false, reason: 'FORBIDDEN' };
 
+  /* Atender aplica a troca no cofre quando o pedido tem os dois lados fechando
+     1:1. Antes a supervisão atendia aqui e alguém digitava a MESMA troca de novo
+     na tela do cofre — dois lançamentos à mão para um só fato. O movimento fica
+     no histórico como OFFICE_SWAP, igual a uma troca registrada à mão. */
+  let aplicado: number | null = null;
+  if (action === 'resolve') {
+    const config = await getDenominations(req.unitId);
+    const need = sanitizeInput(config, readBalances(req.needJson as Record<string, unknown> | null));
+    const give = sanitizeInput(config, readBalances(req.giveJson as Record<string, unknown> | null));
+    const needTotal = sumBalances(need);
+    const giveTotal = sumBalances(give);
+    if (needTotal > 0 && giveTotal > 0 && Math.abs(needTotal - giveTotal) <= 0.011) {
+      const deltas: Balances = {};
+      for (const k of config.keys) deltas[k] = r2((need[k] || 0) - (give[k] || 0));
+      await applyMovement(user, req.unitId, 'OFFICE_SWAP', deltas, {
+        note: `Troco atendido — pedido de ${req.requestedByName}${resolvedNote?.trim() ? `: ${resolvedNote.trim()}` : ''}`,
+      }, ctx);
+      aplicado = r2(needTotal);
+    }
+  }
+
   await prisma.cashChangeRequest.update({
     where: { id },
     data: { status: action === 'resolve' ? 'RESOLVED' : 'CANCELED', resolvedById: user.id, resolvedByName: user.name, resolvedNote: resolvedNote?.trim() || null, resolvedAt: new Date() },
   });
   if (action === 'resolve') {
+    const cofre = aplicado != null
+      ? ` O cofre já foi atualizado (${aplicado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}).`
+      : '';
     await notifyUsers([req.requestedById], {
       title: '✅ Troco atendido',
-      body: `${user.name} atendeu seu pedido de troco${resolvedNote?.trim() ? `: ${resolvedNote.trim()}` : '.'}`,
+      body: `${user.name} atendeu seu pedido de troco${resolvedNote?.trim() ? `: ${resolvedNote.trim()}` : '.'}${cofre}`,
       link: '/modulos/troco', module: 'CASH',
     }).catch(() => {});
   }
-  await audit({ userId: user.id, unitId: req.unitId, action: action === 'resolve' ? 'CASH_CHANGE_RESOLVE' : 'CASH_CHANGE_CANCEL', module: 'CASH', entity: 'cash_change_request', entityId: id, ...ctx });
+  await audit({ userId: user.id, unitId: req.unitId, action: action === 'resolve' ? 'CASH_CHANGE_RESOLVE' : 'CASH_CHANGE_CANCEL', module: 'CASH', entity: 'cash_change_request', entityId: id, metadata: { appliedToVault: aplicado }, ...ctx });
   return { ok: true };
 }
 
@@ -300,6 +369,19 @@ export interface ChangeRequestUI {
   id: string; unitId: string; unitName?: string; amount: number | null; note: string;
   status: ChangeRequestStatus; requestedByName: string; createdAt: string;
   resolvedByName: string | null; resolvedNote: string | null; resolvedAt: string | null;
+  /** Detalhe por denominação (vazio nos pedidos antigos, de texto livre). */
+  need: Balances; give: Balances; needTotal: number; giveTotal: number;
+  /** Os dois lados fecham 1:1 — atender vai aplicar a troca no cofre. */
+  autoApply: boolean;
+}
+
+/** Lê os dois lados de um pedido, tolerante com os registros antigos sem detalhe. */
+function requestSides(row: { needJson: unknown; giveJson: unknown }) {
+  const need = readBalances(row.needJson as Record<string, unknown> | null);
+  const give = readBalances(row.giveJson as Record<string, unknown> | null);
+  const needTotal = sumBalances(need);
+  const giveTotal = sumBalances(give);
+  return { need, give, needTotal, giveTotal, autoApply: needTotal > 0 && giveTotal > 0 && Math.abs(needTotal - giveTotal) <= 0.011 };
 }
 
 /** Solicitações de troco de uma unidade (abertas primeiro). */
@@ -307,9 +389,10 @@ export async function getChangeRequests(user: SessionUser, unitId: string): Prom
   if (!canAccessUnit(user, unitId)) return [];
   const rows = await prisma.cashChangeRequest.findMany({ where: { unitId }, orderBy: [{ status: 'asc' }, { createdAt: 'desc' }], take: 50 });
   return rows.map((r) => ({
-    id: r.id, unitId: r.unitId, amount: r.amount != null ? Number(r.amount) : null, note: r.note, status: r.status,
+    id: r.id, unitId: r.unitId, amount: r.amount != null ? Number(r.amount) : null, note: r.note ?? '', status: r.status,
     requestedByName: r.requestedByName, createdAt: r.createdAt.toISOString(),
     resolvedByName: r.resolvedByName, resolvedNote: r.resolvedNote, resolvedAt: r.resolvedAt?.toISOString() ?? null,
+    ...requestSides(r),
   }));
 }
 
@@ -326,9 +409,10 @@ export async function getOpenChangeRequests(user: SessionUser): Promise<ChangeRe
     orderBy: { createdAt: 'desc' }, take: 100,
   });
   return rows.map((r) => ({
-    id: r.id, unitId: r.unitId, unitName: nameById.get(r.unitId), amount: r.amount != null ? Number(r.amount) : null, note: r.note,
+    id: r.id, unitId: r.unitId, unitName: nameById.get(r.unitId), amount: r.amount != null ? Number(r.amount) : null, note: r.note ?? '',
     status: r.status, requestedByName: r.requestedByName, createdAt: r.createdAt.toISOString(),
     resolvedByName: null, resolvedNote: null, resolvedAt: null,
+    ...requestSides(r),
   }));
 }
 
