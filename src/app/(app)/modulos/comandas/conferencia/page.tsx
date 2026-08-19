@@ -35,11 +35,19 @@ export default async function ConferenciaPage({ searchParams }: { searchParams: 
             {r.ok ? `${selected.name} — dia operacional ${r.ctx.operationalDate}` : selected.name}
           </p>
         </div>
-        {!isCashier && (
-          <Link href="/modulos/comandas" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
-            ← Contagem manual
-          </Link>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {!isCashier && (
+            <Link href="/modulos/comandas" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
+              ← Contagem manual
+            </Link>
+          )}
+          {/* Ferramenta de calibração: só quem configura precisa ver. */}
+          {(user.role === 'ADMIN' || user.role === 'SUPERVISOR' || user.role === 'COORDINATOR') && (
+            <Link href="/modulos/comandas/diagnostico-leitor" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
+              Diagnóstico do leitor
+            </Link>
+          )}
+        </div>
       </div>
 
       {units.length > 1 && <UnitSelectNav units={units} selected={selected.id} />}

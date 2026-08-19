@@ -48,6 +48,31 @@ describe('parseCommandBarcode — leitura tolerante do código da comanda', () =
     expect(parseCommandBarcode('000020', pequena).number).toBe(20);
   });
 
+  /* A etiqueta real da rede (foto de 19/08/2026): cartão plástico com código de
+     barras e "0346" impresso embaixo. A sequência da KM13 vai além de 600. */
+  it('lê a etiqueta da rede no formato impresso "0346"', () => {
+    expect(parseCommandBarcode('0346', active)).toMatchObject({ number: 346, reason: 'OK' });
+  });
+
+  it('lê comanda de três dígitos numa sequência que passa de 600', () => {
+    const km13 = new Set<number>();
+    for (let n = 1; n <= 605; n++) km13.add(n);
+    expect(parseCommandBarcode('0605', km13)).toMatchObject({ number: 605, reason: 'OK' });
+    expect(parseCommandBarcode('0451', km13)).toMatchObject({ number: 451, reason: 'OK' });
+  });
+
+  /* POR QUE A CALIBRAÇÃO IMPORTA (e não é preciosismo):
+     o parser tolerante testa janelas de dígitos e aceita a PRIMEIRA que exista na
+     sequência. Se o código real trouxer dígitos extras, uma janela pode casar com
+     uma comanda válida ERRADA — e a conferência daria "presente" para a comanda
+     que não está na mesa. Este teste registra o risco; ele desaparece quando
+     soubermos o formato exato e o parser puder ser exato também. */
+  it('DOCUMENTA a ambiguidade: dígitos extras podem casar com outra comanda válida', () => {
+    const r = parseCommandBarcode('1346', active); // 1346 não existe; a janela final "346" existe
+    expect(r.number).toBe(346);
+    expect(r.raw).toBe('1346');
+  });
+
   it('candidateNumbers não devolve duplicados nem zero', () => {
     const c = candidateNumbers('0000');
     expect(c).not.toContain(0);
