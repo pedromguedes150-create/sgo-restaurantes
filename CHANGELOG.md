@@ -9,6 +9,35 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.50.0 — 2026-08-19 (Troco, etapa 3: o pedido chega pré-preenchido pelo cofre)
+
+### Novo
+- **Botão "Sugerir pelo cofre"** no pedido de troco. A conta, em uma frase: o cofre precisa
+  conseguir encher todos os baldes, então **o que falta de miúdos para cobrir a soma das metas é o
+  que se pede** — pago com as notas grandes que estão sobrando. A tela mostra o cálculo em texto
+  ("os baldes somam R$ 3.000 e o cofre tem R$ 800 em miúdos: faltam R$ 2.200…"), para o gerente
+  julgar em vez de obedecer.
+- **A composição dos miúdos vem do histórico da própria unidade.** A meta do balde é um valor total
+  (R$ 500) — ela não diz quantas moedas de 0,50. Mas cada reposição de balde registra os deltas por
+  denominação, ou seja, o que de fato sai do cofre para o caixa. A sugestão usa as **20 últimas
+  reposições** da unidade. Sem histórico, divide igual entre os miúdos configurados — o que ao menos
+  respeita quais denominações aquela unidade usa.
+- **A sugestão fecha 1:1 de verdade.** A entrega é montada com as notas grandes que o cofre tem
+  mesmo (da maior para a menor), e o pedido é ajustado para bater com o total resultante. Sugerir
+  uma troca que o próprio formulário recusaria depois, por diferença de centavos, seria pior do que
+  não sugerir.
+- Quando não há o que sugerir, a tela **diz o porquê**: sem baldes com meta, miúdos suficientes, ou
+  sem notas grandes para trocar.
+- A sugestão **não grava nada** — preenche os campos e o gerente ajusta antes de enviar.
+
+### Testes
+`tests/cash-change-suggestion.integration.test.ts` — 7 casos, incluindo o que mais importa:
+**a sugestão é aceita pelo próprio `requestChange`**. Também: não sugere sem baldes, não sugere com
+miúdos sobrando, não sugere sem notas grandes, nunca entrega nota que o cofre não tem, os dois lados
+fecham, e a composição segue as reposições da unidade. 213 testes no total.
+
+---
+
 ## v1.49.1 — 2026-08-19 (A grade mostra TODOS os números, cada um com a cor do seu status)
 
 ### Melhorado

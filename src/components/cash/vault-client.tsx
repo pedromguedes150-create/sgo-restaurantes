@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ClipboardCheck, RefreshCw, Building2, AlertTriangle, Plus, Landmark, HandCoins, ArrowLeftRight, History, Wallet } from 'lucide-react';
+import { ClipboardCheck, RefreshCw, Building2, AlertTriangle, Plus, Landmark, HandCoins, ArrowLeftRight, History, Wallet, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -124,6 +124,28 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
   const reqNeed = smallDenoms.reduce((t, d) => t + parseNum(formA[d.key] || '0'), 0);
   const reqGive = bigDenoms.reduce((t, d) => t + parseNum(formB[d.key] || '0'), 0);
   const reqBalanced = Math.abs(reqNeed - reqGive) <= 0.011;
+  const [sugestao, setSugestao] = useState<string | null>(null);
+  const [sugerindo, setSugerindo] = useState(false);
+
+  /* Preenche o pedido a partir do que o cofre tem hoje. É sugestão: o gerente
+     ajusta antes de enviar — quem conhece a operação do dia é ele. */
+  async function sugerir() {
+    setSugerindo(true);
+    try {
+      const res = await fetch('/api/cash/vault', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'suggestChange', unitId: selectedUnitId }),
+      });
+      const d = await res.json().catch(() => null);
+      if (!d) { setSugestao('Não consegui calcular a sugestão agora.'); return; }
+      setSugestao(d.motivo ?? null);
+      if (d.vazia) return;
+      const paraTexto = (b: Record<string, number>) =>
+        Object.fromEntries(allKeys.map((k) => [k, b?.[k] ? String(b[k]).replace('.', ',') : '']));
+      setFormA(paraTexto(d.need));
+      setFormB(paraTexto(d.give));
+    } finally { setSugerindo(false); }
+  }
   const [note, setNote] = useState('');
   const [bucketId, setBucketId] = useState('');
   const [registerName, setRegisterName] = useState('');
@@ -200,7 +222,13 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
               </div>
               {action === 'request' && (
                 <div className="mb-2 space-y-2 rounded-md border border-dashed p-2">
-                  <p className="text-xs text-ink-500">A supervisão (supervisor, coordenador e administrador) será avisada na hora. Lance o VALOR EM R$ de cada nota ou moeda, como na conferência.</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-ink-500">A supervisão será avisada na hora. Lance o VALOR EM R$ de cada nota ou moeda, como na conferência.</p>
+                    <Button size="sm" variant="outline" disabled={busy || sugerindo} onClick={sugerir}>
+                      <Wand2 className="h-4 w-4" /> {sugerindo ? 'Calculando…' : 'Sugerir pelo cofre'}
+                    </Button>
+                  </div>
+                  {sugestao && <p className="rounded-md bg-info-bg px-2 py-1 text-xs text-info">{sugestao}</p>}
                   <p className="sgo-type-11 font-semibold text-success">PRECISO RECEBER (moedas/miúdos):</p>
                   <DenomForm list={smallDenoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
                   <p className="sgo-type-11 font-semibold text-danger">ENTREGO EM TROCA (notas grandes):</p>

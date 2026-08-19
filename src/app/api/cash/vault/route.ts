@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { countVault, refillBucket, officeSwap, vaultWithdrawal, upsertBucket, toggleBucket, deleteBucket, registerChange, requestChange, resolveChangeRequest } from '@/lib/cash-vault';
+import { suggestChangeRequest, countVault, refillBucket, officeSwap, vaultWithdrawal, upsertBucket, toggleBucket, deleteBucket, registerChange, requestChange, resolveChangeRequest } from '@/lib/cash-vault';
 
 /** POST { action, … } — Cofre de troco v2 (16/07). */
 export async function POST(req: Request) {
@@ -20,6 +20,12 @@ export async function POST(req: Request) {
   else if (b.action === 'bucketToggle') r = await toggleBucket(user, String(b.id ?? ''), Boolean(b.active), ctx);
   else if (b.action === 'bucketDelete') r = await deleteBucket(user, String(b.id ?? ''), ctx);
   else if (b.action === 'registerChange') r = await registerChange(user, String(b.unitId ?? ''), String(b.registerName ?? ''), b.outFromVault ?? {}, b.inToVault ?? {}, b.note, ctx);
+  else if (b.action === 'suggestChange') {
+    /* Só devolve a sugestão — não grava nada. Quem decide é o gerente, que
+       ajusta na tela antes de enviar. */
+    const sug = await suggestChangeRequest(user, String(b.unitId ?? ''));
+    return NextResponse.json(sug ?? { vazia: true, motivo: 'Sem acesso a esta unidade.' });
+  }
   else if (b.action === 'requestChange') r = await requestChange(user, String(b.unitId ?? ''), { note: b.note != null ? String(b.note) : undefined, need: b.need ?? {}, give: b.give ?? {} }, ctx);
   else if (b.action === 'resolveChange') r = await resolveChangeRequest(user, String(b.id ?? ''), b.cancel ? 'cancel' : 'resolve', b.resolvedNote, ctx);
   else return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
