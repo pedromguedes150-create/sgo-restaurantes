@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
@@ -18,7 +19,18 @@ export type SubmitCountResult =
  */
 export async function submitCount(
   user: SessionUser,
-  input: { unitId: string; operationalDate?: string; allPresent: boolean; absentNumbers?: number[]; observation?: string },
+  input: {
+    unitId: string;
+    operationalDate?: string;
+    allPresent: boolean;
+    absentNumbers?: number[];
+    /** Marcadas na grade como CONFERIDA. Quando vem, o servidor calcula os
+     *  ausentes (é a fonte de verdade) e guarda o estado para a grade reabrir. */
+    presentNumbers?: number[];
+    /** Marcadas como EM USO (com cliente). Contam como PRESENTES. */
+    inUseNumbers?: number[];
+    observation?: string;
+  },
   ctx: { ip?: string | null; userAgent?: string | null } = {},
 ): Promise<SubmitCountResult> {
   try {
@@ -44,11 +56,23 @@ export async function submitCount(
     operationalDate = input.operationalDate;
   }
 
-  // normaliza ausentes: somente números que pertencem à sequência ativa;
-  // os demais são devolvidos em `rejected` para a UI avisar o gerente
+  const inteiros = (v: number[] | undefined) => Array.from(new Set((v ?? []).filter((n) => Number.isInteger(n))));
+  const present = inteiros(input.presentNumbers).filter((n) => seq.active.has(n));
+  const inUse = inteiros(input.inUseNumbers).filter((n) => seq.active.has(n));
+
+  /* AUSENTES SÃO CALCULADOS AQUI quando a grade manda o que está marcado.
+     Antes a tela mandava a lista de ausentes que ela mesma calculava como
+     "ativas − conferidas", esquecendo as marcadas EM USO — e a tela dizia, na
+     própria legenda, que "em uso" CONTA COMO PRESENTE. Resultado: comanda azul
+     virava faltante, abria divergência e alertava o supervisor, contrariando o
+     que o gerente via na tela. Com o cálculo no servidor existe uma definição
+     só: ausente é o que não está nem conferido nem em uso. */
+  const marcouGrade = input.presentNumbers !== undefined || input.inUseNumbers !== undefined;
   const requested = input.allPresent
     ? []
-    : Array.from(new Set((input.absentNumbers ?? []).filter((n) => Number.isInteger(n))));
+    : marcouGrade
+      ? [...seq.active].filter((n) => !present.includes(n) && !inUse.includes(n))
+      : inteiros(input.absentNumbers);
   const absent = requested.filter((n) => seq.active.has(n));
   const rejected = requested.filter((n) => !seq.active.has(n));
 
@@ -57,10 +81,21 @@ export async function submitCount(
   }
 
   // registra/atualiza a contagem do dia
+  /* Guarda o estado da grade: é o que permite reabrir para corrigir sem
+     remarcar tudo. "Todas presentes" grava a sequência ativa inteira. */
+  const presentSalvo = input.allPresent ? [...seq.active] : present;
   await prisma.commandCount.upsert({
     where: { unitId_operationalDate: { unitId: unit.id, operationalDate } },
-    create: { unitId: unit.id, operationalDate, allPresent: input.allPresent, absentCount: absent.length, createdById: user.id },
-    update: { allPresent: input.allPresent, absentCount: absent.length, createdById: user.id },
+    create: {
+      unitId: unit.id, operationalDate, allPresent: input.allPresent, absentCount: absent.length, createdById: user.id,
+      presentNumbers: presentSalvo as unknown as Prisma.InputJsonValue,
+      inUseNumbers: inUse as unknown as Prisma.InputJsonValue,
+    },
+    update: {
+      allPresent: input.allPresent, absentCount: absent.length, createdById: user.id,
+      presentNumbers: presentSalvo as unknown as Prisma.InputJsonValue,
+      inUseNumbers: inUse as unknown as Prisma.InputJsonValue,
+    },
   });
 
   // cria divergências para ausentes sem divergência aberta

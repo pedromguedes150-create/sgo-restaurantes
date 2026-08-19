@@ -37,6 +37,16 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
   const seq = await getActiveSequence(selected.id);
   const activeNumbers = [...seq.active].sort((a, b) => a - b);
 
+  /* Última contagem da unidade, com o estado em que a grade foi deixada.
+     Sem isso a grade reabria em branco e corrigir uma contagem de 648 comandas
+     exigia remarcar as 648 de novo. */
+  const ultimaContagem = await prisma.commandCount.findFirst({
+    where: { unitId: selected.id },
+    orderBy: { operationalDate: 'desc' },
+    select: { operationalDate: true, presentNumbers: true, inUseNumbers: true, allPresent: true },
+  });
+  const numeros = (v: unknown): number[] => (Array.isArray(v) ? v.filter((n): n is number => Number.isInteger(n)) : []);
+
   const canResolve = user.role === 'SUPERVISOR' || user.role === 'ADMIN' || user.role === 'CEO';
 
   const isAdmin = user.role === 'ADMIN';
@@ -89,6 +99,12 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
             hasConfig={Boolean(state.config)}
             todayDone={Boolean(state.todayCount)}
             activeNumbers={activeNumbers}
+            ultimaContagem={ultimaContagem ? {
+              data: ultimaContagem.operationalDate,
+              deHoje: ultimaContagem.operationalDate === operationalDate,
+              conferidas: ultimaContagem.allPresent ? activeNumbers : numeros(ultimaContagem.presentNumbers),
+              emUso: numeros(ultimaContagem.inUseNumbers),
+            } : null}
             openDivergences={state.openDivergences.map((d) => ({
               id: d.id,
               number: d.number,
