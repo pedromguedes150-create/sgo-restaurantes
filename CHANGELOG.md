@@ -9,6 +9,40 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.48.1 — 2026-08-19 (Diagnóstico do leitor de comanda — calibração antes de codar)
+
+### Novo
+- **`/modulos/comandas/diagnostico-leitor`** (Admin/Supervisão, atalho na tela de Conferência por
+  leitor). Ferramenta de calibração para a conferência por câmera do celular. Responde no
+  **aparelho real** as três perguntas que não dá para adivinhar de fora dele:
+  1. **Qual motor de leitura o celular usa.** A `BarcodeDetector` nativa existe no Android/Chrome
+     e **não existe no Safari do iPhone**, onde entra o `@zxing`. A tela diz qual entrou, antes e
+     depois de abrir a câmera, e lista os formatos suportados.
+  2. **Quantos códigos ele lê POR QUADRO.** A leitura nativa devolve uma lista — dá para ler várias
+     comandas espalhadas na mesa de uma vez; o `@zxing` devolve uma por quadro. Com 605 comandas
+     numa unidade, é isso que decide se conferir por câmera é viável.
+  3. **O que a etiqueta traz REALMENTE codificado.** O cartão mostra "0346" impresso, mas o código
+     pode trazer o número puro, com zeros à esquerda, com prefixo da unidade ou um EAN-13 com
+     dígito verificador. A tela mostra o valor cru, o formato, o tamanho e **o que o parser
+     tentaria** em cima daquela leitura.
+- Bipe e vibração só em leitura **nova** (o mesmo código aparece em vários quadros seguidos),
+  contador ao vivo, lanterna quando o aparelho permite, resolução pedida em 1920×1080 (a etiqueta é
+  pequena e as barras finas somem num quadro de 640px) e botão que copia um resumo em texto.
+- **Nada é enviado ao servidor**: a leitura fica no aparelho e o resumo é copiado à mão.
+
+### Testes
+- `tests/commands-barcode.test.ts`: casos da etiqueta real ("0346" e sequência que passa de 600) e
+  um teste que **documenta a ambiguidade** do parser tolerante — dígitos extras podem casar com uma
+  comanda válida errada, o que daria "presente" para uma comanda que não está na mesa. É exatamente
+  o risco que a calibração elimina. 194 testes no total.
+
+### Por que só o diagnóstico, e não a conferência por câmera inteira
+Calibrar depois de construir custa retrabalho e, pior, um parser que acerta no teste e erra na
+operação. O diagnóstico é a metade que não depende de palpite; a conferência por câmera vem quando
+soubermos o que a etiqueta traz e quantos códigos cada aparelho lê por quadro.
+
+---
+
 ## v1.48.0 — 2026-08-19 (Solicitação de troco por denominação, e atender já atualiza o cofre)
 
 ### Melhorado
