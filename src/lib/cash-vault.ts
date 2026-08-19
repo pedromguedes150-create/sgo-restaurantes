@@ -244,6 +244,147 @@ export async function registerChange(
   return { ok: true };
 }
 
+/* ───────── Sugestão do pedido de troco ───────── */
+
+export interface ChangeSuggestion {
+  need: Balances;
+  give: Balances;
+  total: number;
+  /** Explicação em uma frase do porquê deste valor — a tela mostra ao gerente. */
+  motivo: string;
+  /** Não há o que sugerir (cofre equilibrado, ou sem notas grandes para trocar). */
+  vazia: boolean;
+}
+
+const emReais = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+/**
+ * Composição que a unidade REALMENTE usa nos miúdos, tirada do histórico de
+ * reposição de balde.
+ *
+ * A meta do balde é um valor total (R$ 500) — ela não diz quantas moedas de
+ * 0,50. Mas cada reposição registrada guarda os deltas por denominação, ou seja,
+ * o que de fato sai do cofre para o caixa. Essa é a melhor fonte que existe
+ * aqui: é a prática da própria unidade, não um palpite sobre "mix típico".
+ *
+ * Sem histórico, cai num padrão conservador — peso igual entre os miúdos
+ * configurados, que ao menos respeita quais denominações a unidade usa.
+ */
+async function smallMix(unitId: string, config: DenomConfig): Promise<Record<string, number>> {
+  const smalls = config.denominations.filter((d) => d.isSmall && d.value != null);
+  if (smalls.length === 0) return {};
+
+  const refills = await prisma.cashVaultMovement.findMany({
+    where: { unitId, type: 'REFILL' },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    select: { deltas: true },
+  });
+
+  const peso: Record<string, number> = {};
+  let soma = 0;
+  for (const r of refills) {
+    const d = readBalances(r.deltas as Record<string, unknown>);
+    for (const s of smalls) {
+      // na reposição os miúdos SAEM do cofre: delta negativo
+      const v = Math.max(0, -(d[s.key] || 0));
+      if (v > 0) { peso[s.key] = (peso[s.key] || 0) + v; soma += v; }
+    }
+  }
+  if (soma <= 0) {
+    for (const s of smalls) peso[s.key] = 1 / smalls.length;
+    return peso;
+  }
+  for (const k of Object.keys(peso)) peso[k] = peso[k] / soma;
+  return peso;
+}
+
+/**
+ * Sugere o pedido de troco a partir do que o cofre tem hoje.
+ *
+ * A conta, em uma frase: o cofre precisa conseguir encher todos os baldes, então
+ * o que falta de miúdos para cobrir a soma das metas é o que se pede — e paga-se
+ * com as notas grandes que estão sobrando.
+ *
+ * Os dois lados fecham EXATAMENTE. A entrega é montada com as notas grandes que
+ * o cofre tem de verdade (da maior para a menor), e o pedido é ajustado para
+ * bater com o total resultante. Sugerir uma troca que o próprio formulário
+ * recusaria depois, por diferença de centavos, seria pior do que não sugerir.
+ */
+export async function suggestChangeRequest(user: SessionUser, unitId: string): Promise<ChangeSuggestion | null> {
+  if (!canAccessUnit(user, unitId)) return null;
+  const config = await getDenominations(unitId);
+  const vault = await getOrCreateVault(unitId);
+  const saldo = readBalances(vault.balances as Record<string, unknown>);
+
+  const smalls = config.denominations.filter((d) => d.isSmall && d.value != null);
+  const bigs = config.denominations.filter((d) => d.isBig && d.value != null).sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+  const vazio = (): Balances => Object.fromEntries(config.keys.map((k) => [k, 0]));
+
+  const buckets = await prisma.cashBucket.findMany({ where: { unitId, active: true }, select: { targetValue: true } });
+  const metaBaldes = r2(buckets.reduce((t, b) => t + Number(b.targetValue), 0));
+  const miudosNoCofre = r2(smalls.reduce((t, d) => t + (saldo[d.key] || 0), 0));
+  const faltaMiudos = r2(Math.max(0, metaBaldes - miudosNoCofre));
+
+  if (metaBaldes <= 0) {
+    return { need: vazio(), give: vazio(), total: 0, vazia: true, motivo: 'Nenhum balde com valor-alvo definido — a supervisão fixa as metas antes.' };
+  }
+  if (faltaMiudos <= 0) {
+    return {
+      need: vazio(), give: vazio(), total: 0, vazia: true,
+      motivo: 'O cofre já tem ' + emReais(miudosNoCofre) + ' em miúdos para uma meta de ' + emReais(metaBaldes) + '. Não falta troco.',
+    };
+  }
+
+  /* ENTREGA: notas grandes que o cofre tem, da maior para a menor, sem passar do
+     que falta. É isso que define o total real da troca. */
+  const give = vazio();
+  let total = 0;
+  for (const d of bigs) {
+    const valor = d.value as number;
+    const disponivel = Math.floor((saldo[d.key] || 0) / valor);
+    const cabem = Math.floor((faltaMiudos - total) / valor);
+    const qtd = Math.max(0, Math.min(disponivel, cabem));
+    if (qtd > 0) { give[d.key] = r2(qtd * valor); total = r2(total + qtd * valor); }
+  }
+
+  if (total <= 0) {
+    return {
+      need: vazio(), give: vazio(), total: 0, vazia: true,
+      motivo: 'Faltam ' + emReais(faltaMiudos) + ' em miúdos, mas o cofre não tem notas grandes suficientes para trocar.',
+    };
+  }
+
+  /* PEDIDO: distribui o total pela composição que a unidade usa, arredondando
+     para múltiplos de cada denominação; a sobra vai para a menor moeda, que
+     sempre consegue representá-la. */
+  const mix = await smallMix(unitId, config);
+  const need = vazio();
+  const ordenadas = [...smalls].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+  let alocado = 0;
+  for (const d of ordenadas) {
+    const p = mix[d.key] ?? 0;
+    if (p <= 0) continue;
+    const valor = d.value as number;
+    const qtd = Math.floor((total * p) / valor);
+    if (qtd > 0) { need[d.key] = r2(qtd * valor); alocado = r2(alocado + qtd * valor); }
+  }
+  const menor = ordenadas[ordenadas.length - 1];
+  const sobra = r2(total - alocado);
+  if (sobra > 0 && menor && menor.value) {
+    const qtd = Math.round(sobra / menor.value);
+    need[menor.key] = r2((need[menor.key] || 0) + qtd * menor.value);
+  }
+
+  return {
+    need, give, total: r2(total), vazia: false,
+    motivo:
+      'Os baldes somam ' + emReais(metaBaldes) + ' e o cofre tem ' + emReais(miudosNoCofre) +
+      ' em miúdos: faltam ' + emReais(faltaMiudos) + '. A troca sugerida é de ' + emReais(total) +
+      ', paga com as notas grandes disponíveis.',
+  };
+}
+
 /* ───────── Solicitação de troco (gerente → supervisão) ───────── */
 
 /** Descreve um conjunto por denominação em texto curto: "R$ 50,00 em 0,50 · R$ 20,00 em 1". */
