@@ -9,6 +9,35 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.48.3 — 2026-08-19 (Conferência por leitor: ignora o QR do cartão e a releitura do leitor de mão)
+
+### Corrigido
+- **O QR do Instagram impresso no cartão aparecia como erro em toda comanda bipada.** O cartão da
+  rede traz, além do código de barras, um QR com
+  `https://www.instagram.com/churrascariabeijaflor/` — e leitor de mão 2D lê os dois. A conferência
+  registrava isso como **"código sem número", em vermelho**, como se fosse defeito. Não é defeito: é
+  parte do cartão. O parser passa a reconhecer conteúdo que não é comanda (URL) e a tela **ignora em
+  silêncio**, com um contador discreto no rodapé ("QR do cartão ignorado: N") — porque sumir sem
+  dizer nada deixaria o operador sem entender por que o leitor bipou e a lista não mexeu.
+- **Releitura imediata da mesma comanda enchia a lista de "já bipada".** Leitor de mão em modo
+  contínuo relê o código enquanto está apontado para a etiqueta: a primeira leitura conferia e as
+  seguintes viravam aviso, parecendo defeito. Agora a releitura **dentro de 2,5 s é ignorada**; fora
+  dessa janela é o operador bipando de novo de propósito, e o aviso discreto continua útil.
+  Também com contador no rodapé.
+- O leitor por câmera das **Notas Recebidas** segue lendo QR de propósito — ali o QR é a NFC-e.
+  A mudança vale só para a conferência de comandas.
+
+### Testes
+23 casos no parser: reconhecimento do QR do cartão como não-comanda, URL genérica, e a garantia de
+que comanda não é confundida com URL. 202 testes no total.
+
+### Como isso foi diagnosticado
+Vídeo enviado da tela em operação (leitor físico, sessão do gerente). O vídeo é de **12:04** e a
+v1.48.2 — que tirou o QR do leitor por **câmera** — entrou no ar às **12:07**: eram problemas
+diferentes, no leitor físico, que a remoção do QR na câmera não alcançava.
+
+---
+
 ## v1.48.2 — 2026-08-19 (Leitor de comanda calibrado: parser exato, leitura mais leve, Android consertado)
 
 ### O padrão da etiqueta, medido
