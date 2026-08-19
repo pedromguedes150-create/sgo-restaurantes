@@ -45,7 +45,7 @@ export function FreelancerRatesConfig({ units, rates, holidays }: {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Valor da hora do freelancer</h2>
+        <h2 className="mb-1 sgo-type-11 font-semibold text-ink-900">Valor da hora do freelancer</h2>
         <p className="mb-3 text-xs text-ink-500">Por unidade e tipo de dia. No pedido, o sistema calcula <b>horas × valor/hora do dia + vale transporte</b> automaticamente.</p>
         <Group>
           {units.map((u) => (
@@ -71,7 +71,7 @@ export function FreelancerRatesConfig({ units, rates, holidays }: {
       </div>
 
       <div>
-        <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-ink-500"><CalendarDays className="h-4 w-4" /> Feriados</h2>
+        <h2 className="mb-1 flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-900"><CalendarDays className="h-4 w-4" /> Feriados</h2>
         <p className="mb-2 text-xs text-ink-500">Datas marcadas como feriado usam o valor/hora de <b>Feriado</b>.</p>
         <div className="mb-2 flex flex-wrap items-end gap-2">
           <DatePicker label="Data" size="sm" value={hDate || null} onValueChange={(v) => setHDate(v ?? '')} />

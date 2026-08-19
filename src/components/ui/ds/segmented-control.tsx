@@ -96,7 +96,7 @@ export function SegmentedControl<T extends string>({
               'flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 font-medium outline-none',
               'transition-[background-color,color,box-shadow] duration-sgo-2 ease-sgo-std',
               'focus-visible:shadow-sgo-focus motion-reduce:transition-none',
-              size === 'sm' ? 'text-[13px]' : 'text-[14px]',
+              size === 'sm' ? 'text-xs' : 'text-sm',
               /* `bg-raised`, não `bg-surface`: no tema escuro `surface`
                  (31 28 27) é mais ESCURO que o trilho `sunken` (42 38 36),
                  então a pílula eleita AFUNDAVA em vez de subir — o inverso do

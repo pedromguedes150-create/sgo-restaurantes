@@ -69,7 +69,7 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
 
           {comm.attachments.length > 0 && (
             <div className="space-y-2">
-              <p className="flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-ink-500"><Paperclip className="h-3.5 w-3.5" /> Anexos</p>
+              <p className="flex items-center gap-1 sgo-type-11 font-semibold text-ink-500"><Paperclip className="h-3.5 w-3.5" /> Anexos</p>
               <div className="flex flex-wrap gap-2">
                 {comm.attachments.map((a) => isImg(a.mimeType) ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -106,7 +106,7 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
         <Card>
           <CardContent className="space-y-3 pt-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Confirmações</h2>
+              <h2 className="sgo-type-11 font-semibold text-ink-900">Confirmações</h2>
               <span className="text-sm font-bold text-ink-900">{confirmed.length}/{comm.recipients.length}</span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} /></div>

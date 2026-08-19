@@ -26,8 +26,8 @@ export default async function OcorrenciaRelatorioPage({ params }: { params: { id
 
       {/* Cabeçalho do relatório */}
       <div className="border-b-2 border-brand pb-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-ink-900">Relatório de Ocorrência — SGO Beija Flor</p>
-        <h1 className="text-2xl font-black text-ink-900">#{o.unit.code}-{String(o.number).padStart(4, '0')} · {o.typeName}</h1>
+        <p className="sgo-type-11 font-semibold text-ink-900">Relatório de Ocorrência — SGO Beija Flor</p>
+        <h1 className="text-2xl font-bold text-ink-900">#{o.unit.code}-{String(o.number).padStart(4, '0')} · {o.typeName}</h1>
         <p className="text-sm text-ink-500">{o.unit.name} · {GRAVITY_META[o.gravity].emoji} {GRAVITY_META[o.gravity].label} · {STATUS_META[o.status].label}</p>
       </div>
 
@@ -43,13 +43,13 @@ export default async function OcorrenciaRelatorioPage({ params }: { params: { id
       </table>
 
       <div>
-        <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Descrição</p>
+        <p className="sgo-type-11 font-semibold text-ink-500">Descrição</p>
         <p className="whitespace-pre-wrap text-sm">{o.description}</p>
       </div>
 
       {o.status === 'CLOSED' && (
         <div className="rounded border border-line-strong p-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Encerramento</p>
+          <p className="sgo-type-11 font-semibold text-ink-500">Encerramento</p>
           <p className="text-sm">Por {o.closedBy?.name ?? '—'} em {fmt(o.closedAt)} · Revisão: {fmt(o.reviewDate)}</p>
           <p className="mt-1 text-sm"><b>Justificativa:</b> {o.closureJustification}</p>
           <p className="text-sm"><b>Ação corretiva:</b> {o.correctiveAction}</p>
@@ -58,7 +58,7 @@ export default async function OcorrenciaRelatorioPage({ params }: { params: { id
 
       {images.length > 0 && (
         <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Anexos</p>
+          <p className="sgo-type-11 font-semibold text-ink-500">Anexos</p>
           <div className="flex flex-wrap gap-2">
             {images.map((a) => <img key={a.id} src={`/${a.path}`} alt="" className="max-h-64 rounded border" />)}
           </div>

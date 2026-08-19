@@ -99,7 +99,7 @@ export default async function ConfiguracoesPage() {
             />
           )}
         </List>
-        <p className="text-[13px] text-ink-500">As demais configurações são restritas ao Administrador.</p>
+        <p className="text-xs text-ink-500">As demais configurações são restritas ao Administrador.</p>
       </div>
     );
   }
@@ -159,7 +159,7 @@ export default async function ConfiguracoesPage() {
               trailing={
                 <>
                   {!u.active && <StatusBadge tone="danger" dot>Inativo</StatusBadge>}
-                  <span className="text-[13px] text-ink-500">{roleLabel(u.role)}</span>
+                  <span className="text-xs text-ink-500">{roleLabel(u.role)}</span>
                 </>
               }
             />
@@ -170,7 +170,7 @@ export default async function ConfiguracoesPage() {
       <section>
         <h2 className="sgo-type-11 mb-2 text-ink-500">LGPD</h2>
         <div className="rounded-card border border-line bg-surface p-4">
-          <dl className="space-y-1.5 text-[14px]">
+          <dl className="space-y-1.5 text-sm">
             <div className="flex justify-between gap-2">
               <dt className="text-ink-500">Versão do termo</dt>
               <dd className="font-medium tabular-nums text-ink-900">v{TERMS_VERSION}</dd>
@@ -180,7 +180,7 @@ export default async function ConfiguracoesPage() {
               <dd className="font-medium tabular-nums text-ink-900">{RETENTION_MONTHS_DEFAULT} meses</dd>
             </div>
           </dl>
-          <p className="mt-3 text-[12px] leading-5 text-ink-500">
+          <p className="mt-3 text-xs leading-5 text-ink-500">
             Anexos sensíveis restritos a Supervisor/Admin/CEO; acessos auditados. Exportação e exclusão de dados do titular disponíveis via API LGPD (Admin).
           </p>
         </div>

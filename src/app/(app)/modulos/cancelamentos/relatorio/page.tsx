@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { ArrowLeft, Download } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
@@ -37,7 +38,7 @@ export default async function CancelamentosRelatorioPage({ searchParams }: { sea
 
       {units.length > 1 && (
         <div className="print:hidden">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500">Filtrar unidade</p>
+          <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Filtrar unidade</p>
           <UnitSelectNav units={[{ id: '', name: 'Todas as unidades' }, ...units]} selected={unitId ?? ''} />
         </div>
       )}
@@ -48,17 +49,17 @@ export default async function CancelamentosRelatorioPage({ searchParams }: { sea
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.monthTotal}</p><p className="text-xs text-ink-500">cupons no mês</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-success">{summary.justifiedPct}%</p><p className="text-xs text-ink-500">justificados</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.pending}</p><p className="text-xs text-ink-500">pendentes</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{formatBRL(totalValue)}</p><p className="text-xs text-ink-500">valor total</p></CardContent></Card>
+        <StatCard label="cupons no mês" value={summary.monthTotal} />
+        <StatCard label="justificados" value={`${summary.justifiedPct}%`} tone="success" />
+        <StatCard label="pendentes" value={summary.pending} tone="danger" />
+        <StatCard label="valor total" value={formatBRL(totalValue)} />
       </div>
 
       <Card className="break-inside-avoid">
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-sunken/40 text-left text-xs uppercase tracking-wide text-ink-500">
+              <tr className="border-b bg-sunken/40 text-left sgo-type-11 font-semibold text-ink-500">
                 <th className="px-3 py-2">Data</th>
                 <th className="px-3 py-2">Unidade</th>
                 <th className="px-3 py-2">Cupom</th>

@@ -64,7 +64,7 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
-            <tr className="bg-canvas text-left text-xs uppercase tracking-wide text-ink-500">
+            <tr className="bg-canvas text-left sgo-type-11 font-semibold text-ink-500">
               <th className="p-2">Unidade</th>
               <th className="p-2 text-right">Meta</th>
               <th className="p-2 text-right">Uso</th>
@@ -111,7 +111,7 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
           </tfoot>
         </table>
       </div>
-      <p className="text-[12px] text-ink-500 print:hidden">
+      <p className="text-xs text-ink-500 print:hidden">
         Ordenado pela meta. A bolinha indica o uso do sistema: verde ≥80%, âmbar ≥50%, vermelho abaixo de 50%. Absenteísmo = dias de atestado ÷ (headcount × dias do mês). Detalhes nos módulos.
       </p>
     </div>

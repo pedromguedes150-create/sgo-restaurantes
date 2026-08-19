@@ -73,7 +73,7 @@ export function EquipmentInventory({ canEdit, isAdmin, units, suppliers, items, 
 }
 
 function Cell({ label, value, tone }: { label: string; value: string; tone?: 'critical' }) {
-  return <div className="rounded-lg border bg-surface py-3 text-center"><p className={tone === 'critical' && value !== '0' ? 'text-xl font-black text-danger' : 'text-xl font-black text-ink-900'}>{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
+  return <div className="rounded-lg border bg-surface py-3 text-center"><p className={tone === 'critical' && value !== '0' ? 'sgo-type-24 font-semibold text-danger' : 'sgo-type-24 font-semibold text-ink-900'}>{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
 }
 
 /* ───────── Estoque (lista + novo + editar) ───────── */
@@ -99,7 +99,7 @@ function ItemRow({ i, canEdit, isAdmin, suppliers, onChange }: { i: EquipItem; c
           <p className="text-xs text-ink-500">{i.category ? `${i.category} · ` : ''}{i.supplier ? `${i.supplier} · ` : ''}{i.location ? `local: ${i.location} · ` : ''}{formatBRL(i.unitValue)}/{i.unitLabel}</p>
         </div>
         <div className="text-right">
-          <p className="text-lg font-black text-ink-900">{i.currentQty.toLocaleString('pt-BR')} <span className="text-xs font-normal text-ink-500">{i.unitLabel}</span></p>
+          <p className="text-sm font-semibold text-ink-900">{i.currentQty.toLocaleString('pt-BR')} <span className="text-xs font-normal text-ink-500">{i.unitLabel}</span></p>
           <p className="text-xs text-ink-500">{formatBRL(i.totalValue)}</p>
         </div>
       </div>

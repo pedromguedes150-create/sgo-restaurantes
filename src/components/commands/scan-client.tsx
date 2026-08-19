@@ -166,15 +166,15 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
       <Card>
         <CardContent className="grid grid-cols-3 gap-2 py-3 text-center">
           <div>
-            <p className="text-2xl font-black text-success">{scanned.size}</p>
+            <p className="sgo-type-24 font-semibold text-success">{scanned.size}</p>
             <p className="text-xs text-ink-500">conferidas</p>
           </div>
           <div>
-            <p className="text-2xl font-black text-ink-900">{activeNumbers.length}</p>
+            <p className="sgo-type-24 font-semibold text-ink-900">{activeNumbers.length}</p>
             <p className="text-xs text-ink-500">ativas</p>
           </div>
           <div>
-            <p className={`text-2xl font-black ${missing.length ? 'text-danger' : 'text-success'}`}>{missing.length}</p>
+            <p className={`sgo-type-24 font-semibold ${missing.length ? 'text-danger' : 'text-success'}`}>{missing.length}</p>
             <p className="text-xs text-ink-500">faltando</p>
           </div>
         </CardContent>
@@ -251,7 +251,7 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
       {log.length > 0 && (
         <Card>
           <CardContent className="pt-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Últimas leituras</p>
+            <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Últimas leituras</p>
             <ul className="space-y-1 text-sm">
               {log.slice(0, 12).map((l) => (
                 <li key={l.id} className="flex items-center justify-between gap-2 border-b py-1 last:border-0">

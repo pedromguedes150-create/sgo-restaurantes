@@ -142,7 +142,7 @@ function NewType({ onDone }: { onDone: () => void }) {
   }
   return (
     <div className="rounded-lg border border-dashed p-2.5">
-      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Novo tipo</p>
+      <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Novo tipo</p>
       <div className="flex flex-col gap-2">
         <div className="flex items-end gap-2">
           <div className="flex-1"><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: Manutenção predial" className="h-9 text-sm" /></div>

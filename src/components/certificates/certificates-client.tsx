@@ -158,7 +158,7 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
     <div className="space-y-3">
       {/* Foto + IA */}
       <div className="rounded-lg border border-dashed p-3">
-        <h2 className="mb-2 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-ink-500"><Sparkles className="h-4 w-4" /> Foto do atestado (a IA lê)</h2>
+        <h2 className="mb-2 flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-900"><Sparkles className="h-4 w-4" /> Foto do atestado (a IA lê)</h2>
         <input
           type="file" accept="image/*,application/pdf" capture="environment"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) readWithAI(f); }}
@@ -355,8 +355,8 @@ function Panel({ report, ym }: { report: CertReport; ym: string }) {
 function KpiCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-lg border bg-surface p-3">
-      <div className="flex items-center gap-2 text-ink-500">{icon}<span className="text-xs font-semibold uppercase tracking-wide">{label}</span></div>
-      <p className="mt-1 text-2xl font-black text-ink-900">{value}</p>
+      <div className="flex items-center gap-2 text-ink-500">{icon}<span className="sgo-type-11 font-semibold">{label}</span></div>
+      <p className="sgo-type-24 mt-1 font-semibold text-ink-900">{value}</p>
     </div>
   );
 }

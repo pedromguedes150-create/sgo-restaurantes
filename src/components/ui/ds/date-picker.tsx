@@ -103,7 +103,7 @@ export function DatePicker({
                 className="flex h-8 w-8 items-center justify-center rounded-control text-ink-500 outline-none hover:bg-sunken hover:text-ink-900 focus-visible:shadow-sgo-focus">
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span aria-live="polite" className="text-[14px] font-semibold capitalize text-ink-900">{MESES[cur.m - 1]} {cur.y}</span>
+              <span aria-live="polite" className="text-sm font-semibold capitalize text-ink-900">{MESES[cur.m - 1]} {cur.y}</span>
               <button type="button" aria-label="Próximo mês" onClick={() => setCursor((c) => addMonths(c, 1))}
                 className="flex h-8 w-8 items-center justify-center rounded-control text-ink-500 outline-none hover:bg-sunken hover:text-ink-900 focus-visible:shadow-sgo-focus">
                 <ChevronRight className="h-4 w-4" />
@@ -112,7 +112,7 @@ export function DatePicker({
 
             <div className="mb-1 grid grid-cols-7">
               {DIAS.map((d, i) => (
-                <span key={i} className="flex h-7 items-center justify-center text-[11px] font-semibold uppercase text-ink-500">{d}</span>
+                <span key={i} className="flex h-7 items-center justify-center sgo-type-11 font-semibold text-ink-500">{d}</span>
               ))}
             </div>
 
@@ -136,7 +136,7 @@ export function DatePicker({
                     aria-pressed={isSel}
                     onClick={() => { onValueChange(iso); setOpen(false); }}
                     className={cn(
-                      'flex h-9 items-center justify-center rounded-control text-[13px] tabular-nums outline-none transition-colors duration-sgo-1 focus-visible:shadow-sgo-focus motion-reduce:transition-none',
+                      'flex h-9 items-center justify-center rounded-control text-xs tabular-nums outline-none transition-colors duration-sgo-1 focus-visible:shadow-sgo-focus motion-reduce:transition-none',
                       off ? 'cursor-not-allowed text-ink-400 opacity-40'
                         : isSel ? 'bg-brand font-semibold text-on-brand'
                         : 'text-ink-700 hover:bg-sunken',
@@ -151,12 +151,12 @@ export function DatePicker({
 
             <div className="mt-2 flex items-center justify-between border-t border-line pt-2">
               <button type="button" onClick={() => { if (!blocked(today)) { onValueChange(today); setOpen(false); } }}
-                className="rounded-control px-2 py-1 text-[13px] font-medium text-brand outline-none hover:bg-brand-tint focus-visible:shadow-sgo-focus">
+                className="rounded-control px-2 py-1 text-xs font-medium text-brand outline-none hover:bg-brand-tint focus-visible:shadow-sgo-focus">
                 Hoje
               </button>
               {value && (
                 <button type="button" onClick={() => { onValueChange(null); setOpen(false); }}
-                  className="rounded-control px-2 py-1 text-[13px] font-medium text-ink-500 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus">
+                  className="rounded-control px-2 py-1 text-xs font-medium text-ink-500 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus">
                   Limpar
                 </button>
               )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
 import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X, Trash2, CalendarClock, Plus, Scale, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -132,7 +133,7 @@ function ContractProgress({ contracts, compact = false }: { contracts: GasContra
   if (contracts.length === 0) return null;
   return (
     <div className="rounded-lg border bg-surface p-3">
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Contratos vigentes — % cumprido</p>
+      <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Contratos vigentes — % cumprido</p>
       <div className="space-y-2.5">
         {contracts.map((c) => (
           <div key={c.id}>
@@ -245,7 +246,7 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
             {c.note && <p className="text-xs text-ink-500">Obs.: {c.note}</p>}
             {canManage && (editId === c.id ? (
               <div className="mt-2 space-y-2 rounded-lg border border-dashed p-2">
-                <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Editar contrato</p>
+                <p className="sgo-type-11 font-semibold text-ink-500">Editar contrato</p>
                 <div className="grid grid-cols-2 gap-2">
                   <DatePicker label="Início" size="sm" value={ef.startDate || null} onValueChange={(v) => setE('startDate', v ?? '')} />
                   <DatePicker label="Fim" size="sm" value={ef.endDate || null} onValueChange={(v) => setE('endDate', v ?? '')} min={ef.startDate || undefined} />
@@ -399,7 +400,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
           {total > 0 && (
             <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
               <p className="text-xs text-ink-500">Valor total (calculado)</p>
-              <p className="text-2xl font-black text-ink-900">{formatBRL(total)}</p>
+              <p className="sgo-type-24 font-semibold text-ink-900">{formatBRL(total)}</p>
               <p className="text-xs text-ink-500">{kg(price)}</p>
             </div>
           )}
@@ -415,7 +416,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
           {cKg > 0 && cTotal > 0 && (
             <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3 text-center">
               <p className="text-xs text-ink-500">{cc} botijão(ões) × {ck}kg = {cKg}kg · valor total {formatBRL(cTotal)}</p>
-              <p className="text-2xl font-black text-ink-900">{kg(cPricePerKg)}</p>
+              <p className="sgo-type-24 font-semibold text-ink-900">{kg(cPricePerKg)}</p>
             </div>
           )}
         </>
@@ -462,7 +463,7 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
       <Compare title="Por fornecedor" rows={d.bySupplier} />
 
       <div>
-        <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Tendência mensal (preço médio/kg)</h2>
+        <h2 className="mb-1 sgo-type-11 font-semibold text-ink-900">Tendência mensal (preço médio/kg)</h2>
         <MonthlyBars points={d.monthly} />
       </div>
 
@@ -472,7 +473,7 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
 }
 
 function Cell({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border bg-surface py-3 text-center"><p className="text-base font-black text-ink-900">{value}</p><p className="text-xs text-ink-500">{label}</p></div>;
+  return <StatCard label="{label}" value={value} />;
 }
 
 function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
@@ -480,7 +481,7 @@ function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
   const max = Math.max(...rows.map((r) => r.avg), 0.0001);
   return (
     <div>
-      <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">{title}</h2>
+      <h2 className="mb-1 sgo-type-11 font-semibold text-ink-900">{title}</h2>
       <Group>
         {rows.map((r) => (
           <div key={r.key} className="p-2.5">

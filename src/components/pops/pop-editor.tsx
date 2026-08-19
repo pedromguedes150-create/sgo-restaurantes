@@ -153,14 +153,14 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">{editing ? 'Editar POP' : 'Novo POP (Admin)'}</h2>
+      <h2 className="mb-2 sgo-type-11 font-semibold text-ink-900">{editing ? 'Editar POP' : 'Novo POP (Admin)'}</h2>
       <div className="space-y-2">
         <div><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
         <div><Label>Categoria</Label><Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Função/Equipamento/Processo" /></div>
 
         {/* Treinamento */}
         <div className="rounded-lg bg-sunken/40 p-2">
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Treinamento — escolha UM tipo</p>
+          <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Treinamento — escolha UM tipo</p>
           <label className={`flex items-center gap-2 text-sm ${sectors.length > 0 ? 'opacity-50' : ''}`}>
             <input type="checkbox" checked={isInitial} disabled={sectors.length > 0} onChange={(e) => { setIsInitial(e.target.checked); if (e.target.checked) setSectors([]); }} />
             Inicial — TODO colaborador da unidade faz (independe do setor)
@@ -215,7 +215,7 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
               >
                 <div className="mb-1 flex items-center gap-2">
                   <span className="cursor-grab text-ink-500" title="Arraste para reordenar"><GripVertical className="h-4 w-4" /></span>
-                  <span className="text-xs font-bold uppercase tracking-wide text-ink-500">{BLOCK_LABEL[b.type]}</span>
+                  <span className="sgo-type-11 font-semibold text-ink-500">{BLOCK_LABEL[b.type]}</span>
                   <div className="ml-auto flex items-center gap-1">
                     <button type="button" className="rounded border px-1.5 py-1 hover:bg-sunken" title="Subir" onClick={() => move(b.key, -1)}><ChevronUp className="h-4 w-4" /></button>
                     <button type="button" className="rounded border px-1.5 py-1 hover:bg-sunken" title="Descer" onClick={() => move(b.key, 1)}><ChevronDown className="h-4 w-4" /></button>

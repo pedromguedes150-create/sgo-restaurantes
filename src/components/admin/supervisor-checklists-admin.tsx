@@ -81,7 +81,7 @@ function ChecklistForm({ init, busy, onSave, onCancel }: {
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">{init ? 'Editar checklist' : 'Novo checklist'}</p>
+      <p className="mb-2 sgo-type-11 font-semibold text-ink-500">{init ? 'Editar checklist' : 'Novo checklist'}</p>
       <div className="space-y-2">
         <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Visita padrão — salão e cozinha" className="h-10 text-sm" /></div>
         <Label className="text-xs">Itens verificados na visita</Label>

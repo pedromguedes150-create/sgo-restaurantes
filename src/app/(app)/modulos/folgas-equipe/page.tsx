@@ -90,7 +90,7 @@ export default async function FolgasEquipePage({ searchParams }: { searchParams:
           exato continua acessível em "Escolher datas". */}
       <PeriodPicker start={start} end={end} basePath="/modulos/folgas-equipe" />
 
-      <p className="text-[13px] tabular-nums text-ink-500">{data.total} registro(s) entre {fmtBR(start)} e {fmtBR(end)}.</p>
+      <p className="text-xs tabular-nums text-ink-500">{data.total} registro(s) entre {fmtBR(start)} e {fmtBR(end)}.</p>
 
       {data.groups.length === 0 && (
         <EmptyState icon={CalendarOff} title="Nenhuma folga ou férias no período" description="Troque o período acima para ver outros registros." />

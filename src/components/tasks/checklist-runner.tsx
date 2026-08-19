@@ -137,7 +137,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
         ) : (
           groups.map((g) => (
             <div key={g.section ?? '_'}>
-              {g.section && <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">{g.section}</p>}
+              {g.section && <p className="mb-1 sgo-type-11 font-semibold text-ink-500">{g.section}</p>}
               <div className="space-y-1">
                 {g.items.map((it) => {
                   const a = answers[it.id];
@@ -159,7 +159,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
           const ordered = [...groups2.entries()].sort((a, b) => (a[0] === '_' ? 1 : b[0] === '_' ? -1 : 0));
           return (
             <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Fotos</p>
+              <p className="sgo-type-11 font-semibold text-ink-500">Fotos</p>
               {ordered.map(([k, ps]) => (
                 <div key={k}>
                   <p className="mb-1 text-xs font-medium text-ink-900">{k === '_' ? 'Gerais' : (textById.get(k) ?? 'Item')}</p>
@@ -182,7 +182,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
       {items.length === 0 && <p className="text-sm text-ink-500">Este checklist não tem itens — basta anexar foto (se exigida) e concluir.</p>}
       {groups.map((g) => (
         <div key={g.section ?? '_'}>
-          {g.section && <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">{g.section}</p>}
+          {g.section && <p className="mb-1 sgo-type-11 font-semibold text-ink-500">{g.section}</p>}
           <div className="space-y-2">
             {g.items.map((it) => {
               const a = answers[it.id];
@@ -267,7 +267,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
 
       {/* Fotos gerais (não ligadas a um item específico) — até 5 no total */}
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Outras fotos {requiresEvidence && <span className="text-ink-900">(exige ao menos 1)</span>} — {photoEntries.length}/5</p>
+        <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Outras fotos {requiresEvidence && <span className="text-ink-900">(exige ao menos 1)</span>} — {photoEntries.length}/5</p>
         <div className="flex flex-wrap gap-2">
           {photoEntries.map((e, i) => ({ e, i })).filter((x) => x.e.itemId === null).map(({ e, i }) => (
             <div key={i} className="relative">

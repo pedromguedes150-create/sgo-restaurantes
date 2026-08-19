@@ -68,7 +68,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
                 key={g.id}
                 href={only.href}
                 className={cn(
-                  'flex h-10 items-center gap-2.5 rounded-control px-2.5 text-[14px] font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
+                  'flex h-10 items-center gap-2.5 rounded-control px-2.5 text-sm font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
                   active ? 'bg-brand-tint-2 font-semibold text-brand' : 'text-ink-700 hover:bg-sunken hover:text-ink-900',
                 )}
               >
@@ -86,7 +86,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
                 onClick={() => setGroup(g.id, !gOpen)}
                 aria-expanded={gOpen}
                 className={cn(
-                  'flex h-10 w-full items-center gap-2.5 rounded-control px-2.5 text-[13px] font-semibold outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
+                  'flex h-10 w-full items-center gap-2.5 rounded-control px-2.5 text-xs font-semibold outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
                   gActive ? 'text-brand' : 'text-ink-700 hover:bg-sunken',
                 )}
               >
@@ -108,7 +108,7 @@ export function Sidebar({ isAdmin, viewable, badges }: { isAdmin: boolean; viewa
                         <Link
                           href={href}
                           className={cn(
-                            'flex h-10 items-center gap-2.5 rounded-control py-2 pl-9 pr-2.5 text-[14px] font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
+                            'flex h-10 items-center gap-2.5 rounded-control py-2 pl-9 pr-2.5 text-sm font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
                             active ? 'bg-brand-tint-2 font-semibold text-brand' : 'text-ink-700 hover:bg-sunken hover:text-ink-900',
                           )}
                         >

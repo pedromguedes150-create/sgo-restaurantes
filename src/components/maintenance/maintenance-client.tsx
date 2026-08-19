@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
 import { Wrench, Plus, Play, Check, X, RotateCcw, Pencil } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -75,10 +76,10 @@ function TicketsTab({ isAdmin, units, equipment, suppliers, summary, tickets, on
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.open}</p><p className="text-xs text-ink-500">abertos</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-ink-900">{summary.inProgress}</p><p className="text-xs text-ink-500">em andamento</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-danger">{summary.overdue}</p><p className="text-xs text-ink-500">atrasados</p></CardContent></Card>
-        <Card><CardContent className="py-3 text-center"><p className="text-2xl font-black text-success">{summary.doneMonth}</p><p className="text-xs text-ink-500">feitos no mês</p></CardContent></Card>
+        <StatCard label="abertos" value={summary.open} />
+        <StatCard label="em andamento" value={summary.inProgress} />
+        <StatCard label="atrasados" value={summary.overdue} tone="danger" />
+        <StatCard label="feitos no mês" value={summary.doneMonth} tone="success" />
       </div>
       {summary.costMonth > 0 && <p className="text-sm text-ink-500">Custo de manutenção no mês: <b className="text-brand">{formatBRL(summary.costMonth)}</b></p>}
 
@@ -118,7 +119,7 @@ function NewTicket({ units, equipment, suppliers, onDone }: { units: UnitDTO[]; 
   if (!open) return <Button onClick={() => setOpen(true)} variant="gold" className="w-full"><Plus className="h-5 w-5" /> Novo chamado</Button>;
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Novo chamado de manutenção</h2>
+      <h2 className="mb-2 sgo-type-11 font-semibold text-ink-900">Novo chamado de manutenção</h2>
       <div className="space-y-2">
         {units.length > 1 && (
           <Select
@@ -256,7 +257,7 @@ function NewPlan({ units, equipment, onDone }: { units: UnitDTO[]; equipment: Eq
   if (!open) return <Button onClick={() => setOpen(true)} variant="gold" className="w-full"><Plus className="h-5 w-5" /> Novo plano preventivo</Button>;
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Novo plano preventivo</h2>
+      <h2 className="mb-2 sgo-type-11 font-semibold text-ink-900">Novo plano preventivo</h2>
       <div className="space-y-2">
         {units.length > 1 && (
           <Select

@@ -213,7 +213,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
           <div className="rounded-lg border-2 border-brand/30 bg-brand/5 p-3">
             <div className="flex items-center justify-between">
               <p className="flex items-center gap-1.5 text-sm font-bold text-ink-900"><Landmark className="h-4 w-4 text-ink-900" /> Cofre da unidade</p>
-              <p className="text-lg font-black tabular-nums text-ink-900">{brl(vault.total)}</p>
+              <p className="sgo-type-24 font-semibold tabular-nums text-ink-900">{brl(vault.total)}</p>
             </div>
             <p className="text-xs text-ink-500">
               {vault.lastCountAt ? `Última conferência: ${new Date(vault.lastCountAt).toLocaleDateString('pt-BR')}` : 'Nenhuma conferência ainda — lance a posição inicial em "Conferir cofre".'}
@@ -238,7 +238,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
                   description="Hora de pedir troca ao escritório."
                 />
               ) : (
-                <p className="text-[12px] tabular-nums text-ink-500">
+                <p className="text-xs tabular-nums text-ink-500">
                   Notas grandes{indicatorLabel ? ` (${indicatorLabel})` : ''}: {brl(vault.bigNotesTotal)} ({vault.bigNotesPct}% do cofre)
                 </p>
               )}
@@ -254,7 +254,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
           {/* Baldes */}
           <div className="rounded-lg border bg-surface p-3">
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Baldes dos caixas (valor-alvo fixado pela supervisão) — soma {brl(bucketsTotal)}</p>
+            <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Baldes dos caixas (valor-alvo fixado pela supervisão) — soma {brl(bucketsTotal)}</p>
             {activeBuckets.length === 0 && <p className="text-sm text-ink-500">Nenhum balde cadastrado{canManageBuckets ? ' — cadastre abaixo' : ' (unidade sem baldes: use "Troca no caixa")'}. </p>}
             <div className="flex flex-wrap gap-2">
               {activeBuckets.map((b) => (
@@ -385,7 +385,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
           {/* Alertas por unidade (supervisão) */}
           {alerts && alerts.length > 0 && (
             <div className="rounded-lg border bg-surface p-3">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><AlertTriangle className="h-3.5 w-3.5" /> Cofres da rede — retiradas no mês</p>
+              <p className="mb-2 flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-500"><AlertTriangle className="h-3.5 w-3.5" /> Cofres da rede — retiradas no mês</p>
               <div className="space-y-1">
                 {alerts.map((a) => (
                   <div key={a.unitId} className="flex items-center justify-between gap-2 text-sm">
@@ -401,7 +401,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
           {/* Movimentações recentes */}
           <div>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Movimentações recentes</p>
+            <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Movimentações recentes</p>
             {vault.recentMovements.length === 0 && <p className="text-sm text-ink-500">Nenhuma movimentação ainda.</p>}
             <div className="space-y-1.5">
               {vault.recentMovements.map((m) => {

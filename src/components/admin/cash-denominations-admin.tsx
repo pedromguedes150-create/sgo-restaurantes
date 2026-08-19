@@ -111,7 +111,7 @@ export function CashDenominationsAdmin({ units, isAdmin }: { units: Unit[]; isAd
 
       {data && (
         <>
-          <div className="hidden grid-cols-12 gap-2 px-2 text-xs font-bold uppercase tracking-wide text-ink-500 sm:grid">
+          <div className="hidden grid-cols-12 gap-2 px-2 sgo-type-11 font-semibold text-ink-500 sm:grid">
             <div className="col-span-4">Denominação</div>
             <div className="col-span-2 text-center">Miúdos</div>
             <div className="col-span-2 text-center">Notas grandes</div>
@@ -193,7 +193,7 @@ function AddFromCatalog({ available, onAdd, busy }: { available: { key: string; 
   useEffect(() => { if (!available.some((a) => a.key === key)) setKey(available[0]?.key ?? ''); }, [available, key]);
   return (
     <div className="rounded-lg border border-dashed p-2.5">
-      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Adicionar denominação do catálogo</p>
+      <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Adicionar denominação do catálogo</p>
       <div className="flex items-end gap-2">
         <div className="flex-1">
           <Select

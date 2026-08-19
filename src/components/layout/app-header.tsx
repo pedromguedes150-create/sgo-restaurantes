@@ -60,12 +60,12 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
 
           {/* Breadcrumb: grupo › página. O rótulo colapsa/expande conforme o scroll. */}
           <div className="flex min-w-0 items-center gap-1.5 pl-1">
-            {crumb?.group && <span className="hidden text-[13px] font-medium text-ink-500 sm:inline">{crumb.group}</span>}
+            {crumb?.group && <span className="hidden text-xs font-medium text-ink-500 sm:inline">{crumb.group}</span>}
             {crumb?.group && showLabel && label && <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 text-ink-400 sm:inline" />}
             {showLabel && label ? (
-              <span className="truncate text-[15px] font-semibold text-ink-900">{label}</span>
+              <span className="truncate text-sm font-semibold text-ink-900">{label}</span>
             ) : !crumb?.group ? (
-              <span className="text-[15px] font-semibold text-ink-900">SGO</span>
+              <span className="text-sm font-semibold text-ink-900">SGO</span>
             ) : null}
           </div>
 
@@ -85,7 +85,7 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
             className="inline-flex h-11 items-center gap-2 rounded-control px-2 text-ink-500 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken hover:text-ink-900 focus-visible:shadow-sgo-focus md:h-9 lg:border lg:border-line-strong lg:pl-2.5 lg:pr-2"
           >
             <Search className="h-5 w-5 md:h-4 md:w-4" />
-            <span className="hidden text-[13px] font-medium text-ink-500 lg:inline">Buscar</span>
+            <span className="hidden text-xs font-medium text-ink-500 lg:inline">Buscar</span>
             <kbd className="hidden rounded border border-line-strong px-1 text-[11px] font-medium text-ink-500 lg:inline">⌘K</kbd>
           </button>
           <Link href="/modulos/comunicacao" aria-label="Comunicação" className={`${iconBtn} relative`}>
@@ -109,9 +109,9 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
           </Link>
           {/* Avatar + nome levam ao Meu Perfil. */}
           <Link href="/perfil" className="ml-1 flex items-center gap-2 rounded-control py-1 pl-1 pr-2 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus" aria-label="Meu Perfil">
-            <span className="flex h-9 w-9 items-center justify-center rounded-control bg-brand text-[13px] font-bold text-on-brand">{initials}</span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-control bg-brand text-xs font-bold text-on-brand">{initials}</span>
             <span className="hidden leading-tight lg:block">
-              <span className="block text-[13px] font-semibold text-ink-900">{userName}</span>
+              <span className="block text-xs font-semibold text-ink-900">{userName}</span>
               <span className="block text-[11px] text-ink-500">{roleLabel}</span>
             </span>
           </Link>

@@ -90,7 +90,7 @@ function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: {
   return (
     <div className="space-y-2 rounded-lg border border-dashed p-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Modelos de checklist</h2>
+        <h2 className="sgo-type-11 font-semibold text-ink-900">Modelos de checklist</h2>
         {available.length > 0 && <button className="text-xs font-semibold text-brand" onClick={() => setSel(sel.size === available.length ? new Set() : new Set(available.map((e) => e.id)))}>{sel.size === available.length ? 'Limpar' : 'Selecionar todos'}</button>}
       </div>
       <p className="text-xs text-ink-500">Marque os que quer criar nesta unidade (você edita depois). Os que já existem ficam sinalizados.</p>
@@ -99,7 +99,7 @@ function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: {
       <div className="max-h-[28rem] space-y-2 overflow-y-auto">
         {[...groups.entries()].map(([cat, list]) => (
           <div key={cat}>
-            <p className="mb-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-ink-900">{cat}</p>
+            <p className="mb-1 mt-1 sgo-type-11 font-semibold tracking-wide text-ink-900">{cat}</p>
             <div className="space-y-1">
               {list.map((e) => {
                 const exists = existingNames.has(e.name);
@@ -148,7 +148,7 @@ function ChecklistForm({ units, defaultUnitId, onDone, onCancel }: { units: Unit
 
   return (
     <div className="rounded-lg border border-dashed p-3 space-y-3">
-      <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Novo checklist</h2>
+      <h2 className="sgo-type-11 font-semibold text-ink-900">Novo checklist</h2>
       {f.fields}
       <div>
         <Label className="text-xs">Replicar para unidades</Label>
@@ -318,7 +318,7 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
           <label className="flex items-center gap-2"><input type="checkbox" checked={entersMeta} onChange={(e) => setEntersMeta(e.target.checked)} /> Entra na meta</label>
         </div>
         <div className="rounded-lg bg-surface/60 p-2">
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-ink-500">Programação (opcional)</p>
+          <p className="mb-1 sgo-type-11 font-semibold tracking-wide text-ink-500">Programação (opcional)</p>
           <div className="grid grid-cols-2 gap-2">
             <DatePicker label="Início" size="sm" value={startDate || null} onValueChange={(v) => setStartDate(v ?? '')} />
             <DatePicker label="Encerramento" size="sm" min={startDate || undefined} value={endDate || null} onValueChange={(v) => setEndDate(v ?? '')} />
@@ -328,7 +328,7 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
 
         {/* Itens/etapas */}
         <div className="rounded-lg bg-surface/60 p-2">
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Itens / etapas (opcional)</p>
+          <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Itens / etapas (opcional)</p>
           <p className="mb-2 text-[11px] text-ink-500">Cada item é verificado pelo gerente como 🟢 De acordo / 🟡 Em correção / 🔴 A corrigir. Use ↑ ↓ para ordenar.</p>
           <div className="space-y-2">
             {items.map((it, i) => (

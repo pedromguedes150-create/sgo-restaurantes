@@ -49,7 +49,7 @@ export function ChecklistFormsAdmin({ units, forms }: { units: Unit[]; forms: Fo
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-dashed p-2.5">
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Nova ficha</p>
+        <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Nova ficha</p>
         <div className="grid grid-cols-12 items-end gap-1.5">
           <div className="col-span-12 sm:col-span-6"><Label className="text-xs">Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ex.: Ficha de Controle de Massas" className="h-9 text-sm" /></div>
           <div className="col-span-9 sm:col-span-5">
@@ -134,7 +134,7 @@ function FormEditor({ id, onChanged }: { id: string; onChanged: () => void }) {
 
       {/* Link */}
       <div className="rounded-lg border bg-canvas p-2.5">
-        <p className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500"><Link2 className="h-3.5 w-3.5" /> Link público</p>
+        <p className="mb-1 flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-500"><Link2 className="h-3.5 w-3.5" /> Link público</p>
         {d.linkEnabled ? (
           <div className="flex flex-wrap items-center gap-1.5">
             <Input readOnly value={url} className="h-9 flex-1 text-xs" onFocus={(e) => e.currentTarget.select()} />
@@ -146,7 +146,7 @@ function FormEditor({ id, onChanged }: { id: string; onChanged: () => void }) {
 
       {/* Campos */}
       <div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Perguntas / campos</p>
+        <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Perguntas / campos</p>
         <div className="space-y-1.5">
           {d.fields.length === 0 && <p className="text-sm text-ink-500">Nenhum campo ainda — adicione abaixo.</p>}
           {d.fields.map((f, idx) => (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
 import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock, Plus } from 'lucide-react';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
@@ -228,8 +229,8 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
       {canManage && (
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <div className="grid flex-1 grid-cols-2 gap-2">
-            <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-2xl font-black text-ink-900">{filtered.length}</p><p className="text-xs text-ink-500">notas</p></div>
-            <div className="rounded-lg border bg-surface p-3 text-center"><p className="text-xl font-black text-ink-900">{formatBRL(total)}</p><p className="text-xs text-ink-500">valor total</p></div>
+            <StatCard label="notas" value={filtered.length} />
+            <StatCard label="valor total" value={formatBRL(total)} />
           </div>
           <div className="flex flex-col gap-1.5">
             <a href={exportHref} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"><FileSpreadsheet className="h-3.5 w-3.5 text-brand" /> Excel</a>
@@ -239,7 +240,7 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
       )}
 
       {canManage && (
-        <label className="inline-flex w-fit cursor-pointer items-center gap-2 text-[13px] text-ink-700 print:hidden">
+        <label className="inline-flex w-fit cursor-pointer items-center gap-2 text-xs text-ink-700 print:hidden">
           <input
             type="checkbox"
             checked={detalhado}

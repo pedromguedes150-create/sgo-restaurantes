@@ -92,7 +92,7 @@ function ScheduleForm({ units, onDone }: { units: { id: string; name: string }[]
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Agendar inventário (Admin)</h2>
+      <h2 className="mb-2 sgo-type-11 font-semibold text-ink-900">Agendar inventário (Admin)</h2>
       <div className="space-y-2">
         <Select label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
         <div className="grid grid-cols-2 gap-2">

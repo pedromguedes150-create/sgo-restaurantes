@@ -9,6 +9,66 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.47.0 — 2026-08-19 (Hierarquia, etapas 2 a 4: o corpo da tela cai para dois tamanhos)
+
+### Melhorado
+- **Etapa 2 — a faixa de estatística vira um componente só.** O mesmo "número em cima de um
+  rótulo" estava escrito à mão em cada tela, com dez grafias diferentes. Agora 21 faixas passam
+  pelo `StatCard` (Cancelamentos, Notas, Manutenção, Gás, Óleo, Supervisão, Caixa, Comissões),
+  e os números que vivem em blocos próprios (anel da meta, KPI de atestados, total do cofre,
+  conferência por leitor, painel da unidade, higiene, inventário) foram para o mesmo nível 24/600.
+  O `StatCard` ganhou `tone` para o número vermelho de pendência e o verde de concluído —
+  pela regra da escala, **cor sinaliza estado**, então isso precisava viajar junto.
+- **Etapa 3 — o corpo tem dois tamanhos: 15 (conteúdo) e 13 (apoio).** 85% de todo o texto do
+  sistema caía em 12px ou 14px, e o resto se espalhava por 13, 15 e 16 — seis estilos numa faixa
+  de quatro pixels, que o olho não consegue ordenar. A escala foi definida no
+  `tailwind.config.ts`, onde ela pertence: `text-xs` passa a valer 13/18 e `text-sm`/`text-base`
+  15/20, alinhando **1430 usos em 143 arquivos de uma vez**, sem varredura cega arquivo a arquivo.
+  Outras 113 grafias escritas em pixel solto (`text-[14px]`, `text-[13px]`…) foram para as
+  classes da escala.
+- **O peso 900 saiu do sistema.** `font-black` era o recurso de "gritar" e não existe mais em
+  nenhuma tela de produção: número de painel usa 24/600, título usa negrito comum.
+- **Etapa 4 — etiquetas e selos num nível só.** As cinco grafias de rótulo viraram o nível 6
+  (`sgo-type-11`, 11/600 caixa alta): 85 rótulos, 39 cabeçalhos de seção (estes em tinta forte,
+  para não se confundirem com rótulo de campo), o cabeçalho de tabela e o `StatusBadge` — que
+  estava em 15/600, **o mesmo tamanho do nome do item que ele qualifica**.
+
+### Manutenção
+- **Portão novo: `scripts/check-type-scale.cjs`**, ligado ao `lint:ds` (que bloqueia o CI).
+  Falha se voltar o peso 900, se um dado for escrito no 34px do título, se aparecer tamanho em
+  pixel solto acima de 11px, ou se alguém escrever caixa alta fora do nível 6. Testado contra as
+  quatro regressões antes de entrar.
+
+### A verificar antes de liberar
+As oito telas do diagnóstico **não foram remedidas** depois destas três etapas: a sessão do
+navegador de desenvolvimento caiu junto com o banco no meio do trabalho. Foram conferidos por
+medição a escala aplicada (13/18, 15/20, 11/14, 24/29), a ausência de peso 900, a galeria do
+design system sem transbordo em 1280 e 375, além de tsc, lint, 181 testes e os 5 portões.
+**Falta ver as telas com dados reais** — é uma mudança de tamanho de corpo em todas elas.
+
+---
+
+## v1.46.0 — 2026-08-18 (Hierarquia, etapa 1: o título da tela volta a ser o primeiro nível)
+
+### Melhorado
+- **O número dos painéis não compete mais com o nome da tela.** O `StatCard` desenhava o número
+  em **34px negrito** — o mesmo tamanho e peso do título da página. Em Ocorrências isso colocava
+  quatro elementos no primeiro nível (o nome da tela e os três contadores), e em Comandas outros
+  quatro: tipograficamente indistinguíveis, sem nada dizendo o que é a tela e o que é dado dentro
+  dela. O número passa a **24px semibold**, um degrau abaixo do título.
+  Medido depois da mudança: Ocorrências, Comandas, Visão Executiva e Início agora têm
+  **exatamente um elemento em 34px** — o título — contra quatro antes em duas delas.
+- **Escala tipográfica ganha o nível 24** (`.sgo-type-24`, 24/29). Com ele a escala usada em
+  produção fica nos seis níveis da proposta: **34 / 24 / 17 / 15 / 13 / 11**. Os níveis 28, 22, 20
+  e 12 só aparecem nas páginas `/dev` e saem nas etapas seguintes.
+- **Rótulo do cartão ganha o peso do nível** (11px semibold, caixa alta), e o esqueleto de
+  carregamento acompanhou a nova altura para a tela não pular ao carregar.
+
+Primeira das quatro etapas do plano de hierarquia. As próximas: unificar as dez grafias do
+número-destaque, colapsar o corpo das listas em 15/13, e padronizar etiquetas e selos.
+
+---
+
 ## v1.45.2 — 2026-08-18 (Digitar em formulário de folha para de jogar o foco no "X")
 
 ### Corrigido

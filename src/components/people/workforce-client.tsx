@@ -95,7 +95,7 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Mapa da unidade</h2>
+            <h2 className="sgo-type-11 font-semibold text-ink-900">Mapa da unidade</h2>
             <p className="text-xs text-ink-500">
               {isNow
                 ? <span className="font-semibold text-success">● Na unidade agora</span>
@@ -196,7 +196,7 @@ function FreelancersPanel({ freelancers, sectors, isToday, post, busy }: {
   if (freelancers.length === 0) return null;
   return (
     <div className="rounded-lg border border-brand/30 bg-brand/5 p-3">
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-900">Freelancers do dia ({freelancers.length})</p>
+      <p className="mb-2 sgo-type-11 font-semibold text-ink-900">Freelancers do dia ({freelancers.length})</p>
       <div className="space-y-1.5">
         {freelancers.map((f) => (
           <div key={f.requestId} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-surface p-2">
@@ -253,7 +253,7 @@ function AllocationBoardEditor({ unitId, board, grid, activeTurnos, post, busy }
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Quadro padrão da equipe</h2>
+      <h2 className="mb-2 sgo-type-11 font-semibold text-ink-900">Quadro padrão da equipe</h2>
       <p className="mb-3 text-xs text-ink-500">Defina uma vez onde cada um trabalha. O mapa do dia mostra automaticamente só quem está escalado (folga/falta/atestado não aparecem no dia).</p>
 
       {/* Alocar quem falta */}
@@ -350,7 +350,7 @@ function TurnosManager({ unitId, turnos, post, busy }: { unitId: string; turnos:
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500"><Clock className="mr-1 inline h-4 w-4" /> Turnos da unidade (Admin)</h2>
+      <h2 className="mb-2 sgo-type-11 font-semibold text-ink-900"><Clock className="mr-1 inline h-4 w-4" /> Turnos da unidade (Admin)</h2>
       <div className="space-y-2">
         {turnos.length === 0 && <p className="text-xs text-ink-500">Nenhum turno. Cadastre os turnos/horários desta unidade.</p>}
         {turnos.map((t) => editId === t.id ? (
@@ -391,7 +391,7 @@ function SectorsManager({ unitId, sectors, suggested, post, busy }: { unitId: st
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Setores da unidade (Admin)</h2>
+      <h2 className="mb-2 sgo-type-11 font-semibold text-ink-900">Setores da unidade (Admin)</h2>
       <div className="space-y-2">
         {sectors.map((s) => editId === s.id ? (
           <div key={s.id} className="grid grid-cols-12 items-end gap-1 rounded-md bg-sunken/40 p-2">

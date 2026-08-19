@@ -67,7 +67,7 @@ export function ChecklistPublicForm({ token, data }: { token: string; data: Data
 
       <div className="space-y-3">
         {data.fields.map((f) => {
-          if (f.kind === 'SECTION') return <p key={f.id} className="pt-2 text-sm font-bold uppercase tracking-wide text-ink-500">{f.label}</p>;
+          if (f.kind === 'SECTION') return <p key={f.id} className="pt-2 sgo-type-11 font-semibold text-ink-900">{f.label}</p>;
           const v = values[f.id];
           const lbl = <label className="mb-1 block text-sm font-semibold text-brand">{f.label} {f.required && <span className="text-danger">*</span>}</label>;
           if (f.kind === 'BOOLEAN') {

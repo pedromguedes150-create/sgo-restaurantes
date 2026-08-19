@@ -107,7 +107,7 @@ export function ModulesHub({ viewable }: { viewable: string[] }) {
                   className="sgo-control flex items-center gap-3 px-3 py-2.5"
                 >
                   <Icon className="h-5 w-5 shrink-0 text-brand" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink-900">{label}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink-900">{label}</span>
                   <ChevronRight className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />
                 </Link>
               ))}

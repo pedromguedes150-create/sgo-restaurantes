@@ -60,7 +60,7 @@ export function GuideView({ sections }: { sections: Section[] }) {
         <div className="space-y-5">
           {filtered.map((s) => (
             <div key={s.title}>
-              <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">{s.title}</h2>
+              <h2 className="mb-2 sgo-type-11 font-semibold text-ink-900">{s.title}</h2>
               <div className="space-y-2">
                 {s.guides.map((g) => {
                   // ao buscar, tudo já vem expandido (poucos resultados); senão, acordeão normal

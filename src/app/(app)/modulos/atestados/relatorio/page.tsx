@@ -31,14 +31,14 @@ export default async function AtestadosRelatorioPage({ searchParams }: { searchP
       </div>
 
       <div className="border-b-2 border-brand pb-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-ink-900">Relatório de Atestados — SGO Beija Flor</p>
-        <h1 className="text-2xl font-black text-ink-900">{ym}</h1>
+        <p className="sgo-type-11 font-semibold text-ink-900">Relatório de Atestados — SGO Beija Flor</p>
+        <h1 className="text-2xl font-bold text-ink-900">{ym}</h1>
         <p className="text-sm text-ink-500">{report.totals.count} atestado(s) · {report.totals.days} dia(s) perdido(s)</p>
       </div>
 
       {/* Por unidade */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Por unidade</p>
+        <p className="sgo-type-11 font-semibold text-ink-500">Por unidade</p>
         <table className="w-full text-sm">
           <thead><tr className="border-b text-left text-ink-500"><th className="py-1">Unidade</th><th className="py-1 text-right">Atestados</th><th className="py-1 text-right">Dias</th><th className="py-1 text-right">Absenteísmo</th></tr></thead>
           <tbody>
@@ -52,7 +52,7 @@ export default async function AtestadosRelatorioPage({ searchParams }: { searchP
 
       {/* Detalhamento */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-wide text-ink-500">Detalhamento</p>
+        <p className="sgo-type-11 font-semibold text-ink-500">Detalhamento</p>
         <table className="w-full text-xs">
           <thead><tr className="border-b text-left text-ink-500"><th className="py-1">Colaborador</th><th className="py-1">Unidade</th><th className="py-1">Tipo</th><th className="py-1">Período</th><th className="py-1 text-right">Dias</th>{showCid && <th className="py-1">CID</th>}</tr></thead>
           <tbody>

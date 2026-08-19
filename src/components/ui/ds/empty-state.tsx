@@ -21,8 +21,8 @@ export function EmptyState({ icon: Icon, title, description, action, size = 'md'
       <span className={cn('flex items-center justify-center rounded-pill bg-sunken', size === 'sm' ? 'h-10 w-10' : 'h-14 w-14')}>
         <Icon className={cn('text-ink-400', size === 'sm' ? 'h-5 w-5' : 'h-6 w-6')} aria-hidden />
       </span>
-      <p className={cn('font-semibold text-ink-900', size === 'sm' ? 'text-[15px]' : 'text-[17px]')}>{title}</p>
-      {description && <p className="max-w-sm text-[14px] leading-5 text-ink-500">{description}</p>}
+      <p className={cn('font-semibold text-ink-900', size === 'sm' ? 'text-sm' : 'sgo-type-17')}>{title}</p>
+      {description && <p className="max-w-sm text-sm leading-5 text-ink-500">{description}</p>}
       {action && <div className="mt-1">{action}</div>}
     </div>
   );

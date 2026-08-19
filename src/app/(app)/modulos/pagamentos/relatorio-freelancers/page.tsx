@@ -75,12 +75,12 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
       {/* Filtros (listas suspensas) */}
       <div className="flex flex-wrap items-end gap-3 print:hidden">
         <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500">Mês</p>
+          <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Mês</p>
           <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" className="h-10 w-56 rounded-lg border-2 border-line-strong bg-surface px-3 text-sm font-medium" />
         </div>
         <form method="get" className="flex items-end gap-1.5">
           <div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500">Ou fechamento semanal</p>
+            <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Ou fechamento semanal</p>
             <FormDatePicker name="semana" aria-label="Início da semana" defaultValue={weekFrom ?? ''} className="w-44" />
             {selectedUnit && <input type="hidden" name="unit" value={selectedUnit} />}
           </div>
@@ -89,7 +89,7 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
         </form>
         {units.length > 1 && (
           <div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-500">Unidade</p>
+            <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Unidade</p>
             <UnitSelectNav units={[{ id: '', name: 'Todas as unidades' }, ...units]} selected={selectedUnit ?? ''} paramName="unit" className="h-10 w-56 rounded-lg border-2 border-line-strong bg-surface px-3 text-sm font-medium" />
           </div>
         )}
@@ -99,7 +99,7 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
       <Card>
         <CardContent className="flex items-center justify-between py-3">
           <span className="text-sm text-ink-500">{data.grandCount} pagamento(s) · {data.groups.length} freelancer(s)</span>
-          <span className="text-lg font-black text-ink-900">{formatBRL(data.grandTotal)}</span>
+          <span className="text-lg font-bold text-ink-900">{formatBRL(data.grandTotal)}</span>
         </CardContent>
       </Card>
 
@@ -114,7 +114,7 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
                 <p className="text-xs text-ink-500">PIX: {g.pixKey || <span className="text-danger">não cadastrada</span>}</p>
               </div>
               <span className="text-right">
-                <span className="block font-black text-ink-900">{formatBRL(g.total)}</span>
+                <span className="block font-bold text-ink-900">{formatBRL(g.total)}</span>
                 <span className="text-xs text-ink-500">{g.count} pagto(s)</span>
               </span>
             </div>

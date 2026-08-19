@@ -58,7 +58,7 @@ export default async function AuditoriaRelatorioPage({ searchParams }: { searchP
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-sunken/40 text-left text-xs uppercase tracking-wide text-ink-500">
+              <tr className="border-b bg-sunken/40 text-left sgo-type-11 font-semibold text-ink-500">
                 <th className="px-3 py-2">Data/hora</th>
                 <th className="px-3 py-2">Ação</th>
                 <th className="px-3 py-2">Módulo</th>

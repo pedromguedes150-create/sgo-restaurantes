@@ -137,8 +137,8 @@ export function WasteForm({
             {unCats.map((c) => (
               <div key={c.id} className="rounded-card border border-line p-3">
                 <div className="mb-2 flex items-baseline justify-between gap-2">
-                  <span className="text-[13px] font-medium text-ink-700">{c.name}</span>
-                  <span className="text-[13px] font-semibold tabular-nums text-ink-900">Total: {subTotal(c.id)} un</span>
+                  <span className="text-xs font-medium text-ink-700">{c.name}</span>
+                  <span className="text-xs font-semibold tabular-nums text-ink-900">Total: {subTotal(c.id)} un</span>
                 </div>
                 <div className="space-y-2">
                   {(subs[c.id] ?? []).map((si, i) => (

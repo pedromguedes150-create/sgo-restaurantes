@@ -60,7 +60,7 @@ export function CancellationsClient({
       {isAdmin && <ImportForm units={units} onDone={() => router.refresh()} />}
 
       <div className="space-y-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">
+        <h2 className="sgo-type-11 font-semibold text-ink-900">
           Pendentes de justificativa ({pending.length})
         </h2>
         {pending.length === 0 && <p className="text-sm text-ink-500">Nenhuma pendência. 🟢</p>}
@@ -128,7 +128,7 @@ function ImportForm({ units, onDone }: { units: Unit[]; onDone: () => void }) {
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Importar Teknisa (Excel/CSV) — Admin</h2>
+      <h2 className="mb-2 sgo-type-11 font-semibold text-ink-900">Importar Teknisa (Excel/CSV) — Admin</h2>
       <div className="space-y-2">
         <Select label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
         <input type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="block w-full text-sm" />

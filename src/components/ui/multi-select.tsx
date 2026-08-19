@@ -71,7 +71,7 @@ export function MultiSelect({
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'flex min-h-11 w-full items-center justify-between gap-2 rounded-control border border-line-strong bg-surface px-3 py-1.5 text-left text-[14px] outline-none',
+          'flex min-h-11 w-full items-center justify-between gap-2 rounded-control border border-line-strong bg-surface px-3 py-1.5 text-left text-sm outline-none',
           'transition-colors duration-sgo-1 ease-sgo-std hover:border-ink-400 focus-visible:shadow-sgo-focus',
           'disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-400',
         )}
@@ -84,7 +84,7 @@ export function MultiSelect({
       {!allOn && selected.length > 0 && selected.length <= 4 && (
         <div className="mt-1.5 flex flex-wrap gap-1">
           {selected.map((v) => (
-            <span key={v} className="inline-flex items-center gap-1 rounded-pill bg-brand-tint-2 py-0.5 pl-2 pr-1 text-[12px] font-medium text-ink-900">
+            <span key={v} className="inline-flex items-center gap-1 rounded-pill bg-brand-tint-2 py-0.5 pl-2 pr-1 text-xs font-medium text-ink-900">
               {labelFor(v)}
               <button
                 type="button"
@@ -111,7 +111,7 @@ export function MultiSelect({
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Buscar…"
                 aria-label="Buscar opções"
-                className="h-9 w-full bg-transparent text-[14px] text-ink-900 outline-none placeholder:text-ink-500"
+                className="h-9 w-full bg-transparent text-sm text-ink-900 outline-none placeholder:text-ink-500"
               />
             </div>
           )}
@@ -119,13 +119,13 @@ export function MultiSelect({
             <button
               type="button"
               onClick={toggleAll}
-              className="w-full border-b border-line px-3 py-2 text-left text-[14px] font-semibold text-brand outline-none hover:bg-sunken focus-visible:shadow-sgo-focus"
+              className="w-full border-b border-line px-3 py-2 text-left text-sm font-semibold text-brand outline-none hover:bg-sunken focus-visible:shadow-sgo-focus"
             >
               {allOn ? 'Limpar seleção' : `Selecionar ${allLabel}`}
             </button>
           )}
           <ul id={listId} role="listbox" aria-multiselectable className="max-h-52 overflow-y-auto py-1">
-            {filtered.length === 0 && <li className="px-3 py-2 text-[14px] text-ink-500">{emptyLabel}</li>}
+            {filtered.length === 0 && <li className="px-3 py-2 text-sm text-ink-500">{emptyLabel}</li>}
             {filtered.map((o) => {
               const on = sel.has(o.value);
               return (
@@ -133,7 +133,7 @@ export function MultiSelect({
                   <button
                     type="button"
                     onClick={() => toggle(o.value)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[14px] text-ink-700 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-700 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus"
                   >
                     <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded border', on ? 'border-brand bg-brand text-on-brand' : 'border-line-strong')}>
                       {on && <Check className="h-3.5 w-3.5" aria-hidden />}

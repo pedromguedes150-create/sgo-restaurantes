@@ -32,8 +32,8 @@ export function ProgressBar({ value, max = 100, label, valueLabel, tone = 'brand
     <div className={className}>
       {(label || shown) && (
         <div className="mb-1 flex items-baseline justify-between gap-2">
-          {label && <span className="text-[13px] font-medium text-ink-700">{label}</span>}
-          <span className="text-[13px] font-semibold tabular-nums text-ink-900">{shown}</span>
+          {label && <span className="text-xs font-medium text-ink-700">{label}</span>}
+          <span className="text-xs font-semibold tabular-nums text-ink-900">{shown}</span>
         </div>
       )}
       <div

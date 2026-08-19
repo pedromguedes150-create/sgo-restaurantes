@@ -63,8 +63,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             >
               <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', iconTone[t.tone])} aria-hidden />
               <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-semibold text-ink-900">{t.title}</p>
-                {t.description && <p className="mt-0.5 text-[13px] leading-5 text-ink-500">{t.description}</p>}
+                <p className="text-sm font-semibold text-ink-900">{t.title}</p>
+                {t.description && <p className="mt-0.5 text-xs leading-5 text-ink-500">{t.description}</p>}
               </div>
               <button
                 type="button"

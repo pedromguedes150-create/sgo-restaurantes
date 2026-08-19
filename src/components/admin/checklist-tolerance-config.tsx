@@ -28,7 +28,7 @@ export function ChecklistToleranceConfig({ current }: { current: number }) {
 
   return (
     <div className="rounded-lg border border-dashed p-3">
-      <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-ink-500"><Clock className="h-4 w-4" /> Tolerância de tempo</h2>
+      <h2 className="mb-1 flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-900"><Clock className="h-4 w-4" /> Tolerância de tempo</h2>
       <p className="mb-2 text-xs text-ink-500">Concluir um checklist até <b>{value || 0} min</b> após o horário-limite ainda conta <b>no prazo</b>. Vale para todos os checklists.</p>
       <div className="flex items-end gap-2">
         <div>

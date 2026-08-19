@@ -38,7 +38,7 @@ export function OccurrenceProgress({ occurrenceId, updates, closed, types, curre
     <div className="space-y-3">
       {/* Timeline do andamento */}
       <div className="rounded-lg border bg-surface p-3">
-        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Andamento ({updates.length})</p>
+        <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Andamento ({updates.length})</p>
         {updates.length === 0 && <p className="text-sm text-ink-500">Nenhuma fase registrada ainda.</p>}
         <ol className="space-y-2 border-l-2 border-brand/30 pl-3">
           {updates.map((u) => (
@@ -59,7 +59,7 @@ export function OccurrenceProgress({ occurrenceId, updates, closed, types, curre
       {/* Reclassificar (move para Manutenção/TI conforme o tipo) */}
       {!closed && (
         <div className="rounded-lg border border-dashed p-3">
-          <button onClick={() => setReclass(!reclass)} className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-500">
+          <button onClick={() => setReclass(!reclass)} className="flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-500">
             <Tags className="h-3.5 w-3.5" /> Reclassificar (tipo atual: {currentType})
           </button>
           {reclass && (

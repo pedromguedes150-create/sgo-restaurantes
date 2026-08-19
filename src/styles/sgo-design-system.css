@@ -286,6 +286,14 @@
   line-height: 40px;
   letter-spacing: -0.022em;
 }
+/* 24/29 — número-destaque de painel. Fica ABAIXO do título da tela (34) de
+   propósito: enquanto os dois eram 34, o nome da tela e os contadores ficavam
+   indistinguíveis e a tela não tinha ponto de entrada. */
+.sgo-type-24 {
+  font-size: 24px;
+  line-height: 29px;
+  letter-spacing: -0.018em;
+}
 .sgo-type-28 {
   font-size: 28px;
   line-height: 34px;

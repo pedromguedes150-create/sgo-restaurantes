@@ -93,7 +93,7 @@ function NewOrder({ units, selUnitId, products, post, busy }: { units: { id: str
       <div className="space-y-3">
         {byCat.map(([cat, list]) => (
           <div key={cat}>
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">{cat}</p>
+            <p className="mb-1 sgo-type-11 font-semibold text-ink-500">{cat}</p>
             <div className="space-y-1.5">
               {list.map((p) => {
                 const O = ORIGIN[p.origin as keyof typeof ORIGIN];

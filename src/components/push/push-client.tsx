@@ -208,7 +208,7 @@ export function PushClient() {
 
       {devices.length > 0 && (
         <div className="rounded-lg border bg-surface p-3">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Meus aparelhos</p>
+          <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Meus aparelhos</p>
           <ul className="space-y-1.5">
             {devices.map((d) => (
               <li key={d.id} className="flex items-center justify-between gap-2 text-sm">
@@ -230,7 +230,7 @@ export function PushClient() {
       )}
 
       <div className="rounded-lg border bg-surface p-3">
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">O que quero receber no celular</p>
+        <p className="mb-1 sgo-type-11 font-semibold text-ink-500">O que quero receber no celular</p>
         <p className="mb-2 text-xs text-ink-500">Desmarcar não apaga nada — o aviso continua aparecendo no sino, só não vira notificação no aparelho. Avisos críticos são sempre enviados.</p>
         <ul className="space-y-2">
           {PUSH_CATEGORIES.map((c) => (

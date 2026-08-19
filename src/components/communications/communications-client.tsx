@@ -70,13 +70,13 @@ function Inbox({ items }: { items: InboxItem[] }) {
   return (
     <div className="space-y-4">
       <section className="space-y-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">A confirmar ({pending.length})</h2>
+        <h2 className="sgo-type-11 font-semibold text-ink-900">A confirmar ({pending.length})</h2>
         {pending.length === 0 && <p className="text-sm text-success">Tudo confirmado. 🎉</p>}
         {pending.map((i) => <InboxCard key={i.recipientId} i={i} />)}
       </section>
       {done.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Confirmados ({done.length})</h2>
+          <h2 className="sgo-type-11 font-semibold text-ink-900">Confirmados ({done.length})</h2>
           {done.map((i) => <InboxCard key={i.recipientId} i={i} />)}
         </section>
       )}

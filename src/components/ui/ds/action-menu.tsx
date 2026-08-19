@@ -133,7 +133,7 @@ export function ActionMenu({
               disabled={item.disabled}
               onClick={() => { fechar(false); item.onSelect(); }}
               className={cn(
-                'sgo-no-press flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-left text-[14px] font-medium',
+                'sgo-no-press flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-left text-sm font-medium',
                 'transition-colors duration-sgo-1 ease-sgo-std focus-visible:outline-none',
                 'disabled:pointer-events-none disabled:opacity-40',
                 /* O item destrutivo ganha o fundo tingido de forma PERMANENTE,

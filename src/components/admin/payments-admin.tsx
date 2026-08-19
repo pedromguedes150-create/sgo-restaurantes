@@ -53,7 +53,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
     <div className="space-y-6">
       {/* Freelancers */}
       <section className="space-y-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Freelancers</h2>
+        <h2 className="sgo-type-11 font-semibold text-ink-900">Freelancers</h2>
         <div className="rounded-lg border border-dashed p-3 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Nome</Label><Input value={fName} onChange={(e) => setFName(e.target.value)} /></div>
@@ -82,7 +82,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
 
       {/* Tipos de avulso */}
       <section className="space-y-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Tipos de pagamento avulso</h2>
+        <h2 className="sgo-type-11 font-semibold text-ink-900">Tipos de pagamento avulso</h2>
         <div className="rounded-lg border border-dashed p-3 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Nome</Label><Input value={mName} onChange={(e) => setMName(e.target.value)} /></div>
@@ -97,7 +97,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
 
       {/* Delegações */}
       <section className="space-y-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ink-500">Delegação de aprovação (por período)</h2>
+        <h2 className="sgo-type-11 font-semibold text-ink-900">Delegação de aprovação (por período)</h2>
         <div className="rounded-lg border border-dashed p-3 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <Select label="De (aprovador)" placeholder="Selecione…" value={dFrom} onValueChange={setDFrom} options={users.map((u) => ({ value: u.id, label: u.name }))} />
@@ -164,7 +164,7 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
 
           {/* Cobertura temporária de setor (16/07): valor por DIA por setor */}
           <div className="rounded-md border border-dashed p-2">
-            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-ink-500">Cobertura de setor — valor por dia</p>
+            <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Cobertura de setor — valor por dia</p>
             {f.sectorRates.length === 0 && <p className="text-xs text-ink-500">Nenhum setor cadastrado. Com setor + valor/dia, o gerente pode lançar &quot;cobertura temporária de setor&quot; (valor fechado do dia + VT).</p>}
             {f.sectorRates.map((r) => (
               <div key={r.sectorName} className="flex items-center justify-between gap-2 py-0.5 text-sm">

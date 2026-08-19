@@ -22,7 +22,7 @@ export const controlBase = [
   'motion-reduce:transition-none',
 ].join(' ');
 
-export const controlSize = { sm: 'h-8 px-2.5 text-[13px]', md: 'h-10 px-3 text-[14px]', lg: 'h-12 px-3.5 text-[15px]' };
+export const controlSize = { sm: 'h-8 px-2.5 text-xs', md: 'h-10 px-3 text-sm', lg: 'h-12 px-3.5 text-sm' };
 export const controlTone = (invalid?: boolean) => (invalid ? 'border-danger' : 'border-line-strong hover:border-ink-400');
 
 interface FieldProps {
@@ -41,7 +41,7 @@ export function Field({ label, hint, error, required, htmlFor, descId, children,
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       {label && (
-        <label htmlFor={htmlFor} className="text-[13px] font-medium text-ink-700">
+        <label htmlFor={htmlFor} className="text-xs font-medium text-ink-700">
           {label}
           {required && <span className="ml-0.5 text-danger" aria-hidden>*</span>}
           {required && <span className="sr-only"> (obrigatório)</span>}
@@ -49,12 +49,12 @@ export function Field({ label, hint, error, required, htmlFor, descId, children,
       )}
       {children}
       {error ? (
-        <p id={descId} className="flex items-center gap-1 text-[12px] font-medium text-danger">
+        <p id={descId} className="flex items-center gap-1 text-xs font-medium text-danger">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {error}
         </p>
       ) : hint ? (
-        <p id={descId} className="text-[12px] text-ink-500">{hint}</p>
+        <p id={descId} className="text-xs text-ink-500">{hint}</p>
       ) : null}
     </div>
   );
@@ -115,7 +115,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           required={required}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className={cn(controlBase, 'min-h-[80px] px-3 py-2 text-[14px] leading-6', controlTone(!!error), className)}
+          className={cn(controlBase, 'min-h-[80px] px-3 py-2 text-sm leading-6', controlTone(!!error), className)}
           {...props}
         />
       </Field>
@@ -198,7 +198,7 @@ export function CurrencyField({ value, onValueChange, inputSize = 'md', classNam
   return (
     <Field label={label} hint={hint} error={error} required={required} htmlFor={fieldId} descId={descId}>
       <div className="relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-medium text-ink-500">R$</span>
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-ink-500">R$</span>
         <input
           id={fieldId}
           inputMode="decimal"

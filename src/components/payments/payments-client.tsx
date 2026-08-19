@@ -209,7 +209,7 @@ export function PaymentsClient({
             // Barra de lote: gruda no topo para o gestor não precisar rolar de
             // volta depois de marcar dezenas de itens.
             <div className="sticky top-14 z-20 -mx-1 flex flex-wrap items-center gap-2 rounded-card border border-line bg-glass px-3 py-2 backdrop-blur-xl">
-              <label className="flex cursor-pointer items-center gap-2 text-[13px] font-medium text-ink-700">
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-ink-700">
                 <input
                   type="checkbox"
                   checked={sel.size === toApprove.length && toApprove.length > 0}
@@ -220,7 +220,7 @@ export function PaymentsClient({
                 />
                 Selecionar todas ({toApprove.length})
               </label>
-              <span className="text-[13px] tabular-nums text-ink-500">
+              <span className="text-xs tabular-nums text-ink-500">
                 {sel.size} selecionada(s) · {formatBRL(selTotal)}
               </span>
               <span className="ml-auto flex gap-2">
@@ -625,7 +625,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
           {calc?.configured && (
             <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
               <p className="text-xs text-ink-500">Valor calculado ({calc.dayTypeLabel})</p>
-              <p className="text-2xl font-black text-ink-900">{formatBRL(calc.amount)}</p>
+              <p className="sgo-type-24 font-semibold text-ink-900">{formatBRL(calc.amount)}</p>
               <p className="text-xs text-ink-500">{calc.hours}h × {formatBRL(calc.rate ?? 0)}/h{calc.transport > 0 ? ` + ${formatBRL(calc.transport)} VT` : ''}</p>
             </div>
           )}
