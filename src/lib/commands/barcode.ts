@@ -21,7 +21,22 @@
  * aceito se corresponder a uma comanda que a unidade realmente tem.
  */
 
-export type ScanReason = 'OK' | 'EMPTY' | 'NO_DIGITS' | 'NOT_ACTIVE';
+export type ScanReason = 'OK' | 'EMPTY' | 'NO_DIGITS' | 'NOT_ACTIVE' | 'NOT_A_COMMAND';
+
+/**
+ * Conteúdo que NÃO é comanda e é esperado no próprio cartão.
+ *
+ * O cartão da rede traz, além do código de barras, um QR do Instagram
+ * (https://www.instagram.com/churrascariabeijaflor/). Leitor de mão 2D lê os dois
+ * — e o QR aparecia na conferência como "código sem número", em vermelho, como se
+ * fosse defeito. Não é: é parte do cartão. Reconhecer aqui deixa a tela ignorar
+ * em silêncio em vez de acusar erro em toda comanda bipada.
+ */
+export function isNotACommand(raw: string): boolean {
+  const t = String(raw ?? '').trim();
+  if (!t) return false;
+  return /^(https?:\/\/|www\.)/i.test(t) || t.includes('://');
+}
 
 export interface ScanResult {
   /** número da comanda reconhecido (null quando não bateu com a sequência ativa) */
@@ -80,6 +95,7 @@ export function candidateNumbers(raw: string): number[] {
 export function parseCommandBarcode(rawInput: string, active: Set<number>): ScanResult {
   const raw = String(rawInput ?? '').trim();
   if (!raw) return { number: null, raw, guess: null, reason: 'EMPTY' };
+  if (isNotACommand(raw)) return { number: null, raw, guess: null, reason: 'NOT_A_COMMAND' };
 
   const candidates = candidateNumbers(raw);
   if (candidates.length === 0) return { number: null, raw, guess: null, reason: 'NO_DIGITS' };

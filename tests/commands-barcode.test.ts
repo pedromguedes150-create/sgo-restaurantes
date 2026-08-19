@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseCommandBarcode, candidateNumbers, absentFromScans } from '@/lib/commands/barcode';
+import { parseCommandBarcode, candidateNumbers, absentFromScans, isNotACommand } from '@/lib/commands/barcode';
 
 /** Sequência ativa de exemplo: comandas 1..600. */
 const active = new Set<number>();
@@ -52,6 +52,28 @@ describe('parseCommandBarcode — leitura tolerante do código da comanda', () =
     expect(r.number).toBeNull();
     expect(r.reason).toBe('NOT_ACTIVE');
     expect(r.guess).toBe(9999);
+  });
+
+  /* O cartão da rede traz um QR do Instagram além do código de barras. Leitor de
+     mão 2D lê os dois, e no vídeo de 19/08/2026 o QR aparecia na conferência
+     como "código sem número", em vermelho, a cada comanda bipada. Não é defeito:
+     é parte do cartão, e a tela precisa saber distinguir para ignorar. */
+  it('reconhece o QR do cartão como NÃO-comanda, em vez de acusar erro', () => {
+    const r = parseCommandBarcode('https://www.instagram.com/churrascariabeijaflor/', active);
+    expect(r.reason).toBe('NOT_A_COMMAND');
+    expect(r.number).toBeNull();
+  });
+
+  it('trata qualquer URL como não-comanda', () => {
+    expect(isNotACommand('https://exemplo.com')).toBe(true);
+    expect(isNotACommand('www.exemplo.com')).toBe(true);
+    expect(isNotACommand('algo://outro')).toBe(true);
+  });
+
+  it('não confunde comanda com URL', () => {
+    expect(isNotACommand('0346')).toBe(false);
+    expect(isNotACommand('CMD-0137')).toBe(false);
+    expect(isNotACommand('')).toBe(false);
   });
 
   it('recusa leitura vazia ou sem dígitos', () => {

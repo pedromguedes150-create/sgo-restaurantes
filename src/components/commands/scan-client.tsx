@@ -31,7 +31,19 @@ const REASON_TEXT: Record<LogEntry['reason'], string> = {
   NOT_ACTIVE: 'não pertence à sequência',
   NO_DIGITS: 'código sem número',
   EMPTY: 'leitura vazia',
+  NOT_A_COMMAND: 'QR do cartão (não é comanda)',
 };
+
+/**
+ * Janela em que a MESMA comanda relida não vira aviso.
+ *
+ * Leitor de mão em modo contínuo relê o código enquanto está apontado para a
+ * etiqueta: a primeira leitura conferia e as seguintes enchiam a lista de "já
+ * bipada", parecendo defeito. Dentro da janela, a releitura é ignorada em
+ * silêncio; fora dela é o operador bipando de novo de propósito, e aí o aviso
+ * discreto ajuda.
+ */
+const JANELA_RELEITURA_MS = 2500;
 
 export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, alreadyCounted, userName }: Props) {
   const active = useMemo(() => new Set(activeNumbers), [activeNumbers]);
@@ -46,6 +58,11 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ absent: number[]; scanned: number; crossed: CrossHit[]; cutDate: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /* Quantas vezes o QR do cartão apareceu. Não vai para a lista — mas some do
+     nada também não serve: fica um contador discreto no rodapé. */
+  const [ignorados, setIgnorados] = useState(0);
+  const [releituras, setReleituras] = useState(0);
+  const ultimaLeitura = useRef<Map<number, number>>(new Map());
 
   // o leitor "digita" no campo focado — manter o foco é o que faz a bipagem funcionar
   const keepFocus = () => inputRef.current?.focus();
@@ -62,12 +79,26 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
 
     const add = (entry: LogEntry) => setLog((l) => [entry, ...l].slice(0, 60));
 
+    /* O QR do Instagram vem no próprio cartão: leitor 2D lê os dois códigos.
+       Não é erro e não polui a lista — só conta no rodapé. */
+    if (r.reason === 'NOT_A_COMMAND') {
+      setIgnorados((n) => n + 1);
+      return;
+    }
+
     if (r.number !== null && scanned.has(r.number)) {
+      const agora = Date.now();
+      const antes = ultimaLeitura.current.get(r.number) ?? 0;
+      ultimaLeitura.current.set(r.number, agora);
+      /* Releitura imediata do mesmo código = leitor de mão apontado para a
+         etiqueta. Silencioso, senão a lista vira uma parede de "já bipada". */
+      if (agora - antes < JANELA_RELEITURA_MS) { setReleituras((n) => n + 1); return; }
       add({ id, raw: r.raw, number: r.number, reason: 'DUPLICATE' });
       return;
     }
     if (r.number !== null) {
       const n = r.number;
+      ultimaLeitura.current.set(n, Date.now());
       setScanned((s) => new Set(s).add(n));
       add({ id, raw: r.raw, number: n, reason: 'OK' });
       return;
@@ -207,6 +238,15 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
             O leitor funciona como teclado: ele digita o código e dá Enter sozinho. Mantenha esta tela aberta e vá passando as comandas. Dá para digitar o
             número à mão e apertar Enter.
           </p>
+          {(ignorados > 0 || releituras > 0) && (
+            /* Discreto de propósito: nada disso é problema, mas sumir em silêncio
+               deixaria o operador sem saber por que o leitor bipou e a lista não
+               mexeu. */
+            <p className="text-xs text-ink-500">
+              {ignorados > 0 && <>QR do cartão ignorado: {ignorados}. </>}
+              {releituras > 0 && <>Releitura da mesma comanda ignorada: {releituras}.</>}
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={undoLast} disabled={!log.some((l) => l.reason === 'OK')}>
               <Undo2 className="h-4 w-4" /> Desfazer última
