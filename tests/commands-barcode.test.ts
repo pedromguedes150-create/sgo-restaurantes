@@ -18,15 +18,33 @@ describe('parseCommandBarcode — leitura tolerante do código da comanda', () =
     expect(parseCommandBarcode('  0137 \r\n', active)).toMatchObject({ number: 137, reason: 'OK' });
   });
 
-  it('aceita código com prefixo de unidade (letras ou dígitos extras)', () => {
+  it('aceita código com prefixo em letras (os dígitos são só a comanda)', () => {
     expect(parseCommandBarcode('CMD-0137', active)).toMatchObject({ number: 137, reason: 'OK' });
-    expect(parseCommandBarcode('99000137', active)).toMatchObject({ number: 137, reason: 'OK' });
   });
 
-  it('aceita EAN-13 descartando o dígito verificador quando o miolo é a comanda', () => {
-    // 12 dígitos + verificador; o número da comanda está no início do bloco
-    const ean = '0000001370005';
-    expect(parseCommandBarcode(ean, active).number).not.toBeNull();
+  it('prefixo NUMÉRICO curto não é mais adivinhado (era onde nascia o falso positivo)', () => {
+    // 8 dígitos: "99000137" poderia virar 137 por janela. Agora exige padrão longo.
+    expect(parseCommandBarcode('99000137', active).number).toBeNull();
+  });
+
+  it('recusa código longo que casa com MAIS DE UMA comanda ativa', () => {
+    /* Neste EAN de 13 dígitos as janelas chegam a 1, 5 e 13 ao mesmo tempo —
+       todas ativas. Antes o parser pegava a primeira e marcava presente uma
+       comanda que não estava na mesa. Agora recusa e mostra o código lido. */
+    const r = parseCommandBarcode('0000001370005', active);
+    expect(r.number).toBeNull();
+    expect(r.reason).toBe('NOT_ACTIVE');
+  });
+
+  it('aceita código longo quando as janelas apontam para UMA só comanda ativa', () => {
+    const so137 = new Set([137]);
+    expect(parseCommandBarcode('9900000137', so137)).toMatchObject({ number: 137, reason: 'OK' });
+  });
+
+  it('etiqueta com muitos zeros à esquerda vale pela leitura EXATA, não por janela', () => {
+    // "0000000137" → 137 pelo número inteiro. A janela do começo produzia "1",
+    // que também é ativa; a precedência do exato é o que resolve.
+    expect(parseCommandBarcode('0000000137', active)).toMatchObject({ number: 137, reason: 'OK' });
   });
 
   it('recusa número fora da sequência ativa, mas devolve o palpite p/ a tela avisar', () => {
@@ -61,16 +79,25 @@ describe('parseCommandBarcode — leitura tolerante do código da comanda', () =
     expect(parseCommandBarcode('0451', km13)).toMatchObject({ number: 451, reason: 'OK' });
   });
 
-  /* POR QUE A CALIBRAÇÃO IMPORTA (e não é preciosismo):
-     o parser tolerante testa janelas de dígitos e aceita a PRIMEIRA que exista na
-     sequência. Se o código real trouxer dígitos extras, uma janela pode casar com
-     uma comanda válida ERRADA — e a conferência daria "presente" para a comanda
-     que não está na mesa. Este teste registra o risco; ele desaparece quando
-     soubermos o formato exato e o parser puder ser exato também. */
-  it('DOCUMENTA a ambiguidade: dígitos extras podem casar com outra comanda válida', () => {
-    const r = parseCommandBarcode('1346', active); // 1346 não existe; a janela final "346" existe
-    expect(r.number).toBe(346);
-    expect(r.raw).toBe('1346');
+  /* A ambiguidade que este teste registrava foi ELIMINADA pela calibração de
+     19/08/2026: medido no cartão real, a etiqueta traz "0346" em CODE_128 — 4
+     dígitos, sem prefixo nem verificador. Etiqueta curta passou a ser lida de
+     forma EXATA, então "1346" não vira mais 346 (a janela final "346" existia na
+     sequência e a conferência marcaria presente uma comanda que não está na mesa). */
+  it('etiqueta curta é EXATA: 1346 não vira 346 por coincidência de sufixo', () => {
+    const r = parseCommandBarcode('1346', active);
+    expect(r.number).toBeNull();
+    expect(r.reason).toBe('NOT_ACTIVE');
+    expect(r.guess).toBe(1346);
+  });
+
+  it('"0346" não gera mais o palpite perigoso 34', () => {
+    expect(candidateNumbers('0346')).toEqual([346]);
+  });
+
+  it('código LONGO de padrão desconhecido mantém a tolerância por janelas', () => {
+    // 10 dígitos com a comanda no fim — outra gráfica, outro padrão
+    expect(parseCommandBarcode('9900000137', active)).toMatchObject({ number: 137, reason: 'OK' });
   });
 
   it('candidateNumbers não devolve duplicados nem zero', () => {

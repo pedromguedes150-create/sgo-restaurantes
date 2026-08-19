@@ -27,8 +27,21 @@ import { candidateNumbers } from '@/lib/commands/barcode';
  * resumo em texto para colar na conversa.
  */
 
-const NATIVE_FORMATS = ['qr_code', 'code_128', 'code_39', 'itf', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'codabar', 'data_matrix', 'pdf417'];
-const ZXING_FORMATS = [BarcodeFormat.QR_CODE, BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.ITF, BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.CODABAR];
+/* So formatos de BARRAS. O QR ficou de fora de proposito: o cartao da comanda
+   traz um QR do Instagram e, na medicao de 19/08/2026, ele foi lido 227 vezes
+   numa unica sessao — CPU gasta em algo que nao e comanda. Procurar QR num
+   quadro de 2 megapixels era boa parte da lentidao no iPhone. */
+const NATIVE_FORMATS = ['code_128', 'code_39', 'itf', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'codabar'];
+const ZXING_FORMATS = [BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.ITF, BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.CODABAR];
+
+/* A faixa do quadro que e realmente decodificada, em fracao da largura/altura.
+   Antes o @zxing recebia o quadro inteiro (1080x1920 no iPhone medido) a cada
+   volta. Recortar a faixa central transforma ~2 megapixels em ~0,6. */
+const RECORTE = { largura: 0.92, altura: 0.3 };
+
+/** Intervalo minimo entre tentativas. A 60 fps o decodificador nao terminava uma
+ *  tentativa antes da proxima comecar; ~12 por segundo da CPU inteira a cada uma. */
+const INTERVALO_MS = 80;
 
 interface Leitura {
   raw: string;
@@ -72,6 +85,8 @@ export function BarcodeDiagnostics() {
   const [temLanterna, setTemLanterna] = useState(false);
   const [lanterna, setLanterna] = useState(false);
   const [resolucao, setResolucao] = useState<string>('—');
+  const [msPorTentativa, setMsPorTentativa] = useState(0);
+  const [areaDecodificada, setAreaDecodificada] = useState<string>('—');
   const [copiado, setCopiado] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -83,13 +98,28 @@ export function BarcodeDiagnostics() {
   /* Ambiente: dá para saber ANTES de abrir a câmera. */
   const [ambiente, setAmbiente] = useState<{ nativa: boolean; seguro: boolean; navegador: string }>({ nativa: false, seguro: false, navegador: '' });
   useEffect(() => {
-    const w = window as unknown as { BarcodeDetector?: { getSupportedFormats?: () => Promise<string[]> } };
-    setAmbiente({
-      nativa: typeof w.BarcodeDetector !== 'undefined',
-      seguro: window.isSecureContext,
-      navegador: navigator.userAgent.slice(0, 120),
-    });
-    w.BarcodeDetector?.getSupportedFormats?.().then(setFormatosSuportados).catch(() => setFormatosSuportados(null));
+    /* Tudo aqui é defensivo de propósito. Na v1.48.1 este efeito derrubava o
+       componente NO ANDROID e em nenhum outro lugar: onde a BarcodeDetector
+       existe, `getSupportedFormats()` é de fato chamado, e um erro SÍNCRONO dela
+       escapa do .catch() (que só pega promessa rejeitada). O componente quebrava,
+       sobrava só o cartão "Como usar" — que é do servidor — e o botão de abrir a
+       câmera nunca aparecia. No iPhone a nativa não existe, o `?.` curto-circuita
+       e nada quebrava: exatamente a assimetria relatada. */
+    try {
+      const w = window as unknown as { BarcodeDetector?: { getSupportedFormats?: () => Promise<string[]> } };
+      setAmbiente({
+        nativa: typeof w.BarcodeDetector !== 'undefined',
+        seguro: window.isSecureContext,
+        navegador: navigator.userAgent.slice(0, 120),
+      });
+      try {
+        const p = w.BarcodeDetector?.getSupportedFormats?.();
+        if (p && typeof p.then === 'function') p.then(setFormatosSuportados).catch(() => setFormatosSuportados(null));
+      } catch { setFormatosSuportados(null); }
+    } catch (e) {
+      setFormatosSuportados(null);
+      setErro('Não consegui inspecionar o leitor deste aparelho: ' + String(e).slice(0, 90));
+    }
   }, []);
 
   const registrar = useCallback((raw: string, formato: string) => {
@@ -141,7 +171,9 @@ export function BarcodeDiagnostics() {
         else {
           const hints = new Map();
           hints.set(DecodeHintType.POSSIBLE_FORMATS, ZXING_FORMATS);
-          hints.set(DecodeHintType.TRY_HARDER, true);
+          /* TRY_HARDER fica DESLIGADO: multiplica o trabalho por quadro, e a
+             etiqueta da comanda e impressa e limpa — ela nao precisa de esforco
+             extra por tentativa, precisa de mais tentativas por segundo. */
           zxing = new BrowserMultiFormatReader(hints);
           setMotor('zxing');
         }
@@ -149,33 +181,53 @@ export function BarcodeDiagnostics() {
         const canvas = canvasRef.current ?? document.createElement('canvas');
         canvasRef.current = canvas;
 
+        let ultima = 0;
         const tick = async () => {
           if (cancelado) return;
+          const agora = performance.now();
           const v = videoRef.current;
-          if (v && v.readyState === v.HAVE_ENOUGH_DATA) {
+          if (v && v.readyState === v.HAVE_ENOUGH_DATA && agora - ultima >= INTERVALO_MS) {
+            ultima = agora;
             setQuadros((n) => n + 1);
+            const t0 = performance.now();
             try {
               if (detector) {
                 /* TODOS os códigos do quadro, não só o primeiro — é o que
-                   permitiria ler várias comandas espalhadas de uma vez. */
+                   permite ler várias comandas espalhadas de uma vez. */
                 const codes = await detector.detect(v);
                 if (codes?.length) {
                   setMaxPorQuadro((m) => Math.max(m, codes.length));
-                  for (const c of codes) registrar(String(c.rawValue ?? ''), String(c.format ?? 'nativo'));
+                  for (const c of codes) {
+                    const bruto = String(c.rawValue ?? '');
+                    if (bruto) registrar(bruto, String(c.format ?? 'nativo'));
+                  }
                 }
               } else if (zxing) {
-                canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+                /* Recorta a faixa central antes de decodificar: o código de barras
+                   é largo e baixo, então manter a largura e cortar a altura
+                   preserva o que importa e joga fora a maior parte dos pixels. */
+                const cw = Math.round(v.videoWidth * RECORTE.largura);
+                const ch = Math.round(v.videoHeight * RECORTE.altura);
+                const cx0 = Math.round((v.videoWidth - cw) / 2);
+                const cy0 = Math.round((v.videoHeight - ch) / 2);
+                canvas.width = cw; canvas.height = ch;
+                setAreaDecodificada(cw + '×' + ch);
                 const ctx = canvas.getContext('2d', { willReadFrequently: true });
                 if (ctx) {
-                  ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+                  ctx.drawImage(v, cx0, cy0, cw, ch, 0, 0, cw, ch);
                   try {
                     const res = zxing.decodeFromCanvas(canvas);
-                    setMaxPorQuadro((m) => Math.max(m, 1));
-                    registrar(res.getText(), BarcodeFormat[res.getBarcodeFormat()] ?? 'zxing');
-                  } catch { /* nenhum código neste quadro */ }
+                    const bruto = res.getText();
+                    if (bruto) {
+                      setMaxPorQuadro((m) => Math.max(m, 1));
+                      registrar(bruto, BarcodeFormat[res.getBarcodeFormat()] ?? 'zxing');
+                    }
+                  } catch { /* nenhum código nesta faixa */ }
                 }
               }
             } catch { /* quadro inválido */ }
+            const gasto = performance.now() - t0;
+            setMsPorTentativa((m) => (m === 0 ? gasto : m * 0.8 + gasto * 0.2));
           }
           rafRef.current = requestAnimationFrame(tick);
         };
@@ -212,6 +264,8 @@ export function BarcodeDiagnostics() {
     `Formatos suportados pela nativa: ${formatosSuportados ? formatosSuportados.join(', ') : '(não informado)'}`,
     `Contexto seguro (HTTPS): ${ambiente.seguro ? 'sim' : 'NÃO'}`,
     `Resolução da câmera: ${resolucao}`,
+    `Área realmente decodificada: ${areaDecodificada}`,
+    `Tempo médio por tentativa: ${msPorTentativa.toFixed(0)} ms`,
     `Quadros processados: ${quadros}`,
     `Máximo de códigos num único quadro: ${maxPorQuadro}`,
     `Navegador: ${ambiente.navegador}`,
@@ -252,18 +306,26 @@ export function BarcodeDiagnostics() {
             <div className="pointer-events-none absolute inset-x-8 inset-y-1/3 rounded-lg border-2 border-surface/80" />
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <div className="min-w-0 rounded-card border border-line bg-surface p-4">
               <p className="sgo-type-11 font-semibold text-ink-500">motor</p>
-              <p className="sgo-type-24 mt-1 font-semibold text-ink-900">{motor === 'nativo' ? 'nativo' : motor === 'zxing' ? 'alternativo' : '—'}</p>
+              <p className="sgo-type-24 mt-1 font-semibold [overflow-wrap:anywhere] text-ink-900">{motor === 'nativo' ? 'nativo' : motor === 'zxing' ? 'alternativo' : '—'}</p>
             </div>
             <div className="min-w-0 rounded-card border border-line bg-surface p-4">
               <p className="sgo-type-11 font-semibold text-ink-500">por quadro</p>
-              <p className="sgo-type-24 mt-1 font-semibold tabular-nums text-ink-900">{maxPorQuadro}</p>
+              <p className="sgo-type-24 mt-1 font-semibold tabular-nums [overflow-wrap:anywhere] text-ink-900">{maxPorQuadro}</p>
             </div>
             <div className="min-w-0 rounded-card border border-line bg-surface p-4">
               <p className="sgo-type-11 font-semibold text-ink-500">lidas</p>
-              <p className="sgo-type-24 mt-1 font-semibold tabular-nums text-ink-900">{leituras.length}</p>
+              <p className="sgo-type-24 mt-1 font-semibold tabular-nums [overflow-wrap:anywhere] text-ink-900">{leituras.length}</p>
+            </div>
+            <div className="min-w-0 rounded-card border border-line bg-surface p-4">
+              <p className="sgo-type-11 font-semibold text-ink-500">ms por tentativa</p>
+              <p className="sgo-type-24 mt-1 font-semibold tabular-nums [overflow-wrap:anywhere] text-ink-900">{msPorTentativa.toFixed(0)}</p>
+            </div>
+            <div className="min-w-0 rounded-card border border-line bg-surface p-4">
+              <p className="sgo-type-11 font-semibold text-ink-500">área lida</p>
+              <p className="sgo-type-24 mt-1 font-semibold tabular-nums [overflow-wrap:anywhere] text-ink-900">{areaDecodificada}</p>
             </div>
           </div>
 

@@ -2,13 +2,22 @@
  * Leitura do código de barras da comanda.
  *
  * O leitor do caixa funciona como TECLADO: ao bipar, ele "digita" o código e dá
- * Enter. O que vem nesse código varia por gráfica/etiqueta (pode ser o número
- * puro, com zeros à esquerda, com prefixo da unidade, ou um EAN-13 com dígito
- * verificador). Enquanto não temos um exemplo real do padrão da rede, o parser é
- * TOLERANTE: testa as leituras mais prováveis contra a sequência ativa da
- * unidade e aceita a primeira que existir de verdade.
+ * Enter. A câmera do celular entrega a mesma string.
  *
- * Isso é seguro porque a sequência ativa é a fonte da verdade: um palpite só é
+ * PADRÃO DA REDE — medido em 19/08/2026 com o diagnóstico do leitor, num cartão
+ * real da Beija-flor: formato CODE_128, conteúdo "0346" — o número da comanda
+ * com zero à esquerda, em 4 dígitos. Sem prefixo de unidade, sem dígito
+ * verificador. (O cartão traz também um QR do Instagram, que NÃO é comanda.)
+ *
+ * Por isso o parser é EXATO para etiquetas curtas: até 6 dígitos, a única
+ * leitura aceita é o número inteiro. Antes ele testava janelas de dígitos e
+ * "0346" produzia os palpites [346, 34] — e 34 TAMBÉM é uma comanda válida. Se a
+ * 346 não estivesse ativa, a conferência marcava a 34 como presente: uma comanda
+ * que não estava na mesa. Esse risco morreu aqui.
+ *
+ * A tolerância por janelas continua, mas só para códigos LONGOS (mais de 8
+ * dígitos), que é onde ela ganha sentido — outra gráfica, outro padrão, número
+ * embutido num código maior. Aí ainda vale a rede de segurança: um palpite só é
  * aceito se corresponder a uma comanda que a unidade realmente tem.
  */
 
@@ -27,6 +36,12 @@ export interface ScanResult {
 /** Comprimentos de sufixo/prefixo testados quando o código traz dígitos extras. */
 const WINDOWS = [3, 4, 5, 6, 7, 8];
 
+/**
+ * Até aqui, o código é lido como o número inteiro e nada mais. É o tamanho da
+ * etiqueta da rede (4 dígitos) com folga, e é o que impede "0346" de virar 34.
+ */
+const EXATO_ATE = 6;
+
 /** Candidatos a "número da comanda" contidos num código lido, em ordem de aposta. */
 export function candidateNumbers(raw: string): number[] {
   const digits = (raw.match(/\d+/g) ?? []).join('');
@@ -41,12 +56,19 @@ export function candidateNumbers(raw: string): number[] {
 
   push(digits); // número puro (cobre também zeros à esquerda, via Number())
 
+  // Etiqueta curta (o padrão da rede): só o número inteiro. Sem janelas, sem
+  // chance de casar com outra comanda válida por coincidência de sufixo.
+  if (digits.length <= EXATO_ATE) return out;
+
   // EAN-13/UPC: o último dígito é verificador
   if (digits.length === 13 || digits.length === 12) push(digits.slice(0, -1));
 
-  // número embutido num código maior: tenta pelo fim (mais comum) e pelo começo
-  for (const w of WINDOWS) if (digits.length > w) push(digits.slice(-w));
-  for (const w of WINDOWS) if (digits.length > w) push(digits.slice(0, w));
+  // Código longo de padrão desconhecido: número embutido: tenta pelo fim
+  // (mais comum) e pelo começo.
+  if (digits.length > 8) {
+    for (const w of WINDOWS) if (digits.length > w) push(digits.slice(-w));
+    for (const w of WINDOWS) if (digits.length > w) push(digits.slice(0, w));
+  }
 
   return out;
 }
@@ -62,10 +84,21 @@ export function parseCommandBarcode(rawInput: string, active: Set<number>): Scan
   const candidates = candidateNumbers(raw);
   if (candidates.length === 0) return { number: null, raw, guess: null, reason: 'NO_DIGITS' };
 
-  const hit = candidates.find((n) => active.has(n));
-  if (hit !== undefined) return { number: hit, raw, guess: hit, reason: 'OK' };
+  /* 1) LEITURA EXATA primeiro: o código inteiro como número. É o padrão da rede
+        ("0346" → 346) e também resolve etiqueta com muitos zeros à esquerda. Tem
+        precedência absoluta — não é um palpite entre iguais. */
+  const exato = candidates[0];
+  if (active.has(exato)) return { number: exato, raw, guess: exato, reason: 'OK' };
 
-  return { number: null, raw, guess: candidates[0], reason: 'NOT_ACTIVE' };
+  /* 2) Só então as janelas, e apenas se apontarem para UMA comanda ativa. Num
+        código longo elas casam por coincidência de sufixo — num EAN de 13 dígitos
+        chegavam a 1, 5 e 13 ao mesmo tempo. Com ambiguidade, recusar e mostrar o
+        código lido é honesto; escolher a primeira marcaria presente uma comanda
+        que não está na mesa. */
+  const ativos = candidates.slice(1).filter((n) => active.has(n));
+  if (ativos.length === 1) return { number: ativos[0], raw, guess: ativos[0], reason: 'OK' };
+
+  return { number: null, raw, guess: exato, reason: 'NOT_ACTIVE' };
 }
 
 /** Faltantes = ativas − bipadas. Ordenado, pronto p/ virar divergência. */
