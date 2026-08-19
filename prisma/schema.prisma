@@ -649,6 +649,13 @@ model CommandCount {
   operationalDate String
   allPresent      Boolean  @default(false)
   absentCount     Int      @default(0)
+  /// Números marcados como CONFERIDA e como EM USO na grade.
+  /// Antes a contagem guardava só o total de ausentes: ao reabrir a tela para
+  /// corrigir, a grade voltava em branco e era preciso remarcar tudo de novo
+  /// (648 comandas na Moreira). Guardando os conjuntos, a grade reabre no
+  /// estado em que foi deixada.
+  presentNumbers  Json?
+  inUseNumbers    Json?
   createdById     String?
   createdAt       DateTime @default(now())
 

@@ -9,6 +9,37 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.49.0 — 2026-08-19 (A grade abre no status da última contagem, e "em uso" para de virar faltante)
+
+### Corrigido — defeito sério
+- **Comanda marcada "em uso" era enviada como FALTANTE.** A própria legenda da grade diz
+  "2× = em uso (com cliente — **conta como presente**)", e o contador da tela tratava assim. Mas o
+  envio calculava `ausentes = ativas − conferidas`, **sem descontar as em uso**: a comanda azul
+  virava faltante, abria divergência e alertava o supervisor — o oposto do que o gerente lia na
+  tela. O cálculo dos ausentes passou para o **servidor**, que recebe os dois conjuntos e tem uma
+  definição só: ausente é o que não está nem conferido nem em uso.
+
+### Melhorado
+- **A grade abre no estado da última contagem.** Antes começava sempre vazia: mesmo com a contagem
+  do dia registrada, a tela mostrava "0 ok · 648 faltando" e corrigir exigia remarcar as 648
+  comandas uma a uma. Agora as conferidas voltam verdes e as em uso azuis, e registrar não limpa
+  mais a grade.
+- **A origem das marcas fica explícita.** Se a contagem é de hoje, aviso azul: "ajuste o que mudou e
+  reenvie". Se é de um dia anterior, aviso **vermelho com a data**: "as marcas não são de hoje,
+  confira a bandeja antes de confirmar". Uma grade que abre verde sem dizer de onde veio vira
+  carimbo — o gerente confirma sem conferir, e o controle deixa de existir.
+
+### Banco
+- `command_counts`: colunas `presentNumbers` e `inUseNumbers` (JSONB). Migração **aditiva**.
+  Contagens antigas não têm os conjuntos: nesses casos a grade abre vazia, como antes.
+
+### Testes
+4 casos novos em `tests/commands.integration.test.ts`: em uso não vira faltante (e não abre
+divergência), o estado da grade é gravado, só o que não está conferido nem em uso fica faltando, e
+"todas presentes" grava a sequência ativa inteira. 206 testes no total.
+
+---
+
 ## v1.48.4 — 2026-08-19 (Só o leitor físico: sai o caminho por câmera das comandas)
 
 ### Removido

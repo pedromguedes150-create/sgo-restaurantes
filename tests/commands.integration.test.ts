@@ -84,3 +84,66 @@ describe('Comandas (Módulo 3)', () => {
     if (!r.ok) expect(r.reason).toBe('FORBIDDEN');
   });
 });
+
+describe('Grade: status da última contagem e "em uso"', () => {
+  /* A legenda da grade diz que "em uso" (com cliente) CONTA COMO PRESENTE. Mas
+     a tela mandava absent = ativas − conferidas, sem descontar as em uso: a
+     comanda azul virava faltante, abria divergência e alertava o supervisor,
+     contrariando o que o gerente lia na tela. O cálculo passou para o servidor.
+
+     Os testes derivam a sequência ativa em tempo de execução — testes anteriores
+     deste arquivo repõem comandas, então fixar 1..100 daria falso negativo. */
+  it('comanda marcada EM USO não vira faltante', async () => {
+    const seq = await getActiveSequence(unitId);
+    const todas = [...seq.active];
+    const emUso = todas.slice(0, 2);
+    const conferidas = todas.filter((n) => !emUso.includes(n));
+    const r = await submitCount(mgr(), {
+      unitId, operationalDate: '2026-06-10', allPresent: false,
+      presentNumbers: conferidas, inUseNumbers: emUso,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.absent).toEqual([]);
+    const c = await prisma.commandCount.findFirst({ where: { unitId, operationalDate: '2026-06-10' } });
+    expect(c?.absentCount).toBe(0);
+    for (const n of emUso) {
+      const d = await prisma.commandDivergence.findFirst({ where: { unitId, number: n, status: { in: ['OPEN', 'INVESTIGATING'] } } });
+      expect(d).toBeNull();
+    }
+  });
+
+  it('guarda o estado da grade para reabrir sem remarcar tudo', async () => {
+    const seq = await getActiveSequence(unitId);
+    const todas = [...seq.active];
+    const conferidas = todas.slice(0, 5);
+    const emUso = todas.slice(5, 6);
+    await submitCount(mgr(), {
+      unitId, operationalDate: '2026-06-11', allPresent: false,
+      presentNumbers: conferidas, inUseNumbers: emUso, observation: 'resto no cofre',
+    });
+    const c = await prisma.commandCount.findFirst({ where: { unitId, operationalDate: '2026-06-11' } });
+    expect(c?.presentNumbers).toEqual(conferidas);
+    expect(c?.inUseNumbers).toEqual(emUso);
+  });
+
+  it('quem não está nem conferida nem em uso é que fica faltando', async () => {
+    const seq = await getActiveSequence(unitId);
+    const todas = [...seq.active].sort((a, b) => a - b);
+    const faltantes = todas.slice(-2);
+    const emUso = todas.slice(-3, -2);
+    const conferidas = todas.filter((n) => !faltantes.includes(n) && !emUso.includes(n));
+    const r = await submitCount(mgr(), {
+      unitId, operationalDate: '2026-06-12', allPresent: false,
+      presentNumbers: conferidas, inUseNumbers: emUso, observation: 'duas fora',
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.absent.sort((a, b) => a - b)).toEqual(faltantes);
+  });
+
+  it('"todas presentes" grava a sequência ativa inteira como conferida', async () => {
+    const seq = await getActiveSequence(unitId);
+    await submitCount(mgr(), { unitId, operationalDate: '2026-06-13', allPresent: true });
+    const c = await prisma.commandCount.findFirst({ where: { unitId, operationalDate: '2026-06-13' } });
+    expect((c?.presentNumbers as number[]).length).toBe(seq.active.size);
+  });
+});

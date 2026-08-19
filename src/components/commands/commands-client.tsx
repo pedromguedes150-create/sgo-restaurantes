@@ -16,6 +16,15 @@ interface Divergence {
   reporter: string | null;
 }
 
+/** Estado em que a grade foi deixada na última contagem registrada. */
+export interface UltimaContagem {
+  data: string;
+  /** A contagem é do dia operacional de hoje (correção) ou de um dia anterior. */
+  deHoje: boolean;
+  conferidas: number[];
+  emUso: number[];
+}
+
 export function CommandsClient({
   unitId,
   canResolve,
@@ -23,6 +32,7 @@ export function CommandsClient({
   hasConfig,
   todayDone,
   activeNumbers = [],
+  ultimaContagem = null,
   openDivergences,
 }: {
   unitId: string;
@@ -31,6 +41,7 @@ export function CommandsClient({
   hasConfig: boolean;
   todayDone: boolean;
   activeNumbers?: number[];
+  ultimaContagem?: UltimaContagem | null;
   openDivergences: Divergence[];
 }) {
   const router = useRouter();
@@ -123,7 +134,7 @@ export function CommandsClient({
         )}
 
         {/* Conferência em grade: seleciona as presentes; as não marcadas = faltando */}
-        <GridConference unitId={unitId} activeNumbers={activeNumbers} underReview={openDivergences.map((d) => d.number)} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
+        <GridConference unitId={unitId} activeNumbers={activeNumbers} underReview={openDivergences.map((d) => d.number)} ultimaContagem={ultimaContagem} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
 
         <Button onClick={allPresent} disabled={busy} size="lg" className="w-full" variant="default">
           <Check className="h-5 w-5" /> Todas presentes (atalho)
@@ -185,15 +196,20 @@ export function CommandsClient({
   );
 }
 
-function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy, onResult }: {
-  unitId: string; activeNumbers: number[]; underReview?: number[]; busy: boolean; setBusy: (b: boolean) => void; onResult: (m: { t: 'ok' | 'err'; m: string }) => void;
+function GridConference({ unitId, activeNumbers, underReview = [], ultimaContagem = null, busy, setBusy, onResult }: {
+  unitId: string; activeNumbers: number[]; underReview?: number[];
+  ultimaContagem?: UltimaContagem | null;
+  busy: boolean; setBusy: (b: boolean) => void; onResult: (m: { t: 'ok' | 'err'; m: string }) => void;
 }) {
   const router = useRouter();
   // Comandas já em divergência/apuração SAEM da grade (16/07) — são tratadas no bloco abaixo.
   const reviewSet = useMemo(() => new Set(underReview), [underReview]);
   const gridNumbers = useMemo(() => activeNumbers.filter((n) => !reviewSet.has(n)), [activeNumbers, reviewSet]);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [inUse, setInUse] = useState<Set<number>>(new Set()); // "em uso" (com cliente) — conta como presente
+  /* A grade abre NO ESTADO DA ÚLTIMA CONTAGEM. Antes começava sempre vazia:
+     mesmo com a contagem do dia registrada, aparecia "0 ok · 648 faltando" e
+     corrigir exigia remarcar tudo. */
+  const [selected, setSelected] = useState<Set<number>>(() => new Set((ultimaContagem?.conferidas ?? []).filter((n) => !reviewSet.has(n))));
+  const [inUse, setInUse] = useState<Set<number>>(() => new Set((ultimaContagem?.emUso ?? []).filter((n) => !reviewSet.has(n)))); // "em uso" (com cliente) — conta como presente
   const [filter, setFilter] = useState('');
   const [obs, setObs] = useState('');
   const [rangeFrom, setRangeFrom] = useState('');
@@ -231,18 +247,24 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
   }
 
   async function confirmConf() {
-    const absent = activeNumbers.filter((n) => !selected.has(n));
+    /* Só para o aviso na tela — quem decide o que é ausente é o servidor, que
+       recebe os dois conjuntos e desconta também as marcadas EM USO. */
+    const absent = activeNumbers.filter((n) => !selected.has(n) && !inUse.has(n));
     if (absent.length > 0 && !obs.trim()) { onResult({ t: 'err', m: 'Há comandas faltando — informe uma observação.' }); return; }
     const ok = window.confirm(absent.length === 0 ? 'Confirmar: TODAS as comandas presentes?' : `Confirmar conferência?\n${absent.length} comanda(s) faltando: ${absent.slice(0, 40).join(', ')}${absent.length > 40 ? '…' : ''}`);
     if (!ok) return;
     setBusy(true);
     try {
-      const body = absent.length === 0 ? { unitId, allPresent: true } : { unitId, allPresent: false, absentNumbers: absent, observation: obs };
+      const body = absent.length === 0
+        ? { unitId, allPresent: true, presentNumbers: [...selected], inUseNumbers: [...inUse] }
+        : { unitId, allPresent: false, presentNumbers: [...selected], inUseNumbers: [...inUse], observation: obs };
       const res = await fetch('/api/commands/count', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { onResult({ t: 'err', m: data.error ?? 'Falha' }); return; }
       onResult({ t: 'ok', m: absent.length === 0 ? 'Conferência registrada: todas presentes ✓' : `Conferência registrada. ${absent.length} faltando — supervisor alertado.` });
-      setSelected(new Set()); setInUse(new Set()); setObs(''); router.refresh();
+      /* NÃO limpa a grade: o estado que acabou de ser registrado é o estado
+         correto para continuar vendo (e corrigir, se for o caso). */
+      setObs(''); router.refresh();
     } finally { setBusy(false); }
   }
 
@@ -253,6 +275,17 @@ function GridConference({ unitId, activeNumbers, underReview = [], busy, setBusy
       <p className="mb-2 text-xs text-ink-500">Toque 1× = <b className="text-success">conferida</b> · 2× = <b className="text-info">em uso</b> (com cliente — conta como presente) · 3× = limpa. As <b>não marcadas</b> viram apuração.</p>
       {underReview.length > 0 && (
         <p className="mb-2 rounded-md bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">{underReview.length} comanda(s) já em apuração — fora da grade (trate no bloco Divergências abaixo).</p>
+      )}
+      {ultimaContagem && (selected.size > 0 || inUse.size > 0) && (
+        /* De onde vieram as marcas. Sem isto, uma grade que abre verde vira
+           carimbo: o gerente confirma sem conferir. Quando a marcação é de um
+           dia anterior o aviso é vermelho, porque aí ela é só um ponto de
+           partida — não um retrato do que está na bandeja agora. */
+        <p className={`mb-2 rounded-md px-2 py-1 text-xs font-semibold ${ultimaContagem.deHoje ? 'bg-info/10 text-info' : 'bg-danger/10 text-danger'}`}>
+          {ultimaContagem.deHoje
+            ? `Grade aberta como ficou na contagem de hoje — ajuste o que mudou e reenvie para corrigir.`
+            : `ATENÇÃO: as marcas são da contagem de ${ultimaContagem.data.split('-').reverse().join('/')}, não de hoje. Confira a bandeja antes de confirmar.`}
+        </p>
       )}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <button onClick={() => { setSelected(new Set(gridNumbers)); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Marcar todas</button>
