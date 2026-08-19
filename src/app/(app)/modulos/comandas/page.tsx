@@ -99,6 +99,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
             hasConfig={Boolean(state.config)}
             todayDone={Boolean(state.todayCount)}
             activeNumbers={activeNumbers}
+            lostNumbers={[...seq.lost].sort((a, b) => a - b)}
             ultimaContagem={ultimaContagem ? {
               data: ultimaContagem.operationalDate,
               deHoje: ultimaContagem.operationalDate === operationalDate,
