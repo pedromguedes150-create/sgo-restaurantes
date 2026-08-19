@@ -9,6 +9,46 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.48.0 — 2026-08-19 (Solicitação de troco por denominação, e atender já atualiza o cofre)
+
+### Melhorado
+- **O pedido de troco deixa de ser uma linha de texto.** Era um campo livre
+  (`"R$ 100 em moedas de 0,50 e 0,25"`) mais um total opcional digitado à parte: o escritório lia
+  prosa, nada era conferido, e o que chegava era digitado de novo na conferência do dia. Agora o
+  pedido usa **as mesmas denominações da conferência**, em dois blocos — **PRECISO RECEBER**
+  (moedas/miúdos) e **ENTREGO EM TROCA** (notas grandes) —, orientados pela configuração de
+  denominações da unidade.
+- **Os dois totais têm de fechar, e a tela mostra a diferença enquanto se digita.** É a mesma
+  regra e a mesma tolerância (R$ 0,011) da troca com o escritório. O valor do pedido passa a ser a
+  **soma do detalhe**: ninguém digita um total que possa divergir do que foi pedido.
+- **Atender um pedido fechado aplica a troca no cofre sozinho** — entra no histórico como
+  "Troca c/ escritório", com o nome de quem pediu. Antes a mesma troca era lançada duas vezes: uma
+  no pedido, outra na tela do cofre. Pedido só com o lado "preciso receber" continua válido; nesse
+  caso a supervisão registra à mão, como antes, e a tela avisa.
+- A notificação para a supervisão passa a trazer **o detalhe por denominação**, não só o texto.
+- A lista de solicitações mostra o detalhe ("precisa R$ 50,00 em 0,50 · entrega R$ 50,00 em 50")
+  e marca as que estão fechadas.
+
+### Corrigido
+- **A grade de denominações estourava a largura no celular** — 50px de rolagem lateral em 375px.
+  O rótulo era fixo em 160px e o `<input>` não encolhe abaixo da largura intrínseca dele sem
+  `min-w-0`. Defeito **pré-existente**: atingia a **conferência diária do cofre**, não só o pedido
+  novo. Verificado depois em 320/375/768/1280px, sem rolagem lateral em nenhuma.
+
+### Banco
+- `cash_change_requests`: colunas `needJson` e `giveJson` (JSONB) e `note` passa a aceitar nulo.
+  Migração **aditiva**, aplicada nos dois bancos de desenvolvimento. Pedidos antigos continuam
+  legíveis: sem detalhe, aparecem pelo texto que têm.
+
+### Testes
+- `tests/cash-change-request.integration.test.ts` — 10 casos: recusa pedido vazio, recusa valor que
+  não é múltiplo da moeda, recusa troca desigual, aceita pedido só com "preciso", aceita a troca
+  fechada, **atender aplica UM movimento no cofre** (total inalterado, composição trocada), não
+  atende duas vezes, atender sem o lado da entrega não mexe no cofre, gerente não atende o próprio
+  pedido, cancelar não mexe no cofre.
+
+---
+
 ## v1.47.1 — 2026-08-19 (Conserto: rótulo literal no painel e rolagem lateral no celular)
 
 ### Corrigido

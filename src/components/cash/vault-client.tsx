@@ -23,6 +23,10 @@ interface ChangeRequest {
   id: string; unitId: string; unitName?: string; amount: number | null; note: string;
   status: 'OPEN' | 'RESOLVED' | 'CANCELED'; requestedByName: string; createdAt: string;
   resolvedByName: string | null; resolvedNote: string | null; resolvedAt: string | null;
+  /** Detalhe por denominação. Vazio nos pedidos antigos, que eram texto livre. */
+  need?: Bal; give?: Bal; needTotal?: number; giveTotal?: number;
+  /** Os dois lados fecham 1:1 — atender aplica a troca no cofre sozinho. */
+  autoApply?: boolean;
 }
 export interface VaultUI {
   balances: Bal; total: number; denominations: DenomView[]; bigNotesTotal: number; bigNotesPct: number;
@@ -62,9 +66,13 @@ function DenomForm({ list, values, onChange }: { list: DenomView[]; values: Reco
         const v = parseNum(values[d.key] || '0');
         const badMultiple = d.value != null && v > 0 && Math.abs(Math.round(v / d.value) * d.value - v) > 0.011;
         return (
+          /* Rótulo estreito no celular e `min-w-0` no campo: o <input> tem largura
+             intrínseca própria e, sem isso, não encolhe abaixo dela — em 375px a
+             grade estourava 50px e a página rolava de lado (valia para a
+             conferência diária também, não só para o pedido de troco). */
           <div key={d.key} className="flex items-center gap-2">
-            <span className="w-40 shrink-0 text-sm">{d.label}</span>
-            <Input inputMode="decimal" value={values[d.key] ?? ''} onChange={(e) => onChange(d.key, e.target.value)} placeholder="0,00" className={cn('h-9 flex-1 text-right text-sm tabular-nums', badMultiple && 'border-warning')} />
+            <span className="w-28 shrink-0 text-sm sm:w-40">{d.label}</span>
+            <Input inputMode="decimal" value={values[d.key] ?? ''} onChange={(e) => onChange(d.key, e.target.value)} placeholder="0,00" className={cn('h-9 min-w-0 flex-1 text-right text-sm tabular-nums', badMultiple && 'border-warning')} />
           </div>
         );
       })}
@@ -72,6 +80,18 @@ function DenomForm({ list, values, onChange }: { list: DenomView[]; values: Reco
     </div>
   );
 }
+/** "precisa R$ 50,00 em 0,50 · entrega R$ 50,00 em 50" — para a linha da lista. */
+function describeSides(r: ChangeRequest, list: DenomView[]): string {
+  const lado = (b: Record<string, number> | undefined) => list
+    .filter((d) => (Number(b?.[d.key]) || 0) > 0)
+    .map((d) => `${brl(Number(b?.[d.key]) || 0)} em ${d.label}`)
+    .join(' · ');
+  const precisa = lado(r.need);
+  const entrega = lado(r.give);
+  if (!precisa) return r.note || 'sem detalhe';
+  return entrega ? `precisa ${precisa} · entrega ${entrega}` : `precisa ${precisa}`;
+}
+
 const emptyForm = (keys: string[]) => Object.fromEntries(keys.map((k) => [k, ''])) as Record<string, string>;
 const toNumbers = (keys: string[], v: Record<string, string>): Bal => Object.fromEntries(keys.map((k) => [k, parseNum(v[k] || '0')]));
 
@@ -99,6 +119,11 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
   const [action, setAction] = useState<'none' | 'count' | 'refill' | 'swap' | 'withdrawal' | 'register' | 'request'>('none');
   const [formA, setFormA] = useState<Record<string, string>>(() => emptyForm(allKeys));
   const [formB, setFormB] = useState<Record<string, string>>(() => emptyForm(allKeys));
+  /* Totais dos dois lados do pedido de troco: a soma é o valor (ninguém digita
+     um total que pode divergir do detalhe) e a igualdade libera o envio. */
+  const reqNeed = smallDenoms.reduce((t, d) => t + parseNum(formA[d.key] || '0'), 0);
+  const reqGive = bigDenoms.reduce((t, d) => t + parseNum(formB[d.key] || '0'), 0);
+  const reqBalanced = Math.abs(reqNeed - reqGive) <= 0.011;
   const [note, setNote] = useState('');
   const [bucketId, setBucketId] = useState('');
   const [registerName, setRegisterName] = useState('');
@@ -175,14 +200,32 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
               </div>
               {action === 'request' && (
                 <div className="mb-2 space-y-2 rounded-md border border-dashed p-2">
-                  <p className="text-xs text-ink-500">A supervisão (supervisor, coordenador e administrador) será avisada na hora.</p>
-                  <div className="flex flex-wrap items-end gap-2">
-                    <div className="w-32"><Label className="text-xs">Valor (opcional)</Label><Input inputMode="decimal" value={reqAmount} onChange={(e) => setReqAmount(e.target.value)} placeholder="0,00" className="h-9 text-sm" /></div>
-                    <div className="min-w-[12rem] flex-1"><Label className="text-xs">O que precisa</Label><Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="ex.: R$ 100 em moedas de 0,50 e 0,25" className="h-9 text-sm" /></div>
-                  </div>
+                  <p className="text-xs text-ink-500">A supervisão (supervisor, coordenador e administrador) será avisada na hora. Lance o VALOR EM R$ de cada nota ou moeda, como na conferência.</p>
+                  <p className="sgo-type-11 font-semibold text-success">PRECISO RECEBER (moedas/miúdos):</p>
+                  <DenomForm list={smallDenoms} values={formA} onChange={(k, v) => setFormA((s) => ({ ...s, [k]: v }))} />
+                  <p className="sgo-type-11 font-semibold text-danger">ENTREGO EM TROCA (notas grandes):</p>
+                  <DenomForm list={bigDenoms} values={formB} onChange={(k, v) => setFormB((s) => ({ ...s, [k]: v }))} />
+                  {reqGive > 0 && !reqBalanced && (
+                    <p className="text-xs font-semibold text-danger">
+                      Os totais precisam ser iguais: você pede {brl(reqNeed)} e entrega {brl(reqGive)} — diferença de {brl(Math.abs(reqNeed - reqGive))}.
+                    </p>
+                  )}
+                  {reqGive > 0 && reqBalanced && (
+                    <p className="text-xs font-semibold text-success">Troca fechada em {brl(reqNeed)} — ao atender, o cofre é atualizado sozinho.</p>
+                  )}
+                  {reqGive === 0 && reqNeed > 0 && (
+                    <p className="text-xs text-ink-500">Sem o lado da entrega, a supervisão registrará a troca à mão. Preencha os dois lados para o cofre se atualizar sozinho.</p>
+                  )}
+                  <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Observação (opcional)" className="h-9 text-sm" />
                   <div className="flex justify-end gap-1.5">
                     <Button size="sm" variant="ghost" onClick={reset}>Cancelar</Button>
-                    <Button size="sm" disabled={busy || !note.trim()} onClick={async () => { if (await post({ action: 'requestChange', unitId: selectedUnitId, amount: reqAmount ? parseNum(reqAmount) : null, note })) reset(); }}>Enviar solicitação</Button>
+                    <Button
+                      size="sm"
+                      disabled={busy || reqNeed <= 0 || (reqGive > 0 && !reqBalanced)}
+                      onClick={async () => { if (await post({ action: 'requestChange', unitId: selectedUnitId, need: toNumbers(allKeys, formA), give: toNumbers(allKeys, formB), note })) reset(); }}
+                    >
+                      Enviar solicitação
+                    </Button>
                   </div>
                 </div>
               )}
@@ -192,8 +235,8 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
                   {openRequests.map((r) => (
                     <ListRow
                       key={r.id}
-                      title={`${r.amount ? brl(r.amount) : 'Troco'} — ${r.note}`}
-                      subtitle={`${r.requestedByName} · ${dt(r.createdAt)}`}
+                      title={`${r.amount ? brl(r.amount) : 'Troco'}${r.autoApply ? ' · troca fechada' : ''}`}
+                      subtitle={`${describeSides(r, denoms)}${r.note ? ` — ${r.note}` : ''} · ${r.requestedByName} · ${dt(r.createdAt)}`}
                       trailing={
                         <>
                           {canResolve && (
