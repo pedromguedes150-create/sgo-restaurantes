@@ -9,6 +9,32 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.47.1 — 2026-08-19 (Conserto: rótulo literal no painel e rolagem lateral no celular)
+
+### Corrigido
+- **Painéis de Óleo e Gás mostravam o texto `{label}` no lugar do nome do indicador.** Bug meu,
+  introduzido na v1.47.0 e publicado: a conversão em massa das faixas de estatística escreveu
+  `<StatCard label="{label}" …/>` — com chaves DENTRO das aspas — nas duas funções auxiliares
+  `Cell`. Como é uma string válida, o TypeScript aceitou, o lint aceitou e os 181 testes passaram.
+- **Rolagem lateral no celular na faixa de estatística com valor em dinheiro.** Medido em 375px:
+  o cartão "no mês" tem 109px de largura (75px úteis) e `R$ 128.470,50` em 24px exige **133px** —
+  o número vazava e empurrava a página para 400px. Duas correções:
+  o `StatCard` ganhou `min-w-0` (a coluna de grade tem `min-width: auto`, isto é, o min-content
+  do texto — era isso que inflava a faixa) e `[overflow-wrap:anywhere]` no número, de modo que
+  qualquer valor comprido **quebra em vez de empurrar a página**; e nas faixas com dinheiro
+  (Notas, Caixa, Óleo, Gás) o cartão de valor passa a ocupar a linha inteira no celular,
+  voltando a um terço a partir de 640px.
+  Verificado: em 375px a página deixou de rolar de lado (excesso 25px → 0); em 768px e 1280px
+  nada mudou.
+
+### Manutenção
+- **Portão novo: `scripts/check-jsx-props.cjs`**, ligado ao `lint:ds`. Falha em qualquer
+  `prop="{expressao}"` — a classe de erro que passou por tsc, lint e testes e só apareceu em
+  produção. Testado contra o bug real, e contra dois falsos positivos plausíveis (valor arbitrário
+  do Tailwind e prop de texto normal).
+
+---
+
 ## v1.47.0 — 2026-08-19 (Hierarquia, etapas 2 a 4: o corpo da tela cai para dois tamanhos)
 
 ### Melhorado

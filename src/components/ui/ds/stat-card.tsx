@@ -39,12 +39,12 @@ export function StatCard({ label, value, hint, delta, invertDelta, tone = 'defau
   const good = delta == null ? null : invertDelta ? delta <= 0 : delta >= 0;
 
   return (
-    <div className={cn('rounded-card border border-line bg-surface p-4', className)}>
+    <div className={cn('min-w-0 rounded-card border border-line bg-surface p-4', className)}>
       <div className="flex items-start justify-between gap-2">
         <p className="sgo-type-11 font-semibold text-ink-500">{label}</p>
         {Icon && <Icon className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />}
       </div>
-      <p className={cn('sgo-type-24 mt-1 font-semibold tabular-nums', empty ? 'text-ink-500' : tones[tone])}>
+      <p className={cn('sgo-type-24 mt-1 font-semibold tabular-nums [overflow-wrap:anywhere]', empty ? 'text-ink-500' : tones[tone])}>
         {empty ? '–' : value}
       </p>
       <div className="mt-1 flex items-center gap-1.5">

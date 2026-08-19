@@ -447,7 +447,7 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         <Cell label="Recebimentos" value={String(d.totalReceipts)} />
         <Cell label="Volume comprado" value={`${d.totalKg.toLocaleString('pt-BR')} kg`} />
-        <Cell label="Valor total" value={formatBRL(d.totalValue)} />
+        <Cell label="Valor total" value={formatBRL(d.totalValue)} className="col-span-2 sm:col-span-1" />
         <Cell label="Preço médio/kg" value={kg(d.avgPrice)} />
         <Cell label="Último preço/kg" value={d.lastPrice != null ? kg(d.lastPrice) : '—'} />
       </div>
@@ -472,8 +472,8 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
   );
 }
 
-function Cell({ label, value }: { label: string; value: string }) {
-  return <StatCard label="{label}" value={value} />;
+function Cell({ label, value, className }: { label: string; value: string; className?: string }) {
+  return <StatCard label={label} value={value} className={className} />;
 }
 
 function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {

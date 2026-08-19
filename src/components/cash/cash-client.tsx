@@ -122,7 +122,7 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
       </div>
 
       {/* Estatística do mês (unidade) */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <StatCard label="caixas no mês" value={month.sessions} />
         <StatCard
           label="divergências"
@@ -130,7 +130,7 @@ export function CashClient({ units, selectedUnitId, openSession, lastClosing, to
           tone={month.divergent > 0 ? 'danger' : 'default'}
           className={month.divergent > 0 ? 'border-danger/50 bg-danger/5' : undefined}
         />
-        <StatCard label="soma divergida" value={brl(month.divergenceTotal)} />
+        <StatCard label="soma divergida" value={brl(month.divergenceTotal)} className="col-span-2 sm:col-span-1" />
       </div>
 
       {/* Caixa aberto → fechar · sem caixa aberto → abrir */}
