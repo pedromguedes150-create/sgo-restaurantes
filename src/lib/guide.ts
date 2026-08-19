@@ -189,6 +189,7 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'O Administrador cria o usuário do caixa em Configurações → Usuários com o perfil "Caixa" e vincula a unidade. Esse perfil só enxerga a conferência de comandas.',
           'Na máquina do caixa, entre no SGO com esse usuário — a tela de conferência abre direto.',
+          'PERFIL CAIXA: crie em Configurações → Usuários um usuário por unidade com o perfil "Caixa (só conferência de comandas)". Ele entra e cai DIRETO nesta tela, e não alcança nenhum outro módulo — nem digitando o endereço.',
           'O leitor funciona como teclado: clique uma vez no campo grande e vá passando o leitor em cada comanda presente. Não precisa tocar em nada entre uma comanda e outra.',
           'Os contadores no topo mostram conferidas / ativas / faltando em tempo real. "Desfazer última" corrige um bipe errado.',
           'O CARTÃO TEM DOIS CÓDIGOS: o de barras (a comanda) e um QR do Instagram. Leitor de mão lê os dois, e o QR é IGNORADO automaticamente — não é erro. O rodapé mostra quantas vezes isso aconteceu, só para você saber que a leitura foi vista.',

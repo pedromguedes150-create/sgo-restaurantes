@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db/prisma';
 import { getSessionUser } from '@/lib/auth/session';
@@ -14,6 +14,7 @@ import { SidebarStateProvider } from '@/components/layout/sidebar-state-provider
 import { PageChromeProvider } from '@/components/layout/page-chrome';
 import { unreadCount } from '@/lib/notifications';
 import { viewableNavHrefs } from '@/lib/permissions';
+import { canOpenPath, homeForRole } from '@/lib/permissions/route-guard';
 import { getInboxPendingCount } from '@/lib/communications/query';
 import { CommunicationInterstitial } from '@/components/communications/communication-interstitial';
 import { ServiceWorkerRegister } from '@/components/push/service-worker-register';
@@ -22,6 +23,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await getSessionUser();
   if (!user) redirect('/login');
   if (user.needsTerms) redirect('/termo'); // LGPD: aceite no 1º login
+
+  /* GUARDA DE MÓDULO NO SERVIDOR. Até aqui a matriz de perfis só escondia o
+     item no menu: dava para abrir qualquer tela digitando o endereço. */
+  const caminho = headers().get('x-sgo-path');
+  if (caminho && !(await canOpenPath(user.role, caminho))) {
+    redirect(await homeForRole(user.role));
+  }
 
   const isAdmin = user.role === 'ADMIN' || user.role === 'CEO';
   // Lido no servidor para a sidebar já sair na largura certa (sem piscar na
