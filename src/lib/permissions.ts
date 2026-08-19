@@ -45,7 +45,7 @@ export const MODULES: { key: string; label: string; nav?: string }[] = [
 ];
 
 export const ALL_ROLES: Role[] = ['CEO', 'ADMIN', 'SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE', 'CASHIER'];
-function isFullAccess(role: Role) { return role === 'ADMIN' || role === 'CEO'; }
+export function isFullAccess(role: Role) { return role === 'ADMIN' || role === 'CEO'; }
 
 export interface Perm { canView: boolean; canEdit: boolean }
 

@@ -44,7 +44,11 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  /* Entrega o caminho ao servidor: componentes de servidor não recebem o
+     pathname, e a guarda de módulo do layout precisa dele. */
+  const headers = new Headers(req.headers);
+  headers.set('x-sgo-path', pathname);
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {

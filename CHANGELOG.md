@@ -9,6 +9,35 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.51.0 — 2026-08-19 (Permissão de módulo passa a valer no servidor — o Caixa só alcança a bipagem)
+
+### Corrigido — controle de acesso
+- **A matriz de perfis só escondia o item no MENU: dava para abrir qualquer tela digitando o
+  endereço.** O perfil **Caixa**, que existe apenas para bipar comandas, alcançava
+  `/modulos/executivo` (números da rede inteira), `/modulos/pessoas` (CPF e chave PIX) e
+  `/modulos/atestados` — **CID, dado sensível de LGPD** — escrevendo a URL. Esconder no menu é
+  conveniência; bloquear no servidor é controle de acesso.
+- Agora existe **guarda de módulo no servidor** (`src/lib/permissions/route-guard.ts`), aplicada no
+  layout autenticado: o caminho é resolvido para o módulo dono (o `nav` mais longo que o prefixa) e
+  confrontado com a matriz de permissões. Quem não pode ver é mandado para uma tela que **pode**
+  abrir — nunca para outra porta fechada, o que viraria laço de redirecionamento.
+- O escopo por **unidade** já era verificado no servidor em cada consulta; o furo era só o de
+  módulo.
+
+### Nota
+Nada muda para Admin, CEO, Gerente e Supervisor: os perfis abertos continuam com o mesmo acesso.
+O que muda é que perfis restritos — Caixa hoje, e qualquer restrição que o Admin criar na matriz —
+passam a ser restritos de verdade.
+
+### Testes
+14 casos novos: mapeamento caminho → módulo (incluindo `/modulos/notas/gas`, que é de NOTAS e não de
+GÁS, e `/modulos/comandas-outro`, que não é de Comandas), o Caixa liberado só em Comandas e Ajuda,
+bloqueado em Atestados/Pessoas/Pagamentos/Executivo/Configurações/Auditoria — inclusive nas telas
+internas —, Admin e CEO inalterados, e a garantia de que o destino de cada perfil é sempre uma tela
+que ele consegue abrir. 227 testes no total.
+
+---
+
 ## v1.50.0 — 2026-08-19 (Troco, etapa 3: o pedido chega pré-preenchido pelo cofre)
 
 ### Novo
