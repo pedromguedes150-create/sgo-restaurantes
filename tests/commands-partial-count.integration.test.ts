@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import { submitCount } from '@/lib/commands/count';
 import { getActiveSequence } from '@/lib/commands/active';
 import { getScanContext, submitScanCount } from '@/lib/commands/scan';
+import { getLastFullCount } from '@/lib/commands/full-count';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -139,5 +140,38 @@ describe('O leitor grava as bipadas (para a grade abrir com o status)', () => {
     await submitScanCount(user(), { unitId, scannedNumbers: todas });
     const c = await prisma.commandCount.findFirst({ where: { unitId }, orderBy: { createdAt: 'desc' } });
     expect((c?.presentNumbers as number[]).length).toBe(300);
+  });
+});
+
+describe('Indicador da última contagem completa', () => {
+  it('a PARCIAL não conta como completa', async () => {
+    await prisma.commandCount.deleteMany({ where: { unitId } });
+    const escopo = Array.from({ length: 300 }, (_, i) => i + 1);
+    await submitCount(user(), { unitId, operationalDate: '2026-08-19', allPresent: true, scopeNumbers: escopo });
+    const info = await getLastFullCount(unitId, '2026-08-19');
+    expect(info.never).toBe(true); // só houve parcial
+  });
+
+  it('a completa é encontrada e os dias são contados', async () => {
+    await submitCount(user(), { unitId, operationalDate: '2026-08-10', allPresent: true });
+    const info = await getLastFullCount(unitId, '2026-08-17');
+    expect(info.never).toBe(false);
+    expect(info.date).toBe('2026-08-10');
+    expect(info.days).toBe(7);
+    expect(info.overdue).toBe(false); // 7 dias = segunda a segunda, dentro do ritmo
+  });
+
+  it('passando do ritmo semanal, acusa atraso', async () => {
+    const info = await getLastFullCount(unitId, '2026-08-20');
+    expect(info.days).toBe(10);
+    expect(info.overdue).toBe(true);
+  });
+
+  it('a parcial mais recente não apaga a completa anterior', async () => {
+    const escopo = Array.from({ length: 300 }, (_, i) => i + 1);
+    await submitCount(user(), { unitId, operationalDate: '2026-08-20', allPresent: true, scopeNumbers: escopo });
+    const info = await getLastFullCount(unitId, '2026-08-20');
+    expect(info.date).toBe('2026-08-10'); // segue apontando a completa
+    expect(info.overdue).toBe(true);
   });
 });

@@ -6,6 +6,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { getUnitCommandState } from '@/lib/commands/query';
 import { getActiveSequence } from '@/lib/commands/active';
+import { getLastFullCount } from '@/lib/commands/full-count';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { Button } from '@/components/ui/ds/button';
@@ -35,6 +36,9 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
   const operationalDate = currentOperationalDate({ timezone: selected.timezone, cutoffHour: selected.cutoffHour }, now);
   const state = await getUnitCommandState(selected.id, operationalDate);
   const seq = await getActiveSequence(selected.id);
+  /* A parcial roda toda madrugada e diria "contagem de hoje registrada" todo
+     dia — verdade que esconde a completa não acontecer há semanas. */
+  const ultimaCompleta = await getLastFullCount(selected.id, operationalDate);
   const activeNumbers = [...seq.active].sort((a, b) => a - b);
 
   /* Última contagem da unidade, com o estado em que a grade foi deixada.
@@ -98,6 +102,8 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
             isAdmin={user.role === 'ADMIN'}
             hasConfig={Boolean(state.config)}
             todayDone={Boolean(state.todayCount)}
+            ultimaCompleta={ultimaCompleta}
+            temFaixaMadrugada={seq.hasNightly}
             activeNumbers={activeNumbers}
             lostNumbers={[...seq.lost].sort((a, b) => a - b)}
             ultimaContagem={ultimaContagem ? {
