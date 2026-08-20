@@ -36,6 +36,7 @@ export function CommandsClient({
   activeNumbers = [],
   lostNumbers = [],
   ultimaContagem = null,
+  abertasPorDia = [],
   openDivergences,
 }: {
   unitId: string;
@@ -51,6 +52,8 @@ export function CommandsClient({
   /** Baixadas (perdidas). Saíram da sequência ativa, mas continuam existindo. */
   lostNumbers?: number[];
   ultimaContagem?: UltimaContagem | null;
+  /** Dias em que as divergências ABERTAS foram criadas, do mais recente. */
+  abertasPorDia?: { date: string; count: number }[];
   openDivergences: Divergence[];
 }) {
   const router = useRouter();
@@ -58,7 +61,6 @@ export function CommandsClient({
   const [observation, setObservation] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ t: 'ok' | 'err'; m: string } | null>(null);
-  const [diaLimpeza, setDiaLimpeza] = useState('');
 
   async function post(url: string, body: unknown) {
     setBusy(true);
@@ -201,31 +203,36 @@ export function CommandsClient({
               contar naquela noite. Se foi o caso, apague as abertas daquele dia e marque a faixa da madrugada em
               Configurações → Comandas para não repetir.
             </p>
-            <div className="mt-2 flex flex-wrap items-end gap-2">
-              <div>
-                <Label htmlFor="dia-div" className="text-xs">Dia em que foram criadas</Label>
-                <Input id="dia-div" type="date" value={diaLimpeza} onChange={(e) => setDiaLimpeza(e.target.value)} className="mt-1 h-9 w-44 text-sm" />
-              </div>
-              <Button
-                size="sm"
-                variant="destructive"
-                disabled={busy || !diaLimpeza}
-                onClick={async () => {
-                  if (!confirm(`Apagar as divergências ABERTAS criadas em ${diaLimpeza.split('-').reverse().join('/')} nesta unidade?
+            <p className="mt-2 sgo-type-11 font-semibold text-ink-500">Apagar as abertas criadas em</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {abertasPorDia.length === 0 && <p className="text-xs text-ink-500">Nenhuma divergência aberta para limpar.</p>}
+              {abertasPorDia.map((d) => (
+                /* Um botão por DIA que realmente tem divergência aberta. Antes
+                   era um campo de data vazio: o Admin tinha de adivinhar o dia e
+                   o botão ficava apagado até ele acertar. */
+                <Button
+                  key={d.date}
+                  size="sm"
+                  variant="destructive"
+                  disabled={busy}
+                  onClick={async () => {
+                    const br = d.date.split('-').reverse().join('/');
+                    if (!confirm(`Apagar ${d.count} divergência(s) ABERTA(S) criada(s) em ${br} nesta unidade?
 
 As já investigadas ou encerradas não são tocadas. A ação fica registrada na auditoria.`)) return;
-                  const res = await fetch('/api/admin/ops', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ entity: 'commandDivergencesOfDay', unitId, date: diaLimpeza }),
-                  });
-                  const d = await res.json().catch(() => ({}));
-                  if (!res.ok) { setMsg({ t: 'err', m: d.error ?? 'Falha' }); return; }
-                  setMsg({ t: 'ok', m: `${d.deleted ?? 0} divergência(s) apagada(s).` });
-                  router.refresh();
-                }}
-              >
-                Apagar as abertas desse dia
-              </Button>
+                    const res = await fetch('/api/admin/ops', {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ entity: 'commandDivergencesOfDay', unitId, date: d.date }),
+                    });
+                    const r = await res.json().catch(() => ({}));
+                    if (!res.ok) { setMsg({ t: 'err', m: r.error ?? 'Falha' }); return; }
+                    setMsg({ t: 'ok', m: `${r.deleted ?? 0} divergência(s) apagada(s).` });
+                    router.refresh();
+                  }}
+                >
+                  {d.date.split('-').reverse().join('/')} · {d.count}
+                </Button>
+              ))}
             </div>
           </div>
         )}
