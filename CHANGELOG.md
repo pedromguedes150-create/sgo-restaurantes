@@ -9,6 +9,23 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.52.3 — 2026-08-20 (Faixas sobrepostas: total certo e aviso na configuração)
+
+### Corrigido
+- **O total de comandas da unidade estava errado quando as faixas se sobrepunham.** A tela somava
+  os tamanhos das faixas em vez de contar números distintos: uma unidade com `2–300` e `1–700`
+  mostrava **999** comandas ativas, quando tem **700**. Número inventado — e, pior, ninguém percebia
+  que as faixas se cruzavam. Agora a conta é por número distinto.
+- **A tela avisa quando duas faixas se sobrepõem**, nomeando o par e o trecho em comum
+  (ex.: `"Sequência 1" e "Madrugada" (2–300)`). Sobreposição não quebra a contagem — a sequência
+  ativa é um conjunto —, mas confunde quem configura: a mesma comanda aparece em duas faixas e não
+  fica claro qual rotina vale para ela.
+- O resumo passa a separar por rotina: **quantas são conferidas na madrugada** e quantas ficam só
+  para a contagem semanal. É a checagem que faltava para conferir a configuração de relance.
+- O texto de ajuda agora diz explicitamente que **as faixas não devem se sobrepor**.
+
+---
+
 ## v1.52.2 — 2026-08-20 (Indicador da última contagem completa)
 
 ### Novo
