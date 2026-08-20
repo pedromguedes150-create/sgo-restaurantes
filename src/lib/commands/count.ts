@@ -29,6 +29,16 @@ export async function submitCount(
     presentNumbers?: number[];
     /** Marcadas como EM USO (com cliente). Contam como PRESENTES. */
     inUseNumbers?: number[];
+    /**
+     * Números que ESTA contagem se propôs a conferir. Ausente = contagem
+     * completa (todas as ativas).
+     *
+     * Existe por causa da rotina real: na madrugada o caixa confere só uma faixa
+     * (ex.: 1–300) e a contagem completa acontece uma vez por semana. Sem o
+     * escopo, as comandas que ninguém contou naquela noite virariam faltantes,
+     * abririam divergência e alertariam o supervisor — todas as noites.
+     */
+    scopeNumbers?: number[];
     observation?: string;
   },
   ctx: { ip?: string | null; userAgent?: string | null } = {},
@@ -60,6 +70,12 @@ export async function submitCount(
   const present = inteiros(input.presentNumbers).filter((n) => seq.active.has(n));
   const inUse = inteiros(input.inUseNumbers).filter((n) => seq.active.has(n));
 
+  /* ESCOPO: o que esta contagem se propôs a conferir. Fora dele, nada é julgado
+     — nem vira faltante, nem vira divergência. */
+  const escopoPedido = input.scopeNumbers === undefined ? null : inteiros(input.scopeNumbers).filter((n) => seq.active.has(n));
+  const escopo = escopoPedido && escopoPedido.length > 0 ? new Set(escopoPedido) : seq.active;
+  const parcial = escopo !== seq.active && escopo.size < seq.active.size;
+
   /* AUSENTES SÃO CALCULADOS AQUI quando a grade manda o que está marcado.
      Antes a tela mandava a lista de ausentes que ela mesma calculava como
      "ativas − conferidas", esquecendo as marcadas EM USO — e a tela dizia, na
@@ -71,8 +87,8 @@ export async function submitCount(
   const requested = input.allPresent
     ? []
     : marcouGrade
-      ? [...seq.active].filter((n) => !present.includes(n) && !inUse.includes(n))
-      : inteiros(input.absentNumbers);
+      ? [...escopo].filter((n) => !present.includes(n) && !inUse.includes(n))
+      : inteiros(input.absentNumbers).filter((n) => escopo.has(n));
   const absent = requested.filter((n) => seq.active.has(n));
   const rejected = requested.filter((n) => !seq.active.has(n));
 
@@ -83,18 +99,21 @@ export async function submitCount(
   // registra/atualiza a contagem do dia
   /* Guarda o estado da grade: é o que permite reabrir para corrigir sem
      remarcar tudo. "Todas presentes" grava a sequência ativa inteira. */
-  const presentSalvo = input.allPresent ? [...seq.active] : present;
+  /* "Todas presentes" numa contagem parcial vale só para o escopo dela. */
+  const presentSalvo = input.allPresent ? [...escopo] : present;
   await prisma.commandCount.upsert({
     where: { unitId_operationalDate: { unitId: unit.id, operationalDate } },
     create: {
       unitId: unit.id, operationalDate, allPresent: input.allPresent, absentCount: absent.length, createdById: user.id,
       presentNumbers: presentSalvo as unknown as Prisma.InputJsonValue,
       inUseNumbers: inUse as unknown as Prisma.InputJsonValue,
+      scopeNumbers: parcial ? ([...escopo] as unknown as Prisma.InputJsonValue) : undefined,
     },
     update: {
       allPresent: input.allPresent, absentCount: absent.length, createdById: user.id,
       presentNumbers: presentSalvo as unknown as Prisma.InputJsonValue,
       inUseNumbers: inUse as unknown as Prisma.InputJsonValue,
+      scopeNumbers: parcial ? ([...escopo] as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
     },
   });
 

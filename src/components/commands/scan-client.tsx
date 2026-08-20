@@ -19,6 +19,9 @@ interface Props {
   unitName: string;
   operationalDate: string;
   activeNumbers: number[];
+  /** A unidade tem faixa de madrugada: esta conferência cobre só parte. */
+  partial: boolean;
+  totalAtivas: number;
   alreadyCounted: boolean;
   userName: string;
 }
@@ -45,7 +48,7 @@ const REASON_TEXT: Record<LogEntry['reason'], string> = {
  */
 const JANELA_RELEITURA_MS = 2500;
 
-export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, alreadyCounted, userName }: Props) {
+export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, partial, totalAtivas, alreadyCounted, userName }: Props) {
   const active = useMemo(() => new Set(activeNumbers), [activeNumbers]);
   const inputRef = useRef<HTMLInputElement>(null);
   const seqRef = useRef(0);
@@ -188,6 +191,16 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
 
   return (
     <div className="space-y-4" onClick={keepFocus}>
+      {partial && (
+        /* O caixa precisa saber que NÃO está conferindo tudo — senão pensa que
+           faltou comanda quando o número "ativas" não bate com o total da casa.
+           E o supervisor precisa saber que o resto não foi julgado nesta noite. */
+        <p className="rounded-md bg-info-bg p-2 text-sm text-info">
+          <strong>Conferência da madrugada (parcial).</strong> Você confere {activeNumbers.length} comanda(s) desta faixa.
+          As outras {Math.max(0, totalAtivas - activeNumbers.length)} da unidade <strong>não entram nesta contagem</strong> e não
+          serão tratadas como extraviadas — elas são conferidas na contagem completa da semana.
+        </p>
+      )}
       {alreadyCounted && (
         <p className="rounded-md bg-warning/10 p-2 text-sm text-warning">
           Já existe uma contagem registrada hoje nesta unidade. Se você concluir, ela será <strong>substituída</strong> por esta conferência.
@@ -202,7 +215,7 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, a
           </div>
           <div>
             <p className="sgo-type-24 font-semibold text-ink-900">{activeNumbers.length}</p>
-            <p className="text-xs text-ink-500">ativas</p>
+            <p className="text-xs text-ink-500">{partial ? 'nesta faixa' : 'ativas'}</p>
           </div>
           <div>
             <p className={`sgo-type-24 font-semibold ${missing.length ? 'text-danger' : 'text-success'}`}>{missing.length}</p>

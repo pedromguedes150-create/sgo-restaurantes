@@ -198,14 +198,14 @@ export async function createCommandSequence(user: SessionUser, input: { unitId: 
   await audit({ userId: user.id, unitId: input.unitId, action: 'COMMAND_SEQ_CREATE', module: 'CONFIG', entity: 'command_sequence', entityId: c.id, metadata: { start, end }, ...ctx });
   return { ok: true, id: c.id };
 }
-export async function updateCommandSequence(user: SessionUser, id: string, input: { name?: string; rangeStart?: number; rangeEnd?: number; active?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateCommandSequence(user: SessionUser, id: string, input: { name?: string; rangeStart?: number; rangeEnd?: number; active?: boolean; nightly?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   const cur = await prisma.commandSequence.findUnique({ where: { id } });
   if (!cur) return { ok: false, reason: 'INVALID' };
   const start = input.rangeStart !== undefined ? Math.trunc(input.rangeStart) : cur.rangeStart;
   const end = input.rangeEnd !== undefined ? Math.trunc(input.rangeEnd) : cur.rangeEnd;
   if (!validRange(start, end)) return { ok: false, reason: 'INVALID' };
-  await prisma.commandSequence.update({ where: { id }, data: { ...(input.name !== undefined ? { name: input.name.trim() || cur.name } : {}), rangeStart: start, rangeEnd: end, ...(input.active !== undefined ? { active: input.active } : {}) } });
+  await prisma.commandSequence.update({ where: { id }, data: { ...(input.name !== undefined ? { name: input.name.trim() || cur.name } : {}), rangeStart: start, rangeEnd: end, ...(input.active !== undefined ? { active: input.active } : {}), ...(input.nightly !== undefined ? { nightly: input.nightly } : {}) } });
   await audit({ userId: user.id, unitId: cur.unitId, action: 'COMMAND_SEQ_UPDATE', module: 'CONFIG', entity: 'command_sequence', entityId: id, ...ctx });
   return { ok: true };
 }

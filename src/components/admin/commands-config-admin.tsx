@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/ds/select';
 import { shortUnitName } from '@/lib/unit-name';
 import { postAdmin } from '@/lib/admin-client';
 
-export interface CmdSeqRow { id: string; unitId: string; name: string; rangeStart: number; rangeEnd: number; active: boolean }
+export interface CmdSeqRow { id: string; unitId: string; name: string; rangeStart: number; rangeEnd: number; active: boolean; nightly: boolean }
 interface Unit { id: string; name: string }
 
 
@@ -68,10 +68,19 @@ function SeqRow({ s, onChange }: { s: CmdSeqRow; onChange: () => void }) {
         ) : (
           <div>
             <p className="text-sm font-semibold text-ink-900">{s.name}</p>
-            <p className="text-xs text-ink-500">{s.rangeStart}–{s.rangeEnd} · {Math.max(0, s.rangeEnd - s.rangeStart + 1)} comandas</p>
+            <p className="text-xs text-ink-500">
+              {s.rangeStart}–{s.rangeEnd} · {Math.max(0, s.rangeEnd - s.rangeStart + 1)} comandas
+              {s.nightly && <> · <span className="font-semibold text-info">conferida na madrugada</span></>}
+            </p>
           </div>
         )}
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => call({ entity: 'commandSequence', action: 'update', id: s.id, nightly: !s.nightly })}
+            title={s.nightly ? 'Sai da conferência da madrugada' : 'Passa a ser conferida na madrugada pelo caixa'}
+          >
+            <StatusBadge tone={s.nightly ? 'medium' : 'neutral'}>{s.nightly ? 'Madrugada' : 'Só na semanal'}</StatusBadge>
+          </button>
           <button onClick={() => call({ entity: 'commandSequence', action: 'update', id: s.id, active: !s.active })}><StatusBadge tone={s.active ? 'success' : 'critical'}>{s.active ? 'Ativa' : 'Inativa'}</StatusBadge></button>
           {editing
             ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => call({ entity: 'commandSequence', action: 'update', id: s.id, name, rangeStart: Number(start), rangeEnd: Number(end) }, () => setEditing(false))} aria-label="Salvar"><Save className="h-4 w-4" /></Button>

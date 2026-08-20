@@ -14,7 +14,7 @@ export default async function ComandasConfigPage() {
 
   const [units, sequences] = await Promise.all([
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-    prisma.commandSequence.findMany({ orderBy: [{ order: 'asc' }, { rangeStart: 'asc' }], select: { id: true, unitId: true, name: true, rangeStart: true, rangeEnd: true, active: true } }),
+    prisma.commandSequence.findMany({ orderBy: [{ order: 'asc' }, { rangeStart: 'asc' }], select: { id: true, unitId: true, name: true, rangeStart: true, rangeEnd: true, active: true, nightly: true } }),
   ]);
 
   return (

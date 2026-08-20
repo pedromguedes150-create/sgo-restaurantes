@@ -9,6 +9,35 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.52.0 — 2026-08-20 (Contagem parcial da madrugada: o que não foi contado não vira extravio)
+
+### Novo
+- **Faixa de madrugada por sequência.** Em Configurações → Comandas, cada faixa ganha um botão
+  **"Madrugada" / "Só na semanal"**. A rotina real da rede: o caixa confere de madrugada apenas uma
+  parte (ex.: 1–300) e a **contagem completa acontece uma vez por semana**, normalmente na segunda.
+- **A contagem passou a ter ESCOPO.** `submitCount` aceita `scopeNumbers`: o que está fora dele não
+  é julgado — não vira faltante, não abre divergência, não alerta supervisor. Sem isso, toda noite
+  as comandas que ninguém se propôs a contar seriam tratadas como extraviadas.
+- **A tela do caixa avisa que é parcial**, em azul: quantas ele confere e quantas ficam de fora,
+  com a frase de que as demais não serão tratadas como extraviadas. O contador "ativas" vira
+  "nesta faixa". O caixa não precisa configurar nada — a faixa vem pronta.
+- O escopo fica **gravado na contagem** (`scopeNumbers`), então o histórico distingue a parcial da
+  completa. Contagem completa continua sem escopo e julgando tudo.
+- **Nada muda em unidade sem faixa marcada**: o caixa confere todas as ativas, como sempre.
+
+### Banco
+`command_sequences.nightly` (boolean, padrão false) e `command_counts.scopeNumbers` (JSONB).
+Migração **aditiva** — com o padrão `false`, nenhuma unidade muda de comportamento até alguém
+marcar uma faixa.
+
+### Testes
+`tests/commands-partial-count.integration.test.ts` — 7 casos: a sequência separa madrugada de
+semanal, a tela do caixa já vem no escopo, bipar a faixa inteira não deixa faltante, **as comandas
+de fora não viram divergência** (o caso central), o escopo é gravado, "todas presentes" numa parcial
+vale só para a faixa, e a contagem completa continua julgando tudo. 234 testes no total.
+
+---
+
 ## v1.51.0 — 2026-08-19 (Permissão de módulo passa a valer no servidor — o Caixa só alcança a bipagem)
 
 ### Corrigido — controle de acesso

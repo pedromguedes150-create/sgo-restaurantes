@@ -58,6 +58,8 @@ export default async function ConferenciaPage({ searchParams }: { searchParams: 
           unitName={r.ctx.unitName}
           operationalDate={r.ctx.operationalDate}
           activeNumbers={r.ctx.activeNumbers}
+          partial={r.ctx.partial}
+          totalAtivas={r.ctx.totalAtivas}
           alreadyCounted={r.ctx.alreadyCounted}
           userName={user.name}
         />
