@@ -222,7 +222,7 @@ export function CommandsClient({
 As já investigadas ou encerradas não são tocadas. A ação fica registrada na auditoria.`)) return;
                     const res = await fetch('/api/admin/ops', {
                       method: 'POST', headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ entity: 'commandDivergencesOfDay', unitId, date: d.date }),
+                      body: JSON.stringify({ entity: 'commandDivergencesOfDay', action: 'delete', unitId, date: d.date }),
                     });
                     const r = await res.json().catch(() => ({}));
                     if (!res.ok) { setMsg({ t: 'err', m: r.error ?? 'Falha' }); return; }

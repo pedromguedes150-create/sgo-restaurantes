@@ -60,6 +60,21 @@ export async function deleteCommandDivergence(user: SessionUser, id: string, ctx
 }
 
 /**
+ * O corpo da requisição identifica um alvo válido?
+ *
+ * Quase toda exclusão da Operação é por `id` (ou `ids`). A de divergências em
+ * lote é a exceção: ela aponta para UNIDADE + DIA. A guarda genérica exigia
+ * `id` e recusava a chamada antes do despacho, devolvendo "Requisição inválida"
+ * — o botão parecia quebrado e o motivo não aparecia em lugar nenhum. Virou
+ * função pura para poder ser testada.
+ */
+export function opHasTarget(body: { entity?: unknown; id?: unknown; ids?: unknown; unitId?: unknown; date?: unknown } | null | undefined): boolean {
+  if (!body) return false;
+  if (body.entity === 'commandDivergencesOfDay') return Boolean(body.unitId && body.date);
+  return Boolean(body.id || body.ids);
+}
+
+/**
  * Apaga em LOTE as divergências abertas criadas num dia, numa unidade.
  *
  * Existe para desfazer engano do sistema, não engano da operação. O caso que a
