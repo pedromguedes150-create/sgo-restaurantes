@@ -19,11 +19,37 @@ export function CommandsConfigAdmin({ units, sequences }: { units: Unit[]; seque
   const router = useRouter();
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
   const list = useMemo(() => sequences.filter((s) => s.unitId === unitId), [sequences, unitId]);
-  const total = list.filter((s) => s.active).reduce((sum, s) => sum + Math.max(0, s.rangeEnd - s.rangeStart + 1), 0);
+  /* Contagem DISTINTA, não soma das faixas.
+     Faixas podem se sobrepor (2–300 e 1–700), e a soma ingênua dava 999 numa
+     unidade que tem 700 comandas — número inventado, e ninguém percebia que as
+     faixas se cruzavam. */
+  const resumo = useMemo(() => {
+    const ativas = list.filter((s) => s.active);
+    const todas = new Set<number>();
+    const madrugada = new Set<number>();
+    for (const s of ativas) {
+      for (let n = s.rangeStart; n <= s.rangeEnd; n++) {
+        todas.add(n);
+        if (s.nightly) madrugada.add(n);
+      }
+    }
+    /* Sobreposição: pares de faixas ativas que compartilham números. */
+    const cruzadas: string[] = [];
+    for (let i = 0; i < ativas.length; i++) {
+      for (let j = i + 1; j < ativas.length; j++) {
+        const a = ativas[i], b = ativas[j];
+        const ini = Math.max(a.rangeStart, b.rangeStart);
+        const fim = Math.min(a.rangeEnd, b.rangeEnd);
+        if (ini <= fim) cruzadas.push(`"${a.name}" e "${b.name}" (${ini}–${fim})`);
+      }
+    }
+    return { total: todas.size, madrugada: madrugada.size, cruzadas };
+  }, [list]);
+  const total = resumo.total;
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-ink-500">Cada unidade pode ter várias faixas de comandas (ex.: 1–200 e 500–650). São a base da contagem diária e das divergências.</p>
+      <p className="text-sm text-ink-500">Cada unidade pode ter várias faixas de comandas (ex.: 1–200 e 500–650). São a base da contagem diária e das divergências. <strong>As faixas não devem se sobrepor</strong> — cada comanda pertence a uma só.</p>
       <Select
         label="Unidade" value={unitId} onValueChange={setUnitId}
         options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
@@ -35,7 +61,22 @@ export function CommandsConfigAdmin({ units, sequences }: { units: Unit[]; seque
       </div>
 
       <NewSeq unitId={unitId} onDone={() => router.refresh()} />
-      <p className="text-xs text-ink-500">Total de comandas ativas nesta unidade: <span className="font-bold text-ink-900">{total}</span></p>
+      {resumo.cruzadas.length > 0 && (
+        /* Sobreposição não quebra a contagem (a sequência ativa é um conjunto),
+           mas confunde quem configura: a mesma comanda aparece em duas faixas e
+           não fica claro qual rotina vale para ela. */
+        <p className="rounded-md bg-danger/10 px-3 py-2 text-sm font-medium text-danger">
+          <strong>Faixas sobrepostas:</strong> {resumo.cruzadas.join(' · ')}. Cada comanda deve pertencer a uma faixa só —
+          ajuste os intervalos para não se cruzarem.
+        </p>
+      )}
+      <p className="text-xs text-ink-500">
+        Total de comandas ativas nesta unidade: <span className="font-bold text-ink-900">{total}</span>
+        {resumo.madrugada > 0 && (
+          <> · <span className="font-bold text-info">{resumo.madrugada}</span> conferidas na madrugada,{' '}
+          <span className="font-bold text-ink-900">{total - resumo.madrugada}</span> só na contagem semanal</>
+        )}
+      </p>
     </div>
   );
 }
