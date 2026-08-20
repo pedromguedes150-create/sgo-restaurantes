@@ -48,3 +48,6 @@ Thumbs.db
 
 # Anotacoes pessoais do Pedro (nao versionar)
 SGO.txt
+
+# Área de trabalho do Claude Code (worktrees, launch.json) — nunca versionar
+.claude/
