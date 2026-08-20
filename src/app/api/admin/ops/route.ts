@@ -26,6 +26,7 @@ export async function POST(req: Request) {
     if (e === 'waste') r = await ops.deleteWasteEntry(user, b.id, ctx);
     else if (e === 'commandCount') r = await ops.deleteCommandCount(user, b.id, ctx);
     else if (e === 'commandDivergence') r = await ops.deleteCommandDivergence(user, b.id, ctx);
+    else if (e === 'commandDivergencesOfDay') r = await ops.deleteOpenDivergencesOfDay(user, String(b.unitId ?? ''), String(b.date ?? ''), ctx);
     else if (e === 'occurrence') r = await ops.deleteOccurrence(user, b.id, ctx);
     else if (e === 'cancellation') r = await ops.deleteCancellation(user, b.id, ctx);
     else if (e === 'cancellationImport') r = await ops.deleteCancellationImport(user, b.id, ctx);

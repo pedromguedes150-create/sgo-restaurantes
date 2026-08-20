@@ -117,3 +117,27 @@ describe('A contagem COMPLETA continua julgando tudo', () => {
     expect(c?.scopeNumbers).toBeNull(); // completa: sem escopo gravado
   });
 });
+
+describe('O leitor grava as bipadas (para a grade abrir com o status)', () => {
+  it('conferência por leitor com faltantes grava quem foi bipada', async () => {
+    await prisma.commandCount.deleteMany({ where: { unitId } });
+    await prisma.commandDivergence.deleteMany({ where: { unitId } });
+    const bipadas = Array.from({ length: 299 }, (_, i) => i + 1); // falta a 300
+    const r = await submitScanCount(user(), { unitId, scannedNumbers: bipadas, note: 'madrugada' });
+    expect(r.ok).toBe(true);
+
+    const c = await prisma.commandCount.findFirst({ where: { unitId }, orderBy: { createdAt: 'desc' } });
+    /* Antes daqui o leitor mandava só os AUSENTES: presentNumbers ficava vazio e
+       a grade do gerente abria "0 ok" no dia seguinte a uma conferência inteira. */
+    expect((c?.presentNumbers as number[]).length).toBe(299);
+    expect((c?.presentNumbers as number[]).includes(1)).toBe(true);
+    expect((c?.presentNumbers as number[]).includes(300)).toBe(false);
+  });
+
+  it('bipando tudo, grava a faixa inteira como presente', async () => {
+    const todas = Array.from({ length: 300 }, (_, i) => i + 1);
+    await submitScanCount(user(), { unitId, scannedNumbers: todas });
+    const c = await prisma.commandCount.findFirst({ where: { unitId }, orderBy: { createdAt: 'desc' } });
+    expect((c?.presentNumbers as number[]).length).toBe(300);
+  });
+});
