@@ -619,6 +619,11 @@ model CommandSequence {
   rangeStart Int
   rangeEnd   Int
   active     Boolean  @default(true)
+  /// Faixa conferida na MADRUGADA pelo caixa (contagem parcial).
+  /// As faixas não marcadas ficam de fora dessa contagem e NÃO viram
+  /// divergência — elas são conferidas na contagem completa da semana.
+  /// Nenhuma faixa marcada = comportamento antigo: o caixa confere tudo.
+  nightly    Boolean  @default(false)
   order      Int      @default(0)
   createdAt  DateTime @default(now())
 
@@ -656,6 +661,10 @@ model CommandCount {
   /// estado em que foi deixada.
   presentNumbers  Json?
   inUseNumbers    Json?
+  /// Números que esta contagem SE PROPÔS a conferir. NULL = contagem completa
+  /// (todas as ativas). Numa contagem parcial, o que está fora daqui não foi
+  /// contado — e não pode ser tratado como extraviado.
+  scopeNumbers    Json?
   createdById     String?
   createdAt       DateTime @default(now())
 

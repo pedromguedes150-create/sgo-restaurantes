@@ -19,8 +19,12 @@ export interface ScanContext {
   unitId: string;
   unitName: string;
   operationalDate: string;
-  /** números ativos da unidade (a conferir) */
+  /** números que ESTA conferência deve cobrir (faixa da madrugada, se houver) */
   activeNumbers: number[];
+  /** a unidade tem faixa de madrugada: esta conferência é PARCIAL */
+  partial: boolean;
+  /** total de ativas na unidade — só para a tela dizer quantas ficam de fora */
+  totalAtivas: number;
   /** já houve contagem registrada nesta data operacional? */
   alreadyCounted: boolean;
 }
@@ -47,7 +51,9 @@ export async function getScanContext(user: SessionUser, unitId: string): Promise
       unitId: unit.id,
       unitName: unit.name,
       operationalDate,
-      activeNumbers: [...seq.active].sort((a, b) => a - b),
+      activeNumbers: [...(seq.hasNightly ? seq.nightly : seq.active)].sort((a, b) => a - b),
+      partial: seq.hasNightly,
+      totalAtivas: seq.active.size,
       alreadyCounted: Boolean(count),
     },
   };
@@ -82,11 +88,15 @@ export async function submitScanCount(
   if (!seq.config) return { ok: false, reason: 'NO_CONFIG' };
 
   const scanned = new Set((input.scannedNumbers ?? []).filter((n) => Number.isInteger(n) && seq.active.has(n)));
-  const absent = absentFromScans(seq.active, scanned);
+  /* O caixa confere a faixa da madrugada quando ela existe; senão, tudo. Sem
+     isso, uma conferência parcial marcaria como faltante toda comanda que
+     ninguém se propôs a contar naquela noite. */
+  const escopo = seq.hasNightly ? seq.nightly : seq.active;
+  const absent = absentFromScans(escopo, scanned);
 
   const note = (input.note ?? '').trim();
   const observation = [
-    `Conferência por leitor: ${scanned.size} bipada(s) de ${seq.active.size} ativa(s); ${absent.length} faltante(s).`,
+    `Conferência por leitor${seq.hasNightly ? ' (madrugada, faixa parcial)' : ''}: ${scanned.size} bipada(s) de ${escopo.size} no escopo; ${absent.length} faltante(s).`,
     note,
   ]
     .filter(Boolean)
@@ -94,7 +104,13 @@ export async function submitScanCount(
 
   const r = await submitCount(
     user,
-    { unitId: input.unitId, allPresent: absent.length === 0, absentNumbers: absent, observation },
+    {
+      unitId: input.unitId,
+      allPresent: absent.length === 0,
+      absentNumbers: absent,
+      scopeNumbers: seq.hasNightly ? [...escopo] : undefined,
+      observation,
+    },
     ctx,
   );
   if (!r.ok) return { ok: false, reason: r.reason };
