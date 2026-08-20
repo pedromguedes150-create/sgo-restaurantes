@@ -51,6 +51,24 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
   });
   const numeros = (v: unknown): number[] => (Array.isArray(v) ? v.filter((n): n is number => Number.isInteger(n)) : []);
 
+  /* Em que dias as divergências abertas foram criadas. Sem isto o Admin tinha
+     de adivinhar a data no campo — e o botão ficava apagado até ele acertar. */
+  const abertasPorDia = user.role === 'ADMIN'
+    ? await prisma.commandDivergence.findMany({
+        where: { unitId: selected.id, status: 'OPEN' },
+        select: { createdAt: true },
+      }).then((rows) => {
+        const mapa = new Map<string, number>();
+        for (const r of rows) {
+          const dia = r.createdAt.toISOString().slice(0, 10);
+          mapa.set(dia, (mapa.get(dia) ?? 0) + 1);
+        }
+        return [...mapa.entries()]
+          .map(([date, count]) => ({ date, count }))
+          .sort((a, b) => (a.date < b.date ? 1 : -1));
+      })
+    : [];
+
   const canResolve = user.role === 'SUPERVISOR' || user.role === 'ADMIN' || user.role === 'CEO';
 
   const isAdmin = user.role === 'ADMIN';
@@ -112,6 +130,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
               conferidas: ultimaContagem.allPresent ? activeNumbers : numeros(ultimaContagem.presentNumbers),
               emUso: numeros(ultimaContagem.inUseNumbers),
             } : null}
+            abertasPorDia={abertasPorDia}
             openDivergences={state.openDivergences.map((d) => ({
               id: d.id,
               number: d.number,

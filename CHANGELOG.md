@@ -9,6 +9,17 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.52.4 — 2026-08-20 (A limpeza de divergências oferece os dias em vez de pedir a data)
+
+### Melhorado
+- **O bloco de limpeza mostra um botão por dia que realmente tem divergência aberta**, com a
+  contagem de cada um (ex.: `20/08/2026 · 413`). Antes era um campo de data vazio: o Admin tinha de
+  **adivinhar o dia**, e o botão ficava apagado até acertar — o sistema sabia a resposta e ainda
+  assim perguntava. Fricção que eu mesmo criei.
+- A confirmação passa a dizer **quantas** serão apagadas naquele dia, não só a data.
+
+---
+
 ## v1.52.3 — 2026-08-20 (Faixas sobrepostas: total certo e aviso na configuração)
 
 ### Corrigido
