@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   const b = await req.json().catch(() => null);
-  if (!b?.entity || !b?.action || (!b?.id && !b?.ids)) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
+  if (!b?.entity || !b?.action || !ops.opHasTarget(b)) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   const ctx = requestContext(req);
 
   let r: (OpResult & { count?: number }) | undefined;

@@ -9,6 +9,29 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.52.5 — 2026-08-20 (A limpeza de divergências volta a funcionar — e ganha os testes que faltavam)
+
+### Corrigido
+- **"Requisição inválida" ao apagar as divergências em lote.** A rota de exclusões tem uma guarda
+  genérica que exige `id` (ou `ids`) — e esta operação é identificada por **unidade + dia**. Eu
+  acrescentei o despacho e não olhei a guarda acima dele, então a chamada era recusada antes de
+  chegar lá. O botão parecia quebrado e o motivo não aparecia em lugar nenhum. A guarda passou a
+  reconhecer o alvo por unidade + dia, e o botão passou a enviar a ação.
+
+### Testes — o que estava faltando
+Subi uma ação **destrutiva sem nenhum teste**, e ela chegou quebrada em produção. Agora tem 9:
+- só ADMIN executa · recusa data mal formada · dia sem divergência devolve zero
+- **apaga só as ABERTAS, só do dia e só da unidade** — deixa intactas a que está em apuração, a
+  encerrada, a de outro dia e a de outra unidade
+- a exclusão fica registrada na auditoria
+- e a **guarda da rota**, que virou função pura para poder ser testada: aceita o alvo por
+  unidade + dia, recusa quando falta um dos dois, e mantém a exigência de `id` para as demais
+  exclusões — inclusive o caso exato do defeito.
+
+249 testes no total.
+
+---
+
 ## v1.52.4 — 2026-08-20 (A limpeza de divergências oferece os dias em vez de pedir a data)
 
 ### Melhorado
