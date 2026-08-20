@@ -58,6 +58,7 @@ export function CommandsClient({
   const [observation, setObservation] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ t: 'ok' | 'err'; m: string } | null>(null);
+  const [diaLimpeza, setDiaLimpeza] = useState('');
 
   async function post(url: string, body: unknown) {
     setBusy(true);
@@ -187,6 +188,47 @@ export function CommandsClient({
           Divergências em aberto ({openDivergences.length})
         </h2>
         {openDivergences.length === 0 && <p className="text-sm text-ink-500">Nenhuma divergência aberta. 🟢</p>}
+
+        {isAdmin && openDivergences.length > 20 && (
+          /* Só aparece com muita divergência aberta de uma vez, que é o sinal de
+             engano do SISTEMA (contagem parcial registrada como completa) e não
+             de sumiço real. Apaga só as ABERTAS de um dia, com registro em
+             auditoria — fechar como "recuperada" mentiria: elas nunca sumiram. */
+          <div className="rounded-lg border border-dashed border-danger/50 p-3">
+            <p className="text-sm font-semibold text-ink-900">São {openDivergences.length} divergências abertas de uma vez</p>
+            <p className="mt-1 text-xs text-ink-500">
+              Volume assim costuma vir de uma conferência PARCIAL registrada como completa — comandas que ninguém se propôs a
+              contar naquela noite. Se foi o caso, apague as abertas daquele dia e marque a faixa da madrugada em
+              Configurações → Comandas para não repetir.
+            </p>
+            <div className="mt-2 flex flex-wrap items-end gap-2">
+              <div>
+                <Label htmlFor="dia-div" className="text-xs">Dia em que foram criadas</Label>
+                <Input id="dia-div" type="date" value={diaLimpeza} onChange={(e) => setDiaLimpeza(e.target.value)} className="mt-1 h-9 w-44 text-sm" />
+              </div>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={busy || !diaLimpeza}
+                onClick={async () => {
+                  if (!confirm(`Apagar as divergências ABERTAS criadas em ${diaLimpeza.split('-').reverse().join('/')} nesta unidade?
+
+As já investigadas ou encerradas não são tocadas. A ação fica registrada na auditoria.`)) return;
+                  const res = await fetch('/api/admin/ops', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ entity: 'commandDivergencesOfDay', unitId, date: diaLimpeza }),
+                  });
+                  const d = await res.json().catch(() => ({}));
+                  if (!res.ok) { setMsg({ t: 'err', m: d.error ?? 'Falha' }); return; }
+                  setMsg({ t: 'ok', m: `${d.deleted ?? 0} divergência(s) apagada(s).` });
+                  router.refresh();
+                }}
+              >
+                Apagar as abertas desse dia
+              </Button>
+            </div>
+          </div>
+        )}
         {openDivergences.map((d) => (
           <div key={d.id} className="rounded-lg border bg-surface p-3">
             <div className="flex items-center justify-between">

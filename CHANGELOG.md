@@ -9,7 +9,7 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
-## v1.52.1 — 2026-08-20 (Indicador da última contagem completa)
+## v1.52.2 — 2026-08-20 (Indicador da última contagem completa)
 
 ### Novo
 - **A tela de Comandas mostra há quantos dias foi a última contagem COMPLETA.** Ele existe por um
@@ -28,6 +28,26 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 4 casos novos em `tests/commands-partial-count.integration.test.ts`: a parcial **não** conta como
 completa · a completa é encontrada e os dias batem · passando do ritmo acusa atraso · e uma parcial
 mais recente **não apaga** a completa anterior. 238 testes no total.
+## v1.52.1 — 2026-08-20 (O leitor grava as bipadas · limpeza em lote de divergências)
+
+### Corrigido — defeito meu, visível na primeira madrugada
+- **A conferência por leitor não gravava quais comandas foram bipadas.** Ela mandava só a lista de
+  AUSENTES, então `presentNumbers` ficava vazio sempre que houvesse ao menos uma faltante — e no dia
+  seguinte a grade do gerente abria **"0 ok · 236 faltando"**, como se ninguém tivesse contado nada,
+  depois de uma conferência inteira. Agora o leitor grava as bipadas e a grade abre com elas verdes.
+
+### Novo
+- **Limpeza em lote das divergências abertas de um dia** (Admin, na tela de Comandas). Aparece só
+  quando há **mais de 20 divergências abertas** — volume assim é sinal de engano do SISTEMA, não de
+  sumiço real: tipicamente uma conferência **parcial registrada como completa**, que abre divergência
+  para tudo que ninguém se propôs a contar naquela noite.
+  Apaga apenas as **abertas**, de **um dia** e de **uma unidade**, com registro em auditoria. As já
+  investigadas ou encerradas não são tocadas. Escolhi apagar em vez de fechar como "recuperada":
+  fechar mentiria no histórico, porque essas comandas nunca sumiram.
+
+### Testes
+2 casos novos: o leitor grava as bipadas mesmo havendo faltantes, e bipando tudo grava a faixa
+inteira. 236 testes no total.
 
 ---
 

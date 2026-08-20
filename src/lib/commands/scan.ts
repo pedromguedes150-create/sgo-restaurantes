@@ -108,6 +108,11 @@ export async function submitScanCount(
       unitId: input.unitId,
       allPresent: absent.length === 0,
       absentNumbers: absent,
+      /* AS BIPADAS PRECISAM SER GRAVADAS. Sem isto, o leitor mandava só os
+         ausentes: `presentNumbers` ficava vazio e a grade do gerente abria com
+         "0 ok" no dia seguinte a uma conferência inteira — como se ninguém
+         tivesse contado nada. */
+      presentNumbers: [...scanned].filter((n) => escopo.has(n)),
       scopeNumbers: seq.hasNightly ? [...escopo] : undefined,
       observation,
     },

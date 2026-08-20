@@ -59,6 +59,48 @@ export async function deleteCommandDivergence(user: SessionUser, id: string, ctx
   return { ok: true };
 }
 
+/**
+ * Apaga em LOTE as divergências abertas criadas num dia, numa unidade.
+ *
+ * Existe para desfazer engano do sistema, não engano da operação. O caso que a
+ * motivou: uma conferência parcial registrada como se fosse completa abriu mais
+ * de quatrocentas divergências de uma vez — comandas que ninguém tinha se
+ * proposto a contar naquela noite. Fechar como "recuperada" mentiria no
+ * histórico (elas nunca sumiram); apagar com registro em auditoria é o que
+ * corresponde ao que houve.
+ *
+ * Só ADMIN, só as ABERTAS, só de um dia e de uma unidade — nunca um "limpar
+ * tudo". Divergência já investigada ou encerrada não é tocada.
+ */
+export async function deleteOpenDivergencesOfDay(
+  user: SessionUser,
+  unitId: string,
+  isoDate: string,
+  ctx: Ctx = {},
+): Promise<OpResult & { deleted?: number; numbers?: number[] }> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return { ok: false, reason: 'INVALID' };
+
+  const inicio = new Date(isoDate + 'T00:00:00.000Z');
+  const fim = new Date(inicio.getTime() + 86400000);
+
+  const alvo = await prisma.commandDivergence.findMany({
+    where: { unitId, status: 'OPEN', createdAt: { gte: inicio, lt: fim } },
+    select: { id: true, number: true },
+  });
+  if (alvo.length === 0) return { ok: true, deleted: 0, numbers: [] };
+
+  await prisma.commandDivergence.deleteMany({ where: { id: { in: alvo.map((d) => d.id) } } });
+  const numbers = alvo.map((d) => d.number).sort((a, b) => a - b);
+  await audit({
+    userId: user.id, unitId, action: 'COMMAND_DIVERGENCE_BULK_DELETE', module: 'COMMANDS',
+    entity: 'command_divergence',
+    metadata: { isoDate, deleted: alvo.length, numbers: numbers.slice(0, 200) },
+    ...ctx,
+  });
+  return { ok: true, deleted: alvo.length, numbers };
+}
+
 /* ───────────────────────── Ocorrências ───────────────────────── */
 export async function deleteOccurrence(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
