@@ -9,6 +9,28 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.52.1 — 2026-08-20 (Indicador da última contagem completa)
+
+### Novo
+- **A tela de Comandas mostra há quantos dias foi a última contagem COMPLETA.** Ele existe por um
+  motivo específico: com a contagem parcial rodando toda madrugada, a tela diria "contagem de hoje
+  já registrada" todo dia — o que é verdade — enquanto as comandas fora da faixa poderiam estar sem
+  conferência há semanas, sem ninguém notar.
+- Uma contagem só conta como completa quando **não gravou escopo**. As contagens anteriores a esta
+  funcionalidade também contam, porque antes dela toda contagem cobria a sequência inteira.
+- **Passando de 8 dias, o aviso fica vermelho** e diz que as comandas fora da faixa da madrugada
+  estão sem conferência desde então. 8 e não 7 porque de segunda a segunda dá exatamente 7.
+- Se a unidade **nunca** teve contagem completa, o aviso diz isso — é o caso que mais importa.
+- **Só aparece em unidade com faixa de madrugada.** Onde se confere tudo todo dia, "última completa"
+  seria sempre "hoje" e viraria ruído.
+
+### Testes
+4 casos novos em `tests/commands-partial-count.integration.test.ts`: a parcial **não** conta como
+completa · a completa é encontrada e os dias batem · passando do ritmo acusa atraso · e uma parcial
+mais recente **não apaga** a completa anterior. 238 testes no total.
+
+---
+
 ## v1.52.0 — 2026-08-20 (Contagem parcial da madrugada: o que não foi contado não vira extravio)
 
 ### Novo

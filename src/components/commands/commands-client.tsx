@@ -31,6 +31,8 @@ export function CommandsClient({
   isAdmin,
   hasConfig,
   todayDone,
+  ultimaCompleta,
+  temFaixaMadrugada = false,
   activeNumbers = [],
   lostNumbers = [],
   ultimaContagem = null,
@@ -41,6 +43,10 @@ export function CommandsClient({
   isAdmin: boolean;
   hasConfig: boolean;
   todayDone: boolean;
+  /** Última contagem COMPLETA da unidade (a parcial da madrugada não conta). */
+  ultimaCompleta?: { date: string | null; days: number | null; overdue: boolean; never: boolean };
+  /** A unidade usa faixa de madrugada — só aí o indicador faz sentido. */
+  temFaixaMadrugada?: boolean;
   activeNumbers?: number[];
   /** Baixadas (perdidas). Saíram da sequência ativa, mas continuam existindo. */
   lostNumbers?: number[];
@@ -133,6 +139,22 @@ export function CommandsClient({
         {todayDone && (
           <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">
             Contagem de hoje já registrada (pode reenviar para corrigir).
+          </p>
+        )}
+
+        {/* Só aparece onde existe contagem parcial: numa unidade que confere
+            tudo todo dia, "última completa" seria sempre "hoje" e viraria ruído. */}
+        {temFaixaMadrugada && ultimaCompleta && (
+          <p className={`rounded-lg px-3 py-2 text-sm font-medium ${ultimaCompleta.never || ultimaCompleta.overdue ? 'bg-danger/10 text-danger' : 'bg-sunken text-ink-900'}`}>
+            {ultimaCompleta.never ? (
+              <>Nunca houve <strong>contagem completa</strong> nesta unidade. A conferência da madrugada cobre só a faixa do salão — as comandas de reserva seguem sem conferência.</>
+            ) : (
+              <>
+                Última <strong>contagem completa</strong>: {ultimaCompleta.date!.split('-').reverse().join('/')}
+                {ultimaCompleta.days === 0 ? ' (hoje)' : ultimaCompleta.days === 1 ? ' (ontem)' : ` (há ${ultimaCompleta.days} dias)`}
+                {ultimaCompleta.overdue && <> — passou do ritmo semanal. As comandas fora da faixa da madrugada estão sem conferência desde então.</>}
+              </>
+            )}
           </p>
         )}
 

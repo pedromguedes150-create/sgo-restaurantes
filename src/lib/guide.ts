@@ -193,6 +193,7 @@ export const GUIDE: GuideSection[] = [
           'CONTAGEM DA MADRUGADA (parcial): em Configurações → Comandas, marque quais faixas o caixa confere de madrugada (botão "Madrugada" / "Só na semanal"). Ex.: 1–300 na madrugada, 301–600 só na contagem completa da semana.',
           'Com a faixa marcada, o caixa vê só ela e um aviso azul explicando que as demais NÃO entram na contagem. As de fora não viram faltantes nem abrem divergência — elas são conferidas na contagem completa (normalmente na segunda-feira).',
           'Sem nenhuma faixa marcada, nada muda: o caixa confere todas as comandas ativas, como sempre.',
+          'INDICADOR DA ÚLTIMA CONTAGEM COMPLETA: na tela de Comandas aparece há quantos dias foi a última contagem que cobriu TUDO. A parcial da madrugada não conta — ela roda todo dia e diria "contagem registrada" sempre, escondendo que as comandas de reserva estão sem conferência há semanas. Passando de 8 dias, o aviso fica vermelho.',
           'O leitor funciona como teclado: clique uma vez no campo grande e vá passando o leitor em cada comanda presente. Não precisa tocar em nada entre uma comanda e outra.',
           'Os contadores no topo mostram conferidas / ativas / faltando em tempo real. "Desfazer última" corrige um bipe errado.',
           'O CARTÃO TEM DOIS CÓDIGOS: o de barras (a comanda) e um QR do Instagram. Leitor de mão lê os dois, e o QR é IGNORADO automaticamente — não é erro. O rodapé mostra quantas vezes isso aconteceu, só para você saber que a leitura foi vista.',
