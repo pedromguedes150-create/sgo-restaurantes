@@ -9,6 +9,24 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.53.1 — 2026-08-21 (Teste de renderização de tela)
+
+### Testes
+- **Agora dá para testar se uma TELA monta**, não só se a regra de negócio calcula.
+  `tests/commands-client-render.test.tsx` renderiza a tela de Comandas com as props que a Moreira
+  produz hoje — 699 ativas, 48 baixadas, 3 em apuração, faixa de madrugada, 416 divergências
+  abertas, contagem completa atrasada.
+- Nasceu de uma investigação: a tela quebrou em produção com "Application error: a client-side
+  exception" e eu não conseguia reproduzir sem entrar no sistema. Renderizar o componente fora do
+  navegador pega exatamente essa classe de erro — o que estoura na montagem — sem precisar de
+  sessão. **Os cinco casos passaram**, o que descartou o componente e apontou a investigação para
+  o lado certo.
+- `vitest.config.ts`: passa a incluir `.tsx` e a compilar JSX no modo automático, como o Next.
+
+265 testes no total.
+
+---
+
 ## v1.53.0 — 2026-08-21 (Troco: ciclo completo — solicitação, envio e confirmação)
 
 ### Novo — o ciclo ganha três etapas e três donos
