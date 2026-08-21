@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { suggestChangeRequest, countVault, refillBucket, officeSwap, vaultWithdrawal, upsertBucket, toggleBucket, deleteBucket, registerChange, requestChange, resolveChangeRequest } from '@/lib/cash-vault';
+import { sendChangeRequest, confirmChangeReceipt, suggestChangeRequest, countVault, refillBucket, officeSwap, vaultWithdrawal, upsertBucket, toggleBucket, deleteBucket, registerChange, requestChange, resolveChangeRequest } from '@/lib/cash-vault';
 
 /** POST { action, … } — Cofre de troco v2 (16/07). */
 export async function POST(req: Request) {
@@ -27,6 +27,8 @@ export async function POST(req: Request) {
     return NextResponse.json(sug ?? { vazia: true, motivo: 'Sem acesso a esta unidade.' });
   }
   else if (b.action === 'requestChange') r = await requestChange(user, String(b.unitId ?? ''), { note: b.note != null ? String(b.note) : undefined, need: b.need ?? {}, give: b.give ?? {} }, ctx);
+  else if (b.action === 'sendChange') r = await sendChangeRequest(user, String(b.id ?? ''), { sent: b.sent, note: b.note }, ctx);
+  else if (b.action === 'confirmReceipt') r = await confirmChangeReceipt(user, String(b.id ?? ''), { received: b.received, note: b.note }, ctx);
   else if (b.action === 'resolveChange') r = await resolveChangeRequest(user, String(b.id ?? ''), b.cancel ? 'cancel' : 'resolve', b.resolvedNote, ctx);
   else return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ClipboardCheck, RefreshCw, Building2, AlertTriangle, Plus, Landmark, HandCoins, ArrowLeftRight, History, Wallet, Wand2 } from 'lucide-react';
+import { ClipboardCheck, RefreshCw, Building2, AlertTriangle, Plus, Landmark, HandCoins, ArrowLeftRight, History, Wallet, Wand2, PackageCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,10 +21,14 @@ interface DenomView { key: string; label: string; value: number | null; kind: 'N
 
 interface ChangeRequest {
   id: string; unitId: string; unitName?: string; amount: number | null; note: string;
-  status: 'OPEN' | 'RESOLVED' | 'CANCELED'; requestedByName: string; createdAt: string;
+  status: 'OPEN' | 'SENT' | 'RECEIVED' | 'RESOLVED' | 'CANCELED'; requestedByName: string; createdAt: string;
   resolvedByName: string | null; resolvedNote: string | null; resolvedAt: string | null;
   /** Detalhe por denominação. Vazio nos pedidos antigos, que eram texto livre. */
   need?: Bal; give?: Bal; needTotal?: number; giveTotal?: number;
+  /** Envio pelo escritório e recebimento confirmado pelo gerente. */
+  sent?: Bal; sentTotal?: number; sentByName?: string | null; sentAt?: string | null; sentNote?: string | null;
+  received?: Bal; receivedTotal?: number; receivedByName?: string | null; receivedAt?: string | null; receivedNote?: string | null;
+  divergent?: boolean;
   /** Os dois lados fecham 1:1 — atender aplica a troca no cofre sozinho. */
   autoApply?: boolean;
 }
@@ -124,7 +128,12 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
   const reqNeed = smallDenoms.reduce((t, d) => t + parseNum(formA[d.key] || '0'), 0);
   const reqGive = bigDenoms.reduce((t, d) => t + parseNum(formB[d.key] || '0'), 0);
   const reqBalanced = Math.abs(reqNeed - reqGive) <= 0.011;
+  const chegouTotal = denoms.reduce((t, d) => t + parseNum(chegou[d.key] || '0'), 0);
   const [sugestao, setSugestao] = useState<string | null>(null);
+  /* Confirmação de recebimento: qual pedido está sendo conferido e o que chegou. */
+  const [conferindo, setConferindo] = useState<string | null>(null);
+  const [chegou, setChegou] = useState<Record<string, string>>({});
+  const [obsChegada, setObsChegada] = useState('');
   const [sugerindo, setSugerindo] = useState(false);
 
   /* Preenche o pedido a partir do que o cofre tem hoje. É sugestão: o gerente
@@ -213,7 +222,67 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
       {tab === 'cofre' && (
         <>
+          {/* TROCO A CAMINHO — o gerente confirma o que chegou de verdade.
+              Fica antes das solicitações de propósito: conferir o que chegou é
+              mais urgente do que pedir mais. */}
+          {vault.changeRequests.filter((r) => r.status === 'SENT').map((r) => (
+            <div key={r.id} className="rounded-lg border-2 border-info/50 bg-info/5 p-3">
+              <p className="flex items-center gap-1.5 text-sm font-bold text-ink-900">
+                <PackageCheck className="h-4 w-4 text-info" /> Chegou troco do escritório — confira e confirme
+              </p>
+              <p className="mt-1 text-xs text-ink-500">
+                O escritório registrou o envio de <strong>{brl(r.sentTotal ?? 0)}</strong>
+                {r.sentByName ? ' (' + r.sentByName + ')' : ''}
+                {r.sentAt ? ' · ' + dt(r.sentAt) : ''}
+                {r.sentNote ? ' · ' + r.sentNote : ''}. <strong>O cofre só é atualizado quando você confirmar.</strong>
+              </p>
+
+              {conferindo !== r.id ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button size="sm" disabled={busy} onClick={() => {
+                    setConferindo(r.id);
+                    setObsChegada('');
+                    /* Vem preenchido com o ENVIADO: o caso comum é chegar certo. */
+                    const inicial: Record<string, string> = {};
+                    for (const [k, v] of Object.entries(r.sent ?? {})) if ((v || 0) > 0) inicial[k] = String(v).replace('.', ',');
+                    setChegou(inicial);
+                  }}>
+                    Conferir e confirmar
+                  </Button>
+                </div>
+              ) : (
+                <div className="mt-2 space-y-2 rounded-md border border-dashed p-2">
+                  <p className="sgo-type-11 font-semibold text-success">O QUE CHEGOU DE VERDADE</p>
+                  <DenomForm list={denoms} values={chegou} onChange={(k, v) => setChegou((s) => ({ ...s, [k]: v }))} />
+                  {Math.abs(chegouTotal - (r.sentTotal ?? 0)) > 0.011 && (
+                    <p className="text-xs font-semibold text-danger">
+                      Diferente do enviado ({brl(r.sentTotal ?? 0)}): diferença de {brl(Math.abs(chegouTotal - (r.sentTotal ?? 0)))}.
+                      Confirmando assim, a supervisão é avisada na hora.
+                    </p>
+                  )}
+                  <Input value={obsChegada} onChange={(e) => setObsChegada(e.target.value)} placeholder="Observação (opcional) — ex.: pacote de 0,50 veio aberto" className="h-9 text-sm" />
+                  <div className="flex justify-end gap-1.5">
+                    <Button size="sm" variant="ghost" onClick={() => setConferindo(null)}>Cancelar</Button>
+                    <Button
+                      size="sm"
+                      variant="gold"
+                      disabled={busy || chegouTotal <= 0}
+                      onClick={async () => {
+                        if (await post({ action: 'confirmReceipt', id: r.id, received: toNumbers(allKeys, chegou), note: obsChegada })) {
+                          setConferindo(null);
+                        }
+                      }}
+                    >
+                      Confirmar recebimento
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
           {/* Solicitações de troco DESTA unidade */}
+
           {(openRequests.length > 0 || canOperate) && (
             <div className={cn('rounded-lg border p-3', openRequests.length > 0 ? 'border-brand/50 bg-brand/5' : 'bg-surface')}>
               <div className="mb-1 flex items-center justify-between">

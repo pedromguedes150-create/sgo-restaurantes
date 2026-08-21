@@ -1,4 +1,6 @@
 
+import Link from 'next/link';
+import { Landmark } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
@@ -42,6 +44,12 @@ export default async function TrocoPage({ searchParams }: { searchParams: { unit
         subtitle="Cofre da unidade por denominação: confira diariamente, reponha os baldes dos caixas com miúdos e troque as notas grandes com o escritório."
       />
       <FamilyTabs active="/modulos/troco" />
+      {/* Atalho para a fila do escritório — só para quem envia. */}
+      {(user.role === 'ADMIN' || user.role === 'SUPERVISOR' || user.role === 'COORDINATOR' || user.role === 'CEO') && (
+        <Link href="/modulos/troco/escritorio" className="inline-flex items-center gap-1.5 rounded-full border-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10">
+          <Landmark className="h-4 w-4" /> Escritório — fila de envio e relação de enviados
+        </Link>
+      )}
       <Card>
         <CardContent className="pt-4">
           <VaultClient

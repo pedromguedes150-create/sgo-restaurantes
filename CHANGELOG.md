@@ -9,6 +9,44 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.53.0 — 2026-08-21 (Troco: ciclo completo — solicitação, envio e confirmação)
+
+### Novo — o ciclo ganha três etapas e três donos
+`SOLICITADO` → `ENVIADO` (escritório) → `RECEBIDO` (gerente confirma) · `CANCELADO`
+
+- **Aba do escritório** (`/modulos/troco/escritorio`, do Supervisor para cima; CEO em leitura):
+  fila de **todas as unidades** com o pedido detalhado por denominação, e **relação de troco
+  enviado** com filtro por unidade e período. O que chegou diferente aparece em vermelho na relação.
+- **Registro do envio.** O escritório lança o que **realmente enviou** — pode ser menos do que se
+  pediu, e o pedido original fica preservado ao lado. O formulário já vem preenchido com o pedido:
+  o caso comum é mandar exatamente aquilo, e redigitar doze campos só criaria erro.
+- **Confirmação do gerente.** Na tela de Troco aparece "chegou troco do escritório"; ele lança o que
+  **realmente chegou**, por denominação.
+
+### A regra que sustenta tudo
+**O cofre só é atualizado na confirmação do recebimento**, nunca no envio. Enquanto o dinheiro está
+a caminho ele não está na gaveta — se o saldo subisse no envio, o gerente conferiria o cofre contra
+um número que ainda não chegou. O movimento registrado é o que **chegou**, não o que saiu.
+
+### Recebido diferente do enviado
+Vira alerta crítico para a supervisão na hora, com os dois valores e a diferença. Dinheiro que sai
+do escritório e não chega na unidade é exatamente o risco que este fluxo existe para pegar — antes
+ele só apareceria (ou não) no fechamento do mês, sem dono.
+
+### Banco
+`cash_change_requests` ganha os conjuntos e a autoria de **envio** e **recebimento**
+(`sentJson`/`receivedJson` + quem, quando e observação), e o enum ganha `SENT` e `RECEIVED`.
+Migração **aditiva**; `RESOLVED` continua existindo para os pedidos do fluxo antigo.
+
+### Testes
+`tests/cash-change-lifecycle.integration.test.ts` — 11 casos, incluindo os três que mais importam:
+**o envio não mexe no cofre**, **a confirmação é que aplica**, e **o cofre recebe o que chegou, não
+o que foi enviado**. Também: gerente não envia, escritório pode mandar menos, a diferença fica
+registrada, não confirma duas vezes, não confirma o que não saiu, e o gerente não enxerga a fila do
+escritório. 260 testes no total.
+
+---
+
 ## v1.52.5 — 2026-08-20 (A limpeza de divergências volta a funcionar — e ganha os testes que faltavam)
 
 ### Corrigido
