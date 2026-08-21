@@ -128,13 +128,17 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
   const reqNeed = smallDenoms.reduce((t, d) => t + parseNum(formA[d.key] || '0'), 0);
   const reqGive = bigDenoms.reduce((t, d) => t + parseNum(formB[d.key] || '0'), 0);
   const reqBalanced = Math.abs(reqNeed - reqGive) <= 0.011;
-  const chegouTotal = denoms.reduce((t, d) => t + parseNum(chegou[d.key] || '0'), 0);
   const [sugestao, setSugestao] = useState<string | null>(null);
   /* Confirmação de recebimento: qual pedido está sendo conferido e o que chegou. */
   const [conferindo, setConferindo] = useState<string | null>(null);
   const [chegou, setChegou] = useState<Record<string, string>>({});
   const [obsChegada, setObsChegada] = useState('');
   const [sugerindo, setSugerindo] = useState(false);
+  /* DEPOIS do useState de propósito: `chegou` é const, e ler uma const antes da
+     linha que a declara estoura na hora ("Cannot access before initialization").
+     Estava acima e derrubava a tela inteira ao montar — o TypeScript não pegou
+     porque a leitura acontece dentro do callback do reduce. */
+  const chegouTotal = denoms.reduce((t, d) => t + parseNum(chegou[d.key] || '0'), 0);
 
   /* Preenche o pedido a partir do que o cofre tem hoje. É sugestão: o gerente
      ajusta antes de enviar — quem conhece a operação do dia é ele. */
@@ -332,7 +336,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
                   {openRequests.map((r) => (
                     <ListRow
                       key={r.id}
-                      title={`${r.amount ? brl(r.amount) : 'Troco'}${r.autoApply ? ' · troca fechada' : ''}`}
+                      title={`${r.amount ? brl(r.amount) : 'Troco'} · ${r.status === 'OPEN' ? 'aguardando o escritório' : r.status === 'SENT' ? 'a caminho' : r.status === 'RECEIVED' ? 'recebido' : 'encerrado'}`}
                       subtitle={`${describeSides(r, denoms)}${r.note ? ` — ${r.note}` : ''} · ${r.requestedByName} · ${dt(r.createdAt)}`}
                       trailing={
                         <>

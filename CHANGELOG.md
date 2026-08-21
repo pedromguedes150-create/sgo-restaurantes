@@ -9,6 +9,46 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.53.2 — 2026-08-21 (A tela de Troco voltou a abrir)
+
+### Corrigido — a tela de Troco não abria, para ninguém
+- **"Application error: a client-side exception" ao entrar no Troco.** Defeito meu, publicado na
+  v1.53.0: eu li a variável `chegou` **quatro linhas antes** do `useState` que a declara. Ler uma
+  `const` antes da própria declaração estoura na hora, e como isso acontece no corpo do componente,
+  a tela morria ao montar — **toda vez, para todo mundo**.
+- O TypeScript não pegou porque a leitura estava dentro do callback de um `reduce`: ele não prova
+  quando o callback roda. Os 265 testes também não pegaram — nenhum montava uma tela.
+- **Também faltou aplicar** a melhoria que mostra o estado do ciclo na lista de solicitações
+  ("aguardando o escritório" / "a caminho" / "recebido"). Ela estava num script que quebrou por
+  outro motivo e eu reexecutei só parte dele, sem conferir o resultado.
+
+### Testes
+- `tests/vault-client-render.test.tsx` — monta a tela de Troco em quatro estados: cofre limpo,
+  pedido aguardando o escritório, **troco a caminho** (o caso exato que quebrou) e troco já recebido.
+  Se alguém repetir o erro, para aqui. 269 no total.
+- Rodei também o **build de produção**, que passou — o que mostra que build passando não prova que a
+  tela abre. Só o teste de renderização prova.
+
+---
+
+## v1.53.1 — 2026-08-21 (Teste de renderização de tela)
+
+### Testes
+- **Agora dá para testar se uma TELA monta**, não só se a regra de negócio calcula.
+  `tests/commands-client-render.test.tsx` renderiza a tela de Comandas com as props que a Moreira
+  produz hoje — 699 ativas, 48 baixadas, 3 em apuração, faixa de madrugada, 416 divergências
+  abertas, contagem completa atrasada.
+- Nasceu de uma investigação: a tela quebrou em produção com "Application error: a client-side
+  exception" e eu não conseguia reproduzir sem entrar no sistema. Renderizar o componente fora do
+  navegador pega exatamente essa classe de erro — o que estoura na montagem — sem precisar de
+  sessão. **Os cinco casos passaram**, o que descartou o componente e apontou a investigação para
+  o lado certo.
+- `vitest.config.ts`: passa a incluir `.tsx` e a compilar JSX no modo automático, como o Next.
+
+265 testes no total.
+
+---
+
 ## v1.53.0 — 2026-08-21 (Troco: ciclo completo — solicitação, envio e confirmação)
 
 ### Novo — o ciclo ganha três etapas e três donos
