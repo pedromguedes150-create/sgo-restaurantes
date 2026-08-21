@@ -9,6 +9,28 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.53.2 — 2026-08-21 (A tela de Troco voltou a abrir)
+
+### Corrigido — a tela de Troco não abria, para ninguém
+- **"Application error: a client-side exception" ao entrar no Troco.** Defeito meu, publicado na
+  v1.53.0: eu li a variável `chegou` **quatro linhas antes** do `useState` que a declara. Ler uma
+  `const` antes da própria declaração estoura na hora, e como isso acontece no corpo do componente,
+  a tela morria ao montar — **toda vez, para todo mundo**.
+- O TypeScript não pegou porque a leitura estava dentro do callback de um `reduce`: ele não prova
+  quando o callback roda. Os 265 testes também não pegaram — nenhum montava uma tela.
+- **Também faltou aplicar** a melhoria que mostra o estado do ciclo na lista de solicitações
+  ("aguardando o escritório" / "a caminho" / "recebido"). Ela estava num script que quebrou por
+  outro motivo e eu reexecutei só parte dele, sem conferir o resultado.
+
+### Testes
+- `tests/vault-client-render.test.tsx` — monta a tela de Troco em quatro estados: cofre limpo,
+  pedido aguardando o escritório, **troco a caminho** (o caso exato que quebrou) e troco já recebido.
+  Se alguém repetir o erro, para aqui. 269 no total.
+- Rodei também o **build de produção**, que passou — o que mostra que build passando não prova que a
+  tela abre. Só o teste de renderização prova.
+
+---
+
 ## v1.53.1 — 2026-08-21 (Teste de renderização de tela)
 
 ### Testes
