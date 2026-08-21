@@ -9,6 +9,42 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.54.0 — 2026-08-21 (Notas: até 3 boletos por nota, cada um acompanhado)
+
+### Novo
+- **A nota aceita até 3 boletos.** Abaixo do vencimento há "Adicionar outro boleto"; cada um tem
+  vencimento e valor próprios. O **boleto 1 recebe automaticamente o que sobra** do valor da nota —
+  quem lança não precisa recalcular à mão o que o sistema sabe fazer.
+- **Cada boleto entra sozinho no acompanhamento de vencimentos**, com o valor dele, identificado
+  como "boleto 2 de 3" — e **alerta a supervisão e o financeiro na data dele**.
+
+### Por que isso importa mais do que parece
+A nota tinha **um** vencimento. Com 3 boletos, o 2º e o 3º simplesmente não existiam para o
+sistema: não apareciam na aba de Vencimentos e não disparavam alerta. Venciam sem ninguém saber.
+O campo faltando no formulário era o sintoma; o risco era boleto vencendo no silêncio.
+
+### Detalhes que sustentam isso
+- O aviso é controlado **por parcela** (`alertedAt` na parcela, não na nota). Com o controle na
+  nota, o alerta do 1º boleto silenciaria os outros dois.
+- O `dueDate` da nota passa a ser o do **primeiro** boleto, e os boletos são ordenados por
+  vencimento independentemente da ordem de digitação. Assim a lista, os alertas antigos e as
+  exportações que já leem esse campo continuam corretos.
+- **Nota de boleto único não muda em nada** — nem no formulário, nem na aba de Vencimentos.
+- Editar uma nota **sem falar de boleto** (trocar o fornecedor, por exemplo) não apaga as parcelas.
+- Gás fica de fora: não vem parcelado.
+
+### Testes
+- `tests/notes-installments.integration.test.ts` — 8 casos: ordenação e numeração, linha vazia
+  descartada, os três gravados, **cada boleto aparecendo no acompanhamento com o próprio valor**,
+  a nota parcelada não aparecendo em duplicidade, edição substituindo os boletos, edição de outro
+  campo preservando-os, e a nota de boleto único inalterada.
+- `tests/notes-client-render.test.tsx` — a tela de Notas **monta** em cinco estados. Toda tela que
+  eu mexer passa a ter isto, pela lição de ontem.
+
+282 testes no total.
+
+---
+
 ## v1.53.2 — 2026-08-21 (A tela de Troco voltou a abrir)
 
 ### Corrigido — a tela de Troco não abria, para ninguém

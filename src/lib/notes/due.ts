@@ -21,6 +21,8 @@ export interface DueRow {
   dueDate: string; // YYYY-MM-DD
   daysToDue: number; // <0 = vencido
   number: string | null;
+  /** Parcela do boleto, quando a nota é parcelada: 2 de 3. Nulo em boleto único. */
+  installment?: { seq: number; of: number } | null;
 }
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -42,10 +44,37 @@ export async function getUpcomingDues(user: SessionUser, f: DueFilters = {}): Pr
 
   const unitFilter = f.unitId ? { unitId: f.unitId } : unitScopeWhere(user, 'unitId');
 
-  const [notes, gas] = await Promise.all([
+  const [notes, parcelas, gas] = await Promise.all([
+    /* Duas buscas de nota, de propósito:
+       - a primeira pega as notas de BOLETO ÚNICO pelo dueDate, como sempre;
+       - a segunda pega as PARCELAS dentro da janela, cada uma virando sua
+         própria linha. Sem isso, a nota parcelada aparecia uma vez só, com o
+         vencimento do primeiro boleto, e o 2º e o 3º nunca eram cobrados. */
     prisma.receivedNote.findMany({
-      where: { ...unitFilter, dueDate: { gte: lower, lte: horizon }, status: { in: ['RECEIVED', 'PROBLEM'] } },
+      where: {
+        ...unitFilter,
+        dueDate: { gte: lower, lte: horizon },
+        status: { in: ['RECEIVED', 'PROBLEM'] },
+        installments: { none: {} },
+      },
       select: { id: true, unitId: true, unit: { select: { name: true } }, supplierName: true, totalValue: true, dueDate: true, number: true },
+      orderBy: { dueDate: 'asc' },
+    }),
+    prisma.noteInstallment.findMany({
+      where: {
+        dueDate: { gte: lower, lte: horizon },
+        note: { ...unitFilter, status: { in: ['RECEIVED', 'PROBLEM'] } },
+      },
+      select: {
+        id: true, seq: true, dueDate: true, value: true,
+        note: {
+          select: {
+            id: true, unitId: true, number: true, supplierName: true,
+            unit: { select: { name: true } },
+            _count: { select: { installments: true } },
+          },
+        },
+      },
       orderBy: { dueDate: 'asc' },
     }),
     prisma.gasReceipt.findMany({
@@ -59,6 +88,13 @@ export async function getUpcomingDues(user: SessionUser, f: DueFilters = {}): Pr
     ...notes.map((n) => ({
       id: n.id, kind: 'NOTE' as const, unitId: n.unitId, unit: n.unit.name, supplier: n.supplierName,
       value: Number(n.totalValue), dueDate: iso(n.dueDate!), daysToDue: daysBetween(todayISO, iso(n.dueDate!)), number: n.number,
+    })),
+    ...parcelas.map((p) => ({
+      /* id da PARCELA, não da nota: duas parcelas da mesma nota são duas linhas
+         distintas e precisam de chave distinta na tela. */
+      id: p.id, kind: 'NOTE' as const, unitId: p.note.unitId, unit: p.note.unit.name, supplier: p.note.supplierName,
+      value: Number(p.value), dueDate: iso(p.dueDate), daysToDue: daysBetween(todayISO, iso(p.dueDate)), number: p.note.number,
+      installment: { seq: p.seq, of: p.note._count.installments },
     })),
     ...gas.map((g) => ({
       id: g.id, kind: 'GAS' as const, unitId: g.unitId, unit: g.unit.name, supplier: g.supplier?.name ?? 'Gás',
@@ -90,10 +126,26 @@ export async function notifyUpcomingDueNotes(): Promise<{ notes: number; gas: nu
   const today = new Date();
   const limit = new Date(today.getTime() + ALERT_DAYS * 86400000);
 
-  const [notes, gas] = await Promise.all([
+  const [notes, parcelas, gas] = await Promise.all([
     prisma.receivedNote.findMany({
-      where: { dueDate: { gte: today, lte: limit }, dueAlertedAt: null, status: { in: ['RECEIVED', 'PROBLEM'] } },
+      where: {
+        dueDate: { gte: today, lte: limit }, dueAlertedAt: null,
+        status: { in: ['RECEIVED', 'PROBLEM'] },
+        installments: { none: {} },
+      },
       select: { id: true, unitId: true, unit: { select: { name: true } }, supplierName: true, totalValue: true, dueDate: true },
+    }),
+    /* Cada boleto avisa por si. Com o controle na nota, o aviso do 1º silenciaria
+       o 2º e o 3º — e eles venceriam sem ninguém saber. */
+    prisma.noteInstallment.findMany({
+      where: {
+        dueDate: { gte: today, lte: limit }, alertedAt: null,
+        note: { status: { in: ['RECEIVED', 'PROBLEM'] } },
+      },
+      select: {
+        id: true, seq: true, dueDate: true, value: true,
+        note: { select: { unitId: true, supplierName: true, unit: { select: { name: true } }, _count: { select: { installments: true } } } },
+      },
     }),
     prisma.gasReceipt.findMany({
       where: { dueDate: { gte: today, lte: limit }, dueAlertedAt: null },
@@ -101,7 +153,7 @@ export async function notifyUpcomingDueNotes(): Promise<{ notes: number; gas: nu
     }),
   ]);
 
-  if (notes.length === 0 && gas.length === 0) return { notes: 0, gas: 0, units: 0 };
+  if (notes.length === 0 && parcelas.length === 0 && gas.length === 0) return { notes: 0, gas: 0, units: 0 };
 
   // agrupa por unidade
   const byUnit = new Map<string, { unitName: string; items: { supplier: string; value: number; dueDate: Date }[] }>();
@@ -109,6 +161,14 @@ export async function notifyUpcomingDueNotes(): Promise<{ notes: number; gas: nu
     const g = byUnit.get(n.unitId) ?? { unitName: n.unit.name, items: [] };
     g.items.push({ supplier: n.supplierName, value: Number(n.totalValue), dueDate: n.dueDate! });
     byUnit.set(n.unitId, g);
+  }
+  for (const p of parcelas) {
+    const g = byUnit.get(p.note.unitId) ?? { unitName: p.note.unit.name, items: [] };
+    g.items.push({
+      supplier: `${p.note.supplierName} (parcela ${p.seq}/${p.note._count.installments})`,
+      value: Number(p.value), dueDate: p.dueDate,
+    });
+    byUnit.set(p.note.unitId, g);
   }
   for (const r of gas) {
     const g = byUnit.get(r.unitId) ?? { unitName: r.unit.name, items: [] };
@@ -125,8 +185,10 @@ export async function notifyUpcomingDueNotes(): Promise<{ notes: number; gas: nu
   }
 
   // Financeiro recebe um resumo geral (controla o pagamento)
-  const totalItems = notes.length + gas.length;
-  const grand = [...notes, ...gas].reduce((s, x) => s + Number(x.totalValue), 0);
+  const totalItems = notes.length + parcelas.length + gas.length;
+  const grand =
+    [...notes, ...gas].reduce((s, x) => s + Number(x.totalValue), 0) +
+    parcelas.reduce((s, p) => s + Number(p.value), 0);
   await notifyRole('FINANCE', {
     title: '📅 Boletos a vencer (rede)',
     body: `${totalItems} boleto(s) vencendo em até ${ALERT_DAYS} dias — total ${brl(grand)}. Confira o acompanhamento de vencimentos em Notas Recebidas.`,
@@ -135,9 +197,10 @@ export async function notifyUpcomingDueNotes(): Promise<{ notes: number; gas: nu
 
   const now = new Date();
   if (notes.length) await prisma.receivedNote.updateMany({ where: { id: { in: notes.map((n) => n.id) } }, data: { dueAlertedAt: now } });
+  if (parcelas.length) await prisma.noteInstallment.updateMany({ where: { id: { in: parcelas.map((p) => p.id) } }, data: { alertedAt: now } });
   if (gas.length) await prisma.gasReceipt.updateMany({ where: { id: { in: gas.map((g) => g.id) } }, data: { dueAlertedAt: now } });
 
-  return { notes: notes.length, gas: gas.length, units: byUnit.size };
+  return { notes: notes.length + parcelas.length, gas: gas.length, units: byUnit.size };
 }
 
 /** Verifica acesso à unidade (para a rota da API). */

@@ -25,6 +25,8 @@ export async function POST(req: Request) {
       totalValue: Number(b.totalValue),
       productType: b.productType,
       observation: b.observation,
+      /* Boletos da nota. Ausente = boleto único, como sempre. */
+      installments: Array.isArray(b.installments) ? b.installments : undefined,
     },
     requestContext(req),
   );

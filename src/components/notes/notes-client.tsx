@@ -389,7 +389,7 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
   );
 }
 
-interface DueRow { id: string; kind: 'NOTE' | 'GAS'; unitId: string; unit: string; supplier: string; value: number; dueDate: string; daysToDue: number; number: string | null }
+interface DueRow { id: string; kind: 'NOTE' | 'GAS'; unitId: string; unit: string; supplier: string; value: number; dueDate: string; daysToDue: number; number: string | null; installment?: { seq: number; of: number } | null }
 
 /** Acompanhamento de vencimentos — foco em boletos a vencer; alerta a supervisão + financeiro. */
 function DueTracking({ units }: { units: Unit[] }) {
@@ -484,7 +484,10 @@ function DueTracking({ units }: { units: Unit[] }) {
                 <p className="text-sm font-semibold text-ink-900">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-info-bg px-1 text-[10px] font-bold text-info">GÁS</span> : null}</p>
                 <StatusBadge tone={tone(r.daysToDue)}>{dueLabel(r.daysToDue)}</StatusBadge>
               </div>
-              <p className="text-xs text-ink-500">{r.unit} · {formatBRL(r.value)}{r.number ? ` · nº ${r.number}` : ''} · vence {fmtBR(r.dueDate)}</p>
+              <p className="text-xs text-ink-500">
+                {r.unit} · {formatBRL(r.value)}{r.number ? ` · nº ${r.number}` : ''}
+                {r.installment ? ` · boleto ${r.installment.seq} de ${r.installment.of}` : ''} · vence {fmtBR(r.dueDate)}
+              </p>
             </div>
           ))}
         </div>
@@ -502,6 +505,9 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
   const [number, setNumber] = useState('');
   const [issueDate, setIssueDate] = useState('');
   const [dueDate, setDueDate] = useState('');
+  /* Boletos 2 e 3. O 1º continua nos campos que já existem (vencimento + valor
+     total), para a nota de boleto único não mudar em nada. */
+  const [parcelas, setParcelas] = useState<{ dueDate: string; value: string }[]>([]);
   const [totalValue, setTotalValue] = useState('');
   const [productType, setProductType] = useState('');
   const [prefilled, setPrefilled] = useState(false);
@@ -574,11 +580,31 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
     // Nota comum
     const v = parseFloat((totalValue || '0').replace('.', '').replace(',', '.')) || parseFloat(totalValue);
     if (!v) { setErr('Preencha o valor da nota.'); return; }
+    /* Boletos 2 e 3 preenchidos de verdade. O 1º recebe o que sobra do total:
+       assim a soma das parcelas fecha com a nota sem obrigar a digitar de novo
+       um número que o sistema consegue calcular. */
+    const parcelasValidas = parcelas
+      .filter((p) => p.dueDate && p.value.trim())
+      .map((p) => ({ dueDate: p.dueDate, value: parseFloat(p.value.replace('.', '').replace(',', '.')) || 0 }))
+      .filter((p) => p.value > 0);
+    const primeiroValor = Math.round((v - parcelasValidas.reduce((t, p) => t + p.value, 0)) * 100) / 100;
+    if (parcelasValidas.length > 0) {
+      if (!dueDate) { setErr('Com mais de um boleto, informe o vencimento do primeiro.'); return; }
+      if (primeiroValor <= 0) { setErr('A soma dos boletos 2 e 3 já passa do valor da nota — confira os valores.'); return; }
+    }
     setBusy(true);
     try {
       const res = await fetch('/api/notes', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unitId, source: accessKey ? 'QRCODE' : 'MANUAL', accessKey, supplierId, supplierName, supplierCnpj, number, issueDate, dueDate, totalValue: v, productType }),
+        body: JSON.stringify({
+          unitId, source: accessKey ? 'QRCODE' : 'MANUAL', accessKey, supplierId, supplierName, supplierCnpj,
+          number, issueDate, dueDate, totalValue: v, productType,
+          /* O 1º boleto entra junto com os outros; sem parcela extra, não manda
+             nada e a nota segue com vencimento único, como sempre. */
+          ...(parcelasValidas.length > 0
+            ? { installments: [{ dueDate, value: primeiroValor }, ...parcelasValidas] }
+            : {}),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(data.error ?? mensagemDeFalha(res.status)); return; }
@@ -630,6 +656,51 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
       <div className="grid grid-cols-2 gap-2">
         <DatePicker label="Emissão" value={issueDate || null} onValueChange={(v) => setIssueDate(v ?? '')} className={hl} />
         <DatePicker label="Vencimento do boleto" value={dueDate || null} onValueChange={(v) => setDueDate(v ?? '')} min={issueDate || undefined} />
+
+        {/* BOLETOS 2 E 3 — a mesma nota costuma vir em mais de um boleto.
+            O 1º usa o vencimento acima e recebe o que sobra do valor da nota,
+            para ninguém ter de recalcular à mão o que o sistema sabe fazer. */}
+        {parcelas.map((p, i) => (
+          <div key={i} className="flex flex-wrap items-end gap-2 rounded-md border border-dashed p-2">
+            <span className="sgo-type-11 font-semibold text-ink-500">boleto {i + 2}</span>
+            <div className="min-w-[10rem] flex-1">
+              <DatePicker
+                label="Vencimento"
+                size="sm"
+                value={p.dueDate || null}
+                onValueChange={(v) => setParcelas((s) => s.map((x, j) => (j === i ? { ...x, dueDate: v ?? '' } : x)))}
+                min={issueDate || undefined}
+              />
+            </div>
+            <div className="w-32">
+              <Label className="text-xs">Valor (R$)</Label>
+              <Input
+                inputMode="decimal"
+                value={p.value}
+                onChange={(e) => setParcelas((s) => s.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
+                placeholder="0,00"
+                className="h-9 text-sm"
+              />
+            </div>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setParcelas((s) => s.filter((_, j) => j !== i))}>
+              Remover
+            </Button>
+          </div>
+        ))}
+
+        {parcelas.length < 2 && (
+          <Button type="button" size="sm" variant="outline" onClick={() => setParcelas((s) => [...s, { dueDate: '', value: '' }])}>
+            <Plus className="h-4 w-4" /> Adicionar outro boleto {parcelas.length === 0 ? '(até 3 no total)' : ''}
+          </Button>
+        )}
+
+        {parcelas.some((p) => p.dueDate || p.value.trim()) && (
+          <p className="text-xs text-ink-500">
+            O <strong>boleto 1</strong> fica com o que sobra do valor da nota. Cada boleto entra sozinho no acompanhamento de
+            vencimentos e avisa a supervisão e o financeiro na data dele.
+          </p>
+        )}
+
       </div>
 
       {isGas ? (

@@ -676,6 +676,32 @@ model CommandCount {
   @@map("command_counts")
 }
 
+/// Parcela (boleto) de uma nota recebida.
+///
+/// Existe porque a mesma nota fiscal costuma vir em mais de um boleto — 3 é o
+/// caso comum na rede. Antes a nota tinha UM vencimento: o segundo e o terceiro
+/// boleto não existiam para o sistema e nunca apareciam no acompanhamento de
+/// vencimentos, que é o que avisa a supervisão e o financeiro.
+///
+/// Só notas comuns são parceladas; recebimento de gás não vem parcelado.
+model NoteInstallment {
+  id      String   @id @default(cuid())
+  noteId  String
+  /// 1, 2, 3… na ordem de vencimento.
+  seq     Int
+  dueDate DateTime
+  value   Decimal  @db.Decimal(12, 2)
+  /// Aviso já enviado para ESTA parcela. Fica aqui e não na nota: com o
+  /// controle na nota, o alerta do 1º boleto silenciaria o 2º e o 3º.
+  alertedAt DateTime?
+
+  note ReceivedNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, seq])
+  @@index([dueDate])
+  @@map("note_installments")
+}
+
 /// Divergência (comanda ausente) e seu ciclo de vida.
 model CommandDivergence {
   id           String             @id @default(cuid())
@@ -1168,6 +1194,9 @@ model ReceivedNote {
   supplierId   String?
   number       String?
   issueDate    DateTime?
+  /// Vencimento do PRIMEIRO boleto. Mantido para a lista, os alertas e as
+  /// exportações que já usam este campo; nota parcelada guarda os demais em
+  /// `installments`.
   dueDate      DateTime?
   /// Marca de quando o alerta de "vencimento próximo" foi disparado (evita repetir).
   dueAlertedAt DateTime?
@@ -1189,6 +1218,8 @@ model ReceivedNote {
 
   unit      Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
   createdBy User?     @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  /// Boletos da nota. Vazio = boleto único (o vencimento vive em `dueDate`).
+  installments NoteInstallment[]
   supplier  Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@index([unitId, status])

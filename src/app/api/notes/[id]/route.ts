@@ -18,6 +18,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     totalValue: b.totalValue != null ? Number(b.totalValue) : undefined,
     productType: b.productType,
     observation: b.observation,
+    /* Só passa quando o formulário falou de boleto: undefined preserva os que
+       já existem, e uma edição de fornecedor não apaga as parcelas. */
+    installments: Array.isArray(b.installments) ? b.installments : undefined,
   }, requestContext(req));
 
   if (!r.ok) {
