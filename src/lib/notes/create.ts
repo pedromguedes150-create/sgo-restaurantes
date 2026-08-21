@@ -15,6 +15,8 @@ export interface CreateNoteInput {
   number?: string;
   issueDate?: string;
   dueDate?: string;
+  /** Boletos da nota. Vazio ou 1 item = comportamento de sempre (boleto único). */
+  installments?: { dueDate: string; value: number }[];
   totalValue: number;
   productType?: string;
   observation?: string;
@@ -27,6 +29,25 @@ export type CreateNoteResult = { ok: true; id: string } | { ok: false; reason: '
  * Registra uma nota recebida (Módulo 8) após a tela de confirmação obrigatória.
  * Notifica Financeiro/Administrativo (Central de Notificações em fase futura).
  */
+/**
+ * Normaliza os boletos: descarta linha vazia, ordena por vencimento e numera.
+ *
+ * A ordem importa — a parcela 1 é a que vira o `dueDate` da nota, que é o campo
+ * que a lista, os alertas e as exportações já usam. Se o lançamento vier fora de
+ * ordem, ordenar aqui evita que o "primeiro vencimento" seja o terceiro boleto.
+ */
+export function normalizeInstallments(
+  raw: { dueDate: string; value: number }[] | undefined,
+): { seq: number; dueDate: Date; value: number }[] {
+  if (!raw?.length) return [];
+  return raw
+    .filter((p) => p?.dueDate && Number.isFinite(p.value) && p.value > 0)
+    .map((p) => ({ dueDate: new Date(p.dueDate), value: Math.round(p.value * 100) / 100 }))
+    .filter((p) => !Number.isNaN(p.dueDate.getTime()))
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
+    .map((p, i) => ({ seq: i + 1, dueDate: p.dueDate, value: p.value }));
+}
+
 export async function createNote(
   user: SessionUser,
   input: CreateNoteInput,
@@ -42,6 +63,8 @@ export async function createNote(
     return { ok: false, reason: 'INVALID' };
   }
 
+  const parcelas = normalizeInstallments(input.installments);
+
   const note = await prisma.receivedNote.create({
     data: {
       unitId: input.unitId,
@@ -52,7 +75,9 @@ export async function createNote(
       supplierId: input.supplierId || null,
       number: input.number || null,
       issueDate: input.issueDate ? new Date(input.issueDate) : null,
-      dueDate: input.dueDate ? new Date(input.dueDate) : null,
+      /* Com parcelas, o vencimento da nota é o do PRIMEIRO boleto: é o que a
+         lista, os alertas e as exportações já leem. */
+      dueDate: parcelas.length > 0 ? parcelas[0].dueDate : input.dueDate ? new Date(input.dueDate) : null,
       totalValue: input.totalValue,
       productType: input.productType || null,
       observation: input.observation || null,
@@ -63,6 +88,12 @@ export async function createNote(
     },
     select: { id: true },
   });
+
+  if (parcelas.length > 0) {
+    await prisma.noteInstallment.createMany({
+      data: parcelas.map((p) => ({ noteId: note.id, seq: p.seq, dueDate: p.dueDate, value: p.value })),
+    });
+  }
 
   await audit({
     userId: user.id,
@@ -104,6 +135,7 @@ export async function createNote(
 export interface UpdateNoteInput {
   supplierName?: string; supplierCnpj?: string; number?: string;
   issueDate?: string; dueDate?: string; totalValue?: number; productType?: string; observation?: string;
+  installments?: { dueDate: string; value: number }[];
 }
 /** Perfis que podem editar/excluir notas: supervisor, admin, CEO. */
 export function canManageNotes(role: string): boolean {
@@ -120,6 +152,8 @@ export async function updateNote(user: SessionUser, id: string, input: UpdateNot
   if (input.supplierName !== undefined && !input.supplierName.trim()) return { ok: false, reason: 'INVALID' };
   if (input.totalValue !== undefined && !(input.totalValue > 0)) return { ok: false, reason: 'INVALID' };
 
+  const parcelasEdit = normalizeInstallments(input.installments);
+
   await prisma.receivedNote.update({
     where: { id },
     data: {
@@ -127,13 +161,26 @@ export async function updateNote(user: SessionUser, id: string, input: UpdateNot
       ...(input.supplierCnpj !== undefined ? { supplierCnpj: input.supplierCnpj.trim() || null } : {}),
       ...(input.number !== undefined ? { number: input.number.trim() || null } : {}),
       ...(input.issueDate !== undefined ? { issueDate: input.issueDate ? new Date(input.issueDate) : null } : {}),
-      ...(input.dueDate !== undefined ? { dueDate: input.dueDate ? new Date(input.dueDate) : null } : {}),
+      ...(parcelasEdit.length > 0
+        ? { dueDate: parcelasEdit[0].dueDate }
+        : input.dueDate !== undefined ? { dueDate: input.dueDate ? new Date(input.dueDate) : null } : {}),
       ...(input.totalValue !== undefined ? { totalValue: input.totalValue } : {}),
       ...(input.productType !== undefined ? { productType: input.productType.trim() || null } : {}),
       ...(input.observation !== undefined ? { observation: input.observation.trim() || null } : {}),
     },
   });
-  await audit({ userId: user.id, unitId: note.unitId, action: 'NOTE_UPDATE', module: 'NOTES', entity: 'received_note', entityId: id, ...ctx });
+  /* Só mexe nas parcelas quando o formulário mandou o campo: uma edição que
+     não fala de boleto (trocar o fornecedor, por exemplo) não pode apagá-los. */
+  if (input.installments !== undefined) {
+    await prisma.noteInstallment.deleteMany({ where: { noteId: id } });
+    if (parcelasEdit.length > 0) {
+      await prisma.noteInstallment.createMany({
+        data: parcelasEdit.map((p) => ({ noteId: id, seq: p.seq, dueDate: p.dueDate, value: p.value })),
+      });
+    }
+  }
+
+  await audit({ userId: user.id, unitId: note.unitId, action: 'NOTE_UPDATE', module: 'NOTES', entity: 'received_note', entityId: id, metadata: { parcelas: parcelasEdit.length }, ...ctx });
   return { ok: true };
 }
 

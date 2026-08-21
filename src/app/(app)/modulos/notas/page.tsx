@@ -53,6 +53,11 @@ export default async function NotasPage({ searchParams }: { searchParams: { dias
               cnpj: n.supplierCnpj ?? '', issueDate: n.issueDate ? new Date(n.issueDate).toISOString().slice(0, 10) : '', dueDate: n.dueDate ? new Date(n.dueDate).toISOString().slice(0, 10) : '', productType: n.productType ?? '', observation: n.observation ?? '',
               requestedAt: n.createdAt.toISOString(), entryDate: n.entryDate ? n.entryDate.toISOString() : null, dateEdited: n.dateEdited, dateEditedByName: n.dateEditedByName,
               supervisorLaunched: n.supervisorLaunched, createdByName: n.createdBy?.name ?? '',
+              installments: n.installments.map((p) => ({
+                seq: p.seq,
+                dueDate: p.dueDate.toISOString().slice(0, 10),
+                value: Number(p.value),
+              })),
             }))}
           />
         </CardContent>

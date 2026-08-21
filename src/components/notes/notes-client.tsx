@@ -30,6 +30,8 @@ export interface NoteDTO {
   id: string; unit: string; supplier: string; value: number;
   status: 'RECEIVED' | 'PAID' | 'PROBLEM' | 'RETURNED'; number: string | null; problemNote: string | null;
   cnpj: string; issueDate: string; dueDate: string; productType: string; observation: string;
+  /** Boletos da nota, em ordem de vencimento. Vazio = boleto único. */
+  installments?: { seq: number; dueDate: string; value: number }[];
   requestedAt?: string; entryDate?: string | null; dateEdited?: boolean; dateEditedByName?: string | null;
   supervisorLaunched?: boolean; createdByName?: string;
 }
@@ -273,13 +275,35 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }));
+  /* Boletos 2 em diante. O 1º continua nos campos de vencimento e valor acima,
+     como na criação — assim a nota de boleto único edita igual a antes. */
+  const [parcelasEd, setParcelasEd] = useState<{ dueDate: string; value: string }[]>(
+    () => (n.installments ?? []).slice(1).map((p) => ({ dueDate: p.dueDate, value: String(p.value).replace('.', ',') })),
+  );
 
   async function save() {
-    setErr(null); setSaving(true);
+    setErr(null);
+    const totalEd = parseFloat((f.totalValue || '0').replace('.', '').replace(',', '.')) || parseFloat(f.totalValue) || 0;
+    const parcelasValidasEd = parcelasEd
+      .filter((p) => p.dueDate && p.value.trim())
+      .map((p) => ({ dueDate: p.dueDate, value: parseFloat(p.value.replace('.', '').replace(',', '.')) || 0 }))
+      .filter((p) => p.value > 0);
+    const primeiroValorEd = Math.round((totalEd - parcelasValidasEd.reduce((t, p) => t + p.value, 0)) * 100) / 100;
+    if (parcelasValidasEd.length > 0) {
+      if (!f.dueDate) { setErr('Com mais de um boleto, informe o vencimento do primeiro.'); return; }
+      if (primeiroValorEd <= 0) { setErr('A soma dos demais boletos já passa do valor da nota — confira os valores.'); return; }
+    }
+    setSaving(true);
     try {
       const res = await fetch(`/api/notes/${n.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         supplierName: f.supplierName, supplierCnpj: f.cnpj, number: f.number, issueDate: f.issueDate || null, dueDate: f.dueDate || null,
         totalValue: parseFloat((f.totalValue || '0').replace('.', '').replace(',', '.')) || parseFloat(f.totalValue), productType: f.productType, observation: f.observation,
+        /* Só manda quando a nota TEM ou GANHOU boleto extra. Numa nota de boleto
+           único, mandar lista vazia apagaria parcelas que nem existem — e numa
+           parcelada, não mandar nada as preservaria por engano. */
+        ...(parcelasEd.length > 0 || (n.installments?.length ?? 0) > 0
+          ? { installments: [{ dueDate: f.dueDate, value: primeiroValorEd }, ...parcelasValidasEd] }
+          : {}),
       }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(data.error ?? mensagemDeFalha(res.status)); return; }
@@ -331,13 +355,57 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
           </div>
           <div className="grid grid-cols-2 gap-2">
             <DatePicker label="Emissão" size="sm" value={f.issueDate || null} onValueChange={(v) => set('issueDate', v ?? '')} />
-            <DatePicker label="Vencimento" size="sm" value={f.dueDate || null} onValueChange={(v) => set('dueDate', v ?? '')} min={f.issueDate || undefined} />
+            <DatePicker label={parcelasEd.length > 0 ? 'Venc. boleto 1' : 'Vencimento'} size="sm" value={f.dueDate || null} onValueChange={(v) => set('dueDate', v ?? '')} min={f.issueDate || undefined} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Valor (R$)</Label><Input inputMode="decimal" value={f.totalValue} onChange={(e) => set('totalValue', e.target.value)} className="h-9 text-sm" /></div>
             <div><Label className="text-xs">Produto</Label><Input value={f.productType} onChange={(e) => set('productType', e.target.value)} className="h-9 text-sm" /></div>
           </div>
           <div><Label className="text-xs">Observação</Label><Input value={f.observation} onChange={(e) => set('observation', e.target.value)} className="h-9 text-sm" /></div>
+
+          {/* BOLETOS 2 EM DIANTE — corrigir vencimento e valor de cada um.
+              Sem isto a nota parcelada era lançada e nunca mais ajustada: um
+              vencimento digitado errado ficaria errado para sempre, avisando
+              a supervisão no dia errado. */}
+          {parcelasEd.map((p, i) => (
+            <div key={i} className="flex flex-wrap items-end gap-2 rounded-md border border-dashed p-2">
+              <span className="sgo-type-11 font-semibold text-ink-500">boleto {i + 2}</span>
+              <div className="min-w-[9rem] flex-1">
+                <DatePicker
+                  label="Vencimento"
+                  size="sm"
+                  value={p.dueDate || null}
+                  onValueChange={(v) => setParcelasEd((st) => st.map((x, j) => (j === i ? { ...x, dueDate: v ?? '' } : x)))}
+                  min={f.issueDate || undefined}
+                />
+              </div>
+              <div className="w-28">
+                <Label className="text-xs">Valor (R$)</Label>
+                <Input
+                  inputMode="decimal"
+                  value={p.value}
+                  onChange={(e) => setParcelasEd((st) => st.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
+                  placeholder="0,00"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setParcelasEd((st) => st.filter((_, j) => j !== i))}>
+                Remover
+              </Button>
+            </div>
+          ))}
+          <div>
+            <Button type="button" size="sm" variant="outline" onClick={() => setParcelasEd((st) => [...st, { dueDate: '', value: '' }])}>
+              <Plus className="h-4 w-4" /> Adicionar outro boleto
+            </Button>
+          </div>
+          {parcelasEd.length > 0 && (
+            <p className="text-xs text-ink-500">
+              O <strong>boleto 1</strong> vence na data acima e fica com o que sobra do valor da nota. Cada boleto entra sozinho
+              no acompanhamento de vencimentos.
+            </p>
+          )}
+
           {err && <p className="text-sm font-medium text-danger">{err}</p>}
           <div className="flex justify-end gap-1">
             <Button size="sm" variant="ghost" onClick={() => setEditing(false)}><X className="h-4 w-4" /> Cancelar</Button>
@@ -389,7 +457,7 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
   );
 }
 
-interface DueRow { id: string; kind: 'NOTE' | 'GAS'; unitId: string; unit: string; supplier: string; value: number; dueDate: string; daysToDue: number; number: string | null }
+interface DueRow { id: string; kind: 'NOTE' | 'GAS'; unitId: string; unit: string; supplier: string; value: number; dueDate: string; daysToDue: number; number: string | null; installment?: { seq: number; of: number } | null }
 
 /** Acompanhamento de vencimentos — foco em boletos a vencer; alerta a supervisão + financeiro. */
 function DueTracking({ units }: { units: Unit[] }) {
@@ -484,7 +552,10 @@ function DueTracking({ units }: { units: Unit[] }) {
                 <p className="text-sm font-semibold text-ink-900">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-info-bg px-1 text-[10px] font-bold text-info">GÁS</span> : null}</p>
                 <StatusBadge tone={tone(r.daysToDue)}>{dueLabel(r.daysToDue)}</StatusBadge>
               </div>
-              <p className="text-xs text-ink-500">{r.unit} · {formatBRL(r.value)}{r.number ? ` · nº ${r.number}` : ''} · vence {fmtBR(r.dueDate)}</p>
+              <p className="text-xs text-ink-500">
+                {r.unit} · {formatBRL(r.value)}{r.number ? ` · nº ${r.number}` : ''}
+                {r.installment ? ` · boleto ${r.installment.seq} de ${r.installment.of}` : ''} · vence {fmtBR(r.dueDate)}
+              </p>
             </div>
           ))}
         </div>
@@ -502,6 +573,9 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
   const [number, setNumber] = useState('');
   const [issueDate, setIssueDate] = useState('');
   const [dueDate, setDueDate] = useState('');
+  /* Boletos 2 e 3. O 1º continua nos campos que já existem (vencimento + valor
+     total), para a nota de boleto único não mudar em nada. */
+  const [parcelas, setParcelas] = useState<{ dueDate: string; value: string }[]>([]);
   const [totalValue, setTotalValue] = useState('');
   const [productType, setProductType] = useState('');
   const [prefilled, setPrefilled] = useState(false);
@@ -574,11 +648,31 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
     // Nota comum
     const v = parseFloat((totalValue || '0').replace('.', '').replace(',', '.')) || parseFloat(totalValue);
     if (!v) { setErr('Preencha o valor da nota.'); return; }
+    /* Boletos 2 e 3 preenchidos de verdade. O 1º recebe o que sobra do total:
+       assim a soma das parcelas fecha com a nota sem obrigar a digitar de novo
+       um número que o sistema consegue calcular. */
+    const parcelasValidas = parcelas
+      .filter((p) => p.dueDate && p.value.trim())
+      .map((p) => ({ dueDate: p.dueDate, value: parseFloat(p.value.replace('.', '').replace(',', '.')) || 0 }))
+      .filter((p) => p.value > 0);
+    const primeiroValor = Math.round((v - parcelasValidas.reduce((t, p) => t + p.value, 0)) * 100) / 100;
+    if (parcelasValidas.length > 0) {
+      if (!dueDate) { setErr('Com mais de um boleto, informe o vencimento do primeiro.'); return; }
+      if (primeiroValor <= 0) { setErr('A soma dos boletos 2 e 3 já passa do valor da nota — confira os valores.'); return; }
+    }
     setBusy(true);
     try {
       const res = await fetch('/api/notes', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unitId, source: accessKey ? 'QRCODE' : 'MANUAL', accessKey, supplierId, supplierName, supplierCnpj, number, issueDate, dueDate, totalValue: v, productType }),
+        body: JSON.stringify({
+          unitId, source: accessKey ? 'QRCODE' : 'MANUAL', accessKey, supplierId, supplierName, supplierCnpj,
+          number, issueDate, dueDate, totalValue: v, productType,
+          /* O 1º boleto entra junto com os outros; sem parcela extra, não manda
+             nada e a nota segue com vencimento único, como sempre. */
+          ...(parcelasValidas.length > 0
+            ? { installments: [{ dueDate, value: primeiroValor }, ...parcelasValidas] }
+            : {}),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(data.error ?? mensagemDeFalha(res.status)); return; }
@@ -630,6 +724,51 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
       <div className="grid grid-cols-2 gap-2">
         <DatePicker label="Emissão" value={issueDate || null} onValueChange={(v) => setIssueDate(v ?? '')} className={hl} />
         <DatePicker label="Vencimento do boleto" value={dueDate || null} onValueChange={(v) => setDueDate(v ?? '')} min={issueDate || undefined} />
+
+        {/* BOLETOS 2 E 3 — a mesma nota costuma vir em mais de um boleto.
+            O 1º usa o vencimento acima e recebe o que sobra do valor da nota,
+            para ninguém ter de recalcular à mão o que o sistema sabe fazer. */}
+        {parcelas.map((p, i) => (
+          <div key={i} className="flex flex-wrap items-end gap-2 rounded-md border border-dashed p-2">
+            <span className="sgo-type-11 font-semibold text-ink-500">boleto {i + 2}</span>
+            <div className="min-w-[10rem] flex-1">
+              <DatePicker
+                label="Vencimento"
+                size="sm"
+                value={p.dueDate || null}
+                onValueChange={(v) => setParcelas((s) => s.map((x, j) => (j === i ? { ...x, dueDate: v ?? '' } : x)))}
+                min={issueDate || undefined}
+              />
+            </div>
+            <div className="w-32">
+              <Label className="text-xs">Valor (R$)</Label>
+              <Input
+                inputMode="decimal"
+                value={p.value}
+                onChange={(e) => setParcelas((s) => s.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
+                placeholder="0,00"
+                className="h-9 text-sm"
+              />
+            </div>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setParcelas((s) => s.filter((_, j) => j !== i))}>
+              Remover
+            </Button>
+          </div>
+        ))}
+
+        {/* Sem teto: já apareceu nota com mais de três boletos, e limitar por
+            número redondo só criaria a necessidade de contornar o sistema. */}
+        <Button type="button" size="sm" variant="outline" onClick={() => setParcelas((s) => [...s, { dueDate: '', value: '' }])}>
+          <Plus className="h-4 w-4" /> Adicionar outro boleto
+        </Button>
+
+        {parcelas.some((p) => p.dueDate || p.value.trim()) && (
+          <p className="text-xs text-ink-500">
+            O <strong>boleto 1</strong> fica com o que sobra do valor da nota. Cada boleto entra sozinho no acompanhamento de
+            vencimentos e avisa a supervisão e o financeiro na data dele.
+          </p>
+        )}
+
       </div>
 
       {isGas ? (

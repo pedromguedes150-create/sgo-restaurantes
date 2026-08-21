@@ -13,7 +13,13 @@ export async function listNotes(user: SessionUser, status?: NoteStatus, sinceDay
     where: { ...unitScopeWhere(user, 'unitId'), ...(status ? { status } : {}), createdAt: { gte: since } },
     orderBy: { createdAt: 'desc' },
     take: 500,
-    include: { unit: { select: { name: true } }, createdBy: { select: { name: true } } },
+    include: {
+      unit: { select: { name: true } },
+      createdBy: { select: { name: true } },
+      /* Os boletos vêm junto: sem eles a edição não teria o que mostrar e
+         salvar apagaria as parcelas da nota. */
+      installments: { orderBy: { seq: 'asc' }, select: { seq: true, dueDate: true, value: true } },
+    },
   });
 }
 
