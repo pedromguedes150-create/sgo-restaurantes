@@ -1455,7 +1455,13 @@ enum CashMovementType {
 
 /// Status de uma solicitação de troco do gerente para a supervisão.
 enum ChangeRequestStatus {
+  /// Gerente pediu; o escritório ainda não enviou.
   OPEN
+  /// Escritório enviou; o dinheiro está a caminho e AINDA NÃO está no cofre.
+  SENT
+  /// Gerente confirmou o recebimento — é aqui que o cofre é atualizado.
+  RECEIVED
+  /// (Legado) Atendido no fluxo antigo, de duas etapas.
   RESOLVED
   CANCELED
 }
@@ -1524,6 +1530,20 @@ model CashChangeRequest {
   status          ChangeRequestStatus @default(OPEN)
   requestedById   String
   requestedByName String
+  /// ENVIO (escritório). O que foi REALMENTE enviado, por denominação — pode
+  /// diferir do pedido: o escritório nem sempre tem tudo o que se pediu.
+  sentJson        Json?
+  sentById        String?
+  sentByName      String?
+  sentNote        String?
+  sentAt          DateTime?
+  /// RECEBIMENTO (gerente). O que REALMENTE chegou. Diferença entre enviado e
+  /// recebido é dinheiro perdido no caminho: vira alerta para a supervisão.
+  receivedJson    Json?
+  receivedById    String?
+  receivedByName  String?
+  receivedNote    String?
+  receivedAt      DateTime?
   resolvedById    String?
   resolvedByName  String?
   resolvedNote    String?

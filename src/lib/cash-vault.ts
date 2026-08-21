@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
-import { notifySupervisory, notifyUsers } from '@/lib/notifications';
+import { notifySupervisory, notifyUsers, notifyUnitRole } from '@/lib/notifications';
 import { isSupervisory } from '@/lib/roles';
 import { getDenominations, denomLabel, type DenomConfig, type DenomKind } from '@/lib/cash-denominations';
 import type { SessionUser } from '@/lib/auth/session';
@@ -458,6 +458,238 @@ export async function requestChange(
   return { ok: true };
 }
 
+/** Lê os conjuntos de ENVIO e RECEBIMENTO de um pedido. */
+function sentAndReceived(row: { sentJson: unknown; receivedJson: unknown; sentByName: string | null; sentAt: Date | null; sentNote: string | null; receivedByName: string | null; receivedAt: Date | null; receivedNote: string | null }) {
+  const sent = readBalances(row.sentJson as Record<string, unknown> | null);
+  const received = readBalances(row.receivedJson as Record<string, unknown> | null);
+  const sentTotal = sumBalances(sent);
+  const receivedTotal = sumBalances(received);
+  return {
+    sent, received, sentTotal, receivedTotal,
+    sentByName: row.sentByName, sentAt: row.sentAt?.toISOString() ?? null, sentNote: row.sentNote,
+    receivedByName: row.receivedByName, receivedAt: row.receivedAt?.toISOString() ?? null, receivedNote: row.receivedNote,
+    /** Chegou diferente do que saiu? */
+    divergent: sentTotal > 0 && receivedTotal > 0 && Math.abs(sentTotal - receivedTotal) > 0.011,
+  };
+}
+
+/* ───────── Envio pelo escritório e confirmação pelo gerente ───────── */
+
+/**
+ * O ciclo do troco tem três donos e três momentos:
+ *
+ *   SOLICITADO  o gerente pede (o que precisa × o que entrega)
+ *   ENVIADO     o escritório manda — e registra o que REALMENTE mandou
+ *   RECEBIDO    o gerente confirma o que REALMENTE chegou
+ *
+ * O cofre só é atualizado na CONFIRMAÇÃO. Antes disso o dinheiro está a caminho:
+ * aplicar no envio faria o saldo mentir durante o transporte, e o gerente
+ * conferiria o cofre contra um número que ainda não existe na gaveta.
+ *
+ * Guardar os três conjuntos é o que permite responder depois: o escritório
+ * mandou o que foi pedido? Chegou o que foi mandado? Sem os três, a diferença
+ * aparece só no fim do mês, sem dono.
+ */
+
+/** Quem opera o escritório: supervisor para cima (CEO permanece leitura). */
+function isOffice(user: SessionUser): boolean {
+  return isSupervisory(user.role);
+}
+
+/**
+ * Escritório registra o ENVIO. O que ele manda pode diferir do pedido — nem
+ * sempre há tudo o que se pediu —, por isso o envio tem conjunto próprio.
+ */
+export async function sendChangeRequest(
+  user: SessionUser,
+  id: string,
+  input: { sent?: Record<string, unknown>; note?: string },
+  ctx: Ctx = {},
+): Promise<Result> {
+  if (!isOffice(user)) return { ok: false, reason: 'FORBIDDEN', detail: 'Só a supervisão para cima envia troco.' };
+  const req = await prisma.cashChangeRequest.findUnique({ where: { id } });
+  if (!req) return { ok: false, reason: 'NOT_FOUND' };
+  if (!canAccessUnit(user, req.unitId)) return { ok: false, reason: 'FORBIDDEN' };
+  if (req.status !== 'OPEN') return { ok: false, reason: 'INVALID', detail: 'Este pedido já saiu da fila de envio.' };
+
+  const config = await getDenominations(req.unitId);
+  /* Sem detalhe, envia-se o que foi pedido: o caso comum é o escritório mandar
+     exatamente aquilo, e obrigar a redigitar 12 campos só atrapalharia. */
+  const enviado = sanitizeInput(config, input.sent ?? readBalances(req.needJson as Record<string, unknown> | null));
+  const total = sumBalances(enviado);
+  if (total <= 0) return { ok: false, reason: 'INVALID', detail: 'Informe o que está sendo enviado.' };
+  const bad = invalidMultiples(config, enviado);
+  if (bad.length) return { ok: false, reason: 'INVALID', detail: `Valor incompatível com a denominação: ${bad.join(', ')}.` };
+
+  await prisma.cashChangeRequest.update({
+    where: { id },
+    data: {
+      status: 'SENT',
+      sentJson: enviado as unknown as Prisma.InputJsonValue,
+      sentById: user.id, sentByName: user.name,
+      sentNote: input.note?.trim() || null,
+      sentAt: new Date(),
+    },
+  });
+
+  const unit = await prisma.unit.findUnique({ where: { id: req.unitId }, select: { name: true } });
+  await notifyUsers([req.requestedById], {
+    title: '📦 Troco enviado — confira ao receber',
+    body: `${user.name} enviou ${emReais(total)} de troco para ${unit?.name ?? 'sua unidade'}. Confirme na tela de Troco o que chegou de verdade.`,
+    link: '/modulos/troco', module: 'CASH',
+  }).catch(() => {});
+  await notifyUnitRole(req.unitId, 'MANAGER', {
+    title: '📦 Troco a caminho',
+    body: `${emReais(total)} enviados pelo escritório. Confirme o recebimento por denominação.`,
+    link: '/modulos/troco', module: 'CASH',
+  }).catch(() => {});
+
+  await audit({
+    userId: user.id, unitId: req.unitId, action: 'CASH_CHANGE_SENT', module: 'CASH',
+    entity: 'cash_change_request', entityId: id, metadata: { total, enviado }, ...ctx,
+  });
+  return { ok: true };
+}
+
+/**
+ * Gerente confirma o RECEBIMENTO. É aqui — e só aqui — que o cofre muda.
+ *
+ * Se o recebido não bate com o enviado, a diferença é registrada e a supervisão
+ * avisada na hora: dinheiro que saiu do escritório e não chegou na unidade é o
+ * risco que este fluxo existe para pegar.
+ */
+export async function confirmChangeReceipt(
+  user: SessionUser,
+  id: string,
+  input: { received?: Record<string, unknown>; note?: string },
+  ctx: Ctx = {},
+): Promise<Result & { divergence?: number }> {
+  if (!canOperate(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const req = await prisma.cashChangeRequest.findUnique({ where: { id } });
+  if (!req) return { ok: false, reason: 'NOT_FOUND' };
+  if (!canAccessUnit(user, req.unitId)) return { ok: false, reason: 'FORBIDDEN' };
+  if (req.status !== 'SENT') return { ok: false, reason: 'INVALID', detail: 'Este pedido não está aguardando confirmação.' };
+
+  const config = await getDenominations(req.unitId);
+  const enviado = sanitizeInput(config, readBalances(req.sentJson as Record<string, unknown> | null));
+  /* Sem detalhe, confirma-se o que foi enviado — o caso comum é chegar certo. */
+  const recebido = sanitizeInput(config, input.received ?? enviado);
+  const totalEnviado = sumBalances(enviado);
+  const totalRecebido = sumBalances(recebido);
+  if (totalRecebido <= 0) return { ok: false, reason: 'INVALID', detail: 'Informe o que chegou.' };
+  const bad = invalidMultiples(config, recebido);
+  if (bad.length) return { ok: false, reason: 'INVALID', detail: `Valor incompatível com a denominação: ${bad.join(', ')}.` };
+
+  /* O MOVIMENTO NO COFRE: entra o que chegou, sai o que a unidade entregou em
+     troca. Sai o que foi combinado no pedido — é o que o gerente mandou para o
+     escritório quando fez a solicitação. */
+  const entregue = sanitizeInput(config, readBalances(req.giveJson as Record<string, unknown> | null));
+  const deltas: Balances = {};
+  for (const k of config.keys) deltas[k] = r2((recebido[k] || 0) - (entregue[k] || 0));
+  const diferenca = r2(totalRecebido - totalEnviado);
+
+  await applyMovement(user, req.unitId, 'OFFICE_SWAP', deltas, {
+    note: `Troco recebido do escritório${input.note?.trim() ? `: ${input.note.trim()}` : ''}`,
+  }, ctx);
+
+  await prisma.cashChangeRequest.update({
+    where: { id },
+    data: {
+      status: 'RECEIVED',
+      receivedJson: recebido as unknown as Prisma.InputJsonValue,
+      receivedById: user.id, receivedByName: user.name,
+      receivedNote: input.note?.trim() || null,
+      receivedAt: new Date(),
+    },
+  });
+
+  const unit = await prisma.unit.findUnique({ where: { id: req.unitId }, select: { name: true } });
+  if (Math.abs(diferenca) > 0.011) {
+    /* Divergência de transporte: alguém precisa procurar hoje, não no fechamento. */
+    await notifySupervisory({
+      title: '🚨 Troco recebido DIFERENTE do enviado',
+      body:
+        `${unit?.name ?? 'Unidade'}: o escritório enviou ${emReais(totalEnviado)} e ${user.name} confirmou ` +
+        `${emReais(totalRecebido)} — diferença de ${emReais(Math.abs(diferenca))}. Confira o transporte.`,
+      link: '/modulos/troco', module: 'CASH', critical: true,
+    }, req.unitId).catch(() => {});
+  } else if (req.sentById) {
+    await notifyUsers([req.sentById], {
+      title: '✅ Troco recebido',
+      body: `${unit?.name ?? 'A unidade'} confirmou o recebimento de ${emReais(totalRecebido)}.`,
+      link: '/modulos/troco', module: 'CASH',
+    }).catch(() => {});
+  }
+
+  await audit({
+    userId: user.id, unitId: req.unitId, action: 'CASH_CHANGE_RECEIVED', module: 'CASH',
+    entity: 'cash_change_request', entityId: id,
+    metadata: { totalEnviado, totalRecebido, diferenca, recebido }, ...ctx,
+  });
+  return { ok: true, divergence: diferenca };
+}
+
+/** Fila do escritório: pedidos de TODAS as unidades que ele alcança. */
+export async function getOfficeChangeRequests(user: SessionUser): Promise<ChangeRequestUI[]> {
+  if (!isOffice(user) && user.role !== 'CEO') return [];
+  const units = await prisma.unit.findMany({
+    where: { active: true, ...unitScopeWhere(user, 'id') },
+    select: { id: true, name: true },
+  });
+  const nameById = new Map(units.map((u) => [u.id, u.name]));
+  if (nameById.size === 0) return [];
+
+  const rows = await prisma.cashChangeRequest.findMany({
+    where: { unitId: { in: [...nameById.keys()] }, status: { in: ['OPEN', 'SENT'] } },
+    orderBy: [{ status: 'asc' }, { createdAt: 'asc' }],
+    take: 200,
+  });
+  return rows.map((r) => ({
+    id: r.id, unitId: r.unitId, unitName: nameById.get(r.unitId),
+    amount: r.amount != null ? Number(r.amount) : null, note: r.note ?? '',
+    status: r.status, requestedByName: r.requestedByName, createdAt: r.createdAt.toISOString(),
+    resolvedByName: r.resolvedByName, resolvedNote: r.resolvedNote, resolvedAt: r.resolvedAt?.toISOString() ?? null,
+    ...requestSides(r),
+    ...sentAndReceived(r),
+  }));
+}
+
+/** Relação de troco ENVIADO — o histórico que o escritório precisa prestar. */
+export async function getSentChangeHistory(
+  user: SessionUser,
+  filtros: { unitId?: string; from?: string; to?: string } = {},
+): Promise<ChangeRequestUI[]> {
+  if (!isOffice(user) && user.role !== 'CEO') return [];
+  const units = await prisma.unit.findMany({
+    where: { active: true, ...unitScopeWhere(user, 'id') },
+    select: { id: true, name: true },
+  });
+  const nameById = new Map(units.map((u) => [u.id, u.name]));
+  const ids = filtros.unitId && nameById.has(filtros.unitId) ? [filtros.unitId] : [...nameById.keys()];
+  if (ids.length === 0) return [];
+
+  const rows = await prisma.cashChangeRequest.findMany({
+    where: {
+      unitId: { in: ids },
+      sentAt: {
+        not: null,
+        ...(filtros.from ? { gte: new Date(filtros.from + 'T00:00:00.000Z') } : {}),
+        ...(filtros.to ? { lt: new Date(new Date(filtros.to + 'T00:00:00.000Z').getTime() + 86400000) } : {}),
+      },
+    },
+    orderBy: { sentAt: 'desc' },
+    take: 300,
+  });
+  return rows.map((r) => ({
+    id: r.id, unitId: r.unitId, unitName: nameById.get(r.unitId),
+    amount: r.amount != null ? Number(r.amount) : null, note: r.note ?? '',
+    status: r.status, requestedByName: r.requestedByName, createdAt: r.createdAt.toISOString(),
+    resolvedByName: r.resolvedByName, resolvedNote: r.resolvedNote, resolvedAt: r.resolvedAt?.toISOString() ?? null,
+    ...requestSides(r),
+    ...sentAndReceived(r),
+  }));
+}
+
 /** Supervisão resolve, ou o próprio solicitante cancela, uma solicitação de troco. */
 export async function resolveChangeRequest(user: SessionUser, id: string, action: 'resolve' | 'cancel', resolvedNote: string | undefined, ctx: Ctx = {}): Promise<Result> {
   const req = await prisma.cashChangeRequest.findUnique({ where: { id } });
@@ -514,6 +746,12 @@ export interface ChangeRequestUI {
   need: Balances; give: Balances; needTotal: number; giveTotal: number;
   /** Os dois lados fecham 1:1 — atender vai aplicar a troca no cofre. */
   autoApply: boolean;
+  /** ENVIO pelo escritório (vazio enquanto não sai). */
+  sent: Balances; sentTotal: number; sentByName: string | null; sentAt: string | null; sentNote: string | null;
+  /** RECEBIMENTO confirmado pelo gerente (vazio enquanto não chega). */
+  received: Balances; receivedTotal: number; receivedByName: string | null; receivedAt: string | null; receivedNote: string | null;
+  /** Chegou diferente do que saiu. */
+  divergent: boolean;
 }
 
 /** Lê os dois lados de um pedido, tolerante com os registros antigos sem detalhe. */
@@ -534,6 +772,7 @@ export async function getChangeRequests(user: SessionUser, unitId: string): Prom
     requestedByName: r.requestedByName, createdAt: r.createdAt.toISOString(),
     resolvedByName: r.resolvedByName, resolvedNote: r.resolvedNote, resolvedAt: r.resolvedAt?.toISOString() ?? null,
     ...requestSides(r),
+    ...sentAndReceived(r),
   }));
 }
 
@@ -554,6 +793,7 @@ export async function getOpenChangeRequests(user: SessionUser): Promise<ChangeRe
     status: r.status, requestedByName: r.requestedByName, createdAt: r.createdAt.toISOString(),
     resolvedByName: null, resolvedNote: null, resolvedAt: null,
     ...requestSides(r),
+    ...sentAndReceived(r),
   }));
 }
 
