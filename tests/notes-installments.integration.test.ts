@@ -114,6 +114,37 @@ describe('Nota com 3 boletos', () => {
   });
 });
 
+describe('Nota com MAIS de 3 boletos', () => {
+  /* Não há teto: o número de boletos é da nota, não do formulário. */
+  it('grava os cinco e os cinco aparecem no acompanhamento', async () => {
+    const r = await createNote(user(), {
+      unitId, supplierName: 'Fornecedor Cinco', totalValue: 5000,
+      installments: [10, 20, 30, 40, 50].map((d) => ({ dueDate: emDias(d), value: 1000 })),
+    });
+    expect(r.ok).toBe(true);
+
+    const nota = await prisma.receivedNote.findFirst({ where: { unitId, supplierName: 'Fornecedor Cinco' }, include: { installments: { orderBy: { seq: 'asc' } } } });
+    expect(nota!.installments).toHaveLength(5);
+    expect(nota!.installments.map((p) => p.seq)).toEqual([1, 2, 3, 4, 5]);
+
+    const rows = await getUpcomingDues(user(), { unitId, daysAhead: 90 });
+    const dele = rows.filter((x) => x.supplier === 'Fornecedor Cinco');
+    expect(dele).toHaveLength(5);
+    expect(dele.every((x) => x.installment?.of === 5)).toBe(true);
+  });
+
+  it('editar acrescenta um 6º boleto a uma nota já lançada', async () => {
+    const nota = await prisma.receivedNote.findFirst({ where: { unitId, supplierName: 'Fornecedor Cinco' } });
+    const r = await updateNote(supervisor(), nota!.id, {
+      installments: [10, 20, 30, 40, 50, 60].map((d) => ({ dueDate: emDias(d), value: 1000 })),
+      totalValue: 6000,
+    });
+    expect(r.ok).toBe(true);
+    const depois = await prisma.receivedNote.findUnique({ where: { id: nota!.id }, include: { installments: true } });
+    expect(depois!.installments).toHaveLength(6);
+  });
+});
+
 describe('Nota de boleto único continua como sempre', () => {
   it('sem parcelas, aparece uma vez com o valor total', async () => {
     await createNote(user(), {

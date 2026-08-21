@@ -65,6 +65,15 @@ describe('Tela de Notas Recebidas — monta sem estourar', () => {
     expect(render({ aba: 'venc' })).toBeTruthy();
   });
 
+  it('nota com vários boletos (mais de três)', () => {
+    /* A tela recebe as parcelas para poder editá-las; nota parcelada não pode
+       quebrar a lista de quem só está olhando. */
+    const parcelada = nota({
+      installments: [10, 20, 30, 40, 50].map((d, i) => ({ seq: i + 1, dueDate: `2026-09-${String(d).padStart(2, '0')}`, value: 600 })),
+    });
+    expect(render({ notes: [parcelada] })).toContain('Distribuidora Sul');
+  });
+
   it('nota com problema', () => {
     expect(render({ notes: [nota({ status: 'PROBLEM', problemNote: 'veio faltando item' })] })).toBeTruthy();
   });

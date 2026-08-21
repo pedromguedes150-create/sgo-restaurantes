@@ -9,17 +9,20 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
-## v1.54.0 — 2026-08-21 (Notas: até 3 boletos por nota, cada um acompanhado)
+## v1.54.0 — 2026-08-21 (Notas: vários boletos por nota, cada um acompanhado)
 
 ### Novo
-- **A nota aceita até 3 boletos.** Abaixo do vencimento há "Adicionar outro boleto"; cada um tem
+- **A nota aceita vários boletos, sem limite de quantidade.** Abaixo do vencimento há "Adicionar outro boleto"; cada um tem
   vencimento e valor próprios. O **boleto 1 recebe automaticamente o que sobra** do valor da nota —
   quem lança não precisa recalcular à mão o que o sistema sabe fazer.
 - **Cada boleto entra sozinho no acompanhamento de vencimentos**, com o valor dele, identificado
   como "boleto 2 de 3" — e **alerta a supervisão e o financeiro na data dele**.
+- **Os boletos também se editam** em "Ver e editar" (Supervisão/Admin): corrigir vencimento, corrigir
+  valor, acrescentar ou remover boleto de uma nota já lançada. Sem isso, um vencimento digitado
+  errado ficaria errado para sempre — avisando no dia errado, que é pior do que não avisar.
 
 ### Por que isso importa mais do que parece
-A nota tinha **um** vencimento. Com 3 boletos, o 2º e o 3º simplesmente não existiam para o
+A nota tinha **um** vencimento. Com 3 boletos — e às vezes mais —, o 2º em diante simplesmente não existia para o
 sistema: não apareciam na aba de Vencimentos e não disparavam alerta. Venciam sem ninguém saber.
 O campo faltando no formulário era o sintoma; o risco era boleto vencendo no silêncio.
 

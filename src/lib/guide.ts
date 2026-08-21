@@ -510,7 +510,8 @@ export const GUIDE: GuideSection[] = [
         summary: 'Registrar o recebimento das notas.',
         steps: [
           'Toque em "Nova nota" (botão no topo) — abre uma janela por cima da lista. Use "Escanear" para ler o QR code OU o código de barras (DANFE) e a chave preenche sozinha; sem câmera, cole a chave de 44 dígitos.',
-          'MAIS DE UM BOLETO NA MESMA NOTA: abaixo do vencimento há "Adicionar outro boleto" — até 3 no total. Informe vencimento e valor de cada um; o BOLETO 1 fica automaticamente com o que sobra do valor da nota, para você não ter de calcular à mão.',
+          'MAIS DE UM BOLETO NA MESMA NOTA: abaixo do vencimento há "Adicionar outro boleto", quantos a nota tiver — não há limite. Informe vencimento e valor de cada um; o BOLETO 1 fica automaticamente com o que sobra do valor da nota, para você não ter de calcular à mão.',
+          'CORRIGIU ALGO? Em "Ver e editar" (Supervisão/Admin) os boletos aparecem do mesmo jeito: dá para mudar vencimento, mudar valor, acrescentar ou remover boleto de uma nota já lançada.',
           'Cada boleto entra SOZINHO no acompanhamento de vencimentos e avisa a supervisão e o financeiro na data dele. Antes a nota tinha um vencimento só: o 2º e o 3º boleto venciam sem ninguém ser avisado.',
           'Na aba Vencimentos, a linha diz "boleto 2 de 3" e mostra o valor daquele boleto, não o total da nota.',
           'Escolha o fornecedor NA LISTA de cadastrados (não dá mais para digitar — falta algum? peça ao Admin em Configurações → Fornecedores).',
