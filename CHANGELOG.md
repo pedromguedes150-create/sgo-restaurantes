@@ -9,6 +9,44 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.54.1 — 2026-08-24 (URGENTE — a conferência em grade não estava registrando nada)
+
+### O que estava acontecendo
+A rota `/api/commands/count` **descartava a grade**. A tela mandava as comandas marcadas
+(`presentNumbers`, `inUseNumbers`, `scopeNumbers`); a rota repassava só `absentNumbers`, que a grade
+não usa. O servidor recebia uma grade vazia e concluía que **não faltava nada**:
+
+- gravava a contagem do dia com **0 faltando**, qualquer que fosse a marcação;
+- **não abria divergência** para comanda nenhuma, e o supervisor não era avisado;
+- **aceitava sem observação**, porque para ele não havia falta;
+- salvava a grade **em branco** — no dia seguinte ela reabria zerada.
+
+A função `submitCount` estava certa e testada. O que faltava era teste **na rota**: os campos
+morriam no caminho entre a tela e a função, e nenhum teste passava por ali.
+
+### O beco sem saída do botão
+Comandas **em apuração** e **baixadas** ficam na grade só para o número não sumir da sequência —
+são desabilitadas e se resolvem no bloco de Divergências. A tela, porém, as contava como faltantes.
+Com tudo o que dava para marcar marcado, o contador zerava e **o campo de observação sumia** — mas
+a confirmação continuava recusando por falta de observação. Botão sem resposta possível.
+
+### Corrigido
+- A rota repassa `presentNumbers`, `inUseNumbers` e `scopeNumbers` (como `undefined` quando não
+  vêm — `[]` significaria "nada marcado" e transformaria a sequência inteira em falta).
+- A tela julga o mesmo universo que mostra (`ausentesDaGrade`, em `src/lib/commands/grid.ts`) e
+  manda o **escopo** da conferência, para em apuração não reabrir divergência a cada contagem.
+- A recusa por falta de observação agora **aparece no campo**: ele fica em vermelho, recebe o foco,
+  a tela rola até ele e o texto diz que sem isso a conferência não é registrada. Antes o aviso saía
+  num banner longe do botão e parecia que o botão estava quebrado.
+
+### Testes
+- `tests/commands-count-route.integration.test.ts` (5) — chama **a rota**: falta vira divergência,
+  a grade é gravada, em uso conta como presente, contagem parcial só julga o escopo dela, e sem
+  observação o **servidor** recusa. Contra o código anterior, 3 destes falham.
+- `tests/commands-grid.test.ts` (5) — inclusive o beco sem saída.
+
+---
+
 ## v1.54.0 — 2026-08-21 (Notas: vários boletos por nota, cada um acompanhado)
 
 ### Novo
