@@ -9,6 +9,36 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.55.1 — 2026-08-24 (Comandas: o servidor recusa faixas sobrepostas)
+
+### Corrigido
+A tela de Configurações sempre disse **"as faixas não devem se sobrepor"** — e o servidor aceitava
+salvar. Uma unidade acabou com `2–300` e `1–700` ao mesmo tempo: as mesmas comandas em duas faixas,
+uma dizendo "conferida na madrugada" e a outra "só na semanal". Regra que só existe como recado é
+regra que vai ser violada.
+
+- Criar ou editar faixa que invada outra é **recusado** (`409`), com mensagem dizendo **qual** faixa
+  colide e **quais comandas** ficariam duplicadas — em vez do "Dados inválidos" genérico.
+- `AdminResult` ganhou `message`: quando o caso conhece um detalhe que a rota não conhece, é ele
+  que chega na tela.
+- **Faixa inativa não disputa comanda** (está fora da sequência), mas **reativar é checado** — são o
+  mesmo problema visto de dois ângulos.
+- Faixas **encostadas** (`1–300` e `301–700`) continuam válidas: se isso acusasse colisão, o jeito
+  certo de cadastrar seria impossível.
+
+### Para quem já tem cadastro sobreposto
+Ajuste primeiro a faixa **que invade** (a maior) e depois a outra. Corrigir a menor primeiro é
+recusado — ela ainda colide com a maior. A mensagem diz com quem.
+
+### Testes
+- `tests/commands-ranges.test.ts` (11) — encostadas não colidem, uma dentro da outra colide,
+  pontas, comanda única, e a mensagem no singular/plural.
+- `tests/commands-sequence-admin.integration.test.ts` (6) — cadastro certo passa, `1–700` é
+  recusado nomeando a faixa, editar para invadir é recusado **e não grava**, editar a própria faixa
+  continua possível, inativa/reativar, e outra unidade não interfere.
+
+---
+
 ## v1.55.0 — 2026-08-24 (Comandas: a grade respeita a faixa do dia)
 
 ### O problema

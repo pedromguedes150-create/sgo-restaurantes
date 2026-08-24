@@ -1,13 +1,29 @@
 import { prisma } from '@/lib/db/prisma';
+import { acharSobreposicao, mensagemDeSobreposicao } from '@/lib/commands/ranges';
 import { hashPassword } from '@/lib/auth/password';
 import { fromZonedTime } from 'date-fns-tz';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role, TaskModule } from '@prisma/client';
 
-export type AdminResult = { ok: true; id?: string } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'CONFLICT' | 'BLOCKED' };
+export type AdminResult =
+  | { ok: true; id?: string }
+  /** `message` substitui o texto genérico da rota quando o motivo tem detalhe
+   *  que só aqui se conhece — "invade a faixa X" ajuda; "Dados inválidos" não. */
+  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'CONFLICT' | 'BLOCKED'; message?: string };
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
+
+/** Faixas ATIVAS da unidade, para checar sobreposição. Inativa não conta: ela
+ *  está fora da sequência e não disputa comanda com ninguém — mas ao reativar,
+ *  a checagem roda de novo. */
+async function faixasAtivas(unitId: string) {
+  return prisma.commandSequence.findMany({
+    where: { unitId, active: true },
+    select: { id: true, name: true, rangeStart: true, rangeEnd: true },
+    orderBy: { rangeStart: 'asc' },
+  });
+}
 
 function isAdmin(user: SessionUser) {
   return user.role === 'ADMIN';
@@ -193,6 +209,8 @@ export async function createCommandSequence(user: SessionUser, input: { unitId: 
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   const start = Math.trunc(input.rangeStart), end = Math.trunc(input.rangeEnd);
   if (!input.unitId || !validRange(start, end)) return { ok: false, reason: 'INVALID' };
+  const colide = acharSobreposicao({ rangeStart: start, rangeEnd: end }, await faixasAtivas(input.unitId));
+  if (colide) return { ok: false, reason: 'CONFLICT', message: mensagemDeSobreposicao({ rangeStart: start, rangeEnd: end }, colide) };
   const count = await prisma.commandSequence.count({ where: { unitId: input.unitId } });
   const c = await prisma.commandSequence.create({ data: { unitId: input.unitId, name: input.name?.trim() || `Sequência ${count + 1}`, rangeStart: start, rangeEnd: end, order: count } });
   await audit({ userId: user.id, unitId: input.unitId, action: 'COMMAND_SEQ_CREATE', module: 'CONFIG', entity: 'command_sequence', entityId: c.id, metadata: { start, end }, ...ctx });
@@ -205,6 +223,13 @@ export async function updateCommandSequence(user: SessionUser, id: string, input
   const start = input.rangeStart !== undefined ? Math.trunc(input.rangeStart) : cur.rangeStart;
   const end = input.rangeEnd !== undefined ? Math.trunc(input.rangeEnd) : cur.rangeEnd;
   if (!validRange(start, end)) return { ok: false, reason: 'INVALID' };
+  /* Checa o estado RESULTANTE: mudar a faixa de uma ativa, ou reativar uma que
+     dormia sobreposta, são o mesmo problema visto de dois ângulos. */
+  const ficaraAtiva = input.active !== undefined ? input.active : cur.active;
+  if (ficaraAtiva) {
+    const colide = acharSobreposicao({ rangeStart: start, rangeEnd: end }, await faixasAtivas(cur.unitId), id);
+    if (colide) return { ok: false, reason: 'CONFLICT', message: mensagemDeSobreposicao({ rangeStart: start, rangeEnd: end }, colide) };
+  }
   await prisma.commandSequence.update({ where: { id }, data: { ...(input.name !== undefined ? { name: input.name.trim() || cur.name } : {}), rangeStart: start, rangeEnd: end, ...(input.active !== undefined ? { active: input.active } : {}), ...(input.nightly !== undefined ? { nightly: input.nightly } : {}) } });
   await audit({ userId: user.id, unitId: cur.unitId, action: 'COMMAND_SEQ_UPDATE', module: 'CONFIG', entity: 'command_sequence', entityId: id, ...ctx });
   return { ok: true };

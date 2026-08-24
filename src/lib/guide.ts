@@ -170,6 +170,7 @@ export const GUIDE: GuideSection[] = [
         summary: 'Contagem diária e divergências.',
         steps: [
           'Antes do uso, o Admin cadastra as faixas em Configurações → Comandas (várias sequências por unidade, ex.: 1–200 e 500–650).',
+          'AS FAIXAS NÃO PODEM SE SOBREPOR e o sistema recusa salvar: cada comanda pertence a UMA faixa só. Se tentar, a mensagem diz qual faixa colide e quais comandas ficariam duplicadas. Para corrigir um cadastro antigo sobreposto, ajuste primeiro a faixa maior (a que invade) e depois a outra.',
           'Conferência em grade: abra COMANDAS e toque em cada comanda conferida (fica verde), como na folha de papel. Um contador mostra conferidas/faltando. Use "Marcar todas"/"Limpar", a seleção por FAIXA (de X até Y — marca/desmarca em lote as sequências guardadas) e o filtro por número para agilizar.',
           'Ao "Confirmar conferência", as comandas NÃO marcadas viram as ausentes: o sistema registra a contagem e alerta os supervisores automaticamente (observação obrigatória quando há falta).',
           'Atalhos: "Todas presentes" registra tudo presente num toque; o lançamento manual de ausentes continua disponível (recolhido).',

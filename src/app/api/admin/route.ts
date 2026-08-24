@@ -99,7 +99,10 @@ export async function POST(req: Request) {
   if (!r) return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });
   if (!r.ok) {
     const map: Record<string, number> = { FORBIDDEN: 403, INVALID: 400, CONFLICT: 409, BLOCKED: 409 };
+    /* A mensagem própria do caso vence a genérica: dizer QUAL faixa colide
+       resolve o problema; a frase genérica só informa que deu errado. */
     const msg =
+      r.message ? r.message :
       r.reason === 'FORBIDDEN' ? 'Apenas o Administrador' :
       r.reason === 'CONFLICT' ? 'Já existe um registro com esses dados' :
       r.reason === 'BLOCKED' ? 'Não é possível excluir: há histórico/registros vinculados. Inative em vez de excluir.' :
