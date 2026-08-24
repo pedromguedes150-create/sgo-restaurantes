@@ -128,7 +128,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
                 isOverdue: t.status === 'PENDING' && t.dueAt < now,
                 moduleHref: MODULE_HREFS[t.template.module] ?? null,
               };
-              return <TaskItem key={t.id} task={data} />;
+              return <TaskItem key={t.id} task={data} unitParam={searchParams.unit} />;
             })}
             {tasks.length === 0 && <li className="px-4 py-6 text-center text-sm text-ink-500">Sem tarefas para hoje.</li>}
           </UnitTasksSection>
