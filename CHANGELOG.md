@@ -9,6 +9,40 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.54.3 — 2026-08-24 (Tarefas obedece o seletor de unidade do cabeçalho)
+
+### O problema por trás do "voltar"
+O app tinha **dois filtros de unidade que não se falavam**:
+
+- o **seletor global** do cabeçalho (o chip com o nome da unidade) grava `?unidade=` + cookie;
+- a tela de **Tarefas** lia só `?unit=`, o parâmetro dos atalhos do Dashboard.
+
+Resultado: o cabeçalho dizia "Moreira" e a lista mostrava a rede inteira. A unidade que parecia
+"perdida" ao voltar de uma tarefa **nunca esteve aplicada** — por isso a correção da v1.54.2, que
+levava o filtro no link, não resolveu o caso de quem escolhe a unidade lá em cima.
+
+### Corrigido
+A tela de Tarefas passa a **obedecer o seletor**. Precedência, do mais explícito para o mais
+implícito (`src/lib/scope/unit-filter.ts`):
+
+1. `?unit=todas` — "ver todas", e vence o seletor;
+2. `?unit=<ids>` — filtro explícito da tela (atalhos do Dashboard), aceita vários;
+3. `?unidade=<id>` — o seletor refletido na URL;
+4. o **cookie do seletor** — o que o chip mostra. É o padrão.
+
+- **"Ver todas as unidades"** passou a ser explícito (`?unit=todas`): sem isso, um `/tarefas` sem
+  parâmetro voltaria a cair no seletor e o link não sairia do lugar.
+- Com **uma unidade só** no alcance, a tela nunca se diz "filtrada" — senão ofereceria um "ver
+  todas" que não muda nada.
+- Unidade fora do alcance do usuário continua ignorada: isto é filtro de tela, e quem garante o
+  escopo é o `unitScopeWhere` no banco (regra nº 3).
+
+### Testes
+`tests/unit-filter.test.ts` (9) — cada nível da precedência, várias unidades, unidade de outro
+grupo ignorada, usuário de uma unidade só e usuário sem unidade alguma.
+
+---
+
 ## v1.54.2 — 2026-08-24 (Tarefas: o "voltar" devolve a lista da unidade)
 
 ### Corrigido
