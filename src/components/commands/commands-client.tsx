@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Search, RotateCcw, XCircle, Plus, Grid3x3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ausentesDaGrade } from '@/lib/commands/grid';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 
@@ -299,6 +300,11 @@ function GridConference({ unitId, activeNumbers, lostNumbers = [], underReview =
   const [inUse, setInUse] = useState<Set<number>>(() => new Set((ultimaContagem?.emUso ?? []).filter((n) => !reviewSet.has(n)))); // "em uso" (com cliente) — conta como presente
   const [filter, setFilter] = useState('');
   const [obs, setObs] = useState('');
+  /* Marca o campo quando a confirmação foi recusada por falta de observação —
+     antes a recusa só aparecia num aviso longe do botão, e quem clicava
+     concluía que o botão estava quebrado. */
+  const [obsFaltando, setObsFaltando] = useState(false);
+  const obsRef = useRef<HTMLInputElement>(null);
   const [rangeFrom, setRangeFrom] = useState('');
   const [rangeTo, setRangeTo] = useState('');
   const total = conferiveis.length;
@@ -335,16 +341,34 @@ function GridConference({ unitId, activeNumbers, lostNumbers = [], underReview =
 
   async function confirmConf() {
     /* Só para o aviso na tela — quem decide o que é ausente é o servidor, que
-       recebe os dois conjuntos e desconta também as marcadas EM USO. */
-    const absent = activeNumbers.filter((n) => !selected.has(n) && !inUse.has(n));
-    if (absent.length > 0 && !obs.trim()) { onResult({ t: 'err', m: 'Há comandas faltando — informe uma observação.' }); return; }
+       recebe os dois conjuntos e desconta também as marcadas EM USO.
+
+       Sobre `conferiveis` e não `activeNumbers`: em apuração e baixadas estão
+       FORA da grade (não dá para marcá-las) e se resolvem no bloco de
+       Divergências. Contá-las como ausentes travava o gerente num beco: com
+       tudo o que dá para marcar marcado, o contador some, o campo de
+       observação some junto — e o botão continuava recusando por falta de uma
+       observação que já não tinha onde ser escrita. */
+    const absent = ausentesDaGrade(conferiveis, selected, inUse);
+    if (absent.length > 0 && !obs.trim()) {
+      setObsFaltando(true);
+      obsRef.current?.focus();
+      obsRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      onResult({ t: 'err', m: 'Há comandas faltando — informe uma observação.' });
+      return;
+    }
+    setObsFaltando(false);
     const ok = window.confirm(absent.length === 0 ? 'Confirmar: TODAS as comandas presentes?' : `Confirmar conferência?\n${absent.length} comanda(s) faltando: ${absent.slice(0, 40).join(', ')}${absent.length > 40 ? '…' : ''}`);
     if (!ok) return;
     setBusy(true);
     try {
+      /* scopeNumbers = o que ESTA grade se propôs a conferir. Sem ele, o
+         servidor julgaria a sequência inteira e as comandas em apuração
+         voltariam a abrir divergência a cada contagem. */
+      const base = { unitId, scopeNumbers: conferiveis, presentNumbers: [...selected], inUseNumbers: [...inUse] };
       const body = absent.length === 0
-        ? { unitId, allPresent: true, presentNumbers: [...selected], inUseNumbers: [...inUse] }
-        : { unitId, allPresent: false, presentNumbers: [...selected], inUseNumbers: [...inUse], observation: obs };
+        ? { ...base, allPresent: true }
+        : { ...base, allPresent: false, observation: obs };
       const res = await fetch('/api/commands/count', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { onResult({ t: 'err', m: data.error ?? 'Falha' }); return; }
@@ -426,7 +450,24 @@ function GridConference({ unitId, activeNumbers, lostNumbers = [], underReview =
         </div>
         {shown.length === 0 && <p className="p-2 text-xs text-ink-500">Nenhum número com esse filtro.</p>}
       </div>
-      {faltando > 0 && <Input value={obs} onChange={(e) => setObs(e.target.value)} aria-label="Observação sobre as comandas que faltam" placeholder="Observação (o que houve com as que faltam)" className="mt-2" />}
+      {faltando > 0 && (
+        <div className="mt-2">
+          <Input
+            ref={obsRef}
+            value={obs}
+            onChange={(e) => { setObs(e.target.value); if (e.target.value.trim()) setObsFaltando(false); }}
+            aria-label="Observação sobre as comandas que faltam"
+            aria-invalid={obsFaltando}
+            placeholder={`Obrigatório: o que houve com as ${faltando} que faltam`}
+            className={obsFaltando ? 'border-danger ring-1 ring-danger' : undefined}
+          />
+          {obsFaltando && (
+            <p className="mt-1 text-xs font-medium text-danger">
+              Escreva aqui o que houve com as comandas que faltam — sem isso a conferência não é registrada.
+            </p>
+          )}
+        </div>
+      )}
       <Button onClick={confirmConf} disabled={busy} className="mt-2 w-full" variant="gold"><Check className="h-4 w-4" /> Confirmar conferência</Button>
     </div>
   );
