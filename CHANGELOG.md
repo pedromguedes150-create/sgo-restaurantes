@@ -9,6 +9,37 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.55.0 — 2026-08-24 (Comandas: a grade respeita a faixa do dia)
+
+### O problema
+No meio da semana a unidade usa só parte das comandas (Moreira: 1 a 300) e guarda o resto. A grade
+do gerente, porém, julgava a **sequência inteira** — as 348 guardadas caíam como faltantes **todo
+dia**: centenas de divergências falsas e o supervisor alertado à toa.
+
+A faixa já existia e o **leitor do caixa** já a respeitava (o campo "Madrugada" da sequência, em
+Configurações → Comandas). A grade é que a ignorava.
+
+### Corrigido
+- A grade abre **na faixa do dia**: só esses números aparecem, e as guardadas não são julgadas nem
+  viram extraviadas.
+- Seletor **"Esta conferência: Faixa do dia (300) · Completa (648)"** no topo da grade, com uma
+  linha dizendo o que cada uma julga. A completa é a da semana.
+- A conferência do dia vai ao servidor como **contagem parcial** (`scopeNumbers`), então o
+  indicador **"Última contagem completa"** continua honesto — a parcial não o zera.
+- Contadores passam a contar **dentro do universo**: em faixa do dia, a marcação de uma contagem
+  completa anterior não faz mais a tela dizer "648 ok / 300".
+- "Limpar" só limpa o que está sendo conferido, e as **baixadas** exibidas ficam restritas à faixa.
+- Unidade que confere tudo todo dia **não muda em nada**: sem faixa configurada, o seletor nem
+  aparece. Faixa que cobre a sequência inteira também não conta como faixa.
+
+### Testes
+- `tests/commands-grid.test.ts` (+5) — universo por modo, sem faixa, faixa que cobre tudo, e as
+  guardadas não caindo como faltantes.
+- `tests/commands-client-render.test.tsx` (+3) — a grade **abre na faixa** (a 301 não é
+  renderizada), o contador não fala da sequência inteira, e sem faixa tudo continua aparecendo.
+
+---
+
 ## v1.54.3 — 2026-08-24 (Tarefas obedece o seletor de unidade do cabeçalho)
 
 ### O problema por trás do "voltar"

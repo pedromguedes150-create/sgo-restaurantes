@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, Search, RotateCcw, XCircle, Plus, Grid3x3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ausentesDaGrade } from '@/lib/commands/grid';
+import { ausentesDaGrade, escopoDaConferencia } from '@/lib/commands/grid';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 
@@ -35,6 +35,7 @@ export function CommandsClient({
   ultimaCompleta,
   temFaixaMadrugada = false,
   activeNumbers = [],
+  nightlyNumbers = [],
   lostNumbers = [],
   ultimaContagem = null,
   abertasPorDia = [],
@@ -50,6 +51,11 @@ export function CommandsClient({
   /** A unidade usa faixa de madrugada — só aí o indicador faz sentido. */
   temFaixaMadrugada?: boolean;
   activeNumbers?: number[];
+  /**
+   * Faixa conferida TODO DIA (a "madrugada", marcada em Configurações).
+   * Vazia = a unidade confere tudo todo dia.
+   */
+  nightlyNumbers?: number[];
   /** Baixadas (perdidas). Saíram da sequência ativa, mas continuam existindo. */
   lostNumbers?: number[];
   ultimaContagem?: UltimaContagem | null;
@@ -163,7 +169,7 @@ export function CommandsClient({
         )}
 
         {/* Conferência em grade: seleciona as presentes; as não marcadas = faltando */}
-        <GridConference unitId={unitId} activeNumbers={activeNumbers} lostNumbers={lostNumbers} underReview={openDivergences.map((d) => d.number)} ultimaContagem={ultimaContagem} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
+        <GridConference unitId={unitId} activeNumbers={activeNumbers} nightlyNumbers={nightlyNumbers} lostNumbers={lostNumbers} underReview={openDivergences.map((d) => d.number)} ultimaContagem={ultimaContagem} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
 
         <Button onClick={allPresent} disabled={busy} size="lg" className="w-full" variant="default">
           <Check className="h-5 w-5" /> Todas presentes (atalho)
@@ -271,8 +277,8 @@ As já investigadas ou encerradas não são tocadas. A ação fica registrada na
   );
 }
 
-function GridConference({ unitId, activeNumbers, lostNumbers = [], underReview = [], ultimaContagem = null, busy, setBusy, onResult }: {
-  unitId: string; activeNumbers: number[]; lostNumbers?: number[]; underReview?: number[];
+function GridConference({ unitId, activeNumbers, nightlyNumbers = [], lostNumbers = [], underReview = [], ultimaContagem = null, busy, setBusy, onResult }: {
+  unitId: string; activeNumbers: number[]; nightlyNumbers?: number[]; lostNumbers?: number[]; underReview?: number[];
   ultimaContagem?: UltimaContagem | null;
   busy: boolean; setBusy: (b: boolean) => void; onResult: (m: { t: 'ok' | 'err'; m: string }) => void;
 }) {
@@ -284,14 +290,35 @@ function GridConference({ unitId, activeNumbers, lostNumbers = [], underReview =
      Antes as em apuração e as baixadas simplesmente sumiam: a grade pulava de 6
      para 8, de 13 para 15, e o gerente não tinha como saber se aquele número
      nunca existiu, foi baixado ou está em apuração. Sumir não é informação. */
-  const gridNumbers = useMemo(
-    () => [...new Set([...activeNumbers, ...lostNumbers])].sort((a, b) => a - b),
-    [activeNumbers, lostNumbers],
+  /* A FAIXA DO DIA. No meio da semana a unidade usa só uma parte das comandas
+     (ex.: 1 a 300); o resto fica guardado e é conferido na contagem completa,
+     uma vez por semana. Mostrar as 648 na conferência diária fazia as 348
+     guardadas caírem como faltantes todo dia — centenas de divergências falsas
+     e o supervisor alertado à toa.
+
+     A faixa é a mesma que o caixa já usava no leitor de código de barras
+     ("Madrugada", em Configurações → Comandas). Aqui ela passa a valer também
+     para a grade do gerente. */
+  const [modo, setModo] = useState<'dia' | 'completa'>('dia');
+  const { universo, temFaixaDoDia, naFaixaDoDia } = useMemo(
+    () => escopoDaConferencia(activeNumbers, nightlyNumbers, modo),
+    [activeNumbers, nightlyNumbers, modo],
   );
+  const faixaLabel = universo.length > 0 ? `${universo[0]} a ${universo[universo.length - 1]}` : '—';
+
+  const gridNumbers = useMemo(() => {
+    /* Baixadas continuam na grade para o número não sumir do meio da sequência
+       — mas só as que caem dentro do universo desta conferência. */
+    const min = universo[0] ?? 0;
+    const max = universo[universo.length - 1] ?? 0;
+    const baixadasNoUniverso = lostNumbers.filter((n) => n >= min && n <= max);
+    return [...new Set([...universo, ...baixadasNoUniverso])].sort((a, b) => a - b);
+  }, [universo, lostNumbers]);
+
   /** Só estas podem ser marcadas: apuração e baixa se resolvem em outro lugar. */
   const conferiveis = useMemo(
-    () => activeNumbers.filter((n) => !reviewSet.has(n) && !lostSet.has(n)),
-    [activeNumbers, reviewSet, lostSet],
+    () => universo.filter((n) => !reviewSet.has(n) && !lostSet.has(n)),
+    [universo, reviewSet, lostSet],
   );
   /* A grade abre NO ESTADO DA ÚLTIMA CONTAGEM. Antes começava sempre vazia:
      mesmo com a contagem do dia registrada, aparecia "0 ok · 648 faltando" e
@@ -308,8 +335,11 @@ function GridConference({ unitId, activeNumbers, lostNumbers = [], underReview =
   const [rangeFrom, setRangeFrom] = useState('');
   const [rangeTo, setRangeTo] = useState('');
   const total = conferiveis.length;
-  const conferidas = selected.size;
-  const emUso = inUse.size;
+  /* Contados DENTRO do universo: em "faixa do dia" a marcação da última
+     contagem completa continua guardada em `selected`, e contar tudo diria
+     "648 ok / 300". */
+  const conferidas = conferiveis.filter((n) => selected.has(n)).length;
+  const emUso = conferiveis.filter((n) => inUse.has(n)).length;
   const faltando = total - conferidas - emUso;
   const shown = useMemo(() => (filter.trim() ? gridNumbers.filter((n) => String(n).includes(filter.trim())) : gridNumbers), [filter, gridNumbers]);
 
@@ -413,9 +443,42 @@ function GridConference({ unitId, activeNumbers, lostNumbers = [], underReview =
             : `ATENÇÃO: as marcas são da contagem de ${ultimaContagem.data.split('-').reverse().join('/')}, não de hoje. Confira a bandeja antes de confirmar.`}
         </p>
       )}
+      {temFaixaDoDia && (
+        <div className="mb-2 rounded-lg bg-sunken p-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="sgo-type-11 font-semibold text-ink-700">Esta conferência:</span>
+            <button
+              type="button"
+              onClick={() => setModo('dia')}
+              aria-pressed={modo === 'dia'}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${modo === 'dia' ? 'bg-brand text-on-brand' : 'border text-ink-700'}`}
+            >
+              Faixa do dia ({nightlyNumbers.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setModo('completa')}
+              aria-pressed={modo === 'completa'}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${modo === 'completa' ? 'bg-brand text-on-brand' : 'border text-ink-700'}`}
+            >
+              Completa ({activeNumbers.length})
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-ink-500">
+            {naFaixaDoDia ? (
+              <>
+                Conferindo <b>{faixaLabel}</b> — as comandas guardadas <b>não são julgadas</b> nesta contagem e não viram
+                extraviadas. A contagem <b>completa</b> é a da semana.
+              </>
+            ) : (
+              <>Conferindo <b>a sequência inteira</b> — o que ficar sem marcar vira apuração.</>
+            )}
+          </p>
+        </div>
+      )}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <button onClick={() => { setSelected(new Set(conferiveis)); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Marcar todas</button>
-        <button onClick={() => { setSelected(new Set()); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Limpar</button>
+        <button onClick={() => { setSelected((s) => new Set([...s].filter((n) => !conferiveis.includes(n)))); setInUse((s) => new Set([...s].filter((n) => !conferiveis.includes(n)))); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Limpar</button>
         <Input inputMode="numeric" value={filter} onChange={(e) => setFilter(e.target.value.replace(/\D/g, ''))} aria-label="Filtrar comandas pelo número" placeholder="filtrar nº" className="h-8 w-24 text-sm" />
         <span className="ml-auto text-xs font-semibold"><span className="text-success">{conferidas} ok</span>{emUso > 0 && <> · <span className="text-info">{emUso} em uso</span></>} · <span className={faltando > 0 ? 'text-danger' : 'text-ink-500'}>{faltando} faltando</span> / {total}</span>
       </div>

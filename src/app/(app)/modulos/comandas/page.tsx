@@ -123,6 +123,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
             ultimaCompleta={ultimaCompleta}
             temFaixaMadrugada={seq.hasNightly}
             activeNumbers={activeNumbers}
+            nightlyNumbers={[...seq.nightly].sort((a, b) => a - b)}
             lostNumbers={[...seq.lost].sort((a, b) => a - b)}
             ultimaContagem={ultimaContagem ? {
               data: ultimaContagem.operationalDate,

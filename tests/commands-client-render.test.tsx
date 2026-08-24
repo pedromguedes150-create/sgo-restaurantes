@@ -83,3 +83,30 @@ describe('Tela de Comandas — monta sem estourar', () => {
     expect(html).toContain('ainda não configurada');
   });
 });
+
+describe('Faixa do dia na grade', () => {
+  /* Moreira: usa 2–300 no meio da semana; o resto fica guardado. */
+  const doDia = Array.from({ length: 299 }, (_, i) => i + 2);
+
+  it('abre na faixa do dia e não mostra as guardadas', () => {
+    const html = render({ nightlyNumbers: doDia, temFaixaMadrugada: true });
+    expect(html).toContain('Faixa do dia');
+    // 301 está guardada — não pode aparecer como botão da grade
+    expect(html).not.toContain('>301<');
+    // 300 é o fim da faixa e tem de estar lá
+    expect(html).toContain('>300<');
+  });
+
+  it('o contador fala do universo do dia, não das 700', () => {
+    const html = render({ nightlyNumbers: doDia, temFaixaMadrugada: true });
+    /* 299 da faixa − 2 em apuração (37, 82) − 8 baixadas dentro da faixa = 289.
+       O que importa é NÃO aparecer o total da sequência inteira. */
+    expect(html).not.toContain('/ 699');
+  });
+
+  it('sem faixa configurada, a grade segue mostrando tudo', () => {
+    const html = render({ nightlyNumbers: [], temFaixaMadrugada: false });
+    expect(html).not.toContain('Faixa do dia');
+    expect(html).toContain('>301<');
+  });
+});
