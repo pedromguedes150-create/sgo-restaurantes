@@ -3,6 +3,7 @@
 import { Camera } from 'lucide-react';
 import { ListRow } from '@/components/ui/ds/list-row';
 import { StatusBadge, type Tone } from '@/components/ui/ds/status-badge';
+import { hrefDetalheTarefa } from '@/lib/tasks/links';
 
 export interface TaskItemData {
   id: string;
@@ -23,10 +24,14 @@ export interface TaskItemData {
  * competindo entre si (viola "um primário por tela"). Agora a linha inteira é
  * a ação: toca e vai executar. O chevron do ListRow indica a navegação.
  */
-export function TaskItem({ task }: { task: TaskItemData }) {
+export function TaskItem({ task, unitParam }: { task: TaskItemData; unitParam?: string }) {
   const done = task.status === 'DONE' || task.status === 'LATE';
   const missed = task.status === 'MISSED';
-  const href = !done && task.moduleHref ? task.moduleHref : `/tarefas/${task.id}`;
+  /* O filtro de unidade viaja com o link. Sem isso, a volta do detalhe caía na
+     lista de TODAS as unidades: quem estava vendo Moreira perdia o lugar e
+     tinha de filtrar de novo a cada tarefa aberta. Só no link do detalhe — os
+     módulos têm o seletor global de unidade e não leem este parâmetro. */
+  const href = !done && task.moduleHref ? task.moduleHref : hrefDetalheTarefa(task.id, unitParam);
 
   const badge: { tone: Tone; label: string } =
     task.status === 'DONE' ? { tone: 'success', label: 'Concluída' }

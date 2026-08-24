@@ -9,6 +9,31 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.54.2 — 2026-08-24 (Tarefas: o "voltar" devolve a lista da unidade)
+
+### Corrigido
+Abrir uma tarefa e clicar em **"← Tarefas"** caía na lista de **todas as unidades**. Quem estava
+vendo Moreira perdia o lugar e tinha de filtrar de novo — a cada tarefa aberta.
+
+O link do "voltar" era um `/tarefas` fixo, sem o filtro que a lista usa (`?unit=`). Agora o filtro
+**viaja com o link**: a lista o manda no link do detalhe e o detalhe o devolve na volta.
+
+- `src/lib/tasks/links.ts` — `hrefDetalheTarefa` e `hrefVoltarTarefas`, juntos porque só funcionam
+  em par: se só um lado carregasse o parâmetro, a volta continuaria caindo na lista geral.
+- O destino do "voltar" é **sempre** `/tarefas`; o parâmetro só reconstrói o filtro, e a lista o
+  valida contra as unidades do usuário (escopo no servidor, regra nº 3).
+- Tarefa de módulo ainda pendente continua abrindo o módulo, como antes.
+- A seta **←** do cabeçalho já usava o histórico do navegador e sempre funcionou — o defeito era
+  só do link dentro da página.
+
+### Testes
+- `tests/tasks-links.test.ts` (4) — ida e volta com o mesmo filtro, URL limpa sem filtro, várias
+  unidades (`u1,u2`), e a volta nunca saindo de `/tarefas` com parâmetro malicioso.
+- `tests/task-item-render.test.tsx` (4) — o link sai no HTML com a unidade, inclusive na tarefa
+  **concluída** (a tela exata do relato).
+
+---
+
 ## v1.54.1 — 2026-08-24 (URGENTE — a conferência em grade não estava registrando nada)
 
 ### O que estava acontecendo

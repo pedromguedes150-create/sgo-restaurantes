@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { hrefVoltarTarefas } from '@/lib/tasks/links';
 import { notFound } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
@@ -9,7 +10,7 @@ import { ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TarefaExecPage({ params }: { params: { id: string } }) {
+export default async function TarefaExecPage({ params, searchParams }: { params: { id: string }; searchParams: { unit?: string } }) {
   const user = (await getSessionUser())!;
   const inst = await prisma.taskInstance.findUnique({
     where: { id: params.id },
@@ -46,7 +47,15 @@ export default async function TarefaExecPage({ params }: { params: { id: string 
 
   return (
     <div className="space-y-4">
-      <Link href="/tarefas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Tarefas</Link>
+      {/* Volta para a lista COMO ELA ESTAVA. O destino é sempre /tarefas — o
+          parâmetro só reconstrói o filtro, e a lista o valida contra as
+          unidades do usuário (escopo no servidor, regra nº 3). */}
+      <Link
+        href={hrefVoltarTarefas(searchParams.unit)}
+        className="inline-flex items-center gap-1 text-sm font-semibold text-brand"
+      >
+        <ArrowLeft className="h-4 w-4" /> Tarefas
+      </Link>
       <div>
         <h1 className="text-xl font-bold text-ink-900">{inst.template.name}</h1>
         <p className="text-xs text-ink-500">
