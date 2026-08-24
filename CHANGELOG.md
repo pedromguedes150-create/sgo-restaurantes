@@ -9,6 +9,35 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.55.3 — 2026-08-24 (Comandas: a confirmação passa a ter prova visível)
+
+### O relato
+"Não confirma a conferência." E confirmava: o servidor gravava e a mensagem verde aparecia. Mas o
+alto da tela dizia **"Contagem de hoje já registrada"** antes e depois do envio — texto idêntico,
+porque a contagem do dia já constava. Sem nada mudando onde a pessoa olha, a conclusão certa a
+tirar é que o botão não funcionou.
+
+### Corrigido
+- O quadro do alto passa a dizer **a hora e quem registrou**: *"Contagem de hoje registrada às
+  15:13 por Alan (faixa do dia) — pode reenviar para corrigir."* **A hora muda a cada envio** — é
+  ela que prova que foi.
+- Coluna `updatedAt` em `command_counts` (migração **aditiva**). Reenviar para corrigir é rotina, e
+  não havia registro de *quando* o último envio aconteceu.
+
+### Um segundo defeito, achado no caminho
+"Todas presentes" numa contagem **parcial** reabria a grade marcando **toda a sequência** de verde —
+inclusive as comandas guardadas, que ninguém tocou. A tela afirmava que 651 comandas foram
+conferidas quando só 251 foram. Agora a reabertura respeita o escopo da contagem
+(`conferidasDaUltimaContagem`).
+
+### Testes
+- `tests/commands-client-render.test.tsx` (+3) — o alto mostra hora e autor, a completa não se
+  anuncia como faixa do dia, e sem contagem hoje não há hora.
+- `tests/commands-grid.test.ts` (+3) — "todas presentes" parcial vale só para o escopo; completa
+  vale para a sequência inteira; contagem normal reabre com o que foi marcado.
+
+---
+
 ## v1.55.2 — 2026-08-24 (Comandas: o atalho "todas presentes" segue a faixa do dia)
 
 ### Corrigido — achado ao conferir a v1.55.0 em produção

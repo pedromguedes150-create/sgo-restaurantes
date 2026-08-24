@@ -17,6 +17,7 @@ import { EmptyState } from '@/components/ui/ds/empty-state';
 import { shortUnitName } from '@/lib/unit-name';
 import { ScanLine, ShieldAlert, ClipboardList } from 'lucide-react';
 import { CommandsClient } from '@/components/commands/commands-client';
+import { conferidasDaUltimaContagem } from '@/lib/commands/grid';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 
@@ -47,7 +48,13 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
   const ultimaContagem = await prisma.commandCount.findFirst({
     where: { unitId: selected.id },
     orderBy: { operationalDate: 'desc' },
-    select: { operationalDate: true, presentNumbers: true, inUseNumbers: true, allPresent: true },
+    select: {
+      operationalDate: true, presentNumbers: true, inUseNumbers: true, allPresent: true,
+      /* QUANDO e POR QUEM: é a prova de que o reenvio funcionou. Sem hora, uma
+         segunda confirmação no mesmo dia não muda nada na tela — e quem clica
+         conclui, com razão, que o botão não confirmou. */
+      updatedAt: true, scopeNumbers: true, createdBy: { select: { name: true } },
+    },
   });
   const numeros = (v: unknown): number[] => (Array.isArray(v) ? v.filter((n): n is number => Number.isInteger(n)) : []);
 
@@ -128,8 +135,19 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
             ultimaContagem={ultimaContagem ? {
               data: ultimaContagem.operationalDate,
               deHoje: ultimaContagem.operationalDate === operationalDate,
-              conferidas: ultimaContagem.allPresent ? activeNumbers : numeros(ultimaContagem.presentNumbers),
+              /* "Todas presentes" numa PARCIAL vale só para o escopo dela — usar
+                 a sequência inteira aqui reabriria a grade com as guardadas
+                 marcadas de verde, dizendo que foram conferidas. */
+              conferidas: conferidasDaUltimaContagem(
+                ultimaContagem.allPresent,
+                numeros(ultimaContagem.scopeNumbers),
+                numeros(ultimaContagem.presentNumbers),
+                activeNumbers,
+              ),
               emUso: numeros(ultimaContagem.inUseNumbers),
+              registradaEm: ultimaContagem.updatedAt.toISOString(),
+              porQuem: ultimaContagem.createdBy?.name ?? null,
+              parcial: numeros(ultimaContagem.scopeNumbers).length > 0,
             } : null}
             abertasPorDia={abertasPorDia}
             openDivergences={state.openDivergences.map((d) => ({

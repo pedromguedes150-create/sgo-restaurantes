@@ -110,3 +110,34 @@ describe('Faixa do dia na grade', () => {
     expect(html).toContain('>301<');
   });
 });
+
+/** Tira os `<!-- -->` que o SSR do React põe entre pedaços de texto. */
+const semMarcadores = (html: string) => html.split('<!-- -->').join('');
+
+describe('Prova de que a conferência foi registrada', () => {
+  const contagem = {
+    data: '2026-08-24', deHoje: true, conferidas: [2, 3], emUso: [],
+    registradaEm: '2026-08-24T18:13:00.000Z', porQuem: 'Alan', parcial: true,
+  };
+
+  it('o topo mostra a HORA e quem registrou', () => {
+    /* Sem a hora, reenviar deixava a tela idêntica — e quem clicava concluía,
+       com razão, que o botão não confirmava. */
+    /* O SSR do React intercala marcadores de comentário entre os pedaços do
+       texto; tirá-los deixa a asserção sobre a FRASE, não sobre o HTML. */
+    const html = semMarcadores(render({ todayDone: true, ultimaContagem: contagem }));
+    expect(html).toMatch(/Contagem de hoje registrada às \d{2}:\d{2}/);
+    expect(html).toContain('por Alan');
+    expect(html).toContain('(faixa do dia)');
+  });
+
+  it('contagem completa não se anuncia como faixa do dia', () => {
+    const html = semMarcadores(render({ todayDone: true, ultimaContagem: { ...contagem, parcial: false } }));
+    expect(html).not.toContain('(faixa do dia)');
+  });
+
+  it('sem contagem hoje, nada de hora', () => {
+    const html = render({ todayDone: false, ultimaContagem: null });
+    expect(html).not.toContain('Contagem de hoje registrada');
+  });
+});

@@ -667,6 +667,10 @@ model CommandCount {
   scopeNumbers    Json?
   createdById     String?
   createdAt       DateTime @default(now())
+  /// Quando a contagem foi registrada PELA ULTIMA VEZ. Reenviar para corrigir e
+  /// rotina, nao excecao — sem isto a tela nao tinha como provar que o reenvio
+  /// funcionou: nada mudava, e quem clicava concluia que o botao nao confirmava.
+  updatedAt       DateTime @default(now()) @updatedAt
 
   unit      Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
   createdBy User? @relation("CmdCountBy", fields: [createdById], references: [id], onDelete: SetNull)
