@@ -76,6 +76,14 @@ export function CommandsClient({
   /* Fica AQUI e não na grade: o atalho "todas presentes" mora fora dela e
      precisa do mesmo modo, senão os dois registram coisas diferentes. */
   const [modo, setModo] = useState<'dia' | 'completa'>('dia');
+  /* Hora do registro feito AGORA, nesta tela.
+
+     O `router.refresh()` acaba trazendo o dado do servidor, mas leva um tempo
+     e não mexe em nada perto do botão — que fica no fim de uma grade de 300
+     números, longe do quadro do topo. Sem uma mudança imediata ali, a tela
+     continua com cara de "falta fazer" depois de feita. */
+  const [registradoAgora, setRegistradoAgora] = useState<string | null>(null);
+  const agora = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   /* Hora do último registro do dia. Formatada aqui e não no servidor porque é
      o relógio de quem está olhando que importa. */
   const registroDeHoje = ultimaContagem?.deHoje && ultimaContagem.registradaEm
@@ -129,6 +137,7 @@ export function CommandsClient({
       ? { unitId, allPresent: true, scopeNumbers: escopoAtual, presentNumbers: escopoAtual, inUseNumbers: [] }
       : { unitId, allPresent: true };
     if (await post('/api/commands/count', body)) {
+      setRegistradoAgora(agora());
       setMsg({ t: 'ok', m: naFaixaDoDia ? `Registrado: faixa do dia (${faixaAtualLabel}), todas presentes ✓` : 'Registrado: todas presentes ✓' });
     }
   }
@@ -213,9 +222,11 @@ export function CommandsClient({
         )}
 
         {/* Conferência em grade: seleciona as presentes; as não marcadas = faltando */}
-        <GridConference unitId={unitId} activeNumbers={activeNumbers} nightlyNumbers={nightlyNumbers} modo={modo} setModo={setModo} lostNumbers={lostNumbers} underReview={openDivergences.map((d) => d.number)} ultimaContagem={ultimaContagem} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
+        <GridConference unitId={unitId} activeNumbers={activeNumbers} nightlyNumbers={nightlyNumbers} modo={modo} setModo={setModo} registro={registradoAgora ? { hora: registradoAgora, porQuem: null, parcial: naFaixaDoDia } : registroDeHoje} onRegistrado={() => setRegistradoAgora(agora())} lostNumbers={lostNumbers} underReview={openDivergences.map((d) => d.number)} ultimaContagem={ultimaContagem} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
 
-        <Button onClick={allPresent} disabled={busy} size="lg" className="w-full" variant="default">
+        {/* Já registrado: o atalho continua disponível para corrigir, mas para
+            de se apresentar como a ação principal pendente da tela. */}
+        <Button onClick={allPresent} disabled={busy} size="lg" className="w-full" variant={registradoAgora || registroDeHoje ? 'outline' : 'default'}>
           <Check className="h-5 w-5" /> Todas presentes (atalho)
         </Button>
 
@@ -321,9 +332,12 @@ As já investigadas ou encerradas não são tocadas. A ação fica registrada na
   );
 }
 
-function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setModo, lostNumbers = [], underReview = [], ultimaContagem = null, busy, setBusy, onResult }: {
+function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setModo, registro = null, onRegistrado, lostNumbers = [], underReview = [], ultimaContagem = null, busy, setBusy, onResult }: {
   unitId: string; activeNumbers: number[]; nightlyNumbers?: number[];
   modo: 'dia' | 'completa'; setModo: (m: 'dia' | 'completa') => void;
+  /** Registro da contagem de hoje — o que transforma o botão em "reenviar". */
+  registro?: { hora: string; porQuem?: string | null; parcial?: boolean } | null;
+  onRegistrado?: () => void;
   lostNumbers?: number[]; underReview?: number[];
   ultimaContagem?: UltimaContagem | null;
   busy: boolean; setBusy: (b: boolean) => void; onResult: (m: { t: 'ok' | 'err'; m: string }) => void;
@@ -447,6 +461,7 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setM
       const res = await fetch('/api/commands/count', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { onResult({ t: 'err', m: data.error ?? 'Falha' }); return; }
+      onRegistrado?.();
       onResult({ t: 'ok', m: absent.length === 0
         ? (naFaixaDoDia ? `Conferência registrada: faixa do dia (${faixaLabel}), todas presentes ✓` : 'Conferência registrada: todas presentes ✓')
         : `Conferência registrada. ${absent.length} faltando — supervisor alertado.` });
@@ -578,7 +593,19 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setM
           )}
         </div>
       )}
-      <Button onClick={confirmConf} disabled={busy} className="mt-2 w-full" variant="gold"><Check className="h-4 w-4" /> Confirmar conferência</Button>
+      {/* A CONFIRMAÇÃO MORA AQUI, colada no botão. O quadro do topo também diz,
+          mas depois de percorrer 300 números ele está fora da tela — e uma
+          tela que não muda perto do dedo parece uma tarefa que não foi feita. */}
+      {registro && (
+        <p className="mt-2 rounded-lg bg-success/10 px-3 py-2 text-sm font-semibold text-success">
+          ✓ Conferência de hoje registrada às {registro.hora}
+          {registro.porQuem ? ` por ${registro.porQuem}` : ''}
+          {registro.parcial ? ' (faixa do dia)' : ''}.
+        </p>
+      )}
+      <Button onClick={confirmConf} disabled={busy} className="mt-2 w-full" variant={registro ? 'outline' : 'gold'}>
+        <Check className="h-4 w-4" /> {registro ? 'Reenviar conferência (corrigir)' : 'Confirmar conferência'}
+      </Button>
     </div>
   );
 }

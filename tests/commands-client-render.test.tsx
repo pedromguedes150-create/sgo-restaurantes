@@ -141,3 +141,34 @@ describe('Prova de que a conferência foi registrada', () => {
     expect(html).not.toContain('Contagem de hoje registrada');
   });
 });
+
+describe('O estado da conferência aparece NO BOTÃO', () => {
+  /* O quadro do topo já dizia a hora, mas depois de percorrer 300 números ele
+     está fora da tela. Uma tela que não muda perto do dedo parece uma tarefa
+     que não foi feita — foi o relato: "parece sempre pendente". */
+  const contagem = {
+    data: '2026-08-24', deHoje: true, conferidas: [2, 3], emUso: [],
+    registradaEm: '2026-08-24T18:33:00.000Z', porQuem: 'Alan', parcial: true,
+  };
+
+  it('registrada: o botão vira "reenviar" e a confirmação fica junto dele', () => {
+    const html = semMarcadores(render({ todayDone: true, ultimaContagem: contagem }));
+    expect(html).toContain('Reenviar conferência (corrigir)');
+    expect(html).toMatch(/✓ Conferência de hoje registrada às \d{2}:\d{2}/);
+    expect(html).not.toContain('Confirmar conferência');
+  });
+
+  it('sem contagem hoje: o botão continua sendo "Confirmar conferência"', () => {
+    const html = semMarcadores(render({ todayDone: false, ultimaContagem: null }));
+    expect(html).toContain('Confirmar conferência');
+    expect(html).not.toContain('Reenviar conferência');
+    expect(html).not.toContain('✓ Conferência de hoje registrada');
+  });
+
+  it('contagem de ONTEM não conta como registrada hoje', () => {
+    /* \`deHoje\` é o que separa "já fiz" de "faz tempo que ninguém faz". */
+    const html = semMarcadores(render({ todayDone: false, ultimaContagem: { ...contagem, deHoje: false } }));
+    expect(html).toContain('Confirmar conferência');
+    expect(html).not.toContain('✓ Conferência de hoje registrada');
+  });
+});

@@ -9,6 +9,32 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.55.4 — 2026-08-24 (Comandas: o botão passa a mostrar que a conferência foi feita)
+
+### O relato
+*"Continua errado, clicar em confirmar conferência parece sempre pendente."*
+
+A v1.55.3 pôs a hora no quadro do alto da tela — e estava certo, mas **insuficiente**: o botão fica
+no fim de uma grade de 300 números, e a essa altura o topo já saiu da tela. Nada mudava perto do
+dedo, e uma tela que não muda onde se está olhando **parece uma tarefa que não foi feita**.
+
+### Corrigido
+- **A confirmação mora junto do botão**: ao registrar, aparece ali mesmo
+  *"✓ Conferência de hoje registrada às 15:33 (faixa do dia)"*.
+- **O botão muda de papel**: vira *"Reenviar conferência (corrigir)"* e deixa de ser o botão
+  principal da tela — porque a ação principal já foi feita.
+- **O atalho "Todas presentes" para de gritar** quando o dia já está registrado: continua
+  disponível para corrigir, sem se apresentar como pendência.
+- A mudança é **imediata**, sem esperar o `router.refresh()`: o servidor confirma e a tela muda no
+  mesmo instante.
+
+### Testes
+`tests/commands-client-render.test.tsx` (+3) — registrada vira "reenviar" com a confirmação ao
+lado, sem contagem hoje o botão continua "Confirmar conferência", e contagem de **ontem** não conta
+como feita hoje.
+
+---
+
 ## v1.55.3 — 2026-08-24 (Comandas: a confirmação passa a ter prova visível)
 
 ### O relato
