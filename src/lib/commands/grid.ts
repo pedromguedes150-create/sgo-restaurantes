@@ -64,3 +64,21 @@ export function conferiveisDaGrade(universo: number[], underReview: number[], lo
   const fora = new Set([...underReview, ...lostNumbers]);
   return universo.filter((n) => !fora.has(n));
 }
+
+/**
+ * Com que marcação a grade REABRE, a partir da última contagem.
+ *
+ * O detalhe que engana: `allPresent` numa contagem PARCIAL significa "todas as
+ * do escopo", não "todas da sequência". Tratar como sequência inteira reabria a
+ * grade com as comandas guardadas pintadas de verde — dizendo que foram
+ * conferidas quando ninguém as tocou.
+ */
+export function conferidasDaUltimaContagem(
+  allPresent: boolean,
+  scopeNumbers: number[],
+  presentNumbers: number[],
+  activeNumbers: number[],
+): number[] {
+  if (!allPresent) return presentNumbers;
+  return scopeNumbers.length > 0 ? scopeNumbers : activeNumbers;
+}

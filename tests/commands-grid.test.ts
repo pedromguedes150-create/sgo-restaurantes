@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ausentesDaGrade, escopoDaConferencia, conferiveisDaGrade } from '@/lib/commands/grid';
+import { ausentesDaGrade, escopoDaConferencia, conferiveisDaGrade, conferidasDaUltimaContagem } from '@/lib/commands/grid';
 
 describe('ausentesDaGrade', () => {
   const conferiveis = [1, 2, 3, 4, 5];
@@ -86,5 +86,24 @@ describe('conferiveisDaGrade', () => {
 
   it('sem apuração nem baixada, é o universo inteiro', () => {
     expect(conferiveisDaGrade([1, 2, 3], [], [])).toEqual([1, 2, 3]);
+  });
+});
+
+describe('conferidasDaUltimaContagem', () => {
+  const ativas = [1, 2, 3, 4, 5, 6];
+  const escopoDoDia = [1, 2, 3];
+
+  it('"todas presentes" numa PARCIAL vale só para o escopo', () => {
+    /* Senão a grade reabria com as guardadas verdes, dizendo que foram
+       conferidas quando ninguém as tocou. */
+    expect(conferidasDaUltimaContagem(true, escopoDoDia, [], ativas)).toEqual([1, 2, 3]);
+  });
+
+  it('"todas presentes" numa COMPLETA vale para a sequência inteira', () => {
+    expect(conferidasDaUltimaContagem(true, [], [], ativas)).toEqual(ativas);
+  });
+
+  it('contagem normal reabre com o que foi marcado', () => {
+    expect(conferidasDaUltimaContagem(false, escopoDoDia, [1, 3], ativas)).toEqual([1, 3]);
   });
 });

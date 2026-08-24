@@ -19,6 +19,11 @@ interface Divergence {
 
 /** Estado em que a grade foi deixada na última contagem registrada. */
 export interface UltimaContagem {
+  /** ISO do último registro — muda a cada reenvio, e é isso que prova o envio. */
+  registradaEm?: string;
+  porQuem?: string | null;
+  /** Contagem parcial (faixa do dia) — não é a completa da semana. */
+  parcial?: boolean;
   data: string;
   /** A contagem é do dia operacional de hoje (correção) ou de um dia anterior. */
   deHoje: boolean;
@@ -71,6 +76,15 @@ export function CommandsClient({
   /* Fica AQUI e não na grade: o atalho "todas presentes" mora fora dela e
      precisa do mesmo modo, senão os dois registram coisas diferentes. */
   const [modo, setModo] = useState<'dia' | 'completa'>('dia');
+  /* Hora do último registro do dia. Formatada aqui e não no servidor porque é
+     o relógio de quem está olhando que importa. */
+  const registroDeHoje = ultimaContagem?.deHoje && ultimaContagem.registradaEm
+    ? {
+        hora: new Date(ultimaContagem.registradaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        porQuem: ultimaContagem.porQuem,
+        parcial: ultimaContagem.parcial,
+      }
+    : null;
 
   async function post(url: string, body: unknown) {
     setBusy(true);
@@ -174,7 +188,11 @@ export function CommandsClient({
       <div className="space-y-3">
         {todayDone && (
           <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-medium text-success">
-            Contagem de hoje já registrada (pode reenviar para corrigir).
+            {/* A HORA é o ponto: reenviar para corrigir é rotina, e sem ela a
+                tela ficava idêntica antes e depois do envio. */}
+            Contagem de hoje registrada{registroDeHoje ? ` às ${registroDeHoje.hora}` : ''}
+            {registroDeHoje?.porQuem ? ` por ${registroDeHoje.porQuem}` : ''}
+            {registroDeHoje?.parcial ? ' (faixa do dia)' : ''} — pode reenviar para corrigir.
           </p>
         )}
 
