@@ -174,6 +174,7 @@ export const GUIDE: GuideSection[] = [
           'Ao "Confirmar conferência", as comandas NÃO marcadas viram as ausentes: o sistema registra a contagem e alerta os supervisores automaticamente (observação obrigatória quando há falta).',
           'Atalhos: "Todas presentes" registra tudo presente num toque; o lançamento manual de ausentes continua disponível (recolhido).',
           'Mais rápido: o botão "📷 Conferir com leitor" abre a conferência por código de barras (ver o guia próprio) — o caixa passa o leitor em vez de tocar comanda por comanda.',
+          'A TELA DE TAREFAS SEGUE O SELETOR DE UNIDADE do cabeçalho (o chip com o nome da unidade, lá em cima): trocou ali, a lista muda junto. Para ver a rede inteira de uma vez, use "Ver todas as unidades" logo abaixo do título.',
           'QUANDO FALTA COMANDA, A OBSERVAÇÃO É OBRIGATÓRIA: o campo aparece logo acima do botão e fica marcado em vermelho se você tentar confirmar sem preencher. Sem ela a conferência NÃO é registrada — é o que explica para a supervisão o que houve com as que faltam.',
           'A GRADE ABRE COMO VOCÊ DEIXOU na última contagem: as conferidas já vêm verdes e as em uso azuis. Para corrigir a contagem do dia, ajuste só o que mudou e reenvie — não precisa marcar tudo de novo.',
           'Se as marcas forem de um dia ANTERIOR, um aviso vermelho diz a data. Nesse caso elas são só ponto de partida: confira a bandeja antes de confirmar, senão você registra o que estava ontem.',

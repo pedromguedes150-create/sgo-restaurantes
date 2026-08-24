@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
-import { parseUnitParam } from '@/lib/scope/unit-param';
+import { resolveUnitFilter, TODAS_AS_UNIDADES } from '@/lib/scope/unit-filter';
+import { getSelectedUnitId } from '@/lib/scope/selected-unit';
 import { getTasksTodayForUser } from '@/lib/tasks/query';
 import { leaveOnDate } from '@/lib/manager-area';
 import { TaskItem, type TaskItemData } from '@/components/tasks/task-item';
@@ -24,7 +25,7 @@ const MODULE_HREFS: Partial<Record<string, string>> = {
   CANCELLATIONS: '/modulos/cancelamentos',
 };
 
-export default async function TarefasPage({ searchParams }: { searchParams: { filter?: string; unit?: string } }) {
+export default async function TarefasPage({ searchParams }: { searchParams: { filter?: string; unit?: string; unidade?: string } }) {
   const user = (await getSessionUser())!;
   const now = new Date();
   // Folga/férias do gerente: nesses dias os checklists não aparecem para ele.
@@ -38,8 +39,12 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
     orderBy: { name: 'asc' },
     select: { id: true, name: true },
   });
-  const unitFilter = parseUnitParam(searchParams.unit, units.map((u) => u.id));
-  const requestedUnits = (searchParams.unit ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  /* A tela OBEDECE o seletor de unidade do cabeçalho. Antes lia só `?unit=`
+     (os atalhos do Dashboard): o chip dizia "Moreira" e a lista mostrava a rede
+     inteira. Para ver todas de uma vez existe o link "Ver todas as unidades",
+     que manda `?unit=todas` — explícito, e vence o seletor. */
+  const unitFilter = resolveUnitFilter(searchParams, units.map((u) => u.id), getSelectedUnitId(units.map((u) => u.id)));
+  const requestedUnits = (searchParams.unit ?? '').split(',').map((s) => s.trim()).filter((s) => s && s.toLowerCase() !== TODAS_AS_UNIDADES);
   const unitDenied = requestedUnits.length > 0 && !requestedUnits.some((id) => units.some((u) => u.id === id));
   const filteredNames = unitFilter.all ? [] : units.filter((u) => unitFilter.ids.includes(u.id)).map((u) => u.name);
 
@@ -58,7 +63,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
         subtitle={
           filteredNames.length > 0
             ? `Unidade: ${filteredNames.map(shortUnitName).join(', ')}`
-            : undefined
+            : units.length > 1 ? 'Todas as unidades' : undefined
         }
         actions={
           onlyOverdue ? (
@@ -73,7 +78,10 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
       />
 
       {filteredNames.length > 0 && units.length > 1 && (
-        <Link href={onlyOverdue ? '/tarefas?filter=atrasadas' : '/tarefas'} className="inline-block text-xs font-semibold text-brand hover:underline">
+        <Link
+          href={onlyOverdue ? `/tarefas?filter=atrasadas&unit=${TODAS_AS_UNIDADES}` : `/tarefas?unit=${TODAS_AS_UNIDADES}`}
+          className="inline-block text-xs font-semibold text-brand hover:underline"
+        >
           Ver todas as unidades
         </Link>
       )}
