@@ -27,3 +27,24 @@ export function ausentesDaGrade(
   const uso = emUso instanceof Set ? emUso : new Set(emUso);
   return conferiveis.filter((n) => !pres.has(n) && !uso.has(n));
 }
+
+/**
+ * O universo de uma conferência: a faixa do dia ou a sequência inteira.
+ *
+ * No meio da semana a unidade usa só parte das comandas (ex.: 1 a 300) e o
+ * resto fica guardado. Julgar as guardadas na conferência diária fazia centenas
+ * delas caírem como faltantes todo dia — divergências falsas e supervisor
+ * alertado à toa. A faixa é a mesma que o caixa já usa no leitor ("Madrugada",
+ * em Configurações → Comandas); aqui ela passa a valer também para a grade.
+ */
+export function escopoDaConferencia(
+  activeNumbers: number[],
+  nightlyNumbers: number[],
+  modo: 'dia' | 'completa',
+): { universo: number[]; temFaixaDoDia: boolean; naFaixaDoDia: boolean } {
+  /* Faixa que cobre tudo não é faixa: oferecer a escolha só confundiria, e o
+     rótulo diria "faixa do dia (648)" ao lado de "completa (648)". */
+  const temFaixaDoDia = nightlyNumbers.length > 0 && nightlyNumbers.length < activeNumbers.length;
+  const naFaixaDoDia = temFaixaDoDia && modo === 'dia';
+  return { universo: naFaixaDoDia ? nightlyNumbers : activeNumbers, temFaixaDoDia, naFaixaDoDia };
+}
