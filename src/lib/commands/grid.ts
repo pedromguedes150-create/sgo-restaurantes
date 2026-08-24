@@ -48,3 +48,19 @@ export function escopoDaConferencia(
   const naFaixaDoDia = temFaixaDoDia && modo === 'dia';
   return { universo: naFaixaDoDia ? nightlyNumbers : activeNumbers, temFaixaDoDia, naFaixaDoDia };
 }
+
+/**
+ * O que pode ser marcado nesta conferência.
+ *
+ * Em apuração e baixadas ficam na grade para o número não sumir do meio da
+ * sequência, mas são desabilitadas e se resolvem no bloco de Divergências —
+ * então não são nem presentes nem faltantes.
+ *
+ * Existe como função para a GRADE e o ATALHO "todas presentes" partirem da
+ * mesma lista: enquanto cada um calculava a sua, o atalho registrava como
+ * presentes comandas que a grade nem deixava tocar.
+ */
+export function conferiveisDaGrade(universo: number[], underReview: number[], lostNumbers: number[]): number[] {
+  const fora = new Set([...underReview, ...lostNumbers]);
+  return universo.filter((n) => !fora.has(n));
+}

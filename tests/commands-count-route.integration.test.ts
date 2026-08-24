@@ -110,3 +110,38 @@ describe('POST /api/commands/count — o que a grade manda chega inteiro', () =>
     expect(r.status).toBe(422);
   });
 });
+
+describe('"Todas presentes" na faixa do dia NÃO é contagem completa', () => {
+  /* O atalho mandava allPresent puro, sem escopo. Com a faixa do dia aberta,
+     um toque registrava a sequência inteira como presente E zerava o indicador
+     "última contagem completa" — apagando a única informação que dizia há
+     quanto tempo ninguém confere o estoque guardado. */
+  it('com escopo, continua sendo PARCIAL', async () => {
+    const { getLastFullCount } = await import('@/lib/commands/full-count');
+    await prisma.commandCount.deleteMany({ where: { unitId } });
+
+    const r = await postContagem({
+      unitId, operationalDate: '2026-07-10', allPresent: true,
+      scopeNumbers: numeros(1, 10), presentNumbers: numeros(1, 10), inUseNumbers: [],
+    });
+    expect(r.status).toBe(200);
+
+    const c = await prisma.commandCount.findFirst({ where: { unitId, operationalDate: '2026-07-10' } });
+    expect(c!.scopeNumbers).toEqual(numeros(1, 10));
+    /* Só as 10 do escopo entram como presentes — não as 20 da sequência. */
+    expect(c!.presentNumbers).toEqual(numeros(1, 10));
+
+    const completa = await getLastFullCount(unitId, '2026-07-10');
+    expect(completa.never).toBe(true);
+  });
+
+  it('sem escopo (unidade que confere tudo), continua sendo COMPLETA', async () => {
+    const { getLastFullCount } = await import('@/lib/commands/full-count');
+    const r = await postContagem({ unitId, operationalDate: '2026-07-11', allPresent: true });
+    expect(r.status).toBe(200);
+
+    const completa = await getLastFullCount(unitId, '2026-07-11');
+    expect(completa.never).toBe(false);
+    expect(completa.date).toBe('2026-07-11');
+  });
+});

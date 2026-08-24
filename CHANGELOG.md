@@ -9,6 +9,36 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.55.2 — 2026-08-24 (Comandas: o atalho "todas presentes" segue a faixa do dia)
+
+### Corrigido — achado ao conferir a v1.55.0 em produção
+Dois problemas que a **faixa do dia** criou e passaram despercebidos:
+
+1. **O atalho "Todas presentes" ignorava a faixa.** Ele mandava `allPresent` puro, sem escopo: com a
+   faixa do dia aberta (2 a 300), um toque registrava as **651** como presentes **e marcava a
+   contagem como COMPLETA** — zerando o indicador "última contagem completa" com uma contagem que
+   nunca aconteceu. Um clique bem-intencionado apagava a única informação que dizia há quanto tempo
+   ninguém confere o estoque guardado.
+2. **Os avisos diziam "TODAS as comandas"** mesmo conferindo só a faixa. Texto de confirmação é
+   exatamente onde a palavra errada faz alguém decidir errado.
+
+Agora o atalho manda o **escopo da conferência aberta**, pergunta nomeando a faixa
+("todas as comandas da FAIXA DO DIA (2 a 300)?") e a mensagem de sucesso diz o que foi registrado.
+Unidade sem faixa configurada **não muda em nada**: segue registrando contagem completa.
+
+### Detalhe que sustenta isso
+O modo (faixa do dia / completa) subiu para o componente de Comandas: o atalho mora **fora** da
+grade e precisava do mesmo modo, senão os dois registrariam coisas diferentes na mesma tela. E a
+grade e o atalho passam a partir da **mesma lista** de conferíveis (`conferiveisDaGrade`) — antes
+cada um calculava a sua, e o atalho registrava como presentes comandas que a grade nem deixava tocar.
+
+### Testes
+- `tests/commands-count-route.integration.test.ts` (+2) — "todas presentes" **com** escopo continua
+  PARCIAL (não vira "última contagem completa"), e **sem** escopo continua completa.
+- `tests/commands-grid.test.ts` (+3) — grade e atalho partindo da mesma lista.
+
+---
+
 ## v1.55.1 — 2026-08-24 (Comandas: o servidor recusa faixas sobrepostas)
 
 ### Corrigido

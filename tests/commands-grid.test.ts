@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ausentesDaGrade, escopoDaConferencia } from '@/lib/commands/grid';
+import { ausentesDaGrade, escopoDaConferencia, conferiveisDaGrade } from '@/lib/commands/grid';
 
 describe('ausentesDaGrade', () => {
   const conferiveis = [1, 2, 3, 4, 5];
@@ -67,5 +67,24 @@ describe('escopoDaConferencia', () => {
     const { universo } = escopoDaConferencia(ativas, doDia, 'dia');
     const todasMarcadas = new Set(universo);
     expect(ausentesDaGrade(universo, todasMarcadas, [])).toEqual([]);
+  });
+});
+
+describe('conferiveisDaGrade', () => {
+  it('tira em apuração e baixadas do que pode ser marcado', () => {
+    expect(conferiveisDaGrade([1, 2, 3, 4, 5], [3], [5])).toEqual([1, 2, 4]);
+  });
+
+  it('a grade e o atalho partem da MESMA lista', () => {
+    /* Enquanto cada um calculava a sua, o atalho "todas presentes" registrava
+       como presentes comandas que a grade nem deixava tocar. */
+    const universo = [1, 2, 3, 4, 5];
+    const daGrade = conferiveisDaGrade(universo, [3], [5]);
+    expect(ausentesDaGrade(daGrade, daGrade, [])).toEqual([]);
+    expect(daGrade).not.toContain(3);
+  });
+
+  it('sem apuração nem baixada, é o universo inteiro', () => {
+    expect(conferiveisDaGrade([1, 2, 3], [], [])).toEqual([1, 2, 3]);
   });
 });
