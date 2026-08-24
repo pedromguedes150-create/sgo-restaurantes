@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, Search, RotateCcw, XCircle, Plus, Grid3x3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ausentesDaGrade, escopoDaConferencia } from '@/lib/commands/grid';
+import { ausentesDaGrade, escopoDaConferencia, conferiveisDaGrade } from '@/lib/commands/grid';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 
@@ -68,6 +68,9 @@ export function CommandsClient({
   const [observation, setObservation] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ t: 'ok' | 'err'; m: string } | null>(null);
+  /* Fica AQUI e não na grade: o atalho "todas presentes" mora fora dela e
+     precisa do mesmo modo, senão os dois registram coisas diferentes. */
+  const [modo, setModo] = useState<'dia' | 'completa'>('dia');
 
   async function post(url: string, body: unknown) {
     setBusy(true);
@@ -89,8 +92,31 @@ export function CommandsClient({
     }
   }
 
+  /* O ATALHO PRECISA SABER EM QUE CONFERÊNCIA O GERENTE ESTÁ.
+
+     Antes ele mandava `allPresent` puro, sem escopo: com a faixa do dia
+     aberta (2 a 300), um toque registrava as 651 como presentes E marcava a
+     contagem como COMPLETA — zerando o indicador "última contagem completa"
+     com uma contagem que nunca aconteceu. Um clique bem-intencionado apagava a
+     única informação que dizia há quanto tempo ninguém confere o estoque. */
+  const { universo, temFaixaDoDia, naFaixaDoDia } = useMemo(
+    () => escopoDaConferencia(activeNumbers, nightlyNumbers, modo),
+    [activeNumbers, nightlyNumbers, modo],
+  );
+  const escopoAtual = useMemo(
+    () => conferiveisDaGrade(universo, openDivergences.map((d) => d.number), lostNumbers),
+    [universo, openDivergences, lostNumbers],
+  );
+  const faixaAtualLabel = universo.length > 0 ? `${universo[0]} a ${universo[universo.length - 1]}` : '—';
+
   async function allPresent() {
-    if (await post('/api/commands/count', { unitId, allPresent: true })) setMsg({ t: 'ok', m: 'Registrado: todas presentes ✓' });
+    if (naFaixaDoDia && !window.confirm(`Confirmar: todas as comandas da FAIXA DO DIA (${faixaAtualLabel}) presentes?\n\nAs guardadas não entram nesta contagem — a completa é a da semana.`)) return;
+    const body = temFaixaDoDia
+      ? { unitId, allPresent: true, scopeNumbers: escopoAtual, presentNumbers: escopoAtual, inUseNumbers: [] }
+      : { unitId, allPresent: true };
+    if (await post('/api/commands/count', body)) {
+      setMsg({ t: 'ok', m: naFaixaDoDia ? `Registrado: faixa do dia (${faixaAtualLabel}), todas presentes ✓` : 'Registrado: todas presentes ✓' });
+    }
   }
 
   async function submitAbsent() {
@@ -169,7 +195,7 @@ export function CommandsClient({
         )}
 
         {/* Conferência em grade: seleciona as presentes; as não marcadas = faltando */}
-        <GridConference unitId={unitId} activeNumbers={activeNumbers} nightlyNumbers={nightlyNumbers} lostNumbers={lostNumbers} underReview={openDivergences.map((d) => d.number)} ultimaContagem={ultimaContagem} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
+        <GridConference unitId={unitId} activeNumbers={activeNumbers} nightlyNumbers={nightlyNumbers} modo={modo} setModo={setModo} lostNumbers={lostNumbers} underReview={openDivergences.map((d) => d.number)} ultimaContagem={ultimaContagem} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
 
         <Button onClick={allPresent} disabled={busy} size="lg" className="w-full" variant="default">
           <Check className="h-5 w-5" /> Todas presentes (atalho)
@@ -277,8 +303,10 @@ As já investigadas ou encerradas não são tocadas. A ação fica registrada na
   );
 }
 
-function GridConference({ unitId, activeNumbers, nightlyNumbers = [], lostNumbers = [], underReview = [], ultimaContagem = null, busy, setBusy, onResult }: {
-  unitId: string; activeNumbers: number[]; nightlyNumbers?: number[]; lostNumbers?: number[]; underReview?: number[];
+function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setModo, lostNumbers = [], underReview = [], ultimaContagem = null, busy, setBusy, onResult }: {
+  unitId: string; activeNumbers: number[]; nightlyNumbers?: number[];
+  modo: 'dia' | 'completa'; setModo: (m: 'dia' | 'completa') => void;
+  lostNumbers?: number[]; underReview?: number[];
   ultimaContagem?: UltimaContagem | null;
   busy: boolean; setBusy: (b: boolean) => void; onResult: (m: { t: 'ok' | 'err'; m: string }) => void;
 }) {
@@ -299,7 +327,6 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], lostNumber
      A faixa é a mesma que o caixa já usava no leitor de código de barras
      ("Madrugada", em Configurações → Comandas). Aqui ela passa a valer também
      para a grade do gerente. */
-  const [modo, setModo] = useState<'dia' | 'completa'>('dia');
   const { universo, temFaixaDoDia, naFaixaDoDia } = useMemo(
     () => escopoDaConferencia(activeNumbers, nightlyNumbers, modo),
     [activeNumbers, nightlyNumbers, modo],
@@ -317,8 +344,8 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], lostNumber
 
   /** Só estas podem ser marcadas: apuração e baixa se resolvem em outro lugar. */
   const conferiveis = useMemo(
-    () => universo.filter((n) => !reviewSet.has(n) && !lostSet.has(n)),
-    [universo, reviewSet, lostSet],
+    () => conferiveisDaGrade(universo, underReview, lostNumbers),
+    [universo, underReview, lostNumbers],
   );
   /* A grade abre NO ESTADO DA ÚLTIMA CONTAGEM. Antes começava sempre vazia:
      mesmo com a contagem do dia registrada, aparecia "0 ok · 648 faltando" e
@@ -388,7 +415,7 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], lostNumber
       return;
     }
     setObsFaltando(false);
-    const ok = window.confirm(absent.length === 0 ? 'Confirmar: TODAS as comandas presentes?' : `Confirmar conferência?\n${absent.length} comanda(s) faltando: ${absent.slice(0, 40).join(', ')}${absent.length > 40 ? '…' : ''}`);
+    const ok = window.confirm(absent.length === 0 ? (naFaixaDoDia ? `Confirmar: todas as comandas da FAIXA DO DIA (${faixaLabel}) presentes?\n\nAs guardadas não entram nesta contagem — a completa é a da semana.` : 'Confirmar: TODAS as comandas presentes?') : `Confirmar conferência?\n${absent.length} comanda(s) faltando: ${absent.slice(0, 40).join(', ')}${absent.length > 40 ? '…' : ''}`);
     if (!ok) return;
     setBusy(true);
     try {
@@ -402,7 +429,9 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], lostNumber
       const res = await fetch('/api/commands/count', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { onResult({ t: 'err', m: data.error ?? 'Falha' }); return; }
-      onResult({ t: 'ok', m: absent.length === 0 ? 'Conferência registrada: todas presentes ✓' : `Conferência registrada. ${absent.length} faltando — supervisor alertado.` });
+      onResult({ t: 'ok', m: absent.length === 0
+        ? (naFaixaDoDia ? `Conferência registrada: faixa do dia (${faixaLabel}), todas presentes ✓` : 'Conferência registrada: todas presentes ✓')
+        : `Conferência registrada. ${absent.length} faltando — supervisor alertado.` });
       /* NÃO limpa a grade: o estado que acabou de ser registrado é o estado
          correto para continuar vendo (e corrigir, se for o caso). */
       setObs(''); router.refresh();
