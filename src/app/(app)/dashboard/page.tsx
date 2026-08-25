@@ -15,6 +15,7 @@ import { StatusBadge as DsStatusBadge, type Tone as DsToneName } from '@/compone
 import { EmptyState } from '@/components/ui/ds/empty-state';
 import { shortUnitName } from '@/lib/unit-name';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
+import { textoDeOcorrencias } from '@/lib/dashboard/attention-text';
 import { ListChecks, AlertTriangle, ScrollText, Trophy, ChevronRight, Building2 } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
 
@@ -72,15 +73,13 @@ export default async function DashboardPage() {
       text: `${totalOverdue} tarefa(s) atrasada(s) ou não realizada(s) na rede.`,
     });
   }
-  if (occ.criticalOpen > 0 || occ.openOver48h > 0) {
+  const textoOcorrencias = textoDeOcorrencias(occ.criticalOpen, occ.openOver48h);
+  if (textoOcorrencias) {
     attention.push({
       id: 'ocorrencias',
       tone: 'danger',
       href: '/modulos/ocorrencias?status=OPEN',
-      text: [
-        occ.criticalOpen > 0 && `${occ.criticalOpen} ocorrência(s) crítica(s) aberta(s)`,
-        occ.openOver48h > 0 && `${occ.openOver48h} aberta(s) há mais de 48h`,
-      ].filter(Boolean).join(' · ') + '.',
+      text: textoOcorrencias,
     });
   }
   if (openDiv > 0) {

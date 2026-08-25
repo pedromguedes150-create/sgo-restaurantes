@@ -9,6 +9,27 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.57.1 — 2026-08-25 (Dashboard: o alerta de ocorrências volta a ter sujeito)
+
+### Corrigido
+O cartão "Precisa da sua atenção" mostrava **"141 aberta(s) há mais de 48h."** — aberta o quê? A
+frase era montada juntando dois trechos, e só o **primeiro** nomeava o assunto. Com **zero
+críticas** — o caso comum — o primeiro trecho sumia e levava o sujeito junto. No cartão mais
+visível do sistema, um número sem assunto.
+
+Agora o assunto vai no primeiro trecho que existir, e o segundo herda dele:
+
+- com os dois: *"3 ocorrência(s) crítica(s) aberta(s) · 141 aberta(s) há mais de 48h."*
+- só as antigas: *"141 ocorrência(s) aberta(s) há mais de 48h."*
+
+Sem repetir "ocorrência(s)" duas vezes na mesma linha — o cartão existe para ser lido de relance.
+
+### Testes
+`tests/dashboard-attention-text.test.ts` (6) — cada combinação, o assunto aparecendo uma vez só,
+toda frase terminando em ponto e números estranhos não quebrando o texto.
+
+---
+
 ## v1.57.0 — 2026-08-25 (Cancelamento de ITENS, antes de virar cupom)
 
 ### O furo que faltava cobrir
