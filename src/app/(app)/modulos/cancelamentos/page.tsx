@@ -57,7 +57,13 @@ export default async function CancelamentosPage() {
             isAdmin={user.role === 'ADMIN'}
             units={units}
             reasons={reasons.map((r) => ({ id: r.id, name: r.name }))}
-            pending={pending.map((c) => ({ id: c.id, unit: c.unit.name, coupon: c.couponNumber, operator: c.cashOperator, value: Number(c.value) }))}
+            pending={pending.map((c) => ({
+              id: c.id, unit: c.unit.name, coupon: c.couponNumber, operator: c.cashOperator, value: Number(c.value),
+              /* Foto e hora: uma foto que ninguém vê não controla nada, e sem a
+                 hora não dá para cruzar com o movimento do caixa. */
+              photo: c.photoPath ?? null,
+              canceledAt: c.canceledAt ? c.canceledAt.toISOString() : null,
+            }))}
           />
         </CardContent>
       </Card>
