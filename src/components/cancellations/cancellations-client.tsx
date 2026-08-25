@@ -2,17 +2,24 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Check } from 'lucide-react';
+import { Upload, Check, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatBRL } from '@/lib/utils';
 import { Select } from '@/components/ui/ds/select';
 import { shortUnitName } from '@/lib/unit-name';
+import { RegisterCancellationForm } from './register-cancellation-form';
 
 interface Reason { id: string; name: string }
 interface Unit { id: string; name: string }
-interface Item { id: string; unit: string; coupon: string; operator: string | null; value: number }
+interface Item {
+  id: string; unit: string; coupon: string; operator: string | null; value: number;
+  /** Caminho da foto do cupom, quando o gerente registrou na hora. */
+  photo?: string | null;
+  /** ISO da hora do cancelamento — só existe no registro feito na hora. */
+  canceledAt?: string | null;
+}
 
 export function CancellationsClient({
   isAdmin,
@@ -57,6 +64,10 @@ export function CancellationsClient({
 
   return (
     <div className="space-y-5">
+      {/* O registro com foto vem ANTES da importação: é a ação do dia a dia do
+          gerente, enquanto a importação é tarefa de Admin, uma vez por dia. */}
+      <RegisterCancellationForm units={units} reasons={reasons} onDone={() => router.refresh()} />
+
       {isAdmin && <ImportForm units={units} onDone={() => router.refresh()} />}
 
       <div className="space-y-2">
@@ -75,7 +86,16 @@ export function CancellationsClient({
             <p className="text-xs text-ink-500">
               {c.unit}
               {c.operator && ` · operador ${c.operator}`}
+              {c.canceledAt && ` · ${new Date(c.canceledAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`}
             </p>
+            {/* A prova. Sem ela, "cupom cancelado por engano" é só uma frase. */}
+            {c.photo ? (
+              <a href={`/${c.photo}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+                <Camera className="h-3.5 w-3.5" /> Ver foto do cupom
+              </a>
+            ) : (
+              <p className="mt-1 text-xs font-medium text-warning">Sem foto do cupom</p>
+            )}
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
               <div className="flex-1">
                 <Select

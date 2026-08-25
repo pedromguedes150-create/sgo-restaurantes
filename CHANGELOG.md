@@ -9,6 +9,46 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.56.0 — 2026-08-25 (Cancelamentos: registro na hora, com foto do cupom)
+
+### Por que dentro do módulo que já existe
+O controle de cancelamentos pedia motivo, foto do cupom e hora. **Motivo já existia** — assim como
+número do cupom, valor, operador, pendência de justificativa, % justificado, ranking por operador e
+os relatórios. Levar isso para Ocorrências custaria todos esses números (e alertaria a supervisão a
+cada cupom, virando ruído); um módulo novo partiria o histórico em dois lugares.
+
+### Parte 1 — o registro (esta versão)
+- **"Registrar cancelamento (com foto)"** na tela de Cancelamentos, para o **gerente**: foto do
+  cupom pela câmera (**obrigatória**), hora (já preenchida com "agora", editável), nº do cupom,
+  valor, operador, motivo e observação.
+- **Com motivo, nasce justificado** — voltar depois para justificar o que acabou de ser explicado
+  seria trabalho repetido. Sem motivo, entra na fila de pendências como antes.
+- **A foto se junta ao que veio do Teknisa** quando o cupom já foi importado, em vez de criar um
+  segundo registro: duplicar contaria o mesmo cancelamento duas vezes no valor do mês.
+  `"0042"` e `"42"` são o mesmo cupom (o Teknisa exporta com zeros à esquerda).
+- **A hora decide o dia operacional**: um cancelamento à 01h pertence à operação do dia anterior, e
+  tratar como "hoje" jogaria a conciliação para o dia errado.
+- Na lista, cada cancelamento mostra a hora e **"Ver foto do cupom"** — ou **"Sem foto do cupom"**,
+  que é justamente o caso que a parte 2 vai cobrar.
+
+### Por que o CSV do Teknisa continua entrando
+Ele é o que garante que **todo** cancelamento apareça. Se o controle dependesse só do lançamento
+manual, o cancelamento suspeito simplesmente não seria lançado — e um controle que o controlado
+pode omitir não controla nada. As duas pernas se cruzam na **parte 2** (conciliação).
+
+### Migração
+Aditiva: `photoPath`, `canceledAt`, `source` (IMPORT|MANUAL) e `registeredById` em
+`cancellations`. Os registros existentes ficam como IMPORT e sem foto — que é o que são.
+
+### Testes
+- `tests/cancellations-register.integration.test.ts` (12) — sem foto não passa, com/sem motivo,
+  duplicado, unidade de outro gerente, o encontro com o registro importado (sem duplicar, com zeros
+  à esquerda), importado que já tem foto, madrugada caindo no dia anterior e hora futura recusada.
+- `tests/cancellations-client-render.test.tsx` (7) — a tela monta para gerente e Admin, a foto
+  aparece como link e a ausência dela aparece como aviso.
+
+---
+
 ## v1.55.4 — 2026-08-24 (Comandas: o botão passa a mostrar que a conferência foi feita)
 
 ### O relato

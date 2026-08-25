@@ -113,6 +113,7 @@ model User {
   divResolved         CommandDivergence[]  @relation("CmdDivResolvedBy")
   commandReplacements CommandReplacement[] @relation("CmdReplBy")
   cancellationsJustified Cancellation[]       @relation("CancJustifiedBy")
+  cancellationsRegistered Cancellation[]      @relation("CancRegisteredBy")
   cancellationImports    CancellationImport[] @relation("CancImportedBy")
   paymentRequested PaymentRequest[]     @relation("PayRequestedBy")
   paymentApproved  PaymentRequest[]     @relation("PayApprovedBy")
@@ -761,6 +762,12 @@ model CancellationReason {
   @@map("cancellation_reasons")
 }
 
+/// De onde o registro do cancelamento nasceu.
+enum CancellationSource {
+  IMPORT // veio do relatorio do Teknisa
+  MANUAL // registrado pelo gerente, com foto do cupom
+}
+
 /// Importação de relatório do Teknisa (CSV) — Módulo 4.
 model CancellationImport {
   id              String   @id @default(cuid())
@@ -793,12 +800,24 @@ model Cancellation {
   justificationNote String?
   justifiedById     String?
   justifiedAt       DateTime?
+  /// Foto do cupom cancelado. Tirada pelo gerente NA HORA: no dia seguinte,
+  /// quando o relatorio do Teknisa chega, o cupom ja foi para o lixo.
+  photoPath         String?
+  /// Hora em que o cancelamento aconteceu. A data operacional sozinha nao
+  /// distingue um cancelamento do almoco de um da virada do caixa.
+  canceledAt        DateTime?
+  /// De onde o registro nasceu. O CSV do Teknisa e a fonte que garante que
+  /// TODO cancelamento aparece — se so houvesse lancamento manual, o
+  /// cancelamento suspeito simplesmente nao seria lancado.
+  source            CancellationSource @default(IMPORT)
+  registeredById    String?
   createdAt         DateTime           @default(now())
 
   unit        Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
   import      CancellationImport? @relation(fields: [importId], references: [id], onDelete: SetNull)
   reason      CancellationReason? @relation(fields: [reasonId], references: [id], onDelete: SetNull)
   justifiedBy User?               @relation("CancJustifiedBy", fields: [justifiedById], references: [id], onDelete: SetNull)
+  registeredBy User?              @relation("CancRegisteredBy", fields: [registeredById], references: [id], onDelete: SetNull)
 
   @@index([unitId, status])
   @@index([unitId, operationalDate])
