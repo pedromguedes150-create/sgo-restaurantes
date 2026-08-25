@@ -557,6 +557,9 @@ export const GUIDE: GuideSection[] = [
         roles: [...MANAGERLINE, 'FINANCE'],
         summary: 'Registrar o cancelamento com foto do cupom e justificar.',
         steps: [
+          'CANCELAMENTO DE ITEM (antes de virar cupom): use o botão "🍽️ Cancelamento de itens", no alto da tela. É para o item que saiu do pedido e NADA entrou no lugar — se o cliente trocou de produto (Coca por Fanta), faça a TROCA no Teknisa, que mantém a venda.',
+          'A PERGUNTA QUE DECIDE TUDO no cancelamento de item: "o produto já tinha saído da cozinha?". Se NÃO saiu, é desistência e custa zero. Se JÁ SAIU, o sistema pede a FOTO do produto que voltou — porque alguém pode ter consumido sem pagar.',
+          'O painel de itens mostra, separados, o total do mês e o VALOR JÁ ENTREGUE (o que dói), além do ranking por garçom e por motivo.',
           'REGISTRE NA HORA, COM FOTO: em Cancelamentos, toque em "Registrar cancelamento (com foto)". Fotografe o cupom, confira a hora (já vem preenchida), informe nº do cupom, valor, operador e o motivo. A foto é OBRIGATÓRIA — o relatório do Teknisa só chega no dia seguinte, e a essa altura o cupom já foi para o lixo.',
           'Com o motivo preenchido, o cancelamento já entra justificado e não vira pendência. Sem motivo, ele fica na fila para você justificar depois.',
           'Se o cupom já tiver vindo do Teknisa, a foto se JUNTA àquele registro em vez de criar outro — o cancelamento não conta duas vezes no total do mês.',

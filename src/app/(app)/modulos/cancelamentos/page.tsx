@@ -40,6 +40,9 @@ export default async function CancelamentosPage() {
         <FamilyTabs active="/modulos/cancelamentos" />
         <div className="flex flex-wrap gap-2">
           {['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role) && <Link href="/modulos/cancelamentos/analise" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🛡️ Análise antifraude (PDF)</Link>}
+          {/* Cancelamento de ITEM (antes de virar cupom) mora ao lado: e o mesmo
+              assunto visto antes do fechamento da conta. */}
+          <Link href="/modulos/cancelamentos/itens" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🍽️ Cancelamento de itens</Link>
           <Link href="/modulos/cancelamentos/relatorio" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-sunken"><FileText className="h-4 w-4" /> Relatório</Link>
         </div>
       </div>

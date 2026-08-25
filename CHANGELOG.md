@@ -9,6 +9,51 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.57.0 — 2026-08-25 (Cancelamento de ITENS, antes de virar cupom)
+
+### O furo que faltava cobrir
+O cupom cancelado já era controlado. O que ninguém via era o item retirado do **pedido em aberto**:
+o garçom lança, o cliente desiste, o item sai da comanda — e se o produto **já tinha saído da
+cozinha**, alguém consumiu e nada foi pago.
+
+### Duas decisões que sustentam a tela
+- **"O produto já tinha saído da cozinha?" é a pergunta central.** Cancelar antes de o produto sair
+  é desistência e custa zero; cancelar depois é perda ou consumo sem pagamento. Somar os dois num
+  total único esconderia justamente a parte que dói — por isso o painel mostra **valor cancelado** e
+  **valor já entregue** separados.
+- **A foto é cobrada só quando o produto saiu.** Exigir foto de uma desistência que nunca virou
+  produto seria burocracia sem prova nenhuma — e burocracia inútil é o que faz o gerente parar de
+  registrar. Quando o produto saiu, a foto dele de volta é a prova de que voltou.
+
+### A troca não entra aqui
+Trocar Coca por Fanta é feito **direto no Teknisa** e mantém a venda. E é justamente por a troca
+existir que o cancelamento puro virou exceção a explicar — a tela diz isso antes do formulário, e a
+lista de motivos padrão **não oferece "cliente mudou de ideia"**: oferecer ensinaria a cancelar onde
+bastava trocar.
+
+### Quem registra
+O **gerente**. O PDV já exige a senha dele para cancelar item, então ele está presente em todo
+cancelamento por definição — registrar aqui é anotar o que ele já faz, no momento em que já está
+parado digitando a senha.
+
+### Onde fica
+Em **Cancelamentos → 🍽️ Cancelamento de itens** (`/modulos/cancelamentos/itens`). Tabela própria
+(`ItemCancellation`), porque item tem produto, quantidade, garçom e mesa, enquanto cupom tem número
+e total — forçar na mesma tabela deixaria metade dos campos vazios. Motivos também em lista própria.
+
+### Migração
+Aditiva: duas tabelas novas (`item_cancellations`, `item_cancellation_reasons`). Nada existente
+muda. Os seis motivos padrão nascem sozinhos na primeira abertura da tela — e **só** com a tabela
+vazia, para que um motivo apagado pelo Admin não volte por conta própria.
+
+### Testes
+- `tests/item-cancellations.integration.test.ts` (12) — foto cobrada só quando entregue, validações,
+  unidade de outro gerente, hora futura, e os números do mês separando entregue de não entregue.
+- `tests/item-cancellations-render.test.tsx` (6) — a tela aponta a troca, mostra a pergunta central,
+  destaca o item entregue com a foto e monta sem registros e sem motivos.
+
+---
+
 ## v1.56.0 — 2026-08-25 (Cancelamentos: registro na hora, com foto do cupom)
 
 ### Por que dentro do módulo que já existe

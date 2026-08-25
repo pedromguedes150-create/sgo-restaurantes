@@ -52,6 +52,7 @@ model Unit {
   commandDivergences  CommandDivergence[]
   commandReplacements CommandReplacement[]
   cancellations       Cancellation[]
+  itemCancellations   ItemCancellation[]
   cancellationImports CancellationImport[]
   paymentRequests     PaymentRequest[]
   freelancerUnits     FreelancerUnit[]
@@ -114,6 +115,7 @@ model User {
   commandReplacements CommandReplacement[] @relation("CmdReplBy")
   cancellationsJustified Cancellation[]       @relation("CancJustifiedBy")
   cancellationsRegistered Cancellation[]      @relation("CancRegisteredBy")
+  itemCancellations       ItemCancellation[]  @relation("ItemCancAuthorizedBy")
   cancellationImports    CancellationImport[] @relation("CancImportedBy")
   paymentRequested PaymentRequest[]     @relation("PayRequestedBy")
   paymentApproved  PaymentRequest[]     @relation("PayApprovedBy")
@@ -760,6 +762,63 @@ model CancellationReason {
   cancellations Cancellation[]
 
   @@map("cancellation_reasons")
+}
+
+/// Motivo do cancelamento de ITEM (lista propria — os motivos de item nao sao
+/// os de cupom: "erro de lancamento", "produto em falta", "demora". Misturar
+/// as duas listas poluiria as duas telas).
+model ItemCancellationReason {
+  id     String             @id @default(cuid())
+  name   String
+  order  Int                @default(0)
+  active Boolean            @default(true)
+  items  ItemCancellation[]
+
+  @@map("item_cancellation_reasons")
+}
+
+/// Cancelamento de ITEM no pedido em aberto, antes de virar cupom.
+///
+/// O furo que este modelo cobre: o garcom lanca, o cliente desiste e o item sai
+/// da comanda. Se o produto JA TINHA SAIDO da cozinha, alguem consumiu e nada
+/// foi pago — por isso `delivered` e o campo que separa desistencia de perda.
+///
+/// A troca (Coca por Fanta) NAO entra aqui: e feita direto no Teknisa e mantem
+/// a venda. Justamente por existir a troca, o cancelamento puro e a excecao que
+/// precisa ser explicada.
+model ItemCancellation {
+  id              String   @id @default(cuid())
+  unitId          String
+  operationalDate String
+  /// Hora do cancelamento — decide tambem a data operacional.
+  canceledAt      DateTime
+  /// Mesa ou comanda de onde o item saiu.
+  tableLabel      String?
+  productName     String
+  quantity        Decimal  @db.Decimal(10, 3)
+  /// Valor TOTAL cancelado (quantidade x preco), como aparece no PDV.
+  value           Decimal  @db.Decimal(10, 2)
+  /// Quem lancou o item. Texto: o garcom nao tem cadastro de usuario no SGO.
+  waiterName      String?
+  reasonId        String?
+  /// O produto ja tinha saido da cozinha/bar quando foi cancelado?
+  delivered       Boolean  @default(false)
+  /// Foto do produto que voltou. Obrigatoria quando `delivered` — antes de
+  /// sair da cozinha nao ha o que fotografar.
+  photoPath       String?
+  note            String?
+  /// O gerente que autorizou. O PDV ja exige a senha dele para cancelar item,
+  /// entao ele esta presente em todo cancelamento por definicao.
+  authorizedById  String?
+  createdAt       DateTime @default(now())
+
+  unit         Unit                    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  reason       ItemCancellationReason? @relation(fields: [reasonId], references: [id], onDelete: SetNull)
+  authorizedBy User?                   @relation("ItemCancAuthorizedBy", fields: [authorizedById], references: [id], onDelete: SetNull)
+
+  @@index([unitId, operationalDate])
+  @@index([unitId, delivered])
+  @@map("item_cancellations")
 }
 
 /// De onde o registro do cancelamento nasceu.
