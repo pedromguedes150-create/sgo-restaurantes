@@ -20,7 +20,7 @@ export default async function ProdutosConfigPage() {
         <p className="text-sm text-ink-500">Produtos da <b>Fábrica</b> e do <b>CD</b> que os gerentes podem pedir. Importe sua lista por Excel.</p>
       </div>
       <Card><CardContent className="pt-4">
-        <ProductCatalogAdmin products={products.map((p) => ({ id: p.id, name: p.name, origin: p.origin, category: p.category, measure: p.measure, active: p.active }))} />
+        <ProductCatalogAdmin products={products.map((p) => ({ id: p.id, name: p.name, origin: p.origin, category: p.category, measure: p.measure, packSize: p.packSize, barcode: p.barcode, active: p.active }))} />
       </CardContent></Card>
     </div>
   );

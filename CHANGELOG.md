@@ -9,6 +9,56 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.58.0 — 2026-08-26 (Catálogo: importa a lista do fornecedor como ela vem)
+
+### O que estava acontecendo
+O importador exigia uma coluna chamada **Nome**. A lista real da rede (BEBIDAS.xlsx, 214 produtos)
+vem assim:
+
+```
+BEBIDAS | QUANT | UN | COD. BARRAS
+CERVEJA BRAHMA 600ML | 24 | UN | 7891149010400
+```
+
+O cabeçalho da primeira coluna **não é um rótulo — é o nome da categoria**. Sem coluna "Nome", o
+importador ignorava as 214 linhas **em silêncio** e respondia "0 criados", sem dizer por quê.
+
+### O que muda
+- **A lista do fornecedor é aceita como vem.** Nomes na primeira coluna; se o cabeçalho dela não for
+  um rótulo conhecido, vira a **categoria** de todos os produtos daquele arquivo. Colunas nomeadas
+  (`Nome`, `Origem`, `Categoria`, `Medida`), quando existem, continuam tendo prioridade.
+- **QUANT e COD. BARRAS passam a ser guardados** (`packSize`, `barcode`). O código sai e entra como
+  **texto**: como número, "070847033301" perderia os zeros à esquerda e deixaria de ser o código do
+  produto — 12 dos 214 estão nessa situação.
+- **Reimportar a lista revisada atualiza, não duplica.** O produto é reconhecido pelo código de
+  barras, então "600ML" → "600 ML" é atualização, não um segundo cadastro.
+- **A origem virou escolha explícita** na tela, porque a planilha do fornecedor não fala de Fábrica
+  ou CD — adivinhar em silêncio jogaria o catálogo inteiro para o lado errado.
+- **O resultado conta o que aconteceu**: quantos criados, atualizados, quantas linhas sem nome foram
+  ignoradas, qual categoria veio do cabeçalho e qual origem foi aplicada.
+- **Arquivo trocado é recusado com motivo.** Uma coluna só, sem nenhum rótulo, é a forma de um .txt
+  ou de um relatório com título na primeira linha: em vez de cadastrar "Relatório de estoque" como
+  produto, a tela pede a coluna de nomes.
+- **Exportar serve de modelo**: as colunas do export são exatamente as que a importação entende, e
+  com o catálogo vazio sai só o cabeçalho para preencher.
+- A busca do catálogo passa a achar por **código de barras**.
+
+### Migração
+Aditiva: `packSize` e `barcode` em `products`, com índice no código de barras. Nenhum produto
+existente muda.
+
+### Testes
+- `tests/products-sheet.test.ts` (21) — o formato real (categoria no cabeçalho, QUANT, zeros à
+  esquerda), o formato antigo continuando válido, e os casos que quebram planilha de verdade:
+  linha em branco, linha sem nome, cabeçalho repetido no meio, planilha sem cabeçalho.
+- `tests/products-import.integration.test.ts` (8) — grava com categoria/embalagem/código,
+  reimportar atualiza, renomeado com o mesmo código não duplica, arquivo trocado é recusado, e o
+  ciclo exportar → importar fecha nas mesmas colunas.
+- `tests/product-catalog-render.test.tsx` (6) — a tela mostra a escolha de origem, explica o
+  formato real e exibe embalagem e código.
+
+---
+
 ## v1.57.1 — 2026-08-25 (Dashboard: o alerta de ocorrências volta a ter sujeito)
 
 ### Corrigido

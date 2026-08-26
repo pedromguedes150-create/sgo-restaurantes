@@ -1012,10 +1012,18 @@ model Product {
   origin    ProductOrigin
   category  String        @default("Geral")
   measure   String        @default("un")
+  /// Quantidade por embalagem (a coluna QUANT das planilhas do fornecedor:
+  /// caixa com 24, fardo com 6). Guardar evita o gerente ter de saber de cor
+  /// quantas unidades vem em cada caixa na hora de pedir.
+  packSize  Int?
+  /// Codigo de barras (EAN/GTIN). Texto, nunca numero: "070847033301" perde os
+  /// zeros a esquerda se virar numero — e ai deixa de ser o codigo do produto.
+  barcode   String?
   active    Boolean       @default(true)
   createdAt DateTime      @default(now())
 
   @@index([active, category])
+  @@index([barcode])
   @@map("products")
 }
 
