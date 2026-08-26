@@ -742,7 +742,11 @@ export const GUIDE: GuideSection[] = [
         summary: 'Criar, editar e excluir cadastros.',
         steps: [
           'Em CONFIGURAÇÕES, gerencie Unidades, Usuários, Checklists, Comandas, Desperdícios, Ocorrências e Pagamentos.',
-          'Comandas: cadastre várias sequências por unidade. Desperdícios e Ocorrências: crie/edite/exclua categorias (e tipos, nas Ocorrências).',
+          'CATÁLOGO DE PRODUTOS — IMPORTAR A LISTA DO FORNECEDOR: em Configurações → Produtos, escolha a ORIGEM (Fábrica ou CD) e toque em "Importar Excel". A planilha pode ser a lista do fornecedor como ela vem: nomes na primeira coluna, e se o cabeçalho dela for o nome da categoria (ex.: BEBIDAS), a categoria vem de lá. As colunas QUANT (por embalagem), UN e COD. BARRAS também são lidas.',
+        'REIMPORTAR A LISTA REVISADA NÃO DUPLICA: o produto é reconhecido pelo CÓDIGO DE BARRAS, então mesmo renomeado ("600ML" → "600 ML") ele é atualizado, não cadastrado de novo.',
+        'PRECISA DE UM MODELO? "Exportar Excel (modelo)" baixa o catálogo nas mesmas colunas que a importação entende — com o catálogo vazio, sai só o cabeçalho para preencher.',
+        'A BUSCA DO CATÁLOGO ACEITA CÓDIGO DE BARRAS: com centenas de bebidas, bipar a garrafa acha mais rápido que digitar o nome.',
+        'Comandas: cadastre várias sequências por unidade. Desperdícios e Ocorrências: crie/edite/exclua categorias (e tipos, nas Ocorrências).',
           'Checklists: ao editar um checklist, use "Salvar unidades" para mudar em quais unidades ele aparece (replica nas novas; remove/inativa nas retiradas).',
           'Checklists têm "Programação" (início/encerramento): sem início vale desde já; sem encerramento é contínuo. O checklist só é gerado dentro do período.',
           'Botão "Modelos prontos…" abre a biblioteca de modelos (por setor/momento) — marque só os que quiser criar na unidade; os que já existem ficam sinalizados.',
