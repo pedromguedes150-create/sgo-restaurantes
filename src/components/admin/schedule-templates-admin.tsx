@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Pencil, Trash2, X, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -50,10 +51,25 @@ export function ScheduleTemplatesAdmin({ templates }: { templates: TemplateRow[]
 
   return (
     <div className="space-y-4">
+      {/* O AVISO VEM PRIMEIRO. Quem chega aqui procurando o dia da folga não o
+          encontra — ele é de cada pessoa, e mora em outra tela. Sem dizer onde,
+          a pessoa conclui que o recurso não existe. */}
+      <div className="rounded-lg border-2 border-info/40 bg-info/5 p-3">
+        <p className="text-sm font-semibold text-ink-900">Procurando o dia da folga? Não é aqui.</p>
+        <p className="mt-1 text-sm text-ink-700">
+          Esta tela define o <b>ciclo</b> (6x1, 12x36) e os horários padrão, que valem para a rede toda. O{' '}
+          <b>dia da folga é de cada colaborador</b> e fica em{' '}
+          <Link href="/modulos/escala" className="font-semibold text-brand underline">
+            Escala → &quot;Cadastrar escala&quot;
+          </Link>
+          , no bloco <b>&quot;Configuração de escala do colaborador&quot;</b>.
+        </p>
+      </div>
+
       <p className="text-sm text-ink-500">
         Quase toda escala é <b>&quot;trabalha X dias, folga Y&quot;</b> — 6x1, 5x2, 4x2. O <b>12x36</b> entra como
-        <b> 1 × 1</b>: em dias de calendário é dia sim, dia não. Os horários aqui são o <b>padrão do tipo</b>; na parte 2
-        cada colaborador poderá ter os seus.
+        <b> 1 × 1</b>: em dias de calendário é dia sim, dia não. Os horários aqui são o <b>padrão do tipo</b>; cada
+        colaborador pode ter os seus na configuração da escala dele.
       </p>
 
       {msg && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{msg}</p>}

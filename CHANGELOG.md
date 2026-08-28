@@ -9,6 +9,26 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.61.1 — 2026-08-28 (Tipos de escala: a tela diz onde fica o dia da folga)
+
+### Corrigido
+Quem abria **Configurações → Tipos de escala** procurando o **dia da folga** não o encontrava — e a
+conclusão natural era que o recurso não existe. Ele existe, mas é **de cada colaborador** e mora em
+**Escala → "Cadastrar escala"**.
+
+A tela agora avisa logo no alto, com link direto: *"Procurando o dia da folga? Não é aqui."* — e
+explica a divisão: aqui fica o **ciclo** (6x1, 12x36), que vale para a rede; o dia da folga é da
+pessoa.
+
+O texto também deixou de falar em **"parte 2"**, que é vocabulário de quem constrói, não de quem usa
+— e além disso já estava velho, porque a parte 2 foi publicada.
+
+### Testes
+`tests/schedule-templates-render.test.tsx` (+2) — o aviso aparece com o caminho, e a tela não menciona
+mais "parte 2".
+
+---
+
 ## v1.61.0 — 2026-08-28 (Escala: as antigas vêm para o formato novo, e o 12x36 fica correto)
 
 Parte 3 de 3.

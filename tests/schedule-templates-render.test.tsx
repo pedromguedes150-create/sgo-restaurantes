@@ -64,3 +64,20 @@ describe('Tela de tipos de escala', () => {
     expect(render([])).toContain('Nenhum tipo de escala cadastrado');
   });
 });
+
+describe('A tela diz ONDE fica o dia da folga', () => {
+  it('avisa que não é aqui e aponta o caminho', () => {
+    /* Quem chega procurando o dia da folga não o encontra: ele é de cada
+       pessoa e mora na tela de Escala. Sem dizer onde, a conclusão natural é
+       que o recurso não existe — foi exatamente o que aconteceu. */
+    const html = render();
+    expect(html).toContain('Procurando o dia da folga? Não é aqui.');
+    expect(html).toContain('/modulos/escala');
+    expect(html).toContain('Configuração de escala do colaborador');
+  });
+
+  it('não fala mais em "parte 2"', () => {
+    /* Vocabulário de quem constrói, não de quem usa. */
+    expect(render()).not.toContain('parte 2');
+  });
+});
