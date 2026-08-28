@@ -2226,6 +2226,13 @@ enum DayStatus {
   ATRASO       // AT - Atraso (trabalhou, chegou atrasado — avisa o RH p/ conferência de ponto)
 }
 
+/// Como a folga do colaborador se comporta ao longo das semanas.
+enum OffMode {
+  FIXED_WEEKLY       // dia fixo toda semana, sem variacao
+  FIXED_PLUS_SUNDAY  // dia fixo, com domingo entrando a cada N semanas
+  CYCLE_ONLY         // sem dia fixo: anda conforme o ciclo, a partir da ancora
+}
+
 /// TIPO DE ESCALA — cadastro do Admin, no lugar de uma lista fixa no codigo.
 ///
 /// Quase toda escala da CLT e "trabalha X dias, folga Y": 6x1, 5x2, 5x1, 4x2 —
@@ -2252,6 +2259,8 @@ model ScheduleTemplate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  employeeSchedules EmployeeSchedule[]
+
   @@map("schedule_templates")
 }
 
@@ -2260,19 +2269,46 @@ model EmployeeSchedule {
   id             String       @id @default(cuid())
   collaboratorId String
   unitId         String
+  /// Tipo do cadastro (Configuracoes > Tipos de escala). Nulo nas linhas
+  /// antigas, que descrevem o ciclo pelo `scheduleType`.
+  templateId     String?
   scheduleType   ScheduleType
   anchorDate     DateTime     // início do ciclo (referência p/ gerar o padrão)
+  /// Como a folga desta pessoa funciona.
+  offMode        OffMode      @default(FIXED_WEEKLY)
+  /// Dia fixo de folga: 0=domingo … 6=sabado. So faz sentido quando o ciclo
+  /// fecha em 7 dias — em ciclo de outro tamanho a folga anda de dia da semana
+  /// sozinha, e prometer dia fixo seria mentira.
+  weeklyOffDay   Int?
+  /// De quantas em quantas semanas a folga cai no DOMINGO (modo
+  /// FIXED_PLUS_SUNDAY). No comercio o descanso precisa coincidir com o domingo
+  /// periodicamente — sem isto, "folga fixa na terca" nunca daria um domingo.
+  sundayEveryWeeks Int?
   shiftId        String?
   customMask     String?      // p/ CUSTOM: ciclo em T/F, ex "TTTTTFF"
+  /// Horarios DESTE colaborador. Vazio herda do tipo de escala.
+  startTime      String?
+  breakTime      String?
+  endTime        String?
+  /// VIGENCIA — "a partir de quando essa escala vale".
+  ///
+  /// Sem isso, mudar a folga de alguem REESCREVERIA o passado: a grade de julho
+  /// passaria a mostrar folga no domingo mesmo se na epoca era terca. Cada
+  /// mudanca abre uma linha nova e fecha a anterior.
+  startDate      DateTime
+  /// Ultimo dia em que esta versao valeu. Nulo = e a vigente.
+  endDate        DateTime?
   active         Boolean      @default(true)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
-  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  shift        Shift?       @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  collaborator Collaborator      @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  unit         Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  shift        Shift?            @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  template     ScheduleTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
-  @@unique([collaboratorId, unitId])
+  @@index([collaboratorId, unitId, startDate])
+  @@index([unitId, startDate])
   @@map("employee_schedules")
 }
 

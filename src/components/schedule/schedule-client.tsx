@@ -47,8 +47,12 @@ const TYPE_OPTIONS: { value: ScheduleType; label: string }[] = [
 const WD = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns }: {
+import { EmployeeScheduleForm, type TipoDeEscala } from './employee-schedule-form';
+
+export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [] }: {
   units: Unit[]; selectedUnitId: string; year: number; month: number; grid: Grid; collaborators: Unit[]; turnos: Turno[]; patterns: Pattern[];
+  /** Tipos cadastrados em Configurações → Tipos de escala. */
+  tiposDeEscala?: TipoDeEscala[];
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<'planejado' | 'realizado' | 'comparacao'>('realizado');
@@ -127,7 +131,25 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
       </div>
 
       {showAbsence && mode === 'realizado' && <AbsencePanel unitId={selectedUnitId} collaborators={collaborators} onDone={() => { setShowAbsence(false); router.refresh(); }} />}
-      {showPattern && <PatternPanel unitId={selectedUnitId} collaborators={collaborators} turnos={turnos} patterns={patterns} onDone={() => router.refresh()} busy={busy} post={postJson} />}
+      {showPattern && (
+        <div className="space-y-3 print:hidden">
+          {/* A configuração NOVA vem primeiro: é a que tem dia de folga e
+              vigência. A antiga fica abaixo, para quem já usava. */}
+          {tiposDeEscala.length > 0 ? (
+            <EmployeeScheduleForm unitId={selectedUnitId} pessoas={collaborators} tipos={tiposDeEscala} turnos={turnos} post={postJson} busy={busy} />
+          ) : (
+            <p className="rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning">
+              Nenhum tipo de escala cadastrado. Peça ao Admin para criar em <b>Configurações → Tipos de escala</b>.
+            </p>
+          )}
+          <details className="rounded-lg border bg-surface p-2">
+            <summary className="cursor-pointer text-xs font-semibold text-ink-500">Cadastro antigo (sem dia de folga)</summary>
+            <div className="mt-2">
+              <PatternPanel unitId={selectedUnitId} collaborators={collaborators} turnos={turnos} patterns={patterns} onDone={() => router.refresh()} busy={busy} post={postJson} />
+            </div>
+          </details>
+        </div>
+      )}
 
       {mode === 'comparacao' && <p className="rounded-lg bg-sunken/50 px-3 py-2 text-xs text-ink-500 print:hidden">Em cada dia: <b>linha de cima = Planejado</b>, <b>linha de baixo = Realizado</b>. Células destacadas indicam divergência.</p>}
 

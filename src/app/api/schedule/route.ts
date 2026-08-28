@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { saveSchedulePattern, deleteSchedulePattern, setActual, clearActual, fillActualFromPlan, type SchedResult } from '@/lib/schedule';
+import { salvarEscalaDoColaborador, encerrarEscala } from '@/lib/schedule/employee';
 
 /** Ações JSON da Escala (cadastro de padrão e edição do Realizado). */
 export async function POST(req: Request) {
@@ -10,6 +11,21 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => null);
   if (!b?.action) return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
   const ctx = requestContext(req);
+
+  /* A escala com VIGÊNCIA responde antes: ela tem mensagem própria, e a
+     genérica ("Dados inválidos") esconderia justamente o que falta preencher. */
+  if (b.action === 'saveEmployeeSchedule' || b.action === 'endEmployeeSchedule') {
+    const res = b.action === 'saveEmployeeSchedule'
+      ? await salvarEscalaDoColaborador(user, b, ctx)
+      : await encerrarEscala(user, String(b.collaboratorId ?? ''), String(b.unitId ?? ''), String(b.lastDay ?? ''), ctx);
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: res.message ?? (res.reason === 'FORBIDDEN' ? 'Sem permissão' : 'Dados inválidos'), reason: res.reason },
+        { status: res.reason === 'FORBIDDEN' ? 403 : 400 },
+      );
+    }
+    return NextResponse.json({ ok: true, id: res.id, substituiu: res.substituiu });
+  }
 
   let r: SchedResult | undefined;
   if (b.action === 'savePattern') r = await saveSchedulePattern(user, b, ctx);
