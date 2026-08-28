@@ -753,6 +753,7 @@ export const GUIDE: GuideSection[] = [
         'TRÊS MODOS DE FOLGA: "Folga fixa semanal" (mesmo dia toda semana), "Folga fixa + domingo em ciclo" (dia fixo, mas de N em N semanas a folga cai no domingo) e "Folga somente em ciclo" (anda conforme o ciclo). O modo só aparece quando o ciclo fecha em 7 dias.',
         'A PARTIR DE QUANDO VALE: toda escala gravada vale a partir da data informada, e a configuração anterior é fechada na véspera. Por isso mudar a folga hoje NÃO altera a grade dos meses passados — cada dia continua mostrando o que valia nele.',
         'HORÁRIOS: entrada, intervalo e saída podem ser do colaborador; em branco, ele herda os do tipo de escala.',
+        'ATENÇÃO — SÃO DUAS TELAS: em Configurações → Tipos de escala fica o CICLO (6x1, 12x36), que vale para a rede. O DIA DA FOLGA é de cada colaborador e fica em Escala → "Cadastrar escala". Procurar a folga em Configurações não adianta.',
         'TIPOS DE ESCALA (Configurações → Tipos de escala): o Admin cadastra as escalas que a operação usa — nome ("6x1 Tarde"), CICLO (trabalha X dias, folga Y) e os horários padrão de entrada, intervalo e saída.',
         'COMO CADASTRAR O 12x36: o ciclo é 1 × 1 — em dias de calendário é dia sim, dia não. O nome que a equipe lê é o do cadastro ("12x36 Noturno"); o ciclo é o que o sistema usa para gerar o Planejado.',
         'CICLO QUE FECHA EM 7 DIAS (6x1, 5x2) permite dia fixo de folga; ciclo de outro tamanho faz a folga andar de dia da semana sozinha — a tela avisa qual é o caso.',
