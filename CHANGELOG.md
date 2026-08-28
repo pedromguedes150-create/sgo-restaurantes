@@ -9,6 +9,56 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.60.0 — 2026-08-28 (Escala: dia de folga por colaborador, com vigência)
+
+Parte 2 de 3. É onde o **dia da folga** finalmente aparece — na parte 1 só existia o ciclo.
+
+### Onde fica
+**Escala → "Cadastrar escala" → Configuração de escala do colaborador.** Escolhe-se o colaborador, o
+tipo de escala e então a folga.
+
+### Três modos de folga
+- **Folga fixa semanal** — o mesmo dia toda semana, sem variação.
+- **Folga fixa + domingo em ciclo** — dia fixo, mas de N em N semanas a folga cai no **domingo**.
+  Sem esse modo, "folga fixa na terça" significaria **nunca** folgar num domingo.
+- **Folga somente em ciclo** — sem dia fixo; anda conforme o ciclo.
+
+Os modos só aparecem quando o **ciclo fecha em 7 dias**. Num ciclo de 6 ou de 2 dias a folga anda de
+dia da semana sozinha, e oferecer "dia fixo" seria prometer o que o gerador não cumpre — nesse caso
+a tela pede o **início do ciclo** e diz por quê.
+
+### A vigência: o passado para de mudar
+Toda escala gravada vale **a partir da data informada**, e a anterior é **fechada na véspera** (não
+sobrescrita). Antes havia **uma** configuração por pessoa, valendo para sempre: mudar a folga em
+agosto reescrevia a grade de março. Agora cada dia da grade consulta a versão que valia **nele**.
+
+### O 12x36 já sai certo nas escalas novas
+O gerador das versões cadastradas conta **dias corridos** desde a âncora. O antigo usava a paridade
+do dia do mês e produzia `31/08 T · 01/09 T` — dois dias seguidos de trabalho em toda virada de mês
+com 31 dias. **As escalas antigas seguem no gerador de antes de propósito**: trocar o motor delas
+mudaria grades já vistas, e isso é decisão da parte 3, não efeito colateral desta.
+
+### Horários
+Entrada, intervalo e saída podem ser do colaborador; em branco, herda do tipo de escala.
+
+### Migração
+Aditiva, com **backfill**: cada cadastro atual vira a primeira vigência, começando na própria
+data-âncora — então o Planejado dos meses já vistos continua idêntico. A única remoção é o índice
+**único** (colaborador, unidade), que era justamente o que impedia a segunda vigência de existir.
+Nenhum dado é apagado.
+
+### Testes
+- `tests/schedule-vigencia.test.ts` (20) — qual versão vale em cada dia, bordas, antes da primeira
+  vigência, versões sobrepostas, a âncora que faz a folga cair no dia certo, e os três modos.
+- `tests/schedule-planned.test.ts` (14) — 6x1 e 5x2 com folgas consecutivas dando a volta na semana,
+  4x2 andando, o modo domingo-em-ciclo sem deixar semana sem folga, e a **prova de que o 12x36 não
+  produz "TT" em 60 dias**.
+- `tests/employee-schedule.integration.test.ts` (12) — exigências por tipo de ciclo, a vigência
+  fechando na véspera, regravar na mesma data corrigindo em vez de duplicar, e nunca duas vigências
+  abertas ao mesmo tempo.
+
+---
+
 ## v1.59.0 — 2026-08-28 (Escala: cadastro de tipos, no lugar da lista fixa)
 
 Parte 1 de 3 da configuração de escala por colaborador.

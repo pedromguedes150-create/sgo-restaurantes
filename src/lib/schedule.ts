@@ -3,6 +3,8 @@ import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import type { ScheduleType, DayStatus } from '@prisma/client';
+import { vigenciaNaData } from './schedule/vigencia';
+import { planejadoDoDia } from './schedule/planned';
 
 /**
  * Escala (Fase D) — PLANEJADO (gerado do padrão + ajustes) × REALIZADO (editável).
@@ -91,12 +93,20 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
 
   const [collabs, patterns, overrides, actuals] = await Promise.all([
     prisma.collaborator.findMany({ where: { active: true, units: { some: { unitId } } }, orderBy: { name: 'asc' }, select: { id: true, name: true, jobTitle: true } }),
-    prisma.employeeSchedule.findMany({ where: { unitId, active: true }, include: { shift: true } }),
+    prisma.employeeSchedule.findMany({ where: { unitId, active: true }, orderBy: { startDate: 'asc' }, include: { shift: true, template: true } }),
     prisma.schedulePlanOverride.findMany({ where: { unitId, date: { gte: first, lte: last } } }),
     prisma.scheduleActual.findMany({ where: { unitId, date: { gte: first, lte: last } } }),
   ]);
 
-  const patternByCollab = new Map(patterns.map((p) => [p.collaboratorId, p]));
+  /* Um colaborador tem VÁRIAS vigências desde a parte 2. Um Map de uma versão
+     por pessoa ficaria com qualquer uma delas — a ordem do banco decidiria a
+     grade, o que é o mesmo que não decidir. */
+  const versoesPorColab = new Map<string, typeof patterns>();
+  for (const p of patterns) {
+    const lista = versoesPorColab.get(p.collaboratorId) ?? [];
+    lista.push(p);
+    versoesPorColab.set(p.collaboratorId, lista);
+  }
   const overrideMap = new Map<string, DayStatus>(); // key collab|dom
   for (const o of overrides) overrideMap.set(`${o.collaboratorId}|${o.date.getUTCDate()}`, o.status);
   const actualMap = new Map<string, DayStatus>();
@@ -106,17 +116,46 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
   const withoutSchedule: { id: string; name: string }[] = [];
 
   for (const c of collabs) {
-    const p = patternByCollab.get(c.id);
-    if (!p) { withoutSchedule.push({ id: c.id, name: c.name }); continue; }
+    const versoes = versoesPorColab.get(c.id);
+    if (!versoes || versoes.length === 0) { withoutSchedule.push({ id: c.id, name: c.name }); continue; }
+
+    /* Antes da primeira vigência vale a versão mais antiga. É o que o sistema
+       já fazia (um padrão só, valendo para sempre): mudar isso para "sem
+       escala" apagaria o passado que hoje aparece — o oposto do objetivo. */
+    const maisAntiga = versoes[0];
+
     const days: ScheduleCell[] = [];
     for (let d = 1; d <= daysCount; d++) {
       const date = dayUTC(year, month, d);
-      const planned = overrideMap.get(`${c.id}|${d}`) ?? plannedStatus(p, date);
+      const v = vigenciaNaData(versoes, date) ?? maisAntiga;
+      /* Versão cadastrada pela parte 2 (tem TIPO) usa o gerador novo: ciclo em
+         dias corridos e folga ancorada no dia da semana. As linhas antigas
+         seguem no gerador de antes — trocar o motor delas mudaria grades já
+         vistas, e isso é decisão da parte 3, não efeito colateral desta. */
+      const planejado = v.template
+        ? planejadoDoDia({
+            workDays: v.template.workDays,
+            offDays: v.template.offDays,
+            anchorDate: v.anchorDate,
+            startDate: v.startDate,
+            weeklyOffDay: v.weeklyOffDay,
+            offMode: v.offMode,
+            sundayEveryWeeks: v.sundayEveryWeeks,
+          }, date)
+        : plannedStatus(v, date);
+      const planned = overrideMap.get(`${c.id}|${d}`) ?? planejado;
       const actual = actualMap.get(`${c.id}|${d}`) ?? null;
       days.push({ planned, actual });
     }
-    const shiftLabel = p.shift ? (p.shift.startTime && p.shift.endTime ? `${p.shift.startTime}-${p.shift.endTime}` : p.shift.name) : null;
-    rows.push({ collaboratorId: c.id, name: c.name, jobTitle: c.jobTitle, typeLabel: TYPE_LABELS[p.scheduleType], scheduleType: p.scheduleType, shiftLabel, days });
+
+    /* O rótulo da linha é o da versão do ÚLTIMO dia do mês: é a que descreve
+       como a pessoa está hoje, e o mês inteiro cabe nos dias, não no rótulo. */
+    const doFim = vigenciaNaData(versoes, last) ?? versoes[versoes.length - 1];
+    const shiftLabel = doFim.shift ? (doFim.shift.startTime && doFim.shift.endTime ? `${doFim.shift.startTime}-${doFim.shift.endTime}` : doFim.shift.name) : null;
+    /* O nome cadastrado ("6x1 Tarde") diz mais que "6x1" — é o que a equipe
+       usa para falar da escala. */
+    const typeLabel = doFim.template?.name ?? TYPE_LABELS[doFim.scheduleType];
+    rows.push({ collaboratorId: c.id, name: c.name, jobTitle: c.jobTitle, typeLabel, scheduleType: doFim.scheduleType, shiftLabel, days });
   }
 
   // ordena por tipo de escala (agrupamento) depois por nome
@@ -143,11 +182,16 @@ export async function saveSchedulePattern(
     customMask: input.scheduleType === 'CUSTOM' ? (input.customMask || '').toUpperCase().replace(/[^TF]/g, '') : null,
     active: true,
   };
-  const saved = await prisma.employeeSchedule.upsert({
-    where: { collaboratorId_unitId: { collaboratorId: input.collaboratorId, unitId: input.unitId } },
-    create: { collaboratorId: input.collaboratorId, unitId: input.unitId, ...data },
-    update: data,
+  /* O caminho antigo (sem tipo cadastrado) continua existindo, mas agora
+     grava uma VIGÊNCIA começando na própria data-âncora — que é o que o
+     gerente informou como início do ciclo. */
+  const jaExiste = await prisma.employeeSchedule.findFirst({
+    where: { collaboratorId: input.collaboratorId, unitId: input.unitId, startDate: anchor },
+    select: { id: true },
   });
+  const saved = jaExiste
+    ? await prisma.employeeSchedule.update({ where: { id: jaExiste.id }, data: { ...data, endDate: null } })
+    : await prisma.employeeSchedule.create({ data: { collaboratorId: input.collaboratorId, unitId: input.unitId, ...data, startDate: anchor } });
   await audit({ userId: user.id, unitId: input.unitId, action: 'SCHEDULE_PATTERN_SAVE', module: 'SCHEDULE', entity: 'employee_schedule', entityId: saved.id, metadata: { type: input.scheduleType }, ...ctx });
   return { ok: true, id: saved.id };
 }
