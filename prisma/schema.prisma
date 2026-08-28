@@ -2226,6 +2226,35 @@ enum DayStatus {
   ATRASO       // AT - Atraso (trabalhou, chegou atrasado — avisa o RH p/ conferência de ponto)
 }
 
+/// TIPO DE ESCALA — cadastro do Admin, no lugar de uma lista fixa no codigo.
+///
+/// Quase toda escala da CLT e "trabalha X dias, folga Y": 6x1, 5x2, 5x1, 4x2 —
+/// e ate o 12x36, que em dias de calendario e 1 x 1. Guardar o CICLO em vez de
+/// um nome fechado deixa a operacao criar o que precisar sem depender de
+/// alterar o sistema.
+///
+/// Os horarios sao o PADRAO do tipo; o colaborador pode ter os seus (parte 2).
+model ScheduleTemplate {
+  id        String   @id @default(cuid())
+  /// "6x1 Tarde", "12x36 Noturno".
+  name      String   @unique
+  /// Dias trabalhados no ciclo.
+  workDays  Int
+  /// Dias de folga no ciclo. Ciclo = workDays + offDays.
+  offDays   Int
+  /// "14:00" — entrada, intervalo e saida. Texto HH:MM: nao ha conta de horas
+  /// aqui, e guardar como data exigiria um dia de referencia que nao existe.
+  startTime String?
+  breakTime String?
+  endTime   String?
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("schedule_templates")
+}
+
 /// Cadastro do padrão de escala do colaborador (gera o Planejado).
 model EmployeeSchedule {
   id             String       @id @default(cuid())

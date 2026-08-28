@@ -9,6 +9,54 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.59.0 — 2026-08-28 (Escala: cadastro de tipos, no lugar da lista fixa)
+
+Parte 1 de 3 da configuração de escala por colaborador.
+
+### Por que um cadastro, e não mais opções no código
+As escalas eram cinco, fixas no código (12x36 ímpar/par, 6x1, 5x2, personalizada). Toda escala nova
+que o Ministério do Trabalho permite dependeria de uma alteração no sistema.
+
+Há uma simplificação que resolve isso: quase toda escala é **"trabalha X dias, folga Y"** — 6x1,
+5x2, 5x1, 4x2 — e o **12x36 também**, porque em dias de calendário ele é **1 × 1**, dia sim, dia
+não. Guardando o **ciclo** em vez de um nome fechado, a operação cria o que precisar.
+
+### O que muda
+- **Configurações → Tipos de escala**: nome ("6x1 Tarde"), ciclo (X × Y) e horários padrão de
+  **entrada, intervalo e saída**.
+- A tela mostra o ciclo **em palavras** antes de salvar — *"trabalha 6, folga 1 · ciclo de 7 dia(s)
+  · fecha na semana"*. Número de ciclo é abstrato; ver a frase evita o 6x2 digitado sem querer.
+- **"Fecha na semana"** é o que permitirá, na parte 2, dizer *"folga sempre no domingo"*. Ciclo de
+  outro tamanho faz a folga andar de dia da semana sozinha, e prometer dia fixo seria mentira.
+- Recusas explicam: ciclo **sem folga** marcaria o mês inteiro como trabalho; **nome repetido** é
+  recusado dizendo qual, porque o nome é a única coisa visível na hora de escolher o tipo do
+  colaborador.
+- Horário aceita `2217` e vira `22:17`; `25:00` é recusado em vez de "corrigido" para 01:00 —
+  gravar um horário que ninguém digitou é pior do que pedir de novo.
+- Os cinco tipos comuns nascem sozinhos na primeira abertura, **sem horários**: o mesmo 6x1 é de
+  manhã numa unidade e à tarde na outra.
+
+### O que vem depois
+**Parte 2**: configuração por colaborador — tipo de escala, **dia fixo de folga**, horários próprios
+e **vigência** ("a partir de quando vale"), para que mudar a folga não reescreva os meses passados.
+**Parte 3**: o gerador do Planejado passando a contar **dias corridos** desde a âncora — o que
+corrige o 12x36, hoje decidido pela paridade do dia do mês e que gera **dois dias seguidos de
+trabalho** em toda virada de mês com 31 dias.
+
+### Migração
+Aditiva: tabela `schedule_templates`. Nada existente muda — a escala atual continua funcionando
+como está até a parte 3.
+
+### Testes
+- `tests/schedule-templates.test.ts` (10) — normalização de horário, rótulo do ciclo, "fecha na
+  semana" e os tipos padrão.
+- `tests/schedule-templates.integration.test.ts` (12) — permissão, criar/editar, horário sem os
+  dois pontos, hora impossível, nome repetido, ciclos sem sentido, inativar.
+- `tests/schedule-templates-render.test.tsx` (7) — a tela mostra o ciclo em palavras, o 12x36 sem
+  a promessa de dia fixo, horários com intervalo e o estado inativo.
+
+---
+
 ## v1.58.0 — 2026-08-26 (Catálogo: importa a lista do fornecedor como ela vem)
 
 ### O que estava acontecendo

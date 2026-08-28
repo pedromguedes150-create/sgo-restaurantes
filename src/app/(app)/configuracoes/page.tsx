@@ -7,7 +7,7 @@ import { LargeTitle } from '@/components/layout/page-chrome';
 import { List, ListRow } from '@/components/ui/ds/list-row';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
 import { shortUnitName } from '@/lib/unit-name';
-import { ScrollText, Building2, Users, ListChecks, Wallet, KeyRound, ClipboardList, Trash2, AlertTriangle, Truck, Coins } from 'lucide-react';
+import { ScrollText, Building2, Users, ListChecks, Wallet, KeyRound, ClipboardList, Trash2, AlertTriangle, Truck, Coins, CalendarDays } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +31,7 @@ const SECOES: { titulo: string; itens: { href: string; title: string; subtitle: 
       { href: '/configuracoes/checklists', title: 'Checklists', subtitle: 'Por unidade, modelos prontos e de supervisor', icon: ListChecks },
       { href: '/configuracoes/fichas', title: 'Fichas', subtitle: 'Checklists preenchidos por link, sem login', icon: ClipboardList },
       { href: '/configuracoes/comandas', title: 'Comandas', subtitle: 'Sequências ativas por unidade', icon: ClipboardList },
+      { href: '/configuracoes/escalas', title: 'Tipos de escala', subtitle: 'Ciclo (6x1, 12x36) e horários que geram o Planejado', icon: CalendarDays },
       { href: '/configuracoes/troco', title: 'Troco', subtitle: 'Denominações aceitas por unidade', icon: Coins },
       { href: '/configuracoes/desperdicios', title: 'Desperdícios', subtitle: 'Categorias e unidade de medida (kg/un)', icon: Trash2 },
       { href: '/configuracoes/ocorrencias', title: 'Ocorrências', subtitle: 'Tipos e categorias, marcações de TI/Manutenção', icon: AlertTriangle },
