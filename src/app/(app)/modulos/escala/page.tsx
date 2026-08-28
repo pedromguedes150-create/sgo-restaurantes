@@ -6,6 +6,7 @@ import { getScheduleGrid } from '@/lib/schedule';
 import { listShifts } from '@/lib/workforce';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScheduleClient } from '@/components/schedule/schedule-client';
+import { contarEscalasLegadas } from '@/lib/schedule/migrate';
 import { ArrowLeft, ArrowRightLeft, BellRing } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
 
@@ -21,13 +22,14 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
   const year = Number(searchParams.year) || now.getFullYear();
   const month = Number(searchParams.month) || now.getMonth() + 1;
 
-  const [grid, collaborators, turnos, tipos] = await Promise.all([
+  const [grid, collaborators, turnos, tipos, legadas] = await Promise.all([
     getScheduleGrid(selected.id, year, month),
     prisma.collaborator.findMany({ where: { active: true, units: { some: { unitId: selected.id } } }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     listShifts(selected.id),
     /* Só os ATIVOS: um tipo inativado não deve voltar a ser escolhido, mas
        continua explicando as escalas antigas que o usaram. */
     prisma.scheduleTemplate.findMany({ where: { active: true }, orderBy: [{ order: 'asc' }, { name: 'asc' }] }),
+    contarEscalasLegadas(selected.id),
   ]);
 
   // padrão atual por colaborador (p/ a tela de cadastro de escala)
@@ -61,6 +63,8 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
           turnos={turnos.map((t) => ({ id: t.id, name: t.name, startTime: t.startTime, endTime: t.endTime }))}
           patterns={patterns.map((p) => ({ collaboratorId: p.collaboratorId, scheduleType: p.scheduleType, anchorDate: p.anchorDate.toISOString().slice(0, 10), shiftId: p.shiftId, customMask: p.customMask }))}
           tiposDeEscala={tipos.map((t) => ({ id: t.id, name: t.name, workDays: t.workDays, offDays: t.offDays, startTime: t.startTime, breakTime: t.breakTime, endTime: t.endTime }))}
+          escalasLegadas={legadas}
+          isAdmin={user.role === 'ADMIN'}
         />
       </CardContent></Card>
     </div>

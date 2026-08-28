@@ -155,7 +155,12 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
     /* O nome cadastrado ("6x1 Tarde") diz mais que "6x1" — é o que a equipe
        usa para falar da escala. */
     const typeLabel = doFim.template?.name ?? TYPE_LABELS[doFim.scheduleType];
-    rows.push({ collaboratorId: c.id, name: c.name, jobTitle: c.jobTitle, typeLabel, scheduleType: doFim.scheduleType, shiftLabel, days });
+    /* Horário do colaborador, herdando o do tipo quando em branco — é a regra
+       que a tela promete no cadastro, e ela precisa valer aqui também. */
+    const entrada = doFim.startTime ?? doFim.template?.startTime ?? null;
+    const saida = doFim.endTime ?? doFim.template?.endTime ?? null;
+    const horario = entrada && saida ? `${entrada}–${saida}` : entrada ?? saida ?? null;
+    rows.push({ collaboratorId: c.id, name: c.name, jobTitle: c.jobTitle, typeLabel, scheduleType: doFim.scheduleType, shiftLabel: horario ?? shiftLabel, days });
   }
 
   // ordena por tipo de escala (agrupamento) depois por nome
