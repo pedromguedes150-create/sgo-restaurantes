@@ -48,11 +48,15 @@ const WD = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 import { EmployeeScheduleForm, type TipoDeEscala } from './employee-schedule-form';
+import { MigrateLegacyPanel } from './migrate-legacy-panel';
 
-export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [] }: {
+export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false }: {
   units: Unit[]; selectedUnitId: string; year: number; month: number; grid: Grid; collaborators: Unit[]; turnos: Turno[]; patterns: Pattern[];
   /** Tipos cadastrados em Configurações → Tipos de escala. */
   tiposDeEscala?: TipoDeEscala[];
+  /** Quantas escalas ainda usam o gerador antigo (só Admin migra). */
+  escalasLegadas?: number;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<'planejado' | 'realizado' | 'comparacao'>('realizado');
@@ -133,6 +137,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
       {showAbsence && mode === 'realizado' && <AbsencePanel unitId={selectedUnitId} collaborators={collaborators} onDone={() => { setShowAbsence(false); router.refresh(); }} />}
       {showPattern && (
         <div className="space-y-3 print:hidden">
+          {isAdmin && <MigrateLegacyPanel unitId={selectedUnitId} quantidade={escalasLegadas} busy={busy} />}
           {/* A configuração NOVA vem primeiro: é a que tem dia de folga e
               vigência. A antiga fica abaixo, para quem já usava. */}
           {tiposDeEscala.length > 0 ? (

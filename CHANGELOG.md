@@ -9,6 +9,41 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.61.0 — 2026-08-28 (Escala: as antigas vêm para o formato novo, e o 12x36 fica correto)
+
+Parte 3 de 3.
+
+### O que a migração faz
+Na tela de Escala, o Admin vê **"N escalas ainda no formato antigo"** e um botão para trazê-las,
+escolhendo **a partir de quando** o formato novo vale.
+
+- **O passado não muda.** A escala antiga é **fechada na véspera** da data escolhida e a nova vale
+  dali em diante. Reescrever a vigência inteira também funcionaria, mas mudaria o Planejado de meses
+  que a operação já conferiu.
+- **6x1 e 5x2 não mudam nem no futuro**: o dia da folga é **deduzido da âncora** que a escala já
+  usava. Há teste comparando os dois geradores dia a dia, por 8 semanas, para as 7 âncoras possíveis.
+- **12x36 fica correto** — e aqui a mudança é o objetivo. A regra antiga decidia pela paridade do dia
+  do mês e produzia `31/08 T · 01/09 T`, dois dias seguidos de trabalho em toda virada de mês com 31
+  dias. A âncora da migração é escolhida para que **o dia do corte continue sendo o mesmo** (de
+  trabalho ou de folga), senão a escala inverteria e a troca de turno da unidade iria junto.
+- **Escala personalizada alternada** (ex.: `TFTFTFF`) **não é traduzida**: ela não é "trabalha X,
+  folga Y", e traduzir com o mesmo número de dias produziria uma escala diferente da que a pessoa
+  cumpre. A tela **diz o nome** de quem ficou de fora.
+- Rodar o botão duas vezes não duplica nada.
+
+### Horários na grade
+A linha do colaborador passa a mostrar o **horário da escala** (o dele, ou o herdado do tipo) no
+lugar do rótulo do turno.
+
+### Testes
+- `tests/schedule-legacy.test.ts` (13) — a tradução da máscara, a recusa da máscara alternada, a
+  **prova de que 6x1/5x2 dão resultado idêntico** nos dois geradores, e o 12x36 mantendo o dia de
+  trabalho no corte.
+- `tests/schedule-migrate.integration.test.ts` (10) — só Admin migra, o passado fechado na véspera,
+  o dia da folga deduzido, a personalizada intacta, e rodar de novo sem duplicar.
+
+---
+
 ## v1.60.0 — 2026-08-28 (Escala: dia de folga por colaborador, com vigência)
 
 Parte 2 de 3. É onde o **dia da folga** finalmente aparece — na parte 1 só existia o ciclo.
