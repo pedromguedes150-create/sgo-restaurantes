@@ -9,6 +9,39 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.62.0 — 2026-08-31 (Escala: as folgas da unidade numa tela só)
+
+### O problema, visto na tela
+A grade estava **genérica**: a cozinha inteira folgando na sexta. A causa é o cadastro antigo, que
+não perguntava o dia da folga — perguntava uma "data de início do ciclo", e quem cadastrou usou a
+mesma para todos. Com âncora igual, o gerador dá folga no mesmo dia para todo mundo.
+
+A configuração por colaborador (v1.60) resolve isso, mas **uma pessoa por vez**. Em 20
+colaboradores × 15 unidades, ninguém abre 300 formulários — e a escala continua genérica.
+
+### O que muda
+**Escala → "Folgas da unidade"**: uma linha por pessoa, com o tipo de escala e o dia de folga.
+
+- **"Buscar definições de cada colaborador"** traz o que cada um já tem — a tela abre assim, e o
+  botão devolve a esse estado depois de mexidas que você quiser descartar.
+- **Um único "Salvar folgas"**, com uma data de início comum. Cada gravação abre vigência e fecha a
+  anterior na véspera, como no cadastro individual — os meses passados não mudam.
+- **Contador por dia da semana** no alto, com o dia sem ninguém em vermelho. É o número que impede
+  deixar a segunda-feira descoberta — ou repetir o problema de todo mundo no mesmo dia.
+- **Quem está sem escala aparece na lista**, destacado. Escondê-los repetiria o problema que a tela
+  veio resolver: são justamente os que somem da grade.
+- **Um erro não derruba o lote**: salva o resto e diz quem faltou, com o motivo. Recusar tudo por
+  causa de um obrigaria a refazer as 19 linhas que estavam certas.
+- Ciclo que não fecha na semana (12x36) não oferece dia fixo e explica por quê.
+
+### Testes
+- `tests/folgas-lote.integration.test.ts` (11) — lista todos (inclusive sem escala), grava por dia,
+  respeita a vigência, um erro não derruba o lote, 12x36 recusado com motivo, escopo por unidade.
+- `tests/folgas-lote-render.test.tsx` (6) — o botão de buscar definições, o que a pessoa já tem, o
+  contador por dia, quem está sem escala e a explicação do ciclo que não fecha na semana.
+
+---
+
 ## v1.61.2 — 2026-08-31 (Escala: quem está sem escala aparece, e o Realizado para de "preencher")
 
 ### O relato

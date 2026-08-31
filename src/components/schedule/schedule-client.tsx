@@ -49,6 +49,8 @@ const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Jul
 
 import { EmployeeScheduleForm, type TipoDeEscala } from './employee-schedule-form';
 import { MigrateLegacyPanel } from './migrate-legacy-panel';
+import Link from 'next/link';
+import { CalendarRange } from 'lucide-react';
 
 export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false }: {
   units: Unit[]; selectedUnitId: string; year: number; month: number; grid: Grid; collaborators: Unit[]; turnos: Turno[]; patterns: Pattern[];
@@ -125,6 +127,11 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
           </>
         )}
         <Button size="sm" variant="outline" onClick={() => setShowPattern((v) => !v)}><Settings2 className="h-4 w-4" /> Cadastrar escala</Button>
+        {/* O caminho rápido: uma linha por pessoa, em vez de um formulário por
+            pessoa. É o que tira a escala de "todo mundo folga no mesmo dia". */}
+        <Link href={`/modulos/escala/folgas?unit=${selectedUnitId}`}>
+          <Button size="sm" variant="outline"><CalendarRange className="h-4 w-4" /> Folgas da unidade</Button>
+        </Link>
       </div>
 
       {/* Legenda */}
