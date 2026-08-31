@@ -9,6 +9,35 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.61.2 — 2026-08-31 (Escala: quem está sem escala aparece, e o Realizado para de "preencher")
+
+### O relato
+*"O botão preencher automaticamente deve funcionar para o Planejado; se quiser o Realizado igual, usa o Puxar."*
+
+### O que se descobriu ao investigar
+1. **O Planejado já é** o que se pedia: a escala inicial do mês, montada a partir da configuração de
+   cada colaborador. **Nada no sistema cria ajuste manual no Planejado** — não há o que preencher.
+2. **Quem está sem escala cadastrada some da grade em silêncio.** A lista já era calculada e
+   **nunca era mostrada**. São exatamente as pessoas "faltando" no Planejado, e o gerente só
+   descobria no fim do mês.
+
+### O que muda
+- **Faixa vermelha em todas as abas** com quem está fora da grade, os nomes, e um link que abre o
+  cadastro de escala. Em **todas** as abas de propósito: a pessoa falta em todas, e o gerente vive
+  no Realizado — mostrar só no Planejado esconderia o aviso de quem precisa vê-lo.
+- **"Preencher automaticamente" deixou de existir no Realizado.** Virou **"Completar dias vazios"**,
+  que é o que ele faz. O nome antigo sugeria planejar — e planejar é o que o Planejado faz sozinho.
+- **"Puxar Realizado = Planejado" passa a avisar o que destrói**: o texto diz que faltas, atestados
+  e férias já lançados serão substituídos pelo previsto.
+- A aba Planejado explica de onde ela vem, para ninguém procurar um botão que não deve existir.
+
+### Testes
+`tests/schedule-client-render.test.tsx` (5) — o Realizado sem "Preencher automaticamente" e com
+"Completar dias vazios", a faixa com os nomes de quem falta, e nenhum alarme quando não falta
+ninguém.
+
+---
+
 ## v1.61.1 — 2026-08-28 (Tipos de escala: a tela diz onde fica o dia da folga)
 
 ### Corrigido

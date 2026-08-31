@@ -621,7 +621,8 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'No modo REALIZADO (única aba editável), clique em cada dia e marque T/F/FI/FJ/A/FE.',
           'Use "Registrar ausência" para faltas/atestados/férias em um período (com anexo).',
-          '"Puxar Realizado = Planejado" copia tudo; "Preencher automaticamente" só completa os vazios.',
+          'O PLANEJADO NÃO SE PREENCHE: ele é a escala inicial do mês, montada sozinha a partir da configuração de cada colaborador. Quem aparecer na faixa vermelha "fora da grade" está sem escala cadastrada — é isso que falta preencher, e o link leva direto ao cadastro.',
+          'NO REALIZADO: "Completar dias vazios" preenche só o que está em branco e NÃO toca no que você já marcou. "Puxar Realizado = Planejado" SOBRESCREVE o mês inteiro — faltas, atestados e férias já lançados são substituídos pelo previsto.',
           'No modo COMPARAÇÃO veja planejado × realizado; exporte em Excel ou PDF para o RH.',
         ],
       },
