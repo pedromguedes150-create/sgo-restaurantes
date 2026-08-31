@@ -116,8 +116,11 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
         ))}
         {mode === 'realizado' && (
           <>
-            <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Preencher os dias vazios do Realizado com o Planejado? Não sobrescreve o que você já marcou.')) postJson({ action: 'fill', unitId: selectedUnitId, year, month, mode: 'empty' }); }}><Wand2 className="h-4 w-4" /> Preencher automaticamente</Button>
-            <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Copiar TODO o Planejado para o Realizado do mês? Isto sobrescreve o Realizado atual.')) postJson({ action: 'fill', unitId: selectedUnitId, year, month, mode: 'all' }); }}><CopyCheck className="h-4 w-4" /> Puxar Realizado = Planejado</Button>
+            {/* Antes se chamava "Preencher automaticamente", nome que sugeria
+                planejar — e planejar é o que o PLANEJADO faz sozinho. Aqui o
+                que se faz é registrar presença, e o nome tem de dizer isso. */}
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Completar os dias VAZIOS do Realizado com o Planejado?\n\nO que você já marcou não é tocado.')) postJson({ action: 'fill', unitId: selectedUnitId, year, month, mode: 'empty' }); }}><Wand2 className="h-4 w-4" /> Completar dias vazios</Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Copiar TODO o Planejado para o Realizado do mês?\n\nISTO SOBRESCREVE o que já foi marcado — faltas, atestados e férias do mês serão substituídos pelo previsto.')) postJson({ action: 'fill', unitId: selectedUnitId, year, month, mode: 'all' }); }}><CopyCheck className="h-4 w-4" /> Puxar Realizado = Planejado</Button>
             <Button size="sm" variant="outline" onClick={() => setShowAbsence((v) => !v)}><CalendarPlus className="h-4 w-4" /> Registrar ausência</Button>
           </>
         )}
@@ -154,6 +157,28 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
             </div>
           </details>
         </div>
+      )}
+
+      {/* QUEM FALTA — em TODAS as abas. Sem escala cadastrada a pessoa não
+          aparece em nenhuma delas, e o gerente vive no Realizado: mostrar só no
+          Planejado esconderia o aviso justamente de quem precisa vê-lo. */}
+      {grid.withoutSchedule.length > 0 && (
+        <div className="rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-xs print:hidden">
+          <span className="block font-semibold text-danger">
+            {grid.withoutSchedule.length} colaborador(es) fora da grade, por não terem escala cadastrada:
+          </span>
+          <span className="block text-ink-700">{grid.withoutSchedule.map((c) => c.name).join(' · ')}</span>
+          <button onClick={() => setShowPattern(true)} className="mt-1 font-semibold text-brand underline">
+            Cadastrar a escala deles
+          </button>
+        </div>
+      )}
+
+      {mode === 'planejado' && (
+        <p className="rounded-lg bg-sunken/50 px-3 py-2 text-xs text-ink-500 print:hidden">
+          O Planejado é a <b>escala inicial do mês</b>, montada sozinha a partir da configuração de cada colaborador — não
+          há o que preencher aqui. Para registrar o que de fato aconteceu, use a aba <b>Realizado</b>.
+        </p>
       )}
 
       {mode === 'comparacao' && <p className="rounded-lg bg-sunken/50 px-3 py-2 text-xs text-ink-500 print:hidden">Em cada dia: <b>linha de cima = Planejado</b>, <b>linha de baixo = Realizado</b>. Células destacadas indicam divergência.</p>}
