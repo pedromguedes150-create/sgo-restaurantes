@@ -9,6 +9,32 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.62.1 — 2026-09-02 (Pagamentos: o número da aba dizia o limite, não o total)
+
+### O defeito
+As listas de Pagamentos paravam em **100 linhas** — e o crachá de cada aba mostrava o **tamanho da
+lista carregada**. Com 340 pendências, ele dizia **100**: o teto se olhando no espelho.
+
+O efeito prático: o gestor aprovava as 100, a tela recarregava, apareciam outras 100 — e em momento
+nenhum havia como saber quantas faltavam. O **"Selecionar todas (100)"** também marcava só as
+visíveis, então "aprovar todas" nunca era todas.
+
+### Corrigido
+- **O crachá vem de um `count` de verdade.** Se são 340, a aba diz 340.
+- **Teto de 100 → 500**, agora numa constante com nome (`LIMITE_DA_LISTA`). Antes era o número 100
+  repetido em quatro consultas — o tipo de número que muda em três lugares e esquece o quarto.
+- **A tela avisa quando a lista foi cortada**: *"Mostrando 500 de 640 lançamento(s). Resolva estes e
+  recarregue — a fila continua depois deles."* O silêncio era o problema, não o teto.
+- **"Selecionar todas" vira "Selecionar as carregadas"** quando a lista está no teto. Dizer "todas"
+  faria o gestor aprovar 500 e achar que zerou a fila.
+
+### Testes
+`tests/payments-limite.integration.test.ts` (5) — o total vindo de `count` e não do tamanho da
+lista, o teto respeitado, a relação "carregado < total" que dispara o aviso, e as contagens
+respeitando o papel (quem não paga vê zero na fila de pagamento).
+
+---
+
 ## v1.62.0 — 2026-08-31 (Escala: as folgas da unidade numa tela só)
 
 ### O problema, visto na tela

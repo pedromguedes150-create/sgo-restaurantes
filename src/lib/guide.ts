@@ -710,6 +710,7 @@ export const GUIDE: GuideSection[] = [
         summary: 'Freelancers, horas-extra e avulsos.',
         steps: [
           'Em PAGAMENTOS, solicite (aba Minhas), aprove (Aprovar) e registre o pagamento (Pagar).',
+          'O NÚMERO NA ABA É O TOTAL DE VERDADE. Se a fila for maior do que cabe numa tela, aparece um aviso amarelo — "Mostrando 500 de 640" — e o botão passa a dizer "Selecionar as carregadas", porque aprovar as visíveis não zera a fila. Resolva e recarregue para ver as próximas.',
           'Freelancer: ao lançar, o valor vem do padrão cadastrado. Se você mudar o valor, aparece um alerta de divergência (não bloqueia) e o aprovador é avisado.',
           'Financeiro/Admin: use "Consolidação de freelancers" para o relatório mensal (chave PIX + total por freelancer) em PDF e Excel, pronto para o Financeiro.',
           'O Admin pode delegar a aprovação por período (férias do aprovador).',

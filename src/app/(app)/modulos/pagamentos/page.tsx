@@ -1,7 +1,7 @@
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
-import { getMyRequests, getToApprove, getToPay, getHistory, getMiscTypes } from '@/lib/payments/query';
+import { getMyRequests, getToApprove, getToPay, getHistory, getMiscTypes, getPaymentCounts, LIMITE_DA_LISTA } from '@/lib/payments/query';
 import { listSuppliers } from '@/lib/suppliers';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -78,11 +78,14 @@ export default async function PagamentosPage() {
   const user = (await getSessionUser())!;
   const isFinanceView = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO';
 
-  const [mine, toApprove, toPay, history, units, miscTypes, freelancers, suppliers] = await Promise.all([
+  const [mine, toApprove, toPay, history, totais, units, miscTypes, freelancers, suppliers] = await Promise.all([
     getMyRequests(user),
     getToApprove(user),
     getToPay(user),
     getHistory(user),
+    /* Os TOTAIS vêm de count, não do tamanho das listas: com o teto de linhas,
+       o tamanho do array é o teto, e o crachá mentiria. */
+    getPaymentCounts(user),
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     getMiscTypes(),
     prisma.freelancer.findMany({ where: { active: true }, include: { units: { select: { unitId: true } }, sectorRates: true }, orderBy: { name: 'asc' } }),
@@ -113,6 +116,8 @@ export default async function PagamentosPage() {
             toApprove={(toApprove as ReqRow[]).map(toDTO)}
             toPay={(toPay as ReqRow[]).map(toDTO)}
             history={(history as ReqRow[]).map(toDTO)}
+            totais={totais}
+            limite={LIMITE_DA_LISTA}
           />
         </CardContent>
       </Card>
