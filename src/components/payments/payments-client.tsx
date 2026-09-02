@@ -73,6 +73,25 @@ const DS_STATUS: Record<PayReq['status'], DsTone> = {
 
 type Tab = 'nova' | 'minhas' | 'aprovar' | 'pagar' | 'historico';
 
+/**
+ * Diz quando a lista não cabe inteira na tela.
+ *
+ * Sem isto, o teto some: a pessoa vê 500 linhas, aprova as 500 e acha que
+ * acabou — quando ainda havia 200 esperando. O silêncio é o problema, não o
+ * teto.
+ */
+function ListaCortada({ mostrando, total, limite }: { mostrando: number; total?: number; limite: number }) {
+  if (mostrando < limite) return null;
+  return (
+    <p className="rounded-lg bg-warning-bg px-3 py-2 text-xs font-medium text-warning">
+      Mostrando <b>{mostrando}</b>{typeof total === 'number' ? <> de <b>{total}</b></> : null} lançamento(s).
+      {typeof total === 'number' && total > mostrando
+        ? ' Resolva estes e recarregue para ver os próximos — a fila continua depois deles.'
+        : ' Há mais na fila do que cabe numa tela.'}
+    </p>
+  );
+}
+
 export function PaymentsClient({
   isFinanceView,
   isAdmin = false,
@@ -84,6 +103,8 @@ export function PaymentsClient({
   mine,
   toApprove,
   toPay,
+  totais,
+  limite = 500,
   history,
 }: {
   isFinanceView: boolean;
@@ -96,6 +117,10 @@ export function PaymentsClient({
   mine: PayReq[];
   toApprove: PayReq[];
   toPay: PayReq[];
+  /** Quantas existem DE VERDADE em cada fila (count, não tamanho da lista). */
+  totais?: { mine: number; toApprove: number; toPay: number; history: number };
+  /** Teto de linhas por lista — acima dele a tela avisa que há mais. */
+  limite?: number;
   history: PayReq[];
 }) {
   const router = useRouter();
@@ -185,8 +210,10 @@ export function PaymentsClient({
   const tabs: { key: Tab; label: string; badge?: number; show: boolean }[] = [
     { key: 'nova', label: 'Nova', show: true },
     { key: 'minhas', label: 'Minhas', show: true },
-    { key: 'aprovar', label: 'Para Aprovar', badge: toApprove.length, show: true },
-    { key: 'pagar', label: 'Pagar', badge: toPay.length, show: isFinanceView },
+    /* O crachá vem do TOTAL de verdade. Com o tamanho da lista ele exibia o
+       teto — 100 com 340 pendências — e ninguém tinha como saber das outras. */
+    { key: 'aprovar', label: 'Para Aprovar', badge: totais?.toApprove ?? toApprove.length, show: true },
+    { key: 'pagar', label: 'Pagar', badge: totais?.toPay ?? toPay.length, show: isFinanceView },
     { key: 'historico', label: 'Histórico', show: true },
   ];
 
@@ -200,6 +227,12 @@ export function PaymentsClient({
       />
 
       {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} onDone={() => { setTab('minhas'); router.refresh(); }} />}
+
+      <ListaCortada mostrando={
+        tab === 'minhas' ? mine.length : tab === 'aprovar' ? toApprove.length : tab === 'pagar' ? toPay.length : tab === 'historico' ? history.length : 0
+      } total={
+        tab === 'minhas' ? totais?.mine : tab === 'aprovar' ? totais?.toApprove : tab === 'pagar' ? totais?.toPay : tab === 'historico' ? totais?.history : undefined
+      } limite={limite} />
 
       {tab === 'minhas' && <List items={mine} />}
 
@@ -218,7 +251,10 @@ export function PaymentsClient({
                   style={{ accentColor: 'var(--sgo-brand)' }}
                   className="h-4 w-4 rounded outline-none focus-visible:shadow-sgo-focus"
                 />
-                Selecionar todas ({toApprove.length})
+                {/* "todas" só é verdade quando a lista não foi cortada. Com o
+                    teto atingido, dizer "todas" faria o gestor aprovar 500 e
+                    achar que zerou a fila. */}
+                Selecionar {toApprove.length >= limite ? 'as carregadas' : 'todas'} ({toApprove.length})
               </label>
               <span className="text-xs tabular-nums text-ink-500">
                 {sel.size} selecionada(s) · {formatBRL(selTotal)}

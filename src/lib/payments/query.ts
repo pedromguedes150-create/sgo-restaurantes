@@ -13,6 +13,17 @@ const REQUEST_INCLUDE = {
   supplier: { select: { name: true } },
 } satisfies Prisma.PaymentRequestInclude;
 
+/**
+ * Teto de linhas por lista.
+ *
+ * Existe para a página não tentar desenhar milhares de linhas de uma vez. O que
+ * NÃO pode acontecer é o teto virar o número que a tela mostra: o contador de
+ * cada aba vem de um `count` de verdade, e quando a lista chega no teto a tela
+ * diz "mostrando X de Y". Antes o crachá exibia o tamanho do array — com 340
+ * pendências ele dizia 100, e ninguém tinha como saber das outras 240.
+ */
+export const LIMITE_DA_LISTA = 500;
+
 /** Escopo de pagamentos: FINANCE e CEO/ADMIN veem toda a rede; demais, suas unidades. */
 function paymentScope(user: SessionUser): Prisma.PaymentRequestWhereInput {
   if (user.seesAllUnits || user.role === 'FINANCE') return {};
@@ -24,7 +35,7 @@ export async function getMyRequests(user: SessionUser) {
   return prisma.paymentRequest.findMany({
     where: { requestedById: user.id },
     orderBy: { createdAt: 'desc' },
-    take: 100,
+    take: LIMITE_DA_LISTA,
     include: REQUEST_INCLUDE,
   });
 }
@@ -40,7 +51,7 @@ export async function getToApprove(user: SessionUser) {
       ...(isAdminLike ? {} : { approverRole: { in: [...roles] } }),
     },
     orderBy: { createdAt: 'asc' },
-    take: 100,
+    take: LIMITE_DA_LISTA,
     include: REQUEST_INCLUDE,
   });
 }
@@ -51,7 +62,7 @@ export async function getToPay(user: SessionUser) {
   return prisma.paymentRequest.findMany({
     where: { status: 'APPROVED', ...paymentScope(user) },
     orderBy: { approvedAt: 'asc' },
-    take: 100,
+    take: LIMITE_DA_LISTA,
     include: REQUEST_INCLUDE,
   });
 }
@@ -61,7 +72,7 @@ export async function getHistory(user: SessionUser) {
   return prisma.paymentRequest.findMany({
     where: { status: { in: ['APPROVED', 'REJECTED', 'PAID'] }, ...paymentScope(user) },
     orderBy: { createdAt: 'desc' },
-    take: 100,
+    take: LIMITE_DA_LISTA,
     include: REQUEST_INCLUDE,
   });
 }
@@ -72,6 +83,18 @@ export async function getToApproveCount(user: SessionUser): Promise<number> {
   return prisma.paymentRequest.count({
     where: { status: 'PENDING', ...paymentScope(user), ...(isAdminLike ? {} : { approverRole: { in: [...roles] } }) },
   });
+}
+
+/** Quantas há DE VERDADE em cada fila — é isto que os crachás mostram. */
+export async function getPaymentCounts(user: SessionUser): Promise<{ mine: number; toApprove: number; toPay: number; history: number }> {
+  const podePagar = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO';
+  const [mine, toApprove, toPay, history] = await Promise.all([
+    prisma.paymentRequest.count({ where: { requestedById: user.id } }),
+    getToApproveCount(user),
+    podePagar ? prisma.paymentRequest.count({ where: { status: 'APPROVED', ...paymentScope(user) } }) : Promise.resolve(0),
+    prisma.paymentRequest.count({ where: { status: { in: ['APPROVED', 'REJECTED', 'PAID'] }, ...paymentScope(user) } }),
+  ]);
+  return { mine, toApprove, toPay, history };
 }
 
 export async function getFreelancersForUnit(unitId: string) {
