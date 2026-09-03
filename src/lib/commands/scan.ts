@@ -4,6 +4,7 @@ import { currentOperationalDate } from '@/lib/date/operational';
 import { getActiveSequence } from '@/lib/commands/active';
 import { absentFromScans } from '@/lib/commands/barcode';
 import { submitCount } from '@/lib/commands/count';
+import { escopoDoLeitor } from '@/lib/commands/scan-scope';
 import type { OpenCmdSuspect } from '@/lib/commands/open-analysis';
 import type { SessionUser } from '@/lib/auth/session';
 
@@ -19,8 +20,15 @@ export interface ScanContext {
   unitId: string;
   unitName: string;
   operationalDate: string;
-  /** números que ESTA conferência deve cobrir (faixa da madrugada, se houver) */
+  /**
+   * TODAS as ativas da unidade — é o universo que o leitor aceita.
+   *
+   * Antes vinha só a faixa da madrugada, e por isso bipar a 350 respondia "não
+   * pertence à sequência": a contagem da semana não podia ser feita por leitor.
+   */
   activeNumbers: number[];
+  /** A faixa do dia. Vazia quando a unidade confere tudo todo dia. */
+  nightlyNumbers: number[];
   /** a unidade tem faixa de madrugada: esta conferência é PARCIAL */
   partial: boolean;
   /** total de ativas na unidade — só para a tela dizer quantas ficam de fora */
@@ -51,7 +59,8 @@ export async function getScanContext(user: SessionUser, unitId: string): Promise
       unitId: unit.id,
       unitName: unit.name,
       operationalDate,
-      activeNumbers: [...(seq.hasNightly ? seq.nightly : seq.active)].sort((a, b) => a - b),
+      activeNumbers: [...seq.active].sort((a, b) => a - b),
+      nightlyNumbers: seq.hasNightly ? [...seq.nightly].sort((a, b) => a - b) : [],
       partial: seq.hasNightly,
       totalAtivas: seq.active.size,
       alreadyCounted: Boolean(count),
@@ -68,7 +77,13 @@ export interface CrossHit {
 }
 
 export type SubmitScanResult =
-  | { ok: true; absent: number[]; scanned: number; newDivergences: number; crossed: CrossHit[]; cutDate: string | null }
+  | {
+      ok: true; absent: number[]; scanned: number; newDivergences: number; crossed: CrossHit[]; cutDate: string | null;
+      /** Foi registrada como contagem COMPLETA da sequência? */
+      completa: boolean;
+      /** As bipadas fora da faixa do dia que tornaram a conferência completa. */
+      foraDaFaixa: number[];
+    }
   | { ok: false; reason: 'FORBIDDEN' | 'NO_CONFIG' | 'INVALID' | 'OBSERVATION_REQUIRED' };
 
 /**
@@ -88,15 +103,18 @@ export async function submitScanCount(
   if (!seq.config) return { ok: false, reason: 'NO_CONFIG' };
 
   const scanned = new Set((input.scannedNumbers ?? []).filter((n) => Number.isInteger(n) && seq.active.has(n)));
-  /* O caixa confere a faixa da madrugada quando ela existe; senão, tudo. Sem
-     isso, uma conferência parcial marcaria como faltante toda comanda que
-     ninguém se propôs a contar naquela noite. */
-  const escopo = seq.hasNightly ? seq.nightly : seq.active;
+
+  /* QUEM DECIDE O ESCOPO É O QUE FOI BIPADO. Só a faixa do dia? Contagem
+     parcial. Apareceu uma comanda de fora? É a contagem da semana, e o escopo
+     passa a ser a sequência inteira — porque o caixa está conferindo tudo. */
+  const { escopo, completa, foraDaFaixa } = escopoDoLeitor(seq.active, seq.nightly, seq.hasNightly, scanned);
   const absent = absentFromScans(escopo, scanned);
 
   const note = (input.note ?? '').trim();
+  const virouCompleta = seq.hasNightly && completa;
   const observation = [
-    `Conferência por leitor${seq.hasNightly ? ' (madrugada, faixa parcial)' : ''}: ${scanned.size} bipada(s) de ${escopo.size} no escopo; ${absent.length} faltante(s).`,
+    `Conferência por leitor${virouCompleta ? ' (COMPLETA — bipou fora da faixa do dia)' : completa ? '' : ' (madrugada, faixa parcial)'}: ${scanned.size} bipada(s) de ${escopo.size} no escopo; ${absent.length} faltante(s).`,
+    virouCompleta ? `Fora da faixa: ${foraDaFaixa.slice(0, 10).join(', ')}${foraDaFaixa.length > 10 ? '…' : ''}.` : '',
     note,
   ]
     .filter(Boolean)
@@ -113,7 +131,10 @@ export async function submitScanCount(
          "0 ok" no dia seguinte a uma conferência inteira — como se ninguém
          tivesse contado nada. */
       presentNumbers: [...scanned].filter((n) => escopo.has(n)),
-      scopeNumbers: seq.hasNightly ? [...escopo] : undefined,
+      /* Só a PARCIAL guarda escopo. Na completa ele vai ausente de propósito:
+         é isso que faz a contagem valer como completa e atualizar o indicador
+         "última contagem completa". */
+      scopeNumbers: completa ? undefined : [...escopo],
       observation,
     },
     ctx,
@@ -121,7 +142,7 @@ export async function submitScanCount(
   if (!r.ok) return { ok: false, reason: r.reason };
 
   const crossed = await crossWithOpenCommands(input.unitId, absent);
-  return { ok: true, absent, scanned: scanned.size, newDivergences: r.newDivergences, crossed: crossed.hits, cutDate: crossed.cutDate };
+  return { ok: true, absent, scanned: scanned.size, newDivergences: r.newDivergences, crossed: crossed.hits, cutDate: crossed.cutDate, completa, foraDaFaixa };
 }
 
 /** Cruza uma lista de faltantes com as suspeitas da última análise de comandas em aberto. */

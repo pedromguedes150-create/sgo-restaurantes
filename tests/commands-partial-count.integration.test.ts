@@ -58,7 +58,13 @@ describe('Faixa da madrugada', () => {
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.ctx.partial).toBe(true);
-      expect(r.ctx.activeNumbers.length).toBe(300);
+      /* O contrato mudou de propósito: `activeNumbers` passou a ser o UNIVERSO
+         que o leitor aceita (todas as ativas) e `nightlyNumbers` é a faixa do
+         dia. Enquanto `activeNumbers` era só a faixa, bipar a 350 respondia
+         "não pertence à sequência" — e a contagem completa não podia ser feita
+         por leitor. */
+      expect(r.ctx.nightlyNumbers.length).toBe(300);
+      expect(r.ctx.activeNumbers.length).toBe(600);
       expect(r.ctx.totalAtivas).toBe(600);
     }
   });

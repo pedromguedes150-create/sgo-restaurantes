@@ -210,7 +210,9 @@ export const GUIDE: GuideSection[] = [
         ],
         tips: [
           'Leituras repetidas são ignoradas (aparece "já bipada") — não tem risco de contar a mesma comanda duas vezes.',
-          'Se o código bipado não pertencer à sequência da unidade, a tela avisa e mostra o código lido, em vez de aceitar em silêncio.',
+          'PARA CONFERIR TODAS PELO LEITOR: basta bipar UMA comanda fora da faixa do dia (ex.: a 350 quando a faixa é 1–300). O sistema entende que é a contagem da semana, muda para CONFERÊNCIA COMPLETA na hora e avisa na tela. Não há botão para trocar de modo — quem decide é o que você bipa.',
+          'ENQUANTO VOCÊ BIPAR SÓ DENTRO DA FAIXA, a conferência segue parcial: as guardadas não viram extraviadas e o indicador "última contagem completa" não é zerado.',
+          'Se o código bipado não pertencer à sequência da unidade, a tela avisa e mostra o código lido, em vez de aceitar em silêncio. Um código estranho NÃO transforma a conferência em completa — erro de leitura não é decisão de contar tudo.',
           'Comanda em uso na mesa: bipe assim que ela voltar, ou registre na observação antes de concluir.',
           'Se a unidade já tiver subido o relatório de "Comandas em Aberto", ao concluir o sistema mostra quais faltantes estão ABERTAS com valor no Teknisa — é o sinal forte da fraude das "2 comandas", leve os horários ao monitoramento.',
         ],

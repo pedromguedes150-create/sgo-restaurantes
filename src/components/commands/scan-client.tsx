@@ -5,6 +5,7 @@ import { CheckCircle2, AlertTriangle, ScanLine, Undo2, ShieldAlert } from 'lucid
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { escopoDoLeitor } from '@/lib/commands/scan-scope';
 import { parseCommandBarcode, type ScanReason } from '@/lib/commands/barcode';
 
 interface CrossHit {
@@ -18,8 +19,11 @@ interface Props {
   unitId: string;
   unitName: string;
   operationalDate: string;
+  /** TODAS as ativas — o universo que o leitor aceita bipar. */
   activeNumbers: number[];
-  /** A unidade tem faixa de madrugada: esta conferência cobre só parte. */
+  /** A faixa do dia. Bipar fora dela transforma a conferência em completa. */
+  nightlyNumbers?: number[];
+  /** A unidade tem faixa de madrugada: esta conferência começa parcial. */
   partial: boolean;
   totalAtivas: number;
   alreadyCounted: boolean;
@@ -48,7 +52,7 @@ const REASON_TEXT: Record<LogEntry['reason'], string> = {
  */
 const JANELA_RELEITURA_MS = 2500;
 
-export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, partial, totalAtivas, alreadyCounted, userName }: Props) {
+export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, nightlyNumbers = [], partial, totalAtivas, alreadyCounted, userName }: Props) {
   const active = useMemo(() => new Set(activeNumbers), [activeNumbers]);
   const inputRef = useRef<HTMLInputElement>(null);
   const seqRef = useRef(0);
@@ -73,7 +77,17 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, p
     keepFocus();
   }, []);
 
-  const missing = activeNumbers.filter((n) => !scanned.has(n));
+  /* O ESCOPO SEGUE O QUE FOI BIPADO, com a mesma regra do servidor: só a
+     faixa do dia = parcial; apareceu uma de fora = contagem completa. Derivar
+     (em vez de guardar num estado) é o que impede a tela dizer "parcial"
+     enquanto o servidor grava "completa". */
+  const faixaDoDia = useMemo(() => new Set(nightlyNumbers), [nightlyNumbers]);
+  const { escopo, completa, foraDaFaixa } = useMemo(
+    () => escopoDoLeitor(active, faixaDoDia, partial && nightlyNumbers.length > 0, scanned),
+    [active, faixaDoDia, partial, nightlyNumbers.length, scanned],
+  );
+  const noEscopo = useMemo(() => [...escopo].sort((a, b) => a - b), [escopo]);
+  const missing = noEscopo.filter((n) => !scanned.has(n));
 
   function register(raw: string) {
     const r = parseCommandBarcode(raw, active);
@@ -191,14 +205,24 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, p
 
   return (
     <div className="space-y-4" onClick={keepFocus}>
-      {partial && (
+      {partial && !completa && (
         /* O caixa precisa saber que NÃO está conferindo tudo — senão pensa que
            faltou comanda quando o número "ativas" não bate com o total da casa.
            E o supervisor precisa saber que o resto não foi julgado nesta noite. */
         <p className="rounded-md bg-info-bg p-2 text-sm text-info">
-          <strong>Conferência da madrugada (parcial).</strong> Você confere {activeNumbers.length} comanda(s) desta faixa.
-          As outras {Math.max(0, totalAtivas - activeNumbers.length)} da unidade <strong>não entram nesta contagem</strong> e não
+          <strong>Conferência da madrugada (parcial).</strong> Você confere {noEscopo.length} comanda(s) desta faixa.
+          As outras {Math.max(0, totalAtivas - noEscopo.length)} da unidade <strong>não entram nesta contagem</strong> e não
           serão tratadas como extraviadas — elas são conferidas na contagem completa da semana.
+          {' '}Se você bipar uma comanda <strong>fora desta faixa</strong>, a conferência passa a ser a <strong>completa</strong>.
+        </p>
+      )}
+      {partial && completa && (
+        /* A mudança de modo tem de ser DITA. Sem isso o contador salta de 300
+           para 648 e o caixa acha que o sistema enlouqueceu. */
+        <p className="rounded-md bg-warning-bg p-2 text-sm text-warning">
+          <strong>Conferência COMPLETA.</strong> Você bipou a comanda {foraDaFaixa[0]}, que está fora da faixa do dia — então
+          esta conferência passou a valer para <strong>todas as {noEscopo.length}</strong> comandas da unidade.
+          {foraDaFaixa.length > 1 ? ` (${foraDaFaixa.length} fora da faixa até agora.)` : ''}
         </p>
       )}
       {alreadyCounted && (
@@ -214,8 +238,8 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, p
             <p className="text-xs text-ink-500">conferidas</p>
           </div>
           <div>
-            <p className="sgo-type-24 font-semibold text-ink-900">{activeNumbers.length}</p>
-            <p className="text-xs text-ink-500">{partial ? 'nesta faixa' : 'ativas'}</p>
+            <p className="sgo-type-24 font-semibold text-ink-900">{noEscopo.length}</p>
+            <p className="text-xs text-ink-500">{partial && !completa ? 'nesta faixa' : 'ativas'}</p>
           </div>
           <div>
             <p className={`sgo-type-24 font-semibold ${missing.length ? 'text-danger' : 'text-success'}`}>{missing.length}</p>
