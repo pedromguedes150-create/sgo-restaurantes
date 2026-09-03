@@ -9,6 +9,44 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.63.0 — 2026-09-02 (Leitor de comandas: bipar fora da faixa vira conferência completa)
+
+### O problema
+O leitor só aceitava os números da **faixa do dia**. Bipar a 350, com a faixa em 1–300, respondia
+*"não pertence à sequência"* — e a **contagem completa da semana simplesmente não podia ser feita
+por leitor**. O caixa ficava presa às 300.
+
+### A regra nova
+**Bipar uma comanda fora da faixa do dia significa que a conferência é completa.** Não há botão para
+trocar de modo: quem decide é o que se bipa. Quando o caixa começa a passar a 350, é porque está
+fazendo a contagem da semana — e o sistema acompanha.
+
+- Enquanto só houver bipadas **dentro** da faixa, a conferência segue **parcial**: as guardadas não
+  viram extraviadas e o indicador "última contagem completa" não é zerado.
+- Na primeira bipada **fora** da faixa, o escopo passa a ser a **sequência inteira**, a tela troca o
+  aviso e diz **qual comanda** provocou a mudança — sem isso o contador salta de 300 para 648 e o
+  caixa acha que o sistema enlouqueceu.
+- A conferência completa é gravada **sem escopo**, que é o que a faz valer como contagem completa e
+  atualizar o indicador.
+- A observação da contagem registra o motivo e os números fora da faixa, para o supervisor entender
+  de onde saíram as divergências.
+- **Código estranho não muda nada**: bipar algo que não é da unidade é erro de leitura, não decisão
+  de contar tudo.
+
+### Detalhe que sustenta isso
+A regra vive num só lugar (`src/lib/commands/scan-scope.ts`) e é usada **pela tela e pelo servidor**.
+Derivar o modo do que foi bipado — em vez de guardar num estado — é o que impede a tela dizer
+"parcial" enquanto o servidor grava "completa".
+
+### Testes
+- `tests/commands-scan-scope.test.ts` (9) — a borda da faixa (300 não dispara, 301 dispara), número
+  de outra unidade ignorado, faixa que cobre tudo, unidade sem faixa.
+- `tests/commands-scan-completa.integration.test.ts` (8) — o contexto mandando todas as ativas,
+  parcial mantendo o escopo e não zerando o indicador, e a bipada fora da faixa virando completa com
+  as faltantes certas, sem escopo gravado e com o motivo na observação.
+
+---
+
 ## v1.62.1 — 2026-09-02 (Pagamentos: o número da aba dizia o limite, não o total)
 
 ### O defeito
