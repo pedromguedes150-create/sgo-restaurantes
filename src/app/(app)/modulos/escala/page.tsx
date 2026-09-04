@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { permissaoDeRota } from '@/lib/permissions/links';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getScheduleGrid } from '@/lib/schedule';
@@ -57,6 +59,7 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
       <Card><CardContent className="pt-4">
         <ScheduleClient
           podeVerFolgas={podeVer('/modulos/escala/folgas')}
+          abas={await abasDoPerfil(user.role, 'SCHEDULE')}
           units={units}
           selectedUnitId={selected.id}
           year={year}

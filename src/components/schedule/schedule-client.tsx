@@ -2,6 +2,7 @@
 
 import { useState, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 import { Wand2, CopyCheck, FileSpreadsheet, Printer, CalendarPlus, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,18 +53,20 @@ import { MigrateLegacyPanel } from './migrate-legacy-panel';
 import Link from 'next/link';
 import { CalendarRange } from 'lucide-react';
 
-export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false, podeVerFolgas = true }: {
+export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false, podeVerFolgas = true, abas = {} }: {
   units: Unit[]; selectedUnitId: string; year: number; month: number; grid: Grid; collaborators: Unit[]; turnos: Turno[]; patterns: Pattern[];
   /** Tipos cadastrados em Configurações → Tipos de escala. */
   tiposDeEscala?: TipoDeEscala[];
   /** A tela de Folgas da unidade é uma parte própria na matriz de perfis. */
   podeVerFolgas?: boolean;
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
   /** Quantas escalas ainda usam o gerador antigo (só Admin migra). */
   escalasLegadas?: number;
   isAdmin?: boolean;
 }) {
   const router = useRouter();
-  const [mode, setMode] = useState<'planejado' | 'realizado' | 'comparacao'>('realizado');
+  const [mode, setMode] = useState<'planejado' | 'realizado' | 'comparacao'>(abaInicial(abas, 'SCHEDULE', 'realizado') as 'planejado' | 'realizado' | 'comparacao');
   const [busy, setBusy] = useState(false);
   const [edit, setEdit] = useState<string | null>(null); // `${collabId}:${day}`
   const [showAbsence, setShowAbsence] = useState(false);
@@ -113,7 +116,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
 
       {/* Modo */}
       <div className="flex flex-wrap items-center gap-2 print:hidden">
-        {(['planejado', 'realizado', 'comparacao'] as const).map((m) => (
+        {(['planejado', 'realizado', 'comparacao'] as const).filter((m) => podeAba(abas, m)).map((m) => (
           <button key={m} onClick={() => setMode(m)} className={cn('rounded-full px-3 py-1.5 text-sm font-semibold', mode === m ? 'bg-brand text-on-brand' : 'border')}>
             {m === 'planejado' ? 'Planejado' : m === 'realizado' ? 'Realizado' : 'Comparação'}
           </button>

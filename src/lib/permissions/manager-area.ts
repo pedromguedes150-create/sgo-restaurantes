@@ -1,35 +1,22 @@
-import type { Perm } from '@/lib/permissions';
+import { ABAS, acessoDasAbas as acessoGenerico, type AcessoAbas } from '@/lib/permissions/abas';
 
 /**
- * As abas da Minha área como SUBMENUS da matriz de perfis.
- *
- * Esta é a regra única, lida pela tela e pelo servidor. Se cada lado tivesse a
- * sua, a aba poderia sumir na tela e continuar aceitando gravação pela rota —
- * ou o contrário, o que é pior: o botão aparece e o servidor recusa.
+ * As abas da Minha área. A lista mora no registro geral (`abas.ts`) desde a
+ * v1.66.0 — aqui ficam só o atalho para ela e a regra de qual aba manda em cada
+ * operação da rota `/api/manager-area`.
  */
 
 export type AbaMinhaArea = 'tarefas' | 'notas' | 'folgas';
-
-export const ABAS_MINHA_AREA: { id: AbaMinhaArea; modulo: string; label: string }[] = [
-  { id: 'tarefas', modulo: 'MANAGER_AREA_TASKS', label: 'Minhas tarefas' },
-  { id: 'notas', modulo: 'MANAGER_AREA_NOTES', label: 'Bloco de notas' },
-  { id: 'folgas', modulo: 'MANAGER_AREA_LEAVES', label: 'Folgas / férias' },
-];
-
-/** O que a tela recebe: por aba, se aparece e se aceita escrever. */
-export type AcessoAbas = Record<AbaMinhaArea, Perm>;
-
-const LIBERADO: Perm = { canView: true, canEdit: true };
+export const ABAS_MINHA_AREA = ABAS.MANAGER_AREA.map((a) => ({ id: a.id as AbaMinhaArea, modulo: a.key, label: a.label }));
+export type { AcessoAbas };
 
 /** Traduz a matriz de permissões para as abas. */
-export function acessoDasAbas(perms: Record<string, Perm | undefined>): AcessoAbas {
-  const out = {} as AcessoAbas;
-  for (const a of ABAS_MINHA_AREA) out[a.id] = perms[a.modulo] ?? LIBERADO;
-  return out;
+export function acessoDasAbas(perms: Record<string, { canView: boolean; canEdit: boolean } | undefined>): AcessoAbas {
+  return acessoGenerico(perms, 'MANAGER_AREA');
 }
 
 /**
- * Qual submenu manda em cada operação de `/api/manager-area`.
+ * Qual aba manda em cada operação de `/api/manager-area`.
  *
  * `workSchedule/set` é o bloco "Meu horário de trabalho", que mora DENTRO da
  * aba de folgas: fechar a aba e deixar a gravação do horário aberta deixaria

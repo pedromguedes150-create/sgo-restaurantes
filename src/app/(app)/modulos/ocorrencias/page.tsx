@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+import { podeAba } from '@/lib/permissions/abas';
+
 import { listOccurrences, getOccurrenceSummary } from '@/lib/occurrences/query';
 import { Button } from '@/components/ui/ds/button';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -27,6 +30,7 @@ export default async function OcorrenciasPage({
   searchParams: { status?: string; view?: string; pagina?: string };
 }) {
   const user = (await getSessionUser())!;
+  const abasOcorrencias = await abasDoPerfil(user.role, 'OCCURRENCES');
   const status = (['OPEN', 'IN_PROGRESS', 'CLOSED'].includes(searchParams.status ?? '')
     ? searchParams.status
     : undefined) as OccurrenceStatus | undefined;
@@ -99,7 +103,7 @@ export default async function OcorrenciasPage({
             { value: 'geral', label: 'Geral', href: link({ view: null, pagina: 1 }) },
             { value: 'manutencao', label: 'Manutenção', href: link({ view: 'manutencao', pagina: 1 }) },
             { value: 'ti', label: 'TI', href: link({ view: 'ti', pagina: 1 }) },
-          ]}
+          ].filter((o) => podeAba(abasOcorrencias, o.value))}
         />
       </div>
 

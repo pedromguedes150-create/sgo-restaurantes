@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Wrench, Plus, Play, Check, X, RotateCcw, Pencil } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,12 +44,15 @@ const STATUS_META: Record<TicketDTO['status'], { label: string; tone: StatusTone
 const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—');
 const isOverdue = (iso: string | null) => Boolean(iso && new Date(iso) < new Date());
 
-export function MaintenanceClient({ view, isAdmin, units, equipment, suppliers, summary, tickets, plans }: {
+export function MaintenanceClient({ view, isAdmin, units, equipment, suppliers, summary, tickets, plans, abas = {} }: {
   view: 'chamados' | 'preventiva'; isAdmin: boolean; units: UnitDTO[]; equipment: EquipDTO[]; suppliers: SupplierDTO[];
   summary: Summary; tickets: TicketDTO[]; plans: PlanDTO[];
+
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'chamados' | 'preventiva'>(view);
+  const [tab, setTab] = useState<'chamados' | 'preventiva'>(abaInicial(abas, 'MAINTENANCE', view) as 'chamados' | 'preventiva');
   return (
     <div className="space-y-4">
       <h1 className="flex items-center gap-2 text-xl font-bold text-ink-900"><Wrench className="h-5 w-5 text-ink-900" /> Manutenção</h1>
@@ -58,8 +62,8 @@ export function MaintenanceClient({ view, isAdmin, units, equipment, suppliers, 
       <SegmentedControl
         aria-label="Seções de Manutenção"
         value={tab}
-        onValueChange={setTab}
-        options={[{ value: 'chamados', label: 'Chamados' }, { value: 'preventiva', label: 'Preventiva' }]}
+        onValueChange={(v) => setTab(v as typeof tab)}
+        options={[{ value: 'chamados', label: 'Chamados' }, { value: 'preventiva', label: 'Preventiva' }].filter((o) => podeAba(abas, o.value))}
       />
 
       {tab === 'chamados'

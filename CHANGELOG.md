@@ -9,6 +9,67 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.66.0 — 2026-09-04 (As abas de dentro das telas entram na matriz — as 15 que faltavam)
+
+### O pedido
+*"Pode fazer as 15 de uma vez."*
+
+A v1.65.0 cobriu tudo que tem endereço próprio. Faltavam as **abas que vivem dentro de uma tela
+só**: elas não têm endereço, então a guarda de rota não as alcança — cada uma precisou ser
+declarada e ligada na tela e na rota.
+
+### As 15 telas, agora aba a aba
+| Tela | Abas |
+|---|---|
+| Pagamentos | Nova · Minhas · Aprovar · Pagar · Histórico |
+| Notas Recebidas | Notas lançadas · Vencimentos |
+| Gestão de Troco | Cofre · Histórico |
+| Inventário | Estoque · Movimentar · Contagem · Histórico |
+| Manutenção | Chamados · Preventiva |
+| Rotina do Supervisor | Painel de uso · Visitas |
+| Solicitação de Produtos | Nova solicitação · Meus pedidos · Atendimento |
+| Atestados | Lançar · Histórico · Painel |
+| Central de Comunicação | Recebidos · Novo comunicado · Painel de leitura |
+| Desligamentos | Solicitar · Solicitações |
+| Recebimento de Gás | Lançar · Painel · Histórico · Contratos |
+| Coleta de Óleo | Lançar · Painel · Histórico |
+| Pessoas | Colaboradores · Férias · Variações de escala |
+| Escala | Planejado · Realizado · Comparação |
+| Ocorrências | Geral · Manutenção · TI |
+
+### Uma fonte só
+As abas moram em `src/lib/permissions/abas.ts`. **A matriz nasce dela** (as linhas são geradas e
+encaixadas logo depois do módulo pai, o que garante a ordem que o cálculo exige), **a tela esconde
+por ela** e **a rota recusa por ela**. Se cada lado tivesse a sua lista, a aba sumiria da tela e o
+servidor continuaria aceitando — ou pior, o botão apareceria e o servidor recusaria.
+
+### A recusa no servidor
+Até aqui, **1 das 105 rotas de API** checava a matriz de perfis: a `/api/manager-area`, de ontem.
+Agora onze rotas recusam (403) a gravação de aba fechada — Troco, Produtos, Desligamentos, Escala,
+Supervisão, Gás, Pagamentos, Atestados, Óleo e as duas de Manutenção. O mapa de "qual ação pertence
+a qual aba" é **explícito**: ação que não está nele não é barrada, porque barrar o que não se
+conhece derrubaria rota de leitura (o `context` dos Desligamentos, a sugestão do cofre).
+
+### Aba de consulta não finge ter "Editar"
+Painel e histórico entram como **só ver**: a coluna Editar mostra um traço em vez de uma caixa que
+não muda nada.
+
+### Nada muda para quem não mexer
+Aba sem linha cadastrada segue o módulo. Fechar o módulo fecha as abas dele. A tela abre sempre
+numa aba que o perfil pode ver — abrir numa fechada mostraria tela vazia e pareceria defeito.
+
+### Testes
+- `tests/permissions-abas.integration.test.ts` (10) — o registro e a matriz não podem divergir:
+  toda aba virou linha com o pai certo e sem endereço próprio, o pai vem antes, não há chave
+  repetida em todo o sistema, as 15 telas estão cobertas, fechar uma aba não mexe nas outras, e
+  fechar o módulo fecha todas.
+- `tests/abas-rotas.integration.test.ts` (7) — chama as rotas: com a aba fechada, lançar coleta,
+  contar o cofre, pedir produto e lançar atestado voltam **403**; com ela aberta, não; e a ação de
+  leitura não mapeada continua passando.
+- Suíte inteira: **636 testes verdes**.
+
+---
+
 ## v1.65.0 — 2026-09-04 (Permissão por parte em TODO o sistema — e a Escala deixa de ser porta aberta)
 
 ### O pedido

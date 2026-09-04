@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { recusaSeAbaFechada } from '@/lib/permissions/guarda-abas';
 import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
@@ -16,6 +17,9 @@ export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const b = await req.json().catch(() => null);
+  /* Aba fechada na matriz de perfis não grava. */
+  const negado = await recusaSeAbaFechada(user.role, 'CERTIFICATES_TAB_NEW');
+  if (negado) return negado;
   if (!b?.unitId || !b?.collaboratorId) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
 
   const r = await createCertificate(user, {

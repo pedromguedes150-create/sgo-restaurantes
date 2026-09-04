@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
+
 import { ClipboardCheck, RefreshCw, Building2, AlertTriangle, Plus, Landmark, HandCoins, ArrowLeftRight, History, Wallet, Wand2, PackageCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -99,9 +101,11 @@ function describeSides(r: ChangeRequest, list: DenomView[]): string {
 const emptyForm = (keys: string[]) => Object.fromEntries(keys.map((k) => [k, ''])) as Record<string, string>;
 const toNumbers = (keys: string[], v: Record<string, string>): Bal => Object.fromEntries(keys.map((k) => [k, parseNum(v[k] || '0')]));
 
-export function VaultClient({ units, selectedUnitId, vault, alerts, openRequestsNetwork, canOperate, canManageBuckets, canResolve }: {
+export function VaultClient({ units, selectedUnitId, vault, alerts, openRequestsNetwork, canOperate, canManageBuckets, canResolve, abas = {} }: {
   units: UnitOpt[]; selectedUnitId: string; vault: VaultUI; alerts: VaultAlertUI[] | null; openRequestsNetwork: ChangeRequest[];
   canOperate: boolean; canManageBuckets: boolean; canResolve: boolean;
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
 }) {
   const router = useRouter();
   // Config de denominações da unidade (dirige rótulos e blocos das telas do cofre).
@@ -118,7 +122,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
   }, [allKeys, vault.balances, denomByKey]);
   const indicatorLabel = bigDenoms.filter((d) => d.countsAsBigIndicator).map((d) => (d.value != null ? d.value.toLocaleString('pt-BR') : d.key)).join(' / ');
 
-  const [tab, setTab] = useState<'cofre' | 'historico'>('cofre');
+  const [tab, setTab] = useState<'cofre' | 'historico'>(abaInicial(abas, 'CASH', 'cofre') as 'cofre' | 'historico');
   const [busy, setBusy] = useState(false);
   const [action, setAction] = useState<'none' | 'count' | 'refill' | 'swap' | 'withdrawal' | 'register' | 'request'>('none');
   const [formA, setFormA] = useState<Record<string, string>>(() => emptyForm(allKeys));
@@ -217,7 +221,7 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
       {/* Abas */}
       <div className="flex gap-1 border-b">
-        {([['cofre', 'Cofre', Wallet], ['historico', 'Histórico', History]] as const).map(([key, label, Icon]) => (
+        {([['cofre', 'Cofre', Wallet], ['historico', 'Histórico', History]] as const).filter(([key]) => podeAba(abas, key)).map(([key, label, Icon]) => (
           <button key={key} onClick={() => setTab(key)} className={cn('flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold', tab === key ? 'border-brand text-brand' : 'border-transparent text-ink-500 hover:text-brand')}>
             <Icon className="h-4 w-4" /> {label}
           </button>

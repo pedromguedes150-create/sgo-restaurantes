@@ -5,6 +5,7 @@ import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
 import { Save, Droplets, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,10 +30,13 @@ const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', '
 const mlabel = (m: string) => { const [y, mm] = m.split('-'); return `${MONTHS[Number(mm) - 1]}/${y.slice(2)}`; };
 const perL = (n: number) => `R$ ${n.toFixed(4).replace('.', ',')}/L`;
 
-export function OilClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, rows }: {
+export function OilClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, rows, abas = {} }: {
   canLaunch: boolean; isAdmin: boolean; canEditDate?: boolean; units: Unit[]; suppliers: Supplier[]; dashboard: OilDash; rows: OilRow[];
+
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
 }) {
-  const [tab, setTab] = useState<'lancar' | 'painel' | 'historico'>(canLaunch ? 'lancar' : 'painel');
+  const [tab, setTab] = useState<'lancar' | 'painel' | 'historico'>(abaInicial(abas, 'OIL', canLaunch ? 'lancar' : 'painel') as 'lancar' | 'painel' | 'historico');
   const tabs: { key: typeof tab; label: string; show: boolean }[] = [
     { key: 'lancar', label: 'Lançar coleta', show: canLaunch },
     { key: 'painel', label: 'Dashboard', show: true },
@@ -43,8 +47,8 @@ export function OilClient({ canLaunch, isAdmin, canEditDate = false, units, supp
       <SegmentedControl
         aria-label="Seções de Coleta de Óleo"
         value={tab}
-        onValueChange={setTab}
-        options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label }))}
+        onValueChange={(v) => setTab(v as typeof tab)}
+        options={tabs.filter((t) => t.show && podeAba(abas, t.key)).map((t) => ({ value: t.key, label: t.label }))}
       />
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
       {tab === 'painel' && <Dashboard d={dashboard} />}

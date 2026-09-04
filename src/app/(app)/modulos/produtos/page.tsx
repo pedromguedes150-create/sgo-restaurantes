@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -40,6 +42,7 @@ export default async function ProdutosPage({ searchParams }: { searchParams: { u
       </div>
       <Card><CardContent className="pt-4">
         <ProductsClient
+            abas={await abasDoPerfil(user.role, 'PRODUCTS')}
           units={units}
           selUnitId={selUnit.id}
           isOps={isOps}

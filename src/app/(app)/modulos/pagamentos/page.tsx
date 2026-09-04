@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getMyRequests, getToApprove, getToPay, getHistory, getMiscTypes, getPaymentCounts, LIMITE_DA_LISTA } from '@/lib/payments/query';
@@ -105,6 +107,7 @@ export default async function PagamentosPage() {
       <Card>
         <CardContent className="pt-4">
           <PaymentsClient
+            abas={await abasDoPerfil(user.role, 'PAYMENTS')}
             isFinanceView={isFinanceView}
             isAdmin={user.role === 'ADMIN'}
             canEditDate={user.role === 'ADMIN' || user.role === 'SUPERVISOR'}

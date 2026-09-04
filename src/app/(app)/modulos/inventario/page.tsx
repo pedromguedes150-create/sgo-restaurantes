@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -47,6 +49,7 @@ export default async function InventarioPage() {
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Wrench className="h-5 w-5 text-brand" /> Inventário de Equipamentos</CardTitle></CardHeader>
         <CardContent>
           <EquipmentInventory
+            abas={await abasDoPerfil(user.role, 'INVENTORY')}
             canEdit={canEditEquip(user)}
             isAdmin={user.role === 'ADMIN'}
             units={units}

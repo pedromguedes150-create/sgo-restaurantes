@@ -2,6 +2,8 @@
 import Link from 'next/link';
 import { Landmark } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { permissaoDeRota } from '@/lib/permissions/links';
 
 import { FamilyTabs } from '@/components/layout/family-tabs';
@@ -56,6 +58,7 @@ export default async function TrocoPage({ searchParams }: { searchParams: { unit
       <Card>
         <CardContent className="pt-4">
           <VaultClient
+            abas={await abasDoPerfil(user.role, 'CASH')}
             units={units}
             selectedUnitId={selected.id}
             vault={vault}

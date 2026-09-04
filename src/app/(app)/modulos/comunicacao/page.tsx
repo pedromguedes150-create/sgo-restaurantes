@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getMyInbox, getAuthoredCommunications } from '@/lib/communications/query';
@@ -60,6 +62,7 @@ export default async function ComunicacaoPage() {
       </div>
       <Card><CardContent className="pt-4">
         <CommunicationsClient
+            abas={await abasDoPerfil(user.role, 'COMMUNICATION')}
           canAuthor={canAuthor}
           isAdmin={user.role === 'ADMIN'}
           weight={weight}

@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listTerminations } from '@/lib/terminations';
@@ -34,7 +36,7 @@ export default async function DesligamentosPage() {
         <LargeTitle title="Desligamentos" subtitle="Solicitação do gerente → aprovação do supervisor → encaminhar ao RH." />
       </div>
       <Card><CardContent className="pt-4">
-        <TerminationsClient canRequest={canRequest} canDecide={canDecide} units={units} collaboratorsByUnit={collaboratorsByUnit} rows={rows} />
+        <TerminationsClient abas={await abasDoPerfil(user.role, 'TERMINATIONS')} canRequest={canRequest} canDecide={canDecide} units={units} collaboratorsByUnit={collaboratorsByUnit} rows={rows} />
       </CardContent></Card>
     </div>
   );
