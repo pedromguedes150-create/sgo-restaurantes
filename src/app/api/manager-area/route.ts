@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import * as ma from '@/lib/manager-area';
 import { setMyWorkSchedule, setManagerWorkSchedule } from '@/lib/manager-schedule';
+import { canEditModule } from '@/lib/permissions';
+import { moduloDaOperacao } from '@/lib/permissions/manager-area';
 import type { ManagerLeaveKind } from '@prisma/client';
 
 export async function POST(req: Request) {
@@ -12,6 +14,13 @@ export async function POST(req: Request) {
 
   let r: { ok: boolean; reason?: string; id?: string } | undefined;
   const e = b.entity as string, a = b.action as string;
+
+  /* Esconder a aba é conveniência; recusar aqui é o controle. Sem esta guarda,
+     quem tem a aba fechada continuaria gravando pela rota. */
+  const modulo = moduloDaOperacao(e, a);
+  if (modulo && !(await canEditModule(user.role, modulo))) {
+    return NextResponse.json({ error: 'Sem permissão', reason: 'FORBIDDEN' }, { status: 403 });
+  }
 
   if (e === 'task' && a === 'create') r = await ma.createManagerTask(user, { title: b.title, notes: b.notes, dueAt: b.dueAt });
   else if (e === 'task' && a === 'update') r = await ma.updateManagerTask(user, b.id, { title: b.title, notes: b.notes, dueAt: b.dueAt });

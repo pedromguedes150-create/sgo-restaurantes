@@ -10,7 +10,7 @@ type Matrix = Record<string, Record<string, Perm>>;
 
 const EDITABLE_ROLES = ['SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE'];
 
-export function PermissionsAdmin({ modules, matrix }: { modules: { key: string; label: string }[]; matrix: Matrix }) {
+export function PermissionsAdmin({ modules, matrix }: { modules: { key: string; label: string; parent?: string }[]; matrix: Matrix }) {
   const router = useRouter();
   const [state, setState] = useState<Matrix>(matrix);
   const [busy, setBusy] = useState(false);
@@ -33,7 +33,7 @@ export function PermissionsAdmin({ modules, matrix }: { modules: { key: string; 
       <div className="max-w-xs">
         <Select
           label="Perfil" value={role} onValueChange={setRole}
-          hint="CEO e Administrador têm acesso total e não podem ser restringidos. Sem marcar “Ver”, o módulo some do menu do perfil."
+          hint="CEO e Administrador têm acesso total e não podem ser restringidos. Sem marcar “Ver”, o módulo some do menu do perfil. As linhas recuadas são partes de dentro de um módulo (abas): dá para fechar uma sem fechar o módulo inteiro."
           options={EDITABLE_ROLES.map((r) => ({ value: r, label: roleLabel(r) }))}
         />
       </div>
@@ -46,11 +46,18 @@ export function PermissionsAdmin({ modules, matrix }: { modules: { key: string; 
           <tbody>
             {modules.map((m) => {
               const p = state[role]?.[m.key] ?? { canView: true, canEdit: true };
+              /* O pai é o teto: fechando o módulo, as abas dele caem juntas —
+                 é assim que o servidor calcula, e a tela precisa dizer o mesmo. */
+              const paiAberto = !m.parent || (state[role]?.[m.parent]?.canView ?? true);
+              const ver = p.canView && paiAberto;
+              const editar = p.canEdit && ver;
               return (
                 <tr key={m.key} className="border-t">
-                  <td className="px-3 py-2 font-medium text-ink-900">{m.label}</td>
-                  <td className="px-3 py-2 text-center"><input type="checkbox" className="h-4 w-4" disabled={busy} checked={p.canView} onChange={(e) => set(m.key, { canView: e.target.checked })} /></td>
-                  <td className="px-3 py-2 text-center"><input type="checkbox" className="h-4 w-4" disabled={busy || !p.canView} checked={p.canEdit} onChange={(e) => set(m.key, { canEdit: e.target.checked })} /></td>
+                  <td className={m.parent ? 'py-1.5 pl-9 pr-3 text-ink-500' : 'px-3 py-2 font-medium text-ink-900'}>
+                    {m.parent && <span className="mr-1 text-ink-400">↳</span>}{m.label}
+                  </td>
+                  <td className="px-3 py-2 text-center"><input type="checkbox" className="h-4 w-4" disabled={busy || !paiAberto} checked={ver} onChange={(e) => set(m.key, { canView: e.target.checked })} /></td>
+                  <td className="px-3 py-2 text-center"><input type="checkbox" className="h-4 w-4" disabled={busy || !ver} checked={editar} onChange={(e) => set(m.key, { canEdit: e.target.checked })} /></td>
                 </tr>
               );
             })}

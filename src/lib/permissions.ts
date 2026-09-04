@@ -10,9 +10,24 @@ import type { Role } from '@prisma/client';
  * ADMIN e CEO sempre têm acesso total (não podem se trancar para fora).
  */
 
-export const MODULES: { key: string; label: string; nav?: string }[] = [
+/**
+ * Um módulo do sistema. `parent` marca um SUBMENU: uma parte de dentro de outro
+ * módulo (uma aba, um bloco), que o Admin pode fechar sem fechar o módulo
+ * inteiro — o pedido de "restringir Folgas/férias mas manter Minhas tarefas".
+ *
+ * Submenu não tem `nav` próprio (vive dentro da tela do pai), então nem a
+ * sidebar nem a guarda de rota mudam de comportamento por causa dele.
+ * O submenu tem de vir DEPOIS do pai nesta lista — `effectivePermissions`
+ * resolve na ordem, e há teste garantindo isso.
+ */
+export interface ModuleDef { key: string; label: string; nav?: string; parent?: string }
+
+export const MODULES: ModuleDef[] = [
   { key: 'DASHBOARD', label: 'Dashboard', nav: '/dashboard' },
   { key: 'MANAGER_AREA', label: 'Minha área', nav: '/minha-area' },
+  { key: 'MANAGER_AREA_TASKS', label: 'Minhas tarefas', parent: 'MANAGER_AREA' },
+  { key: 'MANAGER_AREA_NOTES', label: 'Bloco de notas', parent: 'MANAGER_AREA' },
+  { key: 'MANAGER_AREA_LEAVES', label: 'Folgas / férias (e meu horário)', parent: 'MANAGER_AREA' },
   { key: 'LEAVES_TEAM', label: 'Consolidado de Folgas/Férias', nav: '/modulos/folgas-equipe' },
   { key: 'TASKS', label: 'Tarefas', nav: '/tarefas' },
   { key: 'COMMUNICATION', label: 'Central de Comunicação', nav: '/modulos/comunicacao' },
@@ -77,6 +92,19 @@ export async function effectivePermissions(role: Role): Promise<Record<string, P
   for (const m of MODULES) {
     if (isFullAccess(role)) { out[m.key] = { canView: true, canEdit: true }; continue; }
     const r = byModule.get(m.key);
+
+    if (m.parent) {
+      /* Submenu: sem linha cadastrada ele SEGUE o pai — é o que faz esta
+         funcionalidade não mudar nada para ninguém enquanto o Admin não mexer.
+         E o pai é o teto: fechar "Minha área" fecha as três abas, mesmo que
+         alguma tenha linha liberando (senão a matriz se contradiria). */
+      const pai = out[m.parent] ?? { canView: true, canEdit: true };
+      const canView = (r ? r.canView : pai.canView) && pai.canView;
+      const canEdit = (r ? r.canEdit : pai.canEdit) && canView && pai.canEdit;
+      out[m.key] = { canView, canEdit };
+      continue;
+    }
+
     const allowOnly = DEFAULT_ALLOW_ONLY[role];
     const restricted = RESTRICTED_DEFAULT[m.key];
     const def = allowOnly ? allowOnly.includes(m.key) : restricted ? restricted.includes(role) : true;

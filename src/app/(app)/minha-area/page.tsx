@@ -2,6 +2,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { listManagerTasks, listManagerNotes, listManagerLeaves } from '@/lib/manager-area';
 import { getMyWorkSchedule } from '@/lib/manager-schedule';
 import { effectivePermissions } from '@/lib/permissions';
+import { acessoDasAbas } from '@/lib/permissions/manager-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { ManagerAreaClient } from '@/components/manager-area/manager-area-client';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -18,6 +19,7 @@ export default async function MinhaAreaPage() {
     effectivePermissions(user.role),
   ]);
   const canSeeTeam = Boolean(perms.LEAVES_TEAM?.canView);
+  const abas = acessoDasAbas(perms);
 
   return (
     <div className="space-y-4">
@@ -31,6 +33,7 @@ export default async function MinhaAreaPage() {
           leaves={leaves.map((l) => ({ id: l.id, kind: l.kind, startDate: l.startDate, endDate: l.endDate, note: l.note }))}
           schedule={schedule}
           canSeeTeam={canSeeTeam}
+          abas={abas}
         />
       </CardContent></Card>
     </div>

@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { TimePicker } from '@/components/ui/ds/time-picker';
 import { Group } from '@/components/ui/ds/group';
+import { ABAS_MINHA_AREA, type AbaMinhaArea, type AcessoAbas } from '@/lib/permissions/manager-area';
 
 export interface MTask { id: string; title: string; notes: string | null; dueAt: string | null; done: boolean }
 export interface MNote { id: string; title: string | null; content: string; createdAt: string }
@@ -50,9 +51,18 @@ function DueAtPicker({ date, time, onDate, onTime }: { date: string; time: strin
 
 export interface MWorkSchedule { weekdays: number[]; startTime: string | null; endTime: string | null; note: string | null }
 
-export function ManagerAreaClient({ tasks, notes, leaves, schedule = null, canSeeTeam = false }: { tasks: MTask[]; notes: MNote[]; leaves: MLeave[]; schedule?: MWorkSchedule | null; canSeeTeam?: boolean }) {
+const TODAS_LIBERADAS: AcessoAbas = {
+  tarefas: { canView: true, canEdit: true },
+  notas: { canView: true, canEdit: true },
+  folgas: { canView: true, canEdit: true },
+};
+
+export function ManagerAreaClient({ tasks, notes, leaves, schedule = null, canSeeTeam = false, abas = TODAS_LIBERADAS }: { tasks: MTask[]; notes: MNote[]; leaves: MLeave[]; schedule?: MWorkSchedule | null; canSeeTeam?: boolean; abas?: AcessoAbas }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'tarefas' | 'notas' | 'folgas'>('tarefas');
+  /* A primeira aba que o perfil pode ver — abrir numa aba fechada mostraria a
+     tela vazia e pareceria defeito. */
+  const visiveis = ABAS_MINHA_AREA.filter((a) => abas[a.id]?.canView);
+  const [tab, setTab] = useState<AbaMinhaArea>(visiveis[0]?.id ?? 'tarefas');
   const [busy, setBusy] = useState(false);
 
   async function post(body: Record<string, unknown>): Promise<boolean> {
@@ -64,18 +74,33 @@ export function ManagerAreaClient({ tasks, notes, leaves, schedule = null, canSe
     } finally { setBusy(false); }
   }
 
+  if (visiveis.length === 0) {
+    return <p className="text-sm text-ink-500">Seu perfil não tem acesso a nenhuma parte da Minha área. Fale com o Administrador.</p>;
+  }
+
+  const icones: Record<AbaMinhaArea, React.ReactNode> = {
+    tarefas: <ListTodo className="h-4 w-4" />,
+    notas: <StickyNote className="h-4 w-4" />,
+    folgas: <CalendarOff className="h-4 w-4" />,
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1">
-        <TabBtn active={tab === 'tarefas'} onClick={() => setTab('tarefas')} icon={<ListTodo className="h-4 w-4" />}>Minhas tarefas</TabBtn>
-        <TabBtn active={tab === 'notas'} onClick={() => setTab('notas')} icon={<StickyNote className="h-4 w-4" />}>Bloco de notas</TabBtn>
-        <TabBtn active={tab === 'folgas'} onClick={() => setTab('folgas')} icon={<CalendarOff className="h-4 w-4" />}>Folgas / férias</TabBtn>
+        {visiveis.map((a) => (
+          <TabBtn key={a.id} active={tab === a.id} onClick={() => setTab(a.id)} icon={icones[a.id]}>{a.label}</TabBtn>
+        ))}
       </div>
-      {tab === 'tarefas' && <TasksTab tasks={tasks} busy={busy} post={post} />}
-      {tab === 'notas' && <NotesTab notes={notes} busy={busy} post={post} />}
-      {tab === 'folgas' && <LeavesTab leaves={leaves} schedule={schedule} busy={busy} post={post} canSeeTeam={canSeeTeam} />}
+      {tab === 'tarefas' && abas.tarefas.canView && <TasksTab tasks={tasks} busy={busy} post={post} ro={!abas.tarefas.canEdit} />}
+      {tab === 'notas' && abas.notas.canView && <NotesTab notes={notes} busy={busy} post={post} ro={!abas.notas.canEdit} />}
+      {tab === 'folgas' && abas.folgas.canView && <LeavesTab leaves={leaves} schedule={schedule} busy={busy} post={post} canSeeTeam={canSeeTeam} ro={!abas.folgas.canEdit} />}
     </div>
   );
+}
+
+/** Aviso de aba que o perfil só pode consultar — o botão some, e o servidor recusa de todo jeito. */
+function SomenteLeitura() {
+  return <p className="rounded-md bg-info-bg p-2 text-xs text-info">Somente leitura: seu perfil pode consultar, mas não alterar esta aba.</p>;
 }
 
 function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
@@ -84,7 +109,7 @@ function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick:
 
 type Post = (b: Record<string, unknown>) => Promise<boolean>;
 
-function TasksTab({ tasks, busy, post }: { tasks: MTask[]; busy: boolean; post: Post }) {
+function TasksTab({ tasks, busy, post, ro = false }: { tasks: MTask[]; busy: boolean; post: Post; ro?: boolean }) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('09:00');
@@ -92,6 +117,8 @@ function TasksTab({ tasks, busy, post }: { tasks: MTask[]; busy: boolean; post: 
   const done = tasks.filter((t) => t.done);
   return (
     <div className="space-y-3">
+      {ro && <SomenteLeitura />}
+      {!ro && (
       <div className="rounded-lg border border-dashed p-3">
         <Label className="text-xs">Nova tarefa</Label>
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ex: ligar para o fornecedor X" className="mt-1" />
@@ -101,22 +128,23 @@ function TasksTab({ tasks, busy, post }: { tasks: MTask[]; busy: boolean; post: 
         </div>
         <p className="mt-1 text-[11px] text-ink-500">Com data/hora, o sistema te lembra por notificação quando chegar.</p>
       </div>
+      )}
 
       {pending.length === 0 && done.length === 0 && <p className="text-sm text-ink-500">Nenhuma tarefa. Adicione acima.</p>}
       <div className="space-y-1.5">
-        {pending.map((t) => <TaskRow key={t.id} t={t} busy={busy} post={post} />)}
+        {pending.map((t) => <TaskRow key={t.id} t={t} busy={busy} post={post} ro={ro} />)}
       </div>
       {done.length > 0 && (
         <details>
           <summary className="cursor-pointer text-xs font-semibold text-ink-500">Concluídas ({done.length})</summary>
-          <div className="mt-1 space-y-1.5">{done.map((t) => <TaskRow key={t.id} t={t} busy={busy} post={post} />)}</div>
+          <div className="mt-1 space-y-1.5">{done.map((t) => <TaskRow key={t.id} t={t} busy={busy} post={post} ro={ro} />)}</div>
         </details>
       )}
     </div>
   );
 }
 
-function TaskRow({ t, busy, post }: { t: MTask; busy: boolean; post: Post }) {
+function TaskRow({ t, busy, post, ro = false }: { t: MTask; busy: boolean; post: Post; ro?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(t.title);
   const init = splitDue(t.dueAt);
@@ -124,7 +152,7 @@ function TaskRow({ t, busy, post }: { t: MTask; busy: boolean; post: Post }) {
   const [time, setTime] = useState(init.time || '09:00');
   const overdue = !t.done && t.dueAt && new Date(t.dueAt) < new Date();
 
-  if (editing) {
+  if (editing && !ro) {
     return (
       <div className="rounded-lg border-2 border-brand/40 bg-surface p-2.5">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} className="mb-2 text-sm" />
@@ -138,45 +166,48 @@ function TaskRow({ t, busy, post }: { t: MTask; busy: boolean; post: Post }) {
   }
   return (
     <div className={`flex items-center gap-2 rounded-lg border bg-surface p-2.5 ${t.done ? 'opacity-60' : ''}`}>
-      <button onClick={() => post({ entity: 'task', action: 'toggle', id: t.id, done: !t.done })} disabled={busy} aria-label="Concluir">
+      <button onClick={() => post({ entity: 'task', action: 'toggle', id: t.id, done: !t.done })} disabled={busy || ro} aria-label="Concluir">
         {t.done ? <CheckSquare className="h-5 w-5 text-success" /> : <Square className="h-5 w-5 text-ink-500" />}
       </button>
       <span className="min-w-0 flex-1">
         <span className={`block text-sm font-medium ${t.done ? 'line-through' : 'text-ink-900'}`}>{t.title}</span>
         {t.dueAt && <span className={`block text-xs ${overdue ? 'font-semibold text-danger' : 'text-ink-500'}`}><Clock className="mr-0.5 inline h-3 w-3" />{fmtDateTime(t.dueAt)}</span>}
       </span>
-      {!t.done && <button onClick={() => setEditing(true)} disabled={busy} className="text-ink-500 hover:text-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>}
-      <button onClick={() => post({ entity: 'task', action: 'delete', id: t.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
+      {!ro && !t.done && <button onClick={() => setEditing(true)} disabled={busy} className="text-ink-500 hover:text-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>}
+      {!ro && <button onClick={() => post({ entity: 'task', action: 'delete', id: t.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>}
     </div>
   );
 }
 
-function NotesTab({ notes, busy, post }: { notes: MNote[]; busy: boolean; post: Post }) {
+function NotesTab({ notes, busy, post, ro = false }: { notes: MNote[]; busy: boolean; post: Post; ro?: boolean }) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const empty = !content.replace(/<[^>]*>/g, '').trim();
   return (
     <div className="space-y-3">
+      {ro && <SomenteLeitura />}
+      {!ro && (
       <div className="rounded-lg border border-dashed p-3 space-y-2">
         <div><Label className="text-xs">Título (opcional)</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ex: Ideias para a reunião" className="mt-1" /></div>
         <div><Label className="text-xs">Anotação</Label><div className="mt-1"><RichText value={content} onChange={setContent} placeholder="anote aqui… (use negrito, itálico, listas)" /></div></div>
         <Button size="sm" disabled={busy || empty} onClick={async () => { if (await post({ entity: 'note', action: 'add', title, content })) { setTitle(''); setContent(''); } }}><Plus className="h-4 w-4" /> Salvar nota</Button>
       </div>
+      )}
       {notes.length === 0 && <p className="text-sm text-ink-500">Nenhuma anotação.</p>}
       <div className="space-y-2">
-        {notes.map((n) => <NoteCard key={n.id} n={n} busy={busy} post={post} />)}
+        {notes.map((n) => <NoteCard key={n.id} n={n} busy={busy} post={post} ro={ro} />)}
       </div>
     </div>
   );
 }
 
-function NoteCard({ n, busy, post }: { n: MNote; busy: boolean; post: Post }) {
+function NoteCard({ n, busy, post, ro = false }: { n: MNote; busy: boolean; post: Post; ro?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(n.title ?? '');
   const [content, setContent] = useState(n.content);
   const empty = !content.replace(/<[^>]*>/g, '').trim();
 
-  if (editing) {
+  if (editing && !ro) {
     return (
       <div className="rounded-lg border-2 border-brand/40 bg-surface p-2.5 space-y-2">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título (opcional)" className="text-sm" />
@@ -194,10 +225,12 @@ function NoteCard({ n, busy, post }: { n: MNote; busy: boolean; post: Post }) {
       <div className="pop-rich text-sm" dangerouslySetInnerHTML={{ __html: n.content }} />
       <div className="mt-1 flex items-center justify-between">
         <span className="text-[11px] text-ink-500">{fmtDateTime(n.createdAt)}</span>
+        {!ro && (
         <div className="flex gap-2">
           <button onClick={() => setEditing(true)} disabled={busy} className="text-ink-500 hover:text-brand" aria-label="Editar"><Pencil className="h-4 w-4" /></button>
           <button onClick={() => post({ entity: 'note', action: 'delete', id: n.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
         </div>
+        )}
       </div>
     </div>
   );
@@ -234,19 +267,37 @@ function WorkScheduleEditor({ schedule, busy, post }: { schedule: MWorkSchedule 
   );
 }
 
-function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam }: { leaves: MLeave[]; schedule?: MWorkSchedule | null; busy: boolean; post: Post; canSeeTeam?: boolean }) {
+/** O mesmo horário, sem os controles: quem só consulta ainda precisa ver o que está valendo. */
+function HorarioSomenteLeitura({ schedule }: { schedule: MWorkSchedule | null }) {
+  const dias = (schedule?.weekdays ?? []).map((d) => WD_LABEL[d]).join(", ");
+  const faixa = schedule?.startTime && schedule?.endTime ? `${schedule.startTime} às ${schedule.endTime}` : null;
+  return (
+    <div className="rounded-lg border p-3 text-sm">
+      <p className="font-bold text-ink-900">🕒 Meu horário de trabalho</p>
+      {dias ? (
+        <p className="text-ink-500">{dias}{faixa ? ` · ${faixa}` : ""}{schedule?.note ? ` · ${schedule.note}` : ""}</p>
+      ) : (
+        <p className="text-ink-500">Ainda não informado.</p>
+      )}
+    </div>
+  );
+}
+
+function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam, ro = false }: { leaves: MLeave[]; schedule?: MWorkSchedule | null; busy: boolean; post: Post; canSeeTeam?: boolean; ro?: boolean }) {
   const [kind, setKind] = useState<'FOLGA' | 'FERIAS'>('FOLGA');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   return (
     <div className="space-y-3">
-      <WorkScheduleEditor schedule={schedule} busy={busy} post={post} />
+      {ro && <SomenteLeitura />}
+      {ro ? <HorarioSomenteLeitura schedule={schedule} /> : <WorkScheduleEditor schedule={schedule} busy={busy} post={post} />}
       {canSeeTeam && (
         <a href="/modulos/folgas-equipe" className="flex items-center justify-between gap-2 rounded-lg border border-brand/40 bg-brand/5 p-3 text-sm hover:bg-brand/10">
           <span className="flex items-center gap-2 font-semibold text-ink-900"><CalendarOff className="h-4 w-4" /> Controle de gerentes (consolidado + calendário)</span>
           <span className="text-ink-900">→</span>
         </a>
       )}
+      {!ro && (
       <div className="rounded-lg border border-dashed p-3">
         <p className="mb-2 text-xs text-ink-500">Nos dias de folga/férias, seus checklists e tarefas do dia não aparecem para você (você ainda pode entrar no sistema).</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -259,12 +310,13 @@ function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam }: { leaves
         </div>
         <Button size="sm" className="mt-2" disabled={busy || !start || !end} onClick={async () => { if (await post({ entity: 'leave', action: 'add', kind, startDate: start, endDate: end })) { setStart(''); setEnd(''); } }}><Plus className="h-4 w-4" /> Agendar</Button>
       </div>
+      )}
       {leaves.length === 0 && <p className="text-sm text-ink-500">Nenhuma folga/férias agendada.</p>}
       <Group>
         {leaves.map((l) => (
           <div key={l.id} className="flex items-center justify-between p-2.5 text-sm">
             <span><b className={l.kind === 'FERIAS' ? 'text-info' : 'text-brand'}>{l.kind === 'FERIAS' ? 'Férias' : 'Folga'}</b> · {l.startDate === l.endDate ? fmtBR(l.startDate) : `${fmtBR(l.startDate)} a ${fmtBR(l.endDate)}`}</span>
-            <button onClick={() => post({ entity: 'leave', action: 'delete', id: l.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>
+            {!ro && <button onClick={() => post({ entity: 'leave', action: 'delete', id: l.id })} disabled={busy} className="text-danger" aria-label="Excluir"><Trash2 className="h-4 w-4" /></button>}
           </div>
         ))}
       </Group>
