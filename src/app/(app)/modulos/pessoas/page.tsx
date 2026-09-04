@@ -1,10 +1,17 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { prisma } from '@/lib/db/prisma';
+import { unitScopeWhere } from '@/lib/scope/unit-scope';
+import { resolveUnitFilter } from '@/lib/scope/unit-filter';
+import { getSelectedUnitId } from '@/lib/scope/selected-unit';
+import { listScheduleTemplates } from '@/lib/schedule/templates';
+import { resumoDaFolga } from '@/lib/schedule/vigencia';
+import { canEditModule } from '@/lib/permissions';
 import { abasDoPerfil } from '@/lib/permissions/abas-server';
 
 import { permissaoDeRota } from '@/lib/permissions/links';
 
 import { FamilyTabs } from '@/components/layout/family-tabs';
-import { listCollaborators, listVacations, listSchedule } from '@/lib/people';
+import { listCollaborators, countCollaborators, listVacations, listSchedule, LIMITE_DA_LISTA } from '@/lib/people';
 import { Card, CardContent } from '@/components/ui/card';
 import { PeopleClient } from '@/components/people/people-client';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -26,12 +33,41 @@ const DESTINOS = [
 
 function d(date: Date) { return new Date(date).toLocaleDateString('pt-BR'); }
 
-export default async function PessoasModulePage() {
+export default async function PessoasModulePage({ searchParams }: { searchParams: { unit?: string; unidade?: string } }) {
   const user = (await getSessionUser())!;
   /* Cartão de tela que o perfil não pode abrir não é oferecido — clicar nele
      só devolveria a pessoa para onde ela estava. */
   const podeVer = await permissaoDeRota(user.role);
-  const [collaborators, vacations, schedule] = await Promise.all([listCollaborators(user), listVacations(user), listSchedule(user)]);
+  /* A tela OBEDECE o seletor de unidade do cabeçalho. Sem isto o Admin via a
+     rede inteira misturada — KM13, Vespasiano e Moreira na mesma lista —
+     enquanto o chip lá em cima dizia uma unidade só. */
+  const unidades = await prisma.unit.findMany({
+    where: { active: true, ...unitScopeWhere(user, 'id') },
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true },
+  });
+  const idsAcessiveis = unidades.map((u) => u.id);
+  const filtro = resolveUnitFilter(searchParams, idsAcessiveis, getSelectedUnitId(idsAcessiveis));
+  const doFiltro = filtro.all ? undefined : filtro.ids;
+
+  const [collaborators, total, vacations, schedule, tipos, turnos, configs] = await Promise.all([
+    listCollaborators(user, doFiltro),
+    countCollaborators(user, doFiltro),
+    listVacations(user, doFiltro),
+    listSchedule(user, doFiltro),
+    listScheduleTemplates(),
+    prisma.shift.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, startTime: true, endTime: true } }),
+    prisma.employeeSchedule.findMany({
+      where: { active: true, endDate: null, ...unitScopeWhere(user, 'unitId') },
+      orderBy: { startDate: 'desc' },
+      include: { template: { select: { name: true } } },
+    }),
+  ]);
+  const nomesFiltrados = filtro.all ? [] : unidades.filter((u) => filtro.ids.includes(u.id)).map((u) => u.name);
+  /* A vigente de cada pessoa: a lista vem da mais recente para a mais antiga,
+     então a primeira que aparecer é a que vale. */
+  const configPorColab = new Map<string, (typeof configs)[number]>();
+  for (const c of configs) if (!configPorColab.has(c.collaboratorId)) configPorColab.set(c.collaboratorId, c);
 
   return (
     <div className="space-y-4">
@@ -61,7 +97,21 @@ export default async function PessoasModulePage() {
           <PeopleClient
             abas={await abasDoPerfil(user.role, 'PEOPLE')}
             canRequestVacation={user.role !== 'FINANCE' && user.role !== 'CEO'}
-            collaborators={collaborators.map((c) => ({ id: c.id, name: c.name, jobTitle: c.jobTitle, units: c.units.map((u) => u.unit.name) }))}
+            collaborators={collaborators.map((c) => ({ id: c.id, name: c.name, jobTitle: c.jobTitle, units: c.units.map((u) => u.unit.name), unitIds: c.units.map((u) => u.unit.id) }))}
+            unidades={unidades}
+            tipos={tipos.map((t) => ({ id: t.id, name: t.name, workDays: t.workDays, offDays: t.offDays, startTime: t.startTime, breakTime: t.breakTime, endTime: t.endTime }))}
+            turnos={turnos}
+            configs={Object.fromEntries([...configPorColab].map(([id, c]) => [id, {
+              tipo: c.template?.name ?? null,
+              folga: resumoDaFolga(c.offMode, c.weeklyOffDay, c.sundayEveryWeeks),
+              desde: d(c.startDate),
+              horario: c.startTime && c.endTime ? `${c.startTime}–${c.endTime}` : null,
+            }]))}
+            filtradoPor={nomesFiltrados}
+            total={total}
+            limite={LIMITE_DA_LISTA}
+            /* Cadastrar escala é ato de gestão: quem só consulta Pessoas não abre a folha. */
+            podeConfigurar={await canEditModule(user.role, 'SCHEDULE')}
             vacations={vacations.map((v) => ({ id: v.id, collaborator: v.collaborator.name, unit: v.unit.name, start: d(v.startDate), end: d(v.endDate), status: v.status, changeNote: v.changeNote }))}
             schedule={schedule.map((s) => ({ id: s.id, collaborator: s.collaborator.name, unit: s.unit.name, date: d(s.date), planned: s.planned, variation: s.variation, note: s.variationNote }))}
           />

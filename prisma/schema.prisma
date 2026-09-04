@@ -68,6 +68,7 @@ model Unit {
   shifts              Shift[]
   employeeSchedules   EmployeeSchedule[]
   schedulePlanOverrides SchedulePlanOverride[]
+  schedulePlanFills   SchedulePlanFill[]
   scheduleActuals     ScheduleActual[]
   trainings           TrainingRecord[]
   communicationUnits      CommunicationUnit[]
@@ -2328,6 +2329,36 @@ model SchedulePlanOverride {
   @@index([unitId, date])
   @@map("schedule_plan_overrides")
 }
+
+/// Registro de que o Planejado de um MES foi materializado (o botao
+/// "Preencher automaticamente").
+///
+/// O congelamento em si vive em SchedulePlanOverride, um dia por linha: e ele
+/// que vence o calculado na hora de montar a grade. Aqui fica QUEM apertou e
+/// QUANDO, para a tela poder dizer de onde veio aquele mes — sem isso, uma
+/// grade congelada e uma calculada sao indistinguiveis para quem olha.
+model SchedulePlanFill {
+  id            String   @id @default(cuid())
+  unitId        String
+  year          Int
+  month         Int
+  /// Primeiro preenchimento do mes: nunca e sobrescrito.
+  firstFilledAt DateTime @default(now())
+  /// Ultimo preenchimento (o botao pode ser apertado de novo).
+  filledAt      DateTime @default(now())
+  filledById    String?
+  filledByName  String
+  /// Quantos colaboradores entraram no ultimo preenchimento.
+  collaborators Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([unitId, year, month])
+  @@map("schedule_plan_fills")
+}
+
 
 /// REALIZADO — o que de fato aconteceu (única aba editável pelo gerente).
 model ScheduleActual {

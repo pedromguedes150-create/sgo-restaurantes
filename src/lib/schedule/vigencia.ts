@@ -125,3 +125,15 @@ export function diaDeFolgaNaSemana(
      primeiro ciclo, não só depois de N semanas de espera. */
   return semana % n === 0 ? 0 : fixo;
 }
+
+/**
+ * A folga da pessoa em uma frase — para a lista de Pessoas dizer o que está
+ * cadastrado sem obrigar a abrir cada colaborador.
+ */
+export function resumoDaFolga(modo: ModoDeFolga, weeklyOffDay: number | null, sundayEveryWeeks: number | null): string {
+  if (modo === 'CYCLE_ONLY') return 'folga pelo ciclo';
+  const dia = weeklyOffDay != null ? DIAS_DA_SEMANA[weeklyOffDay] : null;
+  if (!dia) return MODO_LABEL[modo].toLowerCase();
+  if (modo === 'FIXED_PLUS_SUNDAY') return `folga ${dia.toLowerCase()} + domingo a cada ${sundayEveryWeeks ?? DOMINGO_A_CADA_PADRAO} semanas`;
+  return `folga ${dia.toLowerCase()}`;
+}

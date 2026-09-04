@@ -8,30 +8,51 @@ import type { ScheduleVariation } from '@prisma/client';
 type Ctx = { ip?: string | null; userAgent?: string | null };
 export type PeopleResult = { ok: true } | { ok: false; reason: 'NOT_FOUND' | 'FORBIDDEN' | 'INVALID' };
 
-export async function listCollaborators(user: SessionUser) {
+/**
+ * Teto das listas de Pessoas. Nomeado porque o 200 solto aparecia em tres
+ * consultas e cortava gente CALADO: a tela mostrava 200 de 340 e ninguem tinha
+ * como saber das outras. Quem passar do teto recebe o aviso na tela.
+ */
+export const LIMITE_DA_LISTA = 500;
+
+/**
+ * Colaboradores da(s) unidade(s) pedidas.
+ *
+ * `unitIds` é o filtro da TELA (o seletor do cabeçalho). O escopo de segurança
+ * continua sendo o `unitScopeWhere`: id fora do alcance do usuário não passa a
+ * valer só porque veio na URL.
+ */
+export async function listCollaborators(user: SessionUser, unitIds?: string[]) {
+  const daTela = unitIds && unitIds.length > 0 ? { unitId: { in: unitIds } } : {};
   return prisma.collaborator.findMany({
-    where: { active: true, units: { some: { ...unitScopeWhere(user, 'unitId') } } },
+    where: { active: true, units: { some: { ...unitScopeWhere(user, 'unitId'), ...daTela } } },
     orderBy: { name: 'asc' },
-    include: { units: { include: { unit: { select: { name: true } } } } },
-    take: 200,
+    include: { units: { include: { unit: { select: { id: true, name: true } } } } },
+    take: LIMITE_DA_LISTA,
   });
 }
 
-export async function listVacations(user: SessionUser) {
+/** Quantos existem DE VERDADE (para a tela avisar quando a lista foi cortada). */
+export async function countCollaborators(user: SessionUser, unitIds?: string[]) {
+  const daTela = unitIds && unitIds.length > 0 ? { unitId: { in: unitIds } } : {};
+  return prisma.collaborator.count({ where: { active: true, units: { some: { ...unitScopeWhere(user, 'unitId'), ...daTela } } } });
+}
+
+export async function listVacations(user: SessionUser, unitIds?: string[]) {
   return prisma.vacation.findMany({
-    where: { ...unitScopeWhere(user, 'unitId') },
+    where: { ...unitScopeWhere(user, 'unitId'), ...(unitIds && unitIds.length > 0 ? { unitId: { in: unitIds } } : {}) },
     orderBy: { startDate: 'asc' },
     include: { collaborator: { select: { name: true } }, unit: { select: { name: true } } },
-    take: 200,
+    take: LIMITE_DA_LISTA,
   });
 }
 
-export async function listSchedule(user: SessionUser) {
+export async function listSchedule(user: SessionUser, unitIds?: string[]) {
   return prisma.scheduleEntry.findMany({
-    where: { ...unitScopeWhere(user, 'unitId') },
+    where: { ...unitScopeWhere(user, 'unitId'), ...(unitIds && unitIds.length > 0 ? { unitId: { in: unitIds } } : {}) },
     orderBy: { date: 'desc' },
     include: { collaborator: { select: { name: true } }, unit: { select: { name: true } } },
-    take: 200,
+    take: LIMITE_DA_LISTA,
   });
 }
 

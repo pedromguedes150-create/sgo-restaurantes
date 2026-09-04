@@ -19,6 +19,7 @@ export interface TipoDeEscala {
   endTime: string | null;
 }
 export interface Pessoa { id: string; name: string }
+export interface UnidadeOpt { id: string; name: string }
 export interface Turno { id: string; name: string; startTime: string | null; endTime: string | null }
 
 /** Hoje em ISO, no relógio de quem está usando a tela. */
@@ -42,6 +43,8 @@ export function EmployeeScheduleForm({
   turnos,
   post,
   busy,
+  pessoaFixa,
+  unidades = [],
 }: {
   unitId: string;
   pessoas: Pessoa[];
@@ -49,8 +52,13 @@ export function EmployeeScheduleForm({
   turnos: Turno[];
   post: (p: Record<string, unknown>) => Promise<boolean>;
   busy: boolean;
+  /** Aberto DENTRO de um colaborador: o seletor de pessoa sai de cena. */
+  pessoaFixa?: Pessoa;
+  /** Unidades da pessoa — só aparece quando ela está em mais de uma. */
+  unidades?: UnidadeOpt[];
 }) {
-  const [collaboratorId, setCollaboratorId] = useState('');
+  const [collaboratorId, setCollaboratorId] = useState(pessoaFixa?.id ?? '');
+  const [unidade, setUnidade] = useState(unitId);
   const [templateId, setTemplateId] = useState(tipos[0]?.id ?? '');
   const [startDate, setStartDate] = useState(hojeISO);
   const [modo, setModo] = useState<ModoDeFolga>('FIXED_WEEKLY');
@@ -78,7 +86,7 @@ export function EmployeeScheduleForm({
 
     const ok = await post({
       action: 'saveEmployeeSchedule',
-      collaboratorId, unitId, templateId, startDate,
+      collaboratorId, unitId: unidade || unitId, templateId, startDate,
       offMode: semanal ? modo : 'CYCLE_ONLY',
       weeklyOffDay: semanal ? Number(offDay) : null,
       sundayEveryWeeks: semanal && modo === 'FIXED_PLUS_SUNDAY' ? Number(aCada) : null,
@@ -86,23 +94,35 @@ export function EmployeeScheduleForm({
       shiftId: shiftId || null,
       startTime: entrada || null, breakTime: pausa || null, endTime: saida || null,
     });
-    if (ok) { setCollaboratorId(''); setEntrada(''); setPausa(''); setSaida(''); }
+    /* Dentro do colaborador a folha fecha sozinha; no formulário solto, limpa
+       para o próximo cadastro. */
+    if (ok && !pessoaFixa) { setCollaboratorId(''); setEntrada(''); setPausa(''); setSaida(''); }
   }
 
   return (
-    <div className="rounded-lg border bg-surface p-3 print:hidden">
-      <h3 className="mb-1 text-sm font-bold text-ink-900">Configuração de escala do colaborador</h3>
+    <div className={pessoaFixa ? 'print:hidden' : 'rounded-lg border bg-surface p-3 print:hidden'}>
+      {!pessoaFixa && <h3 className="mb-1 text-sm font-bold text-ink-900">Configuração de escala do colaborador</h3>}
       <p className="mb-3 text-xs text-ink-500">
         O que for gravado vale <b>a partir da data informada</b>. A configuração anterior é fechada na véspera — os meses
         já passados continuam mostrando o que valia neles.
       </p>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <Select
-          label="Colaborador" size="sm" placeholder="Selecione…"
-          value={collaboratorId} onValueChange={setCollaboratorId}
-          options={pessoas.map((p) => ({ value: p.id, label: p.name }))}
-        />
+        {pessoaFixa ? (
+          unidades.length > 1 ? (
+            <Select
+              label="Unidade desta escala" size="sm"
+              value={unidade} onValueChange={setUnidade}
+              options={unidades.map((u) => ({ value: u.id, label: u.name }))}
+            />
+          ) : null
+        ) : (
+          <Select
+            label="Colaborador" size="sm" placeholder="Selecione…"
+            value={collaboratorId} onValueChange={setCollaboratorId}
+            options={pessoas.map((p) => ({ value: p.id, label: p.name }))}
+          />
+        )}
         <Select
           label="Tipo de escala" size="sm" placeholder="Selecione…"
           value={templateId} onValueChange={setTemplateId}

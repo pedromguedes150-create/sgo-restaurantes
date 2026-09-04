@@ -9,6 +9,71 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.68.0 — 2026-09-04 (Escala no formato do SGO dos postos — fases 1 e 3)
+
+### O pedido
+*"A lista de colaboradores deve ser de acordo com a unidade selecionada; o cadastro da escala deve
+ser dentro do colaborador; e o botão preencher automaticamente deve buscar as informações e
+preencher a grade de presença."* Depois: *"vamos reformular esse módulo, vai ser idêntico ao do SGO
+dos postos"* — com os prints da tela de lá.
+
+### Fase 1 — a lista e o colaborador
+- **A lista de Colaboradores obedece o seletor de unidade do cabeçalho.** Ela filtrava pelas
+  unidades *do usuário*, não pela *escolhida*: como o Admin enxerga tudo, a tela misturava KM13,
+  Vespasiano, Produtos e Moreira enquanto o chip lá em cima dizia uma unidade só. Mesmo defeito que
+  Tarefas tinha na v1.54.3, resolvido com a mesma regra de precedência. Vale também para as abas
+  Férias e Escala.
+- **Saiu o teto de 200** que cortava a lista em silêncio (era o mesmo problema do limite de 100 dos
+  freelancers, da v1.62.1). Virou `LIMITE_DA_LISTA = 500` **com contagem real**: passando do teto, a
+  tela diz "lista cortada em 500 de N — refine pela unidade".
+- **A escala se cadastra dentro do colaborador**, como no print dos postos: tocar no nome abre a
+  folha com tipo de escala, dia de folga, horários e "a partir de quando vale". A própria linha da
+  lista passou a mostrar o que está cadastrado (*6x1 Tarde · 14:00–22:00 · folga domingo · desde
+  01/09/2026*) ou avisar **"Sem escala cadastrada"** — antes, saber quem tinha escala exigia abrir
+  um por um. O formulário solto da tela de Escala continua onde estava.
+
+### Fase 3 — o Planejado congelado
+No SGO dos postos a grade do mês **nasce de um botão**: "Preencher Automaticamente" materializa o
+mês a partir da configuração de cada colaborador. Aqui o Planejado era **calculado a cada visita** —
+por isso não havia o que preencher, e por isso mudar a folga de alguém mexia num mês que a unidade
+já tinha visto.
+
+- **"Preencher automaticamente" na tela de Escala** monta o mês e o congela. O aviso final diz
+  quantos entraram e **nomeia quem ficou de fora** por não ter escala: preencher sem contar isso
+  seria o mesmo que não preencher.
+- **Apertar de novo refaz** o mês com a configuração atual — é o conserto de quem arrumou o cadastro
+  depois. O **Realizado não é tocado** em nenhum dos casos.
+- A aba Planejado passa a dizer **quem montou e quando** (e desde quando o mês existe), em vez da
+  frase "não há o que preencher aqui".
+
+**Não precisou das tabelas dos postos.** O congelamento vive em `SchedulePlanOverride`, que já
+existia, já é preferido ao calculado na montagem da grade e **nunca era gravado por ninguém** — um
+dia por linha. A tabela nova (`schedule_plan_fills`, migração aditiva) guarda só **quem preencheu e
+quando**, para a tela saber dizer de onde veio o mês.
+
+**Uma diferença deliberada em relação aos postos:** lá a grade **não existe** até alguém apertar o
+botão. Aqui ela continua aparecendo calculada enquanto o mês não for congelado — copiar o "começa
+vazio" seria trocar uma tela que funciona por uma tela em branco. Se preferir o comportamento
+idêntico, é uma linha.
+
+### Testes
+- `tests/schedule-materializar.integration.test.ts` (11) — o caso que dá sentido a tudo: **mudar a
+  configuração depois de preencher não mexe no mês já montado**, e apertar de novo refaz com a
+  configuração nova. Mais: conta quem entrou, nomeia quem ficou de fora, grava um dia por linha nos
+  31 dias, registra autor e hora, não reescreve o primeiro preenchimento, e recusa unidade fora do
+  alcance e mês inválido.
+- `tests/people-client-render.test.tsx` (7) — a lista diz de que unidade é e oferece "ver todas",
+  avisa quando foi cortada pelo teto, mostra a escala vigente na linha, acusa quem está sem escala,
+  e só oferece a folha a quem pode configurar.
+- Suíte inteira: **670 testes verdes**.
+
+### O que ainda falta da reformulação
+A **fase 2** (a aparência da tela dos postos: barra superior com os três botões, filtros
+Unidade/Mês/Ano e a grade agrupada nos quatro blocos — 12x36 ímpar, 12x36 par, 6x1/apoio, sem turno)
+não entrou nesta versão.
+
+---
+
 ## v1.67.0 — 2026-09-04 ("Editar" passa a valer de verdade: a matriz chega às rotas)
 
 ### O que estava acontecendo
