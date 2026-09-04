@@ -610,9 +610,10 @@ export const GUIDE: GuideSection[] = [
         roles: MANAGERLINE,
         summary: 'Definir a escala de cada colaborador (gera o Planejado).',
         steps: [
-          'Em PESSOAS → Escala, clique em "Cadastrar escala".',
-          'Escolha o colaborador, o tipo (12x36 par/ímpar, 6x1, 5x2 ou personalizada), a data de início do ciclo e o turno.',
-          'O Planejado do mês é gerado automaticamente.',
+          'PELO COLABORADOR (v1.68.0, o caminho novo): em PESSOAS → Colaboradores, toque no nome da pessoa. A folha abre com a Configuração de escala dela — tipo, dia de folga, horários e "a partir de quando vale". A própria linha da lista já mostra o que está cadastrado, ou avisa "Sem escala cadastrada".',
+          'A lista de Colaboradores agora obedece a unidade escolhida no cabeçalho — se aparecer gente de outra unidade, é porque o seletor está em "todas".',
+          'PELA TELA DE ESCALA (o caminho de sempre): em PESSOAS → Escala, "Cadastrar escala", escolhendo o colaborador no formulário.',
+          'Em qualquer um dos dois, a data "a partir de quando vale" abre uma vigência nova e fecha a anterior na véspera: os meses passados continuam mostrando o que valia neles.',
         ],
       },
       {
@@ -623,7 +624,8 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'No modo REALIZADO (única aba editável), clique em cada dia e marque T/F/FI/FJ/A/FE.',
           'Use "Registrar ausência" para faltas/atestados/férias em um período (com anexo).',
-          'O PLANEJADO NÃO SE PREENCHE: ele é a escala inicial do mês, montada sozinha a partir da configuração de cada colaborador. Quem aparecer na faixa vermelha "fora da grade" está sem escala cadastrada — é isso que falta preencher, e o link leva direto ao cadastro.',
+          'PREENCHER AUTOMATICAMENTE (v1.68.0): monta o Planejado do mês a partir da configuração de cada colaborador e CONGELA. Depois disso o mês para de mudar sozinho quando alguém altera um cadastro, e a tela passa a dizer quem preencheu e quando. Ao final, o aviso diz quantos entraram e nomeia quem ficou de fora por não ter escala. Apertar de novo refaz o mês com a configuração atual. O Realizado não é tocado em nenhum dos casos.',
+          'Enquanto o mês não for preenchido, o Planejado continua sendo calculado a cada visita — quem aparecer na faixa vermelha "fora da grade" está sem escala cadastrada, e o link leva direto ao cadastro.',
           'NO REALIZADO: "Completar dias vazios" preenche só o que está em branco e NÃO toca no que você já marcou. "Puxar Realizado = Planejado" SOBRESCREVE o mês inteiro — faltas, atestados e férias já lançados são substituídos pelo previsto.',
           'No modo COMPARAÇÃO veja planejado × realizado; exporte em Excel ou PDF para o RH.',
         ],

@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { permissaoDeRota } from '@/lib/permissions/links';
+import { canEditModule } from '@/lib/permissions';
+import { preenchimentoDoMes } from '@/lib/schedule/materializar';
 import { abasDoPerfil } from '@/lib/permissions/abas-server';
 
 import { prisma } from '@/lib/db/prisma';
@@ -26,7 +28,7 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
   const year = Number(searchParams.year) || now.getFullYear();
   const month = Number(searchParams.month) || now.getMonth() + 1;
 
-  const [grid, collaborators, turnos, tipos, legadas] = await Promise.all([
+  const [grid, collaborators, turnos, tipos, legadas, fill] = await Promise.all([
     getScheduleGrid(selected.id, year, month),
     prisma.collaborator.findMany({ where: { active: true, units: { some: { unitId: selected.id } } }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     listShifts(selected.id),
@@ -34,6 +36,7 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
        continua explicando as escalas antigas que o usaram. */
     prisma.scheduleTemplate.findMany({ where: { active: true }, orderBy: [{ order: 'asc' }, { name: 'asc' }] }),
     contarEscalasLegadas(selected.id),
+    preenchimentoDoMes(selected.id, year, month),
   ]);
 
   // padrão atual por colaborador (p/ a tela de cadastro de escala)
@@ -60,6 +63,8 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
         <ScheduleClient
           podeVerFolgas={podeVer('/modulos/escala/folgas')}
           abas={await abasDoPerfil(user.role, 'SCHEDULE')}
+          preenchimento={fill ? { por: fill.filledByName, em: fill.filledAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), primeiro: fill.firstFilledAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) } : null}
+          podePreencher={await canEditModule(user.role, 'SCHEDULE_TAB_PLANNED')}
           units={units}
           selectedUnitId={selected.id}
           year={year}

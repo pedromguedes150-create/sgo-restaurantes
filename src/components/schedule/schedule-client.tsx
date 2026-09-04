@@ -53,12 +53,16 @@ import { MigrateLegacyPanel } from './migrate-legacy-panel';
 import Link from 'next/link';
 import { CalendarRange } from 'lucide-react';
 
-export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false, podeVerFolgas = true, abas = {} }: {
+export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false, podeVerFolgas = true, abas = {}, preenchimento = null, podePreencher = false }: {
   units: Unit[]; selectedUnitId: string; year: number; month: number; grid: Grid; collaborators: Unit[]; turnos: Turno[]; patterns: Pattern[];
   /** Tipos cadastrados em Configurações → Tipos de escala. */
   tiposDeEscala?: TipoDeEscala[];
   /** A tela de Folgas da unidade é uma parte própria na matriz de perfis. */
   podeVerFolgas?: boolean;
+  /** Quem preencheu o Planejado deste mês, e quando (nulo = ainda calculado). */
+  preenchimento?: { por: string; em: string; primeiro: string } | null;
+  /** O perfil pode congelar o mês (aba Planejado com Editar). */
+  podePreencher?: boolean;
   /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
   abas?: AcessoAbas;
   /** Quantas escalas ainda usam o gerador antigo (só Admin migra). */
@@ -71,6 +75,18 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
   const [edit, setEdit] = useState<string | null>(null); // `${collabId}:${day}`
   const [showAbsence, setShowAbsence] = useState(false);
   const [showPattern, setShowPattern] = useState(grid.rows.length === 0);
+
+  /** Como o postJson, mas devolve o resumo do preenchimento para a tela contar. */
+  async function postResumo(body: Record<string, unknown>): Promise<{ preenchidos: number; semConfiguracao: string[]; dias: number } | null> {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { alert(d.error ?? 'Falha'); return null; }
+      router.refresh();
+      return d.resumo ?? null;
+    } finally { setBusy(false); }
+  }
 
   function nav(params: Record<string, string | number>) {
     const sp = new URLSearchParams({ unit: selectedUnitId, year: String(year), month: String(month), ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])) });
@@ -131,6 +147,25 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
             <Button size="sm" variant="outline" onClick={() => setShowAbsence((v) => !v)}><CalendarPlus className="h-4 w-4" /> Registrar ausência</Button>
           </>
         )}
+        {podePreencher && (
+          /* O que dá sentido ao Planejado: ele deixa de ser recalculado a cada
+             visita e passa a ser o que foi montado neste momento. */
+          <Button
+            size="sm" variant="outline" disabled={busy}
+            onClick={async () => {
+              const aviso = preenchimento
+                ? 'Refazer o Planejado deste mês a partir da configuração atual de cada colaborador?\n\nO que estava congelado é substituído. O Realizado não é tocado.'
+                : 'Montar o Planejado deste mês a partir da configuração de cada colaborador?\n\nDepois disso o mês para de mudar sozinho quando alguém alterar um cadastro. O Realizado não é tocado.';
+              if (!confirm(aviso)) return;
+              const r = await postResumo({ action: 'fillPlanned', unitId: selectedUnitId, year, month });
+              if (r) {
+                const fora = r.semConfiguracao.length;
+                alert(`Planejado montado para ${r.preenchidos} colaborador(es) em ${r.dias} dias.` +
+                  (fora > 0 ? `\n\n${fora} ficaram de fora por não ter escala cadastrada:\n` + r.semConfiguracao.slice(0, 12).join(', ') + (fora > 12 ? '…' : '') : ''));
+              }
+            }}
+          ><Wand2 className="h-4 w-4" /> Preencher automaticamente</Button>
+        )}
         <Button size="sm" variant="outline" onClick={() => setShowPattern((v) => !v)}><Settings2 className="h-4 w-4" /> Cadastrar escala</Button>
         {/* O caminho rápido: uma linha por pessoa, em vez de um formulário por
             pessoa. É o que tira a escala de "todo mundo folga no mesmo dia". */}
@@ -190,8 +225,20 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
 
       {mode === 'planejado' && (
         <p className="rounded-lg bg-sunken/50 px-3 py-2 text-xs text-ink-500 print:hidden">
-          O Planejado é a <b>escala inicial do mês</b>, montada sozinha a partir da configuração de cada colaborador — não
-          há o que preencher aqui. Para registrar o que de fato aconteceu, use a aba <b>Realizado</b>.
+          {preenchimento ? (
+            <>
+              Planejado <b>montado por {preenchimento.por}</b> em {preenchimento.em}
+              {preenchimento.primeiro !== preenchimento.em && <> (a primeira vez foi em {preenchimento.primeiro})</>}.
+              {' '}A partir daqui o mês <b>não muda sozinho</b> quando alguém altera um cadastro — para refazer, use “Preencher automaticamente”.
+            </>
+          ) : (
+            <>
+              O Planejado é a <b>escala inicial do mês</b>, montada a partir da configuração de cada colaborador.
+              {podePreencher
+                ? <> Enquanto não for preenchido, ele é <b>recalculado a cada visita</b> — e muda se alguém alterar um cadastro. Use <b>“Preencher automaticamente”</b> para fixar o mês.</>
+                : <> Para registrar o que de fato aconteceu, use a aba <b>Realizado</b>.</>}
+            </>
+          )}
         </p>
       )}
 
