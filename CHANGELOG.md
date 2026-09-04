@@ -9,6 +9,82 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.73.0 — 2026-09-04 (Limpar o mês da escala, com confirmação escrita)
+
+### O pedido
+*"Crie um botão que apague/limpe toda a escala da unidade, com uma confirmação escrita."* — alvo
+confirmado com você: **só o mês que está na tela**.
+
+### O que o botão faz
+Em Pessoas → Escala, o Administrador ganha **"Limpar o mês"** (em vermelho, por último na barra).
+Ele apaga, **daquela unidade e daquele mês**:
+
+- o **Planejado congelado** (o que o "Preencher automaticamente" gravou);
+- o **Realizado** inteiro — presenças, faltas, atestados, férias;
+- o registro de quem preencheu o mês;
+- os **avisos ao RH ainda não enviados** daquele mês — sem isso, remarcar a mesma falta criaria um
+  segundo aviso para o mesmo dia.
+
+### O que ele NÃO toca, de propósito
+- **O cadastro de escala dos colaboradores.** Ele é o cadastro, não o mês: apagar junto obrigaria a
+  recadastrar a unidade inteira para consertar um mês. Sem o congelado, a grade **volta a ser
+  calculada** por esse cadastro — a tela não fica vazia.
+- **Os outros meses e as outras unidades.**
+- **Os avisos ao RH já enviados**, que registram o que a unidade informou. Reescrever isso seria
+  mentir sobre o que foi comunicado.
+
+### A confirmação é escrita — e conferida no servidor
+A folha mostra **o tamanho do estrago antes de apagar** (quantos dias congelados, quantas marcações,
+quantos avisos pendentes) e exige que você **digite o nome da unidade**. Uma janela de "tem certeza?"
+some com um Enter distraído; digitar o nome obriga a ler **qual** unidade está prestes a ser limpa.
+O nome é conferido **de novo no servidor**: a tela é conveniência, a recusa é o controle.
+
+**Só o Administrador**, e a limpeza entra na **Auditoria** com os números do que foi apagado — a
+mesma régua da limpeza em lote das divergências de comandas (v1.52.1).
+
+### Testes
+`tests/schedule-limpar-mes.integration.test.ts` (9) — o resumo conta certo (inclusive só os avisos
+pendentes); sem o nome exato **nada é apagado**; o nome certo passa com espaços e maiúsculas de
+qualquer jeito; o Gerente é recusado; apaga só o mês e a unidade pedidos (o mês seguinte e a outra
+unidade ficam); o aviso já enviado permanece; **o cadastro continua lá e a grade volta a ser
+calculada** — ninguém fica "fora da grade" por causa da limpeza.
+
+Suíte inteira: **727 testes verdes**.
+
+---
+
+## v1.72.0 — 2026-09-04 (A folha de escala do colaborador: botão sempre à vista e campos já preenchidos)
+
+### O relato
+*"Não está gravando"* — na folha de Configuração de escala aberta pelo colaborador.
+
+### O que eu verifiquei primeiro
+**A rota grava.** `tests/employee-schedule-sheet-route.integration.test.ts` chama
+`/api/schedule` com o **corpo exato** que a folha monta: a vigência é criada, gravar de novo fecha a
+anterior na véspera, e um Gerente com a aba Planejado fechada continua conseguindo cadastrar (o
+cadastro do colaborador não é a edição do Planejado do mês). Três casos, todos verdes — então o
+problema não estava no servidor.
+
+### Os dois defeitos, na tela
+- **O botão ficava abaixo da dobra.** O formulário rola DENTRO da folha, e "Salvar escala" era a
+  última coisa depois dos horários: quem preenchia tudo não via mais nada para clicar. Agora a barra
+  de ação **gruda no fim da folha** (`sticky`), com o erro em vermelho ali junto, e o botão diz
+  **"Salvando…"** enquanto grava. Botão de salvar não pode depender de rolagem.
+- **A folha abria com os padrões**, não com o que a pessoa tem. Para quem folga **quinta desde
+  31/08**, ela abria em **Domingo, hoje** — e quem quisesse só corrigir o horário trocava a folga da
+  pessoa sem perceber. Agora ela abre com o **tipo, o modo, o dia de folga, o turno e os horários já
+  cadastrados**; só a data "a partir de quando vale" continua em hoje, porque cada gravação abre uma
+  vigência nova.
+
+### Testes
+- `tests/employee-schedule-sheet-route.integration.test.ts` (3) — a rota com o corpo da folha.
+- `tests/employee-schedule-form-render.test.tsx` (4) — a barra grudada existe dentro do colaborador
+  e **não** no formulário solto da tela de Escala; a folha traz "Quinta" e os horários de quem já
+  tem escala, e cai nos padrões só para quem não tem.
+- Suíte inteira: **718 testes verdes**.
+
+---
+
 ## v1.71.0 — 2026-09-04 (Freelancer alocado aparece no setor · a folha para de encostar na borda)
 
 ### O relato

@@ -19,6 +19,23 @@ export interface TipoDeEscala {
   endTime: string | null;
 }
 export interface Pessoa { id: string; name: string }
+
+/**
+ * A configuracao que a pessoa JA tem, para a folha abrir mostrando o que vale
+ * hoje. Sem isso ela abria com os padroes (Domingo, hoje) para quem folga na
+ * quinta desde agosto — e quem so ajustasse o horario trocaria a folga sem
+ * perceber.
+ */
+export interface EscalaAtual {
+  templateId: string | null;
+  offMode: ModoDeFolga;
+  weeklyOffDay: number | null;
+  sundayEveryWeeks: number | null;
+  shiftId: string | null;
+  startTime: string | null;
+  breakTime: string | null;
+  endTime: string | null;
+}
 export interface UnidadeOpt { id: string; name: string }
 export interface Turno { id: string; name: string; startTime: string | null; endTime: string | null }
 
@@ -44,6 +61,7 @@ export function EmployeeScheduleForm({
   post,
   busy,
   pessoaFixa,
+  atual = null,
   unidades = [],
 }: {
   unitId: string;
@@ -54,21 +72,23 @@ export function EmployeeScheduleForm({
   busy: boolean;
   /** Aberto DENTRO de um colaborador: o seletor de pessoa sai de cena. */
   pessoaFixa?: Pessoa;
+  /** O que ja esta cadastrado — a folha abre com isso preenchido. */
+  atual?: EscalaAtual | null;
   /** Unidades da pessoa — só aparece quando ela está em mais de uma. */
   unidades?: UnidadeOpt[];
 }) {
   const [collaboratorId, setCollaboratorId] = useState(pessoaFixa?.id ?? '');
   const [unidade, setUnidade] = useState(unitId);
-  const [templateId, setTemplateId] = useState(tipos[0]?.id ?? '');
+  const [templateId, setTemplateId] = useState(atual?.templateId ?? tipos[0]?.id ?? '');
   const [startDate, setStartDate] = useState(hojeISO);
-  const [modo, setModo] = useState<ModoDeFolga>('FIXED_WEEKLY');
-  const [offDay, setOffDay] = useState('0');
-  const [aCada, setACada] = useState(String(DOMINGO_A_CADA_PADRAO));
+  const [modo, setModo] = useState<ModoDeFolga>(atual?.offMode ?? 'FIXED_WEEKLY');
+  const [offDay, setOffDay] = useState(String(atual?.weeklyOffDay ?? 0));
+  const [aCada, setACada] = useState(String(atual?.sundayEveryWeeks ?? DOMINGO_A_CADA_PADRAO));
   const [anchor, setAnchor] = useState('');
-  const [shiftId, setShiftId] = useState('');
-  const [entrada, setEntrada] = useState('');
-  const [pausa, setPausa] = useState('');
-  const [saida, setSaida] = useState('');
+  const [shiftId, setShiftId] = useState(atual?.shiftId ?? '');
+  const [entrada, setEntrada] = useState(atual?.startTime ?? '');
+  const [pausa, setPausa] = useState(atual?.breakTime ?? '');
+  const [saida, setSaida] = useState(atual?.endTime ?? '');
   const [erro, setErro] = useState<string | null>(null);
 
   const tipo = useMemo(() => tipos.find((t) => t.id === templateId) ?? null, [tipos, templateId]);
@@ -211,10 +231,13 @@ export function EmployeeScheduleForm({
       </div>
       <p className="mt-1 text-[11px] text-ink-500">Horário em branco usa o do tipo de escala.</p>
 
-      {erro && <p className="mt-2 text-sm font-medium text-danger">{erro}</p>}
-
-      <div className="mt-3">
-        <Button size="sm" disabled={busy} onClick={salvar}><Save className="h-4 w-4" /> Salvar escala</Button>
+      {/* A barra de ação GRUDA no fim da folha.
+          Dentro do colaborador o formulário rola: o botão ficava abaixo da
+          dobra, e quem preenchia tudo não via mais nada para clicar — parecia
+          que a tela não gravava. Botão de salvar não pode depender de rolagem. */}
+      <div className={pessoaFixa ? 'sticky bottom-0 -mx-4 mt-3 border-t border-line bg-surface px-4 py-3' : 'mt-3'}>
+        {erro && <p className="mb-2 text-sm font-medium text-danger">{erro}</p>}
+        <Button size="sm" disabled={busy} onClick={salvar}><Save className="h-4 w-4" /> {busy ? 'Salvando…' : 'Salvar escala'}</Button>
       </div>
     </div>
   );

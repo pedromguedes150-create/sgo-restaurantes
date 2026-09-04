@@ -147,3 +147,97 @@ export async function materializarPlanejado(
 export async function preenchimentoDoMes(unitId: string, year: number, month: number) {
   return prisma.schedulePlanFill.findUnique({ where: { unitId_year_month: { unitId, year, month } } });
 }
+
+/* ───────────────────────── Limpar o mês ───────────────────────── */
+
+export interface ResumoDoMes {
+  /** Dias de Planejado congelado (o que o "Preencher automaticamente" gravou). */
+  congelados: number;
+  /** Marcações de presença lançadas no Realizado. */
+  realizados: number;
+  /** Avisos ao RH deste mês que ainda não foram enviados. */
+  avisosPendentes: number;
+}
+
+/** Quanto existe no mês — a tela precisa dizer o tamanho do estrago ANTES de apagar. */
+export async function resumoDoMes(unitId: string, year: number, month: number): Promise<ResumoDoMes> {
+  const total = diasNoMes(year, month);
+  const primeiro = diaUTC(year, month, 1);
+  const ultimo = diaUTC(year, month, total);
+  const mesISO = `${year}-${String(month).padStart(2, '0')}`;
+
+  const [congelados, realizados, avisosPendentes] = await Promise.all([
+    prisma.schedulePlanOverride.count({ where: { unitId, date: { gte: primeiro, lte: ultimo } } }),
+    prisma.scheduleActual.count({ where: { unitId, date: { gte: primeiro, lte: ultimo } } }),
+    prisma.rhScheduleNotice.count({ where: { unitId, sent: false, date: { startsWith: mesISO } } }),
+  ]);
+  return { congelados, realizados, avisosPendentes };
+}
+
+/**
+ * Limpa a escala de UM MÊS de UMA unidade: o Planejado congelado e o Realizado.
+ *
+ * O que NÃO é tocado, de propósito: a configuração de escala dos colaboradores.
+ * Ela é o cadastro, não o mês — apagar junto obrigaria a recadastrar a unidade
+ * inteira para consertar um mês. Sem o congelado, a grade volta a ser calculada
+ * a partir desse cadastro, então a tela não fica vazia.
+ *
+ * Os avisos ao RH ainda NÃO ENVIADOS do mês saem junto: sem isso, remarcar a
+ * mesma falta criaria um segundo aviso para o mesmo dia. Os já enviados ficam —
+ * eles registram o que a unidade informou, e reescrever isso seria mentir sobre
+ * o que foi comunicado.
+ *
+ * A confirmação é ESCRITA e conferida aqui: quem chamar tem de mandar o nome da
+ * unidade. Uma janela de "tem certeza?" some com um Enter distraído; digitar o
+ * nome exige ler qual unidade está prestes a ser limpa.
+ */
+export type LimpezaResult =
+  | { ok: true; apagados: ResumoDoMes }
+  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND'; message?: string };
+
+export async function limparMesDaEscala(
+  user: SessionUser,
+  input: { unitId: string; year: number; month: number; confirmacao: string },
+  ctx: { ip?: string | null; userAgent?: string | null } = {},
+): Promise<LimpezaResult> {
+  const { unitId } = input;
+  const year = Number(input.year);
+  const month = Number(input.month);
+  if (!unitId || !Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return { ok: false, reason: 'INVALID', message: 'Mês inválido.' };
+  }
+  /* Apagar o mês inteiro de uma unidade é ação de Administrador — a mesma régua
+     da limpeza em lote das divergências de comandas. */
+  if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN', message: 'Só o Administrador pode limpar o mês.' };
+  if (!canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN' };
+
+  const unidade = await prisma.unit.findUnique({ where: { id: unitId }, select: { name: true } });
+  if (!unidade) return { ok: false, reason: 'NOT_FOUND' };
+
+  const digitado = String(input.confirmacao ?? '').trim().toLocaleLowerCase('pt-BR');
+  if (digitado !== unidade.name.trim().toLocaleLowerCase('pt-BR')) {
+    return { ok: false, reason: 'INVALID', message: `Para confirmar, digite o nome da unidade exatamente: ${unidade.name}` };
+  }
+
+  const apagados = await resumoDoMes(unitId, year, month);
+  const total = diasNoMes(year, month);
+  const primeiro = diaUTC(year, month, 1);
+  const ultimo = diaUTC(year, month, total);
+  const mesISO = `${year}-${String(month).padStart(2, '0')}`;
+
+  await prisma.$transaction([
+    prisma.schedulePlanOverride.deleteMany({ where: { unitId, date: { gte: primeiro, lte: ultimo } } }),
+    prisma.scheduleActual.deleteMany({ where: { unitId, date: { gte: primeiro, lte: ultimo } } }),
+    prisma.rhScheduleNotice.deleteMany({ where: { unitId, sent: false, date: { startsWith: mesISO } } }),
+    prisma.schedulePlanFill.deleteMany({ where: { unitId, year, month } }),
+  ]);
+
+  await audit({
+    userId: user.id, unitId, action: 'SCHEDULE_MONTH_CLEAR', module: 'PEOPLE',
+    entity: 'schedule_month', entityId: `${unitId}-${year}-${month}`,
+    metadata: { year, month, ...apagados, unidade: unidade.name },
+    ...ctx,
+  });
+
+  return { ok: true, apagados };
+}
