@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { notifyRole, notifyUsers } from '@/lib/notifications';
+import { avaliarRecorrencia, avisarRecorrencia, type Recorrencia } from '@/lib/payments/recorrencia';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
 
@@ -198,6 +199,7 @@ export async function approverEditRequest(user: SessionUser, id: string, input: 
       unitId: true, status: true, approverRole: true, type: true, requestedById: true,
       amount: true, description: true, workDate: true, workStartTime: true, workEndTime: true, workSectorId: true,
       transportValue: true, hours: true, coverageSector: true, standardValue: true, collaboratorName: true, reason: true, beneficiary: true,
+      freelancerId: true, weekCount: true, recurrent: true,
     },
   });
   if (!req) return { ok: false, reason: 'NOT_FOUND' };
@@ -229,12 +231,22 @@ export async function approverEditRequest(user: SessionUser, id: string, input: 
 
   let amount = Number(req.amount);
   let hours = req.hours;
+  let avisarRec: { rec: Recorrencia; dateISO: string } | null = null;
 
   if (req.type === 'FREELANCER') {
     const workDate = input.workDate !== undefined ? input.workDate : (req.workDate?.toISOString().slice(0, 10) ?? null);
     if (!workDate || !YMD.test(workDate)) return { ok: false, reason: 'INVALID', detail: 'Informe o dia do trabalho.' };
     muda('workDate', req.workDate, workDate);
-    if (data.workDate !== undefined) data.workDate = new Date(workDate + 'T00:00:00.000Z');
+    if (data.workDate !== undefined) {
+      data.workDate = new Date(workDate + 'T00:00:00.000Z');
+      // Mudou o dia: a semana pode ser outra — refaz a contagem de recorrência.
+      if (req.freelancerId) {
+        const rec = await avaliarRecorrencia(req.freelancerId, workDate, id);
+        muda('weekCount', req.weekCount, rec.weekCount);
+        data.recurrent = rec.recurrent;
+        if (rec.recurrent && !req.recurrent) avisarRec = { rec, dateISO: workDate };
+      }
+    }
 
     const start = input.workStartTime !== undefined ? (input.workStartTime || null) : req.workStartTime;
     const end = input.workEndTime !== undefined ? (input.workEndTime || null) : req.workEndTime;
@@ -297,6 +309,7 @@ export async function approverEditRequest(user: SessionUser, id: string, input: 
   const camposMudados = Object.keys(depois);
   if (camposMudados.length === 0) return { ok: true };
   await prisma.paymentRequest.update({ where: { id }, data });
+  if (avisarRec && req.freelancerId) await avisarRecorrencia(req.unitId, req.freelancerId, avisarRec.rec, avisarRec.dateISO);
   await audit({ userId: user.id, unitId: req.unitId, action: 'PAYMENT_APPROVER_EDIT', module: 'PAYMENTS', entity: 'payment_request', entityId: id, metadata: { type: req.type, antes, depois }, ...ctx });
   if (req.requestedById && req.requestedById !== user.id) {
     const visiveis = camposMudados.filter((c) => c !== 'hours');

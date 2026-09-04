@@ -45,6 +45,9 @@ export interface PayReq {
   rejectionReason?: string | null;
   divergent?: boolean;
   standardValue?: number | null;
+  /// recorrência (04/09): passou do limite semanal do freelancer; weekCount = quantas na semana, contando esta
+  recurrent?: boolean;
+  weekCount?: number | null;
   /// data da solicitação (ISO) — exibida e base da ordenação do histórico
   requestedAt?: string;
   /// data efetiva (editada por Admin/Supervisor) — presença indica edição
@@ -108,6 +111,7 @@ export function PaymentsClient({
   miscTypes,
   suppliers = [],
   sectors = [],
+  filtradoPor = [],
   mine,
   toApprove,
   toPay,
@@ -124,6 +128,8 @@ export function PaymentsClient({
   suppliers?: Supplier[];
   /** Setores ativos das unidades do usuário — obrigatório no freelancer (04/09). */
   sectors?: SectorOpt[];
+  /** Nomes das unidades filtradas pelo seletor do cabeçalho; vazio = todas. */
+  filtradoPor?: string[];
   mine: PayReq[];
   toApprove: PayReq[];
   toPay: PayReq[];
@@ -239,6 +245,16 @@ export function PaymentsClient({
         onValueChange={(v) => setTab(v as typeof tab)}
         options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label, badge: t.badge, badgeTone: 'danger' as const }))}
       />
+
+      {/* De qual unidade é o que está na tela — antes a rede inteira vinha
+          misturada enquanto o cabeçalho dizia uma unidade só. */}
+      {tab !== 'nova' && units.length > 1 && (
+        <p className="text-xs text-ink-500">
+          {filtradoPor.length > 0
+            ? <>Mostrando <strong className="text-ink-900">{filtradoPor.join(', ')}</strong>. <a href="?unit=todas" className="font-semibold text-brand hover:underline">Ver todas as unidades</a></>
+            : <>Mostrando <strong className="text-ink-900">todas as unidades</strong> do seu acesso — escolha uma no seletor do cabeçalho para filtrar.</>}
+        </p>
+      )}
 
       {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} onDone={() => { setTab('minhas'); router.refresh(); }} />}
 
@@ -409,6 +425,7 @@ function DetailView({ r }: { r: PayReq }) {
   if (d?.description) rows.push(['Observações', d.description]);
   rows.push(['Valor', formatBRL(r.amount)]);
   if (r.divergent) rows.push(['Valor padrão', r.standardValue != null ? formatBRL(r.standardValue) : '—']);
+  if (r.recurrent) rows.push(['Recorrência', `${r.weekCount ?? '?'} solicitações na semana`]);
   rows.push(['Unidade', r.unit]);
   rows.push(['Solicitado por', `${r.requestedBy ?? '—'}${r.requestedAt ? ` em ${new Date(r.requestedAt).toLocaleString('pt-BR')}` : ''}`]);
   if (d?.approvedBy) rows.push(['Aprovado por', `${d.approvedBy}${d.approvedAt ? ` em ${fmtDate(d.approvedAt)}` : ''}`]);
@@ -436,6 +453,7 @@ function DetailView({ r }: { r: PayReq }) {
  */
 function Row({ r, onOpen, selected, onSelect }: { r: PayReq; onOpen: () => void; selected?: boolean; onSelect?: () => void }) {
   const marks = [
+    r.recurrent ? `Recorrente: ${r.weekCount ?? '?'}ª na semana` : null,
     r.divergent ? `Divergência: padrão ${r.standardValue != null ? formatBRL(r.standardValue) : '—'}` : null,
     r.dateEdited ? 'Data corrigida — desconta na meta' : null,
   ].filter(Boolean).join(' · ');
@@ -452,6 +470,7 @@ function Row({ r, onOpen, selected, onSelect }: { r: PayReq; onOpen: () => void;
       ].filter(Boolean).join(' · ')}
       trailing={
         <>
+          {r.recurrent && <DsStatusBadge tone="danger" dot>Recorrente</DsStatusBadge>}
           {r.divergent && <DsStatusBadge tone="warning" dot>Divergência</DsStatusBadge>}
           <DsStatusBadge tone={DS_STATUS[r.status]} dot>{STATUS[r.status].label}</DsStatusBadge>
         </>
@@ -557,6 +576,13 @@ function List({ items, actions, selection, editor }: {
                   detail.entryDate ? `Para ${new Date(detail.entryDate).toLocaleDateString('pt-BR')}` : null,
                   detail.dateEditedByName ? `por ${detail.dateEditedByName}` : null,
                 ].filter(Boolean).join(' ')}
+              />
+            )}
+            {detail.recurrent && (
+              <Banner
+                tone="danger"
+                title="Freelancer recorrente na semana"
+                description={`${detail.weekCount ?? '?'} solicitações na semana do dia de trabalho (segunda a domingo), contando esta. Confira antes de aprovar.`}
               />
             )}
             {detail.divergent && (

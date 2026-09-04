@@ -9,6 +9,28 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.75.0 — 2026-09-04 (Pagamentos: alerta de freelancer recorrente e filtro por unidade)
+
+### Alerta de recorrência
+- O mesmo freelancer solicitado **mais de 2 vezes na mesma semana** (segunda a domingo, pelo dia do
+  trabalho, em toda a rede, sem contar rejeitadas) faz a solicitação nascer marcada: crachá vermelho
+  **Recorrente** na lista, faixa no detalhe com a contagem, e aviso crítico para a supervisão da
+  unidade e os Admins. Não bloqueia — como a divergência de valor, é para quem aprova ver antes.
+- O limite é configuração (`FREELANCER_WEEK_LIMIT`, padrão 2), editável pelo Admin em
+  Configurações → Pagamentos. A contagem é refeita quando o aprovador corrige o dia do trabalho.
+- Campos `weekCount`/`recurrent` em `PaymentRequest` (migração aditiva) guardam o que o
+  aprovador viu no momento.
+
+### Filtro por unidade
+- As abas Minhas, Para Aprovar, Pagar e Histórico passam a **obedecer o seletor de unidade do
+  cabeçalho**, com a mesma regra de precedência de Tarefas e Pessoas (`?unit=todas` mostra a rede).
+  Os números das abas seguem o filtro. Antes a fila de aprovação vinha com todas as unidades
+  misturadas enquanto o chip lá em cima dizia uma só.
+
+### Testes
+- `payments-recorrencia.integration.test.ts` (9): semana seg→dom, 3ª marca e avisa, rede inteira,
+  semana seguinte zera, rejeitada não conta, limite configurável, correção de dia refaz, listas
+  filtradas por unidade.
 ## v1.74.0 — 2026-09-04 (A folga é toda quinta E um domingo no mês — não uma no lugar da outra)
 
 ### A regra, dita por quem opera

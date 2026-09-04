@@ -82,6 +82,7 @@ const ENTITIES: [string, string][] = [
   ['GAS_RECEIPT', 'Recebimento de gás'],
   ['GAS_IMPORT', 'Importação de notas de gás'],
   ['GAS_ALERT_PCT', 'Limite de alerta do gás'],
+  ['FREELANCER_WEEK_LIMIT', 'Limite semanal do freelancer (recorrência)'],
   ['MAINT_TICKET', 'Chamado de manutenção'],
   ['MAINT_PLAN', 'Plano preventivo'],
   ['TASK_INSTANCE', 'Tarefa'],
