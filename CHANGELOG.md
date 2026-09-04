@@ -9,6 +9,57 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.64.0 — 2026-09-04 (Permissão por aba: dá para fechar Folgas/férias e manter as tarefas)
+
+### O pedido
+*"Em cada módulo, mais opções de liberação por submenus. Exemplo: folgas/férias da Minha
+área quero deixar restrito para o perfil Gerente, mas deixar liberado Minhas tarefas e
+Bloco de notas — e isso hoje não é permitido."*
+
+A matriz de perfis só sabia falar de módulo inteiro: ou o Gerente tinha a Minha área toda,
+ou não tinha nenhuma.
+
+### Novo — submenus na matriz de perfis
+- **A matriz passou a ter partes de dentro do módulo.** Em Configurações → Perfis de acesso,
+  as linhas recuadas com **↳** são pedaços de um módulo. A Minha área estreia com três:
+  **Minhas tarefas**, **Bloco de notas** e **Folgas / férias**.
+- **O módulo é o teto.** Fechar "Minha área" fecha as três abas junto, mesmo que alguma tenha
+  linha liberando — senão a matriz se contradiria. Marcar "Ver" sem "Editar" deixa a aba em
+  **consulta**: o conteúdo aparece e os botões de criar, alterar e excluir somem.
+- **A aba fechada some da tela** e a Minha área abre na primeira aba que o perfil pode ver —
+  abrir numa aba fechada mostraria a tela vazia e pareceria defeito.
+- **O bloco "Meu horário de trabalho" acompanha a aba de folgas**, que é onde ele mora. Deixar
+  a gravação do horário aberta com a aba fechada seria uma porta lateral para o mesmo assunto.
+  O **Controle de gerentes** não é aba daqui: continua com a guarda própria (Admin/CEO).
+
+### A parte que não é desenho
+**Esconder a aba é conveniência; recusar na rota é o controle.** A rota `/api/manager-area` não
+checava permissão nenhuma — qualquer usuário autenticado gravava tarefa, nota, folga e horário
+pela rota. Agora cada operação é confrontada com o submenu dono dela antes de qualquer gravação.
+A regra de qual submenu manda em qual operação mora num arquivo só
+(`src/lib/permissions/manager-area.ts`), lido pela tela **e** pelo servidor: se cada lado
+tivesse a sua, o botão apareceria e o servidor recusaria.
+
+### Nada muda para quem não mexer
+Submenu **sem linha cadastrada segue o pai**. Nenhum perfil perde nem ganha acesso enquanto o
+Administrador não marcar algo. O Caixa, que nasce fechado, não ganha aba de brinde; Admin e CEO
+continuam sem poder ser trancados para fora; e como submenu **não tem endereço próprio**, a
+barra lateral e a guarda de rota não mudaram de comportamento.
+
+### Testes
+- `tests/manager-area-route.integration.test.ts` (7) — chama **a rota**: com a aba de folgas
+  fechada, agendar e excluir folga voltam **403** e nada é gravado; o horário semanal cai junto;
+  tarefas e notas continuam gravando; ver-sem-editar não grava; módulo fechado recusa as três.
+  **Contra o código anterior, 5 dos 7 falham.**
+- `tests/permissions-submodules.integration.test.ts` (16) — o pai é o teto, o filho sem linha
+  segue o pai, ADMIN/CEO não se trancam, o Caixa segue fechado, todo submenu vem depois do pai
+  na lista e nenhum tem `nav` próprio.
+- `tests/manager-area-render.test.tsx` (7) — a aba fechada some do HTML, a tela abre numa aba
+  que existe, a aba de consulta mostra o conteúdo sem os formulários, e sem nenhuma aba
+  liberada a tela diz o que houve.
+
+---
+
 ## v1.63.0 — 2026-09-02 (Leitor de comandas: bipar fora da faixa vira conferência completa)
 
 ### O problema

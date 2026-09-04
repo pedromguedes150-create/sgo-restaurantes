@@ -60,7 +60,7 @@ export const GUIDE: GuideSection[] = [
           'A aba MINHA ÁREA aparece para todos os usuários, individualmente (é sua, ninguém mais vê).',
           'Tarefas pessoais: crie lembretes com data e hora (a hora é escolhida de 30 em 30 min no lembrete; nos demais campos de hora, de 5 em 5). Dá para editar (✏️) e excluir (🗑️) cada tarefa; o sistema avisa por notificação na hora marcada.',
           'Bloco de notas: dê um título, escreva com formatação (negrito, itálico, sublinhado, listas, link) e edite quando quiser.',
-          'Folgas/férias: registre seus dias de folga/férias.',
+          'Folgas/férias: registre seus dias de folga/férias. O Administrador pode restringir esta aba por perfil (Configurações → Perfis de acesso) sem tirar as tarefas e o bloco de notas — se ela não aparecer para você, é isso.',
           'Gestores (Supervisão/Admin): na aba Folgas há o botão "Consolidado da equipe" — veja folgas/férias por unidade num período. Quem enxerga isso é definido em Configurações → Perfis de acesso.',
         ],
         tips: ['Para gerentes: nos dias marcados como folga/férias, os checklists não aparecem na aba Tarefas (você ainda pode entrar no sistema).'],
@@ -784,6 +784,10 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Em CONFIGURAÇÕES → Perfis de acesso, escolha o perfil e marque Ver/Editar por módulo.',
           'Sem "Ver", o módulo some do menu daquele perfil. CEO e Admin são sempre totais.',
+          'PARTES DE DENTRO DO MÓDULO (abas): as linhas recuadas com ↳ são pedaços de um módulo — dá para fechar um sem fechar o módulo inteiro. Hoje a Minha área tem três: Minhas tarefas, Bloco de notas e Folgas / férias (que inclui o bloco "Meu horário de trabalho").',
+          'Exemplo: para o Gerente ver as tarefas e as notas mas NÃO mexer em folgas/férias, desmarque "Ver" só na linha ↳ Folgas / férias — a aba some da tela dele e o servidor recusa a gravação, mesmo por endereço direto.',
+          'Marcar "Ver" sem "Editar" deixa a aba em consulta: a pessoa enxerga o que está lá e os botões de criar/alterar/excluir somem.',
+          'Fechar o módulo inteiro fecha as abas junto — o módulo é o teto. Quem não mexer em nada continua exatamente como está hoje.',
         ],
       },
       {

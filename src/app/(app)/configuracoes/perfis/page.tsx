@@ -18,7 +18,7 @@ export default async function PerfisAdminPage() {
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
       <LargeTitle title="Perfis de acesso" subtitle="Defina o que cada perfil pode ver e editar em cada módulo." />
       <Card><CardContent className="pt-4">
-        <PermissionsAdmin modules={MODULES.map((m) => ({ key: m.key, label: m.label }))} matrix={matrix} />
+        <PermissionsAdmin modules={MODULES.map((m) => ({ key: m.key, label: m.label, parent: m.parent }))} matrix={matrix} />
       </CardContent></Card>
     </div>
   );
