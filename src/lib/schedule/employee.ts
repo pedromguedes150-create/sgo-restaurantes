@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
-import { ancoraParaFolgaFixa, diaAnterior, soData, DOMINGO_A_CADA_PADRAO, SEMANAS_NO_MES, type ModoDeFolga } from './vigencia';
+import { ancoraParaFolgaFixa, diaAnterior, soData, DOMINGO_DO_MES_PADRAO, DOMINGOS_NO_MES, type ModoDeFolga } from './vigencia';
 import { cicloSemanal, normalizarHora } from './templates';
 import type { SessionUser } from '@/lib/auth/session';
 import type { ScheduleType } from '@prisma/client';
@@ -22,7 +22,10 @@ export interface EscalaInput {
   /** 0=domingo … 6=sábado. Só aceito quando o ciclo fecha em 7 dias. */
   weeklyOffDay?: number | null;
   /** Modo fixa+domingo: de quantas em quantas semanas a folga vai ao domingo. */
+  /** LEGADO: nao decide mais nada. */
   sundayEveryWeeks?: number | null;
+  /** Qual domingo do mes e a folga extra (1º…5º). */
+  sundayOfMonth?: number | null;
   /** Quando o ciclo NÃO fecha na semana, é a âncora que posiciona o ciclo. */
   anchorDate?: string | null;
   shiftId?: string | null;
@@ -83,15 +86,15 @@ export async function salvarEscalaDoColaborador(
      gravaria uma promessa que o gerador não cumpre. */
   const modo: ModoDeFolga = semanal ? (input.offMode ?? 'FIXED_WEEKLY') : 'CYCLE_ONLY';
 
-  let sundayEveryWeeks: number | null = null;
+  let sundayOfMonth: number | null = null;
   if (modo === 'FIXED_PLUS_SUNDAY') {
-    const n = Math.trunc(Number(input.sundayEveryWeeks ?? DOMINGO_A_CADA_PADRAO));
-    if (!Number.isFinite(n) || n < 1 || n > SEMANAS_NO_MES) {
-      /* A conta e por MES: um mes nao tem 52 semanas, e aceitar 52 so produzia
-         um numero que nunca acontece. */
-      return { ok: false, reason: 'INVALID', message: `Informe de quantas em quantas semanas do mes a folga cai no domingo (1 a ${SEMANAS_NO_MES}).` };
+    /* QUAL domingo do mês, nao "a cada N semanas": a regra e uma folga extra
+       por mes, somada a fixa. */
+    const n = Math.trunc(Number(input.sundayOfMonth ?? DOMINGO_DO_MES_PADRAO));
+    if (!Number.isFinite(n) || n < 1 || n > DOMINGOS_NO_MES) {
+      return { ok: false, reason: 'INVALID', message: `Escolha qual domingo do mes e a folga extra (1 a ${DOMINGOS_NO_MES}).` };
     }
-    sundayEveryWeeks = n;
+    sundayOfMonth = n;
   }
 
   let weeklyOffDay: number | null = null;
@@ -127,7 +130,7 @@ export async function salvarEscalaDoColaborador(
     anchorDate: ancora,
     offMode: modo,
     weeklyOffDay,
-    sundayEveryWeeks,
+    sundayOfMonth,
     shiftId: input.shiftId || null,
     startTime: normalizarHora(input.startTime),
     breakTime: normalizarHora(input.breakTime),
@@ -172,7 +175,7 @@ export async function salvarEscalaDoColaborador(
   await audit({
     userId: user.id, unitId: input.unitId, action: 'SCHEDULE_PATTERN_SAVE', module: 'SCHEDULE',
     entity: 'employee_schedule', entityId: salvo.id,
-    metadata: { tipo: template.name, ciclo: `${template.workDays}x${template.offDays}`, modo, folga: weeklyOffDay, domingoACada: sundayEveryWeeks, vale_de: input.startDate },
+    metadata: { tipo: template.name, ciclo: `${template.workDays}x${template.offDays}`, modo, folga: weeklyOffDay, domingoDoMes: sundayOfMonth, vale_de: input.startDate },
     ...ctx,
   });
 

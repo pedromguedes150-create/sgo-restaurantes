@@ -40,8 +40,30 @@ export type PreenchimentoResult =
   | { ok: true; resumo: ResumoDoPreenchimento }
   | { ok: false; reason: 'FORBIDDEN' | 'INVALID' };
 
+/**
+ * Um dia do mês — MEIO-DIA UTC, a mesma convenção do `dayUTC` no resto do
+ * módulo. Gravar à meia-noite aqui e ao meio-dia lá deixava a mesma data com
+ * dois valores diferentes no banco.
+ */
 function diaUTC(year: number, month: number, day: number): Date {
-  return new Date(Date.UTC(year, month - 1, day));
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+}
+
+/**
+ * A faixa do mês inteiro: do dia 1 às 00:00 até o dia 1 do mês SEGUINTE,
+ * exclusivo.
+ *
+ * Existe por causa de um defeito real, relatado como "usei o botão limpar e
+ * ficou o último dia preenchido": a faixa ia de `dia 1 00:00` a
+ * `último dia 00:00`, e os dias são gravados às **12:00** — então o último dia
+ * do mês caía fora do intervalo e sobrevivia. Com o limite no primeiro dia do
+ * mês seguinte, a hora do registro deixa de importar.
+ */
+function faixaDoMes(year: number, month: number): { gte: Date; lt: Date } {
+  return {
+    gte: new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)),
+    lt: new Date(Date.UTC(year, month, 1, 0, 0, 0)),
+  };
 }
 function diasNoMes(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -64,8 +86,6 @@ export async function materializarPlanejado(
   if (!(await canEditModule(user.role, 'SCHEDULE_TAB_PLANNED'))) return { ok: false, reason: 'FORBIDDEN' };
 
   const total = diasNoMes(year, month);
-  const primeiro = diaUTC(year, month, 1);
-  const ultimo = diaUTC(year, month, total);
 
   const [collabs, versoes] = await Promise.all([
     prisma.collaborator.findMany({
@@ -111,6 +131,7 @@ export async function materializarPlanejado(
             weeklyOffDay: v.weeklyOffDay,
             offMode: v.offMode,
             sundayEveryWeeks: v.sundayEveryWeeks,
+            sundayOfMonth: v.sundayOfMonth,
           }, date)
         : plannedStatus(v, date);
       linhas.push({ collaboratorId: c.id, unitId, date, status });
@@ -122,7 +143,7 @@ export async function materializarPlanejado(
   await prisma.$transaction([
     /* Apagar e recriar o mês inteiro: apertar o botão de novo tem de refletir a
        configuração de HOJE, inclusive para quem deixou de ter escala. */
-    prisma.schedulePlanOverride.deleteMany({ where: { unitId, date: { gte: primeiro, lte: ultimo } } }),
+    prisma.schedulePlanOverride.deleteMany({ where: { unitId, date: faixaDoMes(year, month) } }),
     prisma.schedulePlanOverride.createMany({ data: linhas }),
     prisma.schedulePlanFill.upsert({
       where: { unitId_year_month: { unitId, year, month } },
@@ -162,13 +183,11 @@ export interface ResumoDoMes {
 /** Quanto existe no mês — a tela precisa dizer o tamanho do estrago ANTES de apagar. */
 export async function resumoDoMes(unitId: string, year: number, month: number): Promise<ResumoDoMes> {
   const total = diasNoMes(year, month);
-  const primeiro = diaUTC(year, month, 1);
-  const ultimo = diaUTC(year, month, total);
   const mesISO = `${year}-${String(month).padStart(2, '0')}`;
 
   const [congelados, realizados, avisosPendentes] = await Promise.all([
-    prisma.schedulePlanOverride.count({ where: { unitId, date: { gte: primeiro, lte: ultimo } } }),
-    prisma.scheduleActual.count({ where: { unitId, date: { gte: primeiro, lte: ultimo } } }),
+    prisma.schedulePlanOverride.count({ where: { unitId, date: faixaDoMes(year, month) } }),
+    prisma.scheduleActual.count({ where: { unitId, date: faixaDoMes(year, month) } }),
     prisma.rhScheduleNotice.count({ where: { unitId, sent: false, date: { startsWith: mesISO } } }),
   ]);
   return { congelados, realizados, avisosPendentes };
@@ -221,13 +240,11 @@ export async function limparMesDaEscala(
 
   const apagados = await resumoDoMes(unitId, year, month);
   const total = diasNoMes(year, month);
-  const primeiro = diaUTC(year, month, 1);
-  const ultimo = diaUTC(year, month, total);
   const mesISO = `${year}-${String(month).padStart(2, '0')}`;
 
   await prisma.$transaction([
-    prisma.schedulePlanOverride.deleteMany({ where: { unitId, date: { gte: primeiro, lte: ultimo } } }),
-    prisma.scheduleActual.deleteMany({ where: { unitId, date: { gte: primeiro, lte: ultimo } } }),
+    prisma.schedulePlanOverride.deleteMany({ where: { unitId, date: faixaDoMes(year, month) } }),
+    prisma.scheduleActual.deleteMany({ where: { unitId, date: faixaDoMes(year, month) } }),
     prisma.rhScheduleNotice.deleteMany({ where: { unitId, sent: false, date: { startsWith: mesISO } } }),
     prisma.schedulePlanFill.deleteMany({ where: { unitId, year, month } }),
   ]);

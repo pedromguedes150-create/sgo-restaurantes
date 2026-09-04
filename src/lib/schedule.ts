@@ -88,14 +88,19 @@ export interface ScheduleGrid {
 
 export async function getScheduleGrid(unitId: string, year: number, month: number): Promise<ScheduleGrid> {
   const daysCount = daysInMonth(year, month);
-  const first = dayUTC(year, month, 1);
   const last = dayUTC(year, month, daysCount);
+  /* A faixa do mês inteiro, INDEPENDENTE da hora gravada: do dia 1 às 00:00 ao
+     dia 1 do mês seguinte. Com limites ao meio-dia (o `dayUTC`), uma linha
+     gravada à meia-noite no dia 1 ficava DE FORA da consulta — foi o que
+     aconteceu com o Planejado congelado da v1.68.0, cujo dia 1 nunca era
+     aplicado. Data é dia; a hora dentro dele não pode decidir nada. */
+  const doMes = { gte: new Date(Date.UTC(year, month - 1, 1)), lt: new Date(Date.UTC(year, month, 1)) };
 
   const [collabs, patterns, overrides, actuals] = await Promise.all([
     prisma.collaborator.findMany({ where: { active: true, units: { some: { unitId } } }, orderBy: { name: 'asc' }, select: { id: true, name: true, jobTitle: true } }),
     prisma.employeeSchedule.findMany({ where: { unitId, active: true }, orderBy: { startDate: 'asc' }, include: { shift: true, template: true } }),
-    prisma.schedulePlanOverride.findMany({ where: { unitId, date: { gte: first, lte: last } } }),
-    prisma.scheduleActual.findMany({ where: { unitId, date: { gte: first, lte: last } } }),
+    prisma.schedulePlanOverride.findMany({ where: { unitId, date: doMes } }),
+    prisma.scheduleActual.findMany({ where: { unitId, date: doMes } }),
   ]);
 
   /* Um colaborador tem VÁRIAS vigências desde a parte 2. Um Map de uma versão
@@ -141,6 +146,7 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
             weeklyOffDay: v.weeklyOffDay,
             offMode: v.offMode,
             sundayEveryWeeks: v.sundayEveryWeeks,
+            sundayOfMonth: v.sundayOfMonth,
           }, date)
         : plannedStatus(v, date);
       const planned = overrideMap.get(`${c.id}|${d}`) ?? planejado;

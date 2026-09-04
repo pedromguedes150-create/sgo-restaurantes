@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
-import { DIAS_DA_SEMANA, MODO_LABEL, MODO_EXPLICACAO, DOMINGO_A_CADA_PADRAO, SEMANAS_NO_MES, semanasComDomingo, type ModoDeFolga } from '@/lib/schedule/vigencia';
+import { DIAS_DA_SEMANA, MODO_LABEL, MODO_EXPLICACAO, DOMINGO_DO_MES_PADRAO, DOMINGOS_NO_MES, type ModoDeFolga } from '@/lib/schedule/vigencia';
 
 export interface TipoDeEscala {
   id: string;
@@ -30,7 +30,7 @@ export interface EscalaAtual {
   templateId: string | null;
   offMode: ModoDeFolga;
   weeklyOffDay: number | null;
-  sundayEveryWeeks: number | null;
+  sundayOfMonth: number | null;
   shiftId: string | null;
   startTime: string | null;
   breakTime: string | null;
@@ -83,7 +83,7 @@ export function EmployeeScheduleForm({
   const [startDate, setStartDate] = useState(hojeISO);
   const [modo, setModo] = useState<ModoDeFolga>(atual?.offMode ?? 'FIXED_WEEKLY');
   const [offDay, setOffDay] = useState(String(atual?.weeklyOffDay ?? 0));
-  const [aCada, setACada] = useState(String(atual?.sundayEveryWeeks ?? DOMINGO_A_CADA_PADRAO));
+  const [domingo, setDomingo] = useState(String(atual?.sundayOfMonth ?? DOMINGO_DO_MES_PADRAO));
   const [anchor, setAnchor] = useState('');
   const [shiftId, setShiftId] = useState(atual?.shiftId ?? '');
   const [entrada, setEntrada] = useState(atual?.startTime ?? '');
@@ -109,7 +109,7 @@ export function EmployeeScheduleForm({
       collaboratorId, unitId: unidade || unitId, templateId, startDate,
       offMode: semanal ? modo : 'CYCLE_ONLY',
       weeklyOffDay: semanal ? Number(offDay) : null,
-      sundayEveryWeeks: semanal && modo === 'FIXED_PLUS_SUNDAY' ? Number(aCada) : null,
+      sundayOfMonth: semanal && modo === 'FIXED_PLUS_SUNDAY' ? Number(domingo) : null,
       anchorDate: semanal ? null : anchor,
       shiftId: shiftId || null,
       startTime: entrada || null, breakTime: pausa || null, endTime: saida || null,
@@ -178,17 +178,21 @@ export function EmployeeScheduleForm({
                 />
                 {modo === 'FIXED_PLUS_SUNDAY' && (
                   <div>
-                    <Label className="text-xs">Domingo a cada quantas semanas do mês?</Label>
-                    <Input
-                      inputMode="numeric" value={aCada} className="h-9 text-sm"
-                      onChange={(e) => setACada(e.target.value.replace(/\D/g, '').slice(0, 1))}
+                    {/* Escolha, não digitação: "qual domingo" tem cinco respostas
+                        possíveis, e uma caixa de texto convidava a inventar
+                        números que não existem (era o "1 a 52"). */}
+                    <Select
+                      label="Qual domingo do mês ele folga?" size="sm"
+                      value={domingo} onValueChange={setDomingo}
+                      options={Array.from({ length: DOMINGOS_NO_MES }, (_, i) => ({
+                        value: String(i + 1),
+                        label: `${i + 1}º domingo`,
+                      }))}
                     />
-                    {/* O efeito do número, escrito — em vez de pedir que a pessoa
-                        imagine em quais semanas a folga vai cair. */}
                     <p className="mt-1 text-[11px] text-ink-500">
-                      {Number(aCada) >= 1 && Number(aCada) <= SEMANAS_NO_MES
-                        ? <>Folga no domingo da <b>{semanasComDomingo(Number(aCada)).map((s) => `${s}ª`).join(' e ')}</b> semana de cada mês. A conta recomeça todo dia 1º.</>
-                        : <>Informe de 1 a {SEMANAS_NO_MES} — a conta é por semana do mês.</>}
+                      Folga <b>toda {DIAS_DA_SEMANA[Number(offDay)]?.toLowerCase()}</b> e também no{' '}
+                      <b>{domingo}º domingo</b> de cada mês — as duas coisas, não uma no lugar da outra.
+                      {Number(domingo) === DOMINGOS_NO_MES && <> Mês sem 5º domingo fica só com as folgas fixas.</>}
                     </p>
                   </div>
                 )}

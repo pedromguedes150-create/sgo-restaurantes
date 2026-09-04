@@ -9,6 +9,84 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.74.0 — 2026-09-04 (A folga é toda quinta E um domingo no mês — não uma no lugar da outra)
+
+### A regra, dita por quem opera
+*"Isso aqui é simples: a folga é toda quinta-feira e o colaborador tem direito a 1 domingo no mês —
+1º, 2º, 3º, 4º ou 5º. Ela teria que estar com todas as quintas de folga do mês e o 3º domingo de
+folga."*
+
+### O que o sistema fazia de errado
+O modo "folga fixa + domingo" **movia** a folga da semana para o domingo: naquela semana, a quinta
+virava dia de trabalho. Por isso a grade aparecia "totalmente desconfigurada" — faltavam quintas, e
+sobravam domingos em semanas que não eram para ter.
+
+### Como ficou
+- **As duas folgas se somam.** A pessoa folga **toda quinta** e **também** no domingo escolhido. Na
+  semana desse domingo ela folga **nos dois dias** — é o direito, não um erro de conta.
+- O campo deixou de ser "a cada quantas semanas" (uma caixa de texto que convidava a inventar
+  número) e virou uma **escolha: 1º, 2º, 3º, 4º ou 5º domingo**. A tela escreve o efeito embaixo:
+  *"Folga toda quinta e também no 3º domingo de cada mês — as duas coisas, não uma no lugar da
+  outra."*
+- **Mês sem 5º domingo** simplesmente não tem a folga extra. Empurrar para o 4º seria inventar um
+  dia que ninguém combinou — a tela avisa isso quando você escolhe o 5º.
+- A lista de Pessoas passou a resumir como a equipe fala: *"folga toda quinta + 3º domingo do mês"*.
+
+### Banco
+Coluna nova `employee_schedules.sundayOfMonth` (migração aditiva). A antiga `sundayEveryWeeks` fica
+como legado, sem decidir nada — quem já estava nesse modo recebe o **1º domingo** e vale reconferir
+no cadastro.
+
+### Testes
+- `tests/schedule-planned.test.ts` — **o caso do print**: 6x1, folga quinta, 3º domingo, em
+  setembro/2026. Todas as quintas (3, 10, 17, 24) são folga, o domingo 20 também, os outros domingos
+  são trabalho, e o mês inteiro sai `TTFTTTTTTFTTTTTTFTTFTTTFTTTTTT`.
+- `tests/schedule-vigencia.test.ts` — o enésimo domingo é reconhecido, não se confunde com os
+  outros, ignora dia que não é domingo, e **a folga fixa nunca se move** (varredura das 53 semanas
+  de 2026).
+- Os testes que descreviam a regra antiga foram **reescritos**, com o motivo escrito.
+- Suíte inteira: **738 testes verdes**.
+
+---
+
+## v1.73.1 — 2026-09-04 (O "Limpar o mês" deixava o último dia para trás)
+
+### O relato
+*"Usei o botão limpar e ficou o último dia preenchido."* — com o print do mês inteiro vazio e a
+coluna do dia 30 ainda marcada.
+
+### A causa, que é minha
+O módulo de escala grava cada dia ao **meio-dia UTC** (`dayUTC` usa `12:00`). A faixa que escrevi
+para apagar ia de `dia 1 00:00` até `último dia 00:00` — e o último dia está gravado às **12:00**,
+depois do limite. Ele ficava de fora do intervalo e **sobrevivia sozinho**, exatamente como no
+print.
+
+**Por que o teste não pegou:** a fixture criava as marcações direto no banco, **à meia-noite**, e o
+aplicativo grava ao meio-dia. O teste passava contra um dado que não existe na vida real. Agora ele
+usa o **gravador de verdade** (`setActual`) e marca explicitamente o **último dia do mês**.
+Contra o código anterior, **6 dos 12 casos falham**.
+
+### O mesmo erro no outro extremo — este estava em produção desde a v1.68.0
+A grade lia o mês com limites ao meio-dia, e o **Planejado congelado** era gravado à **meia-noite**:
+a linha do **dia 1** ficava fora da consulta, e o congelamento daquele dia **nunca era aplicado**.
+Ninguém notaria — o dia 1 caía de volta no calculado, que quase sempre dá o mesmo valor.
+
+- A leitura da grade e a limpeza passaram a usar a **faixa do mês inteiro** (do dia 1 às 00:00 ao
+  dia 1 do mês seguinte). **Data é dia; a hora dentro dele não decide nada.**
+- O congelamento passou a gravar ao meio-dia, como o resto do módulo.
+- **Migração de dados** normaliza o que já foi congelado (`20260904180000_plan_override_meio_dia`).
+  Só o "Preencher automaticamente" escreve nessa tabela, então nada que alguém decidiu muda: o dia
+  continua o mesmo, muda a hora dentro dele.
+
+### Testes
+`tests/schedule-limpar-mes.integration.test.ts` passou de 9 para **14 casos**: o último dia entra na
+contagem e some junto, a grade fica de fato vazia depois da limpeza, e uma linha gravada à
+meia-noite (dado da v1.68.0) continua valendo na grade e é apagada junto.
+
+Suíte inteira: **732 testes verdes**.
+
+---
+
 ## v1.73.0 — 2026-09-04 (Limpar o mês da escala, com confirmação escrita)
 
 ### O pedido

@@ -59,7 +59,7 @@ describe('A escala aparece na linha do colaborador', () => {
     const html = render({
       configs: { 'c-ADAIR': {
         tipo: '6x1 Tarde', folga: 'folga domingo', desde: '01/09/2026', horario: '14:00–22:00',
-        atual: { templateId: 't1', offMode: 'FIXED_WEEKLY' as const, weeklyOffDay: 0, sundayEveryWeeks: null, shiftId: null, startTime: '14:00', breakTime: null, endTime: '22:00' },
+        atual: { templateId: 't1', offMode: 'FIXED_WEEKLY' as const, weeklyOffDay: 0, sundayOfMonth: null, shiftId: null, startTime: '14:00', breakTime: null, endTime: '22:00' },
       } },
     });
     expect(html).toContain('6x1 Tarde');

@@ -10,6 +10,7 @@ const base = (over: Partial<VersaoParaPlanejado> = {}): VersaoParaPlanejado => (
   weeklyOffDay: 0, // domingo
   offMode: 'FIXED_WEEKLY',
   sundayEveryWeeks: null,
+  sundayOfMonth: null,
   ...over,
 });
 
@@ -99,27 +100,58 @@ describe('Ciclos que não fecham na semana', () => {
   });
 });
 
-describe('Folga fixa + domingo em ciclo', () => {
-  it('a folga vai para o domingo nas semanas do MÊS e volta ao dia fixo', () => {
-    const v = base({ weeklyOffDay: 2, offMode: 'FIXED_PLUS_SUNDAY', sundayEveryWeeks: 2, startDate: d('2026-05-01') });
-    /* A cada 2 semanas do mês = 1ª e 3ª. Em maio/2026 as semanas começam nos
-       domingos 03, 10, 17, 24 e 31 — então 03/05 (1ª) e 17/05 (3ª) são de
-       domingo, e nas outras a folga fica na terça. */
-    expect(folgaNoDia(v, d('2026-05-03'))).toBe(true);   // domingo da 1ª semana
-    expect(folgaNoDia(v, d('2026-05-17'))).toBe(true);   // domingo da 3ª semana
-    expect(folgaNoDia(v, d('2026-05-10'))).toBe(false);  // 2ª semana: folga na terça
-    expect(folgaNoDia(v, d('2026-05-12'))).toBe(true);   // ...que é esta
-    expect(folgaNoDia(v, d('2026-05-05'))).toBe(false);  // terça da semana do domingo
+describe('Folga fixa + 1 domingo no mês', () => {
+  /* A regra da rede, dita pelo Alan (04/09): "a folga é toda quinta e o
+     colaborador tem direito a 1 domingo no mês — 1º, 2º, 3º, 4º ou 5º".
+     São folgas que SE SOMAM. Antes o domingo substituía a folga daquela
+     semana, e a quinta sumia da grade: foi esse o relato. */
+
+  /* O caso do print: 6x1, folga toda QUINTA, 3º domingo. Setembro/2026 tem
+     quintas em 3, 10, 17 e 24, e domingos em 6, 13, 20 e 27. */
+  const alessandra = base({
+    weeklyOffDay: 4, offMode: 'FIXED_PLUS_SUNDAY', sundayOfMonth: 3,
+    anchorDate: d('2026-08-28'), startDate: d('2026-09-01'),
+  });
+
+  it('TODAS as quintas do mês são folga', () => {
+    for (const quinta of ['2026-09-03', '2026-09-10', '2026-09-17', '2026-09-24']) {
+      expect(folgaNoDia(alessandra, d(quinta)), quinta).toBe(true);
+    }
+  });
+
+  it('e o 3º domingo também', () => {
+    expect(folgaNoDia(alessandra, d('2026-09-20'))).toBe(true);
+  });
+
+  it('os outros domingos são trabalho', () => {
+    for (const domingo of ['2026-09-06', '2026-09-13', '2026-09-27']) {
+      expect(folgaNoDia(alessandra, d(domingo)), domingo).toBe(false);
+    }
+  });
+
+  it('a semana do domingo tem DUAS folgas — é o direito, não um erro', () => {
+    /* Semana de 20 a 26/09: domingo 20 (o 3º) e quinta 24. */
+    expect(sequencia(alessandra, '2026-09-20', 7)).toBe('FTTTFTT');
+  });
+
+  it('o mês inteiro sai como o Alan descreveu', () => {
+    /* 1 (Ter) a 30 (Qua) de setembro/2026. */
+    expect(sequencia(alessandra, '2026-09-01', 30)).toBe('TTFTTTTTTFTTTTTTFTTFTTTFTTTTTT');
   });
 
   it('nenhuma semana fica sem folga', () => {
-    /* O risco do modo: trocar o dia sem garantir que a semana teve descanso. */
-    const v = base({ weeklyOffDay: 2, offMode: 'FIXED_PLUS_SUNDAY', sundayEveryWeeks: 3, startDate: d('2026-05-10') });
+    /* A folga fixa nunca é movida, então a promessa se mantém sozinha. */
     for (let semana = 0; semana < 9; semana++) {
-      const inicio = new Date(d('2026-05-10').getTime() + semana * 7 * 86400000);
-      const s = sequencia(v, inicio.toISOString().slice(0, 10), 7);
+      const inicio = new Date(d('2026-09-06').getTime() + semana * 7 * 86400000);
+      const s = sequencia(alessandra, inicio.toISOString().slice(0, 10), 7);
       expect(s).toContain('F');
     }
+  });
+
+  it('sem escolher o domingo, é só a folga fixa', () => {
+    const v = base({ weeklyOffDay: 4, offMode: 'FIXED_PLUS_SUNDAY', sundayOfMonth: null, anchorDate: d('2026-08-28'), startDate: d('2026-09-01') });
+    expect(folgaNoDia(v, d('2026-09-20'))).toBe(false);
+    expect(folgaNoDia(v, d('2026-09-17'))).toBe(true);
   });
 });
 

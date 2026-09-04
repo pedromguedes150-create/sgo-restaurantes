@@ -2284,7 +2284,16 @@ model EmployeeSchedule {
   /// De quantas em quantas semanas a folga cai no DOMINGO (modo
   /// FIXED_PLUS_SUNDAY). No comercio o descanso precisa coincidir com o domingo
   /// periodicamente — sem isto, "folga fixa na terca" nunca daria um domingo.
+  /// LEGADO (ate a v1.73.1): "de quantas em quantas semanas a folga CAIA no
+  /// domingo". A regra real da rede e outra — ver sundayOfMonth.
   sundayEveryWeeks Int?
+  /// QUAL domingo do mes e a folga extra: 1=primeiro … 5=quinto.
+  ///
+  /// A regra da rede, dita pelo Alan: "a folga e toda quinta e o colaborador
+  /// tem direito a 1 domingo no mes". Sao folgas que SE SOMAM — a quinta
+  /// continua sendo folga na semana do domingo. O modelo anterior MOVIA a
+  /// folga da quinta para o domingo, e por isso a quinta sumia da grade.
+  sundayOfMonth    Int?
   shiftId        String?
   customMask     String?      // p/ CUSTOM: ciclo em T/F, ex "TTTTTFF"
   /// Horarios DESTE colaborador. Vazio herda do tipo de escala.

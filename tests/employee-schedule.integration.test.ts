@@ -130,25 +130,27 @@ describe('A VIGÊNCIA — o passado não muda', () => {
   });
 });
 
-describe('Modo fixa + domingo em ciclo', () => {
-  it('grava de quantas em quantas semanas o domingo entra', async () => {
+describe('Modo fixa + 1 domingo no mês', () => {
+  it('grava QUAL domingo do mês é a folga extra', async () => {
+    /* A regra da rede: folga toda quinta E um domingo no mês. O campo antigo
+       ('a cada N semanas') movia a folga e fazia a quinta sumir da grade. */
     const r = await salvarEscalaDoColaborador(mgr(), {
       collaboratorId: colabId, unitId, templateId: tipo6x1, startDate: '2026-09-01',
-      offMode: 'FIXED_PLUS_SUNDAY', weeklyOffDay: 2, sundayEveryWeeks: 4,
+      offMode: 'FIXED_PLUS_SUNDAY', weeklyOffDay: 4, sundayOfMonth: 3,
     });
     expect(r.ok).toBe(true);
     const v = await prisma.employeeSchedule.findFirst({ where: { collaboratorId: colabId, unitId, startDate: d('2026-09-01') } });
     expect(v!.offMode).toBe('FIXED_PLUS_SUNDAY');
-    expect(v!.sundayEveryWeeks).toBe(4);
+    expect(v!.sundayOfMonth).toBe(3);
   });
 
-  it('número de semanas fora da faixa é recusado', async () => {
+  it('domingo fora da faixa 1–5 é recusado', async () => {
     const r = await salvarEscalaDoColaborador(mgr(), {
       collaboratorId: colabId, unitId, templateId: tipo6x1, startDate: '2026-10-01',
-      offMode: 'FIXED_PLUS_SUNDAY', weeklyOffDay: 2, sundayEveryWeeks: 0,
+      offMode: 'FIXED_PLUS_SUNDAY', weeklyOffDay: 4, sundayOfMonth: 0,
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.message).toContain('semanas');
+    if (!r.ok) expect(r.message).toContain('domingo');
   });
 });
 

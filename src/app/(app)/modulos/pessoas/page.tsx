@@ -103,12 +103,12 @@ export default async function PessoasModulePage({ searchParams }: { searchParams
             turnos={turnos}
             configs={Object.fromEntries([...configPorColab].map(([id, c]) => [id, {
               tipo: c.template?.name ?? null,
-              folga: resumoDaFolga(c.offMode, c.weeklyOffDay, c.sundayEveryWeeks),
+              folga: resumoDaFolga(c.offMode, c.weeklyOffDay, c.sundayOfMonth),
               desde: d(c.startDate),
               horario: c.startTime && c.endTime ? `${c.startTime}–${c.endTime}` : null,
               atual: {
                 templateId: c.templateId, offMode: c.offMode, weeklyOffDay: c.weeklyOffDay,
-                sundayEveryWeeks: c.sundayEveryWeeks, shiftId: c.shiftId,
+                sundayOfMonth: c.sundayOfMonth, shiftId: c.shiftId,
                 startTime: c.startTime, breakTime: c.breakTime, endTime: c.endTime,
               },
             }]))}
