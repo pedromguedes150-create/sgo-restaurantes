@@ -5,10 +5,13 @@ import { DoorOpen, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Coverage = 'ok' | 'partial' | 'none';
+/** Efetivo e freelancer moram na MESMA célula — a planta conta o que está aqui. */
+interface Pessoa { id: string; name: string; source: string; kind?: 'STAFF' | 'FREELANCER'; pendente?: boolean; horario?: string | null }
+
 interface Grid {
   sectors: { id: string; name: string; minHeadcount: number }[];
   shifts: { id: string | null; label: string }[];
-  cells: Record<string, Record<string, { id: string; name: string; source: string }[]>>;
+  cells: Record<string, Record<string, Pessoa[]>>;
   coverage: Record<string, Record<string, Coverage>>;
 }
 

@@ -9,6 +9,93 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.71.0 — 2026-09-04 (Freelancer alocado aparece no setor · a folha para de encostar na borda)
+
+### O relato
+*"Mesmo com status pendente já deve alocar, não é necessário aguardar aprovação para alocar a
+função"* — com a seta do print apontando do freelancer para o card **Pratos**, que mostrava
+`0/1 pessoa(s) · vazio`. E: *"a caixa some na borda inferior da tela"*.
+
+### O freelancer estava alocado e o mapa dizia o contrário
+Alocar nunca dependeu de aprovação — o painel já gravava o setor com o pagamento **Pendente**. O
+problema era outro: o freelancer vivia numa **lista paralela**, ao lado da grade. A **planta da
+unidade** conta o que está nas **células** do mapa, então o setor com um freelancer dentro aparecia
+`0/1 · vazio`. A alocação existia e a tela afirmava o oposto.
+
+- **Freelancer entra na mesma célula do efetivo**, no setor escolhido e na coluna do turno que
+  contém o horário dele. A planta passa a contá-lo (Pratos `0/1 · vazio` → `1/1`), e a cobertura
+  fica verde.
+- Na lista, ele aparece com **ficha da cor da marca**, com o horário (`12:00-14:10`) e a palavra
+  **pendente** enquanto o pagamento não foi aprovado — porque quem olha o mapa precisa saber que
+  aquela pessoa está lá, e o financeiro precisa saber que ainda não pagou.
+- **Aprovar o pagamento não muda nada no mapa**: só some a marca de pendente. Alocar gente e
+  aprovar dinheiro são decisões diferentes, de pessoas diferentes, em momentos diferentes.
+- O **bloco separado de freelancers por setor saiu** da lista: com a pessoa dentro da célula, manter
+  os dois lugares mostraria a mesma pessoa duas vezes.
+- O **histórico congelado do dia** foi ajustado junto, pelo mesmo motivo: ele somava a célula e a
+  lista paralela, e passaria a gravar o freelancer em duplicidade.
+
+### A folha que encostava na borda de baixo
+As folhas de detalhe (Hora Extra, Freelancer, Avulso) abriam **coladas na borda inferior** da tela
+no computador: os botões de ação ficavam rentes ao fim da janela e, com a barra de tarefas por cima,
+pareciam cortados. No celular a folha continua subindo de baixo (é o gesto do aparelho); **no
+desktop ela passa a abrir centralizada**, com respiro embaixo, cantos arredondados nos quatro lados
+e teto de 85% da altura. Vale para todas as folhas do sistema.
+
+### Testes
+- `tests/workforce-freelancer-mapa.integration.test.ts` (6) — sem setor, o card continua vazio;
+  alocando o **pendente**, o pagamento segue `PENDING` e ele aparece dentro do setor com horário e
+  marca de pendente, com a cobertura virando `ok`; não vaza para outro setor; aprovar só tira a
+  marca; e o histórico do dia grava a pessoa **uma vez só**.
+- Suíte inteira: **711 testes verdes**.
+
+---
+
+## v1.70.0 — 2026-09-04 (O domingo em ciclo passa a contar por semana do MÊS)
+
+### O relato
+*"A configuração das semanas está errada: está considerando semanas do ano todo em vez do mês. Deve
+calcular de acordo com o mês."* — com o print da caixa recusando o valor: *"Informe de quantas em
+quantas semanas a folga cai no domingo (1 a 52)"*.
+
+### O que estava acontecendo
+No modo **Folga fixa + domingo em ciclo**, a conta corria **desde o início da vigência, sem parar**:
+semana 0, 1, 2… indefinidamente. Com "a cada 7", o domingo de folga ia andando pelo calendário e
+caía num dia diferente a cada mês — não dava para dizer à equipe em que domingo ela folga. Por isso
+o campo aceitava até 52.
+
+### Como ficou
+- **A conta recomeça todo dia 1º.** "A cada 2 semanas" é sempre o domingo da **1ª e da 3ª** semana
+  do mês, em todos os meses. O campo passou a aceitar **1 a 5** — um mês não tem mais que cinco
+  semanas, e aceitar 52 só produzia um número que nunca acontecia.
+- **A tela diz o efeito do número**, em vez de pedir que a pessoa imagine: *"Folga no domingo da 1ª
+  e 3ª semana de cada mês. A conta recomeça todo dia 1º."*
+- **A lista de Pessoas também**: o resumo da linha virou *"folga segunda + domingo na 1ª e 3ª semana
+  do mês"*.
+- O padrão passou de 7 para **4** (um domingo por mês, na 1ª semana). Quem já está gravado com 7
+  continua funcionando e dá o mesmo resultado — num mês não existe "semana 7".
+
+### O defeito que a mudança quase introduziu
+A primeira versão contava pelo **dia do mês** (1–7, 8–14…). Parece a mesma coisa e não é: uma semana
+do calendário atravessa a fronteira dos blocos, e quando isso acontecia a semana ficava **sem folga
+nenhuma** — o domingo não folgava porque o bloco dele não era o do ciclo, e a terça também não
+porque o bloco dela mandava folgar no domingo. Uma semana inteira trabalhada, ilegal, que ninguém
+notaria olhando a grade. **O teste "nenhuma semana fica sem folga" pegou** (`'TTTTTTT'`).
+
+A régua passou a ser o **domingo que abre a semana**: todos os dias da mesma semana recebem a mesma
+decisão, e a promessa de uma folga por semana se mantém.
+
+### Testes
+- `tests/schedule-vigencia.test.ts` — três casos novos, entre eles a **varredura das 53 semanas de
+  2026 em todos os N de 1 a 5**, exigindo uma decisão só por semana; mais a prova de que a conta
+  recomeça a cada mês (a 1ª semana de maio, junho, julho e agosto dá o mesmo resultado).
+- Os dois testes que descreviam a conta corrida foram **atualizados de propósito**, com o motivo
+  escrito — inclusive o efeito de virada de mês (5ª semana e 1ª semana seguidas são as duas de
+  domingo, consequência de recomeçar a conta).
+- Suíte inteira: **674 testes verdes**.
+
+---
+
 ## v1.69.0 — 2026-09-04 (Pagamentos: corrigir antes de aprovar, freelancer já alocado; auditoria das rotas "fora da matriz")
 
 ### Pagamentos

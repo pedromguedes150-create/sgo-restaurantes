@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
-import { ancoraParaFolgaFixa, diaAnterior, soData, DOMINGO_A_CADA_PADRAO, type ModoDeFolga } from './vigencia';
+import { ancoraParaFolgaFixa, diaAnterior, soData, DOMINGO_A_CADA_PADRAO, SEMANAS_NO_MES, type ModoDeFolga } from './vigencia';
 import { cicloSemanal, normalizarHora } from './templates';
 import type { SessionUser } from '@/lib/auth/session';
 import type { ScheduleType } from '@prisma/client';
@@ -86,8 +86,10 @@ export async function salvarEscalaDoColaborador(
   let sundayEveryWeeks: number | null = null;
   if (modo === 'FIXED_PLUS_SUNDAY') {
     const n = Math.trunc(Number(input.sundayEveryWeeks ?? DOMINGO_A_CADA_PADRAO));
-    if (!Number.isFinite(n) || n < 1 || n > 52) {
-      return { ok: false, reason: 'INVALID', message: 'Informe de quantas em quantas semanas a folga cai no domingo (1 a 52).' };
+    if (!Number.isFinite(n) || n < 1 || n > SEMANAS_NO_MES) {
+      /* A conta e por MES: um mes nao tem 52 semanas, e aceitar 52 so produzia
+         um numero que nunca acontece. */
+      return { ok: false, reason: 'INVALID', message: `Informe de quantas em quantas semanas do mes a folga cai no domingo (1 a ${SEMANAS_NO_MES}).` };
     }
     sundayEveryWeeks = n;
   }
