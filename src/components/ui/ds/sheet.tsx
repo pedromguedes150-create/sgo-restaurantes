@@ -39,7 +39,11 @@ export function Sheet({ open, onClose, title, description, children, footer }: S
   if (!show) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 print:hidden" onClick={onClose}>
+    /* No celular a folha sobe da borda de baixo (é o gesto do aparelho). No
+       desktop ela para de ficar colada na borda inferior da tela: os botões de
+       ação ficavam rentes ao fim da janela — e, com a barra de tarefas por
+       cima, pareciam cortados. Centralizada, sobra respiro embaixo. */
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 print:hidden sm:items-center sm:p-6" onClick={onClose}>
       <div
         ref={ref}
         role="dialog"
@@ -48,7 +52,10 @@ export function Sheet({ open, onClose, title, description, children, footer }: S
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          'sgo-sheet-enter flex max-h-[90vh] w-full flex-col rounded-t-sheet border border-line bg-surface pb-[env(safe-area-inset-bottom)] shadow-2xl outline-none sm:max-w-lg',
+          'sgo-sheet-enter flex max-h-[90vh] w-full flex-col rounded-t-sheet border border-line bg-surface pb-[env(safe-area-inset-bottom)] shadow-2xl outline-none',
+          /* Centralizada no desktop: cantos arredondados nos quatro lados e um
+             teto menor, para o rodapé com os botões nunca encostar na tela. */
+          'sm:max-h-[85vh] sm:max-w-lg sm:rounded-sheet',
         )}
       >
         {/* Puxador: afordância de arrastar (decorativo). */}

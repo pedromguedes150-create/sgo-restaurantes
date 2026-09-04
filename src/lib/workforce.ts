@@ -21,12 +21,42 @@ export function shiftLabel(s: { name: string; startTime?: string | null; endTime
   return s.name;
 }
 
+/**
+ * Uma pessoa dentro de um setor no mapa do dia.
+ *
+ * Freelancer entra AQUI, e nao numa lista paralela: a planta da unidade conta
+ * o que esta nas celulas, entao um freelancer alocado em Pratos aparecia como
+ * "Pratos 0/1 · vazio" — a alocacao existia e a tela dizia o contrario.
+ */
+export interface PessoaNaCelula {
+  id: string;
+  name: string;
+  source: string;
+  kind?: 'STAFF' | 'FREELANCER';
+  /** Freelancer cujo pagamento ainda nao foi aprovado — aloca do mesmo jeito. */
+  pendente?: boolean;
+  horario?: string | null;
+}
+
 export interface WorkforceGrid {
   sectors: { id: string; name: string; minHeadcount: number }[];
   shifts: { id: string | null; label: string }[];
-  /** cells[sectorId][label] = colaboradores alocados */
-  cells: Record<string, Record<string, { id: string; name: string; source: string }[]>>;
+  /** cells[sectorId][label] = quem está naquele setor/turno — efetivo E freelancer */
+  cells: Record<string, Record<string, PessoaNaCelula[]>>;
   coverage: Record<string, Record<string, Coverage>>;
+}
+
+/**
+ * Em que coluna (turno) o freelancer entra: a que contém o horário dele.
+ *
+ * Sem horário, ou sem coluna que sirva, ele vai para a primeira — melhor
+ * aparecer na coluna aproximada do que sumir do mapa, que era o problema.
+ */
+function colunaDoFreelancer(f: { startTime: string | null }, cols: { label: string; start: number | null; end: number | null }[]): string | null {
+  if (cols.length === 0) return null;
+  const ini = parseHM(f.startTime);
+  if (ini == null) return cols[0].label;
+  return (cols.find((c) => inWindow(ini, c.start, c.end)) ?? cols[0]).label;
 }
 
 /** Monta a grade Setor × Turno × Colaboradores + cobertura (Módulo 9.3). */
@@ -159,11 +189,15 @@ async function workingSetForDate(unitId: string, dateISO: string): Promise<Set<s
  * Folga/falta/atestado/férias não entram (não têm status WORK).
  */
 export async function getUnitDayMap(unitId: string, dateISO: string, nowMinutes: number | null): Promise<WorkforceGrid> {
-  const [sectors, turnos, allocations, working] = await Promise.all([
+  const [sectors, turnos, allocations, working, freelas] = await Promise.all([
     prisma.sector.findMany({ where: { unitId, active: true }, orderBy: { name: 'asc' } }),
     prisma.shift.findMany({ where: { unitId, active: true }, orderBy: [{ order: 'asc' }, { name: 'asc' }] }),
     prisma.workforceAllocation.findMany({ where: { unitId }, include: { collaborator: { select: { name: true } }, shiftRef: true } }),
     workingSetForDate(unitId, dateISO),
+    /* Freelancer alocado entra na grade como qualquer outro. A aprovacao do
+       PAGAMENTO nao tem nada a ver com estar no setor: quem trabalhou hoje
+       aparece hoje. */
+    getDayFreelancers(unitId, dateISO, nowMinutes),
   ]);
 
   type Col = { id: string | null; label: string; start: number | null; end: number | null };
@@ -190,9 +224,17 @@ export async function getUnitDayMap(unitId: string, dateISO: string, nowMinutes:
   for (const s of sectors) {
     cells[s.id] = {}; coverage[s.id] = {};
     for (const col of cols) {
-      const people = visible
+      const people: PessoaNaCelula[] = visible
         .filter((a) => a.sectorId === s.id && allocLabel(a) === col.label)
-        .map((a) => ({ id: a.id, name: a.collaborator?.name ?? a.collaboratorName ?? '—', source: a.source }));
+        .map((a) => ({ id: a.id, name: a.collaborator?.name ?? a.collaboratorName ?? '—', source: a.source, kind: 'STAFF' as const }));
+      for (const f of freelas) {
+        if (f.sectorId !== s.id || colunaDoFreelancer(f, cols) !== col.label) continue;
+        people.push({
+          id: `freela-${f.requestId}`, name: f.name, source: 'FREELANCER', kind: 'FREELANCER',
+          pendente: f.status === 'PENDING',
+          horario: f.startTime && f.endTime ? `${f.startTime}-${f.endTime}` : null,
+        });
+      }
       cells[s.id][col.label] = people;
       coverage[s.id][col.label] = people.length === 0 ? 'none' : people.length < s.minHeadcount ? 'partial' : 'ok';
     }
@@ -238,14 +280,18 @@ export async function snapshotUnitDay(unitId: string, dateISO: string): Promise<
   for (const s of map.sectors) {
     for (const col of map.shifts) {
       for (const p of map.cells[s.id]?.[col.label] ?? []) {
-        rows.push({ unitId, date: dateISO, sectorName: s.name, shiftLabel: col.label, personName: p.name, kind: 'STAFF' });
+        /* O freelancer ja vem DENTRO da celula desde que o mapa passou a
+           conta-lo; gravar 'STAFF' aqui e repetir na volta de baixo daria a
+           mesma pessoa duas vezes no historico. */
+        rows.push({ unitId, date: dateISO, sectorName: s.name, shiftLabel: col.label, personName: p.name, kind: p.kind ?? 'STAFF' });
       }
     }
   }
-  const sectorNameById = new Map(map.sectors.map((s) => [s.id, s.name]));
+  /* Freelancer SEM setor nao entra na grade (nao ha onde), mas o dia dele
+     existiu — vai para o historico numa linha propria. */
   for (const f of freelancers) {
-    if (!f.sectorId) continue;
-    rows.push({ unitId, date: dateISO, sectorName: sectorNameById.get(f.sectorId) ?? f.sectorName ?? 'Freelancer', shiftLabel: f.startTime && f.endTime ? `${f.startTime}-${f.endTime}` : 'Freelancer', personName: f.name, kind: 'FREELANCER' });
+    if (f.sectorId) continue;
+    rows.push({ unitId, date: dateISO, sectorName: 'Sem setor', shiftLabel: f.startTime && f.endTime ? `${f.startTime}-${f.endTime}` : 'Freelancer', personName: f.name, kind: 'FREELANCER' });
   }
   if (rows.length === 0) return { created: 0 };
   await prisma.workforceDaySnapshot.createMany({ data: rows });

@@ -9,6 +9,48 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.71.0 — 2026-09-04 (Freelancer alocado aparece no setor · a folha para de encostar na borda)
+
+### O relato
+*"Mesmo com status pendente já deve alocar, não é necessário aguardar aprovação para alocar a
+função"* — com a seta do print apontando do freelancer para o card **Pratos**, que mostrava
+`0/1 pessoa(s) · vazio`. E: *"a caixa some na borda inferior da tela"*.
+
+### O freelancer estava alocado e o mapa dizia o contrário
+Alocar nunca dependeu de aprovação — o painel já gravava o setor com o pagamento **Pendente**. O
+problema era outro: o freelancer vivia numa **lista paralela**, ao lado da grade. A **planta da
+unidade** conta o que está nas **células** do mapa, então o setor com um freelancer dentro aparecia
+`0/1 · vazio`. A alocação existia e a tela afirmava o oposto.
+
+- **Freelancer entra na mesma célula do efetivo**, no setor escolhido e na coluna do turno que
+  contém o horário dele. A planta passa a contá-lo (Pratos `0/1 · vazio` → `1/1`), e a cobertura
+  fica verde.
+- Na lista, ele aparece com **ficha da cor da marca**, com o horário (`12:00-14:10`) e a palavra
+  **pendente** enquanto o pagamento não foi aprovado — porque quem olha o mapa precisa saber que
+  aquela pessoa está lá, e o financeiro precisa saber que ainda não pagou.
+- **Aprovar o pagamento não muda nada no mapa**: só some a marca de pendente. Alocar gente e
+  aprovar dinheiro são decisões diferentes, de pessoas diferentes, em momentos diferentes.
+- O **bloco separado de freelancers por setor saiu** da lista: com a pessoa dentro da célula, manter
+  os dois lugares mostraria a mesma pessoa duas vezes.
+- O **histórico congelado do dia** foi ajustado junto, pelo mesmo motivo: ele somava a célula e a
+  lista paralela, e passaria a gravar o freelancer em duplicidade.
+
+### A folha que encostava na borda de baixo
+As folhas de detalhe (Hora Extra, Freelancer, Avulso) abriam **coladas na borda inferior** da tela
+no computador: os botões de ação ficavam rentes ao fim da janela e, com a barra de tarefas por cima,
+pareciam cortados. No celular a folha continua subindo de baixo (é o gesto do aparelho); **no
+desktop ela passa a abrir centralizada**, com respiro embaixo, cantos arredondados nos quatro lados
+e teto de 85% da altura. Vale para todas as folhas do sistema.
+
+### Testes
+- `tests/workforce-freelancer-mapa.integration.test.ts` (6) — sem setor, o card continua vazio;
+  alocando o **pendente**, o pagamento segue `PENDING` e ele aparece dentro do setor com horário e
+  marca de pendente, com a cobertura virando `ok`; não vaza para outro setor; aprovar só tira a
+  marca; e o histórico do dia grava a pessoa **uma vez só**.
+- Suíte inteira: **711 testes verdes**.
+
+---
+
 ## v1.70.0 — 2026-09-04 (O domingo em ciclo passa a contar por semana do MÊS)
 
 ### O relato

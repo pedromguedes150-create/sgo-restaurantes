@@ -13,10 +13,13 @@ import { cn } from '@/lib/utils';
 import { UnitFloorplan } from '@/components/people/unit-floorplan';
 
 type Coverage = 'ok' | 'partial' | 'none';
+/** Efetivo e freelancer moram na MESMA célula — a planta conta o que está aqui. */
+interface Pessoa { id: string; name: string; source: string; kind?: 'STAFF' | 'FREELANCER'; pendente?: boolean; horario?: string | null }
+
 interface Grid {
   sectors: { id: string; name: string; minHeadcount: number }[];
   shifts: { id: string | null; label: string }[];
-  cells: Record<string, Record<string, { id: string; name: string; source: string }[]>>;
+  cells: Record<string, Record<string, Pessoa[]>>;
   coverage: Record<string, Record<string, Coverage>>;
 }
 interface Turno { id: string; name: string; startTime: string | null; endTime: string | null; active: boolean }
@@ -164,23 +167,21 @@ export function WorkforceClient({ unitId, isAdmin, grid, board, turnos, suggeste
                     <div className="mt-1 flex flex-wrap gap-1">
                       {people.length === 0 && <span className="text-xs text-ink-500">—</span>}
                       {people.map((p) => (
-                        <span key={p.id} className="inline-flex items-center gap-1 rounded-full bg-sunken px-2 py-0.5 text-xs">{p.name}</span>
+                        <span
+                          key={p.id}
+                          title={p.kind === 'FREELANCER' ? (p.pendente ? 'Freelancer — pagamento ainda pendente de aprovação' : 'Freelancer') : undefined}
+                          className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs', p.kind === 'FREELANCER' ? 'bg-brand/15 font-medium text-brand' : 'bg-sunken')}
+                        >
+                          {p.name}{p.kind === 'FREELANCER' && p.horario ? ` (${p.horario})` : ''}
+                          {p.pendente && <span className="text-[10px] opacity-70">pendente</span>}
+                        </span>
                       ))}
                     </div>
                   </div>
                 );
               })}
             </div>
-            {(freelancers ?? []).filter((f) => f.sectorId === s.id && (isToday ? f.present : true)).length > 0 && (
-              <div className="mt-2 rounded-md bg-brand/5 p-2">
-                <p className="text-xs font-bold text-ink-900">Freelancers</p>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {(freelancers ?? []).filter((f) => f.sectorId === s.id && (isToday ? f.present : true)).map((f) => (
-                    <span key={f.requestId} className="inline-flex items-center gap-1 rounded-full bg-brand/15 px-2 py-0.5 text-xs">{f.name}{f.startTime && f.endTime ? ` (${f.startTime}-${f.endTime})` : ''}</span>
-                  ))}
-                </div>
-              </div>
-            )}
+
           </div>
         ))}
       </div>

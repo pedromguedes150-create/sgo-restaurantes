@@ -588,6 +588,7 @@ export const GUIDE: GuideSection[] = [
           'HISTÓRICO: escolha um DIA passado e um HORÁRIO para ver como a equipe estava naquele dia e hora exatos.',
           'PROJEÇÃO: escolha um DIA futuro (ou use "Amanhã"/"Depois de amanhã") para ver como a equipe deve ficar, pela escala planejada — ótimo para se programar. "Agora" volta ao tempo real.',
           'FREELANCER: o pedido de pagamento já traz o DIA e o SETOR (obrigatórios desde a v1.69.0), então ele entra no Mapa daquele dia direto no setor contratado. O painel "Freelancers do dia" continua servindo para trocar o setor na hora, e para pedidos antigos que nasceram sem setor.',
+          'O freelancer aparece DENTRO do card do setor (v1.71.0), com o horário dele e a marca "pendente" enquanto o pagamento não for aprovado — e conta na cobertura do setor. Alocar não depende de aprovação: quem trabalhou hoje aparece hoje, e o pagamento segue seu próprio caminho.',
         ],
         tips: [
           'Toda alocação/remoção avisa os Admins (para informar o RH).',
