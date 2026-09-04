@@ -11,6 +11,7 @@ import { setEvaluationWeight } from '@/lib/people/evaluation';
 import { setLateEntryPenaltyPct } from '@/lib/late-entry';
 import { setWasteMetaWeight, setCommandsMetaWeight } from '@/lib/metas/config';
 import { setGasAlertPct } from '@/lib/gas/query';
+import { setFreelancerWeekLimit } from '@/lib/payments/recorrencia';
 import { setChecklistToleranceMin } from '@/lib/tasks/tolerance';
 import { setHourlyRate, addHoliday, deleteHoliday } from '@/lib/freelancer/pricing';
 import type { DayType } from '@prisma/client';
@@ -94,6 +95,7 @@ export async function POST(req: Request) {
   else if (e === 'supervisorChecklist' && a === 'toggle') r = await toggleSupervisorChecklist(user, b.id, b.active, ctx);
   else if (e === 'supervisorChecklist' && a === 'delete') r = await deleteSupervisorChecklist(user, b.id, ctx);
   else if (e === 'gas' && a === 'setAlertPct') r = await setGasAlertPct(user, Number(b.pct));
+  else if (e === 'freelancer' && a === 'setWeekLimit') r = await setFreelancerWeekLimit(user, Number(b.limit));
   else if (e === 'checklistTolerance' && a === 'set') r = await setChecklistToleranceMin(user, Number(b.minutes), ctx);
   else if (e === 'freelancerRate' && a === 'set') r = await setHourlyRate(user, b.unitId, b.dayType as DayType, Number(b.value), ctx);
   else if (e === 'holiday' && a === 'add') r = await addHoliday(user, b.date, b.name, ctx);

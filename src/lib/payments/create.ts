@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { notifyUnitRole, notifyRole } from '@/lib/notifications';
+import { avaliarRecorrencia, avisarRecorrencia, type Recorrencia } from '@/lib/payments/recorrencia';
 import type { SessionUser } from '@/lib/auth/session';
 import type { PaymentType, Role } from '@prisma/client';
 
@@ -61,12 +62,15 @@ export async function createPaymentRequest(
   // Freelancer sem dia e sem setor não aparece em mapa nenhum — e "alocar depois"
   // era o que ficava esquecido. Pedido de 04/09: os dois são obrigatórios.
   let workSectorId: string | null = null;
+  let recorrencia: Recorrencia | null = null;
   if (input.type === 'FREELANCER') {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.workDate ?? '')) return { ok: false, reason: 'INVALID', detail: 'Informe o dia do trabalho.' };
     if (!input.workSectorId) return { ok: false, reason: 'INVALID', detail: 'Escolha o setor/função do freelancer.' };
     const sector = await prisma.sector.findUnique({ where: { id: input.workSectorId }, select: { unitId: true, active: true } });
     if (!sector || sector.unitId !== input.unitId || !sector.active) return { ok: false, reason: 'INVALID', detail: 'Setor não pertence a esta unidade.' };
     workSectorId = input.workSectorId;
+    // Mesmo freelancer mais de N vezes na semana do dia de trabalho → marca e avisa.
+    recorrencia = await avaliarRecorrencia(input.freelancerId!, input.workDate!);
   }
 
   // Freelancer: se houver valor/hora cadastrado p/ a unidade+tipo de dia, o valor
@@ -114,6 +118,8 @@ export async function createPaymentRequest(
       amount: effectiveAmount,
       standardValue,
       divergent,
+      weekCount: recorrencia?.weekCount ?? null,
+      recurrent: recorrencia?.recurrent ?? false,
       description: input.description?.trim() || null,
       freelancerId: input.freelancerId || null,
       workDate: input.workDate ? new Date(input.workDate) : null,
@@ -141,9 +147,10 @@ export async function createPaymentRequest(
     module: 'PAYMENTS',
     entity: 'payment_request',
     entityId: req.id,
-    metadata: { type: input.type, amount: input.amount, approverRole },
+    metadata: { type: input.type, amount: input.amount, approverRole, ...(recorrencia ? { weekCount: recorrencia.weekCount, recurrent: recorrencia.recurrent } : {}) },
     ...ctx,
   });
+  if (recorrencia?.recurrent) await avisarRecorrencia(input.unitId, input.freelancerId!, recorrencia, input.workDate!);
 
   // Notifica os aprovadores: por unidade quando o papel é vinculado (SUPERVISOR/
   // COORDINATOR/MANAGER), globalmente para ADMIN/CEO/FINANCE.

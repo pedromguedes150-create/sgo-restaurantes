@@ -31,10 +31,16 @@ function paymentScope(user: SessionUser): Prisma.PaymentRequestWhereInput {
   return { unitId: { in: user.unitIds } };
 }
 
+/**
+ * Filtro de TELA por unidade (seletor do cabeçalho), por cima do escopo. Sem
+ * ele, o Admin via a rede inteira misturada enquanto o chip dizia uma unidade.
+ */
+const porUnidade = (unitIds?: string[]): Prisma.PaymentRequestWhereInput => (unitIds ? { unitId: { in: unitIds } } : {});
+
 /** "Minhas Solicitações" */
-export async function getMyRequests(user: SessionUser) {
+export async function getMyRequests(user: SessionUser, unitIds?: string[]) {
   return prisma.paymentRequest.findMany({
-    where: { requestedById: user.id },
+    where: { requestedById: user.id, ...porUnidade(unitIds) },
     orderBy: { createdAt: 'desc' },
     take: LIMITE_DA_LISTA,
     include: REQUEST_INCLUDE,
@@ -42,13 +48,14 @@ export async function getMyRequests(user: SessionUser) {
 }
 
 /** "Para Aprovar" — pendentes que este usuário pode aprovar (inclui delegação). */
-export async function getToApprove(user: SessionUser) {
+export async function getToApprove(user: SessionUser, unitIds?: string[]) {
   const roles = await approverRolesFor(user);
   const isAdminLike = user.role === 'ADMIN' || user.role === 'CEO';
   return prisma.paymentRequest.findMany({
     where: {
       status: 'PENDING',
       ...paymentScope(user),
+      ...porUnidade(unitIds),
       ...(isAdminLike ? {} : { approverRole: { in: [...roles] } }),
     },
     orderBy: { createdAt: 'asc' },
@@ -58,10 +65,10 @@ export async function getToApprove(user: SessionUser) {
 }
 
 /** Fila do Financeiro: aprovadas aguardando pagamento. */
-export async function getToPay(user: SessionUser) {
+export async function getToPay(user: SessionUser, unitIds?: string[]) {
   if (user.role !== 'FINANCE' && user.role !== 'ADMIN' && user.role !== 'CEO') return [];
   return prisma.paymentRequest.findMany({
-    where: { status: 'APPROVED', ...paymentScope(user) },
+    where: { status: 'APPROVED', ...paymentScope(user), ...porUnidade(unitIds) },
     orderBy: { approvedAt: 'asc' },
     take: LIMITE_DA_LISTA,
     include: REQUEST_INCLUDE,
@@ -69,31 +76,31 @@ export async function getToPay(user: SessionUser) {
 }
 
 /** Histórico (resolvidas) — ordenado pela data da SOLICITAÇÃO, mais nova primeiro (pedido 07/07). */
-export async function getHistory(user: SessionUser) {
+export async function getHistory(user: SessionUser, unitIds?: string[]) {
   return prisma.paymentRequest.findMany({
-    where: { status: { in: ['APPROVED', 'REJECTED', 'PAID'] }, ...paymentScope(user) },
+    where: { status: { in: ['APPROVED', 'REJECTED', 'PAID'] }, ...paymentScope(user), ...porUnidade(unitIds) },
     orderBy: { createdAt: 'desc' },
     take: LIMITE_DA_LISTA,
     include: REQUEST_INCLUDE,
   });
 }
 
-export async function getToApproveCount(user: SessionUser): Promise<number> {
+export async function getToApproveCount(user: SessionUser, unitIds?: string[]): Promise<number> {
   const roles = await approverRolesFor(user);
   const isAdminLike = user.role === 'ADMIN' || user.role === 'CEO';
   return prisma.paymentRequest.count({
-    where: { status: 'PENDING', ...paymentScope(user), ...(isAdminLike ? {} : { approverRole: { in: [...roles] } }) },
+    where: { status: 'PENDING', ...paymentScope(user), ...porUnidade(unitIds), ...(isAdminLike ? {} : { approverRole: { in: [...roles] } }) },
   });
 }
 
 /** Quantas há DE VERDADE em cada fila — é isto que os crachás mostram. */
-export async function getPaymentCounts(user: SessionUser): Promise<{ mine: number; toApprove: number; toPay: number; history: number }> {
+export async function getPaymentCounts(user: SessionUser, unitIds?: string[]): Promise<{ mine: number; toApprove: number; toPay: number; history: number }> {
   const podePagar = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO';
   const [mine, toApprove, toPay, history] = await Promise.all([
-    prisma.paymentRequest.count({ where: { requestedById: user.id } }),
-    getToApproveCount(user),
-    podePagar ? prisma.paymentRequest.count({ where: { status: 'APPROVED', ...paymentScope(user) } }) : Promise.resolve(0),
-    prisma.paymentRequest.count({ where: { status: { in: ['APPROVED', 'REJECTED', 'PAID'] }, ...paymentScope(user) } }),
+    prisma.paymentRequest.count({ where: { requestedById: user.id, ...porUnidade(unitIds) } }),
+    getToApproveCount(user, unitIds),
+    podePagar ? prisma.paymentRequest.count({ where: { status: 'APPROVED', ...paymentScope(user), ...porUnidade(unitIds) } }) : Promise.resolve(0),
+    prisma.paymentRequest.count({ where: { status: { in: ['APPROVED', 'REJECTED', 'PAID'] }, ...paymentScope(user), ...porUnidade(unitIds) } }),
   ]);
   return { mine, toApprove, toPay, history };
 }

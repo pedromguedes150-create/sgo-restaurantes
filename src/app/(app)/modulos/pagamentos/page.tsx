@@ -3,6 +3,8 @@ import { abasDoPerfil } from '@/lib/permissions/abas-server';
 
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
+import { resolveUnitFilter } from '@/lib/scope/unit-filter';
+import { getSelectedUnitId } from '@/lib/scope/selected-unit';
 import { getMyRequests, getToApprove, getToPay, getHistory, getMiscTypes, getPaymentCounts, LIMITE_DA_LISTA } from '@/lib/payments/query';
 import { listSuppliers } from '@/lib/suppliers';
 import Link from 'next/link';
@@ -46,6 +48,8 @@ function toDTO(r: ReqRow): PayReq {
     title,
     rejectionReason: r.rejectionReason,
     divergent: r.divergent,
+    recurrent: r.recurrent,
+    weekCount: r.weekCount ?? null,
     standardValue: r.standardValue !== null && r.standardValue !== undefined ? Number(r.standardValue) : null,
     requestedAt: r.createdAt.toISOString(),
     entryDate: r.entryDate ? r.entryDate.toISOString() : null,
@@ -80,19 +84,27 @@ function toDTO(r: ReqRow): PayReq {
   };
 }
 
-export default async function PagamentosPage() {
+export default async function PagamentosPage({ searchParams }: { searchParams: { unit?: string; unidade?: string } }) {
   const user = (await getSessionUser())!;
   const isFinanceView = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO';
 
-  const [mine, toApprove, toPay, history, totais, units, miscTypes, freelancers, suppliers, sectors] = await Promise.all([
-    getMyRequests(user),
-    getToApprove(user),
-    getToPay(user),
-    getHistory(user),
+  /* A tela OBEDECE o seletor de unidade do cabeçalho (pedido de 04/09: "está
+     tudo misturado"). Mesma regra de precedência de Tarefas e Pessoas;
+     `?unit=todas` mostra a rede. O escopo de verdade segue no banco. */
+  const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
+  const idsAcessiveis = units.map((u) => u.id);
+  const filtro = resolveUnitFilter(searchParams, idsAcessiveis, getSelectedUnitId(idsAcessiveis));
+  const doFiltro = filtro.all ? undefined : filtro.ids;
+  const filtradoPor = filtro.all ? [] : units.filter((u) => filtro.ids.includes(u.id)).map((u) => u.name);
+
+  const [mine, toApprove, toPay, history, totais, miscTypes, freelancers, suppliers, sectors] = await Promise.all([
+    getMyRequests(user, doFiltro),
+    getToApprove(user, doFiltro),
+    getToPay(user, doFiltro),
+    getHistory(user, doFiltro),
     /* Os TOTAIS vêm de count, não do tamanho das listas: com o teto de linhas,
        o tamanho do array é o teto, e o crachá mentiria. */
-    getPaymentCounts(user),
-    prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    getPaymentCounts(user, doFiltro),
     getMiscTypes(),
     prisma.freelancer.findMany({ where: { active: true }, include: { units: { select: { unitId: true } }, sectorRates: true }, orderBy: { name: 'asc' } }),
     listSuppliers({ activeOnly: true }),
@@ -121,6 +133,7 @@ export default async function PagamentosPage() {
             miscTypes={miscTypes.map((t) => ({ id: t.id, name: t.name }))}
             suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
             sectors={sectors}
+            filtradoPor={filtradoPor}
             freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, defaultValue: Number(f.defaultValue), unitIds: f.units.map((u) => u.unitId), sectorRates: f.sectorRates.map((r) => ({ sectorName: r.sectorName, dayValue: Number(r.dayValue) })) }))}
             mine={(mine as ReqRow[]).map(toDTO)}
             toApprove={(toApprove as ReqRow[]).map(toDTO)}

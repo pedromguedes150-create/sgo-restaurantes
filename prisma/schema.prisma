@@ -1201,6 +1201,9 @@ model PaymentRequest {
   standardValue Decimal?      @db.Decimal(10, 2)
   /// true quando o valor lançado diverge do padrão cadastrado (alerta, não bloqueia)
   divergent     Boolean       @default(false)
+  /// Recorrência (04/09): quantas solicitações o freelancer tinha na semana (seg-dom) ao lançar, e se passou do limite
+  weekCount     Int?
+  recurrent     Boolean       @default(false)
   description   String?
 
   // Freelancer

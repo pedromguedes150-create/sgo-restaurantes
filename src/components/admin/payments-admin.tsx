@@ -19,7 +19,9 @@ export interface FreelancerRow { id: string; name: string; defaultValue: number;
 export interface MiscTypeRow { id: string; name: string; approverRole: string; active: boolean }
 export interface DelegationRow { id: string; from: string; to: string; period: string }
 
-export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegations }: {
+export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegations, weekLimit = 2 }: {
+  /** Recorrência (04/09): acima de quantas solicitações na semana o freelancer gera alerta. */
+  weekLimit?: number;
   units: Unit[]; users: UserOpt[]; freelancers: FreelancerRow[]; miscTypes: MiscTypeRow[]; delegations: DelegationRow[];
 }) {
   const router = useRouter();
@@ -39,6 +41,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
   const [dStart, setDStart] = useState('');
   const [dEnd, setDEnd] = useState('');
   const [busy, setBusy] = useState(false);
+  const [limite, setLimite] = useState(String(weekLimit));
 
   async function run(payload: Record<string, unknown>) {
     setBusy(true);
@@ -51,6 +54,19 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
 
   return (
     <div className="space-y-6">
+      {/* Recorrência de freelancer (04/09) */}
+      <section className="space-y-2">
+        <h2 className="sgo-type-11 font-semibold text-ink-900">Alerta de recorrência de freelancer</h2>
+        <div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3">
+          <div className="w-40">
+            <Label>Limite por semana</Label>
+            <Input inputMode="numeric" value={limite} onChange={(e) => setLimite(e.target.value)} aria-label="Limite semanal de solicitações do mesmo freelancer" />
+          </div>
+          <Button size="sm" disabled={busy || !(Number(limite) >= 1)} onClick={() => run({ entity: 'freelancer', action: 'setWeekLimit', limit: Number(limite) })}><Save className="h-4 w-4" /> Salvar</Button>
+          <p className="basis-full text-xs text-ink-500">O mesmo freelancer solicitado mais de <b>{limite || '?'}</b> vez(es) na mesma semana (segunda a domingo, pelo dia do trabalho, em toda a rede) recebe a marca <b>Recorrente</b> e a supervisão da unidade e os Admins são avisados. Não bloqueia a solicitação.</p>
+        </div>
+      </section>
+
       {/* Freelancers */}
       <section className="space-y-2">
         <h2 className="sgo-type-11 font-semibold text-ink-900">Freelancers</h2>
