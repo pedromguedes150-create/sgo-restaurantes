@@ -33,8 +33,11 @@ describe('A lista de módulos', () => {
     }
   });
 
-  it('submenu não tem endereço próprio — a sidebar e a guarda de rota não mudam', async () => {
-    for (const m of MODULES) if (m.parent) expect(m.nav).toBeUndefined();
+  it('submenu com endereço próprio entra na guarda de rota, e o de aba não atrapalha', async () => {
+    /* O contrato mudou de propósito na v1.65.0: submenu PODE ter endereço
+       (as telas internas), e é isso que faz a guarda de rota protegê-las de
+       graça. Submenu que é só aba continua sem endereço. */
+    for (const a of ABAS_MINHA_AREA) expect(MODULES.find((m) => m.key === a.modulo)?.nav).toBeUndefined();
     const hrefs = await viewableNavHrefs('MANAGER');
     expect(hrefs).toContain('/minha-area');
     expect(hrefs.filter((h) => h === '/minha-area')).toHaveLength(1);

@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
+import { permissaoDeRota } from '@/lib/permissions/links';
+
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { resolveUnitFilter, TODAS_AS_UNIDADES } from '@/lib/scope/unit-filter';
@@ -27,6 +29,7 @@ const MODULE_HREFS: Partial<Record<string, string>> = {
 
 export default async function TarefasPage({ searchParams }: { searchParams: { filter?: string; unit?: string; unidade?: string } }) {
   const user = (await getSessionUser())!;
+  const podeVer = await permissaoDeRota(user.role);
   const now = new Date();
   // Folga/férias do gerente: nesses dias os checklists não aparecem para ele.
   const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
@@ -70,8 +73,8 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
             <Link href={withUnit('/tarefas')} className="text-sm font-semibold text-brand hover:underline">Ver todas</Link>
           ) : (
             <span className="flex gap-4">
-              <Link href={withUnit('/tarefas/correcoes')} className="text-sm font-semibold text-brand hover:underline">Correções do dia</Link>
-              <Link href={withUnit('/tarefas/historico')} className="text-sm font-semibold text-brand hover:underline">Histórico</Link>
+              {podeVer('/tarefas/correcoes') && <Link href={withUnit('/tarefas/correcoes')} className="text-sm font-semibold text-brand hover:underline">Correções do dia</Link>}
+              {podeVer('/tarefas/historico') && <Link href={withUnit('/tarefas/historico')} className="text-sm font-semibold text-brand hover:underline">Histórico</Link>}
             </span>
           )
         }

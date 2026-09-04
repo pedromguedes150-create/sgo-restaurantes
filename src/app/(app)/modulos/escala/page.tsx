@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
+import { permissaoDeRota } from '@/lib/permissions/links';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getScheduleGrid } from '@/lib/schedule';
@@ -14,6 +15,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function EscalaPage({ searchParams }: { searchParams: { unit?: string; year?: string; month?: string } }) {
   const user = (await getSessionUser())!;
+  const podeVer = await permissaoDeRota(user.role);
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
   if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
 
@@ -54,6 +56,7 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
 
       <Card><CardContent className="pt-4">
         <ScheduleClient
+          podeVerFolgas={podeVer('/modulos/escala/folgas')}
           units={units}
           selectedUnitId={selected.id}
           year={year}

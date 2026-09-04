@@ -9,6 +9,68 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.65.0 — 2026-09-04 (Permissão por parte em TODO o sistema — e a Escala deixa de ser porta aberta)
+
+### O pedido
+*"Preciso disso em todos os menus e submenus, literalmente todo o sistema."*
+
+A v1.64.0 trouxe o mecanismo e estreou nas três abas da Minha área. Esta versão o espalha
+por todas as **telas com endereço próprio**: 45 partes novas na matriz de perfis.
+
+### Onde dá para liberar/fechar agora
+| Módulo | Partes |
+|---|---|
+| Tarefas | Histórico · Correções pendentes · Fichas |
+| Comandas | Conferência por leitor · Análise de comandas em aberto |
+| Cancelamentos | Cancelamento de itens · Análise · Relatório |
+| Notas Recebidas | Análise de gás |
+| Gestão de Troco | Escritório (fila e envios) |
+| Pessoas | Mapa de funções · Avaliação · Comissões · Experiência · Mudanças de função · **Escala** (com Folgas da unidade, Trocas de plantão e Avisos ao RH) |
+| Pagamentos | Relatório de freelancers |
+| Metas | Configuração da meta |
+| Ocorrências | Registrar ocorrência |
+| Gás · Atestados · Auditoria | Relatório de cada um |
+| Configurações | **as 17 telas, uma a uma** (Unidades, Usuários, Perfis, Checklists, Modelos, Checklists de visita, Comandas, Tipos de escala, Troco, Desperdícios, Ocorrências, Fornecedores, Catálogo, Padrão de produtos, Pagamentos, Valor do freelancer, Integrações) |
+
+### Um buraco de verdade, fechado no caminho
+**A Escala não tinha módulo dono.** Nenhum `nav` da matriz prefixava `/modulos/escala`, e a guarda
+de rota deixa passar o que está fora do mapa: **qualquer usuário autenticado** — o Caixa incluído —
+abria a grade de presença de todas as unidades, e as telas de folgas, trocas e avisos ao RH,
+escrevendo o endereço. Agora a Escala é parte de Pessoas e segue a permissão dela.
+
+### As telas de Configurações nascem restritas
+Elas caíam no módulo CONFIG, que é **aberto por padrão**: a guarda deixava entrar e só a tela
+respondia "Restrito ao Administrador". Agora a recusa acontece antes. Cada tela nasce com o mesmo
+público que ela já aplicava sozinha — Usuários, Fornecedores e Catálogo continuam abertos à
+Supervisão; Troco à Supervisão e Coordenação; o resto, Admin e CEO. **Ninguém perde nem ganha
+acesso**, muda só quem diz não.
+
+E a lista de Configurações passou a ser **derivada da permissão**: liberar Fornecedores para a
+Supervisão virou marcar uma caixa, em vez de editar o código com um `if` de perfil.
+
+### O atalho some junto com a tela
+Fechar uma parte e deixar o botão na tela dá o pior dos dois mundos: a pessoa clica e volta para
+onde estava. Os cartões de Pessoas, os botões de Comandas, Cancelamentos, Troco, Metas, Tarefas e o
+"Folgas da unidade" da Escala agora só aparecem para quem pode abrir (`src/lib/permissions/links.ts`,
+mesma regra da guarda de rota).
+
+### A matriz abre dobrada
+De 31 para 76 linhas. Módulo com partes mostra uma seta e o número delas; mesmo dobrado, avisa em
+âmbar **quantas partes estão fechadas** — restrição nenhuma acontece em silêncio.
+
+### Testes
+- `tests/permissions-rotas.integration.test.ts` (10) — percorre o **disco**, não uma lista escrita
+  à mão: toda tela tem dono (tela nova sem dono quebra aqui), Admin e CEO abrem tudo, o Gerente
+  mantém as 28 telas da rotina, as de Configurações recusam o Gerente e aceitam a Supervisão onde
+  ela já entrava, e o Caixa perde a Escala.
+- `tests/permissions-admin-render.test.tsx` (5) — a matriz abre dobrada, conta as partes e acusa as
+  fechadas.
+- `tests/route-guard.test.ts` — atualizado de propósito: a tela interna agora resolve para a parte
+  dona, não para o módulo pai.
+- Suíte inteira: **619 testes verdes**.
+
+---
+
 ## v1.64.0 — 2026-09-04 (Permissão por aba: dá para fechar Folgas/férias e manter as tarefas)
 
 ### O pedido

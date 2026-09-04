@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { permissaoDeRota } from '@/lib/permissions/links';
+
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { listCollaborators, listVacations, listSchedule } from '@/lib/people';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,6 +26,9 @@ function d(date: Date) { return new Date(date).toLocaleDateString('pt-BR'); }
 
 export default async function PessoasModulePage() {
   const user = (await getSessionUser())!;
+  /* Cartão de tela que o perfil não pode abrir não é oferecido — clicar nele
+     só devolveria a pessoa para onde ela estava. */
+  const podeVer = await permissaoDeRota(user.role);
   const [collaborators, vacations, schedule] = await Promise.all([listCollaborators(user), listVacations(user), listSchedule(user)]);
 
   return (
@@ -39,7 +44,7 @@ export default async function PessoasModulePage() {
       {/* Destinos do módulo numa lista só, com o subtítulo dizendo o que cada
           tela resolve — antes eram 8 blocos soltos só com o nome. */}
       <List>
-        {DESTINOS.map((d) => (
+        {DESTINOS.filter((x) => podeVer(x.href)).map((d) => (
           <ListRow
             key={d.href}
             href={d.href}

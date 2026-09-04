@@ -52,10 +52,12 @@ import { MigrateLegacyPanel } from './migrate-legacy-panel';
 import Link from 'next/link';
 import { CalendarRange } from 'lucide-react';
 
-export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false }: {
+export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false, podeVerFolgas = true }: {
   units: Unit[]; selectedUnitId: string; year: number; month: number; grid: Grid; collaborators: Unit[]; turnos: Turno[]; patterns: Pattern[];
   /** Tipos cadastrados em Configurações → Tipos de escala. */
   tiposDeEscala?: TipoDeEscala[];
+  /** A tela de Folgas da unidade é uma parte própria na matriz de perfis. */
+  podeVerFolgas?: boolean;
   /** Quantas escalas ainda usam o gerador antigo (só Admin migra). */
   escalasLegadas?: number;
   isAdmin?: boolean;
@@ -129,9 +131,11 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
         <Button size="sm" variant="outline" onClick={() => setShowPattern((v) => !v)}><Settings2 className="h-4 w-4" /> Cadastrar escala</Button>
         {/* O caminho rápido: uma linha por pessoa, em vez de um formulário por
             pessoa. É o que tira a escala de "todo mundo folga no mesmo dia". */}
-        <Link href={`/modulos/escala/folgas?unit=${selectedUnitId}`}>
-          <Button size="sm" variant="outline"><CalendarRange className="h-4 w-4" /> Folgas da unidade</Button>
-        </Link>
+        {podeVerFolgas && (
+          <Link href={`/modulos/escala/folgas?unit=${selectedUnitId}`}>
+            <Button size="sm" variant="outline"><CalendarRange className="h-4 w-4" /> Folgas da unidade</Button>
+          </Link>
+        )}
       </div>
 
       {/* Legenda */}

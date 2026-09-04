@@ -21,24 +21,29 @@ describe('moduleOfPath — de quem é esta tela', () => {
     expect(moduleOfPath('/configuracoes')).toBe('CONFIG');
   });
 
-  it('mapeia as telas internas do módulo', () => {
-    expect(moduleOfPath('/modulos/comandas/conferencia')).toBe('COMMANDS');
-    expect(moduleOfPath('/modulos/comandas/analise-aberto/consolidado')).toBe('COMMANDS');
-    expect(moduleOfPath('/modulos/atestados/relatorio')).toBe('CERTIFICATES');
-    expect(moduleOfPath('/configuracoes/usuarios')).toBe('CONFIG');
+  it('mapeia as telas internas na PARTE dona, não no módulo pai', () => {
+    /* O contrato mudou de propósito na v1.65.0: cada tela interna virou uma
+       parte própria na matriz, para poder ser liberada ou fechada sozinha.
+       Quem não tem chave própria continua caindo no dono mais próximo. */
+    expect(moduleOfPath('/modulos/comandas/conferencia')).toBe('COMMANDS_SCAN');
+    expect(moduleOfPath('/modulos/comandas/analise-aberto/consolidado')).toBe('COMMANDS_OPEN');
+    expect(moduleOfPath('/modulos/atestados/relatorio')).toBe('CERTIFICATES_REPORT');
+    expect(moduleOfPath('/configuracoes/usuarios')).toBe('CONFIG_USERS');
+    // sem chave própria: fica com o pai
+    expect(moduleOfPath('/modulos/ocorrencias/qualquer-coisa')).toBe('OCCURRENCES');
   });
 
   it('não confunde módulos de nome parecido', () => {
-    // /modulos/notas/gas pertence a NOTAS, não a GÁS
-    expect(moduleOfPath('/modulos/notas/gas')).toBe('NOTES');
+    // /modulos/notas/gas é a análise de gás DENTRO de Notas, não o módulo Gás
+    expect(moduleOfPath('/modulos/notas/gas')).toBe('NOTES_GAS');
     expect(moduleOfPath('/modulos/gas')).toBe('GAS');
   });
 
   it('escolhe sempre o caminho MAIS ESPECÍFICO', () => {
-    // se um dia existir módulo com nav mais longo prefixado por outro,
-    // o mais longo é que manda — senão a tela cairia no módulo errado
-    const k = moduleOfPath('/modulos/comandas/conferencia');
-    expect(k).toBe('COMMANDS');
+    // com parte e módulo disputando o mesmo prefixo, a parte é que manda —
+    // senão a tela cairia no módulo pai e a restrição não valeria
+    expect(moduleOfPath('/modulos/escala')).toBe('SCHEDULE');
+    expect(moduleOfPath('/modulos/escala/folgas')).toBe('SCHEDULE_OFF');
   });
 
   it('devolve nulo para telas fora do mapa (elas têm regra própria)', () => {
