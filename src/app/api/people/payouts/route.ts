@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { createPayout } from '@/lib/people/payouts';
@@ -9,6 +10,8 @@ import { canAccessUnit } from '@/lib/scope/unit-scope';
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negadoRota = await guardaDaRota(user.role, req);
+  if (negadoRota) return negadoRota;
   const collaboratorId = new URL(req.url).searchParams.get('collaboratorId');
   if (!collaboratorId) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   const collab = await prisma.collaborator.findUnique({ where: { id: collaboratorId }, select: { units: { select: { unitId: true } } } });
@@ -26,6 +29,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negadoRota = await guardaDaRota(user.role, req);
+  if (negadoRota) return negadoRota;
   const b = await req.json().catch(() => null);
   if (!b?.collaboratorId || !b?.type || !b?.yearMonth) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   const r = await createPayout(user, {

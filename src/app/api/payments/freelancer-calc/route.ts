@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { computeFreelancerAmount, DAY_TYPE_LABEL } from '@/lib/freelancer/pricing';
@@ -7,6 +8,8 @@ import { computeFreelancerAmount, DAY_TYPE_LABEL } from '@/lib/freelancer/pricin
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const b = await req.json().catch(() => null);
   if (!b?.unitId || !canAccessUnit(user, b.unitId)) return NextResponse.json({ error: 'Sem acesso' }, { status: 403 });
   if (!b.workDate || !b.start || !b.end) return NextResponse.json({ configured: false });

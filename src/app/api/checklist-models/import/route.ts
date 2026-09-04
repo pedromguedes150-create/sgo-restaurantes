@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import * as XLSX from 'xlsx';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
@@ -8,6 +9,8 @@ import { importModelRows } from '@/lib/checklist-models';
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   if (user.role !== 'ADMIN') return NextResponse.json({ error: 'Restrito ao Administrador' }, { status: 403 });
 
   let rows: Record<string, unknown>[] = [];

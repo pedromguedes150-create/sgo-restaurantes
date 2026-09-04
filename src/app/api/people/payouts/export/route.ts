@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { listPayouts } from '@/lib/people/payouts';
 
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -8,6 +9,8 @@ const TYPE = { COMMISSION: 'Comissão', MOBILITY: 'Mobilidade' } as const;
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return new Response('Não autenticado', { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const url = new URL(req.url);
   const now = new Date();
   const year = Number(url.searchParams.get('year')) || now.getFullYear();

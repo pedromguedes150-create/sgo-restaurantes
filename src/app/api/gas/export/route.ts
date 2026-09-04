@@ -1,10 +1,13 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getGasVariationReport } from '@/lib/gas/query';
 
 /** Exporta a variação do preço/kg do gás em CSV (abre no Excel). */
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return new Response('Não autenticado', { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const units = await getGasVariationReport(user, { months: 12 });
 
   const sep = ';';

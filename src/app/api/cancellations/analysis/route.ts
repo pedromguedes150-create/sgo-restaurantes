@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { saveCancellationAnalysis } from '@/lib/cancellations/fraud-analysis';
@@ -10,6 +11,8 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const form = await req.formData().catch(() => null);
   const unitId = String(form?.get('unitId') ?? '');
   const file = form?.get('file');

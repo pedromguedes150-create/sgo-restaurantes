@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { getVaultHistory, type VaultHistoryFilters } from '@/lib/cash-vault';
 import type { CashMovementType } from '@prisma/client';
@@ -9,6 +10,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const sp = new URL(req.url).searchParams;
   const unitId = sp.get('unitId') ?? '';
   if (!unitId) return NextResponse.json({ error: 'Unidade não informada' }, { status: 400 });

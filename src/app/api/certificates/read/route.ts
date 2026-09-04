@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { saveAttachment, UploadError } from '@/lib/uploads';
@@ -12,6 +13,8 @@ import { readMedicalCertificate } from '@/lib/ai/atestado';
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
 
   const contentType = req.headers.get('content-type') ?? '';
   if (!contentType.includes('multipart/form-data')) return NextResponse.json({ error: 'Envie a imagem do atestado' }, { status: 400 });

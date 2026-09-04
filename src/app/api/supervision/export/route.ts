@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 
@@ -9,6 +10,8 @@ const ST = { PLANNED: 'Agendada', DONE: 'Concluída', CANCELED: 'Cancelada' } as
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return new Response('Não autenticado', { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const url = new URL(req.url);
   const now = new Date();
   const year = Number(url.searchParams.get('year')) || now.getFullYear();

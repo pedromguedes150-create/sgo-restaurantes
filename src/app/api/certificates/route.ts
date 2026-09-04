@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { recusaSeAbaFechada } from '@/lib/permissions/guarda-abas';
 import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
@@ -16,6 +17,8 @@ const REASONS: Record<string, { msg: string; status: number }> = {
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negadoRota = await guardaDaRota(user.role, req);
+  if (negadoRota) return negadoRota;
   const b = await req.json().catch(() => null);
   /* Aba fechada na matriz de perfis não grava. */
   const negado = await recusaSeAbaFechada(user.role, 'CERTIFICATES_TAB_NEW');

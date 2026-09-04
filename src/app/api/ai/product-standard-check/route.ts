@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getSessionUser } from '@/lib/auth/session';
@@ -11,6 +12,8 @@ const MIME_BY_EXT: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jp
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const contentType = req.headers.get('content-type') ?? '';
   if (!contentType.includes('multipart/form-data')) return NextResponse.json({ error: 'Envie a foto' }, { status: 400 });
 

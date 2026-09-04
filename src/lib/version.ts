@@ -4,5 +4,5 @@
  * Convenção: v{maior}.{menor}.{correção} — correção = ajustes/bugs,
  * menor = melhorias/novas funções, maior = módulo novo grande.
  */
-export const APP_VERSION = '1.66.0';
+export const APP_VERSION = '1.67.0';
 export const APP_VERSION_LABEL = `v${APP_VERSION}`;

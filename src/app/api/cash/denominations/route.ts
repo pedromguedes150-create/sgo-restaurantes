@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import {
@@ -15,6 +16,8 @@ function fail(reason: 'FORBIDDEN' | 'NOT_FOUND' | 'INVALID', detail?: string) {
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negadoRota = await guardaDaRota(user.role, req);
+  if (negadoRota) return negadoRota;
   const unitId = new URL(req.url).searchParams.get('unitId') ?? '';
   if (!unitId) return fail('INVALID', 'Informe a unidade.');
   const data = await listUnitDenominations(user, unitId);
@@ -26,6 +29,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negadoRota = await guardaDaRota(user.role, req);
+  if (negadoRota) return negadoRota;
   const b = await req.json().catch(() => null);
   if (!b?.action || !b?.unitId) return fail('INVALID', 'Requisição inválida.');
   const ctx = requestContext(req);

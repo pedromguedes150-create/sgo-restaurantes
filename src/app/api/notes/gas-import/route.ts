@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { canImportGasNotes, validateGasImport, commitGasImport, MAX_ROWS } from '@/lib/notes/gas-import';
@@ -16,6 +17,8 @@ function invalid(r: { missingColumns?: string[]; tooMany?: number }) {
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   if (!canImportGasNotes(user)) return NextResponse.json({ error: 'Apenas Administração/Supervisão pode importar notas' }, { status: 403 });
 
   const b = await req.json().catch(() => null);

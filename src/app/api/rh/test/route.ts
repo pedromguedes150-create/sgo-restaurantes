@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { rh, rhConfigured, RhApiError } from '@/lib/rh/client';
 
@@ -17,6 +18,8 @@ export async function GET(req: Request) {
   }
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   if (user.role !== 'ADMIN' && user.role !== 'CEO') return NextResponse.json({ error: 'Apenas Admin/CEO' }, { status: 403 });
   if (!rhConfigured()) return NextResponse.json({ error: 'RH_API_KEY não configurada no .env' }, { status: 400 });
 

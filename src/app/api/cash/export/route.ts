@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { prisma } from '@/lib/db/prisma';
 
@@ -9,6 +10,8 @@ const num = (v: unknown) => (v == null ? '' : String(Number(v)).replace('.', ','
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return new Response('Não autenticado', { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const url = new URL(req.url);
   const unitId = url.searchParams.get('unit') ?? '';
   const now = new Date();
