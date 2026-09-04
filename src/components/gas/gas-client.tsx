@@ -5,6 +5,7 @@ import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
 import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X, Trash2, CalendarClock, Plus, Scale, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,11 +41,14 @@ const kg = (n: number) => `R$ ${n.toFixed(4).replace('.', ',')}/kg`;
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 function mlabel(m: string) { const [y, mm] = m.split('-'); return `${MONTHS[Number(mm) - 1]}/${y.slice(2)}`; }
 
-export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, receipts, contracts = [], purchased, canManageContracts = false, filter, basePath = '/modulos/gas' }: {
+export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, receipts, contracts = [], purchased, canManageContracts = false, filter, basePath = '/modulos/gas', abas = {} }: {
   canLaunch: boolean; isAdmin: boolean; canEditDate?: boolean; units: Unit[]; suppliers: Supplier[]; dashboard: GasDash; receipts: GasRow[];
   contracts?: GasContractUI[]; purchased?: PurchasedUI; canManageContracts?: boolean; filter?: { unitId: string; supplierId: string; mes: string }; basePath?: string;
+
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
 }) {
-  const [tab, setTab] = useState<'painel' | 'lancar' | 'historico' | 'contratos'>(canLaunch ? 'lancar' : 'painel');
+  const [tab, setTab] = useState<'painel' | 'lancar' | 'historico' | 'contratos'>(abaInicial(abas, 'GAS', canLaunch ? 'lancar' : 'painel') as 'painel' | 'lancar' | 'historico' | 'contratos');
   const tabs: { key: typeof tab; label: string; show: boolean }[] = [
     { key: 'painel', label: 'Dashboard', show: true },
     { key: 'lancar', label: 'Lançar recebimento', show: canLaunch },
@@ -56,8 +60,8 @@ export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, supp
       <SegmentedControl
         aria-label="Seções de Recebimento de Gás"
         value={tab}
-        onValueChange={setTab}
-        options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label }))}
+        onValueChange={(v) => setTab(v as typeof tab)}
+        options={tabs.filter((t) => t.show && podeAba(abas, t.key)).map((t) => ({ value: t.key, label: t.label }))}
       />
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
       {tab === 'painel' && (

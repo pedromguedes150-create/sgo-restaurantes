@@ -21,6 +21,7 @@ import { parseChaveAcesso } from '@/lib/notes/chave';
 import { GasImportModal } from '@/components/notes/gas-import-modal';
 import { Group } from '@/components/ui/ds/group';
 import { Sheet } from '@/components/ui/ds/sheet';
+import { type AcessoAbas } from '@/lib/permissions/abas';
 import { NotesTabs } from '@/components/notes/notes-tabs';
 
 interface Unit { id: string; name: string }
@@ -65,10 +66,14 @@ const PERIODS = [
   { dias: 365, label: 'Último ano' },
 ];
 
-export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false, sinceDays = 60, aba = 'lista' }: {
+export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false, sinceDays = 60, aba = 'lista', abas = {}, podeGas = true }: {
   units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean; sinceDays?: number;
   /** Aba ativa, vinda da URL (`?aba=`). Deixou de ser estado quando o gás ganhou rota própria. */
   aba?: 'lista' | 'venc';
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
+  /** A análise de gás é tela própria (guarda de rota). */
+  podeGas?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -104,7 +109,7 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 print:hidden">
-        <NotesTabs value={aba} sinceDays={sinceDays} />
+        <NotesTabs value={aba} sinceDays={sinceDays} abas={abas} podeGas={podeGas} />
         <Button size="sm" className="ml-auto" onClick={() => setNovaNota(true)}>
           <Plus className="h-4 w-4" /> Nova nota
         </Button>

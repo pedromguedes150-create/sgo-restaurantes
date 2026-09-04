@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Megaphone, Plus, X, Paperclip, LinkIcon, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,11 +35,14 @@ const PRIO: Record<Priority, { label: string; tone: StatusTone } | null> = {
 
 function fmt(d: string) { return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
 
-export function CommunicationsClient({ canAuthor, isAdmin, weight, units, people, inbox, authored }: {
+export function CommunicationsClient({ canAuthor, isAdmin, weight, units, people, inbox, authored, abas = {} }: {
   canAuthor: boolean; isAdmin: boolean; weight: number; units: Unit[]; people: Person[]; inbox: InboxItem[]; authored: AuthoredItem[];
+
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
 }) {
   const pendingInbox = inbox.filter((i) => i.status === 'PENDING');
-  const [tab, setTab] = useState<'recebidos' | 'novo' | 'painel'>(pendingInbox.length > 0 || !canAuthor ? 'recebidos' : 'painel');
+  const [tab, setTab] = useState<'recebidos' | 'novo' | 'painel'>(abaInicial(abas, 'COMMUNICATION', pendingInbox.length > 0 || !canAuthor ? 'recebidos' : 'painel') as 'recebidos' | 'novo' | 'painel');
 
   const tabs: { key: typeof tab; label: string; badge?: number; show: boolean }[] = [
     { key: 'recebidos', label: 'Recebidos', badge: pendingInbox.length, show: inbox.length > 0 || !canAuthor },
@@ -51,8 +55,8 @@ export function CommunicationsClient({ canAuthor, isAdmin, weight, units, people
       <SegmentedControl
         aria-label="Seções da Central de Comunicação"
         value={tab}
-        onValueChange={setTab}
-        options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label, badge: t.badge, badgeTone: 'danger' as const }))}
+        onValueChange={(v) => setTab(v as typeof tab)}
+        options={tabs.filter((t) => t.show && podeAba(abas, t.key)).map((t) => ({ value: t.key, label: t.label, badge: t.badge, badgeTone: 'danger' as const }))}
       />
 
       {tab === 'recebidos' && <Inbox items={inbox} />}

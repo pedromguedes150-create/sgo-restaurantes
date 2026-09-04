@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
+import { ABAS } from '@/lib/permissions/abas';
 
 /**
  * Perfis de acesso (Fase C) — matriz perfil × módulo (ver/editar).
@@ -20,15 +21,16 @@ import type { Role } from '@prisma/client';
  * O submenu tem de vir DEPOIS do pai nesta lista — `effectivePermissions`
  * resolve na ordem, e há teste garantindo isso.
  */
-export interface ModuleDef { key: string; label: string; nav?: string; parent?: string }
+export interface ModuleDef {
+  key: string; label: string; nav?: string; parent?: string;
+  /** Parte de consulta (painel, histórico): "Editar" não se aplica. */
+  soVer?: boolean;
+}
 
-export const MODULES: ModuleDef[] = [
+const BASE: ModuleDef[] = [
   { key: 'DASHBOARD', label: 'Dashboard', nav: '/dashboard' },
 
   { key: 'MANAGER_AREA', label: 'Minha área', nav: '/minha-area' },
-  { key: 'MANAGER_AREA_TASKS', label: 'Minhas tarefas', parent: 'MANAGER_AREA' },
-  { key: 'MANAGER_AREA_NOTES', label: 'Bloco de notas', parent: 'MANAGER_AREA' },
-  { key: 'MANAGER_AREA_LEAVES', label: 'Folgas / férias (e meu horário)', parent: 'MANAGER_AREA' },
 
   { key: 'LEAVES_TEAM', label: 'Consolidado de Folgas/Férias', nav: '/modulos/folgas-equipe' },
 
@@ -128,6 +130,17 @@ export const MODULES: ModuleDef[] = [
   { key: 'CONFIG_INTEGRATIONS', label: 'APIs e integrações', nav: '/configuracoes/integracoes', parent: 'CONFIG' },
 ];
 
+/**
+ * A matriz = os módulos acima + as ABAS de cada um, encaixadas logo depois do
+ * pai. As abas moram em `permissions/abas.ts` porque as telas e as rotas leem a
+ * mesma lista; montar aqui garante a ordem que o cálculo exige (pai antes de
+ * filho) sem depender de alguém lembrar de inserir na posição certa.
+ */
+export const MODULES: ModuleDef[] = BASE.flatMap((m) => [
+  m,
+  ...(ABAS[m.key] ?? []).map((a) => ({ key: a.key, label: a.label, parent: m.key, soVer: a.soVer })),
+]);
+
 export const ALL_ROLES: Role[] = ['CEO', 'ADMIN', 'SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE', 'CASHIER'];
 export function isFullAccess(role: Role) { return role === 'ADMIN' || role === 'CEO'; }
 
@@ -193,7 +206,9 @@ export async function effectivePermissions(role: Role): Promise<Record<string, P
         ? { canView: proprio.includes(role), canEdit: proprio.includes(role) }
         : pai;
       const canView = (r ? r.canView : def.canView) && pai.canView;
-      const canEdit = (r ? r.canEdit : def.canEdit) && canView && pai.canEdit;
+      /* Parte de consulta não tem "editar" separado: ou a pessoa vê, ou não.
+         Um "Editar" que não muda nada seria uma caixa mentirosa na matriz. */
+      const canEdit = m.soVer ? canView : (r ? r.canEdit : def.canEdit) && canView && pai.canEdit;
       out[m.key] = { canView, canEdit };
       continue;
     }

@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listCertificates, getCertificatesReport } from '@/lib/certificates/query';
@@ -46,6 +48,7 @@ export default async function AtestadosPage({ searchParams }: { searchParams: { 
       </div>
       <Card><CardContent className="pt-4">
         <CertificatesClient
+            abas={await abasDoPerfil(user.role, 'CERTIFICATES')}
           canLaunch={canLaunch}
           isAdmin={user.role === 'ADMIN'}
           showCid={showCid}

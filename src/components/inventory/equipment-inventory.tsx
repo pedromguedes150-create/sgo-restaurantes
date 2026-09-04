@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
+
 import { Plus, Pencil, X, Save, ArrowDownCircle, ArrowUpCircle, ClipboardCheck, Printer, AlertTriangle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
@@ -26,20 +28,22 @@ async function call(payload: Record<string, unknown>): Promise<{ ok: boolean; er
   return res.ok ? { ok: true } : { ok: false, error: data.error ?? 'Falha' };
 }
 
-export function EquipmentInventory({ canEdit, isAdmin, units, suppliers, items, movements, summary }: {
+export function EquipmentInventory({ canEdit, isAdmin, units, suppliers, items, movements, summary, abas = {} }: {
   canEdit: boolean; isAdmin: boolean; units: Unit[]; suppliers: Supplier[]; items: EquipItem[]; movements: EquipMove[]; summary: EquipSummary;
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
 }) {
-  const [tab, setTab] = useState<'estoque' | 'movimentar' | 'contagem' | 'historico'>('estoque');
+  const [tab, setTab] = useState<'estoque' | 'movimentar' | 'contagem' | 'historico'>(abaInicial(abas, 'INVENTORY', 'estoque') as 'estoque');
   const [unitId, setUnitId] = useState<string>(units[0]?.id ?? '');
   const multi = units.length > 1;
   const shown = useMemo(() => (multi && unitId ? items.filter((i) => i.unitId === unitId) : items), [items, unitId, multi]);
 
-  const tabs: { key: typeof tab; label: string }[] = [
+  const tabs = ([
     { key: 'estoque', label: 'Estoque' },
     { key: 'movimentar', label: 'Movimentar' },
     { key: 'contagem', label: 'Contagem' },
     { key: 'historico', label: 'Histórico' },
-  ];
+  ] as { key: typeof tab; label: string }[]).filter((t) => podeAba(abas, t.key));
 
   return (
     <div className="space-y-4">
@@ -53,7 +57,7 @@ export function EquipmentInventory({ canEdit, isAdmin, units, suppliers, items, 
         <SegmentedControl
           aria-label="Seções do Inventário de equipamentos"
           value={tab}
-          onValueChange={setTab}
+          onValueChange={(v) => setTab(v as typeof tab)}
           options={tabs.map((t) => ({ value: t.key, label: t.label }))}
         />
         {multi && (

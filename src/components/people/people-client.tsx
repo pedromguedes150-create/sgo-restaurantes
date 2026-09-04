@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,9 +25,9 @@ const VAC_ST: Record<Vac['status'], { label: string; tone: StatusTone }> = {
 };
 const VAR_LABEL = { NONE: 'OK', ABSENCE: 'Falta', LATE: 'Atraso', SWAP: 'Troca' } as const;
 
-export function PeopleClient({ collaborators, vacations, schedule, canRequestVacation }: { collaborators: Collab[]; vacations: Vac[]; schedule: Sched[]; canRequestVacation?: boolean }) {
+export function PeopleClient({ collaborators, vacations, schedule, canRequestVacation, abas = {} }: { collaborators: Collab[]; vacations: Vac[]; schedule: Sched[]; canRequestVacation?: boolean; abas?: AcessoAbas }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'col' | 'fer' | 'esc'>('col');
+  const [tab, setTab] = useState<'col' | 'fer' | 'esc'>(abaInicial(abas, 'PEOPLE', 'col') as 'col' | 'fer' | 'esc');
   const [busy, setBusy] = useState(false);
   // Solicitar férias ao RH (item 11 — provisório até a API do RH)
   const [vCollab, setVCollab] = useState('');
@@ -59,8 +60,8 @@ export function PeopleClient({ collaborators, vacations, schedule, canRequestVac
       <SegmentedControl
         aria-label="Seções de Pessoas"
         value={tab}
-        onValueChange={setTab}
-        options={[{ value: 'col', label: 'Colaboradores' }, { value: 'fer', label: 'Férias' }, { value: 'esc', label: 'Escala' }]}
+        onValueChange={(v) => setTab(v as typeof tab)}
+        options={[{ value: 'col', label: 'Colaboradores' }, { value: 'fer', label: 'Férias' }, { value: 'esc', label: 'Escala' }].filter((o) => podeAba(abas, o.value))}
       />
 
       {tab === 'col' && (

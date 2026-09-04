@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listTickets, listPlans, getMaintenanceSummary } from '@/lib/maintenance';
@@ -35,6 +37,7 @@ export default async function ManutencaoPage({ searchParams }: { searchParams: {
 
   return (
     <MaintenanceClient
+            abas={await abasDoPerfil(user.role, 'MAINTENANCE')}
       view={view}
       isAdmin={user.role === 'ADMIN'}
       units={units}

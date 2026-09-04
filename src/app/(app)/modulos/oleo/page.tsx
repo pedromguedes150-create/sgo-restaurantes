@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -36,6 +38,7 @@ export default async function OleoPage() {
       </div>
       <Card><CardContent className="pt-4">
         <OilClient
+            abas={await abasDoPerfil(user.role, 'OIL')}
           canLaunch={canLaunch}
           isAdmin={user.role === 'ADMIN'}
           canEditDate={user.role === 'ADMIN' || user.role === 'SUPERVISOR'}

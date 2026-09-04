@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
+
 import { Plus, FileText, UserMinus, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,16 +27,19 @@ const STw: Record<TermRow['status'], { label: string; tone: 'medium' | 'success'
   REJECTED: { label: 'Recusado', tone: 'critical' },
 };
 
-export function TerminationsClient({ canRequest, canDecide, units, collaboratorsByUnit, rows }: {
+export function TerminationsClient({ canRequest, canDecide, units, collaboratorsByUnit, rows, abas = {} }: {
   canRequest: boolean; canDecide: boolean; units: Unit[]; collaboratorsByUnit: Record<string, Collab[]>; rows: TermRow[];
+
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'solicitar' | 'lista'>(canRequest ? 'solicitar' : 'lista');
+  const [tab, setTab] = useState<'solicitar' | 'lista'>(abaInicial(abas, 'TERMINATIONS', canRequest ? 'solicitar' : 'lista') as 'solicitar' | 'lista');
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1">
-        {canRequest && <button onClick={() => setTab('solicitar')} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === 'solicitar' ? 'bg-brand text-on-brand' : 'border'}`}><Plus className="h-4 w-4" /> Solicitar</button>}
-        <button onClick={() => setTab('lista')} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === 'lista' ? 'bg-brand text-on-brand' : 'border'}`}><UserMinus className="h-4 w-4" /> Solicitações</button>
+        {canRequest && podeAba(abas, 'solicitar') && <button onClick={() => setTab('solicitar')} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === 'solicitar' ? 'bg-brand text-on-brand' : 'border'}`}><Plus className="h-4 w-4" /> Solicitar</button>}
+        {podeAba(abas, 'lista') && <button onClick={() => setTab('lista')} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === 'lista' ? 'bg-brand text-on-brand' : 'border'}`}><UserMinus className="h-4 w-4" /> Solicitações</button>}
       </div>
       {tab === 'solicitar' && canRequest && <RequestForm units={units} collaboratorsByUnit={collaboratorsByUnit} onDone={() => { setTab('lista'); router.refresh(); }} />}
       {tab === 'lista' && <List rows={rows} canDecide={canDecide} onChanged={() => router.refresh()} />}

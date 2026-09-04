@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { recusaSeAbaFechada } from '@/lib/permissions/guarda-abas';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { createPaymentRequest } from '@/lib/payments/create';
@@ -9,6 +10,9 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
 
   const b = await req.json().catch(() => null);
+  /* Aba fechada na matriz de perfis não grava. */
+  const negado = await recusaSeAbaFechada(user.role, 'PAYMENTS_TAB_NEW');
+  if (negado) return negado;
   if (!b?.type || !b?.unitId) return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
 
   const result = await createPaymentRequest(

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { recusaSeAbaFechada } from '@/lib/permissions/guarda-abas';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { createPlan, updatePlan, registerPlanExecution } from '@/lib/maintenance';
@@ -13,6 +14,9 @@ export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const b = await req.json().catch(() => null);
+  /* Aba fechada na matriz de perfis não grava. */
+  const negado = await recusaSeAbaFechada(user.role, 'MAINTENANCE_TAB_PLANS');
+  if (negado) return negado;
   if (!b?.unitId || !b?.title || !b?.frequencyDays) return NextResponse.json({ error: 'Informe unidade, título e frequência' }, { status: 400 });
   const r = await createPlan(user, {
     unitId: String(b.unitId), title: String(b.title), description: b.description ? String(b.description) : undefined,

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { recusaDeAba } from '@/lib/permissions/guarda-abas';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { createProductRequests, setRequestStatus, upsertProduct, toggleProduct, deleteProduct } from '@/lib/products';
@@ -7,6 +8,10 @@ export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const b = await req.json().catch(() => null);
+  /* Aba fechada na matriz de perfis não grava — esconder o botão é
+     conveniência, recusar aqui é o controle. */
+  const negado = b?.action ? await recusaDeAba(user.role, 'PRODUCTS', String(b.action)) : null;
+  if (negado) return negado;
   if (!b?.action) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   const ctx = requestContext(req);
 

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Plus, Minus, Send, Printer, Factory, Warehouse, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Select } from '@/components/ui/ds/select';
 import { shortUnitName } from '@/lib/unit-name';
@@ -21,11 +22,14 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 };
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export function ProductsClient({ units, selUnitId, isOps, products, myRequests, incoming }: {
+export function ProductsClient({ units, selUnitId, isOps, products, myRequests, incoming, abas = {} }: {
   units: { id: string; name: string }[]; selUnitId: string; isOps: boolean; products: Prod[]; myRequests: Req[]; incoming: Req[];
+
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'novo' | 'meus' | 'ops'>('novo');
+  const [tab, setTab] = useState<'novo' | 'meus' | 'ops'>(abaInicial(abas, 'PRODUCTS', 'novo') as 'novo' | 'meus' | 'ops');
   const [busy, setBusy] = useState(false);
 
   async function post(body: Record<string, unknown>): Promise<boolean> {
@@ -45,7 +49,7 @@ export function ProductsClient({ units, selUnitId, isOps, products, myRequests, 
         aria-label="Seções de Pedidos de produtos"
         value={tab}
         onValueChange={(v) => setTab(v as typeof tab)}
-        options={tabs.map((t) => ({ value: t.k as string, label: t.l }))}
+        options={tabs.filter((t) => podeAba(abas, t.k as string)).map((t) => ({ value: t.k as string, label: t.l }))}
       />
 
       {tab === 'novo' && <NewOrder units={units} selUnitId={selUnitId} products={products} post={post} busy={busy} />}

@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+import { permissaoDeRota } from '@/lib/permissions/links';
 import { StatCard } from '@/components/ui/ds/stat-card';
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
@@ -42,6 +44,8 @@ export default async function NotasPage({ searchParams }: { searchParams: { dias
       <Card>
         <CardContent className="pt-4">
           <NotesClient
+            abas={await abasDoPerfil(user.role, 'NOTES')}
+            podeGas={(await permissaoDeRota(user.role))('/modulos/notas/gas')}
             aba={aba}
             canManage={canManage}
             canEditDate={user.role === 'SUPERVISOR' || user.role === 'ADMIN'}

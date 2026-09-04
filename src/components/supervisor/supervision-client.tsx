@@ -5,6 +5,7 @@ import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
 import { Plus, Check, X, Trash2, CalendarDays, FileSpreadsheet, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,13 +37,16 @@ const fmtMonthLong = (ym: string) => {
 };
 const TONE_DOT = { success: 'bg-success', medium: 'bg-warning', critical: 'bg-danger' } as const;
 
-export function SupervisionClient({ usage, yearMonth, months, board, units, checklists, plans, canOperate, isAdmin }: {
+export function SupervisionClient({ usage, yearMonth, months, board, units, checklists, plans, canOperate, isAdmin, abas = {} }: {
   usage: UsageRowUI[]; yearMonth: string; months: string[];
   board: { upcoming: VisitRowUI[]; history: VisitRowUI[]; month: { done: number; planned: number; overdue: number } };
   units: UnitOpt[]; checklists: ChecklistOpt[]; plans: PlanRowUI[]; canOperate: boolean; isAdmin: boolean;
+
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'PAINEL' | 'VISITAS'>('PAINEL');
+  const [tab, setTab] = useState<'PAINEL' | 'VISITAS'>(abaInicial(abas, 'SUPERVISION', 'PAINEL') as 'PAINEL' | 'VISITAS');
   const [busy, setBusy] = useState(false);
   const [vUnit, setVUnit] = useState('');
   const [vDate, setVDate] = useState('');
@@ -63,8 +67,8 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
       <SegmentedControl
         aria-label="Seções da Rotina do Supervisor"
         value={tab}
-        onValueChange={setTab}
-        options={[{ value: 'PAINEL', label: 'Painel de uso' }, { value: 'VISITAS', label: 'Visitas & Feedbacks' }]}
+        onValueChange={(v) => setTab(v as typeof tab)}
+        options={[{ value: 'PAINEL', label: 'Painel de uso' }, { value: 'VISITAS', label: 'Visitas & Feedbacks' }].filter((o) => podeAba(abas, o.value))}
       />
 
       {tab === 'PAINEL' && (

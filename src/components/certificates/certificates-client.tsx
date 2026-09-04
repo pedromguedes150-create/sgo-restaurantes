@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
+
 import { Plus, Sparkles, Trash2, FileText, Stethoscope, CalendarDays, TrendingUp, BarChart3, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,19 +45,21 @@ function daysBetween(start: string, end: string): number {
 }
 function fmtDate(s: string | null): string { if (!s) return '—'; const [y, m, d] = s.split('-'); return `${d}/${m}/${y}`; }
 
-export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, collaboratorsByUnit, rows, report }: {
+export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, collaboratorsByUnit, rows, report, abas = {} }: {
   canLaunch: boolean; isAdmin: boolean; showCid: boolean; ym: string;
   units: Unit[]; collaboratorsByUnit: Record<string, Collab[]>; rows: CertListItem[]; report: CertReport;
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'lancar' | 'historico' | 'painel'>(canLaunch ? 'lancar' : 'painel');
+  const [tab, setTab] = useState<'lancar' | 'historico' | 'painel'>(abaInicial(abas, 'CERTIFICATES', canLaunch ? 'lancar' : 'painel') as 'lancar' | 'historico' | 'painel');
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1">
-        {canLaunch && <TabBtn active={tab === 'lancar'} onClick={() => setTab('lancar')} icon={<Plus className="h-4 w-4" />}>Lançar</TabBtn>}
-        <TabBtn active={tab === 'historico'} onClick={() => setTab('historico')} icon={<FileText className="h-4 w-4" />}>Histórico</TabBtn>
-        <TabBtn active={tab === 'painel'} onClick={() => setTab('painel')} icon={<BarChart3 className="h-4 w-4" />}>Painel</TabBtn>
+        {canLaunch && podeAba(abas, 'lancar') && <TabBtn active={tab === 'lancar'} onClick={() => setTab('lancar')} icon={<Plus className="h-4 w-4" />}>Lançar</TabBtn>}
+        {podeAba(abas, 'historico') && <TabBtn active={tab === 'historico'} onClick={() => setTab('historico')} icon={<FileText className="h-4 w-4" />}>Histórico</TabBtn>}
+        {podeAba(abas, 'painel') && <TabBtn active={tab === 'painel'} onClick={() => setTab('painel')} icon={<BarChart3 className="h-4 w-4" />}>Painel</TabBtn>}
       </div>
 
       {tab === 'lancar' && canLaunch && (

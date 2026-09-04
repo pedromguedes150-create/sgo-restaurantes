@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { Eye } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getUsageBoard } from '@/lib/supervisor/usage';
@@ -48,6 +50,7 @@ export default async function SupervisaoPage({ searchParams }: { searchParams: {
       <Card>
         <CardContent className="pt-4">
           <SupervisionClient
+            abas={await abasDoPerfil(user.role, 'SUPERVISION')}
             usage={usage}
             yearMonth={yearMonth}
             months={months}

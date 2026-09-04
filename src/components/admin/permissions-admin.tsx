@@ -8,7 +8,7 @@ import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 
 type Perm = { canView: boolean; canEdit: boolean };
 type Matrix = Record<string, Record<string, Perm>>;
-type Mod = { key: string; label: string; parent?: string };
+type Mod = { key: string; label: string; parent?: string; soVer?: boolean };
 
 const EDITABLE_ROLES = ['SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE'];
 
@@ -129,7 +129,11 @@ export function PermissionsAdmin({ modules, matrix }: { modules: Mod[]; matrix: 
                     )}
                   </td>
                   <td className="px-3 py-2 text-center"><input type="checkbox" className="h-4 w-4" disabled={busy || !paiAberto} checked={ver} onChange={(e) => set(m.key, { canView: e.target.checked })} /></td>
-                  <td className="px-3 py-2 text-center"><input type="checkbox" className="h-4 w-4" disabled={busy || !ver} checked={editar} onChange={(e) => set(m.key, { canEdit: e.target.checked })} /></td>
+                  <td className="px-3 py-2 text-center">
+                    {m.soVer
+                      ? <span title="Parte de consulta: não há o que editar" className="text-ink-400">—</span>
+                      : <input type="checkbox" className="h-4 w-4" disabled={busy || !ver} checked={editar} onChange={(e) => set(m.key, { canEdit: e.target.checked })} />}
+                  </td>
                 </tr>
               );
             })}

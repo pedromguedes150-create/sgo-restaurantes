@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { recusaDeAba } from '@/lib/permissions/guarda-abas';
 import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
@@ -31,6 +32,10 @@ async function tratar(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   const b = await req.json().catch(() => null);
+  /* Aba fechada na matriz de perfis não grava — esconder o botão é
+     conveniência, recusar aqui é o controle. */
+  const negado = b?.action ? await recusaDeAba(user.role, 'GAS', String(b.action)) : null;
+  if (negado) return negado;
   if (!b) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
 
   // Correção de lançamento (Supervisão/Admin) — não interfere na meta

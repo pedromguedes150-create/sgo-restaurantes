@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { permissaoDeRota } from '@/lib/permissions/links';
 
 import { FamilyTabs } from '@/components/layout/family-tabs';
@@ -57,6 +59,7 @@ export default async function PessoasModulePage() {
       <Card>
         <CardContent className="pt-4">
           <PeopleClient
+            abas={await abasDoPerfil(user.role, 'PEOPLE')}
             canRequestVacation={user.role !== 'FINANCE' && user.role !== 'CEO'}
             collaborators={collaborators.map((c) => ({ id: c.id, name: c.name, jobTitle: c.jobTitle, units: c.units.map((u) => u.unit.name) }))}
             vacations={vacations.map((v) => ({ id: v.id, collaborator: v.collaborator.name, unit: v.unit.name, start: d(v.startDate), end: d(v.endDate), status: v.status, changeNote: v.changeNote }))}

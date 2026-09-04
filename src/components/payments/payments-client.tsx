@@ -71,6 +71,8 @@ const DS_STATUS: Record<PayReq['status'], DsTone> = {
   PENDING: 'warning', APPROVED: 'info', REJECTED: 'danger', PAID: 'success',
 };
 
+import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
+
 type Tab = 'nova' | 'minhas' | 'aprovar' | 'pagar' | 'historico';
 
 /**
@@ -93,6 +95,7 @@ function ListaCortada({ mostrando, total, limite }: { mostrando: number; total?:
 }
 
 export function PaymentsClient({
+  abas = {},
   isFinanceView,
   isAdmin = false,
   canEditDate = false,
@@ -122,9 +125,13 @@ export function PaymentsClient({
   /** Teto de linhas por lista — acima dele a tela avisa que há mais. */
   limite?: number;
   history: PayReq[];
+  /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
+  abas?: AcessoAbas;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>(toApprove.length > 0 ? 'aprovar' : 'nova');
+  /* Abre na aba que o perfil PODE ver — abrir numa aba fechada mostraria a
+     tela vazia e pareceria defeito. */
+  const [tab, setTab] = useState<Tab>(abaInicial(abas, 'PAYMENTS', toApprove.length > 0 ? 'aprovar' : 'nova') as Tab);
   const [busy, setBusy] = useState(false);
   const [dateEditId, setDateEditId] = useState<string | null>(null);
   // Seleção para aprovação em lote (aba "Para Aprovar").
@@ -208,13 +215,13 @@ export function PaymentsClient({
   }
 
   const tabs: { key: Tab; label: string; badge?: number; show: boolean }[] = [
-    { key: 'nova', label: 'Nova', show: true },
-    { key: 'minhas', label: 'Minhas', show: true },
+    { key: 'nova', label: 'Nova', show: podeAba(abas, 'nova') },
+    { key: 'minhas', label: 'Minhas', show: podeAba(abas, 'minhas') },
     /* O crachá vem do TOTAL de verdade. Com o tamanho da lista ele exibia o
        teto — 100 com 340 pendências — e ninguém tinha como saber das outras. */
-    { key: 'aprovar', label: 'Para Aprovar', badge: totais?.toApprove ?? toApprove.length, show: true },
-    { key: 'pagar', label: 'Pagar', badge: totais?.toPay ?? toPay.length, show: isFinanceView },
-    { key: 'historico', label: 'Histórico', show: true },
+    { key: 'aprovar', label: 'Para Aprovar', badge: totais?.toApprove ?? toApprove.length, show: podeAba(abas, 'aprovar') },
+    { key: 'pagar', label: 'Pagar', badge: totais?.toPay ?? toPay.length, show: isFinanceView && podeAba(abas, 'pagar') },
+    { key: 'historico', label: 'Histórico', show: podeAba(abas, 'historico') },
   ];
 
   return (
@@ -222,7 +229,7 @@ export function PaymentsClient({
       <SegmentedControl
         aria-label="Seções de Pagamentos"
         value={tab}
-        onValueChange={setTab}
+        onValueChange={(v) => setTab(v as typeof tab)}
         options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label, badge: t.badge, badgeTone: 'danger' as const }))}
       />
 

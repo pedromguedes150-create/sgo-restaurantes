@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listSuppliers } from '@/lib/suppliers';
@@ -65,6 +67,7 @@ export default async function AnaliseGasPage({
       <Card>
         <CardContent className="pt-4">
           <GasClient
+            abas={await abasDoPerfil(user.role, 'GAS')}
             basePath="/modulos/notas/gas"
             canLaunch={false}
             isAdmin={user.role === 'ADMIN'}
