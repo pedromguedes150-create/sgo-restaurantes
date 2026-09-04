@@ -86,7 +86,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/occurrences/[id]/update': { modulo: 'OCCURRENCES', exigir: 'editar' },
 
   '/api/payments': { modulo: 'PAYMENTS_TAB_NEW', exigir: 'editar' },
-  '/api/payments/batch': { modulo: 'PAYMENTS_TAB_PAY', exigir: 'editar' },
+  // aprovar/reprovar em lote é a aba Aprovar (estava em Pagar até a v1.75.0)
+  '/api/payments/batch': { modulo: 'PAYMENTS_TAB_APPROVE', exigir: 'editar' },
   '/api/payments/freelancer-calc': { modulo: 'PAYMENTS', exigir: 'ver' },
   '/api/payments/freelancer-report': { modulo: 'PAYMENTS_FREELANCER_REPORT', exigir: 'ver' },
 

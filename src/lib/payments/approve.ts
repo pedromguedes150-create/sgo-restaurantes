@@ -74,6 +74,29 @@ export async function approveManyRequests(
 /** Teto por chamada: evita uma requisição gigante segurando o servidor. */
 export const MAX_BATCH = 200;
 
+/**
+ * Reprova VÁRIAS de uma vez (04/09), com UM motivo para todas — o caso é a
+ * leva inteira lançada errada (dia, unidade, freelancer). Reusa rejectRequest
+ * item a item: a checagem de aprovador, o estado e a auditoria são os mesmos
+ * da reprovação individual, e cada solicitante recebe o seu aviso com o motivo.
+ */
+export async function rejectManyRequests(
+  user: SessionUser,
+  ids: string[],
+  reason: string,
+  ctx: Ctx = {},
+): Promise<{ rejected: number; failed: { id: string; reason: string }[] }> {
+  const failed: { id: string; reason: string }[] = [];
+  let rejected = 0;
+  if (!reason?.trim()) return { rejected: 0, failed: [...new Set(ids)].map((id) => ({ id, reason: 'INVALID' })) };
+  for (const id of [...new Set(ids)].slice(0, MAX_BATCH)) {
+    const r = await rejectRequest(user, id, reason, ctx);
+    if (r.ok) rejected += 1;
+    else failed.push({ id, reason: r.reason });
+  }
+  return { rejected, failed };
+}
+
 export async function approveRequest(user: SessionUser, id: string, ctx: Ctx = {}, opts: { skipFinanceNotice?: boolean } = {}): Promise<PayActionResult> {
   const req = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true, status: true, approverRole: true, type: true, amount: true, requestedById: true } });
   if (!req) return { ok: false, reason: 'NOT_FOUND' };

@@ -178,6 +178,34 @@ export function PaymentsClient({
     }
   }
 
+  async function rejectSelected() {
+    if (sel.size === 0) return;
+    const ids = [...sel];
+    const reason = prompt(`Reprovar ${ids.length} pagamento(s), somando ${formatBRL(selTotal)}.\nMotivo (vale para todos, vai para cada solicitante):`);
+    if (reason === null) return;
+    if (!reason.trim()) { alert('Informe o motivo da reprovação.'); return; }
+    setBusy(true);
+    setBatchMsg(null);
+    try {
+      const res = await fetch('/api/payments/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'rejectMany', ids, reason: reason.trim() }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setBatchMsg({ tone: 'danger', title: d.error ?? 'Falha ao reprovar em lote' }); return; }
+      setSel(new Set());
+      setBatchMsg(
+        d.failed?.length
+          ? { tone: 'warning', title: `${d.rejected} reprovada(s), ${d.failed.length} não passaram`, description: 'As que falharam podem já ter sido resolvidas por outra pessoa ou estar fora do seu perfil de aprovação.' }
+          : { tone: 'success', title: `${d.rejected} pagamento(s) reprovado(s)`, description: 'Cada solicitante foi avisado com o motivo.' },
+      );
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function act(id: string, action: string, extra?: Record<string, unknown>) {
     setBusy(true);
     try {
@@ -291,6 +319,9 @@ export function PaymentsClient({
               </span>
               <span className="ml-auto flex gap-2">
                 {sel.size > 0 && <DsButton size="sm" variant="ghost" onClick={() => setSel(new Set())}>Limpar</DsButton>}
+                <DsButton size="sm" variant="danger" disabled={sel.size === 0 || busy} onClick={rejectSelected}>
+                  <X className="h-4 w-4" /> Reprovar selecionadas
+                </DsButton>
                 <DsButton size="sm" disabled={sel.size === 0} loading={busy} onClick={approveSelected}>
                   <Check className="h-4 w-4" /> Aprovar selecionadas
                 </DsButton>
