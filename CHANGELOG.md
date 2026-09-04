@@ -9,6 +9,41 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.69.0 — 2026-09-04 (Pagamentos: corrigir antes de aprovar, freelancer já alocado; auditoria das rotas "fora da matriz")
+
+### Pagamentos
+- **Corrigir antes de aprovar.** Na aba Para Aprovar, o detalhe ganhou "Editar": quem pode aprovar
+  acerta dia, horário, setor, vale transporte, valor e observações (hora extra: colaborador, horas,
+  motivo; avulso: beneficiário e valor) e só então aprova. Antes a única saída era rejeitar e pedir
+  para lançar de novo. Freelancer com valor/hora cadastrado tem o valor recalculado do horário;
+  cobertura de setor mantém o valor do dia. Mesma porta da aprovação (papel aprovador ou delegado,
+  unidade no escopo, só PENDENTE; o solicitante não corrige a própria). Auditoria
+  `PAYMENT_APPROVER_EDIT` com antes/depois; o solicitante recebe aviso.
+- **Freelancer já nasce alocado.** Dia do trabalho e **setor/função contratada** passaram a ser
+  obrigatórios no lançamento — a lista traz os setores da unidade (os do Mapa de Funções) e o
+  servidor confere que o setor é daquela unidade. O Mapa do dia lê direto; o painel "Freelancers do
+  dia" segue para trocar o setor e para pedidos antigos. Cobertura de setor pré-seleciona o setor de
+  mesmo nome.
+- Fechar a aba **Aprovar** ou **Pagar** na matriz de perfis agora vale na rota
+  (`/api/payments/[id]`: approve/reject/approverEdit → Aprovar, pay → Pagar). Até aqui só sumia o
+  botão.
+
+### Perfis — auditoria das rotas "fora da matriz por regra própria"
+Das 16 rotas que a v1.67.0 deixou fora com esse motivo, lidas uma a uma com a função que executam:
+- **10 tinham regra real** (papel fixo ou dono do registro + unidade). O motivo em `FORA_DA_MATRIZ`
+  agora cita arquivo e função que garantem.
+- **6 só perguntavam "tem vínculo com a unidade?"** — justificar cancelamento, confirmar inventário,
+  mudar status da nota, andamento/reclassificação da ocorrência, alteração de férias e variação de
+  escala. O perfil Caixa (que tem unidade) passava em todas, e "Editar" desmarcado não barrava.
+  Entraram no mapa `REGRAS` e chamam a guarda; o mapa aceita `[id]` como curinga de segmento, com
+  a mesma grafia do disco.
+- **Reclassificar ocorrência** só para Supervisor/Admin/CEO, como o sistema sempre declarou — a
+  rota não conferia o perfil e a tela mostrava o bloco a todos. Gerente segue registrando andamento.
+- Teste `api-guarda-fora-da-matriz.integration.test.ts`: módulo fechado → 403, Caixa → 403,
+  sem mexer → segue.
+
+---
+
 ## v1.68.0 — 2026-09-04 (Escala no formato do SGO dos postos — fases 1 e 3)
 
 ### O pedido

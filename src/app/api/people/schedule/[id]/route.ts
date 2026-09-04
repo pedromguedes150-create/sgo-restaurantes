@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { registerVariation } from '@/lib/people';
@@ -9,6 +10,8 @@ const VALID = ['NONE', 'ABSENCE', 'LATE', 'SWAP'];
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const b = await req.json().catch(() => ({}));
   if (!VALID.includes(b.variation)) return NextResponse.json({ error: 'Variação inválida' }, { status: 400 });
   const r = await registerVariation(user, params.id, b.variation as ScheduleVariation, b.note, requestContext(req));

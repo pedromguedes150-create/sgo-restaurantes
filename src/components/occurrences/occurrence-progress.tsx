@@ -12,8 +12,10 @@ export interface UpdateRow { id: string; text: string; authorName: string; creat
 export interface TypeOpt { id: string; name: string; categories: { id: string; name: string }[] }
 
 /** Fases do andamento (timeline + registrar) e reclassificação (16/07). */
-export function OccurrenceProgress({ occurrenceId, updates, closed, types, currentType }: {
+export function OccurrenceProgress({ occurrenceId, updates, closed, types, currentType, canReclassify = false }: {
   occurrenceId: string; updates: UpdateRow[]; closed: boolean; types: TypeOpt[]; currentType: string;
+  /** Só Supervisor/Admin/CEO reclassificam — a rota recusa os demais, a tela nem oferece. */
+  canReclassify?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -57,7 +59,7 @@ export function OccurrenceProgress({ occurrenceId, updates, closed, types, curre
       </div>
 
       {/* Reclassificar (move para Manutenção/TI conforme o tipo) */}
-      {!closed && (
+      {!closed && canReclassify && (
         <div className="rounded-lg border border-dashed p-3">
           <button onClick={() => setReclass(!reclass)} className="flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-500">
             <Tags className="h-3.5 w-3.5" /> Reclassificar (tipo atual: {currentType})

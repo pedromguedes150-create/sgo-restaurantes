@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
@@ -14,6 +15,8 @@ const REASONS: Record<string, { msg: string; status: number }> = {
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
 
   const body = await req.json().catch(() => null);
   if (!body?.reasonId) return NextResponse.json({ error: 'Selecione o motivo' }, { status: 400 });

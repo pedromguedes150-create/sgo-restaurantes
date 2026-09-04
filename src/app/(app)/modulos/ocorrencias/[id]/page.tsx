@@ -77,6 +77,7 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
         <OccurrenceProgress
           occurrenceId={o.id}
           closed={o.status === 'CLOSED'}
+          canReclassify={user.role === 'SUPERVISOR' || user.role === 'ADMIN' || user.role === 'CEO'}
           currentType={o.typeName}
           updates={o.updates.map((u) => ({ id: u.id, text: u.text, authorName: u.authorName, createdAt: u.createdAt.toISOString() }))}
           types={occTypes.map((t) => ({ id: t.id, name: t.name, categories: t.categories.map((c) => ({ id: c.id, name: c.name })) }))}

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { prisma } from '@/lib/db/prisma';
@@ -9,12 +10,17 @@ import { audit } from '@/lib/audit';
  * Fases de andamento + reclassificação da ocorrência (16/07).
  * POST { action: 'addUpdate', text } — registra uma fase do andamento.
  * POST { action: 'reclassify', typeId, categoryId } — muda tipo/categoria
- *   (move para as sub-abas Manutenção/TI conforme o tipo).
+ *   (move para as sub-abas Manutenção/TI conforme o tipo). Só Supervisor/Admin/CEO:
+ *   a regra sempre foi essa no papel, mas até a auditoria de 04/09 a rota não
+ *   conferia o perfil — qualquer um da unidade reclassificava.
  */
+const RECLASSIFICA: readonly string[] = ['SUPERVISOR', 'ADMIN', 'CEO'];
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
   if (user.role === 'FINANCE') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const b = await req.json().catch(() => null);
   if (!b?.action) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   const ctx = requestContext(req);
@@ -33,6 +39,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   if (b.action === 'reclassify') {
+    if (!RECLASSIFICA.includes(user.role)) return NextResponse.json({ error: 'Apenas Supervisor/Admin reclassificam' }, { status: 403 });
     const type = b.typeId ? await prisma.occurrenceType.findUnique({ where: { id: String(b.typeId) }, include: { categories: true } }) : null;
     if (!type) return NextResponse.json({ error: 'Escolha o tipo' }, { status: 400 });
     const ativas = type.categories.filter((c) => c.active);
