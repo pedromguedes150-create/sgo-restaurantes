@@ -17,6 +17,9 @@ export interface CreatePaymentInput {
   hours?: number;
   workStartTime?: string;
   workEndTime?: string;
+  /// Setor/função para o qual o freelancer foi contratado (obrigatório, 04/09):
+  /// já nasce alocado no Mapa do dia, sem passar pelo painel "Freelancers do dia".
+  workSectorId?: string;
   transportValue?: number;
   /// Cobertura temporária de setor (16/07): valor por DIA do setor cadastrado
   coverageSector?: string;
@@ -32,7 +35,7 @@ export interface CreatePaymentInput {
 
 export type CreatePaymentResult =
   | { ok: true; id: string }
-  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' };
+  | { ok: false; reason: 'FORBIDDEN' | 'INVALID'; detail?: string };
 
 /** Cria uma solicitação de pagamento e roteia ao aprovador correto (Módulo 7). */
 export async function createPaymentRequest(
@@ -54,7 +57,17 @@ export async function createPaymentRequest(
     if (!t) return { ok: false, reason: 'INVALID' };
     approverRole = t.approverRole;
   }
-  if (input.type === 'FREELANCER' && !input.freelancerId) return { ok: false, reason: 'INVALID' };
+  if (input.type === 'FREELANCER' && !input.freelancerId) return { ok: false, reason: 'INVALID', detail: 'Escolha o freelancer.' };
+  // Freelancer sem dia e sem setor não aparece em mapa nenhum — e "alocar depois"
+  // era o que ficava esquecido. Pedido de 04/09: os dois são obrigatórios.
+  let workSectorId: string | null = null;
+  if (input.type === 'FREELANCER') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.workDate ?? '')) return { ok: false, reason: 'INVALID', detail: 'Informe o dia do trabalho.' };
+    if (!input.workSectorId) return { ok: false, reason: 'INVALID', detail: 'Escolha o setor/função do freelancer.' };
+    const sector = await prisma.sector.findUnique({ where: { id: input.workSectorId }, select: { unitId: true, active: true } });
+    if (!sector || sector.unitId !== input.unitId || !sector.active) return { ok: false, reason: 'INVALID', detail: 'Setor não pertence a esta unidade.' };
+    workSectorId = input.workSectorId;
+  }
 
   // Freelancer: se houver valor/hora cadastrado p/ a unidade+tipo de dia, o valor
   // sai AUTOMÁTICO (horas × valor/hora + vale transporte). Senão, usa o valor
@@ -90,7 +103,7 @@ export async function createPaymentRequest(
   } else if (input.type === 'OVERTIME' && transportValue) {
     effectiveAmount = input.amount + transportValue;
   }
-  if (!effectiveAmount || effectiveAmount <= 0) return { ok: false, reason: 'INVALID' };
+  if (!effectiveAmount || effectiveAmount <= 0) return { ok: false, reason: 'INVALID', detail: 'Informe o valor.' };
 
   const req = await prisma.paymentRequest.create({
     data: {
@@ -109,6 +122,7 @@ export async function createPaymentRequest(
       transportValue,
       workStartTime: input.type === 'FREELANCER' ? (input.workStartTime?.trim() || null) : null,
       workEndTime: input.type === 'FREELANCER' ? (input.workEndTime?.trim() || null) : null,
+      workSectorId,
       coverageSector,
       collaboratorName: input.collaboratorName?.trim() || null,
       reason: input.reason?.trim() || null,

@@ -59,6 +59,13 @@ const ACAO_DA_ABA: Record<string, Record<string, string>> = {
   GAS: {
     edit: 'GAS_TAB_HISTORY',
   },
+  PAYMENTS: {
+    // Fechar "Aprovar" tirava a aba e a rota seguia aprovando (auditoria 04/09).
+    approve: 'PAYMENTS_TAB_APPROVE',
+    reject: 'PAYMENTS_TAB_APPROVE',
+    approverEdit: 'PAYMENTS_TAB_APPROVE',
+    pay: 'PAYMENTS_TAB_PAY',
+  },
 };
 
 /**

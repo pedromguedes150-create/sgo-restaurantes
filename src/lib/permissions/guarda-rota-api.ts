@@ -18,6 +18,10 @@ import type { Role } from '@prisma/client';
  *   trancaria quem tem acesso de leitura, que é justamente o caso comum.
  * - O caminho é casado por **prefixo mais longo**, como na guarda das telas, de
  *   modo que `/api/notes/export` não caia na regra de `/api/notes`.
+ * - **`[id]` na chave é curinga de um segmento** (auditoria de 04/09): a chave
+ *   fica com a mesma grafia do disco e a rota de detalhe entra no mapa por
+ *   nome, em vez de herdar a regra do prefixo — `/api/occurrences/[id]/update`
+ *   é "Ocorrências", não "Registrar ocorrência".
  */
 
 type Exigencia = 'ver' | 'editar';
@@ -32,6 +36,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/audit/export': { modulo: 'AUDIT', exigir: 'ver' },
 
   '/api/cancellations/register': { modulo: 'CANCELLATIONS', exigir: 'editar' },
+  '/api/cancellations/[id]/justify': { modulo: 'CANCELLATIONS', exigir: 'editar' },
   '/api/cancellations/import': { modulo: 'CANCELLATIONS', exigir: 'editar' },
   '/api/cancellations/items': { modulo: 'CANCELLATIONS_ITEMS', exigir: 'editar' },
   '/api/cancellations/analysis': { modulo: 'CANCELLATIONS_ANALYSIS', exigir: 'ver' },
@@ -66,16 +71,19 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/higiene/manage': { modulo: 'HYGIENE', exigir: 'editar' },
 
   '/api/inventory': { modulo: 'INVENTORY', exigir: 'editar' },
+  '/api/inventory/[id]/confirm': { modulo: 'INVENTORY', exigir: 'editar' },
   '/api/inventory-equip': { modulo: 'INVENTORY', exigir: 'editar' },
 
   '/api/metas/export': { modulo: 'METAS', exigir: 'ver' },
 
   '/api/notes': { modulo: 'NOTES_TAB_LIST', exigir: 'editar' },
+  '/api/notes/[id]/status': { modulo: 'NOTES_TAB_LIST', exigir: 'editar' },
   '/api/notes/due': { modulo: 'NOTES_TAB_DUE', exigir: 'ver' },
   '/api/notes/export': { modulo: 'NOTES', exigir: 'ver' },
   '/api/notes/gas-import': { modulo: 'NOTES', exigir: 'editar' },
 
   '/api/occurrences': { modulo: 'OCCURRENCES_NEW', exigir: 'editar' },
+  '/api/occurrences/[id]/update': { modulo: 'OCCURRENCES', exigir: 'editar' },
 
   '/api/payments': { modulo: 'PAYMENTS_TAB_NEW', exigir: 'editar' },
   '/api/payments/batch': { modulo: 'PAYMENTS_TAB_PAY', exigir: 'editar' },
@@ -87,7 +95,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/people/payouts/export': { modulo: 'PEOPLE_PAYOUTS', exigir: 'ver' },
   '/api/people/probation': { modulo: 'PEOPLE_PROBATION', exigir: 'editar' },
   '/api/people/vacations': { modulo: 'PEOPLE_TAB_VACATION', exigir: 'editar' },
-  '/api/people/schedule': { modulo: 'SCHEDULE', exigir: 'editar' },
+  '/api/people/vacations/[id]': { modulo: 'PEOPLE_TAB_VACATION', exigir: 'editar' },
+  '/api/people/schedule/[id]': { modulo: 'SCHEDULE', exigir: 'editar' },
 
   '/api/pops': { modulo: 'POPS', exigir: 'editar' },
   '/api/product-standards': { modulo: 'CONFIG_PRODUCT_STANDARDS', exigir: 'editar' },
@@ -134,40 +143,41 @@ export const FORA_DA_MATRIZ: Record<string, string> = {
   '/api/manager-area': 'já tem guarda por aba (v1.64.0)',
   '/api/checklists/public': 'ficha preenchida por link, sem login',
   '/api/integracoes/rh/[evento]': 'webhook do RH, autenticado por chave própria',
-  '/api/lgpd/collaborator/[id]/export': 'LGPD — regra própria de Admin na função',
-  '/api/entry-date': 'edição de data: regra própria (Admin/Supervisão) no caso de uso',
+  '/api/lgpd/collaborator/[id]/export': 'LGPD — só ADMIN/CEO, checado no próprio handler (lgpd/collaborator/[id]/export/route.ts); não há módulo LGPD na matriz',
+  '/api/entry-date': 'editEntryDate (src/lib/late-entry.ts): só ADMIN/SUPERVISOR + canAccessUnit do lançamento',
   '/api/oil': 'já tem guarda por aba (v1.66.0)',
   '/api/products': 'já tem guarda por aba (v1.66.0)',
   '/api/maintenance/tickets': 'já tem guarda por aba (v1.66.0)',
   '/api/maintenance/plans': 'já tem guarda por aba (v1.66.0)',
-  '/api/cancellations/[id]/justify': 'justificativa do próprio operador; escopo por unidade no caso de uso',
-  '/api/communications/[id]': 'ação sobre comunicado próprio; regra no caso de uso',
+  '/api/communications/[id]': 'updateCommunication/setCommunicationPinned (src/lib/communications/update.ts): só o AUTOR (authorId === user.id)',
   '/api/communications/[id]/confirm': 'confirmação de leitura pelo próprio destinatário',
-  '/api/communications/[id]/remind': 'cobrança de leitura; regra no caso de uso',
-  '/api/inventory/[id]/confirm': 'confirmação da contagem agendada; regra no caso de uso',
-  '/api/notes/[id]': 'edição de nota: canManageNotes no caso de uso',
-  '/api/notes/[id]/status': 'mudança de status pelo lançador; regra no caso de uso',
-  '/api/occurrences/[id]/close': 'encerramento: Supervisor/Admin no caso de uso',
-  '/api/occurrences/[id]/progress': 'andamento da ocorrência; regra no caso de uso',
-  '/api/occurrences/[id]/update': 'reclassificação: Supervisor/Admin no caso de uso',
-  '/api/payments/[id]': 'aprovar/pagar: regra de aprovador no caso de uso',
-  '/api/people/vacations/[id]': 'ação sobre a própria solicitação; regra no caso de uso',
-  '/api/people/schedule/[id]': 'ação sobre o próprio aviso; regra no caso de uso',
+  '/api/communications/[id]/remind': 'remindPendingCommunication → getCommunication.canManage (src/lib/communications/query.ts): autor, ou ADMIN/CEO/SUPERVISOR com a unidade no escopo',
+  '/api/notes/[id]': 'updateNote/deleteNote (src/lib/notes/create.ts): canManageNotes = SUPERVISOR/ADMIN/CEO + canAccessUnit',
+  '/api/occurrences/[id]/close': 'closeOccurrence (src/lib/occurrences/close.ts): só SUPERVISOR/ADMIN/CEO + canAccessUnit',
+  '/api/occurrences/[id]/progress': 'markInProgress (src/lib/occurrences/close.ts): só SUPERVISOR/ADMIN/CEO + canAccessUnit',
+  '/api/payments/[id]': 'guarda por aba (approve/reject/approverEdit → Aprovar, pay → Pagar) + src/lib/payments/approve.ts: approverRolesFor (c/ delegação) + segregação + canAccessUnit; adminEdit/adminDelete: ADMIN',
   '/api/pops/[id]/read': 'confirmação de leitura do POP pelo próprio usuário',
   '/api/tasks/[id]/checklist': 'execução da tarefa do dia pelo responsável',
   '/api/tasks/[id]/complete': 'conclusão da tarefa do dia pelo responsável',
   '/api/tasks/[id]/draft': 'rascunho da tarefa do dia pelo responsável',
-  '/api/commands/divergences/[id]': 'tratativa de divergência; regra no caso de uso',
+  '/api/commands/divergences/[id]': 'setInvestigating/closeDivergence (src/lib/commands/lifecycle.ts): isResolver = SUPERVISOR/ADMIN/CEO + canAccessUnit',
   '/api/higiene': 'PÚBLICA — o QR do banheiro é lido por cliente, sem login',
   '/api/communications/pending': 'os comunicados pendentes do próprio usuário',
-  '/api/products/export': 'regra própria (Admin/CEO/Supervisão) na função; handler sem req',
+  '/api/products/export': 'só ADMIN/CEO/SUPERVISOR no próprio handler (products/export/route.ts), igual ao padrão de CONFIG_PRODUCTS; handler sem req',
 };
+
+/** A chave casa com o caminho? `[id]` vale por um segmento qualquer. */
+function casa(rota: string, pathname: string): boolean {
+  if (!rota.includes('[')) return pathname === rota || pathname.startsWith(rota + '/');
+  const partes = rota.split('/').map((s) => (/^\[.+\]$/.test(s) ? '[^/]+' : s.replace(/[.*+?^${}()|\\]/g, '\\$&')));
+  return new RegExp('^' + partes.join('/') + '(?:/|$)').test(pathname);
+}
 
 /** A regra que vale para um caminho: prefixo mais longo. */
 export function regraDaRota(pathname: string): RegraDeRota | null {
   let melhor: { r: RegraDeRota; len: number } | null = null;
   for (const [rota, regra] of Object.entries(REGRAS)) {
-    if (pathname === rota || pathname.startsWith(rota + '/')) {
+    if (casa(rota, pathname)) {
       if (!melhor || rota.length > melhor.len) melhor = { r: regra, len: rota.length };
     }
   }

@@ -587,7 +587,7 @@ export const GUIDE: GuideSection[] = [
           'Se ninguém estiver no horário, o mapa fica vazio — confira a Escala do dia em Pessoas → Escala.',
           'HISTÓRICO: escolha um DIA passado e um HORÁRIO para ver como a equipe estava naquele dia e hora exatos.',
           'PROJEÇÃO: escolha um DIA futuro (ou use "Amanhã"/"Depois de amanhã") para ver como a equipe deve ficar, pela escala planejada — ótimo para se programar. "Agora" volta ao tempo real.',
-          'FREELANCER: depois de lançar o pedido de pagamento dele com o DIA e a HORA (início/fim), ele aparece em "Freelancers do dia" no Mapa — escolha o setor e ele entra no mapa naquele dia/horário.',
+          'FREELANCER: o pedido de pagamento já traz o DIA e o SETOR (obrigatórios desde a v1.69.0), então ele entra no Mapa daquele dia direto no setor contratado. O painel "Freelancers do dia" continua servindo para trocar o setor na hora, e para pedidos antigos que nasceram sem setor.',
         ],
         tips: [
           'Toda alocação/remoção avisa os Admins (para informar o RH).',
@@ -714,6 +714,8 @@ export const GUIDE: GuideSection[] = [
         summary: 'Freelancers, horas-extra e avulsos.',
         steps: [
           'Em PAGAMENTOS, solicite (aba Minhas), aprove (Aprovar) e registre o pagamento (Pagar).',
+          'FREELANCER JÁ NASCE ALOCADO (v1.69.0): no lançamento, o DIA DO TRABALHO e o SETOR/FUNÇÃO contratada são obrigatórios — a lista traz os setores da unidade (os do Mapa de Funções). Ele entra no Mapa daquele dia direto no setor, sem passar pelo painel "Freelancers do dia". Marcou cobertura de setor? O setor de mesmo nome já vem selecionado.',
+          'CORRIGIR ANTES DE APROVAR (v1.69.0): na aba Para Aprovar, abra a solicitação e toque em "Editar". Dá para acertar dia, horário, setor, vale transporte, valor e observações (hora extra: colaborador, horas, motivo; avulso: beneficiário e valor). Freelancer com valor/hora cadastrado tem o valor recalculado do horário. Salvou, aí aprova. Quem pode aprovar é quem pode corrigir; a correção fica na Auditoria com antes/depois e o solicitante recebe um aviso.',
           'O NÚMERO NA ABA É O TOTAL DE VERDADE. Se a fila for maior do que cabe numa tela, aparece um aviso amarelo — "Mostrando 500 de 640" — e o botão passa a dizer "Selecionar as carregadas", porque aprovar as visíveis não zera a fila. Resolva e recarregue para ver as próximas.',
           'Freelancer: ao lançar, o valor vem do padrão cadastrado. Se você mudar o valor, aparece um alerta de divergência (não bloqueia) e o aprovador é avisado.',
           'Financeiro/Admin: use "Consolidação de freelancers" para o relatório mensal (chave PIX + total por freelancer) em PDF e Excel, pronto para o Financeiro.',
@@ -788,6 +790,7 @@ export const GUIDE: GuideSection[] = [
           'Sem "Ver", o módulo some do menu daquele perfil. CEO e Admin são sempre totais.',
           'PARTES DE DENTRO DO MÓDULO: módulo que tem partes mostra uma SETA e o número delas ("3 partes"). Toque na seta para abrir e liberar/fechar cada tela e cada aba de dentro. Vale para o sistema inteiro: as abas da Minha área, as telas internas de Comandas (conferência por leitor, análise em aberto), de Pessoas (mapa, avaliação, comissões, experiência, mudanças, escala e as telas da escala), de Cancelamentos, de Notas, de Tarefas, de Metas e cada tela de Configurações, uma a uma.',
           'Mesmo dobrado, o módulo avisa em âmbar quantas partes estão fechadas — nada se restringe em silêncio.',
+          'A MATRIZ NAS ROTAS DE DETALHE (v1.69.0): auditoria das rotas que estavam "fora da matriz por regra própria" achou seis que só olhavam a unidade — justificar cancelamento, confirmar inventário, mudar status da nota, andamento da ocorrência, férias e variação de escala. Agora obedecem "Editar" do módulo (e o perfil Caixa é barrado). Reclassificar ocorrência passou a ser só de Supervisor/Admin, como sempre foi no papel. E fechar a aba "Aprovar"/"Pagar" de Pagamentos passa a valer na rota, não só no botão.',
           'ABAS DE DENTRO DA TELA (v1.66.0): além das telas, agora dá para fechar aba por aba em Pagamentos (Nova, Minhas, Aprovar, Pagar, Histórico), Notas (Notas, Vencimentos), Troco (Cofre, Histórico), Inventário (Estoque, Movimentar, Contagem, Histórico), Manutenção, Supervisão, Produtos, Atestados, Comunicação, Desligamentos, Gás, Óleo, Pessoas, Escala (Planejado, Realizado, Comparação) e Ocorrências (Geral, Manutenção, TI).',
           'Aba de consulta (painel, histórico) mostra um traço na coluna Editar: nela não há o que editar, então a caixa não existe em vez de fingir que faz algo.',
           'A aba fechada some da tela E a gravação dela é recusada pelo servidor: não adianta mandar a requisição por fora.',

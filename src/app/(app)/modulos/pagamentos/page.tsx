@@ -22,6 +22,7 @@ type ReqRow = PaymentRequest & {
   freelancer: { name: string; pixKey: string | null } | null;
   miscType: { name: string } | null;
   supplier: { name: string } | null;
+  workSector: { id: string; name: string } | null;
 };
 
 function toDTO(r: ReqRow): PayReq {
@@ -39,6 +40,7 @@ function toDTO(r: ReqRow): PayReq {
     status: r.status,
     amount: Number(r.amount),
     unit: r.unit.name,
+    unitId: r.unitId,
     unitCode: r.unit.code,
     requestedBy: r.requestedBy?.name ?? null,
     title,
@@ -59,6 +61,8 @@ function toDTO(r: ReqRow): PayReq {
       hours: r.hours ?? null,
       transportValue: r.transportValue != null ? Number(r.transportValue) : null,
       coverageSector: r.coverageSector ?? null,
+      workSectorId: r.workSectorId ?? null,
+      workSectorName: r.workSector?.name ?? null,
       collaboratorName: r.collaboratorName ?? null,
       reason: r.reason ?? null,
       beneficiary: r.beneficiary ?? null,
@@ -80,7 +84,7 @@ export default async function PagamentosPage() {
   const user = (await getSessionUser())!;
   const isFinanceView = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO';
 
-  const [mine, toApprove, toPay, history, totais, units, miscTypes, freelancers, suppliers] = await Promise.all([
+  const [mine, toApprove, toPay, history, totais, units, miscTypes, freelancers, suppliers, sectors] = await Promise.all([
     getMyRequests(user),
     getToApprove(user),
     getToPay(user),
@@ -92,6 +96,8 @@ export default async function PagamentosPage() {
     getMiscTypes(),
     prisma.freelancer.findMany({ where: { active: true }, include: { units: { select: { unitId: true } }, sectorRates: true }, orderBy: { name: 'asc' } }),
     listSuppliers({ activeOnly: true }),
+    // Setores da unidade: o freelancer já nasce alocado (04/09).
+    prisma.sector.findMany({ where: { active: true, ...unitScopeWhere(user, 'unitId') }, orderBy: [{ order: 'asc' }, { name: 'asc' }], select: { id: true, name: true, unitId: true } }),
   ]);
 
   return (
@@ -114,6 +120,7 @@ export default async function PagamentosPage() {
             units={units}
             miscTypes={miscTypes.map((t) => ({ id: t.id, name: t.name }))}
             suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
+            sectors={sectors}
             freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, defaultValue: Number(f.defaultValue), unitIds: f.units.map((u) => u.unitId), sectorRates: f.sectorRates.map((r) => ({ sectorName: r.sectorName, dayValue: Number(r.dayValue) })) }))}
             mine={(mine as ReqRow[]).map(toDTO)}
             toApprove={(toApprove as ReqRow[]).map(toDTO)}

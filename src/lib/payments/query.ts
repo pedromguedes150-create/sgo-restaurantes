@@ -11,6 +11,7 @@ const REQUEST_INCLUDE = {
   freelancer: { select: { name: true, pixKey: true } },
   miscType: { select: { name: true } },
   supplier: { select: { name: true } },
+  workSector: { select: { id: true, name: true } },
 } satisfies Prisma.PaymentRequestInclude;
 
 /**

@@ -26,6 +26,7 @@ import { shortUnitName } from '@/lib/unit-name';
 export interface PayDetail {
   workDate: string | null; shift: string | null; workStartTime: string | null; workEndTime: string | null;
   hours: number | null; transportValue: number | null; coverageSector: string | null;
+  workSectorId?: string | null; workSectorName?: string | null;
   collaboratorName: string | null; reason: string | null; beneficiary: string | null; description: string | null;
   pixKey: string | null; supplierName: string | null; miscTypeName: string | null;
   approvedBy: string | null; approvedAt: string | null; paidBy: string | null; paidAt: string | null;
@@ -37,6 +38,7 @@ export interface PayReq {
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID';
   amount: number;
   unit: string;
+  unitId?: string;
   unitCode?: string;
   requestedBy: string | null;
   title: string; // descrição curta (freelancer/colaborador/beneficiário)
@@ -57,6 +59,8 @@ interface Unit { id: string; name: string }
 interface Freelancer { id: string; name: string; defaultValue: number; unitIds: string[]; sectorRates?: { sectorName: string; dayValue: number }[] }
 interface MiscType { id: string; name: string }
 interface Supplier { id: string; name: string }
+/** Setor de uma unidade (Mapa de Funções): o freelancer já nasce alocado num deles. */
+interface SectorOpt { id: string; name: string; unitId: string }
 
 const TYPE_LABEL = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra', MISC: 'Avulso' } as const;
 const STATUS: Record<PayReq['status'], { label: string; tone: StatusTone }> = {
@@ -103,6 +107,7 @@ export function PaymentsClient({
   freelancers,
   miscTypes,
   suppliers = [],
+  sectors = [],
   mine,
   toApprove,
   toPay,
@@ -117,6 +122,8 @@ export function PaymentsClient({
   freelancers: Freelancer[];
   miscTypes: MiscType[];
   suppliers?: Supplier[];
+  /** Setores ativos das unidades do usuário — obrigatório no freelancer (04/09). */
+  sectors?: SectorOpt[];
   mine: PayReq[];
   toApprove: PayReq[];
   toPay: PayReq[];
@@ -233,7 +240,7 @@ export function PaymentsClient({
         options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label, badge: t.badge, badgeTone: 'danger' as const }))}
       />
 
-      {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} onDone={() => { setTab('minhas'); router.refresh(); }} />}
+      {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} onDone={() => { setTab('minhas'); router.refresh(); }} />}
 
       <ListaCortada mostrando={
         tab === 'minhas' ? mine.length : tab === 'aprovar' ? toApprove.length : tab === 'pagar' ? toPay.length : tab === 'historico' ? history.length : 0
@@ -279,6 +286,7 @@ export function PaymentsClient({
           )}
           <List
             items={toApprove}
+            editor={{ sectors }}
             selection={toApprove.length > 1 ? { ids: sel, onToggle: (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }) } : undefined}
             actions={(r) => (
               <div className="flex gap-2">
@@ -383,6 +391,7 @@ function DetailView({ r }: { r: PayReq }) {
     rows.push(['Freelancer', r.title]);
     if (d?.pixKey) rows.push(['Chave PIX', d.pixKey]);
     if (d?.coverageSector) rows.push(['Cobertura de setor', d.coverageSector]);
+    rows.push(['Setor / função', d?.workSectorName ?? 'a alocar no Mapa']);
     if (d?.workDate) rows.push(['Dia do trabalho', fmtDay(d.workDate)]);
     if (d?.workStartTime || d?.workEndTime) rows.push(['Horário', `${d?.workStartTime ?? '?'} – ${d?.workEndTime ?? '?'}`]);
     if (d?.hours != null) rows.push(['Horas', String(d.hours)]);
@@ -461,14 +470,19 @@ function Row({ r, onOpen, selected, onSelect }: { r: PayReq; onOpen: () => void;
   );
 }
 
-function List({ items, actions, selection }: {
+function List({ items, actions, selection, editor }: {
   items: PayReq[];
   actions?: (r: PayReq) => React.ReactNode;
   /** Quando presente, cada linha ganha caixa de seleção (aprovação em lote). */
   selection?: { ids: Set<string>; onToggle: (id: string) => void };
+  /** Quando presente, o detalhe ganha "Editar": o aprovador corrige antes de aprovar (04/09). */
+  editor?: { sectors: SectorOpt[] };
 }) {
+  const router = useRouter();
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const detail = items.find((i) => i.id === detailId) ?? null;
+  const abrir = (id: string) => { setDetailId(id); setEditing(false); };
   if (items.length === 0) return <p className="text-sm text-ink-500">Nada por aqui.</p>;
 
   // Agrupa por DIA (mais recente primeiro) e, dentro do dia, por UNIDADE (pedido 16/07)
@@ -498,7 +512,7 @@ function List({ items, actions, selection }: {
                     <Row
                       key={r.id}
                       r={r}
-                      onOpen={() => setDetailId(r.id)}
+                      onOpen={() => abrir(r.id)}
                       selected={selection?.ids.has(r.id)}
                       onSelect={selection ? () => selection.onToggle(r.id) : undefined}
                     />
@@ -513,12 +527,27 @@ function List({ items, actions, selection }: {
       {/* Detalhe fora do fluxo: a lista não se mexe quando se abre um item. */}
       <Sheet
         open={!!detail}
-        onClose={() => setDetailId(null)}
-        title={detail ? `${TYPE_LABEL[detail.type]} · ${detail.title}` : ''}
+        onClose={() => { setDetailId(null); setEditing(false); }}
+        title={detail ? `${editing ? 'Editar · ' : ''}${TYPE_LABEL[detail.type]} · ${detail.title}` : ''}
         description={detail ? `${formatBRL(detail.amount)} · ${shortUnitName(detail.unit)}` : undefined}
-        footer={detail && actions ? actions(detail) : undefined}
+        footer={detail && !editing && (actions || editor) ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {editor && detail.status === 'PENDING' && (
+              <DsButton size="sm" variant="ghost" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Editar</DsButton>
+            )}
+            {actions?.(detail)}
+          </div>
+        ) : undefined}
       >
-        {detail && (
+        {detail && editing && editor && (
+          <ApproverEditForm
+            r={detail}
+            sectors={editor.sectors.filter((s) => s.unitId === detail.unitId)}
+            onDone={() => { setEditing(false); router.refresh(); }}
+            onCancel={() => setEditing(false)}
+          />
+        )}
+        {detail && !editing && (
           <>
             {detail.dateEdited && (
               <Banner
@@ -545,7 +574,7 @@ function List({ items, actions, selection }: {
   );
 }
 
-function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; onDone: () => void }) {
+function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; sectors: SectorOpt[]; onDone: () => void }) {
   const [supplierId, setSupplierId] = useState('');
   const [type, setType] = useState<'FREELANCER' | 'OVERTIME' | 'MISC'>('FREELANCER');
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
@@ -556,6 +585,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
   const [shift, setShift] = useState('');
   const [workStartTime, setWorkStartTime] = useState('');
   const [workEndTime, setWorkEndTime] = useState('');
+  const [workSectorId, setWorkSectorId] = useState(''); // setor/função contratado — obrigatório (04/09)
   const [transportValue, setTransportValue] = useState('');
   const [coverage, setCoverage] = useState(false); // cobertura temporária de setor (16/07)
   const [coverageSector, setCoverageSector] = useState('');
@@ -569,6 +599,15 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
   const [err, setErr] = useState<string | null>(null);
 
   const unitFreelancers = useMemo(() => freelancers.filter((f) => f.unitIds.includes(unitId)), [freelancers, unitId]);
+  const unitSectors = useMemo(() => sectors.filter((s) => s.unitId === unitId), [sectors, unitId]);
+  // Trocou a unidade: o setor era da outra.
+  useEffect(() => { setWorkSectorId(''); }, [unitId]);
+  // Cobertura de setor escolhida: o setor de mesmo nome já vem marcado.
+  useEffect(() => {
+    if (!coverage || !coverageSector) return;
+    const igual = unitSectors.find((s) => s.name.trim().toLowerCase() === coverageSector.trim().toLowerCase());
+    if (igual) setWorkSectorId(igual.id);
+  }, [coverage, coverageSector, unitSectors]);
 
   const selectedFreelancer = useMemo(() => freelancers.find((f) => f.id === freelancerId), [freelancers, freelancerId]);
   const amt = parseFloat((amount || '0').replace(',', '.'));
@@ -591,11 +630,16 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
     const covRate = coverage ? (selectedFreelancer?.sectorRates ?? []).find((r) => r.sectorName === coverageSector)?.dayValue ?? 0 : 0;
     const effAmt = coverage ? covRate : autoPriced ? (calc?.amount ?? 0) : manualAmt;
     if (coverage && !coverageSector) { setErr('Escolha o setor da cobertura.'); return; }
+    if (type === 'FREELANCER') {
+      if (!freelancerId) { setErr('Escolha o freelancer.'); return; }
+      if (!workDate) { setErr('Informe o dia do trabalho.'); return; }
+      if (!workSectorId) { setErr('Escolha o setor/função para o qual o freelancer foi contratado.'); return; }
+    }
     if (!unitId || (!coverage && !autoPriced && !effAmt)) { setErr('Informe unidade e valor.'); return; }
     setBusy(true);
     try {
       const body: Record<string, unknown> = { type, unitId, amount: effAmt, description };
-      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, hours: hours ? Number(hours) : undefined, coverageSector: coverage && coverageSector ? coverageSector : undefined });
+      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workSectorId, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, hours: hours ? Number(hours) : undefined, coverageSector: coverage && coverageSector ? coverageSector : undefined });
       if (type === 'OVERTIME') Object.assign(body, { collaboratorName, workDate, hours: hours ? Number(hours) : undefined, reason, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined });
       if (type === 'MISC') Object.assign(body, { miscTypeId, beneficiary, supplierId: supplierId || undefined });
       const res = await fetch('/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -659,11 +703,21 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
             </div>
           )}
           <DatePicker label="Dia do trabalho" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
+          <DsSelect
+            label="Setor / função contratada"
+            required
+            placeholder={unitSectors.length ? 'Selecione o setor…' : 'Unidade sem setores cadastrados'}
+            value={workSectorId}
+            onValueChange={setWorkSectorId}
+            disabled={unitSectors.length === 0}
+            options={unitSectors.map((s) => ({ value: s.id, label: s.name }))}
+            hint={unitSectors.length ? undefined : 'O Admin cadastra os setores em Pessoas → Mapa de Funções.'}
+          />
           <div className="grid grid-cols-2 gap-2">
             <TimePicker label="Hora início" value={workStartTime || null} onValueChange={(v) => setWorkStartTime(v ?? '')} />
             <TimePicker label="Hora fim" value={workEndTime || null} onValueChange={(v) => setWorkEndTime(v ?? '')} />
           </div>
-          <p className="text-xs text-ink-500">Com o dia e a hora preenchidos, o freelancer fica disponível para alocar no Mapa da unidade naquele dia/horário.</p>
+          <p className="text-xs text-ink-500">O freelancer já entra no Mapa da unidade nesse dia, no setor escolhido. Sem horário, conta o dia todo.</p>
           <div><Label>Vale transporte (R$, opcional)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>
           {calc?.configured && (
             <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
@@ -731,6 +785,134 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, onDone }: { unit
 
       {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
       <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Plus className="h-5 w-5" /> Enviar solicitação</Button>
+    </div>
+  );
+}
+
+/**
+ * O aprovador corrige a solicitação ANTES de aprovar (04/09). Mesmos campos do
+ * lançamento, por tipo. Freelancer com valor/hora cadastrado na unidade tem o
+ * valor recalculado do horário (prévia igual à da tela Nova); cobertura de setor
+ * tem valor fixo do dia. O servidor confere tudo de novo e registra antes/depois.
+ */
+function ApproverEditForm({ r, sectors, onDone, onCancel }: { r: PayReq; sectors: SectorOpt[]; onDone: () => void; onCancel: () => void }) {
+  const d = r.detail;
+  const dec = (n: number | null | undefined) => (n == null ? '' : String(n).replace('.', ','));
+  const num = (s: string) => parseFloat((s || '0').replace(/\./g, '').replace(',', '.')) || 0;
+  const [workDate, setWorkDate] = useState(d?.workDate ?? '');
+  const [start, setStart] = useState(d?.workStartTime ?? '');
+  const [end, setEnd] = useState(d?.workEndTime ?? '');
+  const [workSectorId, setWorkSectorId] = useState(d?.workSectorId ?? '');
+  const [transport, setTransport] = useState(dec(d?.transportValue));
+  const [amount, setAmount] = useState(dec(r.amount));
+  const [description, setDescription] = useState(d?.description ?? '');
+  const [collaboratorName, setCollaboratorName] = useState(d?.collaboratorName ?? '');
+  const [hours, setHours] = useState(dec(d?.hours));
+  const [reason, setReason] = useState(d?.reason ?? '');
+  const [beneficiary, setBeneficiary] = useState(d?.beneficiary ?? '');
+  const [calc, setCalc] = useState<{ configured: boolean; hours: number; rate: number | null; amount: number; transport: number; dayTypeLabel: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const coverage = r.type === 'FREELANCER' && Boolean(d?.coverageSector);
+  const coverageAmount = coverage ? (r.standardValue ?? 0) + num(transport) : null;
+
+  // Prévia do valor: horas × valor/hora do dia + VT, como na tela Nova.
+  useEffect(() => {
+    if (r.type !== 'FREELANCER' || coverage || !r.unitId || !workDate || !start || !end) { setCalc(null); return; }
+    let cancelled = false;
+    fetch('/api/payments/freelancer-calc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unitId: r.unitId, workDate, start, end, transport: num(transport) }) })
+      .then((res) => res.json()).then((data) => { if (!cancelled) setCalc(data); }).catch(() => { if (!cancelled) setCalc(null); });
+    return () => { cancelled = true; };
+  }, [r.type, r.unitId, coverage, workDate, start, end, transport]); // eslint-disable-line react-hooks/exhaustive-deps
+  const autoPriced = Boolean(calc?.configured);
+
+  async function salvar() {
+    setErr(null);
+    const body: Record<string, unknown> = { action: 'approverEdit', description };
+    if (r.type === 'FREELANCER') {
+      if (!workDate) { setErr('Informe o dia do trabalho.'); return; }
+      if (!workSectorId) { setErr('Escolha o setor/função.'); return; }
+      if (Boolean(start) !== Boolean(end)) { setErr('Informe hora início e hora fim.'); return; }
+      Object.assign(body, { workDate, workStartTime: start || null, workEndTime: end || null, workSectorId, transportValue: transport ? num(transport) : null });
+      if (!autoPriced && !coverage) body.amount = num(amount);
+    } else if (r.type === 'OVERTIME') {
+      Object.assign(body, { collaboratorName, workDate: workDate || '', hours: hours ? num(hours) : null, reason, transportValue: transport ? num(transport) : null, amount: num(amount) });
+    } else {
+      Object.assign(body, { beneficiary, amount: num(amount) });
+    }
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/payments/${r.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setErr(data.error ?? 'Falha ao salvar'); return; }
+      onDone();
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="space-y-3">
+      {r.type === 'FREELANCER' && (
+        <>
+          <p className="text-sm font-semibold text-ink-900">{r.title}{d?.pixKey ? <span className="font-normal text-ink-500"> · PIX {d.pixKey}</span> : null}</p>
+          {coverage && <Banner tone="info" title={`Cobertura de setor: ${d?.coverageSector}`} description="Valor fechado por dia (do cadastro do freelancer) + vale transporte." />}
+          <DatePicker label="Dia do trabalho" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
+          <DsSelect
+            label="Setor / função contratada" required
+            placeholder={sectors.length ? 'Selecione o setor…' : 'Unidade sem setores cadastrados'}
+            value={workSectorId} onValueChange={setWorkSectorId} disabled={sectors.length === 0}
+            options={sectors.map((s) => ({ value: s.id, label: s.name }))}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <TimePicker label="Hora início" value={start || null} onValueChange={(v) => setStart(v ?? '')} />
+            <TimePicker label="Hora fim" value={end || null} onValueChange={(v) => setEnd(v ?? '')} />
+          </div>
+          <div><Label>Vale transporte (R$)</Label><Input inputMode="decimal" value={transport} onChange={(e) => setTransport(e.target.value)} placeholder="0,00" /></div>
+          {coverage ? (
+            <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
+              <p className="text-xs text-ink-500">Valor do dia + VT</p>
+              <p className="sgo-type-24 font-semibold text-ink-900">{formatBRL(coverageAmount ?? 0)}</p>
+            </div>
+          ) : autoPriced && calc ? (
+            <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
+              <p className="text-xs text-ink-500">Valor calculado ({calc.dayTypeLabel})</p>
+              <p className="sgo-type-24 font-semibold text-ink-900">{formatBRL(calc.amount)}</p>
+              <p className="text-xs text-ink-500">{calc.hours}h × {formatBRL(calc.rate ?? 0)}/h{calc.transport > 0 ? ` + ${formatBRL(calc.transport)} VT` : ''}</p>
+            </div>
+          ) : (
+            <div>
+              <Label>Valor (R$)</Label>
+              <Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              {r.standardValue != null && <p className="mt-1 text-xs text-ink-500">Padrão cadastrado: {formatBRL(r.standardValue)}.</p>}
+            </div>
+          )}
+        </>
+      )}
+      {r.type === 'OVERTIME' && (
+        <>
+          <div><Label>Colaborador</Label><Input value={collaboratorName} onChange={(e) => setCollaboratorName(e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <DatePicker label="Data" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
+            <div><Label>Horas</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} /></div>
+          </div>
+          <div><Label>Motivo</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+          <div><Label>Vale transporte (R$)</Label><Input inputMode="decimal" value={transport} onChange={(e) => setTransport(e.target.value)} placeholder="0,00" /></div>
+          <div><Label>Valor total (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+        </>
+      )}
+      {r.type === 'MISC' && (
+        <>
+          <div><Label>Beneficiário</Label><Input value={beneficiary} onChange={(e) => setBeneficiary(e.target.value)} /></div>
+          <div><Label>Valor (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+        </>
+      )}
+      <div><Label>Observações</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+      {err && <p className="text-sm text-danger">{err}</p>}
+      <p className="text-xs text-ink-500">A correção fica na Auditoria (antes e depois) e o solicitante é avisado.</p>
+      <div className="flex justify-end gap-2">
+        <DsButton size="sm" variant="ghost" disabled={busy} onClick={onCancel}>Cancelar</DsButton>
+        <DsButton size="sm" loading={busy} onClick={salvar}><Check className="h-4 w-4" /> Salvar correções</DsButton>
+      </div>
     </div>
   );
 }

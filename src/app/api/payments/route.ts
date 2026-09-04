@@ -31,6 +31,7 @@ export async function POST(req: Request) {
       hours: b.hours != null ? Number(b.hours) : undefined,
       workStartTime: b.workStartTime,
       workEndTime: b.workEndTime,
+      workSectorId: b.workSectorId,
       transportValue: b.transportValue != null ? Number(b.transportValue) : undefined,
       collaboratorName: b.collaboratorName,
       reason: b.reason,
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
 
   if (!result.ok) {
     const map: Record<string, number> = { FORBIDDEN: 403, INVALID: 400 };
-    return NextResponse.json({ error: result.reason === 'FORBIDDEN' ? 'Sem acesso a esta unidade' : 'Dados inválidos', reason: result.reason }, { status: map[result.reason] });
+    return NextResponse.json({ error: result.reason === 'FORBIDDEN' ? 'Sem acesso a esta unidade' : (result.detail ?? 'Dados inválidos'), reason: result.reason }, { status: map[result.reason] });
   }
   return NextResponse.json({ ok: true, id: result.id });
 }
