@@ -100,13 +100,16 @@ describe('Ciclos que não fecham na semana', () => {
 });
 
 describe('Folga fixa + domingo em ciclo', () => {
-  it('a folga vai para o domingo nas semanas do ciclo e volta ao dia fixo', () => {
-    const v = base({ weeklyOffDay: 2, offMode: 'FIXED_PLUS_SUNDAY', sundayEveryWeeks: 2, startDate: d('2026-05-10') });
-    /* Semana 0 (10/05, domingo): folga no domingo.
-       Semana 1: folga na terça (12+7 = 19/05). */
-    expect(folgaNoDia(v, d('2026-05-10'))).toBe(true);
-    expect(folgaNoDia(v, d('2026-05-19'))).toBe(true);
-    expect(folgaNoDia(v, d('2026-05-17'))).toBe(false);
+  it('a folga vai para o domingo nas semanas do MÊS e volta ao dia fixo', () => {
+    const v = base({ weeklyOffDay: 2, offMode: 'FIXED_PLUS_SUNDAY', sundayEveryWeeks: 2, startDate: d('2026-05-01') });
+    /* A cada 2 semanas do mês = 1ª e 3ª. Em maio/2026 as semanas começam nos
+       domingos 03, 10, 17, 24 e 31 — então 03/05 (1ª) e 17/05 (3ª) são de
+       domingo, e nas outras a folga fica na terça. */
+    expect(folgaNoDia(v, d('2026-05-03'))).toBe(true);   // domingo da 1ª semana
+    expect(folgaNoDia(v, d('2026-05-17'))).toBe(true);   // domingo da 3ª semana
+    expect(folgaNoDia(v, d('2026-05-10'))).toBe(false);  // 2ª semana: folga na terça
+    expect(folgaNoDia(v, d('2026-05-12'))).toBe(true);   // ...que é esta
+    expect(folgaNoDia(v, d('2026-05-05'))).toBe(false);  // terça da semana do domingo
   });
 
   it('nenhuma semana fica sem folga', () => {

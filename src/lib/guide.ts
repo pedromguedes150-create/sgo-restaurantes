@@ -614,6 +614,7 @@ export const GUIDE: GuideSection[] = [
           'A lista de Colaboradores agora obedece a unidade escolhida no cabeçalho — se aparecer gente de outra unidade, é porque o seletor está em "todas".',
           'PELA TELA DE ESCALA (o caminho de sempre): em PESSOAS → Escala, "Cadastrar escala", escolhendo o colaborador no formulário.',
           'Em qualquer um dos dois, a data "a partir de quando vale" abre uma vigência nova e fecha a anterior na véspera: os meses passados continuam mostrando o que valia neles.',
+          'FOLGA FIXA + DOMINGO EM CICLO (v1.70.0): a conta é por semana do MÊS e recomeça todo dia 1º. "A cada 2 semanas" = domingo da 1ª e da 3ª semana, todo mês; "a cada 4" = um domingo por mês, na 1ª semana. O campo aceita de 1 a 5, e a tela mostra embaixo em quais semanas a folga vai cair.',
         ],
       },
       {
