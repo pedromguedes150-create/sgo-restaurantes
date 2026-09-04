@@ -14,11 +14,15 @@ import { DatePicker } from '@/components/ui/ds/date-picker';
 import { Group } from '@/components/ui/ds/group';
 import { Sheet } from '@/components/ui/ds/sheet';
 import { CalendarCog } from 'lucide-react';
-import { EmployeeScheduleForm, type TipoDeEscala, type Turno } from '@/components/schedule/employee-schedule-form';
+import { EmployeeScheduleForm, type TipoDeEscala, type Turno, type EscalaAtual } from '@/components/schedule/employee-schedule-form';
 
 export interface Collab { id: string; name: string; jobTitle: string | null; units: string[]; unitIds: string[] }
 /** A escala vigente da pessoa, para a linha dizer o que já está cadastrado. */
-export interface ConfigDaPessoa { tipo: string | null; folga: string; desde: string; horario: string | null }
+export interface ConfigDaPessoa {
+  tipo: string | null; folga: string; desde: string; horario: string | null;
+  /** O que a folha precisa para abrir preenchida com o que já vale. */
+  atual: EscalaAtual;
+}
 export interface UnidadeOpt { id: string; name: string }
 export interface Vac { id: string; collaborator: string; unit: string; start: string; end: string; status: 'CONFIRMED' | 'CHANGE_REQUESTED' | 'APPROVED' | 'REQUESTED'; changeNote: string | null }
 export interface Sched { id: string; collaborator: string; unit: string; date: string; planned: string; variation: 'NONE' | 'ABSENCE' | 'LATE' | 'SWAP'; note: string | null }
@@ -102,6 +106,7 @@ export function PeopleClient({
             unitId={aberto.unitIds[0] ?? ''}
             unidades={unidades.filter((u) => aberto.unitIds.includes(u.id))}
             pessoaFixa={{ id: aberto.id, name: aberto.name }}
+            atual={configs[aberto.id]?.atual ?? null}
             pessoas={[{ id: aberto.id, name: aberto.name }]}
             tipos={tipos}
             turnos={turnos}

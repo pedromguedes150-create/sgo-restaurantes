@@ -106,6 +106,11 @@ export default async function PessoasModulePage({ searchParams }: { searchParams
               folga: resumoDaFolga(c.offMode, c.weeklyOffDay, c.sundayEveryWeeks),
               desde: d(c.startDate),
               horario: c.startTime && c.endTime ? `${c.startTime}–${c.endTime}` : null,
+              atual: {
+                templateId: c.templateId, offMode: c.offMode, weeklyOffDay: c.weeklyOffDay,
+                sundayEveryWeeks: c.sundayEveryWeeks, shiftId: c.shiftId,
+                startTime: c.startTime, breakTime: c.breakTime, endTime: c.endTime,
+              },
             }]))}
             filtradoPor={nomesFiltrados}
             total={total}

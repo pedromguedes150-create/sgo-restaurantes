@@ -9,6 +9,38 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.72.0 — 2026-09-04 (A folha de escala do colaborador: botão sempre à vista e campos já preenchidos)
+
+### O relato
+*"Não está gravando"* — na folha de Configuração de escala aberta pelo colaborador.
+
+### O que eu verifiquei primeiro
+**A rota grava.** `tests/employee-schedule-sheet-route.integration.test.ts` chama
+`/api/schedule` com o **corpo exato** que a folha monta: a vigência é criada, gravar de novo fecha a
+anterior na véspera, e um Gerente com a aba Planejado fechada continua conseguindo cadastrar (o
+cadastro do colaborador não é a edição do Planejado do mês). Três casos, todos verdes — então o
+problema não estava no servidor.
+
+### Os dois defeitos, na tela
+- **O botão ficava abaixo da dobra.** O formulário rola DENTRO da folha, e "Salvar escala" era a
+  última coisa depois dos horários: quem preenchia tudo não via mais nada para clicar. Agora a barra
+  de ação **gruda no fim da folha** (`sticky`), com o erro em vermelho ali junto, e o botão diz
+  **"Salvando…"** enquanto grava. Botão de salvar não pode depender de rolagem.
+- **A folha abria com os padrões**, não com o que a pessoa tem. Para quem folga **quinta desde
+  31/08**, ela abria em **Domingo, hoje** — e quem quisesse só corrigir o horário trocava a folga da
+  pessoa sem perceber. Agora ela abre com o **tipo, o modo, o dia de folga, o turno e os horários já
+  cadastrados**; só a data "a partir de quando vale" continua em hoje, porque cada gravação abre uma
+  vigência nova.
+
+### Testes
+- `tests/employee-schedule-sheet-route.integration.test.ts` (3) — a rota com o corpo da folha.
+- `tests/employee-schedule-form-render.test.tsx` (4) — a barra grudada existe dentro do colaborador
+  e **não** no formulário solto da tela de Escala; a folha traz "Quinta" e os horários de quem já
+  tem escala, e cai nos padrões só para quem não tem.
+- Suíte inteira: **718 testes verdes**.
+
+---
+
 ## v1.71.0 — 2026-09-04 (Freelancer alocado aparece no setor · a folha para de encostar na borda)
 
 ### O relato
