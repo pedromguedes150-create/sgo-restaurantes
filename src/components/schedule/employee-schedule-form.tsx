@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
-import { DIAS_DA_SEMANA, MODO_LABEL, MODO_EXPLICACAO, DOMINGO_A_CADA_PADRAO, type ModoDeFolga } from '@/lib/schedule/vigencia';
+import { DIAS_DA_SEMANA, MODO_LABEL, MODO_EXPLICACAO, DOMINGO_A_CADA_PADRAO, SEMANAS_NO_MES, semanasComDomingo, type ModoDeFolga } from '@/lib/schedule/vigencia';
 
 export interface TipoDeEscala {
   id: string;
@@ -158,8 +158,18 @@ export function EmployeeScheduleForm({
                 />
                 {modo === 'FIXED_PLUS_SUNDAY' && (
                   <div>
-                    <Label className="text-xs">Domingo a cada quantas semanas?</Label>
-                    <Input inputMode="numeric" value={aCada} onChange={(e) => setACada(e.target.value)} className="h-9 text-sm" />
+                    <Label className="text-xs">Domingo a cada quantas semanas do mês?</Label>
+                    <Input
+                      inputMode="numeric" value={aCada} className="h-9 text-sm"
+                      onChange={(e) => setACada(e.target.value.replace(/\D/g, '').slice(0, 1))}
+                    />
+                    {/* O efeito do número, escrito — em vez de pedir que a pessoa
+                        imagine em quais semanas a folga vai cair. */}
+                    <p className="mt-1 text-[11px] text-ink-500">
+                      {Number(aCada) >= 1 && Number(aCada) <= SEMANAS_NO_MES
+                        ? <>Folga no domingo da <b>{semanasComDomingo(Number(aCada)).map((s) => `${s}ª`).join(' e ')}</b> semana de cada mês. A conta recomeça todo dia 1º.</>
+                        : <>Informe de 1 a {SEMANAS_NO_MES} — a conta é por semana do mês.</>}
+                    </p>
                   </div>
                 )}
               </div>

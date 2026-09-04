@@ -93,21 +93,58 @@ export const MODO_EXPLICACAO: Record<ModoDeFolga, string> = {
   CYCLE_ONLY: 'Sem dia fixo: a folga anda conforme o ciclo, a partir da data de início.',
 };
 
-/** Semanas entre um domingo e outro no modo FIXED_PLUS_SUNDAY. */
-export const DOMINGO_A_CADA_PADRAO = 7;
+/**
+ * Semanas entre um domingo e outro no modo FIXED_PLUS_SUNDAY.
+ *
+ * 4 = um domingo por mês, na primeira semana. Era 7, herdado de quando a conta
+ * corria pelo ano inteiro; num mês não existe "semana 7", então 7 continua
+ * valendo (dá o mesmo resultado: só a semana 1), mas 4 é o número que descreve
+ * a intenção sem precisar de explicação.
+ */
+export const DOMINGO_A_CADA_PADRAO = 4;
 
-/** Quantas semanas inteiras separam duas datas (a partir da âncora). */
-function semanasDesde(inicio: Date, data: Date): number {
-  return Math.floor((soData(data) - soData(inicio)) / (7 * 86_400_000));
+/** Quantas semanas um mês pode ter — o teto do campo "a cada quantas semanas". */
+export const SEMANAS_NO_MES = 5;
+
+/**
+ * Em que semana DO MÊS a data cai: 0 = a 1ª semana, 1 = a 2ª, e assim por diante.
+ *
+ * A régua é o **domingo que abre a semana**, não o dia em si. Contar pelo dia
+ * do mês (1–7, 8–14…) parece igual e não é: uma semana do calendário atravessa
+ * a fronteira dos blocos, e aí o domingo dela podia cair num bloco e a terça em
+ * outro. Quando isso acontecia, a semana ficava **sem folga nenhuma** — o
+ * domingo não era de folga porque o bloco dele não era o do ciclo, e a terça
+ * também não porque o bloco dela mandava folgar no domingo. Uma semana inteira
+ * trabalhada, que é ilegal e que ninguém notaria olhando a grade.
+ *
+ * Com o domingo como régua, todos os dias da mesma semana recebem a mesma
+ * decisão — e a promessa "uma folga por semana" se mantém.
+ */
+export function semanaDoMes(data: Date): number {
+  const domingo = new Date(soData(data));
+  domingo.setUTCDate(domingo.getUTCDate() - domingo.getUTCDay());
+  return Math.floor((domingo.getUTCDate() - 1) / 7);
+}
+
+/**
+ * As semanas do mês em que a folga cai no domingo, em número de gente (1ª, 2ª…).
+ * A tela usa isto para mostrar o efeito do número escolhido, em vez de pedir
+ * que a pessoa imagine.
+ */
+export function semanasComDomingo(aCada: number): number[] {
+  const n = Math.max(1, Math.trunc(aCada || DOMINGO_A_CADA_PADRAO));
+  const out: number[] = [];
+  for (let s = 0; s < SEMANAS_NO_MES; s += n) out.push(s + 1);
+  return out;
 }
 
 /**
  * O dia da semana em que a folga cai numa data — já considerando o modo.
  *
  * `FIXED_PLUS_SUNDAY` é o único que muda de semana para semana: a cada N
- * semanas contadas desde o início da vigência, a folga daquela semana vai para
- * o domingo; nas outras, fica no dia fixo. Sem isso, "folga fixa na terça"
- * significaria nunca folgar num domingo.
+ * semanas DO MÊS a folga daquela semana vai para o domingo; nas outras, fica no
+ * dia fixo. Sem isso, "folga fixa na terça" significaria nunca folgar num
+ * domingo.
  */
 export function diaDeFolgaNaSemana(
   modo: ModoDeFolga,
@@ -120,9 +157,16 @@ export function diaDeFolgaNaSemana(
   if (modo !== 'FIXED_PLUS_SUNDAY') return fixo;
 
   const n = Math.max(1, Math.trunc(sundayEveryWeeks || DOMINGO_A_CADA_PADRAO));
-  const semana = semanasDesde(inicioDaVigencia, data);
-  /* Semana 0 já é uma "semana de domingo": a promessa começa a valer no
-     primeiro ciclo, não só depois de N semanas de espera. */
+  /* A conta é DENTRO DO MÊS e recomeça no dia 1º. Antes ela corria desde o
+     início da vigência, sem parar: o domingo ia andando pelo calendário e cada
+     mês saía diferente do anterior — não dava para dizer à equipe em que
+     domingo ela folga. Agora "a cada 2 semanas" é sempre 1ª e 3ª do mês.
+     (`inicioDaVigencia` continua na assinatura porque a vigência ainda decide
+     QUAL configuração vale no dia; ela só não conta mais as semanas.) */
+  void inicioDaVigencia;
+  const semana = semanaDoMes(data);
+  /* Semana 1 do mês já é uma "semana de domingo": esperar N semanas atrasaria a
+     promessa logo no mês em que ela foi cadastrada. */
   return semana % n === 0 ? 0 : fixo;
 }
 
@@ -134,6 +178,9 @@ export function resumoDaFolga(modo: ModoDeFolga, weeklyOffDay: number | null, su
   if (modo === 'CYCLE_ONLY') return 'folga pelo ciclo';
   const dia = weeklyOffDay != null ? DIAS_DA_SEMANA[weeklyOffDay] : null;
   if (!dia) return MODO_LABEL[modo].toLowerCase();
-  if (modo === 'FIXED_PLUS_SUNDAY') return `folga ${dia.toLowerCase()} + domingo a cada ${sundayEveryWeeks ?? DOMINGO_A_CADA_PADRAO} semanas`;
+  if (modo === 'FIXED_PLUS_SUNDAY') {
+    const semanas = semanasComDomingo(sundayEveryWeeks ?? DOMINGO_A_CADA_PADRAO);
+    return `folga ${dia.toLowerCase()} + domingo na ${semanas.map((s) => `${s}ª`).join(' e ')} semana do mês`;
+  }
   return `folga ${dia.toLowerCase()}`;
 }

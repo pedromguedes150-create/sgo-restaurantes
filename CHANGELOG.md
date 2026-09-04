@@ -9,6 +9,51 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.69.0 — 2026-09-04 (O domingo em ciclo passa a contar por semana do MÊS)
+
+### O relato
+*"A configuração das semanas está errada: está considerando semanas do ano todo em vez do mês. Deve
+calcular de acordo com o mês."* — com o print da caixa recusando o valor: *"Informe de quantas em
+quantas semanas a folga cai no domingo (1 a 52)"*.
+
+### O que estava acontecendo
+No modo **Folga fixa + domingo em ciclo**, a conta corria **desde o início da vigência, sem parar**:
+semana 0, 1, 2… indefinidamente. Com "a cada 7", o domingo de folga ia andando pelo calendário e
+caía num dia diferente a cada mês — não dava para dizer à equipe em que domingo ela folga. Por isso
+o campo aceitava até 52.
+
+### Como ficou
+- **A conta recomeça todo dia 1º.** "A cada 2 semanas" é sempre o domingo da **1ª e da 3ª** semana
+  do mês, em todos os meses. O campo passou a aceitar **1 a 5** — um mês não tem mais que cinco
+  semanas, e aceitar 52 só produzia um número que nunca acontecia.
+- **A tela diz o efeito do número**, em vez de pedir que a pessoa imagine: *"Folga no domingo da 1ª
+  e 3ª semana de cada mês. A conta recomeça todo dia 1º."*
+- **A lista de Pessoas também**: o resumo da linha virou *"folga segunda + domingo na 1ª e 3ª semana
+  do mês"*.
+- O padrão passou de 7 para **4** (um domingo por mês, na 1ª semana). Quem já está gravado com 7
+  continua funcionando e dá o mesmo resultado — num mês não existe "semana 7".
+
+### O defeito que a mudança quase introduziu
+A primeira versão contava pelo **dia do mês** (1–7, 8–14…). Parece a mesma coisa e não é: uma semana
+do calendário atravessa a fronteira dos blocos, e quando isso acontecia a semana ficava **sem folga
+nenhuma** — o domingo não folgava porque o bloco dele não era o do ciclo, e a terça também não
+porque o bloco dela mandava folgar no domingo. Uma semana inteira trabalhada, ilegal, que ninguém
+notaria olhando a grade. **O teste "nenhuma semana fica sem folga" pegou** (`'TTTTTTT'`).
+
+A régua passou a ser o **domingo que abre a semana**: todos os dias da mesma semana recebem a mesma
+decisão, e a promessa de uma folga por semana se mantém.
+
+### Testes
+- `tests/schedule-vigencia.test.ts` — três casos novos, entre eles a **varredura das 53 semanas de
+  2026 em todos os N de 1 a 5**, exigindo uma decisão só por semana; mais a prova de que a conta
+  recomeça a cada mês (a 1ª semana de maio, junho, julho e agosto dá o mesmo resultado).
+- Os dois testes que descreviam a conta corrida foram **atualizados de propósito**, com o motivo
+  escrito — inclusive o efeito de virada de mês (5ª semana e 1ª semana seguidas são as duas de
+  domingo, consequência de recomeçar a conta).
+- Suíte inteira: **674 testes verdes**.
+
+---
+
 ## v1.68.0 — 2026-09-04 (Escala no formato do SGO dos postos — fases 1 e 3)
 
 ### O pedido
