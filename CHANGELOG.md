@@ -9,6 +9,18 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.76.0 — 2026-09-04 (Pagamentos: reprovar em lote)
+
+- Na aba Para Aprovar, a barra de seleção ganhou **"Reprovar selecionadas"** ao lado de
+  "Aprovar selecionadas". Pede **um motivo**, que vale para todas as marcadas e chega a cada
+  solicitante no aviso de rejeição. Cada item passa pela mesma checagem da reprovação individual
+  (papel aprovador, estado pendente) e entra na Auditoria; o que não passar volta discriminado.
+- Correção de matriz: a rota de lote estava presa à aba **Pagar**; aprovar/reprovar em lote é
+  coisa da aba **Aprovar**, e agora obedece a ela.
+- Teste `payments-lote-reprovar.integration.test.ts`.
+
+---
+
 ## v1.75.0 — 2026-09-04 (Pagamentos: alerta de freelancer recorrente e filtro por unidade)
 
 ### Alerta de recorrência
