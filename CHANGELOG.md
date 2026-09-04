@@ -9,6 +9,44 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.73.1 — 2026-09-04 (O "Limpar o mês" deixava o último dia para trás)
+
+### O relato
+*"Usei o botão limpar e ficou o último dia preenchido."* — com o print do mês inteiro vazio e a
+coluna do dia 30 ainda marcada.
+
+### A causa, que é minha
+O módulo de escala grava cada dia ao **meio-dia UTC** (`dayUTC` usa `12:00`). A faixa que escrevi
+para apagar ia de `dia 1 00:00` até `último dia 00:00` — e o último dia está gravado às **12:00**,
+depois do limite. Ele ficava de fora do intervalo e **sobrevivia sozinho**, exatamente como no
+print.
+
+**Por que o teste não pegou:** a fixture criava as marcações direto no banco, **à meia-noite**, e o
+aplicativo grava ao meio-dia. O teste passava contra um dado que não existe na vida real. Agora ele
+usa o **gravador de verdade** (`setActual`) e marca explicitamente o **último dia do mês**.
+Contra o código anterior, **6 dos 12 casos falham**.
+
+### O mesmo erro no outro extremo — este estava em produção desde a v1.68.0
+A grade lia o mês com limites ao meio-dia, e o **Planejado congelado** era gravado à **meia-noite**:
+a linha do **dia 1** ficava fora da consulta, e o congelamento daquele dia **nunca era aplicado**.
+Ninguém notaria — o dia 1 caía de volta no calculado, que quase sempre dá o mesmo valor.
+
+- A leitura da grade e a limpeza passaram a usar a **faixa do mês inteiro** (do dia 1 às 00:00 ao
+  dia 1 do mês seguinte). **Data é dia; a hora dentro dele não decide nada.**
+- O congelamento passou a gravar ao meio-dia, como o resto do módulo.
+- **Migração de dados** normaliza o que já foi congelado (`20260904180000_plan_override_meio_dia`).
+  Só o "Preencher automaticamente" escreve nessa tabela, então nada que alguém decidiu muda: o dia
+  continua o mesmo, muda a hora dentro dele.
+
+### Testes
+`tests/schedule-limpar-mes.integration.test.ts` passou de 9 para **14 casos**: o último dia entra na
+contagem e some junto, a grade fica de fato vazia depois da limpeza, e uma linha gravada à
+meia-noite (dado da v1.68.0) continua valendo na grade e é apagada junto.
+
+Suíte inteira: **732 testes verdes**.
+
+---
+
 ## v1.73.0 — 2026-09-04 (Limpar o mês da escala, com confirmação escrita)
 
 ### O pedido
