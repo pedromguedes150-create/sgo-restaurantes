@@ -3,11 +3,12 @@
 import { useState, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
-import { Wand2, CopyCheck, FileSpreadsheet, Printer, CalendarPlus, Settings2 } from 'lucide-react';
+import { Wand2, CopyCheck, FileSpreadsheet, Printer, CalendarPlus, Settings2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/ds/select';
+import { Sheet } from '@/components/ui/ds/sheet';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
 import { cn } from '@/lib/utils';
@@ -53,7 +54,7 @@ import { MigrateLegacyPanel } from './migrate-legacy-panel';
 import Link from 'next/link';
 import { CalendarRange } from 'lucide-react';
 
-export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false, podeVerFolgas = true, abas = {}, preenchimento = null, podePreencher = false }: {
+export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false, podeVerFolgas = true, abas = {}, preenchimento = null, podePreencher = false, podeLimpar = false, nomeDaUnidade = '', resumoDoMes = null }: {
   units: Unit[]; selectedUnitId: string; year: number; month: number; grid: Grid; collaborators: Unit[]; turnos: Turno[]; patterns: Pattern[];
   /** Tipos cadastrados em Configurações → Tipos de escala. */
   tiposDeEscala?: TipoDeEscala[];
@@ -63,6 +64,12 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
   preenchimento?: { por: string; em: string; primeiro: string } | null;
   /** O perfil pode congelar o mês (aba Planejado com Editar). */
   podePreencher?: boolean;
+  /** Só o Administrador limpa o mês inteiro da unidade. */
+  podeLimpar?: boolean;
+  /** Nome exato da unidade — é o que se digita para confirmar a limpeza. */
+  nomeDaUnidade?: string;
+  /** Quanto existe no mês, para a confirmação dizer o tamanho do estrago. */
+  resumoDoMes?: { congelados: number; realizados: number; avisosPendentes: number } | null;
   /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
   abas?: AcessoAbas;
   /** Quantas escalas ainda usam o gerador antigo (só Admin migra). */
@@ -75,6 +82,9 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
   const [edit, setEdit] = useState<string | null>(null); // `${collabId}:${day}`
   const [showAbsence, setShowAbsence] = useState(false);
   const [showPattern, setShowPattern] = useState(grid.rows.length === 0);
+  /** Folha de limpeza do mês: guarda o que a pessoa digitou para confirmar. */
+  const [limpando, setLimpando] = useState(false);
+  const [confirmacao, setConfirmacao] = useState('');
 
   /** Como o postJson, mas devolve o resumo do preenchimento para a tela contar. */
   async function postResumo(body: Record<string, unknown>): Promise<{ preenchidos: number; semConfiguracao: string[]; dias: number } | null> {
@@ -167,6 +177,13 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
           ><Wand2 className="h-4 w-4" /> Preencher automaticamente</Button>
         )}
         <Button size="sm" variant="outline" onClick={() => setShowPattern((v) => !v)}><Settings2 className="h-4 w-4" /> Cadastrar escala</Button>
+        {podeLimpar && (
+          /* Destrutivo: fica por último, em vermelho, e não abre nada sozinho —
+             a confirmação é uma folha em que se digita o nome da unidade. */
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => { setConfirmacao(''); setLimpando(true); }} className="border-danger/40 text-danger hover:bg-danger/5">
+            <Trash2 className="h-4 w-4" /> Limpar o mês
+          </Button>
+        )}
         {/* O caminho rápido: uma linha por pessoa, em vez de um formulário por
             pessoa. É o que tira a escala de "todo mundo folga no mesmo dia". */}
         {podeVerFolgas && (
@@ -187,6 +204,48 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
       </div>
 
       {showAbsence && mode === 'realizado' && <AbsencePanel unitId={selectedUnitId} collaborators={collaborators} onDone={() => { setShowAbsence(false); router.refresh(); }} />}
+      {limpando && (
+        <Sheet
+          open
+          onClose={() => setLimpando(false)}
+          title="Limpar o mês desta unidade"
+          description={`${MONTHS[month - 1]} de ${year} · ${nomeDaUnidade}`}
+        >
+          <div className="space-y-3">
+            <p className="rounded-md bg-danger/10 p-2 text-sm text-danger">
+              <strong>Isto apaga o mês e não tem desfazer.</strong> Vai sumir:
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-sm text-ink-900">
+              <li><b>{resumoDoMes?.congelados ?? 0}</b> dia(s) de <b>Planejado congelado</b></li>
+              <li><b>{resumoDoMes?.realizados ?? 0}</b> marcação(ões) de <b>Realizado</b> (presença, faltas, atestados, férias)</li>
+              <li><b>{resumoDoMes?.avisosPendentes ?? 0}</b> aviso(s) ao RH deste mês <b>ainda não enviados</b> — os já enviados ficam, porque registram o que a unidade informou</li>
+            </ul>
+            <p className="text-sm text-ink-500">
+              O <b>cadastro de escala dos colaboradores não é tocado</b>: sem o congelado, a grade volta a ser
+              calculada por ele, e você pode montar o mês de novo em “Preencher automaticamente”.
+            </p>
+            <div>
+              <Label className="text-xs">Para confirmar, digite o nome da unidade: <b>{nomeDaUnidade}</b></Label>
+              <Input value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} placeholder={nomeDaUnidade} className="mt-1" />
+            </div>
+            <div className="flex justify-end gap-2 border-t border-line pt-3">
+              <Button size="sm" variant="ghost" onClick={() => setLimpando(false)}>Cancelar</Button>
+              <Button
+                size="sm"
+                /* O servidor confere o nome de novo: a tela é conveniência,
+                   a recusa é o controle. */
+                disabled={busy || confirmacao.trim().toLocaleLowerCase('pt-BR') !== nomeDaUnidade.trim().toLocaleLowerCase('pt-BR')}
+                className="bg-danger text-on-brand hover:bg-danger/90"
+                onClick={async () => {
+                  const r = await postJson({ action: 'clearMonth', unitId: selectedUnitId, year, month, confirmacao });
+                  if (r) { setLimpando(false); setConfirmacao(''); }
+                }}
+              ><Trash2 className="h-4 w-4" /> Limpar o mês</Button>
+            </div>
+          </div>
+        </Sheet>
+      )}
+
       {showPattern && (
         <div className="space-y-3 print:hidden">
           {isAdmin && <MigrateLegacyPanel unitId={selectedUnitId} quantidade={escalasLegadas} busy={busy} />}

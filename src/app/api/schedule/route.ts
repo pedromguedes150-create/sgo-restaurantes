@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { materializarPlanejado } from '@/lib/schedule/materializar';
+import { materializarPlanejado, limparMesDaEscala } from '@/lib/schedule/materializar';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { recusaDeAba } from '@/lib/permissions/guarda-abas';
 import { getSessionUser } from '@/lib/auth/session';
@@ -66,6 +66,16 @@ export async function POST(req: Request) {
   else if (b.action === 'setActual') r = await setActual(user, b, ctx);
   else if (b.action === 'clearActual') r = await clearActual(user, b.collaboratorId, b.unitId, b.date, ctx);
   else if (b.action === 'fill') r = await fillActualFromPlan(user, b, ctx);
+  else if (b.action === 'clearMonth') {
+    /* Limpa o mes (Planejado congelado + Realizado) da unidade. Destrutivo:
+       a confirmacao escrita e conferida no caso de uso, nao so na tela. */
+    const c = await limparMesDaEscala(user, {
+      unitId: String(b.unitId ?? ''), year: Number(b.year), month: Number(b.month),
+      confirmacao: String(b.confirmacao ?? ''),
+    }, ctx);
+    if (!c.ok) r = c;
+    else return NextResponse.json({ ok: true, apagados: c.apagados });
+  }
   else if (b.action === 'fillPlanned') {
     /* Congela o PLANEJADO do mes a partir da configuracao de cada colaborador. */
     const p = await materializarPlanejado(user, { unitId: String(b.unitId ?? ''), year: Number(b.year), month: Number(b.month) }, ctx);
