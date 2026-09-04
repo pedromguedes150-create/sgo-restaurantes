@@ -131,6 +131,7 @@ export async function materializarPlanejado(
             weeklyOffDay: v.weeklyOffDay,
             offMode: v.offMode,
             sundayEveryWeeks: v.sundayEveryWeeks,
+            sundayOfMonth: v.sundayOfMonth,
           }, date)
         : plannedStatus(v, date);
       linhas.push({ collaboratorId: c.id, unitId, date, status });

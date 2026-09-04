@@ -9,6 +9,46 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.74.0 — 2026-09-04 (A folga é toda quinta E um domingo no mês — não uma no lugar da outra)
+
+### A regra, dita por quem opera
+*"Isso aqui é simples: a folga é toda quinta-feira e o colaborador tem direito a 1 domingo no mês —
+1º, 2º, 3º, 4º ou 5º. Ela teria que estar com todas as quintas de folga do mês e o 3º domingo de
+folga."*
+
+### O que o sistema fazia de errado
+O modo "folga fixa + domingo" **movia** a folga da semana para o domingo: naquela semana, a quinta
+virava dia de trabalho. Por isso a grade aparecia "totalmente desconfigurada" — faltavam quintas, e
+sobravam domingos em semanas que não eram para ter.
+
+### Como ficou
+- **As duas folgas se somam.** A pessoa folga **toda quinta** e **também** no domingo escolhido. Na
+  semana desse domingo ela folga **nos dois dias** — é o direito, não um erro de conta.
+- O campo deixou de ser "a cada quantas semanas" (uma caixa de texto que convidava a inventar
+  número) e virou uma **escolha: 1º, 2º, 3º, 4º ou 5º domingo**. A tela escreve o efeito embaixo:
+  *"Folga toda quinta e também no 3º domingo de cada mês — as duas coisas, não uma no lugar da
+  outra."*
+- **Mês sem 5º domingo** simplesmente não tem a folga extra. Empurrar para o 4º seria inventar um
+  dia que ninguém combinou — a tela avisa isso quando você escolhe o 5º.
+- A lista de Pessoas passou a resumir como a equipe fala: *"folga toda quinta + 3º domingo do mês"*.
+
+### Banco
+Coluna nova `employee_schedules.sundayOfMonth` (migração aditiva). A antiga `sundayEveryWeeks` fica
+como legado, sem decidir nada — quem já estava nesse modo recebe o **1º domingo** e vale reconferir
+no cadastro.
+
+### Testes
+- `tests/schedule-planned.test.ts` — **o caso do print**: 6x1, folga quinta, 3º domingo, em
+  setembro/2026. Todas as quintas (3, 10, 17, 24) são folga, o domingo 20 também, os outros domingos
+  são trabalho, e o mês inteiro sai `TTFTTTTTTFTTTTTTFTTFTTTFTTTTTT`.
+- `tests/schedule-vigencia.test.ts` — o enésimo domingo é reconhecido, não se confunde com os
+  outros, ignora dia que não é domingo, e **a folga fixa nunca se move** (varredura das 53 semanas
+  de 2026).
+- Os testes que descreviam a regra antiga foram **reescritos**, com o motivo escrito.
+- Suíte inteira: **738 testes verdes**.
+
+---
+
 ## v1.73.1 — 2026-09-04 (O "Limpar o mês" deixava o último dia para trás)
 
 ### O relato

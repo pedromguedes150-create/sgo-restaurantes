@@ -146,6 +146,7 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
             weeklyOffDay: v.weeklyOffDay,
             offMode: v.offMode,
             sundayEveryWeeks: v.sundayEveryWeeks,
+            sundayOfMonth: v.sundayOfMonth,
           }, date)
         : plannedStatus(v, date);
       const planned = overrideMap.get(`${c.id}|${d}`) ?? planejado;

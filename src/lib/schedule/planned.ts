@@ -1,4 +1,4 @@
-import { soData, diaDeFolgaNaSemana, type ModoDeFolga } from './vigencia';
+import { soData, diaDeFolgaNaSemana, ehDomingoDoMes, type ModoDeFolga } from './vigencia';
 
 /**
  * O Planejado de um dia, a partir da vigência que vale nele.
@@ -23,7 +23,10 @@ export interface VersaoParaPlanejado {
   startDate: Date;
   weeklyOffDay: number | null;
   offMode: ModoDeFolga;
+  /** LEGADO: 'a cada N semanas'. Não decide mais nada — ver sundayOfMonth. */
   sundayEveryWeeks: number | null;
+  /** Qual domingo do mês é a folga EXTRA (1º…5º), no modo FIXED_PLUS_SUNDAY. */
+  sundayOfMonth?: number | null;
 }
 
 /** Dias corridos entre duas datas (só a data conta). */
@@ -38,12 +41,16 @@ export function folgaNoDia(v: VersaoParaPlanejado, data: Date): boolean {
 
   const semanal = ciclo === 7 && v.weeklyOffDay !== null && v.weeklyOffDay !== undefined;
   if (semanal) {
+    /* O domingo do mês é uma folga A MAIS, não uma troca: a folga fixa segue
+       valendo naquela semana. Antes ela era MOVIDA para o domingo, e a quinta
+       sumia da grade — foi o relato do Alan. */
+    if (v.offMode === 'FIXED_PLUS_SUNDAY' && ehDomingoDoMes(data, v.sundayOfMonth)) return true;
+
     const inicioDaFolga = diaDeFolgaNaSemana(
       v.offMode,
       v.weeklyOffDay as number,
       v.startDate,
       data,
-      v.sundayEveryWeeks ?? undefined,
     );
     /* Folgas consecutivas a partir do dia escolhido: no 5x2 com folga no
        sábado, folga sábado E domingo. */

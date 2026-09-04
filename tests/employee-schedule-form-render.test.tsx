@@ -60,7 +60,7 @@ describe('A folha abre com o que já está cadastrado', () => {
     templateId: 't-6x1',
     offMode: 'FIXED_WEEKLY' as const,
     weeklyOffDay: 4, // quinta
-    sundayEveryWeeks: null,
+    sundayOfMonth: 3,
     shiftId: null,
     startTime: '14:00',
     breakTime: '19:00',
