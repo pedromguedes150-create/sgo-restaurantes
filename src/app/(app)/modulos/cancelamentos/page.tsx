@@ -3,6 +3,8 @@ import { StatCard } from '@/components/ui/ds/stat-card';
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { FileText } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
+import { permissaoDeRota } from '@/lib/permissions/links';
+
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listCancellations, getReasons, getCancellationSummary } from '@/lib/cancellations/query';
@@ -16,6 +18,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function CancelamentosPage() {
   const user = (await getSessionUser())!;
+  const podeVer = await permissaoDeRota(user.role);
   const yearMonth = new Date().toISOString().slice(0, 7);
 
   const [pending, reasons, summary, units] = await Promise.all([
@@ -39,11 +42,11 @@ export default async function CancelamentosPage() {
         <LargeTitle title="Cancelamento de Cupons" />
         <FamilyTabs active="/modulos/cancelamentos" />
         <div className="flex flex-wrap gap-2">
-          {['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role) && <Link href="/modulos/cancelamentos/analise" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🛡️ Análise antifraude (PDF)</Link>}
+          {['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role) && podeVer('/modulos/cancelamentos/analise') && <Link href="/modulos/cancelamentos/analise" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🛡️ Análise antifraude (PDF)</Link>}
           {/* Cancelamento de ITEM (antes de virar cupom) mora ao lado: e o mesmo
               assunto visto antes do fechamento da conta. */}
-          <Link href="/modulos/cancelamentos/itens" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🍽️ Cancelamento de itens</Link>
-          <Link href="/modulos/cancelamentos/relatorio" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-sunken"><FileText className="h-4 w-4" /> Relatório</Link>
+          {podeVer('/modulos/cancelamentos/itens') && <Link href="/modulos/cancelamentos/itens" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🍽️ Cancelamento de itens</Link>}
+          {podeVer('/modulos/cancelamentos/relatorio') && <Link href="/modulos/cancelamentos/relatorio" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-sunken"><FileText className="h-4 w-4" /> Relatório</Link>}
         </div>
       </div>
 

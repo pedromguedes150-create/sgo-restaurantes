@@ -2,6 +2,8 @@
 import Link from 'next/link';
 import { Landmark } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
+import { permissaoDeRota } from '@/lib/permissions/links';
+
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -22,6 +24,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function TrocoPage({ searchParams }: { searchParams: { unit?: string } }) {
   const user = (await getSessionUser())!;
+  const podeVer = await permissaoDeRota(user.role);
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
   if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
@@ -45,7 +48,7 @@ export default async function TrocoPage({ searchParams }: { searchParams: { unit
       />
       <FamilyTabs active="/modulos/troco" />
       {/* Atalho para a fila do escritório — só para quem envia. */}
-      {(user.role === 'ADMIN' || user.role === 'SUPERVISOR' || user.role === 'COORDINATOR' || user.role === 'CEO') && (
+      {(user.role === 'ADMIN' || user.role === 'SUPERVISOR' || user.role === 'COORDINATOR' || user.role === 'CEO') && podeVer('/modulos/troco/escritorio') && (
         <Link href="/modulos/troco/escritorio" className="inline-flex items-center gap-1.5 rounded-full border-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10">
           <Landmark className="h-4 w-4" /> Escritório — fila de envio e relação de enviados
         </Link>

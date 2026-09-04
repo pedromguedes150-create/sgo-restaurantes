@@ -1,4 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { permissaoDeRota } from '@/lib/permissions/links';
+
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -30,6 +32,7 @@ function lastMonths(n: number): { value: string; label: string }[] {
 
 export default async function MetasPage({ searchParams }: { searchParams: { unit?: string; month?: string } }) {
   const user = (await getSessionUser())!;
+  const podeVer = await permissaoDeRota(user.role);
   const months = lastMonths(12);
   const ym = /^\d{4}-\d{2}$/.test(searchParams.month ?? '') ? searchParams.month! : months[0].value;
   const monthLabel = months.find((m) => m.value === ym)?.label ?? ym;
@@ -63,7 +66,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
         }
       />
 
-      {(user.role === 'ADMIN' || user.role === 'SUPERVISOR') && (
+      {(user.role === 'ADMIN' || user.role === 'SUPERVISOR') && podeVer('/modulos/metas/config') && (
         <div className="print:hidden">
           <List>
             <ListRow

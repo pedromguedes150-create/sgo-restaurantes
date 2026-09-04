@@ -2,6 +2,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { roleLabel } from '@/lib/roles';
 import { effectivePermissions } from '@/lib/permissions';
+import { moduleOfPath } from '@/lib/permissions/route-guard';
 import { RETENTION_MONTHS_DEFAULT, TERMS_VERSION } from '@/lib/lgpd';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { List, ListRow } from '@/components/ui/ds/list-row';
@@ -59,12 +60,21 @@ const SECOES: { titulo: string; itens: { href: string; title: string; subtitle: 
 export default async function ConfiguracoesPage() {
   const user = (await getSessionUser())!;
   const isAdmin = user.role === 'ADMIN' || user.role === 'CEO';
+  const perms = await effectivePermissions(user.role);
+
+  /* Cada tela de Configurações é uma parte própria na matriz de perfis. A lista
+     passa a ser DERIVADA da permissão, em vez de "ou é Admin, ou são três
+     linhas fixas": liberar Fornecedores para a Supervisão agora é marcar uma
+     caixa, e não mexer neste arquivo. */
+  const podeVer = (href: string) => {
+    const key = moduleOfPath(href);
+    return !key || Boolean(perms[key]?.canView);
+  };
+  const secoes = SECOES
+    .map((s) => ({ ...s, itens: s.itens.filter((it) => podeVer(it.href)) }))
+    .filter((s) => s.itens.length > 0);
 
   if (!isAdmin) {
-    const isSupervisor = user.role === 'SUPERVISOR';
-    const perms = await effectivePermissions(user.role);
-    const canCashConfig = Boolean(perms.CASH_CONFIG?.canEdit);
-    const canFichas = Boolean(perms.CHECKLIST_FORMS?.canEdit);
     return (
       <div className="space-y-4">
         <LargeTitle title="Configurações" subtitle="O que o seu perfil pode ajustar." />
@@ -75,31 +85,23 @@ export default async function ConfiguracoesPage() {
             subtitle="Dados pessoais e troca de senha"
             leading={<Users className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
           />
-          {isSupervisor && (
-            <ListRow
-              href="/configuracoes/usuarios"
-              title="Usuários"
-              subtitle="Visualização do cadastro da rede"
-              leading={<Users className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
-            />
-          )}
-          {canCashConfig && (
-            <ListRow
-              href="/configuracoes/troco"
-              title="Troco"
-              subtitle="Denominações aceitas por unidade"
-              leading={<Coins className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
-            />
-          )}
-          {canFichas && (
-            <ListRow
-              href="/configuracoes/fichas"
-              title="Fichas"
-              subtitle="Checklists preenchidos por link, sem login"
-              leading={<ClipboardList className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
-            />
-          )}
         </List>
+        {secoes.map((s) => (
+          <section key={s.titulo}>
+            <h2 className="sgo-type-11 mb-2 text-ink-500">{s.titulo}</h2>
+            <List>
+              {s.itens.map((it) => (
+                <ListRow
+                  key={it.href}
+                  href={it.href}
+                  title={it.title}
+                  subtitle={it.subtitle}
+                  leading={<it.icon className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
+                />
+              ))}
+            </List>
+          </section>
+        ))}
         <p className="text-xs text-ink-500">As demais configurações são restritas ao Administrador.</p>
       </div>
     );
@@ -116,7 +118,7 @@ export default async function ConfiguracoesPage() {
 
       {/* 16 destinos em 4 seções: quem procura sabe onde olhar, em vez de
           varrer uma grade plana lendo rótulo por rótulo. */}
-      {SECOES.map((s) => (
+      {secoes.map((s) => (
         <section key={s.titulo}>
           <h2 className="sgo-type-11 mb-2 text-ink-500">{s.titulo}</h2>
           <List>

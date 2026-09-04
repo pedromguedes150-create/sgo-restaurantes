@@ -784,10 +784,13 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Em CONFIGURAÇÕES → Perfis de acesso, escolha o perfil e marque Ver/Editar por módulo.',
           'Sem "Ver", o módulo some do menu daquele perfil. CEO e Admin são sempre totais.',
-          'PARTES DE DENTRO DO MÓDULO (abas): as linhas recuadas com ↳ são pedaços de um módulo — dá para fechar um sem fechar o módulo inteiro. Hoje a Minha área tem três: Minhas tarefas, Bloco de notas e Folgas / férias (que inclui o bloco "Meu horário de trabalho").',
+          'PARTES DE DENTRO DO MÓDULO: módulo que tem partes mostra uma SETA e o número delas ("3 partes"). Toque na seta para abrir e liberar/fechar cada tela e cada aba de dentro. Vale para o sistema inteiro: as abas da Minha área, as telas internas de Comandas (conferência por leitor, análise em aberto), de Pessoas (mapa, avaliação, comissões, experiência, mudanças, escala e as telas da escala), de Cancelamentos, de Notas, de Tarefas, de Metas e cada tela de Configurações, uma a uma.',
+          'Mesmo dobrado, o módulo avisa em âmbar quantas partes estão fechadas — nada se restringe em silêncio.',
           'Exemplo: para o Gerente ver as tarefas e as notas mas NÃO mexer em folgas/férias, desmarque "Ver" só na linha ↳ Folgas / férias — a aba some da tela dele e o servidor recusa a gravação, mesmo por endereço direto.',
           'Marcar "Ver" sem "Editar" deixa a aba em consulta: a pessoa enxerga o que está lá e os botões de criar/alterar/excluir somem.',
-          'Fechar o módulo inteiro fecha as abas junto — o módulo é o teto. Quem não mexer em nada continua exatamente como está hoje.',
+          'Fechar o módulo inteiro fecha as partes junto — o módulo é o teto. Quem não mexer em nada continua exatamente como está hoje.',
+          'As telas de CONFIGURAÇÕES nascem restritas ao Administrador (exceto Usuários, Fornecedores e Catálogo, que a Supervisão já abria). Liberar uma delas para um perfil agora é marcar "Ver" na linha da tela — a lista de Configurações daquele perfil passa a mostrar só o que ele pode abrir.',
+          'A tela que o perfil não pode abrir também some dos ATALHOS: o cartão, o botão e o link deixam de aparecer, em vez de levar a pessoa para uma porta fechada.',
         ],
       },
       {

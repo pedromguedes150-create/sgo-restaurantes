@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { getSessionUser } from '@/lib/auth/session';
+import { permissaoDeRota } from '@/lib/permissions/links';
+
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
@@ -25,6 +27,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ComandasPage({ searchParams }: { searchParams: { unit?: string } }) {
   const user = (await getSessionUser())!;
+  const podeVer = await permissaoDeRota(user.role);
   const now = new Date();
 
   const units = await prisma.unit.findMany({
@@ -93,10 +96,10 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
         subtitle={`Dia operacional ${operationalDate}`}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link href={`/modulos/comandas/conferencia?unit=${selected.id}`}>
+            {podeVer('/modulos/comandas/conferencia') && <Link href={`/modulos/comandas/conferencia?unit=${selected.id}`}>
               <Button size="sm" variant="secondary"><ScanLine className="h-4 w-4" /> Conferir com leitor</Button>
-            </Link>
-            {canResolve && (
+            </Link>}
+            {canResolve && podeVer('/modulos/comandas/analise-aberto') && (
               <Link href="/modulos/comandas/analise-aberto">
                 <Button size="sm" variant="secondary"><ShieldAlert className="h-4 w-4" /> Análise de comandas em aberto</Button>
               </Link>
