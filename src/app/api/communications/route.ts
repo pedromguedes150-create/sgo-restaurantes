@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
@@ -24,6 +25,8 @@ function parseLinks(v: FormDataEntryValue | null): CommLink[] {
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   if (!canAuthorCommunications(user)) return NextResponse.json({ error: REASONS.FORBIDDEN.msg }, { status: 403 });
 
   let input: Parameters<typeof createCommunication>[1];

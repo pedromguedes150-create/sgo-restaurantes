@@ -1,11 +1,14 @@
 import * as XLSX from 'xlsx';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { exportModelRows } from '@/lib/checklist-models';
 
 /** Exporta a biblioteca de modelos em Excel (.xlsx). Admin. */
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return new Response('Não autenticado', { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   if (user.role !== 'ADMIN') return new Response('Restrito ao Administrador', { status: 403 });
 
   const rows = await exportModelRows();

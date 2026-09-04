@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { approveManyRequests, MAX_BATCH } from '@/lib/payments/approve';
@@ -11,6 +12,8 @@ import { approveManyRequests, MAX_BATCH } from '@/lib/payments/approve';
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
 
   const body = await req.json().catch(() => ({}));
   if (body?.action !== 'approveMany') return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });

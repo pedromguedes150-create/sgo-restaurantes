@@ -1,10 +1,13 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getFreelancerConsolidation } from '@/lib/payments/query';
 
 /** Exporta a consolidação mensal de freelancers em CSV (abre no Excel). ?month=YYYY-MM&unit= */
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return new Response('Não autenticado', { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const url = new URL(req.url);
   const ym = url.searchParams.get('month') ?? new Date().toISOString().slice(0, 7);
   const semana = url.searchParams.get('semana');

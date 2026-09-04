@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { recusaDeAba } from '@/lib/permissions/guarda-abas';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
@@ -11,6 +12,8 @@ import { salvarFolgasEmLote } from '@/lib/schedule/folgas-lote';
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negadoRota = await guardaDaRota(user.role, req);
+  if (negadoRota) return negadoRota;
   const b = await req.json().catch(() => null);
   /* Aba fechada na matriz de perfis não grava — esconder o botão é
      conveniência, recusar aqui é o controle. */

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { createPop, updatePop, deletePop, type PopBlock } from '@/lib/pops';
@@ -34,6 +35,8 @@ function errMsg(reason?: string) { return reason === 'FORBIDDEN' ? 'Apenas Admin
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negadoRota = await guardaDaRota(user.role, req);
+  if (negadoRota) return negadoRota;
   const b = await req.json().catch(() => null);
   if (!b?.title) return NextResponse.json({ error: 'Informe o título' }, { status: 400 });
   const r = await createPop(user, payload(b), requestContext(req));
@@ -44,6 +47,8 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negadoRota = await guardaDaRota(user.role, req);
+  if (negadoRota) return negadoRota;
   const b = await req.json().catch(() => null);
   if (!b?.id || !b?.title) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   const r = await updatePop(user, String(b.id), { ...payload(b), bumpVersion: Boolean(b.bumpVersion) }, requestContext(req));
@@ -54,6 +59,8 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negadoRota = await guardaDaRota(user.role, req);
+  if (negadoRota) return negadoRota;
   const b = await req.json().catch(() => null);
   if (!b?.id) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   const r = await deletePop(user, String(b.id), requestContext(req));

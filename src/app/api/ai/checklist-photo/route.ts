@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { analyzeChecklistPhoto } from '@/lib/ai/vision';
@@ -11,6 +12,8 @@ const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
 
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });

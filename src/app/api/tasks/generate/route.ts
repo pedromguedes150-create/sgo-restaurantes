@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { generateTodayForAllUnits } from '@/lib/tasks/generate';
 import { markMissedTasks } from '@/lib/tasks/maintenance';
@@ -12,6 +13,8 @@ import { requestContext } from '@/lib/auth/service';
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   if (user.role !== 'ADMIN' && user.role !== 'CEO') {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }

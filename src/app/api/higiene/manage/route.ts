@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { resolveHygieneRequest, upsertHygieneLocation, toggleHygieneLocation, deleteHygieneLocation } from '@/lib/hygiene';
@@ -7,6 +8,8 @@ import { resolveHygieneRequest, upsertHygieneLocation, toggleHygieneLocation, de
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const b = await req.json().catch(() => null);
   if (!b?.action) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
 

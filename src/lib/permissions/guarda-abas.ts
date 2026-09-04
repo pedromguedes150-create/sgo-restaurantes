@@ -30,6 +30,10 @@ const ACAO_DA_ABA: Record<string, Record<string, string>> = {
   PRODUCTS: {
     order: 'PRODUCTS_TAB_NEW',
     status: 'PRODUCTS_TAB_OPS',
+    // o catálogo mora em Configurações, embora a rota seja a mesma
+    catUpsert: 'CONFIG_PRODUCTS',
+    catDelete: 'CONFIG_PRODUCTS',
+    catToggle: 'CONFIG_PRODUCTS',
   },
   TERMINATIONS: {
     create: 'TERMINATIONS_TAB_NEW',

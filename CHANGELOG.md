@@ -9,6 +9,55 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.67.0 — 2026-09-04 ("Editar" passa a valer de verdade: a matriz chega às rotas)
+
+### O que estava acontecendo
+A matriz de perfis mandava em **três** coisas: o que aparece no menu, quais telas abrem (guarda de
+rota, v1.51.0) e, desde ontem, as abas. Só que **1 das 105 rotas de API** conferia alguma coisa
+antes de gravar. Na prática, desmarcar "Editar" tirava o botão da tela — e a requisição continuava
+sendo aceita. Um relatório era pior ainda: `/api/waste/export` entregava a planilha inteira para
+quem abrisse o endereço, tivesse o módulo ou não.
+
+### O que mudou
+- **71 das 105 rotas** passam a conferir a matriz antes de responder (eram 1). São 66 com a guarda
+  nova mais as 5 que já checavam por aba.
+- **A mesma linha em toda rota.** A guarda deriva o módulo do próprio caminho da requisição
+  (`src/lib/permissions/guarda-rota-api.ts`), então o que existe em cada arquivo é sempre
+  `const negado = await guardaDaRota(user.role, req); if (negado) return negado;` — uma linha
+  idêntica é mais fácil de revisar, e de tirar, do que 66 variações escritas à mão.
+- **`Ver` × `Editar`, decidido rota a rota.** Gravação exige `Editar`; **exportação e consulta
+  exigem só `Ver`** — se o relatório pedisse `Editar`, quem tem acesso de leitura perderia o que
+  sempre teve. As exportações de Desperdícios, Notas, Gás, Óleo, Metas, Atestados, Auditoria,
+  Comandas, Supervisão, Comissões, Escala e Cancelamentos entraram nessa regra.
+- **Rota não mapeada não é barrada.** Barrar o desconhecido derrubaria fluxo sem aviso.
+
+### O que fica FORA da matriz, e por quê
+Login e sessão · `/api/health` · push e avisos do próprio aparelho · Meu Perfil · aceite do termo ·
+a **ficha preenchida por link, sem login** · o webhook do RH · e o **QR de higiene do banheiro**,
+que é lido por cliente sem conta — exigir permissão ali quebraria a coleta inteira. Cada uma tem a
+razão escrita no código, e o teste cobra isso.
+
+### O teste que impede voltar atrás
+`tests/api-guarda-cobertura.test.ts` percorre `src/app/api` no **disco**: toda rota tem de estar no
+mapa ou ter um motivo escrito para ficar fora, nenhuma pode estar nos dois, todo módulo citado tem
+de existir na matriz, e **toda rota que grava tem de chamar alguma guarda**. Rota nova sem decisão
+quebra o CI — não a produção.
+
+### Nada muda para quem não mexer
+Perfil sem linha na matriz continua com o padrão de sempre, e **Admin e CEO nunca são barrados**
+(a guarda corta antes de consultar). O que muda é que "Editar" desmarcado agora significa alguma
+coisa.
+
+### Testes
+- `tests/api-guarda-cobertura.test.ts` (10) — cobertura, coerência do mapa e a exigência de guarda
+  em toda rota que grava.
+- `tests/api-guarda.integration.test.ts` (6) — chama as rotas: com "Editar" desmarcado a gravação
+  volta **403** e a exportação **continua**; com o módulo fechado a exportação também é recusada;
+  sem mexer em nada tudo funciona; e o Admin não é barrado nem com a linha fechada.
+- Suíte inteira: **652 testes verdes**.
+
+---
+
 ## v1.66.0 — 2026-09-04 (As abas de dentro das telas entram na matriz — as 15 que faltavam)
 
 ### O pedido

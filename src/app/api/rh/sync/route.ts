@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { syncCollaboratorsForUnit, syncAllRegisteredUnits } from '@/lib/rh/sync';
 
@@ -13,6 +14,8 @@ const MSG: Record<string, { msg: string; status: number }> = {
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const b = await req.json().catch(() => null);
 
   if (b?.all) {

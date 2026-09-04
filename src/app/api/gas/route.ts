@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { recusaDeAba } from '@/lib/permissions/guarda-abas';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
+import { recusaDeAba, recusaSeAbaFechada } from '@/lib/permissions/guarda-abas';
 import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
@@ -31,10 +32,13 @@ export async function POST(req: Request) {
 async function tratar(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negadoRota = await guardaDaRota(user.role, req);
+  if (negadoRota) return negadoRota;
   const b = await req.json().catch(() => null);
   /* Aba fechada na matriz de perfis não grava — esconder o botão é
      conveniência, recusar aqui é o controle. */
-  const negado = b?.action ? await recusaDeAba(user.role, 'GAS', String(b.action)) : null;
+  /* Sem ação, o corpo é um lançamento novo: quem manda é a aba "Lançar". */
+  const negado = b?.action ? await recusaDeAba(user.role, 'GAS', String(b.action)) : await recusaSeAbaFechada(user.role, 'GAS_TAB_NEW');
   if (negado) return negado;
   if (!b) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
 

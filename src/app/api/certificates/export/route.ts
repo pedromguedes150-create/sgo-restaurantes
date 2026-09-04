@@ -1,4 +1,5 @@
 import { getSessionUser } from '@/lib/auth/session';
+import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { listCertificates } from '@/lib/certificates/query';
 import { canSeeCid, certTypeLabel } from '@/lib/certificates/labels';
 
@@ -8,6 +9,8 @@ function daysInMonth(ym: string): number { const [y, m] = ym.split('-').map(Numb
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return new Response('Não autenticado', { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
   const url = new URL(req.url);
   const now = new Date();
   const ym = /^\d{4}-\d{2}$/.test(url.searchParams.get('mes') ?? '') ? url.searchParams.get('mes')! : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
