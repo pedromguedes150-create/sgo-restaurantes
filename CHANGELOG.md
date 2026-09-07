@@ -9,6 +9,48 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.77.0 — 2026-09-07 (Módulo novo: Escala de gerentes)
+
+**Pessoas → Escala de gerentes** (`/modulos/escala-gerentes`): a agenda de quem responde pela
+unidade, no formato que faltava. Escolhe unidade, mês e ano; a grade mostra **um gerente por
+linha e um dia por coluna**.
+
+- **A célula diz o que vale no dia**: `T` trabalha · `F` folga lançada · `FE` férias ·
+  `·` fora do padrão semanal · `?` sem horário cadastrado. Folga e férias **lançadas vencem o
+  padrão semanal** — o contrário faria a grade afirmar uma cobertura que não existe.
+- **Dia sem gerente** em vermelho, com a contagem no topo: é o buraco de cobertura. Quem não tem
+  horário cadastrado **não conta como cobertura** (linha inteira com `?` e aviso próprio) —
+  chutar "trabalha de segunda a sábado" para ele encheria a grade de presença inventada. Unidade
+  em que ninguém preencheu o horário **não** sai toda vermelha: alerta que aparece sempre deixa
+  de ser lido.
+- **Cadastro central**: horário semanal e lançamento de folga/férias de qualquer gerente da
+  unidade, na mesma tela. Fim em branco = um dia só. Período que **encosta** em outro do mesmo
+  gerente é recusado (409) — sobrepor calaria um dos dois na grade sem avisar ninguém.
+- O gerente é **avisado por notificação** a cada lançamento, e **quem lançou** fica registrado na
+  linha ("lançado por…") e na Auditoria (`MANAGER_LEAVE_ADD` / `_DELETE` / `MANAGER_SCHEDULE_SET`).
+  Coluna nova `manager_leaves.createdById` (aditiva; nulo = lançamento antigo, do próprio dono).
+
+**Quem lança mudou de mão.** A escala de gerência é decisão da Supervisão/Administração, e era o
+próprio gerente que lançava a sua na Minha área. Agora:
+
+- Módulo `MANAGER_SCHEDULE` na matriz (dentro de Pessoas), **restrito à Supervisão** por padrão —
+  ADMIN/CEO sempre. `/api/manager-schedule` exige `Editar` pela guarda de rota, e **cada função
+  confere o escopo por unidade**: perfil certo não é unidade certa, e supervisor de uma região
+  não lança para o gerente de outra.
+- **Minha área → Folgas/férias virou consulta** para o gerente: ele vê o horário e as próprias
+  folgas, sem botão de gravar, com o aviso de quem lança. A rota `/api/manager-area` recusa
+  `leave` e `workSchedule/set` — a tela e o servidor passam pela **mesma conta**
+  (`modulosDaOperacao`, agora uma lista de partes que precisam TODAS liberar), para não sobrar
+  botão que aparece e requisição que é recusada.
+- **Para devolver o lançamento ao gerente** basta ligar o "Editar" da Escala de gerentes no
+  perfil dele (Configurações → Perfis de acesso → Pessoas). Há teste fixando os dois sentidos.
+
+Testes: `manager-schedule-central.integration` (21 — ordem de decisão da célula, dia sem gerente,
+escopo, sobreposição, auditoria), `manager-schedule-route.integration` (7 — a matriz valendo na
+rota), `manager-schedule-render` (9 — o que a grade afirma na tela, e o modo consulta sem botões).
+`manager-area-route` e `permissions-submodules` atualizados para a regra nova.
+
+---
 ## v1.76.0 — 2026-09-04 (Pagamentos: reprovar em lote)
 
 - Na aba Para Aprovar, a barra de seleção ganhou **"Reprovar selecionadas"** ao lado de

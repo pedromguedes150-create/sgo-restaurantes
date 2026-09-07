@@ -16,12 +16,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PeopleClient } from '@/components/people/people-client';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { List, ListRow } from '@/components/ui/ds/list-row';
-import { Grid3x3, CalendarDays, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft, HandCoins } from 'lucide-react';
+import { Grid3x3, CalendarDays, CalendarRange, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft, HandCoins } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 const DESTINOS = [
   { href: '/modulos/escala', icon: CalendarDays, title: 'Escala de funcionários', subtitle: 'Presença mensal, planejado × realizado' },
+  { href: '/modulos/escala-gerentes', icon: CalendarRange, title: 'Escala de gerentes', subtitle: 'Horário, folgas e férias de quem responde pela unidade' },
   { href: '/modulos/pessoas/mapa', icon: Grid3x3, title: 'Mapa de Funções', subtitle: 'Setor × turno, alocação do dia' },
   { href: '/modulos/atestados', icon: Stethoscope, title: 'Central de Atestados', subtitle: 'Lançar por foto, absenteísmo e ranking' },
   { href: '/modulos/desligamentos', icon: UserMinus, title: 'Desligamentos', subtitle: 'Solicitar, aprovar e enviar ao RH' },

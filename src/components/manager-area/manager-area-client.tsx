@@ -289,7 +289,15 @@ function LeavesTab({ leaves, schedule = null, busy, post, canSeeTeam, ro = false
   const [end, setEnd] = useState('');
   return (
     <div className="space-y-3">
-      {ro && <SomenteLeitura />}
+      {/* Dizer "somente leitura" e parar aí deixa o gerente sem saber a quem
+          pedir. A escala de gerência passou a ser lançada pela Supervisão, e a
+          frase precisa dizer isso. */}
+      {ro && (
+        <p className="rounded-md bg-info-bg p-2 text-xs text-info">
+          Somente leitura: sua escala é lançada pela <b>Supervisão/Administração</b>, no módulo Escala de gerentes.
+          Fale com seu supervisor para agendar folga ou férias — você é avisado aqui a cada lançamento.
+        </p>
+      )}
       {ro ? <HorarioSomenteLeitura schedule={schedule} /> : <WorkScheduleEditor schedule={schedule} busy={busy} post={post} />}
       {canSeeTeam && (
         <a href="/modulos/folgas-equipe" className="flex items-center justify-between gap-2 rounded-lg border border-brand/40 bg-brand/5 p-3 text-sm hover:bg-brand/10">

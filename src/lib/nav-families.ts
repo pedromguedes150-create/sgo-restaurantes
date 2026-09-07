@@ -89,6 +89,7 @@ export const FAMILIES: Family[] = [
     icon: Users,
     children: [
       { href: '/modulos/pessoas', tab: 'Colaboradores' },
+      { href: '/modulos/escala-gerentes', tab: 'Escala de gerentes' },
       { href: '/modulos/folgas-equipe', tab: 'Controle de gerentes' },
     ],
   },

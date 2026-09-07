@@ -975,6 +975,9 @@ model ManagerLeave {
   startDate String // yyyy-mm-dd
   endDate   String
   note      String?
+  /// Quem lançou. Nulo = lançamento antigo (era sempre o próprio dono). Desde a
+  /// Escala de gerentes quem lança é a Supervisão/Admin, e a grade precisa dizer por quem.
+  createdById String?
   createdAt DateTime         @default(now())
 
   user User @relation("MgrLeaves", fields: [userId], references: [id], onDelete: Cascade)

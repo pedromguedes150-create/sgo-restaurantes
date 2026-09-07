@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { describe, it, expect, afterAll, afterEach } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { MODULES, effectivePermissions, canEditModule, viewableNavHrefs } from '@/lib/permissions';
-import { acessoDasAbas, moduloDaOperacao, ABAS_MINHA_AREA } from '@/lib/permissions/manager-area';
+import { acessoDasAbas, modulosDaOperacao, ABAS_MINHA_AREA } from '@/lib/permissions/manager-area';
 import { canOpenPath } from '@/lib/permissions/route-guard';
 
 /**
@@ -130,18 +130,44 @@ describe('O módulo é o teto do submenu', () => {
   });
 });
 
-describe('Qual submenu manda em cada operação da rota', () => {
-  it('cada entidade cai no seu', () => {
-    expect(moduloDaOperacao('task', 'create')).toBe('MANAGER_AREA_TASKS');
-    expect(moduloDaOperacao('note', 'add')).toBe('MANAGER_AREA_NOTES');
-    expect(moduloDaOperacao('leave', 'add')).toBe('MANAGER_AREA_LEAVES');
+describe('Quem manda em cada operacao da rota', () => {
+  it('tarefa e nota caem na propria aba', () => {
+    expect(modulosDaOperacao('task', 'create')).toEqual(['MANAGER_AREA_TASKS']);
+    expect(modulosDaOperacao('note', 'add')).toEqual(['MANAGER_AREA_NOTES']);
   });
 
-  it('o horário semanal segue a aba onde ele mora — senão sobra porta lateral', () => {
-    expect(moduloDaOperacao('workSchedule', 'set')).toBe('MANAGER_AREA_LEAVES');
+  /* A escala de gerencia deixou de ser do proprio gerente: quem lanca e a
+     Supervisao, pelo modulo Escala de gerentes. A aba continua decidindo se
+     ele VE a agenda; o modulo novo decide quem ALTERA. */
+  it('folga e ferias exigem TAMBEM a Escala de gerentes', () => {
+    expect(modulosDaOperacao('leave', 'add')).toEqual(['MANAGER_AREA_LEAVES', 'MANAGER_SCHEDULE']);
+    expect(modulosDaOperacao('leave', 'delete')).toEqual(['MANAGER_AREA_LEAVES', 'MANAGER_SCHEDULE']);
   });
 
-  it('o Controle de gerentes fica de fora: tem guarda própria', () => {
-    expect(moduloDaOperacao('workSchedule', 'setForUser')).toBeNull();
+  it('o horario semanal segue a mesma regra — senao sobra porta lateral', () => {
+    expect(modulosDaOperacao('workSchedule', 'set')).toEqual(['MANAGER_AREA_LEAVES', 'MANAGER_SCHEDULE']);
+  });
+
+  it('o Controle de gerentes fica de fora: tem guarda propria', () => {
+    expect(modulosDaOperacao('workSchedule', 'setForUser')).toEqual([]);
+  });
+
+  it('por padrao o GERENTE nao lanca mais a propria folga, e o SUPERVISOR lanca', async () => {
+    /* O relato do Alan foi o oposto do que o sistema fazia: a escala de
+       gerencia e decisao da Supervisao. Se este teste cair, alguem devolveu o
+       lancamento ao gerente sem querer. */
+    const gerente = await effectivePermissions('MANAGER');
+    expect(modulosDaOperacao('leave', 'add').every((m) => gerente[m]?.canEdit)).toBe(false);
+    expect(acessoDasAbas(gerente).folgas).toEqual({ canView: true, canEdit: false });
+
+    const supervisor = await effectivePermissions('SUPERVISOR');
+    expect(modulosDaOperacao('leave', 'add').every((m) => supervisor[m]?.canEdit)).toBe(true);
+  });
+
+  it('ligando o Editar da Escala de gerentes, o gerente volta a lancar', async () => {
+    await prisma.rolePermission.create({ data: { role: 'MANAGER', module: 'MANAGER_SCHEDULE', canView: true, canEdit: true } });
+    const p = await effectivePermissions('MANAGER');
+    expect(modulosDaOperacao('leave', 'add').every((m) => p[m]?.canEdit)).toBe(true);
+    expect(acessoDasAbas(p).folgas.canEdit).toBe(true);
   });
 });
