@@ -9,6 +9,33 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.77.1 — 2026-09-07 (a v1.77.0 não subiu: cliente alcançando servidor)
+
+A v1.77.0 passou no CI, foi mesclada e **falhou no build da publicação** — ficou na `main` sem
+chegar à produção, que seguiu na v1.76.0.
+
+- **Causa**: a tela da Escala de gerentes importava duas constantes de texto
+  (`CELULA_SIGLA`/`CELULA_TITULO`) de `manager-schedule-central.ts`, que também fala com o
+  `prisma` e com as notificações. Constante é valor, não tipo: o webpack arrasta o módulo
+  inteiro para o bundle do navegador, e o build morre em `Can't resolve 'net'`
+  (web-push → https-proxy-agent → `net`/`tls`).
+- **Correção**: o vocabulário da grade (tipos + as duas tabelas de texto) foi para
+  `src/lib/manager-schedule-tipos.ts`, um módulo **sem nenhum import**. O `-central` reexporta
+  dele, então o servidor continua importando de um lugar só; a tela importa do puro.
+- **Guard novo — `scripts/check-client-imports.cjs`**, no `npm run lint:ds`. A partir de cada
+  arquivo com `'use client'` ele segue os imports de **valor** (`import type` é apagado na
+  compilação e não conta) e falha se a cadeia alcançar `prisma`, `@prisma/client`, `web-push`,
+  `bcrypt`, `nodemailer`, `fs`, `net` ou `tls` — mostrando a **cadeia inteira**, senão "não pode
+  importar prisma" num arquivo que não importa prisma é um enigma. Verificado contra o bug real:
+  com o import errado de volta, ele acusa e sai com código 1; hoje o repositório tem **131
+  componentes cliente e nenhuma violação**.
+
+Por que nada pegou antes: `tsc`, `eslint` e os testes de render **não empacotam nada**, e o job
+`verificacoes` do CI não roda `next build` — o erro só aparecia na esteira de publicação, depois
+do merge. O `CLAUDE.md` também não listava o `npm run lint:ds` no fluxo de entrega (o que
+derrubou o CI do PR #78 por outro motivo); agora lista, com os sete guards nomeados.
+
+---
 ## v1.77.0 — 2026-09-07 (Módulo novo: Escala de gerentes)
 
 **Pessoas → Escala de gerentes** (`/modulos/escala-gerentes`): a agenda de quem responde pela

@@ -12,7 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EmptyState } from '@/components/ui/ds/empty-state';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
-import { CELULA_SIGLA, CELULA_TITULO, type GradeDeGerentes, type CelulaDoGerente, type LinhaDaGrade } from '@/lib/manager-schedule-central';
+/* Do arquivo PURO, nunca do `-central`: aquele fala com o banco e com o
+   web-push, e importar dele aqui quebra o build de producao. */
+import { CELULA_SIGLA, CELULA_TITULO, type GradeDeGerentes, type CelulaDoGerente, type LinhaDaGrade } from '@/lib/manager-schedule-tipos';
 
 const WD_CURTO = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const WD_LONGO = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];

@@ -17,72 +17,13 @@ import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import { notifyUsers } from '@/lib/notifications';
 import { parseWeekdays, daysOfMonth } from '@/lib/manager-schedule';
 import type { SessionUser } from '@/lib/auth/session';
+import type { CelulaDoGerente, LancamentoDeGerente, LinhaDaGrade, DiaDaGrade, GradeDeGerentes } from '@/lib/manager-schedule-tipos';
 
-/** O que uma célula da grade diz sobre o dia daquele gerente. */
-export type CelulaDoGerente = 'TRABALHA' | 'FOLGA' | 'FERIAS' | 'FORA_DO_PADRAO' | 'SEM_HORARIO';
-
-export const CELULA_SIGLA: Record<CelulaDoGerente, string> = {
-  TRABALHA: 'T',
-  FOLGA: 'F',
-  FERIAS: 'FE',
-  FORA_DO_PADRAO: '·',
-  SEM_HORARIO: '?',
-};
-
-export const CELULA_TITULO: Record<CelulaDoGerente, string> = {
-  TRABALHA: 'Trabalha',
-  FOLGA: 'Folga lançada',
-  FERIAS: 'Férias',
-  FORA_DO_PADRAO: 'Fora do padrão semanal — não é dia de trabalho dele',
-  SEM_HORARIO: 'Sem horário cadastrado — o sistema não sabe se ele trabalha',
-};
-
-export interface LancamentoDeGerente {
-  id: string;
-  userId: string;
-  managerName: string;
-  kind: 'FOLGA' | 'FERIAS';
-  startDate: string;
-  endDate: string;
-  note: string | null;
-  /** Nome de quem lançou. Nulo nos lançamentos antigos, feitos pelo próprio dono. */
-  lancadoPor: string | null;
-}
-
-export interface LinhaDaGrade {
-  userId: string;
-  name: string;
-  temHorario: boolean;
-  weekdays: number[];
-  startTime: string | null;
-  endTime: string | null;
-  note: string | null;
-  /** Uma célula por dia do mês, na ordem (índice 0 = dia 1). */
-  dias: CelulaDoGerente[];
-  diasTrabalhados: number;
-  diasDeFolga: number;
-  diasDeFerias: number;
-}
-
-export interface DiaDaGrade {
-  day: number;
-  weekday: number;
-  iso: string;
-  /** Nenhum gerente com horário cadastrado trabalha neste dia. */
-  semGerente: boolean;
-}
-
-export interface GradeDeGerentes {
-  unitId: string;
-  unitName: string;
-  year: number;
-  month: number;
-  dias: DiaDaGrade[];
-  linhas: LinhaDaGrade[];
-  lancamentos: LancamentoDeGerente[];
-  diasSemGerente: number;
-  semHorarioCount: number;
-}
+/* O vocabulário da grade mora em `manager-schedule-tipos.ts`, que não importa
+   nada: é o que permite a TELA usar as siglas sem arrastar o prisma e o
+   web-push para o bundle do navegador. Reexportado aqui para quem lê a grade
+   no servidor continuar importando de um lugar só. */
+export * from '@/lib/manager-schedule-tipos';
 
 /** Unidades que o usuário pode abrir neste módulo. */
 export async function unidadesDaEscalaDeGerentes(user: SessionUser) {
