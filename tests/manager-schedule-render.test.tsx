@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
 import { renderToString } from 'react-dom/server';
 import React from 'react';
 import { ManagerScheduleClient } from '@/components/people/manager-schedule-client';
-import type { GradeDeGerentes, CelulaDoGerente, LinhaDaGrade } from '@/lib/manager-schedule-central';
+import type { GradeDeGerentes, CelulaDoGerente, LinhaDaGrade } from '@/lib/manager-schedule-tipos';
 
 /**
  * A TELA da Escala de gerentes.
