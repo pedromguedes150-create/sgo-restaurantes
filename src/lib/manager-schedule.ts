@@ -6,7 +6,7 @@ import type { SessionUser } from '@/lib/auth/session';
 /** Padrão semanal de trabalho do gerente (dias 0=dom..6=sáb + horário). */
 export interface WorkScheduleDTO { weekdays: number[]; startTime: string | null; endTime: string | null; note: string | null }
 
-function parseWeekdays(v: unknown): number[] {
+export function parseWeekdays(v: unknown): number[] {
   if (!Array.isArray(v)) return [];
   return [...new Set(v.map((x) => Number(x)).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort((a, b) => a - b);
 }
@@ -47,7 +47,7 @@ const WD_LABEL = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 export { WD_LABEL };
 
 /** Dias do mês (1..N) e o weekday de cada um. */
-function daysOfMonth(year: number, month: number): { day: number; weekday: number; iso: string }[] {
+export function daysOfMonth(year: number, month: number): { day: number; weekday: number; iso: string }[] {
   const n = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const out: { day: number; weekday: number; iso: string }[] = [];
   for (let d = 1; d <= n; d++) {

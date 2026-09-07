@@ -30,7 +30,10 @@ async function post(body: unknown) {
   return { status: res.status, data: await res.json() as Record<string, unknown> };
 }
 
-const MODULOS = ['MANAGER_AREA', 'MANAGER_AREA_TASKS', 'MANAGER_AREA_NOTES', 'MANAGER_AREA_LEAVES'];
+const MODULOS = ['MANAGER_AREA', 'MANAGER_AREA_TASKS', 'MANAGER_AREA_NOTES', 'MANAGER_AREA_LEAVES', 'MANAGER_SCHEDULE'];
+/** Devolve ao GERENTE a autoridade de lancar a propria folga (padrao: so Supervisao/Admin). */
+async function liberarEscalaDeGerentes() { await fechar('MANAGER_SCHEDULE', true, true); }
+
 async function fechar(module: string, canView = false, canEdit = false) {
   await prisma.rolePermission.upsert({
     where: { role_module: { role: 'MANAGER', module } },
@@ -58,10 +61,27 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-describe('Com a matriz intocada, tudo funciona como sempre', () => {
-  it('cria tarefa, nota e folga', async () => {
+describe('Com a matriz intocada', () => {
+  it('tarefa e nota gravam — sao do dono', async () => {
     expect((await post({ entity: 'task', action: 'create', title: 'ligar para o fornecedor' })).status).toBe(200);
     expect((await post({ entity: 'note', action: 'add', content: '<p>lembrete</p>' })).status).toBe(200);
+  });
+
+  /* MUDOU na Escala de gerentes: quem lanca folga/ferias de gerente e a
+     Supervisao/Administracao. O gerente continua VENDO a agenda dele aqui, mas
+     nao a altera mais — e a recusa e do servidor, nao so da tela. */
+  it('folga do proprio gerente e RECUSADA: quem lanca e a Supervisao', async () => {
+    const r = await post({ entity: 'leave', action: 'add', kind: 'FOLGA', startDate: '2026-09-20', endDate: '2026-09-20' });
+    expect(r.status).toBe(403);
+    expect(await prisma.managerLeave.count({ where: { userId: mgrId, startDate: '2026-09-20' } })).toBe(0);
+  });
+
+  it('e o horario semanal tambem — mora no mesmo assunto', async () => {
+    expect((await post({ entity: 'workSchedule', action: 'set', weekdays: [1, 2, 3] })).status).toBe(403);
+  });
+
+  it('liberando o Editar da Escala de gerentes, o gerente volta a lancar', async () => {
+    await liberarEscalaDeGerentes();
     expect((await post({ entity: 'leave', action: 'add', kind: 'FOLGA', startDate: '2026-09-20', endDate: '2026-09-20' })).status).toBe(200);
   });
 });
@@ -76,7 +96,9 @@ describe('Aba de folgas fechada para o Gerente', () => {
   });
 
   it('excluir folga também é recusado', async () => {
+    await liberarEscalaDeGerentes();
     const criada = await post({ entity: 'leave', action: 'add', kind: 'FOLGA', startDate: '2026-09-22', endDate: '2026-09-22' });
+    expect(criada.status).toBe(200);
     await fechar('MANAGER_AREA_LEAVES');
     const r = await post({ entity: 'leave', action: 'delete', id: criada.data.id });
     expect(r.status).toBe(403);

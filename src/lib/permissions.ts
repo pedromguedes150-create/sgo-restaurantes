@@ -84,6 +84,7 @@ const BASE: ModuleDef[] = [
   // A Escala não tinha módulo dono: qualquer usuário logado abria a grade de
   // presença da rede escrevendo o endereço. Entra como parte de Pessoas.
   { key: 'SCHEDULE', label: 'Escala (grade de presença)', nav: '/modulos/escala', parent: 'PEOPLE' },
+  { key: 'MANAGER_SCHEDULE', label: 'Escala de gerentes', nav: '/modulos/escala-gerentes', parent: 'PEOPLE' },
   { key: 'SCHEDULE_OFF', label: 'Folgas da unidade', nav: '/modulos/escala/folgas', parent: 'SCHEDULE' },
   { key: 'SCHEDULE_SWAPS', label: 'Trocas de plantão', nav: '/modulos/escala/trocas', parent: 'SCHEDULE' },
   { key: 'SCHEDULE_RH_NOTICES', label: 'Avisos ao RH', nav: '/modulos/escala/avisos-rh', parent: 'SCHEDULE' },
@@ -150,6 +151,7 @@ export interface Perm { canView: boolean; canEdit: boolean }
 // explícita (ADMIN/CEO sempre veem). Admin pode liberar/restringir na matriz.
 const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   LEAVES_TEAM: ['SUPERVISOR'],
+  MANAGER_SCHEDULE: ['SUPERVISOR'], // quem manda na escala de gerência é a Supervisão; ADMIN/CEO sempre
   SUPERVISION: ['SUPERVISOR'],
   EXECUTIVE: [], // só ADMIN/CEO por padrão (Admin pode liberar na matriz)
   CASH_CONFIG: ['SUPERVISOR', 'COORDINATOR'], // R5: supervisão configura o cofre; Admin/CEO sempre
