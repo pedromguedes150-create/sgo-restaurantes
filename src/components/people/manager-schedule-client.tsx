@@ -23,10 +23,10 @@ const fmtBR = (iso: string) => iso.split('-').reverse().join('/');
 /* A cor diz o mesmo que a sigla — quem lê a grade de longe enxerga o padrão
    antes de ler letra por letra. */
 const CELULA_CLASSE: Record<CelulaDoGerente, string> = {
-  TRABALHA: 'bg-success/15 text-success-strong',
+  TRABALHA: 'bg-success/15 text-success',
   FOLGA: 'bg-brand/20 text-brand',
-  FERIAS: 'bg-info/20 text-info-strong',
-  FORA_DO_PADRAO: 'text-ink-300',
+  FERIAS: 'bg-info/20 text-info',
+  FORA_DO_PADRAO: 'text-ink-400',
   SEM_HORARIO: 'bg-sunken text-ink-400',
 };
 
@@ -104,7 +104,7 @@ export function ManagerScheduleClient({
         </p>
       )}
       {grade.semHorarioCount > 0 && (
-        <p className="flex items-start gap-2 rounded-lg border border-line-strong bg-sunken p-2 text-sm text-ink-600">
+        <p className="flex items-start gap-2 rounded-lg border border-line-strong bg-sunken p-2 text-sm text-ink-700">
           <UserX className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             {grade.semHorarioCount} gerente(s) <b>sem horário cadastrado</b>. Enquanto o horário não for lançado, o sistema
@@ -114,7 +114,7 @@ export function ManagerScheduleClient({
       )}
 
       {/* ── Legenda ── */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-dashed p-2 text-xs text-ink-600">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-dashed p-2 text-xs text-ink-700">
         {(['TRABALHA', 'FOLGA', 'FERIAS', 'FORA_DO_PADRAO', 'SEM_HORARIO'] as CelulaDoGerente[]).map((c) => (
           <span key={c} className="flex items-center gap-1.5">
             <i className={`inline-flex h-5 w-6 items-center justify-center rounded text-[11px] font-bold ${CELULA_CLASSE[c]}`}>{CELULA_SIGLA[c]}</i>
@@ -138,24 +138,24 @@ export function ManagerScheduleClient({
           <table className="w-full border-collapse text-center text-xs">
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 bg-surface px-2 py-1 text-left font-semibold text-ink-600">Gerente</th>
+                <th className="sticky left-0 z-10 bg-surface px-2 py-1 text-left font-semibold text-ink-700">Gerente</th>
                 {grade.dias.map((d) => (
                   <th
                     key={d.iso}
                     title={d.semGerente ? 'Nenhum gerente neste dia' : undefined}
-                    className={`min-w-[26px] px-0.5 py-1 font-semibold ${d.semGerente ? 'bg-danger/15 text-danger' : 'text-ink-500'}`}
+                    className={`min-w-7 px-0.5 py-1 font-semibold ${d.semGerente ? 'bg-danger/15 text-danger' : 'text-ink-500'}`}
                   >
                     <span className="block tabular-nums">{d.day}</span>
                     <span className="block text-[10px] font-normal">{WD_CURTO[d.weekday]}</span>
                   </th>
                 ))}
-                <th className="px-2 py-1 font-semibold text-ink-600">T/F/FE</th>
+                <th className="px-2 py-1 font-semibold text-ink-700">T/F/FE</th>
               </tr>
             </thead>
             <tbody>
               {grade.linhas.map((l) => (
                 <tr key={l.userId} className="border-t border-line">
-                  <th scope="row" className="sticky left-0 z-10 max-w-[180px] truncate bg-surface px-2 py-1 text-left font-medium text-ink-900">
+                  <th scope="row" className="sticky left-0 z-10 max-w-44 truncate bg-surface px-2 py-1 text-left font-medium text-ink-900">
                     {l.name}
                     <span className="block text-[10px] font-normal text-ink-500">
                       {l.temHorario
@@ -173,7 +173,7 @@ export function ManagerScheduleClient({
                       </span>
                     </td>
                   ))}
-                  <td className="whitespace-nowrap px-2 py-1 tabular-nums text-ink-600">
+                  <td className="whitespace-nowrap px-2 py-1 tabular-nums text-ink-700">
                     {l.diasTrabalhados}/{l.diasDeFolga}/{l.diasDeFerias}
                   </td>
                 </tr>

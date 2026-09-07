@@ -118,9 +118,10 @@ Quando o usuário disser **"finaliza e sobe"** (ou equivalente), execute nesta o
 1. Garanta estar numa **branch de trabalho** (não na `main`): se estiver na main, `git checkout -b feat/descricao`.
 2. `npx tsc --noEmit`
 3. `npx next lint --no-cache`
-4. `npm test`
+4. `npm run lint:ds` — **o CI roda isto e é fácil esquecer** (foi o que derrubou o PR #78). São seis guards: hex/espaçamento fora da grade 8pt, classe de cor que não existe na paleta, foco de diálogo, ternário com os dois lados iguais, escala tipográfica e propriedade JSX presa em aspas.
+5. `npm test`
 
-**Se as três passarem:** commit em **PT-BR** (conventional commits: `feat:`/`fix:`/`refactor:`…, corpo explicando o porquê), suba o número em `src/lib/version.ts` se for mudança de verdade, `git push` da **branch**, e **abra o PR para a `main`** (`gh pr create` ou via API). O CI + auto-merge publicam quando ficar verde.
+**Se as quatro passarem:** commit em **PT-BR** (conventional commits: `feat:`/`fix:`/`refactor:`…, corpo explicando o porquê), suba o número em `src/lib/version.ts` se for mudança de verdade, `git push` da **branch**, e **abra o PR para a `main`** (`gh pr create` ou via API). O CI + auto-merge publicam quando ficar verde.
 
 **Se qualquer uma falhar:** mostre o erro e **não suba nada** (sem commit, sem push, sem PR). Corrija ou reporte.
 
@@ -129,7 +130,7 @@ Quando o usuário disser **"finaliza e sobe"** (ou equivalente), execute nesta o
 Rollback: aba **Actions → "Voltar versão (rollback)"** no GitHub.
 
 Critérios de aprovação de cada verificação:
-- `tsc` e `npm test`: precisam sair com **exit 0** e zero falhas.
+- `tsc`, `npm run lint:ds` e `npm test`: precisam sair com **exit 0** e zero falhas.
 - `next lint`: **zero erros**. Avisos (`Warning`) pré-existentes não bloqueiam — hoje há 7, todos `no-img-element`. Se aparecer aviso **novo**, mencione antes de subir.
 
 ## Comandos
@@ -137,4 +138,5 @@ Critérios de aprovação de cada verificação:
 - `npm run dev` — app em http://localhost:3100
 - `npm run db:migrate` / `npm run db:seed` — schema + seeds
 - `npm test` — testes (Vitest)
+- `npm run lint:ds` — os seis guards de design system (o CI roda; rode antes de abrir PR)
 - `docker compose -f docker-compose.prod.yml up -d --build` — produção
