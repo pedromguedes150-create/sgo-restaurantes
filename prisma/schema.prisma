@@ -49,6 +49,7 @@ model Unit {
   commandConfig       UnitCommandConfig?
   commandSequences    CommandSequence[]
   commandCounts       CommandCount[]
+  commandSessions     CommandCountSession[]
   commandDivergences  CommandDivergence[]
   commandReplacements CommandReplacement[]
   cancellations       Cancellation[]
@@ -111,6 +112,7 @@ model User {
   reportedOccurrences Occurrence[] @relation("OccReportedBy")
   closedOccurrences   Occurrence[] @relation("OccClosedBy")
   commandCounts       CommandCount[]       @relation("CmdCountBy")
+  commandSessions     CommandCountSession[] @relation("CmdSessionBy")
   divReported         CommandDivergence[]  @relation("CmdDivReportedBy")
   divResolved         CommandDivergence[]  @relation("CmdDivResolvedBy")
   commandReplacements CommandReplacement[] @relation("CmdReplBy")
@@ -713,6 +715,99 @@ model NoteInstallment {
   @@unique([noteId, seq])
   @@index([dueDate])
   @@map("note_installments")
+}
+
+
+/// Tipo de conferência: a faixa combinada do dia, ou a unidade inteira.
+enum CommandSessionType {
+  FAIXA_DO_DIA
+  COMPLETA
+}
+
+/// Como a conferência foi feita. MISTO = leitor e ajuste manual na mesma sessão.
+enum CommandSessionMethod {
+  MANUAL
+  LEITOR
+  MISTO
+}
+
+enum CommandSessionStatus {
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+}
+
+/// O que se viu de uma comanda. Ausente NÃO é um estado: é a ausência de marca.
+enum CommandItemState {
+  CONFERIDA
+  EM_USO
+}
+
+enum CommandItemMethod {
+  MANUAL
+  LEITOR
+}
+
+/// Uma SESSÃO de conferência de comandas — o registro permanente de uma contagem.
+///
+/// Por que existe: até a v1.80.0 havia UMA contagem por unidade por dia
+/// (`command_counts`, chave única unidade+data). Começar outra sobrescrevia a
+/// anterior, e a tela chegava a avisar "as marcas são da contagem de 03/09, não
+/// de hoje" — o histórico não existia e a grade reabria com marcas de outro dia.
+///
+/// Aqui cada conferência é independente e IMUTÁVEL depois de concluída. A
+/// contagem do dia (`CommandCount`) continua existindo como a situação atual, e
+/// continua sendo ela que gera divergências: a sessão a alimenta ao finalizar,
+/// em vez de reescrever essa regra.
+model CommandCountSession {
+  id              String               @id @default(cuid())
+  unitId          String
+  operationalDate String
+  type            CommandSessionType
+  method          CommandSessionMethod
+  status          CommandSessionStatus @default(EM_ANDAMENTO)
+  startedAt       DateTime             @default(now())
+  finishedAt      DateTime?
+  createdById     String?
+  /// Números que ESTA sessão se propôs a conferir. Nulo = todas as ativas.
+  scopeNumbers    Json?
+  /// Quantas se esperava conferir — congelado no início, porque a faixa ativa
+  /// da unidade pode mudar depois e o histórico não pode mudar junto.
+  expectedCount   Int                  @default(0)
+  observation     String?
+  /// Resultado congelado na finalização.
+  presentCount    Int                  @default(0)
+  inUseCount      Int                  @default(0)
+  absentCount     Int                  @default(0)
+  divergenceCount Int                  @default(0)
+
+  unit      Unit               @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User?              @relation("CmdSessionBy", fields: [createdById], references: [id], onDelete: SetNull)
+  items     CommandCountItem[]
+
+  @@index([unitId, startedAt])
+  @@index([unitId, status])
+  @@map("command_count_sessions")
+}
+
+/// Uma comanda dentro de uma sessão: o que se viu, COMO e QUANDO.
+///
+/// O "como" e o "quando" são o que permite auditar depois — "comanda 83, leitor,
+/// 09:44". Só existe linha para o que foi marcado; o que não tem linha não foi
+/// conferido, e é dessa ausência que saem os faltantes.
+model CommandCountItem {
+  id        String            @id @default(cuid())
+  sessionId String
+  number    Int
+  state     CommandItemState
+  method    CommandItemMethod
+  at        DateTime          @default(now())
+
+  session CommandCountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, number])
+  @@index([sessionId])
+  @@map("command_count_items")
 }
 
 /// Divergência (comanda ausente) e seu ciclo de vida.

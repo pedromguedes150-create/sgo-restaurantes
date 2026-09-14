@@ -19,6 +19,8 @@ import { EmptyState } from '@/components/ui/ds/empty-state';
 import { shortUnitName } from '@/lib/unit-name';
 import { ScanLine, ShieldAlert, ClipboardList } from 'lucide-react';
 import { CommandsClient } from '@/components/commands/commands-client';
+import { IniciarConferencia } from '@/components/commands/iniciar-conferencia';
+import { listarConferencias, sessaoEmAndamento, TIPO_LABEL, METODO_LABEL } from '@/lib/commands/sessao';
 import { conferidasDaUltimaContagem } from '@/lib/commands/grid';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
@@ -43,6 +45,17 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
   /* A parcial roda toda madrugada e diria "contagem de hoje registrada" todo
      dia — verdade que esconde a completa não acontecer há semanas. */
   const ultimaCompleta = await getLastFullCount(selected.id, operationalDate);
+
+  /* A SESSÃO de conferência (v1.81.0): a última concluída e a que ficou pela
+     metade. As duas juntas respondem "quando foi a última" e "tem coisa
+     aberta?" — perguntas que a tela não sabia responder porque a contagem do
+     dia era sobrescrita a cada nova. */
+  const [historico, aberta] = await Promise.all([
+    listarConferencias(user, { unitId: selected.id, status: 'CONCLUIDA', take: 1 }),
+    sessaoEmAndamento(user, selected.id),
+  ]);
+  const ultimaSessao = historico[0] ?? null;
+  const fmtQuando = (d: Date) => d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
   const activeNumbers = [...seq.active].sort((a, b) => a - b);
 
   /* Última contagem da unidade, com o estado em que a grade foi deixada.
@@ -110,6 +123,29 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
       <FamilyTabs active="/modulos/comandas" />
 
       {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
+
+      <Card><CardContent className="pt-4">
+        <IniciarConferencia
+          unitId={selected.id}
+          faixaDoDia={[...seq.nightly].sort((a, b) => a - b)}
+          ultima={ultimaSessao ? {
+            id: ultimaSessao.id,
+            quando: fmtQuando(ultimaSessao.startedAt),
+            tipo: TIPO_LABEL[ultimaSessao.type],
+            metodo: METODO_LABEL[ultimaSessao.method],
+            responsavel: ultimaSessao.responsavel,
+            conferidas: ultimaSessao.conferidas,
+            expected: ultimaSessao.expected,
+            divergencias: ultimaSessao.divergencias,
+          } : null}
+          emAndamento={aberta ? {
+            id: aberta.id,
+            quando: fmtQuando(aberta.startedAt),
+            vistas: aberta.conferidas.length + aberta.emUso.length,
+            total: aberta.escopo.length,
+          } : null}
+        />
+      </CardContent></Card>
 
       {state.config && (
         <div className="grid grid-cols-3 gap-3">

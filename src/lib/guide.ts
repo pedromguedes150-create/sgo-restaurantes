@@ -192,6 +192,11 @@ export const GUIDE: GuideSection[] = [
           'Comanda marcada EM USO (azul, com cliente) conta como PRESENTE e não gera divergência — antes ela era enviada como faltante por engano.',
           'A GRADE MOSTRA TODOS OS NÚMEROS da sequência, cada um com sua cor: verde = conferida · azul = em uso · âmbar = EM APURAÇÃO (resolva no bloco Divergências) · cinza riscado = BAIXADA (perdida, fora da sequência) · sem cor = ainda não conferida. Antes as em apuração e as baixadas sumiam da grade e o número pulava, sem explicar por quê.',
           'Âmbar e cinza riscado não são clicáveis: elas se resolvem no bloco de Divergências, não na contagem do dia.',
+          'CONFERÊNCIA POR SESSÃO (v1.81.0): toque em "+ Iniciar nova conferência", escolha o tipo (Faixa do dia ou Completa) e o método (Manual, Leitor ou Manual + Leitor). Cada conferência vira um registro próprio, com hora de início, responsável e resultado.',
+          'Conferência CONCLUÍDA nunca é sobrescrita. A nova começa VAZIA — acabou o "as marcas são da contagem de outro dia".',
+          'Saiu da tela no meio? Nada se perde: ao voltar, a tela oferece "Continuar conferência" de onde você parou.',
+          'Ao finalizar, se faltar alguma, o sistema MOSTRA quais antes de confirmar. Você pode continuar conferindo ou finalizar: as não localizadas entram EM APURAÇÃO, nunca viram "perdidas" direto — perdida ou recuperada é decisão de quem apura.',
+          'O card "Última conferência" mostra quando foi, o tipo, o método, o responsável, o resultado e as divergências. "Histórico de conferências" lista todas, com filtros, e cada uma abre comanda a comanda: número, se estava conferida ou em uso, se foi Manual ou Leitor e o horário.',
         ],
       },
       {
