@@ -78,6 +78,10 @@ export function ChecklistOccurrenceSheet({
   const tipo = useMemo(() => types.find((t) => t.id === typeId), [types, typeId]);
   const categorias = tipo?.categories ?? [];
   const destino = !tipo ? null : tipo.isMaintenance ? 'Manutenção' : tipo.isIT ? 'T.I.' : 'Geral';
+  /* Alta e Crítica entram TAMBÉM na aba Geral Crítico. "Também" e não "em vez
+     de": tirar uma falta de energia da aba Manutenção esconderia dela justamente
+     o caso mais grave. */
+  const tambemCritica = gravity === 'HIGH' || gravity === 'CRITICAL';
 
   /* ── Já existe: a folha vira um convite a olhar a que existe ── */
   if (aberta) {
@@ -169,7 +173,8 @@ export function ChecklistOccurrenceSheet({
             responsável", e ninguém confia num encaminhamento que não vê. */}
         {destino && (
           <p className="rounded-md bg-sunken p-2 text-xs text-ink-700">
-            Esta ocorrência vai para a aba <b>{destino}</b>.
+            Esta ocorrência vai para a aba <b>{destino}</b>
+            {tambemCritica && <> — e também para <b>Geral Crítico</b>, por causa da criticidade</>}.
           </p>
         )}
 

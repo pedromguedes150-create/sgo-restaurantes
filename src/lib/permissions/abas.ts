@@ -115,6 +115,9 @@ export const ABAS: Record<string, AbaDef[]> = {
 
   OCCURRENCES: [
     { id: 'geral', key: 'OCCURRENCES_TAB_GENERAL', label: 'Assunto: Geral' },
+    /* Lente de gravidade, não de assunto: reúne o que é Alta/Crítica de TODOS
+       os assuntos. Por isso é `soVer` — não existe "editar a lente". */
+    { id: 'critico', key: 'OCCURRENCES_TAB_CRITICAL', label: 'Geral Crítico (alta e crítica)', soVer: true },
     { id: 'manutencao', key: 'OCCURRENCES_TAB_MAINT', label: 'Assunto: Manutenção' },
     { id: 'ti', key: 'OCCURRENCES_TAB_IT', label: 'Assunto: TI' },
   ],

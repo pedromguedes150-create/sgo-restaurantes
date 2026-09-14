@@ -36,9 +36,14 @@ export default async function OcorrenciasPage({
     : undefined) as OccurrenceStatus | undefined;
   const isMaint = searchParams.view === 'manutencao';
   const isIT = searchParams.view === 'ti';
+  const isCritico = searchParams.view === 'critico';
   const pagina = Math.max(Number(searchParams.pagina) || 1, 1);
 
-  const escopo = { maintenance: isMaint ? true : undefined, it: isIT ? true : undefined };
+  const escopo = {
+    maintenance: isMaint ? true : undefined,
+    it: isIT ? true : undefined,
+    critical: isCritico ? true : undefined,
+  };
 
   /** Monta um link preservando os outros filtros — sem isso, trocar de página
    *  perdia a visão e a situação escolhidas. */
@@ -79,7 +84,7 @@ export default async function OcorrenciasPage({
 
   const primeiro = lista.total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
   const ultimo = Math.min(pagina * POR_PAGINA, lista.total);
-  const ondeEstou = isMaint ? 'de manutenção' : isIT ? 'de TI' : '';
+  const ondeEstou = isMaint ? 'de manutenção' : isIT ? 'de TI' : isCritico ? 'críticas' : '';
 
   return (
     <div className="space-y-5">
@@ -98,14 +103,23 @@ export default async function OcorrenciasPage({
         <p className="sgo-type-11 px-1 text-ink-500">ASSUNTO</p>
         <SegmentedNav
           aria-label="Assunto das ocorrências"
-          value={isMaint ? 'manutencao' : isIT ? 'ti' : 'geral'}
+          value={isMaint ? 'manutencao' : isIT ? 'ti' : isCritico ? 'critico' : 'geral'}
           options={[
             { value: 'geral', label: 'Geral', href: link({ view: null, pagina: 1 }) },
+            { value: 'critico', label: 'Geral Crítico', href: link({ view: 'critico', pagina: 1 }) },
             { value: 'manutencao', label: 'Manutenção', href: link({ view: 'manutencao', pagina: 1 }) },
             { value: 'ti', label: 'TI', href: link({ view: 'ti', pagina: 1 }) },
           ].filter((o) => podeAba(abasOcorrencias, o.value))}
         />
       </div>
+
+      {isCritico && (
+        <Banner
+          tone="warning"
+          title="Ocorrências de gravidade Alta ou Crítica, de todos os assuntos"
+          description="É uma lente, não uma caixa separada: o que afeta o funcionamento da unidade, a segurança ou o atendimento aparece AQUI e também na aba do assunto dele. Uma falta de energia continua sendo manutenção — quem conserta precisa continuar vendo."
+        />
+      )}
 
       {isIT && (
         <Banner
