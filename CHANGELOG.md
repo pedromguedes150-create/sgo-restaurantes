@@ -9,6 +9,41 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.78.0 — 2026-09-14 (Diagnóstico do RH: por que falta gente numa unidade)
+
+Relato: *"Igarapé não está com todos os colaboradores"*. A v1.77.2 impede que o sync **volte** a
+desligar uma unidade, mas **não reativa** ninguém — e o sync decide calado, então de fora só se
+via "está faltando gente", sem nada para investigar. Esta tela é o que faltava para responder.
+
+### Configurações → APIs & Integrações → **Diagnóstico do RH** (Admin/CEO)
+
+Escolhe a unidade e mostra, lado a lado, o que o RH devolveu e o que o SGO tem:
+
+- **O casamento do nome.** Confere o `rhUnitName` contra a lista de unidades do RH. Se não
+  existir, acusa e lista as razões sociais **parecidas** (comparação que ignora acento, caixa e
+  pontuação) — um espaço a mais já faz o RH devolver lista vazia, e essa é a causa mais boba.
+- **Quatro decisões, com o motivo por extenso**: `Ativo no SGO` · `Desligado no SGO` (o status no
+  RH não começa com "Ativo" — **férias e afastamento caem aqui**, e desligado SOME de Pessoas, da
+  Escala e do Mapa) · `Nunca entrou` (o RH mandou **sem matrícula**, e o sync pula quem não tem) ·
+  `Ainda não sincronizado`.
+- **Pessoa a pessoa**, com o status que veio do RH, ordenado pelos problemas primeiro; divergência
+  de nome entre os dois lados é sinalizada (pista de cadastro duplicado).
+- **O outro lado**: quem está no SGO e o RH não devolve mais — é quem o sync desligaria na
+  próxima rodada.
+- **Falha do RH não derruba a tela**: o erro vira uma frase que diz o que o sync faria, e a metade
+  que explica o que a pessoa está vendo (o que o SGO tem) continua visível.
+
+**Só lê** — não grava nem sincroniza. **Não exibe CPF nem nada de folha**, que é o que a separa do
+`/api/rh/test` (aquele despeja a folha do grupo inteiro e por isso continua 404 em produção).
+
+### Cobertura
+
+17 casos novos. Os de integração rodam **o sync de verdade** contra a mesma resposta do RH e
+comparam com o que o diagnóstico afirmou — uma tela que diverge do comportamento real é pior do
+que não existir, porque manda investigar o lugar errado. Os de render montam a página com a
+sessão fingida (ela exige Admin, então abrir no navegador pedia senha) e medem o que a pessoa lê.
+
+---
 ## v1.77.2 — 2026-09-14 (sync do RH: lista vazia desligava a unidade inteira)
 
 Pedido de verificação da integração com o RH. A API do RH está saudável — todos os `/api/ext/*`

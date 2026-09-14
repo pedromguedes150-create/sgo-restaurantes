@@ -359,6 +359,20 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'diagnostico-rh',
+        title: 'Diagnóstico do RH — está faltando gente numa unidade?',
+        roles: ['ADMIN', 'CEO'],
+        summary: 'Mostra quem o RH devolveu, quem chegou ao SGO e POR QUE alguém não chegou.',
+        steps: [
+          'Configurações → APIs & Integrações → "Diagnóstico do RH". Escolha a unidade.',
+          'Primeiro confira o "Nome no RH": se ele não existir na lista do RH, a tela acusa e mostra os nomes parecidos para comparar. Um acento ou espaço a mais já faz o RH devolver lista vazia.',
+          'O resumo separa em quatro: Ativo no SGO · Desligado no SGO (o status no RH não começa com "Ativo" — férias e afastamento caem aqui, e quem está desligado SOME de Pessoas, da Escala e do Mapa) · Nunca entrou (o RH mandou sem matrícula, e o sync pula quem não tem) · Ainda não sincronizado.',
+          'A tabela mostra pessoa a pessoa, com o status que veio do RH, começando pelos problemas.',
+          'No fim, quem está no SGO e o RH não devolve mais — transferência, desligamento ou matrícula trocada.',
+          'A tela só LÊ. Para aplicar, use o botão Sincronizar da unidade em Configurações → Unidades.',
+        ],
+      },
+      {
         id: 'visao-executiva',
         title: 'Visão Executiva',
         roles: ['CEO', 'ADMIN'],
