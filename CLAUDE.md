@@ -132,6 +132,7 @@ Rollback: aba **Actions → "Voltar versão (rollback)"** no GitHub.
 Critérios de aprovação de cada verificação:
 - `tsc`, `npm run lint:ds` e `npm test`: precisam sair com **exit 0** e zero falhas.
 - `next lint`: **zero erros**. Avisos (`Warning`) pré-existentes não bloqueiam — hoje há 7, todos `no-img-element`. Se aparecer aviso **novo**, mencione antes de subir.
+- **Confira pelo CÓDIGO DE SAÍDA, não contando linhas do texto.** Foi assim que o PR #83 caiu: contei os 7 avisos com `grep -c Warning` e não vi os 2 **erros** de `react-hooks/rules-of-hooks` no mesmo relatório. O certo é `npx next lint --no-cache; echo $?` (0 = passou) — vale para as quatro verificações.
 
 ## Comandos
 - `docker compose up -d` — sobe o Postgres dedicado do SGO (dev)

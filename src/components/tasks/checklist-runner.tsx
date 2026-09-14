@@ -102,6 +102,16 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
 
   function setItem(id: string, patch: Partial<Answer>) { setAnswers((a) => ({ ...a, [id]: { ...(a[id] ?? { status: 'OK' }), ...patch } })); }
   const [processing, setProcessing] = useState(false);
+
+  /* Ocorrências abertas AGORA, nesta tela: o `openIssues` veio do servidor e
+     não sabe das que acabaram de nascer. Sem isto o item continuaria
+     oferecendo "Abrir ocorrência" logo depois de abrir uma.
+     Fica AQUI, com os outros hooks: há um `return` antecipado mais abaixo
+     (a visão de checklist concluído), e hook depois dele muda a ordem de
+     chamada entre um render e outro — que é o que o React proíbe. */
+  const [abrindo, setAbrindo] = useState<string | null>(null);
+  const [recemAbertas, setRecemAbertas] = useState<Record<string, OcorrenciaAberta>>({});
+  const ocorrenciaDoItem = (id: string): OcorrenciaAberta | null => recemAbertas[id] ?? openIssues[id] ?? null;
   async function addFiles(itemId: string | null, list: FileList | null) {
     if (!list) return;
     setProcessing(true);
@@ -194,13 +204,6 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
       </div>
     );
   }
-
-  /* Ocorrências abertas AGORA, nesta tela: o `openIssues` veio do servidor e
-     não sabe das que acabaram de nascer. Sem isto, o item continuaria
-     oferecendo "Abrir ocorrência" logo depois de abrir uma. */
-  const [abrindo, setAbrindo] = useState<string | null>(null);
-  const [recemAbertas, setRecemAbertas] = useState<Record<string, OcorrenciaAberta>>({});
-  const ocorrenciaDoItem = (id: string): OcorrenciaAberta | null => recemAbertas[id] ?? openIssues[id] ?? null;
 
   /* ───── Execução ───── */
   return (
