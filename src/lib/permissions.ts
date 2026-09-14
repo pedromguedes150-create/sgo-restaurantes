@@ -53,6 +53,7 @@ const BASE: ModuleDef[] = [
 
   { key: 'COMMANDS', label: 'Comandas', nav: '/modulos/comandas' },
   { key: 'COMMANDS_SCAN', label: 'Conferência por leitor', nav: '/modulos/comandas/conferencia', parent: 'COMMANDS' },
+  { key: 'COMMANDS_SESSIONS', label: 'Histórico de conferências', nav: '/modulos/comandas/conferencias', parent: 'COMMANDS' },
   { key: 'COMMANDS_OPEN', label: 'Análise de comandas em aberto', nav: '/modulos/comandas/analise-aberto', parent: 'COMMANDS' },
 
   { key: 'CASH', label: 'Gestão de Troco', nav: '/modulos/troco' },

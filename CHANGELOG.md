@@ -9,6 +9,56 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.81.0 — 2026-09-14 (Comandas: sessão de conferência — fase 1 de 2)
+
+Terceira e maior das três frentes. **Fase 1**: a sessão, o histórico e a auditoria. **Fase 2**
+(a seguir): a tela dedicada do leitor, os filtros da grade e o dashboard com o aviso de
+conferência completa atrasada.
+
+### O defeito de origem
+
+Havia **uma contagem por unidade por dia** (`command_counts`, chave única unidade+data). Começar
+outra sobrescrevia a anterior — não existia histórico, a grade reabria com marcas de outra
+contagem, e a tela chegava a **avisar isso ao usuário**: *"as marcas são da contagem de 03/09,
+não de hoje"*.
+
+### A decisão de desenho
+
+A sessão **alimenta** a contagem do dia em vez de substituí-la. `CommandCount` continua sendo a
+situação atual e **continua sendo quem gera as divergências**; ao finalizar, a sessão entrega o
+que viu (`submitCount`) e recebe o veredito. Foi o que manteve intactos o ciclo de apuração, o
+alerta ao supervisor, a conclusão da tarefa do dia e o escopo de faixa parcial — tudo isso já
+estava certo e não precisava ser reescrito.
+
+### O que entrou
+
+- **`CommandCountSession`** — id próprio, unidade, data, tipo (Faixa do dia | Completa), método
+  (Manual | Leitor | Misto), status (Em andamento | Concluída | Cancelada), início, fim,
+  responsável, faixa conferida, esperadas, observação e o resultado congelado.
+- **`CommandCountItem`** — uma linha por comanda marcada, com **como** (Manual/Leitor) e
+  **quando**. É o que permite auditar: *"comanda 83 — Leitor — 09:44"*.
+- **Fluxo de início em duas perguntas**: tipo, depois método. Cabe na tela do celular do caixa.
+- **Progresso sempre à vista**: `247 de 254 conferidas — 97% · Faltam: 7`.
+- **Finalização segura**: as não localizadas **aparecem antes de confirmar**, e entram **em
+  apuração** — nunca viram "perdidas" direto. Perdida ou recuperada é decisão de quem apura.
+- **Conferência interrompida não se perde**: ao voltar, a tela oferece *"Continuar conferência"*.
+- **Histórico** com filtros (unidade, tipo, método, status) e **detalhe comanda a comanda**.
+- **Card "Última conferência"** com quando, tipo, método, responsável, resultado e divergências.
+
+### O que NÃO acontece mais
+
+Conferência concluída é **imutável**: não aceita marcação nem nova finalização. E conferência
+nova **nasce vazia** — nunca herda marca da anterior.
+
+### Cobertura
+
+20 casos de integração (912 no total), na ordem do que importa: concluída nunca é sobrescrita;
+nova não herda marcas; comanda não localizada vira apuração e não perda; leitura repetida não
+conta duas vezes (e diz a que horas foi a primeira); "em uso" conta como presente; duas sessões
+do mesmo tipo ao mesmo tempo são recusadas **oferecendo retomar a que existe**; cancelar não abre
+divergência; e o escopo por unidade vale para abrir e para ler.
+
+---
 ## v1.80.0 — 2026-09-14 (Desperdício: lista fechada, três totais e painel da rede)
 
 Segunda das três frentes. As categorias de desperdício eram **livres por unidade**, e é por isso
