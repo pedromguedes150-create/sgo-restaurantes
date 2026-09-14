@@ -44,6 +44,7 @@ const BASE: ModuleDef[] = [
   { key: 'COMMUNICATION', label: 'Central de Comunicação', nav: '/modulos/comunicacao' },
   { key: 'HELP', label: 'Treinamento da Plataforma', nav: '/ajuda' },
   { key: 'WASTE', label: 'Desperdícios', nav: '/modulos/desperdicios' },
+  { key: 'WASTE_CONSOLIDATED', label: 'Painel consolidado de desperdício', nav: '/modulos/desperdicios/consolidado', parent: 'WASTE' },
 
   { key: 'OCCURRENCES', label: 'Ocorrências', nav: '/modulos/ocorrencias' },
   { key: 'OCCURRENCES_NEW', label: 'Registrar ocorrência', nav: '/modulos/ocorrencias/nova', parent: 'OCCURRENCES' },

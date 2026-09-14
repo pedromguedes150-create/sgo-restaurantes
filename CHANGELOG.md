@@ -9,6 +9,68 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.80.0 — 2026-09-14 (Desperdício: lista fechada, três totais e painel da rede)
+
+Segunda das três frentes. As categorias de desperdício eram **livres por unidade**, e é por isso
+que nunca houve consolidado: somar "Salão" de uma com "Buffet almoço" de outra é somar coisas que
+ninguém garantiu serem iguais.
+
+### Os seis tipos
+
+`Self-service almoço` · `Self-service jantar` · `Refeitório almoço` · `Refeitório jantar` ·
+`Sobras produção almoço` · `Sobras produção jantar` — iguais em toda a rede, e formando os três
+totais que a operação usa: **TOTAL S L** (os quatro primeiros), **TOTAL SOBRA PRODUÇÃO** (os dois
+últimos) e **TOTAL GERAL DIA**.
+
+`src/lib/waste/tipos.ts` é a fonte única: folha de lançamento, painel e dashboard leem dela. O
+`code` é o que viaja para o banco e **não pode mudar** — renomeá-lo desligaria em silêncio todo o
+histórico daquele tipo, e por isso os seis códigos estão escritos à mão no teste.
+
+### A virada das categorias antigas
+
+Decisão do Alan: os seis **substituem** as anteriores. A migração **inativa** as demais em vez de
+apagar — o histórico continua legível (verificado: **348 lançamentos preservados**, 4 categorias
+inativadas, 6 ativas). O total geral soma **só os seis**: se sobrar um resíduo de categoria antiga
+num lançamento, ele não infla o número que a rede compara.
+
+⚠️ **Comparativo que atravesse esta data tem um degrau.** Antes e depois medem coisas diferentes —
+a queda no gráfico pode ser a virada, não a operação.
+
+### Na folha de lançamento
+
+Os três totais aparecem **enquanto se digita**. O gerente pesa seis vasilhames e precisa conferir
+a conta antes de gravar; somar de cabeça no fim do turno é onde o erro entra. A conta é a mesma
+função que o painel usa — folha que soma por conta própria acaba divergindo do relatório.
+
+### Painel consolidado (`/modulos/desperdicios/consolidado`)
+
+Todas as unidades num mês: as seis colunas, os três totais, a variação contra o mês anterior e a
+linha da rede. Mais dois blocos — **Aumentou** e **Diminuiu** — com o antes → depois de cada
+unidade. Em desperdício **subir é ruim**, então o ▲ é vermelho e o ▼ é verde.
+
+Três cuidados que o painel toma para não fazer ninguém cobrar a unidade errada:
+
+- **Sem base de comparação, a variação é um traço**, nunca "+100%". Subir infinito a partir do
+  zero é inventar uma tendência que o dado não sustenta.
+- Unidade sem mês anterior **fica fora dos dois blocos** — senão roubaria o topo de quem
+  realmente piorou.
+- **Zero quilo com zero lançamento não é unidade exemplar**: é ausência de dado, e sai num aviso
+  próprio. A coluna **Dias lançados / dias decorridos** fica ao lado da variação pelo mesmo
+  motivo — quem quase não registra parece desperdiçar pouco.
+
+### Cobertura
+
+29 casos novos (892 no total). Os de integração cercam justamente os jeitos de mentir com
+variação: base zero, unidade que só parou de lançar, categoria antiga sobrando, e o mês de
+fronteira (dia 31 conta, dia 1 do seguinte não). Escopo por unidade também: quem enxerga uma
+unidade não vê a outra no consolidado.
+
+### Falta a terceira
+
+**Contagem de Comandas** — sessões de conferência com histórico imutável. A maior das três: exige
+modelo de dados novo e migração.
+
+---
 ## v1.79.0 — 2026-09-14 (Checklist e Ocorrências deixam de ser a mesma coisa)
 
 **Checklist = acompanhamento da rotina. Ocorrência = problema que precisa de ação.** Até aqui as

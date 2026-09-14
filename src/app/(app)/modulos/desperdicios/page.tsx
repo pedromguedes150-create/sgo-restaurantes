@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
+import { permissaoDeRota } from '@/lib/permissions/links';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
@@ -58,6 +60,10 @@ export default async function DesperdiciosPage({
       })
     : [];
 
+  /* Atalho que o perfil não pode abrir não é oferecido — clicar nele só
+     devolveria a pessoa para onde ela estava. */
+  const podeVerConsolidado = (await permissaoDeRota(user.role))('/modulos/desperdicios/consolidado');
+
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-2">
@@ -65,7 +71,17 @@ export default async function DesperdiciosPage({
           <LargeTitle title="Desperdícios" />
           <p className="text-sm text-ink-500">Dia operacional {operationalDate}</p>
         </div>
-        <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">Exportar (Excel)</a>
+        <div className="flex flex-wrap gap-2">
+          {/* O consolidado da rede fica a um toque do lançamento: quem lança é
+              quem melhor entende o próprio número, e comparar com as outras
+              unidades era coisa que só a supervisão conseguia fazer. */}
+          {podeVerConsolidado && (
+            <Link href="/modulos/desperdicios/consolidado" className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">
+              Painel consolidado
+            </Link>
+          )}
+          <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">Exportar (Excel)</a>
+        </div>
       </div>
 
       {/* Seletor de unidade (compacto) */}
@@ -87,7 +103,7 @@ export default async function DesperdiciosPage({
           <WasteForm
             unitId={selected.id}
             operationalDate={operationalDate}
-            categories={categories.map((c) => ({ id: c.id, name: c.name, measure: (c.measure === 'un' ? 'un' : 'kg') as 'kg' | 'un' }))}
+            categories={categories.map((c) => ({ id: c.id, code: c.code, name: c.name, measure: (c.measure === 'un' ? 'un' : 'kg') as 'kg' | 'un' }))}
             initialKg={entry?.kgByCategory ?? {}}
             initialObservation={entry?.observation ?? null}
             requiresEvidence={Boolean(wasteTemplate?.requiresEvidence)}

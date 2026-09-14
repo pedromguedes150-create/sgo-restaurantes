@@ -155,7 +155,11 @@ export const GUIDE: GuideSection[] = [
         roles: MANAGERLINE,
         summary: 'Um lançamento por dia, com foto da balança.',
         steps: [
-          'Abra DESPERDÍCIOS, informe os kg por categoria e anexe a foto.',
+          'Abra DESPERDÍCIOS e informe os kg dos SEIS tipos da rede: self-service almoço e jantar, refeitório almoço e jantar, sobras produção almoço e jantar. Anexe a foto da balança.',
+          'Os três totais aparecem enquanto você digita: TOTAL S L (os quatro primeiros), TOTAL SOBRA PRODUÇÃO (os dois últimos) e TOTAL GERAL DIA. Confira a conta ANTES de salvar.',
+          'A lista de tipos é a mesma em toda a rede (mudou na v1.80.0) — é o que permite comparar uma unidade com a outra. As categorias antigas de cada unidade foram desativadas; o histórico delas continua no banco.',
+          'Botão "Painel consolidado": todas as unidades no mês, por tipo, com quem AUMENTOU e quem DIMINUIU em relação ao mês anterior.',
+          'No painel, leia a variação junto com a coluna "Dias lançados": uma unidade com poucos dias lançados parece desperdiçar pouco só porque quase não registrou. Quem não lançou nada aparece num aviso à parte — zero quilo ali é ausência de dado, não bom resultado.',
           'Salvar conclui a tarefa de desperdício do dia automaticamente.',
           'Se uma categoria subir mais de 20% vs a média de 7 dias, o Supervisor é avisado.',
           'Conta na meta se o lançamento for feito no dia ou até 1 dia depois; passando disso, não conta (nem penaliza).',
