@@ -49,6 +49,7 @@ export default async function ConferenciaPage({ params }: { params: { id: string
           sessao={{
             id: d.id, unitName: d.unitName,
             tipo: TIPO_LABEL[d.type], metodo: METODO_LABEL[d.method],
+            metodoId: d.method,
             iniciadaEm: hora(d.startedAt), responsavel: d.responsavel,
             escopo: d.escopo, conferidas: d.conferidas, emUso: d.emUso,
             faltando: d.faltando, pct: d.pct,

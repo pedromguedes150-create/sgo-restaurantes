@@ -9,6 +9,60 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.82.0 — 2026-09-14 (Comandas: leitor, filtros e painel — fase 2 de 2)
+
+Fecha a terceira frente. A fase 1 trouxe a sessão, o histórico e a auditoria; esta traz o que
+falta para o turno inteiro caber na tela.
+
+### O leitor, dentro da sessão
+
+Nos métodos **Leitor** e **Manual + Leitor**, o campo de leitura aparece na própria conferência e
+**se mantém em foco sozinho** — o leitor é um teclado, e campo fora de foco perde a bipada no
+vazio. Cada leitura marca, conta e responde na hora:
+
+- **aceita** → "Comanda nº 247 conferida.";
+- **repetida** → "Comanda nº 125 já foi conferida às 14:32." — **não conta duas vezes**, porque a
+  chave é (sessão, número), e o horário vem do próprio registro;
+- **fora da faixa** → recusa dizendo qual comanda é.
+
+A **janela de releitura de 2,5s** foi trazida da conferência por leitor que já existia: leitor de
+mão em modo contínuo relê o código enquanto está apontado para a etiqueta, e sem a janela a tela
+enchia de "já conferida" a cada bipada, parecendo defeito.
+
+O método **Manual + Leitor** mostra os dois ao mesmo tempo — é o que ele promete.
+
+### Filtros da grade
+
+**Todas | Conferidas | Não conferidas | Em uso**, mais busca por número. E um cuidado: **"Marcar
+todas" respeita o filtro ligado** e o botão muda de texto para dizer isso ("Marcar as 7 da
+lista"). Um botão que diz "todas" e marca 651 quando a pessoa estava olhando 7 seria uma
+armadilha.
+
+### Painel operacional
+
+Os três números soltos (Ativas · Reposições · Baixas) viraram **Ativas · Última conferência · Em
+apuração · Baixadas** — nenhum dos antigos respondia a pergunta que se faz ao abrir a tela.
+
+E o aviso de **conferência completa atrasada** (ou nunca realizada) ganhou destaque próprio: a
+parcial da madrugada roda todo dia e diria "contagem de hoje registrada" sempre, escondendo a
+completa não acontecer há semanas.
+
+### Cobertura
+
+11 casos de render (923 no total): o progresso legível sem contar, o leitor aparecendo **só**
+quando o método pede, a grade mostrando os números do escopo e só eles, e a tela de consulta sem
+leitor, sem marcar em lote e sem finalizar — mas com o progresso e a grade visíveis.
+
+### As três frentes, fechadas
+
+| Frente | Versão |
+|---|---|
+| Ocorrências separadas do checklist | v1.79.0 |
+| Desperdício: tipos fixos e painel | v1.80.0 |
+| Comandas: sessão e histórico | v1.81.0 |
+| Comandas: leitor, filtros e painel | v1.82.0 |
+
+---
 ## v1.81.0 — 2026-09-14 (Comandas: sessão de conferência — fase 1 de 2)
 
 Terceira e maior das três frentes. **Fase 1**: a sessão, o histórico e a auditoria. **Fase 2**
