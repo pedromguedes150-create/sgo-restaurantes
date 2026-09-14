@@ -6,14 +6,20 @@ import { Camera, Save, Plus, X } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/ds/button';
 import { Input } from '@/components/ui/ds/field';
 import { Banner } from '@/components/ui/ds/banner';
+import { GRUPOS, LABEL_TOTAL_GERAL, totaisDoDia } from '@/lib/waste/tipos';
 
 interface Category {
   id: string;
+  /** Código fixo do tipo (SS_ALMOCO…) — é o que forma os três totais. */
+  code?: string;
   name: string;
   /// 'kg' (padrão) ou 'un' — categorias em unidades (ex.: lanchonete) têm sub-itens (16/07)
   measure?: 'kg' | 'un';
 }
 interface SubItem { name: string; qty: string }
+
+/** 12 kg lê melhor que 12,000 kg; 0,250 precisa das casas. */
+const fmtKg = (n: number) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg`;
 
 export function WasteForm({
   unitId,
@@ -103,6 +109,23 @@ export function WasteForm({
     }
   }
 
+  /**
+   * Os três totais, enquanto se digita.
+   *
+   * O gerente pesa seis vasilhames e precisa conferir a conta ANTES de gravar —
+   * somar de cabeça no fim do turno é onde o erro entra. A conta é a mesma de
+   * `totaisDoDia`, a que o painel consolidado usa: se a folha somasse por
+   * conta própria, uma das duas acabaria certa e a outra errada.
+   */
+  const totais = totaisDoDia(
+    Object.fromEntries(
+      categories
+        .filter((c) => c.code)
+        .map((c) => [c.code as string, parseFloat((kg[c.id] || '0').replace(',', '.')) || 0]),
+    ),
+  );
+  const temTipoFixo = categories.some((c) => c.code && totais.porCodigo[c.code] !== undefined);
+
   // Agrupa por UNIDADE DE MEDIDA: pesagem (kg) e contagem (un) são gestos
   // diferentes — misturá-las obrigava o gerente a trocar de raciocínio a cada campo.
   const kgCats = categories.filter((c) => c.measure !== 'un');
@@ -127,6 +150,25 @@ export function WasteForm({
               />
             ))}
           </div>
+
+          {temTipoFixo && (
+            <div className="mt-3 rounded-card border-2 border-brand/30 bg-brand/5 p-3">
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+                <div className="flex items-baseline justify-between gap-2 sm:block">
+                  <span className="text-[11px] text-ink-700">{GRUPOS[0].label}</span>
+                  <span className="block text-lg font-bold tabular-nums text-ink-900">{fmtKg(totais.sobraLimpa)}</span>
+                </div>
+                <div className="flex items-baseline justify-between gap-2 sm:block">
+                  <span className="text-[11px] text-ink-700">{GRUPOS[1].label}</span>
+                  <span className="block text-lg font-bold tabular-nums text-ink-900">{fmtKg(totais.sobraProducao)}</span>
+                </div>
+                <div className="flex items-baseline justify-between gap-2 sm:block">
+                  <span className="text-[11px] font-semibold text-brand">{LABEL_TOTAL_GERAL}</span>
+                  <span className="block text-xl font-bold tabular-nums text-brand">{fmtKg(totais.geral)}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
