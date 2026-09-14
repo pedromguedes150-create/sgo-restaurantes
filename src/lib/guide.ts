@@ -197,6 +197,9 @@ export const GUIDE: GuideSection[] = [
           'Saiu da tela no meio? Nada se perde: ao voltar, a tela oferece "Continuar conferência" de onde você parou.',
           'Ao finalizar, se faltar alguma, o sistema MOSTRA quais antes de confirmar. Você pode continuar conferindo ou finalizar: as não localizadas entram EM APURAÇÃO, nunca viram "perdidas" direto — perdida ou recuperada é decisão de quem apura.',
           'O card "Última conferência" mostra quando foi, o tipo, o método, o responsável, o resultado e as divergências. "Histórico de conferências" lista todas, com filtros, e cada uma abre comanda a comanda: número, se estava conferida ou em uso, se foi Manual ou Leitor e o horário.',
+          'LEITOR (v1.82.0): nos métodos Leitor e Manual + Leitor, o campo de leitura fica em foco sozinho — o leitor funciona como teclado. Cada bipada marca e conta na hora. Bipar a mesma de novo NÃO conta duas vezes: avisa "comanda nº 125 já foi conferida às 14:32". Comanda fora da faixa desta conferência é recusada, dizendo qual.',
+          'FILTROS da grade: Todas | Conferidas | Não conferidas | Em uso, mais busca por número. "Marcar todas" respeita o filtro ligado — com um filtro ativo, ele marca só o que está na lista, e o botão diz isso.',
+          'No topo de Comandas: Ativas · Última conferência · Em apuração · Baixadas. E um aviso quando a conferência COMPLETA está atrasada (ou nunca aconteceu) — a parcial da madrugada roda todo dia e esconderia isso.',
         ],
       },
       {

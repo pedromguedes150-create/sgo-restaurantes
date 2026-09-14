@@ -1,18 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, X, CircleSlash, Flag } from 'lucide-react';
+import { Check, X, CircleSlash, Flag, ScanLine, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet } from '@/components/ui/ds/sheet';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { parseCommandBarcode } from '@/lib/commands/barcode';
 
 export interface SessaoNaTela {
   id: string;
   unitName: string;
   tipo: string;
   metodo: string;
+  /** MANUAL / LEITOR / MISTO — decide o que a tela oferece. */
+  metodoId: 'MANUAL' | 'LEITOR' | 'MISTO';
   iniciadaEm: string;
   responsavel: string | null;
   escopo: number[];
@@ -23,13 +26,33 @@ export interface SessaoNaTela {
 }
 
 type Estado = 'CONFERIDA' | 'EM_USO' | 'LIMPA';
+type Filtro = 'TODAS' | 'CONFERIDAS' | 'NAO_CONFERIDAS' | 'EM_USO';
 
-/* Os três estados da grade, no mesmo vocabulário de cor que a tela antiga usava. */
 const CLASSE: Record<Estado, string> = {
   CONFERIDA: 'bg-success text-on-brand border-success',
   EM_USO: 'bg-info text-on-brand border-info',
   LIMPA: 'border-line-strong text-ink-500',
 };
+
+const FILTROS: { id: Filtro; label: string }[] = [
+  { id: 'TODAS', label: 'Todas' },
+  { id: 'CONFERIDAS', label: 'Conferidas' },
+  { id: 'NAO_CONFERIDAS', label: 'Não conferidas' },
+  { id: 'EM_USO', label: 'Em uso' },
+];
+
+/**
+ * Janela em que a MESMA comanda relida não vira aviso.
+ *
+ * Leitor de mão em modo contínuo relê o código enquanto está apontado para a
+ * etiqueta: a primeira leitura conferia e as seguintes enchiam a tela de "já
+ * conferida", parecendo defeito. Dentro da janela a releitura é ignorada em
+ * silêncio; fora dela é o operador bipando de novo de propósito, e aí o aviso
+ * com o horário da primeira leitura é o que ele precisa ver.
+ */
+const JANELA_RELEITURA_MS = 2500;
+
+type Retorno = { tipo: 'OK' | 'DUPLICADA' | 'FORA' | 'ERRO'; texto: string };
 
 /**
  * A conferência EM ANDAMENTO.
@@ -45,72 +68,132 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   const [emUso, setEmUso] = useState<Set<number>>(new Set(sessao.emUso));
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
   const [fechando, setFechando] = useState(false);
   const [observacao, setObservacao] = useState('');
+  const [filtro, setFiltro] = useState<Filtro>('TODAS');
+  const [busca, setBusca] = useState('');
+
+  /* Leitor */
+  const [leitura, setLeitura] = useState('');
+  const [retorno, setRetorno] = useState<Retorno | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const ultimaLeitura = useRef<{ n: number; em: number } | null>(null);
+
+  const escopoSet = useMemo(() => new Set(sessao.escopo), [sessao.escopo]);
+  const usaLeitor = sessao.metodoId === 'LEITOR' || sessao.metodoId === 'MISTO';
+  const usaGrade = sessao.metodoId === 'MANUAL' || sessao.metodoId === 'MISTO';
+
+  /* O leitor é um teclado: o campo precisa estar focado o tempo todo, ou a
+     leitura se perde no vazio. */
+  useEffect(() => {
+    if (usaLeitor && podeEditar) inputRef.current?.focus();
+  }, [usaLeitor, podeEditar, retorno]);
 
   const estadoDe = (n: number): Estado => (conferidas.has(n) ? 'CONFERIDA' : emUso.has(n) ? 'EM_USO' : 'LIMPA');
   const vistas = conferidas.size + emUso.size;
   const faltando = sessao.escopo.filter((n) => !conferidas.has(n) && !emUso.has(n));
   const pct = sessao.escopo.length === 0 ? 0 : Math.round((vistas / sessao.escopo.length) * 100);
 
+  const visiveis = useMemo(() => {
+    const porFiltro = sessao.escopo.filter((n) => {
+      const e = estadoDe(n);
+      if (filtro === 'CONFERIDAS') return e === 'CONFERIDA';
+      if (filtro === 'NAO_CONFERIDAS') return e === 'LIMPA';
+      if (filtro === 'EM_USO') return e === 'EM_USO';
+      return true;
+    });
+    const q = busca.trim();
+    return q ? porFiltro.filter((n) => String(n).includes(q)) : porFiltro;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessao.escopo, filtro, busca, conferidas, emUso]);
+
   /* Um toque = conferida, dois = em uso, três = limpa. É o gesto que a grade
      antiga já tinha, mantido de propósito: quem confere 651 comandas por noite
      não pode reaprender o toque. */
-  function proximo(atual: Estado): Estado {
-    return atual === 'LIMPA' ? 'CONFERIDA' : atual === 'CONFERIDA' ? 'EM_USO' : 'LIMPA';
-  }
+  const proximo = (atual: Estado): Estado => (atual === 'LIMPA' ? 'CONFERIDA' : atual === 'CONFERIDA' ? 'EM_USO' : 'LIMPA');
 
-  async function tocar(n: number) {
-    if (!podeEditar || busy) return;
-    const alvo = proximo(estadoDe(n));
-    setErro(null); setAviso(null);
-
-    /* Otimista: a grade responde ao toque na hora. 651 toques esperando o
-       servidor um a um seria inutilizável no celular do caixa. */
-    const antesC = new Set(conferidas); const antesU = new Set(emUso);
-    const c = new Set(conferidas); const u = new Set(emUso);
-    c.delete(n); u.delete(n);
-    if (alvo === 'CONFERIDA') c.add(n);
-    if (alvo === 'EM_USO') u.add(n);
-    setConferidas(c); setEmUso(u);
-
+  async function gravar(n: number, estado: Estado, method: 'MANUAL' | 'LEITOR') {
     const res = await fetch('/api/commands/session', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'marcar', sessionId: sessao.id, number: n, state: alvo === 'LIMPA' ? null : alvo, method: 'MANUAL' }),
+      body: JSON.stringify({ action: 'marcar', sessionId: sessao.id, number: n, state: estado === 'LIMPA' ? null : estado, method }),
     });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      setConferidas(antesC); setEmUso(antesU); // desfaz: o servidor é a verdade
-      setErro(d.error ?? 'Não foi possível marcar.');
-    }
+    return { ok: res.ok, body: await res.json().catch(() => ({} as Record<string, unknown>)) };
   }
 
-  function marcarFaixa(estado: Estado) {
-    if (!podeEditar) return;
-    void (async () => {
-      setBusy(true); setErro(null);
-      try {
-        for (const n of sessao.escopo) {
-          const atual = estadoDe(n);
-          if (atual === estado) continue;
-          await tocarDireto(n, estado);
-        }
-        router.refresh();
-      } finally { setBusy(false); }
-    })();
-  }
-
-  async function tocarDireto(n: number, estado: Estado) {
+  function aplicar(n: number, estado: Estado) {
     const c = new Set(conferidas); const u = new Set(emUso);
     c.delete(n); u.delete(n);
     if (estado === 'CONFERIDA') c.add(n);
     if (estado === 'EM_USO') u.add(n);
     setConferidas(c); setEmUso(u);
-    await fetch('/api/commands/session', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'marcar', sessionId: sessao.id, number: n, state: estado === 'LIMPA' ? null : estado, method: 'MANUAL' }),
-    });
+    return { c, u };
+  }
+
+  async function tocar(n: number) {
+    if (!podeEditar || busy) return;
+    const alvo = proximo(estadoDe(n));
+    setErro(null);
+    const antesC = new Set(conferidas); const antesU = new Set(emUso);
+    /* Otimista: a grade responde ao toque na hora. 651 toques esperando o
+       servidor um a um seria inutilizável no celular do caixa. */
+    aplicar(n, alvo);
+    const { ok, body } = await gravar(n, alvo, 'MANUAL');
+    if (!ok) {
+      setConferidas(antesC); setEmUso(antesU); // desfaz: o servidor é a verdade
+      setErro(String(body.error ?? 'Não foi possível marcar.'));
+    }
+  }
+
+  /* ── O leitor ── */
+  async function bipar(raw: string) {
+    setLeitura('');
+    const r = parseCommandBarcode(raw, escopoSet);
+
+    if (r.number === null) {
+      setRetorno({ tipo: 'ERRO', texto: `Leitura não reconhecida: "${r.raw.slice(0, 24)}"` });
+      return;
+    }
+    if (!escopoSet.has(r.number)) {
+      setRetorno({ tipo: 'FORA', texto: `A comanda nº ${r.number} não faz parte desta conferência.` });
+      return;
+    }
+
+    const agora = Date.now();
+    const ult = ultimaLeitura.current;
+    if (ult && ult.n === r.number && agora - ult.em < JANELA_RELEITURA_MS) return; // releitura contínua: silêncio
+    ultimaLeitura.current = { n: r.number, em: agora };
+
+    const jaVista = conferidas.has(r.number) || emUso.has(r.number);
+    aplicar(r.number, 'CONFERIDA');
+    const { ok, body } = await gravar(r.number, 'CONFERIDA', 'LEITOR');
+
+    if (!ok) {
+      setRetorno({ tipo: 'ERRO', texto: String(body.error ?? 'Não foi possível registrar a leitura.') });
+      return;
+    }
+    if (jaVista || body.jaEstava) {
+      /* Não duplica a contagem — a chave é (sessão, número). O aviso existe
+         para o operador saber que aquela ele já fez. */
+      const em = body.em ? new Date(String(body.em)).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
+      setRetorno({ tipo: 'DUPLICADA', texto: `Comanda nº ${r.number} já foi conferida${em ? ` às ${em}` : ''}.` });
+      return;
+    }
+    setRetorno({ tipo: 'OK', texto: `Comanda nº ${r.number} conferida.` });
+  }
+
+  async function emLote(estado: Estado) {
+    if (!podeEditar) return;
+    setBusy(true); setErro(null);
+    try {
+      /* Só o que está VISÍVEL no filtro: "marcar todas" com um filtro ligado
+         significando "todas as 651" seria uma armadilha. */
+      for (const n of visiveis) {
+        if (estadoDe(n) === estado) continue;
+        aplicar(n, estado);
+        await gravar(n, estado, 'MANUAL');
+      }
+      router.refresh();
+    } finally { setBusy(false); }
   }
 
   async function finalizar() {
@@ -157,6 +240,38 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
         </div>
       </div>
 
+      {/* ── O leitor ── */}
+      {usaLeitor && podeEditar && (
+        <div className="rounded-lg border-2 border-line-strong p-3">
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-ink-900">
+            <ScanLine className="h-4 w-4 text-brand" /> Leitor conectado — aguardando leitura
+          </p>
+          <p className="mb-2 text-xs text-ink-700">
+            Mantenha este campo em foco. O leitor funciona como teclado: cada bipada entra e conta sozinha.
+          </p>
+          <Input
+            ref={inputRef}
+            value={leitura}
+            onChange={(e) => setLeitura(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void bipar(leitura); } }}
+            onBlur={() => setTimeout(() => inputRef.current?.focus(), 50)}
+            placeholder="bipe a comanda…"
+            className="h-11 text-base tabular-nums"
+            autoFocus
+          />
+          {retorno && (
+            <p className={`mt-2 flex items-center gap-1.5 rounded-md p-2 text-sm font-medium ${
+              retorno.tipo === 'OK' ? 'bg-success/10 text-success'
+                : retorno.tipo === 'DUPLICADA' ? 'bg-warning-bg text-warning'
+                  : 'bg-danger/10 text-danger'
+            }`}>
+              {retorno.tipo === 'OK' ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />}
+              {retorno.texto}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* ── Legenda ── */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 rounded-lg border border-dashed p-2 text-xs text-ink-700">
         <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded bg-success" /> Conferida</span>
@@ -164,37 +279,68 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
         <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-line-strong" /> Não conferida</span>
       </div>
 
-      {podeEditar && (
-        <div className="flex flex-wrap gap-2 print:hidden">
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => marcarFaixa('CONFERIDA')}>
-            <Check className="h-4 w-4" /> Marcar todas
-          </Button>
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => marcarFaixa('LIMPA')}>
-            <CircleSlash className="h-4 w-4" /> Limpar
-          </Button>
-        </div>
+      {usaGrade && (
+        <>
+          {/* ── Filtros e busca ── */}
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
+            {FILTROS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFiltro(f.id)}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${filtro === f.id ? 'border-brand bg-brand text-on-brand' : 'text-ink-700'}`}
+              >
+                {f.label}
+              </button>
+            ))}
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="buscar número…"
+              inputMode="numeric"
+              className="h-8 w-32 text-xs tabular-nums"
+            />
+          </div>
+
+          {podeEditar && (
+            <div className="flex flex-wrap gap-2 print:hidden">
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => void emLote('CONFERIDA')}>
+                <Check className="h-4 w-4" /> Marcar {filtro === 'TODAS' && !busca ? 'todas' : `as ${visiveis.length} da lista`}
+              </Button>
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => void emLote('LIMPA')}>
+                <CircleSlash className="h-4 w-4" /> Limpar {filtro === 'TODAS' && !busca ? '' : 'a lista'}
+              </Button>
+            </div>
+          )}
+
+          {erro && <p className="text-sm font-medium text-danger">{erro}</p>}
+
+          <p className="text-xs text-ink-500">
+            {visiveis.length} de {sessao.escopo.length} comandas nesta visão.
+          </p>
+
+          {/* ── A grade ── */}
+          <div className="flex flex-wrap gap-1">
+            {visiveis.map((n) => {
+              const e = estadoDe(n);
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  disabled={!podeEditar}
+                  onClick={() => void tocar(n)}
+                  className={`h-9 w-11 rounded-md border text-xs font-semibold tabular-nums ${CLASSE[e]}`}
+                >
+                  {n}
+                </button>
+              );
+            })}
+            {visiveis.length === 0 && <p className="text-sm text-ink-500">Nenhuma comanda nesta visão.</p>}
+          </div>
+        </>
       )}
 
-      {erro && <p className="text-sm font-medium text-danger">{erro}</p>}
-      {aviso && <p className="text-sm font-medium text-warning">{aviso}</p>}
-
-      {/* ── A grade ── */}
-      <div className="flex flex-wrap gap-1">
-        {sessao.escopo.map((n) => {
-          const e = estadoDe(n);
-          return (
-            <button
-              key={n}
-              type="button"
-              disabled={!podeEditar}
-              onClick={() => void tocar(n)}
-              className={`h-9 w-11 rounded-md border text-xs font-semibold tabular-nums ${CLASSE[e]}`}
-            >
-              {n}
-            </button>
-          );
-        })}
-      </div>
+      {!usaGrade && erro && <p className="text-sm font-medium text-danger">{erro}</p>}
 
       {podeEditar && (
         <div className="sticky bottom-0 -mx-4 border-t border-line bg-surface px-4 py-3 print:hidden">

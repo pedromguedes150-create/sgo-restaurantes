@@ -147,12 +147,33 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
         />
       </CardContent></Card>
 
+      {/* ── O painel operacional ──
+          Antes eram três números soltos (ativas, reposições, baixas) e nenhum
+          deles respondia a pergunta que se faz ao abrir a tela: "quando foi a
+          última conferência e tem coisa em apuração?". */}
       {state.config && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Ativas" value={state.activeCount} />
-          <StatCard label="Reposições" value={state.replacementCount} />
-          <StatCard label="Baixas" value={state.lostCount} />
+          <StatCard
+            label="Última conferência"
+            value={ultimaSessao ? ultimaSessao.operationalDate.split('-').reverse().join('/') : '—'}
+          />
+          <StatCard label="Em apuração" value={state.openDivergences.length} />
+          <StatCard label="Baixadas" value={state.lostCount} />
         </div>
+      )}
+
+      {/* A parcial roda toda madrugada; sem este aviso, "contagem de hoje
+          registrada" esconderia a completa não acontecer há semanas. */}
+      {state.config && (ultimaCompleta.overdue || ultimaCompleta.never) && (
+        <p className="flex items-start gap-2 rounded-lg border border-warning bg-warning-bg p-2 text-sm text-warning">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {ultimaCompleta.never
+              ? <>Esta unidade <b>nunca teve uma conferência completa</b> registrada.</>
+              : <>Conferência completa atrasada — a última foi há <b>{ultimaCompleta.days} dia(s)</b>.</>}
+          </span>
+        </p>
       )}
 
       <Card>
