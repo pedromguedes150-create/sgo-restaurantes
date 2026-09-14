@@ -14,13 +14,14 @@ export const dynamic = 'force-dynamic';
 /* A cor diz a gravidade antes de a pessoa ler a linha. */
 const TOM: Record<Decisao, 'success' | 'warning' | 'danger' | 'info'> = {
   ATIVO_NO_SGO: 'success',
+  ATIVO_STATUS_DESCONHECIDO: 'warning',
   INATIVO_POR_STATUS: 'danger',
   PULADO_SEM_MATRICULA: 'danger',
   NAO_ENCONTRADO_NO_SGO: 'warning',
 };
 
 /* Só o que explica gente faltando — "Ativo no SGO" não precisa de explicação. */
-const ORDEM_DO_RESUMO: Decisao[] = ['PULADO_SEM_MATRICULA', 'INATIVO_POR_STATUS', 'NAO_ENCONTRADO_NO_SGO', 'ATIVO_NO_SGO'];
+const ORDEM_DO_RESUMO: Decisao[] = ['PULADO_SEM_MATRICULA', 'INATIVO_POR_STATUS', 'ATIVO_STATUS_DESCONHECIDO', 'NAO_ENCONTRADO_NO_SGO', 'ATIVO_NO_SGO'];
 
 /**
  * Diagnóstico do RH — por que falta gente numa unidade.
@@ -108,7 +109,7 @@ export default async function DiagnosticoRhPage({ searchParams }: { searchParams
 
           {/* ── Resumo: o número que explica a diferença ── */}
           {d.totalNoRh > 0 && (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
               {ORDEM_DO_RESUMO.map((k) => (
                 <div key={k} className="rounded-lg border p-2">
                   <p className="text-xl font-bold tabular-nums text-ink-900">{d.resumo[k]}</p>

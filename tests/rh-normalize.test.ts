@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { unwrapColaboradores, unwrapUnidades, isAtivo, RhFormatoInesperadoError } from '@/lib/rh/normalize';
+import { unwrapColaboradores, unwrapUnidades, isAtivo, classificarStatus, RhFormatoInesperadoError } from '@/lib/rh/normalize';
 
 /**
  * A leitura da resposta do RH.
@@ -61,11 +61,41 @@ describe('Lista de unidades', () => {
 });
 
 describe('Status do colaborador', () => {
-  it('reconhece as variações de "ativo" que o RH manda', () => {
-    for (const s of ['Ativo', 'ATIVO', ' ativo ', 'Ativa']) expect(isAtivo(s), s).toBe(true);
+  /* ATENÇÃO ao ler o histórico deste arquivo: a versão anterior deste bloco
+     afirmava que "Férias" e "Afastado" deviam ser INATIVOS. Aquilo não era a
+     regra — era o BUG, escrito como se fosse especificação. O teste passava e
+     cimentava o defeito: quem escreve o teste olhando só para o código acaba
+     descrevendo o que ele faz, não o que ele deveria fazer.
+
+     A regra de verdade apareceu na tela de diagnóstico, com dado real de
+     Jardim Teresópolis: o RH devolve "1ª Experiência" e "2ª Experiência" para
+     quem está no período de experiência, e OITO pessoas que estavam
+     trabalhando tinham sumido do SGO. */
+
+  it('quem está trabalhando aparece — inclusive em período de experiência', () => {
+    const trabalhando = [
+      'Ativo', 'ATIVO', ' ativo ', 'Ativa',
+      '1ª Experiência', '2ª Experiência', '3ª Experiência',  // os status reais do RH
+      '1a experiencia', 'CONTRATO DE EXPERIENCIA',
+    ];
+    for (const s of trabalhando) expect(isAtivo(s), s).toBe(true);
+    for (const s of trabalhando) expect(classificarStatus(s), s).toBe('ATIVO');
   });
 
-  it('e trata o resto como inativo, inclusive vazio', () => {
-    for (const s of ['Demitido', 'Afastado', 'Férias', '', null, undefined]) expect(isAtivo(s), String(s)).toBe(false);
+  it('só sai do SGO quem está claramente desligado', () => {
+    for (const s of ['Demitido', 'Desligado', 'Rescisão', 'RESCINDIDO', 'Inativo', 'Cancelado']) {
+      expect(classificarStatus(s), s).toBe('DESLIGADO');
+      expect(isAtivo(s), s).toBe(false);
+    }
+  });
+
+  it('status DESCONHECIDO mantém a pessoa visível — sumir é pior do que sobrar', () => {
+    /* Uma pessoa a mais na tela é visível e alguém corrige. Uma pessoa a menos
+       é invisível, e ninguém procura o que não sabe que falta. Foi exatamente
+       assim que as 8 de Jardim Teresópolis passaram despercebidas. */
+    for (const s of ['Afastado', 'Férias', 'Licença Maternidade', 'Coisa que o RH inventar', '', null, undefined]) {
+      expect(classificarStatus(s), String(s)).toBe('DESCONHECIDO');
+      expect(isAtivo(s), String(s)).toBe(true);
+    }
   });
 });

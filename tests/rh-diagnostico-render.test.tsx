@@ -38,7 +38,7 @@ function base(over: Partial<DiagnosticoDaUnidade> = {}): DiagnosticoDaUnidade {
     unitId: 'u-igarape', unitName: 'Igarapé', rhUnitName: 'CHURRASCARIA IGARAPE LTDA',
     nomeConfere: true, parecidas: [], erro: null,
     totalNoRh: 0, pessoas: [], soNoSgo: [],
-    resumo: { ATIVO_NO_SGO: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
+    resumo: { ATIVO_NO_SGO: 0, ATIVO_STATUS_DESCONHECIDO: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
     ativosNoSgo: 0,
     ...over,
   };
@@ -74,22 +74,22 @@ describe('Os motivos aparecem escritos, não só contados', () => {
   it('status não-ativo: diz que a pessoa SOME das telas', async () => {
     diagnostico = base({
       totalNoRh: 2, ativosNoSgo: 1,
-      resumo: { ATIVO_NO_SGO: 1, INATIVO_POR_STATUS: 1, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
+      resumo: { ATIVO_NO_SGO: 1, ATIVO_STATUS_DESCONHECIDO: 0, INATIVO_POR_STATUS: 1, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
       pessoas: [
-        { matricula: '2', nome: 'DE FERIAS', cargo: 'Atendente', statusNoRh: 'Férias', decisao: 'INATIVO_POR_STATUS', nomeNoSgo: 'DE FERIAS' },
+        { matricula: '2', nome: 'DE FERIAS', cargo: 'Atendente', statusNoRh: 'Demitido', decisao: 'INATIVO_POR_STATUS', nomeNoSgo: 'DE FERIAS' },
         { matricula: '1', nome: 'ATIVA', cargo: 'Caixa', statusNoRh: 'Ativo', decisao: 'ATIVO_NO_SGO', nomeNoSgo: 'ATIVA' },
       ],
     });
     const html = await render();
     expect(html).toContain('DE FERIAS');
-    expect(html).toContain('Férias');
+    expect(html).toContain('Demitido');
     expect(html).toContain('SOME de Pessoas');
   });
 
   it('sem matrícula: marca a pessoa e explica que ela nunca chegou', async () => {
     diagnostico = base({
       totalNoRh: 1,
-      resumo: { ATIVO_NO_SGO: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 1, NAO_ENCONTRADO_NO_SGO: 0 },
+      resumo: { ATIVO_NO_SGO: 0, ATIVO_STATUS_DESCONHECIDO: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 1, NAO_ENCONTRADO_NO_SGO: 0 },
       pessoas: [{ matricula: null, nome: 'SEM MATRICULA', cargo: null, statusNoRh: 'Ativo', decisao: 'PULADO_SEM_MATRICULA', nomeNoSgo: null }],
     });
     const html = await render();

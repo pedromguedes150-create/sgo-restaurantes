@@ -122,6 +122,24 @@ describe('O caminho normal continua igual', () => {
     expect(await ativosNaUnidade()).toEqual(['ALESSANDRA', 'BRUNO']);
   });
 
+  it('período de EXPERIÊNCIA não desliga ninguém — foi o defeito de 14/09', async () => {
+    /* O RH devolve "1ª Experiência"/"2ª Experiência" para quem está no período
+       de experiência. A regra antiga (`startsWith('ativ')`) tirava essas
+       pessoas do SGO, e elas sumiam de Pessoas, da Escala e do Mapa. */
+    respostaDoRh = { data: [
+      { ...colaboradorRh(`T${sfx}-1`, 'ALESSANDRA'), status: '1ª Experiência' },
+      { ...colaboradorRh(`T${sfx}-2`, 'BRUNO'), status: '2ª Experiência' },
+    ] };
+    await syncCollaboratorsForUnit(admin, unitId);
+    expect(await ativosNaUnidade()).toEqual(['ALESSANDRA', 'BRUNO']);
+  });
+
+  it('status desconhecido também mantém a pessoa no SGO', async () => {
+    respostaDoRh = { data: [colaboradorRh(`T${sfx}-1`, 'ALESSANDRA'), { ...colaboradorRh(`T${sfx}-2`, 'BRUNO'), status: 'Afastado' }] };
+    await syncCollaboratorsForUnit(admin, unitId);
+    expect(await ativosNaUnidade()).toEqual(['ALESSANDRA', 'BRUNO']);
+  });
+
   it('status não-ativo no RH inativa a pessoa', async () => {
     respostaDoRh = { data: [colaboradorRh(`T${sfx}-1`, 'ALESSANDRA'), { ...colaboradorRh(`T${sfx}-2`, 'BRUNO'), status: 'Demitido' }] };
     await syncCollaboratorsForUnit(admin, unitId);
