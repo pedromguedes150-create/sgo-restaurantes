@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Plug, CheckCircle2, XCircle, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { ArrowLeft, Plug, CheckCircle2, XCircle, ArrowDownToLine, ArrowUpFromLine, Stethoscope } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { rhConfigured } from '@/lib/rh/client';
@@ -48,6 +48,18 @@ export default async function IntegracoesPage() {
           <Row k="Autenticação" v={`header x-api-key = ${mask(process.env.RH_API_KEY)}`} />
           <Row k="Status" v={rhConfigured() ? 'Configurada — sync automático diário ativo' : 'SEM CHAVE (RH_API_KEY)'} ok={rhConfigured()} />
           <Row k="Endpoints usados" v="/api/ext/colaboradores (sync), /api/ext/financeiro/* (disponível)" />
+          {/* O sync decide calado (pula quem não tem matrícula, desliga quem não
+              está "Ativo") e desligado some de Pessoas, da Escala e do Mapa. O
+              atalho fica aqui porque é aqui que se vem quando falta gente. */}
+          <Link
+            href="/configuracoes/integracoes/diagnostico"
+            className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-brand/40 bg-brand/5 p-2.5 text-sm hover:bg-brand/10"
+          >
+            <span className="flex items-center gap-2 font-semibold text-ink-900">
+              <Stethoscope className="h-4 w-4 text-brand" /> Diagnóstico do RH — está faltando gente numa unidade?
+            </span>
+            <span className="text-ink-900">→</span>
+          </Link>
         </CardContent>
       </Card>
 
