@@ -9,6 +9,57 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.79.0 — 2026-09-14 (Checklist e Ocorrências deixam de ser a mesma coisa)
+
+**Checklist = acompanhamento da rotina. Ocorrência = problema que precisa de ação.** Até aqui as
+duas se misturavam: todo item marcado "A corrigir" abria uma ocorrência **sozinho**, e a aba
+enchia de rotina de checklist junto com o que de fato precisava de outro setor.
+
+### Antes de implementar, uma correção de premissa
+
+O pedido dizia que *"Não realizado" ou "Em correção" geram ocorrência*. Não era o que o código
+fazia (`src/lib/tasks/complete.ts`): **"Em correção" nunca gerou nada**, "Não realizado" não
+existia como status, e **só "A corrigir" abria**. A anti-duplicação pedida também **já existia**.
+Alinhado isso, o trabalho ficou menor e mais preciso do que a especificação sugeria.
+
+### O que mudou
+
+- **Nenhum status abre ocorrência sozinho.** A criação automática saiu de cena. O contador
+  continua na auditoria (`toFix`, `naoRealizados`) — é ele que mostra se o ruído caiu de verdade.
+- **Status novo: ⛔ Não realizado** (a atividade não foi executada), ao lado de De acordo, Em
+  correção, A corrigir e Não se aplica. Migração aditiva; nenhum registro existente muda.
+- **Botão "+ Abrir ocorrência"** ao lado do item, **opcional**, só nos três status de problema —
+  checklist com pendência não significa que exista ocorrência.
+- **A folha de abertura** já vem com o item e a observação preenchidos e pergunta o que o
+  automático tinha de **inventar**: tipo, categoria, criticidade e anexo. A ocorrência automática
+  nascia sempre "Checklist / MÉDIA", sem destino.
+- **Direcionamento visível ANTES de gravar**: a folha diz *"Esta ocorrência vai para a aba
+  Manutenção"*. O roteamento já existia no cadastro (`isMaintenance`/`isIT`) — o que faltava era
+  mostrá-lo. "Geral Crítico" não é destino separado: é a aba Geral com gravidade CRITICAL, que já
+  avisa supervisão e diretoria na hora.
+- **O crachá virou link**: `Ocorrência nº 123 aberta — Manutenção · toque para acompanhar`, em vez
+  de um número solto que obrigava a procurar na outra tela.
+- **Uma pendência, uma ocorrência** — e a trava mora **no servidor** (`createOccurrence`), não na
+  tela: quem recarregar, clicar duas vezes ou chamar a rota direto esbarra nela. A resposta é 409
+  **com o número da que já existe**, para a tela oferecer "deseja visualizar?" em vez de só
+  recusar. Recusa sem saída é o que faz a pessoa tentar de novo.
+- O botão respeita a mesma permissão da tela de registro (`OCCURRENCES_NEW`): nada de porta
+  lateral pelo checklist.
+
+### Cobertura
+
+24 casos novos. Contra o código em produção, **5 falham** — entre eles o que dá nome à entrega:
+`"A corrigir" não abre mais → expected 1 to be 0`. Os de render medem o que o gerente vê: os
+cinco status, o botão só onde faz sentido, o crachá clicável e o botão sumindo para quem não pode
+registrar ocorrência.
+
+### Ainda na fila (combinado com o Alan)
+
+**Desperdício** (6 tipos fixos com totais, painel consolidado, dashboard de alta/baixa — decidido:
+os 6 **substituem** as categorias atuais) e **Contagem de Comandas** (sessões de conferência com
+histórico imutável — o maior dos três, exige modelo novo e migração).
+
+---
 ## v1.78.1 — 2026-09-14 (período de EXPERIÊNCIA estava desligando o colaborador)
 
 A tela de diagnóstico da v1.78.0 respondeu a pergunta na primeira tentativa, e a resposta foi um

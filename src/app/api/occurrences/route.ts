@@ -25,6 +25,7 @@ export async function POST(req: Request) {
   let gravity = '' as OccurrenceGravity;
   let description = '';
   let customerName: string | undefined;
+  let sourceTaskItemId: string | undefined;
   const attachments: { path: string; mimeType: string }[] = [];
 
   const contentType = req.headers.get('content-type') ?? '';
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
       gravity = String(form.get('gravity') ?? '') as OccurrenceGravity;
       description = String(form.get('description') ?? '');
       customerName = (form.get('customerName') as string) || undefined;
+      sourceTaskItemId = (form.get('sourceTaskItemId') as string) || undefined;
 
       if (!unitId || !canAccessUnit(user, unitId)) {
         return NextResponse.json({ error: 'Sem acesso a esta unidade' }, { status: 403 });
@@ -53,6 +55,7 @@ export async function POST(req: Request) {
       gravity = body.gravity;
       description = body.description;
       customerName = body.customerName;
+      sourceTaskItemId = body.sourceTaskItemId;
     }
   } catch (e) {
     if (e instanceof UploadError) return NextResponse.json({ error: e.message }, { status: 422 });
@@ -61,11 +64,23 @@ export async function POST(req: Request) {
 
   const result = await createOccurrence(
     user,
-    { unitId, typeId, categoryId, gravity, description, customerName, attachments },
+    { unitId, typeId, categoryId, gravity, description, customerName, attachments, sourceTaskItemId },
     requestContext(req),
   );
 
   if (!result.ok) {
+    /* Duplicada tem resposta própria: a tela precisa do NÚMERO da que já existe
+       para oferecer "deseja visualizar?" em vez de só recusar. */
+    if (result.reason === 'JA_EXISTE') {
+      return NextResponse.json(
+        {
+          error: 'Já existe uma ocorrência aberta para este item.',
+          reason: 'JA_EXISTE',
+          existente: result.existente,
+        },
+        { status: 409 },
+      );
+    }
     return reasonResponse(REASONS, result.reason);
   }
 

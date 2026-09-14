@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { hrefVoltarTarefas } from '@/lib/tasks/links';
 import { notFound } from 'next/navigation';
 import { getSessionUser } from '@/lib/auth/session';
+import { ocorrenciasAbertasDosItens } from '@/lib/occurrences/do-checklist';
+import { getOccurrenceTypes } from '@/lib/occurrences/query';
+import { canEditModule } from '@/lib/permissions';
 import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,17 +35,17 @@ export default async function TarefaExecPage({ params, searchParams }: { params:
     ...(inst.evidencePath && !inst.photos.some((p) => p.path === inst.evidencePath) ? [{ path: `/${inst.evidencePath}`, itemId: null }] : []),
   ];
 
-  // Ocorrências ABERTAS geradas por itens deste checklist (16/07): sinalização sem pendência nova
+  /* As ocorrências abertas de cada item, já com o destino (Manutenção/T.I./
+     Geral) e o link — o checklist mostra "nº N aberta — Manutenção" e leva
+     direto, em vez de só dizer um número e deixar a pessoa procurar. */
+  const openIssues = await ocorrenciasAbertasDosItens(inst.unitId, inst.template.items.map((i) => i.id));
 
-  const openOcc = await prisma.occurrence.findMany({
-
-    where: { unitId: inst.unitId, sourceTaskItemId: { in: inst.template.items.map((i) => i.id) }, status: { in: ['OPEN', 'IN_PROGRESS'] } },
-
-    select: { sourceTaskItemId: true, number: true, createdAt: true },
-
-  });
-
-  const openIssues = Object.fromEntries(openOcc.map((o) => [o.sourceTaskItemId!, { number: o.number, since: o.createdAt.toLocaleDateString('pt-BR') }]));
+  /* Para abrir ocorrência o perfil precisa do MESMO direito que a tela de
+     registro exige — o botão no checklist não pode ser uma porta lateral. */
+  const [occurrenceTypes, podeAbrirOcorrencia] = await Promise.all([
+    getOccurrenceTypes(),
+    canEditModule(user.role, 'OCCURRENCES_NEW'),
+  ]);
 
 
   return (
@@ -68,6 +71,13 @@ export default async function TarefaExecPage({ params, searchParams }: { params:
       <Card><CardContent className="pt-4">
         <ChecklistRunner
           openIssues={openIssues}
+          unitId={inst.unitId}
+          checklistName={inst.template.name}
+          podeAbrirOcorrencia={podeAbrirOcorrencia}
+          occurrenceTypes={occurrenceTypes.map((t) => ({
+            id: t.id, name: t.name, isMaintenance: t.isMaintenance, isIT: t.isIT,
+            categories: t.categories.map((c) => ({ id: c.id, name: c.name })),
+          }))}
           instanceId={inst.id}
           requiresEvidence={inst.template.requiresEvidence}
           done={done}

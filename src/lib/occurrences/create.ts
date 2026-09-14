@@ -17,11 +17,21 @@ export interface CreateOccurrenceInput {
   customerName?: string;
   occurredAt?: Date;
   attachments?: { path: string; mimeType: string }[];
+  /**
+   * Item do checklist que originou a ocorrência.
+   *
+   * Guardado para o checklist conseguir mostrar "Ocorrência nº N aberta" ao
+   * lado do item nos dias seguintes, e para a mesma pendência não virar duas
+   * ocorrências.
+   */
+  sourceTaskItemId?: string | null;
 }
 
 export type CreateOccurrenceResult =
   | { ok: true; id: string; number: number; isRecurrence: boolean; gravity: OccurrenceGravity }
-  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' };
+  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' }
+  /** Já existe ocorrência ABERTA para o mesmo item de checklist. */
+  | { ok: false; reason: 'JA_EXISTE'; existente: { id: string; number: number } };
 
 /** Cria uma ocorrência (Módulo 6) com nº sequencial por unidade e reincidência. */
 export async function createOccurrence(
@@ -39,6 +49,24 @@ export async function createOccurrence(
   const GRAVITIES: OccurrenceGravity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
   if (!input.description?.trim() || !input.typeId || !GRAVITIES.includes(input.gravity)) {
     return { ok: false, reason: 'INVALID' };
+  }
+
+  /**
+   * Uma pendência, uma ocorrência.
+   *
+   * A checagem mora AQUI e não na tela porque a tela é conveniência: quem
+   * recarregar a página, clicar duas vezes ou chamar a rota direto passaria
+   * pela guarda de lá. E ocorrência duplicada não é só sujeira de lista — cada
+   * uma dispara aviso à supervisão e entra na conta de reincidência.
+   */
+  const origem = input.sourceTaskItemId?.trim();
+  if (origem) {
+    const aberta = await prisma.occurrence.findFirst({
+      where: { unitId: input.unitId, sourceTaskItemId: origem, status: { in: ['OPEN', 'IN_PROGRESS'] } },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, number: true },
+    });
+    if (aberta) return { ok: false, reason: 'JA_EXISTE', existente: aberta };
   }
 
   const unit = await prisma.unit.findUnique({ where: { id: input.unitId } });
@@ -120,6 +148,7 @@ export async function createOccurrence(
           gravity: input.gravity,
           customerName: input.customerName?.trim() || null,
           description: input.description.trim(),
+          sourceTaskItemId: input.sourceTaskItemId?.trim() || null,
           isRecurrence,
           attachments: input.attachments?.length
             ? { create: input.attachments.map((a) => ({ path: a.path, mimeType: a.mimeType })) }
