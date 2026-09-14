@@ -25,15 +25,39 @@ export class RhApiError extends Error {
   }
 }
 
+/**
+ * Teto de espera por requisição.
+ *
+ * Sem isto o `fetch` espera indefinidamente. O RH roda no Replit, que hiberna o
+ * app quando fica ocioso: uma requisição que pega o app dormindo pode ficar
+ * pendurada, e como o sync diário percorre as unidades em série, UMA conexão
+ * presa segura a fila inteira sem erro nenhum no log. 20s é folgado — hoje os
+ * endpoints respondem em menos de 1s.
+ */
+const TIMEOUT_MS = 20_000;
+
 /** GET genérico autenticado. Lança RhApiError em falha. */
 export async function rhGet<T = unknown>(path: string): Promise<T> {
   if (!KEY) throw new RhApiError('RH_API_KEY não configurada', 401);
   const url = `${BASE}${path.startsWith('/') ? '' : '/'}${path}`;
-  const res = await fetch(url, {
-    headers: { 'x-api-key': KEY, Accept: 'application/json' },
-    // dados do RH mudam pouco; cache curto evita martelar a API a cada render
-    next: { revalidate: 60 },
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { 'x-api-key': KEY, Accept: 'application/json' },
+      // dados do RH mudam pouco; cache curto evita martelar a API a cada render
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch (e) {
+    /* Estouro de tempo e queda de rede viram RhApiError como qualquer outra
+       falha de transporte — quem chama já sabe tratar e, no sync, isso ABORTA
+       a unidade em vez de seguir com uma lista vazia. */
+    const timeout = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
+    throw new RhApiError(
+      timeout ? `RH não respondeu em ${TIMEOUT_MS / 1000}s` : `Falha de rede ao consultar o RH: ${e instanceof Error ? e.message : String(e)}`,
+      timeout ? 504 : 503,
+    );
+  }
 
   const data = await res.json().catch(() => null);
   if (!res.ok || (data && typeof data === 'object' && 'success' in data && data.success === false)) {
