@@ -108,6 +108,7 @@ export const GUIDE: GuideSection[] = [
           'NENHUM status abre ocorrência sozinho (mudou na v1.79.0). Checklist é o acompanhamento da rotina; ocorrência é problema que precisa de outro setor.',
           'Quando houver um problema de verdade, use o botão "+ Abrir ocorrência" ao lado do item. Você escolhe o tipo (que define se vai para Manutenção, T.I. ou Geral), a categoria, a criticidade e pode anexar foto — a tela diz para qual aba vai ANTES de gravar.',
           'Se o item já tiver uma ocorrência aberta, o checklist mostra "Ocorrência nº N aberta — Manutenção" e leva direto para ela. O botão some: uma pendência, uma ocorrência.',
+          'ABA GERAL CRÍTICO (v1.83.0): reúne as ocorrências de gravidade Alta e Crítica de TODOS os assuntos. É uma lente, não uma caixa separada — uma falta de energia aparece em Geral Crítico E continua na aba Manutenção, porque quem conserta precisa continuar vendo. Ao abrir a ocorrência, a tela avisa antes de gravar quando ela também vai cair ali.',
           'Anexe até 5 fotos. Em itens com checagem por IA, toque em "Conferir a foto com IA" para ver se está no padrão (compatível/divergente).',
           'O preenchimento é salvo sozinho — se for interrompido, retoma de onde parou.',
           'Toque em "Concluir checklist". Feito após o horário = conta como "fora do prazo" (não penaliza, mas também não pontua).',

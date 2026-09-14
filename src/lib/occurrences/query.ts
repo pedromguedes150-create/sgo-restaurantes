@@ -20,7 +20,20 @@ export interface OccurrenceScope {
   gravity?: OccurrenceGravity;
   maintenance?: boolean;
   it?: boolean;
+  /**
+   * A lente **Geral Crítico**: o que afeta o funcionamento da unidade, a
+   * segurança ou o atendimento — na prática, gravidade Alta ou Crítica.
+   *
+   * É uma LENTE, não um destino exclusivo, e a diferença importa: "unidade sem
+   * energia" é um problema de manutenção E é crítico. Se a aba tirasse a
+   * ocorrência de Manutenção, quem conserta deixaria de vê-la justamente no
+   * caso mais grave. Aqui ela aparece nos dois lugares.
+   */
+  critical?: boolean;
 }
+
+/** As gravidades que a aba Geral Crítico reúne. */
+export const GRAVIDADES_CRITICAS: OccurrenceGravity[] = ['HIGH', 'CRITICAL'];
 
 /** WHERE compartilhado entre a lista e o resumo — para os dois contarem A MESMA coisa. */
 function occurrenceWhere(user: SessionUser, f: OccurrenceScope) {
@@ -29,6 +42,7 @@ function occurrenceWhere(user: SessionUser, f: OccurrenceScope) {
     ...(f.unitId ? { unitId: f.unitId } : {}),
     ...(f.status ? { status: f.status } : {}),
     ...(f.gravity ? { gravity: f.gravity } : {}),
+    ...(f.critical ? { gravity: { in: GRAVIDADES_CRITICAS } } : {}),
     ...(f.maintenance !== undefined ? { type: { isMaintenance: f.maintenance } } : {}),
     ...(f.it !== undefined ? { type: { isIT: f.it } } : {}),
   };

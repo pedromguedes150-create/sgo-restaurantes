@@ -9,6 +9,40 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.83.0 — 2026-09-14 (Ocorrências: aba Geral Crítico)
+
+Pedida depois da v1.79.0, em que eu tinha decidido não criá-la. A aba existe agora — mas como
+**lente**, não como caixa separada, e a diferença é o ponto.
+
+### O que ela reúne
+
+As ocorrências de gravidade **Alta** e **Crítica**, de **todos os assuntos** — que é a definição
+que o pedido dava: *o que afeta o funcionamento da unidade, a segurança ou o atendimento*.
+
+### Por que é lente, e não destino exclusivo
+
+O exemplo do próprio pedido resolve: *"Unidade sem energia elétrica e impossibilitada de operar"*
+é um problema **de manutenção** E é **crítico**. Se a aba tirasse a ocorrência de Manutenção,
+quem conserta deixaria de vê-la **justamente no caso mais grave**.
+
+Então ela aparece nos dois lugares, e um aviso na aba explica isso. Na abertura pelo checklist, a
+tela passa a dizer antes de gravar: *"vai para a aba Manutenção — e também para Geral Crítico,
+por causa da criticidade"*.
+
+### Detalhes
+
+- A aba entra no registro de permissões como `OCCURRENCES_TAB_CRITICAL`, marcada `soVer`: é uma
+  lente de leitura, e não existe "editar a lente".
+- `GRAVIDADES_CRITICAS` é a única fonte do que conta como crítico — e está escrita à mão no
+  teste, porque mudar isso muda o que a supervisão vê.
+
+### Cobertura
+
+9 casos (932 no total): a lente traz Alta e Crítica de todos os assuntos e deixa Baixa/Média de
+fora; **a crítica continua aparecendo na aba do assunto dela**; as abas antigas não mudaram; e a
+lente respeita status e escopo por unidade.
+
+---
 ## v1.82.0 — 2026-09-14 (Comandas: leitor, filtros e painel — fase 2 de 2)
 
 Fecha a terceira frente. A fase 1 trouxe a sessão, o histórico e a auditoria; esta traz o que
