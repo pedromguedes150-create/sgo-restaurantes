@@ -9,6 +9,66 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.78.1 — 2026-09-14 (período de EXPERIÊNCIA estava desligando o colaborador)
+
+A tela de diagnóstico da v1.78.0 respondeu a pergunta na primeira tentativa, e a resposta foi um
+defeito nosso.
+
+### O que a tela mostrou
+
+**Jardim Teresópolis** — o RH devolve 29 pessoas, o SGO tinha 21 ativas. As **8** que faltavam
+apareceram todas em "Desligado no SGO", com o mesmo padrão de status:
+
+```
+DIOGO VINICIUS VIEIRA        CHURRASQUEIRO             1ª Experiência
+EMILLY JULIE SILVA MOTA      JOVEM APRENDIZ            1ª Experiência
+GEOVANNA V. F. RESENDE       GARÇOM / GARÇONETE        2ª Experiência
+MOISES N. BRANDÃO RAMALHO    PIZZAIOLO                 2ª Experiência
+MONICKE M. DE O. SANTOS      AUXILIAR DE COZINHA       1ª Experiência
+REBECA SILVA LAGE            JOVEM APRENDIZ            1ª Experiência
+REGIMARIO SENA QUEIROZ       AUXILIAR DE PIZZAIOLO     2ª Experiência
+SAMUEL L. M. DE OLIVEIRA     AUXILIAR DE CHURRASQUEIRO 1ª Experiência
+```
+
+Gente trabalhando, escalada, no salão — **invisível** em Pessoas, na Escala e no Mapa.
+
+### A causa
+
+`isAtivo` era `status.startsWith('ativ')`: **qualquer** outra coisa virava desligado. O RH usa
+"1ª Experiência" e "2ª Experiência" para quem está no período de experiência, e nenhum dos dois
+começa com "ativ".
+
+### A correção — a lista fechada mudou de lado
+
+Antes a regra tentava enumerar quem está **trabalhando**, que é um vocabulário aberto: o RH pode
+ampliar quando quiser, e foi o que aconteceu. Agora a lista fechada é a de quem **saiu**
+(`demit`, `deslig`, `resci`, `encerr`, `inativ`, `cancelad`, `baixad`) — uma pergunta de resposta
+curta e conhecida.
+
+**Status desconhecido mantém a pessoa presente**, de propósito: quem aparece a mais é visível e
+alguém corrige; quem some é invisível, e ninguém procura o que não sabe que falta. O diagnóstico
+ganhou a marca **"Ativo, status novo"** (âmbar) para o vocabulário ser revisto em vez de a pessoa
+ser escondida.
+
+### Um teste meu estava errado
+
+O bloco de status que escrevi na v1.77.2 afirmava que **"Férias" e "Afastado" deviam ser
+inativos**. Aquilo não era a regra — era o **bug, escrito como especificação**. Passava, e
+cimentava o defeito. Quem escreve teste olhando só para o código acaba descrevendo o que ele faz,
+não o que ele deveria fazer; foi preciso o dado real da tela para a regra aparecer. O bloco foi
+reescrito com um aviso no topo para quem ler o histórico.
+
+A regra nova, verificada contra o código em produção: **`1ª Experiência: expected false to be
+true`**. E a própria suíte pegou um furo meu no caminho — `rescis` não cobria "RESCINDIDO".
+
+### Sobre Igarapé
+
+Caso **diferente**, e não é código: o nome da unidade confere, e o RH devolve **1 pessoa só**
+(VICTORIA MELISSA, ENCARREGADA DE RESTAURANTE) para "LANCHONETE IGARAPÉ". Os outros 6 do SGO
+(matrículas 4001–4007, formato que não é o do RH, que usa 6 dígitos) estão inativos e o RH não os
+devolve mais. **Isso é dado do lado do RH** — nenhuma mudança aqui traz essas pessoas de volta.
+
+---
 ## v1.78.0 — 2026-09-14 (Diagnóstico do RH: por que falta gente numa unidade)
 
 Relato: *"Igarapé não está com todos os colaboradores"*. A v1.77.2 impede que o sync **volte** a

@@ -77,19 +77,41 @@ afterAll(async () => {
 });
 
 describe('O diagnóstico concorda com o que o sync FAZ', () => {
-  it('status não-ativo: o diagnóstico acusa, e o sync realmente desliga', async () => {
-    /* O suspeito nº 1 do relato "falta gente": quem está de férias/afastado no
-       RH some do SGO inteiro, e nada no sistema dizia por quê. */
-    respostaDoRh = { data: [pessoa(`D${sfx}-1`, 'ATIVA'), pessoa(`D${sfx}-2`, 'DE FERIAS', 'Férias')] };
+  it('desligado: o diagnóstico acusa, e o sync realmente desliga', async () => {
+    respostaDoRh = { data: [pessoa(`D${sfx}-1`, 'ATIVA'), pessoa(`D${sfx}-2`, 'SAIU', 'Demitido')] };
     await syncCollaboratorsForUnit(admin, unitId);
 
     const d = await diagnosticarUnidade(admin, unitId);
     expect(d?.resumo.INATIVO_POR_STATUS).toBe(1);
-    expect(d?.pessoas.find((p) => p.nome === 'DE FERIAS')?.decisao).toBe('INATIVO_POR_STATUS');
+    expect(d?.pessoas.find((p) => p.nome === 'SAIU')?.decisao).toBe('INATIVO_POR_STATUS');
 
     /* E o banco confirma: o diagnóstico não está inventando. */
     const noBanco = await prisma.collaborator.findFirst({ where: { externalId: `D${sfx}-2` }, select: { active: true } });
     expect(noBanco?.active).toBe(false);
+  });
+
+  it('EXPERIÊNCIA não é desligamento — o caso real de Jardim Teresópolis', async () => {
+    /* Foi a tela que revelou isto: 8 pessoas em "1ª/2ª Experiência" estavam
+       marcadas como desligadas e tinham sumido do sistema. */
+    respostaDoRh = { data: [
+      pessoa(`D${sfx}-1`, 'NOVATA', '1ª Experiência'),
+      pessoa(`D${sfx}-2`, 'NOVATO', '2ª Experiência'),
+    ] };
+    await syncCollaboratorsForUnit(admin, unitId);
+
+    const d = await diagnosticarUnidade(admin, unitId);
+    expect(d?.resumo.INATIVO_POR_STATUS).toBe(0);
+    expect(d?.resumo.ATIVO_NO_SGO).toBe(2);
+    expect(d?.ativosNoSgo).toBe(2);
+  });
+
+  it('status que o SGO não conhece é sinalizado, mas a pessoa FICA', async () => {
+    respostaDoRh = { data: [pessoa(`D${sfx}-1`, 'ESTRANHA', 'Afastado INSS')] };
+    await syncCollaboratorsForUnit(admin, unitId);
+
+    const d = await diagnosticarUnidade(admin, unitId);
+    expect(d?.resumo.ATIVO_STATUS_DESCONHECIDO).toBe(1);
+    expect(d?.ativosNoSgo).toBe(1);
   });
 
   it('sem matrícula: o diagnóstico acusa, e a pessoa realmente não existe no SGO', async () => {
