@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { rh, rhConfigured } from '@/lib/rh/client';
 import { unwrapColaboradores, isAtivo } from '@/lib/rh/normalize';
 import { audit } from '@/lib/audit';
+import { notifyAdmins } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 
 export type SyncResult =
@@ -59,18 +60,52 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
 
   // Quem veio do RH antes mas NÃO está mais na lista (demissão/transferência) é inativado.
   const matriculas = lista.filter((c) => c.matricula).map((c) => String(c.matricula));
-  const deactivated = await prisma.collaborator.updateMany({
-    where: { source: 'RH', active: true, externalId: { notIn: matriculas }, units: { some: { unitId } } },
-    data: { active: false },
+
+  /**
+   * GUARDA: lista vazia NÃO inativa ninguém.
+   *
+   * `notIn: []` não filtra nada — o Prisma descarta a condição, e o `updateMany`
+   * passa a casar com TODOS os colaboradores de RH da unidade. Medido: com a
+   * lista vazia, 3 de 3 ativos casavam; com uma matrícula inexistente, 0.
+   *
+   * Ou seja: um `200 { data: [] }` — um "Nome no RH" com um espaço a mais, uma
+   * unidade que o RH devolveu vazia por um instante — apagava o quadro inteiro
+   * da unidade, em silêncio, num job que roda sozinho 1×/dia.
+   *
+   * Zero colaboradores numa unidade que tem gente ativa nunca é uma informação
+   * boa o bastante para desligar todo mundo. Pula a inativação e chama alguém.
+   */
+  const ativosNaUnidade = await prisma.collaborator.count({
+    where: { source: 'RH', active: true, units: { some: { unitId } } },
   });
+  const listaVaziaSuspeita = matriculas.length === 0 && ativosNaUnidade > 0;
+
+  const deactivated = listaVaziaSuspeita
+    ? { count: 0 }
+    : await prisma.collaborator.updateMany({
+      where: { source: 'RH', active: true, externalId: { notIn: matriculas }, units: { some: { unitId } } },
+      data: { active: false },
+    });
 
   await audit({
     userId: actorUserId,
     unitId,
     action: actorUserId ? 'RH_SYNC_COLLABORATORS' : 'RH_SYNC_AUTO',
     module: 'PEOPLE',
-    metadata: { rhUnitName: unit.rhUnitName, total: lista.length, created, updated, deactivated: deactivated.count },
+    metadata: {
+      rhUnitName: unit.rhUnitName, total: lista.length, created, updated, deactivated: deactivated.count,
+      ...(listaVaziaSuspeita ? { inativacaoPulada: ativosNaUnidade, motivo: 'RH devolveu lista vazia' } : {}),
+    },
   });
+
+  if (listaVaziaSuspeita) {
+    await notifyAdmins({
+      title: '⚠ RH devolveu lista vazia — sincronização incompleta',
+      body: `A unidade ${unit.name} tem ${ativosNaUnidade} colaborador(es) ativo(s), mas o RH não devolveu nenhum para "${unit.rhUnitName}". Ninguém foi inativado. Confira o "Nome no RH" da unidade em Configurações → Unidades.`,
+      link: '/configuracoes/integracoes',
+      module: 'PEOPLE',
+    }).catch(() => {});
+  }
 
   // novos colaboradores → gera treinamentos iniciais (e setoriais quando alocados)
   try {

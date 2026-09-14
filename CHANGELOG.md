@@ -9,6 +9,52 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.77.2 — 2026-09-14 (sync do RH: lista vazia desligava a unidade inteira)
+
+Pedido de verificação da integração com o RH. A API do RH está saudável — todos os `/api/ext/*`
+respondem `401 {"success":false,"error":…}` em menos de 1s e o app não está hibernando, ou seja,
+o contrato de transporte que `rh/client.ts` espera está de pé. O que a leitura do código revelou
+foi um **defeito latente de perda de dados** no sync.
+
+### O defeito
+
+`syncUnitCore` inativava quem não viesse na lista do RH com `externalId: { notIn: matriculas }`.
+**Com a lista vazia o Prisma descarta a condição**, e o `updateMany` passa a casar com TODOS.
+Medido contra o banco antes de corrigir: `notIn: []` → 3 de 3 ativos; `notIn: ["inexistente"]` → 0.
+
+Consequência: um `200 { data: [] }` **desligava todo o quadro da unidade, em silêncio** — e isso
+roda sozinho ~1×/dia pelo scheduler. Dois caminhos chegavam lá: um "Nome no RH" que não casa com
+nenhuma razão social (o RH responde vazio, não erro) e uma **mudança de envelope no lado do RH**,
+porque `unwrapColaboradores` devolvia `[]` para qualquer formato que não entendesse.
+
+### As três correções
+
+- **Lista vazia nunca inativa em lote.** Se o RH devolver zero para uma unidade que tem gente
+  ativa, o sync **pula a inativação**, grava `inativacaoPulada` + motivo na auditoria e **avisa os
+  Admins**. Unidade que já estava vazia não dispara alarme — lista vazia ali é rotina.
+- **Formato irreconhecível é ERRO, não lista vazia.** `unwrapColaboradores` lança
+  `RhFormatoInesperadoError` (com amostra do que chegou) em vez de devolver `[]`; o sync aborta
+  aquela unidade com `RH_ERROR` sem tocar em ninguém.
+- **Teto de espera de 20s no `rhGet`.** Não havia nenhum. O RH roda no Replit, que hiberna o app
+  ocioso, e o sync diário percorre as unidades **em série** — uma conexão pendurada segurava a
+  fila inteira sem erro no log. Estouro vira `RhApiError` 504, queda de rede 503.
+
+### Cobertura
+
+A integração do RH **não tinha nenhum teste** — nenhum arquivo de `tests/` tocava `lib/rh`. Agora
+são **23 casos** em `rh-sync.integration`, `rh-normalize` e `rh-client`. Verificados contra o
+código anterior: **9 deles falham** (6 do sync/normalize, 3 do timeout) e os demais passam nos
+dois lados — são a garantia de que o caminho normal não mudou (quem sai da lista continua sendo
+inativado, quem volta é reativado, status não-ativo desliga).
+
+### Fica em aberto
+
+**Resposta parcial** ainda inativa em lote: se o RH devolver 3 de 40 colaboradores, os outros 37
+são desligados. Não há como distinguir isso de 37 demissões reais sem uma regra de limite, que é
+decisão de negócio. Também **não foi possível verificar a produção** desta máquina — a
+`RH_API_KEY` só existe no servidor e a chave SSH do droplet (`~/.ssh/bjf_vps`) não está aqui.
+
+---
 ## v1.77.1 — 2026-09-07 (a v1.77.0 não subiu: cliente alcançando servidor)
 
 A v1.77.0 passou no CI, foi mesclada e **falhou no build da publicação** — ficou na `main` sem
