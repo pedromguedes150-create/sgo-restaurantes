@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma';
+import type { ItemStatus } from '@prisma/client';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { getChecklistToleranceMin, isLate } from '@/lib/tasks/tolerance';
@@ -69,7 +70,7 @@ export async function completeTask(
   return { ok: true };
 }
 
-export interface ItemAnswer { itemId: string; itemText: string; status: 'OK' | 'EM_CORRECAO' | 'A_CORRIGIR' | 'NAO_SE_APLICA'; note?: string }
+export interface ItemAnswer { itemId: string; itemText: string; status: ItemStatus; note?: string }
 
 /**
  * Conclui um checklist ESTRUTURADO: respostas dos itens + fotos (até 5).
@@ -121,48 +122,23 @@ export async function completeChecklist(
     }
   });
 
-  // "A corrigir" → ocorrência automática (não bloqueia a conclusão)
+  /**
+   * A ocorrência NÃO nasce mais sozinha aqui.
+   *
+   * Até a v1.78.1, todo item marcado "A corrigir" virava ocorrência — e a aba
+   * de Ocorrências enchia de rotina de checklist, misturada com o que
+   * realmente precisava de outro setor. Checklist é acompanhamento da rotina;
+   * ocorrência é problema que pede ação. Agora quem abre é o usuário, pelo
+   * botão ao lado do item, e a ocorrência nasce com categoria, criticidade e
+   * destino escolhidos — coisas que o automático tinha de inventar.
+   *
+   * O contador continua no log: é ele que mostra se a mudança reduziu mesmo o
+   * ruído, comparando "quantos itens a corrigir" com "quantas ocorrências
+   * abertas".
+   */
   const toFix = data.items.filter((i) => i.status === 'A_CORRIGIR');
-  for (const item of toFix) {
-    try { await createChecklistOccurrence(inst.unitId, user.id, inst.template.name, item); } catch { /* não bloqueia */ }
-  }
+  const naoRealizados = data.items.filter((i) => i.status === 'NAO_REALIZADO');
 
-  await audit({ userId: user.id, unitId: inst.unitId, action: late ? 'COMPLETE_LATE' : 'COMPLETE', module: 'TASKS', entity: 'task_instance', entityId: instanceId, metadata: { task: inst.template.name, items: data.items.length, photos: allPhotos.length, toFix: toFix.length, late }, ...ctx });
+  await audit({ userId: user.id, unitId: inst.unitId, action: late ? 'COMPLETE_LATE' : 'COMPLETE', module: 'TASKS', entity: 'task_instance', entityId: instanceId, metadata: { task: inst.template.name, items: data.items.length, photos: allPhotos.length, toFix: toFix.length, naoRealizados: naoRealizados.length, late }, ...ctx });
   return { ok: true };
-}
-
-/**
- * Cria uma ocorrência a partir de um item "A corrigir".
- * 16/07: se JÁ EXISTE ocorrência aberta para o MESMO item, não cria outra —
- * o item aparece sinalizado nos checklists seguintes até a ocorrência encerrar.
- */
-async function createChecklistOccurrence(unitId: string, userId: string, checklistName: string, item: ItemAnswer) {
-  const open = await prisma.occurrence.findFirst({
-    where: { unitId, sourceTaskItemId: item.itemId, status: { in: ['OPEN', 'IN_PROGRESS'] } },
-    select: { id: true },
-  });
-  if (open) return; // problema segue em aberto — sem pendência duplicada
-  // nº sequencial por unidade (com retry contra corrida)
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const last = await prisma.occurrence.findFirst({ where: { unitId }, orderBy: { number: 'desc' }, select: { number: true } });
-    const number = (last?.number ?? 0) + 1;
-    try {
-      await prisma.occurrence.create({
-        data: {
-          unitId, number, occurredAt: new Date(),
-          operationalDate: new Date().toISOString().slice(0, 10),
-          reportedById: userId,
-          typeName: 'Checklist', categoryName: item.itemText.slice(0, 80),
-          sourceTaskItemId: item.itemId,
-          gravity: 'MEDIUM',
-          description: `Item do checklist "${checklistName}" marcado como A CORRIGIR: ${item.itemText}${item.note ? ` — ${item.note}` : ''}`,
-          isRecurrence: false,
-        },
-      });
-      return;
-    } catch (e) {
-      if ((e as { code?: string }).code === 'P2002') continue; // colisão de número
-      throw e;
-    }
-  }
 }

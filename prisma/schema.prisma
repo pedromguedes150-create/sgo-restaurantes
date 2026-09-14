@@ -233,10 +233,15 @@ enum ChecklistScope {
 
 /// Marcação de um item do checklist.
 enum ItemStatus {
-  OK // De acordo
-  EM_CORRECAO // Em correção
-  A_CORRIGIR // A corrigir (gera ocorrência)
-  NAO_SE_APLICA // Não se aplica (neutro — não gera ocorrência)
+  OK // De acordo — a atividade foi feita
+  /// A atividade NAO foi executada. Fica registrada so no checklist.
+  NAO_REALIZADO
+  EM_CORRECAO // Em correção — a unidade está tratando internamente
+  /// Foi executada, mas ha problema que pede intervencao de outro setor.
+  /// Ate a v1.78.1 este status ABRIA UMA OCORRENCIA SOZINHO; agora quem abre e
+  /// o usuario, pelo botao "Abrir ocorrencia" ao lado do item.
+  A_CORRIGIR
+  NAO_SE_APLICA // Não se aplica (neutro)
 }
 
 /// Como um checklist é entregue/preenchido.

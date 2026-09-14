@@ -5,26 +5,45 @@ import { useRouter } from 'next/navigation';
 import { Camera, Check, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { ChecklistOccurrenceSheet, type TipoDeOcorrencia, type OcorrenciaAberta } from '@/components/tasks/checklist-occurrence-sheet';
 import { compressImage } from '@/lib/image-compress';
 
-type ItemStatus = 'OK' | 'EM_CORRECAO' | 'A_CORRIGIR' | 'NAO_SE_APLICA';
+type ItemStatus = 'OK' | 'NAO_REALIZADO' | 'EM_CORRECAO' | 'A_CORRIGIR' | 'NAO_SE_APLICA';
 interface Item { id: string; section: string | null; text: string; requiresPhoto: boolean; aiCheck?: boolean }
 interface AiState { loading?: boolean; configured?: boolean; verdict?: 'COMPATIVEL' | 'DIVERGENTE' | 'INCERTO'; observations?: string; error?: string }
 interface Answer { status: ItemStatus; note?: string }
 
 const ST: Record<ItemStatus, { label: string; short: string; cls: string }> = {
-  OK:            { label: 'De acordo',    short: '🟢', cls: 'bg-success text-on-brand border-success' },
-  EM_CORRECAO:   { label: 'Em correção',  short: '🟡', cls: 'bg-warning-bg text-warning border-warning' },
-  A_CORRIGIR:    { label: 'A corrigir',   short: '🔴', cls: 'bg-danger text-on-brand border-danger' },
+  OK:            { label: 'De acordo',     short: '🟢', cls: 'bg-success text-on-brand border-success' },
+  NAO_REALIZADO: { label: 'Não realizado', short: '⛔', cls: 'bg-ink-700 text-on-brand border-ink-700' },
+  EM_CORRECAO:   { label: 'Em correção',   short: '🟡', cls: 'bg-warning-bg text-warning border-warning' },
+  A_CORRIGIR:    { label: 'A corrigir',    short: '🔴', cls: 'bg-danger text-on-brand border-danger' },
   NAO_SE_APLICA: { label: 'Não se aplica', short: '⚪', cls: 'bg-sunken text-ink-500 border-line-strong' },
 };
-const STATUSES: ItemStatus[] = ['OK', 'EM_CORRECAO', 'A_CORRIGIR', 'NAO_SE_APLICA'];
+const STATUSES: ItemStatus[] = ['OK', 'NAO_REALIZADO', 'EM_CORRECAO', 'A_CORRIGIR', 'NAO_SE_APLICA'];
 
-export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus, items, initialAnswers, responses = [], photos, openIssues = {} }: {
+/**
+ * Status em que faz sentido abrir uma ocorrência.
+ *
+ * "De acordo" e "Não se aplica" não têm problema a relatar. Nos outros três o
+ * botão APARECE mas é opcional: checklist com pendência não significa que
+ * exista ocorrência — essa é a separação inteira que se pediu.
+ */
+const COM_PROBLEMA: ItemStatus[] = ['NAO_REALIZADO', 'EM_CORRECAO', 'A_CORRIGIR'];
+
+export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus, items, initialAnswers, responses = [], photos, openIssues = {}, unitId = '', checklistName = '', occurrenceTypes = [], podeAbrirOcorrencia = false }: {
   instanceId: string; requiresEvidence: boolean; done: boolean; lateStatus: boolean;
   items: Item[]; initialAnswers: Record<string, { status: string; note?: string }>;
   /// itemId → ocorrência ABERTA gerada por este item (16/07): sinaliza sem recriar pendência
-  openIssues?: Record<string, { number: number; since: string }>;
+  /** Ocorrências ABERTAS por item — some quando a ocorrência é encerrada. */
+  openIssues?: Record<string, OcorrenciaAberta>;
+  unitId?: string;
+  checklistName?: string;
+  /** Tipos de ocorrência para o formulário de abertura. */
+  occurrenceTypes?: TipoDeOcorrencia[];
+  /** O perfil pode registrar ocorrência? Sem isto o botão não aparece. */
+  podeAbrirOcorrencia?: boolean;
   /** Respostas registradas (snapshot do texto) — usado na visão concluída p/ não depender do ID atual do item. */
   responses?: { itemText: string; status: ItemStatus; note: string | null }[];
   photos: { path: string; itemId: string | null }[];
@@ -176,6 +195,13 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
     );
   }
 
+  /* Ocorrências abertas AGORA, nesta tela: o `openIssues` veio do servidor e
+     não sabe das que acabaram de nascer. Sem isto, o item continuaria
+     oferecendo "Abrir ocorrência" logo depois de abrir uma. */
+  const [abrindo, setAbrindo] = useState<string | null>(null);
+  const [recemAbertas, setRecemAbertas] = useState<Record<string, OcorrenciaAberta>>({});
+  const ocorrenciaDoItem = (id: string): OcorrenciaAberta | null => recemAbertas[id] ?? openIssues[id] ?? null;
+
   /* ───── Execução ───── */
   return (
     <div className="space-y-4">
@@ -189,10 +215,17 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
               return (
                 <div key={it.id} className={cn('rounded-lg border bg-surface p-2.5', openIssues[it.id] && 'border-danger/50')}>
                   <p className="text-sm font-medium">{it.text}{it.requiresPhoto && <span className="ml-1 text-xs text-ink-900">(foto)</span>}</p>
-                  {openIssues[it.id] && (
-                    <p className="mt-1 rounded-md bg-danger/10 px-2 py-1 text-xs font-semibold text-danger">
-                      ⚠ Problema em aberto desde {openIssues[it.id].since} (ocorrência nº {openIssues[it.id].number}) — some daqui quando a ocorrência for encerrada; não gera pendência nova.
-                    </p>
+                  {ocorrenciaDoItem(it.id) && (
+                    /* Clicável de propósito: o pedido era "acompanhar o andamento
+                       sem duplicar informações" — o número sozinho obrigava a
+                       procurar a ocorrência na outra tela. */
+                    <Link
+                      href={ocorrenciaDoItem(it.id)!.href}
+                      className="mt-1 block rounded-md bg-danger/10 px-2 py-1 text-xs font-semibold text-danger hover:bg-danger/20"
+                    >
+                      Ocorrência nº {ocorrenciaDoItem(it.id)!.number} aberta — {ocorrenciaDoItem(it.id)!.destinoLabel}
+                      {ocorrenciaDoItem(it.id)!.desde ? ` · desde ${ocorrenciaDoItem(it.id)!.desde}` : ''} · toque para acompanhar
+                    </Link>
                   )}
                   <div className="mt-2 grid grid-cols-2 gap-1">
                     {STATUSES.map((s) => (
@@ -201,8 +234,20 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                       </button>
                     ))}
                   </div>
-                  {a && (a.status === 'EM_CORRECAO' || a.status === 'A_CORRIGIR') && (
+                  {a && COM_PROBLEMA.includes(a.status) && (
                     <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Observação (o que corrigir)" className="mt-2 h-9 w-full rounded-md border-2 border-line-strong bg-surface px-2 text-sm" />
+                  )}
+                  {/* O botão é OPCIONAL: checklist com pendência não significa
+                      que exista ocorrência. Só aparece nos status de problema e
+                      some quando já há uma aberta (o crachá acima ocupa o lugar). */}
+                  {a && COM_PROBLEMA.includes(a.status) && podeAbrirOcorrencia && !ocorrenciaDoItem(it.id) && (
+                    <button
+                      type="button"
+                      onClick={() => setAbrindo(it.id)}
+                      className="mt-2 inline-flex items-center gap-1 rounded-md border border-brand/50 px-2 py-1 text-xs font-semibold text-brand hover:bg-brand/10"
+                    >
+                      + Abrir ocorrência
+                    </button>
                   )}
                   {a && a.status === 'NAO_SE_APLICA' && (
                     <input value={a.note ?? ''} onChange={(e) => setItem(it.id, { note: e.target.value })} placeholder="Motivo (opcional)" className="mt-2 h-9 w-full rounded-md border-2 border-line-strong bg-surface px-2 text-sm" />
@@ -287,6 +332,29 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
       {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
       <p className="text-[11px] text-ink-500">Seu preenchimento é salvo automaticamente — se for interrompido, retoma de onde parou.</p>
       <Button onClick={submit} disabled={busy} size="lg" className="w-full md:w-auto md:px-10"><Check className="h-5 w-5" /> {busy ? 'Concluindo…' : 'Concluir checklist'}</Button>
+
+      {abrindo && (
+        <ChecklistOccurrenceSheet
+          aberta={ocorrenciaDoItem(abrindo)}
+          unitId={unitId}
+          itemId={abrindo}
+          itemText={items.find((i) => i.id === abrindo)?.text ?? ''}
+          itemNote={answers[abrindo]?.note}
+          checklistName={checklistName}
+          types={occurrenceTypes}
+          onFechar={() => setAbrindo(null)}
+          onAberta={(o) => {
+            setRecemAbertas((r) => ({
+              ...r,
+              [abrindo]: {
+                id: o.id, number: o.number, destinoLabel: o.destinoLabel,
+                href: `/modulos/ocorrencias/${o.id}`, desde: '',
+              },
+            }));
+            setAbrindo(null);
+          }}
+        />
+      )}
     </div>
   );
 }
