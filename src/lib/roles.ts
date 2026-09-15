@@ -9,6 +9,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   MANAGER: 'Gerente',
   FINANCE: 'Financeiro',
   CASHIER: 'Caixa',
+  SEPARATOR: 'Separador CD',
 };
 
 export function roleLabel(role: Role): string {
