@@ -9,6 +9,60 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.86.0 — 2026-09-15 (Pedidos Internos: a tela do gerente — entrega 2 de 4)
+
+### O desenho antigo era o problema
+
+A tela abria com a **lista inteira de produtos** e um `- 0 +` em cada linha. No celular, no meio
+do salão, isso é rolagem infinita e toque errado. Agora ela abre com **um botão**, e os produtos
+entram um a um.
+
+Fluxo: **Iniciar pedido → adicionar (câmera ou busca) → revisar → enviar**, com a barra do
+carrinho fixa no rodapé — a lista rola, ela não.
+
+### Câmera
+
+O leitor de código de barras **já existia** no módulo de Notas, preso ao formato de nota fiscal
+(chave de 44 dígitos). Em vez de duplicar a máquina de câmera — que é a parte difícil e a que mais
+varia entre aparelhos — ele ganhou uma propriedade `parse` opcional, com o comportamento antigo
+como padrão. Notas não muda em nada.
+
+**Código não reconhecido** abre o fluxo manual: localizar o produto e escolher entre **Associar**
+(fica no cadastro) ou **Só desta vez**. Associar é permanente e vale para a rede inteira, então
+fica atrás do direito de editar o catálogo — não do de fazer pedido. Código que já pertence a
+outro produto é recusado **dizendo de quem é**: quase sempre é o outro cadastro que está errado.
+
+### Busca
+
+Por nome, categoria ou código de barras, **ignorando acento e caixa** — "mucarela" acha
+"Muçarela". Com 400 produtos, "arroz" traz dezenas, e o que o gerente quer é quase sempre o que
+**começa** com a palavra: por isso a ordem é código exato → início do nome → nome no meio →
+categoria. Pedaço de código **não** casa: "789" traria meio catálogo.
+
+### Sugestão pelo histórico
+
+Sem IA externa: a informação já está no banco, e uma chamada externa acrescentaria custo, latência
+e uma dependência que pode cair no meio do turno.
+
+A quantidade sugerida é a **mediana**, não a média. Um pedido atípico (a festa, o mutirão) puxa a
+média para cima e a sugestão passa a mandar pedir demais **todo mês**. E o produto precisa ter
+aparecido em **pelo menos dois** dos últimos pedidos — um item pedido uma vez só não é rotina.
+
+A tela mostra **de onde veio o número** ("normalmente 4 caixas · últimos: 4 | 5 | 4"): sugestão sem
+origem é palpite, e ninguém confia num palpite para pedir quatro caixas de muçarela.
+
+### Cobertura
+
+24 casos novos (**1025** no total). A busca e a mediana são **puras** e testadas sem tela; os de
+render medem o que aparece **antes** de o gerente pedir para ver — inclusive que a lista de
+produtos **não** está na tela inicial, que era o defeito de origem.
+
+### Falta
+
+Entrega 3: a tela do separador (item a item, salvamento imediato, faltas). Entrega 4: PDF,
+confirmação de envio, conferência de recebimento e as notificações nos dois sentidos.
+
+---
 ## v1.85.0 — 2026-09-15 (Pedidos Internos: a base — entrega 1 de 4)
 
 Refino da Solicitação de Produtos. **Esta entrega é a base**: modelo, perfil e divisão por setor.

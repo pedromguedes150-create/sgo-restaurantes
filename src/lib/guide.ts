@@ -542,6 +542,25 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'pedidos-internos',
+        title: 'Pedidos Internos',
+        roles: MANAGERLINE,
+        summary: 'Pedir ao CD pelo celular: câmera, busca e sugestão do histórico.',
+        steps: [
+          'A tela abre com "+ Iniciar pedido" — e não mais com a lista inteira de produtos. O fluxo é: iniciar → adicionar itens → revisar → enviar ao CD.',
+          'ESCANEAR: toque em "Escanear produto" e aponte a câmera para o código de barras. O produto entra no pedido e você continua bipando.',
+          'CÓDIGO NÃO RECONHECIDO: o mesmo produto chega com código diferente conforme a remessa. A tela pede para localizar o produto na mão e oferece "Associar" (fica no cadastro para as próximas vezes) ou "Só desta vez". Associar é permanente e vale para a rede — por isso só quem edita o catálogo pode.',
+          'BUSCA: por nome, categoria ou código de barras, ignorando acento e maiúsculas — "mucarela" acha "Muçarela". Quem começa com a palavra digitada aparece primeiro.',
+          'SUGESTÃO: vem do histórico da SUA unidade e mostra a quantidade de costume junto com os últimos pedidos ("normalmente 4 caixas · últimos: 4 | 5 | 4"), para você conferir de onde veio o número. Use "Montar pedido sugerido" ou adicione um a um. Nada é enviado sozinho.',
+          'A barra de baixo mostra quantos itens estão no pedido e leva à revisão, onde você confere tudo, escreve uma observação para o CD e envia.',
+          'O pedido é UM só: o sistema divide os itens entre os setores do CD sozinho, pelo setor cadastrado em cada produto. Você não escolhe setor.',
+        ],
+        tips: [
+          'A quantidade sugerida é a MEDIANA dos últimos pedidos, não a média: assim um pedido atípico (festa, mutirão) não faz a sugestão mandar pedir demais todo mês.',
+          'Produto sem setor do CD cadastrado entra no pedido normalmente, mas aparece num aviso ao enviar — sem setor, nenhum separador é avisado dele.',
+        ],
+      },
+      {
         id: 'notas',
         title: 'Notas Recebidas',
         roles: [...MANAGERLINE, 'FINANCE'],
