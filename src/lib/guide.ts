@@ -7,7 +7,7 @@ import type { Role } from '@prisma/client';
  * `roles` = perfis para quem o guia é mais relevante (todos veem se ligarem "ver tudo").
  */
 
-export const ALL_ROLES: Role[] = ['CEO', 'ADMIN', 'SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE', 'CASHIER'];
+export const ALL_ROLES: Role[] = ['CEO', 'ADMIN', 'SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE', 'CASHIER', 'SEPARATOR'];
 
 export interface Guide {
   id: string;
@@ -539,6 +539,24 @@ export const GUIDE: GuideSection[] = [
           'Escolha a empresa coletora (fornecedor) e "como recebemos" (PIX, dinheiro, crédito, troca…).',
           'O "Dashboard" mostra litros e valor recebido por unidade, por forma de recebimento e a tendência mensal.',
           'O "Histórico" guarda todas as coletas, com valor por litro e forma de recebimento.',
+        ],
+      },
+      {
+        id: 'separacao-cd',
+        title: 'Separação de pedidos (CD)',
+        roles: ['SEPARATOR', 'ADMIN', 'CEO'],
+        summary: 'A fila do seu setor, item a item, gravando na hora.',
+        steps: [
+          'Ao entrar, você cai direto na fila do SEU setor — Novos, Em andamento e Separados. Pedido que não tem item do seu setor não aparece na sua lista.',
+          'Abra o pedido e veja SÓ os itens do seu setor, com a quantidade pedida ao lado de cada um.',
+          'Use [-] e [+] para ajustar e toque em "Confirmar separado". Cada item vai para o servidor NA HORA: se o celular travar ou a página fechar, o que você já conferiu está gravado.',
+          'FALTOU: toque em "Informar falta", diga quanto saiu de verdade e escolha o motivo. A falta NÃO impede terminar — ela fica registrada e a unidade vê o que não veio e por quê.',
+          'Errou? "Refazer" limpa o item e você lança de novo.',
+          'Quando todos os setores terminarem, o pedido fica "Pronto para envio". Um pedido só de bebidas não espera o setor de secos: a conta é sobre os itens que existem nele.',
+        ],
+        tips: [
+          'Se outra pessoa do seu setor já tiver separado o item, a tela PARA e mostra quem foi, quanto registrou e quando — e você escolhe manter ou sobrescrever. Ninguém apaga o trabalho do outro sem ver.',
+          'O gerente da unidade é avisado uma única vez, quando a separação começa — e não a cada item.',
         ],
       },
       {

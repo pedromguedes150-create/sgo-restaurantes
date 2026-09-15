@@ -32,6 +32,8 @@ export default async function DashboardPage() {
 
   // Caixa entra no SGO só para bipar as comandas — vai direto para a conferência
   if (user.role === 'CASHIER') redirect('/modulos/comandas/conferencia');
+  /* O Separador do CD so separa: cai direto na tela dele, como o CAIXA. */
+  if (user.role === 'SEPARATOR') redirect('/modulos/separacao');
 
   if (user.role === 'FINANCE') {
     return (
