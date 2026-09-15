@@ -9,6 +9,61 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.88.0 — 2026-09-15 (Pedidos Internos: envio, recebimento e histórico — entrega 4 de 4)
+
+### A discussão que essa entrega encerra
+
+"Mandei tudo" contra "chegou faltando", por telefone, sem registro de nenhum dos dois lados. Agora as
+duas versões ficam gravadas lado a lado: o que o CD **separou** e o que a unidade **recebeu**. Quando
+divergem, o pedido fecha como **Concluído com divergência** e quem deu saída na carga é avisado — a
+reclamação chega ao CD em vez de morrer num caderno da unidade.
+
+### O CD dá saída
+
+Com todos os setores prontos, aparece **Confirmar envio para a unidade**, com espaço para uma
+observação do CD. Enquanto falta item — de qualquer setor — a tela **diz quantos faltam** em vez de
+esconder o botão: o separador que terminou a parte dele precisa saber que está esperando outro setor,
+e não que o sistema quebrou. Depois do envio, a separação vira registro e não muda mais.
+
+### A unidade confere
+
+A conferência **começa em "tudo certo"** e o gerente aponta só a exceção — motivo, detalhe e foto
+tirada na hora. O caminho inverso (marcar item por item o que chegou bem) viraria trinta toques para
+dizer "nada aconteceu", e a conferência simplesmente não seria feita.
+
+Cada item mostra **o que o CD separou**, não só o que foi pedido: é contra esse número que se confere,
+e o que o CD já marcou como falta não é surpresa na doca. A divergência **não impede** fechar o pedido.
+
+### O romaneio
+
+A folha que viaja com a carga, agrupada **por setor do CD** — é assim que ela foi montada e é assim que
+chega empilhada. Traz quadradinho para conferir na caneta e repete no fim **o que saiu incompleto, com
+o motivo**: omitir a falta faria a unidade procurar no caminhão um item que o CD já sabia que não tinha.
+É a **mesma folha** para os dois lados — dois romaneios divergiriam com o tempo, e conferir carga contra
+papéis diferentes é pior do que não conferir.
+
+### Acompanhar e repetir
+
+O pedido ganhou tela própria com **linha do tempo** (pedido → separação → envio → recebimento). As
+quatro etapas aparecem sempre, inclusive as que ainda não aconteceram: "onde está meu pedido?" é a
+pergunta que traz o gerente ali, e o vazio com rótulo responde melhor do que a etapa ausente.
+
+**Repetir** preenche o carrinho com os itens do pedido anterior — o gerente ainda revisa e envia.
+Produto que saiu do catálogo fica de fora e a tela **diz qual foi**, em vez de devolver uma lista menor
+em silêncio.
+
+### Detalhes
+
+- Duas rotas separadas (`/api/products/envio` e `/api/products/recebimento`) porque a matriz cobra
+  módulos diferentes dos dois lados: dar saída é do CD, conferir é da unidade.
+- O caminho da foto é o que o **servidor** salvou; o que o cliente mandar em `photo` é ignorado.
+- Refazer a conferência limpa o apontamento retirado — senão a marca antiga sobraria no banco.
+- 30 testes novos. Um deles achou uma falha real: `divergenciaLabel` devolve o próprio código quando
+  não conhece (para motivo antigo não sumir da tela), o que o tornava inútil como validador — a
+  validação virou `ehDivergencia`, com verificação de verdade.
+- Sem migração: os campos desta perna já tinham entrado no schema na entrega 1.
+
+---
 ## v1.87.0 — 2026-09-15 (Pedidos Internos: a tela do separador — entrega 3 de 4)
 
 ### Quem separa trabalha de pé, num corredor

@@ -553,10 +553,14 @@ export const GUIDE: GuideSection[] = [
           'FALTOU: toque em "Informar falta", diga quanto saiu de verdade e escolha o motivo. A falta NÃO impede terminar — ela fica registrada e a unidade vê o que não veio e por quê.',
           'Errou? "Refazer" limpa o item e você lança de novo.',
           'Quando todos os setores terminarem, o pedido fica "Pronto para envio". Um pedido só de bebidas não espera o setor de secos: a conta é sobre os itens que existem nele.',
+          'ENVIAR: com todos os setores prontos, aparece "Confirmar envio para a unidade", onde dá para deixar uma observação do CD. A unidade é avisada na hora — e a partir daí a separação vira registro e não pode mais ser alterada.',
+          'Enquanto falta item de outro setor, a tela diz quantos faltam. Não é erro: a carga sai uma vez só, com tudo.',
+          'ROMANEIO: "Romaneio para imprimir" gera a folha que viaja com a carga, agrupada por setor, com o que faltou e o motivo impressos junto — para a unidade não procurar no caminhão o que o CD já sabia que não tinha.',
         ],
         tips: [
           'Se outra pessoa do seu setor já tiver separado o item, a tela PARA e mostra quem foi, quanto registrou e quando — e você escolhe manter ou sobrescrever. Ninguém apaga o trabalho do outro sem ver.',
           'O gerente da unidade é avisado uma única vez, quando a separação começa — e não a cada item.',
+          'Se a unidade apontar divergência ao receber, quem deu saída na carga é avisado — a reclamação chega ao CD em vez de morrer num caderno da unidade.',
         ],
       },
       {
@@ -572,6 +576,11 @@ export const GUIDE: GuideSection[] = [
           'SUGESTÃO: vem do histórico da SUA unidade e mostra a quantidade de costume junto com os últimos pedidos ("normalmente 4 caixas · últimos: 4 | 5 | 4"), para você conferir de onde veio o número. Use "Montar pedido sugerido" ou adicione um a um. Nada é enviado sozinho.',
           'A barra de baixo mostra quantos itens estão no pedido e leva à revisão, onde você confere tudo, escreve uma observação para o CD e envia.',
           'O pedido é UM só: o sistema divide os itens entre os setores do CD sozinho, pelo setor cadastrado em cada produto. Você não escolhe setor.',
+          'ACOMPANHAR: toque no número do pedido na lista dos últimos para ver a linha do tempo — pedido feito, separação no CD, enviado para a unidade, recebido. O que ainda não aconteceu aparece apagado, dizendo que falta.',
+          'RECEBER: quando o CD confirma o envio, você é avisado e o pedido ganha "Conferir recebimento". A conferência começa com TUDO CERTO: aponte só o que veio errado, escolha o motivo e, se quiser, tire a foto na hora.',
+          'A divergência NÃO impede fechar o pedido — ela fica registrada e o CD é avisado na hora. O que você não apontar é registrado como recebido conforme o CD separou.',
+          'REPETIR: o botão "Repetir" ao lado de um pedido antigo preenche o carrinho com os mesmos itens e quantidades. Você ainda revisa e envia — nada é mandado sozinho. Produto que saiu do catálogo fica de fora, e a tela diz qual foi.',
+          'ROMANEIO: depois do envio, "Imprimir o romaneio da carga" dá a folha por setor do CD, com quadradinho para conferir na caneta — é a mesma folha que o CD imprime.',
         ],
         tips: [
           'A quantidade sugerida é a MEDIANA dos últimos pedidos, não a média: assim um pedido atípico (festa, mutirão) não faz a sugestão mandar pedir demais todo mês.',

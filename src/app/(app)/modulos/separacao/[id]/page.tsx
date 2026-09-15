@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Printer } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { getPedidoParaSeparar } from '@/lib/products/separacao';
 import { Card, CardContent } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { SeparacaoClient } from '@/components/products/separacao-client';
+import { EnvioClient } from '@/components/products/envio-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,10 +22,15 @@ export default async function SeparacaoDoPedidoPage({ params }: { params: { id: 
   const pedido = await getPedidoParaSeparar(user, params.id);
   if (!pedido) notFound();
 
-  const { status } = (await prisma.productRequest.findUnique({
-    where: { id: params.id }, select: { status: true },
+  /* O progresso do PEDIDO INTEIRO, não só do setor desta pessoa: a carga sai
+     uma vez só, e quem terminou a parte dele precisa ver que está esperando
+     outro setor. */
+  const cru = (await prisma.productRequest.findUnique({
+    where: { id: params.id },
+    select: { status: true, sentByName: true, sentAt: true, requestItems: { select: { qtySeparated: true } } },
   }))!;
-  const bloqueado = !['ENVIADO_CD', 'SEPARANDO', 'PRONTO_ENVIO'].includes(status);
+  const bloqueado = !['ENVIADO_CD', 'SEPARANDO', 'PRONTO_ENVIO'].includes(cru.status);
+  const faltamNoPedido = cru.requestItems.filter((i) => i.qtySeparated === null).length;
 
   return (
     <div className="space-y-4">
@@ -47,9 +53,17 @@ export default async function SeparacaoDoPedidoPage({ params }: { params: { id: 
 
       {bloqueado && (
         <p className="rounded-md bg-info-bg px-3 py-2 text-sm text-info">
-          Este pedido já saiu do CD — a separação fica como registro e não pode mais ser alterada.
+          Este pedido já saiu do CD{cru.sentByName ? ` (${cru.sentByName}, ${cru.sentAt?.toLocaleString('pt-BR')})` : ''} —
+          a separação fica como registro e não pode mais ser alterada.
         </p>
       )}
+
+      <Link
+        href={`/modulos/separacao/${pedido.id}/romaneio`}
+        className="inline-flex items-center gap-1 text-sm font-semibold text-brand"
+      >
+        <Printer className="h-4 w-4" />Romaneio para imprimir
+      </Link>
 
       <SeparacaoClient
         bloqueado={bloqueado}
@@ -59,6 +73,10 @@ export default async function SeparacaoDoPedidoPage({ params }: { params: { id: 
           missingLabel: i.missingLabel, separadoPor: i.separadoPor, faltando: i.faltando,
         }))}
       />
+
+      {!bloqueado && (
+        <EnvioClient requestId={pedido.id} pronto={faltamNoPedido === 0} faltam={faltamNoPedido} />
+      )}
     </div>
   );
 }

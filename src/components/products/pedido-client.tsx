@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Minus, Search, Sparkles, ShoppingCart, Send, X, PackageSearch } from 'lucide-react';
+import { Plus, Minus, Search, Sparkles, ShoppingCart, Send, X, PackageSearch, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -74,6 +74,40 @@ export function PedidoClient({
   const resultados = useMemo(() => buscarProdutos(produtos, termo), [produtos, termo]);
   const itens = Object.entries(carrinho).filter(([, q]) => q > 0);
   const totalItens = itens.length;
+
+  /**
+   * Traz de volta os itens de um pedido antigo.
+   *
+   * Todo mes a unidade pede quase a mesma coisa, e redigitar trinta linhas e o
+   * que faz o pedido sair errado. O carrinho e PREENCHIDO, nao enviado: o
+   * gerente ainda revisa e confirma.
+   */
+  async function repetir(id: string) {
+    setBusy(true);
+    setErro(null);
+    try {
+      const res = await fetch('/api/products/pedido', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'repetir', id }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setErro(d.error ?? 'Nao foi possivel repetir este pedido.'); return; }
+
+      const carrinhoNovo: Record<string, number> = {};
+      for (const i of d.itens as { productId: string; qty: number }[]) carrinhoNovo[i.productId] = i.qty;
+      setCarrinho(carrinhoNovo);
+      setEtapa('REVISAO');
+      /* Produto que saiu do catalogo nao volta calado: o gerente precisa saber
+         que a lista chegou menor do que o pedido de origem. */
+      if (d.ignorados?.length) {
+        setAviso(`Fora do pedido por nao estarem mais no catalogo: ${d.ignorados.join(', ')}.`);
+      }
+    } catch {
+      setErro('Sem conexao. Tente de novo.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function somar(productId: string, delta: number) {
     setCarrinho((c) => {
@@ -187,11 +221,18 @@ export function PedidoClient({
             <ul className="divide-y divide-line rounded-lg border">
               {recentes.map((r) => (
                 <li key={r.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-                  <span>
+                  {/* O numero leva ao acompanhamento: "onde esta meu pedido?" e a
+                      pergunta que traz o gerente de volta a esta tela. */}
+                  <Link href={`/modulos/produtos/pedido/${r.id}`} className="min-w-0">
                     <b className="text-ink-900">nº {r.number}</b>
                     <span className="block text-[11px] text-ink-500">{r.quando} · {r.itens} item(ns)</span>
+                  </Link>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="text-xs font-semibold text-ink-700">{r.statusLabel}</span>
+                    <Button variant="outline" size="sm" onClick={() => repetir(r.id)} disabled={busy}>
+                      <RotateCcw className="h-4 w-4" /><span className="ml-1">Repetir</span>
+                    </Button>
                   </span>
-                  <span className="text-xs font-semibold text-ink-700">{r.statusLabel}</span>
                 </li>
               ))}
             </ul>

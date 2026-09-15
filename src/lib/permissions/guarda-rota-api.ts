@@ -104,6 +104,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/product-standards': { modulo: 'CONFIG_PRODUCT_STANDARDS', exigir: 'editar' },
   '/api/products/pedido': { modulo: 'PRODUCTS', exigir: 'editar' },
   '/api/products/separacao': { modulo: 'PRODUCT_SEPARATION', exigir: 'editar' },
+  '/api/products/envio': { modulo: 'PRODUCT_SEPARATION', exigir: 'editar' },
+  '/api/products/recebimento': { modulo: 'PRODUCTS', exigir: 'editar' },
   '/api/products/import': { modulo: 'CONFIG_PRODUCTS', exigir: 'editar' },
 
   '/api/rh/sync': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
