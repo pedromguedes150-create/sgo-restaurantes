@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { requestContext } from '@/lib/auth/service';
 import { criarPedido } from '@/lib/products/pedido';
+import { itensParaRepetir } from '@/lib/products/entrega';
 import { soDigitos } from '@/lib/products/busca';
 import { audit } from '@/lib/audit';
 
@@ -38,6 +39,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: r.detalhe ?? 'Não foi possível enviar o pedido', reason: r.reason }, { status: status[r.reason] ?? 400 });
     }
     return NextResponse.json({ ok: true, id: r.id, number: r.number, semSetor: r.semSetor });
+  }
+
+  /* ── Repetir um pedido antigo ──
+     Todo mês a unidade pede quase a mesma coisa, e redigitar trinta linhas é o
+     que faz o pedido sair errado. Isto devolve os itens para o carrinho: o
+     gerente ainda revisa e envia, nada é mandado sozinho. */
+  if (b.action === 'repetir') {
+    const r = await itensParaRepetir(user, String(b.id ?? ''));
+    if (!r.ok) {
+      return NextResponse.json({ error: r.reason === 'FORBIDDEN' ? 'Sem permissão' : 'Pedido não encontrado' }, { status: r.reason === 'FORBIDDEN' ? 403 : 404 });
+    }
+    return NextResponse.json({ ok: true, itens: r.itens, ignorados: r.ignorados });
   }
 
   /* ── Associar um código de barras a um produto ──
