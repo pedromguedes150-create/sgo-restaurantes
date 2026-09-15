@@ -2161,18 +2161,52 @@ model Sector {
   id        String   @id @default(cuid())
   unitId    String
   name      String
-  /// meta de pessoas por turno (para cobertura ✅/⚠️/🔴); 0 = sem meta
+  /// LEGADO. Era "meta de pessoas por turno" — e era o defeito: a exigencia
+  /// crescia com a quantidade de turnos cadastrados. Desde a v1.84.0 quem manda
+  /// e `requirements` (faixa de horario). Mantido porque a migracao o converteu
+  /// numa faixa 00:00-24:00 e ele documenta de onde veio o numero.
   minHeadcount Int   @default(1)
   order     Int      @default(0)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  unit        Unit                  @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  allocations WorkforceAllocation[]
+  unit         Unit                  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  allocations  WorkforceAllocation[]
+  requirements SectorRequirement[]
   freelancerRequests PaymentRequest[] @relation("FreelancerSector")
 
   @@index([unitId])
   @@map("sectors")
+}
+
+
+/// Quantas pessoas o setor precisa numa FAIXA DE HORARIO.
+///
+/// Substitui o `Sector.minHeadcount`, que era "minimo por turno": com quatro
+/// turnos cadastrados a unidade passava a "precisar" de quatro vezes o minimo,
+/// sem ninguem ter pedido. E nao havia como dizer que a cozinha precisa de 3
+/// pessoas de manha e 1 de madrugada.
+///
+/// O turno do funcionario continua existindo, com outro papel: dizer se aquela
+/// pessoa esta trabalhando naquele momento. A exigencia vem daqui.
+///
+/// `endTime` MENOR que `startTime` significa que a faixa cruza a meia-noite
+/// (22:00-06:00). Iguais significa o dia inteiro.
+model SectorRequirement {
+  id        String   @id @default(cuid())
+  sectorId  String
+  /// 'HH:mm'
+  startTime String
+  /// 'HH:mm'
+  endTime   String
+  minPeople Int      @default(1)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  sector Sector @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+
+  @@index([sectorId])
+  @@map("sector_requirements")
 }
 
 /// Alocação de colaborador em Setor × Turno/Horário (grade do Mapa de Funções).

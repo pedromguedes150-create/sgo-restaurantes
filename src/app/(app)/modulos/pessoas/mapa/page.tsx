@@ -6,6 +6,10 @@ import { getUnitDayMap, getAllocationBoard, getDayFreelancers, getSnapshotGrid, 
 import { availabilityForDate } from '@/lib/schedule';
 import { Card, CardContent } from '@/components/ui/card';
 import { WorkforceClient } from '@/components/people/workforce-client';
+import { CoberturaClient } from '@/components/people/cobertura-client';
+import { NecessidadePorSetor } from '@/components/people/faixas-do-setor';
+import { getCoberturaDaUnidade, getVisaoDoDia, getSetoresComFaixas } from '@/lib/workforce/cobertura';
+import { canEditModule } from '@/lib/permissions';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { ArrowLeft } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -60,13 +64,42 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
   const existingSectorNames = safeGrid.sectors.map((s) => s.name.toLowerCase());
   const suggestedSectors = STANDARD_SECTORS.filter((n) => !existingSectorNames.includes(n.toLowerCase()));
 
+  /* COBERTURA POR FAIXA DE HORÁRIO (v1.84.0).
+     Usa o MESMO instante que a grade (`filterMinutes`): se a grade mostra as
+     14:35 e a cobertura mostrasse outro horário, os dois números na mesma tela
+     se contradiriam. Sem horário (dia inteiro/passado) a conta é feita ao
+     meio-dia, que é o instante mais representativo de um dia de operação. */
+  const minutoDaCobertura = filterMinutes ?? 12 * 60;
+  const [cobertura, visaoDoDia, setoresComFaixas, podeEditarMapa] = await Promise.all([
+    getCoberturaDaUnidade(user, selected.id, selectedDate, minutoDaCobertura),
+    getVisaoDoDia(user, selected.id, selectedDate),
+    getSetoresComFaixas(user, selected.id),
+    canEditModule(user.role, 'PEOPLE_MAP'),
+  ]);
+
   return (
     <div className="space-y-4">
       <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
       <LargeTitle title="Mapa de Funções" />
       <p className="text-sm text-ink-500">Monte o <b>quadro padrão</b> uma vez; o <b>mapa da unidade</b> mostra automaticamente quem está trabalhando agora (segue a Escala). Cobertura 🟢 ok · 🟡 parcial · 🔴 sem cobertura.</p>
 
+      {cobertura && (
+        <Card><CardContent className="pt-4">
+          <CoberturaClient
+            horaLabel={cobertura.horaLabel}
+            setores={cobertura.setores}
+            abaixoDoMinimo={cobertura.abaixoDoMinimo}
+            comExcedente={cobertura.comExcedente}
+            dia={visaoDoDia}
+          />
+        </CardContent></Card>
+      )}
+
       {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
+
+      <Card><CardContent className="pt-4">
+        <NecessidadePorSetor setores={setoresComFaixas} podeEditar={podeEditarMapa} />
+      </CardContent></Card>
 
       <Card><CardContent className="pt-4">
         <WorkforceClient
