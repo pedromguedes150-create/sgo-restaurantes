@@ -126,6 +126,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/waste': { modulo: 'WASTE', exigir: 'editar' },
   '/api/waste/export': { modulo: 'WASTE', exigir: 'ver' },
   '/api/workforce': { modulo: 'PEOPLE_MAP', exigir: 'editar' },
+  '/api/workforce/requirements': { modulo: 'PEOPLE_MAP', exigir: 'editar' },
 };
 
 /**

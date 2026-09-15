@@ -9,6 +9,64 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.84.0 — 2026-09-15 (Mapa de Funções: necessidade por faixa de horário)
+
+### O defeito que estava no schema, escrito com todas as letras
+
+`Sector.minHeadcount` era descrito como *"meta de pessoas **por turno**"*, e a cobertura era
+calculada por coluna de turno. O efeito: uma unidade com quatro turnos cadastrados passava a
+"precisar" de **quatro vezes** o mínimo, sem ninguém ter pedido isso. E não havia como dizer que
+a cozinha precisa de 3 pessoas de manhã e 1 de madrugada.
+
+### O conceito novo, separado em três
+
+- **Turno do funcionário** — o horário em que ele trabalha.
+- **Setor** — onde ele está alocado.
+- **Necessidade do setor** — quantas pessoas aquele setor precisa **numa faixa de horário**.
+
+O turno deixou de criar exigência. Ele responde uma pergunta só: *essa pessoa está trabalhando
+neste horário?* Depois disso, o setor dela recebe a contagem.
+
+### Cadastro
+
+Dentro do setor, **Necessidade por horário**, com `+ Adicionar faixa de horário`. O resumo saiu de
+`Cozinha (mín. 1)` para `Cozinha · 3 faixas configuradas`.
+
+- **Faixa que atravessa a meia-noite é caso de uso, não erro**: `22:00 → 06:00` vale das 22h às 6h
+  do dia seguinte.
+- **Sobreposição é recusada**, e a mensagem **cita a faixa conflitante** — "entra em conflito" sem
+  dizer com o quê obriga a pessoa a adivinhar qual mexer.
+- Setor **sem faixa** naquele horário fica ⚪ **Sem exigência**: é a unidade não operando ali, e
+  alertar seria cobrar por algo que ninguém combinou.
+
+### No Mapa
+
+Cobertura no horário analisado, com card que **explica a própria cor**: além de `🟡 2/3`, mostra
+*"faixa atual 06:00–14:00 · necessidade 3"*. Mais: excedente (`+2 acima do mínimo`), alerta do que
+está abaixo do mínimo, **sugestão de realocação** quando há sobra num setor e falta em outro (só
+sugestão — nada é movido), e **Visão do dia**, com os intervalos em que cada setor fica descoberto.
+
+### A migração não muda nada no dia da subida
+
+Cada setor com mínimo > 0 ganhou **uma faixa 00:00–24:00** com o mesmo número. Verificado: 3
+setores, 3 faixas convertidas. Dividir a faixa é o que passa a ser possível.
+
+### Cobertura
+
+51 casos novos (983 no total). A lógica das faixas é **pura** de propósito — só aritmética de
+minutos — porque é onde mora o risco: a faixa que vira a meia-noite e a sobreposição, que tornaria
+a necessidade ambígua **sem nada aparecer na tela**. O conflito é detectado por conjunto de
+minutos e não por comparação de intervalos: é barato, e é obviamente correto inclusive no canto em
+que `22:00–06:00` e `02:00–04:00` se sobrepõem sem que "início < fim" perceba.
+
+### Na fila
+
+**Pedidos Internos** — o refino da Solicitação de Produtos. Vai em 3 ou 4 entregas: hoje o pedido
+guarda os itens num campo JSON e não existe setor do CD, separação por item, PDF, conferência de
+recebimento nem notificação nos dois sentidos. Decidido: o **Separador CD será um perfil novo**,
+nos moldes do CAIXA.
+
+---
 ## v1.83.0 — 2026-09-14 (Ocorrências: aba Geral Crítico)
 
 Pedida depois da v1.79.0, em que eu tinha decidido não criá-la. A aba existe agora — mas como
