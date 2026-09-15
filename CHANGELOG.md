@@ -9,6 +9,63 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.85.0 — 2026-09-15 (Pedidos Internos: a base — entrega 1 de 4)
+
+Refino da Solicitação de Produtos. **Esta entrega é a base**: modelo, perfil e divisão por setor.
+As telas vêm nas próximas — gerente (2), separador (3), PDF/conferência/notificações (4).
+
+### O que existia
+
+Um pedido por origem, com os itens dentro de um **campo JSON** e o status numa string livre. Sem
+setor do CD, sem separação por item, sem perfil de separador, com **um** código de barras por
+produto.
+
+### A mudança estrutural: o item virou LINHA
+
+`ProductRequestItem` — uma linha por produto do pedido, com snapshot de nome, categoria, medida e
+**setor do CD congelado**. É o que permite quatro setores trabalharem no mesmo pedido ao mesmo
+tempo: com os itens num JSON único, duas confirmações simultâneas **sobrescreviam uma à outra em
+silêncio**, e o trabalho de alguém sumia sem erro nenhum.
+
+### O resto da base
+
+- **`CdSector`** — os setores do CD, configuráveis. Nascem quatro (Bebidas, Secos, Refrigerados,
+  Descartáveis); nada no código depende desse número.
+- **`Product.cdSectorId`** — o produto sabe quem o separa, e é isso que divide o pedido sem o
+  gerente escolher nada. **Produto sem setor não derruba o pedido**: cai num balde "Sem setor
+  cadastrado", porque recusar o pedido inteiro por um cadastro incompleto do CD puniria a unidade.
+- **`ProductBarcode`** — vários códigos por produto (o mesmo item chega com código diferente
+  conforme a remessa). O código que já existia virou o primeiro da lista.
+- **Perfil `SEPARATOR`**, nos moldes do CAIXA: nasce fechado, só com a Separação e a Ajuda. O
+  **setor vem do cadastro do usuário**, nunca de um seletor na tela.
+- **Status** no vocabulário do fluxo: Rascunho → Enviado ao CD → Separação em andamento → Pronto
+  para envio → Enviado para a unidade → Concluído / Concluído com divergência.
+
+### Um defeito que só a produção teria mostrado
+
+A migração copia o `productId` do JSON para uma coluna que **agora tem chave estrangeira**. Testei
+com dado no formato real e a migração **falhou**: pedido antigo apontando para produto já apagado
+violaria a FK e derrubaria a migração inteira em produção. O banco de dev, praticamente vazio,
+nunca teria mostrado isso.
+
+Corrigido: o `productId` só é copiado se o produto ainda existir — senão fica nulo, e o nome
+continua no snapshot. Provado: 3 itens convertidos, o do produto apagado com `productId` nulo, e
+JSON que não é array não insere nada em vez de derrubar a migração.
+
+### Um teste meu que passava na primeira rodada e falhava na segunda
+
+A limpeza do `permissions-submodules` cobria só as abas da Minha área. Quando a v1.77.0
+acrescentou o caso que liga o "Editar" de `MANAGER_SCHEDULE`, **a linha ficava no banco** e a
+execução seguinte começava com o gerente já podendo lançar. Reproduzido rodando o arquivo duas
+vezes; corrigido e conferido em três rodadas seguidas, e a suíte inteira rodada **duas vezes**.
+
+### Cobertura
+
+18 casos novos (**1001** no total): o item virando linha, o snapshot que sobrevive ao rename, o
+setor congelado que não se move quando o produto muda de setor depois, o produto sem setor, as
+quatro situações do setor dentro do pedido, e o separador enxergando **só** o setor dele.
+
+---
 ## v1.84.0 — 2026-09-15 (Mapa de Funções: necessidade por faixa de horário)
 
 ### O defeito que estava no schema, escrito com todas as letras

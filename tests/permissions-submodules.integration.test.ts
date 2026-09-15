@@ -17,8 +17,19 @@ import { canOpenPath } from '@/lib/permissions/route-guard';
 
 const SUBS = ['MANAGER_AREA_TASKS', 'MANAGER_AREA_NOTES', 'MANAGER_AREA_LEAVES'];
 
+/**
+ * A limpeza precisa cobrir TUDO que os casos gravam.
+ *
+ * Ela cobria só as abas da Minha área. Quando a v1.77.0 acrescentou o caso que
+ * liga o "Editar" de MANAGER_SCHEDULE, a linha ficava no banco depois do
+ * arquivo terminar — e a execução SEGUINTE começava com o gerente já podendo
+ * lançar, derrubando o caso do padrão. Passava na primeira rodada e falhava na
+ * segunda, que é o pior tipo de teste quebrado: parece flaky, e é sujeira.
+ */
 async function limpar() {
-  await prisma.rolePermission.deleteMany({ where: { module: { in: [...SUBS, 'MANAGER_AREA'] } } });
+  await prisma.rolePermission.deleteMany({
+    where: { module: { in: [...SUBS, 'MANAGER_AREA', 'MANAGER_SCHEDULE'] } },
+  });
 }
 
 afterEach(async () => { await limpar(); });

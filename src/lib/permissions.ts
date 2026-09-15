@@ -109,7 +109,8 @@ const BASE: ModuleDef[] = [
   { key: 'AUDIT_REPORT', label: 'Relatório de auditoria', nav: '/auditoria/relatorio', parent: 'AUDIT' },
 
   { key: 'HYGIENE', label: 'Higiene dos banheiros', nav: '/modulos/higiene' },
-  { key: 'PRODUCTS', label: 'Solicitação de Produtos', nav: '/modulos/produtos' },
+  { key: 'PRODUCTS', label: 'Pedidos Internos', nav: '/modulos/produtos' },
+  { key: 'PRODUCT_SEPARATION', label: 'Separação de Pedidos (CD)', nav: '/modulos/separacao' },
 
   // Cada tela de Configurações é uma parte própria: dá para liberar uma sem
   // abrir as outras. Todas nascem restritas ao Admin/CEO (ver RESTRICTED_DEFAULT).
@@ -127,6 +128,7 @@ const BASE: ModuleDef[] = [
   { key: 'CONFIG_OCCURRENCES', label: 'Ocorrências (tipos)', nav: '/configuracoes/ocorrencias', parent: 'CONFIG' },
   { key: 'CONFIG_SUPPLIERS', label: 'Fornecedores', nav: '/configuracoes/fornecedores', parent: 'CONFIG' },
   { key: 'CONFIG_PRODUCTS', label: 'Catálogo de produtos', nav: '/configuracoes/produtos', parent: 'CONFIG' },
+  { key: 'CONFIG_CD_SECTORS', label: 'Setores do CD', nav: '/configuracoes/setores-cd', parent: 'CONFIG' },
   { key: 'CONFIG_PRODUCT_STANDARDS', label: 'Padrão de produtos (foto)', nav: '/configuracoes/padrao-produtos', parent: 'CONFIG' },
   { key: 'CONFIG_PAYMENTS', label: 'Pagamentos (freelancers e avulsos)', nav: '/configuracoes/pagamentos', parent: 'CONFIG' },
   { key: 'CONFIG_FREELANCER_RATES', label: 'Valor do freelancer por setor', nav: '/configuracoes/freelancer-valores', parent: 'CONFIG' },
@@ -154,6 +156,9 @@ export interface Perm { canView: boolean; canEdit: boolean }
 // explícita (ADMIN/CEO sempre veem). Admin pode liberar/restringir na matriz.
 const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   LEAVES_TEAM: ['SUPERVISOR'],
+  /* A separacao e do CD, nao das unidades: nasce so para o Separador (e
+     ADMIN/CEO, que veem tudo). Gerente nao separa pedido. */
+  PRODUCT_SEPARATION: ['SEPARATOR'],
   MANAGER_SCHEDULE: ['SUPERVISOR'], // quem manda na escala de gerência é a Supervisão; ADMIN/CEO sempre
   SUPERVISION: ['SUPERVISOR'],
   EXECUTIVE: [], // só ADMIN/CEO por padrão (Admin pode liberar na matriz)
@@ -187,6 +192,9 @@ for (const m of MODULES) {
  */
 const DEFAULT_ALLOW_ONLY: Partial<Record<Role, string[]>> = {
   CASHIER: ['COMMANDS', 'HELP'],
+  /* O Separador do CD so separa. Nasce fechado como o CAIXA: sem dashboard,
+     sem escala, sem nada da unidade — a tela dele e uma so. */
+  SEPARATOR: ['PRODUCT_SEPARATION', 'HELP'],
 };
 
 /** Permissões efetivas de um perfil por módulo (com defaults). */
