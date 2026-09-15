@@ -9,6 +9,54 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.87.0 — 2026-09-15 (Pedidos Internos: a tela do separador — entrega 3 de 4)
+
+### Quem separa trabalha de pé, num corredor
+
+O separador do CD entra e cai direto na **fila do setor dele** (`/modulos/separacao`): Novos, Em
+andamento e Separados, os mais antigos em cima. Pedido sem item do setor dele **não aparece** —
+e por isso um pedido só de bebidas nunca fica esperando o separador de secos.
+
+Dentro do pedido: um item por cartão, `[-] [+]` grandes, **Confirmar separado** e **Informar falta**.
+
+### Duas regras deram forma a tudo
+
+**1. Cada item é gravado na hora.** Não existe "salvar no fim". O celular trava, o sinal cai no
+corredor, a tela bloqueia — e o que já foi conferido está no banco. Voltar é continuar de onde parou.
+
+**2. Ninguém sobrescreve ninguém em silêncio.** Dois separadores do mesmo setor abrindo o mesmo
+pedido é rotina. Antes, o segundo a gravar apagaria o trabalho do primeiro sem erro nenhum. Agora a
+segunda gravação **para** e devolve **quem mexeu, quanto registrou e quando** (HTTP 409); a tela
+pergunta *manter* ou *sobrescrever*, e quem está ali decide. Corrigir o próprio lançamento não
+pergunta nada.
+
+### Falta é informação, não bloqueio
+
+Separar menos exige **motivo** (sem estoque, quantidade insuficiente, avariado, aguardando reposição,
+outro) e **não impede** concluir o setor. Zero com motivo é o item que não saiu. A unidade passa a
+ver exatamente o que não veio e por quê, em vez de só receber a menos.
+
+### O status do pedido segue os itens
+
+`ENVIADO_CD` → `SEPARANDO` no primeiro item tocado → `PRONTO_ENVIO` quando **todos** os itens foram
+tocados. A conta é sobre os itens que o pedido tem, não sobre os quatro setores do CD. O gerente é
+notificado **uma única vez**, quando a separação começa — avisar a cada item encheria o sino dele e
+faria ignorar o aviso que importa.
+
+Pedido já enviado à unidade abre em **leitura**: mexer nele reescreveria o que a unidade recebeu.
+
+### Detalhes
+
+- Perfil **Separador CD** cai em `/modulos/separacao` ao entrar (dashboard e guarda de rota).
+- `/api/products/separacao` entrou na matriz (`PRODUCT_SEPARATION`, exige Editar); o servidor também
+  confere o setor do usuário em cada função — ADMIN/CEO enxergam todos os setores.
+- `separacao-motivos.ts` guarda a lista de motivos **sem import nenhum**: a tela precisa dela e
+  `separacao.ts` puxa o Prisma. Foi essa fronteira que derrubou o deploy da v1.77.0.
+- 22 testes novos (17 de regra + 5 de tela). A guarda de sobrescrita foi verificada desligando-a:
+  o teste quebra.
+- Guia de treinamento ganhou a seção "Separação de pedidos (CD)".
+
+---
 ## v1.86.0 — 2026-09-15 (Pedidos Internos: a tela do gerente — entrega 2 de 4)
 
 ### O desenho antigo era o problema
