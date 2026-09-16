@@ -5,6 +5,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { getPedido, STATUS_SETOR_LABEL } from '@/lib/products/pedido';
 import { motivoLabel } from '@/lib/products/separacao-motivos';
 import { montarTimeline, divergenciaLabel, avaliacaoLabel } from '@/lib/products/entrega-tela';
+import { numeroDoPedido } from '@/lib/products/numero-do-pedido';
 import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -49,7 +50,7 @@ export default async function PedidoDoGerentePage({ params }: { params: { id: st
         <Link href="/modulos/produtos" className="inline-flex items-center gap-1 text-sm text-ink-500 hover:text-ink-900">
           <ArrowLeft className="h-4 w-4" />Voltar para Pedidos
         </Link>
-        <LargeTitle title={`Pedido nº ${p.number}`} />
+        <LargeTitle title={numeroDoPedido(p.number, p.createdAt)} />
         <p className="text-sm text-ink-500">{p.unitName} · {p.statusLabel}</p>
       </div>
 

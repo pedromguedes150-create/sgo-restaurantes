@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import { criarPedido, getPedido } from '@/lib/products/pedido';
 import { separarItem } from '@/lib/products/separacao';
 import { confirmarEnvio, conferirRecebimento, itensParaRepetir } from '@/lib/products/entrega';
+import { numeroDoPedido } from '@/lib/products/numero-do-pedido';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -38,13 +39,17 @@ beforeAll(async () => {
   prod.suco = (await prisma.product.create({ data: { name: 'Suco de uva', origin: 'CD', category: 'Bebidas', measure: 'caixa', cdSectorId: setorId } })).id;
 });
 
-beforeEach(async () => { await prisma.productRequest.deleteMany({ where: { unitId } }); });
+beforeEach(async () => {
+  await prisma.productRequest.deleteMany({ where: { unitId } });
+  await prisma.notification.deleteMany({ where: { userId: { in: [gerenteId, carlosId] } } });
+});
 
 afterAll(async () => {
   await prisma.productRequest.deleteMany({ where: { unitId: { in: [unitId, outraUnidade] } } });
   await prisma.product.deleteMany({ where: { id: { in: Object.values(prod) } } });
   await prisma.user.deleteMany({ where: { id: { in: [gerenteId, carlosId] } } });
   await prisma.cdSector.deleteMany({ where: { id: setorId } });
+  await prisma.notification.deleteMany({ where: { userId: { in: [gerenteId, carlosId] } } });
   await prisma.auditLog.deleteMany({ where: { unitId: { in: [unitId, outraUnidade] } } });
   await prisma.unit.deleteMany({ where: { id: { in: [unitId, outraUnidade] } } });
   await prisma.$disconnect();
@@ -201,6 +206,54 @@ describe('A unidade confere o que chegou', () => {
     const coca = await itemPorNome(id, 'Coca-Cola 2L');
     const r = await conferirRecebimento(gerente(), id, { itens: [{ itemId: coca.id, issue: 'SUMIU_NO_CAMINHO' }] });
     expect(r.ok === false && r.reason).toBe('INVALID');
+  });
+});
+
+describe('O CD fica sabendo o que aconteceu com a carga', () => {
+  /* Para quem despachou, o pedido só termina quando alguém do outro lado
+     confirma que chegou. Sem esse retorno a carga fica em aberto na cabeça de
+     quem carregou o caminhão, e a checagem volta a ser por telefone — que é o
+     que este módulo veio encerrar. */
+  const avisosDoCarlos = () =>
+    prisma.notification.findMany({ where: { userId: carlosId }, orderBy: { createdAt: 'desc' } });
+
+  it('recebimento SEM divergência também avisa quem deu saída', async () => {
+    const id = await pedidoSeparado();
+    await confirmarEnvio(carlos(), id, null);
+    const antes = (await avisosDoCarlos()).length;
+
+    await conferirRecebimento(gerente(), id, { itens: [] });
+
+    const depois = await avisosDoCarlos();
+    expect(depois.length).toBe(antes + 1);
+    expect(depois[0].title).toContain('recebido');
+    /* E diz QUEM recebeu: o CD despacha para várias unidades no mesmo dia. */
+    expect(depois[0].body).toContain('Unidade Entrega');
+  });
+
+  it('o aviso traz a etiqueta completa do pedido, não só o número', async () => {
+    /* "nº 12" existe em toda unidade ao mesmo tempo. */
+    const id = await pedidoSeparado();
+    await confirmarEnvio(carlos(), id, null);
+    const pedido = (await prisma.productRequest.findUnique({ where: { id } }))!;
+    await conferirRecebimento(gerente(), id, { itens: [] });
+
+    const [aviso] = await avisosDoCarlos();
+    expect(aviso.body).toContain(numeroDoPedido(pedido.number, pedido.createdAt));
+  });
+
+  it('com divergência, o aviso é o da divergência — e não os dois', async () => {
+    const id = await pedidoSeparado();
+    await confirmarEnvio(carlos(), id, null);
+    const coca = await itemPorNome(id, 'Coca-Cola 2L');
+    const antes = (await avisosDoCarlos()).length;
+
+    await conferirRecebimento(gerente(), id, { itens: [{ itemId: coca.id, issue: 'EMBALAGEM' }] });
+
+    const depois = await avisosDoCarlos();
+    expect(depois.length).toBe(antes + 1);
+    expect(depois[0].title).toContain('divergência');
+    expect(depois[0].body).toContain('Embalagem danificada');
   });
 });
 

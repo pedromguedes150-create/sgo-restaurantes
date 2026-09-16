@@ -4,6 +4,7 @@ import { ArrowLeft, Printer } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { getPedidoParaSeparar } from '@/lib/products/separacao';
+import { numeroDoPedido } from '@/lib/products/numero-do-pedido';
 import { Card, CardContent } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { SeparacaoClient } from '@/components/products/separacao-client';
@@ -38,7 +39,7 @@ export default async function SeparacaoDoPedidoPage({ params }: { params: { id: 
         <Link href="/modulos/separacao" className="inline-flex items-center gap-1 text-sm text-ink-500 hover:text-ink-900">
           <ArrowLeft className="h-4 w-4" />Voltar para a fila
         </Link>
-        <LargeTitle title={`Pedido nº ${pedido.number}`} />
+        <LargeTitle title={numeroDoPedido(pedido.number, pedido.createdAt)} />
         <p className="text-sm text-ink-500">
           {pedido.unitName} · {pedido.setorNome} · {pedido.separados} de {pedido.total} itens separados
         </p>

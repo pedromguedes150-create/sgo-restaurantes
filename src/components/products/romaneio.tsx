@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import type { PedidoDetalhado } from '@/lib/products/pedido';
 import { STATUS_SETOR_LABEL } from '@/lib/products/pedido';
 import { motivoLabel } from '@/lib/products/separacao-motivos';
+import { numeroDoPedido } from '@/lib/products/numero-do-pedido';
 import { PrintButton } from '@/components/ui/print-button';
 
 const fmt = (d: Date | null) => (d ? new Date(d).toLocaleString('pt-BR') : '—');
@@ -40,7 +41,7 @@ export function Romaneio({ p, voltarHref }: { p: PedidoDetalhado; voltarHref: st
 
       <div className="border-b-2 border-brand pb-3">
         <p className="sgo-type-11 font-semibold text-ink-900">Romaneio de Separação — SGO Beija Flor</p>
-        <h1 className="text-2xl font-bold text-ink-900">Pedido nº {p.number} · {p.unitName}</h1>
+        <h1 className="text-2xl font-bold text-ink-900">{numeroDoPedido(p.number, p.createdAt)} · {p.unitName}</h1>
         <p className="text-sm text-ink-500">
           Pedido por {p.createdByName} em {fmt(p.createdAt)} · {p.totalSeparados} de {p.totalItens} itens separados
         </p>
@@ -108,6 +109,14 @@ export function Romaneio({ p, voltarHref }: { p: PedidoDetalhado; voltarHref: st
         <div className="border-t border-ink-400 pt-1 text-center text-ink-500">Conferente do CD</div>
         <div className="border-t border-ink-400 pt-1 text-center text-ink-500">Recebido na unidade</div>
       </div>
+
+      {/* Esta folha viaja com a carga, tem itens, quantidades e duas
+          assinaturas — a cara de uma nota. Sem esta linha, alguém de boa-fé a
+          arquiva como documento fiscal, e o papel passa a valer o que não vale.
+          Por isso ela é impressa, e não só mostrada na tela. */}
+      <p className="break-inside-avoid border-t border-line pt-2 text-center sgo-type-11 font-semibold uppercase tracking-wide text-ink-500">
+        Documento interno de controle operacional — sem valor fiscal
+      </p>
     </div>
   );
 }

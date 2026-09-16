@@ -13,6 +13,13 @@ export const DIVERGENCIAS = [
   { id: 'VEIO_MENOS', label: 'Veio menos do que foi separado' },
   { id: 'VEIO_MAIS', label: 'Veio mais do que foi separado' },
   { id: 'AVARIADO', label: 'Chegou avariado' },
+  /* Avaria da EMBALAGEM é separada da avaria do produto: a caixa amassada com
+     o produto íntegro se resolve com o transporte, e a mercadoria estragada,
+     com o fornecedor ou a câmara fria. Juntar as duas num motivo só apagaria
+     essa diferença justamente no dado que serve para cobrar alguém. */
+  { id: 'EMBALAGEM', label: 'Embalagem danificada' },
+  { id: 'ESTRAGADO', label: 'Produto estragado' },
+  { id: 'QUALIDADE', label: 'Qualidade ruim' },
   { id: 'VALIDADE', label: 'Validade curta ou vencida' },
   { id: 'TROCADO', label: 'Produto trocado' },
   { id: 'OUTRO', label: 'Outro' },

@@ -9,6 +9,46 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.89.0 — 2026-09-16 (Pedidos Internos: quatro acertos contra a especificação)
+
+Revisão da especificação escrita contra o que foi entregue nas quatro entregas. Quatro pontos não
+tinham sido feitos como pedido — três por esquecimento, um por decisão minha que contrariou o texto.
+
+### O romaneio agora diz o que é
+
+A folha que viaja com a carga tem itens, quantidades e duas assinaturas — a cara de uma nota. Passa a
+sair impresso **"documento interno de controle operacional — sem valor fiscal"**. Sem essa linha,
+alguém de boa-fé arquiva o papel como documento fiscal, e ele passa a valer o que não vale.
+
+### O CD é avisado quando a carga chega CERTO
+
+Antes, só a divergência gerava aviso — decisão minha, com o raciocínio de que "pedido que chegou certo
+não é notícia". Estava errado: para quem despachou, a carga só termina quando alguém do outro lado
+confirma que chegou. Sem esse retorno ela fica em aberto na cabeça de quem carregou o caminhão, e a
+checagem volta a ser por telefone — que é o que este módulo veio encerrar. O aviso diz **qual unidade**
+recebeu, porque o CD despacha para várias no mesmo dia.
+
+### O pedido ganhou etiqueta
+
+`PED-2026-001245` em vez de "nº 1245". O número é sequencial **por unidade**, então "nº 12" existe em
+Moreira e em Jardim Teresópolis ao mesmo tempo — no papel e no telefonema isso vira confusão. Ano de
+referência (o do pedido, não o de hoje) e largura fixa, que ordena certo e não dança quando o número
+passa de 999.
+
+### Dez motivos de divergência, não sete
+
+Entraram **embalagem danificada**, **produto estragado** e **qualidade ruim**. A avaria da embalagem é
+separada da avaria do produto de propósito: caixa amassada com produto íntegro se resolve com o
+transporte, mercadoria estragada se resolve com o fornecedor. Juntar as duas num motivo só apagaria
+essa diferença justamente no dado que serve para cobrar alguém.
+
+### Detalhes
+
+- 12 testes novos. O da notificação foi verificado desligando o aviso: quebra com `expected 1 to be 2`.
+- `numero-do-pedido.ts` sem import nenhum — a tela do gerente é componente cliente.
+- Sem migração.
+
+---
 ## v1.88.0 — 2026-09-15 (Pedidos Internos: envio, recebimento e histórico — entrega 4 de 4)
 
 ### A discussão que essa entrega encerra
