@@ -148,8 +148,10 @@
   --sgo-focus-ring: 0 0 0 2px var(--sgo-surface), 0 0 0 4px var(--sgo-brand);
 }
 
-/* Dark automático — SOMENTE para quem optou por "Sistema" (data-theme=system) */
-@media (prefers-color-scheme: dark) {
+/* Dark automático — SOMENTE para quem optou por "Sistema" (data-theme=system).
+   E somente na TELA: ver a nota do bloco de impressão, logo abaixo do dark
+   explícito. */
+@media screen and (prefers-color-scheme: dark) {
   :root[data-theme='system'] {
     --sgo-ink-900-rgb: 245 242 240;
     --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
@@ -213,8 +215,21 @@
   }
 }
 
-/* Dark — escolha explícita vence em qualquer sistema */
-:root[data-theme='dark'] {
+/* Dark — escolha explícita vence em qualquer sistema.
+
+   ENVOLTO EM `@media screen` DE PROPÓSITO, junto com o dark automático acima.
+
+   Papel é sempre branco. O tema escuro repinta `--sgo-ink-900` em 245 242 240
+   (quase branco) e, na impressão, `print:bg-white` força o fundo para branco —
+   dava TEXTO BRANCO EM PAPEL BRANCO, e toda tela do sistema saía em folha
+   vazia para quem usa o computador no escuro. Só o romaneio escapava, porque
+   ele carrega a classe `.sgo-print`.
+
+   Limitando o escuro à tela, a impressão cai sozinha nos valores claros de
+   `:root` — sem repetir a paleta num segundo lugar, que é o que sairia do
+   lugar no primeiro ajuste de cor. */
+@media screen {
+  :root[data-theme='dark'] {
   --sgo-ink-900-rgb: 245 242 240;
   --sgo-ink-900: rgb(var(--sgo-ink-900-rgb));
   --sgo-ink-700-rgb: 214 208 204;
@@ -275,6 +290,7 @@
   --sgo-info: rgb(var(--sgo-info-rgb));
   --sgo-info-bg-rgb: 22 34 46;
   --sgo-info-bg: rgb(var(--sgo-info-bg-rgb));
+  }
 }
 
 /* =============================================================================

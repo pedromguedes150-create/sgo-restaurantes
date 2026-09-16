@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       const status: Record<string, number> = { FORBIDDEN: 403, INVALID: 400, NAO_ENCONTRADO: 404 };
       return NextResponse.json({ error: r.detalhe ?? 'Não foi possível enviar o pedido', reason: r.reason }, { status: status[r.reason] ?? 400 });
     }
-    return NextResponse.json({ ok: true, id: r.id, number: r.number, semSetor: r.semSetor });
+    return NextResponse.json({ ok: true, pedidos: r.pedidos, semSetor: r.semSetor });
   }
 
   /* ── Repetir um pedido antigo ──

@@ -13,6 +13,8 @@ import { buscarProdutos, produtoPorCodigo, soDigitos, type ProdutoBuscavel } fro
 
 export interface ProdutoNaTela extends ProdutoBuscavel {
   packSize?: number | null;
+  /** 'FABRICA' | 'CD' — decide para onde o item vai no envio. */
+  origin?: string;
 }
 
 export interface SugestaoNaTela {
@@ -82,6 +84,18 @@ export function PedidoClient({
   const emCurso = recentes.find((r) => r.emAndamento);
   const itens = Object.entries(carrinho).filter(([, q]) => q > 0);
   const totalItens = itens.length;
+
+  /* Para onde este carrinho vai. O envio divide por destino no servidor; aqui é
+     só para a tela não prometer "ao CD" quando o carrinho é da Fábrica — ou
+     quando são os dois. */
+  const destinos = useMemo(() => {
+    const origens = new Set(itens.map(([id]) => porId.get(id)?.origin).filter(Boolean));
+    const temFabrica = origens.has('FABRICA');
+    const temCd = origens.has('CD') || origens.size === 0;
+    if (temFabrica && temCd) return { rotulo: 'Fábrica e Centro de Distribuição', preposicao: 'à Fábrica e ao CD' };
+    if (temFabrica) return { rotulo: 'Fábrica', preposicao: 'à Fábrica' };
+    return { rotulo: 'Centro de Distribuição', preposicao: 'ao CD' };
+  }, [itens, porId]);
 
   /**
    * Traz de volta os itens de um pedido antigo.
@@ -166,9 +180,14 @@ export function PedidoClient({
       if (!res.ok) { setErro(d.error ?? 'Não foi possível enviar o pedido.'); return; }
       setCarrinho({}); setNota(''); setEtapa('INICIO');
       router.refresh();
+      /* O carrinho pode virar DOIS pedidos — um da Fábrica e um do CD. Dizer
+         "pedido nº X enviado ao CD" quando saíram dois deixaria o gerente
+         procurando o outro número. */
+      const pedidos: { number: number; origin: string }[] = d.pedidos ?? [];
+      const partes = pedidos.map((p) => `nº ${p.number} ${p.origin === 'CD' ? 'ao CD' : 'à Fábrica'}`);
       setAviso(
-        `Pedido nº ${d.number} enviado ao CD.` +
-        (d.semSetor > 0 ? ` ${d.semSetor} item(ns) estão sem setor do CD cadastrado e não foram direcionados a ninguém.` : ''),
+        (partes.length > 1 ? `Pedido dividido por destino: ${partes.join(' e ')}.` : `Pedido ${partes[0] ?? ''} enviado.`) +
+        (d.semSetor > 0 ? ` ${d.semSetor} item(ns) do CD estão sem setor cadastrado e não foram direcionados a ninguém.` : ''),
       );
     } finally { setBusy(false); }
   }
@@ -285,7 +304,9 @@ export function PedidoClient({
       <div className="space-y-3 pb-24">
         <div className="rounded-lg border bg-surface p-3 text-sm">
           <p className="font-bold text-ink-900">Revisar pedido</p>
-          <p className="text-xs text-ink-700">Unidade: {unitName} · Destino: Centro de Distribuição · {totalItens} produto(s)</p>
+          {/* O destino sai dos PRODUTOS do carrinho. Dizia sempre "Centro de
+              Distribuição", mesmo num carrinho só da Fábrica. */}
+          <p className="text-xs text-ink-700">Unidade: {unitName} · Destino: {destinos.rotulo} · {totalItens} produto(s)</p>
         </div>
 
         <ul className="divide-y divide-line rounded-lg border">
@@ -310,7 +331,7 @@ export function PedidoClient({
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface p-3">
           <div className="mx-auto flex max-w-3xl gap-2">
             <Button size="lg" className="flex-1" disabled={busy || totalItens === 0} onClick={() => void enviar()}>
-              <Send className="h-5 w-5" /> {busy ? 'Enviando…' : 'Enviar pedido ao CD'}
+              <Send className="h-5 w-5" /> {busy ? 'Enviando…' : `Enviar pedido ${destinos.preposicao}`}
             </Button>
             <Button size="lg" variant="outline" onClick={() => setEtapa('MONTANDO')}>Voltar</Button>
           </div>

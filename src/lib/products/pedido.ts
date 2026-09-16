@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
-import { notifyUsers } from '@/lib/notifications';
+import { notifyAdmins, notifyUsers } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import type { ProductOrigin } from '@prisma/client';
 
@@ -62,9 +62,9 @@ export type ResultadoDePedido<T = Record<string, never>> =
  */
 export async function criarPedido(
   user: SessionUser,
-  input: { unitId: string; origin?: ProductOrigin; items: ItemDoPedido[]; note?: string },
+  input: { unitId: string; items: ItemDoPedido[]; note?: string },
   ctx: { ip?: string | null; userAgent?: string | null } = {},
-): Promise<ResultadoDePedido<{ id: string; number: number; semSetor: number }>> {
+): Promise<ResultadoDePedido<{ pedidos: { id: string; number: number; origin: ProductOrigin }[]; semSetor: number }>> {
   if (!canAccessUnit(user, input.unitId)) return { ok: false, reason: 'FORBIDDEN' };
 
   const limpos = input.items.filter((i) => i.productId && i.qty > 0);
@@ -76,64 +76,85 @@ export async function criarPedido(
   });
   if (produtos.length === 0) return { ok: false, reason: 'INVALID', detalhe: 'Nenhum produto válido no pedido.' };
 
-  const origem: ProductOrigin = input.origin ?? produtos[0].origin;
-
-  /* Número sequencial por unidade, com retry: dois gerentes enviando ao mesmo
-     tempo colidiriam no número, e o segundo perderia o pedido. */
-  const unit = await prisma.unit.findUnique({ where: { id: input.unitId }, select: { name: true } });
-  let criado: { id: string; number: number } | null = null;
-
-  for (let tentativa = 0; tentativa < 5 && !criado; tentativa++) {
-    const ultimo = await prisma.productRequest.findFirst({
-      where: { unitId: input.unitId }, orderBy: { number: 'desc' }, select: { number: true },
-    });
-    const number = (ultimo?.number ?? 0) + 1;
-    try {
-      const r = await prisma.productRequest.create({
-        data: {
-          unitId: input.unitId, origin: origem, number, status: 'ENVIADO_CD',
-          createdById: user.id, createdByName: user.name,
-          note: input.note?.trim() || null,
-          /* O JSON legado continua sendo gravado: telas antigas ainda o leem, e
-             desligar os dois lados na mesma entrega é como se perde o histórico. */
-          items: limpos.map((i) => {
-            const p = produtos.find((x) => x.id === i.productId);
-            return { productId: i.productId, name: p?.name ?? '', category: p?.category ?? '', measure: p?.measure ?? '', qty: i.qty };
-          }) as unknown as Prisma.InputJsonValue,
-          requestItems: {
-            create: limpos.flatMap((i) => {
-              const p = produtos.find((x) => x.id === i.productId);
-              if (!p) return [];
-              return [{
-                productId: p.id, name: p.name, category: p.category, measure: p.measure,
-                cdSectorId: p.cdSectorId, cdSectorName: p.cdSector?.name ?? null,
-                qtyRequested: new Prisma.Decimal(Math.round(i.qty * 1000) / 1000),
-              }];
-            }),
-          },
-        },
-        select: { id: true, number: true },
-      });
-      criado = r;
-    } catch (e) {
-      if ((e as { code?: string }).code === 'P2002') continue;
-      throw e;
-    }
+  /* DIVISÃO POR DESTINO — um pedido para a Fábrica, outro para o CD.
+     O gerente monta UM carrinho e não escolhe destino nenhum: o produto já sabe
+     de onde vem. Antes, o pedido inteiro herdava a origem do PRIMEIRO produto
+     (`input.origin ?? produtos[0].origin`), então um carrinho misto virava um
+     pedido só, carimbado "Fábrica" e enviado ao CD — cada lado via item que não
+     era dele, e o número do pedido não dizia para onde ia. */
+  const porOrigem = new Map<ProductOrigin, ItemDoPedido[]>();
+  for (const i of limpos) {
+    const p = produtos.find((x) => x.id === i.productId);
+    if (!p) continue;
+    porOrigem.set(p.origin, [...(porOrigem.get(p.origin) ?? []), i]);
   }
-  if (!criado) return { ok: false, reason: 'INVALID', detalhe: 'Não foi possível gerar o número do pedido.' };
+  if (porOrigem.size === 0) return { ok: false, reason: 'INVALID', detalhe: 'Nenhum produto válido no pedido.' };
 
-  const semSetor = produtos.filter((p) => !p.cdSectorId).length;
+  const unit = await prisma.unit.findUnique({ where: { id: input.unitId }, select: { name: true } });
+  const semSetor = produtos.filter((p) => p.origin === 'CD' && !p.cdSectorId).length;
+  const criados: { id: string; number: number; origin: ProductOrigin }[] = [];
 
-  await audit({
-    userId: user.id, unitId: input.unitId, action: 'PRODUCT_REQUEST_CREATE', module: 'PRODUCTS',
-    entity: 'product_request', entityId: criado.id,
-    metadata: { numero: criado.number, itens: limpos.length, origem, semSetor }, ...ctx,
-  });
+  /* A Fábrica não passa pela separação por setor do CD: ela tem o fluxo da aba
+     Fábrica/CD (Novo → Em separação → Enviado → Recebido). Nascer `ENVIADO_CD`
+     a colocaria numa esteira que não é dela. */
+  const statusInicial = (o: ProductOrigin) => (o === 'CD' ? 'ENVIADO_CD' : 'NEW');
 
-  /* Avisa SÓ os separadores dos setores que têm item neste pedido — quem não
-     tem nada a separar não precisa receber nada. */
-  const setores = [...new Set(produtos.map((p) => p.cdSectorId).filter((x): x is string => Boolean(x)))];
-  if (setores.length > 0) {
+  for (const [origem, itensDaOrigem] of porOrigem) {
+    /* Número sequencial por unidade, com retry: dois gerentes enviando ao mesmo
+       tempo colidiriam no número, e o segundo perderia o pedido. */
+    let criado: { id: string; number: number } | null = null;
+    for (let tentativa = 0; tentativa < 5 && !criado; tentativa++) {
+      const ultimo = await prisma.productRequest.findFirst({
+        where: { unitId: input.unitId }, orderBy: { number: 'desc' }, select: { number: true },
+      });
+      const number = (ultimo?.number ?? 0) + 1;
+      try {
+        const r = await prisma.productRequest.create({
+          data: {
+            unitId: input.unitId, origin: origem, number, status: statusInicial(origem),
+            createdById: user.id, createdByName: user.name,
+            note: input.note?.trim() || null,
+            /* O JSON legado continua sendo gravado: telas antigas ainda o leem, e
+               desligar os dois lados na mesma entrega é como se perde o histórico. */
+            items: itensDaOrigem.map((i) => {
+              const p = produtos.find((x) => x.id === i.productId);
+              return { productId: i.productId, name: p?.name ?? '', category: p?.category ?? '', measure: p?.measure ?? '', qty: i.qty };
+            }) as unknown as Prisma.InputJsonValue,
+            requestItems: {
+              create: itensDaOrigem.flatMap((i) => {
+                const p = produtos.find((x) => x.id === i.productId);
+                if (!p) return [];
+                return [{
+                  productId: p.id, name: p.name, category: p.category, measure: p.measure,
+                  cdSectorId: p.cdSectorId, cdSectorName: p.cdSector?.name ?? null,
+                  qtyRequested: new Prisma.Decimal(Math.round(i.qty * 1000) / 1000),
+                }];
+              }),
+            },
+          },
+          select: { id: true, number: true },
+        });
+        criado = r;
+      } catch (e) {
+        if ((e as { code?: string }).code === 'P2002') continue;
+        throw e;
+      }
+    }
+    if (!criado) return { ok: false, reason: 'INVALID', detalhe: 'Não foi possível gerar o número do pedido.' };
+    criados.push({ ...criado, origin: origem });
+
+    await audit({
+      userId: user.id, unitId: input.unitId, action: 'PRODUCT_REQUEST_CREATE', module: 'PRODUCTS',
+      entity: 'product_request', entityId: criado.id,
+      metadata: { numero: criado.number, itens: itensDaOrigem.length, origem, semSetor: origem === 'CD' ? semSetor : 0 }, ...ctx,
+    });
+  }
+
+  /* Avisa SÓ os separadores dos setores que têm item no pedido DO CD — quem não
+     tem nada a separar não precisa receber nada, e a Fábrica não tem setor. */
+  const pedidoDoCd = criados.find((c) => c.origin === 'CD');
+  const setores = [...new Set(produtos.filter((p) => p.origin === 'CD').map((p) => p.cdSectorId).filter((x): x is string => Boolean(x)))];
+  if (pedidoDoCd && setores.length > 0) {
     const separadores = await prisma.user.findMany({
       where: { active: true, role: 'SEPARATOR', cdSectorId: { in: setores } },
       select: { id: true },
@@ -141,14 +162,26 @@ export async function criarPedido(
     if (separadores.length > 0) {
       await notifyUsers(separadores.map((s) => s.id), {
         title: '📦 Novo pedido para separação',
-        body: `${unit?.name ?? 'Unidade'} enviou o pedido nº ${criado.number}.`,
+        body: `${unit?.name ?? 'Unidade'} enviou o pedido nº ${pedidoDoCd.number}.`,
         link: '/modulos/separacao',
         module: 'PRODUCTS',
       }).catch(() => {});
     }
   }
 
-  return { ok: true, id: criado.id, number: criado.number, semSetor };
+  /* O pedido da Fábrica não tem separador para avisar: quem o atende é a
+     Fábrica/CD, pela aba de mesmo nome. */
+  const pedidoDaFabrica = criados.find((c) => c.origin === 'FABRICA');
+  if (pedidoDaFabrica) {
+    await notifyAdmins({
+      title: '🏭 Novo pedido à Fábrica',
+      body: `${unit?.name ?? 'Unidade'} enviou o pedido nº ${pedidoDaFabrica.number}.`,
+      link: '/modulos/produtos',
+      module: 'PRODUCTS',
+    }).catch(() => {});
+  }
+
+  return { ok: true, pedidos: criados, semSetor };
 }
 
 export interface ItemNaTela {

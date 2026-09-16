@@ -316,6 +316,7 @@ export const GUIDE: GuideSection[] = [
         tips: [
           'O SGO abre CLARO para todo mundo. O escuro só aparece se você marcar — ou se marcar APARELHO e o celular estiver no modo escuro. A escolha fica salva por 1 ano.',
           'A escolha é por aparelho, não por usuário: se você usa celular e computador, marque nos dois.',
+          'IMPRESSÃO NO TEMA ESCURO (corrigido na v1.95.0): quem estava no escuro imprimia PÁGINA EM BRANCO — o papel sai sempre branco e o texto ia branco junto. Agora o tema escuro vale só para a tela: qualquer relatório, romaneio ou pedido sai impresso em preto no branco, seja qual for o tema que você escolheu.',
         ],
       },
       {
@@ -599,7 +600,9 @@ export const GUIDE: GuideSection[] = [
           'BUSCA: por nome, categoria ou código de barras, ignorando acento e maiúsculas — "mucarela" acha "Muçarela". Quem começa com a palavra digitada aparece primeiro.',
           'SUGESTÃO: vem do histórico da SUA unidade e mostra a quantidade de costume junto com os últimos pedidos ("normalmente 4 caixas · últimos: 4 | 5 | 4"), para você conferir de onde veio o número. Use "Montar pedido sugerido" ou adicione um a um. Nada é enviado sozinho.',
           'A barra de baixo mostra quantos itens estão no pedido e leva à revisão, onde você confere tudo, escreve uma observação para o CD e envia.',
-          'O pedido é UM só: o sistema divide os itens entre os setores do CD sozinho, pelo setor cadastrado em cada produto. Você não escolhe setor.',
+          'Você monta UM carrinho só, misturando o que é da Fábrica e o que é do CD. Na revisão a tela diz para onde vai ("Fábrica e Centro de Distribuição") e, ao enviar, o sistema SEPARA SOZINHO: sai um pedido para a Fábrica e outro para o CD, cada um com o seu número e os seus itens. Você não escolhe destino.',
+          'Dentro do pedido do CD, a divisão por SETOR continua automática, pelo setor cadastrado em cada produto. Você não escolhe setor.',
+          'DOIS PEDIDOS (corrigido na v1.95.0): antes o carrinho misto virava um pedido só, carimbado com o destino do PRIMEIRO produto e mandado pela esteira errada — a Fábrica recebia item do CD e o pedido dela já nascia como "Enviado ao CD".',
           'PEDIDO EM ANDAMENTO: se você tem um pedido aberto, ele aparece em DESTAQUE no topo, com barra de progresso ("12/20 itens separados") e o botão Acompanhar. Não precisa procurar na lista.',
           'AVISO DE FALTA: quando um setor do CD termina a parte dele com algum item faltando, você recebe UMA notificação com todas as faltas daquele setor — no momento em que a falta vira definitiva e ainda dá para comprar fora ou pedir a outra unidade. Não é um aviso por item.',
           'HISTÓRICO: "Ver histórico completo" abre a busca por unidade, produto, período, situação e quem pediu. É onde se responde "quando foi a última vez que pedimos muçarela?" ou "quantos pedidos fecharam com divergência este mês?".',

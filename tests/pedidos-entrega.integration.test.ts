@@ -60,7 +60,7 @@ async function pedidoNovo() {
     unitId, items: [{ productId: prod.coca, qty: 5 }, { productId: prod.suco, qty: 2 }],
   });
   if (!r.ok) throw new Error('não criou');
-  return r.id;
+  return r.pedidos[0].id;
 }
 
 /** Pedido com a separação inteira feita — pronto para sair. */
