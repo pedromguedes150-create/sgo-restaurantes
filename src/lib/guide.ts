@@ -561,6 +561,7 @@ export const GUIDE: GuideSection[] = [
           'Se outra pessoa do seu setor já tiver separado o item, a tela PARA e mostra quem foi, quanto registrou e quando — e você escolhe manter ou sobrescrever. Ninguém apaga o trabalho do outro sem ver.',
           'O gerente da unidade é avisado uma única vez, quando a separação começa — e não a cada item.',
           'Se a unidade apontar divergência ao receber, quem deu saída na carga é avisado — a reclamação chega ao CD em vez de morrer num caderno da unidade.',
+          'Quem deu saída também é avisado quando o pedido chega CERTO. Para o CD a carga só termina quando alguém do outro lado confirma que chegou.',
         ],
       },
       {
@@ -578,9 +579,12 @@ export const GUIDE: GuideSection[] = [
           'O pedido é UM só: o sistema divide os itens entre os setores do CD sozinho, pelo setor cadastrado em cada produto. Você não escolhe setor.',
           'ACOMPANHAR: toque no número do pedido na lista dos últimos para ver a linha do tempo — pedido feito, separação no CD, enviado para a unidade, recebido. O que ainda não aconteceu aparece apagado, dizendo que falta.',
           'RECEBER: quando o CD confirma o envio, você é avisado e o pedido ganha "Conferir recebimento". A conferência começa com TUDO CERTO: aponte só o que veio errado, escolha o motivo e, se quiser, tire a foto na hora.',
+          'MOTIVOS: são dez, e vale reparar que "embalagem danificada", "produto avariado" e "produto estragado" são coisas diferentes — a caixa amassada se resolve com o transporte, a mercadoria estragada com o fornecedor.',
           'A divergência NÃO impede fechar o pedido — ela fica registrada e o CD é avisado na hora. O que você não apontar é registrado como recebido conforme o CD separou.',
           'REPETIR: o botão "Repetir" ao lado de um pedido antigo preenche o carrinho com os mesmos itens e quantidades. Você ainda revisa e envia — nada é mandado sozinho. Produto que saiu do catálogo fica de fora, e a tela diz qual foi.',
           'ROMANEIO: depois do envio, "Imprimir o romaneio da carga" dá a folha por setor do CD, com quadradinho para conferir na caneta — é a mesma folha que o CD imprime.',
+          'O pedido é identificado como PED-ano-número (ex.: PED-2026-001245). Use essa etiqueta ao falar com o CD: o "nº 12" existe em toda unidade ao mesmo tempo, a etiqueta completa é só sua.',
+          'O romaneio traz impresso "documento interno de controle operacional — sem valor fiscal". Ele não substitui nota nem vale como documento fiscal: serve para conferir a carga na doca.',
         ],
         tips: [
           'A quantidade sugerida é a MEDIANA dos últimos pedidos, não a média: assim um pedido atípico (festa, mutirão) não faz a sugestão mandar pedir demais todo mês.',

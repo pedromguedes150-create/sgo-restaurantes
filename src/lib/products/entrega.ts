@@ -4,6 +4,7 @@ import { audit } from '@/lib/audit';
 import { notifyUsers, notifyUnitRole } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import { divergenciaLabel, ehDivergencia } from './entrega-tela';
+import { numeroDoPedido } from './numero-do-pedido';
 
 /**
  * A ÚLTIMA PERNA do pedido: o CD confirma o envio, a unidade confere o que
@@ -39,7 +40,7 @@ export async function confirmarEnvio(
 ): Promise<ResultadoDaEntrega> {
   const pedido = await prisma.productRequest.findUnique({
     where: { id: requestId },
-    select: { id: true, number: true, status: true, unitId: true, createdById: true },
+    select: { id: true, number: true, status: true, unitId: true, createdById: true, createdAt: true },
   });
   if (!pedido) return { ok: false, reason: 'NAO_ENCONTRADO' };
 
@@ -63,7 +64,7 @@ export async function confirmarEnvio(
      quase nunca é quem digitou o pedido. */
   await notifyUnitRole(pedido.unitId, 'MANAGER', {
     title: '🚚 Seu pedido saiu do CD',
-    body: `O pedido nº ${pedido.number} está a caminho. Confira ao receber.`,
+    body: `O ${numeroDoPedido(pedido.number, pedido.createdAt)} está a caminho. Confira ao receber.`,
     link: `/modulos/produtos/pedido/${pedido.id}`, module: 'PRODUCTS',
   }).catch(() => {});
 
@@ -108,7 +109,7 @@ export async function conferirRecebimento(
   const pedido = await prisma.productRequest.findUnique({
     where: { id: requestId },
     select: {
-      id: true, number: true, status: true, unitId: true, sentById: true,
+      id: true, number: true, status: true, unitId: true, sentById: true, createdAt: true,
       requestItems: { select: { id: true, name: true } },
     },
   });
@@ -135,6 +136,9 @@ export async function conferirRecebimento(
 
   const comProblema = apontados.filter((i) => i.issue);
   const status = comProblema.length > 0 ? 'CONCLUIDO_DIVERGENCIA' : 'CONCLUIDO';
+
+  /* `ProductRequest` guarda o unitId sem relacao declarada — o nome vem a parte. */
+  const unidade = await prisma.unit.findUnique({ where: { id: pedido.unitId }, select: { name: true } });
 
   await prisma.$transaction([
     /* Limpa a conferência anterior do pedido inteiro antes de gravar a nova:
@@ -163,20 +167,32 @@ export async function conferirRecebimento(
     }),
   ]);
 
-  /* A divergência precisa CHEGAR ao CD. Avisamos quem deu saída na carga —
-     é quem consegue olhar a doca e responder. Sem divergência, ninguém é
-     incomodado: pedido que chegou certo não é notícia. */
-  if (comProblema.length > 0 && pedido.sentById) {
-    const lista = comProblema
-      .slice(0, 3)
-      .map((i) => `${daCasa.get(i.itemId)} (${divergenciaLabel(i.issue ?? null)})`)
-      .join(', ');
-    const resto = comProblema.length > 3 ? ` e mais ${comProblema.length - 3}` : '';
-    await notifyUsers([pedido.sentById], {
-      title: '⚠️ Divergência no recebimento',
-      body: `Pedido nº ${pedido.number}: ${lista}${resto}.`,
-      link: `/modulos/separacao/${pedido.id}`, module: 'PRODUCTS',
-    }).catch(() => {});
+  /* O CD é avisado NOS DOIS casos, e quem recebe o aviso é quem deu saída na
+     carga — é quem consegue olhar a doca e responder.
+     O "recebido sem divergência" também vale aviso: para o CD, o pedido só
+     termina quando alguém do outro lado confirma que chegou. Sem esse retorno,
+     a carga fica em aberto na cabeça de quem despachou, e a checagem volta a
+     ser por telefone — que é o que este módulo veio encerrar. */
+  if (pedido.sentById) {
+    const etiqueta = numeroDoPedido(pedido.number, pedido.createdAt);
+    if (comProblema.length > 0) {
+      const lista = comProblema
+        .slice(0, 3)
+        .map((i) => `${daCasa.get(i.itemId)} (${divergenciaLabel(i.issue ?? null)})`)
+        .join(', ');
+      const resto = comProblema.length > 3 ? ` e mais ${comProblema.length - 3}` : '';
+      await notifyUsers([pedido.sentById], {
+        title: '⚠️ Recebimento com divergência',
+        body: `${etiqueta}: ${lista}${resto}.`,
+        link: `/modulos/separacao/${pedido.id}`, module: 'PRODUCTS',
+      }).catch(() => {});
+    } else {
+      await notifyUsers([pedido.sentById], {
+        title: '✓ Pedido recebido',
+        body: `${unidade?.name ?? 'A unidade'} confirmou o recebimento do ${etiqueta}, sem divergência.`,
+        link: `/modulos/separacao/${pedido.id}`, module: 'PRODUCTS',
+      }).catch(() => {});
+    }
   }
 
   await audit({
