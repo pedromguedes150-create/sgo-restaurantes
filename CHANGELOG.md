@@ -9,6 +9,52 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.90.0 — 2026-09-16 (Pedidos Internos: aviso de falta, pedido em andamento e histórico)
+
+Os quatro pontos da especificação que ainda não tinham sido feitos.
+
+### O gerente fica sabendo da falta — na hora certa
+
+Antes, a única notícia que ele recebia do CD era "começou a separar". A falta ele descobria quando a
+carga chegava na unidade, sem tempo de comprar fora ou pedir a outra unidade.
+
+O **quando** foi a decisão que deu forma a isto. A cada item seria spam, e o sino passaria a ser
+ignorado. Só no fim do pedido inteiro chegaria tarde. O aviso sai **quando cada setor termina a parte
+dele** — o primeiro instante em que a falta é definitiva e ainda dá para reagir —, com **todas as
+faltas daquele setor numa notificação só**, dizendo de qual setor se trata. Corrigir um item num setor
+que já estava pronto não avisa de novo: senão cada correção de digitação tocaria o sino.
+
+### O pedido em andamento saiu da lista e virou destaque
+
+Quem abre a tela com pedido aberto quer saber **onde ele está** antes de fazer outro. Agora há um
+cartão no topo com a etiqueta, a situação, a barra de progresso ("12/20 itens separados") e
+"Acompanhar". Pedido concluído não ocupa esse espaço — volta para a lista, como histórico.
+
+### Histórico com filtros
+
+`/modulos/produtos/historico`: unidade, produto, período, situação e quem pediu. Responde o que a
+lista dos últimos cinco não responde — quando foi a última vez que pedimos muçarela, quantos pedidos
+fecharam com divergência no mês, o que a Moreira pediu em agosto.
+
+O filtro de produto casa o **nome congelado no item**, não o id: é o que mantém o pedido antigo
+encontrável depois de o produto ser renomeado ou sair do catálogo. Os filtros viajam na URL, então o
+resultado é compartilhável e volta igual no botão "voltar".
+
+### "O pedido chegou completo?"
+
+Declaração de quem recebeu na doca, no fim da conferência. Fica **ao lado** do que o sistema calcula
+(faltas do CD + divergências apontadas), não no lugar: as duas podem discordar — o CD marcou falta mas
+mandou assim mesmo, ou veio item que ninguém apontou — e nessa hora a palavra de quem conferiu é o
+registro que vale numa cobrança.
+
+### Detalhes
+
+- Migração **aditiva**: `product_requests.receiptComplete BOOLEAN`.
+- 8 testes novos. O aviso de falta é coberto nos quatro casos que importam: setor incompleto não avisa,
+  duas faltas viram um aviso só, setor sem falta não incomoda ninguém, e correção em setor pronto não
+  repete o aviso.
+
+---
 ## v1.89.0 — 2026-09-16 (Pedidos Internos: quatro acertos contra a especificação)
 
 Revisão da especificação escrita contra o que foi entregue nas quatro entregas. Quatro pontos não

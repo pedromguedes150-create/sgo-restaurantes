@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import { criarPedido, getPedido } from '@/lib/products/pedido';
 import { separarItem, desfazerItem, getPedidoParaSeparar } from '@/lib/products/separacao';
 import type { SessionUser } from '@/lib/auth/session';
+import { numeroDoPedido } from '@/lib/products/numero-do-pedido';
 
 /**
  * A SEPARAÇÃO no CD.
@@ -47,13 +48,17 @@ beforeAll(async () => {
   prod.arroz = (await prisma.product.create({ data: { name: 'Arroz 5kg', origin: 'CD', category: 'Secos', measure: 'fardo', cdSectorId: setorSecos } })).id;
 });
 
-beforeEach(async () => { await prisma.productRequest.deleteMany({ where: { unitId } }); });
+beforeEach(async () => {
+  await prisma.productRequest.deleteMany({ where: { unitId } });
+  await prisma.notification.deleteMany({ where: { userId: { in: [gerenteId, carlosId, mariaId] } } });
+});
 
 afterAll(async () => {
   await prisma.productRequest.deleteMany({ where: { unitId } });
   await prisma.product.deleteMany({ where: { id: { in: Object.values(prod) } } });
   await prisma.user.deleteMany({ where: { id: { in: [gerenteId, carlosId, mariaId] } } });
   await prisma.cdSector.deleteMany({ where: { id: { in: [setorBebidas, setorSecos] } } });
+  await prisma.notification.deleteMany({ where: { userId: { in: [gerenteId, carlosId, mariaId] } } });
   await prisma.auditLog.deleteMany({ where: { unitId } });
   await prisma.unit.delete({ where: { id: unitId } }).catch(() => {});
   await prisma.$disconnect();
@@ -261,5 +266,67 @@ describe('O status do pedido segue os itens', () => {
     await separarItem(carlos(), { itemId: coca.id, qty: 5 });
     await desfazerItem(carlos(), coca.id);
     expect(await statusDoPedido(id)).toBe('ENVIADO_CD');
+  });
+});
+
+describe('O gerente fica sabendo da falta', () => {
+  /* Antes, a única notícia que o gerente recebia do CD era "começou a separar".
+     A falta ele descobria quando a carga chegava — tarde demais para comprar
+     fora ou pedir a outra unidade. */
+  const avisos = () => prisma.notification.findMany({ where: { userId: gerenteId }, orderBy: { createdAt: 'desc' } });
+
+  it('avisa quando o SETOR termina com falta, não a cada item', async () => {
+    const id = await pedidoPadrao();
+    const itens = await itensDoCarlos(id);
+    /* Primeiro item com falta: o setor ainda não acabou, ninguém é avisado. */
+    await separarItem(carlos(), { itemId: itens[0].id, qty: 0, missingReason: 'SEM_ESTOQUE' });
+    expect((await avisos()).filter((n) => n.title.includes('Falta'))).toHaveLength(0);
+
+    /* Segundo item fecha o setor: UMA notificação, com as faltas juntas. */
+    await separarItem(carlos(), { itemId: itens[1].id, qty: itens[1].qtyRequested });
+    const falta = (await avisos()).filter((n) => n.title.includes('Falta'));
+    expect(falta).toHaveLength(1);
+    expect(falta[0].body).toContain('uma falta');
+  });
+
+  it('duas faltas no mesmo setor viram UM aviso, não dois', async () => {
+    const id = await pedidoPadrao();
+    for (const i of await itensDoCarlos(id)) {
+      await separarItem(carlos(), { itemId: i.id, qty: 0, missingReason: 'SEM_ESTOQUE' });
+    }
+    const falta = (await avisos()).filter((n) => n.title.includes('Falta'));
+    expect(falta).toHaveLength(1);
+    expect(falta[0].body).toContain('2 faltas');
+    /* E diz de QUAL setor, porque quatro trabalham no mesmo pedido. */
+    expect(falta[0].body).toContain('Bebidas');
+  });
+
+  it('setor que fecha SEM falta não incomoda ninguém', async () => {
+    const id = await pedidoPadrao();
+    for (const i of await itensDoCarlos(id)) {
+      await separarItem(carlos(), { itemId: i.id, qty: i.qtyRequested });
+    }
+    expect((await avisos()).filter((n) => n.title.includes('Falta'))).toHaveLength(0);
+  });
+
+  it('corrigir um item de setor JÁ pronto não avisa de novo', async () => {
+    /* Senão, cada correção de digitação tocaria o sino do gerente. */
+    const id = await pedidoPadrao();
+    const itens = await itensDoCarlos(id);
+    for (const i of itens) await separarItem(carlos(), { itemId: i.id, qty: 0, missingReason: 'SEM_ESTOQUE' });
+    const antes = (await avisos()).filter((n) => n.title.includes('Falta')).length;
+
+    await separarItem(carlos(), { itemId: itens[0].id, qty: 1, missingReason: 'QTD_INSUFICIENTE' });
+    expect((await avisos()).filter((n) => n.title.includes('Falta'))).toHaveLength(antes);
+  });
+
+  it('o aviso traz a etiqueta do pedido', async () => {
+    const id = await pedidoPadrao();
+    for (const i of await itensDoCarlos(id)) {
+      await separarItem(carlos(), { itemId: i.id, qty: 0, missingReason: 'SEM_ESTOQUE' });
+    }
+    const p = (await prisma.productRequest.findUnique({ where: { id } }))!;
+    const [falta] = (await avisos()).filter((n) => n.title.includes('Falta'));
+    expect(falta.title).toContain(numeroDoPedido(p.number, p.createdAt));
   });
 });
