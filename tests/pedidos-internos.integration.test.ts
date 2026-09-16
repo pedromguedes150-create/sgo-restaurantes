@@ -79,14 +79,14 @@ describe('O item virou LINHA', () => {
     const r = await pedir([{ productId: prod.coca, qty: 1 }]);
     await prisma.product.update({ where: { id: prod.coca }, data: { name: 'Coca-Cola 2L NOVO NOME' } });
 
-    const p = (await getPedido(gerente(), r.ok ? r.id : ''))!;
+    const p = (await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!;
     expect(p.setores[0].itens[0].name).toBe('Coca-Cola 2L');
     await prisma.product.update({ where: { id: prod.coca }, data: { name: 'Coca-Cola 2L' } });
   });
 
   it('o JSON legado continua sendo gravado — telas antigas ainda o leem', async () => {
     const r = await pedir([{ productId: prod.coca, qty: 5 }]);
-    const bruto = await prisma.productRequest.findUnique({ where: { id: r.ok ? r.id : '' }, select: { items: true } });
+    const bruto = await prisma.productRequest.findUnique({ where: { id: r.ok ? r.pedidos[0].id : '' }, select: { items: true } });
     expect(Array.isArray(bruto?.items)).toBe(true);
     expect((bruto?.items as { name: string }[])[0].name).toBe('Coca-Cola 2L');
   });
@@ -99,7 +99,7 @@ describe('A divisão entre os setores do CD', () => {
       { productId: prod.suco, qty: 2 },
       { productId: prod.arroz, qty: 3 },
     ]);
-    const p = (await getPedido(gerente(), r.ok ? r.id : ''))!;
+    const p = (await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!;
 
     const porSetor = Object.fromEntries(p.setores.map((s) => [s.cdSectorName, s.total]));
     expect(porSetor[`Bebidas ${sfx}`]).toBe(2);
@@ -111,7 +111,7 @@ describe('A divisão entre os setores do CD', () => {
     const r = await pedir([{ productId: prod.coca, qty: 5 }]);
     await prisma.product.update({ where: { id: prod.coca }, data: { cdSectorId: setorSecos } });
 
-    const p = (await getPedido(gerente(), r.ok ? r.id : ''))!;
+    const p = (await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!;
     expect(p.setores[0].cdSectorName).toBe(`Bebidas ${sfx}`);
     await prisma.product.update({ where: { id: prod.coca }, data: { cdSectorId: setorBebidas } });
   });
@@ -123,7 +123,7 @@ describe('A divisão entre os setores do CD', () => {
     expect(r.ok).toBe(true);
     expect(r.ok === true && r.semSetor).toBe(1);
 
-    const p = (await getPedido(gerente(), r.ok ? r.id : ''))!;
+    const p = (await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!;
     const orfao = p.setores.find((s) => s.cdSectorId === null);
     expect(orfao?.cdSectorName).toBe('Sem setor cadastrado');
     expect(orfao?.total).toBe(1);
@@ -133,36 +133,36 @@ describe('A divisão entre os setores do CD', () => {
 describe('A situação de cada setor', () => {
   it('nasce AGUARDANDO', async () => {
     const r = await pedir([{ productId: prod.coca, qty: 5 }, { productId: prod.suco, qty: 2 }]);
-    const p = (await getPedido(gerente(), r.ok ? r.id : ''))!;
+    const p = (await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!;
     expect(p.setores[0].status).toBe('AGUARDANDO');
   });
 
   it('com parte separada, fica EM SEPARAÇÃO', async () => {
     const r = await pedir([{ productId: prod.coca, qty: 5 }, { productId: prod.suco, qty: 2 }]);
-    const p1 = (await getPedido(gerente(), r.ok ? r.id : ''))!;
+    const p1 = (await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!;
     await prisma.productRequestItem.update({ where: { id: p1.setores[0].itens[0].id }, data: { qtySeparated: 5 } });
 
-    const p2 = (await getPedido(gerente(), r.ok ? r.id : ''))!;
+    const p2 = (await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!;
     expect(p2.setores[0].status).toBe('SEPARANDO');
     expect(p2.setores[0].separados).toBe(1);
   });
 
   it('tudo separado na quantidade pedida = CONCLUÍDO', async () => {
     const r = await pedir([{ productId: prod.coca, qty: 5 }]);
-    const p1 = (await getPedido(gerente(), r.ok ? r.id : ''))!;
+    const p1 = (await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!;
     await prisma.productRequestItem.update({ where: { id: p1.setores[0].itens[0].id }, data: { qtySeparated: 5 } });
-    expect((await getPedido(gerente(), r.ok ? r.id : ''))!.setores[0].status).toBe('CONCLUIDO');
+    expect((await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!.setores[0].status).toBe('CONCLUIDO');
   });
 
   it('separando MENOS do que foi pedido = CONCLUÍDO COM FALTA', async () => {
     /* A falta não impede concluir o setor — mas não pode sumir do rótulo. */
     const r = await pedir([{ productId: prod.coca, qty: 5 }]);
-    const p1 = (await getPedido(gerente(), r.ok ? r.id : ''))!;
+    const p1 = (await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!;
     await prisma.productRequestItem.update({
       where: { id: p1.setores[0].itens[0].id },
       data: { qtySeparated: 2, missingReason: 'sem estoque' },
     });
-    expect((await getPedido(gerente(), r.ok ? r.id : ''))!.setores[0].status).toBe('CONCLUIDO_COM_FALTA');
+    expect((await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!.setores[0].status).toBe('CONCLUIDO_COM_FALTA');
   });
 });
 
@@ -213,7 +213,7 @@ describe('Escopo e recusas', () => {
     expect(r.ok === false && r.reason).toBe('FORBIDDEN');
 
     const meu = await pedir([{ productId: prod.coca, qty: 1 }]);
-    expect(await getPedido(forasteiro, meu.ok ? meu.id : '')).toBeNull();
+    expect(await getPedido(forasteiro, meu.ok ? meu.pedidos[0].id : '')).toBeNull();
     expect(await listarPedidosDaUnidade(forasteiro, unitId)).toEqual([]);
   });
 });
@@ -222,7 +222,7 @@ describe('O número do pedido', () => {
   it('é sequencial por unidade', async () => {
     const a = await pedir([{ productId: prod.coca, qty: 1 }]);
     const b = await pedir([{ productId: prod.coca, qty: 1 }]);
-    expect(b.ok === true && a.ok === true && b.number).toBe((a.ok === true ? a.number : 0) + 1);
+    expect(b.ok === true && a.ok === true && b.pedidos[0].number).toBe((a.ok === true ? a.pedidos[0].number : 0) + 1);
   });
 
   it('a lista traz o mais recente primeiro', async () => {

@@ -111,3 +111,86 @@ describe('o setor chega ao item do pedido', () => {
     expect(doCd[0].cdSectorName).toContain('Secos');
   });
 });
+
+describe('a divisão por DESTINO (Fábrica × CD)', () => {
+  /* O gerente monta UM carrinho e não escolhe destino: o produto já sabe de
+     onde vem. Antes, o pedido inteiro herdava a origem do PRIMEIRO produto —
+     um carrinho misto virava um pedido só, carimbado com uma origem e enviado
+     pela esteira da outra. Cada lado via item que não era dele. */
+  const doCd = () => prisma.product.findFirst({ where: { name: `Legado ${sfx}` }, select: { id: true } });
+  const daFabrica = () => prisma.product.findFirst({ where: { name: `Pao ${sfx}` }, select: { id: true } });
+
+  it('carrinho misto vira DOIS pedidos, um por destino', async () => {
+    const [cd, fab] = await Promise.all([doCd(), daFabrica()]);
+    const r = await criarPedido(gerente(), {
+      unitId,
+      items: [{ productId: cd!.id, qty: 3 }, { productId: fab!.id, qty: 2 }],
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+
+    expect(r.pedidos).toHaveLength(2);
+    expect(r.pedidos.map((p) => p.origin).sort()).toEqual(['CD', 'FABRICA']);
+
+    /* Cada pedido leva SÓ os itens da sua origem — é isso que faz a aba
+       Fábrica/CD e a fila do separador mostrarem coisas diferentes. */
+    for (const p of r.pedidos) {
+      const itens = await prisma.productRequestItem.findMany({ where: { requestId: p.id }, select: { productId: true } });
+      expect(itens).toHaveLength(1);
+      expect(itens[0].productId).toBe(p.origin === 'CD' ? cd!.id : fab!.id);
+    }
+  });
+
+  it('cada pedido nasce no status da SUA esteira', async () => {
+    /* A Fábrica não passa pela separação por setor do CD: nascer `ENVIADO_CD`
+       a colocaria numa fila que não é dela. */
+    const [cd, fab] = await Promise.all([doCd(), daFabrica()]);
+    const r = await criarPedido(gerente(), {
+      unitId,
+      items: [{ productId: fab!.id, qty: 1 }, { productId: cd!.id, qty: 1 }],
+    });
+    if (!r.ok) throw new Error('não criou');
+
+    const status = Object.fromEntries(
+      await Promise.all(r.pedidos.map(async (p) => [
+        p.origin,
+        (await prisma.productRequest.findUnique({ where: { id: p.id }, select: { status: true } }))!.status,
+      ])),
+    );
+    expect(status.FABRICA).toBe('NEW');
+    expect(status.CD).toBe('ENVIADO_CD');
+  });
+
+  it('os dois pedidos ganham números próprios e sequenciais na unidade', async () => {
+    const [cd, fab] = await Promise.all([doCd(), daFabrica()]);
+    const r = await criarPedido(gerente(), {
+      unitId,
+      items: [{ productId: cd!.id, qty: 1 }, { productId: fab!.id, qty: 1 }],
+    });
+    if (!r.ok) throw new Error('não criou');
+    const numeros = r.pedidos.map((p) => p.number).sort((a, b) => a - b);
+    expect(numeros[1]).toBe(numeros[0] + 1);
+  });
+
+  it('o setor continua carimbado dentro do pedido do CD', async () => {
+    /* A divisão por destino é a de FORA; a divisão por setor, a de DENTRO.
+       Uma não pode ter comido a outra. */
+    const [cd, fab] = await Promise.all([doCd(), daFabrica()]);
+    const r = await criarPedido(gerente(), {
+      unitId,
+      items: [{ productId: cd!.id, qty: 4 }, { productId: fab!.id, qty: 1 }],
+    });
+    if (!r.ok) throw new Error('não criou');
+    const pedidoCd = r.pedidos.find((p) => p.origin === 'CD')!;
+    const itens = await prisma.productRequestItem.findMany({ where: { requestId: pedidoCd.id }, select: { cdSectorId: true } });
+    expect(itens.map((i) => i.cdSectorId)).toEqual([setorId]);
+  });
+
+  it('carrinho de UM destino só continua gerando UM pedido', async () => {
+    const fab = await daFabrica();
+    const r = await criarPedido(gerente(), { unitId, items: [{ productId: fab!.id, qty: 7 }] });
+    if (!r.ok) throw new Error('não criou');
+    expect(r.pedidos).toHaveLength(1);
+    expect(r.pedidos[0].origin).toBe('FABRICA');
+  });
+});

@@ -71,7 +71,7 @@ async function pedidoPadrao() {
     items: [{ productId: prod.coca, qty: 5 }, { productId: prod.suco, qty: 2 }, { productId: prod.arroz, qty: 3 }],
   });
   if (!r.ok) throw new Error('não criou');
-  return r.id;
+  return r.pedidos[0].id;
 }
 
 const itensDoCarlos = async (id: string) => (await getPedidoParaSeparar(carlos(), id))!.itens;
@@ -253,7 +253,7 @@ describe('O status do pedido segue os itens', () => {
     /* "Se determinado pedido não possuir produtos de um dos setores, não
        aguardar esse setor" — a conta é sobre os itens que existem. */
     const r = await criarPedido(gerente(), { unitId, items: [{ productId: prod.coca, qty: 5 }] });
-    const id = r.ok ? r.id : '';
+    const id = r.ok ? r.pedidos[0].id : '';
     const [coca] = await itensDoCarlos(id);
     await separarItem(carlos(), { itemId: coca.id, qty: 5 });
     expect(await statusDoPedido(id)).toBe('PRONTO_ENVIO');
@@ -261,7 +261,7 @@ describe('O status do pedido segue os itens', () => {
 
   it('desfazer o último item tira o pedido de PRONTO PARA ENVIO', async () => {
     const r = await criarPedido(gerente(), { unitId, items: [{ productId: prod.coca, qty: 5 }] });
-    const id = r.ok ? r.id : '';
+    const id = r.ok ? r.pedidos[0].id : '';
     const [coca] = await itensDoCarlos(id);
     await separarItem(carlos(), { itemId: coca.id, qty: 5 });
     await desfazerItem(carlos(), coca.id);

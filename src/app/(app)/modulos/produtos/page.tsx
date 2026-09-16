@@ -75,7 +75,7 @@ export default async function ProdutosPage({ searchParams }: { searchParams: { u
               podeAssociarCodigo={podeAssociarCodigo}
               produtos={products.map((p) => ({
                 id: p.id, name: p.name, category: p.category, measure: p.measure,
-                packSize: p.packSize, barcode: p.barcode,
+                packSize: p.packSize, barcode: p.barcode, origin: p.origin,
                 barcodes: codigosPorProduto.get(p.id) ?? [],
               }))}
               sugestoes={sugestoes.map((s) => ({
