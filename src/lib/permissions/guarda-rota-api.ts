@@ -165,6 +165,7 @@ export const FORA_DA_MATRIZ: Record<string, string> = {
   '/api/tasks/[id]/draft': 'rascunho da tarefa do dia pelo responsável',
   '/api/commands/divergences/[id]': 'setInvestigating/closeDivergence (src/lib/commands/lifecycle.ts): isResolver = SUPERVISOR/ADMIN/CEO + canAccessUnit',
   '/api/higiene': 'PÚBLICA — o QR do banheiro é lido por cliente, sem login',
+  '/api/pizzas': 'PÚBLICA — fechamento preenchido por link interno, sem login; a unidade vem do token da URL (src/lib/pizzas/acesso.ts: unidadePorToken)',
   '/api/communications/pending': 'os comunicados pendentes do próprio usuário',
   '/api/products/export': 'só ADMIN/CEO/SUPERVISOR no próprio handler (products/export/route.ts), igual ao padrão de CONFIG_PRODUCTS; handler sem req',
 };

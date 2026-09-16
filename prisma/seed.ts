@@ -93,6 +93,60 @@ async function main() {
   }
   console.log(`  ✔ ${usersData.length} usuários (1 por perfil)`);
 
+  /* --- Controle de Pizzas: a ÚNICA unidade com pizzaria ---
+     Fica fora do laço das três unidades de propósito: as demais etapas do seed
+     iteram `units`, e entrar lá dentro encheria a pizzaria de checklists,
+     comandas e desperdício que ela não precisa para validar este módulo.
+     O gerente do seed responde por ela — assim dá para conferir na prática que
+     o módulo aparece para quem tem a unidade e some para o resto da rede. */
+  const pizzaria = await prisma.unit.upsert({
+    where: { code: 'JD_TERESOPOLIS' },
+    update: { name: 'Beija Flor Jardim Teresópolis', hasPizzeria: true, active: true },
+    create: {
+      code: 'JD_TERESOPOLIS',
+      name: 'Beija Flor Jardim Teresópolis',
+      cutoffHour: 4,
+      address: 'Jardim Teresópolis',
+      hasPizzeria: true,
+    },
+  });
+  await prisma.unitMembership.createMany({
+    data: [{ userId: userByEmail['gerente@beijaflor.com.br'], unitId: pizzaria.id }],
+    skipDuplicates: true,
+  });
+
+  const SABORES = ['Calabresa', 'Frango com Catupiry', 'Portuguesa', 'Marguerita', 'Quatro Queijos', 'Chocolate'];
+  const saboresCriados = [];
+  for (const [i, name] of SABORES.entries()) {
+    saboresCriados.push(
+      await prisma.pizzaFlavor.upsert({
+        where: { unitId_name: { unitId: pizzaria.id, name } },
+        update: { order: i, active: true },
+        create: { unitId: pizzaria.id, name, order: i },
+      }),
+    );
+  }
+
+  // Histórico curto para o painel não abrir vazio.
+  await prisma.pizzaClosing.deleteMany({ where: { unitId: pizzaria.id } });
+  const TAMANHOS_SEED = ['CM35', 'CM30', 'CM25'] as const;
+  for (let d = 0; d < 6; d++) {
+    const dia = opDateFor(subDays(new Date(), d), pizzaria.timezone, pizzaria.cutoffHour);
+    const closing = await prisma.pizzaClosing.create({
+      data: { unitId: pizzaria.id, operationalDate: dia, createdById: userByEmail['gerente@beijaflor.com.br'] },
+    });
+    await prisma.pizzaClosingItem.createMany({
+      data: saboresCriados.slice(0, 4).map((s, i) => ({
+        closingId: closing.id,
+        size: TAMANHOS_SEED[i % 3],
+        flavorId: s.id,
+        flavorName: s.name,
+        quantity: 3 + ((d * 2 + i * 5) % 11),
+      })),
+    });
+  }
+  console.log(`  ✔ pizzaria (Jardim Teresópolis): ${SABORES.length} sabores + 6 dias de fechamento`);
+
   // --- Tarefas: reset + templates por unidade ---
   await prisma.taskInstance.deleteMany({});
   await prisma.taskTemplate.deleteMany({});

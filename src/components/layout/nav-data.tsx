@@ -1,7 +1,7 @@
 import {
   Home, LayoutGrid, Users, BarChart3, Settings,
   LayoutDashboard, NotebookPen, Inbox, ListChecks, GraduationCap,
-  Trash2, AlertOctagon, Banknote, Boxes, Sparkles,
+  Trash2, AlertOctagon, Banknote, Boxes, Sparkles, Pizza,
   Wallet, Target, ScrollText, Bell, UserCircle,
 } from 'lucide-react';
 
@@ -41,6 +41,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: '/modulos/comandas', label: 'Caixa', icon: Banknote },
       { href: '/modulos/notas', label: 'Suprimentos', icon: Boxes },
       { href: '/modulos/oleo', label: 'Rotinas da unidade', icon: Sparkles },
+      // Só aparece para quem alcança uma unidade com pizzaria — o layout
+      // subtrai este endereço de `viewable` para as demais.
+      { href: '/modulos/pizzas', label: 'Controle de Pizzas', icon: Pizza },
     ],
   },
   {

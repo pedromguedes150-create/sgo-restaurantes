@@ -15,7 +15,10 @@ import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/auth/cookies';
 // (a config em /configuracoes/fichas e a API /api/checklist-forms seguem protegidas).
 // '/dev' = páginas de referência do design system (dev-only; cada página faz
 // notFound() em produção, então liberá-las do login não expõe nada em prod).
-const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health', '/api/integracoes', '/higiene', '/api/higiene', '/checklists', '/api/checklists/public', '/dev'];
+// '/pizzas' e '/api/pizzas' = fechamento de pizzas preenchido por link interno,
+// SEM login (a unidade vem do token da URL). O painel em /modulos/pizzas e o
+// resto do módulo seguem protegidos.
+const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health', '/api/integracoes', '/higiene', '/api/higiene', '/checklists', '/api/checklists/public', '/pizzas', '/api/pizzas', '/dev'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

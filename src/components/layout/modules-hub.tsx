@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Trash2, Boxes, AlertOctagon, Wallet, Users, Megaphone, Banknote, NotebookPen,
-  GraduationCap, BarChart3, Sparkles, ChevronRight, SearchX,
+  GraduationCap, BarChart3, Sparkles, Pizza, ChevronRight, SearchX,
 } from 'lucide-react';
 import { Group, GroupLabel } from '@/components/ui/ds/group';
 import { SearchField } from '@/components/ui/ds/field';
@@ -40,6 +40,7 @@ const GROUPS: { title: string; items: { href: string; label: string; icon: React
       { href: '/modulos/comandas', label: 'Caixa', icon: Banknote },
       { href: '/modulos/notas', label: 'Suprimentos', icon: Boxes },
       { href: '/modulos/oleo', label: 'Rotinas da unidade', icon: Sparkles },
+      { href: '/modulos/pizzas', label: 'Controle de Pizzas', icon: Pizza },
     ],
   },
   {

@@ -14,6 +14,7 @@ import { SidebarStateProvider } from '@/components/layout/sidebar-state-provider
 import { PageChromeProvider } from '@/components/layout/page-chrome';
 import { unreadCount } from '@/lib/notifications';
 import { viewableNavHrefs } from '@/lib/permissions';
+import { recortarPizzas } from '@/lib/pizzas/acesso';
 import { canOpenPath, homeForRole } from '@/lib/permissions/route-guard';
 import { getInboxPendingCount } from '@/lib/communications/query';
 import { CommunicationInterstitial } from '@/components/communications/communication-interstitial';
@@ -36,13 +37,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // hidratação). O layout já é dinâmico por causa da sessão, então não custa
   // nada em cache.
   const sidebarCollapsed = isSidebarCollapsed(cookies().get(SIDEBAR_COOKIE)?.value);
-  const [unread, viewable, commPending, units] = await Promise.all([
+  const [unread, viewablePorPerfil, commPending, unidades] = await Promise.all([
     unreadCount(user),
     viewableNavHrefs(user.role),
     getInboxPendingCount(user),
-    prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, select: { id: true, name: true, hasPizzeria: true }, orderBy: { name: 'asc' } }),
   ]);
+  const units = unidades.map((u) => ({ id: u.id, name: u.name }));
   const selectedUnitId = getSelectedUnitId(units.map((u) => u.id));
+
+  /* RECORTE POR UNIDADE. A matriz de perfis não tem essa dimensão: ela diz
+     quem PODERIA ver o Controle de Pizzas, não em qual unidade ele existe.
+     Sem esta subtração o módulo apareceria no menu de toda a rede, e só uma
+     unidade tem pizzaria. A porta da tela repete a checagem — esconder item de
+     menu nunca foi controle de acesso. */
+  const viewable = recortarPizzas(viewablePorPerfil, unidades.some((u) => u.hasPizzeria));
   // Comunicação agora é o inbox do header (não mais item da sidebar).
   const badges: Record<string, number> = {};
 

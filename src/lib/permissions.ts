@@ -109,6 +109,11 @@ const BASE: ModuleDef[] = [
   { key: 'AUDIT_REPORT', label: 'Relatório de auditoria', nav: '/auditoria/relatorio', parent: 'AUDIT' },
 
   { key: 'HYGIENE', label: 'Higiene dos banheiros', nav: '/modulos/higiene' },
+  /* A matriz é por PERFIL; "só a unidade com pizzaria" é recorte de UNIDADE e
+     não cabe aqui. O perfil diz quem poderia ver; quem de fato vê depende de
+     `Unit.hasPizzeria` (src/lib/pizzas/acesso.ts), aplicado no menu e na porta
+     da tela. Fechar aqui continua fechando para todos, como nos demais. */
+  { key: 'PIZZAS', label: 'Controle de Pizzas', nav: '/modulos/pizzas' },
   { key: 'PRODUCTS', label: 'Solicitação de Produtos', nav: '/modulos/produtos' },
 
   // Cada tela de Configurações é uma parte própria: dá para liberar uma sem
