@@ -37,6 +37,13 @@ model Unit {
   timezone  String   @default("America/Sao_Paulo")
   /// Hora de corte da data operacional (0-23). Padrão 04:00 (regra nº 4).
   cutoffHour Int     @default(4)
+  /// Só a unidade com pizzaria enxerga o Controle de Pizzas. É marcador de
+  /// cadastro, e não o nome da unidade fixo no código: corrigir a grafia de
+  /// "Jardim Teresópolis" não pode derrubar o módulo.
+  hasPizzeria Boolean @default(false)
+  /// Segredo do link interno de fechamento de pizzas (sem login). Trocar o
+  /// valor revoga o link antigo.
+  pizzaPublicToken String? @unique
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -83,6 +90,8 @@ model Unit {
   freelancerRates         FreelancerHourlyRate[]
   terminations            Termination[]
   cashDenominations       CashDenomination[]
+  pizzaFlavors            PizzaFlavor[]
+  pizzaClosings           PizzaClosing[]
 
   @@map("units")
 }
@@ -116,6 +125,7 @@ model User {
   completedTasks TaskInstance[] @relation("CompletedBy")
   assignedTasks  TaskInstance[] @relation("AssignedTo")
   wasteEntries   WasteEntry[]   @relation("WasteCreatedBy")
+  pizzaClosings  PizzaClosing[] @relation("PizzaClosingCreatedBy")
   reportedOccurrences Occurrence[] @relation("OccReportedBy")
   closedOccurrences   Occurrence[] @relation("OccClosedBy")
   commandCounts       CommandCount[]       @relation("CmdCountBy")
@@ -3091,4 +3101,75 @@ model MaintenancePlanLog {
 
   @@index([planId])
   @@map("maintenance_plan_logs")
+}
+
+// ============================================================
+// Controle de Pizzas — exclusivo da unidade com pizzaria
+// ============================================================
+
+/// Os três tamanhos da casa. Enum, e não texto livre, porque o cruzamento
+/// futuro com a ficha técnica precisa de um valor estável: "35cm", "35 CM" e
+/// "G" digitados à mão nunca casariam com a receita.
+enum PizzaSize {
+  CM25
+  CM30
+  CM35
+}
+
+/// Catálogo de sabores da unidade. É tabela, e não texto digitado no
+/// fechamento, justamente para o consumo teórico de insumos poder ser somado
+/// por sabor mais adiante — texto livre não se junta a uma ficha técnica.
+model PizzaFlavor {
+  id        String   @id @default(cuid())
+  unitId    String
+  name      String
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unit  Unit               @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  items PizzaClosingItem[]
+
+  @@unique([unitId, name])
+  @@index([unitId, active])
+  @@map("pizza_flavors")
+}
+
+/// Um fechamento por unidade e dia operacional (regra nº 4).
+model PizzaClosing {
+  id              String   @id @default(cuid())
+  unitId          String
+  operationalDate String
+  observation     String?
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  unit      Unit               @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User?              @relation("PizzaClosingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  items     PizzaClosingItem[]
+
+  @@unique([unitId, operationalDate])
+  @@index([unitId, operationalDate])
+  @@map("pizza_closings")
+}
+
+/// Uma linha do fechamento: tamanho + sabor + quantidade.
+/// `flavorName` é retrato do nome no dia: renomear o sabor no catálogo não
+/// pode reescrever o histórico já fechado.
+model PizzaClosingItem {
+  id         String    @id @default(cuid())
+  closingId  String
+  size       PizzaSize
+  flavorId   String
+  flavorName String
+  quantity   Int
+
+  closing PizzaClosing @relation(fields: [closingId], references: [id], onDelete: Cascade)
+  flavor  PizzaFlavor  @relation(fields: [flavorId], references: [id])
+
+  @@unique([closingId, size, flavorId])
+  @@index([flavorId])
+  @@map("pizza_closing_items")
 }

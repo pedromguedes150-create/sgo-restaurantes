@@ -1,5 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
 import { viewableNavHrefs } from '@/lib/permissions';
+import { recortarPizzas, temUnidadeComPizzaria } from '@/lib/pizzas/acesso';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { ModulesHub } from '@/components/layout/modules-hub';
 
@@ -15,7 +16,9 @@ export const dynamic = 'force-dynamic';
  */
 export default async function ModulosPage() {
   const user = (await getSessionUser())!;
-  const viewable = await viewableNavHrefs(user.role);
+  const [porPerfil, temPizzaria] = await Promise.all([viewableNavHrefs(user.role), temUnidadeComPizzaria(user)]);
+  // Mesmo recorte de unidade da sidebar (ver src/lib/pizzas/acesso.ts).
+  const viewable = recortarPizzas(porPerfil, temPizzaria);
 
   return (
     <div className="space-y-5">

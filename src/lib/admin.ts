@@ -59,7 +59,7 @@ export async function createUnit(user: SessionUser, input: { name: string; code:
   return { ok: true, id: u.id };
 }
 
-export async function updateUnit(user: SessionUser, id: string, input: { name?: string; address?: string; cutoffHour?: number; timezone?: string; active?: boolean; rhUnitName?: string; cnpj?: string }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateUnit(user: SessionUser, id: string, input: { name?: string; address?: string; cutoffHour?: number; timezone?: string; active?: boolean; rhUnitName?: string; cnpj?: string; hasPizzeria?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   let cnpjPatch: { cnpj?: string | null } = {};
   if (input.cnpj !== undefined) {
@@ -76,6 +76,10 @@ export async function updateUnit(user: SessionUser, id: string, input: { name?: 
       ...(input.timezone !== undefined ? { timezone: input.timezone.trim() } : {}),
       ...(input.active !== undefined ? { active: input.active } : {}),
       ...(input.rhUnitName !== undefined ? { rhUnitName: input.rhUnitName.trim() || null } : {}),
+      /* Liga o Controle de Pizzas para esta unidade. É este marcador — e não o
+         nome da unidade fixo no código — que faz o módulo existir, então abrir
+         uma segunda pizzaria é uma caixa marcada aqui, não um deploy. */
+      ...(input.hasPizzeria !== undefined ? { hasPizzeria: input.hasPizzeria } : {}),
       ...cnpjPatch,
     },
   });

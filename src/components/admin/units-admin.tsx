@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, RefreshCw, Save, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, RefreshCw, Save, Pencil, Pizza, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +10,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Sheet } from '@/components/ui/ds/sheet';
 import { postAdmin } from '@/lib/admin-client';
 
-export interface UnitRow { id: string; name: string; code: string; address: string | null; cutoffHour: number; timezone: string; active: boolean; rhUnitName: string | null; cnpj: string | null }
+export interface UnitRow { id: string; name: string; code: string; address: string | null; cutoffHour: number; timezone: string; active: boolean; rhUnitName: string | null; cnpj: string | null; hasPizzeria: boolean }
 
 /** Formata 14 dígitos como CNPJ; devolve o valor cru se não tiver 14 dígitos. */
 function formatCnpj(d: string | null): string | null {
@@ -93,6 +93,13 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
     await postAdmin({ entity: 'unit', action: 'update', id: unit.id, active: !unit.active });
     onChange();
   }
+  async function togglePizzaria() {
+    setBusy(true); setMsg(null);
+    const r = await postAdmin({ entity: 'unit', action: 'update', id: unit.id, hasPizzeria: !unit.hasPizzeria });
+    setBusy(false);
+    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    onChange();
+  }
   async function remove() {
     if (!confirm(`Excluir a unidade "${unit.name}"? Só é possível se não houver nenhum dado operacional (tarefas, lançamentos, etc.). Caso contrário, inative-a.`)) return;
     setBusy(true); setMsg(null);
@@ -116,6 +123,10 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
       <div className="flex items-center justify-between gap-2">
         <p className="font-semibold text-ink-900">{unit.name} <span className="text-xs font-normal text-ink-500">({unit.code})</span></p>
         <div className="flex items-center gap-1">
+          {/* O selo só aparece quando LIGADO: mostrar "sem pizzaria" em toda
+              unidade encheria a lista com a ausência de um recurso que é de
+              uma só. Quem liga/desliga usa a caixa dentro da edição. */}
+          {unit.hasPizzeria && <StatusBadge tone="success">Com pizzaria</StatusBadge>}
           <button onClick={toggle}><StatusBadge tone={unit.active ? 'success' : 'critical'}>{unit.active ? 'Ativa' : 'Inativa'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
           <Button size="sm" variant="ghost" disabled={busy} onClick={remove} aria-label="Excluir" className="text-danger"><Trash2 className="h-4 w-4" /></Button>
@@ -131,6 +142,16 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
           <div><Label className="text-xs">Hora de corte (0-23)</Label><Input inputMode="numeric" value={cutoffHour} onChange={(e) => setCutoffHour(e.target.value)} className="h-10 text-sm" /></div>
           <div><Label className="text-xs">Fuso</Label><Input value={timezone} onChange={(e) => setTimezone(e.target.value)} className="h-10 text-sm" /></div>
           <div className="col-span-2"><Label className="text-xs">CNPJ <span className="font-normal text-ink-500">(casa notas de gás por CNPJ)</span></Label><Input inputMode="numeric" value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" className="h-10 text-sm" /></div>
+          <div className="col-span-2 rounded-lg border border-line bg-surface p-2">
+            <Label className="text-xs">Controle de Pizzas</Label>
+            <p className="mt-0.5 text-xs text-ink-500">
+              Liga o módulo de fechamento de pizzas para esta unidade. Só quem responde por ela passa a ver o
+              módulo; nas demais unidades ele não existe, nem pelo endereço direto.
+            </p>
+            <Button size="sm" variant="outline" className="mt-2" disabled={busy} onClick={togglePizzaria}>
+              <Pizza className="h-4 w-4" /> {unit.hasPizzeria ? 'Desligar pizzaria' : 'Esta unidade tem pizzaria'}
+            </Button>
+          </div>
           <Button size="sm" className="col-span-2" disabled={busy} onClick={saveEdit}><Save className="h-4 w-4" /> Salvar alterações</Button>
         </div>
       )}

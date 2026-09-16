@@ -109,6 +109,11 @@ const BASE: ModuleDef[] = [
   { key: 'AUDIT_REPORT', label: 'Relatório de auditoria', nav: '/auditoria/relatorio', parent: 'AUDIT' },
 
   { key: 'HYGIENE', label: 'Higiene dos banheiros', nav: '/modulos/higiene' },
+  /* A matriz é por PERFIL; "só a unidade com pizzaria" é recorte de UNIDADE e
+     não cabe aqui. O perfil diz quem poderia ver; quem de fato vê depende de
+     `Unit.hasPizzeria` (src/lib/pizzas/acesso.ts), aplicado no menu e na porta
+     da tela. Fechar aqui continua fechando para todos, como nos demais. */
+  { key: 'PIZZAS', label: 'Controle de Pizzas', nav: '/modulos/pizzas' },
   { key: 'PRODUCTS', label: 'Pedidos Internos', nav: '/modulos/produtos' },
   { key: 'PRODUCT_SEPARATION', label: 'Separação de Pedidos (CD)', nav: '/modulos/separacao' },
 
@@ -130,6 +135,7 @@ const BASE: ModuleDef[] = [
   { key: 'CONFIG_PRODUCTS', label: 'Catálogo de produtos', nav: '/configuracoes/produtos', parent: 'CONFIG' },
   { key: 'CONFIG_CD_SECTORS', label: 'Setores do CD', nav: '/configuracoes/setores-cd', parent: 'CONFIG' },
   { key: 'CONFIG_PRODUCT_STANDARDS', label: 'Padrão de produtos (foto)', nav: '/configuracoes/padrao-produtos', parent: 'CONFIG' },
+  { key: 'CONFIG_PIZZAS', label: 'Pizzas (sabores)', nav: '/configuracoes/pizzas', parent: 'CONFIG' },
   { key: 'CONFIG_PAYMENTS', label: 'Pagamentos (freelancers e avulsos)', nav: '/configuracoes/pagamentos', parent: 'CONFIG' },
   { key: 'CONFIG_FREELANCER_RATES', label: 'Valor do freelancer por setor', nav: '/configuracoes/freelancer-valores', parent: 'CONFIG' },
   { key: 'CONFIG_INTEGRATIONS', label: 'APIs e integrações', nav: '/configuracoes/integracoes', parent: 'CONFIG' },
@@ -170,6 +176,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   CONFIG_USERS: ['SUPERVISOR'], // supervisão visualiza o cadastro da rede
   CONFIG_SUPPLIERS: ['SUPERVISOR'], // canManageSuppliers: Admin, CEO e Supervisão
   CONFIG_PRODUCTS: ['SUPERVISOR'], // catálogo: Admin, CEO e Supervisão
+  CONFIG_PIZZAS: ['SUPERVISOR'], // sabores da pizzaria: mesma linha do catálogo de produtos
   UNIT_PANEL: ['SUPERVISOR', 'COORDINATOR', 'MANAGER'], // painel operacional da unidade
 };
 

@@ -151,6 +151,27 @@ export const GUIDE: GuideSection[] = [
         tips: ['O peso de "Comunicados" na meta é configurável pelo Admin (no Painel). Comunicados urgentes geram notificação destacada no sino.'],
       },
       {
+        id: 'pizzas',
+        title: 'Controle de Pizzas',
+        roles: MANAGERLINE,
+        summary: 'Fechamento diário da pizzaria, por tamanho e sabor. Só a unidade que tem pizzaria enxerga este módulo.',
+        steps: [
+          'O módulo aparece somente para quem responde por uma unidade marcada como tendo pizzaria. Nas demais unidades ele não existe no menu nem pelo endereço direto.',
+          'Para LIGAR numa unidade (Admin): Configurações → Unidades → abrir a edição da unidade → "Esta unidade tem pizzaria". Depois cadastre o cardápio em Configurações → Pizzas (sabores) — sem sabores o link não tem o que oferecer.',
+          'Abra CONTROLE DE PIZZAS e copie o "Link de preenchimento". Ele é de uso interno da operação e abre SEM login, já amarrado à unidade — quem preenche não escolhe nem troca de unidade.',
+          'No link, a data já vem preenchida com o dia de hoje e pode ser alterada para lançar um dia esquecido (até 30 dias atrás; nunca uma data futura).',
+          'Monte o fechamento linha a linha: tamanho (35 cm, 30 cm ou 25 cm), sabor e quantidade. Use "Adicionar sabor" para quantas combinações forem necessárias.',
+          'O TOTAL DE PIZZAS aparece enquanto você digita. Confira a conta ANTES de tocar em "Enviar fechamento".',
+          'Se aquela data já tiver fechamento, aparece "Já existe um fechamento para esta data." em vez de sobrescrever calado. Toque em "Carregar e corrigir" para trazer o que foi lançado, ajustar e reenviar — o gerente é avisado da correção e ela fica na Auditoria.',
+          'No painel: pizzas de hoje, total do período, média por dia lançado, tamanhos e sabores mais vendidos, e o histórico diário. O filtro de 7, 30 ou 90 dias muda todos os números de uma vez.',
+          'A média é por dia LANÇADO, não por dia do calendário: um dia sem fechamento é dado que falta, não venda zero.',
+        ],
+        tips: [
+          'Os sabores vêm de um catálogo por unidade — é o que vai permitir, mais adiante, cruzar as pizzas vendidas com a ficha técnica e calcular o consumo teórico de insumos. Por isso o sabor se escolhe numa lista, e não se digita.',
+          'O link é um segredo: quem o tiver preenche o fechamento. Trate-o como senha da operação e não o publique fora do grupo da unidade.',
+        ],
+      },
+      {
         id: 'desperdicios',
         title: 'Desperdícios',
         roles: MANAGERLINE,
