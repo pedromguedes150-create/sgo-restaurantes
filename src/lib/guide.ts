@@ -916,6 +916,21 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'setores-cd',
+        title: 'Setores do CD e o Separador',
+        roles: ['ADMIN'],
+        summary: 'Cadastrar as áreas do Centro de Distribuição e vincular cada separador à sua.',
+        steps: [
+          'Em CONFIGURAÇÕES → Setores do CD, cadastre as áreas que separam os pedidos (ex.: Secos, Refrigerados, Bebidas).',
+          'Cada produto pertence a um setor. É o que divide um pedido só entre as áreas sem o gerente ter de escolher nada: cada separador recebe apenas a parte dele.',
+          'Produto sem setor cai em "Sem setor cadastrado" e NENHUM separador o enxerga — cadastre o setor antes de importar o catálogo.',
+          'Para criar o funcionário: CONFIGURAÇÕES → Usuários → Novo usuário → perfil "Separador CD". O campo Setor do CD aparece e é obrigatório; sem ele a fila dele abriria vazia.',
+          'O Separador NÃO escolhe unidades: o CD atende a rede inteira, e a fila dele é montada só pelo setor.',
+          'Setor em uso não se exclui, se desativa — apagar soltaria os produtos sem setor e apagaria de qual área cada item saiu. Desativar também é barrado enquanto houver separador vinculado: mude o setor dele primeiro.',
+          'Renomear um setor não reescreve pedido antigo: o nome fica congelado em cada item na data em que foi pedido.',
+        ],
+      },
+      {
         id: 'perfis',
         title: 'Perfis de acesso',
         roles: ['ADMIN'],
@@ -923,6 +938,9 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Em CONFIGURAÇÕES → Perfis de acesso, escolha o perfil e marque Ver/Editar por módulo.',
           'Sem "Ver", o módulo some do menu daquele perfil. CEO e Admin são sempre totais.',
+          'TODOS OS PERFIS APARECEM AQUI (v1.92.0): o seletor listava quatro — Caixa e Separador CD ficavam de fora, e não havia como liberar uma tela a mais para eles sem alterar o código. Agora são seis, e um perfil novo entra sozinho na lista.',
+          'O SEPARADOR CD nasce fechado: só a Separação de pedidos e o Treinamento. Se ele precisar de outra tela (consultar o histórico do pedido, por exemplo), basta marcar "Ver" na linha dela — sem programador e sem publicação.',
+          'ÚLTIMO ADMINISTRADOR: o sistema recusa desativar, rebaixar ou excluir o último Administrador ativo. Como os cadastros e esta própria tela são restritos ao Admin, ficar sem nenhum trancaria todo mundo para fora.',
           'PARTES DE DENTRO DO MÓDULO: módulo que tem partes mostra uma SETA e o número delas ("3 partes"). Toque na seta para abrir e liberar/fechar cada tela e cada aba de dentro. Vale para o sistema inteiro: as abas da Minha área, as telas internas de Comandas (conferência por leitor, análise em aberto), de Pessoas (mapa, avaliação, comissões, experiência, mudanças, escala e as telas da escala), de Cancelamentos, de Notas, de Tarefas, de Metas e cada tela de Configurações, uma a uma.',
           'Mesmo dobrado, o módulo avisa em âmbar quantas partes estão fechadas — nada se restringe em silêncio.',
           'A MATRIZ NAS ROTAS DE DETALHE (v1.69.0): auditoria das rotas que estavam "fora da matriz por regra própria" achou seis que só olhavam a unidade — justificar cancelamento, confirmar inventário, mudar status da nota, andamento da ocorrência, férias e variação de escala. Agora obedecem "Editar" do módulo (e o perfil Caixa é barrado). Reclassificar ocorrência passou a ser só de Supervisor/Admin, como sempre foi no papel. E fechar a aba "Aprovar"/"Pagar" de Pagamentos passa a valer na rota, não só no botão.',

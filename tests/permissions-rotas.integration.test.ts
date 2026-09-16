@@ -63,6 +63,17 @@ describe('Toda tela tem um módulo dono', () => {
     expect(moduleOfPath('/modulos/comandas/analise-aberto/consolidado')).toBe('COMMANDS_OPEN');
   });
 
+  /* O CAMINHO INVERSO, que faltava. O teste acima garante que toda tela tem
+     dono; nada garantia que todo dono tem tela. O módulo CONFIG_CD_SECTORS
+     nasceu com endereço para `/configuracoes/setores-cd` e a tela nunca foi
+     escrita: a linha aparecia na matriz de perfis, o Admin marcava "Ver", e o
+     destino era um 404. */
+  it('todo módulo com endereço aponta para uma tela que existe', () => {
+    const noDisco = new Set(ROTAS);
+    const semTela = MODULES.filter((m) => m.nav && !noDisco.has(m.nav)).map((m) => `${m.key} → ${m.nav}`);
+    expect(semTela, `módulo sem tela no disco: ${semTela.join(', ')}`).toEqual([]);
+  });
+
   it('todo submenu com endereço é filho de alguém, e o pai vem antes', () => {
     const vistos = new Set<string>();
     for (const m of MODULES) {

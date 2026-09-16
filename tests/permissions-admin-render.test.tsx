@@ -9,7 +9,8 @@ vi.mock('next/navigation', () => ({
 import { renderToString } from 'react-dom/server';
 import React from 'react';
 import { PermissionsAdmin } from '@/components/admin/permissions-admin';
-import { MODULES } from '@/lib/permissions';
+import { ALL_ROLES, isFullAccess, MODULES } from '@/lib/permissions';
+import { roleLabel } from '@/lib/roles';
 
 /**
  * A matriz passou de 31 para ~76 linhas. Sem dobrar as partes de dentro, a tela
@@ -19,11 +20,17 @@ import { MODULES } from '@/lib/permissions';
 
 const modules = MODULES.map((m) => ({ key: m.key, label: m.label, parent: m.parent }));
 
+/* Os perfis agora chegam por prop, do servidor — a tela não sabe mais de cor
+   quem pode ser configurado. Aqui entram os mesmos que a página monta. */
+const perfis = ALL_ROLES.filter((r) => !isFullAccess(r)).map((r) => ({ value: r, label: roleLabel(r) }));
+
 function render(over: Record<string, { canView: boolean; canEdit: boolean }> = {}) {
   const linha: Record<string, { canView: boolean; canEdit: boolean }> = {};
   for (const m of modules) linha[m.key] = { canView: true, canEdit: true };
-  const matrix = { MANAGER: { ...linha, ...over }, SUPERVISOR: linha, COORDINATOR: linha, FINANCE: linha };
-  return renderToString(React.createElement(PermissionsAdmin, { modules, matrix })).split('<!-- -->').join('');
+  const matrix: Record<string, Record<string, { canView: boolean; canEdit: boolean }>> = {};
+  for (const p of perfis) matrix[p.value] = linha;
+  matrix.MANAGER = { ...linha, ...over };
+  return renderToString(React.createElement(PermissionsAdmin, { modules, matrix, perfis })).split('<!-- -->').join('');
 }
 
 describe('A matriz abre dobrada', () => {

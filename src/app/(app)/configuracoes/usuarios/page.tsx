@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { UsersAdmin } from '@/components/admin/users-admin';
+import { setoresAtivosDoCd } from '@/lib/products/setores';
 import { ArrowLeft } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
 
@@ -13,11 +14,12 @@ export default async function UsuariosAdminPage() {
   const isAdmin = user.role === 'ADMIN';
   const isViewer = user.role === 'SUPERVISOR' || user.role === 'CEO'; // 16/07: supervisão visualiza dados (CPF etc.)
   if (!isAdmin && !isViewer) return <p className="text-sm text-ink-500">Restrito ao Administrador.</p>;
-  const [users, units] = await Promise.all([
-    prisma.user.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, cpf: true, email: true, role: true, active: true, memberships: { select: { unitId: true } } } }),
+  const [users, units, cdSectors] = await Promise.all([
+    prisma.user.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, cpf: true, email: true, role: true, active: true, cdSectorId: true, cdSector: { select: { name: true } }, memberships: { select: { unitId: true } } } }),
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    setoresAtivosDoCd(),
   ]);
-  const usersRows = users.map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, active: u.active, unitIds: u.memberships.map((m) => m.unitId) }));
+  const usersRows = users.map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, active: u.active, unitIds: u.memberships.map((m) => m.unitId), cdSectorId: u.cdSectorId, cdSectorName: u.cdSector?.name ?? null }));
 
   if (!isAdmin) {
     // Visualização (Supervisor/CEO): dados completos, sem edição
@@ -50,7 +52,7 @@ export default async function UsuariosAdminPage() {
       <LargeTitle title="Usuários" />
       <p className="text-sm text-ink-500">CPF e nome completo cada usuário preenche no próprio <Link href="/perfil" className="font-semibold text-brand">Meu Perfil</Link> (avatar no topo).</p>
       <Card><CardContent className="pt-4">
-        <UsersAdmin users={usersRows} units={units} meId={user.id} />
+        <UsersAdmin users={usersRows} units={units} cdSectors={cdSectors} meId={user.id} />
       </CardContent></Card>
     </div>
   );

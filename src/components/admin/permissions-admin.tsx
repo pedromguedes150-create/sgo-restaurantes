@@ -4,21 +4,27 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { Select } from '@/components/ui/ds/select';
-import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
+import { postAdmin } from '@/lib/admin-client';
 
 type Perm = { canView: boolean; canEdit: boolean };
 type Matrix = Record<string, Record<string, Perm>>;
 type Mod = { key: string; label: string; parent?: string; soVer?: boolean };
 
-const EDITABLE_ROLES = ['SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE'];
+type Perfil = { value: string; label: string; hint?: string };
 
-export function PermissionsAdmin({ modules, matrix }: { modules: Mod[]; matrix: Matrix }) {
+/**
+ * `perfis` vem do SERVIDOR. Era uma lista de quatro nomes escrita aqui, e por
+ * isso o Caixa e o Separador do CD não apareciam nesta tela: não havia como o
+ * Admin liberar uma tela a mais para eles sem alguém alterar o código.
+ */
+export function PermissionsAdmin({ modules, matrix, perfis }: { modules: Mod[]; matrix: Matrix; perfis: Perfil[] }) {
   const router = useRouter();
   const [state, setState] = useState<Matrix>(matrix);
   const [busy, setBusy] = useState(false);
-  const [role, setRole] = useState('MANAGER');
+  // Abre no primeiro perfil da lista em vez de um nome fixo: com a lista vindo
+  // do servidor, um valor fixo aqui poderia não existir mais.
+  const [role, setRole] = useState(() => perfis.find((p) => p.value === 'MANAGER')?.value ?? perfis[0]?.value ?? '');
   const [abertos, setAbertos] = useState<Record<string, boolean>>({});
-  const roleLabel = (r: string) => ROLE_OPTIONS.find((o) => o.value === r)?.label ?? r;
 
   /* Quem é filho de quem, e a que profundidade — a lista já vem com o filho
      depois do pai, então uma passada basta. */
@@ -76,7 +82,7 @@ export function PermissionsAdmin({ modules, matrix }: { modules: Mod[]; matrix: 
         <Select
           label="Perfil" value={role} onValueChange={setRole}
           hint="CEO e Administrador têm acesso total e não podem ser restringidos. Sem marcar “Ver”, o módulo some do menu do perfil."
-          options={EDITABLE_ROLES.map((r) => ({ value: r, label: roleLabel(r) }))}
+          options={perfis}
         />
       </div>
 

@@ -3,6 +3,7 @@ import { acharSobreposicao, mensagemDeSobreposicao } from '@/lib/commands/ranges
 import { hashPassword } from '@/lib/auth/password';
 import { fromZonedTime } from 'date-fns-tz';
 import { audit } from '@/lib/audit';
+import { ALL_ROLES } from '@/lib/permissions';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role, TaskModule } from '@prisma/client';
 
@@ -114,14 +115,50 @@ function clampHour(h?: number) {
 }
 
 /* ───────────────────────────── Usuários ───────────────────────────── */
-export async function createUser(user: SessionUser, input: { name: string; email: string; role: Role; password: string; unitIds?: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
+
+/**
+ * Sobra algum Administrador ATIVO além deste?
+ *
+ * Sem esta checagem dá para ficar sem nenhum admin — e, como a matriz de
+ * perfis e os cadastros são todos restritos a ADMIN, ninguém conseguiria
+ * desfazer o engano pela interface. Só mexendo no banco.
+ */
+async function sobraOutroAdminAtivo(exceptUserId: string): Promise<boolean> {
+  const n = await prisma.user.count({ where: { role: 'ADMIN', active: true, id: { not: exceptUserId } } });
+  return n > 0;
+}
+
+const SEM_ADMIN = 'Este é o último Administrador ativo. Promova outro usuário a Administrador antes de fazer isso.';
+
+/**
+ * O setor do CD que vale para um perfil.
+ *
+ * Só o Separador usa setor, e para ele o setor é obrigatório: sem ele a tela
+ * de separação abre vazia, filtrada por um setor que não existe, e a pessoa
+ * fica sem fila nenhuma sem entender por quê. Qualquer outro perfil sai com
+ * setor nulo — guardar um setor num Gerente seria dado órfão esperando confundir.
+ */
+async function resolverSetorDoCd(role: Role, cdSectorId?: string | null): Promise<{ ok: true; value: string | null } | { ok: false; message: string }> {
+  if (role !== 'SEPARATOR') return { ok: true, value: null };
+  const id = cdSectorId?.trim();
+  if (!id) return { ok: false, message: 'Escolha o setor do CD: o Separador só enxerga os itens do setor dele.' };
+  const setor = await prisma.cdSector.findFirst({ where: { id, active: true }, select: { id: true } });
+  if (!setor) return { ok: false, message: 'Setor do CD inválido ou desativado.' };
+  return { ok: true, value: setor.id };
+}
+
+export async function createUser(user: SessionUser, input: { name: string; email: string; role: Role; password: string; unitIds?: string[]; cdSectorId?: string | null }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!input.name?.trim() || !input.email?.trim() || !input.password || input.password.length < 6 || !input.role) return { ok: false, reason: 'INVALID' };
+  // O perfil vinha sem conferência: só o tipo do Prisma barrava valor estranho.
+  if (!ALL_ROLES.includes(input.role)) return { ok: false, reason: 'INVALID' };
+  const setor = await resolverSetorDoCd(input.role, input.cdSectorId);
+  if (!setor.ok) return { ok: false, reason: 'INVALID', message: setor.message };
   const email = input.email.trim().toLowerCase();
   if (await prisma.user.findUnique({ where: { email } })) return { ok: false, reason: 'CONFLICT' };
   const passwordHash = await hashPassword(input.password);
   const created = await prisma.user.create({
-    data: { name: input.name.trim(), email, role: input.role, passwordHash, memberships: input.unitIds?.length ? { create: input.unitIds.map((unitId) => ({ unitId })) } : undefined },
+    data: { name: input.name.trim(), email, role: input.role, passwordHash, cdSectorId: setor.value, memberships: input.unitIds?.length ? { create: input.unitIds.map((unitId) => ({ unitId })) } : undefined },
   });
   await audit({ userId: user.id, action: 'USER_CREATE', module: 'CONFIG', entity: 'user', entityId: created.id, metadata: { role: input.role }, ...ctx });
   return { ok: true, id: created.id };
@@ -130,20 +167,42 @@ export async function createUser(user: SessionUser, input: { name: string; email
 export async function toggleUser(user: SessionUser, id: string, active: boolean, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (id === user.id) return { ok: false, reason: 'INVALID' }; // não inative a si mesmo
+  if (!active) {
+    const alvo = await prisma.user.findUnique({ where: { id }, select: { role: true, active: true } });
+    if (alvo?.role === 'ADMIN' && alvo.active && !(await sobraOutroAdminAtivo(id))) {
+      return { ok: false, reason: 'BLOCKED', message: SEM_ADMIN };
+    }
+  }
   await prisma.user.update({ where: { id }, data: { active } });
   await audit({ userId: user.id, action: active ? 'USER_ACTIVATE' : 'USER_DEACTIVATE', module: 'CONFIG', entity: 'user', entityId: id, ...ctx });
   return { ok: true };
 }
 
-export async function updateUser(user: SessionUser, id: string, input: { name?: string; role?: Role; password?: string }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateUser(user: SessionUser, id: string, input: { name?: string; role?: Role; password?: string; cdSectorId?: string | null }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
   if (input.password !== undefined && input.password.length > 0 && input.password.length < 6) return { ok: false, reason: 'INVALID' };
   if (id === user.id && input.role !== undefined && input.role !== user.role) return { ok: false, reason: 'INVALID' }; // não rebaixe a si mesmo
-  const data: { name?: string; role?: Role; passwordHash?: string } = {};
+  if (input.role !== undefined && !ALL_ROLES.includes(input.role)) return { ok: false, reason: 'INVALID' };
+
+  const atual = await prisma.user.findUnique({ where: { id }, select: { role: true, active: true, cdSectorId: true } });
+  if (!atual) return { ok: false, reason: 'INVALID' };
+
+  // Rebaixar o último admin tem o mesmo efeito de desativá-lo: ninguém sobra.
+  if (input.role !== undefined && atual.role === 'ADMIN' && input.role !== 'ADMIN' && atual.active && !(await sobraOutroAdminAtivo(id))) {
+    return { ok: false, reason: 'BLOCKED', message: SEM_ADMIN };
+  }
+
+  const papel = input.role ?? atual.role;
+  const setor = await resolverSetorDoCd(papel, input.cdSectorId !== undefined ? input.cdSectorId : atual.cdSectorId);
+  if (!setor.ok) return { ok: false, reason: 'INVALID', message: setor.message };
+
+  const data: { name?: string; role?: Role; passwordHash?: string; cdSectorId?: string | null } = {};
   if (input.name !== undefined) data.name = input.name.trim();
   if (input.role !== undefined) data.role = input.role;
   if (input.password) data.passwordHash = await hashPassword(input.password);
+  // Deixar de ser Separador limpa o setor; virar Separador passa a exigi-lo.
+  if (setor.value !== atual.cdSectorId) data.cdSectorId = setor.value;
   await prisma.user.update({ where: { id }, data });
   // Trocar a senha invalida sessões antigas (refresh tokens)
   if (data.passwordHash) await prisma.refreshToken.deleteMany({ where: { userId: id } });
@@ -154,6 +213,10 @@ export async function updateUser(user: SessionUser, id: string, input: { name?: 
 export async function deleteUser(user: SessionUser, id: string, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (id === user.id) return { ok: false, reason: 'INVALID' }; // não exclua a si mesmo
+  const alvo = await prisma.user.findUnique({ where: { id }, select: { role: true, active: true } });
+  if (alvo?.role === 'ADMIN' && alvo.active && !(await sobraOutroAdminAtivo(id))) {
+    return { ok: false, reason: 'BLOCKED', message: SEM_ADMIN };
+  }
   // Histórico operacional é preservado (relações com autor usam SetNull); apenas
   // vínculos de unidade, tokens e leituras de POP somem (Cascade).
   await prisma.user.delete({ where: { id } }).catch(() => {});
