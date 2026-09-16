@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import { Role as RoleValues, type Role } from '@prisma/client';
+import { getSessionUser } from '@/lib/auth/session';
 import { ABAS } from '@/lib/permissions/abas';
 
 /**
@@ -215,10 +216,21 @@ const DEFAULT_ALLOW_ONLY: Partial<Record<Role, string[]>> = {
   SEPARATOR: ['PRODUCT_SEPARATION', 'HELP'],
 };
 
-/** Permissões efetivas de um perfil por módulo (com defaults). */
+/** Permissões efetivas de um perfil de sistema por módulo (com defaults). */
 export async function effectivePermissions(role: Role): Promise<Record<string, Perm>> {
   const rows = await prisma.rolePermission.findMany({ where: { role } });
-  const byModule = new Map(rows.map((r) => [r.module, r]));
+  return calcular(role, new Map(rows.map((r) => [r.module, { canView: r.canView, canEdit: r.canEdit }])));
+}
+
+/**
+ * O cálculo da matriz, uma vez só.
+ *
+ * `overrides` são as linhas cadastradas; o resto sai dos padrões do `role`. Foi
+ * extraído para o perfil PERSONALIZADO poder usar exatamente a mesma herança
+ * pai→filho e as mesmas travas — duas cópias divergiriam no primeiro ajuste, e
+ * a que divergisse seria a que decide quem entra onde.
+ */
+function calcular(role: Role, byModule: Map<string, Perm>): Record<string, Perm> {
   const out: Record<string, Perm> = {};
   for (const m of MODULES) {
     if (isFullAccess(role)) { out[m.key] = { canView: true, canEdit: true }; continue; }
@@ -252,17 +264,69 @@ export async function effectivePermissions(role: Role): Promise<Record<string, P
   return out;
 }
 
+/**
+ * Permissões de um perfil PERSONALIZADO.
+ *
+ * Parte do perfil base JÁ CONFIGURADO e sobrepõe o que o perfil personalizado
+ * diz. É o significado de "perfil base": o novo perfil é "como um Gerente, com
+ * estas diferenças" — e não uma folha em branco que por acaso tem o mesmo nome.
+ * Restringir o Gerente restringe junto quem herda dele, até que o perfil diga o
+ * contrário naquela linha.
+ */
+export async function permissoesDoPerfil(profileId: string): Promise<Record<string, Perm> | null> {
+  const perfil = await prisma.profile.findUnique({
+    where: { id: profileId },
+    select: { baseRole: true, permissions: { select: { module: true, canView: true, canEdit: true } } },
+  });
+  if (!perfil) return null;
+  const base = await prisma.rolePermission.findMany({ where: { role: perfil.baseRole } });
+  const mapa = new Map<string, Perm>(base.map((r) => [r.module, { canView: r.canView, canEdit: r.canEdit }]));
+  for (const p of perfil.permissions) mapa.set(p.module, { canView: p.canView, canEdit: p.canEdit });
+  return calcular(perfil.baseRole, mapa);
+}
+
+/**
+ * As permissões que valem para o usuário do REQUEST atual.
+ *
+ * As guardas recebem `role`, e não o usuário — são 66 rotas com a mesma linha
+ * `guardaDaRota(user.role, req)`. Em vez de reescrever todas (e arriscar deixar
+ * uma para trás, que é justamente a que vira buraco), o perfil personalizado é
+ * resolvido aqui, a partir da sessão.
+ *
+ * A checagem `u.role === role` é o que mantém isso honesto: só usa o perfil
+ * quando a pergunta é sobre o próprio usuário logado. Perguntar "o que o CAIXA
+ * pode?" enquanto um Gerente está logado continua respondendo sobre o Caixa.
+ */
+async function permissoesDeQuemPergunta(role: Role): Promise<Record<string, Perm>> {
+  let u: Awaited<ReturnType<typeof getSessionUser>> = null;
+  try {
+    u = await getSessionUser();
+  } catch {
+    /* Fora de um request (testes, scripts) não há sessão — segue pelo `role`. */
+  }
+  if (u && u.role === role && u.profileId) {
+    const p = await permissoesDoPerfil(u.profileId);
+    if (p) return p;
+  }
+  return effectivePermissions(role);
+}
+
 /** Este perfil pode EDITAR o módulo? (ADMIN/CEO sempre.) Checagem de servidor. */
 export async function canEditModule(role: Role, moduleKey: string): Promise<boolean> {
   if (isFullAccess(role)) return true;
-  const perms = await effectivePermissions(role);
+  const perms = await permissoesDeQuemPergunta(role);
   return Boolean(perms[moduleKey]?.canEdit);
 }
 
 /** Conjunto de hrefs de navegação que o perfil pode VER (para a sidebar). */
 export async function viewableNavHrefs(role: Role): Promise<string[]> {
-  const perms = await effectivePermissions(role);
+  const perms = await permissoesDeQuemPergunta(role);
   return MODULES.filter((m) => m.nav && perms[m.key]?.canView).map((m) => m.nav!) as string[];
+}
+
+/** Idem, para as guardas de rota e de aba. */
+export async function permissoesEfetivasDoRequest(role: Role): Promise<Record<string, Perm>> {
+  return permissoesDeQuemPergunta(role);
 }
 
 /** Matriz completa (todos os perfis) para a tela de administração. */

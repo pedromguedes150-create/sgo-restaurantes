@@ -139,7 +139,8 @@ describe('setor do CD no cadastro de usuário', () => {
 
   it('perfil inexistente é recusado', async () => {
     const r = await createUser(admin(), { name: 'X', email: `inv-${sfx}@e.com`, role: 'CHEFE' as never, password: 'senha123' });
-    expect(r).toEqual({ ok: false, reason: 'INVALID' });
+    // `toMatchObject`: a recusa passou a trazer uma mensagem explicativa junto.
+    expect(r).toMatchObject({ ok: false, reason: 'INVALID' });
   });
 });
 

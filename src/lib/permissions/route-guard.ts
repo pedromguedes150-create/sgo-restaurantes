@@ -1,4 +1,4 @@
-import { MODULES, isFullAccess, effectivePermissions } from '@/lib/permissions';
+﻿import { MODULES, isFullAccess, permissoesEfetivasDoRequest } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
 
 /**
@@ -36,7 +36,7 @@ export function moduleOfPath(pathname: string): string | null {
 export async function homeForRole(role: Role): Promise<string> {
   if (role === 'CASHIER') return '/modulos/comandas/conferencia';
   if (role === 'SEPARATOR') return '/modulos/separacao';
-  const perms = await effectivePermissions(role);
+  const perms = await permissoesEfetivasDoRequest(role);
   const primeiro = MODULES.find((m) => m.nav && perms[m.key]?.canView);
   return primeiro?.nav ?? '/ajuda';
 }
@@ -46,6 +46,6 @@ export async function canOpenPath(role: Role, pathname: string): Promise<boolean
   if (isFullAccess(role)) return true;
   const key = moduleOfPath(pathname);
   if (!key) return true; // fora do mapa (ex.: /perfil, /notificacoes): regra própria da tela
-  const perms = await effectivePermissions(role);
+  const perms = await permissoesEfetivasDoRequest(role);
   return Boolean(perms[key]?.canView);
 }

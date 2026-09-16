@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -11,10 +11,12 @@ import { MultiSelect } from '@/components/ui/multi-select';
 import { Sheet } from '@/components/ui/ds/sheet';
 import { Select } from '@/components/ui/ds/select';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
+import { ehPerfilPersonalizado, idDoPerfil, valorDePerfil } from '@/lib/perfil-valor';
 
-export interface UserRow { id: string; name: string; email: string; role: string; active: boolean; unitIds: string[]; cdSectorId: string | null; cdSectorName: string | null }
+export interface UserRow { id: string; name: string; email: string; role: string; active: boolean; unitIds: string[]; cdSectorId: string | null; cdSectorName: string | null; profileId: string | null; profileName: string | null }
 interface Unit { id: string; name: string }
 interface CdSector { id: string; name: string }
+interface PerfilPersonalizado { id: string; name: string; baseRole: string }
 
 /**
  * O Separador do CD fica FORA da escolha de unidades: o Centro de Distribuição
@@ -25,8 +27,30 @@ interface CdSector { id: string; name: string }
 function roleNeedsUnits(role: string) { return role !== 'ADMIN' && role !== 'CEO' && role !== 'FINANCE' && role !== 'SEPARATOR'; }
 function roleNeedsCdSector(role: string) { return role === 'SEPARATOR'; }
 
-export function UsersAdmin({ users, units, cdSectors, meId }: { users: UserRow[]; units: Unit[]; cdSectors: CdSector[]; meId: string }) {
+/**
+ * A ferramenta do seletor: o valor escolhido é um perfil de sistema OU um
+ * personalizado (prefixado). Tudo que decide campos na tela — unidades, setor —
+ * pergunta pelo papel EFETIVO, que no personalizado é o perfil base dele.
+ */
+function ferramentasDePerfil(perfis: PerfilPersonalizado[]) {
+  const opcoes = [
+    ...ROLE_OPTIONS,
+    ...perfis.map((p) => ({ value: valorDePerfil(p.id), label: p.name, hint: 'Perfil criado em Perfis de acesso' })),
+  ];
+  const papelEfetivo = (valor: string) =>
+    ehPerfilPersonalizado(valor) ? (perfis.find((p) => p.id === idDoPerfil(valor))?.baseRole ?? '') : valor;
+  /** O que mandar para a API: perfil de sistema vai em `role`; personalizado, em `profileId`. */
+  const comoEnviar = (valor: string) =>
+    ehPerfilPersonalizado(valor) ? { profileId: idDoPerfil(valor) } : { role: valor, profileId: null };
+  return { opcoes, papelEfetivo, comoEnviar };
+}
+
+/** O valor do seletor para um usuário já cadastrado. */
+const valorDoUsuario = (u: UserRow) => (u.profileId ? valorDePerfil(u.profileId) : u.role);
+
+export function UsersAdmin({ users, units, cdSectors, perfis, meId }: { users: UserRow[]; units: Unit[]; cdSectors: CdSector[]; perfis: PerfilPersonalizado[]; meId: string }) {
   const router = useRouter();
+  const { opcoes, papelEfetivo, comoEnviar } = ferramentasDePerfil(perfis);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('MANAGER');
@@ -37,12 +61,12 @@ export function UsersAdmin({ users, units, cdSectors, meId }: { users: UserRow[]
   const [msg, setMsg] = useState<string | null>(null);
   const [novo, setNovo] = useState(false);
 
-  const needsUnits = roleNeedsUnits(role);
-  const needsSector = roleNeedsCdSector(role);
+  const needsUnits = roleNeedsUnits(papelEfetivo(role));
+  const needsSector = roleNeedsCdSector(papelEfetivo(role));
 
   async function create() {
     setBusy(true); setMsg(null);
-    const r = await postAdmin({ entity: 'user', action: 'create', name, email, role, password, unitIds: needsUnits ? unitIds : [], cdSectorId: needsSector ? cdSectorId : null });
+    const r = await postAdmin({ entity: 'user', action: 'create', name, email, ...comoEnviar(role), password, unitIds: needsUnits ? unitIds : [], cdSectorId: needsSector ? cdSectorId : null });
     setBusy(false);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
     setName(''); setEmail(''); setPassword(''); setUnitIds([]); setCdSectorId(null); setNovo(false); router.refresh();
@@ -63,7 +87,7 @@ export function UsersAdmin({ users, units, cdSectors, meId }: { users: UserRow[]
           <div><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div><Label>E-mail</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-2">
-            <Select label="Perfil" value={role} onValueChange={setRole} options={ROLE_OPTIONS} />
+            <Select label="Perfil" value={role} onValueChange={setRole} options={opcoes} />
             <div><Label>Senha (mín. 6)</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
           </div>
           {needsUnits && (
@@ -82,7 +106,7 @@ export function UsersAdmin({ users, units, cdSectors, meId }: { users: UserRow[]
 
       <div className="space-y-2">
         {users.map((u) => (
-          <UserItem key={u.id} u={u} units={units} cdSectors={cdSectors} meId={meId} onChange={() => router.refresh()} onToggle={() => toggle(u)} />
+          <UserItem key={u.id} u={u} units={units} cdSectors={cdSectors} perfis={perfis} meId={meId} onChange={() => router.refresh()} onToggle={() => toggle(u)} />
         ))}
       </div>
     </div>
@@ -111,22 +135,23 @@ function SetorDoCd({ sectors, value, onChange, size }: { sectors: CdSector[]; va
   );
 }
 
-function UserItem({ u, units, cdSectors, meId, onChange, onToggle }: { u: UserRow; units: Unit[]; cdSectors: CdSector[]; meId: string; onChange: () => void; onToggle: () => void }) {
+function UserItem({ u, units, cdSectors, perfis, meId, onChange, onToggle }: { u: UserRow; units: Unit[]; cdSectors: CdSector[]; perfis: PerfilPersonalizado[]; meId: string; onChange: () => void; onToggle: () => void }) {
+  const { opcoes, papelEfetivo, comoEnviar } = ferramentasDePerfil(perfis);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(u.name);
-  const [role, setRole] = useState(u.role);
+  const [role, setRole] = useState(valorDoUsuario(u));
   const [password, setPassword] = useState('');
   const [unitIds, setUnitIds] = useState<string[]>(u.unitIds);
   const [cdSectorId, setCdSectorId] = useState<string | null>(u.cdSectorId);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const needsUnits = roleNeedsUnits(role);
-  const needsSector = roleNeedsCdSector(role);
+  const needsUnits = roleNeedsUnits(papelEfetivo(role));
+  const needsSector = roleNeedsCdSector(papelEfetivo(role));
   const isSelf = u.id === meId;
 
   async function save() {
     setBusy(true); setMsg(null);
-    const r = await postAdmin({ entity: 'user', action: 'update', id: u.id, name, role: isSelf ? undefined : role, password: password || undefined, cdSectorId: needsSector ? cdSectorId : null });
+    const r = await postAdmin({ entity: 'user', action: 'update', id: u.id, name, ...(isSelf ? {} : comoEnviar(role)), password: password || undefined, cdSectorId: needsSector ? cdSectorId : null });
     if (r.ok) await postAdmin({ entity: 'user', action: 'setUnits', id: u.id, unitIds: needsUnits ? unitIds : [] });
     setBusy(false);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
@@ -148,7 +173,7 @@ function UserItem({ u, units, cdSectors, meId, onChange, onToggle }: { u: UserRo
         <div>
           <p className="font-semibold text-ink-900">{u.name}{isSelf && <span className="ml-1 text-xs text-ink-500">(você)</span>}</p>
           <p className="text-xs text-ink-500">
-            {u.email} · {ROLE_OPTIONS.find((r) => r.value === u.role)?.label ?? u.role}
+            {u.email} · {u.profileName ?? ROLE_OPTIONS.find((r) => r.value === u.role)?.label ?? u.role}
             {u.role === 'SEPARATOR' && (
               u.cdSectorName
                 ? <span> · setor {u.cdSectorName}</span>
@@ -169,7 +194,7 @@ function UserItem({ u, units, cdSectors, meId, onChange, onToggle }: { u: UserRo
         <div className="mt-2 space-y-2 rounded-lg bg-sunken/40 p-2">
           <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
           <div className="grid grid-cols-2 gap-2">
-            <Select label="Perfil" size="sm" value={role} disabled={isSelf} onValueChange={setRole} options={ROLE_OPTIONS} />
+            <Select label="Perfil" size="sm" value={role} disabled={isSelf} onValueChange={setRole} options={opcoes} />
             <div><Label className="text-xs">Nova senha (opcional)</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="deixe em branco p/ manter" className="h-10 text-sm" /></div>
           </div>
           {needsUnits && (

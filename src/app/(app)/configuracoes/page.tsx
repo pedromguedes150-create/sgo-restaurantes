@@ -1,7 +1,7 @@
-import { getSessionUser } from '@/lib/auth/session';
+﻿import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { roleLabel } from '@/lib/roles';
-import { effectivePermissions } from '@/lib/permissions';
+import { permissoesEfetivasDoRequest } from '@/lib/permissions';
 import { moduleOfPath } from '@/lib/permissions/route-guard';
 import { RETENTION_MONTHS_DEFAULT, TERMS_VERSION } from '@/lib/lgpd';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -62,7 +62,7 @@ const SECOES: { titulo: string; itens: { href: string; title: string; subtitle: 
 export default async function ConfiguracoesPage() {
   const user = (await getSessionUser())!;
   const isAdmin = user.role === 'ADMIN' || user.role === 'CEO';
-  const perms = await effectivePermissions(user.role);
+  const perms = await permissoesEfetivasDoRequest(user.role);
 
   /* Cada tela de Configurações é uma parte própria na matriz de perfis. A lista
      passa a ser DERIVADA da permissão, em vez de "ou é Admin, ou são três

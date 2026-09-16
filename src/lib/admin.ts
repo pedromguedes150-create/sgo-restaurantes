@@ -147,20 +147,41 @@ async function resolverSetorDoCd(role: Role, cdSectorId?: string | null): Promis
   return { ok: true, value: setor.id };
 }
 
-export async function createUser(user: SessionUser, input: { name: string; email: string; role: Role; password: string; unitIds?: string[]; cdSectorId?: string | null }, ctx: Ctx = {}): Promise<AdminResult> {
+/**
+ * Qual perfil o usuário terá: um de sistema, ou um personalizado.
+ *
+ * O `role` de um usuário com perfil personalizado é o `baseRole` do perfil, e é
+ * DERIVADO aqui, no servidor — nunca aceito do cliente. É o que mantém corretas
+ * as consultas por perfil espalhadas pelo sistema (notificar a supervisão,
+ * listar aprovadores) sem que nenhuma delas precise conhecer perfis novos.
+ */
+async function resolverPerfil(
+  input: { role?: Role; profileId?: string | null },
+): Promise<{ ok: true; role: Role; profileId: string | null } | { ok: false; message: string }> {
+  if (input.profileId) {
+    const p = await prisma.profile.findFirst({ where: { id: input.profileId, active: true }, select: { id: true, baseRole: true } });
+    if (!p) return { ok: false, message: 'Perfil inválido ou desativado.' };
+    return { ok: true, role: p.baseRole, profileId: p.id };
+  }
+  if (!input.role || !ALL_ROLES.includes(input.role)) return { ok: false, message: 'Perfil inválido.' };
+  return { ok: true, role: input.role, profileId: null };
+}
+
+export async function createUser(user: SessionUser, input: { name: string; email: string; role?: Role; profileId?: string | null; password: string; unitIds?: string[]; cdSectorId?: string | null }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
-  if (!input.name?.trim() || !input.email?.trim() || !input.password || input.password.length < 6 || !input.role) return { ok: false, reason: 'INVALID' };
+  if (!input.name?.trim() || !input.email?.trim() || !input.password || input.password.length < 6) return { ok: false, reason: 'INVALID' };
   // O perfil vinha sem conferência: só o tipo do Prisma barrava valor estranho.
-  if (!ALL_ROLES.includes(input.role)) return { ok: false, reason: 'INVALID' };
-  const setor = await resolverSetorDoCd(input.role, input.cdSectorId);
+  const perfil = await resolverPerfil(input);
+  if (!perfil.ok) return { ok: false, reason: 'INVALID', message: perfil.message };
+  const setor = await resolverSetorDoCd(perfil.role, input.cdSectorId);
   if (!setor.ok) return { ok: false, reason: 'INVALID', message: setor.message };
   const email = input.email.trim().toLowerCase();
   if (await prisma.user.findUnique({ where: { email } })) return { ok: false, reason: 'CONFLICT' };
   const passwordHash = await hashPassword(input.password);
   const created = await prisma.user.create({
-    data: { name: input.name.trim(), email, role: input.role, passwordHash, cdSectorId: setor.value, memberships: input.unitIds?.length ? { create: input.unitIds.map((unitId) => ({ unitId })) } : undefined },
+    data: { name: input.name.trim(), email, role: perfil.role, profileId: perfil.profileId, passwordHash, cdSectorId: setor.value, memberships: input.unitIds?.length ? { create: input.unitIds.map((unitId) => ({ unitId })) } : undefined },
   });
-  await audit({ userId: user.id, action: 'USER_CREATE', module: 'CONFIG', entity: 'user', entityId: created.id, metadata: { role: input.role }, ...ctx });
+  await audit({ userId: user.id, action: 'USER_CREATE', module: 'CONFIG', entity: 'user', entityId: created.id, metadata: { role: perfil.role, profileId: perfil.profileId }, ...ctx });
   return { ok: true, id: created.id };
 }
 
@@ -178,28 +199,40 @@ export async function toggleUser(user: SessionUser, id: string, active: boolean,
   return { ok: true };
 }
 
-export async function updateUser(user: SessionUser, id: string, input: { name?: string; role?: Role; password?: string; cdSectorId?: string | null }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateUser(user: SessionUser, id: string, input: { name?: string; role?: Role; profileId?: string | null; password?: string; cdSectorId?: string | null }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
   if (input.password !== undefined && input.password.length > 0 && input.password.length < 6) return { ok: false, reason: 'INVALID' };
-  if (id === user.id && input.role !== undefined && input.role !== user.role) return { ok: false, reason: 'INVALID' }; // não rebaixe a si mesmo
-  if (input.role !== undefined && !ALL_ROLES.includes(input.role)) return { ok: false, reason: 'INVALID' };
 
-  const atual = await prisma.user.findUnique({ where: { id }, select: { role: true, active: true, cdSectorId: true } });
+  const atual = await prisma.user.findUnique({ where: { id }, select: { role: true, active: true, cdSectorId: true, profileId: true } });
   if (!atual) return { ok: false, reason: 'INVALID' };
 
-  // Rebaixar o último admin tem o mesmo efeito de desativá-lo: ninguém sobra.
-  if (input.role !== undefined && atual.role === 'ADMIN' && input.role !== 'ADMIN' && atual.active && !(await sobraOutroAdminAtivo(id))) {
-    return { ok: false, reason: 'BLOCKED', message: SEM_ADMIN };
+  /* Mexeu no perfil? Só então resolvemos — passar `role: undefined` junto com
+     `profileId: undefined` significa "não mexa no perfil", e não "limpe". */
+  const mexeuNoPerfil = input.role !== undefined || input.profileId !== undefined;
+  let papel = atual.role;
+  let profileId = atual.profileId;
+  if (mexeuNoPerfil) {
+    const perfil = await resolverPerfil(input);
+    if (!perfil.ok) return { ok: false, reason: 'INVALID', message: perfil.message };
+    papel = perfil.role;
+    profileId = perfil.profileId;
+    if (id === user.id && papel !== user.role) return { ok: false, reason: 'INVALID' }; // não rebaixe a si mesmo
+    // Rebaixar o último admin tem o mesmo efeito de desativá-lo: ninguém sobra.
+    if (atual.role === 'ADMIN' && papel !== 'ADMIN' && atual.active && !(await sobraOutroAdminAtivo(id))) {
+      return { ok: false, reason: 'BLOCKED', message: SEM_ADMIN };
+    }
   }
 
-  const papel = input.role ?? atual.role;
   const setor = await resolverSetorDoCd(papel, input.cdSectorId !== undefined ? input.cdSectorId : atual.cdSectorId);
   if (!setor.ok) return { ok: false, reason: 'INVALID', message: setor.message };
 
-  const data: { name?: string; role?: Role; passwordHash?: string; cdSectorId?: string | null } = {};
+  const data: { name?: string; role?: Role; profileId?: string | null; passwordHash?: string; cdSectorId?: string | null } = {};
   if (input.name !== undefined) data.name = input.name.trim();
-  if (input.role !== undefined) data.role = input.role;
+  if (mexeuNoPerfil) {
+    data.role = papel;
+    data.profileId = profileId;
+  }
   if (input.password) data.passwordHash = await hashPassword(input.password);
   // Deixar de ser Separador limpa o setor; virar Separador passa a exigi-lo.
   if (setor.value !== atual.cdSectorId) data.cdSectorId = setor.value;

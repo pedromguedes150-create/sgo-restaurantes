@@ -1,4 +1,4 @@
-import { effectivePermissions } from '@/lib/permissions';
+﻿import { permissoesEfetivasDoRequest } from '@/lib/permissions';
 import { acessoDasAbas, type AcessoAbas } from '@/lib/permissions/abas';
 import type { Role } from '@prisma/client';
 
@@ -7,5 +7,5 @@ import type { Role } from '@prisma/client';
  * para não desenhar aba que o servidor vai recusar.
  */
 export async function abasDoPerfil(role: Role, modulo: string): Promise<AcessoAbas> {
-  return acessoDasAbas(await effectivePermissions(role), modulo);
+  return acessoDasAbas(await permissoesEfetivasDoRequest(role), modulo);
 }

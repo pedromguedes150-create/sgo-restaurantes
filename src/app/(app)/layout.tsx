@@ -61,7 +61,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           header e a largura muda na sidebar, então os dois dividem o estado. */}
       <SidebarStateProvider defaultCollapsed={sidebarCollapsed}>
        <PageChromeProvider>
-        <AppHeader userName={user.name} roleLabel={roleLabel(user.role)} unread={unread} commPending={commPending} units={units} selectedUnitId={selectedUnitId} />
+        {/* Quem tem perfil personalizado vê o NOME do perfil, não o do perfil
+            base: o Admin criou "Supervisor Regional" justamente para distinguir,
+            e o cabeçalho dizer "Supervisor" desfaria a distinção. */}
+        <AppHeader userName={user.name} roleLabel={user.profileName ?? roleLabel(user.role)} unread={unread} commPending={commPending} units={units} selectedUnitId={selectedUnitId} />
         {/*
           Largura do conteúdo. Mobile-first: `max-w-3xl` (768px) coincide com o
           breakpoint `md`, então os overrides `md:` abaixo NÃO alteram o celular —

@@ -1,10 +1,11 @@
-'use client';
+﻿'use client';
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { Select } from '@/components/ui/ds/select';
-import { postAdmin } from '@/lib/admin-client';
+import { postAdmin, postPerfis } from '@/lib/admin-client';
+import { ehPerfilPersonalizado, idDoPerfil } from '@/lib/perfil-valor';
 
 type Perm = { canView: boolean; canEdit: boolean };
 type Matrix = Record<string, Record<string, Perm>>;
@@ -61,7 +62,11 @@ export function PermissionsAdmin({ modules, matrix, perfis }: { modules: Mod[]; 
     if (!next.canView) next.canEdit = false; // sem ver, não edita
     setState((s) => ({ ...s, [role]: { ...s[role], [moduleKey]: next } }));
     setBusy(true);
-    const r = await postAdmin({ entity: 'permission', action: 'set', role, module: moduleKey, canView: next.canView, canEdit: next.canEdit });
+    /* Perfil personalizado grava na tabela dele; perfil de sistema segue na
+       rota de sempre. A célula é a mesma na tela — muda só o destino. */
+    const r = ehPerfilPersonalizado(role)
+      ? await postPerfis({ action: 'setPermission', profileId: idDoPerfil(role), module: moduleKey, canView: next.canView, canEdit: next.canEdit })
+      : await postAdmin({ entity: 'permission', action: 'set', role, module: moduleKey, canView: next.canView, canEdit: next.canEdit });
     setBusy(false);
     if (!r.ok) { alert(r.error ?? 'Falha'); router.refresh(); return; }
   }
