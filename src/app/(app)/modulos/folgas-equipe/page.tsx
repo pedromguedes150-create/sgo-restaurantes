@@ -1,7 +1,7 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { getSessionUser } from '@/lib/auth/session';
-import { effectivePermissions } from '@/lib/permissions';
+import { permissoesEfetivasDoRequest } from '@/lib/permissions';
 import { getTeamLeaves } from '@/lib/manager-area';
 import { getManagerCoverageCalendar } from '@/lib/manager-schedule';
 import { ManagerCalendar } from '@/components/people/manager-calendar';
@@ -28,7 +28,7 @@ const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'jul
 
 export default async function FolgasEquipePage({ searchParams }: { searchParams: { start?: string; end?: string; view?: string; ano?: string; mes?: string } }) {
   const user = (await getSessionUser())!;
-  const perms = await effectivePermissions(user.role);
+  const perms = await permissoesEfetivasDoRequest(user.role);
   if (!perms.LEAVES_TEAM?.canView) {
     return <p className="text-sm text-ink-500">Acesso restrito. O Controle de gerentes é liberado pela Supervisão/Administração (Configurações → Perfis de acesso).</p>;
   }

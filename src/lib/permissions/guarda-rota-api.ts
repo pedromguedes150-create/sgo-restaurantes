@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { effectivePermissions, isFullAccess } from '@/lib/permissions';
+import { isFullAccess, permissoesEfetivasDoRequest } from '@/lib/permissions';
 import type { Role } from '@prisma/client';
 
 /**
@@ -99,6 +99,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/people/vacations': { modulo: 'PEOPLE_TAB_VACATION', exigir: 'editar' },
   '/api/people/vacations/[id]': { modulo: 'PEOPLE_TAB_VACATION', exigir: 'editar' },
   '/api/people/schedule/[id]': { modulo: 'SCHEDULE', exigir: 'editar' },
+
+  '/api/perfis': { modulo: 'CONFIG_PROFILES', exigir: 'editar' },
 
   // Mora sob o prefixo público do fechamento, como `/api/higiene/manage`: o
   // prefixo mais longo vence, então esta entra na matriz e a pública não.
@@ -206,7 +208,7 @@ export async function guardaDaRota(role: Role, req: Request): Promise<NextRespon
   if (isFullAccess(role)) return null;
   const regra = regraDaRota(new URL(req.url).pathname);
   if (!regra) return null;
-  const perms = await effectivePermissions(role);
+  const perms = await permissoesEfetivasDoRequest(role);
   const p = perms[regra.modulo];
   const ok = regra.exigir === 'ver' ? p?.canView : p?.canEdit;
   if (ok) return null;

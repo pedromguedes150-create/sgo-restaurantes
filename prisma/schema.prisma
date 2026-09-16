@@ -115,6 +115,11 @@ model User {
 
   /// Setor do CD do Separador. Ele NAO escolhe o setor ao entrar: o cadastro
   /// dele decide, e a tela ja abre filtrada. Nulo para todo mundo que nao e
+  /// Perfil personalizado (Gestão de Perfis). Quando presente, é ele que manda
+  /// nas permissões de TELA. `role` acima continua valendo para as regras de
+  /// negócio e é mantido igual ao `baseRole` do perfil — ver `Profile`.
+  profileId      String?
+  profile        Profile?         @relation(fields: [profileId], references: [id], onDelete: SetNull)
   /// Separador.
   cdSectorId     String?
   cdSector       CdSector?        @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
@@ -3101,6 +3106,61 @@ model MaintenancePlanLog {
 
   @@index([planId])
   @@map("maintenance_plan_logs")
+}
+
+// ============================================================
+// Gestão de Perfis de acesso
+// ============================================================
+
+/// Perfil de acesso criado pelo Administrador.
+///
+/// Por que existe `baseRole` — e por que ele NÃO é decoração:
+/// perfil, neste sistema, é duas coisas fundidas. Uma é o conjunto de telas
+/// (a matriz Ver/Editar), que é dado e vive em `ProfilePermission`. A outra são
+/// as REGRAS DE NEGÓCIO: há 255 comparações do tipo `role === 'SUPERVISOR'`
+/// espalhadas em 146 arquivos decidindo quem aprova pagamento, quem encerra
+/// ocorrência, quem enxerga todas as unidades. Um perfil que não dissesse de
+/// quem herda isso passaria por todas elas como `false`, em silêncio: o Admin
+/// criaria um "Supervisor Regional" e descobriria semanas depois que ele não
+/// aprova nada.
+///
+/// O `baseRole` é replicado em `User.role` de quem usa o perfil, e não apenas
+/// calculado na sessão, porque o sistema inteiro consulta o banco por perfil
+/// (`findMany({ where: { role: 'SUPERVISOR' } })` para notificar, listar
+/// aprovadores, montar a escala). Guardar só na sessão deixaria essas consultas
+/// cegas ao perfil personalizado.
+model Profile {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  /// Perfil de sistema de quem herda as regras de negócio.
+  baseRole  Role
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  permissions ProfilePermission[]
+
+  @@map("profiles")
+}
+
+/// A matriz Ver/Editar de um perfil personalizado.
+///
+/// Tabela à parte de `RolePermission` de propósito: aquela é a configuração dos
+/// perfis de sistema e está em uso hoje. Somar as duas numa só exigiria tornar
+/// `role` opcional e mexer na unique existente — risco desnecessário sobre a
+/// única tabela que governa o acesso de todo mundo.
+model ProfilePermission {
+  id        String  @id @default(cuid())
+  profileId String
+  module    String
+  canView   Boolean @default(true)
+  canEdit   Boolean @default(false)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, module])
+  @@map("profile_permissions")
 }
 
 // ============================================================

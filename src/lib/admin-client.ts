@@ -14,6 +14,17 @@ export async function postAdmin(payload: Record<string, unknown>): Promise<{ ok:
   }
 }
 
+/** Helper client para a Gestão de Perfis (POST /api/perfis). */
+export async function postPerfis(payload: Record<string, unknown>): Promise<{ ok: boolean; error?: string; id?: string }> {
+  try {
+    const res = await fetch('/api/perfis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json().catch(() => ({}));
+    return res.ok ? { ok: true, id: data.id } : { ok: false, error: data.error ?? 'Falha' };
+  } catch {
+    return { ok: false, error: 'Falha de conexão' };
+  }
+}
+
 /**
  * Perfis para os seletores das telas de cadastro.
  *

@@ -1,4 +1,4 @@
-import { effectivePermissions } from '@/lib/permissions';
+﻿import { permissoesEfetivasDoRequest } from '@/lib/permissions';
 import { moduleOfPath } from '@/lib/permissions/route-guard';
 import type { Role } from '@prisma/client';
 
@@ -15,7 +15,7 @@ import type { Role } from '@prisma/client';
  * daria uma consulta ao banco por atalho desenhado.
  */
 export async function permissaoDeRota(role: Role): Promise<(href: string) => boolean> {
-  const perms = await effectivePermissions(role);
+  const perms = await permissoesEfetivasDoRequest(role);
   return (href: string) => {
     const key = moduleOfPath(href.split('?')[0]);
     return !key || Boolean(perms[key]?.canView);

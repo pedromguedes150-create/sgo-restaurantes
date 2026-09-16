@@ -1,7 +1,7 @@
-import { getSessionUser } from '@/lib/auth/session';
+﻿import { getSessionUser } from '@/lib/auth/session';
 import { listManagerTasks, listManagerNotes, listManagerLeaves } from '@/lib/manager-area';
 import { getMyWorkSchedule } from '@/lib/manager-schedule';
-import { effectivePermissions } from '@/lib/permissions';
+import { permissoesEfetivasDoRequest } from '@/lib/permissions';
 import { acessoDasAbas } from '@/lib/permissions/manager-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { ManagerAreaClient } from '@/components/manager-area/manager-area-client';
@@ -16,7 +16,7 @@ export default async function MinhaAreaPage() {
     listManagerNotes(user.id),
     listManagerLeaves(user.id),
     getMyWorkSchedule(user.id),
-    effectivePermissions(user.role),
+    permissoesEfetivasDoRequest(user.role),
   ]);
   const canSeeTeam = Boolean(perms.LEAVES_TEAM?.canView);
   const abas = acessoDasAbas(perms);
