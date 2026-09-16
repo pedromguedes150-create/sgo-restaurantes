@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
-import type { Role } from '@prisma/client';
+import { Role as RoleValues, type Role } from '@prisma/client';
 import { ABAS } from '@/lib/permissions/abas';
 
 /**
@@ -153,7 +153,17 @@ export const MODULES: ModuleDef[] = BASE.flatMap((m) => [
   ...(ABAS[m.key] ?? []).map((a) => ({ key: a.key, label: a.label, parent: m.key, soVer: a.soVer })),
 ]);
 
-export const ALL_ROLES: Role[] = ['CEO', 'ADMIN', 'SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE', 'CASHIER'];
+/**
+ * Todos os perfis, DERIVADOS do enum do Prisma — nunca uma lista à mão.
+ *
+ * A lista era escrita a mão e ficou para trás quando o SEPARATOR entrou: o
+ * enum tinha oito perfis e esta constante, sete. Como `permissionMatrix` e
+ * `setRolePermission` leem daqui, o Separador do CD simplesmente não existia
+ * na tela de Perfis, e qualquer tentativa de configurá-lo voltava "inválido" —
+ * sem nada acusar a divergência. Derivando do enum, esquecer deixa de ser
+ * possível.
+ */
+export const ALL_ROLES: Role[] = Object.values(RoleValues);
 export function isFullAccess(role: Role) { return role === 'ADMIN' || role === 'CEO'; }
 
 export interface Perm { canView: boolean; canEdit: boolean }
@@ -177,6 +187,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   CONFIG_SUPPLIERS: ['SUPERVISOR'], // canManageSuppliers: Admin, CEO e Supervisão
   CONFIG_PRODUCTS: ['SUPERVISOR'], // catálogo: Admin, CEO e Supervisão
   CONFIG_PIZZAS: ['SUPERVISOR'], // sabores da pizzaria: mesma linha do catálogo de produtos
+  CONFIG_CD_SECTORS: ['SUPERVISOR'], // setores do CD: idem — quem cuida do catálogo cuida do setor
   UNIT_PANEL: ['SUPERVISOR', 'COORDINATOR', 'MANAGER'], // painel operacional da unidade
 };
 

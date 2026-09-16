@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { Card, CardContent } from '@/components/ui/card';
 import { PermissionsAdmin } from '@/components/admin/permissions-admin';
-import { MODULES, permissionMatrix } from '@/lib/permissions';
+import { ALL_ROLES, isFullAccess, MODULES, permissionMatrix } from '@/lib/permissions';
+import { ROLE_HINTS, roleLabel } from '@/lib/roles';
 import { ArrowLeft } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
 
@@ -13,12 +14,27 @@ export default async function PerfisAdminPage() {
   if (user.role !== 'ADMIN') return <p className="text-sm text-ink-500">Restrito ao Administrador.</p>;
   const matrix = await permissionMatrix();
 
+  /* Quem aparece no seletor: TODOS os perfis, menos os de acesso total.
+     A lista era escrita à mão no cliente e tinha quatro perfis — Caixa e
+     Separador do CD ficavam invisíveis, e não havia como o Admin liberar uma
+     tela a mais para eles sem mexer no código. Vindo daqui, um perfil novo
+     no enum entra sozinho. */
+  const perfis = ALL_ROLES.filter((r) => !isFullAccess(r)).map((r) => ({
+    value: r,
+    label: roleLabel(r),
+    hint: ROLE_HINTS[r],
+  }));
+
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
       <LargeTitle title="Perfis de acesso" subtitle="Defina o que cada perfil pode ver e editar em cada módulo." />
       <Card><CardContent className="pt-4">
-        <PermissionsAdmin modules={MODULES.map((m) => ({ key: m.key, label: m.label, parent: m.parent, soVer: m.soVer }))} matrix={matrix} />
+        <PermissionsAdmin
+          modules={MODULES.map((m) => ({ key: m.key, label: m.label, parent: m.parent, soVer: m.soVer }))}
+          matrix={matrix}
+          perfis={perfis}
+        />
       </CardContent></Card>
     </div>
   );
