@@ -28,18 +28,38 @@ const ZXING_FORMATS = [BarcodeFormat.QR_CODE, BarcodeFormat.CODE_128, BarcodeFor
 const NATIVE_FORMATS = ['qr_code', 'code_128', 'code_39', 'itf', 'ean_13', 'codabar'];
 
 /**
- * Botão + overlay que abre a câmera do celular e lê o QR code OU o código de
- * barras (Code-128 da DANFE) da nota. Usa a BarcodeDetector nativa
- * (Android/Chrome) e cai para @zxing/browser (iOS/Safari). Requer HTTPS.
- * Ao detectar, devolve a chave de 44 dígitos.
+ * Botão + overlay que abre a câmera do celular e lê QR code OU código de barras.
+ * Usa a BarcodeDetector nativa (Android/Chrome) e cai para @zxing/browser
+ * (iOS/Safari). Requer HTTPS.
+ *
+ * O que ele FAZ com a leitura é do chamador: por padrão extrai a chave de 44
+ * dígitos da nota (o uso original), mas os Pedidos Internos precisam do código
+ * de barras CRU do produto. Generalizado com `parse` em vez de duplicar a
+ * máquina de câmera — que é a parte difícil e a que mais varia entre aparelhos.
  */
-export function QrScanner({ onResult }: { onResult: (chave: string) => void }) {
+export function QrScanner({
+  onResult,
+  parse = extractChave,
+  label = 'Escanear',
+  ajuda = <>Aponte para o <strong>QR code</strong> ou o <strong>código de barras</strong> da nota.</>,
+}: {
+  onResult: (valor: string) => void;
+  /** Devolve o que interessa da leitura, ou null para continuar procurando. */
+  parse?: (texto: string) => string | null;
+  label?: string;
+  ajuda?: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  /* O efeito de câmera depende só de `open`. Sem o ref, um chamador que
+     define `parse` inline recriaria a função a cada render e reabriria a
+     câmera no meio da leitura. */
+  const parseRef = useRef(parse);
+  parseRef.current = parse;
 
   useEffect(() => {
     if (!open) return;
@@ -90,8 +110,8 @@ export function QrScanner({ onResult }: { onResult: (chave: string) => void }) {
               }
             } catch { /* ignora frame inválido */ }
             if (text) {
-              const chave = extractChave(text);
-              if (chave) { finish(); onResult(chave); return; }
+              const valor = parseRef.current(text);
+              if (valor) { finish(); onResult(valor); return; }
             }
           }
           rafRef.current = requestAnimationFrame(tick);
@@ -116,7 +136,7 @@ export function QrScanner({ onResult }: { onResult: (chave: string) => void }) {
   return (
     <>
       <Button type="button" size="sm" variant="outline" onClick={() => { setError(null); setOpen(true); }}>
-        <Camera className="h-4 w-4" /> Escanear
+        <Camera className="h-4 w-4" /> {label}
       </Button>
 
       {open && (
@@ -125,7 +145,7 @@ export function QrScanner({ onResult }: { onResult: (chave: string) => void }) {
             <video ref={videoRef} playsInline muted className="w-full" />
             <div className="pointer-events-none absolute inset-x-6 inset-y-16 rounded-lg border-2 border-white/80" />
           </div>
-          <p className="mt-3 text-center text-sm text-ink-900">Aponte para o <strong>QR code</strong> ou o <strong>código de barras</strong> da nota.</p>
+          <p className="mt-3 text-center text-sm text-ink-900">{ajuda}</p>
           {error && <p className="mt-2 text-center text-sm font-medium text-danger">{error}</p>}
           <Button type="button" variant="outline" className="mt-4" onClick={() => { cleanup(); setOpen(false); }}>
             <X className="h-4 w-4" /> Fechar

@@ -106,6 +106,10 @@ export const REGRAS: Record<string, RegraDeRota> = {
 
   '/api/pops': { modulo: 'POPS', exigir: 'editar' },
   '/api/product-standards': { modulo: 'CONFIG_PRODUCT_STANDARDS', exigir: 'editar' },
+  '/api/products/pedido': { modulo: 'PRODUCTS', exigir: 'editar' },
+  '/api/products/separacao': { modulo: 'PRODUCT_SEPARATION', exigir: 'editar' },
+  '/api/products/envio': { modulo: 'PRODUCT_SEPARATION', exigir: 'editar' },
+  '/api/products/recebimento': { modulo: 'PRODUCTS', exigir: 'editar' },
   '/api/products/import': { modulo: 'CONFIG_PRODUCTS', exigir: 'editar' },
 
   '/api/rh/sync': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
@@ -130,6 +134,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/waste': { modulo: 'WASTE', exigir: 'editar' },
   '/api/waste/export': { modulo: 'WASTE', exigir: 'ver' },
   '/api/workforce': { modulo: 'PEOPLE_MAP', exigir: 'editar' },
+  '/api/workforce/requirements': { modulo: 'PEOPLE_MAP', exigir: 'editar' },
 };
 
 /**

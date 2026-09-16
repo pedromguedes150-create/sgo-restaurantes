@@ -7,7 +7,7 @@ import type { Role } from '@prisma/client';
  * `roles` = perfis para quem o guia é mais relevante (todos veem se ligarem "ver tudo").
  */
 
-export const ALL_ROLES: Role[] = ['CEO', 'ADMIN', 'SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE', 'CASHIER'];
+export const ALL_ROLES: Role[] = ['CEO', 'ADMIN', 'SUPERVISOR', 'COORDINATOR', 'MANAGER', 'FINANCE', 'CASHIER', 'SEPARATOR'];
 
 export interface Guide {
   id: string;
@@ -563,6 +563,60 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'separacao-cd',
+        title: 'Separação de pedidos (CD)',
+        roles: ['SEPARATOR', 'ADMIN', 'CEO'],
+        summary: 'A fila do seu setor, item a item, gravando na hora.',
+        steps: [
+          'Ao entrar, você cai direto na fila do SEU setor — Novos, Em andamento e Separados. Pedido que não tem item do seu setor não aparece na sua lista.',
+          'Abra o pedido e veja SÓ os itens do seu setor, com a quantidade pedida ao lado de cada um.',
+          'Use [-] e [+] para ajustar e toque em "Confirmar separado". Cada item vai para o servidor NA HORA: se o celular travar ou a página fechar, o que você já conferiu está gravado.',
+          'FALTOU: toque em "Informar falta", diga quanto saiu de verdade e escolha o motivo. A falta NÃO impede terminar — ela fica registrada e a unidade vê o que não veio e por quê.',
+          'Errou? "Refazer" limpa o item e você lança de novo.',
+          'Quando todos os setores terminarem, o pedido fica "Pronto para envio". Um pedido só de bebidas não espera o setor de secos: a conta é sobre os itens que existem nele.',
+          'ENVIAR: com todos os setores prontos, aparece "Confirmar envio para a unidade", onde dá para deixar uma observação do CD. A unidade é avisada na hora — e a partir daí a separação vira registro e não pode mais ser alterada.',
+          'Enquanto falta item de outro setor, a tela diz quantos faltam. Não é erro: a carga sai uma vez só, com tudo.',
+          'ROMANEIO: "Romaneio para imprimir" gera a folha que viaja com a carga, agrupada por setor, com o que faltou e o motivo impressos junto — para a unidade não procurar no caminhão o que o CD já sabia que não tinha.',
+        ],
+        tips: [
+          'Se outra pessoa do seu setor já tiver separado o item, a tela PARA e mostra quem foi, quanto registrou e quando — e você escolhe manter ou sobrescrever. Ninguém apaga o trabalho do outro sem ver.',
+          'O gerente da unidade é avisado uma única vez, quando a separação começa — e não a cada item.',
+          'Se a unidade apontar divergência ao receber, quem deu saída na carga é avisado — a reclamação chega ao CD em vez de morrer num caderno da unidade.',
+          'Quem deu saída também é avisado quando o pedido chega CERTO. Para o CD a carga só termina quando alguém do outro lado confirma que chegou.',
+        ],
+      },
+      {
+        id: 'pedidos-internos',
+        title: 'Pedidos Internos',
+        roles: MANAGERLINE,
+        summary: 'Pedir ao CD pelo celular: câmera, busca e sugestão do histórico.',
+        steps: [
+          'A tela abre com "+ Iniciar pedido" — e não mais com a lista inteira de produtos. O fluxo é: iniciar → adicionar itens → revisar → enviar ao CD.',
+          'ESCANEAR: toque em "Escanear produto" e aponte a câmera para o código de barras. O produto entra no pedido e você continua bipando.',
+          'CÓDIGO NÃO RECONHECIDO: o mesmo produto chega com código diferente conforme a remessa. A tela pede para localizar o produto na mão e oferece "Associar" (fica no cadastro para as próximas vezes) ou "Só desta vez". Associar é permanente e vale para a rede — por isso só quem edita o catálogo pode.',
+          'BUSCA: por nome, categoria ou código de barras, ignorando acento e maiúsculas — "mucarela" acha "Muçarela". Quem começa com a palavra digitada aparece primeiro.',
+          'SUGESTÃO: vem do histórico da SUA unidade e mostra a quantidade de costume junto com os últimos pedidos ("normalmente 4 caixas · últimos: 4 | 5 | 4"), para você conferir de onde veio o número. Use "Montar pedido sugerido" ou adicione um a um. Nada é enviado sozinho.',
+          'A barra de baixo mostra quantos itens estão no pedido e leva à revisão, onde você confere tudo, escreve uma observação para o CD e envia.',
+          'O pedido é UM só: o sistema divide os itens entre os setores do CD sozinho, pelo setor cadastrado em cada produto. Você não escolhe setor.',
+          'PEDIDO EM ANDAMENTO: se você tem um pedido aberto, ele aparece em DESTAQUE no topo, com barra de progresso ("12/20 itens separados") e o botão Acompanhar. Não precisa procurar na lista.',
+          'AVISO DE FALTA: quando um setor do CD termina a parte dele com algum item faltando, você recebe UMA notificação com todas as faltas daquele setor — no momento em que a falta vira definitiva e ainda dá para comprar fora ou pedir a outra unidade. Não é um aviso por item.',
+          'HISTÓRICO: "Ver histórico completo" abre a busca por unidade, produto, período, situação e quem pediu. É onde se responde "quando foi a última vez que pedimos muçarela?" ou "quantos pedidos fecharam com divergência este mês?".',
+          'ACOMPANHAR: toque no número do pedido na lista dos últimos para ver a linha do tempo — pedido feito, separação no CD, enviado para a unidade, recebido. O que ainda não aconteceu aparece apagado, dizendo que falta.',
+          'RECEBER: quando o CD confirma o envio, você é avisado e o pedido ganha "Conferir recebimento". A conferência começa com TUDO CERTO: aponte só o que veio errado, escolha o motivo e, se quiser, tire a foto na hora.',
+          'MOTIVOS: são dez, e vale reparar que "embalagem danificada", "produto avariado" e "produto estragado" são coisas diferentes — a caixa amassada se resolve com o transporte, a mercadoria estragada com o fornecedor.',
+          'A divergência NÃO impede fechar o pedido — ela fica registrada e o CD é avisado na hora. O que você não apontar é registrado como recebido conforme o CD separou.',
+          'No fim da conferência você declara se o pedido chegou COMPLETO ou PARCIAL. Essa é a sua palavra, e ela fica ao lado do que o sistema calculou — as duas podem discordar (o CD marcou falta mas mandou assim mesmo), e numa cobrança vale o registro de quem recebeu na doca.',
+          'REPETIR: o botão "Repetir" ao lado de um pedido antigo preenche o carrinho com os mesmos itens e quantidades. Você ainda revisa e envia — nada é mandado sozinho. Produto que saiu do catálogo fica de fora, e a tela diz qual foi.',
+          'ROMANEIO: depois do envio, "Imprimir o romaneio da carga" dá a folha por setor do CD, com quadradinho para conferir na caneta — é a mesma folha que o CD imprime.',
+          'O pedido é identificado como PED-ano-número (ex.: PED-2026-001245). Use essa etiqueta ao falar com o CD: o "nº 12" existe em toda unidade ao mesmo tempo, a etiqueta completa é só sua.',
+          'O romaneio traz impresso "documento interno de controle operacional — sem valor fiscal". Ele não substitui nota nem vale como documento fiscal: serve para conferir a carga na doca.',
+        ],
+        tips: [
+          'A quantidade sugerida é a MEDIANA dos últimos pedidos, não a média: assim um pedido atípico (festa, mutirão) não faz a sugestão mandar pedir demais todo mês.',
+          'Produto sem setor do CD cadastrado entra no pedido normalmente, mas aparece num aviso ao enviar — sem setor, nenhum separador é avisado dele.',
+        ],
+      },
+      {
         id: 'notas',
         title: 'Notas Recebidas',
         roles: [...MANAGERLINE, 'FINANCE'],
@@ -640,6 +694,14 @@ export const GUIDE: GuideSection[] = [
           'PROJEÇÃO: escolha um DIA futuro (ou use "Amanhã"/"Depois de amanhã") para ver como a equipe deve ficar, pela escala planejada — ótimo para se programar. "Agora" volta ao tempo real.',
           'FREELANCER: o pedido de pagamento já traz o DIA e o SETOR (obrigatórios desde a v1.69.0), então ele entra no Mapa daquele dia direto no setor contratado. O painel "Freelancers do dia" continua servindo para trocar o setor na hora, e para pedidos antigos que nasceram sem setor.',
           'O freelancer aparece DENTRO do card do setor (v1.71.0), com o horário dele e a marca "pendente" enquanto o pagamento não for aprovado — e conta na cobertura do setor. Alocar não depende de aprovação: quem trabalhou hoje aparece hoje, e o pagamento segue seu próprio caminho.',
+          'NECESSIDADE POR HORÁRIO (v1.84.0): cada setor agora diz quantas pessoas precisa em CADA FAIXA do dia, e não mais um número só. Abra o setor em Mapa de Funções → Necessidade por horário e use "+ Adicionar faixa de horário".',
+          'Exemplo de unidade 24h — Cozinha: 06:00–14:00 → 3 pessoas · 14:00–22:00 → 2 · 22:00–06:00 → 1. Faixa que atravessa a meia-noite é aceita (22:00 → 06:00 vale até as 6h do dia seguinte).',
+          'Faixas que se sobrepõem são RECUSADAS, e a mensagem diz com qual faixa o conflito aconteceu.',
+          'Setor sem faixa naquele horário fica ⚪ Sem exigência — não gera alerta. É o caso de "Pratos 11:00–23:00": às 4h da manhã não se cobra ninguém.',
+          'O TURNO do funcionário não cria mais exigência. Ele serve só para responder "essa pessoa está trabalhando neste horário?" — depois o sistema vê em qual setor ela está alocada e ela conta para a cobertura dele.',
+          'Status: 🟢 Coberto (tem o suficiente) · 🟡 Parcial (tem gente, mas menos que o mínimo) · 🔴 Sem cobertura (ninguém) · ⚪ Sem exigência. O card mostra de qual faixa veio o número.',
+          'Sobrando gente, o card mostra "+2 acima do mínimo". Havendo sobra num setor e falta em outro, aparece uma SUGESTÃO de realocação — só sugestão, nada é movido automaticamente.',
+          'Botão "Visão do dia": como a cobertura varia ao longo do dia, trecho a trecho, com aviso dos intervalos em que o setor fica abaixo do mínimo.',
         ],
         tips: [
           'Toda alocação/remoção avisa os Admins (para informar o RH).',

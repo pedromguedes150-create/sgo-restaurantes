@@ -19,4 +19,5 @@ export const ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: 'MANAGER', label: 'Gerente' },
   { value: 'FINANCE', label: 'Financeiro' },
   { value: 'CASHIER', label: 'Caixa (só conferência de comandas)' },
+  { value: 'SEPARATOR', label: 'Separador CD (só separação de pedidos)' },
 ];

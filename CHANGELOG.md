@@ -9,6 +9,364 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.90.0 — 2026-09-16 (Pedidos Internos: aviso de falta, pedido em andamento e histórico)
+
+Os quatro pontos da especificação que ainda não tinham sido feitos.
+
+### O gerente fica sabendo da falta — na hora certa
+
+Antes, a única notícia que ele recebia do CD era "começou a separar". A falta ele descobria quando a
+carga chegava na unidade, sem tempo de comprar fora ou pedir a outra unidade.
+
+O **quando** foi a decisão que deu forma a isto. A cada item seria spam, e o sino passaria a ser
+ignorado. Só no fim do pedido inteiro chegaria tarde. O aviso sai **quando cada setor termina a parte
+dele** — o primeiro instante em que a falta é definitiva e ainda dá para reagir —, com **todas as
+faltas daquele setor numa notificação só**, dizendo de qual setor se trata. Corrigir um item num setor
+que já estava pronto não avisa de novo: senão cada correção de digitação tocaria o sino.
+
+### O pedido em andamento saiu da lista e virou destaque
+
+Quem abre a tela com pedido aberto quer saber **onde ele está** antes de fazer outro. Agora há um
+cartão no topo com a etiqueta, a situação, a barra de progresso ("12/20 itens separados") e
+"Acompanhar". Pedido concluído não ocupa esse espaço — volta para a lista, como histórico.
+
+### Histórico com filtros
+
+`/modulos/produtos/historico`: unidade, produto, período, situação e quem pediu. Responde o que a
+lista dos últimos cinco não responde — quando foi a última vez que pedimos muçarela, quantos pedidos
+fecharam com divergência no mês, o que a Moreira pediu em agosto.
+
+O filtro de produto casa o **nome congelado no item**, não o id: é o que mantém o pedido antigo
+encontrável depois de o produto ser renomeado ou sair do catálogo. Os filtros viajam na URL, então o
+resultado é compartilhável e volta igual no botão "voltar".
+
+### "O pedido chegou completo?"
+
+Declaração de quem recebeu na doca, no fim da conferência. Fica **ao lado** do que o sistema calcula
+(faltas do CD + divergências apontadas), não no lugar: as duas podem discordar — o CD marcou falta mas
+mandou assim mesmo, ou veio item que ninguém apontou — e nessa hora a palavra de quem conferiu é o
+registro que vale numa cobrança.
+
+### Detalhes
+
+- Migração **aditiva**: `product_requests.receiptComplete BOOLEAN`.
+- 8 testes novos. O aviso de falta é coberto nos quatro casos que importam: setor incompleto não avisa,
+  duas faltas viram um aviso só, setor sem falta não incomoda ninguém, e correção em setor pronto não
+  repete o aviso.
+
+---
+## v1.89.0 — 2026-09-16 (Pedidos Internos: quatro acertos contra a especificação)
+
+Revisão da especificação escrita contra o que foi entregue nas quatro entregas. Quatro pontos não
+tinham sido feitos como pedido — três por esquecimento, um por decisão minha que contrariou o texto.
+
+### O romaneio agora diz o que é
+
+A folha que viaja com a carga tem itens, quantidades e duas assinaturas — a cara de uma nota. Passa a
+sair impresso **"documento interno de controle operacional — sem valor fiscal"**. Sem essa linha,
+alguém de boa-fé arquiva o papel como documento fiscal, e ele passa a valer o que não vale.
+
+### O CD é avisado quando a carga chega CERTO
+
+Antes, só a divergência gerava aviso — decisão minha, com o raciocínio de que "pedido que chegou certo
+não é notícia". Estava errado: para quem despachou, a carga só termina quando alguém do outro lado
+confirma que chegou. Sem esse retorno ela fica em aberto na cabeça de quem carregou o caminhão, e a
+checagem volta a ser por telefone — que é o que este módulo veio encerrar. O aviso diz **qual unidade**
+recebeu, porque o CD despacha para várias no mesmo dia.
+
+### O pedido ganhou etiqueta
+
+`PED-2026-001245` em vez de "nº 1245". O número é sequencial **por unidade**, então "nº 12" existe em
+Moreira e em Jardim Teresópolis ao mesmo tempo — no papel e no telefonema isso vira confusão. Ano de
+referência (o do pedido, não o de hoje) e largura fixa, que ordena certo e não dança quando o número
+passa de 999.
+
+### Dez motivos de divergência, não sete
+
+Entraram **embalagem danificada**, **produto estragado** e **qualidade ruim**. A avaria da embalagem é
+separada da avaria do produto de propósito: caixa amassada com produto íntegro se resolve com o
+transporte, mercadoria estragada se resolve com o fornecedor. Juntar as duas num motivo só apagaria
+essa diferença justamente no dado que serve para cobrar alguém.
+
+### Detalhes
+
+- 12 testes novos. O da notificação foi verificado desligando o aviso: quebra com `expected 1 to be 2`.
+- `numero-do-pedido.ts` sem import nenhum — a tela do gerente é componente cliente.
+- Sem migração.
+
+---
+## v1.88.0 — 2026-09-15 (Pedidos Internos: envio, recebimento e histórico — entrega 4 de 4)
+
+### A discussão que essa entrega encerra
+
+"Mandei tudo" contra "chegou faltando", por telefone, sem registro de nenhum dos dois lados. Agora as
+duas versões ficam gravadas lado a lado: o que o CD **separou** e o que a unidade **recebeu**. Quando
+divergem, o pedido fecha como **Concluído com divergência** e quem deu saída na carga é avisado — a
+reclamação chega ao CD em vez de morrer num caderno da unidade.
+
+### O CD dá saída
+
+Com todos os setores prontos, aparece **Confirmar envio para a unidade**, com espaço para uma
+observação do CD. Enquanto falta item — de qualquer setor — a tela **diz quantos faltam** em vez de
+esconder o botão: o separador que terminou a parte dele precisa saber que está esperando outro setor,
+e não que o sistema quebrou. Depois do envio, a separação vira registro e não muda mais.
+
+### A unidade confere
+
+A conferência **começa em "tudo certo"** e o gerente aponta só a exceção — motivo, detalhe e foto
+tirada na hora. O caminho inverso (marcar item por item o que chegou bem) viraria trinta toques para
+dizer "nada aconteceu", e a conferência simplesmente não seria feita.
+
+Cada item mostra **o que o CD separou**, não só o que foi pedido: é contra esse número que se confere,
+e o que o CD já marcou como falta não é surpresa na doca. A divergência **não impede** fechar o pedido.
+
+### O romaneio
+
+A folha que viaja com a carga, agrupada **por setor do CD** — é assim que ela foi montada e é assim que
+chega empilhada. Traz quadradinho para conferir na caneta e repete no fim **o que saiu incompleto, com
+o motivo**: omitir a falta faria a unidade procurar no caminhão um item que o CD já sabia que não tinha.
+É a **mesma folha** para os dois lados — dois romaneios divergiriam com o tempo, e conferir carga contra
+papéis diferentes é pior do que não conferir.
+
+### Acompanhar e repetir
+
+O pedido ganhou tela própria com **linha do tempo** (pedido → separação → envio → recebimento). As
+quatro etapas aparecem sempre, inclusive as que ainda não aconteceram: "onde está meu pedido?" é a
+pergunta que traz o gerente ali, e o vazio com rótulo responde melhor do que a etapa ausente.
+
+**Repetir** preenche o carrinho com os itens do pedido anterior — o gerente ainda revisa e envia.
+Produto que saiu do catálogo fica de fora e a tela **diz qual foi**, em vez de devolver uma lista menor
+em silêncio.
+
+### Detalhes
+
+- Duas rotas separadas (`/api/products/envio` e `/api/products/recebimento`) porque a matriz cobra
+  módulos diferentes dos dois lados: dar saída é do CD, conferir é da unidade.
+- O caminho da foto é o que o **servidor** salvou; o que o cliente mandar em `photo` é ignorado.
+- Refazer a conferência limpa o apontamento retirado — senão a marca antiga sobraria no banco.
+- 30 testes novos. Um deles achou uma falha real: `divergenciaLabel` devolve o próprio código quando
+  não conhece (para motivo antigo não sumir da tela), o que o tornava inútil como validador — a
+  validação virou `ehDivergencia`, com verificação de verdade.
+- Sem migração: os campos desta perna já tinham entrado no schema na entrega 1.
+
+---
+## v1.87.0 — 2026-09-15 (Pedidos Internos: a tela do separador — entrega 3 de 4)
+
+### Quem separa trabalha de pé, num corredor
+
+O separador do CD entra e cai direto na **fila do setor dele** (`/modulos/separacao`): Novos, Em
+andamento e Separados, os mais antigos em cima. Pedido sem item do setor dele **não aparece** —
+e por isso um pedido só de bebidas nunca fica esperando o separador de secos.
+
+Dentro do pedido: um item por cartão, `[-] [+]` grandes, **Confirmar separado** e **Informar falta**.
+
+### Duas regras deram forma a tudo
+
+**1. Cada item é gravado na hora.** Não existe "salvar no fim". O celular trava, o sinal cai no
+corredor, a tela bloqueia — e o que já foi conferido está no banco. Voltar é continuar de onde parou.
+
+**2. Ninguém sobrescreve ninguém em silêncio.** Dois separadores do mesmo setor abrindo o mesmo
+pedido é rotina. Antes, o segundo a gravar apagaria o trabalho do primeiro sem erro nenhum. Agora a
+segunda gravação **para** e devolve **quem mexeu, quanto registrou e quando** (HTTP 409); a tela
+pergunta *manter* ou *sobrescrever*, e quem está ali decide. Corrigir o próprio lançamento não
+pergunta nada.
+
+### Falta é informação, não bloqueio
+
+Separar menos exige **motivo** (sem estoque, quantidade insuficiente, avariado, aguardando reposição,
+outro) e **não impede** concluir o setor. Zero com motivo é o item que não saiu. A unidade passa a
+ver exatamente o que não veio e por quê, em vez de só receber a menos.
+
+### O status do pedido segue os itens
+
+`ENVIADO_CD` → `SEPARANDO` no primeiro item tocado → `PRONTO_ENVIO` quando **todos** os itens foram
+tocados. A conta é sobre os itens que o pedido tem, não sobre os quatro setores do CD. O gerente é
+notificado **uma única vez**, quando a separação começa — avisar a cada item encheria o sino dele e
+faria ignorar o aviso que importa.
+
+Pedido já enviado à unidade abre em **leitura**: mexer nele reescreveria o que a unidade recebeu.
+
+### Detalhes
+
+- Perfil **Separador CD** cai em `/modulos/separacao` ao entrar (dashboard e guarda de rota).
+- `/api/products/separacao` entrou na matriz (`PRODUCT_SEPARATION`, exige Editar); o servidor também
+  confere o setor do usuário em cada função — ADMIN/CEO enxergam todos os setores.
+- `separacao-motivos.ts` guarda a lista de motivos **sem import nenhum**: a tela precisa dela e
+  `separacao.ts` puxa o Prisma. Foi essa fronteira que derrubou o deploy da v1.77.0.
+- 22 testes novos (17 de regra + 5 de tela). A guarda de sobrescrita foi verificada desligando-a:
+  o teste quebra.
+- Guia de treinamento ganhou a seção "Separação de pedidos (CD)".
+
+---
+## v1.86.0 — 2026-09-15 (Pedidos Internos: a tela do gerente — entrega 2 de 4)
+
+### O desenho antigo era o problema
+
+A tela abria com a **lista inteira de produtos** e um `- 0 +` em cada linha. No celular, no meio
+do salão, isso é rolagem infinita e toque errado. Agora ela abre com **um botão**, e os produtos
+entram um a um.
+
+Fluxo: **Iniciar pedido → adicionar (câmera ou busca) → revisar → enviar**, com a barra do
+carrinho fixa no rodapé — a lista rola, ela não.
+
+### Câmera
+
+O leitor de código de barras **já existia** no módulo de Notas, preso ao formato de nota fiscal
+(chave de 44 dígitos). Em vez de duplicar a máquina de câmera — que é a parte difícil e a que mais
+varia entre aparelhos — ele ganhou uma propriedade `parse` opcional, com o comportamento antigo
+como padrão. Notas não muda em nada.
+
+**Código não reconhecido** abre o fluxo manual: localizar o produto e escolher entre **Associar**
+(fica no cadastro) ou **Só desta vez**. Associar é permanente e vale para a rede inteira, então
+fica atrás do direito de editar o catálogo — não do de fazer pedido. Código que já pertence a
+outro produto é recusado **dizendo de quem é**: quase sempre é o outro cadastro que está errado.
+
+### Busca
+
+Por nome, categoria ou código de barras, **ignorando acento e caixa** — "mucarela" acha
+"Muçarela". Com 400 produtos, "arroz" traz dezenas, e o que o gerente quer é quase sempre o que
+**começa** com a palavra: por isso a ordem é código exato → início do nome → nome no meio →
+categoria. Pedaço de código **não** casa: "789" traria meio catálogo.
+
+### Sugestão pelo histórico
+
+Sem IA externa: a informação já está no banco, e uma chamada externa acrescentaria custo, latência
+e uma dependência que pode cair no meio do turno.
+
+A quantidade sugerida é a **mediana**, não a média. Um pedido atípico (a festa, o mutirão) puxa a
+média para cima e a sugestão passa a mandar pedir demais **todo mês**. E o produto precisa ter
+aparecido em **pelo menos dois** dos últimos pedidos — um item pedido uma vez só não é rotina.
+
+A tela mostra **de onde veio o número** ("normalmente 4 caixas · últimos: 4 | 5 | 4"): sugestão sem
+origem é palpite, e ninguém confia num palpite para pedir quatro caixas de muçarela.
+
+### Cobertura
+
+24 casos novos (**1025** no total). A busca e a mediana são **puras** e testadas sem tela; os de
+render medem o que aparece **antes** de o gerente pedir para ver — inclusive que a lista de
+produtos **não** está na tela inicial, que era o defeito de origem.
+
+### Falta
+
+Entrega 3: a tela do separador (item a item, salvamento imediato, faltas). Entrega 4: PDF,
+confirmação de envio, conferência de recebimento e as notificações nos dois sentidos.
+
+---
+## v1.85.0 — 2026-09-15 (Pedidos Internos: a base — entrega 1 de 4)
+
+Refino da Solicitação de Produtos. **Esta entrega é a base**: modelo, perfil e divisão por setor.
+As telas vêm nas próximas — gerente (2), separador (3), PDF/conferência/notificações (4).
+
+### O que existia
+
+Um pedido por origem, com os itens dentro de um **campo JSON** e o status numa string livre. Sem
+setor do CD, sem separação por item, sem perfil de separador, com **um** código de barras por
+produto.
+
+### A mudança estrutural: o item virou LINHA
+
+`ProductRequestItem` — uma linha por produto do pedido, com snapshot de nome, categoria, medida e
+**setor do CD congelado**. É o que permite quatro setores trabalharem no mesmo pedido ao mesmo
+tempo: com os itens num JSON único, duas confirmações simultâneas **sobrescreviam uma à outra em
+silêncio**, e o trabalho de alguém sumia sem erro nenhum.
+
+### O resto da base
+
+- **`CdSector`** — os setores do CD, configuráveis. Nascem quatro (Bebidas, Secos, Refrigerados,
+  Descartáveis); nada no código depende desse número.
+- **`Product.cdSectorId`** — o produto sabe quem o separa, e é isso que divide o pedido sem o
+  gerente escolher nada. **Produto sem setor não derruba o pedido**: cai num balde "Sem setor
+  cadastrado", porque recusar o pedido inteiro por um cadastro incompleto do CD puniria a unidade.
+- **`ProductBarcode`** — vários códigos por produto (o mesmo item chega com código diferente
+  conforme a remessa). O código que já existia virou o primeiro da lista.
+- **Perfil `SEPARATOR`**, nos moldes do CAIXA: nasce fechado, só com a Separação e a Ajuda. O
+  **setor vem do cadastro do usuário**, nunca de um seletor na tela.
+- **Status** no vocabulário do fluxo: Rascunho → Enviado ao CD → Separação em andamento → Pronto
+  para envio → Enviado para a unidade → Concluído / Concluído com divergência.
+
+### Um defeito que só a produção teria mostrado
+
+A migração copia o `productId` do JSON para uma coluna que **agora tem chave estrangeira**. Testei
+com dado no formato real e a migração **falhou**: pedido antigo apontando para produto já apagado
+violaria a FK e derrubaria a migração inteira em produção. O banco de dev, praticamente vazio,
+nunca teria mostrado isso.
+
+Corrigido: o `productId` só é copiado se o produto ainda existir — senão fica nulo, e o nome
+continua no snapshot. Provado: 3 itens convertidos, o do produto apagado com `productId` nulo, e
+JSON que não é array não insere nada em vez de derrubar a migração.
+
+### Um teste meu que passava na primeira rodada e falhava na segunda
+
+A limpeza do `permissions-submodules` cobria só as abas da Minha área. Quando a v1.77.0
+acrescentou o caso que liga o "Editar" de `MANAGER_SCHEDULE`, **a linha ficava no banco** e a
+execução seguinte começava com o gerente já podendo lançar. Reproduzido rodando o arquivo duas
+vezes; corrigido e conferido em três rodadas seguidas, e a suíte inteira rodada **duas vezes**.
+
+### Cobertura
+
+18 casos novos (**1001** no total): o item virando linha, o snapshot que sobrevive ao rename, o
+setor congelado que não se move quando o produto muda de setor depois, o produto sem setor, as
+quatro situações do setor dentro do pedido, e o separador enxergando **só** o setor dele.
+
+---
+## v1.84.0 — 2026-09-15 (Mapa de Funções: necessidade por faixa de horário)
+
+### O defeito que estava no schema, escrito com todas as letras
+
+`Sector.minHeadcount` era descrito como *"meta de pessoas **por turno**"*, e a cobertura era
+calculada por coluna de turno. O efeito: uma unidade com quatro turnos cadastrados passava a
+"precisar" de **quatro vezes** o mínimo, sem ninguém ter pedido isso. E não havia como dizer que
+a cozinha precisa de 3 pessoas de manhã e 1 de madrugada.
+
+### O conceito novo, separado em três
+
+- **Turno do funcionário** — o horário em que ele trabalha.
+- **Setor** — onde ele está alocado.
+- **Necessidade do setor** — quantas pessoas aquele setor precisa **numa faixa de horário**.
+
+O turno deixou de criar exigência. Ele responde uma pergunta só: *essa pessoa está trabalhando
+neste horário?* Depois disso, o setor dela recebe a contagem.
+
+### Cadastro
+
+Dentro do setor, **Necessidade por horário**, com `+ Adicionar faixa de horário`. O resumo saiu de
+`Cozinha (mín. 1)` para `Cozinha · 3 faixas configuradas`.
+
+- **Faixa que atravessa a meia-noite é caso de uso, não erro**: `22:00 → 06:00` vale das 22h às 6h
+  do dia seguinte.
+- **Sobreposição é recusada**, e a mensagem **cita a faixa conflitante** — "entra em conflito" sem
+  dizer com o quê obriga a pessoa a adivinhar qual mexer.
+- Setor **sem faixa** naquele horário fica ⚪ **Sem exigência**: é a unidade não operando ali, e
+  alertar seria cobrar por algo que ninguém combinou.
+
+### No Mapa
+
+Cobertura no horário analisado, com card que **explica a própria cor**: além de `🟡 2/3`, mostra
+*"faixa atual 06:00–14:00 · necessidade 3"*. Mais: excedente (`+2 acima do mínimo`), alerta do que
+está abaixo do mínimo, **sugestão de realocação** quando há sobra num setor e falta em outro (só
+sugestão — nada é movido), e **Visão do dia**, com os intervalos em que cada setor fica descoberto.
+
+### A migração não muda nada no dia da subida
+
+Cada setor com mínimo > 0 ganhou **uma faixa 00:00–24:00** com o mesmo número. Verificado: 3
+setores, 3 faixas convertidas. Dividir a faixa é o que passa a ser possível.
+
+### Cobertura
+
+51 casos novos (983 no total). A lógica das faixas é **pura** de propósito — só aritmética de
+minutos — porque é onde mora o risco: a faixa que vira a meia-noite e a sobreposição, que tornaria
+a necessidade ambígua **sem nada aparecer na tela**. O conflito é detectado por conjunto de
+minutos e não por comparação de intervalos: é barato, e é obviamente correto inclusive no canto em
+que `22:00–06:00` e `02:00–04:00` se sobrepõem sem que "início < fim" perceba.
+
+### Na fila
+
+**Pedidos Internos** — o refino da Solicitação de Produtos. Vai em 3 ou 4 entregas: hoje o pedido
+guarda os itens num campo JSON e não existe setor do CD, separação por item, PDF, conferência de
+recebimento nem notificação nos dois sentidos. Decidido: o **Separador CD será um perfil novo**,
+nos moldes do CAIXA.
+
+---
 ## v1.83.0 — 2026-09-14 (Ocorrências: aba Geral Crítico)
 
 Pedida depois da v1.79.0, em que eu tinha decidido não criá-la. A aba existe agora — mas como

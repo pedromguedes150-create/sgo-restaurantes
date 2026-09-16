@@ -35,6 +35,7 @@ export function moduleOfPath(pathname: string): string | null {
  */
 export async function homeForRole(role: Role): Promise<string> {
   if (role === 'CASHIER') return '/modulos/comandas/conferencia';
+  if (role === 'SEPARATOR') return '/modulos/separacao';
   const perms = await effectivePermissions(role);
   const primeiro = MODULES.find((m) => m.nav && perms[m.key]?.canView);
   return primeiro?.nav ?? '/ajuda';

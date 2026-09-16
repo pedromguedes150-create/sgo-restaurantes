@@ -21,6 +21,7 @@ enum Role {
   MANAGER // Gerente — operação diária, lançamentos
   FINANCE // Financeiro — sem acesso operacional; recebe notificações
   CASHIER // Caixa — login próprio SÓ para a conferência de comandas por leitor
+  SEPARATOR // Separador do CD — login próprio SÓ para a separação de pedidos do SETOR dele
 }
 
 /// Unidade (restaurante). Toda lógica diária usa a data operacional desta unidade.
@@ -111,6 +112,12 @@ model User {
   lastLoginAt    DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  /// Setor do CD do Separador. Ele NAO escolhe o setor ao entrar: o cadastro
+  /// dele decide, e a tela ja abre filtrada. Nulo para todo mundo que nao e
+  /// Separador.
+  cdSectorId     String?
+  cdSector       CdSector?        @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
 
   memberships    UnitMembership[]
   refreshTokens  RefreshToken[]
@@ -1130,15 +1137,60 @@ model Product {
   /// caixa com 24, fardo com 6). Guardar evita o gerente ter de saber de cor
   /// quantas unidades vem em cada caixa na hora de pedir.
   packSize  Int?
-  /// Codigo de barras (EAN/GTIN). Texto, nunca numero: "070847033301" perde os
-  /// zeros a esquerda se virar numero — e ai deixa de ser o codigo do produto.
+  /// Codigo de barras PRINCIPAL (EAN/GTIN). Texto, nunca numero: "070847033301"
+  /// perde os zeros a esquerda se virar numero — e ai deixa de ser o codigo do
+  /// produto. Os DEMAIS codigos ficam em `barcodes`: o mesmo produto chega ao
+  /// CD com codigos diferentes dependendo da remessa.
   barcode   String?
+  /// Setor do CD que separa este produto. E o que permite dividir um pedido so
+  /// entre os setores sem o gerente ter de escolher nada.
+  cdSectorId String?
   active    Boolean       @default(true)
   createdAt DateTime      @default(now())
 
+  cdSector CdSector?       @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
+  barcodes ProductBarcode[]
+  requestItems ProductRequestItem[]
+
   @@index([active, category])
   @@index([barcode])
+  @@index([cdSectorId])
   @@map("products")
+}
+
+/// Setor do Centro de Distribuicao. Configuravel: a rede tem quatro hoje, mas
+/// nada no codigo depende desse numero.
+model CdSector {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  products     Product[]
+  separators   User[]
+  requestItems ProductRequestItem[]
+
+  @@map("cd_sectors")
+}
+
+/// Um codigo de barras a mais para o mesmo produto.
+///
+/// Por que existe: o mesmo item chega com codigo diferente conforme a remessa.
+/// Sem isto, bipar a caixa nova dizia "produto nao encontrado" e o gerente
+/// tinha de procurar na mao toda vez.
+model ProductBarcode {
+  id        String   @id @default(cuid())
+  productId String
+  /// Unico no sistema: dois produtos nao podem responder pelo mesmo codigo.
+  code      String   @unique
+  createdById String?
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_barcodes")
 }
 
 model ProductRequest {
@@ -1150,13 +1202,77 @@ model ProductRequest {
   createdById   String
   createdByName String
   note          String?
-  items         Json // [{ productId, name, category, measure, qty }]
+  /// LEGADO: os itens viviam aqui dentro. A migracao os copiou para
+  /// `ProductRequestItem`, que e quem permite separar item a item, guardar
+  /// quem separou e quanto faltou. Mantido para o historico antigo continuar
+  /// legivel exatamente como foi gravado.
+  items         Json
   createdAt     DateTime      @default(now())
   receivedAt    DateTime?
+  /// Quem confirmou o envio para a unidade, e quando.
+  sentById      String?
+  sentByName    String?
+  sentAt        DateTime?
+  /// Observacao do CD (a do gerente e `note`).
+  cdNote        String?
+  /// Conferencia de recebimento.
+  receivedById   String?
+  receivedByName String?
+  receiptQuality String?
+  receiptPackaging String?
+  receiptNote    String?
+  /// Declaracao do gerente no fecho da conferencia: a carga chegou completa?
+  /// Fica ao lado do que o sistema calcula (faltas do CD + divergencias
+  /// apontadas) de proposito — as duas podem discordar, e a palavra de quem
+  /// recebeu na doca e o registro que vale numa cobranca.
+  receiptComplete Boolean?
+
+  requestItems  ProductRequestItem[]
 
   @@index([unitId, createdAt])
   @@index([origin, status])
   @@map("product_requests")
+}
+
+/// Um item do pedido — a linha que o separador confirma.
+///
+/// Existe porque a separacao acontece POR ITEM e por SETOR, em paralelo: quatro
+/// pessoas mexendo no mesmo pedido ao mesmo tempo. Com os itens dentro de um
+/// JSON unico, duas confirmacoes simultaneas sobrescreviam uma a outra em
+/// silencio — e o trabalho de alguem sumia sem erro nenhum.
+model ProductRequestItem {
+  id         String   @id @default(cuid())
+  requestId  String
+  productId  String?
+  /// Snapshot: o pedido antigo continua legivel mesmo se o produto for
+  /// renomeado ou desativado depois.
+  name       String
+  category   String   @default("Geral")
+  measure    String   @default("un")
+  /// Setor do CD no momento do pedido — congelado pelo mesmo motivo.
+  cdSectorId   String?
+  cdSectorName String?
+
+  qtyRequested Decimal  @db.Decimal(12, 3)
+  qtySeparated Decimal? @db.Decimal(12, 3)
+  /// Motivo da falta, quando separou menos do que foi pedido.
+  missingReason String?
+  separatedById   String?
+  separatedByName String?
+  separatedAt     DateTime?
+
+  /// Conferencia do recebimento na unidade.
+  receiptIssue String?
+  receiptNote  String?
+  receiptPhoto String?
+
+  request  ProductRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  product  Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+  cdSector CdSector?      @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([cdSectorId])
+  @@map("product_request_items")
 }
 
 /// Local de higiene (banheiro) por unidade — QR aponta para a página pública (20/07).
@@ -2171,18 +2287,52 @@ model Sector {
   id        String   @id @default(cuid())
   unitId    String
   name      String
-  /// meta de pessoas por turno (para cobertura ✅/⚠️/🔴); 0 = sem meta
+  /// LEGADO. Era "meta de pessoas por turno" — e era o defeito: a exigencia
+  /// crescia com a quantidade de turnos cadastrados. Desde a v1.84.0 quem manda
+  /// e `requirements` (faixa de horario). Mantido porque a migracao o converteu
+  /// numa faixa 00:00-24:00 e ele documenta de onde veio o numero.
   minHeadcount Int   @default(1)
   order     Int      @default(0)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  unit        Unit                  @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  allocations WorkforceAllocation[]
+  unit         Unit                  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  allocations  WorkforceAllocation[]
+  requirements SectorRequirement[]
   freelancerRequests PaymentRequest[] @relation("FreelancerSector")
 
   @@index([unitId])
   @@map("sectors")
+}
+
+
+/// Quantas pessoas o setor precisa numa FAIXA DE HORARIO.
+///
+/// Substitui o `Sector.minHeadcount`, que era "minimo por turno": com quatro
+/// turnos cadastrados a unidade passava a "precisar" de quatro vezes o minimo,
+/// sem ninguem ter pedido. E nao havia como dizer que a cozinha precisa de 3
+/// pessoas de manha e 1 de madrugada.
+///
+/// O turno do funcionario continua existindo, com outro papel: dizer se aquela
+/// pessoa esta trabalhando naquele momento. A exigencia vem daqui.
+///
+/// `endTime` MENOR que `startTime` significa que a faixa cruza a meia-noite
+/// (22:00-06:00). Iguais significa o dia inteiro.
+model SectorRequirement {
+  id        String   @id @default(cuid())
+  sectorId  String
+  /// 'HH:mm'
+  startTime String
+  /// 'HH:mm'
+  endTime   String
+  minPeople Int      @default(1)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  sector Sector @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+
+  @@index([sectorId])
+  @@map("sector_requirements")
 }
 
 /// Alocação de colaborador em Setor × Turno/Horário (grade do Mapa de Funções).
