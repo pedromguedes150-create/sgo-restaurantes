@@ -592,6 +592,8 @@ export const GUIDE: GuideSection[] = [
         summary: 'Pedir ao CD pelo celular: câmera, busca e sugestão do histórico.',
         steps: [
           'A tela abre com "+ Iniciar pedido" — e não mais com a lista inteira de produtos. O fluxo é: iniciar → adicionar itens → revisar → enviar ao CD.',
+          'UMA TELA SÓ (v1.94.0): havia duas telas de pedido na mesma página — esta e uma herdada do módulo antigo, que despejava os 1.184 produtos. Pior: o pedido feito naquela nascia sem setor e o CD nunca o via. A antiga saiu; a aba "Novo pedido" passou a ser esta. Nada se perdeu: os pedidos já feitos continuam em Meus pedidos e Fábrica/CD.',
+          'Os produtos aparecem SÓ quando você digita (nome, categoria ou código de barras, e pode digitar sem acento). Limpou a busca, os resultados somem e fica o que você já pôs no pedido.',
           'ESCANEAR: toque em "Escanear produto" e aponte a câmera para o código de barras. O produto entra no pedido e você continua bipando.',
           'CÓDIGO NÃO RECONHECIDO: o mesmo produto chega com código diferente conforme a remessa. A tela pede para localizar o produto na mão e oferece "Associar" (fica no cadastro para as próximas vezes) ou "Só desta vez". Associar é permanente e vale para a rede — por isso só quem edita o catálogo pode.',
           'BUSCA: por nome, categoria ou código de barras, ignorando acento e maiúsculas — "mucarela" acha "Muçarela". Quem começa com a palavra digitada aparece primeiro.',
@@ -923,7 +925,10 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Em CONFIGURAÇÕES → Setores do CD, cadastre as áreas que separam os pedidos (ex.: Secos, Refrigerados, Bebidas).',
           'Cada produto pertence a um setor. É o que divide um pedido só entre as áreas sem o gerente ter de escolher nada: cada separador recebe apenas a parte dele.',
+          'O SETOR É OBRIGATÓRIO no produto do CD (v1.94.0): em Configurações → Catálogo de Produtos, produto com origem CD só salva com setor escolhido. Produto da Fábrica não tem setor.',
+          'PARA OS PRODUTOS QUE JÁ EXISTEM: o catálogo mostra em âmbar quantos produtos do CD ainda estão sem setor e traz o botão "Corrigir agora", que filtra só eles. O setor se escolhe NA PRÓPRIA LINHA do produto e salva na hora — não precisa abrir formulário nenhum.',
           'Produto sem setor cai em "Sem setor cadastrado" e NENHUM separador o enxerga — cadastre o setor antes de importar o catálogo.',
+          'A importação por Excel ainda NÃO traz setor: depois de importar uma lista do CD, volte ao catálogo e use "Corrigir agora" para atribuir os setores.',
           'Para criar o funcionário: CONFIGURAÇÕES → Usuários → Novo usuário → perfil "Separador CD". O campo Setor do CD aparece e é obrigatório; sem ele a fila dele abriria vazia.',
           'O Separador NÃO escolhe unidades: o CD atende a rede inteira, e a fila dele é montada só pelo setor.',
           'Setor em uso não se exclui, se desativa — apagar soltaria os produtos sem setor e apagaria de qual área cada item saiu. Desativar também é barrado enquanto houver separador vinculado: mude o setor dele primeiro.',

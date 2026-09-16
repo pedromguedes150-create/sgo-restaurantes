@@ -18,16 +18,37 @@ export async function listActiveProducts() {
   return prisma.product.findMany({ where: { active: true }, orderBy: [{ category: 'asc' }, { name: 'asc' }], select: { id: true, name: true, origin: true, category: true, measure: true, packSize: true, barcode: true } });
 }
 export async function listAllProducts() {
-  return prisma.product.findMany({ orderBy: [{ active: 'desc' }, { category: 'asc' }, { name: 'asc' }] });
+  return prisma.product.findMany({
+    orderBy: [{ active: 'desc' }, { category: 'asc' }, { name: 'asc' }],
+    include: { cdSector: { select: { name: true } } },
+  });
 }
-export async function upsertProduct(user: SessionUser, input: { id?: string; name: string; origin: string; category?: string; measure?: string; packSize?: number | null; barcode?: string | null }) {
+export async function upsertProduct(user: SessionUser, input: { id?: string; name: string; origin: string; category?: string; measure?: string; packSize?: number | null; barcode?: string | null; cdSectorId?: string | null }) {
   if (!canManageCatalog(user)) return { ok: false as const, reason: 'FORBIDDEN' as const };
   const origin = input.origin === 'CD' ? 'CD' : input.origin === 'FABRICA' ? 'FABRICA' : null;
   if (!input.name?.trim() || !origin) return { ok: false as const, reason: 'INVALID' as const };
+
+  /* SETOR DO CD, obrigatório para produto do CD.
+     É o campo que divide o pedido entre as áreas do Centro de Distribuição:
+     sem ele o item cai em "Sem setor cadastrado" e NENHUM separador o enxerga —
+     some da fila de todo mundo sem avisar ninguém. Produto da Fábrica não tem
+     setor, e salvar um limparia a coluna em vez de deixar dado órfão. */
+  let setor: { cdSectorId: string | null };
+  if (origin === 'CD') {
+    const id = input.cdSectorId?.trim();
+    if (!id) return { ok: false as const, reason: 'SEM_SETOR' as const };
+    const existe = await prisma.cdSector.findFirst({ where: { id, active: true }, select: { id: true } });
+    if (!existe) return { ok: false as const, reason: 'SEM_SETOR' as const };
+    setor = { cdSectorId: existe.id };
+  } else {
+    setor = { cdSectorId: null };
+  }
+
   const data = {
     name: input.name.trim(), origin: origin as ProductOrigin,
     category: input.category?.trim() || 'Geral',
     measure: MEASURES.includes(input.measure ?? '') ? input.measure! : 'un',
+    ...setor,
     ...(input.packSize !== undefined ? { packSize: input.packSize && input.packSize > 0 ? Math.trunc(input.packSize) : null } : {}),
     ...(input.barcode !== undefined ? { barcode: normalizarCodigoDeBarras(input.barcode) } : {}),
   };
@@ -154,36 +175,20 @@ export function exportProductsBuffer(products: { name: string; origin: string; c
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
 }
 
-/* ───────── Pedido do gerente ───────── */
-export interface OrderItemInput { productId: string; qty: number }
-export async function createProductRequests(user: SessionUser, unitId: string, items: OrderItemInput[], note: string | undefined, ctx: { ip?: string | null; userAgent?: string | null } = {}): Promise<{ ok: true; created: number } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' }> {
-  if (!canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN' };
-  const clean = items.filter((i) => i.productId && i.qty > 0);
-  if (clean.length === 0) return { ok: false, reason: 'INVALID' };
-  const products = await prisma.product.findMany({ where: { id: { in: clean.map((i) => i.productId) }, active: true } });
-  const byOrigin: Record<string, { productId: string; name: string; category: string; measure: string; qty: number }[]> = { FABRICA: [], CD: [] };
-  for (const it of clean) {
-    const p = products.find((x) => x.id === it.productId);
-    if (!p) continue;
-    byOrigin[p.origin].push({ productId: p.id, name: p.name, category: p.category, measure: p.measure, qty: Math.round(it.qty * 1000) / 1000 });
-  }
-  const unit = await prisma.unit.findUnique({ where: { id: unitId }, select: { name: true } });
-  let created = 0;
-  for (const origin of ['FABRICA', 'CD'] as ProductOrigin[]) {
-    const list = byOrigin[origin];
-    if (list.length === 0) continue;
-    const last = await prisma.productRequest.findFirst({ where: { unitId }, orderBy: { number: 'desc' }, select: { number: true } });
-    const number = (last?.number ?? 0) + 1;
-    const req = await prisma.productRequest.create({
-      data: { unitId, origin, number, createdById: user.id, createdByName: user.name, note: note?.trim() || null, items: list as unknown as object },
-      select: { id: true },
-    });
-    await audit({ userId: user.id, unitId, action: 'PRODUCT_REQUEST', module: 'GENERAL', entity: 'product_request', entityId: req.id, metadata: { origin, items: list.length }, ...ctx });
-    created++;
-  }
-  await notifyAdmins({ title: '📦 Novo pedido de produtos', body: `${unit?.name ?? 'Unidade'}: ${user.name} enviou pedido(s) de produtos.`, link: '/modulos/produtos', module: 'GENERAL' }).catch(() => {});
-  return { ok: true, created };
-}
+/* ───────── Pedido do gerente ─────────
+ *
+ * `createProductRequests` viveu aqui e foi REMOVIDA (não desativada).
+ *
+ * Ela gravava o pedido pelo caminho antigo: os itens dentro do campo JSON
+ * `items`, sem criar nenhum `ProductRequestItem`, sem o setor do CD e com
+ * status `NEW` — que `listarParaSeparacao` nem consulta. Na prática, todo
+ * pedido feito por ela nascia INVISÍVEL para o separador do CD, sem erro
+ * nenhum no caminho. Quem cria pedido hoje é `criarPedido`, em
+ * `src/lib/products/pedido.ts`, que monta os itens por linha e carimba o setor.
+ *
+ * Os pedidos antigos continuam no banco e seguem aparecendo em "Meus pedidos"
+ * e "Fábrica/CD", que leem o mesmo `ProductRequest`.
+ */
 
 export async function listUnitRequests(user: SessionUser, unitId: string) {
   if (!canAccessUnit(user, unitId)) return [];

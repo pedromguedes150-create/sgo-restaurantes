@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { listAllProducts } from '@/lib/products';
+import { setoresAtivosDoCd } from '@/lib/products/setores';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProductCatalogAdmin } from '@/components/products/product-catalog-admin';
 import { ArrowLeft } from 'lucide-react';
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default async function ProdutosConfigPage() {
   const user = (await getSessionUser())!;
   if (!['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role)) return <p className="text-sm text-ink-500">Restrito à Supervisão/Administração.</p>;
-  const products = await listAllProducts();
+  const [products, setores] = await Promise.all([listAllProducts(), setoresAtivosDoCd()]);
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
@@ -20,7 +21,10 @@ export default async function ProdutosConfigPage() {
         <p className="text-sm text-ink-500">Produtos da <b>Fábrica</b> e do <b>CD</b> que os gerentes podem pedir. Importe sua lista por Excel.</p>
       </div>
       <Card><CardContent className="pt-4">
-        <ProductCatalogAdmin products={products.map((p) => ({ id: p.id, name: p.name, origin: p.origin, category: p.category, measure: p.measure, packSize: p.packSize, barcode: p.barcode, active: p.active }))} />
+        <ProductCatalogAdmin
+          products={products.map((p) => ({ id: p.id, name: p.name, origin: p.origin, category: p.category, measure: p.measure, packSize: p.packSize, barcode: p.barcode, active: p.active, cdSectorId: p.cdSectorId, cdSectorName: p.cdSector?.name ?? null }))}
+          setores={setores}
+        />
       </CardContent></Card>
     </div>
   );
