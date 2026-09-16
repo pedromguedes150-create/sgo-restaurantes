@@ -58,37 +58,37 @@ export default async function ProdutosPage({ searchParams }: { searchParams: { u
         <FamilyTabs active="/modulos/produtos" />
         <p className="text-sm text-ink-500">Peça à <b>Fábrica</b> e ao <b>Centro de Distribuição</b> num pedido só — o sistema separa por destino.</p>
       </div>
-      <Card><CardContent className="pt-4">
-        <PedidoClient
-          unitId={selUnit.id}
-          unitName={selUnit.name}
-          podeAssociarCodigo={podeAssociarCodigo}
-          produtos={products.map((p) => ({
-            id: p.id, name: p.name, category: p.category, measure: p.measure,
-            packSize: p.packSize, barcode: p.barcode,
-            barcodes: codigosPorProduto.get(p.id) ?? [],
-          }))}
-          sugestoes={sugestoes.map((s) => ({
-            productId: s.productId, name: s.name, measure: s.measure,
-            qtySugerida: s.qtySugerida, ultimas: s.ultimas, vezes: s.vezes,
-          }))}
-          recentes={recentes.map((r) => ({
-            id: r.id, number: r.number, etiqueta: numeroDoPedido(r.number, r.createdAt),
-            statusLabel: r.statusLabel, itens: r.itens, separados: r.separados, emAndamento: r.emAndamento,
-            quando: r.createdAt.toLocaleDateString('pt-BR'),
-          }))}
-        />
-      </CardContent></Card>
-
+      {/* UMA tela de pedido, dentro da aba "Novo pedido". Havia duas na mesma
+          página: esta e uma herdada do módulo antigo, que gravava por um caminho
+          que a separação do CD nem consulta — pedido feito lá nascia invisível
+          para o separador. */}
       <Card><CardContent className="pt-4">
         <ProductsClient
-            abas={await abasDoPerfil(user.role, 'PRODUCTS')}
-          units={units}
-          selUnitId={selUnit.id}
+          abas={await abasDoPerfil(user.role, 'PRODUCTS')}
           isOps={isOps}
-          products={products.map((p) => ({ id: p.id, name: p.name, origin: p.origin, category: p.category, measure: p.measure }))}
           myRequests={myRequests.map(serReq)}
           incoming={incoming.map((r) => ({ ...serReq(r), unitName: unitNameById[r.unitId] ?? '—' }))}
+          novoPedido={
+            <PedidoClient
+              unitId={selUnit.id}
+              unitName={selUnit.name}
+              podeAssociarCodigo={podeAssociarCodigo}
+              produtos={products.map((p) => ({
+                id: p.id, name: p.name, category: p.category, measure: p.measure,
+                packSize: p.packSize, barcode: p.barcode,
+                barcodes: codigosPorProduto.get(p.id) ?? [],
+              }))}
+              sugestoes={sugestoes.map((s) => ({
+                productId: s.productId, name: s.name, measure: s.measure,
+                qtySugerida: s.qtySugerida, ultimas: s.ultimas, vezes: s.vezes,
+              }))}
+              recentes={recentes.map((r) => ({
+                id: r.id, number: r.number, etiqueta: numeroDoPedido(r.number, r.createdAt),
+                statusLabel: r.statusLabel, itens: r.itens, separados: r.separados, emAndamento: r.emAndamento,
+                quando: r.createdAt.toLocaleDateString('pt-BR'),
+              }))}
+            />
+          }
         />
       </CardContent></Card>
     </div>
