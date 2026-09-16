@@ -6,6 +6,7 @@ import { currentOperationalDate } from '@/lib/date/operational';
 import { recortarPizzas, unidadePorToken, unidadesComPizzaria, garantirTokenPublico, PIZZAS_NAV } from '@/lib/pizzas/acesso';
 import { salvarFechamento, fechamentoDoDia } from '@/lib/pizzas/fechamento';
 import { inicioDoPeriodo, painelDePizzas } from '@/lib/pizzas/painel';
+import { alternarSabor, criarSabor, excluirSabor, listarSabores, renomearSabor } from '@/lib/pizzas/catalogo';
 import { totalDePizzas, totaisPorTamanho, rotuloDoTamanho } from '@/lib/pizzas/tipos';
 import type { SessionUser } from '@/lib/auth/session';
 
@@ -54,9 +55,16 @@ let inativoId: string;
 let deOutraUnidadeId: string;
 let hoje: string;
 
-const gerenteDaPizzaria = (): SessionUser => ({ id: 'x', name: 'G', role: 'MANAGER', unitIds: [pizzariaId], seesAllUnits: false, needsTerms: false });
-const gerenteDeOutra = (): SessionUser => ({ id: 'y', name: 'O', role: 'MANAGER', unitIds: [semPizzariaId], seesAllUnits: false, needsTerms: false });
-const admin = (): SessionUser => ({ id: 'z', name: 'A', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false });
+/* Usuários REAIS no banco, não ids inventados: a auditoria tem FK para `users`
+   e um id fantasma a faria falhar em silêncio — `audit()` engole o erro para
+   nunca derrubar a operação, então o teste passaria sem auditar nada. */
+let gerenteId: string;
+let outroGerenteId: string;
+let adminId: string;
+
+const gerenteDaPizzaria = (): SessionUser => ({ id: gerenteId, name: 'G', role: 'MANAGER', unitIds: [pizzariaId], seesAllUnits: false, needsTerms: false });
+const gerenteDeOutra = (): SessionUser => ({ id: outroGerenteId, name: 'O', role: 'MANAGER', unitIds: [semPizzariaId], seesAllUnits: false, needsTerms: false });
+const admin = (): SessionUser => ({ id: adminId, name: 'A', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false });
 
 beforeAll(async () => {
   const pizzaria = await prisma.unit.create({
@@ -71,6 +79,10 @@ beforeAll(async () => {
     })
   ).id;
 
+  gerenteId = (await prisma.user.create({ data: { name: 'G', email: `pzg-${sfx}@e.com`, role: 'MANAGER', passwordHash: 'x' } })).id;
+  outroGerenteId = (await prisma.user.create({ data: { name: 'O', email: `pzo-${sfx}@e.com`, role: 'MANAGER', passwordHash: 'x' } })).id;
+  adminId = (await prisma.user.create({ data: { name: 'A', email: `pza-${sfx}@e.com`, role: 'ADMIN', passwordHash: 'x' } })).id;
+
   token = await garantirTokenPublico(pizzariaId);
 
   calabresaId = (await prisma.pizzaFlavor.create({ data: { unitId: pizzariaId, name: `Calabresa ${sfx}`, order: 0 } })).id;
@@ -82,7 +94,9 @@ beforeAll(async () => {
 afterAll(async () => {
   await prisma.pizzaClosing.deleteMany({ where: { unitId: { in: [pizzariaId, semPizzariaId] } } });
   await prisma.pizzaFlavor.deleteMany({ where: { unitId: { in: [pizzariaId, semPizzariaId] } } });
+  await prisma.auditLog.deleteMany({ where: { unitId: { in: [pizzariaId, semPizzariaId] } } });
   await prisma.unit.deleteMany({ where: { id: { in: [pizzariaId, semPizzariaId] } } });
+  await prisma.user.deleteMany({ where: { id: { in: [gerenteId, outroGerenteId, adminId] } } });
 });
 
 describe('quem alcança o módulo', () => {
@@ -222,6 +236,64 @@ describe('fechamento do dia', () => {
     const logs = await prisma.auditLog.findMany({ where: { unitId: pizzariaId, module: 'PIZZAS' } });
     expect(logs.length).toBeGreaterThan(0);
     expect(logs.some((l) => l.action === 'PIZZA_CLOSING_UPDATE')).toBe(true);
+  });
+});
+
+describe('catálogo de sabores (Configurações)', () => {
+  it('o gerente não gerencia o catálogo — é tela de Configurações', async () => {
+    const r = await criarSabor(gerenteDaPizzaria(), { unitId: pizzariaId, name: `Proibido ${sfx}` });
+    expect(r).toEqual({ ok: false, reason: 'FORBIDDEN' });
+  });
+
+  it('cria, lista e renomeia', async () => {
+    const nome = `Catupiry ${sfx}`;
+    const r = await criarSabor(admin(), { unitId: pizzariaId, name: nome });
+    expect(r.ok).toBe(true);
+    const criado = (await listarSabores(admin(), pizzariaId)).find((s) => s.name === nome);
+    expect(criado).toBeTruthy();
+
+    const novo = `Catupiry especial ${sfx}`;
+    expect(await renomearSabor(admin(), { id: criado!.id, name: novo })).toEqual({ ok: true });
+    const depois = await listarSabores(admin(), pizzariaId);
+    expect(depois.some((s) => s.name === novo)).toBe(true);
+  });
+
+  it('recusa nome repetido na mesma unidade', async () => {
+    const r = await criarSabor(admin(), { unitId: pizzariaId, name: `Calabresa ${sfx}` });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('CONFLICT');
+  });
+
+  it('recusa catálogo em unidade que não tem pizzaria', async () => {
+    const r = await criarSabor(admin(), { unitId: semPizzariaId, name: `Qualquer ${sfx}` });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('INVALID');
+  });
+
+  it('sabor JÁ LANÇADO não se exclui — desativa, para o histórico não perder linhas', async () => {
+    const r = await excluirSabor(admin(), calabresaId);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('BLOCKED');
+
+    expect(await alternarSabor(admin(), { id: calabresaId, active: false })).toEqual({ ok: true });
+    const fora = (await listarSabores(admin(), pizzariaId)).find((s) => s.id === calabresaId);
+    expect(fora?.active).toBe(false);
+    expect(fora?.lancamentos).toBeGreaterThan(0);
+    await alternarSabor(admin(), { id: calabresaId, active: true }); // devolve ao cardápio
+  });
+
+  it('sabor sem lançamento pode ser excluído', async () => {
+    const novo = await criarSabor(admin(), { unitId: pizzariaId, name: `Descartável ${sfx}` });
+    expect(novo.ok).toBe(true);
+    if (novo.ok) expect(await excluirSabor(admin(), novo.id!)).toEqual({ ok: true });
+  });
+
+  it('renomear NÃO reescreve o histórico já fechado', async () => {
+    const antes = await fechamentoDoDia(pizzariaId, hoje);
+    const nomeNoFechamento = antes!.items[0].flavorName;
+    await renomearSabor(admin(), { id: calabresaId, name: `Calabresa renomeada ${sfx}` });
+    const depois = await fechamentoDoDia(pizzariaId, hoje);
+    expect(depois!.items[0].flavorName).toBe(nomeNoFechamento);
   });
 });
 

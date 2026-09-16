@@ -100,6 +100,10 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/people/vacations/[id]': { modulo: 'PEOPLE_TAB_VACATION', exigir: 'editar' },
   '/api/people/schedule/[id]': { modulo: 'SCHEDULE', exigir: 'editar' },
 
+  // Mora sob o prefixo público do fechamento, como `/api/higiene/manage`: o
+  // prefixo mais longo vence, então esta entra na matriz e a pública não.
+  '/api/pizzas/sabores': { modulo: 'CONFIG_PIZZAS', exigir: 'editar' },
+
   '/api/pops': { modulo: 'POPS', exigir: 'editar' },
   '/api/product-standards': { modulo: 'CONFIG_PRODUCT_STANDARDS', exigir: 'editar' },
   '/api/products/import': { modulo: 'CONFIG_PRODUCTS', exigir: 'editar' },

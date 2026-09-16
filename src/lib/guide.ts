@@ -157,6 +157,7 @@ export const GUIDE: GuideSection[] = [
         summary: 'Fechamento diário da pizzaria, por tamanho e sabor. Só a unidade que tem pizzaria enxerga este módulo.',
         steps: [
           'O módulo aparece somente para quem responde por uma unidade marcada como tendo pizzaria. Nas demais unidades ele não existe no menu nem pelo endereço direto.',
+          'Para LIGAR numa unidade (Admin): Configurações → Unidades → abrir a edição da unidade → "Esta unidade tem pizzaria". Depois cadastre o cardápio em Configurações → Pizzas (sabores) — sem sabores o link não tem o que oferecer.',
           'Abra CONTROLE DE PIZZAS e copie o "Link de preenchimento". Ele é de uso interno da operação e abre SEM login, já amarrado à unidade — quem preenche não escolhe nem troca de unidade.',
           'No link, a data já vem preenchida com o dia de hoje e pode ser alterada para lançar um dia esquecido (até 30 dias atrás; nunca uma data futura).',
           'Monte o fechamento linha a linha: tamanho (35 cm, 30 cm ou 25 cm), sabor e quantidade. Use "Adicionar sabor" para quantas combinações forem necessárias.',

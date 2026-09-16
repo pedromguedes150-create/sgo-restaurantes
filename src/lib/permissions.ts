@@ -133,6 +133,7 @@ const BASE: ModuleDef[] = [
   { key: 'CONFIG_SUPPLIERS', label: 'Fornecedores', nav: '/configuracoes/fornecedores', parent: 'CONFIG' },
   { key: 'CONFIG_PRODUCTS', label: 'Catálogo de produtos', nav: '/configuracoes/produtos', parent: 'CONFIG' },
   { key: 'CONFIG_PRODUCT_STANDARDS', label: 'Padrão de produtos (foto)', nav: '/configuracoes/padrao-produtos', parent: 'CONFIG' },
+  { key: 'CONFIG_PIZZAS', label: 'Pizzas (sabores)', nav: '/configuracoes/pizzas', parent: 'CONFIG' },
   { key: 'CONFIG_PAYMENTS', label: 'Pagamentos (freelancers e avulsos)', nav: '/configuracoes/pagamentos', parent: 'CONFIG' },
   { key: 'CONFIG_FREELANCER_RATES', label: 'Valor do freelancer por setor', nav: '/configuracoes/freelancer-valores', parent: 'CONFIG' },
   { key: 'CONFIG_INTEGRATIONS', label: 'APIs e integrações', nav: '/configuracoes/integracoes', parent: 'CONFIG' },
@@ -170,6 +171,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   CONFIG_USERS: ['SUPERVISOR'], // supervisão visualiza o cadastro da rede
   CONFIG_SUPPLIERS: ['SUPERVISOR'], // canManageSuppliers: Admin, CEO e Supervisão
   CONFIG_PRODUCTS: ['SUPERVISOR'], // catálogo: Admin, CEO e Supervisão
+  CONFIG_PIZZAS: ['SUPERVISOR'], // sabores da pizzaria: mesma linha do catálogo de produtos
   UNIT_PANEL: ['SUPERVISOR', 'COORDINATOR', 'MANAGER'], // painel operacional da unidade
 };
 
