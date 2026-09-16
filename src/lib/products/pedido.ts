@@ -266,15 +266,87 @@ export async function listarPedidosDaUnidade(user: SessionUser, unitId: string, 
   if (!canAccessUnit(user, unitId)) return [];
   const rs = await prisma.productRequest.findMany({
     where: { unitId }, orderBy: { createdAt: 'desc' }, take,
-    include: { _count: { select: { requestItems: true } } },
+    /* Os itens vêm só com `qtySeparated` para contar o progresso — "12 de 20
+       separados" é o que o gerente quer saber ao abrir a tela, e sem isso o
+       cartão do pedido em andamento não teria o que mostrar. */
+    include: { requestItems: { select: { qtySeparated: true } } },
   });
   return rs.map((r) => {
     const status = (r.status as StatusPedido) in STATUS_PEDIDO ? (r.status as StatusPedido) : 'ENVIADO_CD';
     return {
       id: r.id, number: r.number, status, statusLabel: STATUS_PEDIDO[status],
-      createdAt: r.createdAt, createdByName: r.createdByName, itens: r._count.requestItems,
+      createdAt: r.createdAt, createdByName: r.createdByName,
+      itens: r.requestItems.length,
+      separados: r.requestItems.filter((i) => i.qtySeparated !== null).length,
+      /* Ainda em curso: é o pedido que merece o cartão em destaque. Concluído e
+         cancelado saem do topo e viram histórico. */
+      emAndamento: ['ENVIADO_CD', 'SEPARANDO', 'PRONTO_ENVIO', 'ENVIADO_UNIDADE'].includes(status),
     };
   });
+}
+
+export interface FiltroDoHistorico {
+  unitId?: string;
+  /** Texto livre casado contra o NOME do produto congelado no item. */
+  produto?: string;
+  de?: Date;
+  ate?: Date;
+  status?: string;
+  gerente?: string;
+}
+
+/**
+ * O HISTÓRICO de pedidos, com filtros.
+ *
+ * Responde a perguntas que a lista dos últimos pedidos não responde: "quando
+ * foi a última vez que pedimos muçarela?", "quantos pedidos fecharam com
+ * divergência este mês?", "o que a Moreira pediu em agosto?".
+ *
+ * O filtro por produto casa o **nome congelado no item**, não o id do produto:
+ * é o que faz o pedido antigo continuar encontrável depois de o produto ser
+ * renomeado ou excluído do catálogo.
+ */
+export async function historicoDePedidos(user: SessionUser, f: FiltroDoHistorico, take = 200) {
+  /* Escopo no servidor: sem unidade escolhida, valem as que a pessoa enxerga. */
+  const unidades = f.unitId
+    ? (canAccessUnit(user, f.unitId) ? [f.unitId] : [])
+    : (user.seesAllUnits ? null : user.unitIds);
+  if (unidades && unidades.length === 0) return { pedidos: [], unidades: new Map<string, string>() };
+
+  const rs = await prisma.productRequest.findMany({
+    where: {
+      ...(unidades ? { unitId: { in: unidades } } : {}),
+      ...(f.status ? { status: f.status } : {}),
+      ...(f.gerente ? { createdByName: { contains: f.gerente, mode: 'insensitive' } } : {}),
+      ...(f.de || f.ate ? { createdAt: { ...(f.de ? { gte: f.de } : {}), ...(f.ate ? { lte: f.ate } : {}) } } : {}),
+      ...(f.produto ? { requestItems: { some: { name: { contains: f.produto, mode: 'insensitive' } } } } : {}),
+    },
+    orderBy: { createdAt: 'desc' },
+    take,
+    include: { requestItems: { select: { qtySeparated: true, receiptIssue: true } } },
+  });
+
+  const nomes = new Map(
+    (await prisma.unit.findMany({
+      where: { id: { in: [...new Set(rs.map((r) => r.unitId))] } },
+      select: { id: true, name: true },
+    })).map((u) => [u.id, u.name]),
+  );
+
+  return {
+    unidades: nomes,
+    pedidos: rs.map((r) => {
+      const status = (r.status as StatusPedido) in STATUS_PEDIDO ? (r.status as StatusPedido) : 'ENVIADO_CD';
+      return {
+        id: r.id, number: r.number, status, statusLabel: STATUS_PEDIDO[status],
+        unitId: r.unitId, unitName: nomes.get(r.unitId) ?? '—',
+        createdAt: r.createdAt, createdByName: r.createdByName,
+        itens: r.requestItems.length,
+        separados: r.requestItems.filter((i) => i.qtySeparated !== null).length,
+        divergencias: r.requestItems.filter((i) => i.receiptIssue !== null).length,
+      };
+    }),
+  };
 }
 
 /**

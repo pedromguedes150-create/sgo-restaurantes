@@ -91,6 +91,15 @@ export interface ConferenciaDeRecebimento {
   quality?: string | null;
   packaging?: string | null;
   note?: string | null;
+  /**
+   * A carga chegou completa? Declaração de quem recebeu na doca.
+   *
+   * Fica ao LADO do que o sistema calcula (faltas do CD + divergências
+   * apontadas), não no lugar. As duas podem discordar — o CD marcou falta mas
+   * mandou assim mesmo, ou veio item que ninguém apontou — e nessa hora a
+   * palavra de quem conferiu é o registro que vale.
+   */
+  completo?: boolean | null;
 }
 
 /**
@@ -163,6 +172,7 @@ export async function conferirRecebimento(
         receiptQuality: input.quality?.trim() || null,
         receiptPackaging: input.packaging?.trim() || null,
         receiptNote: input.note?.trim() || null,
+        receiptComplete: input.completo ?? null,
       },
     }),
   ]);
@@ -201,7 +211,7 @@ export async function conferirRecebimento(
     metadata: {
       pedido: pedido.number, status,
       divergencias: comProblema.map((i) => ({ item: daCasa.get(i.itemId), motivo: divergenciaLabel(i.issue ?? null) })),
-      qualidade: input.quality ?? null, embalagem: input.packaging ?? null,
+      qualidade: input.quality ?? null, embalagem: input.packaging ?? null, completo: input.completo ?? null,
     }, ...ctx,
   });
 

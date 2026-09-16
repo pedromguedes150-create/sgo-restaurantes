@@ -10,6 +10,7 @@ import { ProductsClient } from '@/components/products/products-client';
 import { PedidoClient } from '@/components/products/pedido-client';
 import { sugerirProdutos } from '@/lib/products/sugestoes';
 import { listarPedidosDaUnidade } from '@/lib/products/pedido';
+import { numeroDoPedido } from '@/lib/products/numero-do-pedido';
 import { canEditModule } from '@/lib/permissions';
 import { PackagePlus } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -72,7 +73,8 @@ export default async function ProdutosPage({ searchParams }: { searchParams: { u
             qtySugerida: s.qtySugerida, ultimas: s.ultimas, vezes: s.vezes,
           }))}
           recentes={recentes.map((r) => ({
-            id: r.id, number: r.number, statusLabel: r.statusLabel, itens: r.itens,
+            id: r.id, number: r.number, etiqueta: numeroDoPedido(r.number, r.createdAt),
+            statusLabel: r.statusLabel, itens: r.itens, separados: r.separados, emAndamento: r.emAndamento,
             quando: r.createdAt.toLocaleDateString('pt-BR'),
           }))}
         />

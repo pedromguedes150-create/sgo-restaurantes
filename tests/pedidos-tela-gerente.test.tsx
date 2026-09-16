@@ -29,7 +29,7 @@ const SUGESTOES: SugestaoNaTela[] = [
 ];
 
 const RECENTES: PedidoRecente[] = [
-  { id: 'p1', number: 1245, statusLabel: 'Separação em andamento', quando: '15/09/2026', itens: 20 },
+  { id: 'p1', number: 1245, etiqueta: 'PED-2026-001245', statusLabel: 'Separação em andamento', quando: '15/09/2026', itens: 20, separados: 12, emAndamento: true },
 ];
 
 const render = (over: Partial<React.ComponentProps<typeof PedidoClient>> = {}) =>
@@ -85,5 +85,30 @@ describe('O que a tela NÃO faz sozinha', () => {
     const html = render();
     expect(html).not.toContain('Revisar pedido');
     expect(html).not.toContain('Enviar pedido ao CD');
+  });
+});
+
+describe('O pedido que ainda está em curso', () => {
+  /* Quem abre esta tela com pedido aberto quer saber ONDE ELE ESTÁ antes de
+     fazer outro. Perdido na lista dos últimos, isso não se lê. */
+  it('ganha destaque, com a etiqueta e o progresso', () => {
+    const html = render();
+    expect(html).toContain('Pedido em andamento');
+    expect(html).toContain('PED-2026-001245');
+    expect(html).toContain('12/20 itens separados');
+    expect(html).toContain('Acompanhar');
+  });
+
+  it('pedido já concluído NÃO ocupa o destaque', () => {
+    const html = render({
+      recentes: [{ id: 'p9', number: 9, etiqueta: 'PED-2026-000009', statusLabel: 'Concluído', quando: '01/09/2026', itens: 5, separados: 5, emAndamento: false }],
+    });
+    expect(html).not.toContain('Pedido em andamento');
+    /* Mas continua na lista: é histórico, não some. */
+    expect(html).toContain('PED-2026-000009');
+  });
+
+  it('leva ao histórico completo', () => {
+    expect(render()).toContain('Ver histórico completo');
   });
 });

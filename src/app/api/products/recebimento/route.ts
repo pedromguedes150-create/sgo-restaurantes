@@ -25,6 +25,8 @@ export async function POST(req: Request) {
   let quality: string | null = null;
   let packaging: string | null = null;
   let note: string | null = null;
+  /* undefined = o gerente nao declarou; true/false = declarou. */
+  let completo: boolean | null = null;
 
   try {
     const tipo = req.headers.get('content-type') ?? '';
@@ -34,6 +36,8 @@ export async function POST(req: Request) {
       quality = (form.get('quality') as string) || null;
       packaging = (form.get('packaging') as string) || null;
       note = (form.get('note') as string) || null;
+      const dec = form.get('completo');
+      completo = dec === 'sim' ? true : dec === 'nao' ? false : null;
 
       const crus = JSON.parse((form.get('itens') as string) || '[]') as ConferenciaDeItem[];
       itens = [];
@@ -54,6 +58,7 @@ export async function POST(req: Request) {
       quality = b.quality ?? null;
       packaging = b.packaging ?? null;
       note = b.note ?? null;
+      completo = typeof b.completo === 'boolean' ? b.completo : null;
       itens = (Array.isArray(b.itens) ? b.itens : []).map((i: ConferenciaDeItem) => ({
         itemId: String(i.itemId ?? ''), issue: i.issue ?? null, note: i.note ?? null, photo: null,
       }));
@@ -65,7 +70,7 @@ export async function POST(req: Request) {
 
   if (!requestId) return NextResponse.json({ error: 'Pedido não informado' }, { status: 400 });
 
-  const r = await conferirRecebimento(user, requestId, { itens, quality, packaging, note }, requestContext(req));
+  const r = await conferirRecebimento(user, requestId, { itens, quality, packaging, note, completo }, requestContext(req));
   if (r.ok) return NextResponse.json({ ok: true, status: r.status });
 
   const status: Record<string, number> = { FORBIDDEN: 403, NAO_ENCONTRADO: 404, FORA_DE_ORDEM: 409, INVALID: 400 };

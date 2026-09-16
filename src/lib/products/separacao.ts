@@ -4,6 +4,7 @@ import { audit } from '@/lib/audit';
 import { notifyUsers } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import { motivoLabel } from './separacao-motivos';
+import { numeroDoPedido } from './numero-do-pedido';
 
 /**
  * SEPARAÇÃO no CD — item a item, com quatro setores ao mesmo tempo.
@@ -90,6 +91,12 @@ export async function separarItem(
     };
   }
 
+  /* Fotografia do setor ANTES da gravação: é o que distingue "o setor acabou
+     agora" de "alguém corrigiu um item num setor que já estava pronto". */
+  const setorJaEstavaPronto = (await prisma.productRequestItem.count({
+    where: { requestId: item.request.id, cdSectorId: item.cdSectorId, qtySeparated: null },
+  })) === 0;
+
   await prisma.productRequestItem.update({
     where: { id: item.id },
     data: {
@@ -100,6 +107,7 @@ export async function separarItem(
   });
 
   const pedidoPronto = await recalcularStatusDoPedido(item.request.id, user, ctx);
+  await avisarFaltasDoSetor(item.request.id, item.cdSectorId, item.request.createdById, setorJaEstavaPronto);
 
   await audit({
     userId: user.id, unitId: item.request.unitId, action: 'PRODUCT_ITEM_SEPARATED', module: 'PRODUCTS',
@@ -108,6 +116,56 @@ export async function separarItem(
   });
 
   return { ok: true, pedidoPronto };
+}
+
+/**
+ * Avisa o gerente das faltas de UM setor, no momento em que aquele setor
+ * termina — e uma vez só.
+ *
+ * O "quando" é a decisão que importa aqui. A cada item seria spam, e o gerente
+ * passaria a ignorar o sino. Só no fim do pedido inteiro chegaria tarde: ele
+ * descobre a falta quando a carga já está a caminho, sem tempo de comprar fora
+ * ou pedir a outra unidade. O fim de cada setor é o primeiro instante em que a
+ * falta é **definitiva** e ainda dá para reagir.
+ *
+ * Dispara só na TRANSIÇÃO para completo: se o setor já estava pronto antes
+ * desta gravação, era correção de lançamento, e o gerente já foi avisado.
+ */
+async function avisarFaltasDoSetor(
+  requestId: string,
+  cdSectorId: string | null,
+  gerenteId: string | null,
+  jaEstavaPronto: boolean,
+): Promise<void> {
+  if (!gerenteId || jaEstavaPronto) return;
+
+  const itens = await prisma.productRequestItem.findMany({
+    where: { requestId, cdSectorId },
+    select: { name: true, measure: true, qtyRequested: true, qtySeparated: true, missingReason: true, cdSectorName: true },
+  });
+  if (itens.length === 0 || itens.some((i) => i.qtySeparated === null)) return;
+
+  const faltas = itens.filter((i) => Number(i.qtySeparated) < Number(i.qtyRequested));
+  if (faltas.length === 0) return;
+
+  const pedido = await prisma.productRequest.findUnique({
+    where: { id: requestId }, select: { number: true, createdAt: true },
+  });
+  if (!pedido) return;
+
+  /* Uma notificação com TODAS as faltas do setor, não uma por item. */
+  const lista = faltas
+    .slice(0, 4)
+    .map((i) => `${i.name}: pedido ${Number(i.qtyRequested)} ${i.measure}, separado ${Number(i.qtySeparated)}${motivoLabel(i.missingReason) ? ` (${motivoLabel(i.missingReason)})` : ''}`)
+    .join('; ');
+  const resto = faltas.length > 4 ? ` e mais ${faltas.length - 4}` : '';
+  const setorNome = itens[0].cdSectorName ?? 'Sem setor';
+
+  await notifyUsers([gerenteId], {
+    title: `⚠️ Falta no ${numeroDoPedido(pedido.number, pedido.createdAt)}`,
+    body: `${setorNome} concluiu com ${faltas.length === 1 ? 'uma falta' : `${faltas.length} faltas`} — ${lista}${resto}.`,
+    link: `/modulos/produtos/pedido/${requestId}`, module: 'PRODUCTS',
+  }).catch(() => {});
 }
 
 /** Desfaz a separação de um item — o separador se enganou e quer refazer. */

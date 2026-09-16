@@ -47,6 +47,8 @@ export function RecebimentoClient({
   const [quality, setQuality] = useState('');
   const [packaging, setPackaging] = useState('');
   const [note, setNote] = useState('');
+  /* '' = não declarou; a declaração é de quem recebeu na doca. */
+  const [completo, setCompleto] = useState('');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -74,6 +76,7 @@ export function RecebimentoClient({
       form.set('quality', quality);
       form.set('packaging', packaging);
       form.set('note', note);
+      form.set('completo', completo);
       form.set('itens', JSON.stringify(
         Object.entries(apontados).map(([itemId, a]) => ({ itemId, issue: a.issue, note: a.note })),
       ));
@@ -192,6 +195,21 @@ export function RecebimentoClient({
             {AVALIACOES.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
           </select>
         </div>
+      </div>
+
+      <div>
+        <Label htmlFor="completo">O pedido chegou completo?</Label>
+        {/* Declaração de quem recebeu, ao LADO do que o sistema calcula. As
+            duas podem discordar — o CD marcou falta mas mandou assim mesmo — e
+            é a palavra de quem conferiu que vale numa cobrança. */}
+        <select
+          id="completo" className="h-10 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink-900"
+          value={completo} onChange={(e) => setCompleto(e.target.value)}
+        >
+          <option value="">Não declarar</option>
+          <option value="sim">Completo</option>
+          <option value="nao">Parcial</option>
+        </select>
       </div>
 
       <div>

@@ -1211,6 +1211,11 @@ model ProductRequest {
   receiptQuality String?
   receiptPackaging String?
   receiptNote    String?
+  /// Declaracao do gerente no fecho da conferencia: a carga chegou completa?
+  /// Fica ao lado do que o sistema calcula (faltas do CD + divergencias
+  /// apontadas) de proposito — as duas podem discordar, e a palavra de quem
+  /// recebeu na doca e o registro que vale numa cobranca.
+  receiptComplete Boolean?
 
   requestItems  ProductRequestItem[]
 

@@ -27,9 +27,14 @@ export interface SugestaoNaTela {
 export interface PedidoRecente {
   id: string;
   number: number;
+  /** `PED-2026-001245` — a etiqueta completa, que é única na rede. */
+  etiqueta: string;
   statusLabel: string;
   quando: string;
   itens: number;
+  separados: number;
+  /** Ainda em curso no CD ou a caminho — ganha o cartão em destaque. */
+  emAndamento: boolean;
 }
 
 type Etapa = 'INICIO' | 'MONTANDO' | 'REVISAO';
@@ -72,6 +77,9 @@ export function PedidoClient({
 
   const porId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos]);
   const resultados = useMemo(() => buscarProdutos(produtos, termo), [produtos, termo]);
+  /* O mais recente ainda em curso. Mais de um aberto é raro e, quando
+     acontece, o novo é o que interessa. */
+  const emCurso = recentes.find((r) => r.emAndamento);
   const itens = Object.entries(carrinho).filter(([, q]) => q > 0);
   const totalItens = itens.length;
 
@@ -215,6 +223,35 @@ export function PedidoClient({
 
         <div>
           <p className="mb-1 text-sm font-semibold text-ink-900">Últimos pedidos</p>
+          {/* ── O pedido que ainda está em curso ──
+              Fica em destaque, e não perdido na lista: quem abre esta tela com
+              pedido aberto quer saber ONDE ELE ESTÁ antes de fazer outro. */}
+          {emCurso && (
+            <Link href={`/modulos/produtos/pedido/${emCurso.id}`} className="mb-3 block">
+              <div className="rounded-lg border-2 border-brand bg-brand-tint p-3">
+                <p className="sgo-type-11 font-semibold text-brand">Pedido em andamento</p>
+                <p className="font-bold text-ink-900">{emCurso.etiqueta}</p>
+                <p className="text-sm text-ink-700">{emCurso.statusLabel}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-sunken">
+                    <div
+                      className="h-full rounded-full bg-brand"
+                      style={{ width: `${emCurso.itens > 0 ? Math.round((emCurso.separados / emCurso.itens) * 100) : 0}%` }}
+                    />
+                  </div>
+                  <span className="shrink-0 text-sm font-medium text-ink-700">
+                    {emCurso.separados}/{emCurso.itens} itens separados
+                  </span>
+                </div>
+                <p className="mt-2 text-sm font-semibold text-brand">Acompanhar →</p>
+              </div>
+            </Link>
+          )}
+
+          <Link href="/modulos/produtos/historico" className="mb-2 block text-sm font-semibold text-brand">
+            Ver histórico completo →
+          </Link>
+
           {recentes.length === 0 ? (
             <p className="text-sm text-ink-500">Nenhum pedido ainda.</p>
           ) : (
@@ -224,7 +261,7 @@ export function PedidoClient({
                   {/* O numero leva ao acompanhamento: "onde esta meu pedido?" e a
                       pergunta que traz o gerente de volta a esta tela. */}
                   <Link href={`/modulos/produtos/pedido/${r.id}`} className="min-w-0">
-                    <b className="text-ink-900">nº {r.number}</b>
+                    <b className="text-ink-900">{r.etiqueta}</b>
                     <span className="block text-[11px] text-ink-500">{r.quando} · {r.itens} item(ns)</span>
                   </Link>
                   <span className="flex shrink-0 items-center gap-2">
