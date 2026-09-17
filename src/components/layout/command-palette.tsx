@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Search, Building2, CornerDownLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { NAV_GROUPS, HEADER_DESTINATIONS, type IconType } from '@/components/layout/nav-data';
-import { FAMILIES } from '@/lib/nav-families';
+import { HEADER_DESTINATIONS, type IconType } from '@/components/layout/nav-data';
+import { LayoutGrid } from 'lucide-react';
+import type { AreaMontada } from '@/lib/nav/areas';
 import { shortUnitName } from '@/lib/unit-name';
 import { UNIT_COOKIE, UNIT_PARAM } from '@/lib/scope/unit-context';
 import type { UnitOption } from '@/components/layout/unit-switcher';
@@ -15,7 +16,7 @@ export const OPEN_COMMAND_EVENT = 'sgo:open-command';
 interface Cmd { id: string; label: string; group: string; icon: IconType; href?: string; unitId?: string }
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export function CommandPalette({ units = [], viewable, isAdmin = false }: { units?: UnitOption[]; viewable?: string[]; isAdmin?: boolean }) {
+export function CommandPalette({ units = [], viewable, isAdmin = false, areas = [] }: { units?: UnitOption[]; viewable?: string[]; isAdmin?: boolean; areas?: AreaMontada[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -28,33 +29,31 @@ export function CommandPalette({ units = [], viewable, isAdmin = false }: { unit
   const canSee = useCallback((href: string) => !viewable || viewable.includes(href), [viewable]);
 
   const commands = useMemo<Cmd[]>(() => {
-    const nav: Cmd[] = NAV_GROUPS.flatMap((g) =>
-      g.items
-        .filter((it) => (!it.adminOnly || isAdmin) && canSee(it.href))
-        .map((it) => ({ id: `nav:${it.href}`, label: it.label, group: g.title, icon: it.icon, href: it.href })),
-    );
     /**
-     * Os IRMÃOS das famílias entram aqui à parte.
+     * O ⌘K lê O MESMO CATÁLOGO do menu por áreas.
      *
-     * O menu encurtou de 21 para 11 juntando módulos em famílias, então Troco,
-     * Cancelamentos, Inventário, Pedidos, POPs, Supervisão, Executivo e
-     * Controle de gerentes saíram do NAV_GROUPS. Sem isto eles deixariam de ser
-     * ENCONTRÁVEIS na busca — e um menu curto que esconde destino é pior que um
-     * menu longo. Aqui quem digita "troco" acha "Troco", com a família como
-     * grupo para dizer onde ele mora.
+     * Antes ele juntava duas listas escritas à mão — a da sidebar e a das
+     * famílias — e, entre as duas, ainda faltavam as dezoito telas de
+     * Configurações e os relatórios. Quem digitava "setores do CD" ou
+     * "diagnóstico" não achava nada, e a busca era o único caminho para elas.
+     * Agora o que está no menu está na busca, por construção.
      */
-    const naNav = new Set(NAV_GROUPS.flatMap((g) => g.items.map((it) => it.href)));
-    const irmaos: Cmd[] = FAMILIES.flatMap((fam) =>
-      fam.children
-        .filter((c) => !naNav.has(c.href) && canSee(c.href))
-        .map((c) => ({ id: `fam:${c.href}`, label: c.tab, group: fam.title, icon: fam.icon, href: c.href })),
+    const nav: Cmd[] = areas.flatMap((a) =>
+      a.colunas.flatMap((c) =>
+        c.itens
+          .filter((i) => canSee(i.href))
+          .map((i) => ({ id: `nav:${i.href}`, label: i.label, group: `${a.titulo} › ${c.titulo}`, icon: LayoutGrid as IconType, href: i.href })),
+      ),
     );
-    const header: Cmd[] = HEADER_DESTINATIONS.map((d) => ({ id: `hdr:${d.href}`, label: d.label, group: 'Atalhos', icon: d.icon, href: d.href }));
+    const naNav = new Set(nav.map((c) => c.href));
+    const header: Cmd[] = HEADER_DESTINATIONS
+      .filter((d) => !naNav.has(d.href))
+      .map((d) => ({ id: `hdr:${d.href}`, label: d.label, group: 'Atalhos', icon: d.icon, href: d.href }));
     const unitCmds: Cmd[] = units.length > 1
       ? units.map((u) => ({ id: `unit:${u.id}`, label: shortUnitName(u.name), group: 'Trocar unidade', icon: Building2, unitId: u.id }))
       : [];
-    return [...nav, ...irmaos, ...header, ...unitCmds];
-  }, [units, isAdmin, canSee]);
+    return [...nav, ...header, ...unitCmds];
+  }, [units, areas, canSee]);
 
   const filtered = useMemo(() => {
     const q = norm(query.trim());

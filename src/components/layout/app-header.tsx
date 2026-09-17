@@ -2,23 +2,23 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { LogOut, Bell, ArrowLeft, GraduationCap, PanelLeftClose, PanelLeftOpen, ChevronRight, Search, Inbox } from 'lucide-react';
+import { LogOut, Bell, ArrowLeft, GraduationCap, ChevronRight, Search, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSidebarState } from '@/components/layout/sidebar-state-provider';
 import { usePageChrome } from '@/components/layout/page-chrome';
 import { crumbFor } from '@/components/layout/nav-data';
 import { UnitSwitcher, type UnitOption } from '@/components/layout/unit-switcher';
 import { OPEN_COMMAND_EVENT } from '@/components/layout/command-palette';
+import { GlobalSearch } from '@/components/layout/global-search';
+import type { AreaMontada } from '@/lib/nav/areas';
 
 const iconBtn =
   'inline-flex h-11 w-11 items-center justify-center rounded-control text-ink-500 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken hover:text-ink-900 focus-visible:shadow-sgo-focus md:h-9 md:w-9';
 
-export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, units = [], selectedUnitId = null }: { userName: string; roleLabel: string; unread?: number; commPending?: number; units?: UnitOption[]; selectedUnitId?: string | null }) {
+export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, units = [], selectedUnitId = null, areas = [] }: { userName: string; roleLabel: string; unread?: number; commPending?: number; units?: UnitOption[]; selectedUnitId?: string | null; areas?: AreaMontada[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const showBack = pathname !== '/dashboard';
-  const crumb = crumbFor(pathname);
-  const { collapsed, toggle } = useSidebarState();
+  const crumb = crumbFor(pathname, areas);
   const { scrolled, collapsed: titleCollapsed, title: pageTitle } = usePageChrome();
   // Título inline: telas com <LargeTitle> só o mostram ao rolar; telas legadas
   // (sem título grande) mostram o rótulo do breadcrumb sempre.
@@ -39,19 +39,6 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
     <header className={cn('sticky top-0 z-30 border-b bg-glass backdrop-blur-xl backdrop-saturate-150 transition-colors duration-sgo-2 ease-sgo-std print:hidden', scrolled ? 'border-line' : 'border-transparent')}>
       <div className="mx-auto flex h-12 w-full max-w-6xl items-center justify-between gap-2 px-4 md:h-14 lg:max-w-none lg:pl-3 lg:pr-6 2xl:max-w-[1760px]">
         <div className="flex min-w-0 items-center gap-1">
-          {/* Recolher/expandir a sidebar (desktop). */}
-          <button
-            type="button"
-            onClick={toggle}
-            aria-expanded={!collapsed}
-            aria-controls="sidebar-nav"
-            aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
-            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-            className={`${iconBtn} hidden lg:inline-flex`}
-          >
-            {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
-          </button>
-
           {showBack && (
             <button type="button" onClick={() => router.back()} aria-label="Voltar" className={`${iconBtn} -ml-1`}>
               <ArrowLeft className="h-5 w-5" />
@@ -76,17 +63,22 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
           )}
         </div>
 
+        {/* A BUSCA fica no meio do cabeçalho, sempre aberta, a partir de `lg`.
+            Era um botão: botão exige saber que a busca existe; um campo com o
+            cursor piscando convida a digitar — e é por ele que se chega ao que
+            não está no menu visível. */}
+        <GlobalSearch areas={areas} className="mx-3 hidden w-full max-w-sm lg:block" />
+
         <div className="flex shrink-0 items-center gap-0.5">
-          {/* Abre o ⌘K (busca global). No mobile é só o ícone. */}
+          {/* No celular a busca continua sendo o ⌘K em tela cheia: um campo de
+              320px no cabeçalho de um telefone não sobra espaço para nada. */}
           <button
             type="button"
             onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_EVENT))}
-            aria-label="Buscar (atalho Ctrl+K)"
-            className="inline-flex h-11 items-center gap-2 rounded-control px-2 text-ink-500 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken hover:text-ink-900 focus-visible:shadow-sgo-focus md:h-9 lg:border lg:border-line-strong lg:pl-2.5 lg:pr-2"
+            aria-label="Buscar"
+            className={`${iconBtn} lg:hidden`}
           >
-            <Search className="h-5 w-5 md:h-4 md:w-4" />
-            <span className="hidden text-xs font-medium text-ink-500 lg:inline">Buscar</span>
-            <kbd className="hidden rounded border border-line-strong px-1 text-[11px] font-medium text-ink-500 lg:inline">⌘K</kbd>
+            <Search className="h-5 w-5" />
           </button>
           <Link href="/modulos/comunicacao" aria-label="Comunicação" className={`${iconBtn} relative`}>
             <Inbox className="h-5 w-5" />
