@@ -1,296 +1,215 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Plus, Send, X } from 'lucide-react';
-import { Button, IconButton } from '@/components/ui/ds/button';
+import { useMemo, useRef, useState } from 'react';
+import { Send, AlertTriangle, CheckCircle2, Store, Bike } from 'lucide-react';
+import { Button } from '@/components/ui/ds/button';
 import { Input } from '@/components/ui/ds/field';
-import { Select } from '@/components/ui/ds/select';
+import { DatePicker } from '@/components/ui/ds/date-picker';
 import { Banner } from '@/components/ui/ds/banner';
-import { emBR, MSG_DUPLICADO, TAMANHOS, totalDePizzas, type TamanhoPizza } from '@/lib/pizzas/tipos';
-
-interface Sabor {
-  id: string;
-  name: string;
-}
-interface LinhaSalva {
-  size: string;
-  flavorId: string;
-  quantity: number;
-}
-interface Linha {
-  size: TamanhoPizza;
-  flavorId: string;
-  /** Texto enquanto digita — vira número só no envio. */
-  quantity: string;
-}
-
-const LINHA_VAZIA: Linha = { size: 'CM35', flavorId: '', quantity: '' };
-
-const paraLinhas = (itens: LinhaSalva[]): Linha[] =>
-  itens.map((i) => ({ size: i.size as TamanhoPizza, flavorId: i.flavorId, quantity: String(i.quantity) }));
+import {
+  CANAIS, TAMANHOS, contagensVazias, emBR, nomeComercial, rotuloDoTamanho, totalDoCanal, totalGeral,
+  type CanalPizza, type ContagensDoFechamento, type TamanhoPizza,
+} from '@/lib/pizzas/tipos';
 
 /**
- * Fechamento de pizzas pelo link interno — SEM login.
+ * FECHAMENTO DE PIZZAS — seis números e enviar.
  *
- * A unidade não aparece como campo, nem como texto editável: ela vem do token
- * da URL e é resolvida no servidor. Quem abre o link preenche o que vendeu, e
- * nada mais.
+ * O formulário anterior pedia sabor + tamanho + quantidade e obrigava a montar
+ * uma linha por combinação. Não era o processo: no fim da noite a pizzaria tem
+ * na mão quantas saíram por tamanho em cada canal, não a abertura por sabor.
+ * Montar dez linhas para lançar um número que já se sabia somado custava
+ * minutos e convidava ao erro.
+ *
+ * Agora são três campos por canal, com o total de cada bloco e o TOTAL GERAL
+ * atualizando enquanto se digita — o número que a pessoa confere antes de
+ * mandar. A soma é a mesma do painel (`tipos.ts`), de propósito: folha e painel
+ * somando por conta própria é como uma das duas acaba certa e a outra errada.
  */
-export function PizzaPublicForm({
-  token,
-  unitName,
-  hoje,
-  flavors,
-  fechamentoDeHoje,
-}: {
+
+const ICONE_CANAL: Record<CanalPizza, React.ComponentType<{ className?: string }>> = {
+  TEKNISA: Store,
+  IFOOD: Bike,
+};
+
+interface Props {
   token: string;
-  unitName: string;
   hoje: string;
-  flavors: Sabor[];
-  fechamentoDeHoje: { items: LinhaSalva[]; observation: string | null } | null;
-}) {
-  const [data, setData] = useState(hoje);
-  const [linhas, setLinhas] = useState<Linha[]>([{ ...LINHA_VAZIA }]);
+  /** Fechamento já gravado para a data aberta (duplicidade), se houver. */
+  fechamentoDeHoje: { contagens: ContagensDoFechamento; observation: string | null; sabores: number } | null;
+}
+
+export function PizzaPublicForm({ token, hoje, fechamentoDeHoje }: Props) {
+  const [data, setData] = useState<string | null>(hoje);
+  const [contagens, setContagens] = useState<ContagensDoFechamento>(contagensVazias);
   const [observation, setObservation] = useState('');
-  const [substituir, setSubstituir] = useState(false);
-  const [duplicado, setDuplicado] = useState(fechamentoDeHoje !== null);
   const [enviando, setEnviando] = useState(false);
-  const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [duplicado, setDuplicado] = useState<ContagensDoFechamento | null>(fechamentoDeHoje ? fechamentoDeHoje.contagens : null);
   const [pronto, setPronto] = useState<{ total: number; corrigido: boolean } | null>(null);
+  const resumoRef = useRef<HTMLDivElement>(null);
 
-  const opcoesDeSabor = flavors.map((f) => ({ value: f.id, label: f.name }));
-  const opcoesDeTamanho = TAMANHOS.map((t) => ({ value: t.valor, label: t.rotulo }));
+  const totais = useMemo(() => ({
+    TEKNISA: totalDoCanal(contagens, 'TEKNISA'),
+    IFOOD: totalDoCanal(contagens, 'IFOOD'),
+    geral: totalGeral(contagens),
+  }), [contagens]);
 
-  const total = totalDePizzas(linhas.map((l) => ({ quantity: parseInt(l.quantity, 10) || 0 })));
-
-  function alterar(i: number, campo: Partial<Linha>) {
-    setLinhas((s) => s.map((l, j) => (j === i ? { ...l, ...campo } : l)));
+  function mudar(canal: CanalPizza, size: TamanhoPizza, bruto: string) {
+    /* Só dígitos. Campo numérico no celular ainda aceita colar "12,5" e o
+       traço do sinal — e um `-3` viraria erro só lá no servidor. */
+    const limpo = bruto.replace(/\D/g, '').slice(0, 5);
+    setContagens((c) => ({ ...c, [canal]: { ...c[canal], [size]: limpo === '' ? 0 : Number(limpo) } }));
+    setErro(null);
   }
 
-  /** Troca de data: consulta o servidor antes de deixar digitar por cima. */
-  async function trocarData(nova: string) {
-    setData(nova);
+  async function enviar(substituir = false) {
     setErro(null);
-    setPronto(null);
-    setSubstituir(false);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(nova)) return;
-    setCarregando(true);
-    try {
-      const res = await fetch(`/api/pizzas?token=${encodeURIComponent(token)}&data=${nova}`);
-      const d = await res.json().catch(() => ({}));
-      setDuplicado(Boolean(d?.closing));
-    } catch {
-      setDuplicado(false);
-    } finally {
-      setCarregando(false);
-    }
-  }
+    if (!data) { setErro('Escolha a data do fechamento.'); return; }
+    if (totais.geral === 0) { setErro('Informe ao menos uma pizza antes de enviar.'); return; }
 
-  /** Traz o que já foi lançado para a tela, para a correção ser sobre o real. */
-  async function carregarParaCorrigir() {
-    setCarregando(true);
-    setErro(null);
-    try {
-      const res = await fetch(`/api/pizzas?token=${encodeURIComponent(token)}&data=${data}`);
-      const d = await res.json().catch(() => ({}));
-      if (d?.closing?.items?.length) {
-        setLinhas(paraLinhas(d.closing.items));
-        setObservation(d.closing.observation ?? '');
-        setSubstituir(true);
-      } else {
-        setErro('Não foi possível carregar o fechamento desta data.');
-      }
-    } catch {
-      setErro('Falha de conexão');
-    } finally {
-      setCarregando(false);
-    }
-  }
-
-  async function enviar() {
-    setErro(null);
-    const items = linhas
-      .filter((l) => l.flavorId && (parseInt(l.quantity, 10) || 0) > 0)
-      .map((l) => ({ size: l.size, flavorId: l.flavorId, quantity: parseInt(l.quantity, 10) }));
-    if (items.length === 0) {
-      setErro('Informe ao menos um sabor com quantidade.');
-      return;
-    }
     setEnviando(true);
     try {
       const res = await fetch('/api/pizzas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, operationalDate: data, items, observation, substituir }),
+        body: JSON.stringify({ token, operationalDate: data, contagens, observation, substituir }),
       });
-      const d = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setPronto({ total: d.total ?? total, corrigido: Boolean(d.substituiu) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (body.reason === 'DUPLICADO') { setDuplicado(contagensVazias()); setErro(body.error); return; }
+        setErro(body.error ?? 'Não foi possível enviar o fechamento.');
         return;
       }
-      if (d?.reason === 'DUPLICADO') {
-        setDuplicado(true);
-        setErro(null);
-        return;
-      }
-      setErro(d?.error ?? 'Não foi possível enviar o fechamento.');
+      setPronto({ total: body.total, corrigido: Boolean(body.substituiu) });
+      setDuplicado(null);
     } catch {
-      setErro('Falha de conexão');
+      setErro('Sem conexão. Confira a internet e tente de novo.');
     } finally {
       setEnviando(false);
     }
   }
 
+  /** Traz para a tela o que já está gravado, para a pessoa corrigir em cima. */
+  async function carregarParaCorrigir() {
+    setErro(null);
+    const res = await fetch(`/api/pizzas?token=${encodeURIComponent(token)}&data=${data ?? hoje}`);
+    const body = await res.json().catch(() => ({}));
+    if (body?.closing?.contagens) {
+      setContagens(body.closing.contagens);
+      setObservation(body.closing.observation ?? '');
+      setDuplicado(body.closing.contagens);
+      resumoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
   if (pronto) {
     return (
-      <div className="rounded-card bg-surface p-6 text-center">
-        <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-success/15">
-          <Check className="h-8 w-8 text-success" />
-        </div>
-        <p className="text-lg font-bold text-ink-900">
+      <div className="space-y-3 text-center">
+        <CheckCircle2 className="mx-auto h-12 w-12 text-success" aria-hidden />
+        <p className="sgo-type-17 font-semibold text-ink-900">
           {pronto.corrigido ? 'Fechamento corrigido!' : 'Fechamento enviado!'}
         </p>
-        <p className="text-sm text-ink-500">
-          {pronto.total} {pronto.total === 1 ? 'pizza registrada' : 'pizzas registradas'} em {emBR(data)}.
-        </p>
+        <p className="text-sm text-ink-500">{emBR(data ?? hoje)} — {pronto.total} pizza(s).</p>
         <Button
           variant="secondary"
-          className="mt-4"
-          onClick={() => {
-            setPronto(null);
-            setLinhas([{ ...LINHA_VAZIA }]);
-            setObservation('');
-            setSubstituir(false);
-            trocarData(data);
-          }}
+          className="w-full"
+          onClick={() => { setPronto(null); setContagens(contagensVazias()); setObservation(''); setDuplicado(null); }}
         >
-          Lançar outra data
+          Lançar outro dia
         </Button>
       </div>
     );
   }
 
-  if (flavors.length === 0) {
-    return (
-      <Banner
-        tone="warning"
-        title="Nenhum sabor cadastrado"
-        description={`A pizzaria de ${unitName} ainda não tem sabores no catálogo. Peça ao gerente para cadastrá-los no SGO.`}
-      />
-    );
-  }
-
   return (
-    <div className="space-y-4 rounded-card bg-surface p-4">
-      <Input
+    <div className="space-y-4">
+      <DatePicker
         label="Data do fechamento"
-        type="date"
-        max={hoje}
+        required
         value={data}
-        onChange={(e) => trocarData(e.target.value)}
+        onValueChange={(v) => { setData(v); setDuplicado(null); setErro(null); }}
+        max={hoje}
       />
 
-      {duplicado && !substituir && (
+      {CANAIS.map((canal, i) => {
+        const Icone = ICONE_CANAL[canal.valor];
+        return (
+          <section key={canal.valor} className="rounded-card border border-line bg-surface p-3">
+            <p className="mb-2 flex items-center gap-2 sgo-type-11 font-semibold text-ink-900">
+              <Icone className="h-4 w-4 text-brand" aria-hidden />
+              {i + 1}. {canal.rotulo.toUpperCase()}
+            </p>
+            <div className="space-y-2">
+              {TAMANHOS.map((t) => (
+                <div key={t.valor} className="flex items-center gap-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-ink-900">{nomeComercial(t.valor)}</span>
+                    <span className="block text-xs text-ink-500">{rotuloDoTamanho(t.valor)}</span>
+                  </span>
+                  <Input
+                    aria-label={`${canal.rotulo} — ${nomeComercial(t.valor)} (${rotuloDoTamanho(t.valor)})`}
+                    inputMode="numeric"
+                    /* `value` sempre string e sem zero à esquerda: um campo que
+                       começa em "0" e vira "05" quando se digita é o tipo de
+                       detalhe que faz a pessoa apagar e redigitar. */
+                    value={String(contagens[canal.valor][t.valor])}
+                    onChange={(e) => mudar(canal.valor, t.valor, e.target.value)}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="w-20 text-center text-base tabular-nums"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 border-t border-line pt-2 text-right text-sm text-ink-500">
+              Total {canal.rotulo}: <b className="tabular-nums text-ink-900">{totais[canal.valor]}</b>
+            </p>
+          </section>
+        );
+      })}
+
+      {/* RESUMO — é o número que a pessoa confere antes de mandar, então ele é
+          o elemento mais forte da tela depois dos campos. */}
+      <div ref={resumoRef} className="rounded-card border-2 border-brand/40 bg-brand/5 p-3">
+        <div className="flex items-baseline justify-between text-sm">
+          <span className="text-ink-500">Teknisa</span>
+          <span className="font-semibold tabular-nums text-ink-900">{totais.TEKNISA} pizzas</span>
+        </div>
+        <div className="mt-1 flex items-baseline justify-between text-sm">
+          <span className="text-ink-500">iFood</span>
+          <span className="font-semibold tabular-nums text-ink-900">{totais.IFOOD} pizzas</span>
+        </div>
+        <div className="mt-2 flex items-baseline justify-between border-t border-brand/30 pt-2">
+          <span className="sgo-type-11 font-semibold text-ink-900">Total geral</span>
+          <span className="sgo-type-24 font-semibold tabular-nums text-brand">{totais.geral}</span>
+        </div>
+      </div>
+
+      <Input label="Observação (opcional)" value={observation} onChange={(e) => setObservation(e.target.value)} />
+
+      {erro && (
+        <Banner
+          tone={duplicado ? 'warning' : 'danger'}
+          title={erro}
+          description={duplicado ? 'Carregue o que já foi lançado e corrija em cima, para não sobrescrever sem ver.' : undefined}
+          action={duplicado ? <Button size="sm" variant="secondary" onClick={carregarParaCorrigir}>Carregar e corrigir</Button> : undefined}
+        />
+      )}
+
+      {duplicado && !erro && (
         <Banner
           tone="warning"
-          title={MSG_DUPLICADO}
-          description="Para corrigir, carregue o que já foi lançado e ajuste os números. O gerente é avisado da correção."
-          action={
-            <Button size="sm" variant="secondary" loading={carregando} onClick={carregarParaCorrigir}>
-              Carregar e corrigir
-            </Button>
-          }
+          title="Este dia já tem fechamento"
+          description="Enviar agora vai substituir o que está gravado. O gerente da unidade é avisado da correção."
         />
       )}
-
-      {substituir && (
-        <Banner
-          tone="info"
-          title="Você está corrigindo um fechamento já enviado"
-          description="Ao enviar, os números abaixo substituem os anteriores desta data."
-        />
-      )}
-
-      <div className="space-y-3">
-        {linhas.map((l, i) => (
-          /* EMPILHADO, não em linha única. Mobile-first é o padrão do SGO e
-             este formulário é preenchido no celular, no fim do turno: com os
-             quatro controles lado a lado em 375px o sabor cabia em duas letras
-             ("Frango com Catupiry" virava "F..") e ninguém conferia o que tinha
-             lançado. O sabor ocupa a linha inteira; tamanho e quantidade, que
-             são curtos e se explicam sozinhos, dividem a de baixo. */
-          <div key={i} className="space-y-2 rounded-card border border-line p-3">
-            <Select
-              label={i === 0 ? 'Sabor' : undefined}
-              aria-label={`Sabor da linha ${i + 1}`}
-              placeholder="Escolha o sabor"
-              options={opcoesDeSabor}
-              value={l.flavorId || null}
-              onValueChange={(v) => alterar(i, { flavorId: v })}
-            />
-            <div className="flex items-end gap-2">
-              <div className="w-28 shrink-0">
-                <Select
-                  label={i === 0 ? 'Tamanho' : undefined}
-                  aria-label={`Tamanho da linha ${i + 1}`}
-                  options={opcoesDeTamanho}
-                  value={l.size}
-                  onValueChange={(v) => alterar(i, { size: v as TamanhoPizza })}
-                />
-              </div>
-              <div className="w-20 shrink-0">
-                <Input
-                  label={i === 0 ? 'Qtd' : undefined}
-                  aria-label={`Quantidade da linha ${i + 1}`}
-                  inputMode="numeric"
-                  placeholder="0"
-                  className="text-right tabular-nums"
-                  value={l.quantity}
-                  onChange={(e) => alterar(i, { quantity: e.target.value.replace(/\D/g, '') })}
-                />
-              </div>
-              <div className="flex-1" />
-              <IconButton
-                variant="danger"
-                className="shrink-0"
-                aria-label={`Remover linha ${i + 1}`}
-                onClick={() => setLinhas((s) => (s.length > 1 ? s.filter((_, j) => j !== i) : s))}
-              >
-                <X className="h-4 w-4" />
-              </IconButton>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <Button variant="ghost" size="sm" onClick={() => setLinhas((s) => [...s, { ...LINHA_VAZIA }])}>
-        <Plus className="h-4 w-4" /> Adicionar sabor
-      </Button>
-
-      {/* O total antes do envio: quem fecha o caixa confere aqui, não de cabeça. */}
-      <div className="flex items-baseline justify-between rounded-card border-2 border-brand/30 bg-brand/5 px-3 py-2">
-        <span className="text-xs font-semibold text-brand">Total de pizzas</span>
-        <span className="sgo-type-24 font-bold tabular-nums text-brand">{total}</span>
-      </div>
-
-      <Input
-        label="Observação (opcional)"
-        value={observation}
-        onChange={(e) => setObservation(e.target.value)}
-        placeholder="Ex.: promoção de terça"
-      />
-
-      {erro && <Banner tone="danger" title={erro} />}
 
       <Button
+        onClick={() => enviar(Boolean(duplicado))}
+        loading={enviando}
         size="lg"
         className="w-full"
-        loading={enviando}
-        disabled={duplicado && !substituir}
-        onClick={enviar}
       >
-        <Send className="h-5 w-5" /> Enviar fechamento
+        {duplicado ? <><AlertTriangle className="h-5 w-5" /> Substituir fechamento</> : <><Send className="h-5 w-5" /> Enviar fechamento</>}
       </Button>
     </div>
   );
