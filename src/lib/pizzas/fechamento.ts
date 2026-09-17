@@ -3,8 +3,12 @@ import { prisma } from '@/lib/db/prisma';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { audit } from '@/lib/audit';
 import { notifyUnitRole } from '@/lib/notifications';
-import { saboresAtivos, unidadePorToken } from '@/lib/pizzas/acesso';
-import { DIAS_RETROATIVOS, FORMATO_DATA, ehTamanho, emBR, totalDePizzas, type ItemDeFechamento } from '@/lib/pizzas/tipos';
+import { unidadePorToken } from '@/lib/pizzas/acesso';
+import {
+  CANAIS, DIAS_RETROATIVOS, FORMATO_DATA, TAMANHOS, contagensDeLinhas, contagensVazias, emBR,
+  linhasDeContagem, quantidadeValida, totalGeral,
+  type ContagensDoFechamento,
+} from '@/lib/pizzas/tipos';
 
 /**
  * Fechamento de pizzas do dia, preenchido pelo LINK PÚBLICO (sem login).
@@ -25,11 +29,17 @@ export interface FechamentoSalvo {
   id: string;
   operationalDate: string;
   observation: string | null;
+  /** As seis quantidades do fechamento novo. */
+  contagens: ContagensDoFechamento;
+  /**
+   * Linhas por SABOR dos fechamentos antigos. Vazio nos novos — mas o dia
+   * antigo continua abrindo com o que foi lançado, em vez de parecer vazio.
+   */
   items: ItemSalvo[];
   atualizadoEm: Date;
 }
 
-export type MotivoRecusa = 'TOKEN' | 'DATA' | 'ITENS' | 'DUPLICADO';
+export type MotivoRecusa = 'TOKEN' | 'DATA' | 'QUANTIDADES' | 'VAZIO' | 'DUPLICADO';
 
 export type ResultadoFechamento =
   | { ok: true; closingId: string; operationalDate: string; substituiu: boolean; total: number }
@@ -39,7 +49,10 @@ export type ResultadoFechamento =
 export async function fechamentoDoDia(unitId: string, operationalDate: string): Promise<FechamentoSalvo | null> {
   const c = await prisma.pizzaClosing.findUnique({
     where: { unitId_operationalDate: { unitId, operationalDate } },
-    include: { items: { orderBy: [{ size: 'desc' }, { flavorName: 'asc' }] } },
+    include: {
+      items: { orderBy: [{ size: 'desc' }, { flavorName: 'asc' }] },
+      counts: true,
+    },
   });
   if (!c) return null;
   return {
@@ -47,6 +60,7 @@ export async function fechamentoDoDia(unitId: string, operationalDate: string): 
     operationalDate: c.operationalDate,
     observation: c.observation,
     atualizadoEm: c.updatedAt,
+    contagens: contagensDeLinhas(c.counts),
     items: c.items.map((i) => ({ size: i.size, flavorId: i.flavorId, flavorName: i.flavorName, quantity: i.quantity })),
   };
 }
@@ -62,7 +76,7 @@ export async function salvarFechamento(
   input: {
     token: string;
     operationalDate?: string;
-    items: ItemDeFechamento[];
+    contagens: ContagensDoFechamento;
     observation?: string | null;
     substituir?: boolean;
   },
@@ -82,27 +96,24 @@ export async function salvarFechamento(
     operationalDate = input.operationalDate;
   }
 
-  // Só sabores do catálogo ATIVO desta unidade. Um flavorId de outra unidade
-  // faria o item vazar de pizzaria — e a FK sozinha não impediria isso.
-  const sabores = await saboresAtivos(unit.id);
-  const nomePorId = new Map(sabores.map((s) => [s.id, s.name]));
-
-  // Mesma combinação tamanho+sabor digitada duas vezes SOMA: é o que a pessoa
-  // quis dizer, e deixar passar violaria a unique com um 500 na cara dela.
-  const porChave = new Map<string, { size: string; flavorId: string; flavorName: string; quantity: number }>();
-  for (const item of input.items ?? []) {
-    if (!ehTamanho(item.size)) return { ok: false, reason: 'ITENS' };
-    const flavorName = nomePorId.get(item.flavorId);
-    if (!flavorName) return { ok: false, reason: 'ITENS' };
-    const qtd = Number(item.quantity);
-    if (!Number.isInteger(qtd) || qtd < 1 || qtd > 10_000) return { ok: false, reason: 'ITENS' };
-    const chave = `${item.size}|${item.flavorId}`;
-    const atual = porChave.get(chave);
-    if (atual) atual.quantity += qtd;
-    else porChave.set(chave, { size: item.size, flavorId: item.flavorId, flavorName, quantity: qtd });
+  /* As SEIS quantidades, validadas uma a uma. Zero é valor legítimo em cada
+     campo — vender só pelo iFood num dia é normal. */
+  const contagens: ContagensDoFechamento = contagensVazias();
+  for (const canal of CANAIS) {
+    for (const tam of TAMANHOS) {
+      const bruto = input.contagens?.[canal.valor]?.[tam.valor] ?? 0;
+      if (!quantidadeValida(bruto)) return { ok: false, reason: 'QUANTIDADES' };
+      contagens[canal.valor][tam.valor] = Number(bruto);
+    }
   }
-  const itens = [...porChave.values()];
-  if (itens.length === 0) return { ok: false, reason: 'ITENS' };
+
+  /* Fechamento com as seis em zero é RECUSADO — e não é capricho: o painel
+     calcula a média por DIA LANÇADO justamente porque dia sem fechamento é
+     dado que falta, não venda zero. Gravar um dia de zero pizzas entraria na
+     conta e afundaria a média com um dia em que a pizzaria não vendeu porque
+     não abriu. Dia sem venda é dia sem fechamento. */
+  const total = totalGeral(contagens);
+  if (total === 0) return { ok: false, reason: 'VAZIO' };
 
   const existente = await prisma.pizzaClosing.findUnique({
     where: { unitId_operationalDate: { unitId: unit.id, operationalDate } },
@@ -117,20 +128,17 @@ export async function salvarFechamento(
       create: { unitId: unit.id, operationalDate, observation },
       update: { observation },
     });
-    await tx.pizzaClosingItem.deleteMany({ where: { closingId: c.id } });
-    await tx.pizzaClosingItem.createMany({
-      data: itens.map((i) => ({
-        closingId: c.id,
-        size: i.size as 'CM25' | 'CM30' | 'CM35',
-        flavorId: i.flavorId,
-        flavorName: i.flavorName,
-        quantity: i.quantity,
-      })),
+    await tx.pizzaClosingCount.deleteMany({ where: { closingId: c.id } });
+    await tx.pizzaClosingCount.createMany({
+      data: linhasDeContagem(contagens).map((l) => ({ closingId: c.id, channel: l.channel, size: l.size, quantity: l.quantity })),
     });
+    /* Corrigir um dia ANTIGO (que fora lançado por sabor) pelo formulário novo
+       apaga as linhas de sabor daquele dia: manter as duas somaria a mesma
+       venda duas vezes no painel. Só daquele dia — o resto do histórico fica. */
+    await tx.pizzaClosingItem.deleteMany({ where: { closingId: c.id } });
     return c;
   });
 
-  const total = totalDePizzas(itens);
   const substituiu = Boolean(existente);
 
   await audit({
@@ -140,7 +148,13 @@ export async function salvarFechamento(
     module: 'PIZZAS',
     entity: 'pizza_closing',
     entityId: closing.id,
-    metadata: { operationalDate, total, linhas: itens.length, origem: 'link-publico' },
+    metadata: {
+      operationalDate,
+      total,
+      teknisa: totalDoCanalAuditoria(contagens, 'TEKNISA'),
+      ifood: totalDoCanalAuditoria(contagens, 'IFOOD'),
+      origem: 'link-publico',
+    },
     ...ctx,
   });
 
@@ -157,4 +171,9 @@ export async function salvarFechamento(
   }
 
   return { ok: true, closingId: closing.id, operationalDate, substituiu, total };
+}
+
+/** Só para a metadata da auditoria não depender de import extra na leitura. */
+function totalDoCanalAuditoria(c: ContagensDoFechamento, canal: 'TEKNISA' | 'IFOOD'): number {
+  return TAMANHOS.reduce((t, tam) => t + (c[canal]?.[tam.valor] ?? 0), 0);
 }

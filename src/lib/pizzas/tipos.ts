@@ -32,27 +32,6 @@ export function ehTamanho(v: unknown): v is TamanhoPizza {
   return typeof v === 'string' && v in ROTULOS;
 }
 
-/** Uma linha do fechamento, como trafega entre tela e servidor. */
-export interface ItemDeFechamento {
-  size: TamanhoPizza;
-  flavorId: string;
-  quantity: number;
-}
-
-/** Total de pizzas de uma lista — a conta que a tela mostra antes de enviar. */
-export function totalDePizzas(itens: { quantity: number }[]): number {
-  return itens.reduce((t, i) => t + (Number.isFinite(i.quantity) ? i.quantity : 0), 0);
-}
-
-/** Soma por tamanho, na ordem de `TAMANHOS`. */
-export function totaisPorTamanho(itens: ItemDeFechamento[]): { size: TamanhoPizza; rotulo: string; total: number }[] {
-  return TAMANHOS.map((t) => ({
-    size: t.valor,
-    rotulo: t.rotulo,
-    total: totalDePizzas(itens.filter((i) => i.size === t.valor)),
-  }));
-}
-
 /** Formato de data do fechamento: o mesmo 'YYYY-MM-DD' da data operacional. */
 export const FORMATO_DATA = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -74,4 +53,93 @@ export const MSG_DUPLICADO = 'Já existe um fechamento para esta data.';
  */
 export function emBR(iso: string): string {
   return iso.split('-').reverse().join('/');
+}
+
+/* ───────────────────────── Fechamento por CANAL ─────────────────────────
+ *
+ * O fechamento deixou de ser "tamanho × sabor, várias linhas" e passou a ser
+ * SEIS NÚMEROS: três tamanhos em dois canais. A pizzaria fecha o dia somando o
+ * que saiu pelo Teknisa e o que saiu pelo iFood — pedir sabor obrigava a
+ * montar linha por linha um dado que ninguém tinha na mão na hora do
+ * fechamento.
+ *
+ * Os sabores continuam existindo no banco e no catálogo: os fechamentos
+ * antigos são histórico e não se reescrevem.
+ */
+
+export const CANAIS = [
+  { valor: 'TEKNISA', rotulo: 'Teknisa' },
+  { valor: 'IFOOD', rotulo: 'iFood' },
+] as const;
+
+export type CanalPizza = (typeof CANAIS)[number]['valor'];
+
+const ROTULO_CANAL: Record<CanalPizza, string> = { TEKNISA: 'Teknisa', IFOOD: 'iFood' };
+
+export function rotuloDoCanal(c: CanalPizza): string {
+  return ROTULO_CANAL[c];
+}
+
+export function ehCanal(v: unknown): v is CanalPizza {
+  return typeof v === 'string' && v in ROTULO_CANAL;
+}
+
+/** Nome comercial do tamanho — é assim que a operação chama na pizzaria. */
+const NOME_COMERCIAL: Record<TamanhoPizza, string> = {
+  CM35: 'Gigante',
+  CM30: 'Grande',
+  CM25: 'Brotinho',
+};
+
+export function nomeComercial(t: TamanhoPizza): string {
+  return NOME_COMERCIAL[t];
+}
+
+/** As seis quantidades do fechamento, indexadas por canal e tamanho. */
+export type ContagensDoFechamento = Record<CanalPizza, Record<TamanhoPizza, number>>;
+
+/** Um fechamento zerado — o estado inicial do formulário. */
+export function contagensVazias(): ContagensDoFechamento {
+  return {
+    TEKNISA: { CM35: 0, CM30: 0, CM25: 0 },
+    IFOOD: { CM35: 0, CM30: 0, CM25: 0 },
+  };
+}
+
+/** Total de um canal: a soma dos três tamanhos dele. */
+export function totalDoCanal(c: ContagensDoFechamento, canal: CanalPizza): number {
+  return TAMANHOS.reduce((t, tam) => t + (c[canal]?.[tam.valor] ?? 0), 0);
+}
+
+/** TOTAL GERAL — a conta que a operação confere antes de enviar. */
+export function totalGeral(c: ContagensDoFechamento): number {
+  return CANAIS.reduce((t, canal) => t + totalDoCanal(c, canal.valor), 0);
+}
+
+/**
+ * Quantidade válida de um campo: NÚMERO inteiro, de 0 a 10.000.
+ *
+ * Exige o tipo, não só o valor. `Number('')` é 0 e `Number(null)` também: com
+ * coerção, um campo que chegasse vazio ou nulo de um corpo malformado viraria
+ * "vendeu zero" em silêncio. Campo AUSENTE é outra história — esse vira zero de
+ * propósito, antes da validação, porque faltar chave num link público é normal.
+ */
+export function quantidadeValida(v: unknown): boolean {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 10_000;
+}
+
+/** As seis quantidades achatadas, para gravar e para o teste conferir. */
+export function linhasDeContagem(c: ContagensDoFechamento): { channel: CanalPizza; size: TamanhoPizza; quantity: number }[] {
+  return CANAIS.flatMap((canal) =>
+    TAMANHOS.map((tam) => ({ channel: canal.valor, size: tam.valor, quantity: c[canal.valor]?.[tam.valor] ?? 0 })),
+  );
+}
+
+/** Reconstrói as contagens a partir das linhas gravadas (o caminho de volta). */
+export function contagensDeLinhas(linhas: { channel: string; size: string; quantity: number }[]): ContagensDoFechamento {
+  const c = contagensVazias();
+  for (const l of linhas) {
+    if (ehCanal(l.channel) && ehTamanho(l.size)) c[l.channel][l.size] = l.quantity;
+  }
+  return c;
 }

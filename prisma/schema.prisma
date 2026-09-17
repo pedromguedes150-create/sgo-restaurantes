@@ -3212,11 +3212,44 @@ model PizzaClosing {
 
   unit      Unit               @relation(fields: [unitId], references: [id], onDelete: Cascade)
   createdBy User?              @relation("PizzaClosingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  /// Fechamentos ANTIGOS (por sabor). Preservados de propósito: histórico já
+  /// fechado não se reescreve, e apagar a tabela seria migração destrutiva.
   items     PizzaClosingItem[]
+  counts    PizzaClosingCount[]
 
   @@unique([unitId, operationalDate])
   @@index([unitId, operationalDate])
   @@map("pizza_closings")
+}
+
+/// Canal de venda do fechamento. Os dois nascem juntos porque a pizzaria fecha
+/// o dia somando as duas origens — e o relatório precisa saber de qual veio
+/// cada pizza. É enum, e não texto, para um terceiro canal (balcão, retirada)
+/// entrar por migração e não por digitação.
+enum PizzaChannel {
+  TEKNISA
+  IFOOD
+}
+
+/// Quantidade fechada por CANAL e TAMANHO — a estrutura do fechamento novo.
+///
+/// Tabela à parte, e não seis colunas em `pizza_closings`, por dois motivos: um
+/// canal novo vira LINHA (migração de dados, não de schema), e "quanto de 35cm
+/// veio do iFood" sai de um group by em vez de um caso no código.
+/// Os TOTAIS não são gravados de propósito: total guardado é total que um dia
+/// discorda das parcelas.
+model PizzaClosingCount {
+  id        String       @id @default(cuid())
+  closingId String
+  channel   PizzaChannel
+  size      PizzaSize
+  quantity  Int
+
+  closing PizzaClosing @relation(fields: [closingId], references: [id], onDelete: Cascade)
+
+  @@unique([closingId, channel, size])
+  @@index([closingId])
+  @@map("pizza_closing_counts")
 }
 
 /// Uma linha do fechamento: tamanho + sabor + quantidade.

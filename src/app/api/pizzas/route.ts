@@ -16,7 +16,8 @@ import { FORMATO_DATA, MSG_DUPLICADO } from '@/lib/pizzas/tipos';
 const RECUSAS: Record<MotivoRecusa, { msg: string; status: number }> = {
   TOKEN: { msg: 'Link inválido ou desativado', status: 404 },
   DATA: { msg: 'Data fora do período permitido', status: 400 },
-  ITENS: { msg: 'Informe ao menos um tamanho, sabor e quantidade válidos', status: 400 },
+  QUANTIDADES: { msg: 'As quantidades precisam ser números inteiros a partir de zero', status: 400 },
+  VAZIO: { msg: 'Informe ao menos uma pizza para fechar o dia', status: 400 },
   DUPLICADO: { msg: MSG_DUPLICADO, status: 409 },
 };
 
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
     {
       token: String(body.token),
       operationalDate: body.operationalDate ? String(body.operationalDate) : undefined,
-      items: Array.isArray(body.items) ? body.items : [],
+      contagens: body.contagens ?? {},
       observation: body.observation ?? null,
       substituir: body.substituir === true,
     },

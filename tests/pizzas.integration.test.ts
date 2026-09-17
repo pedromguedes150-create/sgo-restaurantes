@@ -7,29 +7,52 @@ import { recortarPizzas, unidadePorToken, unidadesComPizzaria, garantirTokenPubl
 import { salvarFechamento, fechamentoDoDia } from '@/lib/pizzas/fechamento';
 import { inicioDoPeriodo, painelDePizzas } from '@/lib/pizzas/painel';
 import { alternarSabor, criarSabor, excluirSabor, listarSabores, renomearSabor } from '@/lib/pizzas/catalogo';
-import { totalDePizzas, totaisPorTamanho, rotuloDoTamanho } from '@/lib/pizzas/tipos';
+import {
+  contagensVazias, contagensDeLinhas, linhasDeContagem, nomeComercial, quantidadeValida,
+  rotuloDoCanal, rotuloDoTamanho, totalDoCanal, totalGeral, type ContagensDoFechamento,
+} from '@/lib/pizzas/tipos';
 import type { SessionUser } from '@/lib/auth/session';
 
+/** Atalho de leitura: monta as seis quantidades numa linha só. */
+const conta = (t35: number, t30: number, t25: number, i35: number, i30: number, i25: number): ContagensDoFechamento => ({
+  TEKNISA: { CM35: t35, CM30: t30, CM25: t25 },
+  IFOOD: { CM35: i35, CM30: i30, CM25: i25 },
+});
+
 describe('vocabulário do módulo (puro)', () => {
-  it('soma o total de pizzas ignorando quantidade não numérica', () => {
-    expect(totalDePizzas([{ quantity: 12 }, { quantity: 8 }, { quantity: NaN }])).toBe(20);
+  it('soma cada canal e o total geral — é a conta que a tela mostra antes de enviar', () => {
+    /* O exemplo do pedido: Teknisa 10+5+3 = 18, iFood 4+2+1 = 7, geral 25. */
+    const c = conta(10, 5, 3, 4, 2, 1);
+    expect(totalDoCanal(c, 'TEKNISA')).toBe(18);
+    expect(totalDoCanal(c, 'IFOOD')).toBe(7);
+    expect(totalGeral(c)).toBe(25);
   });
 
-  it('agrupa por tamanho na ordem de venda, com zero para tamanho sem linha', () => {
-    const t = totaisPorTamanho([
-      { size: 'CM35', flavorId: 'a', quantity: 12 },
-      { size: 'CM35', flavorId: 'b', quantity: 8 },
-      { size: 'CM30', flavorId: 'a', quantity: 5 },
-    ]);
-    expect(t.map((x) => [x.rotulo, x.total])).toEqual([
-      ['35 cm', 20],
-      ['30 cm', 5],
-      ['25 cm', 0],
-    ]);
+  it('um fechamento vazio soma zero, sem estourar', () => {
+    expect(totalGeral(contagensVazias())).toBe(0);
   });
 
-  it('só existem os três tamanhos da casa', () => {
+  it('quantidade válida é inteiro de zero a dez mil', () => {
+    for (const v of [0, 1, 10_000]) expect(quantidadeValida(v), String(v)).toBe(true);
+    for (const v of [-1, 1.5, NaN, '', 10_001, 'x']) expect(quantidadeValida(v), String(v)).toBe(false);
+  });
+
+  it('as seis linhas vão e voltam iguais', () => {
+    /* O caminho de ida (gravar) e o de volta (abrir para corrigir) precisam
+       resultar na MESMA tabela — senão corrigir um dia mudaria os números sem
+       ninguém digitar nada. */
+    const c = conta(9, 8, 7, 6, 5, 4);
+    const linhas = linhasDeContagem(c);
+    expect(linhas).toHaveLength(6);
+    expect(contagensDeLinhas(linhas)).toEqual(c);
+  });
+
+  it('os rótulos são os da pizzaria', () => {
     expect(rotuloDoTamanho('CM25')).toBe('25 cm');
+    expect(nomeComercial('CM35')).toBe('Gigante');
+    expect(nomeComercial('CM30')).toBe('Grande');
+    expect(nomeComercial('CM25')).toBe('Brotinho');
+    expect(rotuloDoCanal('IFOOD')).toBe('iFood');
   });
 });
 
@@ -136,106 +159,109 @@ describe('o token é a credencial do link público', () => {
   });
 });
 
+/**
+ * Um fechamento no formato ANTIGO (por sabor), gravado direto no banco.
+ *
+ * O formulário não produz mais isso — e é justamente por isso que o teste
+ * precisa produzir: as regras do catálogo e a leitura do painel existem para
+ * proteger esse histórico, e sem ele os casos passariam sem exercitar nada.
+ */
+async function lancamentoLegado(flavorId: string, diasAtras: number, quantity: number): Promise<string> {
+  const dia = format(subDays(new Date(`${hoje}T12:00:00`), diasAtras), 'yyyy-MM-dd');
+  const sabor = await prisma.pizzaFlavor.findUnique({ where: { id: flavorId }, select: { name: true } });
+  const c = await prisma.pizzaClosing.upsert({
+    where: { unitId_operationalDate: { unitId: pizzariaId, operationalDate: dia } },
+    create: { unitId: pizzariaId, operationalDate: dia },
+    update: {},
+  });
+  await prisma.pizzaClosingItem.deleteMany({ where: { closingId: c.id } });
+  await prisma.pizzaClosingItem.create({
+    data: { closingId: c.id, size: 'CM30', flavorId, flavorName: sabor!.name, quantity },
+  });
+  return dia;
+}
+
 describe('fechamento do dia', () => {
-  it('grava o fechamento e devolve o total', async () => {
-    const r = await salvarFechamento({
-      token,
-      items: [
-        { size: 'CM35', flavorId: calabresaId, quantity: 12 },
-        { size: 'CM35', flavorId: frangoId, quantity: 8 },
-        { size: 'CM30', flavorId: calabresaId, quantity: 5 },
-      ],
-    });
+  it('grava as seis quantidades e devolve o total geral', async () => {
+    const r = await salvarFechamento({ token, contagens: conta(10, 5, 3, 4, 2, 1) });
     expect(r).toMatchObject({ ok: true, total: 25, substituiu: false, operationalDate: hoje });
+
+    const atual = await fechamentoDoDia(pizzariaId, hoje);
+    expect(atual!.contagens).toEqual(conta(10, 5, 3, 4, 2, 1));
+  });
+
+  it('separa Teknisa de iFood no banco — é o que permite o relatório por canal', async () => {
+    const linhas = await prisma.pizzaClosingCount.findMany({
+      where: { closing: { unitId: pizzariaId, operationalDate: hoje } },
+      select: { channel: true, size: true, quantity: true },
+    });
+    expect(linhas).toHaveLength(6);
+    expect(linhas.find((l) => l.channel === 'IFOOD' && l.size === 'CM35')!.quantity).toBe(4);
+    expect(linhas.find((l) => l.channel === 'TEKNISA' && l.size === 'CM25')!.quantity).toBe(3);
+  });
+
+  it('zero em um canal inteiro é válido — vender só por um deles acontece', async () => {
+    const r = await salvarFechamento({ token, substituir: true, contagens: conta(6, 0, 0, 0, 0, 0) });
+    expect(r).toMatchObject({ ok: true, total: 6 });
   });
 
   it('recusa o segundo envio da mesma data em vez de sobrescrever calado', async () => {
-    const r = await salvarFechamento({ token, items: [{ size: 'CM25', flavorId: calabresaId, quantity: 3 }] });
+    const r = await salvarFechamento({ token, contagens: conta(1, 0, 0, 0, 0, 0) });
     expect(r).toEqual({ ok: false, reason: 'DUPLICADO' });
-    // e o que já estava gravado continua intacto
     const atual = await fechamentoDoDia(pizzariaId, hoje);
-    expect(totalDePizzas(atual!.items)).toBe(25);
+    expect(totalGeral(atual!.contagens)).toBe(6);
   });
 
-  it('com `substituir` a correção passa e troca os itens', async () => {
-    const r = await salvarFechamento({
-      token,
-      substituir: true,
-      items: [{ size: 'CM25', flavorId: calabresaId, quantity: 3 }],
-      observation: 'refeito',
-    });
+  it('com `substituir` a correção passa e troca as quantidades', async () => {
+    const r = await salvarFechamento({ token, substituir: true, contagens: conta(0, 0, 3, 0, 0, 0), observation: 'refeito' });
     expect(r).toMatchObject({ ok: true, total: 3, substituiu: true });
     const atual = await fechamentoDoDia(pizzariaId, hoje);
-    expect(atual!.items).toHaveLength(1);
+    expect(atual!.contagens).toEqual(conta(0, 0, 3, 0, 0, 0));
     expect(atual!.observation).toBe('refeito');
   });
 
-  it('a mesma combinação tamanho+sabor SOMA em vez de estourar a unique', async () => {
-    const r = await salvarFechamento({
-      token,
-      substituir: true,
-      items: [
-        { size: 'CM35', flavorId: calabresaId, quantity: 4 },
-        { size: 'CM35', flavorId: calabresaId, quantity: 6 },
-      ],
-    });
-    expect(r).toMatchObject({ ok: true, total: 10 });
-    const atual = await fechamentoDoDia(pizzariaId, hoje);
-    expect(atual!.items).toHaveLength(1);
-    expect(atual!.items[0].quantity).toBe(10);
+  it('as SEIS em zero são recusadas — dia sem venda é dia sem fechamento', async () => {
+    /* Gravar um dia de zero pizzas entraria na média por dia lançado e a
+       afundaria com um dia em que a pizzaria nem abriu. */
+    const r = await salvarFechamento({ token, substituir: true, contagens: contagensVazias() });
+    expect(r).toEqual({ ok: false, reason: 'VAZIO' });
   });
 
-  it('guarda o nome do sabor do dia — renomear o catálogo não reescreve o histórico', async () => {
-    const atual = await fechamentoDoDia(pizzariaId, hoje);
-    expect(atual!.items[0].flavorName).toContain('Calabresa');
-  });
-
-  it('recusa sabor de OUTRA unidade', async () => {
-    const r = await salvarFechamento({
-      token,
-      substituir: true,
-      items: [{ size: 'CM35', flavorId: deOutraUnidadeId, quantity: 1 }],
-    });
-    expect(r).toEqual({ ok: false, reason: 'ITENS' });
-  });
-
-  it('recusa sabor desativado', async () => {
-    const r = await salvarFechamento({ token, substituir: true, items: [{ size: 'CM35', flavorId: inativoId, quantity: 1 }] });
-    expect(r).toEqual({ ok: false, reason: 'ITENS' });
-  });
-
-  it('recusa quantidade zero, negativa ou quebrada', async () => {
-    for (const quantity of [0, -3, 1.5]) {
-      const r = await salvarFechamento({ token, substituir: true, items: [{ size: 'CM35', flavorId: calabresaId, quantity }] });
-      expect(r, `quantidade ${quantity}`).toEqual({ ok: false, reason: 'ITENS' });
+  it('recusa quantidade negativa, quebrada ou absurda', async () => {
+    for (const q of [-3, 1.5, 10_001]) {
+      const r = await salvarFechamento({ token, substituir: true, contagens: conta(q, 0, 0, 0, 0, 0) });
+      expect(r, `quantidade ${q}`).toEqual({ ok: false, reason: 'QUANTIDADES' });
     }
   });
 
-  it('recusa lista vazia', async () => {
-    expect(await salvarFechamento({ token, substituir: true, items: [] })).toEqual({ ok: false, reason: 'ITENS' });
+  it('campo ausente conta como zero, não como erro', async () => {
+    /* O corpo vem de um link público: faltar chave é normal, e recusar o
+       fechamento inteiro por isso seria hostil com quem só não vendeu brotinho. */
+    const r = await salvarFechamento({ token, substituir: true, contagens: { TEKNISA: { CM35: 4 } } as never });
+    expect(r).toMatchObject({ ok: true, total: 4 });
   });
 
   it('recusa data futura', async () => {
     const amanha = format(subDays(new Date(`${hoje}T12:00:00`), -1), 'yyyy-MM-dd');
-    const r = await salvarFechamento({ token, operationalDate: amanha, items: [{ size: 'CM35', flavorId: calabresaId, quantity: 1 }] });
-    expect(r).toEqual({ ok: false, reason: 'DATA' });
+    expect(await salvarFechamento({ token, operationalDate: amanha, contagens: conta(1, 0, 0, 0, 0, 0) })).toEqual({ ok: false, reason: 'DATA' });
   });
 
   it('recusa data velha demais para um link sem login', async () => {
     const antiga = format(subDays(new Date(`${hoje}T12:00:00`), 45), 'yyyy-MM-dd');
-    const r = await salvarFechamento({ token, operationalDate: antiga, items: [{ size: 'CM35', flavorId: calabresaId, quantity: 1 }] });
-    expect(r).toEqual({ ok: false, reason: 'DATA' });
+    expect(await salvarFechamento({ token, operationalDate: antiga, contagens: conta(1, 0, 0, 0, 0, 0) })).toEqual({ ok: false, reason: 'DATA' });
   });
 
   it('token inválido não grava nada', async () => {
-    const r = await salvarFechamento({ token: 'xxxxxxxxxxxxxxxxxx', items: [{ size: 'CM35', flavorId: calabresaId, quantity: 1 }] });
-    expect(r).toEqual({ ok: false, reason: 'TOKEN' });
+    expect(await salvarFechamento({ token: 'xxxxxxxxxxxxxxxxxx', contagens: conta(1, 0, 0, 0, 0, 0) })).toEqual({ ok: false, reason: 'TOKEN' });
   });
 
-  it('a gravação entra na Auditoria', async () => {
-    const logs = await prisma.auditLog.findMany({ where: { unitId: pizzariaId, module: 'PIZZAS' } });
+  it('a gravação entra na Auditoria, com os totais de cada canal', async () => {
+    const logs = await prisma.auditLog.findMany({ where: { unitId: pizzariaId, module: 'PIZZAS' }, orderBy: { createdAt: 'desc' } });
     expect(logs.length).toBeGreaterThan(0);
     expect(logs.some((l) => l.action === 'PIZZA_CLOSING_UPDATE')).toBe(true);
+    const meta = logs.find((l) => l.action === 'PIZZA_CLOSING_UPDATE')!.metadata as Record<string, unknown>;
+    expect(meta).toHaveProperty('teknisa');
+    expect(meta).toHaveProperty('ifood');
   });
 });
 
@@ -271,6 +297,10 @@ describe('catálogo de sabores (Configurações)', () => {
   });
 
   it('sabor JÁ LANÇADO não se exclui — desativa, para o histórico não perder linhas', async () => {
+    /* O formulário novo não lança sabor, então o "já lançado" precisa vir de um
+       fechamento LEGADO — que é exatamente o histórico que esta regra protege. */
+    await lancamentoLegado(calabresaId, 5, 9);
+
     const r = await excluirSabor(admin(), calabresaId);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('BLOCKED');
@@ -289,42 +319,50 @@ describe('catálogo de sabores (Configurações)', () => {
   });
 
   it('renomear NÃO reescreve o histórico já fechado', async () => {
-    const antes = await fechamentoDoDia(pizzariaId, hoje);
+    const dia = await lancamentoLegado(calabresaId, 6, 4);
+    const antes = await fechamentoDoDia(pizzariaId, dia);
     const nomeNoFechamento = antes!.items[0].flavorName;
     await renomearSabor(admin(), { id: calabresaId, name: `Calabresa renomeada ${sfx}` });
-    const depois = await fechamentoDoDia(pizzariaId, hoje);
+    const depois = await fechamentoDoDia(pizzariaId, dia);
     expect(depois!.items[0].flavorName).toBe(nomeNoFechamento);
   });
 });
 
 describe('painel', () => {
-  it('soma o período, separa por tamanho e por sabor, e calcula a média por dia lançado', async () => {
+  /* O painel parte de uma unidade LIMPA. Os blocos anteriores deixam
+     fechamentos para trás (inclusive os legados que as regras do catálogo
+     precisam ter), e um painel que soma o resíduo dos vizinhos falha por
+     motivo errado — ou, pior, passa por motivo errado. */
+  beforeAll(async () => {
+    await prisma.pizzaClosing.deleteMany({ where: { unitId: pizzariaId } });
+  });
+
+  it('soma o período, separa por canal e por tamanho, e calcula a média por dia lançado', async () => {
     const ontem = format(subDays(new Date(`${hoje}T12:00:00`), 1), 'yyyy-MM-dd');
-    await salvarFechamento({
-      token,
-      operationalDate: hoje,
-      substituir: true,
-      items: [
-        { size: 'CM35', flavorId: calabresaId, quantity: 10 },
-        { size: 'CM30', flavorId: frangoId, quantity: 6 },
-      ],
-    });
-    await salvarFechamento({
-      token,
-      operationalDate: ontem,
-      substituir: true,
-      items: [{ size: 'CM35', flavorId: calabresaId, quantity: 4 }],
-    });
+    await salvarFechamento({ token, operationalDate: hoje, substituir: true, contagens: conta(10, 6, 0, 0, 0, 0) });
+    await salvarFechamento({ token, operationalDate: ontem, substituir: true, contagens: conta(0, 0, 0, 4, 0, 0) });
 
     const p = await painelDePizzas(pizzariaId, { de: inicioDoPeriodo(hoje, 30), ate: hoje, hoje });
     expect(p.total).toBe(20);
     expect(p.hoje).toBe(16);
     expect(p.diasComRegistro).toBe(2);
     expect(p.mediaDiaria).toBe(10);
-    expect(p.porTamanho.find((t) => t.size === 'CM35')!.total).toBe(14);
+
+    /* "Tamanhos mais vendidos" soma os DOIS canais — é o total real de 35 cm. */
+    const g = p.porTamanho.find((t) => t.size === 'CM35')!;
+    expect(g.total).toBe(14);
+    expect(g.porCanal.TEKNISA).toBe(10);
+    expect(g.porCanal.IFOOD).toBe(4);
     expect(p.porTamanho.find((t) => t.size === 'CM25')!.total).toBe(0);
-    expect(p.porSabor[0].total).toBe(14); // calabresa lidera
-    expect(p.dias[0].operationalDate).toBe(hoje); // mais recente primeiro
+
+    const teknisa = p.porCanal.find((c) => c.canal === 'TEKNISA')!;
+    const ifood = p.porCanal.find((c) => c.canal === 'IFOOD')!;
+    expect(teknisa.total).toBe(16);
+    expect(ifood.total).toBe(4);
+    expect(teknisa.pct + ifood.pct).toBe(100);
+
+    expect(p.dias[0].operationalDate).toBe(hoje);
+    expect(p.dias[0]).toMatchObject({ total: 16, teknisa: 16, ifood: 0 });
   });
 
   it('o cartão "hoje" não depende do período filtrado', async () => {
@@ -342,5 +380,55 @@ describe('painel', () => {
     expect(p.total).toBe(0);
     expect(p.mediaDiaria).toBe(0);
     expect(p.dias).toEqual([]);
+    expect(p.porCanal.every((c) => c.total === 0 && c.pct === 0)).toBe(true);
+  });
+
+  it('o histórico ANTIGO, lançado por sabor, continua no painel', async () => {
+    /* O formulário não pede mais sabor, mas os fechamentos já gravados assim
+       são histórico que ninguém tem como refazer. Ler só as contagens novas
+       faria meses desaparecerem do painel sem ninguém ter apagado nada. */
+    const antigo = await lancamentoLegado(frangoId, 3, 7);
+
+    expect(antigo).toBeTruthy();
+    const p = await painelDePizzas(pizzariaId, { de: inicioDoPeriodo(hoje, 30), ate: hoje, hoje });
+    expect(p.total).toBe(27);
+    expect(p.porTamanho.find((t) => t.size === 'CM30')!.total).toBe(13);
+    expect(p.porSabor[0].total).toBe(7);
+    /* E NÃO é atribuído a canal nenhum: a venda antiga é anterior à separação,
+       e jogá-la no Teknisa inventaria uma origem que ninguém registrou. */
+    const soma = p.porCanal.reduce((t, x) => t + x.total, 0);
+    expect(soma).toBe(20);
+  });
+
+  it('corrigir um dia antigo pelo formulário novo não conta a venda duas vezes', async () => {
+    const antigo = format(subDays(new Date(`${hoje}T12:00:00`), 3), 'yyyy-MM-dd');
+    await salvarFechamento({ token, operationalDate: antigo, substituir: true, contagens: conta(0, 9, 0, 0, 0, 0) });
+
+    const p = await painelDePizzas(pizzariaId, { de: inicioDoPeriodo(hoje, 30), ate: hoje, hoje });
+    /* 20 dos dois dias novos + 9 do dia corrigido — as 7 por sabor daquele dia
+       saíram junto com a correção. */
+    expect(p.total).toBe(29);
+    expect(p.porSabor).toEqual([]);
+  });
+});
+
+describe('a comparação Teknisa x iFood', () => {
+  it('a porcentagem é entre os DOIS canais, não sobre o total do período', async () => {
+    /* Com fechamento antigo no período (sem canal), medir sobre o total
+       deixaria a barra quase vazia — como se os dois canais juntos fossem uma
+       fração da venda. O cartão compara um canal com o outro. */
+    await prisma.pizzaClosing.deleteMany({ where: { unitId: pizzariaId } });
+    await lancamentoLegado(frangoId, 2, 100); // venda antiga, sem canal
+    await salvarFechamento({ token, substituir: true, contagens: conta(18, 0, 0, 6, 0, 0) });
+
+    const p = await painelDePizzas(pizzariaId, { de: inicioDoPeriodo(hoje, 30), ate: hoje, hoje });
+    expect(p.total).toBe(124);
+    const t = p.porCanal.find((c) => c.canal === 'TEKNISA')!;
+    const i = p.porCanal.find((c) => c.canal === 'IFOOD')!;
+    expect(t.total).toBe(18);
+    expect(i.total).toBe(6);
+    expect(t.pct).toBe(75);
+    expect(i.pct).toBe(25);
+    expect(t.pct + i.pct).toBe(100);
   });
 });

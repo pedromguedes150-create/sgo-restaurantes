@@ -1,5 +1,5 @@
 import { currentOperationalDate } from '@/lib/date/operational';
-import { saboresAtivos, unidadePorToken } from '@/lib/pizzas/acesso';
+import { unidadePorToken } from '@/lib/pizzas/acesso';
 import { fechamentoDoDia } from '@/lib/pizzas/fechamento';
 import { PizzaPublicForm } from '@/components/pizzas/pizza-public-form';
 
@@ -23,7 +23,7 @@ export default async function PizzasPublicPage({ params }: { params: { token: st
   }
 
   const hoje = currentOperationalDate({ timezone: unit.timezone, cutoffHour: unit.cutoffHour });
-  const [flavors, deHoje] = await Promise.all([saboresAtivos(unit.id), fechamentoDoDia(unit.id, hoje)]);
+  const deHoje = await fechamentoDoDia(unit.id, hoje);
 
   return (
     <div className="mx-auto min-h-dvh max-w-md bg-canvas p-4">
@@ -34,15 +34,10 @@ export default async function PizzasPublicPage({ params }: { params: { token: st
       </div>
       <PizzaPublicForm
         token={params.token}
-        unitName={unit.name}
         hoje={hoje}
-        flavors={flavors}
         fechamentoDeHoje={
           deHoje
-            ? {
-                items: deHoje.items.map((i) => ({ size: i.size, flavorId: i.flavorId, quantity: i.quantity })),
-                observation: deHoje.observation,
-              }
+            ? { contagens: deHoje.contagens, observation: deHoje.observation, sabores: deHoje.items.length }
             : null
         }
       />
