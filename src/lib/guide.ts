@@ -40,6 +40,7 @@ export const GUIDE: GuideSection[] = [
           'BUSCA SEMPRE ABERTA no topo: digite e os resultados aparecem enquanto você escreve, com o caminho ao lado ("Operação › Conferências"). Ignora acento — "oleo" acha "Coleta de Óleo". No celular, é a lupa do cabeçalho.',
           'FAVORITOS (v1.98.0): a estrela ⭐ ao lado de cada item fixa a ferramenta no topo da tela MÓDULOS. Guarde as cinco que você usa todo dia e pare de procurar. A escolha é por aparelho.',
           'No celular, a barra inferior e o botão MÓDULOS continuam sendo a navegação — e a tela Módulos agora lista o sistema inteiro, com busca no topo.',
+          'NO TABLET (v1.99.1) o menu de áreas também aparece, com os nomes das sete áreas. Corrigido: entre 768 e 1023px de largura — todo tablet em pé — não havia menu NENHUM, nem em cima nem embaixo. Se você usa iPad e ficou sem menu, é isso; já está resolvido.',
           'Para ir de um módulo irmão a outro, o botão ao lado do TÍTULO da tela continua existindo: em Comandas aparece "Caixa ⌄", e ali você salta para Cancelamentos ou Troco.',
           'Nada mudou de endereço: se você tem um link salvo ou toca numa notificação antiga, continua caindo na tela certa.',
           'O sino 🔔 no topo mostra suas NOTIFICAÇÕES (alertas e avisos). O número vermelho é o que falta ler.',

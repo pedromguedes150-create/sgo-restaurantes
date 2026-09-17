@@ -26,6 +26,12 @@ const ICONES: Record<string, React.ComponentType<{ className?: string }>> = {
  * trinta itens sem rolar. Área com um destino só vira link direto: abrir um
  * painel para mostrar uma linha seria menu dentro de menu.
  *
+ * A barra vale de `md` (768px) para cima, e a barra de baixo some no mesmo
+ * ponto: era ali que a sidebar antiga entrava. Quando a barra superior começava
+ * só em `lg`, o TABLET ficava SEM NAVEGAÇÃO NENHUMA entre 768 e 1023px — nem
+ * menu em cima, nem barra embaixo. No tablet os ícones e a seta saem: eles
+ * custavam ~150px e faziam a sétima área (Administrativo) cair para fora.
+ *
  * Abre no hover E no clique. Hover sozinho é armadilha em telas com toque e em
  * quem navega pelo teclado; clique sozinho custa um clique a mais em quem já
  * sabe onde vai.
@@ -58,9 +64,13 @@ export function TopNav({ areas }: { areas: AreaMontada[] }) {
   if (areas.length === 0) return null;
 
   return (
-    <div ref={ref} className="relative hidden border-b border-line bg-surface lg:block print:hidden">
-      <nav aria-label="Áreas do sistema" className="mx-auto w-full max-w-6xl px-6 lg:max-w-none 2xl:max-w-[1760px]">
-        <ul className="flex items-stretch gap-0.5">
+    <div ref={ref} className="relative hidden border-b border-line bg-surface md:block print:hidden">
+      <nav aria-label="Áreas do sistema" className="mx-auto w-full max-w-6xl px-4 lg:max-w-none lg:px-6 2xl:max-w-[1760px]">
+        {/* `overflow-x-auto` é a REDE DE SEGURANÇA: no tablet as sete áreas
+            chegam a não caber, e sem isto quem empurrava era a PÁGINA — a tela
+            inteira passava a rolar de lado, que é justamente o que o design
+            system proíbe. Aqui rola a tira, não o conteúdo. */}
+        <ul className="flex items-stretch gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {areas.map((area) => {
             const Icone = ICONES[area.icone] ?? LayoutGrid;
             const unica = area.colunas.length === 1 && area.colunas[0].itens.length === 1;
@@ -68,7 +78,7 @@ export function TopNav({ areas }: { areas: AreaMontada[] }) {
             const estaAberta = aberta === area.id;
 
             const visual = cn(
-              'flex h-11 items-center gap-1.5 border-b-2 px-3 text-sm font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
+              'flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2 text-sm font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus lg:px-3',
               estaAtiva ? 'border-brand text-brand' : 'border-transparent text-ink-700 hover:bg-sunken hover:text-ink-900',
             );
 
@@ -76,7 +86,7 @@ export function TopNav({ areas }: { areas: AreaMontada[] }) {
               return (
                 <li key={area.id}>
                   <Link href={area.colunas[0].itens[0].href} className={visual} aria-current={estaAtiva ? 'page' : undefined}>
-                    <Icone className={cn('h-4 w-4', estaAtiva ? 'text-brand' : 'text-ink-400')} />
+                    <Icone className={cn('hidden h-4 w-4 lg:inline', estaAtiva ? 'text-brand' : 'text-ink-400')} />
                     {area.titulo}
                   </Link>
                 </li>
@@ -92,9 +102,9 @@ export function TopNav({ areas }: { areas: AreaMontada[] }) {
                   aria-haspopup="true"
                   className={visual}
                 >
-                  <Icone className={cn('h-4 w-4', estaAtiva ? 'text-brand' : 'text-ink-400')} />
+                  <Icone className={cn('hidden h-4 w-4 lg:inline', estaAtiva ? 'text-brand' : 'text-ink-400')} />
                   {area.titulo}
-                  <ChevronDown className={cn('h-3.5 w-3.5 text-ink-400 transition-transform duration-sgo-1 ease-sgo-std motion-reduce:transition-none', estaAberta && 'rotate-180')} />
+                  <ChevronDown className={cn('hidden h-3.5 w-3.5 text-ink-400 transition-transform duration-sgo-1 ease-sgo-std motion-reduce:transition-none lg:inline', estaAberta && 'rotate-180')} />
                 </button>
               </li>
             );
@@ -108,8 +118,8 @@ export function TopNav({ areas }: { areas: AreaMontada[] }) {
           onMouseLeave={adiarFechamento}
           className="absolute inset-x-0 top-full z-40 border-b border-line bg-surface shadow-lg"
         >
-          <div className="mx-auto w-full max-w-6xl px-6 py-5 lg:max-w-none 2xl:max-w-[1760px]">
-            <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mx-auto w-full max-w-6xl px-4 py-5 lg:max-w-none lg:px-6 2xl:max-w-[1760px]">
+            <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-x-8">
               {areas.find((a) => a.id === aberta)!.colunas.map((coluna) => (
                 <div key={coluna.titulo}>
                   <p className="mb-1.5 sgo-type-11 font-semibold text-ink-500">{coluna.titulo}</p>
