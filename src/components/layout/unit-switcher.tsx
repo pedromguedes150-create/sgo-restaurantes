@@ -87,12 +87,12 @@ export function UnitSwitcher({ units, selectedId }: { units: UnitOption[]; selec
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          'inline-flex h-9 items-center gap-1.5 rounded-control border px-2.5 text-xs font-semibold outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus',
+          'inline-flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-control border px-2.5 text-xs font-semibold outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus',
           naRede ? 'border-brand/40 bg-brand-tint text-brand' : 'border-line-strong bg-surface text-ink-900',
         )}
       >
         {naRede ? <Globe className="h-4 w-4 shrink-0 text-brand" /> : <Building2 className="h-4 w-4 shrink-0 text-ink-400" />}
-        <span className="max-w-[9rem] truncate">{rotulo}</span>
+        <span className="min-w-0 truncate">{rotulo}</span>
         <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-ink-400" />
       </button>
 
