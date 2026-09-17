@@ -557,10 +557,14 @@ export const GUIDE: GuideSection[] = [
         roles: [...MANAGERLINE, 'CEO'],
         summary: 'Controle da coleta de óleo usado (recebemos por ela).',
         steps: [
-          'Em ÓLEO → "Lançar coleta", informe litros e valor por litro — o total a receber é calculado na hora.',
-          'Escolha a empresa coletora (fornecedor) e "como recebemos" (PIX, dinheiro, crédito, troca…).',
+          'Em ÓLEO → "Lançar coleta", informe a DATA da coleta (v1.96.0 — pode ser um dia anterior, o recibo nem sempre chega no mesmo dia; futuro o sistema não aceita), os litros e o valor por litro. O total a receber é calculado na hora.',
+          'Diga QUEM COLETOU: escolha a empresa no cadastro de fornecedores ou, se ela não estiver lá, digite o nome. Um dos dois é obrigatório.',
+          'FOTO DO RECIBO — OBRIGATÓRIA (v1.96.0): o lançamento NÃO fecha sem ela. Toque em "Anexar / tirar foto" e fotografe o comprovante. É o que permite, depois, conferir se o recibo diz os mesmos litros que foram digitados.',
+          'Você não preenche "Responsável pelo lançamento": o sistema grava o seu nome e a data/hora do envio sozinho, e isso não se edita.',
+          'CONFERÊNCIA (v1.96.0): no "Histórico", toque na linha da coleta. Abre o lançamento e o recibo LADO A LADO — unidade, data, litros, quem lançou e quando, com a foto ao lado. É onde se vê que o papel diz 80 litros e o sistema diz 100. "Ampliar" abre a foto em tela cheia para ler o número escrito à mão.',
+          'FILTROS do histórico: período (30/90 dias, 6 meses, 1 ano ou todo o histórico), unidade e responsável pelo lançamento. Nada é apagado — coleta antiga continua lá, basta ampliar o período.',
+          'Coleta lançada ANTES desta regra aparece como "Sem foto" e o cartão de conferência explica o motivo. Não foi erro nem some do histórico; só não dá para conferir o que nunca foi anexado.',
           'O "Dashboard" mostra litros e valor recebido por unidade, por forma de recebimento e a tendência mensal.',
-          'O "Histórico" guarda todas as coletas, com valor por litro e forma de recebimento.',
         ],
       },
       {
