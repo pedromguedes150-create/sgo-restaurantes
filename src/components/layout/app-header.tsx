@@ -38,7 +38,7 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
     // Alinha pelo mesmo envelope do conteúdo. Altura 48px no mobile, 56px a partir de md.
     <header className={cn('sticky top-0 z-30 border-b bg-glass backdrop-blur-xl backdrop-saturate-150 transition-colors duration-sgo-2 ease-sgo-std print:hidden', scrolled ? 'border-line' : 'border-transparent')}>
       <div className="mx-auto flex h-12 w-full max-w-6xl items-center justify-between gap-2 px-4 md:h-14 lg:max-w-none lg:pl-3 lg:pr-6 2xl:max-w-[1760px]">
-        <div className="flex min-w-0 items-center gap-1">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
           {showBack && (
             <button type="button" onClick={() => router.back()} aria-label="Voltar" className={`${iconBtn} -ml-1`}>
               <ArrowLeft className="h-5 w-5" />
@@ -57,7 +57,11 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
           </div>
 
           {units.length > 0 && (
-            <div className="ml-1 shrink-0 border-l border-line pl-2">
+            /* `min-w-0` e NÃO `shrink-0`: com "Toda a Rede" o seletor ficou
+               mais largo e, a 375px, passava POR CIMA dos ícones da direita —
+               o grupo da esquerda não encolhia. Agora ele cede espaço e o nome
+               trunca. */
+            <div className="ml-1 min-w-0 border-l border-line pl-2">
               <UnitSwitcher units={units} selectedId={selectedUnitId} />
             </div>
           )}
