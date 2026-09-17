@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
@@ -99,4 +99,24 @@ export async function saveAttachment(
   await writeFile(path.join(dir, filename), buf);
 
   return { path: path.posix.join('uploads', unit, filename), mimeType: file.type || MIME_BY_EXT[ext] || 'application/octet-stream' };
+}
+
+/**
+ * Apaga um arquivo recém-salvo no volume de uploads.
+ *
+ * Existe para o caso em que o anexo é gravado ANTES de a regra de negócio
+ * decidir: se o lançamento é recusado depois (data futura, quantidade
+ * inválida), o arquivo já está em disco e não pertence a registro nenhum.
+ * Tentativa recusada não deve deixar rastro ocupando o volume.
+ *
+ * Recebe o caminho RELATIVO devolvido por `saveEvidence`/`saveAttachment` e
+ * silencia a falha: não conseguir apagar um órfão não pode virar erro para
+ * quem já tinha um erro melhor para receber.
+ */
+export async function removeUpload(relPath: string): Promise<void> {
+  const segs = relPath.split('/').filter((s) => s && s !== 'uploads');
+  if (segs.length === 0 || segs.some((s) => s.includes('..'))) return;
+  const full = path.join(UPLOAD_ROOT, ...segs);
+  if (!full.startsWith(UPLOAD_ROOT)) return;
+  await unlink(full).catch(() => {});
 }

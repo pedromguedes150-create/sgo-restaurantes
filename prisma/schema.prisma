@@ -2879,6 +2879,10 @@ model OilCollection {
   paymentMethod   String?
   collectorName   String?
   observation     String?
+  /// Foto do recibo da coleta. OBRIGATÓRIA no lançamento novo — é o que permite
+  /// conferir "o recibo diz 80 L, o lançamento diz 100 L". Opcional na coluna
+  /// porque as coletas lançadas antes desta regra existem e não serão apagadas.
+  receiptPath     String?
   createdById     String?
   createdAt       DateTime @default(now())
 
