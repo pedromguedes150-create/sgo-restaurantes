@@ -38,7 +38,7 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
     // Alinha pelo mesmo envelope do conteúdo. Altura 48px no mobile, 56px a partir de md.
     <header className={cn('sticky top-0 z-30 border-b bg-glass backdrop-blur-xl backdrop-saturate-150 transition-colors duration-sgo-2 ease-sgo-std print:hidden', scrolled ? 'border-line' : 'border-transparent')}>
       <div className="mx-auto flex h-12 w-full max-w-6xl items-center justify-between gap-2 px-4 md:h-14 lg:max-w-none lg:pl-3 lg:pr-6 2xl:max-w-[1760px]">
-        <div className="flex min-w-0 flex-1 items-center gap-1">
+        <div className="flex min-w-0 shrink items-center gap-1">
           {showBack && (
             <button type="button" onClick={() => router.back()} aria-label="Voltar" className={`${iconBtn} -ml-1`}>
               <ArrowLeft className="h-5 w-5" />
@@ -71,7 +71,7 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
             Era um botão: botão exige saber que a busca existe; um campo com o
             cursor piscando convida a digitar — e é por ele que se chega ao que
             não está no menu visível. */}
-        <GlobalSearch areas={areas} className="mx-3 hidden w-full max-w-sm lg:block" />
+        <GlobalSearch areas={areas} className="mx-2 hidden w-full min-w-0 max-w-xs flex-1 md:block lg:mx-3 lg:max-w-sm" />
 
         <div className="flex shrink-0 items-center gap-0.5">
           {/* No celular a busca continua sendo o ⌘K em tela cheia: um campo de
@@ -80,7 +80,7 @@ export function AppHeader({ userName, roleLabel, unread = 0, commPending = 0, un
             type="button"
             onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_EVENT))}
             aria-label="Buscar"
-            className={`${iconBtn} lg:hidden`}
+            className={`${iconBtn} md:hidden`}
           >
             <Search className="h-5 w-5" />
           </button>
