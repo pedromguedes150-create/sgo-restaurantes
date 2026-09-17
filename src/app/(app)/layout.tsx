@@ -1,19 +1,18 @@
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db/prisma';
 import { getSessionUser } from '@/lib/auth/session';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getSelectedUnitId } from '@/lib/scope/selected-unit';
-import { SIDEBAR_COOKIE, isSidebarCollapsed } from '@/lib/sidebar-state';
 import { roleLabel } from '@/lib/roles';
 import { AppHeader } from '@/components/layout/app-header';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { CommandPalette } from '@/components/layout/command-palette';
-import { Sidebar } from '@/components/layout/sidebar';
-import { SidebarStateProvider } from '@/components/layout/sidebar-state-provider';
+import { TopNav } from '@/components/layout/top-nav';
 import { PageChromeProvider } from '@/components/layout/page-chrome';
 import { unreadCount } from '@/lib/notifications';
 import { viewableNavHrefs } from '@/lib/permissions';
+import { montarMenu } from '@/lib/nav/menu';
 import { recortarPizzas } from '@/lib/pizzas/acesso';
 import { canOpenPath, homeForRole } from '@/lib/permissions/route-guard';
 import { getInboxPendingCount } from '@/lib/communications/query';
@@ -33,10 +32,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const isAdmin = user.role === 'ADMIN' || user.role === 'CEO';
-  // Lido no servidor para a sidebar já sair na largura certa (sem piscar na
-  // hidratação). O layout já é dinâmico por causa da sessão, então não custa
-  // nada em cache.
-  const sidebarCollapsed = isSidebarCollapsed(cookies().get(SIDEBAR_COOKIE)?.value);
   const [unread, viewablePorPerfil, commPending, unidades] = await Promise.all([
     unreadCount(user),
     viewableNavHrefs(user.role),
@@ -52,19 +47,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
      unidade tem pizzaria. A porta da tela repete a checagem — esconder item de
      menu nunca foi controle de acesso. */
   const viewable = recortarPizzas(viewablePorPerfil, unidades.some((u) => u.hasPizzeria));
-  // Comunicação agora é o inbox do header (não mais item da sidebar).
-  const badges: Record<string, number> = {};
+
+  /* O MENU POR ÁREAS sai do mesmo `viewable` — inclusive do recorte da
+     pizzaria, que a matriz de perfis não sabe fazer. Monta-se aqui, no
+     servidor, porque o catálogo mora junto do Prisma; a barra recebe pronto. */
+  const permitido = new Set(viewable);
+  const areas = await montarMenu(user.role, (href) => permitido.has(href));
 
   return (
     <div className="min-h-dvh bg-canvas print:min-h-0 print:bg-white">
-      {/* O provider envolve header e sidebar: o botão de recolher mora no
-          header e a largura muda na sidebar, então os dois dividem o estado. */}
-      <SidebarStateProvider defaultCollapsed={sidebarCollapsed}>
        <PageChromeProvider>
         {/* Quem tem perfil personalizado vê o NOME do perfil, não o do perfil
             base: o Admin criou "Supervisor Regional" justamente para distinguir,
             e o cabeçalho dizer "Supervisor" desfaria a distinção. */}
-        <AppHeader userName={user.name} roleLabel={user.profileName ?? roleLabel(user.role)} unread={unread} commPending={commPending} units={units} selectedUnitId={selectedUnitId} />
+        <AppHeader userName={user.name} roleLabel={user.profileName ?? roleLabel(user.role)} unread={unread} commPending={commPending} units={units} selectedUnitId={selectedUnitId} areas={areas} />
+        {/* A navegação por ÁREAS substitui a sidebar no desktop: sete botões
+            sempre à vista e o mega menu com tudo o que há dentro de cada um.
+            No celular quem navega é a barra de baixo + o hub de módulos. */}
+        <TopNav areas={areas} />
         {/*
           Largura do conteúdo. Mobile-first: `max-w-3xl` (768px) coincide com o
           breakpoint `md`, então os overrides `md:` abaixo NÃO alteram o celular —
@@ -82,13 +82,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           conteúdo dele alinhe com a sidebar e o main em qualquer largura.
         */}
         <div className="mx-auto flex w-full max-w-6xl lg:max-w-none 2xl:max-w-[1760px] print:block print:max-w-none">
-          <Sidebar isAdmin={isAdmin} viewable={viewable} badges={badges} />
           <main className="w-full max-w-3xl flex-1 px-4 pb-24 pt-4 md:max-w-none md:px-6 md:pb-8 print:max-w-none print:p-0">{children}</main>
         </div>
        </PageChromeProvider>
-      </SidebarStateProvider>
       <BottomNav />
-      <CommandPalette units={units} viewable={viewable} isAdmin={isAdmin} />
+      <CommandPalette units={units} viewable={viewable} isAdmin={isAdmin} areas={areas} />
       <ServiceWorkerRegister />
       {commPending > 0 && <CommunicationInterstitial />}
     </div>

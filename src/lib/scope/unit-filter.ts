@@ -50,6 +50,12 @@ export function resolveUnitFilter(
   }
 
   const doSeletor = (raw.unidade ?? '').trim() || selectedUnitId || '';
+  /* O seletor global também sabe dizer "toda a rede" — e diz com a MESMA
+     palavra de `?unit=todas`. Antes isto funcionava por acidente (nenhuma
+     unidade tem id "todas", então a condição abaixo falhava e caía no retorno
+     final); agora é explícito, porque comportamento certo por acidente é
+     comportamento que a próxima refatoração quebra sem avisar. */
+  if (doSeletor.toLowerCase() === TODAS_AS_UNIDADES) return todas;
   if (doSeletor && accessibleIds.includes(doSeletor)) {
     /* Uma unidade só no alcance: filtrar por ela é o mesmo que ver todas, e
        dizer "filtrado" faria a tela oferecer um "ver todas" que não muda nada. */

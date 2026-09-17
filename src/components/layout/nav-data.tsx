@@ -1,72 +1,13 @@
-import {
-  Home, LayoutGrid, Users, BarChart3, Settings,
-  LayoutDashboard, NotebookPen, Inbox, ListChecks, GraduationCap,
-  Trash2, AlertOctagon, Banknote, Boxes, Sparkles, Pizza,
-  Wallet, Target, ScrollText, Bell, UserCircle,
-} from 'lucide-react';
+import { Inbox, GraduationCap, Bell, UserCircle } from 'lucide-react';
+import type { AreaMontada } from '@/lib/nav/areas';
 
 export type IconType = React.ComponentType<{ className?: string }>;
-export interface NavLeaf { href: string; label: string; icon: IconType; adminOnly?: boolean }
-export interface NavGroup { id: string; title: string; icon: IconType; items: NavLeaf[] }
+export interface NavLeaf { href: string; label: string; icon: IconType }
 
-// Arquitetura de informação em 6 grupos. Fonte única consumida pela sidebar,
-// pelo breadcrumb do header e pelo ⌘K.
-//
-// 18/08: as entradas caíram de 21 para 11. Cada entrada que virou FAMÍLIA
-// (Caixa, Suprimentos, Rotinas, Treinamentos, Performance, Pessoas) aponta para
-// o primeiro irmão e leva aos outros pelo botão ao lado do título — ver
-// src/lib/nav-families.ts. As ROTAS não se moveram: os links de notificação
-// ficam gravados no banco apontando para /modulos/*, e mover caminho quebraria
-// todo aviso antigo.
-export const NAV_GROUPS: NavGroup[] = [
-  {
-    id: 'inicio', title: 'Início', icon: Home,
-    items: [
-      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/minha-area', label: 'Minha área', icon: NotebookPen },
-    ],
-  },
-  {
-    id: 'tarefas', title: 'Tarefas', icon: ListChecks,
-    items: [
-      { href: '/tarefas', label: 'Tarefas', icon: ListChecks },
-      { href: '/modulos/treinamentos', label: 'Treinamentos', icon: GraduationCap },
-    ],
-  },
-  {
-    id: 'operacao', title: 'Operação', icon: LayoutGrid,
-    items: [
-      { href: '/modulos/desperdicios', label: 'Desperdícios', icon: Trash2 },
-      { href: '/modulos/ocorrencias', label: 'Ocorrências', icon: AlertOctagon },
-      { href: '/modulos/comandas', label: 'Caixa', icon: Banknote },
-      { href: '/modulos/notas', label: 'Suprimentos', icon: Boxes },
-      { href: '/modulos/oleo', label: 'Rotinas da unidade', icon: Sparkles },
-      // Só aparece para quem alcança uma unidade com pizzaria — o layout
-      // subtrai este endereço de `viewable` para as demais.
-      { href: '/modulos/pizzas', label: 'Controle de Pizzas', icon: Pizza },
-    ],
-  },
-  {
-    id: 'pessoas', title: 'Pessoas', icon: Users,
-    items: [
-      { href: '/modulos/pessoas', label: 'Pessoas', icon: Users },
-      { href: '/modulos/pagamentos', label: 'Pagamentos', icon: Wallet },
-    ],
-  },
-  {
-    id: 'performance', title: 'Performance', icon: BarChart3,
-    items: [
-      { href: '/modulos/metas', label: 'Metas e indicadores', icon: Target },
-      { href: '/auditoria', label: 'Auditoria', icon: ScrollText, adminOnly: true },
-    ],
-  },
-  {
-    id: 'ajustes', title: 'Ajustes', icon: Settings,
-    items: [{ href: '/configuracoes', label: 'Configurações', icon: Settings }],
-  },
-];
-
-// Destinos que vivem no header (fora da sidebar) — para o ⌘K e o breadcrumb.
+/**
+ * Destinos que vivem no CABEÇALHO (fora do menu por áreas) — para a busca e a
+ * migalha. São os ícones fixos da direita: inbox, ajuda, sino e perfil.
+ */
 export const HEADER_DESTINATIONS: NavLeaf[] = [
   { href: '/modulos/comunicacao', label: 'Comunicação', icon: Inbox },
   { href: '/notificacoes', label: 'Notificações', icon: Bell },
@@ -74,15 +15,29 @@ export const HEADER_DESTINATIONS: NavLeaf[] = [
   { href: '/perfil', label: 'Meu Perfil', icon: UserCircle },
 ];
 
-/** Migalha (grupo › item) para o header. Fallback nos destinos do header. */
-export function crumbFor(pathname: string): { group?: string; label: string } | null {
-  for (const g of NAV_GROUPS) {
-    for (const it of g.items) {
-      if (pathname === it.href || pathname.startsWith(it.href + '/')) {
-        return { group: g.title, label: it.label };
+/**
+ * Migalha (área › página) para o header.
+ *
+ * Lê O MENU MONTADO, não uma lista própria. Antes havia um `NAV_GROUPS` aqui
+ * com os nomes dos grupos antigos: o menu passou a dizer "Operação › Rotinas
+ * da unidade" e a migalha continuaria dizendo o nome de um grupo que não existe
+ * mais na tela — dois vocabulários para o mesmo lugar.
+ *
+ * Casa pelo caminho MAIS LONGO: `/tarefas/historico` tem de virar "Histórico de
+ * tarefas", não "Tarefas", que também casa por prefixo.
+ */
+export function crumbFor(pathname: string, areas: AreaMontada[]): { group?: string; label: string } | null {
+  let melhor: { group: string; label: string; tamanho: number } | null = null;
+  for (const a of areas) {
+    for (const c of a.colunas) {
+      for (const i of c.itens) {
+        if (pathname !== i.href && !pathname.startsWith(i.href + '/')) continue;
+        if (!melhor || i.href.length > melhor.tamanho) melhor = { group: a.titulo, label: i.label, tamanho: i.href.length };
       }
     }
   }
+  if (melhor) return { group: melhor.group, label: melhor.label };
+
   for (const d of HEADER_DESTINATIONS) {
     if (pathname === d.href || pathname.startsWith(d.href + '/')) return { label: d.label };
   }
