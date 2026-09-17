@@ -169,7 +169,11 @@ export async function getFreelancerConsolidation(user: SessionUser, yearMonth: s
     const amount = Number(r.amount);
     g.lines.push({
       id: r.id,
-      date: r.createdAt.toISOString().slice(0, 10),
+      /* O DIA DO TRABALHO, não a criação. O período deste fechamento é filtrado
+         por `workDate`, então mostrar `createdAt` na linha punha na folha uma
+         data fora da semana que o cabeçalho anuncia — três lançamentos feitos
+         hoje apareciam todos com a data de hoje numa folha de outra semana. */
+      date: (r.workDate ?? r.createdAt).toISOString().slice(0, 10),
       unit: r.unit.name,
       status: PAY_STATUS_LABEL[r.status] ?? r.status,
       amount,
