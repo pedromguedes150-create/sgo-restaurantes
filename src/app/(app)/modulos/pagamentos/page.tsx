@@ -87,6 +87,7 @@ function toDTO(r: ReqRow): PayReq {
 export default async function PagamentosPage({ searchParams }: { searchParams: { unit?: string; unidade?: string } }) {
   const user = (await getSessionUser())!;
   const isFinanceView = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO';
+  const podeVerConsolidacao = isFinanceView || user.role === 'SUPERVISOR';
 
   /* A tela OBEDECE o seletor de unidade do cabeçalho (pedido de 04/09: "está
      tudo misturado"). Mesma regra de precedência de Tarefas e Pessoas;
@@ -116,7 +117,11 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <LargeTitle title="Pagamentos" />
-        {isFinanceView && (
+        {/* A Supervisão abria a consolidação se digitasse o endereço, mas não
+            tinha link — e é ela quem recebe o alerta de freelancer recorrente,
+            ou seja, a primeira a precisar do consolidado. A condição passa a ser
+            a mesma que a própria página usa para deixar entrar. */}
+        {podeVerConsolidacao && (
           <Link href="/modulos/pagamentos/relatorio-freelancers" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
             <FileText className="h-4 w-4" /> Consolidação de freelancers
           </Link>

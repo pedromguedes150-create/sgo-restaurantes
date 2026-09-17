@@ -3,12 +3,15 @@ import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getFreelancerConsolidation } from '@/lib/payments/query';
+import { getConsolidadoFreelancers, type FiltroConsolidado, type PeriodoKey, type RecorrenciaFiltro, type StatusFiltro, type TipoFiltro } from '@/lib/payments/consolidado';
+import { ConsolidadoClient } from '@/components/payments/consolidado-client';
 import { Card, CardContent } from '@/components/ui/card';
 import { PrintButton } from '@/components/ui/print-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { formatBRL } from '@/lib/utils';
 import { ArrowLeft, Download, AlertTriangle } from 'lucide-react';
 import { FormDatePicker } from '@/components/ui/ds/form-controls';
+import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +28,8 @@ function lastMonths(n: number): { value: string; label: string }[] {
   return out;
 }
 
+const ISO_DIA = /^\d{4}-\d{2}-\d{2}$/;
+
 function mondayOf(iso: string): string {
   const d = new Date(iso + 'T12:00:00Z');
   const dow = d.getUTCDay(); // 0=dom
@@ -37,34 +42,116 @@ function addDaysISO(iso: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default async function RelatorioFreelancersPage({ searchParams }: { searchParams: { month?: string; unit?: string; semana?: string } }) {
+const umDe = <T extends string>(v: string | undefined, validos: readonly T[], padrao: T): T =>
+  (validos as readonly string[]).includes(v ?? '') ? (v as T) : padrao;
+
+interface Params {
+  aba?: string;
+  month?: string; unit?: string; semana?: string;
+  periodo?: string; de?: string; ate?: string; unidade?: string; tipo?: string; status?: string; rec?: string;
+}
+
+/**
+ * Consolidação de Freelancers — duas leituras do mesmo dado.
+ *
+ * CONSOLIDADO é a visão gerencial da rede: quem usa mais, quanto custa e onde
+ * o mesmo freelancer aparece semana após semana. FECHAMENTO é o documento
+ * operacional que vai ao Financeiro, com PIX e total dos aprovados/pagos — ele
+ * não mudou, só ganhou vizinho.
+ */
+export default async function RelatorioFreelancersPage({ searchParams }: { searchParams: Params }) {
   const user = (await getSessionUser())!;
   const canSee = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO' || user.role === 'SUPERVISOR';
   if (!canSee) return <p className="text-sm text-ink-500">Relatório restrito a Financeiro/Supervisão/Admin.</p>;
 
-  const months = lastMonths(12);
-  const ym = /^\d{4}-\d{2}$/.test(searchParams.month ?? '') ? searchParams.month! : months[0].value;
-
+  const aba = searchParams.aba === 'fechamento' ? 'fechamento' : 'consolidado';
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
-  const selectedUnit = searchParams.unit && units.some((u) => u.id === searchParams.unit) ? searchParams.unit : undefined;
-
-  // Fechamento SEMANAL (16/07): ?semana=<qualquer dia> → segunda→domingo daquela semana
-  const weekMode = /^d{4}-d{2}-d{2}$/.test(searchParams.semana ?? '');
-  const weekFrom = weekMode ? mondayOf(searchParams.semana!) : null;
-  const weekTo = weekFrom ? addDaysISO(weekFrom, 6) : null;
-  const data = await getFreelancerConsolidation(user, ym, selectedUnit, weekFrom && weekTo ? { from: weekFrom, to: weekTo } : undefined);
-  const fmtBR = (iso: string) => iso.split('-').reverse().join('/');
-  const label = weekFrom && weekTo ? `Semana ${fmtBR(weekFrom)} → ${fmtBR(weekTo)}` : (months.find((m) => m.value === ym)?.label ?? ym);
-
-  const exportHref = `/api/payments/freelancer-report?month=${ym}${weekFrom ? `&semana=${weekFrom}` : ''}${selectedUnit ? `&unit=${selectedUnit}` : ''}`;
 
   return (
     <div className="space-y-4">
       <div className="print:hidden">
         <Link href="/modulos/pagamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pagamentos</Link>
       </div>
+      <LargeTitle title="Consolidação de Freelancers" />
+
+      {/* Duas abas, dois públicos. Links de servidor: cada aba tem os seus
+          próprios filtros na URL e não faz sentido carregar os dois de uma vez. */}
+      <nav className="flex gap-1 print:hidden" aria-label="Seções da consolidação">
+        <AbaLink ativa={aba === 'consolidado'} href="/modulos/pagamentos/relatorio-freelancers?aba=consolidado" rotulo="Consolidado da rede" />
+        <AbaLink ativa={aba === 'fechamento'} href="/modulos/pagamentos/relatorio-freelancers?aba=fechamento" rotulo="Fechamento (PIX)" />
+      </nav>
+
+      {aba === 'consolidado'
+        ? await Consolidado({ user, searchParams, units })
+        : await Fechamento({ user, searchParams, units })}
+    </div>
+  );
+}
+
+function AbaLink({ ativa, href, rotulo }: { ativa: boolean; href: string; rotulo: string }) {
+  return (
+    <Link
+      href={href}
+      aria-current={ativa ? 'page' : undefined}
+      className={ativa
+        ? 'rounded-control bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand'
+        : 'rounded-control border border-line px-3 py-1.5 text-sm font-semibold text-ink-500 hover:border-brand hover:text-ink-900'}
+    >
+      {rotulo}
+    </Link>
+  );
+}
+
+/* ───────────────────────── Consolidado da rede ───────────────────────── */
+
+type Sessao = Awaited<ReturnType<typeof getSessionUser>>;
+
+async function Consolidado({ user, searchParams, units }: { user: NonNullable<Sessao>; searchParams: Params; units: { id: string; name: string }[] }) {
+  const filtro: FiltroConsolidado = {
+    periodo: umDe<PeriodoKey>(searchParams.periodo, ['semana', 'semana-anterior', 'mes', 'mes-anterior', 'personalizado'], 'mes'),
+    de: ISO_DIA.test(searchParams.de ?? '') ? searchParams.de : undefined,
+    ate: ISO_DIA.test(searchParams.ate ?? '') ? searchParams.ate : undefined,
+    /* Unidade fora do escopo é ignorada, não recusada: o recorte de verdade já
+       está no `where` do servidor, aqui é só o seletor da tela. */
+    unitId: searchParams.unidade && units.some((u) => u.id === searchParams.unidade) ? searchParams.unidade : undefined,
+    tipo: umDe<TipoFiltro>(searchParams.tipo, ['TODOS', 'FREELANCER', 'OVERTIME'], 'FREELANCER'),
+    status: umDe<StatusFiltro>(searchParams.status, ['TODOS', 'PENDING', 'APPROVED', 'PAID', 'REJECTED'], 'TODOS'),
+    recorrencia: umDe<RecorrenciaFiltro>(searchParams.rec, ['todos', 'recorrentes'], 'todos'),
+  };
+
+  const dados = await getConsolidadoFreelancers(user, filtro);
+
+  return (
+    <Card><CardContent className="pt-4">
+      <ConsolidadoClient dados={dados} filtro={filtro} units={units} />
+    </CardContent></Card>
+  );
+}
+
+/* ───────────────────────── Fechamento para o Financeiro ───────────────────────── */
+
+async function Fechamento({ user, searchParams, units }: { user: NonNullable<Sessao>; searchParams: Params; units: { id: string; name: string }[] }) {
+  const months = lastMonths(12);
+  const ym = /^\d{4}-\d{2}$/.test(searchParams.month ?? '') ? searchParams.month! : months[0].value;
+  const selectedUnit = searchParams.unit && units.some((u) => u.id === searchParams.unit) ? searchParams.unit : undefined;
+
+  /* Fechamento SEMANAL (16/07): ?semana=<qualquer dia> → segunda→domingo.
+     O padrão aqui era `/^d{4}-d{2}-d{2}$/` — `d` literal, sem a barra invertida.
+     Ele nunca casava, então o botão "Ver semana" recarregava a página no mês e
+     o fechamento semanal simplesmente não existia, sem erro nenhum. */
+  const weekFrom = ISO_DIA.test(searchParams.semana ?? '') ? mondayOf(searchParams.semana!) : null;
+  const weekTo = weekFrom ? addDaysISO(weekFrom, 6) : null;
+  const data = await getFreelancerConsolidation(user, ym, selectedUnit, weekFrom && weekTo ? { from: weekFrom, to: weekTo } : undefined);
+  const fmtBR = (iso: string) => iso.split('-').reverse().join('/');
+  const label = weekFrom && weekTo ? `Semana ${fmtBR(weekFrom)} → ${fmtBR(weekTo)}` : (months.find((m) => m.value === ym)?.label ?? ym);
+
+  const exportHref = `/api/payments/freelancer-report?month=${ym}${weekFrom ? `&semana=${weekFrom}` : ''}${selectedUnit ? `&unit=${selectedUnit}` : ''}`;
+  const base = '/modulos/pagamentos/relatorio-freelancers';
+
+  return (
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-ink-900">Consolidação de Freelancers — {label}</h1>
+        <h2 className="sgo-type-17 font-semibold text-ink-900">{label}</h2>
         <div className="flex gap-2 print:hidden">
           <a href={exportHref} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><Download className="h-4 w-4" /> Exportar (Excel)</a>
           <PrintButton />
@@ -79,13 +166,14 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
           <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" className="h-10 w-56 rounded-lg border-2 border-line-strong bg-surface px-3 text-sm font-medium" />
         </div>
         <form method="get" className="flex items-end gap-1.5">
+          <input type="hidden" name="aba" value="fechamento" />
           <div>
             <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Ou fechamento semanal</p>
             <FormDatePicker name="semana" aria-label="Início da semana" defaultValue={weekFrom ?? ''} className="w-44" />
             {selectedUnit && <input type="hidden" name="unit" value={selectedUnit} />}
           </div>
           <button type="submit" className="h-10 rounded-lg bg-brand px-3 text-sm font-semibold text-on-brand">Ver semana</button>
-          {weekFrom && <Link href={`/modulos/pagamentos/relatorio-freelancers?month=${ym}${selectedUnit ? `&unit=${selectedUnit}` : ''}`} className="h-10 rounded-lg border px-3 py-2 text-sm font-semibold">Voltar ao mês</Link>}
+          {weekFrom && <Link href={`${base}?aba=fechamento&month=${ym}${selectedUnit ? `&unit=${selectedUnit}` : ''}`} className="h-10 rounded-lg border px-3 py-2 text-sm font-semibold">Voltar ao mês</Link>}
         </form>
         {units.length > 1 && (
           <div>
@@ -99,11 +187,11 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
       <Card>
         <CardContent className="flex items-center justify-between py-3">
           <span className="text-sm text-ink-500">{data.grandCount} pagamento(s) · {data.groups.length} freelancer(s)</span>
-          <span className="text-lg font-bold text-ink-900">{formatBRL(data.grandTotal)}</span>
+          <span className="sgo-type-17 font-bold text-ink-900">{formatBRL(data.grandTotal)}</span>
         </CardContent>
       </Card>
 
-      {data.groups.length === 0 && <p className="text-sm text-ink-500">Nenhum pagamento de freelancer aprovado/pago neste mês.</p>}
+      {data.groups.length === 0 && <p className="text-sm text-ink-500">Nenhum pagamento de freelancer aprovado/pago neste período.</p>}
 
       {data.groups.map((g) => (
         <Card key={g.freelancerId}>
@@ -121,7 +209,7 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
             <div className="divide-y border-t pt-1">
               {g.lines.map((l) => (
                 <div key={l.id} className="flex items-center justify-between gap-2 py-1 text-sm">
-                  <span className="text-ink-500">{l.date} · {l.unit} · {l.status}</span>
+                  <span className="text-ink-500">{fmtBR(l.date)} · {l.unit} · {l.status}</span>
                   <span className="flex items-center gap-2">
                     {l.divergent && <span className="flex items-center gap-0.5 text-xs font-semibold text-warning"><AlertTriangle className="h-3 w-3" /> padrão {l.standardValue != null ? formatBRL(l.standardValue) : '—'}</span>}
                     <span className="font-semibold">{formatBRL(l.amount)}</span>
