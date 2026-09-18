@@ -9,6 +9,38 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.100.1 — 2026-09-18 (Relatório impresso saía em folha em branco)
+
+Gerar o PDF de qualquer tela do sistema produzia um arquivo com o número certo de páginas e **nada
+escrito**. Não era texto branco sobre papel branco: no PDF gerado não havia operador de desenho de
+texto ALGUM — 73 páginas, zero.
+
+A causa são as animações de entrada. Elas usam `animation-fill-mode: both`, que é o certo na tela:
+antes de a animação começar o elemento já assume o primeiro quadro, e nada pisca. Só que o primeiro
+quadro de `sgo-page-emerge` é `opacity: 0`, e o de `sgo-page-push` está deslocado 100% para fora da
+página. Ao imprimir, o Chrome monta um documento novo — as animações voltam ao tempo zero e o papel
+não roda quadro nenhum, então o `both` congela o conteúdo no quadro inicial: invisível. Como
+`.sgo-page-enter` envolve toda tela do grupo (app) (`src/app/(app)/template.tsx`), valia para o
+sistema inteiro, em qualquer tema e em qualquer relatório.
+
+`@media print` passa a desligar animação e transição para todo elemento. O seletor é **universal de
+propósito**: listar as classes de hoje deixaria a armadilha armada para a próxima animação de
+entrada, que nasceria imprimindo em branco do mesmo jeito.
+
+Por que passou pela revisão: na tela está tudo perfeito, `opacity` e `transform` não alteram o
+layout (daí a contagem de páginas sair certa) e nenhum teste abre um PDF.
+`tests/impressao-sem-animacao.test.ts` trava a regra — verificado que ele falha quando o bloco de
+impressão é removido.
+
+Não confundir com a v1.95.0: lá o defeito era real, mas outro (tema escuro pintando texto claro em
+papel branco) e atingia só quem usava o sistema no escuro. Esta segunda causa atingia todo mundo, e
+estava por baixo da primeira.
+
+⚠️ Este CHANGELOG estava parado na v1.90.0: as versões 1.91 a 1.100 foram registradas só na tabela
+de status do `CLAUDE.md`.
+
+---
+
 ## v1.90.0 — 2026-09-16 (Pedidos Internos: aviso de falta, pedido em andamento e histórico)
 
 Os quatro pontos da especificação que ainda não tinham sido feitos.
