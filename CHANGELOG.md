@@ -9,6 +9,34 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.100.2 — 2026-09-18 (Separador do CD: "Romaneio para imprimir" dava 404)
+
+O separador abria o pedido, clicava em **Romaneio para imprimir** e caía num 404 — em cima do pedido
+que ele tinha acabado de abrir. Valia para **todo separador e todo pedido**.
+
+A página do romaneio do CD carregava o pedido por `getPedido`, que pede acesso à **unidade**. Só que
+o separador não tem unidade nenhuma: desde a v1.92.0 ele é cadastrado por **setor do CD**, porque o
+CD atende a rede toda. `canAccessUnit` então recusava tudo e a página caía em `notFound()`.
+
+A porta passou a ser a do setor, e por construção: `getRomaneioDoCd` pergunta a
+`getPedidoParaSeparar` — a mesma função que decide se a tela de separação abre. **Quem consegue
+abrir o pedido consegue imprimir o romaneio dele, sempre.** Escrever uma segunda regra equivalente
+traria o mesmo 404 de volta por outro caminho assim que as duas divergissem.
+
+O conteúdo continua sendo a **carga inteira**, não só o setor de quem imprime: é a folha conferida
+na doca, com a mercadoria já reunida. O recorte por setor existe para ninguém separar a lista do
+colega por engano — não para esconder o que vai no mesmo caminhão.
+
+`getPedido` foi dividida em porta (unidade) e montagem. A parte sem escopo chama-se
+`carregarPedidoSemEscopoDeUnidade`, com nome longo de propósito: ela não decide acesso nenhum e só
+deve ser chamada por quem já decidiu por outra porta. O romaneio do gerente e a tela de pedido
+seguem barrados por unidade — verificado em teste.
+
+Cinco casos novos em `tests/pedidos-separacao.integration.test.ts`, e verificado que **três deles
+reprovam** o código anterior.
+
+---
+
 ## v1.100.1 — 2026-09-18 (Relatório impresso saía em folha em branco)
 
 Gerar o PDF de qualquer tela do sistema produzia um arquivo com o número certo de páginas e **nada

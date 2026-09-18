@@ -5,6 +5,7 @@ import { notifyUsers } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import { motivoLabel } from './separacao-motivos';
 import { numeroDoPedido } from './numero-do-pedido';
+import { carregarPedidoSemEscopoDeUnidade, type PedidoDetalhado } from './pedido';
 
 /**
  * SEPARAÇÃO no CD — item a item, com quatro setores ao mesmo tempo.
@@ -298,4 +299,31 @@ export async function getPedidoParaSeparar(user: SessionUser, requestId: string)
     separados: itens.filter((i) => i.qtySeparated !== null).length,
     total: itens.length,
   };
+}
+
+/**
+ * O ROMANEIO pelo lado do CD — a folha inteira da carga.
+ *
+ * O defeito que esta função existe para consertar: a página do romaneio do CD
+ * carregava o pedido por `getPedido`, que pede acesso à UNIDADE. O separador
+ * não tem unidade nenhuma — desde a v1.92.0 ele é cadastrado por setor do CD,
+ * porque o CD atende a rede toda —, então `canAccessUnit` recusava todos os
+ * pedidos e "Romaneio para imprimir" dava **404 em cima de um pedido que a
+ * pessoa tinha acabado de abrir**. Valia para todo separador e todo pedido.
+ *
+ * A porta aqui é EXATAMENTE a da tela de separação, e por construção: em vez de
+ * escrever uma segunda regra equivalente — que envelheceria em separado e
+ * traria o mesmo 404 de volta por outro caminho —, esta função pergunta a
+ * `getPedidoParaSeparar`. Quem consegue abrir o pedido consegue imprimir o
+ * romaneio dele, sempre.
+ *
+ * O conteúdo, porém, é a carga INTEIRA e não só o setor de quem imprime: é a
+ * folha que sai junto com a mercadoria e é conferida na doca, onde a carga já
+ * está reunida. O recorte por setor existe para ninguém separar a lista do
+ * colega por engano — não para esconder o que vai no mesmo caminhão.
+ */
+export async function getRomaneioDoCd(user: SessionUser, requestId: string): Promise<PedidoDetalhado | null> {
+  const meu = await getPedidoParaSeparar(user, requestId);
+  if (!meu) return null;
+  return carregarPedidoSemEscopoDeUnidade(requestId);
 }

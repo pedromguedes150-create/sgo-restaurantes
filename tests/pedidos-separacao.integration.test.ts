@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { criarPedido, getPedido } from '@/lib/products/pedido';
-import { separarItem, desfazerItem, getPedidoParaSeparar } from '@/lib/products/separacao';
+import { separarItem, desfazerItem, getPedidoParaSeparar, getRomaneioDoCd } from '@/lib/products/separacao';
 import type { SessionUser } from '@/lib/auth/session';
 import { numeroDoPedido } from '@/lib/products/numero-do-pedido';
 
@@ -328,5 +328,67 @@ describe('O gerente fica sabendo da falta', () => {
     const p = (await prisma.productRequest.findUnique({ where: { id } }))!;
     const [falta] = (await avisos()).filter((n) => n.title.includes('Falta'));
     expect(falta.title).toContain(numeroDoPedido(p.number, p.createdAt));
+  });
+});
+
+/**
+ * O ROMANEIO pelo lado do CD.
+ *
+ * O defeito que estes casos existem para impedir (estava em produção, relatado
+ * com print pelo separador): a página do romaneio do CD carregava o pedido por
+ * `getPedido`, que exige acesso à UNIDADE. O separador não tem unidade nenhuma
+ * — desde a v1.92.0 ele é cadastrado por setor, porque o CD atende a rede toda
+ * —, então `canAccessUnit` recusava **todos** os pedidos e "Romaneio para
+ * imprimir" dava 404 em cima do pedido que a pessoa tinha acabado de abrir.
+ *
+ * Nada em `tsc`, lint ou nos testes existentes falhava: a tela de separação usa
+ * a porta certa e o romaneio do GERENTE também. Só o caminho do CD estava com a
+ * fechadura trocada.
+ */
+describe('O romaneio abre para quem separa', () => {
+  it('o separador imprime o romaneio do pedido que ele está separando', async () => {
+    const id = await pedidoPadrao();
+    const romaneio = await getRomaneioDoCd(carlos(), id);
+    expect(romaneio).not.toBeNull();
+    expect(romaneio!.id).toBe(id);
+  });
+
+  it('a folha traz a CARGA INTEIRA, não só o setor de quem imprime', async () => {
+    /* É o papel que é conferido na doca, com a carga já reunida. Recortar por
+       setor deixaria a conferência sem os itens que estão no mesmo caminhão. */
+    const id = await pedidoPadrao();
+    const romaneio = (await getRomaneioDoCd(carlos(), id))!;
+    const nomes = romaneio.setores.flatMap((s) => s.itens.map((i) => i.name)).sort();
+    expect(nomes).toEqual(['Arroz 5kg', 'Coca-Cola 2L', 'Suco de uva']);
+  });
+
+  it('a porta é a MESMA da tela de separação — se abriu o pedido, imprime', async () => {
+    /* O contrato que impede o defeito de voltar por outro caminho: as duas
+       respostas andam juntas, em vez de existirem duas regras parecidas que
+       envelhecem em separado. */
+    const id = await pedidoPadrao();
+    for (const quem of [carlos(), maria(), gerente()]) {
+      const abre = (await getPedidoParaSeparar(quem, id)) !== null;
+      const imprime = (await getRomaneioDoCd(quem, id)) !== null;
+      expect(imprime).toBe(abre);
+    }
+  });
+
+  it('separador de setor que não está no pedido não imprime', async () => {
+    const soDeSecos = await criarPedido(gerente(), { unitId, items: [{ productId: prod.arroz, qty: 1 }] });
+    if (!soDeSecos.ok) throw new Error('não criou');
+    /* Carlos é de Bebidas: este pedido não tem item dele, e a tela de separação
+       já o recusava. O romaneio recusa pelo mesmo motivo. */
+    expect(await getPedidoParaSeparar(carlos(), soDeSecos.pedidos[0].id)).toBeNull();
+    expect(await getRomaneioDoCd(carlos(), soDeSecos.pedidos[0].id)).toBeNull();
+  });
+
+  it('o gerente continua entrando pela porta da unidade', async () => {
+    /* A porta do CD é um acréscimo, não uma troca: quem pede segue barrado por
+       unidade, e um gerente de OUTRA unidade não vê o pedido. */
+    const id = await pedidoPadrao();
+    const deOutraUnidade: SessionUser = { id: gerenteId, name: 'Gerente', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false, needsTerms: false };
+    expect(await getPedido(deOutraUnidade, id)).toBeNull();
+    expect(await getPedido(gerente(), id)).not.toBeNull();
   });
 });
