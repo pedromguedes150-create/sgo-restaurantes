@@ -239,8 +239,31 @@ function statusDoSetor(itens: ItemNaTela[]): StatusDoSetor {
 
 const num = (d: Prisma.Decimal | null) => (d === null ? null : Number(d));
 
-/** O pedido inteiro, já dividido por setor do CD. */
+/**
+ * O pedido inteiro, já dividido por setor do CD — pela porta da UNIDADE.
+ *
+ * Esta é a porta de quem pede: gerente, supervisão, administração. Quem entra
+ * pelo lado do CD **não passa por aqui**, porque o separador não tem unidade
+ * nenhuma (o CD atende a rede toda, v1.92.0) e `canAccessUnit` recusaria todos
+ * os pedidos. Para esse lado existe `carregarPedidoSemEscopoDeUnidade`, usada
+ * atrás da porta do setor em `separacao.ts`.
+ */
 export async function getPedido(user: SessionUser, id: string): Promise<PedidoDetalhado | null> {
+  const r = await prisma.productRequest.findUnique({ where: { id }, select: { unitId: true } });
+  if (!r) return null;
+  if (!canAccessUnit(user, r.unitId)) return null;
+  return carregarPedidoSemEscopoDeUnidade(id);
+}
+
+/**
+ * O MESMO pedido, sem checar unidade.
+ *
+ * ⚠️ Não chame direto de uma tela. Ela não decide acesso nenhum — só monta. Quem
+ * a usa precisa TER DECIDIDO o acesso por outra porta, e hoje existe uma só:
+ * a do CD, em `separacao.ts`, onde o direito vem do setor da pessoa e não da
+ * unidade. O nome é longo de propósito.
+ */
+export async function carregarPedidoSemEscopoDeUnidade(id: string): Promise<PedidoDetalhado | null> {
   const r = await prisma.productRequest.findUnique({
     where: { id },
     include: {
@@ -248,7 +271,6 @@ export async function getPedido(user: SessionUser, id: string): Promise<PedidoDe
     },
   });
   if (!r) return null;
-  if (!canAccessUnit(user, r.unitId)) return null;
   const unit = await prisma.unit.findUnique({ where: { id: r.unitId }, select: { name: true } });
 
   const porSetor = new Map<string, ItemNaTela[]>();
