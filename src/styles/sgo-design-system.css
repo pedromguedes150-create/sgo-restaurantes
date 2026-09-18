@@ -533,6 +533,38 @@
   }
 }
 
+/* PAPEL NÃO TEM MOVIMENTO — e este bloco não é enfeite: sem ele TODO relatório
+   do sistema saía em folha em branco.
+
+   As animações de entrada usam `animation-fill-mode: both`, que é o certo na
+   tela: antes de a animação começar o elemento já assume o primeiro quadro, e
+   nada pisca. Só que o primeiro quadro de `sgo-page-emerge` é `opacity: 0` e o
+   de `sgo-page-push` é `opacity: .6` DESLOCADO 100% para fora da página.
+
+   Ao imprimir, o Chrome monta um documento novo e as animações voltam ao tempo
+   zero — mas o papel não roda quadro nenhum. O `both` então congela o conteúdo
+   no quadro inicial: invisível. Como `.sgo-page-enter` envolve toda tela do
+   grupo (app) (`src/app/(app)/template.tsx`), isso valia para o sistema
+   inteiro, em qualquer tema. No PDF gerado não havia texto branco sobre branco:
+   não havia texto ALGUM — zero operadores de desenho de texto, com a contagem
+   de páginas certinha, porque `opacity` e `transform` não mexem no layout. É
+   por isso que o defeito passava pela revisão de código: na tela está tudo
+   perfeito, e nenhum teste abre um PDF.
+
+   O seletor é universal de propósito. Ele é o único jeito de a próxima
+   animação de entrada nascer já correta na impressão — listar as classes de
+   hoje deixaria a armadilha armada para a próxima. Nenhum elemento do sistema
+   depende de animação para ficar visível: os `opacity: 0` vivem só dentro dos
+   `@keyframes`, então desligar devolve o estado natural, que é o visível. */
+@media print {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 /* Regra 8 do contrato: alvo de toque de no mínimo 44px. Os tamanhos compactos
    (sm 32px, md 40px) existem para o mouse, onde a mira é precisa; num aparelho
    de toque eles ficam abaixo do dedo. Em vez de proibir o compacto, o próprio
