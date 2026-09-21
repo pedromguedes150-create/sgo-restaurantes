@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
+import { competenciaDeHoje, emNumero, emReal, rotuloDaCompetencia } from '@/lib/ticket-media/calculo';
+import { resumoParaODashboard } from '@/lib/ticket-media/query';
 import { getUnitsOverview, aggregateDay, type UnitOverview } from '@/lib/tasks/overview';
 import { getOccurrenceSummary } from '@/lib/occurrences/query';
 import { getOpenDivergenceCount } from '@/lib/commands/query';
@@ -83,7 +85,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
   const { de, ate } = mesCorrente(hoje);
   const soDaUnidade = unitIds && unitIds.length === 1 ? unitIds[0] : undefined;
 
-  const [overviews, occ, divergencias, cancelamentos, aprovar, freelas, unidadesDaRede, oleoDoMes, desperdicioDoMes] = await Promise.all([
+  const [overviews, occ, divergencias, cancelamentos, aprovar, freelas, unidadesDaRede, oleoDoMes, desperdicioDoMes, ticket] = await Promise.all([
     getUnitsOverview(user, hoje),
     getOccurrenceSummary(user, soDaUnidade ? { unitId: soDaUnidade } : {}),
     getOpenDivergenceCount(user),
@@ -99,6 +101,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
       where: { ...unitScopeWhere(user, 'unitId'), ...(soDaUnidade ? { unitId: soDaUnidade } : {}), operationalDate: { gte: de, lte: ate } },
       select: { unitId: true },
     }),
+    resumoParaODashboard(user, { competencia: competenciaDeHoje(hoje), unitIds }),
   ]);
 
   const visiveis = soDaUnidade ? overviews.filter((o) => o.unit.id === soDaUnidade) : overviews;
@@ -152,6 +155,27 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
       href: '/modulos/ocorrencias?status=OPEN',
       tom: occ.criticalOpen > 0 ? 'critico' : occ.openOver48h > 0 ? 'atencao' : 'ok',
     },
+    /* TICKET MÉDIO — só entra quando há unidade participante no alcance de
+       quem olha. Com o seletor em "Toda a Rede", o número continua sendo o das
+       CHURRASCARIAS: CD, lanchonete e produtos não participam do indicador, e
+       somá-los aqui daria um ticket que não existe em lugar nenhum. Sem
+       participante, o cartão some — melhor do que "R$ 0,00", que afirmaria que
+       a rede não vendeu. */
+    ...(ticket
+      ? [{
+        id: 'ticket-medio',
+        titulo: 'Ticket Médio',
+        valor: emReal(ticket.ticket),
+        /* O MÊS vai escrito no cartão: ele nem sempre é o corrente (ver
+           `resumoParaODashboard`), e um ticket sem mês seria um número que a
+           pessoa atribui ao mês errado. */
+        detalhe: ticket.completo
+          ? `${rotuloDaCompetencia(ticket.competencia)} · ${emNumero(ticket.coupons)} cupons · receita ${emReal(ticket.receita)}`
+          : `${rotuloDaCompetencia(ticket.competencia)} parcial — ${ticket.importadas} de ${ticket.participantes} unidades importadas`,
+        href: `/modulos/ticket-medio?competencia=${ticket.competencia}`,
+        tom: (ticket.completo ? 'ok' : 'atencao') as Gravidade,
+      }]
+      : []),
     {
       id: 'freelance',
       titulo: 'Freelancers no mês',

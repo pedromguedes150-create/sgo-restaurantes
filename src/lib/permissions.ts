@@ -104,6 +104,9 @@ const BASE: ModuleDef[] = [
 
   { key: 'SUPERVISION', label: 'Rotina do Supervisor', nav: '/modulos/supervisao' },
   { key: 'EXECUTIVE', label: 'Visão Executiva', nav: '/modulos/executivo' },
+
+  { key: 'TICKET_MEDIA', label: 'Ticket Médio', nav: '/modulos/ticket-medio' },
+  { key: 'TICKET_MEDIA_IMPORT', label: 'Importar Ticket Médio', nav: '/modulos/ticket-medio/importar', parent: 'TICKET_MEDIA' },
   { key: 'UNIT_PANEL', label: 'Painel da unidade', nav: '/modulos/painel-unidade' },
 
   { key: 'AUDIT', label: 'Auditoria', nav: '/auditoria' },
@@ -137,6 +140,7 @@ const BASE: ModuleDef[] = [
   { key: 'CONFIG_CD_SECTORS', label: 'Setores do CD', nav: '/configuracoes/setores-cd', parent: 'CONFIG' },
   { key: 'CONFIG_PRODUCT_STANDARDS', label: 'Padrão de produtos (foto)', nav: '/configuracoes/padrao-produtos', parent: 'CONFIG' },
   { key: 'CONFIG_PIZZAS', label: 'Pizzas (sabores)', nav: '/configuracoes/pizzas', parent: 'CONFIG' },
+  { key: 'CONFIG_TICKET_MEDIA', label: 'Ticket Médio (unidades participantes)', nav: '/configuracoes/ticket-medio', parent: 'CONFIG' },
   { key: 'CONFIG_PAYMENTS', label: 'Pagamentos (freelancers e avulsos)', nav: '/configuracoes/pagamentos', parent: 'CONFIG' },
   { key: 'CONFIG_FREELANCER_RATES', label: 'Valor do freelancer por setor', nav: '/configuracoes/freelancer-valores', parent: 'CONFIG' },
   { key: 'CONFIG_INTEGRATIONS', label: 'APIs e integrações', nav: '/configuracoes/integracoes', parent: 'CONFIG' },

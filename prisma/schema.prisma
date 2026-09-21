@@ -71,6 +71,8 @@ model Unit {
   vacations           Vacation[]
   scheduleEntries     ScheduleEntry[]
   popUnits            PopUnit[]
+  ticketMediaParticipations TicketMediaParticipation[]
+  ticketMediaEntries        TicketMediaEntry[]
   sectors             Sector[]
   allocations         WorkforceAllocation[]
   workforceDaySnapshots WorkforceDaySnapshot[]
@@ -3269,4 +3271,85 @@ model PizzaClosingItem {
   @@unique([closingId, size, flavorId])
   @@index([flavorId])
   @@map("pizza_closing_items")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TICKET MÉDIO — acompanhamento mensal das churrascarias
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// PARTICIPAÇÃO de uma unidade no Ticket Médio, por PERÍODO DE VIGÊNCIA.
+///
+/// Não é uma chave `participa: sim/não` na Unit, e não é por acaso. Tirar uma
+/// unidade do controle não pode apagar os meses em que ela participou: um
+/// booleano responderia "não participa" também sobre Janeiro, e o consolidado
+/// de Janeiro mudaria sozinho meses depois.
+///
+/// São VÁRIAS linhas por unidade porque a participação pode ser interrompida e
+/// retomada. Com uma linha só, uma unidade que saiu em setembro e voltou em
+/// novembro apareceria como pendente em setembro e outubro — meses em que ela,
+/// de fato, não participava.
+///
+/// A competência é "AAAA-MM" (texto). Data completa mentiria uma precisão de
+/// dia que este controle não tem: a alimentação é mensal.
+model TicketMediaParticipation {
+  id       String  @id @default(cuid())
+  unitId   String
+  /// Primeira competência em que a unidade participa ("AAAA-MM"), inclusive.
+  startsAt String
+  /// Última competência em que participa, inclusive. Null = ainda participa.
+  endsAt   String?
+
+  createdById   String
+  createdByName String
+  createdAt     DateTime  @default(now())
+  closedById    String?
+  closedByName  String?
+  closedAt      DateTime?
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId, startsAt])
+  @@map("ticket_media_participations")
+}
+
+/// O lançamento mensal de UMA unidade: o que a planilha do mês somou.
+///
+/// Receita e ticket médio NÃO são colunas. Os dois saem de `grossSales`,
+/// `discounts` e `coupons` — total gravado é total que um dia discorda das
+/// parcelas, e aqui a regra (receita = venda − desconto) é justamente o que
+/// não pode divergir entre a tela, o consolidado e o relatório.
+model TicketMediaEntry {
+  id         String @id @default(cuid())
+  unitId     String
+  /// "AAAA-MM".
+  competence String
+
+  coupons    Int
+  /// Soma de "Vr. Venda" dos cupons válidos da planilha.
+  grossSales Decimal @db.Decimal(14, 2)
+  /// Soma de "Vr. Desc.".
+  discounts  Decimal @db.Decimal(14, 2)
+
+  /// Cupons descartados na leitura (cancelados, status não reconhecido) e o
+  /// porquê — o número que a tela mostra para o conferente não ficar no escuro.
+  skipped       Int     @default(0)
+  skippedDetail String?
+
+  fileName       String
+  importedById   String
+  importedByName String
+  importedAt     DateTime @default(now())
+
+  /// Da ÚLTIMA substituição. O histórico completo de quem substituiu quando
+  /// vive na Auditoria — esta coluna é para a tela não precisar consultá-la.
+  replacedAt     DateTime?
+  replacedById   String?
+  replacedByName String?
+  replacedCount  Int       @default(0)
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([unitId, competence])
+  @@index([competence])
+  @@map("ticket_media_entries")
 }
