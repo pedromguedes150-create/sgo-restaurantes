@@ -9,6 +9,50 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.101.2 — 2026-09-21 (Mapa de Funções: "Necessário 24 horas" vira escolha, e não herança)
+
+Toda função aparecia exigindo cobertura **24 horas**, e cadastrar `06:40–15:00` era recusado por
+conflito com `00:00–24:00` — sem saída pela tela.
+
+### A causa não era o cálculo
+
+Faixas que **encostam** já eram aceitas (`06:40–15:00` e `15:00–23:40` convivem, porque a faixa é
+`[início, fim)`), faixa que cruza a meia-noite já funcionava, e setor sem faixa já ficava *sem
+exigência* em vez de "sem cobertura". Também não havia preenchimento automático rodando.
+
+O que havia era a **migração da v1.84.0**: ao substituir o antigo `Sector.minHeadcount` ela converteu
+cada setor numa faixa `00:00–24:00`, "para não mudar nada no dia da subida". O efeito colateral só
+aparece em uso — a faixa de dia inteiro ocupa os 1440 minutos, então **qualquer** horário específico
+colide com ela, e a tela de adicionar não oferecia caminho de volta.
+
+### Agora
+
+**"Necessário 24 horas" é uma caixa de marcar** dentro do setor. Marcar **substitui** as faixas dele
+(pedir 24 horas e manter uma faixa das 10h às 15h seria pedir duas coisas, e a segunda ficaria
+inerte); desmarcar apaga só a faixa de dia inteiro e deixa o setor **sem exigência** até alguém
+cadastrar as faixas — "não é 24 horas" não diz qual é o horário, e inventar um seria pior do que não
+ter nenhum.
+
+A recusa por conflito com a faixa de dia inteiro passou a **apontar a saída** em vez de dizer
+"conflito de horário": mandava procurar uma sobreposição que não dá para enxergar.
+
+As faixas ganharam **editar** (antes só dava para apagar e recadastrar) e a dica passou a dizer os
+dois casos que parecem erro e não são: faixa que encosta na outra e faixa que atravessa a meia-noite.
+
+### No painel
+
+Funções **sem necessidade naquele horário ficam escondidas**, com um botão
+`Mostrar funções fora do horário (N)`. Uma função sem faixa às 2h não está descoberta — ela não opera
+àquela hora; mostrá-la junto das que importam ensina a varrer a tela, e é assim que o cartão
+realmente vermelho passa despercebido. O rodapé do cartão passou de "sem faixa cadastrada" para
+**"Sem necessidade neste horário"**.
+
+⚠️ **Nada foi apagado do banco.** Os `00:00–24:00` herdados continuam lá: alguns são legítimos (Caixa
+e Balcão de uma unidade 24 horas). Quem precisa de horário específico desmarca a caixa naquele setor
+— uma vez, por função.
+
+---
+
 ## v1.101.0 — 2026-09-21 (Módulo Ticket Médio — acompanhamento mensal das churrascarias)
 
 Importar a planilha do mês → conferir → gravar → cobrar quem falta → consolidar.

@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
-import { salvarFaixa, apagarFaixa, getSetoresComFaixas } from '@/lib/workforce/cobertura';
+import { salvarFaixa, apagarFaixa, getSetoresComFaixas, definirVinteQuatroHoras } from '@/lib/workforce/cobertura';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -158,5 +158,108 @@ describe('A auditoria registra o cadastro', () => {
     const meta = log?.metadata as Record<string, unknown> | null;
     expect(meta?.setor).toBe('Cozinha');
     expect(meta?.minPeople).toBe(3);
+  });
+});
+
+/**
+ * O "NECESSÁRIO 24 HORAS" — e o beco sem saída que ele veio resolver.
+ *
+ * O defeito relatado com print: toda função aparecia exigindo cobertura 24
+ * horas, e cadastrar 06:40–15:00 era recusado por conflito com 00:00–24:00.
+ *
+ * A causa não era o cálculo (faixas que encostam já eram aceitas) nem um
+ * preenchimento automático rodando hoje: foi a migração da v1.84.0, que
+ * converteu o antigo `Sector.minHeadcount` numa faixa de dia inteiro para "não
+ * mudar nada no dia da subida". O efeito só apareceu em uso — com os 1440
+ * minutos ocupados, QUALQUER faixa específica colide, e a tela de adicionar não
+ * oferecia saída.
+ */
+describe('Necessário 24 horas', () => {
+  it('reproduz o beco: com a faixa de dia inteiro, 06:40–15:00 é recusada', async () => {
+    await criar(cozinha, '00:00', '24:00', 1);
+    const r = await criar(cozinha, '06:40', '15:00', 1);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.reason).toBe('CONFLITO');
+    /* A mensagem precisa apontar a SAÍDA — "conflito de horário" seco mandava
+       procurar uma sobreposição que a pessoa não consegue enxergar. */
+    expect(r.erro).toContain('24 horas');
+    expect(r.erro).toContain('Desmarque');
+  });
+
+  it('desmarcar as 24 horas libera o cadastro das faixas específicas', async () => {
+    await criar(cozinha, '00:00', '24:00', 1);
+    expect((await definirVinteQuatroHoras(admin(), { sectorId: cozinha, ligado: false })).ok).toBe(true);
+
+    expect((await criar(cozinha, '06:40', '15:00', 1)).ok).toBe(true);
+    expect((await criar(cozinha, '15:00', '23:40', 1)).ok).toBe(true);
+
+    const [setor] = (await getSetoresComFaixas(admin(), unitId)).filter((s) => s.id === cozinha);
+    expect(setor.faixas.map((f) => f.rotulo).sort()).toEqual(['06:40–15:00', '15:00–23:40']);
+    expect(setor.faixas.every((f) => !f.diaInteiro)).toBe(true);
+  });
+
+  it('marcar 24 horas SUBSTITUI as faixas específicas', async () => {
+    /* Manter as duas seria pedir duas coisas ao mesmo tempo, e a específica
+       ficaria inerte: a de dia inteiro cobre o minuto primeiro. */
+    await criar(cozinha, '06:40', '15:00', 1);
+    await criar(cozinha, '15:00', '23:40', 2);
+    expect((await definirVinteQuatroHoras(admin(), { sectorId: cozinha, ligado: true, minPeople: 3 })).ok).toBe(true);
+
+    const [setor] = (await getSetoresComFaixas(admin(), unitId)).filter((s) => s.id === cozinha);
+    expect(setor.faixas).toHaveLength(1);
+    expect(setor.faixas[0].diaInteiro).toBe(true);
+    expect(setor.faixas[0].rotulo).toBe('00:00–24:00');
+    expect(setor.faixas[0].minPeople).toBe(3);
+  });
+
+  it('desmarcar deixa o setor SEM exigência, e não com um horário inventado', async () => {
+    await definirVinteQuatroHoras(admin(), { sectorId: cozinha, ligado: true, minPeople: 2 });
+    await definirVinteQuatroHoras(admin(), { sectorId: cozinha, ligado: false });
+    const [setor] = (await getSetoresComFaixas(admin(), unitId)).filter((s) => s.id === cozinha);
+    expect(setor.faixas).toHaveLength(0);
+  });
+
+  it('desmarcar num setor que não era 24 horas não apaga as faixas dele', async () => {
+    await criar(cozinha, '10:00', '15:00', 2);
+    expect((await definirVinteQuatroHoras(admin(), { sectorId: cozinha, ligado: false })).ok).toBe(true);
+    const [setor] = (await getSetoresComFaixas(admin(), unitId)).filter((s) => s.id === cozinha);
+    expect(setor.faixas).toHaveLength(1);
+  });
+
+  it('respeita o escopo por unidade', async () => {
+    const deOutraUnidade: SessionUser = { id: userId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false, needsTerms: false };
+    const r = await definirVinteQuatroHoras(deOutraUnidade, { sectorId: cozinha, ligado: true, minPeople: 1 });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.reason).toBe('FORBIDDEN');
+  });
+});
+
+/**
+ * O CENÁRIO DO PEDIDO, inteiro: unidade 24 horas em que cada função tem o seu
+ * próprio horário. É o que o módulo precisa conseguir representar.
+ */
+describe('Unidade 24 horas com funções de horários diferentes', () => {
+  it('Caixa 24h, Cozinha em dois turnos, Churrasqueira com buraco no meio', async () => {
+    await definirVinteQuatroHoras(admin(), { sectorId: caixa, ligado: true, minPeople: 1 });
+    expect((await criar(cozinha, '06:40', '15:00', 1)).ok).toBe(true);
+    expect((await criar(cozinha, '15:00', '23:40', 1)).ok).toBe(true);
+
+    const churrasqueira = (await prisma.sector.create({ data: { unitId, name: `Churrasqueira ${sfx}`, minHeadcount: 0 } })).id;
+    expect((await criar(churrasqueira, '10:00', '15:00', 2)).ok).toBe(true);
+    /* O intervalo 15:00–18:00 fica DE FORA de propósito: não existe
+       necessidade ali, e o painel não deve cobrar ninguém. */
+    expect((await criar(churrasqueira, '18:00', '23:00', 2)).ok).toBe(true);
+
+    const setores = await getSetoresComFaixas(admin(), unitId);
+    const porNome = (n: string) => setores.find((s) => s.name.startsWith(n))!;
+    expect(porNome('Caixa').faixas).toHaveLength(1);
+    expect(porNome('Caixa').faixas[0].diaInteiro).toBe(true);
+    expect(porNome('Cozinha').faixas).toHaveLength(2);
+    expect(porNome('Churrasqueira').faixas).toHaveLength(2);
+
+    await prisma.sectorRequirement.deleteMany({ where: { sectorId: churrasqueira } });
+    await prisma.sector.delete({ where: { id: churrasqueira } });
   });
 });

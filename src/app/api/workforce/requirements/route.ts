@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { requestContext } from '@/lib/auth/service';
-import { salvarFaixa, apagarFaixa } from '@/lib/workforce/cobertura';
+import { salvarFaixa, apagarFaixa, definirVinteQuatroHoras } from '@/lib/workforce/cobertura';
 
 /**
  * Faixas de necessidade do setor.
@@ -32,7 +32,13 @@ export async function POST(req: Request) {
     }, ctx)
     : b.action === 'apagar'
       ? await apagarFaixa(user, String(b.id ?? ''), ctx)
-      : null;
+      : b.action === '24h'
+        ? await definirVinteQuatroHoras(user, {
+          sectorId: String(b.sectorId ?? ''),
+          ligado: Boolean(b.ligado),
+          minPeople: Number(b.minPeople ?? 1),
+        }, ctx)
+        : null;
 
   if (!r) return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });
   if (!r.ok) {
