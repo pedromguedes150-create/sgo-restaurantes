@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { isSupervisory } from '@/lib/roles';
+import { getGasMaxPriceKg } from '@/lib/gas/query';
 import type { SessionUser } from '@/lib/auth/session';
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
@@ -147,6 +148,7 @@ export async function validateGasImport(user: SessionUser, rows: Record<string, 
   const supByCnpj = new Map(suppliers.filter((s) => s.cnpj).map((s) => [cnpjKey(s.cnpj), s]));
 
   const today = new Date().toISOString().slice(0, 10);
+  const teto = await getGasMaxPriceKg();
   const seenInFile = new Set<string>(); // dup dentro do arquivo (cnpj|cnpjForn|numero)
   const results: RowResult[] = [];
 
@@ -196,6 +198,13 @@ export async function validateGasImport(user: SessionUser, rows: Record<string, 
     if (venc && venc < emissao) { results.push(err('Vencimento anterior à emissão')); continue; }
     if (preco == null || !(preco > 0)) { results.push(err('Preço unitário deve ser maior que zero')); continue; }
     if (qtd == null || !(qtd > 0)) { results.push(err('Quantidade deve ser maior que zero')); continue; }
+    /* Faixa de plausibilidade do preço/kg. O modelo diz "Preço unitário =
+       preço por kg" e "Quantidade = quantidade em kg", mas nada verificava, e
+       duas trocas cabem aqui em silêncio: o preço do BOTIJÃO inteiro (~R$ 300)
+       e o TOTAL da nota (milhares) no lugar do unitário. Na segunda, o import
+       ainda MULTIPLICA pela quantidade — foi assim que entrou a nota que
+       sozinha distorceu o preço médio da rede e achatou todos os gráficos. */
+    if (preco > teto) { results.push(err(`Preço unitário de R$ ${preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} acima do teto de R$ ${teto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/kg — a coluna é o preço POR KG, não o total da nota nem o preço do botijão`)); continue; }
     let kind: 'BULK' | 'CYLINDER' = 'BULK';
     if (formaStr) {
       if (normHeader(formaStr) === normHeader(FORMA_GRANEL)) kind = 'BULK';

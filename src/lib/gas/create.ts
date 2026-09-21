@@ -4,7 +4,8 @@ import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { notifyUnitRole, notifyUsers } from '@/lib/notifications';
 import { currentOperationalDate } from '@/lib/date/operational';
-import { getGasAlertPct } from '@/lib/gas/query';
+import { getGasAlertPct, getGasMaxPriceKg } from '@/lib/gas/query';
+import { precoImplausivel } from '@/lib/gas/variacao';
 import type { SessionUser } from '@/lib/auth/session';
 
 export interface CreateGasInput {
@@ -31,7 +32,7 @@ export type CreateGasResult =
   | { ok: true; id: string; pricePerKg: number; variationPct: number | null; alerted: boolean }
   /** `message` sobrepõe o texto padrão do motivo quando a causa tem detalhe
    *  útil (ex.: o número da nota que já existe). */
-  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'DUPLICATE'; message?: string };
+  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'DUPLICATE' | 'PRECO_IMPLAUSIVEL'; message?: string };
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
 
@@ -57,6 +58,20 @@ export async function createGasReceipt(user: SessionUser, input: CreateGasInput,
   if (!unit) return { ok: false, reason: 'INVALID' };
 
   const pricePerKg = hasUnit ? Math.round(unitPrice * 10000) / 10000 : Math.round((total / qty) * 10000) / 10000;
+
+  /* Faixa de plausibilidade. Até aqui só se exigia kg > 0 e valor > 0, e uma
+     nota a milhares de reais por quilo entrava calada — e depois achatava todo
+     gráfico de gás, que é escalado pelo maior valor da série. O teto não julga
+     se a compra foi cara: separa preço de QUILO de preço de BOTIJÃO (ou do
+     total da nota) digitado no campo errado. */
+  const tetoPrecoKg = await getGasMaxPriceKg();
+  if (precoImplausivel(pricePerKg, tetoPrecoKg)) {
+    return {
+      ok: false,
+      reason: 'PRECO_IMPLAUSIVEL',
+      message: `Preço de R$ ${pricePerKg.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/kg está acima do teto de R$ ${tetoPrecoKg.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/kg. Confira se a quantidade está em KG e se o valor é o total da nota.`,
+    };
+  }
   const opDate = input.operationalDate && /^\d{4}-\d{2}-\d{2}$/.test(input.operationalDate)
     ? input.operationalDate
     : currentOperationalDate({ timezone: unit.timezone, cutoffHour: unit.cutoffHour });
@@ -157,7 +172,7 @@ export async function createGasReceipt(user: SessionUser, input: CreateGasInput,
 }
 
 export interface EditGasInput { quantityKg?: number; totalValue?: number; supplierId?: string | null; observation?: string | null }
-export type EditGasResult = { ok: true } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND' };
+export type EditGasResult = { ok: true } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND' | 'PRECO_IMPLAUSIVEL'; message?: string };
 
 /**
  * Corrige um lançamento de gás (erro de digitação do gerente) — Supervisão/Admin.
@@ -175,6 +190,17 @@ export async function editGasReceipt(user: SessionUser, id: string, input: EditG
   const total = input.totalValue != null ? Number(input.totalValue) : Number(rec.totalValue);
   if (!(qty > 0) || !(total > 0)) return { ok: false, reason: 'INVALID' };
   const pricePerKg = Math.round((total / qty) * 10000) / 10000;
+  /* O mesmo teto do lançamento. Sem ele, a correção seria a porta aberta ao
+     lado da porta fechada — e é justamente por esta tela que se conserta uma
+     nota fora de faixa, então ela não pode aceitar outra. */
+  const tetoPrecoKg = await getGasMaxPriceKg();
+  if (precoImplausivel(pricePerKg, tetoPrecoKg)) {
+    return {
+      ok: false,
+      reason: 'PRECO_IMPLAUSIVEL',
+      message: `Preço de R$ ${pricePerKg.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/kg está acima do teto de R$ ${tetoPrecoKg.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/kg. Confira se a quantidade está em KG e se o valor é o total da nota.`,
+    };
+  }
   const prevPrice = rec.prevPricePerKg != null ? Number(rec.prevPricePerKg) : null;
   const variationPct = prevPrice && prevPrice > 0 ? Math.round(((pricePerKg - prevPrice) / prevPrice) * 1000) / 10 : null;
   const threshold = await getGasAlertPct();

@@ -11,6 +11,8 @@ const REASONS: Record<string, { msg: string; status: number }> = {
   INVALID: { msg: 'Informe quantidade (kg) e valor total válidos', status: 400 },
   NOT_FOUND: { msg: 'Lançamento não encontrado', status: 404 },
   DUPLICATE: { msg: 'Este recebimento já foi lançado.', status: 409 },
+  /* O texto real vem em `message`, com os dois valores; este é só o piso. */
+  PRECO_IMPLAUSIVEL: { msg: 'Preço por kg acima do teto configurado.', status: 400 },
 };
 
 export async function POST(req: Request) {
@@ -51,7 +53,7 @@ async function tratar(req: Request) {
       supplierId: b.supplierId === undefined ? undefined : (b.supplierId || null),
       observation: b.observation === undefined ? undefined : b.observation,
     }, requestContext(req));
-    if (!e.ok) return reasonResponse(REASONS, e.reason);
+    if (!e.ok) return reasonResponse(REASONS, e.reason, e.message);
     return NextResponse.json({ ok: true });
   }
 

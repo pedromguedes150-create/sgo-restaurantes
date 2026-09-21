@@ -719,8 +719,13 @@ export const GUIDE: GuideSection[] = [
           'Aba "Análise de gás" (dentro de Notas): Dashboard com preço médio/kg e VOLUME comprado por unidade e por fornecedor (com filtros de unidade/fornecedor/mês que agora funcionam), histórico, contratos e o relatório de variação (imprimível).',
           'Contratos: Supervisão/Admin cadastram período, kg e preço/kg por fornecedor; os recebimentos abatem sozinhos e o Dashboard mostra o % cumprido.',
           'Se o preço/kg subir acima do limite (padrão 10%) vs a última compra da unidade, gerente e supervisor são avisados.',
+          'PREÇO FORA DA FAIXA (v1.104.0): o sistema recusa lançamento acima de R$ 30,00/kg. Não é limite de gasto — é o corte entre preço de QUILO e preço de outra coisa: o valor do botijão inteiro (~R$ 290) ou o TOTAL da nota digitado no campo do preço unitário. Se aparecer essa recusa, confira se a quantidade está em kg e se o valor é o total da nota. Vale também para a correção de lançamento e para a importação por planilha.',
+          'Se já houver notas assim gravadas, o Dashboard mostra um aviso vermelho no topo NOMEANDO cada uma (unidade, data, preço) — corrija kg/valor na aba Histórico. Enquanto elas existirem, o preço médio fica distorcido e os gráficos ficam achatados.',
         ],
-        tips: ['A lista de fornecedores é compartilhada com Notas e Pagamentos. O Admin ajusta o limite do alerta no Dashboard da Análise de gás.'],
+        tips: [
+          'A lista de fornecedores é compartilhada com Notas e Pagamentos. O Admin ajusta o limite do alerta e o teto de preço/kg no Dashboard da Análise de gás.',
+          'O "preço médio/kg" é PONDERADO: valor total ÷ kg total, e não a média dos preços das notas — assim uma compra de 600 kg pesa mais que uma de 30 kg, como deve ser.',
+        ],
       },
       {
         id: 'cancelamentos',
