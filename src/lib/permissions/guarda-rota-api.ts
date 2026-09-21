@@ -106,6 +106,11 @@ export const REGRAS: Record<string, RegraDeRota> = {
   // prefixo mais longo vence, então esta entra na matriz e a pública não.
   '/api/pizzas/sabores': { modulo: 'CONFIG_PIZZAS', exigir: 'editar' },
 
+  /* O importador e a configuração de participantes são portas diferentes: quem
+     importa a planilha do mês não precisa poder mudar QUEM entra no consolidado. */
+  '/api/ticket-medio/importar': { modulo: 'TICKET_MEDIA_IMPORT', exigir: 'editar' },
+  '/api/ticket-medio/participantes': { modulo: 'CONFIG_TICKET_MEDIA', exigir: 'editar' },
+
   '/api/pops': { modulo: 'POPS', exigir: 'editar' },
   '/api/product-standards': { modulo: 'CONFIG_PRODUCT_STANDARDS', exigir: 'editar' },
   '/api/products/pedido': { modulo: 'PRODUCTS', exigir: 'editar' },

@@ -9,6 +9,87 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.101.0 — 2026-09-21 (Módulo Ticket Médio — acompanhamento mensal das churrascarias)
+
+Importar a planilha do mês → conferir → gravar → cobrar quem falta → consolidar.
+
+### A planilha não é um resumo
+
+A "Relação de Cupons SAT/NFC-e" do Teknisa tem **uma linha por cupom** — 7.499 no arquivo de agosto.
+Não existe nela um campo "quantidade de cupons" nem um total de vendas para copiar: quem soma é o
+SGO. As linhas "Total (Data:…)" que o relatório intercala vêm com as colunas de valor **vazias**.
+
+Do arquivo real: 7.457 cupons válidos, venda R$ 441.576,85, desconto R$ 8.708,97 → receita
+R$ 432.867,88, ticket **R$ 58,05**.
+
+**Cupom cancelado não entra.** Eram 8, R$ 728,15 em venda. Cancelado não é venda, e somá-lo inflaria
+receita e ticket. Os descartados são contados por status e mostrados na prévia — descartar em
+silêncio e incluir em silêncio são o mesmo erro em direções opostas.
+
+As colunas são achadas **pelo nome**, não pela posição: relatório exportado com um título acima
+quebraria a posição fixa somando a coluna errada, sem erro nenhum.
+
+### As três regras
+
+1. `RECEITA = Vr. Venda − Vr. Desc.` (o desconto sai da venda)
+2. `TICKET = Receita ÷ Cupons` (nunca venda ÷ cupons)
+3. `CONSOLIDADO = Σreceita ÷ Σcupons` — **não** a média dos tickets das unidades
+
+A terceira é a mais traiçoeira porque o número sai plausível: com A (R$ 100.000/2.000) e B
+(R$ 300.000/5.000), a média simples dá R$ 55,00 e o correto é R$ 57,14. A média dá o mesmo peso a
+uma unidade de 2.000 cupons e a uma de 50.000. A frase está escrita na própria tela, e há teste.
+
+Acréscimo e gorjeta **não** entram na receita (a regra é venda − desconto), mas quando existem na
+planilha a prévia avisa — a regra descarta, e esconder o descarte seria outra coisa.
+
+### Quem participa é configuração do módulo
+
+O SGO **não tem no cadastro** nada que diga "isto é uma churrascaria": nome não serve, razão social
+não serve (várias unidades dividem a mesma) e CNPJ não serve. Então nada é inferido —
+`/configuracoes/ticket-medio` é uma lista de caixas que o Admin marca, gravando o **id real** da
+unidade já cadastrada. Nenhum cadastro novo de unidade, nenhuma coluna nova na `Unit`.
+
+**Unidade nova nasce fora.** É o que impede o CD ou a lanchonete caírem no consolidado.
+
+A participação tem **vigência** (`TicketMediaParticipation`, com `startsAt`/`endsAt` em "AAAA-MM"), e
+não um booleano: tirar a unidade do controle em setembro não pode mudar o consolidado de janeiro.
+São várias linhas por unidade porque a participação pode ser interrompida e retomada — com uma só,
+uma unidade que saiu em setembro e voltou em novembro apareceria como pendente em setembro e
+outubro, meses em que não participava.
+
+### Importação em duas etapas
+
+A prévia **não grava**, e a confirmação **lê o arquivo de novo**: devolver ao servidor os totais que
+a prévia calculou seria confiar num número que passou pelo navegador.
+
+Recusas com mensagem própria: mês trocado (o SGO lê a data dos cupons — importar agosto como
+setembro é o engano mais provável da rotina, e o total sai plausível), unidade que não participa da
+competência, planilha sem as colunas necessárias, e **duplicidade** — que nunca sobrescreve calada.
+Substituir exige a mesma permissão de administrar o módulo, e grava quem/quando/qual arquivo na
+linha e na Auditoria.
+
+Receita e ticket **não são colunas** no banco: saem de cupons, venda e desconto. Total gravado é
+total que um dia discorda das parcelas.
+
+### Na tela
+
+Status do fechamento **antes** dos números (ler "R$ 58,05" sem saber que falta uma unidade é ler um
+número que vai mudar): parcial diz o nome de quem falta; completo diz que fechou. Tabela por unidade
+com variação contra o mês anterior, linha de consolidado, evolução em barras.
+
+A comparação com o mês anterior usa **só as unidades presentes nos dois meses** — somar um mês cheio
+contra um mês anterior incompleto acusaria uma queda que é só de importação faltando.
+
+O seletor do módulo diz **"Consolidado das churrascarias"**, e não "Toda a Rede": a rede tem CD,
+lanchonete e produtos, e usar a mesma palavra do seletor global faria o número parecer incluir tudo.
+
+⚠️ **O cartão do Dashboard mostra o último mês COM lançamento, não o mês corrente** — decidido vendo
+o cartão pronto na tela, no dia 21: a planilha de um mês só sai depois que ele fecha, então um cartão
+preso ao mês corrente mostraria "–" em três semanas de cada quatro. O mês vai escrito no cartão, e
+assim que o mês corrente recebe a primeira planilha o cartão passa para ele, marcado como parcial.
+
+---
+
 ## v1.100.2 — 2026-09-18 (Separador do CD: "Romaneio para imprimir" dava 404)
 
 O separador abria o pedido, clicava em **Romaneio para imprimir** e caía num 404 — em cima do pedido

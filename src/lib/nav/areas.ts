@@ -82,6 +82,7 @@ export const AREAS: AreaDoMenu[] = [
     colunas: [
       { titulo: 'Metas', keys: ['METAS', 'METAS_CONFIG'] },
       { titulo: 'Acompanhamento', keys: ['SUPERVISION', 'EXECUTIVE', 'UNIT_PANEL', 'WASTE_CONSOLIDATED'] },
+      { titulo: 'Ticket Médio', keys: ['TICKET_MEDIA', 'TICKET_MEDIA_IMPORT'] },
     ],
   },
   {
@@ -105,7 +106,7 @@ export const AREAS: AreaDoMenu[] = [
     colunas: [
       { titulo: 'Estrutura', keys: ['CONFIG', 'CONFIG_UNITS', 'CONFIG_USERS', 'CONFIG_PROFILES', 'CONFIG_INTEGRATIONS', 'CONFIG_RH_DIAG'] },
       { titulo: 'Operação', keys: ['CONFIG_CHECKLISTS', 'CONFIG_MODELS', 'CONFIG_SUP_CHECKLISTS', 'CONFIG_COMMANDS', 'CASH_CONFIG', 'CONFIG_WASTE', 'CONFIG_OCCURRENCES'] },
-      { titulo: 'Cadastros', keys: ['CONFIG_SUPPLIERS', 'CONFIG_PRODUCTS', 'CONFIG_CD_SECTORS', 'CONFIG_PRODUCT_STANDARDS', 'CONFIG_PIZZAS'] },
+      { titulo: 'Cadastros', keys: ['CONFIG_SUPPLIERS', 'CONFIG_PRODUCTS', 'CONFIG_CD_SECTORS', 'CONFIG_PRODUCT_STANDARDS', 'CONFIG_PIZZAS', 'CONFIG_TICKET_MEDIA'] },
       { titulo: 'Pessoas e escala', keys: ['CONFIG_SCHEDULES', 'CONFIG_PAYMENTS', 'CONFIG_FREELANCER_RATES'] },
     ],
   },
