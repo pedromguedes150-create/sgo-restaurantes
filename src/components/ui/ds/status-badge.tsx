@@ -7,13 +7,19 @@ import { cn } from '@/lib/utils';
  */
 export type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'brand';
 
+/**
+ * O anel interno de 1px é o acabamento: sobre `surface` os fundos de status são
+ * claríssimos (danger-bg é 254 243 242) e a pílula some, virando texto colorido
+ * solto. O anel devolve a forma sem escurecer o fundo — e usa a própria cor do
+ * tom, em alfa baixo, para não virar uma borda cinza genérica.
+ */
 const tones: Record<Tone, string> = {
-  neutral: 'bg-sunken text-ink-700',
-  success: 'bg-success-bg text-success',
-  warning: 'bg-warning-bg text-warning',
-  danger: 'bg-danger-bg text-danger',
-  info: 'bg-info-bg text-info',
-  brand: 'bg-brand-tint-2 text-brand',
+  neutral: 'bg-sunken text-ink-700 ring-1 ring-inset ring-ink-400/20',
+  success: 'bg-success-bg text-success ring-1 ring-inset ring-success/20',
+  warning: 'bg-warning-bg text-warning ring-1 ring-inset ring-warning/20',
+  danger: 'bg-danger-bg text-danger ring-1 ring-inset ring-danger/20',
+  info: 'bg-info-bg text-info ring-1 ring-inset ring-info/20',
+  brand: 'bg-brand-tint-2 text-brand ring-1 ring-inset ring-brand/20',
 };
 const dots: Record<Tone, string> = {
   neutral: 'bg-ink-400',

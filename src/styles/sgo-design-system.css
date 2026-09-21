@@ -61,6 +61,15 @@
      contraste de cor — branco sobre cinza claro dá ~1,2:1. É assim no iOS.
      O estado continua legível porque o texto muda de cor E de peso. */
   --sgo-shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 1px rgba(0, 0, 0, 0.06);
+  /* ---- Elevação de acabamento ----
+     Duas sombras, e as duas DISCRETAS de propósito: o cartão já se separa do
+     canvas pela borda, e a sombra só tira a sensação de adesivo colado. Sombra
+     forte num painel com dez cartões vira sujeira visual, não modernidade.
+     `card` é o repouso; `pop` é o que flutua de verdade (mega menu, popover) e
+     por isso pode ser mais funda — ali a distância é a informação. */
+  --sgo-shadow-card: 0 1px 2px rgba(24, 16, 14, 0.04), 0 1px 3px rgba(24, 16, 14, 0.06);
+  --sgo-shadow-card-hover: 0 2px 4px rgba(24, 16, 14, 0.06), 0 4px 12px rgba(24, 16, 14, 0.08);
+  --sgo-shadow-pop: 0 4px 6px rgba(24, 16, 14, 0.04), 0 12px 32px rgba(24, 16, 14, 0.12);
   /* Superfície translúcida (barras com backdrop-blur). */
   --sgo-glass: rgba(255, 255, 255, 0.72);
 
@@ -178,6 +187,14 @@
     --sgo-raised: rgb(var(--sgo-raised-rgb));
     /* Sombra preta some sobre fundo escuro; aqui a elevação vem do tom. */
     --sgo-shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --sgo-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --sgo-shadow-card-hover: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --sgo-shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
+    /* No escuro a sombra some contra o fundo — a elevação vem do tom da
+       superfície. Fica mais funda só para o que de fato flutua. */
+    --sgo-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --sgo-shadow-card-hover: 0 2px 8px rgba(0, 0, 0, 0.45);
+    --sgo-shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.55);
     --sgo-glass: rgba(31, 28, 27, 0.72);
 
     --sgo-brand-rgb: 240 167 177;
@@ -563,6 +580,16 @@
     animation: none !important;
     transition: none !important;
   }
+
+  /* Sombra no papel vira borrão cinza: a elevação é uma dica de tela, e a
+     impressora não tem como desenhar "flutuando". Os tokens zeram aqui, então
+     nenhum componente precisa lembrar de tirar a própria sombra. */
+  :root {
+    --sgo-shadow-raised: none;
+    --sgo-shadow-card: none;
+    --sgo-shadow-card-hover: none;
+    --sgo-shadow-pop: none;
+  }
 }
 
 /* Regra 8 do contrato: alvo de toque de no mínimo 44px. Os tamanhos compactos
@@ -613,6 +640,9 @@
   --sgo-raised-rgb: 255 255 255;
   --sgo-raised: rgb(var(--sgo-raised-rgb));
   --sgo-shadow-raised: none;
+  --sgo-shadow-card: none;
+  --sgo-shadow-card-hover: none;
+  --sgo-shadow-pop: none;
   --sgo-glass: rgba(255, 255, 255, 0.72);
   --sgo-brand-rgb: 124 26 43;
   --sgo-brand: rgb(var(--sgo-brand-rgb));

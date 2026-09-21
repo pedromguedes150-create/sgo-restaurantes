@@ -35,6 +35,12 @@ export interface Indicador {
   /** Para onde o clique leva — já filtrado. */
   href: string;
   tom: Gravidade;
+  /**
+   * CHAVE do ícone, resolvida para componente na tela (este módulo é de
+   * servidor e não carrega JSX). Só acabamento: o cartão continua legível sem
+   * ele, e o ícone nunca carrega significado sozinho.
+   */
+  icone: string;
 }
 
 export interface AlertaDaRede {
@@ -133,6 +139,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
   const indicadores: Indicador[] = [
     {
       id: 'unidades',
+      icone: 'unidades',
       titulo: 'Unidades',
       valor: inteiro(unidades.length),
       detalhe: comAtencao === 0 ? 'todas em dia' : `${comAtencao} precisa(m) de atenção`,
@@ -141,6 +148,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
     },
     {
       id: 'tarefas',
+      icone: 'tarefas',
       titulo: 'Tarefas de hoje',
       valor: `${dia.progressPct}%`,
       detalhe: dia.overdue + dia.missed > 0 ? `${inteiro(dia.overdue + dia.missed)} atrasada(s) ou não realizada(s)` : `${inteiro(dia.done)} de ${inteiro(dia.total)} concluídas`,
@@ -149,6 +157,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
     },
     {
       id: 'ocorrencias',
+      icone: 'ocorrencias',
       titulo: 'Ocorrências abertas',
       valor: inteiro(occ.open + occ.inProgress),
       detalhe: occ.criticalOpen > 0 ? `${inteiro(occ.criticalOpen)} crítica(s)` : occ.openOver48h > 0 ? `${inteiro(occ.openOver48h)} aberta(s) há mais de 48h` : 'nenhuma crítica',
@@ -164,6 +173,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
     ...(ticket
       ? [{
         id: 'ticket-medio',
+        icone: 'ticket',
         titulo: 'Ticket Médio',
         valor: emReal(ticket.ticket),
         /* O MÊS vai escrito no cartão mesmo sendo sempre o corrente: um ticket
@@ -178,6 +188,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
       : []),
     {
       id: 'freelance',
+      icone: 'pessoas',
       titulo: 'Freelancers no mês',
       valor: inteiro(freelas.resumo.solicitacoes),
       detalhe: freelas.resumo.recorrentes > 0
@@ -188,6 +199,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
     },
     {
       id: 'oleo',
+      icone: 'oleo',
       titulo: 'Coleta de óleo',
       valor: `${inteiro(Math.round(litros))} L`,
       detalhe: semOleo.length > 0 ? `${inteiro(semOleo.length)} unidade(s) sem lançamento no mês` : `${lancaramOleo.size} unidade(s) lançaram`,
@@ -196,6 +208,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
     },
     {
       id: 'desperdicio',
+      icone: 'desperdicio',
       titulo: 'Desperdício',
       valor: inteiro(diasComDesperdicio),
       detalhe: 'dia(s) lançado(s) no mês na rede',
@@ -204,6 +217,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
     },
     {
       id: 'pagamentos',
+      icone: 'pagamentos',
       titulo: 'Pagamentos',
       valor: inteiro(aprovar),
       detalhe: aprovar > 0 ? 'aguardando sua aprovação' : 'nada na sua fila',
@@ -212,6 +226,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
     },
     {
       id: 'caixa',
+      icone: 'caixa',
       titulo: 'Caixa',
       valor: inteiro(divergencias + cancelamentos),
       detalhe: `${inteiro(divergencias)} divergência(s) · ${inteiro(cancelamentos)} cancelamento(s) sem justificativa`,

@@ -1,5 +1,8 @@
 import Link from 'next/link';
-import { ChevronRight, AlertTriangle, AlertOctagon, Clock, Inbox } from 'lucide-react';
+import {
+  ChevronRight, AlertTriangle, AlertOctagon, Clock, Inbox,
+  Store, ListChecks, Receipt, Users, Droplets, Trash2, Wallet, Ticket,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { shortUnitName } from '@/lib/unit-name';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
@@ -24,6 +27,20 @@ const VALOR_TOM: Record<Gravidade, string> = {
   ok: 'text-ink-900',
 };
 
+const ICONE_INDICADOR: Record<string, React.ComponentType<{ className?: string }>> = {
+  unidades: Store, tarefas: ListChecks, ocorrencias: AlertTriangle, ticket: Receipt,
+  pessoas: Users, oleo: Droplets, desperdicio: Trash2, pagamentos: Wallet, caixa: Ticket,
+};
+
+/* O CHIP do ícone segue o tom do cartão, e o padrão é a MARCA — não um cinza.
+   Vermelho e âmbar ficam para o que está de fato fora do lugar; se todo cartão
+   usasse cor de alerta, nenhum chamaria atenção. */
+const CHIP_TOM: Record<Gravidade, string> = {
+  critico: 'bg-danger-bg text-danger',
+  atencao: 'bg-warning-bg text-warning',
+  ok: 'bg-brand-tint-2 text-brand',
+};
+
 export function IndicadoresDaRede({ indicadores }: { indicadores: Indicador[] }) {
   return (
     <section>
@@ -36,21 +53,32 @@ export function IndicadoresDaRede({ indicadores }: { indicadores: Indicador[] })
 }
 
 function Cartao({ i }: { i: Indicador }) {
+  const Icone = ICONE_INDICADOR[i.icone] ?? Store;
   return (
     <Link
       href={i.href}
       className={cn(
-        'group flex min-h-24 flex-col justify-between rounded-card border p-3 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:border-brand focus-visible:shadow-sgo-focus',
+        /* A sombra é o acabamento; a MUDANÇA de sombra no hover é o que diz
+           que o cartão é clicável, sem precisar de mais uma cor na tela. */
+        'group flex min-h-28 flex-col justify-between rounded-card border p-4 shadow-sgo-card outline-none transition-all duration-sgo-1 ease-sgo-std hover:border-brand hover:shadow-sgo-card-hover focus-visible:shadow-sgo-focus',
         CARD_TOM[i.tom],
       )}
     >
-      <span className="flex items-start justify-between gap-1">
-        <span className="sgo-type-11 font-semibold text-ink-500">{i.titulo}</span>
+      <span className="flex items-start justify-between gap-2">
+        {/* O chip de ícone é o que dá ao cartão a aparência de painel moderno
+            em vez de caixa de texto. Ele é decorativo: `aria-hidden`, e o
+            título ao lado continua dizendo tudo. */}
+        <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-control', CHIP_TOM[i.tom])} aria-hidden>
+          <Icone className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1 sgo-type-11 font-semibold text-ink-500">{i.titulo}</span>
         <ChevronRight className="h-4 w-4 shrink-0 text-ink-400 transition-transform duration-sgo-1 ease-sgo-std group-hover:translate-x-0.5" aria-hidden />
       </span>
-      <span>
+      <span className="mt-2 block">
+        {/* O número é o primeiro nível do cartão e o apoio é o terceiro: em
+            `text-xs` colado ele competia com o número. */}
         <span className={cn('block sgo-type-24 font-semibold tabular-nums', VALOR_TOM[i.tom])}>{i.valor}</span>
-        <span className="mt-0.5 block text-xs text-ink-500">{i.detalhe}</span>
+        <span className="mt-1 block text-xs leading-snug text-ink-500">{i.detalhe}</span>
       </span>
     </Link>
   );
@@ -68,12 +96,21 @@ const FAIXA: Record<Gravidade, string> = {
   ok: 'bg-brand',
 };
 
+/* Vermelho fica reservado ao crítico. O "ok" da lista de atenção é o item que
+   está na fila de alguém (um pagamento a aprovar), e ele usa a MARCA — pintá-lo
+   de vermelho gastaria o alarme com trabalho de rotina. */
+const BADGE_ALERTA: Record<Gravidade, 'danger' | 'warning' | 'brand'> = {
+  critico: 'danger',
+  atencao: 'warning',
+  ok: 'brand',
+};
+
 export function AlertasDaRede({ alertas }: { alertas: AlertaDaRede[] }) {
   if (alertas.length === 0) {
     return (
       <section>
         <h2 className="mb-2 sgo-type-11 font-semibold text-ink-500">Precisa da sua atenção</h2>
-        <p className="rounded-card border border-success/40 bg-success/5 px-4 py-3 text-sm font-medium text-success">
+        <p className="rounded-card border border-success/40 bg-success/5 px-4 py-3 text-sm font-medium text-success shadow-sgo-card">
           Tudo em dia — nenhum desvio na rede agora.
         </p>
       </section>
@@ -86,7 +123,7 @@ export function AlertasDaRede({ alertas }: { alertas: AlertaDaRede[] }) {
         Precisa da sua atenção
         <span className="text-xs font-medium text-ink-500">{alertas.length} item(ns)</span>
       </h2>
-      <ul className="overflow-hidden rounded-card border border-line bg-surface">
+      <ul className="overflow-hidden rounded-card border border-line bg-surface shadow-sgo-card">
         {alertas.map((a) => {
           const Icone = ICONE_ALERTA[a.gravidade];
           return (
@@ -94,22 +131,25 @@ export function AlertasDaRede({ alertas }: { alertas: AlertaDaRede[] }) {
               <Link href={a.href} className="group flex items-stretch gap-0 outline-none focus-visible:shadow-sgo-focus">
                 {/* Faixa de cor à esquerda: a gravidade se lê antes do texto,
                     mas NUNCA só por ela — o rótulo diz a mesma coisa em palavra. */}
-                <span className={cn('w-1 shrink-0', FAIXA[a.gravidade])} aria-hidden />
-                <span className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 transition-colors duration-sgo-1 ease-sgo-std group-hover:bg-sunken">
+                <span className={cn('w-1.5 shrink-0', FAIXA[a.gravidade])} aria-hidden />
+                <span className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 transition-colors duration-sgo-1 ease-sgo-std group-hover:bg-brand-tint">
                   <Icone className={cn('h-4 w-4 shrink-0', a.gravidade === 'critico' ? 'text-danger' : a.gravidade === 'atencao' ? 'text-warning' : 'text-brand')} aria-hidden />
                   <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-baseline gap-x-2">
+                    {/* O RÓTULO subiu para a primeira linha e virou crachá.
+                        Embaixo, em caixa alta e cinza, ele tinha peso de
+                        legenda mas ocupava o lugar da informação — e a segunda
+                        linha ficava com três coisas concorrendo. */}
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="text-sm font-semibold text-ink-900">{a.problema}</span>
+                      <StatusBadge tone={BADGE_ALERTA[a.gravidade]}>{a.rotulo}</StatusBadge>
                       {a.unidade && <span className="text-xs text-ink-500">{shortUnitName(a.unidade)}</span>}
                     </span>
                     <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-ink-500">
-                      <span className="sgo-type-11 font-semibold text-ink-500">{a.rotulo}</span>
-                      {a.quando && <><span aria-hidden>·</span><span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden />{a.quando}</span></>}
-                      <span aria-hidden>·</span>
+                      {a.quando && <><span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden />{a.quando}</span><span aria-hidden>·</span></>}
                       <span>{a.acao}</span>
                     </span>
                   </span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-ink-400 transition-transform duration-sgo-1 ease-sgo-std group-hover:translate-x-0.5" aria-hidden />
                 </span>
               </Link>
             </li>
@@ -138,12 +178,12 @@ export function UnidadesHoje({ unidades }: { unidades: UnidadeHoje[] }) {
   return (
     <section>
       <h2 className="mb-2 sgo-type-11 font-semibold text-ink-500">Unidades hoje</h2>
-      <ul className="overflow-hidden rounded-card border border-line bg-surface">
+      <ul className="overflow-hidden rounded-card border border-line bg-surface shadow-sgo-card">
         {unidades.map((u) => (
           <li key={u.unitId} className="border-b border-line last:border-0">
             <Link
               href={`/tarefas?unidade=${u.unitId}`}
-              className="flex items-center gap-3 px-3 py-2.5 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus"
+              className="group flex items-center gap-3 px-3 py-2.5 outline-none transition-colors duration-sgo-1 ease-sgo-std hover:bg-brand-tint focus-visible:shadow-sgo-focus"
             >
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold text-ink-900">{shortUnitName(u.nome)}</span>
@@ -154,7 +194,7 @@ export function UnidadesHoje({ unidades }: { unidades: UnidadeHoje[] }) {
                 </span>
               </span>
               <StatusBadge tone={ROTULO_TOM[u.tom].tone} dot>{ROTULO_TOM[u.tom].texto}</StatusBadge>
-              <ChevronRight className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />
+              <ChevronRight className="h-4 w-4 shrink-0 text-ink-400 transition-transform duration-sgo-1 ease-sgo-std group-hover:translate-x-0.5" aria-hidden />
             </Link>
           </li>
         ))}

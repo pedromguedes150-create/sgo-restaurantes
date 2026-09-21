@@ -9,6 +9,53 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.102.0 — 2026-09-21 (Acabamento visual — modernização leve, identidade bordô intacta)
+
+Nenhuma tela mudou de lugar, nenhum dado mudou de nome, nenhuma rota mudou. O que mudou é o
+**acabamento**: elevação, crachás, hierarquia e o estado ativo do menu.
+
+O SGO dos postos foi referência de **acabamento**, não de paleta. A identidade continua vinho/bordô
+— e agora há teste travando isso (`tests/identidade-visual.test.ts`), porque o risco é silencioso:
+quase todo painel de mercado é azul, `info` (azul) **é** um token válido do sistema, e trocar a marca
+por ele não quebraria lint nem guard de paleta.
+
+### Elevação virou token
+
+Três sombras no design system — `card` (repouso), `card-hover` e `pop` (mega menu) — e as três
+discretas: o cartão já se separa do canvas pela borda, e a sombra só tira a sensação de adesivo
+colado. Sombra forte num painel de dez cartões é sujeira, não modernidade. **Zeram na impressão**: no
+papel a sombra vira borrão cinza.
+
+### Menu superior
+
+O item ativo virou **pílula de tinta bordô**, no lugar do sublinhado de 2px colado na borda da barra
+— era o risco embaixo que dava cara de barra de sistema antigo. O hover usa a mesma tinta, mais
+clara: o destino do ponteiro fica óbvio sem introduzir um cinza que não existe em lugar nenhum. O
+mega menu trocou `shadow-lg` do Tailwind pela sombra do sistema.
+
+### Cartões do Dashboard
+
+Ganharam **chip de ícone** (o cue mais forte do acabamento moderno), mais respiro (`p-3` → `p-4`) e
+mudança de sombra no hover — que é o que diz "isto é clicável" sem gastar mais uma cor. O chip segue
+o tom do cartão e o **padrão é a marca**: vermelho e âmbar ficam para o que está de fato fora do
+lugar.
+
+### "Precisa da sua atenção"
+
+O rótulo (`Parada`, `Atrasado`, `Sem lançamento`) **subiu para a primeira linha e virou crachá**.
+Embaixo, em caixa alta e cinza, ele tinha peso de legenda mas ocupava o lugar da informação, e a
+segunda linha ficava com três coisas concorrendo. Nada foi removido: quando, ação e unidade
+continuam todos lá.
+
+Os crachás ganharam um anel interno de 1px na própria cor: sobre `surface` os fundos de status são
+claríssimos e a pílula sumia, virando texto colorido solto.
+
+### O que NÃO mudou
+
+Estrutura das páginas, nomes de abas, lógica dos dashboards, permissões, rotas e regras de negócio.
+
+---
+
 ## v1.101.2 — 2026-09-21 (Mapa de Funções: "Necessário 24 horas" vira escolha, e não herança)
 
 Toda função aparecia exigindo cobertura **24 horas**, e cadastrar `06:40–15:00` era recusado por

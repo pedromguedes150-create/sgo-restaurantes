@@ -77,16 +77,25 @@ export function TopNav({ areas }: { areas: AreaMontada[] }) {
             const estaAtiva = area.id === areaAtiva;
             const estaAberta = aberta === area.id;
 
+            /* O ATIVO virou PÍLULA de tinta bordô, no lugar do sublinhado de
+               2px que ia até a borda da barra — é o risco colado embaixo que
+               dava ao menu cara de barra de sistema antigo. A pílula fica
+               dentro da faixa, com ar em volta, e a marca aparece como
+               superfície em vez de traço.
+               O hover usa a MESMA tinta mais clara: o destino do ponteiro fica
+               óbvio sem introduzir um cinza que não existe em lugar nenhum. */
             const visual = cn(
-              'flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2 text-sm font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus lg:px-3',
-              estaAtiva ? 'border-brand text-brand' : 'border-transparent text-ink-700 hover:bg-sunken hover:text-ink-900',
+              'my-1.5 flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3 text-sm font-medium outline-none transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
+              estaAtiva
+                ? 'bg-brand-tint-2 font-semibold text-brand'
+                : 'text-ink-700 hover:bg-brand-tint hover:text-brand',
             );
 
             if (unica) {
               return (
                 <li key={area.id}>
                   <Link href={area.colunas[0].itens[0].href} className={visual} aria-current={estaAtiva ? 'page' : undefined}>
-                    <Icone className={cn('hidden h-4 w-4 lg:inline', estaAtiva ? 'text-brand' : 'text-ink-400')} />
+                    <Icone className={cn('hidden h-4 w-4 lg:inline', estaAtiva ? 'text-brand' : 'text-ink-500')} />
                     {area.titulo}
                   </Link>
                 </li>
@@ -102,9 +111,9 @@ export function TopNav({ areas }: { areas: AreaMontada[] }) {
                   aria-haspopup="true"
                   className={visual}
                 >
-                  <Icone className={cn('hidden h-4 w-4 lg:inline', estaAtiva ? 'text-brand' : 'text-ink-400')} />
+                  <Icone className={cn('hidden h-4 w-4 lg:inline', estaAtiva ? 'text-brand' : 'text-ink-500')} />
                   {area.titulo}
-                  <ChevronDown className={cn('hidden h-3.5 w-3.5 text-ink-400 transition-transform duration-sgo-1 ease-sgo-std motion-reduce:transition-none lg:inline', estaAberta && 'rotate-180')} />
+                  <ChevronDown className={cn('hidden h-3.5 w-3.5 transition-transform duration-sgo-1 ease-sgo-std motion-reduce:transition-none lg:inline', estaAtiva ? 'text-brand' : 'text-ink-400', estaAberta && 'rotate-180')} />
                 </button>
               </li>
             );
@@ -116,7 +125,7 @@ export function TopNav({ areas }: { areas: AreaMontada[] }) {
         <div
           onMouseEnter={cancelarFechamento}
           onMouseLeave={adiarFechamento}
-          className="absolute inset-x-0 top-full z-40 border-b border-line bg-surface shadow-lg"
+          className="absolute inset-x-0 top-full z-40 rounded-b-card border-b border-line bg-surface shadow-sgo-pop"
         >
           <div className="mx-auto w-full max-w-6xl px-4 py-5 lg:max-w-none lg:px-6 2xl:max-w-[1760px]">
             <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-x-8">
