@@ -6,7 +6,7 @@ import { abasDoPerfil } from '@/lib/permissions/abas-server';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listSuppliers } from '@/lib/suppliers';
-import { getGasDashboard, listGasReceipts } from '@/lib/gas/query';
+import { getGasDashboard, getVariacoesPorNota, listGasReceipts } from '@/lib/gas/query';
 import { listGasContracts, getGasPurchasedInFilter } from '@/lib/gas/contracts';
 import { isSupervisory } from '@/lib/roles';
 import { Card, CardContent } from '@/components/ui/card';
@@ -42,13 +42,17 @@ export default async function AnaliseGasPage({
   const fSupplier = searchParams.fornecedor || undefined;
   const fMes = /^\d{4}-\d{2}$/.test(searchParams.mes ?? '') ? searchParams.mes : undefined;
 
-  const [units, suppliers, dashboard, receipts, contracts, purchased] = await Promise.all([
+  const [units, suppliers, dashboard, receipts, contracts, purchased, variacoes] = await Promise.all([
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     listSuppliers({ activeOnly: true }),
     getGasDashboard(user, { unitId: fUnit, supplierId: fSupplier, yearMonth: fMes }),
     listGasReceipts(user, { limit: 300 }),
     listGasContracts(user),
     getGasPurchasedInFilter(user, { unitId: fUnit, supplierId: fSupplier, yearMonth: fMes }),
+    /* A variação vem RECALCULADA da série da unidade, e não da coluna gravada
+       no lançamento: era ali que a nota com data corrigida aparecia sem
+       variação, e as vizinhas comparavam com quem já não era mais vizinho. */
+    getVariacoesPorNota(user),
   ]);
 
   return (
@@ -80,7 +84,7 @@ export default async function AnaliseGasPage({
             filter={{ unitId: fUnit ?? '', supplierId: fSupplier ?? '', mes: fMes ?? '' }}
             receipts={receipts.map((r) => ({
               id: r.id, date: r.operationalDate, unit: r.unit.name, supplier: r.supplier?.name ?? 'Sem fornecedor',
-              qty: Number(r.quantityKg), total: Number(r.totalValue), price: Number(r.pricePerKg), variation: r.variationPct, alerted: r.alerted,
+              qty: Number(r.quantityKg), total: Number(r.totalValue), price: Number(r.pricePerKg), variation: variacoes.get(r.id)?.variationPct ?? null, alerted: r.alerted,
               by: r.createdBy?.name ?? '', dateEdited: r.dateEdited, dateEditedByName: r.dateEditedByName,
             }))}
             contracts={contracts}
