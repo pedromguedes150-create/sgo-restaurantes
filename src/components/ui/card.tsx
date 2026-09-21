@@ -5,7 +5,10 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('rounded-xl border bg-surface text-ink-900 shadow-sm', className)}
+      /* `rounded-card` (16px) e a sombra do design system, no lugar do
+         `rounded-xl`/`shadow-sm` do Tailwind: assim o acabamento do cartão
+         acompanha o token e some sozinho na impressão. */
+      className={cn('rounded-card border border-line bg-surface text-ink-900 shadow-sgo-card', className)}
       {...props}
     />
   ),

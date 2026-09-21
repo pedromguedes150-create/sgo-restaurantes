@@ -106,6 +106,11 @@ const config: Config = {
         // sombra, não por cor (branco sobre cinza claro dá ~1,2:1) — é assim
         // no iOS. Some na impressão.
         'sgo-raised': 'var(--sgo-shadow-raised)',
+        // Acabamento: repouso, repouso com ponteiro em cima, e o que flutua.
+        // Somem na impressão (os tokens viram `none` no bloco de print).
+        'sgo-card': 'var(--sgo-shadow-card)',
+        'sgo-card-hover': 'var(--sgo-shadow-card-hover)',
+        'sgo-pop': 'var(--sgo-shadow-pop)',
       },
       transitionTimingFunction: {
         'sgo-std': 'var(--sgo-ease-std)',
