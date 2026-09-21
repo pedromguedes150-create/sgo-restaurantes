@@ -9,6 +9,61 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.103.0 — 2026-09-21 (Gás: variação recalculada sobre todo o histórico + relatório por unidade)
+
+A variação do preço/kg era calculada **uma vez**, no lançamento, e gravada em `prevPricePerKg` /
+`variationPct`. Duas coisas quebravam esse retrato, e as duas em silêncio.
+
+### Os dois defeitos
+
+**Nota retroativa comparava com o futuro.** A referência era *"a nota mais recente da unidade"*
+(`orderBy operationalDate desc`), não a nota **anterior** à que estava entrando. Lançar hoje uma
+compra de junho comparava junho com julho — e as notas de julho continuavam apontando para maio,
+como se junho não existisse.
+
+**Correção de data não recalculava nada.** `editEntryDate` troca o `operationalDate` e mais nada. É o
+caso do print: a nota com "Data corrigida por Marcelo Teles" ficou **sem variação nenhuma**, e as
+vizinhas seguiram comparando com quem já não era mais vizinho.
+
+### A saída foi parar de guardar
+
+Variação é função da **série ordenada**: quem pergunta, calcula (`src/lib/gas/variacao.ts`). Assim a
+correção de data se resolve sozinha — não existe gatilho para alguém esquecer de chamar, que é
+exatamente como os dois defeitos nasceram.
+
+A ordem é data e, no mesmo dia, ordem de lançamento: no arquivo real há **quatro notas no mesmo
+23/07**, e sem desempate estável a variação de cada uma mudaria entre duas leituras da mesma tela.
+
+`alerted` continua gravado de propósito — ele não é "a variação desta nota", é o **fato** de um
+alerta ter sido disparado naquele dia. Recalcular um fato do passado seria reescrever história.
+
+### Relatório por unidade
+
+`/modulos/gas/relatorio` (mesmo endereço) com filtro de período: por unidade traz notas, kg, valor,
+preço médio/kg, menor, maior, último e variação do período; clicar na unidade abre **todas as notas**
+dela. Consolidado da rede no rodapé, exportação em **Excel** (resumo + detalhamento no mesmo arquivo)
+e **PDF** pela impressão.
+
+⚠️ **O preço médio/kg é PONDERADO** — valor total ÷ kg totais, não a média dos preços das notas. É o
+mesmo erro do ticket médio consolidado e sai igualmente plausível: a média simples dá o mesmo peso a
+uma compra de 30 kg e a uma de 600 kg. A tela diz isso em texto.
+
+A **âncora** é o que faz o filtro de período ser honesto: busca-se também a última nota *anterior* ao
+período, só para a primeira linha ter contra o quê comparar. Sem ela, a variação de uma nota mudaria
+conforme o período escolhido — e dois relatórios da mesma nota diriam números diferentes. Há teste
+para exatamente isso.
+
+### Achado no caminho
+
+A tela quebrava com período sem data final: eu passava string vazia ao `PeriodPicker` e o `DatePicker`
+de dentro dele estourava em `parseISO('')`, derrubando a página inteira. Período aberto agora vira
+**hoje**.
+
+**Nada foi alterado ou excluído no banco.** As colunas gravadas continuam lá (são o retrato do
+lançamento e alimentam o alerta do momento); o que mudou é que a exibição deixou de lê-las.
+
+---
+
 ## v1.102.0 — 2026-09-21 (Acabamento visual — modernização leve, identidade bordô intacta)
 
 Nenhuma tela mudou de lugar, nenhum dado mudou de nome, nenhuma rota mudou. O que mudou é o
