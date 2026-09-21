@@ -65,23 +65,45 @@ export function CoberturaClient({
   dia: DiaNaTela[];
 }) {
   const [verDia, setVerDia] = useState(false);
+  const [verForaDoHorario, setVerForaDoHorario] = useState(false);
 
   /* Realocação só faz sentido quando existem os dois lados ao mesmo tempo. */
   const sugestoes = abaixoDoMinimo.flatMap((falta) =>
     comExcedente.map((sobra) => ({ falta, sobra })),
   );
 
+  /* SÓ QUEM PRECISA DE GENTE AGORA.
+     Um setor sem faixa naquele minuto não está errado nem descoberto: ele
+     simplesmente não opera àquela hora (a churrasqueira entre 15h e 18h, a
+     cozinha às 2h). Mostrá-lo ao lado dos que importam ensina a varrer a tela
+     — e é assim que o cartão que está de fato vermelho passa despercebido.
+     Ele continua a um clique de distância, com a contagem à vista. */
+  const comExigencia = setores.filter((s) => s.status !== 'SEM_EXIGENCIA');
+  const foraDoHorario = setores.filter((s) => s.status === 'SEM_EXIGENCIA');
+  const visiveis = verForaDoHorario ? setores : comExigencia;
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-semibold text-ink-900">Cobertura às {horaLabel}</p>
-        <button
-          type="button"
-          onClick={() => setVerDia((v) => !v)}
-          className={`rounded-full border px-3 py-1 text-xs font-semibold ${verDia ? 'border-brand bg-brand text-on-brand' : 'text-ink-700'}`}
-        >
-          Visão do dia
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {foraDoHorario.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setVerForaDoHorario((v) => !v)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${verForaDoHorario ? 'border-brand bg-brand text-on-brand' : 'text-ink-700'}`}
+            >
+              {verForaDoHorario ? 'Ocultar' : 'Mostrar'} funções fora do horário ({foraDoHorario.length})
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setVerDia((v) => !v)}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold ${verDia ? 'border-brand bg-brand text-on-brand' : 'text-ink-700'}`}
+          >
+            Visão do dia
+          </button>
+        </div>
       </div>
 
       {/* ── Alertas: o que está descoberto AGORA ── */}
@@ -149,7 +171,7 @@ export function CoberturaClient({
 
       {/* ── Os cards ── */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {setores.map((s) => (
+        {visiveis.map((s) => (
           <div key={s.sectorId} className={`rounded-lg border-2 bg-surface p-3 ${BORDA[s.status]}`}>
             <div className="flex items-start justify-between gap-2">
               <p className="text-sm font-bold text-ink-900">{s.sectorName}</p>
@@ -158,6 +180,8 @@ export function CoberturaClient({
               </span>
             </div>
 
+            {/* SEM EXIGÊNCIA não mostra "0 / 1": não há mínimo a comparar, e
+                um denominador ali afirmaria uma cobrança que não existe. */}
             <p className="mt-1 text-2xl font-bold tabular-nums text-ink-900">
               {s.status === 'SEM_EXIGENCIA' ? `${s.presentes}` : `${s.presentes} / ${s.necessario}`}
               <span className="ml-1 text-xs font-normal text-ink-500">
@@ -186,11 +210,16 @@ export function CoberturaClient({
             <p className="mt-2 border-t border-line pt-1.5 text-[11px] text-ink-500">
               {s.faixaAtual
                 ? <>Faixa atual: <b>{s.faixaAtual}</b> · necessidade: <b>{s.necessario}</b></>
-                : <>Sem faixa de necessidade cadastrada para este horário.</>}
+                : <>Sem necessidade neste horário — este setor não tem faixa cadastrada às {horaLabel}.</>}
             </p>
           </div>
         ))}
         {setores.length === 0 && <p className="text-sm text-ink-500">Nenhum setor cadastrado nesta unidade.</p>}
+        {setores.length > 0 && visiveis.length === 0 && (
+          <p className="text-sm text-ink-500">
+            Nenhum setor tem necessidade cadastrada às {horaLabel}. Use &quot;Mostrar funções fora do horário&quot; para ver todos.
+          </p>
+        )}
       </div>
     </div>
   );

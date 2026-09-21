@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
 import { renderToString } from 'react-dom/server';
 import React from 'react';
 import { CoberturaClient, type SetorNaTela, type DiaNaTela } from '@/components/people/cobertura-client';
-import { NecessidadePorSetor } from '@/components/people/faixas-do-setor';
+import { NecessidadePorSetor, CorpoDaNecessidade, type FaixaNaTela } from '@/components/people/faixas-do-setor';
 
 /**
  * A TELA da cobertura.
@@ -75,11 +75,14 @@ describe('O card do setor', () => {
 
   it('SEM EXIGÊNCIA não mostra "x/0" nem parece problema', () => {
     /* O caso "Salada às 04:00": necessidade zero é a unidade não operando ali,
-       e mostrar 0/0 em vermelho seria cobrar por algo que ninguém combinou. */
+       e mostrar 0/0 em vermelho seria cobrar por algo que ninguém combinou.
+       Desde a correção do 24 horas, o setor sai dos cards em vez de aparecer
+       cinza no meio dos outros — o contador fica no botão. */
     const html = render({ setores: [setor({ necessario: 0, presentes: 0, status: 'SEM_EXIGENCIA', pessoas: [], faixaAtual: null })] });
-    expect(html).toContain('Sem exigência');
     expect(html).not.toContain('0 / 0');
-    expect(html).toContain('Sem faixa de necessidade cadastrada');
+    expect(html).not.toContain('Sem cobertura');
+    expect(html).toContain('Mostrar funções fora do horário (1)');
+    expect(html).toContain('Nenhum setor tem necessidade cadastrada');
   });
 
   it('o excedente aparece, para o gestor ver quem pode ser deslocado', () => {
@@ -121,13 +124,13 @@ describe('A sugestão de realocação', () => {
   });
 });
 
-describe('O cadastro das faixas', () => {
-  const render2 = (faixas: { id: string; startTime: string; endTime: string; minPeople: number; rotulo: string }[], podeEditar = true) =>
+const render2 = (faixas: { id: string; startTime: string; endTime: string; minPeople: number; rotulo: string; diaInteiro?: boolean }[], podeEditar = true) =>
     renderToString(React.createElement(NecessidadePorSetor, {
-      setores: [{ id: 's1', name: 'Cozinha', faixas }],
+      setores: [{ id: 's1', name: 'Cozinha', faixas: faixas.map((f) => ({ ...f, diaInteiro: f.diaInteiro ?? false })) }],
       podeEditar,
     })).split('<!-- -->').join('');
 
+describe('O cadastro das faixas', () => {
   it('o resumo diz quantas faixas existem, em vez do antigo "mín. 1"', () => {
     const html = render2([
       { id: '1', startTime: '06:00', endTime: '14:00', minPeople: 3, rotulo: '06:00–14:00' },
@@ -148,5 +151,64 @@ describe('O cadastro das faixas', () => {
 
   it('quem não pode editar não vê o botão de adicionar', () => {
     expect(render2([], false)).not.toContain('Adicionar faixa de horário');
+  });
+});
+
+/**
+ * FUNÇÃO FORA DO HORÁRIO não polui o painel.
+ *
+ * Às 2h, a cozinha de uma unidade 24 horas não tem necessidade cadastrada. Ela
+ * ao lado dos setores que importam ensina a varrer a tela — e é assim que o
+ * cartão de fato vermelho passa despercebido.
+ */
+describe('Funções sem necessidade no horário', () => {
+  const semExigencia = setor({
+    sectorId: 's2', sectorName: 'Auxiliar Cozinha',
+    necessario: 0, presentes: 0, status: 'SEM_EXIGENCIA', faixaAtual: null, pessoas: [],
+  });
+
+  it('o setor sem exigência fica fora dos cards por padrão', () => {
+    const html = render({ setores: [setor(), semExigencia] });
+    expect(html).toContain('Cozinha');
+    expect(html).not.toContain('Auxiliar Cozinha');
+  });
+
+  it('o botão diz quantas estão escondidas', () => {
+    expect(render({ setores: [setor(), semExigencia] })).toContain('Mostrar funções fora do horário (1)');
+  });
+
+  it('sem nenhuma fora do horário, o botão não aparece', () => {
+    expect(render({ setores: [setor()] })).not.toContain('funções fora do horário');
+  });
+
+  it('o card fora do horário NÃO mostra "0 / 1" — não há mínimo a cobrar', () => {
+    /* Renderizado só para conferir o texto do rodapé do card: com o botão
+       ligado ele aparece, e precisa dizer o motivo em vez de um denominador. */
+    const html = render({ setores: [semExigencia] });
+    expect(html).toContain('Nenhum setor tem necessidade cadastrada');
+  });
+});
+
+/** O acordeão nasce fechado; o miolo é renderizado direto. */
+const corpo = (faixas: FaixaNaTela[], podeEditar = true) =>
+  renderToString(React.createElement(CorpoDaNecessidade, { sectorId: 's1', sectorName: 'Cozinha', faixas, podeEditar })).split('<!-- -->').join('');
+
+describe('A caixa "Necessário 24 horas"', () => {
+  const vinteQuatro = { id: '1', startTime: '00:00', endTime: '00:00', minPeople: 2, rotulo: '00:00–24:00', diaInteiro: true };
+
+  it('o resumo do setor diz 24 horas em vez de "1 faixa configurada"', () => {
+    expect(render2([vinteQuatro])).toContain('24 horas · mínimo 2');
+  });
+
+  it('com 24 horas marcado, a tela explica como cadastrar horários específicos', () => {
+    expect(corpo([vinteQuatro])).toContain('desmarque');
+  });
+
+  it('a caixa existe mesmo quando o setor não tem faixa nenhuma', () => {
+    expect(corpo([])).toContain('Necessário 24 horas');
+  });
+
+  it('a dica diz que faixas podem encostar — era o que parecia proibido', () => {
+    expect(corpo([])).toContain('começar onde a outra termina');
   });
 });

@@ -3,7 +3,7 @@ import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import {
   necessidadeNoMinuto, statusDaCobertura, segmentosDoDia, conflitoDeFaixa, faixaValida,
-  rotuloDaFaixa, emHHMM, faixaCobre,
+  rotuloDaFaixa, emHHMM, faixaCobre, ehDiaInteiro, FAIXA_DIA_INTEIRO,
   type FaixaDeNecessidade, type StatusDeCobertura,
 } from '@/lib/workforce/necessidade';
 import type { SessionUser } from '@/lib/auth/session';
@@ -253,9 +253,20 @@ export async function salvarFaixa(
 
   const conflito = conflitoDeFaixa(existentes, nova, indiceAtual);
   if (conflito) {
+    /* O conflito com a faixa de DIA INTEIRO tem uma saída e a mensagem precisa
+       dizê-la: uma faixa 00:00–24:00 cobre todos os minutos, então QUALQUER
+       horário específico bate com ela. "Conflito de horário" seco mandava a
+       pessoa procurar uma sobreposição que não existe — o que falta é desmarcar
+       as 24 horas. */
+    if (ehDiaInteiro(conflito.faixa)) {
+      return {
+        ok: false, reason: 'CONFLITO',
+        erro: `${setor.name} está marcado como "Necessário 24 horas" (00:00–24:00). Desmarque essa opção para cadastrar faixas específicas.`,
+      };
+    }
     return {
       ok: false, reason: 'CONFLITO',
-      erro: `Esta faixa entra em conflito com uma faixa já cadastrada para este setor (${rotuloDaFaixa(conflito.faixa)}).`,
+      erro: `Esta faixa se sobrepõe a ${rotuloDaFaixa(conflito.faixa)}, já cadastrada para ${setor.name}. Faixas podem encostar (15:00 fecha uma e abre a outra), mas não se cruzar.`,
     };
   }
 
@@ -274,6 +285,70 @@ export async function salvarFaixa(
     metadata: { setor: setor.name, ...dados }, ...ctx,
   });
   return { ok: true, id: salva.id };
+}
+
+/**
+ * Liga/desliga o "Necessário 24 horas" do setor.
+ *
+ * Existe porque 24 horas é a EXCEÇÃO que precisa ser dita — e porque era o
+ * estado em que quase todo setor estava sem ninguém ter escolhido: a migração
+ * da v1.84.0 converteu o antigo `minHeadcount` numa faixa 00:00–24:00 para
+ * "não mudar nada no dia da subida". O efeito colateral só apareceu em uso: com
+ * o dia inteiro ocupado, toda faixa específica é recusada por sobreposição, e a
+ * pessoa não tem como sair disso pela tela de adicionar.
+ *
+ * LIGAR **substitui** as faixas do setor: dizer "preciso 24 horas" e manter uma
+ * faixa das 10h às 15h seria pedir duas coisas diferentes ao mesmo tempo, e a
+ * segunda ficaria inerte — a de 24h cobre o minuto primeiro.
+ *
+ * DESLIGAR apaga só a faixa de dia inteiro. O setor fica SEM exigência até
+ * alguém cadastrar as faixas, e isso é correto: "não é 24 horas" não diz qual é
+ * o horário, e inventar um seria pior do que não ter nenhum (setor sem faixa
+ * não gera alerta).
+ */
+export async function definirVinteQuatroHoras(
+  user: SessionUser,
+  input: { sectorId: string; ligado: boolean; minPeople?: number },
+  ctx: { ip?: string | null; userAgent?: string | null } = {},
+): Promise<ResultadoDeFaixa> {
+  const setor = await setorNoEscopo(user, input.sectorId);
+  if (!setor) return { ok: false, reason: 'FORBIDDEN' };
+
+  const existentes = await prisma.sectorRequirement.findMany({
+    where: { sectorId: setor.id },
+    select: { id: true, startTime: true, endTime: true, minPeople: true },
+  });
+  const diaInteiro = existentes.filter((e) => ehDiaInteiro(e));
+
+  if (!input.ligado) {
+    if (diaInteiro.length === 0) return { ok: true };
+    await prisma.sectorRequirement.deleteMany({ where: { id: { in: diaInteiro.map((d) => d.id) } } });
+    await audit({
+      userId: user.id, unitId: setor.unitId, action: 'SECTOR_REQUIREMENT_DELETE',
+      module: 'PEOPLE', entity: 'sector_requirement', entityId: setor.id,
+      metadata: { setor: setor.name, motivo: 'desmarcou 24 horas', faixasRemovidas: diaInteiro.length }, ...ctx,
+    });
+    return { ok: true };
+  }
+
+  const minPeople = Math.max(0, Math.trunc(Number(input.minPeople ?? 1)));
+  if (!Number.isFinite(minPeople)) return { ok: false, reason: 'INVALID', erro: 'Quantidade mínima inválida.' };
+
+  const id = await prisma.$transaction(async (tx) => {
+    await tx.sectorRequirement.deleteMany({ where: { sectorId: setor.id } });
+    const criada = await tx.sectorRequirement.create({
+      data: { sectorId: setor.id, ...FAIXA_DIA_INTEIRO, minPeople, order: 0 },
+      select: { id: true },
+    });
+    return criada.id;
+  });
+
+  await audit({
+    userId: user.id, unitId: setor.unitId, action: 'SECTOR_REQUIREMENT_CREATE',
+    module: 'PEOPLE', entity: 'sector_requirement', entityId: id,
+    metadata: { setor: setor.name, motivo: 'marcou 24 horas', minPeople, faixasSubstituidas: existentes.length }, ...ctx,
+  });
+  return { ok: true, id };
 }
 
 export async function apagarFaixa(
@@ -301,7 +376,7 @@ export async function apagarFaixa(
 export interface SetorComFaixas {
   id: string;
   name: string;
-  faixas: { id: string; startTime: string; endTime: string; minPeople: number; rotulo: string }[];
+  faixas: { id: string; startTime: string; endTime: string; minPeople: number; rotulo: string; diaInteiro: boolean }[];
 }
 
 /** Os setores da unidade com as faixas — para a tela de cadastro. */
@@ -318,6 +393,6 @@ export async function getSetoresComFaixas(user: SessionUser, unitId: string): Pr
   return setores.map((s) => ({
     id: s.id,
     name: s.name,
-    faixas: s.requirements.map((r) => ({ ...r, rotulo: rotuloDaFaixa(r) })),
+    faixas: s.requirements.map((r) => ({ ...r, rotulo: rotuloDaFaixa(r), diaInteiro: ehDiaInteiro(r) })),
   }));
 }

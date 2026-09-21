@@ -62,11 +62,24 @@ export function emHHMM(minutos: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
-/** Como a faixa aparece para quem lê: o dia inteiro vira "00:00–24:00". */
-export function rotuloDaFaixa(f: FaixaDeNecessidade): string {
+/**
+ * A faixa vale o dia inteiro? (início igual ao fim)
+ *
+ * É como o "Necessário 24 horas" é gravado — um jeito só, e não uma coluna
+ * `is24h` ao lado que pudesse discordar da faixa.
+ */
+export function ehDiaInteiro(f: FaixaDeNecessidade): boolean {
   const i = emMinutos(f.startTime);
   const fim = emMinutos(f.endTime);
-  if (i !== null && fim !== null && i === fim) return '00:00–24:00';
+  return i !== null && fim !== null && i === fim;
+}
+
+/** Os horários com que uma faixa de 24 horas é gravada. */
+export const FAIXA_DIA_INTEIRO = { startTime: '00:00', endTime: '00:00' } as const;
+
+/** Como a faixa aparece para quem lê: o dia inteiro vira "00:00–24:00". */
+export function rotuloDaFaixa(f: FaixaDeNecessidade): string {
+  if (ehDiaInteiro(f)) return '00:00–24:00';
   return `${f.startTime}–${f.endTime}`;
 }
 
@@ -137,6 +150,12 @@ export interface ConflitoDeFaixa {
  * Duas faixas cobrindo o mesmo minuto deixariam a necessidade ambígua — e a
  * ambiguidade não apareceria na tela: o cálculo simplesmente pegaria a primeira
  * e o usuário nunca saberia por que o número dele foi ignorado.
+ *
+ * ⚠️ ENCOSTAR NÃO É CONFLITO. A faixa é `[início, fim)`: 06:40–15:00 termina no
+ * minuto 899 e 15:00–23:40 começa no 900, então as duas convivem. É o caso mais
+ * comum do mundo real (o turno da tarde começa quando o da manhã acaba), e
+ * recusá-lo obrigaria a cadastrar 14:59 — que abriria um buraco de um minuto na
+ * cobertura, sem ninguém perceber.
  */
 export function conflitoDeFaixa(
   existentes: FaixaDeNecessidade[],

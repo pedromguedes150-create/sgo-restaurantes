@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   emMinutos, emHHMM, rotuloDaFaixa, faixaCobre, necessidadeNoMinuto,
-  statusDaCobertura, conflitoDeFaixa, faixaValida, segmentosDoDia,
+  statusDaCobertura, conflitoDeFaixa, faixaValida, segmentosDoDia, ehDiaInteiro,
   type FaixaDeNecessidade,
 } from '@/lib/workforce/necessidade';
 
@@ -191,5 +191,63 @@ describe('A visão do dia', () => {
     expect(segmentosDoDia([])).toEqual([
       { inicio: 0, fim: 1440, rotulo: '00:00–24:00', necessario: 0 },
     ]);
+  });
+});
+
+/**
+ * O CENÁRIO RELATADO: unidade 24 horas, funções com horários próprios.
+ *
+ * O horário de funcionamento da UNIDADE não define a necessidade da FUNÇÃO —
+ * era isso que a faixa 00:00–24:00 herdada da migração fazia parecer.
+ */
+describe('Unidade 24 horas não significa função 24 horas', () => {
+  /* Auxiliar de Cozinha do pedido: dois turnos que se encostam. */
+  const AUX_COZINHA = [faixa('06:40', '15:00', 1), faixa('15:00', '23:40', 1)];
+
+  it('as duas faixas convivem — encostar não é sobrepor', () => {
+    expect(conflitoDeFaixa([AUX_COZINHA[0]], AUX_COZINHA[1])).toBeNull();
+  });
+
+  it('exige 1 pessoa dentro dos dois turnos', () => {
+    for (const minuto of [h(7), h(14), h(16), h(22)]) {
+      expect(necessidadeNoMinuto(AUX_COZINHA, minuto)).toBe(1);
+    }
+  });
+
+  it('às 00:30 NÃO há exigência — e isso não é "sem cobertura"', () => {
+    expect(necessidadeNoMinuto(AUX_COZINHA, h(0, 30))).toBe(0);
+    expect(statusDaCobertura(0, 0)).toBe('SEM_EXIGENCIA');
+    /* O ponto do pedido: não pode sair "0/1 — sem cobertura" às 2h num setor
+       que nem opera àquela hora. */
+    expect(statusDaCobertura(0, 0)).not.toBe('SEM_COBERTURA');
+  });
+
+  it('o minuto exato da virada pertence à faixa que começa', () => {
+    /* 15:00 é fim da primeira e início da segunda. Sem isto, 15:00 ficaria sem
+       dono — um buraco de um minuto que ninguém veria. */
+    expect(faixaCobre(AUX_COZINHA[0], h(15))).toBe(false);
+    expect(faixaCobre(AUX_COZINHA[1], h(15))).toBe(true);
+    expect(necessidadeNoMinuto(AUX_COZINHA, h(15))).toBe(1);
+  });
+
+  it('a churrasqueira com buraco entre os serviços não cobra ninguém às 16h', () => {
+    const CHURRASQUEIRA = [faixa('10:00', '15:00', 2), faixa('18:00', '23:00', 2)];
+    expect(necessidadeNoMinuto(CHURRASQUEIRA, h(12))).toBe(2);
+    expect(necessidadeNoMinuto(CHURRASQUEIRA, h(16))).toBe(0);
+    expect(necessidadeNoMinuto(CHURRASQUEIRA, h(20))).toBe(2);
+  });
+
+  it('o Caixa 24 horas continua exigindo em qualquer minuto', () => {
+    const CAIXA = [faixa('00:00', '24:00', 1)];
+    for (const minuto of [0, h(2), h(12), h(23, 59)]) {
+      expect(necessidadeNoMinuto(CAIXA, minuto)).toBe(1);
+    }
+  });
+
+  it('a faixa de dia inteiro é reconhecida como tal — é o que a caixa de marcar lê', () => {
+    expect(ehDiaInteiro(faixa('00:00', '24:00', 1))).toBe(true);
+    expect(ehDiaInteiro(faixa('00:00', '00:00', 1))).toBe(true);
+    expect(ehDiaInteiro(faixa('06:40', '15:00', 1))).toBe(false);
+    expect(ehDiaInteiro(faixa('22:00', '06:00', 1))).toBe(false);
   });
 });
