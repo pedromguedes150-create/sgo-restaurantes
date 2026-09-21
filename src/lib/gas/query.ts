@@ -2,10 +2,14 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
-import { encadear, precoPorKg, resumoDoPeriodo, variacaoEntre, type ResumoDeGas } from '@/lib/gas/variacao';
+import {
+  encadear, mediaPonderada, ordemCronologica, precoImplausivel, precoPorKg, resumoDoPeriodo,
+  variacaoEntre, TETO_PRECO_KG_PADRAO, type ResumoDeGas,
+} from '@/lib/gas/variacao';
 
 const ALERT_KEY = 'GAS_ALERT_PCT';
 const DEFAULT_ALERT = 10;
+const TETO_KEY = 'GAS_MAX_PRICE_KG';
 
 export async function getGasAlertPct(): Promise<number> {
   const s = await prisma.appSetting.findUnique({ where: { key: ALERT_KEY } });
@@ -17,6 +21,29 @@ export async function setGasAlertPct(user: SessionUser, pct: number) {
   const p = Math.max(1, Math.round(pct));
   await prisma.appSetting.upsert({ where: { key: ALERT_KEY }, create: { key: ALERT_KEY, value: String(p) }, update: { value: String(p) } });
   await audit({ userId: user.id, action: 'GAS_ALERT_PCT_SET', module: 'CONFIG', metadata: { pct: p } });
+  return { ok: true as const };
+}
+
+/**
+ * Teto do preço/kg aceito num lançamento de gás (R$).
+ *
+ * Não é um limite de orçamento: é o corte entre "caro" e "não é preço de
+ * quilo". Existe porque nada barrava uma nota de milhares de reais por kg — o
+ * preço do BOTIJÃO inteiro, ou o TOTAL da nota, parando na coluna de preço
+ * unitário da planilha de importação.
+ */
+export async function getGasMaxPriceKg(): Promise<number> {
+  const s = await prisma.appSetting.findUnique({ where: { key: TETO_KEY } });
+  const n = s ? Number(s.value) : TETO_PRECO_KG_PADRAO;
+  return Number.isFinite(n) && n > 0 ? n : TETO_PRECO_KG_PADRAO;
+}
+export async function setGasMaxPriceKg(user: SessionUser, teto: number) {
+  if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' as const };
+  const t = Number(teto);
+  if (!Number.isFinite(t) || t <= 0) return { ok: false as const, reason: 'INVALID' as const };
+  const v = Math.round(t * 100) / 100;
+  await prisma.appSetting.upsert({ where: { key: TETO_KEY }, create: { key: TETO_KEY, value: String(v) }, update: { value: String(v) } });
+  await audit({ userId: user.id, action: 'GAS_MAX_PRICE_KG_SET', module: 'CONFIG', metadata: { teto: v } });
   return { ok: true as const };
 }
 
@@ -249,6 +276,8 @@ export async function getVariacoesPorNota(
 
 export interface GasGroupStat { key: string; name: string; count: number; avg: number; last: number; min: number; max: number; kg: number; total: number }
 export interface GasMonthPoint { month: string; avg: number; count: number }
+/** Nota com preço/kg fora de qualquer faixa real — ver `precoImplausivel`. */
+export interface GasOutlier { id: string; unitId: string; unitName: string; date: string; pricePerKg: number; kg: number; total: number }
 export interface GasDashboard {
   totalReceipts: number;
   avgPrice: number;
@@ -259,25 +288,41 @@ export interface GasDashboard {
   bySupplier: GasGroupStat[];
   monthly: GasMonthPoint[];
   alertPct: number;
+  /** Teto de preço/kg em vigor (R$), para a tela explicar o corte. */
+  tetoPrecoKg: number;
+  foraDaFaixa: GasOutlier[];
 }
 
-type AggRow = { key: string; name: string; price: number; date: string; kg: number; total: number };
+type AggRow = { key: string; name: string; price: number; date: string; createdAt: Date; id: string; kg: number; total: number };
+
+/**
+ * Agrupa por unidade/fornecedor.
+ *
+ * Duas coisas aqui já saíram erradas na tela: a média era SIMPLES (agora é
+ * ponderada, valor ÷ kg — ver `mediaPonderada`) e o "último" era decidido por
+ * `date >=`, ou seja, pela ordem em que o banco devolveu as linhas. Com quatro
+ * notas no mesmo 23/07 o último preço mudava entre duas leituras da mesma tela;
+ * o desempate agora é o mesmo da cadeia de variação (`ordemCronologica`).
+ */
 function agg(rows: AggRow[]): GasGroupStat[] {
-  const map = new Map<string, { name: string; prices: number[]; lastDate: string; last: number; kg: number; total: number }>();
+  const map = new Map<string, { name: string; prices: number[]; ultima: AggRow | null; kg: number; total: number }>();
   for (const r of rows) {
-    const cur = map.get(r.key) ?? { name: r.name, prices: [], lastDate: '', last: 0, kg: 0, total: 0 };
+    const cur = map.get(r.key) ?? { name: r.name, prices: [], ultima: null, kg: 0, total: 0 };
     cur.prices.push(r.price);
     cur.kg += r.kg; cur.total += r.total;
-    if (r.date >= cur.lastDate) { cur.lastDate = r.date; cur.last = r.price; }
+    if (!cur.ultima || ordemCronologica(paraNota(r), paraNota(cur.ultima)) > 0) cur.ultima = r;
     map.set(r.key, cur);
   }
   return [...map.entries()].map(([key, v]) => ({
     key, name: v.name, count: v.prices.length,
-    avg: v.prices.reduce((s, p) => s + p, 0) / v.prices.length,
-    last: v.last, min: Math.min(...v.prices), max: Math.max(...v.prices),
+    avg: precoPorKg(v.total, v.kg) ?? 0,
+    last: v.ultima ? v.ultima.price : 0, min: Math.min(...v.prices), max: Math.max(...v.prices),
     kg: Math.round(v.kg * 100) / 100, total: Math.round(v.total * 100) / 100,
   })).sort((a, b) => a.avg - b.avg);
 }
+
+/** `AggRow` visto como nota, só para reusar a ordenação da cadeia. */
+const paraNota = (r: AggRow) => ({ id: r.id, operationalDate: r.date, createdAt: r.createdAt, quantityKg: r.kg, totalValue: r.total });
 
 /**
  * Painel de gás: comparativo por unidade, por fornecedor e tendência mensal.
@@ -306,28 +351,50 @@ export async function getGasDashboard(user: SessionUser, opts: { unitId?: string
       ...(opts.supplierId ? { supplierId: opts.supplierId } : {}),
       operationalDate: dateFilter,
     },
-    orderBy: [{ operationalDate: 'asc' }],
+    /* `createdAt` é o desempate. Sem ele, duas notas do mesmo dia voltam na
+       ordem que o Postgres quiser — e era dessa ordem que saía o "último
+       preço/kg" da tela. No arquivo real há QUATRO notas no mesmo 23/07. */
+    orderBy: [{ operationalDate: 'asc' }, { createdAt: 'asc' }],
     include: { unit: { select: { name: true } }, supplier: { select: { name: true } } },
   });
 
-  const all = receipts.map((r) => ({ price: Number(r.pricePerKg), date: r.operationalDate, kg: Number(r.quantityKg), total: Number(r.totalValue), unitId: r.unitId, unitName: r.unit.name, supplierId: r.supplierId, supplierName: r.supplier?.name ?? 'Sem fornecedor' }));
+  const all = receipts.map((r) => ({ id: r.id, price: Number(r.pricePerKg), date: r.operationalDate, createdAt: r.createdAt, kg: Number(r.quantityKg), total: Number(r.totalValue), unitId: r.unitId, unitName: r.unit.name, supplierId: r.supplierId, supplierName: r.supplier?.name ?? 'Sem fornecedor' }));
 
-  const byUnit = agg(all.map((r) => ({ key: r.unitId, name: r.unitName, price: r.price, date: r.date, kg: r.kg, total: r.total })));
-  const bySupplier = agg(all.map((r) => ({ key: r.supplierId ?? 'none', name: r.supplierName, price: r.price, date: r.date, kg: r.kg, total: r.total })));
+  const byUnit = agg(all.map((r) => ({ key: r.unitId, name: r.unitName, id: r.id, price: r.price, date: r.date, createdAt: r.createdAt, kg: r.kg, total: r.total })));
+  const bySupplier = agg(all.map((r) => ({ key: r.supplierId ?? 'none', name: r.supplierName, id: r.id, price: r.price, date: r.date, createdAt: r.createdAt, kg: r.kg, total: r.total })));
 
-  // tendência mensal (média do preço/kg no escopo)
-  const byMonth = new Map<string, number[]>();
-  for (const r of all) { const m = r.date.slice(0, 7); const arr = byMonth.get(m) ?? []; arr.push(r.price); byMonth.set(m, arr); }
-  const monthly: GasMonthPoint[] = [...byMonth.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([month, ps]) => ({ month, avg: ps.reduce((s, p) => s + p, 0) / ps.length, count: ps.length }));
+  // Tendência mensal: preço PONDERADO do mês (valor ÷ kg), não a média dos preços.
+  const byMonth = new Map<string, { quantityKg: number; totalValue: number }[]>();
+  for (const r of all) { const m = r.date.slice(0, 7); const arr = byMonth.get(m) ?? []; arr.push({ quantityKg: r.kg, totalValue: r.total }); byMonth.set(m, arr); }
+  const monthly: GasMonthPoint[] = [...byMonth.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([month, ns]) => ({ month, avg: mediaPonderada(ns) ?? 0, count: ns.length }));
 
-  const avgPrice = all.length ? all.reduce((s, r) => s + r.price, 0) / all.length : 0;
-  const last = all.length ? all.reduce((a, b) => (b.date >= a.date ? b : a)) : null;
-  const alertPct = await getGasAlertPct();
+  const avgPrice = mediaPonderada(all.map((r) => ({ quantityKg: r.kg, totalValue: r.total }))) ?? 0;
+  /* O último é o último da CADEIA (data e, no mesmo dia, ordem de lançamento).
+     Com `date >=` bastavam duas notas do mesmo dia para o número depender da
+     ordem em que o banco devolveu as linhas. */
+  const last = all.length
+    ? [...all].sort((a, b) => ordemCronologica(
+        { id: a.id, operationalDate: a.date, createdAt: a.createdAt, quantityKg: a.kg, totalValue: a.total },
+        { id: b.id, operationalDate: b.date, createdAt: b.createdAt, quantityKg: b.kg, totalValue: b.total },
+      )).at(-1)!
+    : null;
+  const [alertPct, tetoPrecoKg] = await Promise.all([getGasAlertPct(), getGasMaxPriceKg()]);
+
+  /* Notas fora de qualquer faixa real de preço. Elas não são só um número feio
+     num cartão: como TODO gráfico de gás é escalado pelo maior valor da série,
+     uma só achata as barras de todas as outras no piso — foi o defeito relatado
+     ("as colunas não estão subindo"). Por isso saem nomeadas, com link, em vez
+     de apenas distorcerem a tela em silêncio. */
+  const foraDaFaixa: GasOutlier[] = all
+    .filter((r) => precoImplausivel(r.price, tetoPrecoKg))
+    .sort((a, b) => b.price - a.price)
+    .slice(0, 20)
+    .map((r) => ({ id: r.id, unitId: r.unitId, unitName: r.unitName, date: r.date, pricePerKg: r.price, kg: r.kg, total: r.total }));
 
   return {
     totalReceipts: all.length, avgPrice, lastPrice: last ? last.price : null,
     totalKg: Math.round(all.reduce((s, r) => s + r.kg, 0) * 100) / 100,
     totalValue: Math.round(all.reduce((s, r) => s + r.total, 0) * 100) / 100,
-    byUnit, bySupplier, monthly, alertPct,
+    byUnit, bySupplier, monthly, alertPct, tetoPrecoKg, foraDaFaixa,
   };
 }

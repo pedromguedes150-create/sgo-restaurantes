@@ -28,7 +28,8 @@ interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null }
 interface GroupStat { key: string; name: string; count: number; avg: number; last: number; min: number; max: number; kg: number; total: number }
 interface MonthPoint { month: string; avg: number; count: number }
-export interface GasDash { totalReceipts: number; avgPrice: number; lastPrice: number | null; totalKg: number; totalValue: number; byUnit: GroupStat[]; bySupplier: GroupStat[]; monthly: MonthPoint[]; alertPct: number }
+export interface GasOutlierRow { id: string; unitId: string; unitName: string; date: string; pricePerKg: number; kg: number; total: number }
+export interface GasDash { totalReceipts: number; avgPrice: number; lastPrice: number | null; totalKg: number; totalValue: number; byUnit: GroupStat[]; bySupplier: GroupStat[]; monthly: MonthPoint[]; alertPct: number; tetoPrecoKg: number; foraDaFaixa: GasOutlierRow[] }
 export interface GasRow { id: string; date: string; unit: string; supplier: string; qty: number; total: number; price: number; variation: number | null; alerted: boolean; by: string; dateEdited?: boolean; dateEditedByName?: string | null }
 export interface GasContractUI {
   id: string; unitId: string; unitName: string; supplierId: string; supplierName: string;
@@ -38,6 +39,8 @@ export interface GasContractUI {
 export interface PurchasedUI { kg: number; total: number; count: number }
 
 const kg = (n: number) => `R$ ${n.toFixed(4).replace('.', ',')}/kg`;
+/** 'AAAA-MM-DD' → 'DD/MM/AAAA', sem Date (fuso não muda um dia operacional). */
+const br = (iso: string) => { const [y, m, d] = iso.split('-'); return d ? `${d}/${m}/${y}` : iso; };
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 function mlabel(m: string) { const [y, mm] = m.split('-'); return `${MONTHS[Number(mm) - 1]}/${y.slice(2)}`; }
 
@@ -439,13 +442,17 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
 function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
   const router = useRouter();
   const [pct, setPct] = useState(String(d.alertPct));
+  const [teto, setTeto] = useState(String(d.tetoPrecoKg));
   const [busy, setBusy] = useState(false);
   async function savePct() { setBusy(true); const r = await postAdmin({ entity: 'gas', action: 'setAlertPct', pct: Number(pct) }); setBusy(false); if (r.ok) router.refresh(); else alert(r.error ?? 'Falha'); }
+  async function saveTeto() { setBusy(true); const r = await postAdmin({ entity: 'gas', action: 'setMaxPriceKg', teto: Number(teto.replace(',', '.')) }); setBusy(false); if (r.ok) router.refresh(); else alert(r.error ?? 'Falha'); }
 
   if (d.totalReceipts === 0) return <p className="text-sm text-ink-500">Ainda não há recebimentos de gás no período. Lance o primeiro para ver os comparativos.</p>;
 
   return (
     <div className="space-y-4">
+      <ForaDaFaixa rows={d.foraDaFaixa} teto={d.tetoPrecoKg} />
+
       {/* Uma fileira só. O "Valor total" veio da fileira duplicada que existia
           acima — era o único número dela que não se repetia aqui. */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -457,9 +464,11 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
       </div>
 
       {isAdmin && (
-        <div className="flex items-end gap-2 rounded-lg border border-dashed p-2">
+        <div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-2">
           <div><label className="text-xs text-ink-500">Alertar acima de (%)</label><Input inputMode="numeric" value={pct} onChange={(e) => setPct(e.target.value)} className="h-9 w-24 text-sm" /></div>
           <Button size="sm" variant="outline" disabled={busy} onClick={savePct}>Salvar limite</Button>
+          <div><label className="text-xs text-ink-500">Recusar preço acima de (R$/kg)</label><Input inputMode="decimal" value={teto} onChange={(e) => setTeto(e.target.value)} className="h-9 w-28 text-sm" /></div>
+          <Button size="sm" variant="outline" disabled={busy} onClick={saveTeto}>Salvar teto</Button>
         </div>
       )}
 
@@ -480,9 +489,44 @@ function Cell({ label, value, className }: { label: string; value: string; class
   return <StatCard label={label} value={value} className={className} />;
 }
 
+/**
+ * Notas com preço/kg fora de qualquer faixa real.
+ *
+ * Elas não eram só um número feio num cartão: como todo gráfico de gás é
+ * escalado pela série, UMA nota assim achatava as colunas de todos os meses e
+ * as barras de todas as unidades. Antes, a tela só ficava estranha e não dizia
+ * por quê. Agora a nota sai NOMEADA — unidade, data e preço — porque o conserto
+ * é abrir esse lançamento no Histórico e corrigir kg/valor.
+ */
+function ForaDaFaixa({ rows, teto }: { rows: GasOutlierRow[]; teto: number }) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="rounded-lg border border-danger/40 bg-danger/10 p-3">
+      <p className="text-sm font-semibold text-danger">
+        {rows.length === 1 ? '1 lançamento com preço fora da faixa' : `${rows.length} lançamentos com preço fora da faixa`} (acima de {formatBRL(teto)}/kg)
+      </p>
+      <p className="mt-0.5 text-xs text-ink-700">
+        Enquanto estiverem assim, eles distorcem o preço médio e achatam os gráficos abaixo. Quase sempre é o valor TOTAL da nota
+        (ou o preço do botijão inteiro) lançado no lugar do preço por quilo. Corrija kg/valor na aba Histórico.
+      </p>
+      <ul className="mt-2 space-y-1">
+        {rows.map((r) => (
+          <li key={r.id} className="text-xs tabular-nums text-ink-900">
+            <b>{kg(r.pricePerKg)}</b> · {r.unitName} · {br(r.date)} · {r.kg.toLocaleString('pt-BR')} kg · {formatBRL(r.total)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
   if (rows.length === 0) return null;
-  const max = Math.max(...rows.map((r) => r.avg), 0.0001);
+  /* Mesma escala das colunas mensais, e pelo mesmo motivo: uma unidade com nota
+     fora de faixa zerava a barra de todas as outras. */
+  const vals = rows.map((r) => r.avg);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
   return (
     <div>
       <h2 className="mb-1 sgo-type-11 font-semibold text-ink-900">{title}</h2>
@@ -493,7 +537,7 @@ function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
               <span className="font-semibold text-ink-900">{r.name}</span>
               <span className="font-bold">{kg(r.avg)} <span className="text-xs font-normal text-ink-500">méd</span></span>
             </div>
-            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-brand" style={{ width: `${(r.avg / max) * 100}%` }} /></div>
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-sunken"><div className="h-full rounded-full bg-brand" style={{ width: `${alturaDaBarra(r.avg, min, max, 100, 1)}%` }} /></div>
             <p className="mt-1 text-xs text-ink-500">{r.count} compra(s) · <b className="text-brand">{r.kg.toLocaleString('pt-BR')} kg</b> · último {kg(r.last)} · mín {kg(r.min)} · máx {kg(r.max)}</p>
           </div>
         ))}
@@ -502,15 +546,49 @@ function Compare({ title, rows }: { title: string; rows: GroupStat[] }) {
   );
 }
 
+/**
+ * Altura de uma coluna/barra de PREÇO, numa escala que começa perto do dado.
+ *
+ * As barras iam de zero ao máximo da série, e isso falha nos dois extremos:
+ *
+ *  - Com dado limpo, o gás varia de R$ 6,46 a R$ 7,02. Partindo do zero, a
+ *    menor coluna já tem 92% da altura da maior — todas parecem iguais, e o
+ *    gráfico que existe para mostrar a variação é justamente o que a esconde.
+ *  - Com UMA nota fora de escala (o caso relatado), o máximo dispara e todas as
+ *    outras colunas caem no piso. Era esse o "as colunas não estão subindo".
+ *
+ * A escala vai do menor ao maior da série, com uma FOLGA embaixo (em múltiplos
+ * da própria amplitude) para o menor não sumir. `min === max` (um mês só, ou
+ * preço estável) cai em meia altura, que é honesto: não há variação a mostrar.
+ *
+ * A folga é o que decide o quanto a diferença é ampliada, e os dois gráficos
+ * querem coisas diferentes:
+ *
+ *  - **Tendência mensal** (`folga` 0,2): é uma série no tempo, lida pela forma.
+ *    Ampliar é o serviço — sem isso não se vê que o preço subiu.
+ *  - **Comparação entre unidades** (`folga` 1): aqui o comprimento lê-se como
+ *    grandeza. Com folga 1 a menor barra fica em EXATAMENTE metade da maior,
+ *    qualquer que seja a diferença: a ordem e o "esta está mais cara" aparecem,
+ *    sem que 2 centavos virem o dobro. O número exato está escrito ao lado.
+ */
+export function alturaDaBarra(valor: number, min: number, max: number, alturaMax = 90, folga = 0.2): number {
+  if (!(max > min)) return Math.round(alturaMax * 0.5);
+  const base = min - (max - min) * folga;
+  const frac = (valor - base) / (max - base);
+  return Math.max(4, Math.round(frac * alturaMax));
+}
+
 function MonthlyBars({ points }: { points: MonthPoint[] }) {
   if (points.length === 0) return <p className="text-sm text-ink-500">Sem dados.</p>;
-  const max = Math.max(...points.map((p) => p.avg), 0.0001);
+  const vals = points.map((p) => p.avg);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
   return (
     <div className="flex items-end gap-2 rounded-lg border bg-surface p-3" style={{ height: 140 }}>
       {points.map((p) => (
         <div key={p.month} className="flex flex-1 flex-col items-center justify-end gap-1">
           <span className="text-[10px] font-semibold text-ink-900">{p.avg.toFixed(2).replace('.', ',')}</span>
-          <div className="w-full rounded-t bg-brand" style={{ height: `${Math.max(4, (p.avg / max) * 90)}px` }} />
+          <div className="w-full rounded-t bg-brand" style={{ height: `${alturaDaBarra(p.avg, min, max)}px` }} />
           <span className="text-[10px] text-ink-500">{mlabel(p.month)}</span>
         </div>
       ))}

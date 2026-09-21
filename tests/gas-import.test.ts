@@ -122,6 +122,35 @@ describe('Import de gás — validação (dry-run)', () => {
       expect(r.rows.length).toBe(2); // a vazia não entra
     }
   });
+
+  /**
+   * A FAIXA DE PLAUSIBILIDADE DO PREÇO.
+   *
+   * O modelo diz "Preço unitário = preço POR KG", mas nada verificava, e duas
+   * trocas cabiam aqui em silêncio: o preço do BOTIJÃO inteiro e o TOTAL da
+   * nota. Na segunda o import ainda MULTIPLICA pela quantidade — foi assim que
+   * entrou a nota que sozinha puxou o preço médio da rede para R$ 48,99/kg e
+   * achatou todas as colunas do painel.
+   */
+  it('recusa o TOTAL da nota lançado na coluna de preço unitário', async () => {
+    const r = await validateGasImport(admin(), [row({ [COLS.numero]: 'TOT1', [COLS.preco]: '4177,92' })]);
+    if (r.ok) {
+      expect(r.rows[0].status).toBe('ERRO');
+      /* O motivo tem de ensinar o conserto: "inválido" faria reimportar igual. */
+      expect(r.rows[0].motivo).toContain('POR KG');
+    }
+  });
+
+  it('recusa o preço do botijão inteiro como preço de quilo', async () => {
+    /* P45 a ~R$ 6,50/kg custa ~R$ 293 — a troca mais provável de todas. */
+    const r = await validateGasImport(admin(), [row({ [COLS.numero]: 'BTJ1', [COLS.preco]: '293', [COLS.forma]: FORMA_BOTIJAO })]);
+    if (r.ok) expect(r.rows[0].status).toBe('ERRO');
+  });
+
+  it('o preço real do gás continua passando', async () => {
+    const r = await validateGasImport(admin(), [row({ [COLS.numero]: 'OK-FAIXA', [COLS.preco]: '7,0162' })]);
+    if (r.ok) expect(r.rows[0].status).toBe('OK');
+  });
 });
 
 describe('Import de gás — gravação (commit)', () => {

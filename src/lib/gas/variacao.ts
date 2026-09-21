@@ -192,3 +192,52 @@ export function emPercentual(v: number | null): string {
   if (v == null) return '–';
   return `${v > 0 ? '+' : ''}${v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * PREÇO MÉDIO E FAIXA DE PLAUSIBILIDADE
+ *
+ * As duas nasceram do mesmo print: preço médio de R$ 48,99/kg ao lado de um
+ * último preço de R$ 7,02/kg, e R$ 2,2 milhões para 46 toneladas de gás.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Soma de valor e de kg de um conjunto de notas — a base de todo preço médio. */
+export function somarNotas(notas: readonly { quantityKg: number; totalValue: number }[]): { kg: number; valor: number } {
+  let kg = 0;
+  let valor = 0;
+  for (const n of notas) {
+    kg += Number(n.quantityKg) || 0;
+    valor += Number(n.totalValue) || 0;
+  }
+  return { kg: Math.round(kg * 100) / 100, valor: Math.round(valor * 100) / 100 };
+}
+
+/**
+ * Preço médio PONDERADO: valor ÷ kg, e nunca a média dos preços.
+ *
+ * A média simples dá o mesmo peso a uma compra de 30 kg e a uma de 600 kg — o
+ * mesmo erro do ticket médio consolidado, e igualmente plausível na tela. Aqui
+ * ele era pior que plausível: uma única nota fora de escala puxava a média de
+ * toda a rede, e ninguém tinha como ver de onde vinha.
+ */
+export function mediaPonderada(notas: readonly { quantityKg: number; totalValue: number }[]): number | null {
+  const { kg, valor } = somarNotas(notas);
+  return precoPorKg(valor, kg);
+}
+
+/**
+ * Teto de plausibilidade do preço/kg, em reais.
+ *
+ * O gás da rede gira em torno de R$ 6,50/kg; o teto é ~4,5× isso. Não é um
+ * palpite de mercado, é o corte entre "caro" e "não pode ser preço de quilo":
+ * R$ 300 é o preço de um BOTIJÃO P45 inteiro, e valores na casa dos milhares
+ * são o TOTAL da nota parando na coluna de preço unitário. As duas trocas cabem
+ * abaixo do teto de nenhum jeito, e nenhuma compra real chega perto dele.
+ *
+ * Admin ajusta em Configurações; este é só o padrão.
+ */
+export const TETO_PRECO_KG_PADRAO = 30;
+
+/** O preço/kg desta nota está fora de qualquer faixa real de gás? */
+export function precoImplausivel(pricePerKg: number | null, teto: number = TETO_PRECO_KG_PADRAO): boolean {
+  return pricePerKg != null && Number.isFinite(pricePerKg) && pricePerKg > teto;
+}
