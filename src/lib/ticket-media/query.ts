@@ -174,13 +174,12 @@ export async function competenciasComDados(user: SessionUser): Promise<Competenc
 /**
  * O resumo para o cartão do Dashboard / Central Operacional.
  *
- * ⚠️ A competência do cartão é a ÚLTIMA COM LANÇAMENTO, não o mês corrente — e
- * isso foi decidido vendo o cartão pronto na tela. A alimentação é mensal e as
- * planilhas de um mês só saem depois que ele fecha: no dia 21, setembro ainda
- * não tem nada, e um cartão preso ao mês corrente mostraria "–" durante três
- * semanas de cada quatro. O mês aparece escrito no cartão, então nada é
- * disfarçado: quando setembro começa a entrar, o cartão passa a setembro
- * sozinho, marcado como parcial.
+ * A competência é o MÊS CORRENTE, sempre — decisão do Pedro, mantida depois de
+ * eu levantar a alternativa. Consequência a conhecer: a planilha de um mês só
+ * sai depois que ele fecha, então no começo de cada mês o cartão mostra "–" e
+ * "0 de N importadas" até a primeira planilha entrar. Isso é leitura correta do
+ * mês corrente, e serve de cobrança — o que o cartão NÃO faz é mostrar o
+ * fechamento do mês passado no lugar.
  *
  * Devolve `null` quando não há unidade participante no alcance do usuário —
  * um cartão "R$ 0,00" ali afirmaria que a rede não vendeu nada.
@@ -188,32 +187,18 @@ export async function competenciasComDados(user: SessionUser): Promise<Competenc
 export async function resumoParaODashboard(
   user: SessionUser,
   opcoes: { competencia: Competencia; unitIds?: string[] | null },
-): Promise<{ competencia: Competencia; ticket: number | null; receita: number; coupons: number; importadas: number; participantes: number; completo: boolean; doMesCorrente: boolean } | null> {
+): Promise<{ competencia: Competencia; ticket: number | null; receita: number; coupons: number; importadas: number; participantes: number; completo: boolean } | null> {
   const filtrar = (ps: UnidadeParticipante[]) => {
     if (!opcoes.unitIds || opcoes.unitIds.length === 0) return ps;
     const permitidas = new Set(opcoes.unitIds);
     return ps.filter((p) => permitidas.has(p.unitId));
   };
 
-  const participantesHoje = filtrar(await participantesEm(user, opcoes.competencia));
-  if (participantesHoje.length === 0) return null;
+  const { competencia } = opcoes;
+  const participantes = filtrar(await participantesEm(user, competencia));
+  if (participantes.length === 0) return null;
 
-  /* A última competência com lançamento, olhando uma janela de um ano. Sem
-     janela, uma rede que parou de importar há dois anos mostraria aquele
-     número como se fosse notícia. */
-  const janela = competenciasEntre(deslocarCompetencia(opcoes.competencia, -(MESES_DA_EVOLUCAO - 1)), opcoes.competencia);
-  const todos = await lancamentos(participantesHoje.map((p) => p.unitId), janela);
-  const comDado = [...new Set(todos.map((e) => e.competence))].sort();
-  const competencia = (comDado[comDado.length - 1] ?? opcoes.competencia) as Competencia;
-
-  /* Os participantes são os DAQUELA competência: uma unidade que saiu do
-     controle em setembro não pode aparecer como pendente de agosto. */
-  const participantes = competencia === opcoes.competencia
-    ? participantesHoje
-    : filtrar(await participantesEm(user, competencia));
-  const permitidas = new Set(participantes.map((p) => p.unitId));
-  const linhas = todos.filter((e) => e.competence === competencia && permitidas.has(e.unitId));
-
+  const linhas = await lancamentos(participantes.map((p) => p.unitId), [competencia]);
   const ns = linhas.map(numeros);
   const s = somar(ns);
 
@@ -225,6 +210,5 @@ export async function resumoParaODashboard(
     importadas: linhas.length,
     participantes: participantes.length,
     completo: participantes.length > 0 && linhas.length === participantes.length,
-    doMesCorrente: competencia === opcoes.competencia,
   };
 }

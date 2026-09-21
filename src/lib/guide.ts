@@ -608,7 +608,7 @@ export const GUIDE: GuideSection[] = [
           'Se a unidade já tiver aquele mês importado, o SGO NÃO sobrescreve calado: avisa quem importou, quando e com qual arquivo. Substituir é permitido só a quem administra o módulo.',
           'NA TELA PRINCIPAL: escolha a competência e veja o consolidado das churrascarias ou uma unidade só. Os cartões trazem ticket médio, receita, cupons, vendas, descontos e quantas unidades já importaram, sempre comparados com o mês anterior.',
           'STATUS DO FECHAMENTO: enquanto faltar alguma unidade, a tela mostra "Consolidado parcial — 6 de 7" e diz o NOME de quem falta. Quando todas entram, vira "Consolidado completo". Use isso para cobrar.',
-          'O Dashboard traz um cartão com o ticket médio do último mês lançado (com o mês escrito nele) e o status das importações. Clicar abre o módulo naquele mês.',
+          'O Dashboard traz um cartão com o ticket médio do MÊS CORRENTE e o status das importações. No começo do mês ele aparece com "–" e "0 de N importadas" — é assim mesmo: a planilha de um mês só sai depois que ele fecha, e o cartão serve justamente para cobrar. Clicar abre o módulo.',
         ],
         tips: [
           'O CONSOLIDADO NÃO É A MÉDIA DOS TICKETS das unidades: é a receita total dividida pelos cupons totais. A média simples daria o mesmo peso a uma unidade de 2.000 cupons e a uma de 50.000, e o número sai parecido — por isso o erro sobrevive em planilha durante anos.',
