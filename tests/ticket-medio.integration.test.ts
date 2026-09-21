@@ -323,33 +323,48 @@ describe('Painel e consolidado', () => {
   });
 });
 
-describe('O cartão do Dashboard escolhe a competência certa', () => {
+/**
+ * O CARTÃO DO DASHBOARD FICA NO MÊS CORRENTE.
+ *
+ * Decisão do Pedro, mantida depois de eu levantar a alternativa (mostrar o
+ * último mês com lançamento). O que estes casos travam é a consequência dela:
+ * o cartão NÃO pode escorregar para o mês passado quando o mês corrente ainda
+ * está vazio — ele mostra o mês corrente vazio, que é a cobrança.
+ */
+describe('O cartão do Dashboard fica no mês corrente', () => {
   beforeEach(async () => { await ligar([churras1, churras2], '2026-01'); });
 
-  it('mostra o ÚLTIMO mês com lançamento, não o mês corrente vazio', async () => {
-    /* A alimentação é mensal e a planilha de um mês só sai depois que ele
-       fecha: preso ao mês corrente, o cartão mostraria "–" em três semanas de
-       cada quatro. Achado olhando o cartão pronto na tela, no dia 21. */
+  it('NÃO mostra o mês passado quando o mês corrente está vazio', async () => {
     await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', fileName: 'a.xlsx', linhas: planilha(100, 50, 0), podeSubstituir: true });
     await gravarImportacao(admin(), { unitId: churras2, competencia: '2026-08', fileName: 'b.xlsx', linhas: planilha(100, 50, 0), podeSubstituir: true });
 
     const r = await resumoParaODashboard(admin(), { competencia: '2026-09', unitIds: [churras1, churras2] });
-    expect(r!.competencia).toBe('2026-08');
-    expect(r!.doMesCorrente).toBe(false);
-    expect(r!.ticket).toBe(50);
-    expect(r!.completo).toBe(true);
+    expect(r!.competencia).toBe('2026-09');
+    expect(r!.ticket).toBeNull();
+    expect(r!.importadas).toBe(0);
+    expect(r!.participantes).toBe(2);
+    expect(r!.completo).toBe(false);
   });
 
-  it('assim que o mês corrente recebe a primeira planilha, o cartão passa para ele — como parcial', async () => {
+  it('com o mês corrente parcial, conta só o que já entrou nele', async () => {
     await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', fileName: 'a.xlsx', linhas: planilha(100, 50, 0), podeSubstituir: true });
     await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-09', fileName: 'c.xlsx', linhas: planilha(100, 70, 0, '2026-09'), podeSubstituir: true });
 
     const r = await resumoParaODashboard(admin(), { competencia: '2026-09', unitIds: [churras1, churras2] });
     expect(r!.competencia).toBe('2026-09');
-    expect(r!.doMesCorrente).toBe(true);
-    expect(r!.completo).toBe(false);
+    expect(r!.ticket).toBe(70); // e não 50, nem a mistura dos dois meses
     expect(r!.importadas).toBe(1);
     expect(r!.participantes).toBe(2);
+    expect(r!.completo).toBe(false);
+  });
+
+  it('com o mês corrente fechado, marca completo', async () => {
+    for (const u of [churras1, churras2]) {
+      await gravarImportacao(admin(), { unitId: u, competencia: '2026-09', fileName: 'c.xlsx', linhas: planilha(100, 70, 0, '2026-09'), podeSubstituir: true });
+    }
+    const r = await resumoParaODashboard(admin(), { competencia: '2026-09', unitIds: [churras1, churras2] });
+    expect(r!.completo).toBe(true);
+    expect(r!.ticket).toBe(70);
   });
 
   it('sem lançamento nenhum, fica no mês corrente e diz que está vazio', async () => {

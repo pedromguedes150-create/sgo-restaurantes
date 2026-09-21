@@ -166,9 +166,9 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
         id: 'ticket-medio',
         titulo: 'Ticket Médio',
         valor: emReal(ticket.ticket),
-        /* O MÊS vai escrito no cartão: ele nem sempre é o corrente (ver
-           `resumoParaODashboard`), e um ticket sem mês seria um número que a
-           pessoa atribui ao mês errado. */
+        /* O MÊS vai escrito no cartão mesmo sendo sempre o corrente: um ticket
+           médio sem mês é um número que a pessoa atribui ao mês errado, e no
+           começo do mês o cartão mostra "–" até a primeira planilha entrar. */
         detalhe: ticket.completo
           ? `${rotuloDaCompetencia(ticket.competencia)} · ${emNumero(ticket.coupons)} cupons · receita ${emReal(ticket.receita)}`
           : `${rotuloDaCompetencia(ticket.competencia)} parcial — ${ticket.importadas} de ${ticket.participantes} unidades importadas`,

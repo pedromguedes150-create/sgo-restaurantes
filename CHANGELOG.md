@@ -83,10 +83,12 @@ contra um mês anterior incompleto acusaria uma queda que é só de importação
 O seletor do módulo diz **"Consolidado das churrascarias"**, e não "Toda a Rede": a rede tem CD,
 lanchonete e produtos, e usar a mesma palavra do seletor global faria o número parecer incluir tudo.
 
-⚠️ **O cartão do Dashboard mostra o último mês COM lançamento, não o mês corrente** — decidido vendo
-o cartão pronto na tela, no dia 21: a planilha de um mês só sai depois que ele fecha, então um cartão
-preso ao mês corrente mostraria "–" em três semanas de cada quatro. O mês vai escrito no cartão, e
-assim que o mês corrente recebe a primeira planilha o cartão passa para ele, marcado como parcial.
+**O cartão do Dashboard fica no mês corrente**, com o mês escrito nele. Consequência a conhecer: a
+planilha de um mês só sai depois que ele fecha, então no começo de cada mês o cartão mostra "–" e
+"0 de N importadas" até a primeira entrar — leitura correta do mês corrente, e a cobrança em si. O
+que ele não faz é escorregar para o mês passado, que seria mostrar um fechamento no lugar do mês que
+está sendo perguntado. Eu havia entregado a alternativa (último mês com lançamento) e o Pedro
+manteve o mês corrente; há teste travando as duas pontas.
 
 ---
 
