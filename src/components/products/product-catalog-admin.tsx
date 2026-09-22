@@ -2,10 +2,11 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Upload, Download, Trash2, Search } from 'lucide-react';
+import { Plus, Upload, Download, Trash2, Search, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/ds/select';
+import { MutiraoDeSetores } from '@/components/products/mutirao-de-setores';
 
 interface Prod {
   id: string; name: string; origin: string; category: string; measure: string; active: boolean;
@@ -32,6 +33,9 @@ export function ProductCatalogAdmin({ products, setores = [] }: { products: Prod
   /* Filtro do mutirão: os produtos do CD que ainda não têm setor. São eles que
      caem em "Sem setor cadastrado" e somem da fila de todo separador. */
   const [soSemSetor, setSoSemSetor] = useState(false);
+  /* Painel do mutirão: a lista inteira com o setor proposto, para confirmar de
+     uma vez. Fechado por padrão — quem entra aqui nem sempre vem para isso. */
+  const [mutirao, setMutirao] = useState(false);
   /* Origem da IMPORTAÇÃO, separada da origem do cadastro manual: uma planilha
      inteira costuma ser de um lado só, e misturar as duas confundiria. */
   const [importOrigin, setImportOrigin] = useState('FABRICA');
@@ -125,10 +129,23 @@ export function ProductCatalogAdmin({ products, setores = [] }: { products: Prod
           <p className="min-w-0 flex-1 text-sm text-ink-900">
             <b>{semSetor.length} produto(s) do CD sem setor.</b> Enquanto estiverem assim, caem em “Sem setor cadastrado” no pedido e nenhum separador os enxerga.
           </p>
+          {/* "Definir setores" vem PRIMEIRO: com mais de mil produtos, corrigir
+              um a um pelo filtro é o caminho que ninguém termina. */}
+          <Button size="sm" onClick={() => setMutirao((v) => !v)}>
+            <Sparkles className="h-4 w-4" /> {mutirao ? 'Fechar' : 'Definir setores'}
+          </Button>
           <Button size="sm" variant={soSemSetor ? 'default' : 'outline'} onClick={() => setSoSemSetor((v) => !v)}>
-            {soSemSetor ? 'Ver todos' : 'Corrigir agora'}
+            {soSemSetor ? 'Ver todos' : 'Corrigir um a um'}
           </Button>
         </div>
+      )}
+
+      {mutirao && semSetor.length > 0 && (
+        <MutiraoDeSetores
+          itens={semSetor.map((p) => ({ id: p.id, name: p.name, category: p.category, barcode: p.barcode }))}
+          setores={setores}
+          onFechar={() => setMutirao(false)}
+        />
       )}
 
       <div className="relative">

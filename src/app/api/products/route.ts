@@ -3,6 +3,7 @@ import { recusaDeAba } from '@/lib/permissions/guarda-abas';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { setRequestStatus, upsertProduct, toggleProduct, deleteProduct } from '@/lib/products';
+import { aplicarSetores, sugerirComIA } from '@/lib/stock/setor-em-lote';
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -20,6 +21,25 @@ export async function POST(req: Request) {
      separação nem consulta: o pedido nascia invisível para o separador. Pedido
      agora é só por `/api/products/pedido` (criarPedido). Manter a rota viva
      seria deixar a porta aberta para recriar o problema por fora da tela. */
+  /* MUTIRÃO DO SETOR — respostas próprias, porque não são { ok } simples:
+     a IA devolve sugestões e o aplicar devolve contagens. */
+  if (b.action === 'setorIA') {
+    const r = await sugerirComIA(user, Array.isArray(b.productIds) ? b.productIds.map(String) : []);
+    if ('ok' in r && r.ok === false) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+    return NextResponse.json({ ok: true, ...r });
+  }
+  if (b.action === 'setorAplicar') {
+    const pares = Array.isArray(b.pares)
+      ? (b.pares as unknown[]).map((p) => {
+          const o = p as { productId?: unknown; cdSectorId?: unknown };
+          return { productId: String(o.productId ?? ''), cdSectorId: String(o.cdSectorId ?? '') };
+        })
+      : [];
+    const r = await aplicarSetores(user, pares, ctx);
+    if (!r.ok) return NextResponse.json({ error: r.reason === 'FORBIDDEN' ? 'Sem permissão' : 'Nada para aplicar' }, { status: r.reason === 'FORBIDDEN' ? 403 : 400 });
+    return NextResponse.json({ ok: true, aplicados: r.aplicados, ignorados: r.ignorados });
+  }
+
   let r: { ok: boolean; reason?: string } | undefined;
   if (b.action === 'status') r = await setRequestStatus(user, String(b.id ?? ''), String(b.status ?? ''), ctx);
   else if (b.action === 'catUpsert') r = await upsertProduct(user, {
