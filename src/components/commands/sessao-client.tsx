@@ -83,11 +83,35 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   const usaLeitor = sessao.metodoId === 'LEITOR' || sessao.metodoId === 'MISTO';
   const usaGrade = sessao.metodoId === 'MANUAL' || sessao.metodoId === 'MISTO';
 
-  /* O leitor é um teclado: o campo precisa estar focado o tempo todo, ou a
-     leitura se perde no vazio. */
+  /**
+   * O leitor é um teclado: o campo precisa estar focado durante a conferência,
+   * ou a bipada se perde no vazio.
+   *
+   * ⚠️ MAS SÓ DURANTE A CONFERÊNCIA. Enquanto o diálogo de finalizar está
+   * aberto, o campo do leitor NÃO pode recapturar o foco: era isso que
+   * travava a justificativa — a pessoa clicava em "O que houve?", começava a
+   * escrever, e o `onBlur` do leitor puxava o foco de volta 50ms depois. O
+   * campo obrigatório ficava impossível de preencher, e com ele o botão de
+   * finalizar ficava inalcançável.
+   *
+   * `leitorAtivo` é a condição única: ela vale no efeito E no `onBlur`, porque
+   * duas condições escritas em lugares diferentes é como uma delas envelhece
+   * sozinha.
+   */
+  const leitorAtivo = usaLeitor && podeEditar && !fechando;
+
+  /* Uma REFERÊNCIA, e não a variável: o `onBlur` agenda um timeout, e o valor
+     capturado no closure é o do instante em que ele foi AGENDADO. Ao tocar em
+     "Finalizar conferência" o campo perde o foco no mesmo momento em que o
+     diálogo abre — com a variável, aquele timeout ainda veria `true` e
+     roubaria o foco de volta, que é justamente o defeito. A referência é lida
+     quando o timeout DISPARA. */
+  const leitorAtivoRef = useRef(leitorAtivo);
+  leitorAtivoRef.current = leitorAtivo;
+
   useEffect(() => {
-    if (usaLeitor && podeEditar) inputRef.current?.focus();
-  }, [usaLeitor, podeEditar, retorno]);
+    if (leitorAtivo) inputRef.current?.focus();
+  }, [leitorAtivo, retorno]);
 
   const estadoDe = (n: number): Estado => (conferidas.has(n) ? 'CONFERIDA' : emUso.has(n) ? 'EM_USO' : 'LIMPA');
   const vistas = conferidas.size + emUso.size;
@@ -254,7 +278,10 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
             value={leitura}
             onChange={(e) => setLeitura(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void bipar(leitura); } }}
-            onBlur={() => setTimeout(() => inputRef.current?.focus(), 50)}
+            /* Recaptura o foco só enquanto a conferência está em curso — pela
+               REFERÊNCIA, que vale o estado do instante em que o timeout
+               dispara, e não o de quando foi agendado. */
+            onBlur={() => setTimeout(() => { if (leitorAtivoRef.current) inputRef.current?.focus(); }, 50)}
             placeholder="bipe a comanda…"
             className="h-11 text-base tabular-nums"
             autoFocus
