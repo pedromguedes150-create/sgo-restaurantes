@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { ROTULO_CURTO, UNIDADES_DE_PEDIDO, rotuloDaQuantidade, type UnidadeDePedido } from '@/lib/products/embalagem-pedido';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Plus, Minus, Search, Sparkles, ShoppingCart, Send, X, PackageSearch, RotateCcw } from 'lucide-react';
@@ -48,7 +49,43 @@ type Etapa = 'INICIO' | 'MONTANDO' | 'REVISAO';
  * celular. O que isso muda na prática — a tela NÃO abre com a lista inteira de
  * produtos e um `- 0 +` em cada linha, que era o desenho antigo. Abre com um
  * botão, e os produtos entram um a um, pela câmera ou pela busca.
+ *
+ * A tira de embalagem abaixo faz parte desse desenho: ela vive NA LINHA do
+ * item, com um toque por escolha.
  */
+
+/**
+ * A TIRA DE EMBALAGEM.
+ *
+ * Quatro botões numa linha, um toque para escolher. Mobile-first de verdade:
+ * um seletor suspenso ou um modal custaria dois toques por item, e o gerente
+ * repete isso trinta vezes num pedido.
+ *
+ * ⚠️ O que ela NÃO faz: perguntar quantas unidades vêm dentro. O pedido diz
+ * "2 fardos" e o SGO registra "2 fardos" — quem separa lê isso e separa isso.
+ */
+function TiraDeEmbalagem({ valor, onEscolher }: { valor: UnidadeDePedido; onEscolher: (u: UnidadeDePedido) => void }) {
+  return (
+    <div className="mt-1.5 flex gap-1" role="group" aria-label="Como está pedindo">
+      {UNIDADES_DE_PEDIDO.map((u) => (
+        <button
+          key={u}
+          type="button"
+          aria-pressed={valor === u}
+          onClick={() => onEscolher(u)}
+          className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors ${
+            valor === u ? 'border-brand bg-brand text-on-brand' : 'border-line text-ink-700 hover:border-brand hover:text-brand'
+          }`}
+        >
+          {ROTULO_CURTO[u]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** O que o carrinho guarda por produto: quanto, e em que embalagem. */
+interface ItemNoCarrinho { qty: number; pack: UnidadeDePedido }
 export function PedidoClient({
   unitId,
   unitName,
@@ -67,7 +104,11 @@ export function PedidoClient({
 }) {
   const router = useRouter();
   const [etapa, setEtapa] = useState<Etapa>('INICIO');
-  const [carrinho, setCarrinho] = useState<Record<string, number>>({});
+  /* O carrinho guarda QUANTIDADE + COMO foi pedido. Só a quantidade não
+     bastava: "2" de Coca-Cola pode ser 2 latas ou 2 fardos, e quem separa
+     precisa saber qual. O SGO não converte um no outro e não consulta o
+     cadastro para saber quantas vêm dentro — ver `embalagem-pedido.ts`. */
+  const [carrinho, setCarrinho] = useState<Record<string, ItemNoCarrinho>>({});
   const [termo, setTermo] = useState('');
   const [nota, setNota] = useState('');
   const [busy, setBusy] = useState(false);
@@ -82,7 +123,7 @@ export function PedidoClient({
   /* O mais recente ainda em curso. Mais de um aberto é raro e, quando
      acontece, o novo é o que interessa. */
   const emCurso = recentes.find((r) => r.emAndamento);
-  const itens = Object.entries(carrinho).filter(([, q]) => q > 0);
+  const itens = Object.entries(carrinho).filter(([, i]) => i.qty > 0);
   const totalItens = itens.length;
 
   /* Para onde este carrinho vai. O envio divide por destino no servidor; aqui é
@@ -115,8 +156,8 @@ export function PedidoClient({
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { setErro(d.error ?? 'Nao foi possivel repetir este pedido.'); return; }
 
-      const carrinhoNovo: Record<string, number> = {};
-      for (const i of d.itens as { productId: string; qty: number }[]) carrinhoNovo[i.productId] = i.qty;
+      const carrinhoNovo: Record<string, ItemNoCarrinho> = {};
+      for (const i of d.itens as { productId: string; qty: number; packUnit?: UnidadeDePedido }[]) carrinhoNovo[i.productId] = { qty: i.qty, pack: i.packUnit ?? 'UN' };
       setCarrinho(carrinhoNovo);
       setEtapa('REVISAO');
       /* Produto que saiu do catalogo nao volta calado: o gerente precisa saber
@@ -133,12 +174,18 @@ export function PedidoClient({
 
   function somar(productId: string, delta: number) {
     setCarrinho((c) => {
-      const novo = Math.max(0, Math.round(((c[productId] ?? 0) + delta) * 1000) / 1000);
-      return { ...c, [productId]: novo };
+      const atual = c[productId];
+      const novo = Math.max(0, Math.round(((atual?.qty ?? 0) + delta) * 1000) / 1000);
+      return { ...c, [productId]: { qty: novo, pack: atual?.pack ?? 'UN' } };
     });
   }
   function definir(productId: string, qtd: number) {
-    setCarrinho((c) => ({ ...c, [productId]: Math.max(0, qtd) }));
+    setCarrinho((c) => ({ ...c, [productId]: { qty: Math.max(0, qtd), pack: c[productId]?.pack ?? 'UN' } }));
+  }
+
+  /** Troca só a embalagem, preservando a quantidade já digitada. */
+  function trocarEmbalagem(productId: string, pack: UnidadeDePedido) {
+    setCarrinho((c) => ({ ...c, [productId]: { qty: c[productId]?.qty ?? 1, pack } }));
   }
 
   function aoLerCodigo(codigo: string) {
@@ -146,7 +193,9 @@ export function PedidoClient({
     const p = produtoPorCodigo(produtos, codigo);
     if (!p) { setNaoReconhecido(soDigitos(codigo)); return; }
     somar(p.id, 1);
-    setAviso(`${p.name} — adicionado (${(carrinho[p.id] ?? 0) + 1} ${p.measure}).`);
+    /* Sem a quantidade no aviso: ela e a embalagem estão logo abaixo, e quem
+       bipa em sequência lê o nome para conferir que pegou o produto certo. */
+    setAviso(`${p.name} — adicionado. Confira a embalagem e a quantidade abaixo.`);
   }
 
   async function associar(productId: string) {
@@ -173,7 +222,7 @@ export function PedidoClient({
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'criar', unitId, note: nota,
-          items: itens.map(([productId, qty]) => ({ productId, qty })),
+          items: itens.map(([productId, i]) => ({ productId, qty: i.qty, packUnit: i.pack })),
         }),
       });
       const d = await res.json().catch(() => ({}));
@@ -230,8 +279,8 @@ export function PedidoClient({
             <Button
               size="sm" className="mt-2"
               onClick={() => {
-                const c: Record<string, number> = {};
-                for (const s of sugestoes) c[s.productId] = s.qtySugerida;
+                const c: Record<string, ItemNoCarrinho> = {};
+                for (const s of sugestoes) c[s.productId] = { qty: s.qtySugerida, pack: 'UN' };
                 setCarrinho(c); setEtapa('MONTANDO');
               }}
             >
@@ -315,7 +364,8 @@ export function PedidoClient({
             return (
               <li key={id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
                 <span className="min-w-0 truncate text-ink-900">{p?.name ?? id}</span>
-                <span className="shrink-0 tabular-nums text-ink-700">{q} {p?.measure}</span>
+                {/* "2 fardos", e não "2 un": é o que quem separa vai ler. */}
+                <span className="shrink-0 tabular-nums text-ink-700">{rotuloDaQuantidade(q.qty, q.pack, p?.measure)}</span>
               </li>
             );
           })}
@@ -383,7 +433,7 @@ export function PedidoClient({
               </span>
               <div className="flex shrink-0 items-center gap-1">
                 <Button size="sm" variant="ghost" onClick={() => somar(p.id, -1)} aria-label="Diminuir"><Minus className="h-4 w-4" /></Button>
-                <span className="w-8 text-center text-sm font-semibold tabular-nums">{carrinho[p.id] ?? 0}</span>
+                <span className="w-8 text-center text-sm font-semibold tabular-nums">{carrinho[p.id]?.qty ?? 0}</span>
                 <Button size="sm" variant="ghost" onClick={() => somar(p.id, 1)} aria-label="Aumentar"><Plus className="h-4 w-4" /></Button>
               </div>
             </li>
@@ -395,16 +445,26 @@ export function PedidoClient({
         <div>
           <p className="mb-1 text-sm font-semibold text-ink-900">No pedido ({totalItens})</p>
           <ul className="divide-y divide-line rounded-lg border">
-            {itens.map(([id, q]) => {
+            {itens.map(([id, item]) => {
               const p = porId.get(id);
               return (
-                <li key={id} className="flex items-center justify-between gap-2 px-3 py-2">
-                  <span className="min-w-0 truncate text-sm text-ink-900">{p?.name ?? id}</span>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => somar(id, -1)} aria-label="Diminuir"><Minus className="h-4 w-4" /></Button>
-                    <span className="w-8 text-center text-sm font-semibold tabular-nums">{q}</span>
-                    <Button size="sm" variant="ghost" onClick={() => somar(id, 1)} aria-label="Aumentar"><Plus className="h-4 w-4" /></Button>
+                <li key={id} className="px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-sm text-ink-900">{p?.name ?? id}</span>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => somar(id, -1)} aria-label="Diminuir"><Minus className="h-4 w-4" /></Button>
+                      <span className="w-8 text-center text-sm font-semibold tabular-nums">{item.qty}</span>
+                      <Button size="sm" variant="ghost" onClick={() => somar(id, 1)} aria-label="Aumentar"><Plus className="h-4 w-4" /></Button>
+                    </div>
                   </div>
+                  {/* A embalagem fica NA LINHA do produto, logo abaixo da
+                      quantidade: quatro botões numa tira, um toque, sem abrir
+                      nada. Modal ou seletor suspenso custaria dois toques por
+                      item, e o gerente faz isso trinta vezes seguidas. */}
+                  <TiraDeEmbalagem valor={item.pack} onEscolher={(u) => trocarEmbalagem(id, u)} />
+                  <p className="mt-1 text-[11px] text-ink-500">
+                    Pedido: <b className="text-ink-900">{rotuloDaQuantidade(item.qty, item.pack, p?.measure)}</b>
+                  </p>
                 </li>
               );
             })}

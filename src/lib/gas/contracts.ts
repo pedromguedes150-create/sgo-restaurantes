@@ -82,6 +82,15 @@ export async function deleteGasContract(user: SessionUser, id: string, ctx: Ctx 
   return { ok: true };
 }
 
+/** Uma nota que NÃO entrou no contrato, e o motivo. */
+export interface ForaDoContrato {
+  id: string;
+  date: string;
+  kg: number;
+  supplierName: string;
+  motivo: 'FORA_DO_PERIODO' | 'OUTRO_FORNECEDOR' | 'SEM_FORNECEDOR';
+}
+
 export interface GasContractRow {
   id: string; unitId: string; unitName: string; supplierId: string; supplierName: string;
   startDate: string; endDate: string; quantityKg: number; pricePerKg: number; initialUsedKg: number;
@@ -90,6 +99,20 @@ export interface GasContractRow {
   progressPct: number; // usedKg ÷ quantityKg
   remainingKg: number;
   expired: boolean; active: boolean; note: string | null;
+  /**
+   * As notas DA MESMA UNIDADE que ficaram de fora, com o motivo.
+   *
+   * Não existe FK entre `GasReceipt` e `GasContract`: o vínculo é INFERIDO por
+   * unidade + fornecedor + janela de datas, e qualquer uma das três exclui uma
+   * nota sem dizer nada. Foi assim que 429 kg sumiram de um contrato e a
+   * divergência só apareceu quando alguém somou a lista na mão.
+   *
+   * Enquanto não há FK, o mínimo é o contrato **conseguir explicar o próprio
+   * número** — listando o que deixou de fora e por quê.
+   */
+  foraDoContrato: ForaDoContrato[];
+  /** Soma do que ficou de fora, para a tela mostrar a diferença de uma vez. */
+  foraDoContratoKg: number;
 }
 
 /** Contratos do escopo com a posição/baixa calculada dos recebimentos. */
@@ -107,13 +130,48 @@ export async function listGasContracts(user: SessionUser, opts: { activeOnly?: b
   const supBy = new Map(suppliers.map((s) => [s.id, s.name]));
   const today = new Date().toISOString().slice(0, 10);
 
+  /**
+   * TODAS as notas das unidades com contrato, de uma vez.
+   *
+   * Antes era um `aggregate` por contrato — nove idas ao banco para nove
+   * contratos, e nenhuma delas capaz de dizer o que tinha deixado de fora. A
+   * classificação abaixo é a mesma regra de sempre (unidade + fornecedor +
+   * janela); o que mudou é que agora o RESTO também é contado.
+   */
+  const notas = await prisma.gasReceipt.findMany({
+    where: { unitId: { in: [...new Set(contracts.map((c) => c.unitId))] } },
+    select: { id: true, unitId: true, supplierId: true, operationalDate: true, quantityKg: true, supplier: { select: { name: true } } },
+  });
+
   const out: GasContractRow[] = [];
   for (const c of contracts) {
-    const agg = await prisma.gasReceipt.aggregate({
-      where: { unitId: c.unitId, supplierId: c.supplierId, operationalDate: { gte: c.startDate, lte: c.endDate } },
-      _sum: { quantityKg: true },
-    });
-    const purchasedKg = Number(agg._sum.quantityKg ?? 0);
+    const daUnidade = notas.filter((n) => n.unitId === c.unitId);
+
+    let purchasedKg = 0;
+    const foraDoContrato: ForaDoContrato[] = [];
+    for (const n of daUnidade) {
+      const noPeriodo = n.operationalDate >= c.startDate && n.operationalDate <= c.endDate;
+      const doFornecedor = n.supplierId === c.supplierId;
+      if (noPeriodo && doFornecedor) { purchasedKg += Number(n.quantityKg); continue; }
+
+      /* Nota de OUTRO fornecedor e FORA do período não diz nada sobre este
+         contrato — listá-la encheria a tela de ruído. Só entra no aviso o que
+         quase entrou: mesmo fornecedor fora do período, ou mesmo período com
+         fornecedor diferente. */
+      if (doFornecedor && !noPeriodo) {
+        foraDoContrato.push({ id: n.id, date: n.operationalDate, kg: Number(n.quantityKg), supplierName: n.supplier?.name ?? '—', motivo: 'FORA_DO_PERIODO' });
+      } else if (noPeriodo && !doFornecedor) {
+        foraDoContrato.push({
+          id: n.id, date: n.operationalDate, kg: Number(n.quantityKg),
+          supplierName: n.supplier?.name ?? 'Sem fornecedor',
+          /* Sem fornecedor é um caso à parte: não é "de outro", é dado
+             incompleto — e o conserto é diferente (preencher, não discutir). */
+          motivo: n.supplierId ? 'OUTRO_FORNECEDOR' : 'SEM_FORNECEDOR',
+        });
+      }
+    }
+    foraDoContrato.sort((a, b) => a.date.localeCompare(b.date));
+
     const usedKg = Number(c.initialUsedKg) + purchasedKg;
     const quantityKg = Number(c.quantityKg);
     out.push({
@@ -127,6 +185,8 @@ export async function listGasContracts(user: SessionUser, opts: { activeOnly?: b
       remainingKg: Math.round((quantityKg - usedKg) * 100) / 100,
       expired: c.endDate < today,
       active: c.active, note: c.note,
+      foraDoContrato,
+      foraDoContratoKg: Math.round(foraDoContrato.reduce((s, f) => s + f.kg, 0) * 100) / 100,
     });
   }
   return out;

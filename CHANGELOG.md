@@ -9,6 +9,21 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.109.0 — 2026-09-22 (Pedido por fardo/display/caixa · o contrato de gás explica o próprio número)
+### Adicionado
+- **O gerente escolhe COMO está pedindo** (`src/lib/products/embalagem-pedido.ts` puro, `OrderPackUnit`, `ProductRequestItem.packUnit`). Depois de bipar ou buscar o produto, uma **tira de quatro botões** — Unidade · Fardo · Display · Caixa — aparece na própria linha do item, com a quantidade ao lado. "Coca-Cola 350ml — 2 fardos".
+  - ⚠️ **O SGO NÃO converte e NÃO consulta o cadastro** para saber quantas unidades vêm dentro. É registro do pedido: quem separa lê "2 fardos" e separa 2 fardos. Há teste travando isso (`rotuloDaQuantidade.length === 3` — nenhum dos parâmetros é o fator de conversão).
+  - **Enum próprio**, e não o `PackType` do Estoque: `Product.packType` é propriedade do PRODUTO (como ele é contado na prateleira) e ali a conversão é obrigatória; aqui é o que o gerente quer AGORA, e a conversão é proibida. Enums separados tornam a distinção estrutural, em vez de convenção que alguém quebra em seis meses.
+  - A tira fica **na linha**, com um toque por escolha: seletor suspenso ou modal custaria dois toques por item, e o gerente repete isso trinta vezes num pedido.
+  - "2 fardos" atravessa até o fim — tela do gerente, detalhe do pedido, **tela do separador**, recebimento e romaneio. Há teste de integração provando que chega a quem separa.
+  - Sem escolha, cai em `UN` e vale a medida do cadastro ("3 kg", "2 cx"): o comportamento de sempre. Valor inválido vindo do corpo também cai em `UN` — um cliente antigo não pode derrubar o pedido.
+### Corrigido
+- **O contrato de gás não explicava o próprio número.** Relato: o contrato mostrava 39.385,6 kg e a soma das notas dava 39.814,6 — diferença exata de uma nota de 429 kg (08/09/2023). ⚠️ **Não era o "Data corrigida"** (o Pedro apontou e estava certo: o cálculo nunca olhou `dateEdited`, e outras notas com o mesmo aviso entraram normalmente).
+  - A causa da CLASSE está no modelo: **não existe FK entre `GasReceipt` e `GasContract`**. O vínculo é INFERIDO por unidade + fornecedor + janela de datas, e qualquer uma das três exclui uma nota **sem dizer nada**.
+  - Enquanto não há FK, o contrato passou a **listar o que deixou de fora e por quê**: fora do período · outro fornecedor · sem fornecedor. Cada motivo aponta um conserto diferente (o período do contrato, a data da nota, ou o fornecedor dela). Nota que está fora do período **e** é de outro fornecedor não entra no aviso — ela não diz nada sobre este contrato, e listá-la encheria a tela de ruído.
+  - O cálculo virou **uma consulta só** para todos os contratos, em vez de um `aggregate` por contrato (nove idas ao banco para nove contratos, e nenhuma delas capaz de dizer o que sobrou). A regra de soma **não mudou**.
+- 24 testes novos (14 puros de embalagem, 10 do contrato), mais 3 de integração provando que a embalagem chega ao separador.
+
 ## v1.108.0 — 2026-09-22 (Comissão e Mobilidade: duas abas, dois arquivos)
 ### Alterado
 - **A tela "Comissões & Mobilidade" foi reestruturada em DUAS ABAS independentes** (`src/lib/people/payouts-competencia.ts`, `payouts-export.ts`, `components/people/payouts-competencia-client.tsx`). A independência não é visual: cada modalidade tem a sua data de entrega, o seu fechamento e o seu arquivo.

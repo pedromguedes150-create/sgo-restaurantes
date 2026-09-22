@@ -392,3 +392,52 @@ describe('O romaneio abre para quem separa', () => {
     expect(await getPedido(gerente(), id)).not.toBeNull();
   });
 });
+
+/**
+ * COMO O GERENTE PEDIU chega até quem separa.
+ *
+ * O ponto do pedido do Pedro: "Coca-Cola 350ml — 2 fardos". De nada adianta a
+ * tela oferecer a escolha se ela morre no caminho — quem separa é que precisa
+ * ler "2 fardos" para separar 2 fardos.
+ */
+describe('A embalagem do pedido atravessa até a separação', () => {
+  it('o separador recebe FARDO, e não a medida do cadastro', async () => {
+    const r = await criarPedido(gerente(), {
+      unitId,
+      items: [
+        { productId: prod.coca, qty: 2, packUnit: 'FARDO' },
+        { productId: prod.suco, qty: 3, packUnit: 'DISPLAY' },
+      ],
+    });
+    if (!r.ok) throw new Error('não criou');
+
+    const itens = await itensDoCarlos(r.pedidos[0].id);
+    const coca = itens.find((i) => i.name.includes('Coca'))!;
+    const suco = itens.find((i) => i.name.includes('Suco'))!;
+    expect(coca.packUnit).toBe('FARDO');
+    expect(suco.packUnit).toBe('DISPLAY');
+    /* E a QUANTIDADE continua sendo a pedida: 2 fardos são 2, não 24. */
+    expect(Number(coca.qtyRequested)).toBe(2);
+  });
+
+  it('sem escolher nada, cai em UN — o comportamento de sempre', async () => {
+    const r = await criarPedido(gerente(), { unitId, items: [{ productId: prod.coca, qty: 5 }] });
+    if (!r.ok) throw new Error('não criou');
+    const itens = await itensDoCarlos(r.pedidos[0].id);
+    expect(itens[0].packUnit).toBe('UN');
+  });
+
+  it('valor inválido vindo do corpo da requisição vira UN, e não quebra o pedido', async () => {
+    /* O corpo não é confiável: um cliente antigo (ou um teste de API) pode
+       mandar qualquer coisa, e o pedido não pode falhar por isso. */
+    const r = await criarPedido(gerente(), {
+      unitId,
+      items: [{ productId: prod.coca, qty: 1, packUnit: 'PALETE' as unknown as 'UN' }],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const itens = await itensDoCarlos(r.pedidos[0].id);
+      expect(itens[0].packUnit).toBe('UN');
+    }
+  });
+});

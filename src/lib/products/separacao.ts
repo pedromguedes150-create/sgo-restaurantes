@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
+import type { UnidadeDePedido } from '@/lib/products/embalagem-pedido';
 import { notifyUsers } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import { motivoLabel } from './separacao-motivos';
@@ -239,6 +240,8 @@ export interface ItemParaSeparar {
   name: string;
   category: string;
   measure: string;
+  /** Como o gerente pediu — a tela do separador mostra "2 fardos". */
+  packUnit: UnidadeDePedido;
   qtyRequested: number;
   qtySeparated: number | null;
   missingReason: string | null;
@@ -285,7 +288,7 @@ export async function getPedidoParaSeparar(user: SessionUser, requestId: string)
     const pedido = Number(i.qtyRequested);
     const separado = i.qtySeparated === null ? null : Number(i.qtySeparated);
     return {
-      id: i.id, name: i.name, category: i.category, measure: i.measure,
+      id: i.id, name: i.name, category: i.category, measure: i.measure, packUnit: i.packUnit,
       qtyRequested: pedido, qtySeparated: separado,
       missingReason: i.missingReason, missingLabel: motivoLabel(i.missingReason),
       separadoPor: i.separatedByName, separadoEm: i.separatedAt,
