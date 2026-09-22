@@ -9,6 +9,26 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.108.0 — 2026-09-22 (Comissão e Mobilidade: duas abas, dois arquivos)
+### Alterado
+- **A tela "Comissões & Mobilidade" foi reestruturada em DUAS ABAS independentes** (`src/lib/people/payouts-competencia.ts`, `payouts-export.ts`, `components/people/payouts-competencia-client.tsx`). A independência não é visual: cada modalidade tem a sua data de entrega, o seu fechamento e o seu arquivo.
+  - **Agrupado por UNIDADE**, como no SGO dos postos: a linha responde "quanto e quantos", e só quem precisa do detalhe expande. Com 279 lançamentos, a lista corrida não responde nada.
+  - **Lançamento em lote**: filtra a unidade, busca por nome **ou CPF**, aplica um valor a todos os visíveis e ajusta linha a linha quem foge da regra. Campo vazio = não lança, que é como se pula alguém sem desmarcar nada.
+  - **Data de entrega por unidade + competência** (`PayoutDelivery`), herdada por todos os lançamentos daquela unidade — a entrega é do lote inteiro, e pedi-la em cada linha multiplicaria por cinquenta uma informação que é uma só. Data vazia **apaga** o registro: deixar uma data errada mandaria "entregue" no arquivo.
+  - **Finalizar competência** (`PayoutClosure`) trava lançamento, edição, exclusão e entrega **daquela modalidade**; exportar continua liberado, porque é o que se faz depois. Só o Admin reabre, e a reabertura fica na Auditoria — "fechado" é um ESTADO, e o histórico de idas e vindas pertence ao log.
+### Adicionado
+- **Dois Excel completamente separados**, um botão por aba. ⚠️ **Não existe "exportar tudo"**: a rota não sabe montar arquivo misto (o tipo é obrigatório e entra no filtro, no nome do arquivo e no nome da aba). A forma segura de garantir que comissão e mobilidade não se misturem é não oferecer o caminho.
+  - O formato saiu do **arquivo real** da administradora, e não do que seria natural inventar: 12 colunas, com a coluna `Unidade` **vazia** ao lado de `Unidade Trabalho` preenchida — é assim no arquivo que ela aceita hoje, e preencher por conta própria mudaria um formato que funciona.
+  - **`Novato` conta até o FIM DA COMPETÊNCIA, nunca até hoje** (90 dias de admissão, decisão do Pedro). Contra "hoje", o arquivo de janeiro diria uma coisa em fevereiro e outra em junho — e um arquivo que a administradora já recebeu não pode mudar de resposta quando reemitido. Há teste exatamente para isso.
+  - **O que o SGO não sabe fica VAZIO**: `No Prazo` exigiria um prazo acordado que não existe (responder "Sim" sem ter contra o quê comparar pareceria conferido), `Status` só vira "entregue" quando há entrega registrada, e `Novato` fica vazio sem data de admissão.
+  - O `ID` da planilha é **sequencial da exportação**, não o `cuid` do banco: o id interno não diz nada para a administradora, e a coluna do arquivo real é um número curto.
+### Notas
+- ⚠️ **A exportação CSV anterior foi substituída, e ela misturava as duas modalidades** num arquivo só, com coluna "Tipo" — exatamente o que o pedido proíbe. A rota mudou de `?year=&month=` para `?tipo=&mes=`; o único consumidor era a tela antiga. **Eu a sobrescrevi sem olhar antes** e só percebi depois, ao conferir o mapa de rotas; o conteúdo foi recuperado do git e a substituição confirmada como correta.
+- **Nenhum cadastro paralelo de gente**: o colaborador é sempre o do SGO, e **CPF e admissão são lidos do cadastro na hora de exibir e exportar** — não copiados para o lançamento. Correção feita no RH aparece no próximo arquivo sem ninguém reescrever lançamento antigo. O nome segue congelado no lançamento, que é o que mantém legível o histórico de quem já saiu.
+- A tela **nomeia as unidades do escopo ainda sem lançamento** na competência: sem isso, uma unidade esquecida só aparece quando a administradora reclama.
+- O cliente antigo (`payouts-client.tsx`) foi **removido**, não deixado ao lado do novo — duas telas para a mesma coisa foi o defeito da v1.94.0.
+- Migração `20260922155750_payout_entrega_e_fechamento`: **aditiva** (2 tabelas). 49 testes novos (18 do formato do arquivo, 20 de integração, 11 de render), e o arquivo foi gerado e lido de volta para conferir contra o modelo real.
+
 ## v1.107.0 — 2026-09-22 (Os 8 setores do romaneio do CD)
 ### Adicionado
 - **Os oito setores do romaneio passaram a ser criados sozinhos** (`src/lib/products/setores-padrao.ts`), na primeira abertura do Catálogo ou dos Setores do CD — mesmo padrão de `ensureDefaultModels()`. O classificador só aponta para setor que EXISTA, e o cadastro tinha três: cinco conceitos ficavam reconhecidos e sem destino.

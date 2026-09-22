@@ -94,6 +94,7 @@ model Unit {
   cashDenominations       CashDenomination[]
   pizzaFlavors            PizzaFlavor[]
   pizzaClosings           PizzaClosing[]
+  payoutDeliveries        PayoutDelivery[]
   stockLots               StockLot[]
 
   @@map("units")
@@ -3477,4 +3478,54 @@ model StockMovement {
   @@index([lotId])
   @@index([unitId, createdAt])
   @@map("stock_movements")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMISSÃO E MOBILIDADE — entrega e fechamento (v1.108.0)
+//
+// A administradora exige "Data Entrega" e "Status" no arquivo, e nenhum dos
+// dois vem do RH: o RH sabe quem é o colaborador, não em que dia a unidade
+// entregou o vale. É a operação que registra — e registra UMA VEZ por unidade
+// e competência, não por lançamento, porque a entrega é do lote inteiro.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Quando a unidade entregou o benefício daquela competência.
+model PayoutDelivery {
+  id          String     @id @default(cuid())
+  unitId      String
+  /// 'AAAA-MM'
+  yearMonth   String
+  type        PayoutType
+  /// 'AAAA-MM-DD'. Texto, como todo dia de calendário do SGO: data de entrega
+  /// é um DIA, e `DateTime` a arrastaria por fuso na exportação.
+  deliveredAt String
+
+  createdById   String?
+  createdByName String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  /// Uma entrega por unidade + competência + tipo. Comissão e mobilidade podem
+  /// ser entregues em dias diferentes, então o tipo faz parte da chave.
+  @@unique([unitId, yearMonth, type])
+  @@index([yearMonth, type])
+  @@map("payout_deliveries")
+}
+
+/// Competência fechada: trava edição e exclusão dos lançamentos.
+model PayoutClosure {
+  id        String     @id @default(cuid())
+  /// 'AAAA-MM'
+  yearMonth String
+  type      PayoutType
+
+  closedById   String?
+  closedByName String
+  closedAt     DateTime @default(now())
+  /// Reabertura fica registrada na Auditoria; aqui a linha some, porque
+  /// "fechado" é um estado, e não um histórico de idas e vindas.
+  @@unique([yearMonth, type])
+  @@map("payout_closures")
 }

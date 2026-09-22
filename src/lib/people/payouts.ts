@@ -127,7 +127,9 @@ export async function listPayoutCollaborators(user: SessionUser) {
   return prisma.collaborator.findMany({
     where: { active: true, units: { some: { ...unitScopeWhere(user, 'unitId') } } },
     orderBy: { name: 'asc' },
-    select: { id: true, name: true, jobTitle: true, units: { select: { unit: { select: { name: true } } } } },
+    /* CPF e o ID da unidade entram porque a tela de lançamento em lote busca
+       por CPF e grava na unidade do CADASTRO — nunca numa escolhida na tela. */
+    select: { id: true, name: true, jobTitle: true, cpf: true, units: { select: { unit: { select: { id: true, name: true } } } } },
     take: 500,
   });
 }
