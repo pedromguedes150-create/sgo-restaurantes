@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { listAllProducts } from '@/lib/products';
 import { setoresAtivosDoCd } from '@/lib/products/setores';
+import { ensureSetoresDoRomaneio } from '@/lib/products/setores-padrao';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProductCatalogAdmin } from '@/components/products/product-catalog-admin';
 import { ArrowLeft } from 'lucide-react';
@@ -12,6 +13,10 @@ export const dynamic = 'force-dynamic';
 export default async function ProdutosConfigPage() {
   const user = (await getSessionUser())!;
   if (!['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role)) return <p className="text-sm text-ink-500">Restrito à Supervisão/Administração.</p>;
+  /* O mutirão de setores vive nesta tela e só consegue propor para setor que
+     EXISTA — daí garantir os do romaneio aqui também, e não só na tela de
+     setores, que a pessoa pode nunca abrir. */
+  await ensureSetoresDoRomaneio().catch(() => {});
   const [products, setores] = await Promise.all([listAllProducts(), setoresAtivosDoCd()]);
   return (
     <div className="space-y-4">

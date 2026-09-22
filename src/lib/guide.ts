@@ -731,7 +731,7 @@ export const GUIDE: GuideSection[] = [
           'Tudo o que você declara vira histórico do lote, com autor — é de lá que sai a divergência de conferência.',
           'A sugestão de setor funciona SEM internet de IA: a maior parte sai de uma regra do próprio SGO, calibrada com o romaneio real do CD. A IA só é chamada no que a regra não reconhece.',
           'MUTIRÃO DOS PRODUTOS ANTIGOS (Admin/Supervisão): em Configurações → Catálogo de Produtos, o aviso âmbar "N produtos do CD sem setor" ganhou o botão DEFINIR SETORES. Ele abre a lista inteira com o setor já proposto e o motivo ao lado, você confere, troca o que quiser e aplica de uma vez. Para o que a regra não reconhecer, há o botão "Usar a IA" (60 por clique). Produto que você deixar sem setor continua no aviso — sem setor é melhor que com o setor errado, porque o errado some numa fila que ninguém confere.',
-        ],
+          'OS SETORES DO ROMANEIO já vêm cadastrados: ao abrir o Catálogo ou Configurações → Setores do CD pela primeira vez, o SGO cria os que faltarem (Carnes Churrasco, Câmaras Frias, Salgados, Confeitaria, Despensa Cozinha, Bomboniere Diversos, Bebidas e Descartáveis). Ele NÃO duplica o que você já tem com outro nome: se existir "Secos", ele entende que a despensa já está coberta e não cria uma segunda. Pode renomear à vontade depois — a sugestão de setor continua funcionando.',        ],
       },
       {
         id: 'gas',
