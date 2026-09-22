@@ -717,7 +717,9 @@ export const GUIDE: GuideSection[] = [
           'BIPAR: abra Operação → Estoque → aba "Bipar". O campo já nasce focado. O leitor de código de barras funciona como teclado: ele digita e dá Enter sozinho. Quem não tem leitor usa "Usar a câmera".',
           'Achou o produto? Informe quantos FARDOS (ou displays, ou unidades) você encontrou — o SGO converte e mostra "= 60 unidades" antes de salvar. Salvou, o campo volta a ficar focado para o próximo. Você anda pela prateleira sem tocar na tela entre um item e outro.',
           'CÓDIGO NOVO de um produto que JÁ existe: digite o nome no campo que aparece e bipe de novo — o SGO oferece VINCULAR o código ao produto existente. É isso que impede dois cadastros do mesmo produto, que criariam dois saldos para a mesma prateleira. Um produto pode ter quantos códigos de barras precisar.',
-          'PRODUTO REALMENTE NOVO: cadastre ali mesmo (nome, categoria, embalagem, quantas unidades vêm dentro). O cadastro vale para TODA A REDE, não só para a sua unidade. Ele nasce como "Compra local da unidade" e NÃO aparece na tela de pedido da Fábrica/CD — para torná-lo pedível, o Admin o edita em Configurações → Catálogo e informa o setor do CD.',
+          'PRODUTO REALMENTE NOVO: cadastre ali mesmo (nome, categoria, embalagem, quantas unidades vêm dentro). O cadastro vale para TODA A REDE, não só para a sua unidade.',
+          'O SETOR DO CD VEM SUGERIDO: ao sair do campo do nome, o SGO diz em qual setor aquele produto se separa — uma Coca é BEBIDAS, um chiclete é BOMBONIERE, uma coxinha é SALGADOS. Ele mostra POR QUE sugeriu (o termo que reconheceu) e você confirma ou troca na lista. Nada é gravado sem a sua confirmação: errar o setor manda o item para a fila de um separador que não tem o que fazer com ele.',
+          'COM setor confirmado, o produto já nasce PEDÍVEL ao CD e aparece na tela de pedido. SEM setor, ele fica só no estoque, como compra local da unidade — que é a verdade quando ninguém sabe de onde ele vem. O que nunca acontece é nascer do CD sem setor: isso o faria sumir da fila de todos os separadores.',
           'VALIDADE É POR LOTE, não por produto. O mesmo molho chega hoje vencendo em dezembro e na próxima entrega vencendo em fevereiro: são duas linhas, cada uma com a sua data. Duas entregas do MESMO lote somam numa linha só.',
           'OS ALERTAS: 30 dias 🟡 próximo · 7 dias 🟠 atenção · 2 dias 🔴 crítico · vence hoje 🔴 · vencido ⛔. A antecedência do PRIMEIRO aviso é por produto (um produto de 15 dias não pode acender junto com um de 6 meses); os avisos seguintes são iguais para todos.',
           'A TRATATIVA — é o coração do módulo. Quando um lote entra na faixa, ele aparece em "Precisam da sua resposta" com quatro saídas: ✅ Lote finalizado · 📦 Ainda possui estoque · 🗑️ Descarte/perda · 🔄 Transferido. Só "Ainda possui estoque" pede a quantidade (aproximada serve) e mantém o lote vivo; as outras três encerram o monitoramento.',
@@ -727,6 +729,7 @@ export const GUIDE: GuideSection[] = [
           'A tela abre direto na aba Validade quando há lote esperando resposta: é trabalho parado.',
           'Contagem SUBSTITUI o saldo, não soma. A diferença fica registrada com o seu nome e a hora.',
           'Tudo o que você declara vira histórico do lote, com autor — é de lá que sai a divergência de conferência.',
+          'A sugestão de setor funciona SEM internet de IA: a maior parte sai de uma regra do próprio SGO, calibrada com o romaneio real do CD. A IA só é chamada no que a regra não reconhece.',
         ],
       },
       {

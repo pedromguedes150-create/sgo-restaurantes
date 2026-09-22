@@ -3,7 +3,7 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { biparCodigo, cadastrarProduto, vincularCodigo } from '@/lib/stock/catalogo';
+import { biparCodigo, cadastrarProduto, sugerirSetor, vincularCodigo } from '@/lib/stock/catalogo';
 import { lancarEntrada, registrarContagem, tratarLote, type Tratativa } from '@/lib/stock/lotes';
 
 const REASONS: Record<string, { msg: string; status: number }> = {
@@ -54,6 +54,12 @@ async function tratar(req: Request) {
     return NextResponse.json({ ok: true, produto: r.produto });
   }
 
+  /* Sugestão de setor: leitura pura, nada grava. A tela chama assim que o nome
+     é digitado, para o gerente já ver o setor proposto e poder trocar. */
+  if (acao === 'sugerirSetor') {
+    return NextResponse.json({ ok: true, ...(await sugerirSetor(String(b?.name ?? ''), b?.category ? String(b.category) : null)) });
+  }
+
   if (acao === 'cadastrar') {
     const r = await cadastrarProduto(user, {
       name: String(b?.name ?? ''),
@@ -64,6 +70,7 @@ async function tratar(req: Request) {
       trackExpiry: Boolean(b?.trackExpiry),
       alertDays: b?.alertDays != null ? Number(b.alertDays) : undefined,
       codigo: b?.codigo ? String(b.codigo) : null,
+      cdSectorId: b?.cdSectorId ? String(b.cdSectorId) : null,
     });
     if (!r.ok) return reasonResponse(REASONS, r.reason, r.message);
     return NextResponse.json({ ok: true, produto: r.produto });

@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
-import { biparCodigo, cadastrarProduto, vincularCodigo } from '@/lib/stock/catalogo';
+import { biparCodigo, cadastrarProduto, sugerirSetor, vincularCodigo } from '@/lib/stock/catalogo';
 import { lancarEntrada, registrarContagem, tratarLote } from '@/lib/stock/lotes';
 import { getEstoqueDaUnidade } from '@/lib/stock/query';
 import { criarPedido } from '@/lib/products/pedido';
@@ -161,6 +161,88 @@ describe('Cadastro pelo gerente', () => {
     const r = await cadastrarProduto(gerente(), { name: `EST-${sfx} Novo`, codigo: `${ean}0` });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('JA_VINCULADO');
+  });
+});
+
+/* ═══════════════ O SETOR DO CD ═══════════════ */
+
+describe('Sugestão de setor', () => {
+  it('a regra resolve sem IA: a Coca vai para o setor de bebidas', async () => {
+    /* O setor `Setor Estoque <sfx>` do teste não casa com apelido nenhum, mas
+       "Bebidas" do seed casa — e é o que prova que o casamento é pelo NOME
+       cadastrado, e não por id fixo no código. */
+    const s = await sugerirSetor('Coca-Cola 2L');
+    if ('fonte' in s) {
+      expect(s.fonte).toBe('REGRA');
+      expect(s.sectorName.toLowerCase()).toContain('bebida');
+      expect(s.porque).toBe('coca cola');
+    } else {
+      /* Sem setor de bebidas cadastrado, não sugerir é a resposta certa. */
+      expect(s.sectorId).toBeNull();
+    }
+  });
+
+  it('devolve SEMPRE a lista de setores, para a tela oferecer a troca', async () => {
+    const s = await sugerirSetor('Peça de reposição sem setor conhecido');
+    expect(s.setores.length).toBeGreaterThan(0);
+  });
+
+  it('produto que nenhuma regra conhece não recebe palpite', async () => {
+    const s = await sugerirSetor('Peça de reposição do fogão industrial');
+    /* Sem chave de IA o resultado é `sectorId: null`; com chave, a IA pode
+       acertar — as duas respostas são aceitáveis, o que NÃO pode é inventar um
+       setor fora do cadastro. */
+    if ('fonte' in s) {
+      expect(s.setores.some((x) => x.id === s.sectorId)).toBe(true);
+    } else {
+      expect(s.sectorId).toBeNull();
+    }
+  });
+});
+
+describe('A origem sai do setor', () => {
+  it('COM setor confirmado, o produto nasce CD e já é pedível', async () => {
+    const r = await cadastrarProduto(gerente(), { name: `EST-${sfx} Com Setor`, cdSectorId: setorCd });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.produto.origin).toBe('CD');
+      const lista = await listActiveProducts();
+      expect(lista.some((p) => p.id === r.produto.id)).toBe(true);
+    }
+  });
+
+  it('SEM setor, nasce LOCAL e fica fora da tela de pedido', async () => {
+    const r = await cadastrarProduto(gerente(), { name: `EST-${sfx} Sem Setor` });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.produto.origin).toBe('LOCAL');
+      const lista = await listActiveProducts();
+      expect(lista.some((p) => p.id === r.produto.id)).toBe(false);
+    }
+  });
+
+  it('NUNCA nasce CD sem setor — é o defeito da v1.94.0', async () => {
+    /* Produto do CD sem setor some da fila de TODOS os separadores, sem erro
+       nenhum. A origem ser DERIVADA do setor é o que torna esse estado
+       inalcançável: não há como a tela pedir CD e esquecer o setor. */
+    const semSetor = await prisma.product.findMany({
+      where: { name: { startsWith: `EST-${sfx}` }, origin: 'CD', cdSectorId: null },
+    });
+    expect(semSetor).toHaveLength(0);
+  });
+
+  it('setor inexistente é recusado, e não vira produto órfão', async () => {
+    const r = await cadastrarProduto(gerente(), { name: `EST-${sfx} Fantasma`, cdSectorId: 'setor-que-nao-existe' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('INVALID');
+  });
+
+  it('setor INATIVO também é recusado', async () => {
+    /* A fila de um setor desativado não é lida por ninguém. */
+    const morto = await prisma.cdSector.create({ data: { name: `Setor Morto ${sfx}`, active: false } });
+    const r = await cadastrarProduto(gerente(), { name: `EST-${sfx} Inativo`, cdSectorId: morto.id });
+    expect(r.ok).toBe(false);
+    await prisma.cdSector.delete({ where: { id: morto.id } });
   });
 });
 

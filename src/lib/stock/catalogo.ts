@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import { normalizarCodigoDeBarras } from '@/lib/products/sheet';
 import { buscarProdutos } from '@/lib/products/busca';
+import { sugerirSetorPorRegra, type SetorCadastrado } from '@/lib/stock/setor-sugerido';
+import { sugerirSetorPorIA } from '@/lib/ai/produto-setor';
 import type { SessionUser } from '@/lib/auth/session';
 import type { PackType, ProductOrigin } from '@prisma/client';
 
@@ -140,6 +142,47 @@ export async function vincularCodigo(user: SessionUser, productId: string, codig
   return { ok: true, produto: paraProduto(atualizado!) };
 }
 
+export interface SugestaoDeSetor {
+  sectorId: string;
+  sectorName: string;
+  fonte: 'REGRA' | 'IA';
+  /** O que decidiu — o termo casado, ou o motivo que o modelo deu. */
+  porque: string | null;
+  /** Todos os setores do cadastro, para a tela oferecer a troca. */
+  setores: SetorCadastrado[];
+}
+
+/**
+ * Em que setor do CD este produto se separa.
+ *
+ * DUAS CAMADAS, e a ordem importa: a regra determinística resolve o romaneio da
+ * rede inteira na hora, de graça e sem chave; a IA entra só no que sobra. O
+ * contrário deixaria o cadastro dependente de rede e gastaria segundos numa
+ * pergunta que uma tabela responde em microssegundos — com o gerente de pé no
+ * estoque.
+ *
+ * A sugestão NUNCA grava sozinha: ela volta para a tela, que a mostra ao lado
+ * da lista completa de setores. Errar o setor manda o item para a fila de um
+ * separador que não tem o que fazer com ele.
+ */
+export async function sugerirSetor(nome: string, categoria?: string | null): Promise<SugestaoDeSetor | { setores: SetorCadastrado[]; sectorId: null }> {
+  const setores = await prisma.cdSector.findMany({
+    where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true },
+  });
+  if (setores.length === 0 || !nome.trim()) return { setores, sectorId: null };
+
+  const porRegra = sugerirSetorPorRegra(nome, setores, categoria);
+  if (porRegra) {
+    return { sectorId: porRegra.sectorId, sectorName: porRegra.sectorName, fonte: 'REGRA', porque: porRegra.termo, setores };
+  }
+
+  const porIA = await sugerirSetorPorIA({ nome, categoria, setores });
+  if (porIA.ok && porIA.sectorId && porIA.sectorName) {
+    return { sectorId: porIA.sectorId, sectorName: porIA.sectorName, fonte: 'IA', porque: porIA.motivo ?? null, setores };
+  }
+  return { setores, sectorId: null };
+}
+
 export interface NovoProdutoInput {
   name: string;
   category?: string;
@@ -149,6 +192,8 @@ export interface NovoProdutoInput {
   trackExpiry?: boolean;
   alertDays?: number;
   codigo?: string | null;
+  /** Setor do CD confirmado pelo gerente. Sem ele, o produto nasce LOCAL. */
+  cdSectorId?: string | null;
 }
 export type CadastrarResult =
   | { ok: true; produto: ProdutoDoEstoque }
@@ -160,12 +205,18 @@ const TIPOS: PackType[] = ['UN', 'FARDO', 'DISPLAY'];
 /**
  * Cadastro pelo gerente, direto da prateleira.
  *
- * Nasce com origem **LOCAL**: o gerente não tem como saber o setor do CD que
- * separa o item, e produto de origem CD sem setor some da fila de todo mundo
- * sem avisar ninguém (foi o defeito da v1.94.0). LOCAL é a origem honesta para
- * "comprei no distribuidor" — e ela NÃO entra na esteira de pedidos, que segue
- * exatamente como está. Quem quiser tornar o produto pedível o edita no
- * catálogo, onde o setor é exigido.
+ * A ORIGEM SAI DO SETOR, e não de uma escolha a mais na tela:
+ *
+ *  - **Com setor confirmado** → nasce `CD` e já é pedível. É o caso normal: o
+ *    SGO sugere ("uma Coca é Bebidas"), o gerente confirma, e o produto entra
+ *    no estoque e no catálogo de pedidos de uma vez só.
+ *  - **Sem setor** → nasce `LOCAL`, que existe para compra direta da unidade e
+ *    NÃO entra na esteira de pedidos.
+ *
+ * O que não pode acontecer em hipótese nenhuma é nascer `CD` SEM setor: o item
+ * sumiria da fila de todos os separadores sem erro nenhum (defeito da v1.94.0).
+ * Por isso a decisão é binária e derivada — não há como a tela pedir CD e
+ * esquecer o setor.
  */
 export async function cadastrarProduto(user: SessionUser, input: NovoProdutoInput): Promise<CadastrarResult> {
   if (!podeCadastrar(user)) return { ok: false, reason: 'FORBIDDEN' };
@@ -189,10 +240,20 @@ export async function cadastrarProduto(user: SessionUser, input: NovoProdutoInpu
     return { ok: false, reason: 'INVALID', message: 'Informe quantas unidades vêm dentro do fardo/display.' };
   }
 
+  /* Setor confirmado precisa EXISTIR e estar ativo. Um id solto vindo do corpo
+     da requisição criaria o produto apontando para lugar nenhum. */
+  let setor: string | null = null;
+  if (input.cdSectorId) {
+    const achado = await prisma.cdSector.findFirst({ where: { id: input.cdSectorId, active: true }, select: { id: true } });
+    if (!achado) return { ok: false, reason: 'INVALID', message: 'Setor do CD inválido ou inativo.' };
+    setor = achado.id;
+  }
+
   const produto = await prisma.product.create({
     data: {
       name,
-      origin: 'LOCAL',
+      origin: setor ? 'CD' : 'LOCAL',
+      cdSectorId: setor,
       category: input.category?.trim() || 'Geral',
       measure: MEDIDAS.includes(String(input.measure)) ? String(input.measure) : 'un',
       packType,

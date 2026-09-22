@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, PackagePlus, Link2, CalendarClock, Search, Check } from 'lucide-react';
+import { ScanLine, Save, PackagePlus, Link2, CalendarClock, Search, Check, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -223,7 +223,14 @@ function Candidatos({ codigo, candidatos, onVinculado, onNenhum }: {
   );
 }
 
-/** Cadastro rápido, da prateleira. Nasce LOCAL e vale para a rede inteira. */
+/**
+ * Cadastro rápido, da prateleira. Vale para a rede inteira.
+ *
+ * O SETOR é sugerido pelo SGO ("uma Coca é Bebidas, um chiclete é Bomboniere")
+ * e **confirmado** pelo gerente — nunca gravado sozinho, porque errar o setor
+ * manda o item para a fila de um separador que não tem o que fazer com ele.
+ * Com setor, o produto nasce pedível ao CD; sem setor, fica só no estoque.
+ */
 function NovoProduto({ codigo, nomeInicial, onCriado }: { codigo: string; nomeInicial: string; onCriado: (p: ProdutoUI) => void }) {
   const [name, setName] = useState(nomeInicial);
   const [category, setCategory] = useState('Geral');
@@ -234,11 +241,41 @@ function NovoProduto({ codigo, nomeInicial, onCriado }: { codigo: string; nomeIn
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
 
+  const [setores, setSetores] = useState<{ id: string; name: string }[]>([]);
+  const [setorId, setSetorId] = useState('');
+  const [sugestao, setSugestao] = useState<{ fonte: string; porque: string | null } | null>(null);
+  const [buscandoSetor, setBuscandoSetor] = useState(false);
+
+  async function pedirSugestao() {
+    if (!name.trim()) return;
+    setBuscandoSetor(true);
+    const r = await post({ action: 'sugerirSetor', name: name.trim(), category: category.trim() });
+    setBuscandoSetor(false);
+    if (!r.ok) return;
+    setSetores((r.setores as { id: string; name: string }[]) ?? []);
+    if (r.sectorId) {
+      setSetorId(String(r.sectorId));
+      setSugestao({ fonte: String(r.fonte), porque: r.porque ? String(r.porque) : null });
+    } else {
+      setSugestao(null);
+    }
+  }
+
   return (
     <div className="space-y-3 rounded-lg border border-line p-3">
       <p className="sgo-type-15 font-semibold text-ink-900"><PackagePlus className="mr-1 inline h-4 w-4 text-brand" /> Cadastrar produto novo</p>
-      <div><Label htmlFor="np">Nome</Label><Input id="np" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Arroz Tio João 5 kg" /></div>
-      <div><Label htmlFor="nc">Categoria</Label><Input id="nc" value={category} onChange={(e) => setCategory(e.target.value)} /></div>
+      <div>
+        <Label htmlFor="np">Nome</Label>
+        {/* A sugestão é pedida ao SAIR do campo: pedir a cada tecla faria uma
+            chamada por letra digitada. */}
+        <Input id="np" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => void pedirSugestao()} placeholder="Ex.: Arroz Tio João 5 kg" />
+      </div>
+      <div><Label htmlFor="nc">Categoria</Label><Input id="nc" value={category} onChange={(e) => setCategory(e.target.value)} onBlur={() => void pedirSugestao()} /></div>
+
+      <SetorDoProduto
+        setores={setores} setorId={setorId} onChange={setSetorId}
+        sugestao={sugestao} carregando={buscandoSetor}
+      />
       <div className="grid grid-cols-2 gap-2">
         <Select
           label="Embalagem" value={packType} onValueChange={(v) => setPackType(v as TipoDeEmbalagem)}
@@ -273,11 +310,54 @@ function NovoProduto({ codigo, nomeInicial, onCriado }: { codigo: string; nomeIn
             action: 'cadastrar', codigo, name: name.trim(), category: category.trim(),
             packType, packSize: packSize.trim() ? Number(packSize.replace(/\D/g, '')) : null,
             trackExpiry, alertDays: Number(alertDays.replace(/\D/g, '')) || 30,
+            cdSectorId: setorId || null,
           });
           setBusy(false);
           if (r.ok) onCriado(r.produto as ProdutoUI); else setErro(String(r.error ?? 'Falha'));
         }}
       ><Save className="h-4 w-4" /> Cadastrar e continuar</Button>
+    </div>
+  );
+}
+
+/**
+ * O setor do CD, sugerido e confirmado.
+ *
+ * A sugestão vem com o MOTIVO ao lado ("pelo termo: coca cola"), e não como um
+ * campo já preenchido sem explicação: o gerente precisa poder discordar sem ter
+ * de adivinhar de onde veio o palpite. Sem setor não é erro — o produto nasce
+ * como compra local, que é a verdade quando ninguém sabe de onde ele vem.
+ */
+function SetorDoProduto({ setores, setorId, onChange, sugestao, carregando }: {
+  setores: { id: string; name: string }[];
+  setorId: string;
+  onChange: (v: string) => void;
+  sugestao: { fonte: string; porque: string | null } | null;
+  carregando: boolean;
+}) {
+  if (carregando) return <p className="sgo-type-13 text-ink-500">Procurando o setor…</p>;
+  if (setores.length === 0) return null;
+
+  return (
+    <div className="space-y-1">
+      <Select
+        label="Setor do CD que separa este produto"
+        value={setorId || ''}
+        onValueChange={onChange}
+        options={[{ value: '', label: 'Sem setor — compra local da unidade' }, ...setores.map((s) => ({ value: s.id, label: s.name }))]}
+      />
+      {sugestao && setorId && (
+        <p className="sgo-type-11 text-brand">
+          <Sparkles className="mr-1 inline h-3 w-3" />
+          Sugerido {sugestao.fonte === 'IA' ? 'pela IA' : 'pela regra'}
+          {sugestao.porque ? ` — ${sugestao.porque}` : ''}. Confira antes de salvar.
+        </p>
+      )}
+      {!setorId && (
+        <p className="sgo-type-11 text-ink-500">
+          Sem setor, o produto entra só no estoque e <b>não</b> aparece na tela de pedido ao CD.
+        </p>
+      )}
     </div>
   );
 }
