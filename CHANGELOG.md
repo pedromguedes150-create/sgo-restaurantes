@@ -9,7 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
-## v1.106.0 — 2026-09-22 (Mutirão do setor + os 8 setores do romaneio)
+## v1.107.0 — 2026-09-22 (Os 8 setores do romaneio do CD)
+### Adicionado
+- **Os oito setores do romaneio passaram a ser criados sozinhos** (`src/lib/products/setores-padrao.ts`), na primeira abertura do Catálogo ou dos Setores do CD — mesmo padrão de `ensureDefaultModels()`. O classificador só aponta para setor que EXISTA, e o cadastro tinha três: cinco conceitos ficavam reconhecidos e sem destino.
+  - ⚠️ **Cria só o que falta, e a conferência é por CONCEITO, não por nome.** Pelo nome seria frágil: "Secos" e "DESPENSA COZINHA" são o mesmo lugar, e criar o segundo partiria a mercadoria entre duas filas, com dois separadores conferindo metade cada um — o pior tipo de duplicidade, porque ninguém vê erro e o que chega incompleto é o caminhão. Usa os mesmos apelidos do classificador (`conceitoCoberto`), então "Açougue" já cobre carnes e "Câmara Fria" já cobre as câmaras. Setor **inativo não conta** como cobertura: a fila dele não é lida por ninguém.
+  - Renomear depois **não quebra nada** — o classificador casa por apelido, não por nome exato. Não roda no boot de propósito: criar registro de operação sem ninguém ter aberto a tela é o que aparece meses depois como "quem cadastrou isto?". Auditado em `CD_SECTOR_SEED`.
+  - A decisão de "o que falta" é **pura** (`faltantesDoRomaneio`) e testada sem banco: `cd_sectors` é tabela **global**, sem escopo por unidade, e um teste que a limpasse derrubaria — rodando em paralelo — os setores que os outros arquivos acabaram de criar, fazendo a falha aparecer no arquivo errado. **Escrevi esse teste destrutivo primeiro e ele apagou os setores do banco de desenvolvimento**; o desenho mudou por causa disso.
+
+## v1.106.0 — 2026-09-22 (Mutirão do setor: os produtos do CD que ninguém enxergava)
 ### Adicionado
 - **Definir o setor de todos os produtos órfãos de uma vez** (`src/lib/stock/setor-em-lote.ts`, `src/components/products/mutirao-de-setores.tsx`). Produto de origem CD **sem setor** cai em "Sem setor cadastrado" e **nenhum separador o enxerga**: some da fila de todo mundo, sem erro nenhum. A importação por Excel escreve direto no Prisma, sem passar por `upsertProduct`, então o buraco se refaz a cada planilha nova — foi assim que mais de mil produtos chegaram lá.
   - O aviso âmbar do catálogo ganhou **"Definir setores"**: abre a lista inteira com o setor **já proposto pela regra** (a mesma da v1.105.0, calibrada contra o romaneio real do CD) e o **motivo ao lado** — "pela regra — coca cola". Corrigir mil e duzentos num modal por item é o caminho que ninguém termina.
@@ -21,10 +28,6 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 - A auditoria (`PRODUCT_SECTOR_BULK`) registra **por setor** ("Bebidas: 214 itens"), e não mil linhas de id: a linha precisa ser legível meses depois, e "para onde foi cada monte" é o que responde a pergunta.
 - Na resposta da IA, o índice de cada item é **conferido contra a faixa da lista enviada**. Sem isso, um índice fora da faixa ou repetido carimbaria o setor no produto errado — e o erro só apareceria na doca.
 - 24 testes novos (14 de integração, 10 de render). Tela provada por `renderToString`: a sessão do preview local expirou e eu não insiro senha em formulário.
-- **Os oito setores do romaneio passaram a ser criados sozinhos** (`src/lib/products/setores-padrao.ts`), na primeira abertura do Catálogo ou dos Setores do CD — mesmo padrão de `ensureDefaultModels()`. O classificador só aponta para setor que EXISTA, e o cadastro tinha três: cinco conceitos ficavam reconhecidos e sem destino.
-  - ⚠️ **Cria só o que falta, e a conferência é por CONCEITO, não por nome.** Pelo nome seria frágil: "Secos" e "DESPENSA COZINHA" são o mesmo lugar, e criar o segundo partiria a mercadoria entre duas filas, com dois separadores conferindo metade cada um — o pior tipo de duplicidade, porque ninguém vê erro e o que chega incompleto é o caminhão. Usa os mesmos apelidos do classificador (`conceitoCoberto`), então "Açougue" já cobre carnes e "Câmara Fria" já cobre as câmaras. Setor **inativo não conta** como cobertura: a fila dele não é lida por ninguém.
-  - Renomear depois **não quebra nada** — o classificador casa por apelido, não por nome exato. Não roda no boot de propósito: criar registro de operação sem ninguém ter aberto a tela é o que aparece meses depois como "quem cadastrou isto?". Auditado em `CD_SECTOR_SEED`.
-  - A decisão de "o que falta" é **pura** (`faltantesDoRomaneio`) e testada sem banco: `cd_sectors` é tabela **global**, sem escopo por unidade, e um teste que a limpasse derrubaria — rodando em paralelo — os setores que os outros arquivos acabaram de criar, fazendo a falha aparecer no arquivo errado. **Escrevi esse teste destrutivo primeiro e ele apagou os setores do banco de desenvolvimento**; o desenho mudou por causa disso.
 
 ## v1.105.0 — 2026-09-22 (Estoque operacional: bipagem, lote e validade — etapa 1 de 4)
 ### Adicionado
