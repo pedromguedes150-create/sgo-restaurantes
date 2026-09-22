@@ -3,6 +3,10 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { createPayout } from '@/lib/people/payouts';
+import {
+  editarLancamento, excluirLancamento, fecharCompetencia, lancarEmLote,
+  reabrirCompetencia, registrarEntrega,
+} from '@/lib/people/payouts-competencia';
 import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 
@@ -43,4 +47,60 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status: map[r.reason] });
   }
   return NextResponse.json({ ok: true, id: r.id });
+}
+
+/**
+ * Ações da competência (v1.108.0): lote, edição, exclusão, entrega e
+ * fechamento. Cada uma carrega o TIPO, porque comissão e mobilidade são
+ * independentes em tudo — inclusive no fechamento.
+ */
+export async function PATCH(req: Request) {
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
+
+  const b = await req.json().catch(() => null);
+  const acao = String(b?.action ?? '');
+  const ctx = requestContext(req);
+  const tipo = b?.tipo === 'COMMISSION' || b?.tipo === 'MOBILITY' ? b.tipo : null;
+
+  let r: Awaited<ReturnType<typeof lancarEmLote>> | null = null;
+  if (acao === 'lote' && tipo) {
+    r = await lancarEmLote(user, {
+      competencia: String(b?.competencia ?? ''), tipo,
+      itens: Array.isArray(b?.itens) ? b.itens.map((i: { collaboratorId?: unknown; amount?: unknown; note?: unknown }) => ({
+        collaboratorId: String(i?.collaboratorId ?? ''), amount: Number(i?.amount), note: i?.note ? String(i.note) : null,
+      })) : [],
+    }, ctx);
+  } else if (acao === 'editar') {
+    r = await editarLancamento(user, String(b?.id ?? ''), {
+      amount: b?.amount != null ? Number(b.amount) : undefined,
+      note: b?.note === undefined ? undefined : (b.note ? String(b.note) : null),
+    }, ctx);
+  } else if (acao === 'excluir') {
+    r = await excluirLancamento(user, String(b?.id ?? ''), ctx);
+  } else if (acao === 'entrega' && tipo) {
+    r = await registrarEntrega(user, {
+      unitId: String(b?.unitId ?? ''), competencia: String(b?.competencia ?? ''), tipo,
+      entregaEm: b?.entregaEm ? String(b.entregaEm) : null,
+    }, ctx);
+  } else if (acao === 'fechar' && tipo) {
+    r = await fecharCompetencia(user, String(b?.competencia ?? ''), tipo, ctx);
+  } else if (acao === 'reabrir' && tipo) {
+    r = await reabrirCompetencia(user, String(b?.competencia ?? ''), tipo, ctx);
+  }
+
+  if (!r) return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
+  if (!r.ok) {
+    const status: Record<string, number> = { FORBIDDEN: 403, NOT_FOUND: 404, INVALID: 400, FECHADA: 409 };
+    const padrao: Record<string, string> = {
+      FORBIDDEN: 'Apenas Supervisão/Admin lançam comissões e mobilidade',
+      NOT_FOUND: 'Lançamento não encontrado',
+      INVALID: 'Dados inválidos',
+      FECHADA: 'Competência finalizada.',
+    };
+    return NextResponse.json({ error: r.message ?? padrao[r.reason] }, { status: status[r.reason] ?? 400 });
+  }
+  return NextResponse.json({ ok: true, gravados: r.gravados, ignorados: r.ignorados });
 }
