@@ -34,6 +34,9 @@ const ACAO_DA_ABA: Record<string, Record<string, string>> = {
     catUpsert: 'CONFIG_PRODUCTS',
     catDelete: 'CONFIG_PRODUCTS',
     catToggle: 'CONFIG_PRODUCTS',
+    // o mutirão de setores é edição do catálogo, e obedece a mesma porta
+    setorIA: 'CONFIG_PRODUCTS',
+    setorAplicar: 'CONFIG_PRODUCTS',
   },
   TERMINATIONS: {
     create: 'TERMINATIONS_TAB_NEW',

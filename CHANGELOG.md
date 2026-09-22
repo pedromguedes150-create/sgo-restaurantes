@@ -9,6 +9,19 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.106.0 — 2026-09-22 (Mutirão do setor: os produtos do CD que ninguém enxergava)
+### Adicionado
+- **Definir o setor de todos os produtos órfãos de uma vez** (`src/lib/stock/setor-em-lote.ts`, `src/components/products/mutirao-de-setores.tsx`). Produto de origem CD **sem setor** cai em "Sem setor cadastrado" e **nenhum separador o enxerga**: some da fila de todo mundo, sem erro nenhum. A importação por Excel escreve direto no Prisma, sem passar por `upsertProduct`, então o buraco se refaz a cada planilha nova — foi assim que mais de mil produtos chegaram lá.
+  - O aviso âmbar do catálogo ganhou **"Definir setores"**: abre a lista inteira com o setor **já proposto pela regra** (a mesma da v1.105.0, calibrada contra o romaneio real do CD) e o **motivo ao lado** — "pela regra — coca cola". Corrigir mil e duzentos num modal por item é o caminho que ninguém termina.
+  - **"Usar a IA nos N sem proposta"** para o que a regra não reconhece, em **batelada**: uma chamada resolve 20 produtos, até 60 por clique. Mil e duzentas idas à rede seriam caras, lentas e frágeis — uma falha no meio deixaria o mutirão pela metade sem ninguém saber onde parou. O teto por clique também deixa o **custo visível**, em vez de um botão que gasta um valor que ninguém previu; a tela diz quantos sobraram.
+  - **Nada é aplicado sem confirmação**, e cada linha oferece **"Deixar sem setor"**: sem setor é melhor que com o setor errado, porque o errado some numa fila que ninguém confere, enquanto o sem setor continua aparecendo no aviso.
+### Notas
+- **Três conferências no momento de aplicar**, e cada uma fecha um jeito de o lote estragar dado em escala: só produto de **origem CD** (um LOCAL ficaria com setor e sem ser pedível, um estado que não quer dizer nada); só produto **ainda sem setor** (não sobrescreve quem foi corrigido à mão enquanto a tela estava aberta); e só **setor ativo** (a fila de um setor desativado não é lida por ninguém). O que não passa é **contado** — responder "900 aplicados" escondendo 12 recusados esconderia justamente os que precisam de atenção.
+- A gravação é **um `updateMany` por setor**, e não um update por produto: mil produtos seriam mil idas ao banco, e numa transação só isso seguraria a conexão por minutos.
+- A auditoria (`PRODUCT_SECTOR_BULK`) registra **por setor** ("Bebidas: 214 itens"), e não mil linhas de id: a linha precisa ser legível meses depois, e "para onde foi cada monte" é o que responde a pergunta.
+- Na resposta da IA, o índice de cada item é **conferido contra a faixa da lista enviada**. Sem isso, um índice fora da faixa ou repetido carimbaria o setor no produto errado — e o erro só apareceria na doca.
+- 24 testes novos (14 de integração, 10 de render). Tela provada por `renderToString`: a sessão do preview local expirou e eu não insiro senha em formulário.
+
 ## v1.105.0 — 2026-09-22 (Estoque operacional: bipagem, lote e validade — etapa 1 de 4)
 ### Adicionado
 - **Módulo Estoque** (`/modulos/estoque`, `src/lib/stock/*`). Controle de prateleira pelo celular: bipar → informar o que encontrou → seguir. **Não é registro fiscal**, e o desenho inteiro sai daí.
