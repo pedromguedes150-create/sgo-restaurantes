@@ -708,6 +708,28 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'estoque',
+        title: 'Estoque (validade e lotes)',
+        roles: [...MANAGERLINE, 'CEO'],
+        summary: 'Bipe, informe o que encontrou e siga. O SGO cobra a validade por LOTE.',
+        steps: [
+          'O QUE ELE É, e o que NÃO é: um controle operacional de prateleira, não um registro fiscal. O SGO não sabe o que foi vendido (não há PDV integrado), então o saldo é o que VOCÊ declara — na entrada, numa contagem, ou quando responde ao alerta de validade. Ninguém precisa dar baixa de saída todo dia.',
+          'BIPAR: abra Operação → Estoque → aba "Bipar". O campo já nasce focado. O leitor de código de barras funciona como teclado: ele digita e dá Enter sozinho. Quem não tem leitor usa "Usar a câmera".',
+          'Achou o produto? Informe quantos FARDOS (ou displays, ou unidades) você encontrou — o SGO converte e mostra "= 60 unidades" antes de salvar. Salvou, o campo volta a ficar focado para o próximo. Você anda pela prateleira sem tocar na tela entre um item e outro.',
+          'CÓDIGO NOVO de um produto que JÁ existe: digite o nome no campo que aparece e bipe de novo — o SGO oferece VINCULAR o código ao produto existente. É isso que impede dois cadastros do mesmo produto, que criariam dois saldos para a mesma prateleira. Um produto pode ter quantos códigos de barras precisar.',
+          'PRODUTO REALMENTE NOVO: cadastre ali mesmo (nome, categoria, embalagem, quantas unidades vêm dentro). O cadastro vale para TODA A REDE, não só para a sua unidade. Ele nasce como "Compra local da unidade" e NÃO aparece na tela de pedido da Fábrica/CD — para torná-lo pedível, o Admin o edita em Configurações → Catálogo e informa o setor do CD.',
+          'VALIDADE É POR LOTE, não por produto. O mesmo molho chega hoje vencendo em dezembro e na próxima entrega vencendo em fevereiro: são duas linhas, cada uma com a sua data. Duas entregas do MESMO lote somam numa linha só.',
+          'OS ALERTAS: 30 dias 🟡 próximo · 7 dias 🟠 atenção · 2 dias 🔴 crítico · vence hoje 🔴 · vencido ⛔. A antecedência do PRIMEIRO aviso é por produto (um produto de 15 dias não pode acender junto com um de 6 meses); os avisos seguintes são iguais para todos.',
+          'A TRATATIVA — é o coração do módulo. Quando um lote entra na faixa, ele aparece em "Precisam da sua resposta" com quatro saídas: ✅ Lote finalizado · 📦 Ainda possui estoque · 🗑️ Descarte/perda · 🔄 Transferido. Só "Ainda possui estoque" pede a quantidade (aproximada serve) e mantém o lote vivo; as outras três encerram o monitoramento.',
+          'Respondeu, o alerta PARA de perguntar — e volta só quando o lote ficar mais perto do vencimento. Ele não repete a mesma pergunta todo dia.',
+        ],
+        tips: [
+          'A tela abre direto na aba Validade quando há lote esperando resposta: é trabalho parado.',
+          'Contagem SUBSTITUI o saldo, não soma. A diferença fica registrada com o seu nome e a hora.',
+          'Tudo o que você declara vira histórico do lote, com autor — é de lá que sai a divergência de conferência.',
+        ],
+      },
+      {
         id: 'gas',
         title: 'Gás (dentro de Notas Recebidas)',
         roles: [...MANAGERLINE, 'CEO'],

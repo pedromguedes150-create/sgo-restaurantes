@@ -7,15 +7,26 @@ import type { SessionUser } from '@/lib/auth/session';
 import type { ProductOrigin } from '@prisma/client';
 import { lerPlanilhaDeProdutos, normalizarCodigoDeBarras } from './products/sheet';
 
-export const ORIGIN_LABEL: Record<ProductOrigin, string> = { FABRICA: 'Fábrica', CD: 'Centro de Distribuição' };
+export const ORIGIN_LABEL: Record<ProductOrigin, string> = { FABRICA: 'Fábrica', CD: 'Centro de Distribuição', LOCAL: 'Compra local da unidade' };
+
+/**
+ * As origens que TÊM esteira de pedido.
+ *
+ * `LOCAL` nasceu no Estoque (v1.105.0) para o gerente cadastrar o que bipa na
+ * prateleira sem inventar um setor do CD. Ela não é pedível, e o filtro é
+ * explícito de propósito: sem ele o produto local apareceria calado na tela de
+ * pedido e geraria um `ProductRequest` de origem que nenhuma aba trata.
+ */
+export const ORIGENS_PEDIVEIS: ProductOrigin[] = ['FABRICA', 'CD'];
 export const REQ_STATUS: Record<string, string> = { NEW: 'Novo', SEPARATING: 'Em separação', SENT: 'Enviado', RECEIVED: 'Recebido' };
 const MEASURES = ['un', 'kg', 'cx', 'pct', 'L', 'dz'];
 
 function canManageCatalog(user: SessionUser): boolean { return ['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role); }
 
 /* ───────── Catálogo ───────── */
+/** Catálogo da tela de PEDIDO — só o que a Fábrica ou o CD entregam. */
 export async function listActiveProducts() {
-  return prisma.product.findMany({ where: { active: true }, orderBy: [{ category: 'asc' }, { name: 'asc' }], select: { id: true, name: true, origin: true, category: true, measure: true, packSize: true, barcode: true } });
+  return prisma.product.findMany({ where: { active: true, origin: { in: ORIGENS_PEDIVEIS } }, orderBy: [{ category: 'asc' }, { name: 'asc' }], select: { id: true, name: true, origin: true, category: true, measure: true, packSize: true, barcode: true } });
 }
 export async function listAllProducts() {
   return prisma.product.findMany({

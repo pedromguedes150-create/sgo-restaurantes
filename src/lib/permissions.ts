@@ -75,6 +75,8 @@ const BASE: ModuleDef[] = [
 
   { key: 'OIL', label: 'Coleta de Óleo', nav: '/modulos/oleo' },
 
+  { key: 'STOCK', label: 'Estoque (validade e lotes)', nav: '/modulos/estoque' },
+
   { key: 'PAYMENTS', label: 'Pagamentos', nav: '/modulos/pagamentos' },
   { key: 'PAYMENTS_FREELANCER_REPORT', label: 'Relatório de freelancers', nav: '/modulos/pagamentos/relatorio-freelancers', parent: 'PAYMENTS' },
 

@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
+import { ORIGENS_PEDIVEIS } from '@/lib/products';
 import { audit } from '@/lib/audit';
 import { notifyAdmins, notifyUsers } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
@@ -70,8 +71,13 @@ export async function criarPedido(
   const limpos = input.items.filter((i) => i.productId && i.qty > 0);
   if (limpos.length === 0) return { ok: false, reason: 'INVALID', detalhe: 'O pedido está vazio.' };
 
+  /* SÓ o que tem esteira de pedido. `LOCAL` (Estoque, v1.105.0) é compra direta
+     da unidade: não há quem separe e não há para onde enviar. Filtrar AQUI, e
+     não só na tela, é o que garante que ela não entre por uma chamada direta —
+     um item local viraria um `ProductRequest` de origem que nenhuma aba trata e
+     que ninguém veria. */
   const produtos = await prisma.product.findMany({
-    where: { id: { in: limpos.map((i) => i.productId) }, active: true },
+    where: { id: { in: limpos.map((i) => i.productId) }, active: true, origin: { in: ORIGENS_PEDIVEIS } },
     select: { id: true, name: true, category: true, measure: true, origin: true, cdSectorId: true, cdSector: { select: { name: true } } },
   });
   if (produtos.length === 0) return { ok: false, reason: 'INVALID', detalhe: 'Nenhum produto válido no pedido.' };
