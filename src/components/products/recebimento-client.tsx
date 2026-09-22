@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { rotuloDaQuantidade, type UnidadeDePedido } from '@/lib/products/embalagem-pedido';
 import { useRouter } from 'next/navigation';
 import { Check, TriangleAlert, Camera, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ export interface ItemParaConferir {
   id: string;
   name: string;
   measure: string;
+  packUnit?: UnidadeDePedido;
   qtyRequested: number;
   qtySeparated: number | null;
   missingLabel: string | null;
@@ -128,8 +130,8 @@ export function RecebimentoClient({
                   <p className="truncate text-sm font-medium text-ink-900">{i.name}</p>
                   <p className="sgo-type-11 text-ink-500">
                     {i.qtySeparated === null
-                      ? `Pedido: ${i.qtyRequested} ${i.measure} · o CD não separou`
-                      : `O CD separou ${i.qtySeparated} de ${i.qtyRequested} ${i.measure}`}
+                      ? `Pedido: ${rotuloDaQuantidade(i.qtyRequested, i.packUnit, i.measure)} · o CD não separou`
+                      : `O CD separou ${i.qtySeparated} de ${rotuloDaQuantidade(i.qtyRequested, i.packUnit, i.measure)}`}
                     {i.missingLabel ? ` · ${i.missingLabel}` : ''}
                   </p>
                 </div>

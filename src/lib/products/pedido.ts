@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { ORIGENS_PEDIVEIS } from '@/lib/products';
+import { unidadeValida, type UnidadeDePedido } from '@/lib/products/embalagem-pedido';
 import { audit } from '@/lib/audit';
 import { notifyAdmins, notifyUsers } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
@@ -46,6 +47,8 @@ export const STATUS_SETOR_LABEL: Record<StatusDoSetor, string> = {
 export interface ItemDoPedido {
   productId: string;
   qty: number;
+  /** Como o gerente pediu: 2 FARDOS, 3 DISPLAYS. Registro, não conversão. */
+  packUnit?: UnidadeDePedido;
 }
 
 export type ResultadoDePedido<T = Record<string, never>> =
@@ -124,7 +127,7 @@ export async function criarPedido(
                desligar os dois lados na mesma entrega é como se perde o histórico. */
             items: itensDaOrigem.map((i) => {
               const p = produtos.find((x) => x.id === i.productId);
-              return { productId: i.productId, name: p?.name ?? '', category: p?.category ?? '', measure: p?.measure ?? '', qty: i.qty };
+              return { productId: i.productId, name: p?.name ?? '', category: p?.category ?? '', measure: p?.measure ?? '', qty: i.qty, packUnit: unidadeValida(i.packUnit) };
             }) as unknown as Prisma.InputJsonValue,
             requestItems: {
               create: itensDaOrigem.flatMap((i) => {
@@ -133,6 +136,10 @@ export async function criarPedido(
                 return [{
                   productId: p.id, name: p.name, category: p.category, measure: p.measure,
                   cdSectorId: p.cdSectorId, cdSectorName: p.cdSector?.name ?? null,
+                  /* A unidade de embalagem é do PEDIDO, e não do cadastro: o
+                     SGO não converte para unidades nem consulta quantas vêm
+                     dentro. Quem separa lê "2 fardos" e separa 2 fardos. */
+                  packUnit: unidadeValida(i.packUnit),
                   qtyRequested: new Prisma.Decimal(Math.round(i.qty * 1000) / 1000),
                 }];
               }),
@@ -195,6 +202,8 @@ export interface ItemNaTela {
   name: string;
   category: string;
   measure: string;
+  /** Como o gerente pediu — "2 fardos". Registro, nunca conversao. */
+  packUnit: UnidadeDePedido;
   cdSectorId: string | null;
   cdSectorName: string | null;
   qtyRequested: number;
@@ -287,7 +296,7 @@ export async function carregarPedidoSemEscopoDeUnidade(id: string): Promise<Pedi
     const chave = i.cdSectorId ?? '__sem_setor__';
     const lista = porSetor.get(chave) ?? [];
     lista.push({
-      id: i.id, name: i.name, category: i.category, measure: i.measure,
+      id: i.id, name: i.name, category: i.category, measure: i.measure, packUnit: i.packUnit,
       cdSectorId: i.cdSectorId, cdSectorName: i.cdSectorName,
       qtyRequested: Number(i.qtyRequested),
       qtySeparated: num(i.qtySeparated),

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { rotuloDaQuantidade, type UnidadeDePedido } from '@/lib/products/embalagem-pedido';
 import { ArrowLeft } from 'lucide-react';
 import type { PedidoDetalhado } from '@/lib/products/pedido';
 import { STATUS_SETOR_LABEL } from '@/lib/products/pedido';
@@ -77,7 +78,7 @@ export function Romaneio({ p, voltarHref }: { p: PedidoDetalhado; voltarHref: st
                       <span className="block sgo-type-11 text-ink-500">Falta: {motivoLabel(i.missingReason)}</span>
                     )}
                   </td>
-                  <td className="py-1 text-right">{i.qtyRequested} {i.measure}</td>
+                  <td className="py-1 text-right">{rotuloDaQuantidade(i.qtyRequested, i.packUnit, i.measure)}</td>
                   <td className="py-1 text-right font-medium">
                     {i.qtySeparated === null ? '—' : `${i.qtySeparated} ${i.measure}`}
                   </td>
@@ -97,7 +98,7 @@ export function Romaneio({ p, voltarHref }: { p: PedidoDetalhado; voltarHref: st
           <ul className="mt-1 space-y-1 text-sm text-ink-700">
             {faltas.map((i) => (
               <li key={i.id}>
-                <b>{i.name}</b> — separado {i.qtySeparated} de {i.qtyRequested} {i.measure}
+                <b>{i.name}</b> — separado {i.qtySeparated} de {rotuloDaQuantidade(i.qtyRequested, i.packUnit, i.measure)}
                 {i.missingReason ? ` · ${motivoLabel(i.missingReason)}` : ''}
               </li>
             ))}

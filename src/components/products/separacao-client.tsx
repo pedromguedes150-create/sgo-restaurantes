@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { rotuloDaQuantidade, type UnidadeDePedido } from '@/lib/products/embalagem-pedido';
 import { useRouter } from 'next/navigation';
 import { Plus, Minus, Check, TriangleAlert, Undo2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,8 @@ export interface ItemNaSeparacao {
   name: string;
   category: string;
   measure: string;
+  /** Como o gerente pediu — a tela mostra "2 fardos", nao "2 un". */
+  packUnit?: UnidadeDePedido;
   qtyRequested: number;
   qtySeparated: number | null;
   missingLabel: string | null;
@@ -136,7 +139,7 @@ export function SeparacaoClient({
                 <p className="text-xs text-ink-500">{i.category}</p>
               </div>
               <p className="shrink-0 text-right text-sm text-ink-700">
-                <b className="text-base text-ink-900">{i.qtyRequested}</b> {i.measure}
+                <b className="text-base text-ink-900">{rotuloDaQuantidade(i.qtyRequested, i.packUnit, i.measure)}</b>
               </p>
             </div>
 
@@ -193,7 +196,7 @@ export function SeparacaoClient({
           return (
             <div className="space-y-4 p-4">
               <p className="text-sm text-ink-700">
-                <b>{item.name}</b> — pedido de {item.qtyRequested} {item.measure}.
+                <b>{item.name}</b> — pedido de {rotuloDaQuantidade(item.qtyRequested, item.packUnit, item.measure)}.
               </p>
               <div>
                 <Label htmlFor="qtd-saiu">Quanto saiu de verdade</Label>

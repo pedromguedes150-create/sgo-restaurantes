@@ -35,6 +35,8 @@ export interface GasContractUI {
   id: string; unitId: string; unitName: string; supplierId: string; supplierName: string;
   startDate: string; endDate: string; quantityKg: number; pricePerKg: number; initialUsedKg: number;
   purchasedKg: number; usedKg: number; progressPct: number; remainingKg: number; expired: boolean; active: boolean; note: string | null;
+  foraDoContrato?: { id: string; date: string; kg: number; supplierName: string; motivo: 'FORA_DO_PERIODO' | 'OUTRO_FORNECEDOR' | 'SEM_FORNECEDOR' }[];
+  foraDoContratoKg?: number;
 }
 export interface PurchasedUI { kg: number; total: number; count: number }
 
@@ -152,9 +154,54 @@ function ContractProgress({ contracts, compact = false }: { contracts: GasContra
               <div className={`h-full rounded-full ${c.progressPct >= 100 ? 'bg-danger' : c.progressPct >= 80 ? 'bg-warning' : 'bg-success'}`} style={{ width: `${Math.min(100, c.progressPct)}%` }} />
             </div>
             {!compact && <p className="mt-0.5 text-xs text-ink-500">{c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {kg(c.pricePerKg)} acordado · restam {c.remainingKg.toLocaleString('pt-BR')} kg</p>}
+            <ForaDoContrato contrato={c} />
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * O QUE O CONTRATO DEIXOU DE FORA.
+ *
+ * Não existe FK entre o recebimento e o contrato: o vínculo é INFERIDO por
+ * unidade + fornecedor + janela de datas, e qualquer uma das três exclui uma
+ * nota sem dizer nada. Foi assim que 429 kg sumiram de um contrato, e a
+ * divergência só apareceu quando alguém somou a lista na mão.
+ *
+ * Enquanto não há FK, o mínimo honesto é o contrato EXPLICAR O PRÓPRIO NÚMERO:
+ * a nota que quase entrou aparece com a data, o peso e o motivo — e o motivo
+ * diz qual é o conserto (mexer no período do contrato, na data da nota ou no
+ * fornecedor dela).
+ */
+const MOTIVO: Record<string, string> = {
+  FORA_DO_PERIODO: 'fora do período do contrato',
+  OUTRO_FORNECEDOR: 'lançada com outro fornecedor',
+  SEM_FORNECEDOR: 'sem fornecedor na nota',
+};
+
+function ForaDoContrato({ contrato }: { contrato: GasContractUI }) {
+  const fora = contrato.foraDoContrato ?? [];
+  if (fora.length === 0) return null;
+  const total = contrato.foraDoContratoKg ?? 0;
+  return (
+    <div className="mt-1.5 rounded-lg border border-warning/40 bg-warning-bg p-2">
+      <p className="sgo-type-11 font-semibold text-ink-900">
+        {total.toLocaleString('pt-BR')} kg desta unidade NÃO entraram neste contrato
+        {fora.length > 1 ? ` (${fora.length} lançamentos)` : ''}
+      </p>
+      <ul className="mt-1 space-y-0.5">
+        {fora.slice(0, 6).map((f) => (
+          <li key={f.id} className="sgo-type-11 tabular-nums text-ink-700">
+            {f.date.split('-').reverse().join('/')} · {f.kg.toLocaleString('pt-BR')} kg · {f.supplierName} — <b>{MOTIVO[f.motivo] ?? f.motivo}</b>
+          </li>
+        ))}
+        {fora.length > 6 && <li className="sgo-type-11 text-ink-500">e mais {fora.length - 6}…</li>}
+      </ul>
+      <p className="mt-1 sgo-type-11 text-ink-500">
+        Corrija o período do contrato, a data da nota ou o fornecedor dela — conforme o motivo acima.
+      </p>
     </div>
   );
 }

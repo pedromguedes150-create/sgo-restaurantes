@@ -1277,6 +1277,11 @@ model ProductRequestItem {
   cdSectorId   String?
   cdSectorName String?
 
+  /// Como o gerente PEDIU: 2 fardos, 3 displays, 1 caixa. É registro do
+  /// pedido, e nada mais — o SGO NÃO converte para unidades nem consulta o
+  /// cadastro para saber quantas vêm dentro. Quem separa lê "2 fardos" e
+  /// separa 2 fardos.
+  packUnit   OrderPackUnit @default(UN)
   qtyRequested Decimal  @db.Decimal(12, 3)
   qtySeparated Decimal? @db.Decimal(12, 3)
   /// Motivo da falta, quando separou menos do que foi pedido.
@@ -3528,4 +3533,21 @@ model PayoutClosure {
   /// "fechado" é um estado, e não um histórico de idas e vindas.
   @@unique([yearMonth, type])
   @@map("payout_closures")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMO O GERENTE PEDIU (v1.109.0)
+//
+// Enum PRÓPRIO, e não o `PackType` do Estoque, porque as duas coisas são
+// diferentes: `Product.packType` é uma propriedade do PRODUTO (como ele é
+// contado na prateleira), enquanto isto aqui é o que o gerente está pedindo
+// AGORA — e o pedido diz explicitamente para NÃO buscar essa informação no
+// cadastro. Separar os enums torna essa distinção estrutural, em vez de uma
+// convenção que alguém quebra em seis meses.
+// ═══════════════════════════════════════════════════════════════════════════
+enum OrderPackUnit {
+  UN
+  FARDO
+  DISPLAY
+  CAIXA
 }

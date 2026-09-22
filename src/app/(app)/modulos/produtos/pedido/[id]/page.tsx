@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { rotuloDaQuantidade } from '@/lib/products/embalagem-pedido';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Printer, Check, Circle } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
@@ -129,7 +130,7 @@ export default async function PedidoDoGerentePage({ params }: { params: { id: st
                   )}
                 </span>
                 <span className="shrink-0 text-right text-ink-700">
-                  <span className="block">Pedido: {i.qtyRequested} {i.measure}</span>
+                  <span className="block">Pedido: {rotuloDaQuantidade(i.qtyRequested, i.packUnit, i.measure)}</span>
                   <span className={`block ${i.qtySeparated !== null && i.qtySeparated < i.qtyRequested ? 'text-warning' : 'text-ink-500'}`}>
                     {i.qtySeparated === null ? 'Não separado' : `Separado: ${i.qtySeparated} ${i.measure}`}
                   </span>
