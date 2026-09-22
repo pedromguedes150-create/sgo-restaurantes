@@ -251,3 +251,25 @@ export function sugerirSetorPorRegra(
 export function apelidosConhecidos(): string[] {
   return [...new Set(CONCEITOS.flatMap((c) => c.apelidos))];
 }
+
+/**
+ * Algum setor CADASTRADO já cobre este conceito?
+ *
+ * É a mesma pergunta que `setorDoConceito` faz, exposta para quem precisa
+ * decidir se vale criar um setor novo. Exportar a PERGUNTA, e não a lista de
+ * apelidos, é o que impede uma segunda cópia dos apelidos nascer noutro arquivo
+ * e envelhecer em silêncio.
+ */
+export function conceitoCoberto(apelidos: string[], setores: SetorCadastrado[]): SetorCadastrado | null {
+  for (const s of setores) {
+    const nome = normalizar(s.name);
+    if (apelidos.some((a) => nome.includes(normalizar(a)))) return s;
+  }
+  return null;
+}
+
+/** Os apelidos de um conceito, pelo primeiro deles (que serve de identidade). */
+export function apelidosDoConceito(chave: string): string[] {
+  const alvo = normalizar(chave);
+  return CONCEITOS.find((c) => c.apelidos.some((a) => normalizar(a) === alvo))?.apelidos ?? [alvo];
+}
