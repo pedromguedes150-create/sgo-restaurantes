@@ -94,6 +94,7 @@ model Unit {
   cashDenominations       CashDenomination[]
   pizzaFlavors            PizzaFlavor[]
   pizzaClosings           PizzaClosing[]
+  stockLots               StockLot[]
 
   @@map("units")
 }
@@ -1132,6 +1133,10 @@ model CancellationAnalysis {
 enum ProductOrigin {
   FABRICA
   CD
+  /// Compra direta da unidade (distribuidor, mercado). NAO entra na esteira de
+  /// pedidos: existe para o gerente conseguir cadastrar o que bipa na
+  /// prateleira sem ter de inventar um setor do CD.
+  LOCAL
 }
 
 model Product {
@@ -1152,12 +1157,23 @@ model Product {
   /// Setor do CD que separa este produto. E o que permite dividir um pedido so
   /// entre os setores sem o gerente ter de escolher nada.
   cdSectorId String?
+  /// Como o produto é contado na prateleira. `packSize` diz quantas unidades
+  /// vêm dentro do fardo/display.
+  packType  PackType      @default(UN)
+  /// Este produto tem validade a controlar? Nem tudo tem (descartável, limpeza
+  /// de longa duração), e ligar para todos encheria a tela de alerta sem dono.
+  trackExpiry Boolean     @default(false)
+  /// Antecedência do PRIMEIRO alerta, em dias. Produto que dura 15 dias e
+  /// produto que dura 6 meses não podem entrar no radar no mesmo momento; a
+  /// escalada seguinte (7/2/hoje/vencido) é fixa e igual para todos.
+  alertDays Int           @default(30)
   active    Boolean       @default(true)
   createdAt DateTime      @default(now())
 
   cdSector CdSector?       @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
   barcodes ProductBarcode[]
   requestItems ProductRequestItem[]
+  stockLots    StockLot[]
 
   @@index([active, category])
   @@index([barcode])
@@ -3352,4 +3368,113 @@ model TicketMediaEntry {
   @@unique([unitId, competence])
   @@index([competence])
   @@map("ticket_media_entries")
+}
+
+// ESTOQUE OPERACIONAL (v1.105.0) — controle por LOTE, e NÃO fiscal.
+//
+// A diferença que organiza o desenho inteiro: o saldo NÃO é deduzido de venda,
+// porque não há PDV integrado. Ele é DECLARADO — na entrada, numa contagem, ou
+// quando o gerente responde à pergunta do alerta de validade. Tentar manter um
+// estoque exato sem o fiscal transformaria o gerente em digitador de saída, e o
+// dado ficaria velho na primeira semana.
+
+/// Como o produto é contado na prateleira. `packSize` diz QUANTAS unidades vêm
+/// dentro: fardo de água com 12, display de chiclete com 21.
+enum PackType {
+  UN
+  FARDO
+  DISPLAY
+}
+
+enum StockLotStatus {
+  /// Em uso — é o único que gera alerta de validade.
+  OPEN
+  /// O gerente declarou que acabou. Encerra o monitoramento.
+  FINISHED
+  DISCARDED
+  TRANSFERRED
+}
+
+/// Todo movimento é uma DECLARAÇÃO de alguém, com autor e hora. Não existe
+/// baixa automática: o que não foi declarado não aconteceu para o SGO.
+enum StockMoveType {
+  ENTRY
+  COUNT
+  DISCARD
+  FINISH
+  ADJUST
+}
+
+/// Um lote é o que de fato se controla: o mesmo produto chega hoje vencendo em
+/// dezembro e na próxima entrega vence em fevereiro. Validade presa ao produto
+/// responderia a pergunta errada.
+model StockLot {
+  id        String @id @default(cuid())
+  unitId    String
+  productId String
+
+  /// Código do lote impresso na embalagem. Nem todo produto tem — daí opcional.
+  lotCode   String?
+  /// 'AAAA-MM-DD'. Texto, como todo dia operacional do SGO: validade é um DIA
+  /// de calendário, e `DateTime` a arrastaria por fuso.
+  expiresAt String?
+
+  /// O que entrou, congelado. Serve de referência na pergunta do alerta
+  /// ("recebidas: 20") e não muda nunca.
+  qtyReceived Decimal @db.Decimal(12, 3)
+  /// Saldo declarado, SEMPRE em unidades. Guardar também em fardos seriam dois
+  /// números que um dia discordam; a tela converte na exibição.
+  qtyOnHand   Decimal @db.Decimal(12, 3)
+
+  /// Embalagem CONGELADA no lote: corrigir o cadastro do produto não pode
+  /// reescrever quanto tinha um lote de três meses atrás.
+  packType     PackType @default(UN)
+  unitsPerPack Int      @default(1)
+
+  status StockLotStatus @default(OPEN)
+
+  /// Última faixa de validade sobre a qual já se perguntou ('30','7','2','0',
+  /// 'VENCIDO'). É o que impede o alerta de repetir a mesma pergunta todo dia:
+  /// pergunta-se de novo quando o lote CRUZA para a faixa seguinte.
+  lastReviewBand String?
+  lastReviewAt   DateTime?
+
+  createdById   String?
+  createdByName String
+  createdAt     DateTime @default(now())
+  closedAt      DateTime?
+  closedByName  String?
+  closeNote     String?
+
+  unit      Unit            @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  movements StockMovement[]
+
+  @@index([unitId, status])
+  @@index([unitId, expiresAt])
+  @@index([productId])
+  @@map("stock_lots")
+}
+
+model StockMovement {
+  id     String        @id @default(cuid())
+  lotId  String
+  unitId String
+  type   StockMoveType
+
+  /// Variação declarada (negativa numa saída) e o saldo que ficou. Guardar o
+  /// saldo resultante permite ler o histórico sem re-somar a série inteira.
+  qty      Decimal @db.Decimal(12, 3)
+  qtyAfter Decimal @db.Decimal(12, 3)
+  note     String?
+
+  createdById   String?
+  createdByName String
+  createdAt     DateTime @default(now())
+
+  lot StockLot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+
+  @@index([lotId])
+  @@index([unitId, createdAt])
+  @@map("stock_movements")
 }

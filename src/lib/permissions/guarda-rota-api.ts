@@ -66,6 +66,10 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/communications': { modulo: 'COMMUNICATION_TAB_NEW', exigir: 'editar' },
 
   '/api/gas': { modulo: 'GAS', exigir: 'editar' },
+  /* Estoque: bipar é leitura, mas as demais ações do mesmo endereço gravam —
+     e a regra é a do verbo mais forte. Quem só pode VER abre a tela e não
+     declara nada. */
+  '/api/estoque': { modulo: 'STOCK', exigir: 'editar' },
   '/api/gas/contracts': { modulo: 'GAS_TAB_CONTRACTS', exigir: 'editar' },
   '/api/gas/export': { modulo: 'GAS', exigir: 'ver' },
 
