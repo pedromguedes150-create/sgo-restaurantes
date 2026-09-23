@@ -27,7 +27,7 @@ export default async function ProdutosConfigPage() {
       </div>
       <Card><CardContent className="pt-4">
         <ProductCatalogAdmin
-          products={products.map((p) => ({ id: p.id, name: p.name, origin: p.origin, category: p.category, measure: p.measure, packSize: p.packSize, barcode: p.barcode, active: p.active, cdSectorId: p.cdSectorId, cdSectorName: p.cdSector?.name ?? null }))}
+          products={products.map((p) => ({ id: p.id, name: p.name, origin: p.origin, category: p.category, measure: p.measure, packSize: p.packSize, barcode: p.barcode, active: p.active, cdSectorId: p.cdSectorId, cdSectorName: p.cdSector?.name ?? null, validation: p.validation, createdByName: p.createdByName }))}
           setores={setores}
         />
       </CardContent></Card>

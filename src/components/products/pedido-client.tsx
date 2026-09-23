@@ -86,21 +86,22 @@ function TiraDeEmbalagem({ valor, onEscolher }: { valor: UnidadeDePedido; onEsco
 
 /** O que o carrinho guarda por produto: quanto, e em que embalagem. */
 interface ItemNoCarrinho { qty: number; pack: UnidadeDePedido }
+/** Embalagem do cadastro provisório — a mesma tira do pedido, sem "caixa". */
+type EmbalagemNova = 'UN' | 'FARDO' | 'DISPLAY';
+const EMBALAGENS_NOVAS: { v: EmbalagemNova; l: string }[] = [{ v: 'UN', l: 'Unidade' }, { v: 'FARDO', l: 'Fardo' }, { v: 'DISPLAY', l: 'Display' }];
+
 export function PedidoClient({
   unitId,
   unitName,
   produtos,
   sugestoes,
   recentes,
-  podeAssociarCodigo,
 }: {
   unitId: string;
   unitName: string;
   produtos: ProdutoNaTela[];
   sugestoes: SugestaoNaTela[];
   recentes: PedidoRecente[];
-  /** Associar código é permanente e vale para a rede — fica com quem edita o catálogo. */
-  podeAssociarCodigo: boolean;
 }) {
   const router = useRouter();
   const [etapa, setEtapa] = useState<Etapa>('INICIO');
@@ -118,8 +119,26 @@ export function PedidoClient({
   const [naoReconhecido, setNaoReconhecido] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
-  const porId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos]);
-  const resultados = useMemo(() => buscarProdutos(produtos, termo), [produtos, termo]);
+  /* O que o gerente ENSINOU ao catálogo nesta sessão — código vinculado ou
+     produto provisório criado. Entra na lista local na hora: o próximo bip do
+     mesmo código já reconhece, sem esperar o refresh do servidor. */
+  const [extras, setExtras] = useState<ProdutoNaTela[]>([]);
+  /* Etapas do "código não reconhecido": confirmar vínculo / cadastrar novo / possíveis duplicados. */
+  const [confirmando, setConfirmando] = useState<ProdutoNaTela | null>(null);
+  const [modoNovo, setModoNovo] = useState(false);
+  const [novoNome, setNovoNome] = useState('');
+  const [novoQtd, setNovoQtd] = useState('1');
+  const [novoPack, setNovoPack] = useState<EmbalagemNova>('UN');
+  const [novoPackSize, setNovoPackSize] = useState('');
+  const [duplicados, setDuplicados] = useState<(ProdutoNaTela & { grau: number })[] | null>(null);
+
+  const todos = useMemo(() => {
+    const m = new Map(produtos.map((p) => [p.id, p]));
+    for (const e of extras) m.set(e.id, e);
+    return [...m.values()];
+  }, [produtos, extras]);
+  const porId = useMemo(() => new Map(todos.map((p) => [p.id, p])), [todos]);
+  const resultados = useMemo(() => buscarProdutos(todos, termo), [todos, termo]);
   /* O mais recente ainda em curso. Mais de um aberto é raro e, quando
      acontece, o novo é o que interessa. */
   const emCurso = recentes.find((r) => r.emAndamento);
@@ -189,28 +208,95 @@ export function PedidoClient({
   }
 
   function aoLerCodigo(codigo: string) {
-    setAviso(null); setNaoReconhecido(null);
-    const p = produtoPorCodigo(produtos, codigo);
-    if (!p) { setNaoReconhecido(soDigitos(codigo)); return; }
+    setAviso(null); setNaoReconhecido(null); setConfirmando(null); setModoNovo(false); setDuplicados(null);
+    const p = produtoPorCodigo(todos, codigo);
+    if (!p) { setNaoReconhecido(soDigitos(codigo)); setTermo(''); return; }
     somar(p.id, 1);
     /* Sem a quantidade no aviso: ela e a embalagem estão logo abaixo, e quem
        bipa em sequência lê o nome para conferir que pegou o produto certo. */
     setAviso(`${p.name} — adicionado. Confira a embalagem e a quantidade abaixo.`);
   }
 
-  async function associar(productId: string) {
+  function fecharNaoReconhecido() {
+    setNaoReconhecido(null); setConfirmando(null); setModoNovo(false); setDuplicados(null); setErro(null);
+  }
+
+  /** Grava o produto ensinado na lista local, com os códigos que o servidor devolveu. */
+  function aprender(p: { id: string; name: string; category: string; measure: string; packSize: number | null; barcode: string | null; barcodes: string[]; origin: string }) {
+    setExtras((xs) => [...xs.filter((x) => x.id !== p.id), { id: p.id, name: p.name, category: p.category, measure: p.measure, packSize: p.packSize, barcode: p.barcode, barcodes: p.barcodes, origin: p.origin }]);
+  }
+
+  /**
+   * VINCULAR — permanente e para a rede inteira. No próximo pedido, de
+   * qualquer gerente, este código já abre este produto. Não existe "só desta
+   * vez": era o que fazia o mesmo código cair em "não reconhecido" para sempre.
+   */
+  async function vincular(p: ProdutoNaTela) {
     if (!naoReconhecido) return;
     setBusy(true); setErro(null);
     try {
       const res = await fetch('/api/products/pedido', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'associarCodigo', productId, code: naoReconhecido }),
+        body: JSON.stringify({ action: 'associarCodigo', productId: p.id, code: naoReconhecido }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) { setErro(d.error ?? 'Não foi possível associar o código.'); return; }
-      somar(productId, 1);
-      setNaoReconhecido(null);
-      setAviso('Código associado e produto adicionado.');
+      if (!res.ok) { setErro(d.error ?? 'Não foi possível vincular o código.'); return; }
+      if (d.produto) aprender(d.produto);
+      somar(p.id, 1);
+      fecharNaoReconhecido();
+      setAviso(`Código vinculado a ${p.name} — nos próximos pedidos ele já será reconhecido. Produto adicionado.`);
+      router.refresh();
+    } finally { setBusy(false); }
+  }
+
+  /** Antes de criar: o catálogo já tem algo parecido? Só sugere; quem decide é o gerente. */
+  async function verificarDuplicados() {
+    const nome = novoNome.trim();
+    if (nome.length < 3) { setErro('Informe o nome do produto.'); return; }
+    if (novoPack !== 'UN' && !(Number(novoPackSize) > 1)) { setErro('Informe quantas unidades vêm no fardo/display.'); return; }
+    setBusy(true); setErro(null);
+    try {
+      const res = await fetch('/api/products/pedido', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'duplicados', nome }),
+      });
+      const d = await res.json().catch(() => ({}));
+      const lista = (d.duplicados ?? []) as (ProdutoNaTela & { grau: number })[];
+      if (lista.length > 0) { setDuplicados(lista); return; }
+      await criarProvisorio();
+    } finally { setBusy(false); }
+  }
+
+  /** Usa um produto que já existia no lugar de criar: vincula o código a ele. */
+  async function usarExistente(p: ProdutoNaTela) {
+    setDuplicados(null);
+    await vincular(p);
+  }
+
+  /**
+   * CADASTRO PROVISÓRIO — nome, código e embalagem, nada mais. O produto nasce
+   * "pendente de validação", já entra neste pedido e já responde pelo código;
+   * setor e categoria são de quem valida, depois. O pedido não para.
+   */
+  async function criarProvisorio() {
+    setBusy(true); setErro(null);
+    try {
+      const res = await fetch('/api/products/pedido', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'cadastrarProvisorio', nome: novoNome.trim(), codigo: naoReconhecido,
+          packType: novoPack, packSize: novoPack === 'UN' ? null : Number(novoPackSize),
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setErro(d.error ?? 'Não foi possível cadastrar o produto.'); setDuplicados(null); return; }
+      const p = d.produto as { id: string; name: string; category: string; measure: string; packSize: number | null; barcode: string | null; barcodes: string[]; origin: string };
+      aprender(p);
+      const qtd = Math.max(1, Math.round(Number(novoQtd) || 1));
+      setCarrinho((c) => ({ ...c, [p.id]: { qty: qtd, pack: novoPack } }));
+      fecharNaoReconhecido();
+      setNovoNome(''); setNovoQtd('1'); setNovoPack('UN'); setNovoPackSize('');
+      setAviso(`${p.name} cadastrado (pendente de validação) e adicionado ao pedido. A Administração vai confirmar o cadastro e o setor.`);
       router.refresh();
     } finally { setBusy(false); }
   }
@@ -472,46 +558,120 @@ export function PedidoClient({
         </div>
       )}
 
-      {/* ── Código lido que não existe no catálogo ── */}
+      {/* ── Código lido que não existe no catálogo ──
+          Três saídas, nesta ordem: LOCALIZAR e vincular (o caso comum: o
+          produto existe com outro código), ou CADASTRAR um produto novo —
+          provisório, validado depois. Não há "só desta vez": o vínculo é
+          permanente, para a rede, e é isso que impede o quarto cadastro do
+          mesmo refrigerante. */}
       {naoReconhecido && (
         <Sheet
-          open onClose={() => setNaoReconhecido(null)}
-          title="Código não reconhecido"
-          description={`Código lido: ${naoReconhecido}`}
+          open onClose={fecharNaoReconhecido}
+          title="Produto não encontrado"
+          description={`Código lido: ${naoReconhecido}. Localize ou informe o produto correspondente.`}
         >
           <div className="space-y-3">
-            <p className="text-sm text-ink-700">
-              Localize o produto na lista abaixo. {podeAssociarCodigo
-                ? 'Você pode associar este código a ele para as próximas vezes.'
-                : 'O produto entra no pedido; associar o código ao catálogo é com quem edita produtos.'}
-            </p>
-            <Input
-              value={termo} onChange={(e) => setTermo(e.target.value)}
-              placeholder="buscar produto…" className="h-11 text-base" autoFocus
-            />
-            <ul className="max-h-64 divide-y divide-line overflow-y-auto rounded-lg border">
-              {resultados.slice(0, 12).map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-2">
-                  <span className="min-w-0 truncate text-sm text-ink-900">{p.name}</span>
-                  <div className="flex shrink-0 gap-1">
-                    {podeAssociarCodigo && (
-                      <Button size="sm" disabled={busy} onClick={() => void associar(p.id)}>Associar</Button>
-                    )}
-                    <Button
-                      size="sm" variant="outline"
-                      onClick={() => { somar(p.id, 1); setNaoReconhecido(null); setAviso(`${p.name} — adicionado.`); }}
-                    >
-                      Só desta vez
-                    </Button>
+            {/* 1) CONFIRMAR O VÍNCULO */}
+            {confirmando && (
+              <div className="space-y-2 rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
+                <p className="text-sm text-ink-900">Vincular este código ao produto <b>{confirmando.name}</b>?</p>
+                <p className="text-xs text-ink-500">Vale para toda a rede: nos próximos pedidos, este código abre direto este produto.</p>
+                <div className="flex gap-2">
+                  <Button className="flex-1" disabled={busy} onClick={() => void vincular(confirmando)}>SIM, VINCULAR</Button>
+                  <Button variant="outline" disabled={busy} onClick={() => setConfirmando(null)}>Escolher outro</Button>
+                </div>
+              </div>
+            )}
+
+            {/* 2) POSSÍVEIS DUPLICADOS, antes de criar */}
+            {duplicados && (
+              <div className="space-y-2 rounded-lg border-2 border-warning/40 bg-warning-bg p-3">
+                <p className="text-sm font-semibold text-ink-900">Possível produto já cadastrado</p>
+                <p className="text-xs text-ink-700">Parece com o que você digitou. Se for o mesmo, use-o — o código fica vinculado a ele.</p>
+                <ul className="divide-y divide-line rounded-lg border bg-surface">
+                  {duplicados.map((p) => (
+                    <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                      <span className="min-w-0 truncate text-sm text-ink-900">{p.name}</span>
+                      <Button size="sm" disabled={busy} onClick={() => void usarExistente(p)}>USAR ESTE PRODUTO</Button>
+                    </li>
+                  ))}
+                </ul>
+                <Button variant="outline" className="w-full" disabled={busy} onClick={() => void criarProvisorio()}>CRIAR NOVO mesmo assim</Button>
+              </div>
+            )}
+
+            {/* 3) CADASTRO PROVISÓRIO */}
+            {modoNovo && !duplicados && (
+              <div className="space-y-2 rounded-lg border p-3">
+                <p className="text-sm font-semibold text-ink-900">Produto não está no catálogo</p>
+                <div>
+                  <Label className="text-xs">Nome do produto</Label>
+                  <Input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="ex.: Biscoito XYZ 400g" className="h-11 text-base" autoFocus />
+                </div>
+                <p className="text-xs text-ink-500">Código de barras: <b className="tabular-nums text-ink-900">{naoReconhecido}</b></p>
+                <div>
+                  <Label className="text-xs">Embalagem</Label>
+                  <div className="mt-1 flex gap-1" role="group" aria-label="Embalagem">
+                    {EMBALAGENS_NOVAS.map((e) => (
+                      <button
+                        key={e.v} type="button" aria-pressed={novoPack === e.v}
+                        onClick={() => setNovoPack(e.v)}
+                        className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold ${novoPack === e.v ? 'border-brand bg-brand text-on-brand' : 'border-line text-ink-700 hover:border-brand'}`}
+                      >
+                        {e.l}
+                      </button>
+                    ))}
                   </div>
-                </li>
-              ))}
-              {resultados.length === 0 && (
-                <li className="flex items-center gap-2 px-3 py-3 text-sm text-ink-500">
-                  <PackageSearch className="h-4 w-4" /> Digite para procurar o produto.
-                </li>
-              )}
-            </ul>
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Label className="text-xs">Quantidade</Label>
+                    <Input inputMode="numeric" value={novoQtd} onChange={(e) => setNovoQtd(e.target.value.replace(/\D/g, '').slice(0, 5))} className="h-11 text-base tabular-nums" />
+                  </div>
+                  {novoPack !== 'UN' && (
+                    <div className="flex-1">
+                      <Label className="text-xs">Unidades por {novoPack === 'FARDO' ? 'fardo' : 'display'}</Label>
+                      <Input inputMode="numeric" value={novoPackSize} onChange={(e) => setNovoPackSize(e.target.value.replace(/\D/g, '').slice(0, 4))} className="h-11 text-base tabular-nums" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-ink-500">Setor, categoria e validade ficam com a Administração, depois. O pedido segue normalmente.</p>
+                <div className="flex gap-2">
+                  <Button className="flex-1" disabled={busy} onClick={() => void verificarDuplicados()}>ADICIONAR AO PEDIDO</Button>
+                  <Button variant="outline" disabled={busy} onClick={() => setModoNovo(false)}>Voltar</Button>
+                </div>
+              </div>
+            )}
+
+            {/* 0) LOCALIZAR */}
+            {!confirmando && !modoNovo && !duplicados && (
+              <>
+                <Input
+                  value={termo} onChange={(e) => setTermo(e.target.value)}
+                  placeholder="pesquisar no catálogo… (ex.: açúcar)" className="h-11 text-base" autoFocus
+                />
+                <ul className="max-h-64 divide-y divide-line overflow-y-auto rounded-lg border">
+                  {resultados.slice(0, 12).map((p) => (
+                    <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm text-ink-900">{p.name}</span>
+                        <span className="block text-[11px] text-ink-500">{p.category} · {p.measure}</span>
+                      </span>
+                      <Button size="sm" disabled={busy} onClick={() => setConfirmando(p)}>Vincular</Button>
+                    </li>
+                  ))}
+                  {resultados.length === 0 && (
+                    <li className="flex items-center gap-2 px-3 py-3 text-sm text-ink-500">
+                      <PackageSearch className="h-4 w-4" /> {termo.trim() ? `Nada parecido com "${termo}".` : 'Digite para procurar o produto.'}
+                    </li>
+                  )}
+                </ul>
+                <Button variant="outline" className="w-full" onClick={() => { setNovoNome(termo.trim()); setModoNovo(true); setErro(null); }}>
+                  <Plus className="h-4 w-4" /> PRODUTO NÃO ESTÁ NO CATÁLOGO
+                </Button>
+              </>
+            )}
+
             {erro && <p className="text-sm font-medium text-danger">{erro}</p>}
           </div>
         </Sheet>
