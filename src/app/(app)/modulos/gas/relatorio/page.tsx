@@ -1,7 +1,11 @@
 import Link from 'next/link';
 import { ArrowLeft, Download, ChevronRight, PencilLine } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
+import { prisma } from '@/lib/db/prisma';
+import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getRelatorioDeGas } from '@/lib/gas/query';
+import { UnitSelectNav } from '@/components/ui/unit-select-nav';
+import { AutoPrint } from '@/components/shared/auto-print';
 import { emKg, emPercentual, emPrecoKg, emReal } from '@/lib/gas/variacao';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/ui/ds/stat-card';
@@ -26,32 +30,42 @@ export const dynamic = 'force-dynamic';
 export default async function GasRelatorioPage({
   searchParams,
 }: {
-  searchParams: { start?: string; end?: string; unidade?: string };
+  searchParams: { start?: string; end?: string; unidade?: string; unit?: string; imprimir?: string };
 }) {
   const user = (await getSessionUser())!;
-  const relatorio = await getRelatorioDeGas(user, {
-    de: searchParams.start,
-    ate: searchParams.end,
-    months: 12,
-  });
+  /* `unit` FILTRA o relatório a uma unidade (vem do cartão "Variação por
+     unidade e período" do Dashboard); `unidade` só ABRE o detalhamento de uma
+     linha, como sempre. Filtrada, a unidade já abre detalhada: é a variação
+     nota a nota que a pessoa veio ver. */
+  const unitId = searchParams.unit || undefined;
+  const [relatorio, unidadesDoEscopo] = await Promise.all([
+    getRelatorioDeGas(user, { de: searchParams.start, ate: searchParams.end, unitId, months: 12 }),
+    prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+  ]);
 
   const ateNaTela = relatorio.ate === '9999-12-31' ? todayISO() : relatorio.ate;
+  const unidadeFiltrada = unitId ? unidadesDoEscopo.find((u) => u.id === unitId) ?? null : null;
 
   const aberta = searchParams.unidade
     ? relatorio.unidades.find((u) => u.unitId === searchParams.unidade) ?? null
-    : null;
+    : unitId
+      ? relatorio.unidades.find((u) => u.unitId === unitId) ?? null
+      : null;
 
   const filtro = new URLSearchParams();
   if (searchParams.start) filtro.set('start', searchParams.start);
   if (searchParams.end) filtro.set('end', searchParams.end);
+  if (unitId) filtro.set('unit', unitId);
   const qs = filtro.toString();
   const linkDaUnidade = (id: string) => `/modulos/gas/relatorio?${qs ? `${qs}&` : ''}unidade=${id}`;
 
   return (
     <div className="space-y-4">
+      {/* `?imprimir=1` vem do botão PDF do Dashboard: abre já no diálogo de impressão. */}
+      {searchParams.imprimir === '1' && <AutoPrint />}
       <div className="flex items-center justify-between print:hidden">
-        <Link href="/modulos/gas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
-          <ArrowLeft className="h-4 w-4" /> Gás
+        <Link href="/modulos/notas/gas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
+          <ArrowLeft className="h-4 w-4" /> Análise de gás
         </Link>
         <div className="flex gap-2">
           <a
@@ -65,17 +79,27 @@ export default async function GasRelatorioPage({
       </div>
 
       <div>
-        <h1 className="sgo-type-24 font-bold text-ink-900">Relatório do gás</h1>
+        <h1 className="sgo-type-24 font-bold text-ink-900">
+          Relatório do gás{unidadeFiltrada ? ` — ${unidadeFiltrada.name}` : ''}
+        </h1>
         <p className="text-sm text-ink-500">
-          Compras por unidade no período, com a variação do preço/kg recalculada em cima de todo o histórico.
+          {unidadeFiltrada ? 'Compras da unidade' : 'Compras por unidade'} de {relatorio.de.split('-').reverse().join('/')} a {ateNaTela.split('-').reverse().join('/')}, com a variação do preço/kg recalculada em cima de todo o histórico.
         </p>
       </div>
 
-      <div className="print:hidden">
+      <div className="space-y-3 print:hidden">
         {/* O seletor precisa de uma data de verdade nas duas pontas: com string
             vazia o DatePicker de dentro dele quebra a página inteira. Período
             sem fim vira HOJE, que é o que a pessoa quer dizer com "até agora". */}
-        <PeriodPicker start={relatorio.de} end={ateNaTela} basePath="/modulos/gas/relatorio" />
+        <PeriodPicker start={relatorio.de} end={ateNaTela} basePath="/modulos/gas/relatorio" extra={unitId ? { unit: unitId } : undefined} />
+        {unidadesDoEscopo.length > 1 && (
+          <UnitSelectNav
+            label="Unidade do relatório"
+            units={[{ id: '', name: 'Todas as unidades' }, ...unidadesDoEscopo]}
+            selected={unitId ?? ''}
+            className="w-full max-w-xs"
+          />
+        )}
       </div>
 
       {relatorio.unidades.length === 0 ? (

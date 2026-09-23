@@ -25,7 +25,11 @@ function monthRange(offset = 0): { start: string; end: string } {
   return { start: toISO(y2, m2, 1), end: toISO(y2, m2, last) };
 }
 
-export function PeriodPicker({ start, end, basePath }: { start: string; end: string; basePath: string }) {
+export function PeriodPicker({ start, end, basePath, extra }: {
+  start: string; end: string; basePath: string;
+  /** Outros parâmetros que a tela precisa manter ao trocar o período (ex.: a unidade filtrada). */
+  extra?: Record<string, string>;
+}) {
   const router = useRouter();
   const thisMonth = monthRange(0);
   const lastMonth = monthRange(-1);
@@ -41,7 +45,11 @@ export function PeriodPicker({ start, end, basePath }: { start: string; end: str
   const [from, setFrom] = useState<string | null>(start);
   const [to, setTo] = useState<string | null>(end);
 
-  const go = (s: string, e: string) => router.push(`${basePath}?start=${s}&end=${e}`);
+  const go = (s: string, e: string) => {
+    const p = new URLSearchParams({ start: s, end: e });
+    for (const [k, v] of Object.entries(extra ?? {})) if (v) p.set(k, v);
+    router.push(`${basePath}?${p.toString()}`);
+  };
 
   return (
     <div className="space-y-3">

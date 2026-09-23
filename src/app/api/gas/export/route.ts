@@ -20,9 +20,13 @@ export async function GET(req: Request) {
   if (negado) return negado;
 
   const url = new URL(req.url);
+  /* `unit` filtra o relatório inteiro a UMA unidade — o mesmo filtro da tela.
+     O escopo do usuário continua valendo dentro de getRelatorioDeGas. */
+  const unitId = url.searchParams.get('unit') || undefined;
   const relatorio = await getRelatorioDeGas(user, {
     de: url.searchParams.get('start') ?? undefined,
     ate: url.searchParams.get('end') ?? undefined,
+    unitId,
     months: 12,
   });
 
@@ -75,7 +79,7 @@ export async function GET(req: Request) {
   return new Response(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="gas-${relatorio.de}-a-${ate}.csv"`,
+      'Content-Disposition': `attachment; filename="gas-${unitId && relatorio.unidades[0] ? `${relatorio.unidades[0].unit.normalize('NFD').replace(/[^\w]+/g, '-').toLowerCase()}-` : ''}${relatorio.de}-a-${ate}.csv"`,
     },
   });
 }

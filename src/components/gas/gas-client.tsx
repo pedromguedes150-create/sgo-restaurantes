@@ -20,6 +20,7 @@ import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { postAdmin } from '@/lib/admin-client';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 import { formatBRL } from '@/lib/utils';
+import { PRESETS_DE_PERIODO, datasDoPreset, type PresetDePeriodo } from '@/lib/gas/periodo';
 import { Group } from '@/components/ui/ds/group';
 import { Sheet } from '@/components/ui/ds/sheet';
 import { ActionMenu } from '@/components/ui/ds/action-menu';
@@ -81,7 +82,7 @@ export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, supp
         <>
           <DashFilters units={units} suppliers={suppliers} filter={filter} purchased={purchased} basePath={basePath} />
           <ContractProgress contracts={contracts.filter((c) => c.active && !c.expired)} compact />
-          <Dashboard d={dashboard} isAdmin={isAdmin} receipts={receipts} contracts={contracts} />
+          <Dashboard d={dashboard} isAdmin={isAdmin} receipts={receipts} contracts={contracts} units={units} />
         </>
       )}
       {tab === 'historico' && <History rows={receipts} isAdmin={isAdmin} canEditDate={canEditDate} />}
@@ -579,7 +580,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
 }
 
 /* ───────── Dashboard ───────── */
-function Dashboard({ d, isAdmin, receipts, contracts }: { d: GasDash; isAdmin: boolean; receipts: GasRow[]; contracts: GasContractUI[] }) {
+function Dashboard({ d, isAdmin, receipts, contracts, units }: { d: GasDash; isAdmin: boolean; receipts: GasRow[]; contracts: GasContractUI[]; units: Unit[] }) {
   const router = useRouter();
   const [pct, setPct] = useState(String(d.alertPct));
   const [teto, setTeto] = useState(String(d.tetoPrecoKg));
@@ -622,7 +623,79 @@ function Dashboard({ d, isAdmin, receipts, contracts }: { d: GasDash; isAdmin: b
         <MonthlyBars points={d.monthly} />
       </div>
 
-      <a href="/modulos/gas/relatorio" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><TrendingUp className="h-4 w-4 text-brand" /> Relatório de variação (imprimir/PDF)</a>
+      <VariacaoPorUnidadeCard units={units} />
+    </div>
+  );
+}
+
+/**
+ * Filtro de VARIAÇÃO por unidade e período, com saída em PDF e Excel.
+ *
+ * Não calcula nada aqui: monta a URL do relatório (`/modulos/gas/relatorio`),
+ * que já recalcula a variação da série inteira e já sabe exportar. Duas telas
+ * somando a mesma variação por conta própria é como uma delas acaba errada.
+ * O PDF é a própria folha do relatório abrindo no diálogo de impressão
+ * (`?imprimir=1`), para a impressão sair igual ao que a tela mostra.
+ */
+function VariacaoPorUnidadeCard({ units }: { units: Unit[] }) {
+  const [unitId, setUnitId] = useState('');
+  const [preset, setPreset] = useState<PresetDePeriodo>('3m');
+  const [de, setDe] = useState<string | null>(null);
+  const [ate, setAte] = useState<string | null>(null);
+
+  const datas = preset === 'custom' ? (de && ate ? { start: de, end: ate } : null) : datasDoPreset(preset);
+  const qs = datas ? new URLSearchParams({ start: datas.start, end: datas.end, ...(unitId ? { unit: unitId } : {}) }).toString() : null;
+
+  return (
+    <div className="rounded-lg border p-3">
+      <p className="mb-1 flex items-center gap-1.5 sgo-type-11 font-semibold text-ink-900"><TrendingUp className="h-4 w-4 text-brand" /> Variação por unidade e período</p>
+      <p className="mb-2 text-xs text-ink-500">Escolha a unidade e o período e gere o relatório de variação do preço/kg — na tela, em PDF ou em Excel.</p>
+      <div className="flex flex-wrap items-end gap-2">
+        {units.length > 1 && (
+          <div className="w-52">
+            <Select
+              label="Unidade" size="sm" value={unitId} onValueChange={setUnitId}
+              options={[{ value: '', label: 'Todas as unidades' }, ...units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))]}
+            />
+          </div>
+        )}
+        <div className="w-44">
+          <Select
+            label="Período" size="sm" value={preset} onValueChange={(v) => setPreset(v as PresetDePeriodo)}
+            options={PRESETS_DE_PERIODO.map((p) => ({ value: p.valor, label: p.rotulo }))}
+          />
+        </div>
+        {preset === 'custom' && (
+          <>
+            <div className="w-40"><DatePicker label="De" size="sm" value={de} onValueChange={setDe} /></div>
+            <div className="w-40"><DatePicker label="Até" size="sm" value={ate} onValueChange={setAte} min={de ?? undefined} /></div>
+          </>
+        )}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <a
+          href={qs ? `/modulos/gas/relatorio?${qs}` : undefined}
+          aria-disabled={!qs}
+          className={`inline-flex items-center gap-1 rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand ${qs ? 'hover:bg-brand-hover' : 'pointer-events-none opacity-50'}`}
+        >
+          <TrendingUp className="h-4 w-4" /> Ver relatório
+        </a>
+        <a
+          href={qs ? `/modulos/gas/relatorio?${qs}&imprimir=1` : undefined}
+          target="_blank" rel="noreferrer"
+          aria-disabled={!qs}
+          className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold ${qs ? 'hover:border-brand' : 'pointer-events-none opacity-50'}`}
+        >
+          <FileText className="h-4 w-4 text-brand" /> PDF
+        </a>
+        <a
+          href={qs ? `/api/gas/export?${qs}` : undefined}
+          aria-disabled={!qs}
+          className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold ${qs ? 'hover:border-brand' : 'pointer-events-none opacity-50'}`}
+        >
+          <Download className="h-4 w-4 text-brand" /> Excel
+        </a>
+      </div>
     </div>
   );
 }
