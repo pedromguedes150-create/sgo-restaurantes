@@ -163,6 +163,7 @@ model User {
   communicationsAuthored  Communication[]          @relation("CommAuthor")
   communicationRecipients CommunicationRecipient[] @relation("CommRecipient")
   gasReceipts             GasReceipt[]             @relation("GasReceiptBy")
+  gasContractDocuments    GasContractDocument[]    @relation("GasContractDocBy")
   suppliersCreated        Supplier[]               @relation("SupplierBy")
   oilCollections          OilCollection[]          @relation("OilBy")
   inventoryItemsCreated   InventoryItem[]          @relation("InvItemBy")
@@ -2832,9 +2833,30 @@ model GasContract {
   createdByName String?
   createdAt     DateTime @default(now())
 
+  documents GasContractDocument[]
+
   @@index([unitId, active])
   @@index([supplierId])
   @@map("gas_contracts")
+}
+
+/// Versão de documento (PDF/imagem) anexada a um contrato de gás.
+/// Cada upload gera um registro — substituir não apaga o anterior.
+model GasContractDocument {
+  id             String      @id @default(cuid())
+  contractId     String
+  path           String      // caminho relativo no volume de uploads
+  fileName       String?
+  mimeType       String?
+  uploadedAt     DateTime    @default(now())
+  uploadedById   String?
+  uploadedByName String?
+
+  contract  GasContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  uploadedBy User?       @relation("GasContractDocBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([contractId])
+  @@map("gas_contract_documents")
 }
 
 model GasReceipt {

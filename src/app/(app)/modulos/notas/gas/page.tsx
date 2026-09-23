@@ -83,8 +83,10 @@ export default async function AnaliseGasPage({
             purchased={purchased}
             filter={{ unitId: fUnit ?? '', supplierId: fSupplier ?? '', mes: fMes ?? '' }}
             receipts={receipts.map((r) => ({
-              id: r.id, date: r.operationalDate, unit: r.unit.name, supplier: r.supplier?.name ?? 'Sem fornecedor',
-              qty: Number(r.quantityKg), total: Number(r.totalValue), price: Number(r.pricePerKg), variation: variacoes.get(r.id)?.variationPct ?? null, alerted: r.alerted,
+              id: r.id, unitId: r.unitId, date: r.operationalDate, unit: r.unit.name,
+              supplier: r.supplier?.name ?? 'Sem fornecedor',
+              qty: Number(r.quantityKg), total: Number(r.totalValue), price: Number(r.pricePerKg),
+              variation: variacoes.get(r.id)?.variationPct ?? null, alerted: r.alerted,
               by: r.createdBy?.name ?? '', dateEdited: r.dateEdited, dateEditedByName: r.dateEditedByName,
             }))}
             contracts={contracts}

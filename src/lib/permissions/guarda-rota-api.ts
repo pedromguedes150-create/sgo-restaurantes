@@ -71,6 +71,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
      declara nada. */
   '/api/estoque': { modulo: 'STOCK', exigir: 'editar' },
   '/api/gas/contracts': { modulo: 'GAS_TAB_CONTRACTS', exigir: 'editar' },
+  '/api/gas/contracts/documents': { modulo: 'GAS_TAB_CONTRACTS', exigir: 'editar' },
   '/api/gas/export': { modulo: 'GAS', exigir: 'ver' },
 
   '/api/higiene/manage': { modulo: 'HYGIENE', exigir: 'editar' },

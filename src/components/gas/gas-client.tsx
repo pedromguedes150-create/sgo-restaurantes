@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X, Trash2, CalendarClock, Plus, Scale, Power } from 'lucide-react';
+import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X, Trash2, CalendarClock, Plus, Scale, Power, Paperclip, Download, FileText, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
@@ -30,13 +30,21 @@ interface GroupStat { key: string; name: string; count: number; avg: number; las
 interface MonthPoint { month: string; avg: number; count: number }
 export interface GasOutlierRow { id: string; unitId: string; unitName: string; date: string; pricePerKg: number; kg: number; total: number }
 export interface GasDash { totalReceipts: number; avgPrice: number; lastPrice: number | null; totalKg: number; totalValue: number; byUnit: GroupStat[]; bySupplier: GroupStat[]; monthly: MonthPoint[]; alertPct: number; tetoPrecoKg: number; foraDaFaixa: GasOutlierRow[] }
-export interface GasRow { id: string; date: string; unit: string; supplier: string; qty: number; total: number; price: number; variation: number | null; alerted: boolean; by: string; dateEdited?: boolean; dateEditedByName?: string | null }
+/** Documento (PDF/imagem) anexado a um contrato. */
+export interface ContractDocUI { id: string; path: string; fileName: string | null; mimeType: string | null; uploadedAt: string; uploadedByName: string | null }
+export interface GasRow {
+  id: string; unitId: string; date: string; unit: string; supplier: string; qty: number; total: number;
+  price: number; variation: number | null; alerted: boolean; by: string;
+  dateEdited?: boolean; dateEditedByName?: string | null;
+}
 export interface GasContractUI {
   id: string; unitId: string; unitName: string; supplierId: string; supplierName: string;
   startDate: string; endDate: string; quantityKg: number; pricePerKg: number; initialUsedKg: number;
   purchasedKg: number; usedKg: number; progressPct: number; remainingKg: number; expired: boolean; active: boolean; note: string | null;
   foraDoContrato?: { id: string; date: string; kg: number; supplierName: string; motivo: 'FORA_DO_PERIODO' | 'OUTRO_FORNECEDOR' | 'SEM_FORNECEDOR' }[];
   foraDoContratoKg?: number;
+  /** Documentos anexados (mais recente primeiro). */
+  documents?: ContractDocUI[];
 }
 export interface PurchasedUI { kg: number; total: number; count: number }
 
@@ -73,7 +81,7 @@ export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, supp
         <>
           <DashFilters units={units} suppliers={suppliers} filter={filter} purchased={purchased} basePath={basePath} />
           <ContractProgress contracts={contracts.filter((c) => c.active && !c.expired)} compact />
-          <Dashboard d={dashboard} isAdmin={isAdmin} />
+          <Dashboard d={dashboard} isAdmin={isAdmin} receipts={receipts} contracts={contracts} />
         </>
       )}
       {tab === 'historico' && <History rows={receipts} isAdmin={isAdmin} canEditDate={canEditDate} />}
@@ -207,6 +215,83 @@ function ForaDoContrato({ contrato }: { contrato: GasContractUI }) {
 }
 
 /* ───────── Aba Contratos (gestão — Supervisão/Admin) ───────── */
+/* ───────── Painel de documentos por contrato ───────── */
+function DocumentsPanel({ contractId, docs, canManage }: { contractId: string; docs: ContractDocUI[]; canManage: boolean }) {
+  const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append('contractId', contractId);
+    fd.append('file', file);
+    setUploading(true);
+    try {
+      const res = await fetch('/api/gas/contracts/documents', { method: 'POST', body: fd });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error ?? 'Falha ao enviar'); return; }
+      router.refresh();
+      setExpanded(true);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  const latest = docs[0] ?? null;
+
+  return (
+    <div className="mt-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Mostrar o documento mais recente */}
+        {latest && (
+          <a
+            href={`/${latest.path}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 rounded-md border bg-surface px-2 py-0.5 text-xs font-medium text-brand hover:border-brand"
+          >
+            {latest.mimeType === 'application/pdf' ? <FileText className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {latest.fileName ?? 'Documento'}{docs.length > 1 ? ` (+${docs.length - 1})` : ''}
+          </a>
+        )}
+        {canManage && (
+          <label className={`inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium text-ink-500 hover:border-brand hover:text-brand ${uploading ? 'opacity-50' : ''}`}>
+            <Paperclip className="h-3.5 w-3.5" />
+            {uploading ? 'Enviando…' : latest ? 'Nova versão' : 'Anexar contrato'}
+            <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="sr-only" onChange={handleFile} disabled={uploading} />
+          </label>
+        )}
+        {docs.length > 1 && (
+          <button type="button" onClick={() => setExpanded((v) => !v)} className="text-xs text-ink-500 underline-offset-2 hover:underline">
+            {expanded ? 'Ocultar versões' : `Ver todas as ${docs.length} versões`}
+          </button>
+        )}
+      </div>
+      {expanded && docs.length > 1 && (
+        <div className="mt-1.5 space-y-1 rounded-lg border bg-canvas p-2">
+          <p className="sgo-type-11 font-semibold text-ink-500">Histórico de documentos</p>
+          {docs.map((d) => (
+            <div key={d.id} className="flex items-center gap-2 text-xs">
+              <a
+                href={`/${d.path}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 font-medium text-brand hover:underline"
+              >
+                <Download className="h-3 w-3" />{d.fileName ?? 'Arquivo'}
+              </a>
+              <span className="text-ink-500">{new Date(d.uploadedAt).toLocaleDateString('pt-BR')}{d.uploadedByName ? ` · ${d.uploadedByName}` : ''}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { contracts: GasContractUI[]; units: Unit[]; suppliers: Supplier[]; canManage: boolean; isAdmin: boolean }) {
   const [novoContrato, setNovoContrato] = useState(false);
   const router = useRouter();
@@ -291,13 +376,21 @@ function ContractsTab({ contracts, units, suppliers, canManage, isAdmin }: { con
           <div key={c.id} className={`rounded-lg border p-2.5 ${c.expired || !c.active ? 'opacity-70' : 'bg-surface'}`}>
             <div className="flex items-center justify-between gap-2">
               <p className="min-w-0 truncate text-sm font-semibold text-ink-900">{c.unitName} · {c.supplierName}</p>
-              <span className="shrink-0 text-xs font-bold tabular-nums">{c.progressPct}%{c.expired ? ' · vencido' : !c.active ? ' · inativo' : ''}</span>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {(c.documents?.length ?? 0) > 0 && (
+                  <span className="flex items-center gap-0.5 rounded-full bg-success/10 px-1.5 py-0.5 text-[10px] font-semibold text-success">
+                    <Paperclip className="h-3 w-3" /> Doc
+                  </span>
+                )}
+                <span className="text-xs font-bold tabular-nums">{c.progressPct}%{c.expired ? ' · vencido' : !c.active ? ' · inativo' : ''}</span>
+              </div>
             </div>
             <p className="text-xs text-ink-500 tabular-nums">
               {c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {c.quantityKg.toLocaleString('pt-BR')} kg a {kg(c.pricePerKg)} ·
               comprado {c.purchasedKg.toLocaleString('pt-BR')} kg{c.initialUsedKg > 0 ? ` (+${c.initialUsedKg.toLocaleString('pt-BR')} kg posição inicial)` : ''} · restam {c.remainingKg.toLocaleString('pt-BR')} kg
             </p>
             {c.note && <p className="text-xs text-ink-500">Obs.: {c.note}</p>}
+            <DocumentsPanel contractId={c.id} docs={c.documents ?? []} canManage={canManage} />
             {canManage && (editId === c.id ? (
               <div className="mt-2 space-y-2 rounded-lg border border-dashed p-2">
                 <p className="sgo-type-11 font-semibold text-ink-500">Editar contrato</p>
@@ -486,7 +579,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
 }
 
 /* ───────── Dashboard ───────── */
-function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
+function Dashboard({ d, isAdmin, receipts, contracts }: { d: GasDash; isAdmin: boolean; receipts: GasRow[]; contracts: GasContractUI[] }) {
   const router = useRouter();
   const [pct, setPct] = useState(String(d.alertPct));
   const [teto, setTeto] = useState(String(d.tetoPrecoKg));
@@ -519,6 +612,8 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
         </div>
       )}
 
+      <PriceEvolutionSection receipts={receipts} contracts={contracts} alertPct={d.alertPct} tetoPrecoKg={d.tetoPrecoKg} />
+
       <Compare title="Por unidade" rows={d.byUnit} />
       <Compare title="Por fornecedor" rows={d.bySupplier} />
 
@@ -528,6 +623,303 @@ function Dashboard({ d, isAdmin }: { d: GasDash; isAdmin: boolean }) {
       </div>
 
       <a href="/modulos/gas/relatorio" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"><TrendingUp className="h-4 w-4 text-brand" /> Relatório de variação (imprimir/PDF)</a>
+    </div>
+  );
+}
+
+/* ─── Gráfico de evolução de preço/kg ─── */
+
+const PERIOD_OPTS = [
+  { v: '3m', l: '3 meses' },
+  { v: '6m', l: '6 meses' },
+  { v: '12m', l: '12 meses' },
+  { v: 'all', l: 'Tudo' },
+] as const;
+type PeriodKey = typeof PERIOD_OPTS[number]['v'];
+
+function cutoffDate(period: PeriodKey): string | null {
+  if (period === 'all') return null;
+  const months = period === '3m' ? 3 : period === '6m' ? 6 : 12;
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Seção de evolução do preço/kg por unidade.
+ *
+ * Usa os recebimentos que já vêm para o cliente (até 300 entradas) e os
+ * contratos para sobrepor o preço acordado como linha de referência. Não faz
+ * chamada adicional ao servidor.
+ *
+ * Notas com preço acima do teto ficam marcadas com ⚠ mas NÃO escalam o eixo Y.
+ */
+function PriceEvolutionSection({ receipts, contracts, alertPct, tetoPrecoKg }: {
+  receipts: GasRow[];
+  contracts: GasContractUI[];
+  alertPct: number;
+  tetoPrecoKg: number;
+}) {
+  const [selUnit, setSelUnit] = useState('');
+  const [period, setPeriod] = useState<PeriodKey>('12m');
+
+  const unitNames = useMemo(() => [...new Set(receipts.map((r) => r.unitId))].map((uid) => {
+    const r = receipts.find((x) => x.unitId === uid);
+    return { id: uid, name: r?.unit ?? uid };
+  }).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')), [receipts]);
+
+  const cutoff = cutoffDate(period);
+  const filtered = useMemo(() => receipts.filter((r) =>
+    (!selUnit || r.unitId === selUnit) && (!cutoff || r.date >= cutoff),
+  ), [receipts, selUnit, cutoff]);
+
+  const byUnit = useMemo(() => {
+    const m = new Map<string, { name: string; rows: GasRow[] }>();
+    for (const r of filtered) {
+      const cur = m.get(r.unitId) ?? { name: r.unit, rows: [] };
+      cur.rows.push(r);
+      m.set(r.unitId, cur);
+    }
+    return [...m.entries()].map(([uid, v]) => ({ unitId: uid, ...v }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [filtered]);
+
+  if (receipts.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="sgo-type-11 font-semibold text-ink-900">Evolução do preço/kg</h2>
+        <div className="flex flex-wrap gap-1.5">
+          {unitNames.length > 1 && (
+            <select
+              value={selUnit}
+              onChange={(e) => setSelUnit(e.target.value)}
+              className="h-7 rounded-md border bg-surface px-2 text-xs font-medium text-ink-900"
+              aria-label="Filtrar por unidade"
+            >
+              <option value="">Todas as unidades</option>
+              {unitNames.map((u) => <option key={u.id} value={u.id}>{shortUnitName(u.name)}</option>)}
+            </select>
+          )}
+          <div className="flex overflow-hidden rounded-md border">
+            {PERIOD_OPTS.map((o) => (
+              <button
+                key={o.v}
+                type="button"
+                onClick={() => setPeriod(o.v)}
+                className={`px-2 py-1 text-xs font-medium ${period === o.v ? 'bg-brand text-on-brand' : 'bg-surface text-ink-500'}`}
+              >
+                {o.l}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      {byUnit.length === 0 && <p className="text-sm text-ink-500">Nenhum recebimento no período.</p>}
+      {byUnit.map((u) => {
+        const unitContracts = contracts.filter((c) => c.unitId === u.unitId && c.active);
+        return (
+          <UnitPriceChart
+            key={u.unitId}
+            unitName={u.name}
+            rows={u.rows}
+            contracts={unitContracts}
+            alertPct={alertPct}
+            tetoPrecoKg={tetoPrecoKg}
+            showUnitTitle={byUnit.length > 1}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+interface ChartPt {
+  date: string; price: number; supplier: string; kg: number; total: number;
+  alerted: boolean; isOutlier: boolean; variationPct: number | null;
+}
+
+/** Gráfico de linha SVG para o preço/kg de uma unidade ao longo do tempo. */
+function UnitPriceChart({ unitName, rows, contracts, alertPct, tetoPrecoKg, showUnitTitle }: {
+  unitName: string; rows: GasRow[]; contracts: GasContractUI[];
+  alertPct: number; tetoPrecoKg: number; showUnitTitle: boolean;
+}) {
+  const [hovered, setHovered] = useState<ChartPt | null>(null);
+
+  const sorted = useMemo(() =>
+    [...rows].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)),
+  [rows]);
+
+  const points: ChartPt[] = useMemo(() => sorted.map((r) => ({
+    date: r.date, price: r.price, supplier: r.supplier, kg: r.qty, total: r.total,
+    alerted: r.alerted, isOutlier: r.price > tetoPrecoKg, variationPct: r.variation,
+  })), [sorted, tetoPrecoKg]);
+
+  const validPoints = points.filter((p) => !p.isOutlier);
+  if (validPoints.length === 0) return null;
+
+  // Contratos que tocam o período dos recebimentos
+  const firstDate = sorted[0]?.date ?? '';
+  const lastDate = sorted[sorted.length - 1]?.date ?? '';
+  const activeContracts = contracts.filter((c) => c.endDate >= firstDate && c.startDate <= lastDate);
+
+  const allPrices = validPoints.map((p) => p.price);
+  const refPrices = activeContracts.map((c) => c.pricePerKg);
+  const allForScale = [...allPrices, ...refPrices].filter((p) => p > 0);
+  if (allForScale.length === 0) return null;
+
+  const minP = Math.min(...allForScale);
+  const maxP = Math.max(...allForScale);
+  /* Margem de 3% para os pontos não colarem nas bordas. */
+  const amp = maxP - minP || maxP * 0.05;
+  const lo = minP - amp * 0.12;
+  const hi = maxP + amp * 0.12;
+
+  const VW = 480; const VH = 200;
+  const PAD = { t: 24, r: 16, b: 36, l: 58 };
+  const cW = VW - PAD.l - PAD.r;
+  const cH = VH - PAD.t - PAD.b;
+
+  const n = sorted.length;
+  const xOf = (i: number) => PAD.l + (n <= 1 ? cW / 2 : (i / (n - 1)) * cW);
+  const yOf = (p: number) => PAD.t + cH - ((p - lo) / (hi - lo)) * cH;
+
+  /* Y axis: 4 labels */
+  const yStep = (hi - lo) / 4;
+  const yLabels = [0, 1, 2, 3, 4].map((i) => lo + i * yStep);
+
+  /* X axis: show at most 6 date labels */
+  const step = Math.max(1, Math.ceil(n / 6));
+  const xLabels: { i: number; date: string }[] = sorted.map((r, i) => ({ i, date: r.date })).filter((_, i) => i % step === 0 || i === n - 1);
+
+  /* Polyline for valid points */
+  const lineSegs: string[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    if (points[i].isOutlier) continue;
+    const x = xOf(i); const y = yOf(points[i].price);
+    lineSegs.push(`${i === 0 || points[i - 1]?.isOutlier ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`);
+  }
+  const linePath = lineSegs.join(' ');
+
+  function ptColor(p: ChartPt): string {
+    if (p.isOutlier) return 'var(--sgo-ink-400)';
+    // Contratos vigentes no dia do recebimento
+    const dayContracts = activeContracts.filter((c) => p.date >= c.startDate && p.date <= c.endDate);
+    const contractPrice = dayContracts.length ? Math.min(...dayContracts.map((c) => c.pricePerKg)) : null;
+    if (contractPrice !== null && p.price > contractPrice * (1 + alertPct / 100)) return 'var(--sgo-danger)';
+    if (contractPrice !== null && p.price > contractPrice) return 'var(--sgo-warning)';
+    return 'var(--sgo-brand)';
+  }
+
+  return (
+    <div className="rounded-lg border bg-surface p-3">
+      {showUnitTitle && <p className="mb-1.5 text-sm font-semibold text-ink-900">{shortUnitName(unitName)}</p>}
+      <div className="relative">
+        <svg viewBox={`0 0 ${VW} ${VH}`} className="w-full overflow-visible" style={{ height: 180 }}>
+          {/* Y axis labels + grid lines */}
+          {yLabels.map((p, i) => (
+            <g key={i}>
+              <line x1={PAD.l} y1={yOf(p)} x2={VW - PAD.r} y2={yOf(p)} stroke="var(--sgo-ink-200)" strokeWidth={0.5} />
+              <text x={PAD.l - 3} y={yOf(p) + 3} textAnchor="end" fontSize={9} fill="var(--sgo-ink-500)">
+                {p.toFixed(2).replace('.', ',')}
+              </text>
+            </g>
+          ))}
+          {/* X axis labels */}
+          {xLabels.map(({ i, date }) => {
+            const [y, m, d] = date.split('-');
+            return (
+              <text key={i} x={xOf(i)} y={VH - PAD.b + 12} textAnchor="middle" fontSize={9} fill="var(--sgo-ink-500)">
+                {d}/{m}/{y?.slice(2)}
+              </text>
+            );
+          })}
+          {/* Contract reference lines */}
+          {activeContracts.map((c, ci) => {
+            const y = yOf(c.pricePerKg);
+            /* clip to chart area */
+            if (y < PAD.t - 4 || y > PAD.t + cH + 4) return null;
+            /* x range of the contract within the chart */
+            const x1 = PAD.l;
+            const x2 = VW - PAD.r;
+            return (
+              <g key={ci}>
+                <line x1={x1} y1={y} x2={x2} y2={y} stroke="var(--sgo-brand)" strokeWidth={1.5} strokeDasharray="5,3" opacity={0.55} />
+                <text x={x2 - 2} y={y - 3} textAnchor="end" fontSize={8} fill="var(--sgo-brand)" opacity={0.8}>
+                  {c.supplierName} R$ {c.pricePerKg.toFixed(4).replace('.', ',')}
+                </text>
+              </g>
+            );
+          })}
+          {/* Main line */}
+          {linePath && <path d={linePath} fill="none" stroke="var(--sgo-brand)" strokeWidth={2} strokeLinejoin="round" />}
+          {/* Points */}
+          {sorted.map((r, i) => {
+            const p = points[i];
+            const cx = xOf(i); const cy = p.isOutlier ? PAD.t + 4 : yOf(p.price);
+            return (
+              <g key={r.id}>
+                <circle
+                  cx={cx} cy={cy} r={5}
+                  fill={ptColor(p)}
+                  stroke="white" strokeWidth={1.5}
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHovered(p)}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={() => setHovered((h) => h?.date === p.date && h.supplier === p.supplier ? null : p)}
+                />
+                {p.isOutlier && (
+                  <text x={cx} y={cy + 14} textAnchor="middle" fontSize={8} fill="var(--sgo-ink-400)">⚠</text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+        {/* Legenda */}
+        <div className="mt-1 flex flex-wrap gap-3 text-[10px] text-ink-500">
+          <span className="flex items-center gap-1"><span className="inline-block h-2 w-5 rounded-full bg-brand opacity-60" style={{ borderTop: '2px dashed var(--sgo-brand)' }} /> Preço contratado</span>
+          <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-brand" /> Dentro do contrato</span>
+          <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-warning" /> Acima do contratado</span>
+          <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-danger" /> Acima do limite ({alertPct}%)</span>
+        </div>
+      </div>
+      {/* Tooltip — detalhe do ponto selecionado */}
+      {hovered && (
+        <div className="mt-2 rounded-lg border border-brand/20 bg-brand/5 p-2 text-xs">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
+            <span className="font-semibold text-ink-900">{br(hovered.date)}</span>
+            <span className="font-bold text-brand">{kg(hovered.price)}</span>
+            {hovered.variationPct !== null && (
+              <span className={hovered.variationPct > 0 ? 'font-semibold text-danger' : 'font-semibold text-success'}>
+                {hovered.variationPct > 0 ? '+' : ''}{hovered.variationPct}% vs anterior
+              </span>
+            )}
+          </div>
+          <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5 text-ink-500">
+            <span>{hovered.supplier}</span>
+            <span>{hovered.kg.toLocaleString('pt-BR')} kg</span>
+            <span>{formatBRL(hovered.total)}</span>
+            {hovered.isOutlier && <span className="font-semibold text-warning">⚠ Preço fora da faixa — corrigir no Histórico</span>}
+          </div>
+          {/* Comparação com os contratos ativos naquele dia */}
+          {activeContracts
+            .filter((c) => hovered.date >= c.startDate && hovered.date <= c.endDate)
+            .map((c) => {
+              const diff = hovered.price - c.pricePerKg;
+              const pct = Math.round((diff / c.pricePerKg) * 100 * 10) / 10;
+              return (
+                <div key={c.id} className="mt-0.5 text-ink-500">
+                  Contrato {c.supplierName}: {kg(c.pricePerKg)}
+                  {' '}
+                  <span className={diff > 0 ? 'font-semibold text-danger' : 'font-semibold text-success'}>
+                    ({diff > 0 ? '+' : ''}{pct}% vs contratado)
+                  </span>
+                </div>
+              );
+            })}
+        </div>
+      )}
     </div>
   );
 }
