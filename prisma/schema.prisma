@@ -1188,6 +1188,7 @@ model Product {
   barcodes ProductBarcode[]
   requestItems ProductRequestItem[]
   stockLots    StockLot[]
+  sectorProposal ProductSectorProposal?
 
   @@index([active, category])
   @@index([barcode])
@@ -1255,6 +1256,44 @@ model ProductBarcodeChange {
   @@index([fromProductId])
   @@index([toProductId])
   @@map("product_barcode_changes")
+}
+
+/// PROPOSTA DE SETOR POR IA — aguardando aprovação do Coordenador.
+///
+/// A IA sugere em qual setor do CD o produto deve ser separado, mas nada é
+/// aplicado sozinho: a proposta fica aqui como PENDENTE até o Coordenador
+/// aprovar (aplica o setor), editar (aprova com outro setor) ou rejeitar.
+/// Uma proposta ativa por produto (@@unique) — repropor sobrescreve a anterior.
+/// Nomes de setor congelados para o histórico ler mesmo após renome/exclusão.
+model ProductSectorProposal {
+  id                 String               @id @default(cuid())
+  productId          String               @unique
+  product            Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// O setor que a IA propôs (id + nome congelado). Nulo = a IA não apontou.
+  proposedSectorId   String?
+  proposedSectorName String?
+  /// Por que a IA decidiu — a frase que o Coordenador confere antes de aprovar.
+  reason             String?
+  status             SectorProposalStatus @default(PENDING)
+  createdById        String?
+  createdByName      String?
+  createdAt          DateTime             @default(now())
+  /// Quem decidiu e quando; finalSector = o que foi aplicado (pode diferir do
+  /// proposto, se o Coordenador editou antes de aprovar).
+  reviewedById       String?
+  reviewedByName     String?
+  reviewedAt         DateTime?
+  finalSectorId      String?
+  finalSectorName    String?
+
+  @@index([status])
+  @@map("product_sector_proposals")
+}
+
+enum SectorProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model ProductRequest {

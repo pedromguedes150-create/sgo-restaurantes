@@ -194,7 +194,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   // tela responder "Restrito".
   CONFIG_USERS: ['SUPERVISOR'], // supervisão visualiza o cadastro da rede
   CONFIG_SUPPLIERS: ['SUPERVISOR'], // canManageSuppliers: Admin, CEO e Supervisão
-  CONFIG_PRODUCTS: ['SUPERVISOR'], // catálogo: Admin, CEO e Supervisão
+  CONFIG_PRODUCTS: ['SUPERVISOR', 'COORDINATOR'], // catálogo: Admin, CEO, Supervisão e Coordenação (mantém e valida — decisão do Pedro; alinha a matriz com podeGerirCatalogo e a página)
   CONFIG_PIZZAS: ['SUPERVISOR'], // sabores da pizzaria: mesma linha do catálogo de produtos
   CONFIG_CD_SECTORS: ['SUPERVISOR'], // setores do CD: idem — quem cuida do catálogo cuida do setor
   UNIT_PANEL: ['SUPERVISOR', 'COORDINATOR', 'MANAGER'], // painel operacional da unidade

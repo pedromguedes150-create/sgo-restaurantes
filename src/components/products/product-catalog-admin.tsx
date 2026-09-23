@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/ds/select';
 import { MutiraoDeSetores } from '@/components/products/mutirao-de-setores';
+import { PropostasDeSetor } from '@/components/products/propostas-de-setor';
 import { FichaDoProdutoSheet } from '@/components/products/ficha-do-produto';
 import type { PendenciasDeCadastro } from '@/lib/products/pendencias';
+import type { PropostaPendente } from '@/lib/products/propostas-setor';
 
 interface Prod {
   id: string; name: string; origin: string; category: string; measure: string; active: boolean;
@@ -34,8 +36,10 @@ const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
 /** Os cards da fila "Pendências de cadastro" — cada um é um filtro da lista. */
 type Pendencia = 'novos' | 'codigos' | 'semSetor' | 'dups' | 'embalagem';
 
-export function ProductCatalogAdmin({ products, setores = [], pendencias, filtroInicial }: {
+export function ProductCatalogAdmin({ products, setores = [], pendencias, propostas = [], filtroInicial }: {
   products: Prod[]; setores?: Setor[]; pendencias?: PendenciasDeCadastro;
+  /** Propostas de setor da IA aguardando aprovação do Coordenador. */
+  propostas?: PropostaPendente[];
   /** `?pendentes=1` no endereço (o link da notificação) abre já filtrado nos novos. */
   filtroInicial?: Pendencia | null;
 }) {
@@ -127,6 +131,29 @@ export function ProductCatalogAdmin({ products, setores = [], pendencias, filtro
     } finally { setBusy(false); }
   }
 
+  /* Propõe o setor pela IA nos selecionados — a proposta NÃO aplica, entra na
+     fila de aprovação do Coordenador. Só produto do CD é considerado (o resto o
+     servidor descarta), e a IA processa em lotes: a tela avisa quantos sobraram. */
+  async function proporIA() {
+    setBusy(true); setMsg(null);
+    try {
+      const res = await fetch('/api/products/propostas', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'gerar', productIds: [...selecao] }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.ok) { setMsg(d.error ?? 'Falha ao consultar a IA.'); return; }
+      if (!d.configured) { setMsg('A IA não está configurada neste ambiente (falta a chave). Defina os setores na mão.'); return; }
+      setMsg(
+        d.criadas === 0
+          ? 'A IA não reconheceu setor para os selecionados (ou nenhum era do CD).'
+          : `${d.criadas} proposta(s) criada(s) — revise em "Propostas da IA aguardando aprovação".${d.restantes > 0 ? ` Ainda faltam ${d.restantes} selecionado(s); clique de novo.` : ''}`,
+      );
+      setSelecao(new Set());
+      router.refresh();
+    } finally { setBusy(false); }
+  }
+
   const cards: { k: Pendencia; rotulo: string; n: number }[] = pendencias ? [
     { k: 'novos', rotulo: 'Produtos novos', n: pendencias.novos.length },
     { k: 'codigos', rotulo: 'Códigos novos', n: pendencias.codigosNovos.length },
@@ -202,6 +229,9 @@ export function ProductCatalogAdmin({ products, setores = [], pendencias, filtro
         />
       )}
 
+      {/* Fila de aprovação das propostas da IA (o Coordenador decide antes de aplicar). */}
+      <PropostasDeSetor propostas={propostas} setores={setores} />
+
       {/* ── PENDÊNCIAS DE CADASTRO — a fila de quem mantém o catálogo. Cada
           card é um filtro: tocar mostra só aquele grupo na lista abaixo. ── */}
       {pendencias && (
@@ -252,6 +282,8 @@ export function ProductCatalogAdmin({ products, setores = [], pendencias, filtro
           <Button size="sm" disabled={busy || !loteSetor} onClick={() => void lote({ cdSectorId: loteSetor })}>Aplicar setor</Button>
           <div className="w-36"><Select label="Alterar origem" size="sm" value={loteOrigem} placeholder="Escolha…" onValueChange={setLoteOrigem} options={[{ value: 'FABRICA', label: 'Fábrica' }, { value: 'CD', label: 'CD' }]} /></div>
           <Button size="sm" disabled={busy || !loteOrigem} onClick={() => void lote({ origin: loteOrigem, ...(loteOrigem === 'CD' && loteSetor ? { cdSectorId: loteSetor } : {}) })}>Aplicar origem</Button>
+          {/* Propor pela IA: não aplica: entra na fila de aprovação do Coordenador. */}
+          <Button size="sm" disabled={busy} onClick={() => void proporIA()}><Sparkles className="h-4 w-4" /> Propor setor com IA</Button>
           <Button size="sm" variant="outline" disabled={busy} onClick={() => void lote({ active: true })}>Ativar</Button>
           <Button size="sm" variant="outline" disabled={busy} onClick={() => void lote({ active: false })}>Desativar</Button>
           <Button size="sm" variant="ghost" onClick={() => setSelecao(new Set())}>Limpar seleção</Button>

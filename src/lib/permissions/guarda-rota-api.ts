@@ -114,6 +114,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   // Ficha do produto (códigos, lote): manter o catálogo é editar o catálogo.
   '/api/products/ficha': { modulo: 'CONFIG_PRODUCTS', exigir: 'editar' },
   '/api/products/classificacao': { modulo: 'CONFIG_PRODUCTS', exigir: 'editar' },
+  // Propostas de setor por IA (gerar + aprovar/rejeitar do Coordenador).
+  '/api/products/propostas': { modulo: 'CONFIG_PRODUCTS', exigir: 'editar' },
   // Correção de massas pela GESTÃO (qualquer dia, retroativo com motivo). O
   // perfil que corrige também é conferido em portaDaSessao (massas.ts).
   '/api/pizzas/massas/gestao': { modulo: 'PIZZAS', exigir: 'editar' },

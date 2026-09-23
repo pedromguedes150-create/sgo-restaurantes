@@ -50,7 +50,7 @@ export interface ProdutoParaClassificar {
 export interface SetorPorIAEmLote {
   configured: boolean;
   /** Só os que o modelo conseguiu apontar para um setor REAL do cadastro. */
-  sugestoes: { productId: string; sectorId: string; sectorName: string }[];
+  sugestoes: { productId: string; sectorId: string; sectorName: string; motivo?: string }[];
   error?: string;
 }
 
@@ -94,7 +94,7 @@ export async function sugerirSetoresPorIAEmLote(input: {
           'não laticínio); o recipiente vence o conteúdo (forminha de papel para empada é descartável). ' +
           'Quando nenhum setor servir, use "NENHUM" — chutar manda o produto para a fila de um separador ' +
           'que não tem o que fazer com ele, o que é pior que deixá-lo sem setor.\n\n' +
-          'Responda SÓ com JSON: {"itens":[{"n":1,"setor":"<nome exato ou NENHUM>"}, ...]}, ' +
+          'Responda SÓ com JSON: {"itens":[{"n":1,"setor":"<nome exato ou NENHUM>","motivo":"<no máximo 8 palavras>"}, ...]}, ' +
           'na mesma ordem e com um objeto por produto.',
       }],
     });
@@ -107,7 +107,7 @@ export async function sugerirSetoresPorIAEmLote(input: {
     const porNome = new Map(input.setores.map((s) => [normalizar(s.name), s]));
     const sugestoes: SetorPorIAEmLote['sugestoes'] = [];
     for (const bruto of itensResposta) {
-      const o = bruto as { n?: unknown; setor?: unknown };
+      const o = bruto as { n?: unknown; setor?: unknown; motivo?: unknown };
       const n = Number(o.n);
       /* O índice tem de apontar para um produto da lista ENVIADA. Sem esta
          conferência, um `n` fora da faixa (ou repetido) carimbaria o setor no
@@ -117,7 +117,10 @@ export async function sugerirSetoresPorIAEmLote(input: {
       if (!nome || nome.toUpperCase() === 'NENHUM') continue;
       const setor = porNome.get(normalizar(nome));
       if (!setor) continue;
-      sugestoes.push({ productId: input.produtos[n - 1].id, sectorId: setor.id, sectorName: setor.name });
+      sugestoes.push({
+        productId: input.produtos[n - 1].id, sectorId: setor.id, sectorName: setor.name,
+        motivo: typeof o.motivo === 'string' ? o.motivo.slice(0, 120) : undefined,
+      });
     }
     return { configured: true, sugestoes };
   } catch (e) {
