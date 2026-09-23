@@ -2,11 +2,13 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Upload, Download, Trash2, Search, Sparkles } from 'lucide-react';
+import { Plus, Upload, Download, Trash2, Search, Sparkles, Pencil, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/ds/select';
 import { MutiraoDeSetores } from '@/components/products/mutirao-de-setores';
+import { FichaDoProdutoSheet } from '@/components/products/ficha-do-produto';
+import type { PendenciasDeCadastro } from '@/lib/products/pendencias';
 
 interface Prod {
   id: string; name: string; origin: string; category: string; measure: string; active: boolean;
@@ -19,17 +21,35 @@ interface Prod {
   /** 'PENDENTE' = criado pelo gerente no pedido, aguardando validação. */
   validation?: string;
   createdByName?: string | null;
+  packType?: string;
+  /** Todos os códigos (o principal incluído). */
+  codigos?: string[];
+  /** Códigos que entraram pelo pedido e ninguém do catálogo revisou. */
+  codigosNovos?: number;
 }
 interface Setor { id: string; name: string }
 const MEASURES = ['un', 'kg', 'cx', 'pct', 'L', 'dz'];
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export function ProductCatalogAdmin({ products, setores = [] }: { products: Prod[]; setores?: Setor[] }) {
+/** Os cards da fila "Pendências de cadastro" — cada um é um filtro da lista. */
+type Pendencia = 'novos' | 'codigos' | 'semSetor' | 'dups' | 'embalagem';
+
+export function ProductCatalogAdmin({ products, setores = [], pendencias, filtroInicial }: {
+  products: Prod[]; setores?: Setor[]; pendencias?: PendenciasDeCadastro;
+  /** `?pendentes=1` no endereço (o link da notificação) abre já filtrado nos novos. */
+  filtroInicial?: Pendencia | null;
+}) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [q, setQ] = useState('');
+  const [pendencia, setPendencia] = useState<Pendencia | null>(filtroInicial ?? null);
+  /* Seleção para o LOTE e a ficha aberta. */
+  const [selecao, setSelecao] = useState<Set<string>>(new Set());
+  const [fichaId, setFichaId] = useState<string | null>(null);
+  const [loteSetor, setLoteSetor] = useState<string | null>(null);
+  const [loteOrigem, setLoteOrigem] = useState<string | null>(null);
   const [name, setName] = useState(''); const [origin, setOrigin] = useState('FABRICA'); const [category, setCategory] = useState(''); const [measure, setMeasure] = useState('un');
   const [pack, setPack] = useState(''); const [barcode, setBarcode] = useState('');
   const [novoSetor, setNovoSetor] = useState<string | null>(null);
@@ -75,14 +95,45 @@ export function ProductCatalogAdmin({ products, setores = [] }: { products: Prod
   }
 
   const semSetor = useMemo(() => products.filter((p) => p.origin === 'CD' && !p.cdSectorId), [products]);
+  const emDuplicidade = useMemo(() => new Set(pendencias?.idsEmDuplicidade ?? []), [pendencias]);
 
   const filtered = useMemo(() => {
     const t = norm(q.trim());
     /* Busca por código de barras também: com 214 bebidas, achar pelo nome exato
-       é mais lento do que bipar a garrafa. */
-    const base = soSemSetor ? semSetor : products;
-    return base.filter((p) => !t || norm(p.name).includes(t) || norm(p.category).includes(t) || (p.barcode ?? '').includes(t));
-  }, [products, q, soSemSetor, semSetor]);
+       é mais lento do que bipar a garrafa. Vale para QUALQUER código do
+       produto, não só o principal. */
+    let base = soSemSetor ? semSetor : products;
+    if (pendencia === 'novos') base = base.filter((p) => p.validation === 'PENDENTE');
+    else if (pendencia === 'codigos') base = base.filter((p) => (p.codigosNovos ?? 0) > 0);
+    else if (pendencia === 'semSetor') base = base.filter((p) => p.origin === 'CD' && !p.cdSectorId);
+    else if (pendencia === 'dups') base = base.filter((p) => emDuplicidade.has(p.id));
+    else if (pendencia === 'embalagem') base = base.filter((p) => p.packType && p.packType !== 'UN' && !(p.packSize && p.packSize > 1));
+    return base.filter((p) => !t || norm(p.name).includes(t) || norm(p.category).includes(t) || (p.codigos ?? [p.barcode ?? '']).some((c) => c.includes(t)));
+  }, [products, q, soSemSetor, semSetor, pendencia, emDuplicidade]);
+
+  function alternar(id: string) {
+    setSelecao((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }
+  async function lote(body: Record<string, unknown>) {
+    setBusy(true); setMsg(null);
+    try {
+      const res = await fetch('/api/products/ficha', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'lote', ids: [...selecao], ...body }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setMsg(d.error ?? 'Falha'); return; }
+      /* O que não pôde é dito: "12 ignorados" são justamente os que precisam de atenção. */
+      setMsg(`Lote: ${d.aplicados} aplicado(s)${d.ignorados ? `, ${d.ignorados} ignorado(s) — produto do CD validado não fica sem setor` : ''}.`);
+      setSelecao(new Set());
+      router.refresh();
+    } finally { setBusy(false); }
+  }
+
+  const cards: { k: Pendencia; rotulo: string; n: number }[] = pendencias ? [
+    { k: 'novos', rotulo: 'Produtos novos', n: pendencias.novos.length },
+    { k: 'codigos', rotulo: 'Códigos novos', n: pendencias.codigosNovos.length },
+    { k: 'semSetor', rotulo: 'Sem setor', n: pendencias.semSetor },
+    { k: 'dups', rotulo: 'Possíveis duplicidades', n: pendencias.duplicidades.length },
+    { k: 'embalagem', rotulo: 'Embalagem não definida', n: pendencias.embalagemIndefinida.length },
+  ] : [];
 
   return (
     <div className="space-y-4">
@@ -151,16 +202,73 @@ export function ProductCatalogAdmin({ products, setores = [] }: { products: Prod
         />
       )}
 
+      {/* ── PENDÊNCIAS DE CADASTRO — a fila de quem mantém o catálogo. Cada
+          card é um filtro: tocar mostra só aquele grupo na lista abaixo. ── */}
+      {pendencias && (
+        <div className="rounded-lg border p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink-900"><ClipboardList className="h-4 w-4 text-brand" /> Pendências de cadastro</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {cards.map((c) => (
+              <button
+                key={c.k} type="button" aria-pressed={pendencia === c.k}
+                onClick={() => { setPendencia(pendencia === c.k ? null : c.k); setSoSemSetor(false); }}
+                className={`rounded-lg border p-2 text-left ${pendencia === c.k ? 'border-brand bg-brand/5' : c.n > 0 ? 'border-warning/40 bg-warning-bg' : 'border-line bg-surface'}`}
+              >
+                <p className={`text-lg font-bold tabular-nums ${c.n > 0 ? 'text-ink-900' : 'text-ink-500'}`}>{c.n}</p>
+                <p className="text-[11px] text-ink-700">{c.rotulo}</p>
+              </button>
+            ))}
+          </div>
+          {pendencia === 'dups' && pendencias.duplicidades.length > 0 && (
+            <ul className="mt-2 divide-y divide-line rounded-lg border bg-surface text-sm">
+              {pendencias.duplicidades.map((d) => (
+                <li key={`${d.aId}-${d.bId}`} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                  <span className="min-w-0 text-ink-900">
+                    <button type="button" className="text-brand underline" onClick={() => setFichaId(d.aId)}>{d.aName}</button>
+                    <span className="text-ink-500"> × </span>
+                    <button type="button" className="text-brand underline" onClick={() => setFichaId(d.bId)}>{d.bName}</button>
+                  </span>
+                  <span className="text-[11px] text-ink-500">Abra um deles e transfira os códigos para o que fica; depois desative o outro.</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {pendencia === 'codigos' && pendencias.codigosNovos.length > 0 && (
+            <p className="mt-2 text-xs text-ink-500">Códigos vinculados pelo pedido e ainda não revisados. Abra a ficha do produto para revisar, transferir ou remover.</p>
+          )}
+        </div>
+      )}
+
       <div className="relative">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar no catálogo…" className="h-10 w-full rounded-lg border-2 border-line-strong bg-surface pl-9 pr-3 text-sm" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="buscar no catálogo por nome, categoria ou qualquer código…" className="h-10 w-full rounded-lg border-2 border-line-strong bg-surface pl-9 pr-3 text-sm" />
       </div>
 
-      <p className="text-xs text-ink-500">{filtered.length} de {products.length} produto(s)</p>
+      {/* ── LOTE: aparece só com seleção. ── */}
+      {selecao.size > 0 && (
+        <div className="flex flex-wrap items-end gap-2 rounded-lg border-2 border-brand/40 bg-brand/5 p-2.5">
+          <p className="w-full text-sm font-semibold text-ink-900 sm:w-auto">{selecao.size} selecionado(s)</p>
+          <div className="w-44"><Select label="Definir setor" size="sm" value={loteSetor} placeholder="Escolha…" onValueChange={setLoteSetor} options={setores.map((s) => ({ value: s.id, label: s.name }))} /></div>
+          <Button size="sm" disabled={busy || !loteSetor} onClick={() => void lote({ cdSectorId: loteSetor })}>Aplicar setor</Button>
+          <div className="w-36"><Select label="Alterar origem" size="sm" value={loteOrigem} placeholder="Escolha…" onValueChange={setLoteOrigem} options={[{ value: 'FABRICA', label: 'Fábrica' }, { value: 'CD', label: 'CD' }]} /></div>
+          <Button size="sm" disabled={busy || !loteOrigem} onClick={() => void lote({ origin: loteOrigem, ...(loteOrigem === 'CD' && loteSetor ? { cdSectorId: loteSetor } : {}) })}>Aplicar origem</Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => void lote({ active: true })}>Ativar</Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => void lote({ active: false })}>Desativar</Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelecao(new Set())}>Limpar seleção</Button>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-ink-500">{filtered.length} de {products.length} produto(s){pendencia ? ` · filtro: ${cards.find((c) => c.k === pendencia)?.rotulo}` : ''}</p>
+        {filtered.length > 0 && (
+          <button type="button" className="text-xs text-brand underline" onClick={() => setSelecao(new Set(filtered.map((p) => p.id)))}>Selecionar os {filtered.length} da lista</button>
+        )}
+      </div>
       <div className="space-y-1.5">
         {filtered.map((p) => (
           <div key={p.id} className={`flex items-center justify-between gap-2 rounded-lg border p-2 ${p.active ? 'bg-surface' : 'bg-canvas opacity-60'}`}>
-            <div className="min-w-0">
+            <input type="checkbox" aria-label={`Selecionar ${p.name}`} checked={selecao.has(p.id)} onChange={() => alternar(p.id)} className="h-4 w-4 shrink-0 accent-brand" />
+            <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 truncate text-sm font-medium text-ink-900">
                 {p.name}
                 {p.validation === 'PENDENTE' && (
@@ -171,9 +279,14 @@ export function ProductCatalogAdmin({ products, setores = [] }: { products: Prod
                 {p.origin === 'CD' ? 'CD' : 'Fábrica'} · {p.category} · {p.measure}
                 {p.packSize ? ` · cx com ${p.packSize}` : ''}
                 {p.barcode ? ` · ${p.barcode}` : ''}
+                {(p.codigos?.length ?? 0) > 1 ? ` (+${(p.codigos?.length ?? 1) - 1} código(s))` : ''}
+                {(p.codigosNovos ?? 0) > 0 ? ` · ${p.codigosNovos} código(s) a revisar` : ''}
                 {p.validation === 'PENDENTE' && p.createdByName ? ` · cadastrado por ${p.createdByName} no pedido` : ''}
               </p>
             </div>
+            <Button size="sm" variant="outline" className="shrink-0" onClick={() => setFichaId(p.id)}>
+              <Pencil className="h-3.5 w-3.5" /> Ver / editar
+            </Button>
             {/* O setor se atribui NA LINHA, sem abrir formulário: são mais de mil
                 produtos para acertar, e um modal por item tornaria o mutirão
                 inviável. Trocar aqui já salva. */}
@@ -210,6 +323,13 @@ export function ProductCatalogAdmin({ products, setores = [] }: { products: Prod
           </div>
         ))}
       </div>
+
+      <FichaDoProdutoSheet
+        productId={fichaId}
+        onClose={() => setFichaId(null)}
+        setores={setores}
+        produtos={products.map((p) => ({ id: p.id, name: p.name, category: p.category, measure: p.measure, barcode: p.barcode, barcodes: p.codigos }))}
+      />
     </div>
   );
 }

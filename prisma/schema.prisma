@@ -1223,11 +1223,38 @@ model ProductBarcode {
   code      String   @unique
   createdById String?
   createdAt DateTime @default(now())
+  /// Quem mantém o catálogo já olhou este código. Nulo = entrou pelo pedido
+  /// (gerente) e ainda está na fila "códigos novos" das Pendências de cadastro.
+  reviewedAt DateTime?
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+  @@index([reviewedAt])
   @@map("product_barcodes")
+}
+
+/// Histórico IMUTÁVEL dos códigos de barras: adicionado, removido ou
+/// TRANSFERIDO de um produto para outro (a correção do vínculo errado). Fica
+/// nos dois produtos — de quem saiu e para quem foi — com quem mexeu e o motivo.
+model ProductBarcodeChange {
+  id              String   @id @default(cuid())
+  code            String
+  /// ADD | REMOVE | TRANSFER
+  action          String
+  fromProductId   String?
+  fromProductName String?
+  toProductId     String?
+  toProductName   String?
+  userId          String?
+  userName        String
+  reason          String?
+  createdAt       DateTime @default(now())
+
+  @@index([code])
+  @@index([fromProductId])
+  @@index([toProductId])
+  @@map("product_barcode_changes")
 }
 
 model ProductRequest {

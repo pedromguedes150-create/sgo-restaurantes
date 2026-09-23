@@ -64,3 +64,38 @@ export function possiveisDuplicados<T extends { name: string }>(produtos: T[], n
   }
   return out.sort((a, b) => b.grau - a.grau || a.produto.name.localeCompare(b.produto.name, 'pt-BR')).slice(0, limite);
 }
+
+export interface ParDuplicado<T> {
+  a: T;
+  b: T;
+  /** Tokens em comum ÷ tokens do MAIOR nome — simétrico. */
+  grau: number;
+}
+
+/**
+ * Pares do catálogo que parecem ser o mesmo produto — a fila "possíveis
+ * duplicidades" do Administrador.
+ *
+ * Simétrico de propósito (divide pelo maior conjunto): "Arroz" contra "Arroz
+ * Tio João 5kg" NÃO é par — três tokens de diferença é outro produto, e o
+ * sentido único do `possiveisDuplicados` (que existe para quem está
+ * DIGITANDO um nome curto) apontaria tudo como duplicado de tudo. Número
+ * diferente exclui o par: lata e garrafa da mesma marca não são duplicidade.
+ */
+export function paresDuplicados<T extends { id: string; name: string }>(produtos: T[], limiar = 0.75, limite = 60): ParDuplicado<T>[] {
+  const tokens = produtos.map((p) => tokensDeProduto(p.name));
+  const numeros = tokens.map((t) => [...t].filter((x) => /^\d/.test(x)));
+  const out: ParDuplicado<T>[] = [];
+  for (let i = 0; i < produtos.length; i++) {
+    if (tokens[i].size === 0) continue;
+    for (let j = i + 1; j < produtos.length; j++) {
+      if (tokens[j].size === 0) continue;
+      if (numeros[i].length && numeros[j].length && !numeros[i].some((n) => numeros[j].includes(n))) continue;
+      let comuns = 0;
+      for (const t of tokens[i]) if (tokens[j].has(t)) comuns++;
+      const grau = comuns / Math.max(tokens[i].size, tokens[j].size);
+      if (grau >= limiar) out.push({ a: produtos[i], b: produtos[j], grau: Math.round(grau * 100) / 100 });
+    }
+  }
+  return out.sort((x, y) => y.grau - x.grau || x.a.name.localeCompare(y.a.name, 'pt-BR')).slice(0, limite);
+}
