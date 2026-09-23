@@ -4,6 +4,7 @@ import { listAllProducts } from '@/lib/products';
 import { setoresAtivosDoCd } from '@/lib/products/setores';
 import { ensureSetoresDoRomaneio } from '@/lib/products/setores-padrao';
 import { pendenciasDeCadastro } from '@/lib/products/pendencias';
+import { listarPropostasPendentes } from '@/lib/products/propostas-setor';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProductCatalogAdmin } from '@/components/products/product-catalog-admin';
 import { ArrowLeft } from 'lucide-react';
@@ -19,7 +20,7 @@ export default async function ProdutosConfigPage({ searchParams }: { searchParam
      EXISTA — daí garantir os do romaneio aqui também, e não só na tela de
      setores, que a pessoa pode nunca abrir. */
   await ensureSetoresDoRomaneio().catch(() => {});
-  const [products, setores, pendencias] = await Promise.all([listAllProducts(), setoresAtivosDoCd(), pendenciasDeCadastro()]);
+  const [products, setores, pendencias, propostas] = await Promise.all([listAllProducts(), setoresAtivosDoCd(), pendenciasDeCadastro(), listarPropostasPendentes()]);
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
@@ -37,6 +38,7 @@ export default async function ProdutosConfigPage({ searchParams }: { searchParam
           }))}
           setores={setores}
           pendencias={pendencias}
+          propostas={propostas}
           filtroInicial={searchParams.pendentes === '1' ? 'novos' : null}
         />
       </CardContent></Card>
