@@ -244,7 +244,12 @@ export function PedidoClient({
       if (d.produto) aprender(d.produto);
       somar(p.id, 1);
       fecharNaoReconhecido();
-      setAviso(`Código vinculado a ${p.name} — nos próximos pedidos ele já será reconhecido. Produto adicionado.`);
+      /* Limpa a busca que o "Localizar" do diálogo deixou preenchida: sem isso
+         a lista de resultados fica no lugar e empurra "No pedido" (com a tira de
+         embalagem) para fora da tela. O aviso diz "confira a embalagem abaixo",
+         e é preciso que "abaixo" esteja de fato visível. */
+      setTermo('');
+      setAviso(`Código vinculado a ${p.name} — nos próximos pedidos ele já será reconhecido. Confira a embalagem e a quantidade abaixo.`);
       router.refresh();
     } finally { setBusy(false); }
   }
@@ -296,6 +301,8 @@ export function PedidoClient({
       setCarrinho((c) => ({ ...c, [p.id]: { qty: qtd, pack: novoPack } }));
       fecharNaoReconhecido();
       setNovoNome(''); setNovoQtd('1'); setNovoPack('UN'); setNovoPackSize('');
+      /* Mesma razão do vincular: o "Localizar" deixou a busca preenchida. */
+      setTermo('');
       setAviso(`${p.name} cadastrado (pendente de validação) e adicionado ao pedido. A Administração vai confirmar o cadastro e o setor.`);
       router.refresh();
     } finally { setBusy(false); }
@@ -509,21 +516,40 @@ export function PedidoClient({
           {resultados.length === 0 && (
             <li className="px-3 py-3 text-sm text-ink-500">Nenhum produto encontrado para &quot;{termo}&quot;.</li>
           )}
-          {resultados.map((p) => (
-            <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-2">
-              <span className="min-w-0">
-                <span className="block truncate text-sm text-ink-900">{p.name}</span>
-                <span className="block text-[11px] text-ink-500">
-                  {p.category} · {p.measure}{p.packSize ? ` · ${p.packSize} por embalagem` : ''}
-                </span>
-              </span>
-              <div className="flex shrink-0 items-center gap-1">
-                <Button size="sm" variant="ghost" onClick={() => somar(p.id, -1)} aria-label="Diminuir"><Minus className="h-4 w-4" /></Button>
-                <span className="w-8 text-center text-sm font-semibold tabular-nums">{carrinho[p.id]?.qty ?? 0}</span>
-                <Button size="sm" variant="ghost" onClick={() => somar(p.id, 1)} aria-label="Aumentar"><Plus className="h-4 w-4" /></Button>
-              </div>
-            </li>
-          ))}
+          {resultados.map((p) => {
+            const noCarrinho = carrinho[p.id];
+            return (
+              <li key={p.id} className="px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm text-ink-900">{p.name}</span>
+                    <span className="block text-[11px] text-ink-500">
+                      {p.category} · {p.measure}{p.packSize ? ` · ${p.packSize} por embalagem` : ''}
+                    </span>
+                  </span>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => somar(p.id, -1)} aria-label="Diminuir"><Minus className="h-4 w-4" /></Button>
+                    <span className="w-8 text-center text-sm font-semibold tabular-nums">{noCarrinho?.qty ?? 0}</span>
+                    <Button size="sm" variant="ghost" onClick={() => somar(p.id, 1)} aria-label="Aumentar"><Plus className="h-4 w-4" /></Button>
+                  </div>
+                </div>
+                {/* A embalagem aparece assim que o item entra no pedido, na
+                    PRÓPRIA linha do resultado: Unidade/Fardo/Display/Caixa
+                    escolhidos ali, sem rolar até "No pedido" lá embaixo. Quando
+                    o gerente bipa um código, a busca fica preenchida e empurra a
+                    seção de baixo para fora da tela — a tira aqui é o que garante
+                    que a escolha de embalagem nunca some do caminho. */}
+                {noCarrinho && noCarrinho.qty > 0 && (
+                  <>
+                    <TiraDeEmbalagem valor={noCarrinho.pack} onEscolher={(u) => trocarEmbalagem(p.id, u)} />
+                    <p className="mt-1 text-[11px] text-ink-500">
+                      Pedido: <b className="text-ink-900">{rotuloDaQuantidade(noCarrinho.qty, noCarrinho.pack, p.measure)}</b>
+                    </p>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
 
