@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { ArrowLeft, Plug, CheckCircle2, XCircle, ArrowDownToLine, ArrowUpFromLine, Stethoscope } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
-import { rhConfigured } from '@/lib/rh/client';
+import { rhConfigured, rhV2Base, rhV2Configured } from '@/lib/rh/client';
 import { feriasWebhookConfigured } from '@/lib/rh/webhook';
+import { RhV2Ping } from '@/components/admin/rh-v2-ping';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -60,6 +61,21 @@ export default async function IntegracoesPage() {
             </span>
             <span className="text-ink-900">→</span>
           </Link>
+        </CardContent>
+      </Card>
+
+      {/* 1b. API do RH — v2 (em preparação). Transporte e diagnóstico prontos;
+          o sync SEGUE na v1 até o formato da v2 ser validado com uma unidade
+          real. O botão de teste roda no servidor do SGO — em produção, no
+          droplet — e é o que responde se a v2 aceita a chave de lá. */}
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ArrowDownToLine className="h-4 w-4 text-brand" /> API do RH — v2 (em preparação)</CardTitle></CardHeader>
+        <CardContent className="space-y-1 text-sm">
+          <Row k="Base" v={rhV2Base()} mono />
+          <Row k="Autenticação" v={`header x-api-key = ${mask(process.env.RH_API_V2_KEY)}`} />
+          <Row k="Status" v={rhV2Configured() ? 'Chave configurada — aguardando liberação/validação do formato; o sync continua na v1' : 'SEM CHAVE (RH_API_V2_KEY)'} ok={rhV2Configured()} />
+          <Row k="Em uso pelo sync" v="Não — v1 continua sendo a produção" />
+          <RhV2Ping configurada={rhV2Configured()} />
         </CardContent>
       </Card>
 
