@@ -1,22 +1,33 @@
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
-import { Wand2, CopyCheck, FileSpreadsheet, Printer, CalendarPlus, Settings2, Trash2 } from 'lucide-react';
+import { Wand2, CopyCheck, FileSpreadsheet, Printer, CalendarPlus, Settings2, Trash2, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/ds/select';
 import { Sheet } from '@/components/ui/ds/sheet';
 import { DatePicker } from '@/components/ui/ds/date-picker';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
+import { StatCard } from '@/components/ui/ds/stat-card';
 import { shortUnitName } from '@/lib/unit-name';
 import { cn } from '@/lib/utils';
+import {
+  filtrarLinhas, opcoesDosFiltros, resumoDaGrade, totaisDaLinha, detalheDasAusencias, celulaDivergente,
+  type FiltrosDaGrade, type ModoDaGrade,
+} from '@/lib/schedule/grade-filtros';
 
 type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'ATRASO';
 type ScheduleType = 'TWELVE36_ODD' | 'TWELVE36_EVEN' | 'SIX_ONE' | 'FIVE_TWO' | 'CUSTOM';
 interface Cell { planned: DayStatus; actual: DayStatus | null }
-interface Row { collaboratorId: string; name: string; jobTitle: string | null; typeLabel: string; scheduleType: ScheduleType; shiftLabel: string | null; days: Cell[] }
+interface Row {
+  collaboratorId: string; name: string; jobTitle: string | null; typeLabel: string; scheduleType: ScheduleType; shiftLabel: string | null;
+  /** Setor(es) do Mapa de Funções — é por onde o gerente filtra a grade. */
+  setores?: string[];
+  days: Cell[];
+}
 interface Grid { year: number; month: number; daysCount: number; rows: Row[]; withoutSchedule: { id: string; name: string }[] }
 interface Unit { id: string; name: string }
 interface Turno { id: string; name: string; startTime: string | null; endTime: string | null }
@@ -77,8 +88,16 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
   isAdmin?: boolean;
 }) {
   const router = useRouter();
-  const [mode, setMode] = useState<'planejado' | 'realizado' | 'comparacao'>(abaInicial(abas, 'SCHEDULE', 'realizado') as 'planejado' | 'realizado' | 'comparacao');
+  const [mode, setMode] = useState<ModoDaGrade>(abaInicial(abas, 'SCHEDULE', 'realizado') as ModoDaGrade);
   const [busy, setBusy] = useState(false);
+  /* Filtros da grade (fase 2). Vivem só na tela: são um jeito de OLHAR o mês,
+     não uma consulta diferente — o servidor manda a unidade inteira. */
+  const [filtros, setFiltros] = useState<FiltrosDaGrade>({});
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const opcoes = useMemo(() => opcoesDosFiltros(grid.rows), [grid.rows]);
+  const linhasVisiveis = useMemo(() => filtrarLinhas(grid.rows, filtros, mode) as Row[], [grid.rows, filtros, mode]);
+  const resumo = useMemo(() => resumoDaGrade(linhasVisiveis, mode), [linhasVisiveis, mode]);
+  const filtrosAtivos = Object.values(filtros).filter((v) => v !== undefined && v !== '' && v !== false).length;
   const [edit, setEdit] = useState<string | null>(null); // `${collabId}:${day}`
   const [showAbsence, setShowAbsence] = useState(false);
   const [showPattern, setShowPattern] = useState(grid.rows.length === 0);
@@ -140,13 +159,69 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
         </div>
       </div>
 
-      {/* Modo */}
+      {/* A barra de três botões (fase 2): Planejado · Realizado · Comparação.
+          Os botões de AÇÃO ficam na linha de baixo, porque misturados aqui a
+          aba parecia mais um botão entre nove. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+        <SegmentedControl
+          aria-label="Visão da escala"
+          size="sm"
+          value={mode}
+          onValueChange={(v) => setMode(v)}
+          options={(['planejado', 'realizado', 'comparacao'] as const).filter((m) => podeAba(abas, m)).map((m) => ({
+            value: m,
+            label: m === 'planejado' ? 'Planejado' : m === 'realizado' ? 'Realizado' : 'Comparação',
+            ...(m === 'comparacao' && resumo.pessoasDivergentes > 0 ? { badge: resumo.pessoasDivergentes, badgeTone: 'danger' as const } : {}),
+          }))}
+        />
+        <Button size="sm" variant={filtrosAtivos > 0 ? 'default' : 'outline'} onClick={() => setMostrarFiltros((v) => !v)}>
+          <Filter className="h-4 w-4" /> Filtros{filtrosAtivos > 0 ? ` (${filtrosAtivos})` : ''}
+        </Button>
+      </div>
+
+      {mostrarFiltros && (
+        <div className="flex flex-wrap items-end gap-2 rounded-lg border border-line bg-sunken/40 p-3 print:hidden">
+          <div className="w-48">
+            <Label htmlFor="esc-nome" className="text-xs">Nome ou função</Label>
+            <Input id="esc-nome" value={filtros.nome ?? ''} onChange={(e) => setFiltros((f) => ({ ...f, nome: e.target.value || undefined }))} placeholder="Procurar…" className="mt-1 h-9 text-sm" />
+          </div>
+          {opcoes.tipos.length > 1 && (
+            <div className="w-44"><Select label="Tipo de escala" size="sm" value={filtros.tipo ?? ''} onValueChange={(v) => setFiltros((f) => ({ ...f, tipo: v || undefined }))} options={[{ value: '', label: 'Todos' }, ...opcoes.tipos.map((t) => ({ value: t, label: t }))]} /></div>
+          )}
+          {opcoes.setores.length > 0 && (
+            <div className="w-44"><Select label="Setor (Mapa de Funções)" size="sm" value={filtros.setor ?? ''} onValueChange={(v) => setFiltros((f) => ({ ...f, setor: v || undefined }))} options={[{ value: '', label: 'Todos' }, ...opcoes.setores.map((t) => ({ value: t, label: t }))]} /></div>
+          )}
+          {opcoes.horarios.length > 1 && (
+            <div className="w-40"><Select label="Horário" size="sm" value={filtros.horario ?? ''} onValueChange={(v) => setFiltros((f) => ({ ...f, horario: v || undefined }))} options={[{ value: '', label: 'Todos' }, ...opcoes.horarios.map((t) => ({ value: t, label: t }))]} /></div>
+          )}
+          {mode === 'comparacao' && (
+            <label className="flex h-9 items-center gap-2 text-sm text-ink-900">
+              <input type="checkbox" checked={Boolean(filtros.soDivergentes)} onChange={(e) => setFiltros((f) => ({ ...f, soDivergentes: e.target.checked || undefined }))} className="h-4 w-4 accent-brand" />
+              Só quem divergiu do planejado
+            </label>
+          )}
+          {filtrosAtivos > 0 && (
+            <Button size="sm" variant="ghost" onClick={() => setFiltros({})}><X className="h-4 w-4" /> Limpar filtros</Button>
+          )}
+        </div>
+      )}
+
+      {/* Os quatro blocos (fase 2): a soma das linhas VISÍVEIS. Filtrou a
+          Cozinha, os números são da Cozinha — um bloco da unidade inteira ao
+          lado de uma grade filtrada diria dois números que não conversam. */}
+      {grid.rows.length > 0 && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 print:hidden">
+          <StatCard label="Na grade" value={resumo.pessoas} hint={filtrosAtivos > 0 ? `de ${grid.rows.length} na unidade` : 'colaboradores com escala'} />
+          <StatCard label="Dias de trabalho" value={resumo.trabalho} hint={mode === 'realizado' && resumo.vazios > 0 ? `${resumo.vazios} dia(s) sem marcação` : mode === 'planejado' ? 'previstos no mês' : 'registrados'} />
+          <StatCard label="Folgas" value={resumo.folgas} hint={mode === 'planejado' ? 'previstas no mês' : 'registradas'} />
+          {mode === 'comparacao'
+            ? <StatCard label="Divergências" value={resumo.divergencias} tone={resumo.divergencias > 0 ? 'danger' : 'default'} hint={resumo.pessoasDivergentes > 0 ? `em ${resumo.pessoasDivergentes} pessoa(s)` : 'realizado = planejado'} />
+            : <StatCard label="Ausências" value={resumo.ausencias} tone={resumo.ausencias > 0 ? 'warning' : 'default'} hint={detalheDasAusencias(resumo) || 'faltas, atestados e férias'} />}
+        </div>
+      )}
+
+      {/* Ações da aba */}
       <div className="flex flex-wrap items-center gap-2 print:hidden">
-        {(['planejado', 'realizado', 'comparacao'] as const).filter((m) => podeAba(abas, m)).map((m) => (
-          <button key={m} onClick={() => setMode(m)} className={cn('rounded-full px-3 py-1.5 text-sm font-semibold', mode === m ? 'bg-brand text-on-brand' : 'border')}>
-            {m === 'planejado' ? 'Planejado' : m === 'realizado' ? 'Realizado' : 'Comparação'}
-          </button>
-        ))}
         {mode === 'realizado' && (
           <>
             {/* Antes se chamava "Preencher automaticamente", nome que sugeria
@@ -306,6 +381,10 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
       {/* Grade */}
       {grid.rows.length === 0 ? (
         <p className="text-sm text-ink-500">Nenhum colaborador com escala cadastrada nesta unidade. Use “Cadastrar escala”.</p>
+      ) : linhasVisiveis.length === 0 ? (
+        <p className="rounded-lg border border-line bg-sunken/40 px-3 py-4 text-center text-sm text-ink-500">
+          Ninguém corresponde aos filtros. <button onClick={() => setFiltros({})} className="font-semibold text-brand underline">Limpar filtros</button>
+        </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
           <table className="min-w-full border-collapse text-center text-xs">
@@ -318,29 +397,38 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                     <div>{d}</div>
                   </th>
                 ))}
+                {/* Totais por pessoa (fase 2): T · F · ausências — no mês, na aba. */}
+                <th className="min-w-[88px] px-2 py-1 font-medium" title="Trabalho · Folgas · Ausências no mês">
+                  <div className="text-[10px] opacity-80">{mode === 'comparacao' ? 'Diverg.' : 'Totais'}</div>
+                  <div>{mode === 'comparacao' ? 'dias' : 'T · F · Aus'}</div>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {grid.rows.map((row, idx) => {
-                const showGroup = idx === 0 || grid.rows[idx - 1].typeLabel !== row.typeLabel;
+              {linhasVisiveis.map((row, idx) => {
+                const showGroup = idx === 0 || linhasVisiveis[idx - 1].typeLabel !== row.typeLabel;
+                const tot = totaisDaLinha(row, mode);
                 return (
                   <Fragment key={row.collaboratorId}>
                     {showGroup && (
                       <tr className="bg-sunken">
-                        <td colSpan={grid.daysCount + 1} className="px-2 py-1 text-left sgo-type-11 font-semibold tracking-wide text-ink-500">{row.typeLabel}</td>
+                        <td colSpan={grid.daysCount + 2} className="px-2 py-1 text-left sgo-type-11 font-semibold tracking-wide text-ink-500">{row.typeLabel}</td>
                       </tr>
                     )}
                     <tr className="border-t">
                       <td className="sticky left-0 z-10 min-w-[184px] bg-surface px-2 py-1.5 text-left">
                         <div className="font-semibold text-ink-900">{row.name}</div>
-                        <div className="text-[10px] text-ink-500">{row.jobTitle ?? ''}{row.shiftLabel ? ` · ${row.shiftLabel}` : ''}</div>
+                        <div className="text-[10px] text-ink-500">
+                          {row.jobTitle ?? ''}{row.shiftLabel ? ` · ${row.shiftLabel}` : ''}
+                          {row.setores && row.setores.length > 0 ? ` · ${row.setores.join(', ')}` : ''}
+                        </div>
                       </td>
                       {row.days.map((cell, i) => {
                         const day = i + 1;
                         const key = `${row.collaboratorId}:${day}`;
                         if (mode === 'comparacao') {
                           const act = cell.actual;
-                          const diff = act !== null && act !== cell.planned;
+                          const diff = celulaDivergente(cell);
                           return (
                             <td key={day} className={cn('px-0.5 py-0.5', diff && 'bg-danger/10', isWeekend(day) && !diff && 'bg-sunken/40')}>
                               <div className={cn('mx-auto flex h-5 w-6 items-center justify-center rounded text-[10px] font-bold', STATUS[cell.planned].cls)}>{STATUS[cell.planned].code}</div>
@@ -380,6 +468,16 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                           </td>
                         );
                       })}
+                      <td className="px-2 py-1.5 tabular-nums text-ink-700">
+                        {mode === 'comparacao'
+                          ? <span className={cn('font-semibold', tot.divergencias > 0 ? 'text-danger' : 'text-ink-500')}>{tot.divergencias}</span>
+                          : <>
+                              <span className="font-semibold text-ink-900">{tot.trabalho}</span>
+                              <span className="text-ink-400"> · </span>{tot.folgas}
+                              <span className="text-ink-400"> · </span>
+                              <span className={cn(tot.ausencias > 0 && 'font-semibold text-warning')}>{tot.ausencias}</span>
+                            </>}
+                      </td>
                     </tr>
                   </Fragment>
                 );

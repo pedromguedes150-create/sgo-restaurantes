@@ -75,3 +75,23 @@ export function descreverQuantidade(unidades: number, tipo: TipoDeEmbalagem, uni
   if (sobra === 0) return `${plural(pacotes, r)} · ${emUn}`;
   return `${plural(pacotes, r)} + ${sobra.toLocaleString('pt-BR')} un · ${emUn}`;
 }
+
+/**
+ * A quantidade SUGERIDA ao lançar no estoque um item recebido da Fábrica/CD.
+ *
+ * O pedido guarda "como o gerente pediu" (fardo/display/caixa/un, SEM fator) e
+ * o estoque guarda unidades com fator congelado. Só há sugestão quando as duas
+ * leituras são a mesma embalagem — 2 fardos pedidos, produto contado em fardos:
+ * sugere 2. Pediu em CAIXA (que o estoque não conhece) ou em unidade quando o
+ * produto se conta em fardo, a sugestão é `null` e a pessoa informa: propor um
+ * número convertido por um `packSize` que pode estar errado seria inventar
+ * saldo com cara de conferido.
+ */
+export function quantidadeSugerida(
+  embalagemPedida: 'UN' | 'FARDO' | 'DISPLAY' | 'CAIXA' | string,
+  tipoDoEstoque: TipoDeEmbalagem,
+  quantidadeRecebida: number | null,
+): number | null {
+  if (quantidadeRecebida === null || !Number.isFinite(quantidadeRecebida) || quantidadeRecebida <= 0) return null;
+  return embalagemPedida === tipoDoEstoque ? quantidadeRecebida : null;
+}

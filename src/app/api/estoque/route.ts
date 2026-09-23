@@ -5,6 +5,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { biparCodigo, cadastrarProduto, sugerirSetor, vincularCodigo } from '@/lib/stock/catalogo';
 import { lancarEntrada, registrarContagem, tratarLote, type Tratativa } from '@/lib/stock/lotes';
+import { transferirLote } from '@/lib/stock/transferencia';
 
 const REASONS: Record<string, { msg: string; status: number }> = {
   FORBIDDEN: { msg: 'Sem acesso a esta unidade', status: 403 },
@@ -14,6 +15,9 @@ const REASONS: Record<string, { msg: string; status: number }> = {
   ENCERRADO: { msg: 'Este lote já foi encerrado.', status: 409 },
   CODIGO_INVALIDO: { msg: 'Código de barras inválido.', status: 400 },
   JA_VINCULADO: { msg: 'Este código já pertence a outro produto.', status: 409 },
+  JA_LANCADO: { msg: 'Este item do pedido já foi lançado no estoque.', status: 409 },
+  DESTINO_INVALIDO: { msg: 'Escolha a unidade que vai receber.', status: 400 },
+  SALDO_INSUFICIENTE: { msg: 'O lote não tem esse saldo.', status: 409 },
 };
 
 const TRATATIVAS: Tratativa[] = ['FINALIZADO', 'AINDA_TEM', 'DESCARTE', 'TRANSFERIDO'];
@@ -84,9 +88,21 @@ async function tratar(req: Request) {
       lotCode: b?.lotCode ? String(b.lotCode) : null,
       expiresAt: b?.expiresAt ? String(b.expiresAt) : null,
       note: b?.note ? String(b.note) : null,
+      requestItemId: b?.requestItemId ? String(b.requestItemId) : null,
     }, ctx);
     if (!r.ok) return reasonResponse(REASONS, r.reason, r.message);
     return NextResponse.json({ ok: true, lotId: r.lotId, unidades: r.unidades });
+  }
+
+  if (acao === 'transferir') {
+    const r = await transferirLote(user, {
+      lotId: String(b?.lotId ?? ''),
+      paraUnitId: String(b?.paraUnitId ?? ''),
+      quantidade: b?.quantidade != null && b.quantidade !== '' ? Number(b.quantidade) : null,
+      note: b?.note ? String(b.note) : null,
+    }, ctx);
+    if (!r.ok) return reasonResponse(REASONS, r.reason, r.message);
+    return NextResponse.json({ ok: true, destinoLotId: r.destinoLotId, unidades: r.unidades, origemEncerrada: r.origemEncerrada });
   }
 
   if (acao === 'contagem') {
@@ -101,6 +117,7 @@ async function tratar(req: Request) {
     const r = await tratarLote(user, String(b?.lotId ?? ''), t, {
       quantidade: b?.quantidade != null ? Number(b.quantidade) : undefined,
       note: b?.note ? String(b.note) : null,
+      paraUnitId: b?.paraUnitId ? String(b.paraUnitId) : null,
     }, ctx);
     if (!r.ok) return reasonResponse(REASONS, r.reason, r.message);
     return NextResponse.json({ ok: true, status: r.status, saldo: r.saldo });

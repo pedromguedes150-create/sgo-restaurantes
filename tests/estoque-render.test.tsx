@@ -146,3 +146,34 @@ describe('Estoque vazio', () => {
     expect(h).toContain('Nenhum lote em estoque');
   });
 });
+
+describe('Etapa 2 — transferência e o gancho com o pedido', () => {
+  const destinos = [{ id: 'u2', name: 'Beija Flor Orla' }];
+
+  it('com outra unidade ativa, a linha do lote oferece "Transferir"; sem destino, não', () => {
+    /* Com pendência a tela abre na aba Validade, que lista os lotes em alerta
+       com a mesma linha da Prateleira — é onde o botão fica visível no SSR. */
+    const com = tela({ unidadesDestino: destinos, estoque: estoque({ linhas: [linha({ pendente: true })] }) });
+    expect(com).toContain('aria-label="Transferir Molho X"');
+    const sem = tela({ unidadesDestino: [], estoque: estoque({ linhas: [linha({ pendente: true })] }) });
+    expect(sem).not.toContain('aria-label="Transferir');
+  });
+
+  it('quem não lança não transfere', () => {
+    const h = tela({ podeLancar: false, unidadesDestino: destinos });
+    expect(h).not.toContain('aria-label="Transferir');
+  });
+
+  it('a cobrança dos recebimentos não lançados aparece com o número do pedido e o link', () => {
+    const h = semSeparadores(tela({ recebimentosPendentes: [{ requestId: 'r9', rotulo: 'PED-2026-000042', recebidoEm: '22/09/2026', itensPendentes: 3 }] }));
+    expect(h).toContain('1 recebimento(s) da Fábrica/CD ainda não lançado(s)');
+    expect(h).toContain('PED-2026-000042');
+    expect(h).toContain('3 item(ns) a lançar');
+    expect(h).toContain('/modulos/produtos/pedido/r9');
+  });
+
+  it('a tratativa "Transferido" fica desabilitada quando não há outra unidade para receber', () => {
+    const h = tela({ unidadesDestino: [], estoque: estoque({ linhas: [linha({ pendente: true })] }) });
+    expect(h).toContain('Não há outra unidade ativa para receber');
+  });
+});
