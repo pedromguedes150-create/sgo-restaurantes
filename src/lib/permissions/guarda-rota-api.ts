@@ -110,6 +110,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   // Mora sob o prefixo público do fechamento, como `/api/higiene/manage`: o
   // prefixo mais longo vence, então esta entra na matriz e a pública não.
   '/api/pizzas/sabores': { modulo: 'CONFIG_PIZZAS', exigir: 'editar' },
+  // Ficha do produto (códigos, lote): manter o catálogo é editar o catálogo.
+  '/api/products/ficha': { modulo: 'CONFIG_PRODUCTS', exigir: 'editar' },
   // Correção de massas pela GESTÃO (qualquer dia, retroativo com motivo). O
   // perfil que corrige também é conferido em portaDaSessao (massas.ts).
   '/api/pizzas/massas/gestao': { modulo: 'PIZZAS', exigir: 'editar' },

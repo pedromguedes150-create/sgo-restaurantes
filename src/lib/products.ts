@@ -21,7 +21,8 @@ export const ORIGENS_PEDIVEIS: ProductOrigin[] = ['FABRICA', 'CD'];
 export const REQ_STATUS: Record<string, string> = { NEW: 'Novo', SEPARATING: 'Em separação', SENT: 'Enviado', RECEIVED: 'Recebido' };
 const MEASURES = ['un', 'kg', 'cx', 'pct', 'L', 'dz'];
 
-function canManageCatalog(user: SessionUser): boolean { return ['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role); }
+/** Coordenação entrou em 23/09/2026 (decisão do Pedro): valida e mantém o catálogo junto com a Administração. */
+function canManageCatalog(user: SessionUser): boolean { return ['ADMIN', 'CEO', 'SUPERVISOR', 'COORDINATOR'].includes(user.role); }
 
 /* ───────── Catálogo ───────── */
 /** Catálogo da tela de PEDIDO — só o que a Fábrica ou o CD entregam. */
@@ -31,7 +32,7 @@ export async function listActiveProducts() {
 export async function listAllProducts() {
   return prisma.product.findMany({
     orderBy: [{ active: 'desc' }, { category: 'asc' }, { name: 'asc' }],
-    include: { cdSector: { select: { name: true } } },
+    include: { cdSector: { select: { name: true } }, barcodes: { select: { code: true, reviewedAt: true } } },
   });
 }
 export async function upsertProduct(user: SessionUser, input: { id?: string; name: string; origin: string; category?: string; measure?: string; packSize?: number | null; barcode?: string | null; cdSectorId?: string | null }) {
