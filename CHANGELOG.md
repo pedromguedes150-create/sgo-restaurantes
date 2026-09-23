@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.109.1 — 2026-09-22 (Conferência de comandas: o leitor travava a justificativa)
+### Corrigido
+- 🔴 **Em produção, para toda conferência com leitor**: ao clicar em "Finalizar conferência" e tentar preencher **"O que houve? (obrigatório)"**, o campo não aceitava texto. Como a justificativa é obrigatória, o botão de finalizar ficava inalcançável — a conferência do print travou com 423 de 504 comandas (84%) e 81 não localizadas.
+  - A causa estava numa linha só: `onBlur={() => setTimeout(() => inputRef.current?.focus(), 50)}` no campo do leitor. Ele recapturava o foco 50ms depois de perdê-lo, **sem exceção** — inclusive quando o foco tinha ido para um campo do diálogo sobreposto. A pessoa clicava, começava a escrever, e o leitor puxava o foco de volta.
+  - O leitor agora só recaptura enquanto a conferência está em curso: `leitorAtivo = usaLeitor && podeEditar && !fechando`. **Condição única**, usada no efeito de foco e no `onBlur` — duas condições escritas em lugares diferentes é como uma delas envelhece sozinha.
+  - ⚠️ A condição é lida de uma **referência**, não da variável. Com a variável, o valor seria o do instante em que o timeout foi AGENDADO: ao tocar em "Finalizar conferência" o campo perde o foco no mesmo momento em que o diálogo abre, e aquele timeout ainda veria "ativo", roubando o foco de volta. A referência é lida quando ele dispara.
+  - A justificativa **continua obrigatória**: a correção é sobre poder escrever, não sobre deixar de exigir.
+  - 7 testes lendo o código-fonte, **3 verificados reprovando** a linha anterior. Teste de fonte, e não de tela, porque `jsdom` não reproduz disputa de foco entre um campo e um diálogo sobreposto — e um teste que "passa" sem reproduzir o defeito dá falsa segurança. O que se garante é a FORMA da correção.
+
 ## v1.109.0 — 2026-09-22 (Pedido por fardo/display/caixa · o contrato de gás explica o próprio número)
 ### Adicionado
 - **O gerente escolhe COMO está pedindo** (`src/lib/products/embalagem-pedido.ts` puro, `OrderPackUnit`, `ProductRequestItem.packUnit`). Depois de bipar ou buscar o produto, uma **tira de quatro botões** — Unidade · Fardo · Display · Caixa — aparece na própria linha do item, com a quantidade ao lado. "Coca-Cola 350ml — 2 fardos".

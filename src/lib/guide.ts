@@ -270,6 +270,7 @@ export const GUIDE: GuideSection[] = [
           'Se o leitor relê a mesma comanda enquanto você o mantém apontado, a repetição é ignorada. "Já bipada" só aparece quando você bipa a mesma comanda de novo mais tarde — aí é aviso útil, não erro.',
           'Dica de configuração do leitor: a maioria dos leitores 2D permite DESATIVAR a leitura de QR pelo manual do aparelho. Desativando, ele nem tenta ler o Instagram e a bipagem fica mais rápida.',
           'Terminou a bandeja? Toque em "Concluir conferência", confira a lista de faltantes na confirmação e registre.',
+          'AO FINALIZAR, o campo "O que houve?" é OBRIGATÓRIO quando há comandas não localizadas. Ele já aceita texto normalmente: até a v1.109.0, o campo do leitor puxava o foco de volta e travava a digitação — a conferência não fechava. Corrigido: enquanto a janela de finalizar está aberta, o leitor para de capturar o foco.',
           'As faltantes viram divergências e o supervisor da unidade é avisado na hora — exatamente como na conferência em grade.',
         ],
         tips: [
