@@ -1438,6 +1438,7 @@ export const GUIDE: GuideSection[] = [
           'A nota considera o que já foi resolvido; pendências no prazo não penalizam.',
           'Use o seletor de meses para ver o histórico dos meses anteriores.',
           'Botões "PDF" (imprimir/salvar) e "Excel" geram o relatório do mês selecionado.',
+          'CONSOLIDADO DA REDE (v1.118.0 — Supervisão/Admin): aba ao lado de "Metas" no menu Performance. Dashboard executivo com: 5 cartões KPI (média, melhor, na meta, atenção, críticas); barras horizontais por unidade (clique → posição no ranking); status visual das metas; gráfico de evolução mensal (3/6/12 meses, carregado após abertura); 5 metas com pior desempenho na rede, com clique para abrir por unidade; e comparação lado a lado de até 3 unidades. Nenhum cálculo novo — os mesmos números do ranking e do detalhamento existentes.',
         ],
       },
       {

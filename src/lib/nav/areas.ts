@@ -80,7 +80,7 @@ export const AREAS: AreaDoMenu[] = [
     titulo: 'Performance',
     icone: 'chart',
     colunas: [
-      { titulo: 'Metas', keys: ['METAS', 'METAS_CONFIG'] },
+      { titulo: 'Metas', keys: ['METAS', 'METAS_CONFIG', 'METAS_CONSOLIDADO'] },
       { titulo: 'Acompanhamento', keys: ['SUPERVISION', 'EXECUTIVE', 'UNIT_PANEL', 'WASTE_CONSOLIDATED'] },
       { titulo: 'Ticket Médio', keys: ['TICKET_MEDIA', 'TICKET_MEDIA_IMPORT'] },
     ],
