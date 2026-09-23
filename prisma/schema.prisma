@@ -94,6 +94,10 @@ model Unit {
   cashDenominations       CashDenomination[]
   pizzaFlavors            PizzaFlavor[]
   pizzaClosings           PizzaClosing[]
+  pizzaDoughBatches       PizzaDoughBatch[]
+  pizzaDoughWastes        PizzaDoughWaste[]
+  pizzaDoughCounts        PizzaDoughCount[]
+  pizzaDoughChanges       PizzaDoughChange[]
   payoutDeliveries        PayoutDelivery[]
   stockLots               StockLot[]
 
@@ -135,6 +139,7 @@ model User {
   assignedTasks  TaskInstance[] @relation("AssignedTo")
   wasteEntries   WasteEntry[]   @relation("WasteCreatedBy")
   pizzaClosings  PizzaClosing[] @relation("PizzaClosingCreatedBy")
+  pizzaDoughChanges PizzaDoughChange[] @relation("PizzaDoughChangeBy")
   reportedOccurrences Occurrence[] @relation("OccReportedBy")
   closedOccurrences   Occurrence[] @relation("OccClosedBy")
   commandCounts       CommandCount[]       @relation("CmdCountBy")
@@ -3572,4 +3577,116 @@ enum OrderPackUnit {
   FARDO
   DISPLAY
   CAIXA
+}
+
+// ------------------------------------------------------------
+// Massas e Desperdícios — dentro do Controle de Pizzas
+//
+// Aditivo ao fechamento de vendas: nenhuma tabela de pizzas mudou. O estoque
+// de massas NÃO é gravado — é derivado da série (contagem confirmada +
+// recebimentos − pizzas vendidas − desperdícios), como a variação do gás
+// (v1.103.0): saldo guardado é saldo que um dia discorda das parcelas, e a
+// correção retroativa se resolve sozinha porque não há gatilho a esquecer.
+// ------------------------------------------------------------
+
+/// Por que a massa foi perdida. EXPIRED é PERDA POR VALIDADE; os demais são
+/// PERDA DE PRODUÇÃO — os relatórios separam os dois.
+enum PizzaDoughWasteReason {
+  EXPIRED
+  BURNED
+  WRONG_INGREDIENT
+  DAMAGED
+  PRODUCTION_ERROR
+  OTHER
+}
+
+/// Um RECEBIMENTO = um LOTE. Duas entregas com validades diferentes nunca se
+/// misturam: a mais antiga sai primeiro e o descarte por validade aponta o lote.
+model PizzaDoughBatch {
+  id              String    @id @default(cuid())
+  unitId          String
+  operationalDate String
+  quantity        Int
+  /// 'YYYY-MM-DD'
+  expiresAt       String
+  lotCode         String?
+  createdById     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  /// Exclusão LÓGICA: nada some calado — a linha fica, sai das contas.
+  deletedAt       DateTime?
+
+  unit   Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  wastes PizzaDoughWaste[]
+
+  @@index([unitId, operationalDate])
+  @@index([unitId, expiresAt])
+  @@map("pizza_dough_batches")
+}
+
+model PizzaDoughWaste {
+  id              String                @id @default(cuid())
+  unitId          String
+  operationalDate String
+  quantity        Int
+  reason          PizzaDoughWasteReason
+  observation     String?
+  photoPath       String?
+  /// Preenchido no descarte por validade: QUAL lote perdeu.
+  batchId         String?
+  createdById     String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  deletedAt       DateTime?
+
+  unit  Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  batch PizzaDoughBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@index([unitId, operationalDate])
+  @@map("pizza_dough_wastes")
+}
+
+/// Fechamento do estoque: a contagem física do dia. `expectedAtClose` é o
+/// esperado CONGELADO no momento da contagem — é o que distingue a divergência
+/// do dia da "divergência gerada por alteração retroativa", sem tocar no que
+/// a pessoa contou.
+model PizzaDoughCount {
+  id              String   @id @default(cuid())
+  unitId          String
+  operationalDate String
+  physicalQty     Int
+  expectedAtClose Int
+  justification   String?
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([unitId, operationalDate])
+  @@map("pizza_dough_counts")
+}
+
+/// Histórico imutável de toda alteração (inclusive as do mesmo dia pelo link).
+/// `changedById` nulo = link público, sem sessão.
+model PizzaDoughChange {
+  id              String   @id @default(cuid())
+  unitId          String
+  entity          String
+  entityId        String
+  operationalDate String
+  before          Json?
+  after           Json?
+  changedById     String?
+  changedByName   String?
+  reason          String?
+  retroactive     Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  unit      Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  changedBy User? @relation("PizzaDoughChangeBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([unitId, operationalDate])
+  @@index([entityId])
+  @@map("pizza_dough_changes")
 }

@@ -110,6 +110,9 @@ export const REGRAS: Record<string, RegraDeRota> = {
   // Mora sob o prefixo público do fechamento, como `/api/higiene/manage`: o
   // prefixo mais longo vence, então esta entra na matriz e a pública não.
   '/api/pizzas/sabores': { modulo: 'CONFIG_PIZZAS', exigir: 'editar' },
+  // Correção de massas pela GESTÃO (qualquer dia, retroativo com motivo). O
+  // perfil que corrige também é conferido em portaDaSessao (massas.ts).
+  '/api/pizzas/massas/gestao': { modulo: 'PIZZAS', exigir: 'editar' },
 
   /* O importador e a configuração de participantes são portas diferentes: quem
      importa a planilha do mês não precisa poder mudar QUEM entra no consolidado. */
@@ -188,6 +191,7 @@ export const FORA_DA_MATRIZ: Record<string, string> = {
   '/api/commands/divergences/[id]': 'setInvestigating/closeDivergence (src/lib/commands/lifecycle.ts): isResolver = SUPERVISOR/ADMIN/CEO + canAccessUnit',
   '/api/higiene': 'PÚBLICA — o QR do banheiro é lido por cliente, sem login',
   '/api/pizzas': 'PÚBLICA — fechamento preenchido por link interno, sem login; a unidade vem do token da URL (src/lib/pizzas/acesso.ts: unidadePorToken)',
+  '/api/pizzas/massas': 'PÚBLICA — massas/desperdícios/contagem pelo mesmo link interno, sem login; só o dia ATUAL (src/lib/pizzas/massas.ts: podeMexerNoDia)',
   '/api/communications/pending': 'os comunicados pendentes do próprio usuário',
   '/api/products/export': 'só ADMIN/CEO/SUPERVISOR no próprio handler (products/export/route.ts), igual ao padrão de CONFIG_PRODUCTS; handler sem req',
 };

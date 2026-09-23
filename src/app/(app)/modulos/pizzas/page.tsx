@@ -8,8 +8,10 @@ import { LargeTitle } from '@/components/layout/page-chrome';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { EmptyState } from '@/components/ui/ds/empty-state';
 import { PizzaLinkCard } from '@/components/pizzas/pizza-link-card';
+import { MassasPainel } from '@/components/pizzas/massas-painel';
 import { garantirTokenPublico, unidadesComPizzaria } from '@/lib/pizzas/acesso';
 import { ehPeriodo, inicioDoPeriodo, painelDePizzas, PERIODOS_EM_DIAS } from '@/lib/pizzas/painel';
+import { painelDeMassas } from '@/lib/pizzas/massas';
 import { emBR, rotuloDoCanal } from '@/lib/pizzas/tipos';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +27,7 @@ export const dynamic = 'force-dynamic';
 export default async function PizzasPage({
   searchParams,
 }: {
-  searchParams: { unit?: string; periodo?: string };
+  searchParams: { unit?: string; periodo?: string; aba?: string };
 }) {
   const user = (await getSessionUser())!;
   const unidades = await unidadesComPizzaria(user);
@@ -33,10 +35,17 @@ export default async function PizzasPage({
 
   const unidade = unidades.find((u) => u.id === searchParams.unit) ?? unidades[0];
   const dias = ehPeriodo(searchParams.periodo) ? Number(searchParams.periodo) : 30;
+  /* Aba "Pizzas" é a tela de sempre; "Massas" entrou AO LADO dela. */
+  const aba = searchParams.aba === 'massas' ? 'massas' : 'pizzas';
+  const podeCorrigirMassas = ['MANAGER', 'SUPERVISOR', 'ADMIN', 'CEO'].includes(user.role);
 
   const token = unidade.pizzaPublicToken ?? (await garantirTokenPublico(unidade.id));
   const hoje = currentOperationalDate({ timezone: unidade.timezone, cutoffHour: unidade.cutoffHour });
-  const painel = await painelDePizzas(unidade.id, { de: inicioDoPeriodo(hoje, dias), ate: hoje, hoje });
+  const janela = { de: inicioDoPeriodo(hoje, dias), ate: hoje, hoje };
+  const [painel, massas] = await Promise.all([
+    painelDePizzas(unidade.id, janela),
+    aba === 'massas' ? painelDeMassas(unidade.id, janela) : null,
+  ]);
 
   const maiorSabor = painel.porSabor[0]?.total ?? 0;
   const maiorTamanho = Math.max(...painel.porTamanho.map((t) => t.total), 0);
@@ -58,11 +67,16 @@ export default async function PizzasPage({
 
       <PizzaLinkCard token={token} />
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <nav aria-label="Abas do Controle de Pizzas" className="flex gap-1 rounded-control bg-sunken p-1">
+          <AbaLink ativa={aba === 'pizzas'} href={`/modulos/pizzas?unit=${unidade.id}&periodo=${dias}&aba=pizzas`} rotulo="Pizzas" />
+          <AbaLink ativa={aba === 'massas'} href={`/modulos/pizzas?unit=${unidade.id}&periodo=${dias}&aba=massas`} rotulo="Massas e desperdícios" />
+        </nav>
+        <span className="flex-1" />
         {PERIODOS_EM_DIAS.map((d) => (
           <Link
             key={d}
-            href={`/modulos/pizzas?unit=${unidade.id}&periodo=${d}`}
+            href={`/modulos/pizzas?unit=${unidade.id}&periodo=${d}&aba=${aba}`}
             scroll={false}
             className={`sgo-control rounded-control border px-3 py-1.5 text-xs font-semibold ${
               d === dias ? 'border-brand bg-brand text-on-brand' : 'border-line-strong text-ink-700'
@@ -73,6 +87,11 @@ export default async function PizzasPage({
         ))}
       </div>
 
+      {massas && (
+        <MassasPainel painel={massas} unitId={unidade.id} hoje={hoje} dias={dias} podeCorrigir={podeCorrigirMassas} />
+      )}
+
+      {aba === 'pizzas' && (<>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <Kpi label="Pizzas hoje" value={String(painel.hoje)} destaque />
         <Kpi label={`Total em ${dias} dias`} value={String(painel.total)} />
@@ -182,7 +201,23 @@ export default async function PizzasPage({
           </Card>
         </>
       )}
+      </>)}
     </div>
+  );
+}
+
+function AbaLink({ ativa, href, rotulo }: { ativa: boolean; href: string; rotulo: string }) {
+  return (
+    <Link
+      href={href}
+      scroll={false}
+      aria-current={ativa ? 'page' : undefined}
+      className={ativa
+        ? 'rounded-control bg-brand px-3 py-1.5 text-xs font-semibold text-on-brand'
+        : 'rounded-control px-3 py-1.5 text-xs font-semibold text-ink-700 hover:text-ink-900'}
+    >
+      {rotulo}
+    </Link>
   );
 }
 
