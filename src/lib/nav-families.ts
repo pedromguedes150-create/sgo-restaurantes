@@ -70,6 +70,7 @@ export const FAMILIES: Family[] = [
     icon: BarChart3,
     children: [
       { href: '/modulos/metas', tab: 'Metas' },
+      { href: '/modulos/metas/consolidado', tab: 'Consolidado da Rede' },
       { href: '/modulos/supervisao', tab: 'Supervisão' },
       { href: '/modulos/executivo', tab: 'Executivo' },
     ],

@@ -81,6 +81,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/inventory-equip': { modulo: 'INVENTORY', exigir: 'editar' },
 
   '/api/metas/export': { modulo: 'METAS', exigir: 'ver' },
+  '/api/metas/consolidado': { modulo: 'METAS_CONSOLIDADO', exigir: 'ver' },
 
   '/api/notes': { modulo: 'NOTES_TAB_LIST', exigir: 'editar' },
   '/api/notes/[id]/status': { modulo: 'NOTES_TAB_LIST', exigir: 'editar' },

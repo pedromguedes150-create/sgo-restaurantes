@@ -103,6 +103,7 @@ const BASE: ModuleDef[] = [
 
   { key: 'METAS', label: 'Metas', nav: '/modulos/metas' },
   { key: 'METAS_CONFIG', label: 'Configuração da meta', nav: '/modulos/metas/config', parent: 'METAS' },
+  { key: 'METAS_CONSOLIDADO', label: 'Consolidado da Rede', nav: '/modulos/metas/consolidado', parent: 'METAS' },
 
   { key: 'SUPERVISION', label: 'Rotina do Supervisor', nav: '/modulos/supervisao' },
   { key: 'EXECUTIVE', label: 'Visão Executiva', nav: '/modulos/executivo' },
@@ -185,6 +186,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   MANAGER_SCHEDULE: ['SUPERVISOR'], // quem manda na escala de gerência é a Supervisão; ADMIN/CEO sempre
   SUPERVISION: ['SUPERVISOR'],
   EXECUTIVE: [], // só ADMIN/CEO por padrão (Admin pode liberar na matriz)
+  METAS_CONSOLIDADO: ['SUPERVISOR'], // visão executiva de metas: Admin/CEO + Supervisor por padrão
   CASH_CONFIG: ['SUPERVISOR', 'COORDINATOR'], // R5: supervisão configura o cofre; Admin/CEO sempre
   CHECKLIST_FORMS: [], // sem papel fixo: só ADMIN/CEO por padrão; o admin libera na matriz (R5)
   // Os três padrões abaixo copiam a regra que a própria tela já aplicava —
