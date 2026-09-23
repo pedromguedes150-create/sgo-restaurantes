@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { setRequestStatus, upsertProduct, toggleProduct, deleteProduct } from '@/lib/products';
 import { aplicarSetores, sugerirComIA } from '@/lib/stock/setor-em-lote';
+import { validarProduto } from '@/lib/products/cadastro-provisorio';
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -53,6 +54,7 @@ export async function POST(req: Request) {
   });
   else if (b.action === 'catToggle') r = await toggleProduct(user, String(b.id ?? ''), Boolean(b.active));
   else if (b.action === 'catDelete') r = await deleteProduct(user, String(b.id ?? ''));
+  else if (b.action === 'catValidar') r = await validarProduto(user, String(b.id ?? ''), ctx);
 
   if (!r) return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
   if (!r.ok) {
@@ -61,6 +63,7 @@ export async function POST(req: Request) {
     const msg =
       r.reason === 'FORBIDDEN' ? 'Sem permissão' :
       r.reason === 'SEM_SETOR' ? 'Escolha o Setor do CD: sem ele o produto não chega a separador nenhum.' :
+      r.reason === 'NAO_ENCONTRADO' ? 'Produto não encontrado' :
       'Dados inválidos';
     return NextResponse.json({ error: msg, reason: r.reason }, { status: r.reason === 'FORBIDDEN' ? 403 : 400 });
   }

@@ -11,7 +11,6 @@ import { PedidoClient } from '@/components/products/pedido-client';
 import { sugerirProdutos } from '@/lib/products/sugestoes';
 import { listarPedidosDaUnidade } from '@/lib/products/pedido';
 import { numeroDoPedido } from '@/lib/products/numero-do-pedido';
-import { canEditModule } from '@/lib/permissions';
 import { PackagePlus } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
 
@@ -24,15 +23,12 @@ export default async function ProdutosPage({ searchParams }: { searchParams: { u
   const selUnit = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const isOps = ['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role);
 
-  const [products, myRequests, incoming, sugestoes, recentes, podeAssociarCodigo, comCodigos] = await Promise.all([
+  const [products, myRequests, incoming, sugestoes, recentes, comCodigos] = await Promise.all([
     listActiveProducts(),
     listUnitRequests(user, selUnit.id),
     isOps ? listIncomingRequests(user) : Promise.resolve([]),
     sugerirProdutos(user, selUnit.id),
     listarPedidosDaUnidade(user, selUnit.id, 5),
-    /* Associar codigo e permanente e vale para a rede inteira — fica com quem
-       edita o catalogo, nao com quem faz pedido. */
-    canEditModule(user.role, 'CONFIG_PRODUCTS'),
     /* Os codigos ALTERNATIVOS de cada produto: sem eles, bipar a caixa da
        remessa nova cairia no "codigo nao reconhecido" todas as vezes. */
     prisma.productBarcode.findMany({ select: { productId: true, code: true } }),
@@ -72,7 +68,6 @@ export default async function ProdutosPage({ searchParams }: { searchParams: { u
             <PedidoClient
               unitId={selUnit.id}
               unitName={selUnit.name}
-              podeAssociarCodigo={podeAssociarCodigo}
               produtos={products.map((p) => ({
                 id: p.id, name: p.name, category: p.category, measure: p.measure,
                 packSize: p.packSize, barcode: p.barcode, origin: p.origin,

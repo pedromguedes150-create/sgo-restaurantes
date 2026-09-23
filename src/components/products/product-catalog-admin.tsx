@@ -16,6 +16,9 @@ interface Prod {
   /** Setor do CD — obrigatório para produto do CD, nulo para Fábrica. */
   cdSectorId?: string | null;
   cdSectorName?: string | null;
+  /** 'PENDENTE' = criado pelo gerente no pedido, aguardando validação. */
+  validation?: string;
+  createdByName?: string | null;
 }
 interface Setor { id: string; name: string }
 const MEASURES = ['un', 'kg', 'cx', 'pct', 'L', 'dz'];
@@ -158,11 +161,17 @@ export function ProductCatalogAdmin({ products, setores = [] }: { products: Prod
         {filtered.map((p) => (
           <div key={p.id} className={`flex items-center justify-between gap-2 rounded-lg border p-2 ${p.active ? 'bg-surface' : 'bg-canvas opacity-60'}`}>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-ink-900">{p.name}</p>
+              <p className="flex items-center gap-1.5 truncate text-sm font-medium text-ink-900">
+                {p.name}
+                {p.validation === 'PENDENTE' && (
+                  <span className="shrink-0 rounded-pill bg-warning-bg px-1.5 py-0.5 text-[10px] font-semibold text-warning">Pendente de validação</span>
+                )}
+              </p>
               <p className="text-[11px] text-ink-500">
                 {p.origin === 'CD' ? 'CD' : 'Fábrica'} · {p.category} · {p.measure}
                 {p.packSize ? ` · cx com ${p.packSize}` : ''}
                 {p.barcode ? ` · ${p.barcode}` : ''}
+                {p.validation === 'PENDENTE' && p.createdByName ? ` · cadastrado por ${p.createdByName} no pedido` : ''}
               </p>
             </div>
             {/* O setor se atribui NA LINHA, sem abrir formulário: são mais de mil
@@ -183,6 +192,18 @@ export function ProductCatalogAdmin({ products, setores = [] }: { products: Prod
               </div>
             )}
             <div className="flex shrink-0 items-center gap-2">
+              {/* Validar só COM setor: é o setor que tira o produto do balde
+                  "sem setor" e o entrega a um separador. O botão fica
+                  desabilitado até o setor ser escolhido na própria linha. */}
+              {p.validation === 'PENDENTE' && (
+                <Button
+                  size="sm" disabled={busy || (p.origin === 'CD' && !p.cdSectorId)}
+                  title={p.origin === 'CD' && !p.cdSectorId ? 'Escolha o setor do CD antes de validar' : undefined}
+                  onClick={() => post({ action: 'catValidar', id: p.id })}
+                >
+                  Validar
+                </Button>
+              )}
               <button onClick={() => post({ action: 'catToggle', id: p.id, active: !p.active })} disabled={busy} className="text-xs text-brand underline">{p.active ? 'desativar' : 'ativar'}</button>
               <button onClick={() => { if (confirm(`Excluir "${p.name}"?`)) post({ action: 'catDelete', id: p.id }); }} disabled={busy} className="text-danger"><Trash2 className="h-4 w-4" /></button>
             </div>

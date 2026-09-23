@@ -36,7 +36,6 @@ const render = (over: Partial<React.ComponentProps<typeof PedidoClient>> = {}) =
   renderToString(React.createElement(PedidoClient, {
     unitId: 'u1', unitName: 'Moreira',
     produtos: PRODUTOS, sugestoes: SUGESTOES, recentes: RECENTES,
-    podeAssociarCodigo: true,
     ...over,
   })).split('<!-- -->').join('');
 

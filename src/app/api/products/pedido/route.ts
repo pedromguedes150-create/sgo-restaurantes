@@ -5,8 +5,7 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { requestContext } from '@/lib/auth/service';
 import { criarPedido } from '@/lib/products/pedido';
 import { itensParaRepetir } from '@/lib/products/entrega';
-import { soDigitos } from '@/lib/products/busca';
-import { audit } from '@/lib/audit';
+import { cadastrarProvisorio, duplicadosProvaveis, vincularCodigoPeloPedido } from '@/lib/products/cadastro-provisorio';
 
 /**
  * Pedidos Internos — criação do pedido e associação de código de barras.
@@ -54,42 +53,39 @@ export async function POST(req: Request) {
   }
 
   /* ── Associar um código de barras a um produto ──
-     O mesmo item chega com código diferente conforme a remessa. Associar é
-     permanente e vale para a rede inteira, por isso fica atrás do direito de
-     editar o catálogo — e não do direito de fazer pedido. */
+     PERMANENTE e para a rede inteira — e agora pelo GERENTE, que está com a
+     embalagem na mão. Antes exigia o direito de editar o catálogo, e o código
+     caía em "não reconhecido" em todo pedido seguinte; era assim que nasciam os
+     cadastros duplicados. O que protege o catálogo é a regra (um código, um
+     produto) e a Auditoria — não o perfil. Ver cadastro-provisorio.ts. */
   if (b.action === 'associarCodigo') {
-    const { canEditModule } = await import('@/lib/permissions');
-    if (!(await canEditModule(user.role, 'CONFIG_PRODUCTS'))) {
-      return NextResponse.json({ error: 'Só quem edita o catálogo pode associar um código ao produto', reason: 'FORBIDDEN' }, { status: 403 });
+    const r = await vincularCodigoPeloPedido(user, String(b.productId ?? ''), String(b.code ?? ''), ctx);
+    if (!r.ok) {
+      const status: Record<string, number> = { FORBIDDEN: 403, INVALID: 400, NAO_ENCONTRADO: 404, JA_USADO: 409 };
+      const msg = r.message ?? (r.reason === 'FORBIDDEN' ? 'Sem permissão' : r.reason === 'NAO_ENCONTRADO' ? 'Produto não encontrado' : 'Código ou produto inválido');
+      return NextResponse.json({ error: msg, reason: r.reason }, { status: status[r.reason] ?? 400 });
     }
-    const code = soDigitos(String(b.code ?? ''));
-    const productId = String(b.productId ?? '');
-    if (code.length < 6 || !productId) return NextResponse.json({ error: 'Código ou produto inválido' }, { status: 400 });
+    return NextResponse.json({ ok: true, jaExistia: r.jaExistia, produto: r.produto });
+  }
 
-    const produto = await prisma.product.findUnique({ where: { id: productId }, select: { id: true, name: true } });
-    if (!produto) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
+  /* ── Possíveis duplicados, antes de criar um produto novo ── */
+  if (b.action === 'duplicados') {
+    const lista = await duplicadosProvaveis(String(b.nome ?? ''));
+    return NextResponse.json({ ok: true, duplicados: lista.map((d) => ({ ...d.produto, grau: d.grau })) });
+  }
 
-    /* Um código responde por UM produto. Se já pertence a outro, dizer de quem
-       é vale mais do que recusar em silêncio — quase sempre é o cadastro do
-       outro que está errado. */
-    const existente = await prisma.productBarcode.findUnique({
-      where: { code },
-      select: { productId: true, product: { select: { name: true } } },
-    });
-    if (existente && existente.productId !== productId) {
-      return NextResponse.json(
-        { error: `Este código já pertence a "${existente.product.name}".`, reason: 'JA_USADO' },
-        { status: 409 },
-      );
+  /* ── Cadastro PROVISÓRIO pelo gerente: entra no pedido, valida-se depois ── */
+  if (b.action === 'cadastrarProvisorio') {
+    const r = await cadastrarProvisorio(user, {
+      name: String(b.nome ?? ''), codigo: b.codigo ? String(b.codigo) : null,
+      packType: b.packType ? String(b.packType) : 'UN',
+      packSize: b.packSize === undefined || b.packSize === null ? null : Number(b.packSize),
+    }, ctx);
+    if (!r.ok) {
+      const status: Record<string, number> = { FORBIDDEN: 403, INVALID: 400, JA_VINCULADO: 409 };
+      return NextResponse.json({ error: r.message ?? 'Não foi possível cadastrar', reason: r.reason }, { status: status[r.reason] ?? 400 });
     }
-    if (existente) return NextResponse.json({ ok: true, jaExistia: true });
-
-    await prisma.productBarcode.create({ data: { productId, code, createdById: user.id } });
-    await audit({
-      userId: user.id, action: 'PRODUCT_BARCODE_ADD', module: 'PRODUCTS',
-      entity: 'product', entityId: productId, metadata: { produto: produto.name, code }, ...ctx,
-    });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, produto: r.produto });
   }
 
   return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });

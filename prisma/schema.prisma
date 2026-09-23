@@ -1174,6 +1174,13 @@ model Product {
   /// produto que dura 6 meses não podem entrar no radar no mesmo momento; a
   /// escalada seguinte (7/2/hoje/vencido) é fixa e igual para todos.
   alertDays Int           @default(30)
+  /// Produto criado pelo GERENTE durante o pedido nasce PENDENTE: já entra no
+  /// pedido e já responde pelo código, mas alguém do catálogo confirma depois.
+  validation ProductValidation @default(VALIDADO)
+  createdById   String?
+  createdByName String?
+  validatedById String?
+  validatedAt   DateTime?
   active    Boolean       @default(true)
   createdAt DateTime      @default(now())
 
@@ -3413,6 +3420,13 @@ model TicketMediaEntry {
 
 /// Como o produto é contado na prateleira. `packSize` diz QUANTAS unidades vêm
 /// dentro: fardo de água com 12, display de chiclete com 21.
+/// Situação do cadastro. PENDENTE = criado pelo gerente no pedido, aguardando
+/// validação de Admin/Coordenação (nome, embalagem e setor).
+enum ProductValidation {
+  VALIDADO
+  PENDENTE
+}
+
 enum PackType {
   UN
   FARDO
