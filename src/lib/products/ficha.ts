@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import { normalizarCodigoDeBarras } from '@/lib/products/sheet';
+import { propagarSetorParaItensAbertos } from '@/lib/products/propagar-setor';
 import type { SessionUser } from '@/lib/auth/session';
 import type { PackType, ProductOrigin } from '@prisma/client';
 
@@ -186,6 +187,7 @@ export async function atualizarProduto(user: SessionUser, id: string, patch: Pat
     userId: user.id, action: 'PRODUCT_UPDATE', module: 'PRODUCTS', entity: 'product', entityId: id,
     metadata: { nome: atual.name, antes, depois }, ...ctx,
   });
+  if (data.cdSectorId) await propagarSetorParaItensAbertos([id], ctx).catch(() => {});
   return { ok: true };
 }
 
@@ -339,6 +341,7 @@ export async function alterarEmLote(user: SessionUser, ids: string[], patch: Pat
     else if (setor) data.cdSectorId = setor.id;
     const r = await prisma.product.updateMany({ where: { id: { in: idsOk } }, data });
     aplicados = r.count;
+    if (data.cdSectorId) await propagarSetorParaItensAbertos(idsOk, ctx).catch(() => {});
   }
   await audit({
     userId: user.id, action: 'PRODUCT_BULK_UPDATE', module: 'PRODUCTS', entity: 'product',

@@ -28,9 +28,13 @@ export default async function SeparacaoDoPedidoPage({ params }: { params: { id: 
      outro setor. */
   const cru = (await prisma.productRequest.findUnique({
     where: { id: params.id },
-    select: { status: true, sentByName: true, sentAt: true, requestItems: { select: { qtySeparated: true } } },
+    select: { status: true, sentByName: true, sentAt: true, checkedByName: true, checkedAt: true, requestItems: { select: { qtySeparated: true } } },
   }))!;
+  /* CONFERIDO trava os itens (a conferência não pode ser invalidada em
+     silêncio) mas ainda está no CD: o envio continua disponível. */
+  const conferido = cru.status === 'CONFERIDO';
   const bloqueado = !['ENVIADO_CD', 'SEPARANDO', 'PRONTO_ENVIO'].includes(cru.status);
+  const aindaNoCd = !bloqueado || conferido;
   const faltamNoPedido = cru.requestItems.filter((i) => i.qtySeparated === null).length;
 
   return (
@@ -52,7 +56,13 @@ export default async function SeparacaoDoPedidoPage({ params }: { params: { id: 
         </CardContent></Card>
       )}
 
-      {bloqueado && (
+      {conferido && (
+        <p className="rounded-md bg-info-bg px-3 py-2 text-sm text-info">
+          Carga conferida{cru.checkedByName ? ` por ${cru.checkedByName}` : ''}{cru.checkedAt ? ` em ${cru.checkedAt.toLocaleString('pt-BR')}` : ''} —
+          a separação está travada; falta só confirmar a saída.
+        </p>
+      )}
+      {bloqueado && !conferido && (
         <p className="rounded-md bg-info-bg px-3 py-2 text-sm text-info">
           Este pedido já saiu do CD{cru.sentByName ? ` (${cru.sentByName}, ${cru.sentAt?.toLocaleString('pt-BR')})` : ''} —
           a separação fica como registro e não pode mais ser alterada.
@@ -75,8 +85,8 @@ export default async function SeparacaoDoPedidoPage({ params }: { params: { id: 
         }))}
       />
 
-      {!bloqueado && (
-        <EnvioClient requestId={pedido.id} pronto={faltamNoPedido === 0} faltam={faltamNoPedido} />
+      {aindaNoCd && (
+        <EnvioClient requestId={pedido.id} pronto={faltamNoPedido === 0} faltam={faltamNoPedido} status={cru.status} conferidoPor={cru.checkedByName} />
       )}
     </div>
   );

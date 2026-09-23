@@ -53,7 +53,7 @@ const AVAL_LABEL = new Map<string, string>(AVALIACOES.map((a) => [a.id, a.label]
 export const avaliacaoLabel = (id: string | null) => (id ? AVAL_LABEL.get(id) ?? id : null);
 
 export interface EtapaDaTimeline {
-  chave: 'PEDIDO' | 'SEPARACAO' | 'ENVIO' | 'RECEBIMENTO';
+  chave: 'PEDIDO' | 'SEPARACAO' | 'CONFERENCIA' | 'ENVIO' | 'RECEBIMENTO';
   titulo: string;
   quem: string | null;
   quando: Date | null;
@@ -79,12 +79,16 @@ export function montarTimeline(p: {
   totalSeparados: number;
   sentByName: string | null;
   sentAt: Date | null;
+  /** Conferência da carga no CD (v1.116.0). Opcional: quem não faz, não tem. */
+  checkedByName?: string | null;
+  checkedAt?: Date | null;
   receivedByName: string | null;
   receivedAt: Date | null;
 }): EtapaDaTimeline[] {
   const cancelado = p.status === 'CANCELADO';
   const separou = p.totalSeparados > 0;
   const separouTudo = p.totalItens > 0 && p.totalSeparados === p.totalItens;
+  const conferiu = Boolean(p.checkedAt);
 
   return [
     {
@@ -100,8 +104,16 @@ export function montarTimeline(p: {
           : separou ? `${p.totalSeparados} de ${p.totalItens} itens separados`
             : 'Ainda não começou',
     },
+    /* A conferência aparece SEMPRE, mesmo quando pulada: "Carga conferida no
+       CD — não registrada" diz que a carga saiu sem conferência, que é uma
+       informação; omitir a linha faria parecer que a etapa não existe. */
     {
-      chave: 'ENVIO', titulo: 'Enviado para a unidade',
+      chave: 'CONFERENCIA', titulo: 'Carga conferida no CD',
+      quem: p.checkedByName ?? null, quando: p.checkedAt ?? null, feito: conferiu,
+      detalhe: conferiu ? null : p.sentAt ? 'Saiu sem conferência registrada' : 'Ainda não',
+    },
+    {
+      chave: 'ENVIO', titulo: 'Em trânsito para a unidade',
       quem: p.sentByName, quando: p.sentAt, feito: !!p.sentAt,
       detalhe: p.sentAt ? null : 'Ainda não',
     },

@@ -21,16 +21,30 @@ import type { ProductOrigin } from '@prisma/client';
  * o trabalho de alguém sumia sem erro nenhum.
  */
 
+/**
+ * Os status do pedido do CD, na ordem da esteira (v1.116.0 alinhou os RÓTULOS
+ * ao fluxo da operação — as CHAVES não mudaram, então nenhum dado foi tocado):
+ *
+ *   ENVIADO_CD → SEPARANDO → PRONTO_ENVIO → CONFERIDO → ENVIADO_UNIDADE → CONCLUIDO
+ *   recebido     em separação  separado      conferido   em trânsito       recebido pela unidade
+ *
+ * CONFERIDO é a etapa nova (conferência da carga no CD) e é OPCIONAL: o envio
+ * continua liberado direto de "Separado", para não travar quem já opera assim.
+ */
 export const STATUS_PEDIDO = {
   RASCUNHO: 'Rascunho',
-  ENVIADO_CD: 'Enviado ao CD',
-  SEPARANDO: 'Separação em andamento',
-  PRONTO_ENVIO: 'Pronto para envio',
-  ENVIADO_UNIDADE: 'Enviado para a unidade',
-  CONCLUIDO: 'Concluído',
-  CONCLUIDO_DIVERGENCIA: 'Concluído com divergência',
+  ENVIADO_CD: 'Recebido pelo CD',
+  SEPARANDO: 'Em separação',
+  PRONTO_ENVIO: 'Separado',
+  CONFERIDO: 'Conferido',
+  ENVIADO_UNIDADE: 'Em trânsito',
+  CONCLUIDO: 'Recebido pela unidade',
+  CONCLUIDO_DIVERGENCIA: 'Recebido com divergência',
   CANCELADO: 'Cancelado',
 } as const;
+
+/** Rótulo do balde dos itens sem setor dentro do pedido. */
+export const PENDENTES_DE_CLASSIFICACAO = 'Pendentes de classificação';
 
 export type StatusPedido = keyof typeof STATUS_PEDIDO;
 
@@ -235,11 +249,15 @@ export interface PedidoDetalhado {
   cdNote: string | null;
   sentByName: string | null;
   sentAt: Date | null;
+  checkedByName: string | null;
+  checkedAt: Date | null;
   receivedByName: string | null;
   receivedAt: Date | null;
   setores: SetorDoPedido[];
   totalItens: number;
   totalSeparados: number;
+  /** Itens sem setor — o balde "Pendentes de classificação". */
+  pendentesDeClassificacao: number;
 }
 
 /** Como está cada setor dentro do pedido. */
@@ -307,14 +325,16 @@ export async function carregarPedidoSemEscopoDeUnidade(id: string): Promise<Pedi
     porSetor.set(chave, lista);
   }
 
+  /* O balde sem setor vai por ÚLTIMO, não em ordem alfabética: é a exceção a
+     resolver, e a operação lê os setores de verdade primeiro. */
   const setores: SetorDoPedido[] = [...porSetor.entries()].map(([chave, itens]) => ({
     cdSectorId: chave === '__sem_setor__' ? null : chave,
-    cdSectorName: chave === '__sem_setor__' ? 'Sem setor cadastrado' : (itens[0].cdSectorName ?? 'Setor'),
+    cdSectorName: chave === '__sem_setor__' ? PENDENTES_DE_CLASSIFICACAO : (itens[0].cdSectorName ?? 'Setor'),
     itens,
     separados: itens.filter((i) => i.qtySeparated !== null).length,
     total: itens.length,
     status: statusDoSetor(itens),
-  })).sort((a, b) => a.cdSectorName.localeCompare(b.cdSectorName, 'pt-BR'));
+  })).sort((a, b) => (a.cdSectorId === null ? 1 : 0) - (b.cdSectorId === null ? 1 : 0) || a.cdSectorName.localeCompare(b.cdSectorName, 'pt-BR'));
 
   const totalItens = r.requestItems.length;
   const totalSeparados = r.requestItems.filter((i) => i.qtySeparated !== null).length;
@@ -326,8 +346,10 @@ export async function carregarPedidoSemEscopoDeUnidade(id: string): Promise<Pedi
     createdAt: r.createdAt, createdByName: r.createdByName,
     note: r.note, cdNote: r.cdNote,
     sentByName: r.sentByName, sentAt: r.sentAt,
+    checkedByName: r.checkedByName, checkedAt: r.checkedAt,
     receivedByName: r.receivedByName, receivedAt: r.receivedAt,
     setores, totalItens, totalSeparados,
+    pendentesDeClassificacao: r.requestItems.filter((i) => i.cdSectorId === null).length,
   };
 }
 
@@ -350,7 +372,7 @@ export async function listarPedidosDaUnidade(user: SessionUser, unitId: string, 
       separados: r.requestItems.filter((i) => i.qtySeparated !== null).length,
       /* Ainda em curso: é o pedido que merece o cartão em destaque. Concluído e
          cancelado saem do topo e viram histórico. */
-      emAndamento: ['ENVIADO_CD', 'SEPARANDO', 'PRONTO_ENVIO', 'ENVIADO_UNIDADE'].includes(status),
+      emAndamento: ['ENVIADO_CD', 'SEPARANDO', 'PRONTO_ENVIO', 'CONFERIDO', 'ENVIADO_UNIDADE'].includes(status),
     };
   });
 }
@@ -435,7 +457,7 @@ export async function listarParaSeparacao(user: SessionUser) {
 
   const pedidos = await prisma.productRequest.findMany({
     where: {
-      status: { in: ['ENVIADO_CD', 'SEPARANDO', 'PRONTO_ENVIO'] },
+      status: { in: ['ENVIADO_CD', 'SEPARANDO', 'PRONTO_ENVIO', 'CONFERIDO'] },
       ...(meuSetor ? { requestItems: { some: { cdSectorId: meuSetor } } } : {}),
     },
     orderBy: { createdAt: 'asc' },

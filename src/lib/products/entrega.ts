@@ -47,7 +47,9 @@ export async function confirmarEnvio(
   if (pedido.status === 'ENVIADO_UNIDADE') {
     return { ok: false, reason: 'FORA_DE_ORDEM', detalhe: 'Este pedido já foi enviado para a unidade.' };
   }
-  if (pedido.status !== 'PRONTO_ENVIO') {
+  /* De "Separado" OU de "Conferido": a conferência da carga (v1.116.0) é
+     etapa oferecida, não obrigatória — obrigar travaria quem já opera sem ela. */
+  if (pedido.status !== 'PRONTO_ENVIO' && pedido.status !== 'CONFERIDO') {
     return { ok: false, reason: 'FORA_DE_ORDEM', detalhe: 'A separação ainda não terminou — só dá para enviar quando todos os setores concluírem.' };
   }
 
@@ -75,6 +77,40 @@ export async function confirmarEnvio(
   });
 
   return { ok: true, status: 'ENVIADO_UNIDADE' };
+}
+
+/**
+ * A CONFERÊNCIA DA CARGA no CD — entre "Separado" e "Em trânsito".
+ *
+ * Alguém confere a carga reunida na doca contra o romaneio e marca. Depois
+ * disso a separação trava (mexer num item depois de conferido invalidaria a
+ * conferência em silêncio); o envio segue liberado. Só de `PRONTO_ENVIO`.
+ */
+export async function conferirCarga(
+  user: SessionUser,
+  requestId: string,
+  ctx: { ip?: string | null; userAgent?: string | null } = {},
+): Promise<ResultadoDaEntrega> {
+  const pedido = await prisma.productRequest.findUnique({
+    where: { id: requestId },
+    select: { id: true, number: true, status: true, unitId: true },
+  });
+  if (!pedido) return { ok: false, reason: 'NAO_ENCONTRADO' };
+  if (pedido.status === 'CONFERIDO') return { ok: true, status: 'CONFERIDO' };
+  if (pedido.status !== 'PRONTO_ENVIO') {
+    return { ok: false, reason: 'FORA_DE_ORDEM', detalhe: pedido.status === 'ENVIADO_UNIDADE' || pedido.status.startsWith('CONCLUIDO')
+      ? 'Este pedido já saiu do CD.'
+      : 'A separação ainda não terminou — a carga só se confere depois que todos os setores concluírem.' };
+  }
+  await prisma.productRequest.update({
+    where: { id: requestId },
+    data: { status: 'CONFERIDO', checkedById: user.id, checkedByName: user.name, checkedAt: new Date() },
+  });
+  await audit({
+    userId: user.id, unitId: pedido.unitId, action: 'PRODUCT_REQUEST_CHECKED', module: 'PRODUCTS',
+    entity: 'product_request', entityId: requestId, metadata: { pedido: pedido.number }, ...ctx,
+  });
+  return { ok: true, status: 'CONFERIDO' };
 }
 
 export interface ConferenciaDeItem {

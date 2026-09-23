@@ -1277,6 +1277,11 @@ model ProductRequest {
   sentById      String?
   sentByName    String?
   sentAt        DateTime?
+  /// Conferência da carga no CD, entre "Separado" e "Em trânsito" (v1.116.0).
+  /// Etapa opcional: o envio continua liberado direto de Separado.
+  checkedById   String?
+  checkedByName String?
+  checkedAt     DateTime?
   /// Observacao do CD (a do gerente e `note`).
   cdNote        String?
   /// Conferencia de recebimento.

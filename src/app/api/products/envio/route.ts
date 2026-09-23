@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSessionUser } from '@/lib/auth/session';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { requestContext } from '@/lib/auth/service';
-import { confirmarEnvio } from '@/lib/products/entrega';
+import { confirmarEnvio, conferirCarga } from '@/lib/products/entrega';
 
 /**
  * A saída da carga do CD.
@@ -21,7 +21,11 @@ export async function POST(req: Request) {
   const b = await req.json().catch(() => null);
   if (!b?.requestId) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
 
-  const r = await confirmarEnvio(user, String(b.requestId), b.cdNote ? String(b.cdNote) : null, requestContext(req));
+  /* `acao: 'conferir'` marca a carga conferida (etapa nova, opcional); o resto
+     é a saída da carga, como sempre. */
+  const r = b.acao === 'conferir'
+    ? await conferirCarga(user, String(b.requestId), requestContext(req))
+    : await confirmarEnvio(user, String(b.requestId), b.cdNote ? String(b.cdNote) : null, requestContext(req));
   if (r.ok) return NextResponse.json({ ok: true, status: r.status });
 
   const status: Record<string, number> = { FORBIDDEN: 403, NAO_ENCONTRADO: 404, FORA_DE_ORDEM: 409, INVALID: 400 };

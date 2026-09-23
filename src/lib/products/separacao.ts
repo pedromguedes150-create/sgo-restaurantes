@@ -6,7 +6,7 @@ import { notifyUsers } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import { motivoLabel } from './separacao-motivos';
 import { numeroDoPedido } from './numero-do-pedido';
-import { carregarPedidoSemEscopoDeUnidade, type PedidoDetalhado } from './pedido';
+import { carregarPedidoSemEscopoDeUnidade, STATUS_PEDIDO, type PedidoDetalhado, type StatusPedido } from './pedido';
 
 /**
  * SEPARAÇÃO no CD — item a item, com quatro setores ao mesmo tempo.
@@ -67,6 +67,12 @@ export async function separarItem(
      colega por engano. */
   if (!vejoTudo && (!setor || item.cdSectorId !== setor)) return { ok: false, reason: 'FORBIDDEN' };
 
+  /* Carga já CONFERIDA na doca: mexer num item agora invalidaria a conferência
+     em silêncio. Quem precisa corrigir desfaz a conferência dando saída —
+     ou o Admin acompanha pelo romaneio. */
+  if (item.request.status === 'CONFERIDO') {
+    return { ok: false, reason: 'JA_ENVIADO', detalhe: 'A carga deste pedido já foi conferida — a separação não muda mais.' };
+  }
   /* Pedido já enviado à unidade é registro fechado: mexer nele agora mudaria o
      que a unidade recebeu depois de ter recebido. */
   if (!['ENVIADO_CD', 'SEPARANDO', 'PRONTO_ENVIO'].includes(item.request.status)) {
@@ -179,6 +185,9 @@ export async function desfazerItem(user: SessionUser, itemId: string): Promise<R
   if (!item) return { ok: false, reason: 'NAO_ENCONTRADO' };
   const { id: setor, vejoTudo } = await meuSetor(user);
   if (!vejoTudo && (!setor || item.cdSectorId !== setor)) return { ok: false, reason: 'FORBIDDEN' };
+  if (item.request.status === 'CONFERIDO') {
+    return { ok: false, reason: 'JA_ENVIADO', detalhe: 'A carga deste pedido já foi conferida — a separação não muda mais.' };
+  }
   if (!['ENVIADO_CD', 'SEPARANDO', 'PRONTO_ENVIO'].includes(item.request.status)) {
     return { ok: false, reason: 'JA_ENVIADO', detalhe: 'Este pedido já saiu do CD.' };
   }
@@ -329,4 +338,104 @@ export async function getRomaneioDoCd(user: SessionUser, requestId: string): Pro
   const meu = await getPedidoParaSeparar(user, requestId);
   if (!meu) return null;
   return carregarPedidoSemEscopoDeUnidade(requestId);
+}
+
+/* ─────────────────────── ROMANEIO POR SETOR ─────────────────────── */
+
+export interface LinhaDoSetor {
+  itemId: string;
+  name: string;
+  measure: string;
+  packUnit: UnidadeDePedido;
+  qtyRequested: number;
+  qtySeparated: number | null;
+}
+
+export interface PedidoNoSetor {
+  requestId: string;
+  number: number;
+  etiqueta: string;
+  unitName: string;
+  createdAt: Date;
+  statusLabel: string;
+  itens: LinhaDoSetor[];
+}
+
+export interface TotalDoSetor {
+  name: string;
+  measure: string;
+  packUnit: UnidadeDePedido;
+  qtyRequested: number;
+  qtySeparated: number;
+  /** Quantas unidades pedem este produto. */
+  unidades: number;
+}
+
+export interface RomaneioPorSetor {
+  setorId: string;
+  setorNome: string;
+  geradoEm: Date;
+  pedidos: PedidoNoSetor[];
+  totais: TotalDoSetor[];
+  totalItens: number;
+  totalSeparados: number;
+}
+
+/**
+ * A SEGUNDA VISÃO do romaneio: tudo que UM setor precisa separar, considerando
+ * todos os pedidos abertos das unidades — com o TOTAL por produto.
+ *
+ * É como a Fábrica/CD separa de fato: quem está nas Câmaras Frias pega a
+ * tilápia de três unidades de uma vez, não abre três pedidos. O total soma por
+ * (produto, embalagem pedida): "2 fardos" e "6 unidades" do mesmo item são
+ * duas linhas, porque o SGO não converte um no outro (embalagem-pedido.ts).
+ *
+ * A porta é a MESMA da fila: o separador vê só o setor dele; ADMIN/CEO veem
+ * qualquer setor. Pedidos já enviados ficam de fora — romaneio é do que ainda
+ * está no CD.
+ */
+export async function romaneioPorSetor(user: SessionUser, sectorId: string): Promise<RomaneioPorSetor | null> {
+  const { id: meu, vejoTudo } = await meuSetor(user);
+  if (!vejoTudo && meu !== sectorId) return null;
+  const setor = await prisma.cdSector.findUnique({ where: { id: sectorId }, select: { id: true, name: true } });
+  if (!setor) return null;
+
+  const pedidos = await prisma.productRequest.findMany({
+    where: { origin: 'CD', status: { in: ['ENVIADO_CD', 'SEPARANDO', 'PRONTO_ENVIO', 'CONFERIDO'] }, requestItems: { some: { cdSectorId: sectorId } } },
+    orderBy: { createdAt: 'asc' },
+    include: { requestItems: { where: { cdSectorId: sectorId }, orderBy: { name: 'asc' } } },
+  });
+  const unidades = new Map(
+    (await prisma.unit.findMany({ where: { id: { in: [...new Set(pedidos.map((p) => p.unitId))] } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]),
+  );
+
+  const totais = new Map<string, TotalDoSetor & { unitIds: Set<string> }>();
+  const lista: PedidoNoSetor[] = pedidos.map((p) => {
+    const status = (p.status as StatusPedido) in STATUS_PEDIDO ? (p.status as StatusPedido) : 'ENVIADO_CD';
+    const itens: LinhaDoSetor[] = p.requestItems.map((i) => {
+      const linha: LinhaDoSetor = {
+        itemId: i.id, name: i.name, measure: i.measure, packUnit: i.packUnit,
+        qtyRequested: Number(i.qtyRequested), qtySeparated: i.qtySeparated === null ? null : Number(i.qtySeparated),
+      };
+      const chave = `${i.name.toLowerCase()}|${i.packUnit}`;
+      const t = totais.get(chave) ?? { name: i.name, measure: i.measure, packUnit: i.packUnit, qtyRequested: 0, qtySeparated: 0, unidades: 0, unitIds: new Set<string>() };
+      t.qtyRequested += linha.qtyRequested;
+      t.qtySeparated += linha.qtySeparated ?? 0;
+      t.unitIds.add(p.unitId);
+      totais.set(chave, t);
+      return linha;
+    });
+    return { requestId: p.id, number: p.number, etiqueta: numeroDoPedido(p.number, p.createdAt), unitName: unidades.get(p.unitId) ?? '—', createdAt: p.createdAt, statusLabel: STATUS_PEDIDO[status], itens };
+  });
+
+  const todos = lista.flatMap((p) => p.itens);
+  return {
+    setorId: setor.id, setorNome: setor.name, geradoEm: new Date(),
+    pedidos: lista,
+    totais: [...totais.values()]
+      .map(({ unitIds, ...t }) => ({ ...t, unidades: unitIds.size, qtyRequested: Math.round(t.qtyRequested * 1000) / 1000, qtySeparated: Math.round(t.qtySeparated * 1000) / 1000 }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
+    totalItens: todos.length,
+    totalSeparados: todos.filter((i) => i.qtySeparated !== null).length,
+  };
 }

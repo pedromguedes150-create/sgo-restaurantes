@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import { sugerirSetorPorRegra, type SetorCadastrado } from '@/lib/stock/setor-sugerido';
 import { sugerirSetoresPorIAEmLote } from '@/lib/ai/produto-setor';
+import { propagarSetorParaItensAbertos } from '@/lib/products/propagar-setor';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -183,6 +184,9 @@ export async function aplicarSetores(
     });
     aplicados += r.count;
   }
+  /* Os itens "pendentes de classificação" dos pedidos ABERTOS seguem o setor
+     recém-definido — é o que faz o mutirão destravar a fila do CD. */
+  await propagarSetorParaItensAbertos(validos.map((p) => p.productId), ctx).catch(() => {});
 
   await audit({
     userId: user.id, action: 'PRODUCT_SECTOR_BULK', module: 'PRODUCTS', entity: 'product',
