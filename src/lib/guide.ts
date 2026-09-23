@@ -1156,6 +1156,7 @@ export const GUIDE: GuideSection[] = [
           'Atenção à meta: se a Supervisão corrigir a data OU precisar lançar uma nota que era sua, desconta % na sua meta do mês.',
           'GÁS entra por aqui: se o fornecedor for de gás (marcado no cadastro), ao selecioná-lo os campos viram os de gás (kg/botijão + vencimento).',
           'CONTRATOS que não fecham a conta (v1.109.0): quando uma nota da unidade NÃO entra no contrato, o cartão do contrato passa a dizer quanto ficou de fora e POR QUÊ — fora do período, lançada com outro fornecedor, ou sem fornecedor. Cada motivo tem um conserto diferente: ajustar o período do contrato, a data da nota, ou o fornecedor dela.',
+          'DOCUMENTO DO CONTRATO (v1.110.0): nos cartões de contrato da aba Contratos, Supervisão/Admin podem anexar o PDF ou a imagem do contrato assinado. Versões anteriores ficam guardadas — clique em "Histórico de documentos" para ver e baixar.',
           'A aba "Análise de gás" agora abre uma TELA PRÓPRIA (preço por kg, histórico e contratos), com o link "← Notas Recebidas" para voltar. Antes ela ficava embutida e a tela acabava com duas fileiras de abas empilhadas.',
           'RELATÓRIO DO GÁS (v1.103.0), no botão "Relatório" da tela de gás: escolha o período e veja, POR UNIDADE, quantas notas, quantos kg, quanto foi gasto, o preço médio/kg, o menor, o maior, o último e a variação do período. Toque na unidade para abrir todas as notas dela. No rodapé fica o consolidado da rede, e há Excel e PDF.',
           'VARIAÇÃO CORRIGIDA (v1.103.0): a variação de cada nota agora é recalculada em cima de TODO o histórico da unidade, sempre. Antes ela era congelada no momento do lançamento — então lançar uma nota com data retroativa comparava com a nota errada, e corrigir a data de uma nota deixava a variação desatualizada (ou em branco). Hoje, corrigiu a data, os percentuais se ajustam sozinhos.',
@@ -1209,10 +1210,13 @@ export const GUIDE: GuideSection[] = [
           'Se o preço/kg subir acima do limite (padrão 10%) vs a última compra da unidade, gerente e supervisor são avisados.',
           'PREÇO FORA DA FAIXA (v1.104.0): o sistema recusa lançamento acima de R$ 30,00/kg. Não é limite de gasto — é o corte entre preço de QUILO e preço de outra coisa: o valor do botijão inteiro (~R$ 290) ou o TOTAL da nota digitado no campo do preço unitário. Se aparecer essa recusa, confira se a quantidade está em kg e se o valor é o total da nota. Vale também para a correção de lançamento e para a importação por planilha.',
           'Se já houver notas assim gravadas, o Dashboard mostra um aviso vermelho no topo NOMEANDO cada uma (unidade, data, preço) — corrija kg/valor na aba Histórico. Enquanto elas existirem, o preço médio fica distorcido e os gráficos ficam achatados.',
+          'GRÁFICO DE EVOLUÇÃO DO PREÇO (v1.110.0): no Dashboard, acima das comparações, há um gráfico de linha do preço/kg ao longo do tempo, por unidade. Cada ponto é um recebimento; passe o mouse (ou toque) para ver data, fornecedor, kg, valor total e variação. Se a unidade tiver contrato ativo no período, uma linha tracejada mostra o preço/kg acordado — pontos amarelos ficaram acima do contrato, vermelhos ultrapassaram o limite de alerta. Escolha o período (3 meses, 6 meses, 12 meses ou tudo) no seletor no alto da seção.',
+          'DOCUMENTO DO CONTRATO (v1.110.0): dentro da aba Contratos (Análise de gás), cada cartão de contrato tem um botão "Anexar contrato" (PDF ou imagem). Depois do primeiro envio, o botão vira "Nova versão" e o arquivo mais recente aparece como link para abrir. Todas as versões ficam guardadas — clique em "Histórico de documentos" para ver e baixar as anteriores.',
         ],
         tips: [
           'A lista de fornecedores é compartilhada com Notas e Pagamentos. O Admin ajusta o limite do alerta e o teto de preço/kg no Dashboard da Análise de gás.',
           'O "preço médio/kg" é PONDERADO: valor total ÷ kg total, e não a média dos preços das notas — assim uma compra de 600 kg pesa mais que uma de 30 kg, como deve ser.',
+          'No gráfico de evolução, pontos cinzas com ⚠ são notas com preço acima do teto configurado — elas ficam marcadas mas fora da escala do eixo Y para não amassar o gráfico.',
         ],
       },
       {

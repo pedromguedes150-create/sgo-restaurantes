@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
+import { saveAttachment } from '@/lib/uploads';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -82,6 +83,16 @@ export async function deleteGasContract(user: SessionUser, id: string, ctx: Ctx 
   return { ok: true };
 }
 
+/** Versão de documento PDF/imagem anexada a um contrato. */
+export interface ContractDoc {
+  id: string;
+  path: string;
+  fileName: string | null;
+  mimeType: string | null;
+  uploadedAt: string; // ISO
+  uploadedByName: string | null;
+}
+
 /** Uma nota que NÃO entrou no contrato, e o motivo. */
 export interface ForaDoContrato {
   id: string;
@@ -113,6 +124,8 @@ export interface GasContractRow {
   foraDoContrato: ForaDoContrato[];
   /** Soma do que ficou de fora, para a tela mostrar a diferença de uma vez. */
   foraDoContratoKg: number;
+  /** Documentos anexados ao contrato (PDF/imagem), do mais recente ao mais antigo. */
+  documents: ContractDoc[];
 }
 
 /** Contratos do escopo com a posição/baixa calculada dos recebimentos. */
@@ -120,6 +133,7 @@ export async function listGasContracts(user: SessionUser, opts: { activeOnly?: b
   const contracts = await prisma.gasContract.findMany({
     where: { ...unitScopeWhere(user, 'unitId'), ...(opts.activeOnly ? { active: true } : {}) },
     orderBy: [{ active: 'desc' }, { endDate: 'asc' }],
+    include: { documents: { orderBy: { uploadedAt: 'desc' } } },
   });
   if (contracts.length === 0) return [];
   const [units, suppliers] = await Promise.all([
@@ -187,6 +201,14 @@ export async function listGasContracts(user: SessionUser, opts: { activeOnly?: b
       active: c.active, note: c.note,
       foraDoContrato,
       foraDoContratoKg: Math.round(foraDoContrato.reduce((s, f) => s + f.kg, 0) * 100) / 100,
+      documents: c.documents.map((d) => ({
+        id: d.id,
+        path: d.path,
+        fileName: d.fileName,
+        mimeType: d.mimeType,
+        uploadedAt: d.uploadedAt.toISOString(),
+        uploadedByName: d.uploadedByName,
+      })),
     });
   }
   return out;
@@ -208,5 +230,61 @@ export async function getGasPurchasedInFilter(user: SessionUser, filters: { unit
     kg: Math.round(Number(agg._sum.quantityKg ?? 0) * 100) / 100,
     total: Math.round(Number(agg._sum.totalValue ?? 0) * 100) / 100,
     count: agg._count,
+  };
+}
+
+/**
+ * Anexa um documento (PDF ou imagem) a um contrato de gás.
+ *
+ * Cada upload gera um registro em `GasContractDocument` — versões anteriores
+ * não são apagadas, para que o histórico de negociação fique preservado.
+ */
+export async function attachContractDocument(
+  user: SessionUser,
+  contractId: string,
+  file: File,
+  ctx: Ctx = {},
+): Promise<{ ok: true; doc: ContractDoc } | { ok: false; reason: 'FORBIDDEN' | 'NOT_FOUND' | 'INVALID' }> {
+  if (!canManage(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const c = await prisma.gasContract.findUnique({ where: { id: contractId }, select: { id: true, unitId: true } });
+  if (!c) return { ok: false, reason: 'NOT_FOUND' };
+  if (!canAccessUnit(user, c.unitId)) return { ok: false, reason: 'FORBIDDEN' };
+
+  let saved: { path: string; mimeType: string };
+  try {
+    saved = await saveAttachment(file, c.unitId, `gas-contrato-${contractId}`);
+  } catch {
+    return { ok: false, reason: 'INVALID' };
+  }
+
+  const doc = await prisma.gasContractDocument.create({
+    data: {
+      contractId,
+      path: saved.path,
+      fileName: file.name || null,
+      mimeType: saved.mimeType || null,
+      uploadedById: user.id,
+      uploadedByName: user.name,
+    },
+  });
+
+  await audit({
+    userId: user.id, unitId: c.unitId,
+    action: 'GAS_CONTRACT_DOCUMENT_ATTACH',
+    module: 'GAS', entity: 'gas_contract', entityId: contractId,
+    metadata: { fileName: file.name, size: file.size },
+    ...ctx,
+  });
+
+  return {
+    ok: true,
+    doc: {
+      id: doc.id,
+      path: doc.path,
+      fileName: doc.fileName,
+      mimeType: doc.mimeType,
+      uploadedAt: doc.uploadedAt.toISOString(),
+      uploadedByName: doc.uploadedByName,
+    },
   };
 }
