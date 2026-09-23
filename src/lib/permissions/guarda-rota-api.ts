@@ -130,6 +130,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
 
   '/api/rh/sync': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
   '/api/rh/test': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'ver' },
+  // Ping da v2: só status/erro/forma, sem dado do RH — por isso pode viver em produção.
+  '/api/rh/v2/ping': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'ver' },
 
   '/api/schedule': { modulo: 'SCHEDULE', exigir: 'editar' },
   '/api/schedule/absence': { modulo: 'SCHEDULE_TAB_ACTUAL', exigir: 'editar' },

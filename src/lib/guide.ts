@@ -430,6 +430,7 @@ export const GUIDE: GuideSection[] = [
         summary: 'Central única de chaves, URLs e eventos.',
         steps: [
           'Em Configurações → APIs & Integrações: API do RH (consumo), endpoints de recepção RH→SGO (URLs para colar no painel do RH) e webhook de férias SGO→RH.',
+          'API DO RH v2 (v1.112.0): cartão próprio "API do RH — v2 (em preparação)" com a base, a chave mascarada e o botão "Testar conexão v2". O teste roda no servidor do SGO e mostra só o status, o tempo e os NOMES dos campos da resposta — nunca os dados. Enquanto a v2 não for validada, a sincronização continua na v1; nada muda no dia a dia.',
           'Os tokens aparecem mascarados; os valores completos ficam no .env do servidor.',
           'A lista "Últimos eventos" mostra tudo que entrou/saiu (admissões, desligamentos, webhooks de férias) com status.',
         ],
@@ -898,6 +899,7 @@ export const GUIDE: GuideSection[] = [
         summary: 'Central única de chaves, URLs e eventos.',
         steps: [
           'Em Configurações → APIs & Integrações: API do RH (consumo), endpoints de recepção RH→SGO (URLs para colar no painel do RH) e webhook de férias SGO→RH.',
+          'API DO RH v2 (v1.112.0): cartão próprio "API do RH — v2 (em preparação)" com a base, a chave mascarada e o botão "Testar conexão v2". O teste roda no servidor do SGO e mostra só o status, o tempo e os NOMES dos campos da resposta — nunca os dados. Enquanto a v2 não for validada, a sincronização continua na v1; nada muda no dia a dia.',
           'Os tokens aparecem mascarados; os valores completos ficam no .env do servidor.',
           'A lista "Últimos eventos" mostra tudo que entrou/saiu (admissões, desligamentos, webhooks de férias) com status.',
         ],
