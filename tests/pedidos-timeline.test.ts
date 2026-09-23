@@ -24,10 +24,10 @@ const base = {
 const etapa = (p: Parameters<typeof montarTimeline>[0], chave: string) =>
   montarTimeline(p).find((e) => e.chave === chave)!;
 
-describe('As quatro etapas aparecem sempre', () => {
-  it('pedido recém-feito já mostra as quatro, três delas por fazer', () => {
+describe('As cinco etapas aparecem sempre', () => {
+  it('pedido recém-feito já mostra as cinco, quatro delas por fazer', () => {
     const t = montarTimeline(base);
-    expect(t.map((e) => e.chave)).toEqual(['PEDIDO', 'SEPARACAO', 'ENVIO', 'RECEBIMENTO']);
+    expect(t.map((e) => e.chave)).toEqual(['PEDIDO', 'SEPARACAO', 'CONFERENCIA', 'ENVIO', 'RECEBIMENTO']);
     expect(t.filter((e) => e.feito)).toHaveLength(1);
   });
 

@@ -55,6 +55,23 @@ export default async function PedidoDoGerentePage({ params }: { params: { id: st
         <p className="text-sm text-ink-500">{p.unitName} · {p.statusLabel}</p>
       </div>
 
+      {/* ── Progresso por setor: onde a carga está travando ── */}
+      {p.setores.length > 1 && (
+        <div className="flex flex-wrap gap-2 text-xs">
+          {p.setores.map((s) => (
+            <span key={s.cdSectorId ?? 'sem'} className={`rounded-pill border px-2 py-0.5 ${s.status === 'CONCLUIDO' ? 'border-success/40 bg-success-bg text-success' : s.status === 'CONCLUIDO_COM_FALTA' ? 'border-warning/40 bg-warning-bg text-warning' : s.status === 'SEPARANDO' ? 'border-brand/40 bg-brand/5 text-brand' : 'border-line text-ink-500'}`}>
+              {s.cdSectorName}: {STATUS_SETOR_LABEL[s.status].toLowerCase()}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {p.pendentesDeClassificacao > 0 && (
+        <p className="rounded-md bg-warning-bg px-3 py-2 text-sm text-ink-900">
+          ⚠ {p.pendentesDeClassificacao} item(ns) sem setor definido — aguardam classificação pela Administração do CD e, por isso, ainda não estão na fila de nenhum separador.
+        </p>
+      )}
+
       {/* ── A timeline ── */}
       <Card><CardContent className="space-y-3 pt-4">
         {timeline.map((e) => (

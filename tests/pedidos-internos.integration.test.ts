@@ -125,7 +125,7 @@ describe('A divisão entre os setores do CD', () => {
 
     const p = (await getPedido(gerente(), r.ok ? r.pedidos[0].id : ''))!;
     const orfao = p.setores.find((s) => s.cdSectorId === null);
-    expect(orfao?.cdSectorName).toBe('Sem setor cadastrado');
+    expect(orfao?.cdSectorName).toBe('Pendentes de classificação');
     expect(orfao?.total).toBe(1);
   });
 });
@@ -231,6 +231,6 @@ describe('O número do pedido', () => {
     const lista = await listarPedidosDaUnidade(gerente(), unitId);
     expect(lista).toHaveLength(2);
     expect(lista[0].number).toBeGreaterThan(lista[1].number);
-    expect(lista[0].statusLabel).toBe('Enviado ao CD');
+    expect(lista[0].statusLabel).toBe('Recebido pelo CD');
   });
 });

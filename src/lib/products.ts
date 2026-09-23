@@ -6,6 +6,7 @@ import { notifyAdmins } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import type { ProductOrigin } from '@prisma/client';
 import { lerPlanilhaDeProdutos, normalizarCodigoDeBarras } from './products/sheet';
+import { propagarSetorParaItensAbertos } from './products/propagar-setor';
 
 export const ORIGIN_LABEL: Record<ProductOrigin, string> = { FABRICA: 'Fábrica', CD: 'Centro de Distribuição', LOCAL: 'Compra local da unidade' };
 
@@ -66,6 +67,9 @@ export async function upsertProduct(user: SessionUser, input: { id?: string; nam
   };
   if (input.id) await prisma.product.update({ where: { id: input.id }, data });
   else await prisma.product.create({ data });
+  /* Setor definido no cadastro vai para os itens sem setor dos pedidos
+     ABERTOS: o item "pendente de classificação" entra na fila do setor certo. */
+  if (input.id && data.cdSectorId) await propagarSetorParaItensAbertos([input.id]).catch(() => {});
   return { ok: true as const };
 }
 export async function toggleProduct(user: SessionUser, id: string, active: boolean) {
