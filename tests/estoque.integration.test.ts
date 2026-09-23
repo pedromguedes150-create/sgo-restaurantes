@@ -430,7 +430,8 @@ describe('A tratativa do alerta', () => {
     const a = await loteVencendoEm(3);
     const b = await loteVencendoEm(4);
     const ra = await tratarLote(gerente(), a, 'DESCARTE', { note: 'estufou' });
-    const rb = await tratarLote(gerente(), b, 'TRANSFERIDO');
+    /* Transferido exige o DESTINO desde a v1.117.0: o lote entra na outra unidade. */
+    const rb = await tratarLote(gerente(), b, 'TRANSFERIDO', { paraUnitId: outra });
     if (ra.ok) expect(ra.status).toBe('DISCARDED');
     if (rb.ok) expect(rb.status).toBe('TRANSFERRED');
   });

@@ -77,3 +77,44 @@ describe('Quem está sem escala aparece', () => {
     expect(render({ grid: { year: 2026, month: 8, daysCount: 31, rows: [], withoutSchedule: [] } })).toBeTruthy();
   });
 });
+
+describe('Fase 2 — barra de três botões, filtros, quatro blocos e totais', () => {
+  const grade = (rows: Props['grid']['rows']) => ({ year: 2026, month: 8, daysCount: 31, rows, withoutSchedule: [] });
+  const semSeparadores = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '');
+
+  it('as três visões viram um controle segmentado e o botão de filtros aparece', () => {
+    const html = render();
+    expect(html).toContain('role="radiogroup"');
+    expect(html).toContain('aria-label="Visão da escala"');
+    for (const r of ['Planejado', 'Realizado', 'Comparação']) expect(html).toContain(r);
+    expect(html).toContain('Filtros');
+  });
+
+  it('os quatro blocos somam a grade — no Realizado, dias sem marcação ficam ditos', () => {
+    /* Ana: 31 dias planejados T, realizado só nos 3 primeiros (T, T, FI). */
+    const ana: Props['grid']['rows'][number] = {
+      ...linha('ANA'),
+      days: linha('ANA').days.map((d, i) => (i < 3 ? { planned: 'WORK', actual: i === 2 ? 'FALTA_INJUST' : 'WORK' } : d)),
+    };
+    const html = semSeparadores(render({ grid: grade([ana]) }));
+    for (const b of ['Na grade', 'Dias de trabalho', 'Folgas', 'Ausências']) expect(html).toContain(b);
+    expect(html).toContain('28 dia(s) sem marcação');
+    expect(html).toContain('FI 1');
+  });
+
+  it('cada linha ganha a coluna de totais T · F · Aus', () => {
+    const html = render();
+    expect(html).toContain('T · F · Aus');
+  });
+
+  it('o setor do Mapa de Funções aparece na linha quando existe', () => {
+    const ana = { ...linha('ANA'), setores: ['Cozinha'] };
+    const html = semSeparadores(render({ grid: grade([ana]) }));
+    expect(html).toContain('Cozinha');
+  });
+
+  it('grade vazia não desenha os blocos (não há o que somar)', () => {
+    const html = render({ grid: grade([]) });
+    expect(html).not.toContain('Na grade');
+  });
+});

@@ -43,6 +43,20 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
   // padrão atual por colaborador (p/ a tela de cadastro de escala)
   const patterns = await prisma.employeeSchedule.findMany({ where: { unitId: selected.id, active: true }, select: { collaboratorId: true, scheduleType: true, anchorDate: true, shiftId: true, customMask: true } });
 
+  /* Setor de cada pessoa, pelo quadro do Mapa de Funções — é o filtro que o
+     gerente mais usa ("só a Cozinha"). Quem cobre dois setores aparece nos dois. */
+  const alocacoes = await prisma.workforceAllocation.findMany({
+    where: { unitId: selected.id, collaboratorId: { not: null }, sector: { active: true } },
+    select: { collaboratorId: true, sector: { select: { name: true } } },
+  });
+  const setoresPorColaborador = new Map<string, string[]>();
+  for (const a of alocacoes) {
+    const lista = setoresPorColaborador.get(a.collaboratorId!) ?? [];
+    if (!lista.includes(a.sector.name)) lista.push(a.sector.name);
+    setoresPorColaborador.set(a.collaboratorId!, lista);
+  }
+  const gridComSetores = { ...grid, rows: grid.rows.map((r) => ({ ...r, setores: (setoresPorColaborador.get(r.collaboratorId) ?? []).sort((a, b) => a.localeCompare(b, 'pt-BR')) })) };
+
   return (
     <div className="space-y-4">
       <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand print:hidden"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
@@ -73,7 +87,7 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
           selectedUnitId={selected.id}
           year={year}
           month={month}
-          grid={grid}
+          grid={gridComSetores}
           collaborators={collaborators}
           turnos={turnos.map((t) => ({ id: t.id, name: t.name, startTime: t.startTime, endTime: t.endTime }))}
           patterns={patterns.map((p) => ({ collaboratorId: p.collaboratorId, scheduleType: p.scheduleType, anchorDate: p.anchorDate.toISOString().slice(0, 10), shiftId: p.shiftId, customMask: p.customMask }))}

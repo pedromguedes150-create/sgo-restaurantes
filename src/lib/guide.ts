@@ -1214,6 +1214,8 @@ export const GUIDE: GuideSection[] = [
           'OS ALERTAS: 30 dias 🟡 próximo · 7 dias 🟠 atenção · 2 dias 🔴 crítico · vence hoje 🔴 · vencido ⛔. A antecedência do PRIMEIRO aviso é por produto (um produto de 15 dias não pode acender junto com um de 6 meses); os avisos seguintes são iguais para todos.',
           'A TRATATIVA — é o coração do módulo. Quando um lote entra na faixa, ele aparece em "Precisam da sua resposta" com quatro saídas: ✅ Lote finalizado · 📦 Ainda possui estoque · 🗑️ Descarte/perda · 🔄 Transferido. Só "Ainda possui estoque" pede a quantidade (aproximada serve) e mantém o lote vivo; as outras três encerram o monitoramento.',
           'Respondeu, o alerta PARA de perguntar — e volta só quando o lote ficar mais perto do vencimento. Ele não repete a mesma pergunta todo dia.',
+          'TRANSFERIR PARA OUTRA UNIDADE (v1.117.0): na aba Estoque, cada lote tem "Transferir" — escolha a unidade, a quantidade (em branco = o lote inteiro) e confirme. A mercadoria SAI daqui e ENTRA lá no mesmo lote e com a mesma validade; o gerente da outra unidade é avisado e o alerta de validade segue contando na prateleira dele. A resposta "Transferido" do alerta passou a pedir para qual unidade — sem destino o lote sumiria daqui e não apareceria em lugar nenhum.',
+          'RECEBEU DO CD? LANCE NO ESTOQUE (v1.117.0): depois de conferir o recebimento de um pedido, o próprio pedido mostra "Lançar no estoque" com cada item recebido. A quantidade já vem sugerida quando a embalagem bate ("3 fardos" pedidos, produto contado em fardos); quando não bate, você informa. Produto que controla validade pede a data do lote. Cada item é um toque e NÃO se lança duas vezes — o que já entrou fica marcado. A tela Estoque avisa quais recebimentos dos últimos 30 dias ainda não foram lançados.',
         ],
         tips: [
           'A tela abre direto na aba Validade quando há lote esperando resposta: é trabalho parado.',
@@ -1355,6 +1357,9 @@ export const GUIDE: GuideSection[] = [
           'Enquanto o mês não for preenchido, o Planejado continua sendo calculado a cada visita — quem aparecer na faixa vermelha "fora da grade" está sem escala cadastrada, e o link leva direto ao cadastro.',
           'NO REALIZADO: "Completar dias vazios" preenche só o que está em branco e NÃO toca no que você já marcou. "Puxar Realizado = Planejado" SOBRESCREVE o mês inteiro — faltas, atestados e férias já lançados são substituídos pelo previsto.',
           'No modo COMPARAÇÃO veja planejado × realizado; exporte em Excel ou PDF para o RH.',
+          'A GRADE POR PARTES (v1.117.0): as três visões viraram uma barra de três botões (Planejado · Realizado · Comparação — este com o número de pessoas que divergiram), e o botão FILTROS abre nome/função, tipo de escala, SETOR do Mapa de Funções e horário. Filtrou "Cozinha", a grade mostra só a Cozinha. "Sem setor" também é filtro: é como achar quem ainda não foi alocado no Mapa.',
+          'OS QUATRO BLOCOS acima da grade — Na grade · Dias de trabalho · Folgas · Ausências (na Comparação, Divergências) — somam SÓ AS LINHAS VISÍVEIS: filtrou um setor, os números são daquele setor. No Realizado, o bloco de trabalho diz quantos dias ainda estão sem marcação; o de ausências abre FI/FJ/A/FE.',
+          'TOTAIS POR PESSOA: a última coluna da grade traz T · F · Aus de cada colaborador no mês (na Comparação, os dias divergentes). Na Comparação, marque "Só quem divergiu do planejado" para a grade encolher para quem precisa de explicação.',
         ],
       },
       {

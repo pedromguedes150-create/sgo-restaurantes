@@ -4,6 +4,8 @@ import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { emUnidades, type TipoDeEmbalagem } from '@/lib/stock/embalagem';
 import { bandaDaFaixa, faixaDaValidade } from '@/lib/stock/validade';
+import { registrarMovimento as mover, type Tx } from '@/lib/stock/movimento';
+import { transferirLote } from '@/lib/stock/transferencia';
 import type { SessionUser } from '@/lib/auth/session';
 import type { PackType, StockMoveType } from '@prisma/client';
 
@@ -18,34 +20,13 @@ import type { PackType, StockMoveType } from '@prisma/client';
  */
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
-type Falha = { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NAO_ENCONTRADO' | 'SEM_VALIDADE' | 'ENCERRADO'; message?: string };
+type Falha = { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NAO_ENCONTRADO' | 'SEM_VALIDADE' | 'ENCERRADO' | 'JA_LANCADO' | 'DESTINO_INVALIDO' | 'SALDO_INSUFICIENTE'; message?: string };
 
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
 
 async function diaDaUnidade(unitId: string): Promise<string> {
   const u = await prisma.unit.findUnique({ where: { id: unitId }, select: { timezone: true, cutoffHour: true } });
   return currentOperationalDate({ timezone: u?.timezone ?? 'America/Sao_Paulo', cutoffHour: u?.cutoffHour ?? 4 });
-}
-
-/** Grava o movimento junto com o saldo, sempre na MESMA transação. */
-async function mover(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
-  lote: { id: string; unitId: string; qtyOnHand: unknown },
-  type: StockMoveType,
-  novoSaldo: number,
-  user: SessionUser,
-  note?: string | null,
-) {
-  const antes = Number(lote.qtyOnHand);
-  await tx.stockMovement.create({
-    data: {
-      lotId: lote.id, unitId: lote.unitId, type,
-      qty: Math.round((novoSaldo - antes) * 1000) / 1000,
-      qtyAfter: novoSaldo,
-      note: note?.trim() || null,
-      createdById: user.id, createdByName: user.name,
-    },
-  });
 }
 
 /* ───────────────────────── ENTRADA ───────────────────────── */
@@ -58,8 +39,34 @@ export interface EntradaInput {
   lotCode?: string | null;
   expiresAt?: string | null;
   note?: string | null;
+  /**
+   * O item do pedido da Fábrica/CD que está virando estoque (v1.117.0). Com
+   * ele, a entrada marca o item como lançado — e recusa lançar de novo.
+   */
+  requestItemId?: string | null;
 }
 export type EntradaResult = { ok: true; lotId: string; unidades: number } | Falha;
+
+/** Sentinela da transação: o item já tinha sido lançado entre a checagem e a gravação. */
+class JaLancado extends Error {}
+
+/**
+ * Confere o item do pedido ANTES de gravar: é desta unidade, é deste produto,
+ * o pedido já foi recebido e ninguém o lançou ainda. Cada recusa diz o motivo,
+ * porque as quatro têm consertos diferentes.
+ */
+async function conferirItemDoPedido(requestItemId: string, unitId: string, productId: string): Promise<Falha | null> {
+  const item = await prisma.productRequestItem.findUnique({
+    where: { id: requestItemId },
+    select: { productId: true, stockedAt: true, request: { select: { unitId: true, status: true } } },
+  });
+  if (!item) return { ok: false, reason: 'NAO_ENCONTRADO', message: 'Item do pedido não encontrado.' };
+  if (item.request.unitId !== unitId) return { ok: false, reason: 'INVALID', message: 'Este item é de um pedido de outra unidade.' };
+  if (item.productId !== productId) return { ok: false, reason: 'INVALID', message: 'O item do pedido é de outro produto.' };
+  if (!item.request.status.startsWith('CONCLUIDO')) return { ok: false, reason: 'INVALID', message: 'O pedido ainda não foi recebido pela unidade.' };
+  if (item.stockedAt) return { ok: false, reason: 'JA_LANCADO', message: 'Este item do pedido já foi lançado no estoque.' };
+  return null;
+}
 
 /**
  * Lançar o que entrou na prateleira.
@@ -95,6 +102,12 @@ export async function lancarEntrada(user: SessionUser, input: EntradaInput, ctx:
 
   const lotCode = input.lotCode?.trim() || null;
 
+  const requestItemId = input.requestItemId?.trim() || null;
+  if (requestItemId) {
+    const recusa = await conferirItemDoPedido(requestItemId, input.unitId, produto.id);
+    if (recusa) return recusa;
+  }
+
   /* MESMO LOTE = mesma unidade + produto + código + validade. Duas entregas do
      mesmo lote SOMAM em vez de criar duas linhas: na prateleira é uma pilha só,
      e duas linhas fariam o gerente responder a mesma pergunta duas vezes. */
@@ -103,32 +116,49 @@ export async function lancarEntrada(user: SessionUser, input: EntradaInput, ctx:
     select: { id: true, unitId: true, qtyOnHand: true, qtyReceived: true },
   });
 
-  const lotId = await prisma.$transaction(async (tx) => {
-    if (existente) {
-      const saldo = Math.round((Number(existente.qtyOnHand) + unidades) * 1000) / 1000;
-      await mover(tx, existente, 'ENTRY', saldo, user, input.note);
-      await tx.stockLot.update({
-        where: { id: existente.id },
-        data: { qtyOnHand: saldo, qtyReceived: Math.round((Number(existente.qtyReceived) + unidades) * 1000) / 1000 },
+  /* A marcação do item do pedido vai na MESMA transação da entrada, e é
+     condicional (stockedAt ainda nulo): dois toques no mesmo botão não podem
+     virar dois lotes — o segundo cai na sentinela e a entrada dele é desfeita. */
+  async function marcarItem(tx: Tx, lotId: string) {
+    if (!requestItemId) return;
+    const r = await tx.productRequestItem.updateMany({ where: { id: requestItemId, stockedAt: null }, data: { stockLotId: lotId, stockedAt: new Date() } });
+    if (r.count === 0) throw new JaLancado();
+  }
+
+  let lotId: string;
+  try {
+    lotId = await prisma.$transaction(async (tx) => {
+      if (existente) {
+        const saldo = Math.round((Number(existente.qtyOnHand) + unidades) * 1000) / 1000;
+        await mover(tx, existente, 'ENTRY', saldo, user, input.note);
+        await tx.stockLot.update({
+          where: { id: existente.id },
+          data: { qtyOnHand: saldo, qtyReceived: Math.round((Number(existente.qtyReceived) + unidades) * 1000) / 1000 },
+        });
+        await marcarItem(tx, existente.id);
+        return existente.id;
+      }
+      const novo = await tx.stockLot.create({
+        data: {
+          unitId: input.unitId, productId: produto.id, lotCode, expiresAt,
+          qtyReceived: unidades, qtyOnHand: unidades,
+          packType, unitsPerPack,
+          createdById: user.id, createdByName: user.name,
+        },
+        select: { id: true, unitId: true, qtyOnHand: true },
       });
-      return existente.id;
-    }
-    const novo = await tx.stockLot.create({
-      data: {
-        unitId: input.unitId, productId: produto.id, lotCode, expiresAt,
-        qtyReceived: unidades, qtyOnHand: unidades,
-        packType, unitsPerPack,
-        createdById: user.id, createdByName: user.name,
-      },
-      select: { id: true, unitId: true, qtyOnHand: true },
+      await mover(tx, { ...novo, qtyOnHand: 0 }, 'ENTRY', unidades, user, input.note);
+      await marcarItem(tx, novo.id);
+      return novo.id;
     });
-    await mover(tx, { ...novo, qtyOnHand: 0 }, 'ENTRY', unidades, user, input.note);
-    return novo.id;
-  });
+  } catch (e) {
+    if (e instanceof JaLancado) return { ok: false, reason: 'JA_LANCADO', message: 'Este item do pedido já foi lançado no estoque.' };
+    throw e;
+  }
 
   await audit({
     userId: user.id, unitId: input.unitId, action: 'STOCK_ENTRY', module: 'STOCK', entity: 'stock_lot', entityId: lotId,
-    metadata: { produto: produto.name, unidades, lote: lotCode, validade: expiresAt }, ...ctx,
+    metadata: { produto: produto.name, unidades, lote: lotCode, validade: expiresAt, itemDoPedido: requestItemId }, ...ctx,
   });
   return { ok: true, lotId, unidades };
 }
@@ -195,7 +225,7 @@ export async function tratarLote(
   user: SessionUser,
   lotId: string,
   tratativa: Tratativa,
-  input: { quantidade?: number; note?: string | null } = {},
+  input: { quantidade?: number; note?: string | null; paraUnitId?: string | null } = {},
   ctx: Ctx = {},
 ): Promise<TratativaResult> {
   const lote = await prisma.stockLot.findUnique({
@@ -217,6 +247,21 @@ export async function tratarLote(
      faixa de ontem faria a pergunta voltar amanhã sem nada ter mudado. */
   const banda = bandaDaFaixa(faixaDaValidade(lote.expiresAt, hoje, lote.product.alertDays));
 
+  /* "Transferido" deixou de ser só um motivo de encerramento (v1.117.0): a
+     mercadoria ENTRA na outra unidade, no mesmo lote e com a mesma validade.
+     Sem o destino, o lote sumiria daqui e não apareceria em lugar nenhum. */
+  if (tratativa === 'TRANSFERIDO') {
+    if (!input.paraUnitId) return { ok: false, reason: 'INVALID', message: 'Informe para qual unidade o lote foi transferido.' };
+    const t = await transferirLote(user, { lotId: lote.id, paraUnitId: input.paraUnitId, quantidade: null, note: input.note }, ctx);
+    if (!t.ok) return t;
+    await prisma.stockLot.update({ where: { id: lote.id }, data: { lastReviewBand: banda, lastReviewAt: new Date() } });
+    await audit({
+      userId: user.id, unitId: lote.unitId, action: 'STOCK_LOT_REVIEW', module: 'STOCK', entity: 'stock_lot', entityId: lote.id,
+      metadata: { produto: lote.product.name, tratativa, saldoAntes: Number(lote.qtyOnHand), saldoDepois: 0, faixa: banda, paraUnitId: input.paraUnitId }, ...ctx,
+    });
+    return { ok: true, status: 'TRANSFERRED', saldo: 0 };
+  }
+
   let saldo = 0;
   let status: 'OPEN' | 'FINISHED' | 'DISCARDED' | 'TRANSFERRED' = 'FINISHED';
   let tipo: StockMoveType = 'FINISH';
@@ -232,9 +277,6 @@ export async function tratarLote(
   } else if (tratativa === 'DESCARTE') {
     status = 'DISCARDED';
     tipo = 'DISCARD';
-  } else if (tratativa === 'TRANSFERIDO') {
-    status = 'TRANSFERRED';
-    tipo = 'ADJUST';
   }
 
   await prisma.$transaction(async (tx) => {

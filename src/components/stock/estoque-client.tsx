@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, PackagePlus, Link2, CalendarClock, Search, Check, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { ScanLine, Save, PackagePlus, Link2, CalendarClock, Search, Check, Sparkles, ArrowRightLeft, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +32,8 @@ export interface EstoqueUI {
   pendencias: LinhaUI[];
   contagens: { total: number; lotes: number; vencidos: number; criticos: number; atencao: number; proximos: number };
 }
+/** Pedido da Fábrica/CD já recebido e ainda não lançado no estoque. */
+export interface RecebimentoPendenteUI { requestId: string; rotulo: string; recebidoEm: string; itensPendentes: number }
 interface ProdutoUI {
   id: string; name: string; category: string; measure: string;
   packType: TipoDeEmbalagem; packSize: number | null;
@@ -45,8 +48,11 @@ async function post(body: Record<string, unknown>): Promise<{ ok: boolean; error
   return r.json().catch(() => ({ ok: false, error: 'Falha de comunicação.' }));
 }
 
-export function EstoqueClient({ podeLancar, units, unitId, estoque }: {
+export function EstoqueClient({ podeLancar, units, unitId, estoque, unidadesDestino = [], recebimentosPendentes = [] }: {
   podeLancar: boolean; units: UnidadeUI[]; unitId: string | null; estoque: EstoqueUI;
+  /** Para onde um lote pode ser transferido: toda unidade ativa da rede, menos esta. */
+  unidadesDestino?: UnidadeUI[];
+  recebimentosPendentes?: RecebimentoPendenteUI[];
 }) {
   const [aba, setAba] = useState<'bipar' | 'estoque' | 'validade'>(
     /* Pendência de validade é trabalho parado: quem tem, cai nela. */
@@ -69,9 +75,26 @@ export function EstoqueClient({ podeLancar, units, unitId, estoque }: {
       )}
       <SegmentedControl aria-label="Seções do Estoque" value={aba} onValueChange={(v) => setAba(v as typeof aba)} options={abas} />
 
+      {/* O gancho com o pedido (etapa 2): o que a unidade recebeu do CD e ainda
+          não virou lote. Fica em toda aba porque é trabalho parado — e o
+          lançamento se faz no próprio pedido, onde estão as quantidades. */}
+      {podeLancar && recebimentosPendentes.length > 0 && (
+        <div className="rounded-lg border border-warning/40 bg-warning-bg px-3 py-2 text-sm">
+          <p className="flex items-center gap-1.5 font-semibold text-ink-900"><Truck className="h-4 w-4" /> {recebimentosPendentes.length} recebimento(s) da Fábrica/CD ainda não lançado(s) no estoque</p>
+          <ul className="mt-1 space-y-0.5">
+            {recebimentosPendentes.map((r) => (
+              <li key={r.requestId}>
+                <Link href={`/modulos/produtos/pedido/${r.requestId}`} className="font-medium text-brand underline">{r.rotulo}</Link>
+                <span className="text-ink-700"> · recebido em {r.recebidoEm} · {r.itensPendentes} item(ns) a lançar</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {aba === 'bipar' && podeLancar && <Bipar unitId={unitId} />}
-      {aba === 'estoque' && <Prateleira estoque={estoque} />}
-      {aba === 'validade' && <Validade estoque={estoque} podeLancar={podeLancar} />}
+      {aba === 'estoque' && <Prateleira estoque={estoque} podeLancar={podeLancar} unidadesDestino={unidadesDestino} />}
+      {aba === 'validade' && <Validade estoque={estoque} podeLancar={podeLancar} unidadesDestino={unidadesDestino} />}
     </div>
   );
 }
@@ -425,7 +448,7 @@ function Entrada({ unitId, produto, onSalvo }: { unitId: string; produto: Produt
 
 /* ═════════════════════════ PRATELEIRA ═════════════════════════ */
 
-function Prateleira({ estoque }: { estoque: EstoqueUI }) {
+function Prateleira({ estoque, podeLancar, unidadesDestino }: { estoque: EstoqueUI; podeLancar: boolean; unidadesDestino: UnidadeUI[] }) {
   const [q, setQ] = useState('');
   const linhas = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -440,14 +463,16 @@ function Prateleira({ estoque }: { estoque: EstoqueUI }) {
     <div className="space-y-3">
       <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar produto ou lote" />
       <Group>
-        {linhas.map((l) => <LinhaDoLote key={l.lotId} l={l} />)}
+        {linhas.map((l) => <LinhaDoLote key={l.lotId} l={l} transferivel={podeLancar} unidadesDestino={unidadesDestino} />)}
       </Group>
       {linhas.length === 0 && <p className="text-sm text-ink-500">Nada encontrado.</p>}
     </div>
   );
 }
 
-function LinhaDoLote({ l }: { l: LinhaUI }) {
+function LinhaDoLote({ l, transferivel = false, unidadesDestino = [] }: { l: LinhaUI; transferivel?: boolean; unidadesDestino?: UnidadeUI[] }) {
+  const [transferindo, setTransferindo] = useState(false);
+  const podeTransferir = transferivel && unidadesDestino.length > 0;
   return (
     <div className="p-3">
       <div className="flex items-start justify-between gap-2">
@@ -459,7 +484,63 @@ function LinhaDoLote({ l }: { l: LinhaUI }) {
             {l.expiresAt ? ` · Validade ${l.expiresAt.split('-').reverse().join('/')}` : ''}
           </p>
         </div>
-        {l.faixa && <StatusBadge tone={TOM[l.faixa.tom] ?? 'neutral'}>{l.faixa.chave === 'VENCIDO' ? 'Vencido' : l.faixa.rotulo}</StatusBadge>}
+        <div className="flex shrink-0 items-center gap-2">
+          {l.faixa && <StatusBadge tone={TOM[l.faixa.tom] ?? 'neutral'}>{l.faixa.chave === 'VENCIDO' ? 'Vencido' : l.faixa.rotulo}</StatusBadge>}
+          {podeTransferir && !transferindo && (
+            <Button variant="ghost" size="sm" onClick={() => setTransferindo(true)} aria-label={`Transferir ${l.produto}`}><ArrowRightLeft className="h-4 w-4" /> Transferir</Button>
+          )}
+        </div>
+      </div>
+      {transferindo && <Transferencia l={l} unidadesDestino={unidadesDestino} onFechar={() => setTransferindo(false)} />}
+    </div>
+  );
+}
+
+/**
+ * TRANSFERIR PARA OUTRA UNIDADE (etapa 2).
+ *
+ * A mercadoria sai desta prateleira e ENTRA na da outra unidade, no mesmo lote
+ * e com a mesma validade — quem recebe é avisado e o alerta de validade segue
+ * contando lá. Quantidade vazia = o lote inteiro (é o caso comum: "manda o
+ * resto para o Centro").
+ */
+function Transferencia({ l, unidadesDestino, onFechar }: { l: LinhaUI; unidadesDestino: UnidadeUI[]; onFechar: () => void }) {
+  const router = useRouter();
+  const [para, setPara] = useState('');
+  const [quantidade, setQuantidade] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [erro, setErro] = useState('');
+
+  async function transferir() {
+    setBusy(true); setErro('');
+    const r = await post({ action: 'transferir', lotId: l.lotId, paraUnitId: para, quantidade: quantidade.trim() ? Number(quantidade.replace(',', '.')) : null, note: note.trim() || null });
+    setBusy(false);
+    if (!r.ok) { setErro(String(r.error ?? 'Falha ao transferir.')); return; }
+    router.refresh();
+    onFechar();
+  }
+
+  return (
+    <div className="mt-2 space-y-2 rounded-lg border border-line bg-sunken/40 p-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="col-span-2 sm:col-span-1">
+          <Select label="Para a unidade" size="sm" placeholder="Escolha…" value={para} onValueChange={setPara} options={unidadesDestino.map((u) => ({ value: u.id, label: u.name }))} />
+        </div>
+        <div>
+          <Label htmlFor={`t-${l.lotId}`} className="text-xs">Quantidade</Label>
+          <Input id={`t-${l.lotId}`} inputMode="decimal" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} placeholder="Tudo" className="mt-1 h-9 text-sm" />
+        </div>
+        <div>
+          <Label htmlFor={`n-${l.lotId}`} className="text-xs">Observação</Label>
+          <Input id={`n-${l.lotId}`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="opcional" className="mt-1 h-9 text-sm" />
+        </div>
+      </div>
+      <p className="sgo-type-11 text-ink-500">Saldo aqui: {l.quantidade}. Em branco transfere o lote inteiro; o gerente da outra unidade é avisado e o lote entra lá com a mesma validade.</p>
+      {erro && <p className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">{erro}</p>}
+      <div className="flex gap-2">
+        <Button size="sm" disabled={busy || !para} onClick={() => void transferir()}><ArrowRightLeft className="h-4 w-4" /> Confirmar transferência</Button>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={onFechar}>Cancelar</Button>
       </div>
     </div>
   );
@@ -467,7 +548,7 @@ function LinhaDoLote({ l }: { l: LinhaUI }) {
 
 /* ═════════════════════════ VALIDADE ═════════════════════════ */
 
-function Validade({ estoque, podeLancar }: { estoque: EstoqueUI; podeLancar: boolean }) {
+function Validade({ estoque, podeLancar, unidadesDestino }: { estoque: EstoqueUI; podeLancar: boolean; unidadesDestino: UnidadeUI[] }) {
   const emAlerta = estoque.linhas.filter((l) => l.faixa);
   return (
     <div className="space-y-4">
@@ -485,7 +566,7 @@ function Validade({ estoque, podeLancar }: { estoque: EstoqueUI; podeLancar: boo
             O SGO não sabe o que foi vendido — não há PDV integrado. Responder aqui é o que mantém o alerta útil:
             sem isso ele repetiria a mesma pergunta todo dia sobre um lote que talvez já tenha acabado.
           </p>
-          {estoque.pendencias.map((l) => <CartaoDeTratativa key={l.lotId} l={l} />)}
+          {estoque.pendencias.map((l) => <CartaoDeTratativa key={l.lotId} l={l} unidadesDestino={unidadesDestino} />)}
         </div>
       )}
 
@@ -493,7 +574,7 @@ function Validade({ estoque, podeLancar }: { estoque: EstoqueUI; podeLancar: boo
       {emAlerta.length > 0 && (
         <div className="space-y-2">
           <p className="sgo-type-17 font-semibold text-ink-900">Próximos do vencimento</p>
-          <Group>{emAlerta.map((l) => <LinhaDoLote key={l.lotId} l={l} />)}</Group>
+          <Group>{emAlerta.map((l) => <LinhaDoLote key={l.lotId} l={l} transferivel={podeLancar} unidadesDestino={unidadesDestino} />)}</Group>
         </div>
       )}
     </div>
@@ -508,16 +589,19 @@ function Validade({ estoque, podeLancar }: { estoque: EstoqueUI; podeLancar: boo
  * diferentes, e a diferença importa: acabou é normal, descarte é perda, e
  * transferido é mercadoria que está noutra unidade.
  */
-function CartaoDeTratativa({ l }: { l: LinhaUI }) {
+function CartaoDeTratativa({ l, unidadesDestino = [] }: { l: LinhaUI; unidadesDestino?: UnidadeUI[] }) {
   const router = useRouter();
   const [quantidade, setQuantidade] = useState('');
   const [pedindoQtd, setPedindoQtd] = useState(false);
+  /* "Transferido" pede o DESTINO (v1.117.0): o lote entra na outra unidade. */
+  const [pedindoDestino, setPedindoDestino] = useState(false);
+  const [para, setPara] = useState('');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState('');
 
-  async function responder(tratativa: string, qtd?: number) {
+  async function responder(tratativa: string, qtd?: number, paraUnitId?: string) {
     setBusy(true); setErro('');
-    const r = await post({ action: 'tratativa', lotId: l.lotId, tratativa, quantidade: qtd });
+    const r = await post({ action: 'tratativa', lotId: l.lotId, tratativa, quantidade: qtd, paraUnitId });
     setBusy(false);
     if (r.ok) router.refresh(); else setErro(String(r.error ?? 'Falha'));
   }
@@ -537,12 +621,21 @@ function CartaoDeTratativa({ l }: { l: LinhaUI }) {
 
       {erro && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{erro}</p>}
 
-      {!pedindoQtd ? (
+      {pedindoDestino ? (
+        <div className="space-y-2">
+          <Select label="Transferido para qual unidade?" size="sm" placeholder="Escolha…" value={para} onValueChange={setPara} options={unidadesDestino.map((u) => ({ value: u.id, label: u.name }))} />
+          <div className="flex gap-2">
+            <Button size="sm" disabled={busy || !para} onClick={() => void responder('TRANSFERIDO', undefined, para)}>Confirmar</Button>
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => setPedindoDestino(false)}>Voltar</Button>
+          </div>
+          <p className="sgo-type-11 text-ink-500">O lote inteiro passa para o estoque da outra unidade, com a mesma validade — o gerente de lá é avisado.</p>
+        </div>
+      ) : !pedindoQtd ? (
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" size="sm" disabled={busy} onClick={() => void responder('FINALIZADO')}>Lote finalizado</Button>
           <Button variant="outline" size="sm" disabled={busy} onClick={() => setPedindoQtd(true)}>Ainda possui estoque</Button>
           <Button variant="outline" size="sm" disabled={busy} onClick={() => void responder('DESCARTE')}>Descarte / perda</Button>
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => void responder('TRANSFERIDO')}>Transferido</Button>
+          <Button variant="outline" size="sm" disabled={busy || unidadesDestino.length === 0} onClick={() => setPedindoDestino(true)} title={unidadesDestino.length === 0 ? 'Não há outra unidade ativa para receber' : undefined}>Transferido</Button>
         </div>
       ) : (
         <div className="space-y-2">

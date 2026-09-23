@@ -1340,6 +1340,12 @@ model ProductRequestItem {
   receiptNote  String?
   receiptPhoto String?
 
+  /// O gancho com o ESTOQUE (v1.117.0): quando o gerente lança o que recebeu
+  /// como lote da prateleira, fica aqui em qual lote entrou e quando. É o que
+  /// impede lançar o mesmo recebimento duas vezes.
+  stockLotId String?
+  stockedAt  DateTime?
+
   request  ProductRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   product  Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
   cdSector CdSector?      @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
@@ -3482,6 +3488,11 @@ enum StockMoveType {
   DISCARD
   FINISH
   ADJUST
+  /// Transferência entre unidades (v1.117.0): a saída na origem e a entrada no
+  /// destino são DOIS movimentos casados por `counterpartLotId` — cada unidade
+  /// lê o seu lado e o par conta a história inteira.
+  TRANSFER_OUT
+  TRANSFER_IN
 }
 
 /// Um lote é o que de fato se controla: o mesmo produto chega hoje vencendo em
@@ -3546,6 +3557,12 @@ model StockMovement {
   qty      Decimal @db.Decimal(12, 3)
   qtyAfter Decimal @db.Decimal(12, 3)
   note     String?
+
+  /// Só em TRANSFER_*: a outra ponta da transferência (a unidade e o lote de
+  /// lá). Sem FK de propósito — o lote do outro lado pode ser apagado com a
+  /// unidade dele, e o movimento daqui precisa continuar legível.
+  counterpartUnitId String?
+  counterpartLotId  String?
 
   createdById   String?
   createdByName String

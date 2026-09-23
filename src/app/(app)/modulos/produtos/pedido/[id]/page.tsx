@@ -11,6 +11,9 @@ import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { RecebimentoClient } from '@/components/products/recebimento-client';
+import { EstoqueDoRecebimentoClient } from '@/components/stock/estoque-do-recebimento-client';
+import { itensParaEstoque } from '@/lib/stock/recebimento';
+import { canEditModule } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +34,12 @@ export default async function PedidoDoGerentePage({ params }: { params: { id: st
 
   const timeline = montarTimeline(p);
   const podeConferir = p.status === 'ENVIADO_UNIDADE';
+
+  /* O gancho com o Estoque (v1.117.0): pedido recebido oferece virar lotes da
+     prateleira. Só para quem lança estoque — a porta é a mesma da tela Estoque. */
+  const paraEstoque = p.status.startsWith('CONCLUIDO') && (await canEditModule(user.role, 'STOCK'))
+    ? await itensParaEstoque(user, p.id)
+    : null;
 
   /* A conferência já gravada, para o pedido fechado mostrar o que foi apontado. */
   const apontados = p.status.startsWith('CONCLUIDO')
@@ -105,6 +114,20 @@ export default async function PedidoDoGerentePage({ params }: { params: { id: st
             id: i.id, name: i.name, measure: i.measure,
             qtyRequested: i.qtyRequested, qtySeparated: i.qtySeparated,
             missingLabel: motivoLabel(i.missingReason),
+          }))}
+        />
+      )}
+
+      {paraEstoque && paraEstoque.itens.length > 0 && (
+        <EstoqueDoRecebimentoClient
+          requestId={p.id}
+          unitId={p.unitId}
+          itens={paraEstoque.itens.map((i) => ({
+            itemId: i.itemId, productId: i.productId, nome: i.nome, recebido: i.recebido,
+            tipoDoEstoque: i.tipoDoEstoque, rotuloDoEstoque: i.rotuloDoEstoque, unitsPerPack: i.unitsPerPack,
+            quantidadeSugerida: i.quantidadeSugerida, exigeValidade: i.exigeValidade,
+            lancadoEm: i.lancadoEm ? i.lancadoEm.toLocaleDateString('pt-BR') : null,
+            bloqueio: i.bloqueio,
           }))}
         />
       )}
