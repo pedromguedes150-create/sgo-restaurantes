@@ -625,8 +625,12 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
     if (!unitId || !supplierId) { setErr('Preencha unidade e fornecedor (da lista).'); return; }
 
     if (isGas) {
-      // Lançamento de GÁS (cria GasReceipt) — vencimento do boleto incluso
-      const body: Record<string, unknown> = { unitId, supplierId, accessKey, noteNumber: number, dueDate };
+      // Lançamento de GÁS (cria GasReceipt) — vencimento do boleto incluso.
+      // A data do recebimento é a EMISSÃO da nota (`issueDate`), que a chave
+      // preenche com o mês/ano da NF-e (dia 1º) e o gerente pode ajustar. Sem
+      // enviar isso, o servidor cairia em `currentOperationalDate` (hoje) e o
+      // Controle de Gás mostraria o dia atual em vez do mês da nota.
+      const body: Record<string, unknown> = { unitId, supplierId, accessKey, noteNumber: number, dueDate, operationalDate: issueDate || undefined };
       if (kind === 'CYLINDER') {
         if (!(cc > 0) || !(cTotal > 0)) { setErr('Informe nº de botijões e valor total.'); return; }
         Object.assign(body, { kind: 'CYLINDER', cylinderCount: cc, cylinderKg: ck, cylindersReturned: cylReturned ? parseInt(cylReturned, 10) : undefined, totalValue: cTotal });

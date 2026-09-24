@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { createGasReceipt } from '@/lib/gas/create';
+import { currentOperationalDate } from '@/lib/date/operational';
 import type { SessionUser } from '@/lib/auth/session';
 
 const sfx = process.pid.toString(36);
@@ -38,6 +39,35 @@ describe('Recebimento de gás (Módulo 16)', () => {
       expect(r.pricePerKg).toBe(7.34);
       const fresh = await prisma.gasReceipt.findUnique({ where: { id: r.id } });
       expect(Number(fresh?.totalValue)).toBe(1746.92);
+    }
+  });
+
+  /**
+   * A data do recebimento é a EMISSÃO da nota, não hoje.
+   *
+   * A tela de Notas preenche a Emissão pela chave da NF-e (mês/ano, dia 1º) e o
+   * gerente pode ajustar; o cliente manda esse dia como `operationalDate`. Se o
+   * servidor não a respeitasse (ou o cliente não a enviasse), o Controle de Gás
+   * mostraria o dia atual — foi o defeito relatado. Estes casos travam as duas
+   * pontas do contrato.
+   */
+  it('respeita a operationalDate informada (emissão da nota), sem cair em hoje', async () => {
+    const emissao = '2026-03-01';
+    const r = await createGasReceipt(mgr(), { unitId, supplierId, noteNumber: `DT-${sfx}`, quantityKg: 100, pricePerKg: 7, operationalDate: emissao });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const fresh = await prisma.gasReceipt.findUnique({ where: { id: r.id } });
+      expect(fresh?.operationalDate).toBe(emissao);
+    }
+  });
+
+  it('sem operationalDate, cai no dia operacional de hoje (comportamento de sempre)', async () => {
+    const hoje = currentOperationalDate({ timezone: 'America/Sao_Paulo', cutoffHour: 4 });
+    const r = await createGasReceipt(mgr(), { unitId, supplierId, noteNumber: `HJ-${sfx}`, quantityKg: 100, pricePerKg: 7 });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const fresh = await prisma.gasReceipt.findUnique({ where: { id: r.id } });
+      expect(fresh?.operationalDate).toBe(hoje);
     }
   });
 
