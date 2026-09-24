@@ -60,12 +60,14 @@ beforeEach(() => {
 describe('A tabela da rede', () => {
   it('traz as seis colunas de tipo e os três totais', async () => {
     const html = await render();
-    for (const t of ['Self-service almoço', 'Self-service jantar', 'Refeitório almoço', 'Refeitório jantar', 'Sobras produção almoço', 'Sobras produção jantar']) {
+    /* Rótulos da v1.121.0 (pedido do Pedro). "Refeitório" segue na tabela como
+       coluna de HISTÓRICO — não se lança mais nela, mas os meses antigos leem. */
+    for (const t of ['Sobra Limpa (Self-Service) — Almoço', 'Sobra Limpa (Self-Service) — Jantar', 'Refeitório almoço (histórico)', 'Refeitório jantar (histórico)', 'Sobra de Produção — Almoço', 'Sobra de Produção — Jantar']) {
       expect(html, t).toContain(t);
     }
-    expect(html).toContain('TOTAL S L (kg)');
-    expect(html).toContain('TOTAL SOBRA PRODUÇÃO (kg)');
-    expect(html).toContain('TOTAL GERAL DIA (kg)');
+    expect(html).toContain('Total Sobra Limpa (kg)');
+    expect(html).toContain('Total Sobra de Produção (kg)');
+    expect(html).toContain('Total Geral do dia (kg)');
   });
 
   it('mostra a unidade e a linha da rede', async () => {

@@ -26,9 +26,9 @@ describe('A lista fechada', () => {
     expect(new Set(nosGrupos).size).toBe(6);
   });
 
-  it('os rótulos são os que a rede usa', () => {
-    expect(GRUPOS[0].label).toBe('TOTAL S L (kg)');
-    expect(GRUPOS[1].label).toBe('TOTAL SOBRA PRODUÇÃO (kg)');
+  it('os rótulos são os que a rede usa (v1.121.0: os do Pedro)', () => {
+    expect(GRUPOS[0].label).toBe('Total Sobra Limpa (kg)');
+    expect(GRUPOS[1].label).toBe('Total Sobra de Produção (kg)');
   });
 
   it('reconhece o que é e o que não é tipo fixo', () => {

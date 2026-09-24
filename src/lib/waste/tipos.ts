@@ -24,15 +24,23 @@ export interface TipoDeDesperdicio {
   order: number;
 }
 
-/** Os seis, na ordem em que o Alan os escreveu. */
+/**
+ * Os seis, na ordem em que o Alan os escreveu. Desde a v1.121.0 (pedido do
+ * Pedro) a FOLHA mostra só quatro — "Refeitório" foi INATIVADO no banco, não
+ * apagado: os lançamentos antigos continuam contando aqui e no consolidado, e
+ * os dois códigos ficam na lista para o histórico seguir encontrando o tipo.
+ */
 export const TIPOS_DE_DESPERDICIO: TipoDeDesperdicio[] = [
-  { code: 'SS_ALMOCO', name: 'Self-service almoço', grupo: 'SOBRA_LIMPA', turno: 'ALMOCO', order: 10 },
-  { code: 'SS_JANTAR', name: 'Self-service jantar', grupo: 'SOBRA_LIMPA', turno: 'JANTAR', order: 20 },
-  { code: 'REF_ALMOCO', name: 'Refeitório almoço', grupo: 'SOBRA_LIMPA', turno: 'ALMOCO', order: 30 },
-  { code: 'REF_JANTAR', name: 'Refeitório jantar', grupo: 'SOBRA_LIMPA', turno: 'JANTAR', order: 40 },
-  { code: 'PROD_ALMOCO', name: 'Sobras produção almoço', grupo: 'SOBRA_PRODUCAO', turno: 'ALMOCO', order: 50 },
-  { code: 'PROD_JANTAR', name: 'Sobras produção jantar', grupo: 'SOBRA_PRODUCAO', turno: 'JANTAR', order: 60 },
+  { code: 'SS_ALMOCO', name: 'Sobra Limpa (Self-Service) — Almoço', grupo: 'SOBRA_LIMPA', turno: 'ALMOCO', order: 10 },
+  { code: 'SS_JANTAR', name: 'Sobra Limpa (Self-Service) — Jantar', grupo: 'SOBRA_LIMPA', turno: 'JANTAR', order: 20 },
+  { code: 'REF_ALMOCO', name: 'Refeitório almoço (histórico)', grupo: 'SOBRA_LIMPA', turno: 'ALMOCO', order: 30 },
+  { code: 'REF_JANTAR', name: 'Refeitório jantar (histórico)', grupo: 'SOBRA_LIMPA', turno: 'JANTAR', order: 40 },
+  { code: 'PROD_ALMOCO', name: 'Sobra de Produção — Almoço', grupo: 'SOBRA_PRODUCAO', turno: 'ALMOCO', order: 50 },
+  { code: 'PROD_JANTAR', name: 'Sobra de Produção — Jantar', grupo: 'SOBRA_PRODUCAO', turno: 'JANTAR', order: 60 },
 ];
+
+/** Rótulo do turno para agrupar a folha (Almoço em cima, Jantar embaixo). */
+export const TURNO_LABEL: Record<TurnoDoDesperdicio, string> = { ALMOCO: 'Almoço', JANTAR: 'Jantar' };
 
 export interface GrupoDef {
   id: GrupoDeDesperdicio;
@@ -42,11 +50,13 @@ export interface GrupoDef {
 }
 
 export const GRUPOS: GrupoDef[] = [
-  { id: 'SOBRA_LIMPA', label: 'TOTAL S L (kg)', codes: ['SS_ALMOCO', 'SS_JANTAR', 'REF_ALMOCO', 'REF_JANTAR'] },
-  { id: 'SOBRA_PRODUCAO', label: 'TOTAL SOBRA PRODUÇÃO (kg)', codes: ['PROD_ALMOCO', 'PROD_JANTAR'] },
+  { id: 'SOBRA_LIMPA', label: 'Total Sobra Limpa (kg)', codes: ['SS_ALMOCO', 'SS_JANTAR', 'REF_ALMOCO', 'REF_JANTAR'] },
+  { id: 'SOBRA_PRODUCAO', label: 'Total Sobra de Produção (kg)', codes: ['PROD_ALMOCO', 'PROD_JANTAR'] },
 ];
 
-export const LABEL_TOTAL_GERAL = 'TOTAL GERAL DIA (kg)';
+export const LABEL_TOTAL_GERAL = 'Total Geral do dia (kg)';
+/** O mesmo total, sem "do dia" — para o cartão do mês no consolidado. */
+export const LABEL_TOTAL_GERAL_MES = 'Total Geral (kg)';
 
 const POR_CODIGO = new Map(TIPOS_DE_DESPERDICIO.map((t) => [t.code, t]));
 
