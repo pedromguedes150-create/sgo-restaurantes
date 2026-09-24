@@ -53,6 +53,7 @@ model Unit {
   taskTemplates TaskTemplate[]
   taskInstances TaskInstance[]
   wasteEntries  WasteEntry[]
+  snackDiscards WasteSnackDiscard[]
   occurrences   Occurrence[]
   commandConfig       UnitCommandConfig?
   commandSequences    CommandSequence[]
@@ -138,6 +139,7 @@ model User {
   completedTasks TaskInstance[] @relation("CompletedBy")
   assignedTasks  TaskInstance[] @relation("AssignedTo")
   wasteEntries   WasteEntry[]   @relation("WasteCreatedBy")
+  snackDiscards  WasteSnackDiscard[] @relation("SnackCreatedBy")
   pizzaClosings  PizzaClosing[] @relation("PizzaClosingCreatedBy")
   pizzaDoughChanges PizzaDoughChange[] @relation("PizzaDoughChangeBy")
   reportedOccurrences Occurrence[] @relation("OccReportedBy")
@@ -513,6 +515,54 @@ model WasteEntryItem {
   @@unique([entryId, categoryId])
   @@index([categoryId])
   @@map("waste_entry_items")
+}
+
+/// SOBRAS SALGADOS — a segunda frente do desperdício, em UNIDADES (nunca kg).
+/// Tipo e motivo vêm de um catálogo configurável (kind TIPO | MOTIVO): texto
+/// livre fragmentaria "coxinha"/"Coxinha" e a recorrência por tipo não fecharia.
+model WasteSnackOption {
+  id        String               @id @default(cuid())
+  kind      WasteSnackOptionKind
+  name      String
+  order     Int                  @default(0)
+  active    Boolean              @default(true)
+  createdAt DateTime             @default(now())
+
+  asType   WasteSnackDiscard[] @relation("SnackType")
+  asReason WasteSnackDiscard[] @relation("SnackReason")
+
+  @@unique([kind, name])
+  @@map("waste_snack_options")
+}
+
+enum WasteSnackOptionKind {
+  TIPO
+  MOTIVO
+}
+
+/// Um descarte de salgado: uma linha por (dia, tipo, motivo) na unidade. Várias
+/// linhas por dia; o total do dia é a soma. Nomes CONGELADOS para o histórico
+/// continuar legível se o catálogo for renomeado.
+model WasteSnackDiscard {
+  id              String   @id @default(cuid())
+  unitId          String
+  operationalDate String
+  typeId          String
+  typeName        String
+  reasonId        String
+  reasonName      String
+  quantity        Int
+  createdById     String?
+  createdAt       DateTime @default(now())
+
+  unit      Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  type      WasteSnackOption @relation("SnackType", fields: [typeId], references: [id])
+  reason    WasteSnackOption @relation("SnackReason", fields: [reasonId], references: [id])
+  createdBy User?            @relation("SnackCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([unitId, operationalDate])
+  @@index([typeId])
+  @@map("waste_snack_discards")
 }
 
 /// Gravidade da ocorrência (🟢🟡🔴⚫) — Módulo 6.

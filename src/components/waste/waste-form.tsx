@@ -6,7 +6,7 @@ import { Camera, Save, Plus, X } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/ds/button';
 import { Input } from '@/components/ui/ds/field';
 import { Banner } from '@/components/ui/ds/banner';
-import { GRUPOS, LABEL_TOTAL_GERAL, totaisDoDia } from '@/lib/waste/tipos';
+import { GRUPOS, LABEL_TOTAL_GERAL, totaisDoDia, tipoPorCodigo, TURNO_LABEL } from '@/lib/waste/tipos';
 
 interface Category {
   id: string;
@@ -136,20 +136,31 @@ export function WasteForm({
       {kgCats.length > 0 && (
         <section>
           <h3 className="sgo-type-11 mb-2 text-ink-500">Pesagem (kg)</h3>
-          {/* 2 colunas a partir de sm: o formulário deixa de ser uma coluna longa. */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {kgCats.map((c) => (
-              <Input
-                key={c.id}
-                label={c.name}
-                inputMode="decimal"
-                placeholder="0,000"
-                className="text-right tabular-nums"
-                value={kg[c.id] ?? ''}
-                onChange={(e) => setKg((s) => ({ ...s, [c.id]: e.target.value }))}
-              />
-            ))}
-          </div>
+          {/* Agrupado por TURNO (Almoço em cima, Jantar embaixo): é como o gerente
+              pesa — dois vasilhames por turno. Categoria fora da lista fixa cai
+              em "Outros" (não há nenhuma ativa hoje; fica por segurança). */}
+          {(['ALMOCO', 'JANTAR', 'OUTROS'] as const).map((turno) => {
+            const doTurno = kgCats.filter((c) => (tipoPorCodigo(c.code ?? '')?.turno ?? 'OUTROS') === turno);
+            if (doTurno.length === 0) return null;
+            return (
+              <div key={turno} className="mb-3">
+                <p className="mb-1.5 sgo-type-13 font-semibold text-brand">{turno === 'OUTROS' ? 'Outros' : TURNO_LABEL[turno]}</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {doTurno.map((c) => (
+                    <Input
+                      key={c.id}
+                      label={c.name}
+                      inputMode="decimal"
+                      placeholder="0,000"
+                      className="text-right tabular-nums"
+                      value={kg[c.id] ?? ''}
+                      onChange={(e) => setKg((s) => ({ ...s, [c.id]: e.target.value }))}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
 
           {temTipoFixo && (
             <div className="mt-3 rounded-card border-2 border-brand/30 bg-brand/5 p-3">

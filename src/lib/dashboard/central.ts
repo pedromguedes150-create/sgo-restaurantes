@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
+import { ehTipoFixo } from '@/lib/waste/tipos';
 import { competenciaDeHoje, emNumero, emReal, rotuloDaCompetencia } from '@/lib/ticket-media/calculo';
 import { resumoParaODashboard } from '@/lib/ticket-media/query';
 import { getUnitsOverview, aggregateDay, type UnitOverview } from '@/lib/tasks/overview';
@@ -91,7 +92,7 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
   const { de, ate } = mesCorrente(hoje);
   const soDaUnidade = unitIds && unitIds.length === 1 ? unitIds[0] : undefined;
 
-  const [overviews, occ, divergencias, cancelamentos, aprovar, freelas, unidadesDaRede, oleoDoMes, desperdicioDoMes, ticket] = await Promise.all([
+  const [overviews, occ, divergencias, cancelamentos, aprovar, freelas, unidadesDaRede, oleoDoMes, desperdicioDoMes, salgadosDoMes, ticket] = await Promise.all([
     getUnitsOverview(user, hoje),
     getOccurrenceSummary(user, soDaUnidade ? { unitId: soDaUnidade } : {}),
     getOpenDivergenceCount(user),
@@ -105,7 +106,11 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
     }),
     prisma.wasteEntry.findMany({
       where: { ...unitScopeWhere(user, 'unitId'), ...(soDaUnidade ? { unitId: soDaUnidade } : {}), operationalDate: { gte: de, lte: ate } },
-      select: { unitId: true },
+      select: { unitId: true, items: { select: { kg: true, category: { select: { code: true } } } } },
+    }),
+    prisma.wasteSnackDiscard.findMany({
+      where: { ...unitScopeWhere(user, 'unitId'), ...(soDaUnidade ? { unitId: soDaUnidade } : {}), operationalDate: { gte: de, lte: ate } },
+      select: { quantity: true },
     }),
     resumoParaODashboard(user, { competencia: competenciaDeHoje(hoje), unitIds }),
   ]);
@@ -130,11 +135,16 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
   const lancaramOleo = new Set(oleoDoMes.map((r) => r.unitId));
   const semOleo = unidadesDaRede.filter((u) => !lancaramOleo.has(u.id) && (!soDaUnidade || u.id === soDaUnidade));
 
-  /* ── Desperdício: COBERTURA, não peso.
-     O peso vive em kg e em unidades ao mesmo tempo (categoria com medida `un`),
-     e somar os dois daria um número sem significado. O que cabe num cartão da
-     rede é quantos dias foram lançados — que é o que a meta já mede. ── */
-  const diasComDesperdicio = desperdicioDoMes.length;
+  /* ── Desperdício: DOIS indicadores, NUNCA somados (v1.121.0).
+     Restaurante em kg (só os tipos fixos, a mesma regra do consolidado) e
+     Salgados em unidades. Antes o cartão mostrava cobertura (dias lançados)
+     justamente porque kg + un não tinha significado; separados, cada um pode
+     aparecer com o seu número. ── */
+  const kgRestaurante = desperdicioDoMes.reduce(
+    (s, e) => s + e.items.filter((i) => ehTipoFixo(i.category.code)).reduce((a, i) => a + Number(i.kg), 0),
+    0,
+  );
+  const unSalgados = salgadosDoMes.reduce((s, r) => s + r.quantity, 0);
 
   const indicadores: Indicador[] = [
     {
@@ -210,9 +220,9 @@ export async function getCentralDaRede(user: SessionUser, unitIds: string[] | un
       id: 'desperdicio',
       icone: 'desperdicio',
       titulo: 'Desperdício',
-      valor: inteiro(diasComDesperdicio),
-      detalhe: 'dia(s) lançado(s) no mês na rede',
-      href: '/modulos/desperdicios',
+      valor: `${kgRestaurante.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg`,
+      detalhe: `Restaurante · Salgados: ${inteiro(unSalgados)} un. no mês`,
+      href: '/modulos/desperdicios/consolidado',
       tom: 'ok',
     },
     {

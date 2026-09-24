@@ -5,8 +5,10 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { getActiveCategories, getEntryForDay, getWasteSeries, getCrossUnitWaste } from '@/lib/waste/query';
+import { ensureDefaultSnackOptions, getSnackOptions, getSnackDay, getSnackRecent } from '@/lib/waste/salgados';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { WasteForm } from '@/components/waste/waste-form';
+import { SalgadosForm } from '@/components/waste/salgados-form';
 import { WasteDatePicker } from '@/components/waste/waste-date-picker';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
@@ -14,36 +16,118 @@ import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
+type Aba = 'restaurante' | 'salgados';
+
+/**
+ * DESPERDÍCIOS em DUAS FRENTES (v1.121.0): Sobras Restaurante (kg) e Sobras
+ * Salgados (unidades). Abas separadas porque são indicadores separados — kg e
+ * unidades nunca se somam, nem no lançamento, nem no consolidado.
+ */
 export default async function DesperdiciosPage({
   searchParams,
 }: {
-  searchParams: { unit?: string; date?: string };
+  searchParams: { unit?: string; date?: string; aba?: string };
 }) {
   const user = (await getSessionUser())!;
   const now = new Date();
+  const aba: Aba = searchParams.aba === 'salgados' ? 'salgados' : 'restaurante';
 
   const units = await prisma.unit.findMany({
     where: { active: true, ...unitScopeWhere(user, 'id') },
     orderBy: { name: 'asc' },
   });
-
-  if (units.length === 0) {
-    return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
-  }
+  if (units.length === 0) return <p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p>;
 
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const today = currentOperationalDate({ timezone: selected.timezone, cutoffHour: selected.cutoffHour }, now);
   const operationalDate = searchParams.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date) && searchParams.date <= today ? searchParams.date : today;
   const isBackdated = operationalDate !== today;
+  const podeVerConsolidado = (await permissaoDeRota(user.role))('/modulos/desperdicios/consolidado');
 
+  const linkAba = (a: Aba) => `/modulos/desperdicios?aba=${a}&unit=${selected.id}${isBackdated ? `&date=${operationalDate}` : ''}`;
+  const abas = (
+    <div className="inline-flex overflow-hidden rounded-control border border-line">
+      <Link href={linkAba('restaurante')} className={`px-3 py-1.5 sgo-type-13 font-semibold ${aba === 'restaurante' ? 'bg-brand text-on-brand' : 'bg-surface text-ink-700 hover:bg-sunken'}`}>Sobras Restaurante</Link>
+      <Link href={linkAba('salgados')} className={`px-3 py-1.5 sgo-type-13 font-semibold ${aba === 'salgados' ? 'bg-brand text-on-brand' : 'bg-surface text-ink-700 hover:bg-sunken'}`}>Sobras Salgados</Link>
+    </div>
+  );
+
+  const cabecalho = (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <LargeTitle title="Desperdícios" />
+          <p className="text-sm text-ink-500">Dia operacional {operationalDate} · {aba === 'restaurante' ? 'Restaurante em kg' : 'Salgados em unidades'}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {podeVerConsolidado && (
+            <Link href={`/modulos/desperdicios/consolidado?aba=${aba}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">
+              Painel consolidado
+            </Link>
+          )}
+          {aba === 'restaurante' && (
+            <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">Exportar (Excel)</a>
+          )}
+        </div>
+      </div>
+      {abas}
+      {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
+    </>
+  );
+
+  /* ───────────────────────── SOBRAS SALGADOS ───────────────────────── */
+  if (aba === 'salgados') {
+    await ensureDefaultSnackOptions().catch(() => {});
+    const [opcoes, dia, recentes] = await Promise.all([getSnackOptions(), getSnackDay(selected.id, operationalDate), getSnackRecent(selected.id, 30)]);
+    const totalPeriodo = recentes.reduce((s, d) => s + d.total, 0);
+    return (
+      <div className="space-y-5">
+        {cabecalho}
+        <Card>
+          <CardHeader>
+            <CardTitle>{isBackdated ? `Salgados de ${operationalDate}` : 'Salgados de hoje'} — {selected.name}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} aba="salgados" />
+            {isBackdated && <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs font-medium text-warning">Lançando para um dia anterior ({operationalDate}).</p>}
+            {dia.createdBy && <p className="text-xs text-ink-500">Registrado por {dia.createdBy} · total atual {dia.total} un.</p>}
+            <SalgadosForm unitId={selected.id} operationalDate={operationalDate} tipos={opcoes.tipos} motivos={opcoes.motivos} initialRows={dia.rows} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Últimos 30 dias — {totalPeriodo} un.</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {recentes.length === 0 && <p className="text-sm text-ink-500">Nenhum descarte de salgado lançado no período.</p>}
+            {recentes.map((d) => (
+              <details key={d.operationalDate} className="rounded-lg border bg-surface p-2.5">
+                <summary className="flex cursor-pointer items-center justify-between text-sm">
+                  <span className="font-semibold text-ink-900">{d.operationalDate}</span>
+                  <span className="font-bold tabular-nums text-brand">{d.total} un.</span>
+                </summary>
+                <ul className="mt-1.5 space-y-0.5">
+                  {d.itens.map((i, idx) => (
+                    <li key={idx} className="flex justify-between text-xs text-ink-700">
+                      <span>{i.typeName} <span className="text-ink-500">· {i.reasonName}</span></span>
+                      <span className="font-medium tabular-nums">{i.quantity} un.</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ))}
+            <p className="pt-1 text-xs text-ink-500">Para lançar/corrigir um dia, escolha a data acima. O histórico por tipo e motivo fica no Painel consolidado.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  /* ───────────────────────── SOBRAS RESTAURANTE ───────────────────────── */
   const [categories, entry, series, wasteTemplate] = await Promise.all([
     getActiveCategories(),
     getEntryForDay(selected.id, operationalDate),
     getWasteSeries(selected.id, 30, now),
-    prisma.taskTemplate.findFirst({
-      where: { unitId: selected.id, module: 'WASTE', active: true },
-      select: { requiresEvidence: true },
-    }),
+    prisma.taskTemplate.findFirst({ where: { unitId: selected.id, module: 'WASTE', active: true }, select: { requiresEvidence: true } }),
   ]);
 
   const canCompare = user.seesAllUnits || user.role === 'SUPERVISOR';
@@ -60,45 +144,19 @@ export default async function DesperdiciosPage({
       })
     : [];
 
-  /* Atalho que o perfil não pode abrir não é oferecido — clicar nele só
-     devolveria a pessoa para onde ela estava. */
-  const podeVerConsolidado = (await permissaoDeRota(user.role))('/modulos/desperdicios/consolidado');
-
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <LargeTitle title="Desperdícios" />
-          <p className="text-sm text-ink-500">Dia operacional {operationalDate}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {/* O consolidado da rede fica a um toque do lançamento: quem lança é
-              quem melhor entende o próprio número, e comparar com as outras
-              unidades era coisa que só a supervisão conseguia fazer. */}
-          {podeVerConsolidado && (
-            <Link href="/modulos/desperdicios/consolidado" className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">
-              Painel consolidado
-            </Link>
-          )}
-          <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">Exportar (Excel)</a>
-        </div>
-      </div>
+      {cabecalho}
 
-      {/* Seletor de unidade (compacto) */}
-      {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
-
-      {/* Lançamento do dia */}
       <Card>
         <CardHeader>
           <CardTitle>{isBackdated ? `Lançamento de ${operationalDate}` : 'Lançamento de hoje'} — {selected.name}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} />
+          <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} aba="restaurante" />
           {isBackdated && <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs font-medium text-warning">Lançando para um dia anterior ({operationalDate}).</p>}
           {entry?.createdBy && (
-            <p className="mb-3 text-xs text-ink-500">
-              Registrado por {entry.createdBy} · total atual {entry.total.toFixed(2)} KG
-            </p>
+            <p className="mb-3 text-xs text-ink-500">Registrado por {entry.createdBy} · total atual {entry.total.toFixed(2)} KG</p>
           )}
           <WasteForm
             unitId={selected.id}
@@ -112,12 +170,9 @@ export default async function DesperdiciosPage({
         </CardContent>
       </Card>
 
-      {/* Histórico de lançamentos (Admin: editar pelo seletor de dia / excluir) */}
       {isAdmin && (
         <Card>
-          <CardHeader>
-            <CardTitle>Histórico de lançamentos (admin)</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Histórico de lançamentos (admin)</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {recent.length === 0 && <p className="text-sm text-ink-500">Nenhum lançamento.</p>}
             {recent.map((e) => {
@@ -153,11 +208,8 @@ export default async function DesperdiciosPage({
         </Card>
       )}
 
-      {/* Mini-dashboard: barras por categoria (30 dias) */}
       <Card>
-        <CardHeader>
-          <CardTitle>Por categoria (30 dias)</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Por categoria (30 dias)</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-ink-500">Total no período</span>
@@ -165,14 +217,10 @@ export default async function DesperdiciosPage({
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-ink-500">Dias com registro</span>
-            <span className="font-semibold">
-              {series.daysWithRecord}/{series.windowDays} ({series.recordRatePct}%)
-            </span>
+            <span className="font-semibold">{series.daysWithRecord}/{series.windowDays} ({series.recordRatePct}%)</span>
           </div>
           <div className="space-y-2 pt-1">
-            {series.byCategory.length === 0 && (
-              <p className="text-sm text-ink-500">Sem dados no período.</p>
-            )}
+            {series.byCategory.length === 0 && <p className="text-sm text-ink-500">Sem dados no período.</p>}
             {series.byCategory.map((c) => (
               <div key={c.categoryId}>
                 <div className="mb-0.5 flex justify-between text-xs">
@@ -188,19 +236,14 @@ export default async function DesperdiciosPage({
         </CardContent>
       </Card>
 
-      {/* Comparativo entre unidades (Admin/CEO/Supervisor) */}
       {canCompare && cross.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Comparativo entre unidades (30 dias)</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Comparativo entre unidades (30 dias)</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {cross.map((u) => (
               <div key={u.unitId} className="flex items-center justify-between text-sm">
                 <span className="font-medium">{u.name}</span>
-                <span className="text-ink-500">
-                  {u.total.toFixed(1)} KG · {u.recordRatePct}% dias
-                </span>
+                <span className="text-ink-500">{u.total.toFixed(1)} KG · {u.recordRatePct}% dias</span>
               </div>
             ))}
           </CardContent>
