@@ -3,13 +3,16 @@ import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getUsageBoard } from '@/lib/supervisor/usage';
+import { getPainelRede } from '@/lib/supervisor/rede';
 import { getMetaBreakdown } from '@/lib/metas/query';
 import { Card, CardContent } from '@/components/ui/card';
 import { PrintButton } from '@/components/ui/print-button';
-import { ArrowLeft, ClipboardCheck } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { FormSelect } from '@/components/ui/ds/form-controls';
 import { shortUnitName } from '@/lib/unit-name';
 import { LargeTitle } from '@/components/layout/page-chrome';
+import { PainelRedeClient } from '@/components/supervisor/painel-rede-client';
+import { PainelUnidadeChecklists } from '@/components/supervisor/painel-unidade-checklists';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,8 +20,12 @@ const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', '
 function tone(pct: number): string { return pct >= 80 ? 'text-success' : pct >= 50 ? 'text-warning' : 'text-danger'; }
 function toneBg(pct: number): string { return pct >= 80 ? 'bg-success' : pct >= 50 ? 'bg-warning' : 'bg-danger'; }
 
-/** Painel resumo da unidade para a reunião supervisor×gerente (20/07). Imprimível. */
-export default async function PainelUnidadePage({ searchParams }: { searchParams: { unit?: string; mes?: string } }) {
+/**
+ * PAINEL DA SUPERVISÃO. Um seletor no topo: REDE GERAL (visão executiva da
+ * diretoria) ou UNIDADE (detalhamento). A visão da rede COMPÕE os números que a
+ * visão da unidade já mostra — nada é recalculado (`getPainelRede`).
+ */
+export default async function PainelUnidadePage({ searchParams }: { searchParams: { unit?: string; mes?: string; visao?: string } }) {
   const user = (await getSessionUser())!;
   if (!['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role)) {
     return <p className="text-sm text-ink-500">Restrito à Supervisão/Administração.</p>;
@@ -28,9 +35,56 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
 
   const now = new Date();
   const ym = /^\d{4}-\d{2}$/.test(searchParams.mes ?? '') ? searchParams.mes! : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const selUnit = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const [y, m] = ym.split('-').map(Number);
+  /* Rede por padrão quando há mais de uma unidade — é a pergunta da diretoria. */
+  const visao = searchParams.visao === 'unidade' || units.length === 1 ? 'unidade' : 'rede';
 
+  const months: string[] = [];
+  for (let i = 0; i < 12; i++) { const d = new Date(y, (m - 1) - i, 1); months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
+  const mesOptions = months.map((mm) => { const [yy, m2] = mm.split('-'); return { value: mm, label: `${MONTHS[Number(m2) - 1]}/${yy}` }; });
+
+  const toggle = (
+    <div className="inline-flex overflow-hidden rounded-control border border-line print:hidden">
+      <Link href={`/modulos/painel-unidade?visao=rede&mes=${ym}`} className={`px-3 py-1.5 sgo-type-13 font-semibold ${visao === 'rede' ? 'bg-brand text-on-brand' : 'bg-surface text-ink-700 hover:bg-sunken'}`}>Rede geral</Link>
+      <Link href={`/modulos/painel-unidade?visao=unidade&mes=${ym}${searchParams.unit ? `&unit=${searchParams.unit}` : ''}`} className={`px-3 py-1.5 sgo-type-13 font-semibold ${visao === 'unidade' ? 'bg-brand text-on-brand' : 'bg-surface text-ink-700 hover:bg-sunken'}`}>Unidade</Link>
+    </div>
+  );
+
+  const header = (
+    <>
+      <div className="print:hidden">
+        <Link href="/modulos/supervisao" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Supervisão</Link>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <LargeTitle title={visao === 'rede' ? 'Painel executivo da rede' : 'Painel da unidade'} />
+        <div className="flex flex-wrap items-center gap-2">{toggle}<PrintButton /></div>
+      </div>
+    </>
+  );
+
+  /* ───────────────────────── REDE GERAL ───────────────────────── */
+  if (visao === 'rede') {
+    const dados = await getPainelRede(user, ym);
+    return (
+      <div className="space-y-4">
+        {header}
+        <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3 print:hidden">
+          <input type="hidden" name="visao" value="rede" />
+          <FormSelect name="mes" label="Mês" defaultValue={ym} className="w-44" options={mesOptions} />
+          <button type="submit" className="h-10 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand">Ver</button>
+        </form>
+        <div className="rounded-card border border-line bg-surface p-4">
+          <p className="text-lg font-bold text-ink-900">Consolidado da rede</p>
+          <p className="text-sm text-ink-500">{dados.resumo.unidades} unidade(s) · {MONTHS[m - 1]}/{y} · gerado em {now.toLocaleDateString('pt-BR')}</p>
+        </div>
+        <PainelRedeClient dados={dados} ym={ym} />
+        <p className="text-center text-xs text-ink-500 print:mt-6">SGO Beija Flor · Painel executivo da rede · {MONTHS[m - 1]}/{y}</p>
+      </div>
+    );
+  }
+
+  /* ───────────────────────── UNIDADE ───────────────────────── */
+  const selUnit = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const [board, breakdown, taskCounts, occ] = await Promise.all([
     getUsageBoard(user, ym),
     getMetaBreakdown(selUnit.id, ym),
@@ -43,37 +97,21 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
   const occOpen = (occ.find((o) => o.status === 'OPEN')?._count ?? 0) + (occ.find((o) => o.status === 'IN_PROGRESS')?._count ?? 0);
   const occTotal = occ.reduce((s, o) => s + o._count, 0);
 
-  const months: string[] = [];
-  for (let i = 0; i < 12; i++) { const d = new Date(y, (m - 1) - i, 1); months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
-
   return (
     <div className="space-y-4">
-      <div className="print:hidden">
-        <Link href="/modulos/supervisao" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Supervisão</Link>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <LargeTitle title="Painel da unidade" />
-        <PrintButton />
-      </div>
-
+      {header}
       <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3 print:hidden">
-        <FormSelect
-          name="unit" label="Unidade" defaultValue={selUnit.id} className="w-52"
-          options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
-        />
-        <FormSelect
-          name="mes" label="Mês" defaultValue={ym} className="w-44"
-          options={months.map((mm) => { const [yy, m2] = mm.split('-'); return { value: mm, label: `${MONTHS[Number(m2) - 1]}/${yy}` }; })}
-        />
+        <input type="hidden" name="visao" value="unidade" />
+        <FormSelect name="unit" label="Unidade" defaultValue={selUnit.id} className="w-52" options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
+        <FormSelect name="mes" label="Mês" defaultValue={ym} className="w-44" options={mesOptions} />
         <button type="submit" className="h-10 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand">Ver</button>
       </form>
 
-      <div className="rounded-xl border bg-surface p-4">
+      <div className="rounded-card border border-line bg-surface p-4">
         <p className="text-lg font-bold text-ink-900">{selUnit.name}</p>
         <p className="text-sm text-ink-500">Resumo de {MONTHS[m - 1]}/{y} · gerado em {now.toLocaleDateString('pt-BR')}</p>
       </div>
 
-      {/* Performance */}
       <Card><CardContent className="pt-4">
         <h2 className="mb-3 sgo-type-11 font-semibold text-ink-900">Performance na plataforma</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -84,7 +122,6 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
         </div>
       </CardContent></Card>
 
-      {/* Preenchimento operacional */}
       <Card><CardContent className="pt-4">
         <h2 className="mb-3 sgo-type-11 font-semibold text-ink-900">Preenchimento operacional</h2>
         <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
@@ -97,18 +134,9 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
         </div>
       </CardContent></Card>
 
-      {/* Detalhamento da meta */}
       <Card><CardContent className="pt-4">
-        <h2 className="mb-3 sgo-type-11 font-semibold text-ink-900">Histórico de checklists / componentes da meta</h2>
-        {breakdown.length === 0 && <p className="text-sm text-ink-500">Sem componentes no período.</p>}
-        <div className="space-y-1.5">
-          {breakdown.map((b, i) => (
-            <div key={i} className="flex items-center justify-between gap-2 border-b pb-1.5 text-sm">
-              <span className="min-w-0"><span className="block font-medium text-ink-900">{b.name}</span><span className="block text-xs text-ink-500">{b.done}/{b.resolved} realizadas</span></span>
-              <span className={`shrink-0 font-bold tabular-nums ${tone(b.scorePct)}`}>{b.scorePct}%<span className="ml-1 text-xs font-normal text-ink-500">peso {b.weight}</span></span>
-            </div>
-          ))}
-        </div>
+        <h2 className="mb-3 sgo-type-11 font-semibold text-ink-900">Checklists / componentes da meta</h2>
+        <PainelUnidadeChecklists breakdown={breakdown} done={done} late={late} missed={missed} />
       </CardContent></Card>
 
       <p className="text-center text-xs text-ink-500 print:mt-6">SGO Beija Flor · Painel da unidade · {selUnit.name} · {MONTHS[m - 1]}/{y}</p>
