@@ -214,6 +214,109 @@ export async function listGasContracts(user: SessionUser, opts: { activeOnly?: b
   return out;
 }
 
+/**
+ * Uma unidade que RECEBE gás mas não tem contrato vigente para explicar as
+ * notas — e o motivo.
+ *
+ * O painel "Contratos vigentes — % cumprido" mostra só contratos `active` e não
+ * vencidos (a definição de vigente). Uma unidade cujo contrato venceu, foi
+ * inativado, ou nunca teve contrato, simplesmente SOME do painel — sem nada
+ * dizer que ela ainda compra gás nem por que o contrato não conta. É a mesma
+ * exclusão silenciosa que este módulo já combate nota a nota (`foraDoContrato`):
+ * aqui ela acontece um nível acima, na unidade inteira.
+ *
+ * Foi o que aconteceu com a Nova União: recebimentos vinculados à unidade
+ * (por ID), aparecendo no histórico, mas ausentes da área de contratos. Este
+ * levantamento faz a unidade aparecer com o motivo — sem inventar contrato,
+ * sem redistribuir nota e sem tocar no cálculo de quem tem contrato vigente.
+ */
+export interface UnidadeSemContratoVigente {
+  unitId: string;
+  unitName: string;
+  receiptsKg: number;
+  receiptsCount: number;
+  lastReceiptDate: string;
+  motivo: 'SEM_CONTRATO' | 'CONTRATO_VENCIDO' | 'CONTRATO_INATIVO';
+  /** O contrato mais recente da unidade, quando existe (para o conserto: renovar/reativar). */
+  ultimoContrato?: { id: string; startDate: string; endDate: string; active: boolean; supplierName: string };
+}
+
+/**
+ * Unidades DO ESCOPO que receberam gás recentemente e não têm contrato vigente.
+ *
+ * Vínculo 100% por ID (unitId): a mesma chave que liga recebimento e contrato
+ * em `listGasContracts`. Nenhuma comparação por nome/razão social.
+ *
+ * Janela de 180 dias no ÚLTIMO recebimento: uma unidade que parou de comprar há
+ * tempos e não tem contrato não é pendência acionável — nagging não é sinal.
+ */
+export async function listUnitsWithReceiptsWithoutActiveContract(
+  user: SessionUser,
+  opts: { sinceDays?: number } = {},
+): Promise<UnidadeSemContratoVigente[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const cutoff = new Date(Date.now() - (opts.sinceDays ?? 180) * 86_400_000).toISOString().slice(0, 10);
+
+  const porUnidade = await prisma.gasReceipt.groupBy({
+    by: ['unitId'],
+    where: { ...unitScopeWhere(user, 'unitId') },
+    _sum: { quantityKg: true },
+    _count: { _all: true },
+    _max: { operationalDate: true },
+  });
+  // Só quem recebeu dentro da janela (o último recebimento é recente).
+  const recentes = porUnidade.filter((u) => (u._max.operationalDate ?? '') >= cutoff);
+  if (recentes.length === 0) return [];
+
+  const unitIds = recentes.map((u) => u.unitId);
+  const [units, contracts] = await Promise.all([
+    prisma.unit.findMany({ where: { id: { in: unitIds } }, select: { id: true, name: true } }),
+    prisma.gasContract.findMany({ where: { unitId: { in: unitIds } }, select: { id: true, unitId: true, active: true, startDate: true, endDate: true, supplierId: true } }),
+  ]);
+  const unitBy = new Map(units.map((u) => [u.id, u.name]));
+  const supIds = [...new Set(contracts.map((c) => c.supplierId))];
+  const suppliers = supIds.length ? await prisma.supplier.findMany({ where: { id: { in: supIds } }, select: { id: true, name: true } }) : [];
+  const supBy = new Map(suppliers.map((s) => [s.id, s.name]));
+
+  const contratosPorUnidade = new Map<string, typeof contracts>();
+  for (const c of contracts) {
+    const arr = contratosPorUnidade.get(c.unitId) ?? [];
+    arr.push(c);
+    contratosPorUnidade.set(c.unitId, arr);
+  }
+
+  const out: UnidadeSemContratoVigente[] = [];
+  for (const u of recentes) {
+    const doUnidade = contratosPorUnidade.get(u.unitId) ?? [];
+    // "Vigente" = a MESMA regra do painel (linha 84 do gas-client): ativo e não vencido.
+    const temVigente = doUnidade.some((c) => c.active && c.endDate >= today);
+    if (temVigente) continue; // já aparece em "% cumprido"
+
+    let motivo: UnidadeSemContratoVigente['motivo'];
+    let ultimoContrato: UnidadeSemContratoVigente['ultimoContrato'];
+    if (doUnidade.length === 0) {
+      motivo = 'SEM_CONTRATO';
+    } else {
+      // O mais recente pela data de fim (desempate: início) explica a situação.
+      const latest = [...doUnidade].sort((a, b) => (b.endDate.localeCompare(a.endDate) || b.startDate.localeCompare(a.startDate)))[0];
+      motivo = latest.endDate < today ? 'CONTRATO_VENCIDO' : 'CONTRATO_INATIVO';
+      ultimoContrato = { id: latest.id, startDate: latest.startDate, endDate: latest.endDate, active: latest.active, supplierName: supBy.get(latest.supplierId) ?? '—' };
+    }
+
+    out.push({
+      unitId: u.unitId,
+      unitName: unitBy.get(u.unitId) ?? '—',
+      receiptsKg: Math.round(Number(u._sum.quantityKg ?? 0) * 100) / 100,
+      receiptsCount: u._count._all,
+      lastReceiptDate: u._max.operationalDate ?? '',
+      motivo,
+      ultimoContrato,
+    });
+  }
+  out.sort((a, b) => b.receiptsKg - a.receiptsKg);
+  return out;
+}
+
 /** Total comprado (kg e R$) dentro dos filtros do dashboard (unidade/fornecedor/mês). */
 export async function getGasPurchasedInFilter(user: SessionUser, filters: { unitId?: string; supplierId?: string; yearMonth?: string }): Promise<{ kg: number; total: number; count: number }> {
   const agg = await prisma.gasReceipt.aggregate({
