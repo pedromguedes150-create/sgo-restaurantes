@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Camera, CheckCircle2, Lock, PackagePlus, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/ds/button';
 import { Input, Textarea } from '@/components/ui/ds/field';
@@ -69,8 +69,19 @@ export function MassasOperacao({ porta, estadoInicial, secao, hrefVendas }: Prop
   const [ocupado, setOcupado] = useState(false);
   /* Motivo da alteração: só existe na gestão e só quando o dia é anterior. */
   const [motivoAlteracao, setMotivoAlteracao] = useState('');
+  /* O campo de motivo e o aviso de erro moram no TOPO, e o botão "Salvar" de
+     cada seção fica lá embaixo numa tela longa: sem isto, clicar em salvar num
+     dia anterior sem motivo mostrava o erro fora da tela — e parecia que "não
+     salvava". Ao recusar, o campo recebe o foco (e rola até ele); qualquer
+     erro rola até o aviso. */
+  const motivoRef = useRef<HTMLTextAreaElement>(null);
+  const erroRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (erro) erroRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [erro]);
 
   const retroativo = porta.tipo === 'gestao' && estado.data < estado.hoje;
+  const faltaMotivo = retroativo && !motivoAlteracao.trim();
   const bloqueado = porta.tipo === 'link' && estado.data < estado.hoje;
 
   const recarregar = useCallback(async () => {
@@ -84,7 +95,12 @@ export function MassasOperacao({ porta, estadoInicial, secao, hrefVendas }: Prop
   /** Envia uma ação; devolve true se gravou. */
   const enviar = useCallback(async (payload: Record<string, unknown>, foto?: File | null): Promise<boolean> => {
     setErro(null);
-    if (retroativo && !motivoAlteracao.trim()) { setErro('Escreva o motivo da alteração: este dia já fechou.'); return false; }
+    if (retroativo && !motivoAlteracao.trim()) {
+      setErro('Escreva o motivo da alteração: este dia já fechou.');
+      motivoRef.current?.focus();
+      motivoRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return false;
+    }
     setOcupado(true);
     try {
       const base = porta.tipo === 'link'
@@ -138,6 +154,7 @@ export function MassasOperacao({ porta, estadoInicial, secao, hrefVendas }: Prop
 
       {retroativo && (
         <Textarea
+          ref={motivoRef}
           label="Motivo da alteração (obrigatório — dia anterior)"
           required
           rows={2}
@@ -147,16 +164,16 @@ export function MassasOperacao({ porta, estadoInicial, secao, hrefVendas }: Prop
         />
       )}
 
-      {erro && <Banner tone="danger" title={erro} onDismiss={() => setErro(null)} />}
+      <div ref={erroRef}>{erro && <Banner tone="danger" title={erro} onDismiss={() => setErro(null)} />}</div>
 
       {mostrar('recebimento') && (
-        <Recebimento estado={estado} enviar={enviar} ocupado={ocupado} somenteLeitura={bloqueado} />
+        <Recebimento estado={estado} enviar={enviar} ocupado={ocupado} somenteLeitura={bloqueado} faltaMotivo={faltaMotivo} />
       )}
       {mostrar('desperdicio') && (
-        <Desperdicio estado={estado} enviar={enviar} ocupado={ocupado} somenteLeitura={bloqueado} comFoto={porta.tipo === 'link'} />
+        <Desperdicio estado={estado} enviar={enviar} ocupado={ocupado} somenteLeitura={bloqueado} comFoto={porta.tipo === 'link'} faltaMotivo={faltaMotivo} />
       )}
       {mostrar('fechamento') && (
-        <Fechamento estado={estado} enviar={enviar} ocupado={ocupado} somenteLeitura={bloqueado} hrefVendas={hrefVendas} />
+        <Fechamento estado={estado} enviar={enviar} ocupado={ocupado} somenteLeitura={bloqueado} hrefVendas={hrefVendas} faltaMotivo={faltaMotivo} />
       )}
     </div>
   );
@@ -166,7 +183,17 @@ export function MassasOperacao({ porta, estadoInicial, secao, hrefVendas }: Prop
 
 type Acao = (payload: Record<string, unknown>, foto?: File | null) => Promise<boolean>;
 
-function Recebimento({ estado, enviar, ocupado, somenteLeitura }: { estado: EstadoParaTela; enviar: Acao; ocupado: boolean; somenteLeitura: boolean }) {
+/** Junto do botão de salvar: o motivo é obrigatório e o campo está no topo. */
+function AvisoMotivo() {
+  return (
+    <p className="flex items-center gap-1.5 rounded-control bg-warning-bg px-3 py-2 text-xs font-medium text-warning">
+      <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+      Este dia já fechou: preencha o <b>Motivo da alteração</b> (campo no topo da tela) para poder salvar.
+    </p>
+  );
+}
+
+function Recebimento({ estado, enviar, ocupado, somenteLeitura, faltaMotivo }: { estado: EstadoParaTela; enviar: Acao; ocupado: boolean; somenteLeitura: boolean; faltaMotivo: boolean }) {
   const [resposta, setResposta] = useState<'sim' | 'nao' | null>(estado.lancamentos.recebimentos.length ? 'sim' : null);
   const [editando, setEditando] = useState<string | null>(null);
   const [qtd, setQtd] = useState('');
@@ -248,6 +275,7 @@ function Recebimento({ estado, enviar, ocupado, somenteLeitura }: { estado: Esta
             {' · '}<span className="text-ink-500">Recebimento</span> <b className="tabular-nums text-ink-900">+{editando ? n : estado.dia.recebidas + n}</b>
             {' · '}<span className="text-ink-500">Disponível</span> <b className="tabular-nums text-brand">{editando ? estado.dia.inicial + estado.dia.recebidas - estado.dia.vendidas - estado.dia.desperdicadas : disponivel} massas</b>
           </div>
+          {faltaMotivo && <AvisoMotivo />}
           <div className="flex gap-2">
             <Button className="flex-1" loading={ocupado} disabled={n < 1 || !validade} onClick={salvar}>
               {editando ? 'Salvar correção' : 'Registrar recebimento'}
@@ -290,7 +318,7 @@ function Lotes({ lotes }: { lotes: EstadoParaTela['lotes'] }) {
 
 /* ───────────────────────────── Desperdício ───────────────────────────── */
 
-function Desperdicio({ estado, enviar, ocupado, somenteLeitura, comFoto }: { estado: EstadoParaTela; enviar: Acao; ocupado: boolean; somenteLeitura: boolean; comFoto: boolean }) {
+function Desperdicio({ estado, enviar, ocupado, somenteLeitura, comFoto, faltaMotivo }: { estado: EstadoParaTela; enviar: Acao; ocupado: boolean; somenteLeitura: boolean; comFoto: boolean; faltaMotivo: boolean }) {
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
   const [qtd, setQtd] = useState('');
@@ -375,6 +403,7 @@ function Desperdicio({ estado, enviar, ocupado, somenteLeitura, comFoto }: { est
               <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => setFoto(e.target.files?.[0] ?? null)} />
             </label>
           )}
+          {faltaMotivo && <AvisoMotivo />}
           <div className="flex gap-2">
             <Button className="flex-1" loading={ocupado} disabled={n < 1 || !motivo} onClick={salvar}>{editando ? 'Salvar correção' : 'Registrar'}</Button>
             <Button variant="secondary" onClick={limpar}>Cancelar</Button>
@@ -387,7 +416,7 @@ function Desperdicio({ estado, enviar, ocupado, somenteLeitura, comFoto }: { est
 
 /* ───────────────────────────── Fechamento ───────────────────────────── */
 
-function Fechamento({ estado, enviar, ocupado, somenteLeitura, hrefVendas }: { estado: EstadoParaTela; enviar: Acao; ocupado: boolean; somenteLeitura: boolean; hrefVendas?: string }) {
+function Fechamento({ estado, enviar, ocupado, somenteLeitura, hrefVendas, faltaMotivo }: { estado: EstadoParaTela; enviar: Acao; ocupado: boolean; somenteLeitura: boolean; hrefVendas?: string; faltaMotivo: boolean }) {
   const contagem = estado.lancamentos.contagem;
   const [recontando, setRecontando] = useState(false);
   const [fisico, setFisico] = useState(contagem ? String(contagem.fisico) : '');
@@ -461,6 +490,7 @@ function Fechamento({ estado, enviar, ocupado, somenteLeitura, hrefVendas }: { e
               <Textarea label="O que houve? (obrigatório)" required rows={2} value={justificativa} onChange={(e) => setJustificativa(e.target.value.slice(0, 500))} />
             </>
           )}
+          {faltaMotivo && <AvisoMotivo />}
           <div className="flex gap-2">
             <Button size="lg" className="flex-1" loading={ocupado} disabled={n === null || (divergencia !== 0 && !justificativa.trim())} onClick={fechar}>
               {contagem ? 'Salvar correção' : 'Fechar estoque do dia'}
