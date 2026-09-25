@@ -39,6 +39,12 @@ export function DatePicker({
   const { descId, describedBy } = useDescribedBy(id, hint, error);
   const [open, setOpen] = React.useState(false);
   const [cursor, setCursor] = React.useState(() => value ?? todayISO());
+  /* De que lado o calendário abre. Ancorado sempre em `left-0`, um campo na
+     coluna direita de uma grade de 2 colunas (Início/Fim num celular de 375px)
+     jogava o popover de 280px para fora da tela — o calendário aparecia cortado,
+     com só 4 das 7 colunas visíveis. Ao abrir, medimos: se abrir pela esquerda
+     estoura a borda direita, ancoramos à direita. Vale para todo DatePicker. */
+  const [alignRight, setAlignRight] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const gridRef = React.useRef<HTMLDivElement>(null);
 
@@ -52,6 +58,14 @@ export function DatePicker({
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [open, value]);
+
+  React.useLayoutEffect(() => {
+    if (!open || !rootRef.current) return;
+    const POP_W = 280; // 17.5rem
+    const rect = rootRef.current.getBoundingClientRect();
+    // Sobra da borda direita da viewport (com folga de 8px): se não couber, ancora à direita.
+    setAlignRight(rect.left + POP_W > window.innerWidth - 8);
+  }, [open]);
 
   React.useEffect(() => {
     if (open) gridRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.focus();
@@ -96,7 +110,10 @@ export function DatePicker({
             role="dialog"
             aria-label="Escolher data"
             onKeyDown={onKeyDown}
-            className="absolute left-0 top-full z-40 mt-1 w-[17.5rem] rounded-card border border-line bg-surface p-3 shadow-lg"
+            className={cn(
+              'absolute top-full z-40 mt-1 w-[17.5rem] max-w-[calc(100vw-1rem)] rounded-card border border-line bg-surface p-3 shadow-lg',
+              alignRight ? 'right-0' : 'left-0',
+            )}
           >
             <div className="mb-2 flex items-center justify-between">
               <button type="button" aria-label="Mês anterior" onClick={() => setCursor((c) => addMonths(c, -1))}
