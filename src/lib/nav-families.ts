@@ -81,6 +81,7 @@ export const FAMILIES: Family[] = [
     icon: GraduationCap,
     children: [
       { href: '/modulos/treinamentos', tab: 'Treinamentos' },
+      { href: '/modulos/treinamentos/acompanhamento', tab: 'Acompanhamento' },
       { href: '/modulos/pops', tab: 'POPs' },
     ],
   },

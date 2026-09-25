@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { getPop, sanitizePopHtml, type PopBlock } from '@/lib/pops';
 import { youtubeEmbedUrl } from '@/lib/youtube';
 import { STANDARD_SECTORS } from '@/lib/workforce';
+import { opcoesDePublico } from '@/lib/treinamentos/publico';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,11 +28,13 @@ export default async function PopDetailPage({ params, searchParams }: { params: 
   const units = isAdmin
     ? await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } })
     : [];
+  const publico = isAdmin ? await opcoesDePublico(user) : { funcoes: [], colaboradores: [] };
   const editData = isAdmin
     ? {
         id: pop.id, title: pop.title, category: pop.category,
         isInitial: pop.isInitial, recurrence: pop.recurrence as 'ONCE' | 'MONTHLY',
         unitIds: pop.units.map((u) => u.unitId), sectorNames: pop.sectors.map((s) => s.sectorName),
+        jobTitles: pop.jobTitles.map((j) => j.jobTitle), collaboratorIds: pop.collaborators.map((c) => c.collaboratorId),
         blocks,
       }
     : null;
@@ -41,7 +44,7 @@ export default async function PopDetailPage({ params, searchParams }: { params: 
       <Link href="/modulos/pops" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
       <div>
         <h1 className="text-xl font-bold text-ink-900">{pop.title}</h1>
-        <p className="text-xs text-ink-500">v{pop.version} · {[pop.category, pop.sector].filter(Boolean).join(' · ') || 'Geral'}</p>
+        <p className="text-xs text-ink-500">v{pop.version} · {[pop.category, pop.isInitial ? 'Geral / Inicial' : null, pop.jobTitles.length ? `Função: ${pop.jobTitles.map((j) => j.jobTitle).join(', ')}` : null, pop.sector].filter(Boolean).join(' · ') || 'Geral'}</p>
       </div>
 
       <Card>
@@ -78,7 +81,7 @@ export default async function PopDetailPage({ params, searchParams }: { params: 
       <ConfirmRead popId={pop.id} confirmed={pop.confirmed} trainingRecordId={trainingRecordId} />
 
       {isAdmin && editData && (
-        <PopEditor units={units} standardSectors={STANDARD_SECTORS} pop={editData} redirectOnDelete="/modulos/pops" />
+        <PopEditor units={units} standardSectors={STANDARD_SECTORS} publico={publico} pop={editData} redirectOnDelete="/modulos/pops" />
       )}
     </div>
   );

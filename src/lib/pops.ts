@@ -73,6 +73,7 @@ export async function listPopsForUser(user: SessionUser) {
     where: { status: 'PUBLISHED', units: { some: { ...unitScopeWhere(user, 'unitId') } } },
     orderBy: { updatedAt: 'desc' },
     take: 100,
+    include: { jobTitles: { select: { jobTitle: true } }, _count: { select: { collaborators: true, sectors: true } } },
   });
   const reads = await prisma.popRead.findMany({ where: { userId: user.id, popId: { in: pops.map((p) => p.id) } } });
   const readSet = new Set(reads.map((r) => `${r.popId}:${r.version}`));
@@ -80,7 +81,7 @@ export async function listPopsForUser(user: SessionUser) {
 }
 
 export async function getPop(user: SessionUser, id: string) {
-  const pop = await prisma.pop.findUnique({ where: { id }, include: { units: { select: { unitId: true } }, sectors: { select: { sectorName: true } } } });
+  const pop = await prisma.pop.findUnique({ where: { id }, include: { units: { select: { unitId: true } }, sectors: { select: { sectorName: true } }, jobTitles: { select: { jobTitle: true } }, collaborators: { select: { collaboratorId: true } } } });
   if (!pop) return null;
   // acesso: seesAll ou interseção de unidades
   if (!user.seesAllUnits && !pop.units.some((u) => user.unitIds.includes(u.unitId))) return null;
@@ -108,13 +109,27 @@ interface PopInput {
   isInitial?: boolean;
   recurrence?: 'ONCE' | 'MONTHLY';
   sectorNames?: string[];
+  /** Funções (cargos) alvo — distribuição automática principal. */
+  jobTitles?: string[];
+  /** Colaboradores adicionais — exceção/complemento à função. */
+  collaboratorIds?: string[];
 }
 
-/** Admin cria/publica um POP. Treinamento: isInitial e/ou setores + recorrência. */
+/**
+ * Admin cria/publica um POP. Público do treinamento: GERAL (isInitial) ou
+ * DIRECIONADO (funções + colaboradores adicionais + setores da regra anterior).
+ * Geral e direcionado são exclusivos: marcar geral limpa o direcionamento.
+ */
 export async function createPop(user: SessionUser, input: PopInput, ctx: { ip?: string | null; userAgent?: string | null } = {}) {
   if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' };
   if (!input.title?.trim() || input.unitIds.length === 0) return { ok: false as const, reason: 'INVALID' };
-  const sectors = dedupeSectors(input.sectorNames);
+  // GERAL é escolha explícita: marcar geral limpa qualquer direcionamento que
+  // tenha vindo junto (a tela não manda os dois, mas a regra mora aqui).
+  const geral = Boolean(input.isInitial);
+  const sectors = geral ? [] : dedupeSectors(input.sectorNames);
+  const jobTitles = geral ? [] : dedupeSectors(input.jobTitles);
+  const collaboratorIds = geral ? [] : await colaboradoresExistentes(input.collaboratorIds);
+  const direcionado = sectors.length > 0 || jobTitles.length > 0 || collaboratorIds.length > 0;
   const blocks = sanitizePopBlocks(input.blocks);
   const pop = await prisma.pop.create({
     data: {
@@ -123,14 +138,16 @@ export async function createPop(user: SessionUser, input: PopInput, ctx: { ip?: 
       sector: sectors[0] ?? null, // compat com o campo legado
       status: 'PUBLISHED',
       version: 1,
-      isInitial: sectors.length > 0 ? false : Boolean(input.isInitial), // setorial e inicial são exclusivos
+      isInitial: geral, // geral e direcionado são exclusivos
       recurrence: input.recurrence === 'MONTHLY' ? 'MONTHLY' : 'ONCE',
       content: blocks as unknown as Prisma.InputJsonValue,
       units: { create: input.unitIds.map((unitId) => ({ unitId })) },
       sectors: { create: sectors.map((sectorName) => ({ sectorName })) },
+      jobTitles: { create: jobTitles.map((jobTitle) => ({ jobTitle })) },
+      collaborators: { create: collaboratorIds.map((collaboratorId) => ({ collaboratorId })) },
     },
   });
-  await audit({ userId: user.id, action: 'POP_PUBLISH', module: 'POPS', entity: 'pop', entityId: pop.id, ...ctx });
+  await audit({ userId: user.id, action: 'POP_PUBLISH', module: 'POPS', entity: 'pop', entityId: pop.id, metadata: { publico: geral ? 'GERAL' : direcionado ? 'DIRECIONADO' : 'REFERENCIA', jobTitles, colaboradores: collaboratorIds.length, setores: sectors }, ...ctx });
   await reconcileForUnits(input.unitIds);
   return { ok: true as const, id: pop.id };
 }
@@ -141,30 +158,40 @@ export async function updatePop(user: SessionUser, id: string, input: PopInput &
   if (!input.title?.trim() || input.unitIds.length === 0) return { ok: false as const, reason: 'INVALID' };
   const current = await prisma.pop.findUnique({ where: { id }, select: { version: true, content: true, units: { select: { unitId: true } } } });
   if (!current) return { ok: false as const, reason: 'INVALID' };
-  const sectors = dedupeSectors(input.sectorNames);
+  // GERAL é escolha explícita: marcar geral limpa qualquer direcionamento que
+  // tenha vindo junto (a tela não manda os dois, mas a regra mora aqui).
+  const geral = Boolean(input.isInitial);
+  const sectors = geral ? [] : dedupeSectors(input.sectorNames);
+  const jobTitles = geral ? [] : dedupeSectors(input.jobTitles);
+  const collaboratorIds = geral ? [] : await colaboradoresExistentes(input.collaboratorIds);
+  const direcionado = sectors.length > 0 || jobTitles.length > 0 || collaboratorIds.length > 0;
   const blocks = sanitizePopBlocks(input.blocks);
-  const contentChanged = JSON.stringify(current.content) !== JSON.stringify(blocks);
+  const contentChanged = canonico(current.content) !== canonico(blocks);
   const newVersion = (input.bumpVersion ?? contentChanged) ? current.version + 1 : current.version;
 
   await prisma.$transaction(async (tx) => {
     await tx.popUnit.deleteMany({ where: { popId: id } });
     await tx.popSector.deleteMany({ where: { popId: id } });
+    await tx.popJobTitle.deleteMany({ where: { popId: id } });
+    await tx.popCollaborator.deleteMany({ where: { popId: id } });
     await tx.pop.update({
       where: { id },
       data: {
         title: input.title.trim(),
         category: input.category || null,
         sector: sectors[0] ?? null,
-        isInitial: sectors.length > 0 ? false : Boolean(input.isInitial), // setorial e inicial são exclusivos
+        isInitial: geral, // geral e direcionado são exclusivos
         recurrence: input.recurrence === 'MONTHLY' ? 'MONTHLY' : 'ONCE',
         version: newVersion,
         content: blocks as unknown as Prisma.InputJsonValue,
         units: { create: input.unitIds.map((unitId) => ({ unitId })) },
         sectors: { create: sectors.map((sectorName) => ({ sectorName })) },
+        jobTitles: { create: jobTitles.map((jobTitle) => ({ jobTitle })) },
+        collaborators: { create: collaboratorIds.map((collaboratorId) => ({ collaboratorId })) },
       },
     });
   });
-  await audit({ userId: user.id, action: 'POP_UPDATE', module: 'POPS', entity: 'pop', entityId: id, metadata: { version: newVersion, contentChanged }, ...ctx });
+  await audit({ userId: user.id, action: 'POP_UPDATE', module: 'POPS', entity: 'pop', entityId: id, metadata: { version: newVersion, contentChanged, publico: geral ? 'GERAL' : direcionado ? 'DIRECIONADO' : 'REFERENCIA', jobTitles, colaboradores: collaboratorIds.length, setores: sectors }, ...ctx });
   // reconcilia nas unidades atuais e nas antigas (caso tenha saído de alguma)
   await reconcileForUnits([...new Set([...input.unitIds, ...current.units.map((u) => u.unitId)])]);
   return { ok: true as const, id, version: newVersion };
@@ -179,9 +206,27 @@ export async function deletePop(user: SessionUser, id: string, ctx: { ip?: strin
   return { ok: true as const };
 }
 
+/**
+ * JSON canônico (chaves ordenadas) para comparar o conteúdo. O JSONB do
+ * Postgres devolve as chaves em ordem alfabética ({text, type}) e o editor
+ * manda {type, text}: comparar as strings cruas dizia "mudou" em TODA edição —
+ * inclusive ao trocar só o público — e subia a versão, mandando a equipe
+ * inteira refazer o treinamento.
+ */
+function canonico(v: unknown): string {
+  return JSON.stringify(v, (_k, val) => (val && typeof val === 'object' && !Array.isArray(val) ? Object.fromEntries(Object.entries(val as Record<string, unknown>).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0))) : val));
+}
+
 function dedupeSectors(names?: string[]): string[] {
   if (!names) return [];
   return [...new Set(names.map((n) => n.trim()).filter(Boolean))];
+}
+/** Só ids que existem: a FK recusaria o resto e derrubaria a gravação inteira por um id velho na tela. */
+async function colaboradoresExistentes(ids?: string[]): Promise<string[]> {
+  const pedidos = [...new Set((ids ?? []).map((i) => String(i).trim()).filter(Boolean))];
+  if (pedidos.length === 0) return [];
+  const achados = await prisma.collaborator.findMany({ where: { id: { in: pedidos } }, select: { id: true } });
+  return achados.map((c) => c.id);
 }
 async function reconcileForUnits(unitIds: string[]) {
   const { reconcileTrainingForUnit } = await import('@/lib/training');

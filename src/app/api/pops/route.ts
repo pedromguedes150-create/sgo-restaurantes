@@ -27,6 +27,8 @@ function payload(b: Record<string, unknown>) {
     isInitial: Boolean(b.isInitial),
     recurrence: b.recurrence === 'MONTHLY' ? ('MONTHLY' as const) : ('ONCE' as const),
     sectorNames: Array.isArray(b.sectorNames) ? (b.sectorNames as string[]) : [],
+    jobTitles: Array.isArray(b.jobTitles) ? (b.jobTitles as unknown[]).map(String) : [],
+    collaboratorIds: Array.isArray(b.collaboratorIds) ? (b.collaboratorIds as unknown[]).map(String) : [],
   };
 }
 function errStatus(reason?: string) { return reason === 'FORBIDDEN' ? 403 : 400; }
