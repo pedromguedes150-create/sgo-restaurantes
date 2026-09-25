@@ -156,6 +156,84 @@ describe('o exemplo do pedido: recebimento, uso e correção retroativa', () => 
   });
 });
 
+describe('o caso do print da Nova União: venda antes do recebimento, estoque negativo e a 1ª contagem', () => {
+  /* Reprodução do relato: a pizzaria vendeu vários dias SEM registrar
+     recebimento de massa, então o estoque esperado ficou NEGATIVO (é o modelo
+     declarado: sem entrada lançada, a saída joga o saldo abaixo de zero). Depois
+     veio um recebimento grande e a primeira contagem física — que reconcilia com
+     uma divergência POSITIVA. A conta está certa; o negativo é dado que faltou,
+     não erro de cálculo. */
+  const d18 = '2026-09-18';
+  const d20 = '2026-09-20';
+  const d22 = '2026-09-22';
+  const d23 = '2026-09-23';
+  const d24 = '2026-09-24';
+
+  const base = (): SerieDeMassas => serie({
+    // Só em 23/09 se registra recebimento (78+40+40 = 158), nada antes.
+    lotes: [
+      { id: 'A', data: d23, quantidade: 78, validade: '2026-09-26', lotCode: null },
+      { id: 'B', data: d23, quantidade: 40, validade: '2026-09-26', lotCode: null },
+      { id: 'C', data: d23, quantidade: 40, validade: '2026-09-29', lotCode: null },
+    ],
+    // Vendas nos dias anteriores, sem estoque lançado → saldo negativo.
+    vendasPorDia: new Map([[d18, 19], [d20, 18], [d22, 7], [d23, 12], [d24, 12]]),
+    // Desperdício por validade em 24/09.
+    desperdicios: [{ id: 'w', data: d24, quantidade: 28, motivo: 'EXPIRED', loteId: 'A' }],
+    // Primeira contagem física em 24/09: a câmara tinha 79.
+    contagens: [{ data: d24, fisico: 79, esperadoNoFechamento: 36 }],
+  });
+
+  it('o esperado fica negativo enquanto não há recebimento — e a aritmética de cada dia fecha', () => {
+    const s = base();
+    // 18/09: 0 − 19 = −19 (nada antes dele nesta série).
+    expect(calcularDia(s, d18).esperado).toBe(-19);
+    // 20/09 parte de −19: −19 − 18 = −37.
+    expect(calcularDia(s, d20).inicial).toBe(-19);
+    expect(calcularDia(s, d20).esperado).toBe(-37);
+    // 22/09: −37 − 7 = −44.
+    expect(calcularDia(s, d22).esperado).toBe(-44);
+    // 23/09: −44 + 158 − 12 = 102.
+    const dia23 = calcularDia(s, d23);
+    expect(dia23.inicial).toBe(-44);
+    expect(dia23.recebidas).toBe(158);
+    expect(dia23.esperado).toBe(102);
+  });
+
+  it('24/09: 102 − 12 pizzas − 28 desperdício = 62 esperado; contou 79 → divergência +17, DIVERGENTE', () => {
+    const s = base();
+    const dia24 = calcularDia(s, d24);
+    expect(dia24.inicial).toBe(102);
+    expect(dia24.vendidas).toBe(12);
+    expect(dia24.desperdicadas).toBe(28);
+    expect(dia24.perdaValidade).toBe(28);
+    expect(dia24.esperado).toBe(62);
+    expect(dia24.fisico).toBe(79);
+    expect(dia24.divergencia).toBe(17);
+    expect(dia24.situacao).toBe('DIVERGENTE');
+  });
+
+  it('depois da contagem de 24/09, o estoque de hoje parte do FÍSICO, não do esperado', () => {
+    const s = base();
+    // 25/09 sem movimento: estoque atual = a contagem de 24/09 (79), não o esperado.
+    expect(estoqueAtual(s, '2026-09-25')).toBe(79);
+  });
+
+  it('% de desperdício é sobre o que SAIU da câmara (pizzas + desperdício), não sobre o estoque', () => {
+    const s = base();
+    const dias = calcularDias(s, d18, d24);
+    const r = resumoDoPeriodo(dias, posicaoDosLotes(s, d24, '2026-09-25'), estoqueAtual(s, '2026-09-25'));
+    // utilizadas = 19+18+7+12+12 = 68; desperdício = 28; consumo = 96.
+    expect(r.utilizadas).toBe(68);
+    expect(r.desperdicadas).toBe(28);
+    expect(r.recebidas).toBe(158);
+    // 28 / (68 + 28) = 29,2%.
+    expect(r.pctDesperdicio).toBe(29.2);
+    // uma contagem, e ela diverge → 1 divergência.
+    expect(r.divergencias).toBe(1);
+  });
+});
+
 describe('desperdício', () => {
   const dia = '2026-09-21';
 

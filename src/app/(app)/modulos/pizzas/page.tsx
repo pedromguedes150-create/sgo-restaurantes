@@ -8,6 +8,7 @@ import { LargeTitle } from '@/components/layout/page-chrome';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { EmptyState } from '@/components/ui/ds/empty-state';
 import { PizzaLinkCard } from '@/components/pizzas/pizza-link-card';
+import { FechamentoEditor } from '@/components/pizzas/fechamento-editor';
 import { MassasPainel } from '@/components/pizzas/massas-painel';
 import { garantirTokenPublico, unidadesComPizzaria } from '@/lib/pizzas/acesso';
 import { ehPeriodo, inicioDoPeriodo, painelDePizzas, PERIODOS_EM_DIAS } from '@/lib/pizzas/painel';
@@ -38,6 +39,7 @@ export default async function PizzasPage({
   /* Aba "Pizzas" é a tela de sempre; "Massas" entrou AO LADO dela. */
   const aba = searchParams.aba === 'massas' ? 'massas' : 'pizzas';
   const podeCorrigirMassas = ['MANAGER', 'SUPERVISOR', 'ADMIN', 'CEO'].includes(user.role);
+  const podeCorrigirFechamento = ['MANAGER', 'SUPERVISOR', 'ADMIN', 'CEO'].includes(user.role);
 
   const token = unidade.pizzaPublicToken ?? (await garantirTokenPublico(unidade.id));
   const hoje = currentOperationalDate({ timezone: unidade.timezone, cutoffHour: unidade.cutoffHour });
@@ -92,6 +94,12 @@ export default async function PizzasPage({
       )}
 
       {aba === 'pizzas' && (<>
+      {podeCorrigirFechamento && (
+        <div className="flex items-center justify-between gap-2 rounded-card border border-line bg-surface px-3 py-2">
+          <span className="sgo-type-11 text-ink-700">Funcionário lançou errado? Audite e corrija o fechamento de qualquer dia.</span>
+          <FechamentoEditor unitId={unidade.id} hoje={hoje} dataInicial={hoje} />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <Kpi label="Pizzas hoje" value={String(painel.hoje)} destaque />
         <Kpi label={`Total em ${dias} dias`} value={String(painel.total)} />
