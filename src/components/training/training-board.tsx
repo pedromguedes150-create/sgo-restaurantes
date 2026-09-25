@@ -12,15 +12,33 @@ import { cn } from '@/lib/utils';
 
 type Status = 'PENDING' | 'DONE' | 'MISSED';
 type Origin = 'GENERAL' | 'JOB_TITLE' | 'SECTOR' | 'INDIVIDUAL';
-interface Item { recordId: string; popId: string; popTitle: string; status: Status; dueDate: string; periodKey: string; origin: Origin }
-const ORIGEM: Record<Origin, string> = { GENERAL: 'Geral', JOB_TITLE: 'Função', SECTOR: 'Setor', INDIVIDUAL: 'Vínculo individual' };
+interface Item { recordId: string; popId: string; popTitle: string; moduleId: string; moduleName: string; status: Status; dueDate: string; periodKey: string; origin: Origin }
 interface Collab { collaboratorId: string; name: string; pending: number; done: number; missed: number; items: Item[] }
 interface Group { sector: string; coverage: 'ok' | 'partial' | 'none'; collaborators: Collab[] }
 
+const ORIGEM: Record<Origin, string> = { GENERAL: 'Geral', JOB_TITLE: 'Função', SECTOR: 'Setor', INDIVIDUAL: 'Vínculo individual' };
 const COV = { ok: { tone: 'success' as const, label: 'Em dia' }, partial: { tone: 'medium' as const, label: 'Pendências' }, none: { tone: 'critical' as const, label: 'Vencidos' } };
 const ST: Record<Status, { tone: 'success' | 'medium' | 'critical'; label: string }> = {
   PENDING: { tone: 'medium', label: 'Pendente' }, DONE: { tone: 'success', label: 'Realizado' }, MISSED: { tone: 'critical', label: 'Não realizado' },
 };
+
+/**
+ * "SEUS TREINAMENTOS" do colaborador, organizados por POP → módulo. O progresso
+ * de cada POP é sobre os MÓDULOS APLICÁVEIS à pessoa (1 de 2 = 50%, nunca 1 de
+ * 3): Conferência não aparece para quem não deve Conferência.
+ */
+function porPop(items: Item[]) {
+  const m = new Map<string, { popId: string; popTitle: string; itens: Item[] }>();
+  for (const it of items) {
+    const g = m.get(it.popId) ?? { popId: it.popId, popTitle: it.popTitle, itens: [] };
+    g.itens.push(it);
+    m.set(it.popId, g);
+  }
+  return [...m.values()].map((g) => {
+    const done = g.itens.filter((i) => i.status === 'DONE').length;
+    return { ...g, done, total: g.itens.length, pct: Math.round((done / g.itens.length) * 100) };
+  });
+}
 
 export function TrainingBoard({ board, isAdmin, weight }: { board: Group[]; isAdmin: boolean; weight: number }) {
   const router = useRouter();
@@ -51,7 +69,7 @@ export function TrainingBoard({ board, isAdmin, weight }: { board: Group[]; isAd
         </div>
       )}
 
-      {board.length === 0 && <p className="text-sm text-ink-500">Nenhum treinamento configurado. Crie POPs marcados como Inicial ou de setor.</p>}
+      {board.length === 0 && <p className="text-sm text-ink-500">Nenhum treinamento configurado. Crie POPs com módulos gerais ou direcionados por função.</p>}
 
       {board.map((g) => (
         <div key={g.sector} className="space-y-2">
@@ -76,19 +94,32 @@ export function TrainingBoard({ board, isAdmin, weight }: { board: Group[]; isAd
                   </span>
                 </button>
                 {expanded && (
-                  <div className="space-y-2 border-t p-3">
-                    {c.items.map((it) => (
-                      <div key={it.recordId} className={cn('flex items-center justify-between gap-2 rounded-md p-2', it.status === 'MISSED' ? 'bg-danger/5' : 'bg-canvas')}>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{it.popTitle}</p>
-                          <p className="text-xs text-ink-500">prazo {it.dueDate} · {ORIGEM[it.origin]} · <StatusBadge tone={ST[it.status].tone}>{ST[it.status].label}</StatusBadge></p>
+                  <div className="space-y-3 border-t p-3">
+                    {porPop(c.items).map((p) => (
+                      <div key={p.popId} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-ink-900">{p.popTitle}</p>
+                          <span className={cn('text-xs font-semibold tabular-nums', p.pct === 100 ? 'text-success' : 'text-ink-700')}>
+                            {p.done} de {p.total} concluído(s) — {p.pct}%{p.pct === 100 ? ' ✓' : ''}
+                          </span>
                         </div>
-                        <div className="flex shrink-0 items-center gap-1">
-                          <Link href={`/modulos/pops/${it.popId}?treino=${it.recordId}`}><Button size="sm" variant="outline"><BookOpen className="h-4 w-4" /> Abrir POP</Button></Link>
-                          {it.status === 'DONE'
-                            ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(it.recordId, 'reopen')} aria-label="Reabrir"><RotateCcw className="h-4 w-4" /></Button>
-                            : <Button size="sm" disabled={busy} onClick={() => act(it.recordId, 'complete')}><Check className="h-4 w-4" /> Treinei</Button>}
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-sunken">
+                          <div className={cn('h-full rounded-full', p.pct === 100 ? 'bg-success' : 'bg-brand')} style={{ width: `${p.pct}%` }} />
                         </div>
+                        {p.itens.map((it) => (
+                          <div key={it.recordId} className={cn('flex items-center justify-between gap-2 rounded-md p-2', it.status === 'MISSED' ? 'bg-danger/5' : 'bg-canvas')}>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">{it.moduleName}</p>
+                              <p className="text-xs text-ink-500">prazo {it.dueDate} · {ORIGEM[it.origin]} · <StatusBadge tone={ST[it.status].tone}>{ST[it.status].label}</StatusBadge></p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-1">
+                              <Link href={`/modulos/pops/${it.popId}?treino=${it.recordId}`}><Button size="sm" variant="outline"><BookOpen className="h-4 w-4" /> Abrir</Button></Link>
+                              {it.status === 'DONE'
+                                ? <Button size="sm" variant="ghost" disabled={busy} onClick={() => act(it.recordId, 'reopen')} aria-label="Reabrir"><RotateCcw className="h-4 w-4" /></Button>
+                                : <Button size="sm" disabled={busy} onClick={() => act(it.recordId, 'complete')}><Check className="h-4 w-4" /> Treinei</Button>}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ))}
                   </div>

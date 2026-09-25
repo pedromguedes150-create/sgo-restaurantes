@@ -3,15 +3,19 @@ import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import type { TrainingStatus, TrainingOrigin } from '@prisma/client';
-import { treinamentosAplicaveis, type PopParaAplicar } from '@/lib/treinamentos/aplicabilidade';
+import { geraTreinamento, treinamentosAplicaveis, type ModuloParaAplicar } from '@/lib/treinamentos/aplicabilidade';
 
 /**
  * Treinamentos via POPs (conta na meta do gerente).
- * - Quem deve o quê sai de UMA regra (`src/lib/treinamentos/aplicabilidade.ts`):
- *   POP geral → toda a unidade · por FUNÇÃO (cargo) → quem tem a função ·
+ * - A OBRIGAÇÃO É POR MÓDULO (v1.124.0): um registro por colaborador × módulo
+ *   × ciclo. Quem deve o quê sai de UMA regra (`src/lib/treinamentos/aplicabilidade.ts`):
+ *   módulo geral → toda a unidade · por FUNÇÃO (cargo) → quem tem a função ·
  *   setorial → quem está no setor (regra anterior) · vínculo individual → a pessoa.
- *   O mesmo POP por dois caminhos vira UM registro (chave única) com a origem
- *   de maior precedência; a origem fica gravada para o histórico.
+ *   O mesmo módulo por dois caminhos vira UM registro (chave única) com a origem
+ *   de maior precedência; a origem e o nome do módulo ficam gravados.
+ * - Versão por MÓDULO: editar o conteúdo de um módulo re-treina só ele
+ *   (periodKey "V{moduleVersion}"); módulo inativado some das pendências e o
+ *   que já foi concluído fica.
  * - Recorrência ONCE (periodKey "V{versão}", re-treina ao mudar de versão) ·
  *   MONTHLY (periodKey "AAAA-MM", reciclagem mensal).
  * - Prazo: ONCE = 7 dias a partir da geração · MONTHLY = fim do mês.
@@ -50,31 +54,39 @@ export async function reconcileTrainingForUnit(unitId: string): Promise<void> {
   const dueMonthly = endOfMonth(now);
 
   const pops = await prisma.pop.findMany({
-    where: {
-      status: 'PUBLISHED',
-      units: { some: { unitId } },
-      OR: [{ isInitial: true }, { sectors: { some: {} } }, { jobTitles: { some: {} } }, { collaborators: { some: {} } }],
-    },
+    where: { status: 'PUBLISHED', units: { some: { unitId } }, modules: { some: { active: true } } },
     select: {
-      id: true, version: true, isInitial: true, recurrence: true,
-      sectors: { select: { sectorName: true } },
-      jobTitles: { select: { jobTitle: true } },
-      collaborators: { select: { collaboratorId: true } },
+      id: true, version: true, recurrence: true,
+      modules: {
+        where: { active: true },
+        select: {
+          id: true, name: true, version: true, allPublic: true,
+          sectors: { select: { sectorName: true } },
+          jobTitles: { select: { jobTitle: true } },
+          collaborators: { select: { collaboratorId: true } },
+        },
+      },
     },
   });
-  if (pops.length === 0) {
+
+  type Modulo = ModuloParaAplicar & { popId: string; popVersion: number; name: string; version: number; recurrence: 'ONCE' | 'MONTHLY' };
+  const modulos: Modulo[] = pops
+    .flatMap((p) => p.modules.map((m) => ({
+      id: m.id, popId: p.id, popVersion: p.version, name: m.name, version: m.version, recurrence: p.recurrence,
+      isInitial: m.allPublic,
+      jobTitles: m.jobTitles.map((j) => j.jobTitle),
+      sectorNames: m.sectors.map((x) => x.sectorName),
+      collaboratorIds: m.collaborators.map((c) => c.collaboratorId),
+    })))
+    .filter(geraTreinamento);
+
+  if (modulos.length === 0) {
     // ainda assim marca vencidas
     await prisma.trainingRecord.updateMany({ where: { unitId, status: 'PENDING', dueDate: { lt: now } }, data: { status: 'MISSED' } });
     return;
   }
 
   const links = await prisma.collaboratorUnit.findMany({ where: { unitId, collaborator: { active: true } }, select: { collaboratorId: true, collaborator: { select: { jobTitle: true } } } });
-  const popsParaAplicar: (PopParaAplicar & { version: number; recurrence: 'ONCE' | 'MONTHLY' })[] = pops.map((p) => ({
-    id: p.id, version: p.version, recurrence: p.recurrence, isInitial: p.isInitial,
-    jobTitles: p.jobTitles.map((j) => j.jobTitle),
-    sectorNames: p.sectors.map((x) => x.sectorName),
-    collaboratorIds: p.collaborators.map((c) => c.collaboratorId),
-  }));
   const allocations = await prisma.workforceAllocation.findMany({ where: { unitId }, select: { collaboratorId: true, sector: { select: { name: true } } } });
   const sectorsByCollab = new Map<string, Set<string>>();
   for (const a of allocations) {
@@ -86,33 +98,38 @@ export async function reconcileTrainingForUnit(unitId: string): Promise<void> {
 
   for (const link of links) {
     const collabSectors = [...(sectorsByCollab.get(link.collaboratorId) ?? new Set<string>())];
-    const aplicaveis = treinamentosAplicaveis({ id: link.collaboratorId, jobTitle: link.collaborator.jobTitle, sectorNames: collabSectors }, popsParaAplicar);
+    const aplicaveis = treinamentosAplicaveis({ id: link.collaboratorId, jobTitle: link.collaborator.jobTitle, sectorNames: collabSectors }, modulos);
 
-    // chaves requeridas: popId|periodKey -> { sectorName, origin }
-    const required = new Map<string, { popId: string; version: number; periodKey: string; sectorName: string | null; origin: TrainingOrigin; due: Date }>();
-    for (const p of popsParaAplicar) {
-      const a = aplicaveis.get(p.id);
+    // chaves requeridas: moduleId|periodKey
+    const required = new Map<string, { m: Modulo; periodKey: string; sectorName: string | null; origin: TrainingOrigin; due: Date }>();
+    for (const m of modulos) {
+      const a = aplicaveis.get(m.id);
       if (!a) continue;
-      const periodKey = p.recurrence === 'MONTHLY' ? month : `V${p.version}`;
-      const due = p.recurrence === 'MONTHLY' ? dueMonthly : dueOnce;
-      required.set(`${p.id}|${periodKey}`, { popId: p.id, version: p.version, periodKey, sectorName: a.sectorName, origin: a.origem, due });
+      const periodKey = m.recurrence === 'MONTHLY' ? month : `V${m.version}`;
+      const due = m.recurrence === 'MONTHLY' ? dueMonthly : dueOnce;
+      required.set(`${m.id}|${periodKey}`, { m, periodKey, sectorName: a.sectorName, origin: a.origem, due });
     }
 
     // cria as que faltam
     for (const r of required.values()) {
       await prisma.trainingRecord.upsert({
-        where: { popId_collaboratorId_periodKey: { popId: r.popId, collaboratorId: link.collaboratorId, periodKey: r.periodKey } },
-        create: { popId: r.popId, popVersion: r.version, collaboratorId: link.collaboratorId, unitId, sectorName: r.sectorName, origin: r.origin, periodKey: r.periodKey, status: 'PENDING', dueDate: r.due },
+        where: { moduleId_collaboratorId_periodKey: { moduleId: r.m.id, collaboratorId: link.collaboratorId, periodKey: r.periodKey } },
+        create: {
+          popId: r.m.popId, popVersion: r.m.popVersion,
+          moduleId: r.m.id, moduleName: r.m.name, moduleVersion: r.m.version,
+          collaboratorId: link.collaboratorId, unitId, sectorName: r.sectorName, origin: r.origin,
+          periodKey: r.periodKey, status: 'PENDING', dueDate: r.due,
+        },
         update: {}, // não mexe em registros já existentes (preserva DONE/MISSED e prazos)
       });
     }
 
-    // remove pendências que não se aplicam mais (ex.: saiu do setor ou mudou de
-    // função). Mantém DONE/MISSED: o que foi feito é histórico. Pendência que
-    // continua valendo por OUTRO caminho só troca a origem.
-    const existing = await prisma.trainingRecord.findMany({ where: { collaboratorId: link.collaboratorId, unitId, status: 'PENDING' }, select: { id: true, popId: true, periodKey: true, origin: true, sectorName: true } });
+    // remove pendências que não se aplicam mais (mudou de função, módulo
+    // inativado, versão nova). Mantém DONE/MISSED: o que foi feito é histórico.
+    // Pendência que continua valendo por OUTRO caminho só troca a origem.
+    const existing = await prisma.trainingRecord.findMany({ where: { collaboratorId: link.collaboratorId, unitId, status: 'PENDING' }, select: { id: true, moduleId: true, periodKey: true, origin: true, sectorName: true } });
     for (const e of existing) {
-      const r = required.get(`${e.popId}|${e.periodKey}`);
+      const r = required.get(`${e.moduleId}|${e.periodKey}`);
       if (!r) {
         await prisma.trainingRecord.delete({ where: { id: e.id } }).catch(() => {});
       } else if (r.origin !== e.origin || r.sectorName !== e.sectorName) {
@@ -132,7 +149,7 @@ export async function reconcileAllTraining(): Promise<void> {
 }
 
 /* ───────── Board do gerente (por setor) ───────── */
-export interface TrainingItem { recordId: string; popId: string; popTitle: string; status: TrainingStatus; dueDate: string; periodKey: string; origin: TrainingOrigin }
+export interface TrainingItem { recordId: string; popId: string; popTitle: string; moduleId: string; moduleName: string; status: TrainingStatus; dueDate: string; periodKey: string; origin: TrainingOrigin }
 export interface TrainingCollab { collaboratorId: string; name: string; pending: number; done: number; missed: number; items: TrainingItem[] }
 export interface TrainingSectorGroup { sector: string; coverage: 'ok' | 'partial' | 'none'; collaborators: TrainingCollab[] }
 
@@ -148,9 +165,11 @@ function grupoDoRegistro(origin: TrainingOrigin, sectorName: string | null, jobT
 export async function getTrainingBoard(unitId: string): Promise<TrainingSectorGroup[]> {
   await reconcileTrainingForUnit(unitId); // sempre fresco ao abrir
   const records = await prisma.trainingRecord.findMany({
-    where: { unitId },
+    // Módulo INATIVADO sai do quadro (pendências já foram removidas pela
+    // reconciliação; o concluído fica no banco e no histórico do painel).
+    where: { unitId, module: { active: true } },
     include: { pop: { select: { title: true } }, collaborator: { select: { name: true, active: true, jobTitle: true } } },
-    orderBy: { dueDate: 'asc' },
+    orderBy: [{ pop: { title: 'asc' } }, { dueDate: 'asc' }],
   });
 
   // agrupa pela ORIGEM da atribuição: iniciais, por função (o cargo da pessoa),
@@ -163,7 +182,7 @@ export async function getTrainingBoard(unitId: string): Promise<TrainingSectorGr
     const byCollab = groups.get(sector) ?? new Map<string, TrainingCollab>();
     const c = byCollab.get(r.collaboratorId) ?? { collaboratorId: r.collaboratorId, name: r.collaborator.name, pending: 0, done: 0, missed: 0, items: [] };
     if (r.status === 'PENDING') c.pending++; else if (r.status === 'DONE') c.done++; else c.missed++;
-    c.items.push({ recordId: r.id, popId: r.popId, popTitle: r.pop.title, status: r.status, dueDate: r.dueDate.toISOString().slice(0, 10), periodKey: r.periodKey, origin: r.origin });
+    c.items.push({ recordId: r.id, popId: r.popId, popTitle: r.pop.title, moduleId: r.moduleId, moduleName: r.moduleName, status: r.status, dueDate: r.dueDate.toISOString().slice(0, 10), periodKey: r.periodKey, origin: r.origin });
     byCollab.set(r.collaboratorId, c);
     groups.set(sector, byCollab);
   }

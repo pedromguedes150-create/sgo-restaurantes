@@ -73,7 +73,7 @@ export async function listPopsForUser(user: SessionUser) {
     where: { status: 'PUBLISHED', units: { some: { ...unitScopeWhere(user, 'unitId') } } },
     orderBy: { updatedAt: 'desc' },
     take: 100,
-    include: { jobTitles: { select: { jobTitle: true } }, _count: { select: { collaborators: true, sectors: true } } },
+    include: { modules: { where: { active: true }, orderBy: { order: 'asc' }, select: { id: true, name: true, allPublic: true, jobTitles: { select: { jobTitle: true } }, _count: { select: { collaborators: true, sectors: true } } } } },
   });
   const reads = await prisma.popRead.findMany({ where: { userId: user.id, popId: { in: pops.map((p) => p.id) } } });
   const readSet = new Set(reads.map((r) => `${r.popId}:${r.version}`));
@@ -81,7 +81,16 @@ export async function listPopsForUser(user: SessionUser) {
 }
 
 export async function getPop(user: SessionUser, id: string) {
-  const pop = await prisma.pop.findUnique({ where: { id }, include: { units: { select: { unitId: true } }, sectors: { select: { sectorName: true } }, jobTitles: { select: { jobTitle: true } }, collaborators: { select: { collaboratorId: true } } } });
+  const pop = await prisma.pop.findUnique({
+    where: { id },
+    include: {
+      units: { select: { unitId: true } },
+      modules: {
+        where: { active: true }, orderBy: { order: 'asc' },
+        include: { jobTitles: { select: { jobTitle: true } }, collaborators: { select: { collaboratorId: true } }, sectors: { select: { sectorName: true } } },
+      },
+    },
+  });
   if (!pop) return null;
   // acesso: seesAll ou interseção de unidades
   if (!user.seesAllUnits && !pop.units.some((u) => user.unitIds.includes(u.unitId))) return null;
@@ -101,100 +110,183 @@ export async function confirmRead(user: SessionUser, popId: string, ctx: { ip?: 
   return { ok: true as const };
 }
 
-interface PopInput {
-  title: string;
-  category?: string;
-  blocks: PopBlock[];
-  unitIds: string[];
-  isInitial?: boolean;
-  recurrence?: 'ONCE' | 'MONTHLY';
-  sectorNames?: string[];
+/** Um MÓDULO/ETAPA do POP, com o seu público e o seu conteúdo. */
+export interface ModuleInput {
+  /** id existente ao editar; ausente = módulo novo. */
+  id?: string;
+  name: string;
+  /** "Todos os colaboradores abrangidos pelo POP" (independe da função). */
+  allPublic?: boolean;
   /** Funções (cargos) alvo — distribuição automática principal. */
   jobTitles?: string[];
   /** Colaboradores adicionais — exceção/complemento à função. */
   collaboratorIds?: string[];
+  /** Setores do Mapa (regra anterior, opcional). */
+  sectorNames?: string[];
+  blocks: PopBlock[];
+}
+
+interface PopInput {
+  title: string;
+  category?: string;
+  unitIds: string[];
+  recurrence?: 'ONCE' | 'MONTHLY';
+  /** Pelo menos um. A ordem da lista é a ordem de exibição. */
+  modules: ModuleInput[];
+}
+
+interface ModuloNormalizado {
+  id: string | null;
+  name: string;
+  allPublic: boolean;
+  jobTitles: string[];
+  collaboratorIds: string[];
+  sectorNames: string[];
+  blocks: PopBlock[];
 }
 
 /**
- * Admin cria/publica um POP. Público do treinamento: GERAL (isInitial) ou
- * DIRECIONADO (funções + colaboradores adicionais + setores da regra anterior).
- * Geral e direcionado são exclusivos: marcar geral limpa o direcionamento.
+ * Normaliza os módulos: nome obrigatório, GERAL limpa o direcionamento (são
+ * exclusivos), ids de colaborador conferidos no banco de uma vez.
+ */
+async function normalizarModulos(entrada: ModuleInput[]): Promise<ModuloNormalizado[] | null> {
+  if (!Array.isArray(entrada) || entrada.length === 0) return null;
+  const todosIds = [...new Set(entrada.flatMap((m) => m.collaboratorIds ?? []))];
+  const existentes = new Set(await colaboradoresExistentes(todosIds));
+  const out: ModuloNormalizado[] = [];
+  for (const m of entrada) {
+    const name = String(m.name ?? '').trim();
+    if (!name) return null;
+    const geral = Boolean(m.allPublic);
+    out.push({
+      id: m.id ? String(m.id) : null,
+      name: name.slice(0, 120),
+      allPublic: geral,
+      jobTitles: geral ? [] : dedupeSectors(m.jobTitles),
+      collaboratorIds: geral ? [] : [...new Set((m.collaboratorIds ?? []).map(String).filter((i) => existentes.has(i)))],
+      sectorNames: geral ? [] : dedupeSectors(m.sectorNames),
+      blocks: sanitizePopBlocks(m.blocks),
+    });
+  }
+  return out;
+}
+
+function resumoDoPublico(mods: ModuloNormalizado[]) {
+  return mods.map((m) => ({ nome: m.name, publico: m.allPublic ? 'GERAL' : (m.jobTitles.length || m.collaboratorIds.length || m.sectorNames.length) ? 'DIRECIONADO' : 'REFERENCIA', funcoes: m.jobTitles, colaboradores: m.collaboratorIds.length, setores: m.sectorNames }));
+}
+
+/**
+ * Admin cria/publica um POP com os seus MÓDULOS. O POP é título, categoria,
+ * unidades e recorrência; público e conteúdo vivem em cada módulo. Os campos
+ * legados do POP (content/isInitial/setores/funções) não são mais escritos.
  */
 export async function createPop(user: SessionUser, input: PopInput, ctx: { ip?: string | null; userAgent?: string | null } = {}) {
   if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' };
   if (!input.title?.trim() || input.unitIds.length === 0) return { ok: false as const, reason: 'INVALID' };
-  // GERAL é escolha explícita: marcar geral limpa qualquer direcionamento que
-  // tenha vindo junto (a tela não manda os dois, mas a regra mora aqui).
-  const geral = Boolean(input.isInitial);
-  const sectors = geral ? [] : dedupeSectors(input.sectorNames);
-  const jobTitles = geral ? [] : dedupeSectors(input.jobTitles);
-  const collaboratorIds = geral ? [] : await colaboradoresExistentes(input.collaboratorIds);
-  const direcionado = sectors.length > 0 || jobTitles.length > 0 || collaboratorIds.length > 0;
-  const blocks = sanitizePopBlocks(input.blocks);
+  const mods = await normalizarModulos(input.modules);
+  if (!mods) return { ok: false as const, reason: 'INVALID' };
+
   const pop = await prisma.pop.create({
     data: {
       title: input.title.trim(),
       category: input.category || null,
-      sector: sectors[0] ?? null, // compat com o campo legado
       status: 'PUBLISHED',
       version: 1,
-      isInitial: geral, // geral e direcionado são exclusivos
+      isInitial: false,
       recurrence: input.recurrence === 'MONTHLY' ? 'MONTHLY' : 'ONCE',
-      content: blocks as unknown as Prisma.InputJsonValue,
+      content: [] as unknown as Prisma.InputJsonValue,
       units: { create: input.unitIds.map((unitId) => ({ unitId })) },
-      sectors: { create: sectors.map((sectorName) => ({ sectorName })) },
-      jobTitles: { create: jobTitles.map((jobTitle) => ({ jobTitle })) },
-      collaborators: { create: collaboratorIds.map((collaboratorId) => ({ collaboratorId })) },
+      modules: {
+        create: mods.map((m, i) => ({
+          name: m.name, order: i, version: 1, allPublic: m.allPublic,
+          content: m.blocks as unknown as Prisma.InputJsonValue,
+          jobTitles: { create: m.jobTitles.map((jobTitle) => ({ jobTitle })) },
+          collaborators: { create: m.collaboratorIds.map((collaboratorId) => ({ collaboratorId })) },
+          sectors: { create: m.sectorNames.map((sectorName) => ({ sectorName })) },
+        })),
+      },
     },
   });
-  await audit({ userId: user.id, action: 'POP_PUBLISH', module: 'POPS', entity: 'pop', entityId: pop.id, metadata: { publico: geral ? 'GERAL' : direcionado ? 'DIRECIONADO' : 'REFERENCIA', jobTitles, colaboradores: collaboratorIds.length, setores: sectors }, ...ctx });
+  await audit({ userId: user.id, action: 'POP_PUBLISH', module: 'POPS', entity: 'pop', entityId: pop.id, metadata: { modulos: resumoDoPublico(mods) }, ...ctx });
   await reconcileForUnits(input.unitIds);
   return { ok: true as const, id: pop.id };
 }
 
-/** Admin edita um POP. Se o conteúdo mudar, incrementa a versão (gera re-treino). */
+/**
+ * Admin edita um POP. Versão é POR MÓDULO: só o módulo cujo conteúdo mudou sobe
+ * de versão (e re-treina). Módulo que saiu da lista é INATIVADO, não apagado —
+ * quem já o concluiu continua com o histórico.
+ */
 export async function updatePop(user: SessionUser, id: string, input: PopInput & { bumpVersion?: boolean }, ctx: { ip?: string | null; userAgent?: string | null } = {}) {
   if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' };
   if (!input.title?.trim() || input.unitIds.length === 0) return { ok: false as const, reason: 'INVALID' };
-  const current = await prisma.pop.findUnique({ where: { id }, select: { version: true, content: true, units: { select: { unitId: true } } } });
+  const current = await prisma.pop.findUnique({
+    where: { id },
+    select: { version: true, units: { select: { unitId: true } }, modules: { where: { active: true }, select: { id: true, version: true, content: true } } },
+  });
   if (!current) return { ok: false as const, reason: 'INVALID' };
-  // GERAL é escolha explícita: marcar geral limpa qualquer direcionamento que
-  // tenha vindo junto (a tela não manda os dois, mas a regra mora aqui).
-  const geral = Boolean(input.isInitial);
-  const sectors = geral ? [] : dedupeSectors(input.sectorNames);
-  const jobTitles = geral ? [] : dedupeSectors(input.jobTitles);
-  const collaboratorIds = geral ? [] : await colaboradoresExistentes(input.collaboratorIds);
-  const direcionado = sectors.length > 0 || jobTitles.length > 0 || collaboratorIds.length > 0;
-  const blocks = sanitizePopBlocks(input.blocks);
-  const contentChanged = canonico(current.content) !== canonico(blocks);
-  const newVersion = (input.bumpVersion ?? contentChanged) ? current.version + 1 : current.version;
+  const mods = await normalizarModulos(input.modules);
+  if (!mods) return { ok: false as const, reason: 'INVALID' };
+
+  const atuais = new Map(current.modules.map((m) => [m.id, m]));
+  const mantidos = new Set<string>();
+  const mudancas: { nome: string; versao: number; conteudoMudou: boolean }[] = [];
 
   await prisma.$transaction(async (tx) => {
     await tx.popUnit.deleteMany({ where: { popId: id } });
-    await tx.popSector.deleteMany({ where: { popId: id } });
-    await tx.popJobTitle.deleteMany({ where: { popId: id } });
-    await tx.popCollaborator.deleteMany({ where: { popId: id } });
     await tx.pop.update({
       where: { id },
       data: {
         title: input.title.trim(),
         category: input.category || null,
-        sector: sectors[0] ?? null,
-        isInitial: geral, // geral e direcionado são exclusivos
         recurrence: input.recurrence === 'MONTHLY' ? 'MONTHLY' : 'ONCE',
-        version: newVersion,
-        content: blocks as unknown as Prisma.InputJsonValue,
         units: { create: input.unitIds.map((unitId) => ({ unitId })) },
-        sectors: { create: sectors.map((sectorName) => ({ sectorName })) },
-        jobTitles: { create: jobTitles.map((jobTitle) => ({ jobTitle })) },
-        collaborators: { create: collaboratorIds.map((collaboratorId) => ({ collaboratorId })) },
       },
     });
+
+    for (const [i, m] of mods.entries()) {
+      const existente = m.id ? atuais.get(m.id) : undefined;
+      if (existente) {
+        mantidos.add(existente.id);
+        const conteudoMudou = canonico(existente.content) !== canonico(m.blocks);
+        const version = (input.bumpVersion ?? conteudoMudou) ? existente.version + 1 : existente.version;
+        mudancas.push({ nome: m.name, versao: version, conteudoMudou });
+        await tx.popModuleJobTitle.deleteMany({ where: { moduleId: existente.id } });
+        await tx.popModuleCollaborator.deleteMany({ where: { moduleId: existente.id } });
+        await tx.popModuleSector.deleteMany({ where: { moduleId: existente.id } });
+        await tx.popModule.update({
+          where: { id: existente.id },
+          data: {
+            name: m.name, order: i, version, allPublic: m.allPublic, active: true,
+            content: m.blocks as unknown as Prisma.InputJsonValue,
+            jobTitles: { create: m.jobTitles.map((jobTitle) => ({ jobTitle })) },
+            collaborators: { create: m.collaboratorIds.map((collaboratorId) => ({ collaboratorId })) },
+            sectors: { create: m.sectorNames.map((sectorName) => ({ sectorName })) },
+          },
+        });
+      } else {
+        mudancas.push({ nome: m.name, versao: 1, conteudoMudou: true });
+        await tx.popModule.create({
+          data: {
+            popId: id, name: m.name, order: i, version: 1, allPublic: m.allPublic,
+            content: m.blocks as unknown as Prisma.InputJsonValue,
+            jobTitles: { create: m.jobTitles.map((jobTitle) => ({ jobTitle })) },
+            collaborators: { create: m.collaboratorIds.map((collaboratorId) => ({ collaboratorId })) },
+            sectors: { create: m.sectorNames.map((sectorName) => ({ sectorName })) },
+          },
+        });
+      }
+    }
+
+    // Módulo que saiu da lista: INATIVA (histórico de quem concluiu fica).
+    const removidos = current.modules.filter((m) => !mantidos.has(m.id)).map((m) => m.id);
+    if (removidos.length) await tx.popModule.updateMany({ where: { id: { in: removidos } }, data: { active: false } });
   });
-  await audit({ userId: user.id, action: 'POP_UPDATE', module: 'POPS', entity: 'pop', entityId: id, metadata: { version: newVersion, contentChanged, publico: geral ? 'GERAL' : direcionado ? 'DIRECIONADO' : 'REFERENCIA', jobTitles, colaboradores: collaboratorIds.length, setores: sectors }, ...ctx });
+
+  await audit({ userId: user.id, action: 'POP_UPDATE', module: 'POPS', entity: 'pop', entityId: id, metadata: { modulos: resumoDoPublico(mods), versoes: mudancas, inativados: current.modules.length - mantidos.size }, ...ctx });
   // reconcilia nas unidades atuais e nas antigas (caso tenha saído de alguma)
   await reconcileForUnits([...new Set([...input.unitIds, ...current.units.map((u) => u.unitId)])]);
-  return { ok: true as const, id, version: newVersion };
+  return { ok: true as const, id, version: current.version };
 }
 
 export async function deletePop(user: SessionUser, id: string, ctx: { ip?: string | null; userAgent?: string | null } = {}) {

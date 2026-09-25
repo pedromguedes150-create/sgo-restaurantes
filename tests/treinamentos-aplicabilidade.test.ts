@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizarFuncao, origemDoTreinamento, treinamentosAplicaveis, geraTreinamento, type PopParaAplicar, type ColaboradorParaAplicar } from '@/lib/treinamentos/aplicabilidade';
+import { normalizarFuncao, origemDoTreinamento, treinamentosAplicaveis, geraTreinamento, type ModuloParaAplicar as PopParaAplicar, type ColaboradorParaAplicar } from '@/lib/treinamentos/aplicabilidade';
 
 /**
  * A REGRA CENTRAL — "quem deve o quê" — sem banco.

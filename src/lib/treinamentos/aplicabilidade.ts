@@ -2,15 +2,18 @@
  * REGRA CENTRAL DE ATRIBUIÇÃO — pura, sem banco.
  *
  *   treinamentos aplicáveis ao colaborador =
- *       POPs GERAIS da unidade
- *     + POPs da FUNÇÃO (cargo) dele
- *     + POPs em que ele foi VINCULADO individualmente
- *     (+ POPs do SETOR do Mapa de Funções — a regra anterior, mantida)
+ *       MÓDULOS GERAIS ("todos abrangidos pelo POP") das unidades dele
+ *     + MÓDULOS da FUNÇÃO (cargo) dele
+ *     + MÓDULOS em que ele foi VINCULADO individualmente
+ *     (+ MÓDULOS do SETOR do Mapa de Funções — a regra anterior, mantida)
  *
- * Uma pessoa pode cair no mesmo POP por mais de um caminho (função E vínculo
- * individual). O resultado é UM item por POP: o Map elimina a duplicidade por
- * construção, e a ORIGEM registrada é a de maior precedência — a função vence o
- * vínculo individual porque é a distribuição principal; o vínculo é exceção.
+ * A unidade da regra é o MÓDULO (v1.124.0), não o POP: um POP "Operacional"
+ * com Desperdício, Conferência e Manuseio dá a cada pessoa só os módulos que
+ * cabem à função dela. Uma pessoa pode cair no mesmo módulo por mais de um
+ * caminho (função E vínculo individual). O resultado é UM item por módulo: o
+ * Map elimina a duplicidade por construção, e a ORIGEM registrada é a de maior
+ * precedência — a função vence o vínculo individual porque é a distribuição
+ * principal; o vínculo é exceção.
  *
  * "Cada funcionário é medido só pelos treinamentos que realmente deveria
  * realizar": esta função é a definição de "deveria". A reconciliação a usa
@@ -20,9 +23,10 @@
 
 export type OrigemTreinamento = 'GENERAL' | 'JOB_TITLE' | 'SECTOR' | 'INDIVIDUAL';
 
-export interface PopParaAplicar {
+export interface ModuloParaAplicar {
+  /** id do MÓDULO. */
   id: string;
-  /** Geral/inicial: toda a unidade, independe da função. */
+  /** Geral ("todos abrangidos pelo POP"): toda a unidade, independe da função. */
   isInitial: boolean;
   /** Funções (cargos) alvo, como cadastradas no POP. */
   jobTitles: string[];
@@ -67,8 +71,8 @@ export const ORIGEM_LABEL: Record<OrigemTreinamento, string> = {
   INDIVIDUAL: 'Vínculo individual',
 };
 
-/** Por que (e se) este POP se aplica a este colaborador. `null` = não se aplica. */
-export function origemDoTreinamento(colab: ColaboradorParaAplicar, pop: PopParaAplicar): Atribuicao | null {
+/** Por que (e se) este MÓDULO se aplica a este colaborador. `null` = não se aplica. */
+export function origemDoTreinamento(colab: ColaboradorParaAplicar, pop: ModuloParaAplicar): Atribuicao | null {
   if (pop.isInitial) return { origem: 'GENERAL', sectorName: null };
 
   const funcao = normalizarFuncao(colab.jobTitle);
@@ -85,8 +89,8 @@ export function origemDoTreinamento(colab: ColaboradorParaAplicar, pop: PopParaA
   return null;
 }
 
-/** Todos os POPs aplicáveis ao colaborador — um por POP, sem duplicidade. */
-export function treinamentosAplicaveis(colab: ColaboradorParaAplicar, pops: PopParaAplicar[]): Map<string, Atribuicao> {
+/** Todos os MÓDULOS aplicáveis ao colaborador — um por módulo, sem duplicidade. */
+export function treinamentosAplicaveis(colab: ColaboradorParaAplicar, pops: ModuloParaAplicar[]): Map<string, Atribuicao> {
   const out = new Map<string, Atribuicao>();
   for (const pop of pops) {
     const a = origemDoTreinamento(colab, pop);
@@ -95,7 +99,7 @@ export function treinamentosAplicaveis(colab: ColaboradorParaAplicar, pops: PopP
   return out;
 }
 
-/** Um POP gera treinamento quando tem QUALQUER público; sem público é só referência. */
-export function geraTreinamento(pop: PopParaAplicar): boolean {
+/** Um MÓDULO gera treinamento quando tem QUALQUER público; sem público é só referência. */
+export function geraTreinamento(pop: ModuloParaAplicar): boolean {
   return pop.isInitial || pop.jobTitles.length > 0 || pop.sectorNames.length > 0 || pop.collaboratorIds.length > 0;
 }

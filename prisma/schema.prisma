@@ -1811,6 +1811,7 @@ model Collaborator {
   medicalCertificates MedicalCertificate[]
   terminations        Termination[]
   popLinks            PopCollaborator[]
+  moduleLinks         PopModuleCollaborator[]
 
   @@index([cpf])
   @@map("collaborators")
@@ -2405,8 +2406,78 @@ model Pop {
   trainings     TrainingRecord[]
   jobTitles     PopJobTitle[]
   collaborators PopCollaborator[]
+  /// MÓDULOS (v1.124.0): público e conteúdo vivem no módulo. Os campos
+  /// legados acima (content/isInitial/sectors/jobTitles/collaborators) ficam
+  /// no banco por migração não-destrutiva; o código lê dos módulos.
+  modules       PopModule[]
 
   @@map("pops")
+}
+
+/// MÓDULO/ETAPA de um POP (v1.124.0). Um POP "Operacional" pode ter
+/// Desperdício, Conferência e Manuseio, cada um com o SEU público e o SEU
+/// conteúdo — e cada colaborador só deve os módulos aplicáveis a ele.
+/// Versão PRÓPRIA: editar o conteúdo de um módulo re-treina só ele.
+/// Remover um módulo INATIVA (active=false): o histórico de quem concluiu fica.
+model PopModule {
+  id        String   @id @default(cuid())
+  popId     String
+  name      String
+  order     Int      @default(0)
+  version   Int      @default(1)
+  /// "Todos os colaboradores abrangidos pelo POP" (independe da função).
+  allPublic Boolean  @default(false)
+  active    Boolean  @default(true)
+  /// blocos: [{type:'text'|'image'|'video'|'checklist', ...}]
+  content   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pop           Pop                     @relation(fields: [popId], references: [id], onDelete: Cascade)
+  jobTitles     PopModuleJobTitle[]
+  collaborators PopModuleCollaborator[]
+  sectors       PopModuleSector[]
+  trainings     TrainingRecord[]
+
+  @@index([popId])
+  @@map("pop_modules")
+}
+
+/// Função (cargo, por NOME normalizado) alvo do MÓDULO — distribuição automática principal.
+model PopModuleJobTitle {
+  id       String @id @default(cuid())
+  moduleId String
+  jobTitle String
+
+  module PopModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, jobTitle])
+  @@map("pop_module_job_titles")
+}
+
+/// Colaborador ADICIONAL do módulo — exceção a quem executa a atividade sem ter a função.
+model PopModuleCollaborator {
+  id             String @id @default(cuid())
+  moduleId       String
+  collaboratorId String
+
+  module       PopModule    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, collaboratorId])
+  @@map("pop_module_collaborators")
+}
+
+/// Setor do Mapa de Funções alvo do módulo (regra anterior, mantida).
+model PopModuleSector {
+  id         String @id @default(cuid())
+  moduleId   String
+  sectorName String
+
+  module PopModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, sectorName])
+  @@map("pop_module_sectors")
 }
 
 /// Setor (por NOME) ao qual o POP/treinamento se aplica (vale em todas as unidades do POP).
@@ -2472,6 +2543,12 @@ model TrainingRecord {
   id             String         @id @default(cuid())
   popId          String
   popVersion     Int
+  /// O MÓDULO devido (v1.124.0): a obrigação é por módulo, não por POP.
+  moduleId       String
+  /// Nome do módulo congelado: renomear não reescreve o histórico.
+  moduleName     String
+  /// Versão do módulo devida; único → periodKey = "V{moduleVersion}".
+  moduleVersion  Int            @default(1)
   collaboratorId String
   unitId         String
   sectorName     String? // null = treinamento inicial
@@ -2484,13 +2561,15 @@ model TrainingRecord {
   createdAt      DateTime       @default(now())
 
   pop          Pop          @relation(fields: [popId], references: [id], onDelete: Cascade)
+  module       PopModule    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
   unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
   completedBy  User?        @relation("TrainingBy", fields: [completedById], references: [id], onDelete: SetNull)
 
-  @@unique([popId, collaboratorId, periodKey])
+  @@unique([moduleId, collaboratorId, periodKey])
   @@index([unitId, status])
   @@index([collaboratorId])
+  @@index([popId])
   @@map("training_records")
 }
 

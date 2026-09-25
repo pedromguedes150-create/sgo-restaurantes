@@ -19,8 +19,9 @@ function hojeBr(): string { const d = new Date(); return `${String(d.getDate()).
  *
  * Respeita os filtros da tela (vêm na URL): sem filtro é o consolidado da
  * rede; com filtro, só o recorte. A primeira página é o RESUMO EXECUTIVO
- * (rede, unidades, treinamentos com mais pendência); as pendências e o
- * detalhamento por colaborador vêm depois. Identidade vinho/bordô do SGO.
+ * (rede, unidades, POPs com seus módulos); as pendências — por MÓDULO, nunca
+ * um módulo que não pertence àquela pessoa — e o detalhamento por colaborador
+ * vêm depois. Identidade vinho/bordô do SGO.
  */
 export default async function RelatorioTreinamentosPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
   const user = (await getSessionUser())!;
@@ -35,7 +36,8 @@ export default async function RelatorioTreinamentosPage({ searchParams }: { sear
   const recorte: string[] = [];
   if (filtros.unitId) recorte.push(`Unidade: ${opcoes.unidades.find((u) => u.id === filtros.unitId)?.name ?? filtros.unitId}`);
   if (filtros.jobTitle) recorte.push(`Função: ${filtros.jobTitle}`);
-  if (filtros.popId) recorte.push(`Treinamento: ${opcoes.treinamentos.find((t) => t.id === filtros.popId)?.title ?? filtros.popId}`);
+  if (filtros.popId) recorte.push(`POP: ${opcoes.treinamentos.find((t) => t.id === filtros.popId)?.title ?? filtros.popId}`);
+  if (filtros.moduleId) recorte.push(`Módulo: ${opcoes.modulos.find((m) => m.id === filtros.moduleId)?.name ?? filtros.moduleId}`);
   if (filtros.collaboratorId) recorte.push(`Colaborador: ${opcoes.colaboradores.find((c) => c.id === filtros.collaboratorId)?.name ?? filtros.collaboratorId}`);
   if (filtros.status && filtros.status !== 'todos') recorte.push(`Status: ${{ concluido: 'Concluído', pendente: 'Pendente', atrasado: 'Atrasado' }[filtros.status]}`);
 
@@ -43,6 +45,10 @@ export default async function RelatorioTreinamentosPage({ searchParams }: { sear
   const thN = 'py-1 pl-2 text-right font-semibold';
   const td = 'py-1 pr-2 align-top';
   const tdN = 'py-1 pl-2 text-right tabular-nums align-top';
+
+  // Módulos agrupados por POP, na ordem dos POPs (menor conclusão primeiro).
+  const modulosPorPop = new Map<string, typeof painel.porModulo>();
+  for (const m of painel.porModulo) { const arr = modulosPorPop.get(m.popId) ?? []; arr.push(m); modulosPorPop.set(m.popId, arr); }
 
   return (
     <div className="sgo-print mx-auto max-w-4xl space-y-5 bg-surface p-4 text-ink-900 print:p-0">
@@ -52,10 +58,9 @@ export default async function RelatorioTreinamentosPage({ searchParams }: { sear
         <PrintButton label="Salvar PDF" />
       </div>
 
-      {/* Cabeçalho */}
       <header className="border-b-4 border-brand pb-3">
         <p className="sgo-type-11 font-semibold tracking-wide text-brand">GRUPO BEIJA-FLOR</p>
-        <h1 className="text-2xl font-bold text-ink-900">Relatório de Treinamentos</h1>
+        <h1 className="text-2xl font-bold text-ink-900">Relatório de Treinamentos da Rede</h1>
         <div className="mt-1 grid gap-x-6 text-sm text-ink-700 sm:grid-cols-2">
           <p><span className="text-ink-500">Período:</span> {periodo}</p>
           <p><span className="text-ink-500">Data de emissão:</span> {hojeBr()}</p>
@@ -66,15 +71,16 @@ export default async function RelatorioTreinamentosPage({ searchParams }: { sear
       {/* 1. Resumo geral */}
       <section>
         <h2 className="sgo-type-13 mb-2 font-bold text-brand">1. Resumo geral {recorte.length ? 'do recorte' : 'da rede'}</h2>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+          <Kpi label="POPs ativos" valor={painel.popsAtivos} />
           <Kpi label="Colaboradores" valor={resumo.colaboradores} />
-          <Kpi label="Previstos" valor={resumo.previstos} />
+          <Kpi label="Módulos aplicáveis" valor={resumo.previstos} />
           <Kpi label="Concluídos" valor={resumo.concluidos} classe="text-success" />
           <Kpi label="Pendentes" valor={resumo.pendentes} classe={resumo.pendentes ? 'text-warning' : ''} />
           <Kpi label="Atrasados" valor={resumo.atrasados} classe={resumo.atrasados ? 'text-danger' : ''} />
           <Kpi label="Conclusão" valor={emPercentual(resumo.taxa)} classe="text-brand" />
         </div>
-        <p className="mt-1 text-xs text-ink-500">Previstos = concluídos + pendentes + atrasados. Cada colaborador conta só os treinamentos aplicáveis a ele (gerais da unidade, da sua função e vínculos individuais).</p>
+        <p className="mt-1 text-xs text-ink-500">Aplicáveis = concluídos + pendentes + atrasados. Cada colaborador conta só os MÓDULOS aplicáveis a ele (gerais da unidade, da sua função e vínculos individuais) — nunca módulos que não pertencem a ele.</p>
       </section>
 
       {/* 2. Por unidade */}
@@ -95,20 +101,31 @@ export default async function RelatorioTreinamentosPage({ searchParams }: { sear
         </table>
       </section>
 
-      {/* 3. Por treinamento */}
+      {/* 3. Por POP, com os módulos de cada um */}
       <section>
-        <h2 className="sgo-type-13 mb-2 font-bold text-brand">3. Resultado por treinamento</h2>
-        <p className="mb-1 text-xs text-ink-500">Menor conclusão primeiro — os que mais precisam de atenção.</p>
+        <h2 className="sgo-type-13 mb-2 font-bold text-brand">3. Resultado por POP e por módulo</h2>
+        <p className="mb-1 text-xs text-ink-500">Menor conclusão primeiro. Abaixo de cada POP, os módulos dele.</p>
         <table className="w-full text-sm">
-          <thead><tr className="border-b-2 border-brand text-ink-700"><th className={th}>Treinamento</th><th className={thN}>Aplicáveis</th><th className={thN}>Concluídos</th><th className={thN}>Pendentes</th><th className={thN}>Atrasados</th><th className={thN}>Conclusão</th></tr></thead>
+          <thead><tr className="border-b-2 border-brand text-ink-700"><th className={th}>POP / módulo</th><th className={thN}>Aplicáveis</th><th className={thN}>Concluídos</th><th className={thN}>Pendentes</th><th className={thN}>Atrasados</th><th className={thN}>Conclusão</th></tr></thead>
           <tbody>
-            {painel.porTreinamento.length === 0 && <tr><td colSpan={6} className="py-2 text-ink-500">Sem treinamentos.</td></tr>}
+            {painel.porTreinamento.length === 0 && <tr><td colSpan={6} className="py-2 text-ink-500">Sem POPs.</td></tr>}
             {painel.porTreinamento.map((t) => (
-              <tr key={t.popId} className="border-b border-line">
-                <td className={td}>{t.popTitle}</td><td className={tdN}>{t.previstos}</td><td className={tdN}>{t.concluidos}</td>
-                <td className={`${tdN} ${t.pendentes ? 'text-warning' : ''}`}>{t.pendentes}</td><td className={`${tdN} ${t.atrasados ? 'text-danger' : ''}`}>{t.atrasados}</td>
-                <td className={`${tdN} font-semibold`}>{emPercentual(t.taxa)}</td>
-              </tr>
+              <>
+                <tr key={t.popId} className="border-b border-line bg-sunken">
+                  <td className={`${td} font-semibold`}>{t.popTitle} <span className="text-xs font-normal text-ink-500">({t.modulos} módulo(s))</span></td>
+                  <td className={`${tdN} font-semibold`}>{t.previstos}</td><td className={`${tdN} font-semibold`}>{t.concluidos}</td>
+                  <td className={`${tdN} font-semibold ${t.pendentes ? 'text-warning' : ''}`}>{t.pendentes}</td><td className={`${tdN} font-semibold ${t.atrasados ? 'text-danger' : ''}`}>{t.atrasados}</td>
+                  <td className={`${tdN} font-semibold`}>{emPercentual(t.taxa)}</td>
+                </tr>
+                {(modulosPorPop.get(t.popId) ?? []).map((m) => (
+                  <tr key={m.moduleId} className="border-b border-line">
+                    <td className={`${td} pl-6 text-ink-700`}>{m.moduleName}</td>
+                    <td className={tdN}>{m.previstos}</td><td className={tdN}>{m.concluidos}</td>
+                    <td className={`${tdN} ${m.pendentes ? 'text-warning' : ''}`}>{m.pendentes}</td><td className={`${tdN} ${m.atrasados ? 'text-danger' : ''}`}>{m.atrasados}</td>
+                    <td className={tdN}>{emPercentual(m.taxa)}</td>
+                  </tr>
+                ))}
+              </>
             ))}
           </tbody>
         </table>
@@ -116,18 +133,18 @@ export default async function RelatorioTreinamentosPage({ searchParams }: { sear
 
       {/* 4. Pendências */}
       <section className="break-before-page">
-        <h2 className="sgo-type-13 mb-2 font-bold text-brand">4. Pendências — quem ainda precisa treinar</h2>
-        <p className="mb-1 text-xs text-ink-500">{painel.pendencias.length} pendência(s), por unidade e colaborador.</p>
+        <h2 className="sgo-type-13 mb-2 font-bold text-brand">4. Pendências de treinamento — quem ainda precisa treinar</h2>
+        <p className="mb-1 text-xs text-ink-500">{painel.pendencias.length} pendência(s), por unidade e colaborador. Só módulos aplicáveis à pessoa.</p>
         <table className="w-full text-xs">
-          <thead><tr className="border-b-2 border-brand text-ink-700"><th className={th}>Unidade</th><th className={th}>Colaborador</th><th className={th}>Função</th><th className={th}>Treinamento</th><th className={th}>Origem</th><th className={th}>Prazo</th><th className={th}>Status</th></tr></thead>
+          <thead><tr className="border-b-2 border-brand text-ink-700"><th className={th}>Unidade</th><th className={th}>Colaborador</th><th className={th}>Função</th><th className={th}>POP</th><th className={th}>Módulo pendente</th><th className={th}>Origem</th><th className={th}>Prazo</th><th className={th}>Status</th></tr></thead>
           <tbody>
-            {painel.pendencias.length === 0 && <tr><td colSpan={7} className="py-2 text-ink-500">Nenhuma pendência no recorte.</td></tr>}
+            {painel.pendencias.length === 0 && <tr><td colSpan={8} className="py-2 text-ink-500">Nenhuma pendência no recorte.</td></tr>}
             {painel.pendencias.map((l) => {
               const s = statusEfetivo(l, hoje);
               return (
                 <tr key={l.recordId} className="border-b border-line">
                   <td className={td}>{l.unitName}</td><td className={td}>{l.collaboratorName}</td><td className={td}>{l.jobTitle ?? '—'}</td>
-                  <td className={td}>{l.popTitle}</td><td className={td}>{ORIGEM_LABEL[l.origin]}</td><td className={td}>{emData(l.dueDate)}</td>
+                  <td className={td}>{l.popTitle}</td><td className={`${td} font-semibold`}>{l.moduleName}</td><td className={td}>{ORIGEM_LABEL[l.origin]}</td><td className={td}>{emData(l.dueDate)}</td>
                   <td className={`${td} font-semibold ${STATUS_CLASSE[s]}`}>{STATUS_LABEL[s]}</td>
                 </tr>
               );
@@ -155,7 +172,7 @@ export default async function RelatorioTreinamentosPage({ searchParams }: { sear
         </table>
       </section>
 
-      <p className="pt-2 text-center text-[10px] text-ink-500">Gerado pelo SGO Beija Flor em {hojeBr()} · {resumo.previstos} atribuição(ões) · {painel.detalhado.length ? '' : 'sem dados no recorte'}</p>
+      <p className="pt-2 text-center text-[10px] text-ink-500">Gerado pelo SGO Beija Flor em {hojeBr()} · {resumo.previstos} atribuição(ões) de módulo</p>
     </div>
   );
 }
