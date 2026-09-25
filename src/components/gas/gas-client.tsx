@@ -48,6 +48,12 @@ export interface GasContractUI {
   documents?: ContractDocUI[];
 }
 export interface PurchasedUI { kg: number; total: number; count: number }
+/** Unidade que recebe gás mas está sem contrato vigente — e o motivo. */
+export interface UnidadeSemContratoUI {
+  unitId: string; unitName: string; receiptsKg: number; receiptsCount: number; lastReceiptDate: string;
+  motivo: 'SEM_CONTRATO' | 'CONTRATO_VENCIDO' | 'CONTRATO_INATIVO';
+  ultimoContrato?: { id: string; startDate: string; endDate: string; active: boolean; supplierName: string };
+}
 
 const kg = (n: number) => `R$ ${n.toFixed(4).replace('.', ',')}/kg`;
 /** 'AAAA-MM-DD' → 'DD/MM/AAAA', sem Date (fuso não muda um dia operacional). */
@@ -55,9 +61,9 @@ const br = (iso: string) => { const [y, m, d] = iso.split('-'); return d ? `${d}
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 function mlabel(m: string) { const [y, mm] = m.split('-'); return `${MONTHS[Number(mm) - 1]}/${y.slice(2)}`; }
 
-export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, receipts, contracts = [], purchased, canManageContracts = false, filter, basePath = '/modulos/gas', abas = {} }: {
+export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, receipts, contracts = [], unitsWithoutContract = [], purchased, canManageContracts = false, filter, basePath = '/modulos/gas', abas = {} }: {
   canLaunch: boolean; isAdmin: boolean; canEditDate?: boolean; units: Unit[]; suppliers: Supplier[]; dashboard: GasDash; receipts: GasRow[];
-  contracts?: GasContractUI[]; purchased?: PurchasedUI; canManageContracts?: boolean; filter?: { unitId: string; supplierId: string; mes: string }; basePath?: string;
+  contracts?: GasContractUI[]; unitsWithoutContract?: UnidadeSemContratoUI[]; purchased?: PurchasedUI; canManageContracts?: boolean; filter?: { unitId: string; supplierId: string; mes: string }; basePath?: string;
 
   /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
   abas?: AcessoAbas;
@@ -82,6 +88,7 @@ export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, supp
         <>
           <DashFilters units={units} suppliers={suppliers} filter={filter} purchased={purchased} basePath={basePath} />
           <ContractProgress contracts={contracts.filter((c) => c.active && !c.expired)} compact />
+          <UnidadesSemContrato unidades={unitsWithoutContract} />
           <Dashboard d={dashboard} isAdmin={isAdmin} receipts={receipts} contracts={contracts} units={units} />
         </>
       )}
@@ -164,6 +171,48 @@ function ContractProgress({ contracts, compact = false }: { contracts: GasContra
             </div>
             {!compact && <p className="mt-0.5 text-xs text-ink-500">{c.startDate.split('-').reverse().join('/')} → {c.endDate.split('-').reverse().join('/')} · {kg(c.pricePerKg)} acordado · restam {c.remainingKg.toLocaleString('pt-BR')} kg</p>}
             <ForaDoContrato contrato={c} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Unidades com recebimento e SEM contrato vigente ───────── */
+/**
+ * O nível acima do `foraDoContrato`: ali é a NOTA que ficou de fora de um
+ * contrato; aqui é a UNIDADE inteira que some do painel porque seu contrato
+ * venceu, foi inativado ou nunca existiu — mesmo ainda comprando gás.
+ *
+ * Foi o caso da Nova União: 32 notas ligadas à unidade (por ID), no histórico,
+ * mas invisíveis na área de contratos. Em vez de a unidade sumir em silêncio,
+ * ela aparece aqui com o motivo e o caminho do conserto. Nada é inventado: se
+ * ela tivesse contrato vigente, estaria no painel de cima, e não aqui.
+ */
+const MOTIVO_UNIDADE: Record<UnidadeSemContratoUI['motivo'], string> = {
+  SEM_CONTRATO: 'nunca teve contrato cadastrado',
+  CONTRATO_VENCIDO: 'contrato vencido',
+  CONTRATO_INATIVO: 'contrato inativado (dentro do período)',
+};
+
+function UnidadesSemContrato({ unidades }: { unidades: UnidadeSemContratoUI[] }) {
+  if (unidades.length === 0) return null;
+  return (
+    <div className="rounded-lg border border-warning/40 bg-warning-bg p-3">
+      <p className="mb-1 sgo-type-11 font-semibold text-ink-900">Unidades com recebimento e sem contrato vigente</p>
+      <p className="mb-2 sgo-type-11 text-ink-700">Elas compram gás mas não entram em “% cumprido”. Renove ou reative o contrato para acompanhar a baixa.</p>
+      <div className="space-y-1.5">
+        {unidades.map((u) => (
+          <div key={u.unitId} className="text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate font-medium text-ink-900">{u.unitName}</span>
+              <span className="shrink-0 text-xs tabular-nums text-ink-700">{u.receiptsKg.toLocaleString('pt-BR')} kg · {u.receiptsCount} nota(s)</span>
+            </div>
+            <p className="sgo-type-11 text-ink-700">
+              <b>{MOTIVO_UNIDADE[u.motivo]}</b>
+              {u.ultimoContrato ? ` · ${u.ultimoContrato.supplierName} · ${u.ultimoContrato.startDate.split('-').reverse().join('/')} → ${u.ultimoContrato.endDate.split('-').reverse().join('/')}` : ''}
+              {` · último recebimento ${u.lastReceiptDate.split('-').reverse().join('/')}`}
+            </p>
           </div>
         ))}
       </div>

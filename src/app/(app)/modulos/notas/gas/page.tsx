@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listSuppliers } from '@/lib/suppliers';
 import { getGasDashboard, getVariacoesPorNota, listGasReceipts } from '@/lib/gas/query';
-import { listGasContracts, getGasPurchasedInFilter } from '@/lib/gas/contracts';
+import { listGasContracts, getGasPurchasedInFilter, listUnitsWithReceiptsWithoutActiveContract } from '@/lib/gas/contracts';
 import { isSupervisory } from '@/lib/roles';
 import { Card, CardContent } from '@/components/ui/card';
 import { GasClient } from '@/components/gas/gas-client';
@@ -42,12 +42,13 @@ export default async function AnaliseGasPage({
   const fSupplier = searchParams.fornecedor || undefined;
   const fMes = /^\d{4}-\d{2}$/.test(searchParams.mes ?? '') ? searchParams.mes : undefined;
 
-  const [units, suppliers, dashboard, receipts, contracts, purchased, variacoes] = await Promise.all([
+  const [units, suppliers, dashboard, receipts, contracts, unitsWithoutContract, purchased, variacoes] = await Promise.all([
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     listSuppliers({ activeOnly: true }),
     getGasDashboard(user, { unitId: fUnit, supplierId: fSupplier, yearMonth: fMes }),
     listGasReceipts(user, { limit: 300 }),
     listGasContracts(user),
+    listUnitsWithReceiptsWithoutActiveContract(user),
     getGasPurchasedInFilter(user, { unitId: fUnit, supplierId: fSupplier, yearMonth: fMes }),
     /* A variação vem RECALCULADA da série da unidade, e não da coluna gravada
        no lançamento: era ali que a nota com data corrigida aparecia sem
@@ -90,6 +91,7 @@ export default async function AnaliseGasPage({
               by: r.createdBy?.name ?? '', dateEdited: r.dateEdited, dateEditedByName: r.dateEditedByName,
             }))}
             contracts={contracts}
+            unitsWithoutContract={unitsWithoutContract}
           />
         </CardContent>
       </Card>
