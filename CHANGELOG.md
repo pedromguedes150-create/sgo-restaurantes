@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.123.2 — 2026-09-25 (Seed de desenvolvimento preserva os tipos fixos de desperdício)
+### Corrigido
+- O seed (`prisma/seed.ts`) fazia `wasteCategory.deleteMany({})` e recriava 4 categorias de demonstração (SELF/CLIENT/SNACK/KITCHEN). Isso **apagava as seis categorias FIXAS** criadas pela migração `20260914180000_desperdicio_tipos_fixos`: depois de `prisma migrate reset` ou `npm run db:seed` a folha de lançamento ficava sem os tipos da rede e `tests/desperdicio-consolidado` falhava no `beforeAll`. No CI não aparecia porque lá só roda `migrate deploy`, sem seed.
+  - Agora o seed apaga só o que **não** é fixo e garante as seis por upsert pelo `code`, com nome/ordem de `src/lib/waste/tipos.ts` e `REF_ALMOCO`/`REF_JANTAR` inativas (como a migração `20260924150000_sobras_salgados`).
+  - As categorias de demonstração saíram (nenhum teste ou código as usava; e nasciam ativas, aparecendo na folha ao lado das fixas). O histórico de 29 dias passa a ser lançado nos quatro tipos ativos.
+  - Sem mudança em migrações nem nas regras do módulo; só ambiente de desenvolvimento.
+
 ## v1.109.1 — 2026-09-22 (Conferência de comandas: o leitor travava a justificativa)
 ### Corrigido
 - 🔴 **Em produção, para toda conferência com leitor**: ao clicar em "Finalizar conferência" e tentar preencher **"O que houve? (obrigatório)"**, o campo não aceitava texto. Como a justificativa é obrigatória, o botão de finalizar ficava inalcançável — a conferência do print travou com 423 de 504 comandas (84%) e 81 não localizadas.
