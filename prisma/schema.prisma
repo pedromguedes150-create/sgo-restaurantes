@@ -2,7 +2,7 @@
 // Base única; escopo por unidade (unit_id) aplicado SEMPRE no servidor.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // native = dev (Windows); linux-musl-openssl-3.0.x = produção (node:20-alpine)
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
@@ -26,147 +26,149 @@ enum Role {
 
 /// Unidade (restaurante). Toda lógica diária usa a data operacional desta unidade.
 model Unit {
-  id        String   @id @default(cuid())
-  name      String
-  code      String   @unique // sigla curta p/ exibição
-  address   String?
-  cnpj      String?
+  id               String   @id @default(cuid())
+  name             String
+  code             String   @unique // sigla curta p/ exibição
+  address          String?
+  cnpj             String?
   /// Razão social correspondente na API do RH (para casar/sincronizar colaboradores)
-  rhUnitName String?
+  rhUnitName       String?
   /// Fuso da unidade (exibição). Banco grava em UTC. Padrão America/Sao_Paulo.
-  timezone  String   @default("America/Sao_Paulo")
+  timezone         String   @default("America/Sao_Paulo")
   /// Hora de corte da data operacional (0-23). Padrão 04:00 (regra nº 4).
-  cutoffHour Int     @default(4)
+  cutoffHour       Int      @default(4)
   /// Só a unidade com pizzaria enxerga o Controle de Pizzas. É marcador de
   /// cadastro, e não o nome da unidade fixo no código: corrigir a grafia de
   /// "Jardim Teresópolis" não pode derrubar o módulo.
-  hasPizzeria Boolean @default(false)
+  hasPizzeria      Boolean  @default(false)
   /// Segredo do link interno de fechamento de pizzas (sem login). Trocar o
   /// valor revoga o link antigo.
-  pizzaPublicToken String? @unique
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  pizzaPublicToken String?  @unique
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  memberships   UnitMembership[]
-  auditLogs     AuditLog[]
-  taskTemplates TaskTemplate[]
-  taskInstances TaskInstance[]
-  wasteEntries  WasteEntry[]
-  snackDiscards WasteSnackDiscard[]
-  occurrences   Occurrence[]
-  commandConfig       UnitCommandConfig?
-  commandSequences    CommandSequence[]
-  commandCounts       CommandCount[]
-  commandSessions     CommandCountSession[]
-  commandDivergences  CommandDivergence[]
-  commandReplacements CommandReplacement[]
-  cancellations       Cancellation[]
-  itemCancellations   ItemCancellation[]
-  cancellationImports CancellationImport[]
-  paymentRequests     PaymentRequest[]
-  freelancerUnits     FreelancerUnit[]
-  receivedNotes       ReceivedNote[]
-  inventorySchedules  InventorySchedule[]
-  collaboratorUnits   CollaboratorUnit[]
-  vacations           Vacation[]
-  scheduleEntries     ScheduleEntry[]
-  popUnits            PopUnit[]
+  memberships               UnitMembership[]
+  auditLogs                 AuditLog[]
+  taskTemplates             TaskTemplate[]
+  taskInstances             TaskInstance[]
+  wasteEntries              WasteEntry[]
+  snackDiscards             WasteSnackDiscard[]
+  snackDayEvidences         WasteSnackDayEvidence[]
+  occurrences               Occurrence[]
+  commandConfig             UnitCommandConfig?
+  commandSequences          CommandSequence[]
+  commandCounts             CommandCount[]
+  commandSessions           CommandCountSession[]
+  commandDivergences        CommandDivergence[]
+  commandReplacements       CommandReplacement[]
+  cancellations             Cancellation[]
+  itemCancellations         ItemCancellation[]
+  cancellationImports       CancellationImport[]
+  paymentRequests           PaymentRequest[]
+  freelancerUnits           FreelancerUnit[]
+  receivedNotes             ReceivedNote[]
+  inventorySchedules        InventorySchedule[]
+  collaboratorUnits         CollaboratorUnit[]
+  vacations                 Vacation[]
+  scheduleEntries           ScheduleEntry[]
+  popUnits                  PopUnit[]
   ticketMediaParticipations TicketMediaParticipation[]
   ticketMediaEntries        TicketMediaEntry[]
-  sectors             Sector[]
-  allocations         WorkforceAllocation[]
-  workforceDaySnapshots WorkforceDaySnapshot[]
-  shifts              Shift[]
-  employeeSchedules   EmployeeSchedule[]
-  schedulePlanOverrides SchedulePlanOverride[]
-  schedulePlanFills   SchedulePlanFill[]
-  scheduleActuals     ScheduleActual[]
-  trainings           TrainingRecord[]
-  communicationUnits      CommunicationUnit[]
-  communicationRecipients CommunicationRecipient[]
-  gasReceipts             GasReceipt[]
-  oilCollections          OilCollection[]
-  inventoryItems          InventoryItem[]
-  inventoryMovements      InventoryMovement[]
-  medicalCertificates     MedicalCertificate[]
-  freelancerRates         FreelancerHourlyRate[]
-  terminations            Termination[]
-  cashDenominations       CashDenomination[]
-  pizzaFlavors            PizzaFlavor[]
-  pizzaClosings           PizzaClosing[]
-  pizzaDoughBatches       PizzaDoughBatch[]
-  pizzaDoughWastes        PizzaDoughWaste[]
-  pizzaDoughCounts        PizzaDoughCount[]
-  pizzaDoughChanges       PizzaDoughChange[]
-  payoutDeliveries        PayoutDelivery[]
-  stockLots               StockLot[]
+  sectors                   Sector[]
+  allocations               WorkforceAllocation[]
+  workforceDaySnapshots     WorkforceDaySnapshot[]
+  shifts                    Shift[]
+  employeeSchedules         EmployeeSchedule[]
+  schedulePlanOverrides     SchedulePlanOverride[]
+  schedulePlanFills         SchedulePlanFill[]
+  scheduleActuals           ScheduleActual[]
+  trainings                 TrainingRecord[]
+  communicationUnits        CommunicationUnit[]
+  communicationRecipients   CommunicationRecipient[]
+  gasReceipts               GasReceipt[]
+  oilCollections            OilCollection[]
+  inventoryItems            InventoryItem[]
+  inventoryMovements        InventoryMovement[]
+  medicalCertificates       MedicalCertificate[]
+  freelancerRates           FreelancerHourlyRate[]
+  terminations              Termination[]
+  cashDenominations         CashDenomination[]
+  pizzaFlavors              PizzaFlavor[]
+  pizzaClosings             PizzaClosing[]
+  pizzaDoughBatches         PizzaDoughBatch[]
+  pizzaDoughWastes          PizzaDoughWaste[]
+  pizzaDoughCounts          PizzaDoughCount[]
+  pizzaDoughChanges         PizzaDoughChange[]
+  payoutDeliveries          PayoutDelivery[]
+  stockLots                 StockLot[]
 
   @@map("units")
 }
 
 /// Usuário do sistema.
 model User {
-  id             String   @id @default(cuid())
-  name           String
+  id              String    @id @default(cuid())
+  name            String
   /// CPF do usuário (só dígitos) — preenchido pelo próprio no Meu Perfil (16/07)
-  cpf            String?
-  email          String   @unique
-  passwordHash   String
-  role           Role
-  active         Boolean  @default(true)
+  cpf             String?
+  email           String    @unique
+  passwordHash    String
+  role            Role
+  active          Boolean   @default(true)
   /// Aceite do termo LGPD no 1º login (regra LGPD nº 1)
   termsAcceptedAt DateTime?
   termsVersion    String?
-  lastLoginAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   /// Setor do CD do Separador. Ele NAO escolhe o setor ao entrar: o cadastro
   /// dele decide, e a tela ja abre filtrada. Nulo para todo mundo que nao e
   /// Perfil personalizado (Gestão de Perfis). Quando presente, é ele que manda
   /// nas permissões de TELA. `role` acima continua valendo para as regras de
   /// negócio e é mantido igual ao `baseRole` do perfil — ver `Profile`.
-  profileId      String?
-  profile        Profile?         @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  profileId  String?
+  profile    Profile?  @relation(fields: [profileId], references: [id], onDelete: SetNull)
   /// Separador.
-  cdSectorId     String?
-  cdSector       CdSector?        @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
+  cdSectorId String?
+  cdSector   CdSector? @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
 
-  memberships    UnitMembership[]
-  refreshTokens  RefreshToken[]
-  auditLogs      AuditLog[]
-  completedTasks TaskInstance[] @relation("CompletedBy")
-  assignedTasks  TaskInstance[] @relation("AssignedTo")
-  wasteEntries   WasteEntry[]   @relation("WasteCreatedBy")
-  snackDiscards  WasteSnackDiscard[] @relation("SnackCreatedBy")
-  pizzaClosings  PizzaClosing[] @relation("PizzaClosingCreatedBy")
-  pizzaDoughChanges PizzaDoughChange[] @relation("PizzaDoughChangeBy")
-  reportedOccurrences Occurrence[] @relation("OccReportedBy")
-  closedOccurrences   Occurrence[] @relation("OccClosedBy")
-  commandCounts       CommandCount[]       @relation("CmdCountBy")
-  commandSessions     CommandCountSession[] @relation("CmdSessionBy")
-  divReported         CommandDivergence[]  @relation("CmdDivReportedBy")
-  divResolved         CommandDivergence[]  @relation("CmdDivResolvedBy")
-  commandReplacements CommandReplacement[] @relation("CmdReplBy")
-  cancellationsJustified Cancellation[]       @relation("CancJustifiedBy")
-  cancellationsRegistered Cancellation[]      @relation("CancRegisteredBy")
-  itemCancellations       ItemCancellation[]  @relation("ItemCancAuthorizedBy")
-  cancellationImports    CancellationImport[] @relation("CancImportedBy")
-  paymentRequested PaymentRequest[]     @relation("PayRequestedBy")
-  paymentApproved  PaymentRequest[]     @relation("PayApprovedBy")
-  paymentPaid      PaymentRequest[]     @relation("PayPaidBy")
-  delegationsFrom  ApprovalDelegation[] @relation("DelegFrom")
-  delegationsTo    ApprovalDelegation[] @relation("DelegTo")
-  receivedNotes    ReceivedNote[]       @relation("NoteCreatedBy")
-  inventoryResponsible InventorySchedule[] @relation("InvResp")
-  inventoryConfirmed   InventorySchedule[] @relation("InvConf")
-  popReads             PopRead[]
-  notifications        Notification[]
-  pushSubscriptions    PushSubscription[]
-  pushPreferences      PushPreference[]
-  scheduleActuals      ScheduleActual[] @relation("ScheduleActualBy")
-  trainingsApplied     TrainingRecord[] @relation("TrainingBy")
+  memberships             UnitMembership[]
+  refreshTokens           RefreshToken[]
+  auditLogs               AuditLog[]
+  completedTasks          TaskInstance[]           @relation("CompletedBy")
+  assignedTasks           TaskInstance[]           @relation("AssignedTo")
+  wasteEntries            WasteEntry[]             @relation("WasteCreatedBy")
+  snackDiscards           WasteSnackDiscard[]      @relation("SnackCreatedBy")
+  snackDayEvidences       WasteSnackDayEvidence[]  @relation("SnackDayEvidenceBy")
+  pizzaClosings           PizzaClosing[]           @relation("PizzaClosingCreatedBy")
+  pizzaDoughChanges       PizzaDoughChange[]       @relation("PizzaDoughChangeBy")
+  reportedOccurrences     Occurrence[]             @relation("OccReportedBy")
+  closedOccurrences       Occurrence[]             @relation("OccClosedBy")
+  commandCounts           CommandCount[]           @relation("CmdCountBy")
+  commandSessions         CommandCountSession[]    @relation("CmdSessionBy")
+  divReported             CommandDivergence[]      @relation("CmdDivReportedBy")
+  divResolved             CommandDivergence[]      @relation("CmdDivResolvedBy")
+  commandReplacements     CommandReplacement[]     @relation("CmdReplBy")
+  cancellationsJustified  Cancellation[]           @relation("CancJustifiedBy")
+  cancellationsRegistered Cancellation[]           @relation("CancRegisteredBy")
+  itemCancellations       ItemCancellation[]       @relation("ItemCancAuthorizedBy")
+  cancellationImports     CancellationImport[]     @relation("CancImportedBy")
+  paymentRequested        PaymentRequest[]         @relation("PayRequestedBy")
+  paymentApproved         PaymentRequest[]         @relation("PayApprovedBy")
+  paymentPaid             PaymentRequest[]         @relation("PayPaidBy")
+  delegationsFrom         ApprovalDelegation[]     @relation("DelegFrom")
+  delegationsTo           ApprovalDelegation[]     @relation("DelegTo")
+  receivedNotes           ReceivedNote[]           @relation("NoteCreatedBy")
+  inventoryResponsible    InventorySchedule[]      @relation("InvResp")
+  inventoryConfirmed      InventorySchedule[]      @relation("InvConf")
+  popReads                PopRead[]
+  notifications           Notification[]
+  pushSubscriptions       PushSubscription[]
+  pushPreferences         PushPreference[]
+  scheduleActuals         ScheduleActual[]         @relation("ScheduleActualBy")
+  trainingsApplied        TrainingRecord[]         @relation("TrainingBy")
   communicationsAuthored  Communication[]          @relation("CommAuthor")
   communicationRecipients CommunicationRecipient[] @relation("CommRecipient")
   gasReceipts             GasReceipt[]             @relation("GasReceiptBy")
@@ -302,38 +304,38 @@ enum ChecklistFieldKind {
 
 /// Modelo (catálogo) de tarefa/checklist configurável por unidade (Módulo 1 / Config).
 model TaskTemplate {
-  id              String     @id @default(cuid())
-  unitId          String
-  name            String
-  description     String?
+  id               String         @id @default(cuid())
+  unitId           String
+  name             String
+  description      String?
   /// Horário limite "HH:mm" (dentro do dia operacional). NULL = sem horário (até o fim do dia).
-  limitTime       String?
+  limitTime        String?
   /// Peso na meta (Módulo 11). Só conta se entersMeta = true.
-  weight          Int        @default(1)
-  module          TaskModule @default(GENERAL)
-  scope           ChecklistScope @default(UNIT)
+  weight           Int            @default(1)
+  module           TaskModule     @default(GENERAL)
+  scope            ChecklistScope @default(UNIT)
   /// Liga cópias do mesmo checklist em várias unidades (replicação).
-  groupKey        String?
+  groupKey         String?
   /// Exige evidência fotográfica ao concluir (conceito transversal nº 6)
-  requiresEvidence Boolean   @default(false)
+  requiresEvidence Boolean        @default(false)
   /// "Entra na Meta" (Módulo 11)
-  entersMeta      Boolean    @default(true)
+  entersMeta       Boolean        @default(true)
   /// Programação: data de início 'YYYY-MM-DD' (NULL = vale desde sempre)
-  startDate       String?
+  startDate        String?
   /// Programação: data de encerramento 'YYYY-MM-DD' (NULL = sem fim)
-  endDate         String?
-  active          Boolean    @default(true)
-  order           Int        @default(0)
+  endDate          String?
+  active           Boolean        @default(true)
+  order            Int            @default(0)
   /// Modo de entrega: DAILY (gerado por dia, padrão) ou LINK (ficha por link público).
-  deliveryMode    DeliveryMode @default(DAILY)
+  deliveryMode     DeliveryMode   @default(DAILY)
   /// Campos usados só quando deliveryMode = LINK (inertes para DAILY):
-  publicToken     String?    @unique // token aleatório do link (revogável)
-  linkEnabled     Boolean    @default(true)
-  expiresAt       DateTime?
-  maxPerDay       Int        @default(0) // 0 = sem teto (anti-spam)
-  notifyRole      String? // avisa este papel na unidade ao receber um envio (opcional)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  publicToken      String?        @unique // token aleatório do link (revogável)
+  linkEnabled      Boolean        @default(true)
+  expiresAt        DateTime?
+  maxPerDay        Int            @default(0) // 0 = sem teto (anti-spam)
+  notifyRole       String? // avisa este papel na unidade ao receber um envio (opcional)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   unit        Unit                  @relation(fields: [unitId], references: [id], onDelete: Cascade)
   instances   TaskInstance[]
@@ -346,25 +348,25 @@ model TaskTemplate {
 
 /// Item/etapa de um checklist (verificação com marcação 🟢🟡🔴).
 model ChecklistItem {
-  id           String  @id @default(cuid())
-  templateId   String
-  section      String? // agrupador opcional (ex.: "Cozinha", "Salão")
-  text         String
-  requiresPhoto Boolean @default(false)
-  order        Int     @default(0)
+  id                  String             @id @default(cuid())
+  templateId          String
+  section             String? // agrupador opcional (ex.: "Cozinha", "Salão")
+  text                String
+  requiresPhoto       Boolean            @default(false)
+  order               Int                @default(0)
   /// Checagem por IA (visão): compara a foto com o padrão esperado (modo consultivo).
-  aiCheck      Boolean @default(false)
+  aiCheck             Boolean            @default(false)
   /// Descrição do padrão esperado (o que a IA deve verificar na foto).
   standardDescription String?
   /// Imagem de referência do padrão (opcional) — caminho no volume de uploads.
   referenceImagePath  String?
   /// Tipo do campo. VERIFICATION (padrão) = item 🟢🟡🔴 dos checklists diários.
   /// Os demais valem para as fichas por link (deliveryMode = LINK).
-  fieldKind    ChecklistFieldKind @default(VERIFICATION)
+  fieldKind           ChecklistFieldKind @default(VERIFICATION)
   /// Opções da lista suspensa (SELECT), como JSON de strings.
-  options      Json?
+  options             Json?
   /// Campo obrigatório no preenchimento da ficha.
-  required     Boolean @default(false)
+  required            Boolean            @default(false)
 
   template TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
@@ -392,10 +394,10 @@ model TaskInstance {
   draft           Json?
   createdAt       DateTime   @default(now())
 
-  template      TaskTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  unit          Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  completedBy   User?               @relation("CompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
-  assignedTo    User?               @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
+  template      TaskTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  unit          Unit               @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  completedBy   User?              @relation("CompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  assignedTo    User?              @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
   itemResponses TaskItemResponse[]
   photos        TaskPhoto[]
 
@@ -489,9 +491,10 @@ model WasteEntry {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  unit      Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  createdBy User?            @relation("WasteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  unit      Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User?             @relation("WasteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   items     WasteEntryItem[]
+  photos    WasteEntryPhoto[]
 
   // Regra: 1 lançamento por unidade/dia operacional (conflito offline aplicado)
   @@unique([unitId, operationalDate])
@@ -515,6 +518,39 @@ model WasteEntryItem {
   @@unique([entryId, categoryId])
   @@index([categoryId])
   @@map("waste_entry_items")
+}
+
+/// Foto por procedimento (SS_ALMOCO | SS_JANTAR | PROD_ALMOCO | PROD_JANTAR)
+/// dentro de um lançamento de desperdício do restaurante. Migração 20260925.
+model WasteEntryPhoto {
+  id        String   @id @default(cuid())
+  entryId   String
+  typeCode  String
+  path      String
+  createdAt DateTime @default(now())
+
+  entry WasteEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, typeCode])
+  @@map("waste_entry_photos")
+}
+
+/// Foto geral do recipiente de descarte — UMA por unidade/dia operacional.
+/// Fica separada das linhas de salgado porque saveSnackDay substitui o dia
+/// inteiro; a foto não é re-tirada quando se corrige uma quantidade.
+model WasteSnackDayEvidence {
+  id              String   @id @default(cuid())
+  unitId          String
+  operationalDate String
+  path            String
+  createdById     String?
+  createdAt       DateTime @default(now())
+
+  unit      Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("SnackDayEvidenceBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([unitId, operationalDate])
+  @@map("waste_snack_day_evidences")
 }
 
 /// SOBRAS SALGADOS — a segunda frente do desperdício, em UNIDADES (nunca kg).
@@ -581,27 +617,27 @@ enum OccurrenceStatus {
 
 /// Tipo de ocorrência (configurável/expansível).
 model OccurrenceType {
-  id         String                @id @default(cuid())
-  code       String                @unique
-  name       String
-  order      Int                   @default(0)
-  active     Boolean               @default(true)
+  id            String               @id @default(cuid())
+  code          String               @unique
+  name          String
+  order         Int                  @default(0)
+  active        Boolean              @default(true)
   /// Tipo de manutenção → ocorrências aparecem na sub-aba Manutenção.
-  isMaintenance Boolean            @default(false)
+  isMaintenance Boolean              @default(false)
   /// Tipo de TI → ocorrências aparecem na sub-aba TI (futura API de gestão de TI).
-  isIT          Boolean            @default(false)
-  categories OccurrenceCategory[]
-  occurrences Occurrence[]
+  isIT          Boolean              @default(false)
+  categories    OccurrenceCategory[]
+  occurrences   Occurrence[]
 
   @@map("occurrence_types")
 }
 
 /// Categoria dependente do tipo (configurável/expansível).
 model OccurrenceCategory {
-  id     String @id @default(cuid())
+  id     String  @id @default(cuid())
   typeId String
   name   String
-  order  Int    @default(0)
+  order  Int     @default(0)
   active Boolean @default(true)
 
   type        OccurrenceType @relation(fields: [typeId], references: [id], onDelete: Cascade)
@@ -613,45 +649,45 @@ model OccurrenceCategory {
 
 /// Ocorrência (Módulo 6). Nº sequencial por unidade; encerramento imutável.
 model Occurrence {
-  id              String           @id @default(cuid())
-  unitId          String
+  id                   String            @id @default(cuid())
+  unitId               String
   /// Nº sequencial por unidade (exibição: #unidade-000123)
-  number          Int
-  occurredAt      DateTime         @default(now())
-  operationalDate String
-  reportedById    String?
-  typeId          String?
-  categoryId      String?
+  number               Int
+  occurredAt           DateTime          @default(now())
+  operationalDate      String
+  reportedById         String?
+  typeId               String?
+  categoryId           String?
   /// snapshots para preservar histórico mesmo se tipo/categoria mudarem
-  typeName        String
+  typeName             String
   /// Opcional: há tipos SEM categoria cadastrada (o formulário não exige uma
   /// quando o tipo não tem nenhuma). Acompanha `categoryId`, que já era
   /// opcional — a coluna era NOT NULL só por descuido, e a incoerência já
   /// deixava rastro: `onDelete: SetNull` zerava o id e deixava o nome pendurado.
-  categoryName    String?
-  gravity         OccurrenceGravity
-  customerName    String?
-  description     String
-  status          OccurrenceStatus @default(OPEN)
+  categoryName         String?
+  gravity              OccurrenceGravity
+  customerName         String?
+  description          String
+  status               OccurrenceStatus  @default(OPEN)
   /// reincidência: mesmo tipo+categoria na mesma unidade em < 30 dias
-  isRecurrence    Boolean          @default(false)
+  isRecurrence         Boolean           @default(false)
   /// Item do checklist que gerou a ocorrência (16/07): enquanto ela estiver
   /// aberta, o item aparece SINALIZADO nos checklists seguintes (sem recriar).
-  sourceTaskItemId String?
+  sourceTaskItemId     String?
   // Encerramento (somente Supervisor/Admin)
-  closedById          String?
-  closedAt            DateTime?
+  closedById           String?
+  closedAt             DateTime?
   closureJustification String?
   correctiveAction     String?
   reviewDate           DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
-  unit        Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  reportedBy  User?                @relation("OccReportedBy", fields: [reportedById], references: [id], onDelete: SetNull)
-  closedBy    User?                @relation("OccClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
-  type        OccurrenceType?      @relation(fields: [typeId], references: [id], onDelete: SetNull)
-  category    OccurrenceCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  unit        Unit                   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  reportedBy  User?                  @relation("OccReportedBy", fields: [reportedById], references: [id], onDelete: SetNull)
+  closedBy    User?                  @relation("OccClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+  type        OccurrenceType?        @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  category    OccurrenceCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   attachments OccurrenceAttachment[]
   updates     OccurrenceUpdate[]
 
@@ -666,12 +702,12 @@ model Occurrence {
 /// Anexo (foto/vídeo) de uma ocorrência. Acesso a anexos sensíveis é auditado (LGPD).
 /// Fase/andamento da ocorrência (16/07): registros de progresso até o encerramento.
 model OccurrenceUpdate {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   occurrenceId String
   text         String
   authorId     String?
   authorName   String
-  createdAt    DateTime   @default(now())
+  createdAt    DateTime @default(now())
 
   occurrence Occurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
 
@@ -782,12 +818,12 @@ model CommandCount {
 ///
 /// Só notas comuns são parceladas; recebimento de gás não vem parcelado.
 model NoteInstallment {
-  id      String   @id @default(cuid())
-  noteId  String
+  id        String    @id @default(cuid())
+  noteId    String
   /// 1, 2, 3… na ordem de vencimento.
-  seq     Int
-  dueDate DateTime
-  value   Decimal  @db.Decimal(12, 2)
+  seq       Int
+  dueDate   DateTime
+  value     Decimal   @db.Decimal(12, 2)
   /// Aviso já enviado para ESTA parcela. Fica aqui e não na nota: com o
   /// controle na nota, o alerta do 1º boleto silenciaria o 2º e o 3º.
   alertedAt DateTime?
@@ -798,7 +834,6 @@ model NoteInstallment {
   @@index([dueDate])
   @@map("note_installments")
 }
-
 
 /// Tipo de conferência: a faixa combinada do dia, ou a unidade inteira.
 enum CommandSessionType {
@@ -1055,11 +1090,11 @@ model Cancellation {
   registeredById    String?
   createdAt         DateTime           @default(now())
 
-  unit        Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  import      CancellationImport? @relation(fields: [importId], references: [id], onDelete: SetNull)
-  reason      CancellationReason? @relation(fields: [reasonId], references: [id], onDelete: SetNull)
-  justifiedBy User?               @relation("CancJustifiedBy", fields: [justifiedById], references: [id], onDelete: SetNull)
-  registeredBy User?              @relation("CancRegisteredBy", fields: [registeredById], references: [id], onDelete: SetNull)
+  unit         Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  import       CancellationImport? @relation(fields: [importId], references: [id], onDelete: SetNull)
+  reason       CancellationReason? @relation(fields: [reasonId], references: [id], onDelete: SetNull)
+  justifiedBy  User?               @relation("CancJustifiedBy", fields: [justifiedById], references: [id], onDelete: SetNull)
+  registeredBy User?               @relation("CancRegisteredBy", fields: [registeredById], references: [id], onDelete: SetNull)
 
   @@index([unitId, status])
   @@index([unitId, operationalDate])
@@ -1151,16 +1186,16 @@ model ManagerNote {
 
 /// Folgas/férias do gerente (ele não bate ponto). Nesses dias os checklists somem da visão dele.
 model ManagerLeave {
-  id        String           @id @default(cuid())
-  userId    String
-  kind      ManagerLeaveKind @default(FOLGA)
-  startDate String // yyyy-mm-dd
-  endDate   String
-  note      String?
+  id          String           @id @default(cuid())
+  userId      String
+  kind        ManagerLeaveKind @default(FOLGA)
+  startDate   String // yyyy-mm-dd
+  endDate     String
+  note        String?
   /// Quem lançou. Nulo = lançamento antigo (era sempre o próprio dono). Desde a
   /// Escala de gerentes quem lança é a Supervisão/Admin, e a grade precisa dizer por quem.
   createdById String?
-  createdAt DateTime         @default(now())
+  createdAt   DateTime         @default(now())
 
   user User @relation("MgrLeaves", fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1197,47 +1232,47 @@ enum ProductOrigin {
 }
 
 model Product {
-  id        String        @id @default(cuid())
-  name      String
-  origin    ProductOrigin
-  category  String        @default("Geral")
-  measure   String        @default("un")
+  id            String            @id @default(cuid())
+  name          String
+  origin        ProductOrigin
+  category      String            @default("Geral")
+  measure       String            @default("un")
   /// Quantidade por embalagem (a coluna QUANT das planilhas do fornecedor:
   /// caixa com 24, fardo com 6). Guardar evita o gerente ter de saber de cor
   /// quantas unidades vem em cada caixa na hora de pedir.
-  packSize  Int?
+  packSize      Int?
   /// Codigo de barras PRINCIPAL (EAN/GTIN). Texto, nunca numero: "070847033301"
   /// perde os zeros a esquerda se virar numero — e ai deixa de ser o codigo do
   /// produto. Os DEMAIS codigos ficam em `barcodes`: o mesmo produto chega ao
   /// CD com codigos diferentes dependendo da remessa.
-  barcode   String?
+  barcode       String?
   /// Setor do CD que separa este produto. E o que permite dividir um pedido so
   /// entre os setores sem o gerente ter de escolher nada.
-  cdSectorId String?
+  cdSectorId    String?
   /// Como o produto é contado na prateleira. `packSize` diz quantas unidades
   /// vêm dentro do fardo/display.
-  packType  PackType      @default(UN)
+  packType      PackType          @default(UN)
   /// Este produto tem validade a controlar? Nem tudo tem (descartável, limpeza
   /// de longa duração), e ligar para todos encheria a tela de alerta sem dono.
-  trackExpiry Boolean     @default(false)
+  trackExpiry   Boolean           @default(false)
   /// Antecedência do PRIMEIRO alerta, em dias. Produto que dura 15 dias e
   /// produto que dura 6 meses não podem entrar no radar no mesmo momento; a
   /// escalada seguinte (7/2/hoje/vencido) é fixa e igual para todos.
-  alertDays Int           @default(30)
+  alertDays     Int               @default(30)
   /// Produto criado pelo GERENTE durante o pedido nasce PENDENTE: já entra no
   /// pedido e já responde pelo código, mas alguém do catálogo confirma depois.
-  validation ProductValidation @default(VALIDADO)
+  validation    ProductValidation @default(VALIDADO)
   createdById   String?
   createdByName String?
   validatedById String?
   validatedAt   DateTime?
-  active    Boolean       @default(true)
-  createdAt DateTime      @default(now())
+  active        Boolean           @default(true)
+  createdAt     DateTime          @default(now())
 
-  cdSector CdSector?       @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
-  barcodes ProductBarcode[]
-  requestItems ProductRequestItem[]
-  stockLots    StockLot[]
+  cdSector       CdSector?              @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
+  barcodes       ProductBarcode[]
+  requestItems   ProductRequestItem[]
+  stockLots      StockLot[]
   sectorProposal ProductSectorProposal?
 
   @@index([active, category])
@@ -1268,15 +1303,15 @@ model CdSector {
 /// Sem isto, bipar a caixa nova dizia "produto nao encontrado" e o gerente
 /// tinha de procurar na mao toda vez.
 model ProductBarcode {
-  id        String   @id @default(cuid())
-  productId String
+  id          String    @id @default(cuid())
+  productId   String
   /// Unico no sistema: dois produtos nao podem responder pelo mesmo codigo.
-  code      String   @unique
+  code        String    @unique
   createdById String?
-  createdAt DateTime @default(now())
+  createdAt   DateTime  @default(now())
   /// Quem mantém o catálogo já olhou este código. Nulo = entrou pelo pedido
   /// (gerente) e ainda está na fila "códigos novos" das Pendências de cadastro.
-  reviewedAt DateTime?
+  reviewedAt  DateTime?
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -1347,45 +1382,45 @@ enum SectorProposalStatus {
 }
 
 model ProductRequest {
-  id            String        @id @default(cuid())
-  unitId        String
-  origin        ProductOrigin
-  number        Int
-  status        String        @default("NEW") // NEW SEPARATING SENT RECEIVED
-  createdById   String
-  createdByName String
-  note          String?
+  id               String        @id @default(cuid())
+  unitId           String
+  origin           ProductOrigin
+  number           Int
+  status           String        @default("NEW") // NEW SEPARATING SENT RECEIVED
+  createdById      String
+  createdByName    String
+  note             String?
   /// LEGADO: os itens viviam aqui dentro. A migracao os copiou para
   /// `ProductRequestItem`, que e quem permite separar item a item, guardar
   /// quem separou e quanto faltou. Mantido para o historico antigo continuar
   /// legivel exatamente como foi gravado.
-  items         Json
-  createdAt     DateTime      @default(now())
-  receivedAt    DateTime?
+  items            Json
+  createdAt        DateTime      @default(now())
+  receivedAt       DateTime?
   /// Quem confirmou o envio para a unidade, e quando.
-  sentById      String?
-  sentByName    String?
-  sentAt        DateTime?
+  sentById         String?
+  sentByName       String?
+  sentAt           DateTime?
   /// Conferência da carga no CD, entre "Separado" e "Em trânsito" (v1.116.0).
   /// Etapa opcional: o envio continua liberado direto de Separado.
-  checkedById   String?
-  checkedByName String?
-  checkedAt     DateTime?
+  checkedById      String?
+  checkedByName    String?
+  checkedAt        DateTime?
   /// Observacao do CD (a do gerente e `note`).
-  cdNote        String?
+  cdNote           String?
   /// Conferencia de recebimento.
-  receivedById   String?
-  receivedByName String?
-  receiptQuality String?
+  receivedById     String?
+  receivedByName   String?
+  receiptQuality   String?
   receiptPackaging String?
-  receiptNote    String?
+  receiptNote      String?
   /// Declaracao do gerente no fecho da conferencia: a carga chegou completa?
   /// Fica ao lado do que o sistema calcula (faltas do CD + divergencias
   /// apontadas) de proposito — as duas podem discordar, e a palavra de quem
   /// recebeu na doca e o registro que vale numa cobranca.
-  receiptComplete Boolean?
+  receiptComplete  Boolean?
 
-  requestItems  ProductRequestItem[]
+  requestItems ProductRequestItem[]
 
   @@index([unitId, createdAt])
   @@index([origin, status])
@@ -1399,14 +1434,14 @@ model ProductRequest {
 /// JSON unico, duas confirmacoes simultaneas sobrescreviam uma a outra em
 /// silencio — e o trabalho de alguem sumia sem erro nenhum.
 model ProductRequestItem {
-  id         String   @id @default(cuid())
-  requestId  String
-  productId  String?
+  id           String  @id @default(cuid())
+  requestId    String
+  productId    String?
   /// Snapshot: o pedido antigo continua legivel mesmo se o produto for
   /// renomeado ou desativado depois.
-  name       String
-  category   String   @default("Geral")
-  measure    String   @default("un")
+  name         String
+  category     String  @default("Geral")
+  measure      String  @default("un")
   /// Setor do CD no momento do pedido — congelado pelo mesmo motivo.
   cdSectorId   String?
   cdSectorName String?
@@ -1415,11 +1450,11 @@ model ProductRequestItem {
   /// pedido, e nada mais — o SGO NÃO converte para unidades nem consulta o
   /// cadastro para saber quantas vêm dentro. Quem separa lê "2 fardos" e
   /// separa 2 fardos.
-  packUnit   OrderPackUnit @default(UN)
-  qtyRequested Decimal  @db.Decimal(12, 3)
-  qtySeparated Decimal? @db.Decimal(12, 3)
+  packUnit        OrderPackUnit @default(UN)
+  qtyRequested    Decimal       @db.Decimal(12, 3)
+  qtySeparated    Decimal?      @db.Decimal(12, 3)
   /// Motivo da falta, quando separou menos do que foi pedido.
-  missingReason String?
+  missingReason   String?
   separatedById   String?
   separatedByName String?
   separatedAt     DateTime?
@@ -1479,17 +1514,17 @@ model HygieneRequest {
 /// Análise de "Comandas em Aberto" (Teknisa) — antifraude das 2 comandas (20/07).
 /// Supervisor/Admin sobe o relatório; guardamos as suspeitas (aberta + valor + data < hoje).
 model OpenCommandAnalysis {
-  id              String   @id @default(cuid())
-  unitId          String
-  createdById     String
-  createdByName   String
-  cutDate         String // yyyy-mm-dd usado como corte
-  fileName        String?
-  totalCommands   Int
-  suspectCount    Int
-  suspectValue    Decimal  @db.Decimal(12, 2)
-  suspects        Json // [{ number, openedAt, value, daysOpen, items:[{name,qty,value}] }]
-  createdAt       DateTime @default(now())
+  id            String   @id @default(cuid())
+  unitId        String
+  createdById   String
+  createdByName String
+  cutDate       String // yyyy-mm-dd usado como corte
+  fileName      String?
+  totalCommands Int
+  suspectCount  Int
+  suspectValue  Decimal  @db.Decimal(12, 2)
+  suspects      Json // [{ number, openedAt, value, daysOpen, items:[{name,qty,value}] }]
+  createdAt     DateTime @default(now())
 
   @@index([unitId, createdAt])
   @@map("open_command_analyses")
@@ -1514,13 +1549,13 @@ model ManagerWorkSchedule {
 }
 
 model Freelancer {
-  id           String           @id @default(cuid())
+  id           String                 @id @default(cuid())
   name         String
-  defaultValue Decimal          @db.Decimal(10, 2)
+  defaultValue Decimal                @db.Decimal(10, 2)
   /// Chave PIX para pagamento (obrigatória no cadastro) — Módulo 7.
   pixKey       String?
-  active       Boolean          @default(true)
-  createdAt    DateTime         @default(now())
+  active       Boolean                @default(true)
+  createdAt    DateTime               @default(now())
   units        FreelancerUnit[]
   requests     PaymentRequest[]
   sectorRates  FreelancerSectorRate[]
@@ -1605,19 +1640,19 @@ model PaymentRequest {
   description   String?
 
   // Freelancer
-  freelancerId String?
-  workDate     DateTime?
-  shift        String?
-  hours        Float?
+  freelancerId   String?
+  workDate       DateTime?
+  shift          String?
+  hours          Float?
   /// Janela de trabalho do freelancer (HH:MM) — usada na alocação/Mapa do dia
-  workStartTime String?
-  workEndTime   String?
+  workStartTime  String?
+  workEndTime    String?
   /// Setor onde o freelancer foi alocado no Mapa do dia (Módulo 9.3)
-  workSectorId  String?
+  workSectorId   String?
   /// Cobertura temporária de setor (16/07): nome do setor coberto — valor por DIA
   coverageSector String?
   /// Vale transporte somado ao valor do freelancer (opcional)
-  transportValue Decimal? @db.Decimal(10, 2)
+  transportValue Decimal?  @db.Decimal(10, 2)
 
   // Hora extra
   collaboratorName String?
@@ -1676,43 +1711,43 @@ enum NoteSource {
 
 /// Nota fiscal recebida (Módulo 8). Confirmação obrigatória antes de salvar.
 model ReceivedNote {
-  id           String     @id @default(cuid())
-  unitId       String
-  source       NoteSource @default(MANUAL)
-  accessKey    String? // chave de acesso (44 dígitos)
-  supplierName String
-  supplierCnpj String?
+  id                 String     @id @default(cuid())
+  unitId             String
+  source             NoteSource @default(MANUAL)
+  accessKey          String? // chave de acesso (44 dígitos)
+  supplierName       String
+  supplierCnpj       String?
   /// Vínculo opcional ao cadastro de fornecedores (lista compartilhada)
-  supplierId   String?
-  number       String?
-  issueDate    DateTime?
+  supplierId         String?
+  number             String?
+  issueDate          DateTime?
   /// Vencimento do PRIMEIRO boleto. Mantido para a lista, os alertas e as
   /// exportações que já usam este campo; nota parcelada guarda os demais em
   /// `installments`.
-  dueDate      DateTime?
+  dueDate            DateTime?
   /// Marca de quando o alerta de "vencimento próximo" foi disparado (evita repetir).
-  dueAlertedAt DateTime?
-  totalValue   Decimal    @db.Decimal(12, 2)
-  productType  String?
-  observation  String?
-  imagePath    String?
-  status       NoteStatus @default(RECEIVED)
-  problemNote  String?
+  dueAlertedAt       DateTime?
+  totalValue         Decimal    @db.Decimal(12, 2)
+  productType        String?
+  observation        String?
+  imagePath          String?
+  status             NoteStatus @default(RECEIVED)
+  problemNote        String?
   /// Data efetiva do lançamento (item 4): null = createdAt; edição penaliza a meta.
-  entryDate        DateTime?
-  dateEdited       Boolean   @default(false)
-  dateEditedByName String?
+  entryDate          DateTime?
+  dateEdited         Boolean    @default(false)
+  dateEditedByName   String?
   /// Nota lançada pela supervisão (gerente esqueceu) — desconta na meta (16/07)
-  supervisorLaunched Boolean @default(false)
-  createdById  String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  supervisorLaunched Boolean    @default(false)
+  createdById        String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
-  unit      Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  createdBy User?     @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  unit         Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy    User?             @relation("NoteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   /// Boletos da nota. Vazio = boleto único (o vencimento vive em `dueDate`).
   installments NoteInstallment[]
-  supplier  Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  supplier     Supplier?         @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@index([unitId, status])
   @@index([accessKey])
@@ -1753,28 +1788,29 @@ enum CollaboratorSource {
 
 /// Colaborador (Módulo 9). Fonte primária: API RH; fallback manual.
 model Collaborator {
-  id        String             @id @default(cuid())
-  name      String
-  jobTitle  String?
-  active    Boolean            @default(true)
-  source    CollaboratorSource @default(MANUAL)
+  id         String             @id @default(cuid())
+  name       String
+  jobTitle   String?
+  active     Boolean            @default(true)
+  source     CollaboratorSource @default(MANUAL)
   externalId String? // id no RH
   /// CPF (só dígitos, do RH) — casa os eventos de desligamento da integração
-  cpf       String?
+  cpf        String?
   /// Data de admissão (do RH, 'YYYY-MM-DD') — base do tempo de empresa
-  hireDate  String?
-  createdAt DateTime           @default(now())
+  hireDate   String?
+  createdAt  DateTime           @default(now())
 
-  units     CollaboratorUnit[]
-  vacations Vacation[]
-  schedule  ScheduleEntry[]
-  allocations WorkforceAllocation[]
-  employeeSchedules EmployeeSchedule[]
-  planOverrides     SchedulePlanOverride[]
-  scheduleActuals   ScheduleActual[]
-  trainings         TrainingRecord[]
+  units               CollaboratorUnit[]
+  vacations           Vacation[]
+  schedule            ScheduleEntry[]
+  allocations         WorkforceAllocation[]
+  employeeSchedules   EmployeeSchedule[]
+  planOverrides       SchedulePlanOverride[]
+  scheduleActuals     ScheduleActual[]
+  trainings           TrainingRecord[]
   medicalCertificates MedicalCertificate[]
-  terminations      Termination[]
+  terminations        Termination[]
+  popLinks            PopCollaborator[]
 
   @@index([cpf])
   @@map("collaborators")
@@ -2003,11 +2039,11 @@ model CashVault {
 
 /// Balde de troco de um caixa físico — valor-alvo pré-fixado pelo supervisor.
 model CashBucket {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   unitId      String
   name        String // ex.: "Caixa 1"
-  targetValue Decimal @db.Decimal(10, 2)
-  active      Boolean @default(true)
+  targetValue Decimal  @db.Decimal(10, 2)
+  active      Boolean  @default(true)
   createdAt   DateTime @default(now())
 
   @@index([unitId, active])
@@ -2087,23 +2123,23 @@ model CashDenomination {
 
   /// Chave usada no JSON de saldos/movimentos: "200", "0.50", "outros".
   /// É o que amarra esta linha ao histórico já gravado — NÃO muda depois de criada.
-  key    String
+  key   String
   /// Valor em R$ da nota/moeda. Nulo só na linha "outros" (PIX/caixinha).
-  value  Decimal? @db.Decimal(10, 2)
+  value Decimal? @db.Decimal(10, 2)
   /// "NOTE" | "COIN" | "OTHER" — só para o rótulo na tela ("Nota R$ 10" / "Moeda R$ 0,50").
-  kind   String   @default("NOTE")
+  kind  String   @default("NOTE")
   /// Rótulo opcional para sobrescrever o texto automático.
-  label  String?
+  label String?
 
   /// Em quais BLOCOS esta denominação aparece (o coração da configuração):
-  isSmall Boolean @default(false) // bloco de miúdos/troco (SAIU na reposição, RECEBIDO do escritório)
-  isBig   Boolean @default(false) // bloco de notas grandes (ENTROU na reposição, ENVIADO ao escritório)
+  isSmall              Boolean @default(false) // bloco de miúdos/troco (SAIU na reposição, RECEBIDO do escritório)
+  isBig                Boolean @default(false) // bloco de notas grandes (ENTROU na reposição, ENVIADO ao escritório)
   /// Conta no indicador "notas grandes ≥ 50% do cofre". Separado de isBig
   /// porque as duas listas são diferentes (decisão R1: indicador não muda de valor).
   countsAsBigIndicator Boolean @default(false)
 
-  order  Int     @default(0)     // ordem de exibição (200 primeiro … 0,05 por último)
-  active Boolean @default(true)  // desligar sem apagar (preserva o histórico)
+  order  Int     @default(0) // ordem de exibição (200 primeiro … 0,05 por último)
+  active Boolean @default(true) // desligar sem apagar (preserva o histórico)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2341,7 +2377,7 @@ enum PopStatus {
 }
 
 enum PopRecurrence {
-  ONCE    // treinamento único
+  ONCE // treinamento único
   MONTHLY // reciclagem mensal
 }
 
@@ -2363,10 +2399,12 @@ model Pop {
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
 
-  units     PopUnit[]
-  reads     PopRead[]
-  sectors   PopSector[]
-  trainings TrainingRecord[]
+  units         PopUnit[]
+  reads         PopRead[]
+  sectors       PopSector[]
+  trainings     TrainingRecord[]
+  jobTitles     PopJobTitle[]
+  collaborators PopCollaborator[]
 
   @@map("pops")
 }
@@ -2383,10 +2421,49 @@ model PopSector {
   @@map("pop_sectors")
 }
 
+/// FUNÇÃO (cargo, por NOME — casa com Collaborator.jobTitle, normalizado) à qual
+/// o POP/treinamento se aplica. É a distribuição automática PRINCIPAL: quem entra
+/// ou sai da função recebe/perde a pendência sozinho na reconciliação.
+model PopJobTitle {
+  id       String @id @default(cuid())
+  popId    String
+  jobTitle String
+
+  pop Pop @relation(fields: [popId], references: [id], onDelete: Cascade)
+
+  @@unique([popId, jobTitle])
+  @@map("pop_job_titles")
+}
+
+/// COLABORADOR ADICIONAL: exceção/complemento à função (alguém que executa a
+/// atividade sem ter a função oficial). Não é a regra principal de propósito —
+/// vínculo individual não acompanha entrada e saída de gente.
+model PopCollaborator {
+  id             String @id @default(cuid())
+  popId          String
+  collaboratorId String
+
+  pop          Pop          @relation(fields: [popId], references: [id], onDelete: Cascade)
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+
+  @@unique([popId, collaboratorId])
+  @@map("pop_collaborators")
+}
+
+/// ORIGEM da atribuição — por que este colaborador deve este treinamento.
+/// Gravada no registro (não recalculada) para o histórico dizer por que valia
+/// na época, mesmo que a função ou o POP mudem depois.
+enum TrainingOrigin {
+  GENERAL // POP geral/inicial: toda a unidade
+  JOB_TITLE // pela FUNÇÃO (cargo) do colaborador
+  SECTOR // pelo setor do Mapa de Funções (regra anterior, mantida)
+  INDIVIDUAL // vínculo individual no POP
+}
+
 enum TrainingStatus {
   PENDING // pendente (no prazo)
-  DONE    // realizado
-  MISSED  // não realizado (venceu o prazo)
+  DONE // realizado
+  MISSED // não realizado (venceu o prazo)
 }
 
 /// Registro de treinamento de um colaborador num POP, por período
@@ -2398,6 +2475,7 @@ model TrainingRecord {
   collaboratorId String
   unitId         String
   sectorName     String? // null = treinamento inicial
+  origin         TrainingOrigin @default(GENERAL)
   periodKey      String
   status         TrainingStatus @default(PENDING)
   dueDate        DateTime
@@ -2453,27 +2531,26 @@ model PopRead {
 
 /// Setor de uma unidade (Mapa de Funções — Módulo 9.3). Definido pelo Admin.
 model Sector {
-  id        String   @id @default(cuid())
-  unitId    String
-  name      String
+  id           String   @id @default(cuid())
+  unitId       String
+  name         String
   /// LEGADO. Era "meta de pessoas por turno" — e era o defeito: a exigencia
   /// crescia com a quantidade de turnos cadastrados. Desde a v1.84.0 quem manda
   /// e `requirements` (faixa de horario). Mantido porque a migracao o converteu
   /// numa faixa 00:00-24:00 e ele documenta de onde veio o numero.
-  minHeadcount Int   @default(1)
-  order     Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  minHeadcount Int      @default(1)
+  order        Int      @default(0)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
 
-  unit         Unit                  @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  allocations  WorkforceAllocation[]
-  requirements SectorRequirement[]
-  freelancerRequests PaymentRequest[] @relation("FreelancerSector")
+  unit               Unit                  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  allocations        WorkforceAllocation[]
+  requirements       SectorRequirement[]
+  freelancerRequests PaymentRequest[]      @relation("FreelancerSector")
 
   @@index([unitId])
   @@map("sectors")
 }
-
 
 /// Quantas pessoas o setor precisa numa FAIXA DE HORARIO.
 ///
@@ -2507,19 +2584,19 @@ model SectorRequirement {
 /// Alocação de colaborador em Setor × Turno/Horário (grade do Mapa de Funções).
 /// Origem híbrida: pode vir da escala do RH (collaboratorName) ou alocação manual.
 model WorkforceAllocation {
-  id             String   @id @default(cuid())
-  unitId         String
-  sectorId       String
+  id               String   @id @default(cuid())
+  unitId           String
+  sectorId         String
   /// rótulo do turno/horário (ex: "Manhã 06-14", "Noite 18-23")
-  shift          String
-  collaboratorId String?
+  shift            String
+  collaboratorId   String?
   /// nome quando vier do RH sem vínculo local (fallback)
   collaboratorName String?
   /// turno padronizado da unidade (opcional; mantém `shift` como rótulo p/ compat)
-  shiftId        String?
+  shiftId          String?
   /// 'RH' (escala) ou 'MANUAL' (alocação do gerente/admin)
-  source         String   @default("MANUAL")
-  createdAt      DateTime @default(now())
+  source           String   @default("MANUAL")
+  createdAt        DateTime @default(now())
 
   unit         Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
   sector       Sector        @relation(fields: [sectorId], references: [id], onDelete: Cascade)
@@ -2613,7 +2690,7 @@ model PushPreference {
 model RolePermission {
   id      String  @id @default(cuid())
   role    Role
-  module  String  // chave do módulo (ex: 'WASTE', 'PEOPLE', 'SCHEDULE', 'CONFIG'...)
+  module  String // chave do módulo (ex: 'WASTE', 'PEOPLE', 'SCHEDULE', 'CONFIG'...)
   canView Boolean @default(true)
   canEdit Boolean @default(true)
 
@@ -2625,9 +2702,9 @@ model RolePermission {
 model Shift {
   id        String   @id @default(cuid())
   unitId    String
-  name      String   // ex: "Manhã", "Noite"
-  startTime String?  // "06:00"
-  endTime   String?  // "14:00"
+  name      String // ex: "Manhã", "Noite"
+  startTime String? // "06:00"
+  endTime   String? // "14:00"
   order     Int      @default(0)
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -2644,29 +2721,29 @@ model Shift {
 // PLANEJADO = gerado do padrão (EmployeeSchedule) + ajustes (SchedulePlanOverride).
 // REALIZADO = ScheduleActual (única coisa editável no dia a dia).
 enum ScheduleType {
-  TWELVE36_ODD  // 12x36 turno ímpar (trabalha dias ímpares do ciclo)
+  TWELVE36_ODD // 12x36 turno ímpar (trabalha dias ímpares do ciclo)
   TWELVE36_EVEN // 12x36 turno par
-  SIX_ONE       // 6x1
-  FIVE_TWO      // 5x2
-  CUSTOM        // padrão livre (customMask)
+  SIX_ONE // 6x1
+  FIVE_TWO // 5x2
+  CUSTOM // padrão livre (customMask)
 }
 
 /// Status de um dia: T, F, FI, FJ, A, FE
 enum DayStatus {
-  WORK         // T  - Trabalho
-  OFF          // F  - Folga
+  WORK // T  - Trabalho
+  OFF // F  - Folga
   FALTA_INJUST // FI - Falta injustificada
-  FALTA_JUST   // FJ - Falta justificada
-  ATESTADO     // A  - Atestado
-  FERIAS       // FE - Férias
-  ATRASO       // AT - Atraso (trabalhou, chegou atrasado — avisa o RH p/ conferência de ponto)
+  FALTA_JUST // FJ - Falta justificada
+  ATESTADO // A  - Atestado
+  FERIAS // FE - Férias
+  ATRASO // AT - Atraso (trabalhou, chegou atrasado — avisa o RH p/ conferência de ponto)
 }
 
 /// Como a folga do colaborador se comporta ao longo das semanas.
 enum OffMode {
-  FIXED_WEEKLY       // dia fixo toda semana, sem variacao
-  FIXED_PLUS_SUNDAY  // dia fixo, com domingo entrando a cada N semanas
-  CYCLE_ONLY         // sem dia fixo: anda conforme o ciclo, a partir da ancora
+  FIXED_WEEKLY // dia fixo toda semana, sem variacao
+  FIXED_PLUS_SUNDAY // dia fixo, com domingo entrando a cada N semanas
+  CYCLE_ONLY // sem dia fixo: anda conforme o ciclo, a partir da ancora
 }
 
 /// TIPO DE ESCALA — cadastro do Admin, no lugar de uma lista fixa no codigo.
@@ -2702,20 +2779,20 @@ model ScheduleTemplate {
 
 /// Cadastro do padrão de escala do colaborador (gera o Planejado).
 model EmployeeSchedule {
-  id             String       @id @default(cuid())
-  collaboratorId String
-  unitId         String
+  id               String       @id @default(cuid())
+  collaboratorId   String
+  unitId           String
   /// Tipo do cadastro (Configuracoes > Tipos de escala). Nulo nas linhas
   /// antigas, que descrevem o ciclo pelo `scheduleType`.
-  templateId     String?
-  scheduleType   ScheduleType
-  anchorDate     DateTime     // início do ciclo (referência p/ gerar o padrão)
+  templateId       String?
+  scheduleType     ScheduleType
+  anchorDate       DateTime // início do ciclo (referência p/ gerar o padrão)
   /// Como a folga desta pessoa funciona.
-  offMode        OffMode      @default(FIXED_WEEKLY)
+  offMode          OffMode      @default(FIXED_WEEKLY)
   /// Dia fixo de folga: 0=domingo … 6=sabado. So faz sentido quando o ciclo
   /// fecha em 7 dias — em ciclo de outro tamanho a folga anda de dia da semana
   /// sozinha, e prometer dia fixo seria mentira.
-  weeklyOffDay   Int?
+  weeklyOffDay     Int?
   /// De quantas em quantas semanas a folga cai no DOMINGO (modo
   /// FIXED_PLUS_SUNDAY). No comercio o descanso precisa coincidir com o domingo
   /// periodicamente — sem isto, "folga fixa na terca" nunca daria um domingo.
@@ -2729,23 +2806,23 @@ model EmployeeSchedule {
   /// continua sendo folga na semana do domingo. O modelo anterior MOVIA a
   /// folga da quinta para o domingo, e por isso a quinta sumia da grade.
   sundayOfMonth    Int?
-  shiftId        String?
-  customMask     String?      // p/ CUSTOM: ciclo em T/F, ex "TTTTTFF"
+  shiftId          String?
+  customMask       String? // p/ CUSTOM: ciclo em T/F, ex "TTTTTFF"
   /// Horarios DESTE colaborador. Vazio herda do tipo de escala.
-  startTime      String?
-  breakTime      String?
-  endTime        String?
+  startTime        String?
+  breakTime        String?
+  endTime          String?
   /// VIGENCIA — "a partir de quando essa escala vale".
   ///
   /// Sem isso, mudar a folga de alguem REESCREVERIA o passado: a grade de julho
   /// passaria a mostrar folga no domingo mesmo se na epoca era terca. Cada
   /// mudanca abre uma linha nova e fecha a anterior.
-  startDate      DateTime
+  startDate        DateTime
   /// Ultimo dia em que esta versao valeu. Nulo = e a vigente.
-  endDate        DateTime?
-  active         Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  endDate          DateTime?
+  active           Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   collaborator Collaborator      @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
   unit         Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
@@ -2803,7 +2880,6 @@ model SchedulePlanFill {
   @@map("schedule_plan_fills")
 }
 
-
 /// REALIZADO — o que de fato aconteceu (única aba editável pelo gerente).
 model ScheduleActual {
   id             String    @id @default(cuid())
@@ -2812,8 +2888,8 @@ model ScheduleActual {
   date           DateTime
   status         DayStatus
   note           String?
-  reason         String?   // motivo (ausência)
-  attachmentPath String?   // atestado/anexo
+  reason         String? // motivo (ausência)
+  attachmentPath String? // atestado/anexo
   createdById    String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -2965,7 +3041,7 @@ model GasContract {
   endDate       String
   quantityKg    Decimal  @db.Decimal(12, 2)
   pricePerKg    Decimal  @db.Decimal(10, 4)
-  initialUsedKg Decimal  @db.Decimal(12, 2) @default(0)
+  initialUsedKg Decimal  @default(0) @db.Decimal(12, 2)
   active        Boolean  @default(true)
   note          String?
   createdById   String?
@@ -2982,16 +3058,16 @@ model GasContract {
 /// Versão de documento (PDF/imagem) anexada a um contrato de gás.
 /// Cada upload gera um registro — substituir não apaga o anterior.
 model GasContractDocument {
-  id             String      @id @default(cuid())
+  id             String   @id @default(cuid())
   contractId     String
-  path           String      // caminho relativo no volume de uploads
+  path           String // caminho relativo no volume de uploads
   fileName       String?
   mimeType       String?
-  uploadedAt     DateTime    @default(now())
+  uploadedAt     DateTime @default(now())
   uploadedById   String?
   uploadedByName String?
 
-  contract  GasContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contract   GasContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   uploadedBy User?       @relation("GasContractDocBy", fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@index([contractId])
@@ -2999,50 +3075,50 @@ model GasContractDocument {
 }
 
 model GasReceipt {
-  id              String   @id @default(cuid())
-  unitId          String
-  supplierId      String?
+  id                String    @id @default(cuid())
+  unitId            String
+  supplierId        String?
   /// Dia operacional do recebimento (YYYY-MM-DD)
-  operationalDate String
+  operationalDate   String
   /// Edição de data por Admin/Supervisor (item 4) — penaliza a meta do gerente
-  dateEdited       Boolean @default(false)
-  dateEditedByName String?
-  accessKey       String?
-  noteNumber      String?
+  dateEdited        Boolean   @default(false)
+  dateEditedByName  String?
+  accessKey         String?
+  noteNumber        String?
   /// Vencimento do boleto (item 23/07) — usado no acompanhamento de vencimentos das notas.
-  dueDate         DateTime?
+  dueDate           DateTime?
   /// Marca de quando o alerta de "vencimento próximo" foi disparado (evita repetir).
-  dueAlertedAt    DateTime?
+  dueAlertedAt      DateTime?
   /// Forma de recebimento. Botijão converte para kg (count × cylinderKg) p/ os dashboards.
-  kind             GasKind @default(BULK)
-  cylinderCount    Int? // botijões recebidos
-  cylinderKg       Int? // kg por botijão (P45 = 45)
+  kind              GasKind   @default(BULK)
+  cylinderCount     Int? // botijões recebidos
+  cylinderKg        Int? // kg por botijão (P45 = 45)
   cylindersReturned Int? // botijões vazios devolvidos (troca)
-  quantityKg      Decimal  @db.Decimal(10, 2)
-  totalValue      Decimal  @db.Decimal(12, 2)
+  quantityKg        Decimal   @db.Decimal(10, 2)
+  totalValue        Decimal   @db.Decimal(12, 2)
   /// Snapshot do preço por kg (valor total ÷ kg)
-  pricePerKg      Decimal  @db.Decimal(10, 4)
+  pricePerKg        Decimal   @db.Decimal(10, 4)
   /// Preço/kg da compra anterior (mesma unidade) para a variação
-  prevPricePerKg  Decimal? @db.Decimal(10, 4)
-  variationPct    Float?
-  alerted         Boolean  @default(false)
-  observation     String?
+  prevPricePerKg    Decimal?  @db.Decimal(10, 4)
+  variationPct      Float?
+  alerted           Boolean   @default(false)
+  observation       String?
   /// Origem "importação em lote" (XLSX): id do lote (null = lançamento normal).
   /// Agrupa o lote para auditoria e rollback do arquivo inteiro.
-  importBatchId   String?
-  createdById     String?
-  createdAt       DateTime @default(now())
+  importBatchId     String?
+  createdById       String?
+  createdAt         DateTime  @default(now())
 
   unit      Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
   supplier  Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   createdBy User?     @relation("GasReceiptBy", fields: [createdById], references: [id], onDelete: SetNull)
 
-  @@index([unitId, operationalDate])
-  @@index([supplierId])
-  @@index([importBatchId])
   /// Idempotência do import: um recebimento por (unidade + fornecedor + nº da nota).
   /// NULLs são distintos no Postgres → lançamentos sem nº/fornecedor não conflitam.
   @@unique([unitId, supplierId, noteNumber])
+  @@index([unitId, operationalDate])
+  @@index([supplierId])
+  @@index([importBatchId])
   @@map("gas_receipts")
 }
 
@@ -3050,26 +3126,26 @@ model GasReceipt {
 /// Coleta de óleo usado (resto de fritura). Recebemos por ela — controle de
 /// litros, valor/litro, valor total e forma de recebimento, com histórico.
 model OilCollection {
-  id              String   @id @default(cuid())
-  unitId          String
-  supplierId      String?
-  operationalDate String
+  id               String   @id @default(cuid())
+  unitId           String
+  supplierId       String?
+  operationalDate  String
   /// Edição de data por Admin/Supervisor (item 4) — penaliza a meta do gerente
-  dateEdited       Boolean @default(false)
+  dateEdited       Boolean  @default(false)
   dateEditedByName String?
-  liters          Decimal  @db.Decimal(10, 2)
-  pricePerLiter   Decimal  @db.Decimal(10, 4)
-  totalValue      Decimal  @db.Decimal(12, 2)
+  liters           Decimal  @db.Decimal(10, 2)
+  pricePerLiter    Decimal  @db.Decimal(10, 4)
+  totalValue       Decimal  @db.Decimal(12, 2)
   /// Como recebemos: PIX, Dinheiro, Crédito, Troca por produto, etc.
-  paymentMethod   String?
-  collectorName   String?
-  observation     String?
+  paymentMethod    String?
+  collectorName    String?
+  observation      String?
   /// Foto do recibo da coleta. OBRIGATÓRIA no lançamento novo — é o que permite
   /// conferir "o recibo diz 80 L, o lançamento diz 100 L". Opcional na coluna
   /// porque as coletas lançadas antes desta regra existem e não serão apagadas.
-  receiptPath     String?
-  createdById     String?
-  createdAt       DateTime @default(now())
+  receiptPath      String?
+  createdById      String?
+  createdAt        DateTime @default(now())
 
   unit      Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
   supplier  Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
@@ -3138,8 +3214,8 @@ model InventoryItem {
   category    String?
   /// Unidade de medida exibida (un, cx, kg, L...)
   unitLabel   String   @default("un")
-  unitValue   Decimal  @db.Decimal(12, 2) @default(0)
-  currentQty  Decimal  @db.Decimal(12, 2) @default(0)
+  unitValue   Decimal  @default(0) @db.Decimal(12, 2)
+  currentQty  Decimal  @default(0) @db.Decimal(12, 2)
   minQty      Decimal? @db.Decimal(12, 2)
   location    String?
   active      Boolean  @default(true)
@@ -3184,23 +3260,23 @@ model InventoryMovement {
 /// Biblioteca de modelos prontos de checklist (Admin cria/edita/exclui). A partir
 /// de um modelo, o Admin gera checklists (TaskTemplate) nas unidades.
 model ChecklistModel {
-  id               String              @id @default(cuid())
+  id               String         @id @default(cuid())
   name             String
-  category         String?             // setor (ex.: Cozinha, Churrasco, Salão)
-  moment           String?             // Abertura, Durante o turno, Fechamento…
-  scope            ChecklistScope      @default(UNIT)
+  category         String? // setor (ex.: Cozinha, Churrasco, Salão)
+  moment           String? // Abertura, Durante o turno, Fechamento…
+  scope            ChecklistScope @default(UNIT)
   limitTime        String?
-  weight           Int                 @default(10)
-  requiresEvidence Boolean             @default(false)
-  active           Boolean             @default(true)
-  order            Int                 @default(0)
+  weight           Int            @default(10)
+  requiresEvidence Boolean        @default(false)
+  active           Boolean        @default(true)
+  order            Int            @default(0)
   /// veio do seed padrão (apenas marca a origem)
-  builtin          Boolean             @default(false)
+  builtin          Boolean        @default(false)
   createdById      String?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
-  createdBy User?                 @relation("ChecklistModelBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy User?                @relation("ChecklistModelBy", fields: [createdById], references: [id], onDelete: SetNull)
   items     ChecklistModelItem[]
 
   @@index([active, order])
@@ -3261,20 +3337,20 @@ model MaintenanceTicket {
 
 // Plano de manutenção preventiva por equipamento (recorrência em dias).
 model MaintenancePlan {
-  id            String   @id @default(cuid())
-  unitId        String
-  title         String
-  description   String?
-  equipmentId   String?
-  equipmentName String?
-  frequencyDays Int
-  nextDueAt     DateTime
-  lastDoneAt    DateTime?
+  id             String    @id @default(cuid())
+  unitId         String
+  title          String
+  description    String?
+  equipmentId    String?
+  equipmentName  String?
+  frequencyDays  Int
+  nextDueAt      DateTime
+  lastDoneAt     DateTime?
   lastNotifiedAt DateTime?
-  active        Boolean  @default(true)
-  createdById   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  active         Boolean   @default(true)
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   logs MaintenancePlanLog[]
 
@@ -3395,8 +3471,8 @@ model PizzaClosing {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  unit      Unit               @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  createdBy User?              @relation("PizzaClosingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  unit      Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User?               @relation("PizzaClosingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   /// Fechamentos ANTIGOS (por sabor). Preservados de propósito: histórico já
   /// fechado não se reescreve, e apagar a tabela seria migração destrutiva.
   items     PizzaClosingItem[]
@@ -3620,7 +3696,7 @@ model StockLot {
 
   createdById   String?
   createdByName String
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
   closedAt      DateTime?
   closedByName  String?
   closeNote     String?
@@ -3708,6 +3784,7 @@ model PayoutClosure {
   closedById   String?
   closedByName String
   closedAt     DateTime @default(now())
+
   /// Reabertura fica registrada na Auditoria; aqui a linha some, porque
   /// "fechado" é um estado, e não um histórico de idas e vindas.
   @@unique([yearMonth, type])

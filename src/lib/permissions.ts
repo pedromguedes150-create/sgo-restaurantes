@@ -100,6 +100,8 @@ const BASE: ModuleDef[] = [
   { key: 'TERMINATIONS', label: 'Desligamentos', nav: '/modulos/desligamentos' },
   { key: 'POPS', label: 'POPs', nav: '/modulos/pops' },
   { key: 'TRAINING', label: 'Treinamentos', nav: '/modulos/treinamentos' },
+  // Acompanhamento da REDE (Supervisor/Admin/CEO): quem deve o quê, concluído, pendente, atrasado — e o PDF.
+  { key: 'TRAINING_PANEL', label: 'Treinamentos — Acompanhamento', nav: '/modulos/treinamentos/acompanhamento', parent: 'TRAINING' },
 
   { key: 'METAS', label: 'Metas', nav: '/modulos/metas' },
   { key: 'METAS_CONFIG', label: 'Configuração da meta', nav: '/modulos/metas/config', parent: 'METAS' },
@@ -198,6 +200,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   CONFIG_PIZZAS: ['SUPERVISOR'], // sabores da pizzaria: mesma linha do catálogo de produtos
   CONFIG_CD_SECTORS: ['SUPERVISOR'], // setores do CD: idem — quem cuida do catálogo cuida do setor
   UNIT_PANEL: ['SUPERVISOR', 'COORDINATOR', 'MANAGER'], // painel operacional da unidade
+  TRAINING_PANEL: ['SUPERVISOR'], // acompanhamento de treinamentos da rede: gestão (Admin/CEO sempre); o gerente segue no quadro da unidade
 };
 
 /**

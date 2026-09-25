@@ -2,11 +2,16 @@ import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
-import type { TrainingStatus } from '@prisma/client';
+import type { TrainingStatus, TrainingOrigin } from '@prisma/client';
+import { treinamentosAplicaveis, type PopParaAplicar } from '@/lib/treinamentos/aplicabilidade';
 
 /**
  * Treinamentos via POPs (conta na meta do gerente).
- * - POP inicial → todo colaborador da unidade. POP setorial → colaboradores do setor.
+ * - Quem deve o quê sai de UMA regra (`src/lib/treinamentos/aplicabilidade.ts`):
+ *   POP geral → toda a unidade · por FUNÇÃO (cargo) → quem tem a função ·
+ *   setorial → quem está no setor (regra anterior) · vínculo individual → a pessoa.
+ *   O mesmo POP por dois caminhos vira UM registro (chave única) com a origem
+ *   de maior precedência; a origem fica gravada para o histórico.
  * - Recorrência ONCE (periodKey "V{versão}", re-treina ao mudar de versão) ·
  *   MONTHLY (periodKey "AAAA-MM", reciclagem mensal).
  * - Prazo: ONCE = 7 dias a partir da geração · MONTHLY = fim do mês.
@@ -45,8 +50,17 @@ export async function reconcileTrainingForUnit(unitId: string): Promise<void> {
   const dueMonthly = endOfMonth(now);
 
   const pops = await prisma.pop.findMany({
-    where: { status: 'PUBLISHED', units: { some: { unitId } }, OR: [{ isInitial: true }, { sectors: { some: {} } }] },
-    select: { id: true, version: true, isInitial: true, recurrence: true, sectors: { select: { sectorName: true } } },
+    where: {
+      status: 'PUBLISHED',
+      units: { some: { unitId } },
+      OR: [{ isInitial: true }, { sectors: { some: {} } }, { jobTitles: { some: {} } }, { collaborators: { some: {} } }],
+    },
+    select: {
+      id: true, version: true, isInitial: true, recurrence: true,
+      sectors: { select: { sectorName: true } },
+      jobTitles: { select: { jobTitle: true } },
+      collaborators: { select: { collaboratorId: true } },
+    },
   });
   if (pops.length === 0) {
     // ainda assim marca vencidas
@@ -54,7 +68,13 @@ export async function reconcileTrainingForUnit(unitId: string): Promise<void> {
     return;
   }
 
-  const links = await prisma.collaboratorUnit.findMany({ where: { unitId, collaborator: { active: true } }, select: { collaboratorId: true } });
+  const links = await prisma.collaboratorUnit.findMany({ where: { unitId, collaborator: { active: true } }, select: { collaboratorId: true, collaborator: { select: { jobTitle: true } } } });
+  const popsParaAplicar: (PopParaAplicar & { version: number; recurrence: 'ONCE' | 'MONTHLY' })[] = pops.map((p) => ({
+    id: p.id, version: p.version, recurrence: p.recurrence, isInitial: p.isInitial,
+    jobTitles: p.jobTitles.map((j) => j.jobTitle),
+    sectorNames: p.sectors.map((x) => x.sectorName),
+    collaboratorIds: p.collaborators.map((c) => c.collaboratorId),
+  }));
   const allocations = await prisma.workforceAllocation.findMany({ where: { unitId }, select: { collaboratorId: true, sector: { select: { name: true } } } });
   const sectorsByCollab = new Map<string, Set<string>>();
   for (const a of allocations) {
@@ -65,33 +85,38 @@ export async function reconcileTrainingForUnit(unitId: string): Promise<void> {
   }
 
   for (const link of links) {
-    const collabSectors = sectorsByCollab.get(link.collaboratorId) ?? new Set<string>();
-    // chaves requeridas: popId|periodKey -> { sectorName }
-    const required = new Map<string, { popId: string; version: number; periodKey: string; sectorName: string | null; due: Date }>();
-    for (const p of pops) {
-      const isSetorialMatch = p.sectors.some((s) => collabSectors.has(s.sectorName));
-      const applies = p.isInitial || isSetorialMatch;
-      if (!applies) continue;
-      const sectorName = p.isInitial ? null : (p.sectors.find((s) => collabSectors.has(s.sectorName))?.sectorName ?? null);
+    const collabSectors = [...(sectorsByCollab.get(link.collaboratorId) ?? new Set<string>())];
+    const aplicaveis = treinamentosAplicaveis({ id: link.collaboratorId, jobTitle: link.collaborator.jobTitle, sectorNames: collabSectors }, popsParaAplicar);
+
+    // chaves requeridas: popId|periodKey -> { sectorName, origin }
+    const required = new Map<string, { popId: string; version: number; periodKey: string; sectorName: string | null; origin: TrainingOrigin; due: Date }>();
+    for (const p of popsParaAplicar) {
+      const a = aplicaveis.get(p.id);
+      if (!a) continue;
       const periodKey = p.recurrence === 'MONTHLY' ? month : `V${p.version}`;
       const due = p.recurrence === 'MONTHLY' ? dueMonthly : dueOnce;
-      required.set(`${p.id}|${periodKey}`, { popId: p.id, version: p.version, periodKey, sectorName, due });
+      required.set(`${p.id}|${periodKey}`, { popId: p.id, version: p.version, periodKey, sectorName: a.sectorName, origin: a.origem, due });
     }
 
     // cria as que faltam
     for (const r of required.values()) {
       await prisma.trainingRecord.upsert({
         where: { popId_collaboratorId_periodKey: { popId: r.popId, collaboratorId: link.collaboratorId, periodKey: r.periodKey } },
-        create: { popId: r.popId, popVersion: r.version, collaboratorId: link.collaboratorId, unitId, sectorName: r.sectorName, periodKey: r.periodKey, status: 'PENDING', dueDate: r.due },
+        create: { popId: r.popId, popVersion: r.version, collaboratorId: link.collaboratorId, unitId, sectorName: r.sectorName, origin: r.origin, periodKey: r.periodKey, status: 'PENDING', dueDate: r.due },
         update: {}, // não mexe em registros já existentes (preserva DONE/MISSED e prazos)
       });
     }
 
-    // remove pendências que não se aplicam mais (ex.: saiu do setor). Mantém DONE/MISSED.
-    const existing = await prisma.trainingRecord.findMany({ where: { collaboratorId: link.collaboratorId, unitId, status: 'PENDING' }, select: { id: true, popId: true, periodKey: true } });
+    // remove pendências que não se aplicam mais (ex.: saiu do setor ou mudou de
+    // função). Mantém DONE/MISSED: o que foi feito é histórico. Pendência que
+    // continua valendo por OUTRO caminho só troca a origem.
+    const existing = await prisma.trainingRecord.findMany({ where: { collaboratorId: link.collaboratorId, unitId, status: 'PENDING' }, select: { id: true, popId: true, periodKey: true, origin: true, sectorName: true } });
     for (const e of existing) {
-      if (!required.has(`${e.popId}|${e.periodKey}`)) {
+      const r = required.get(`${e.popId}|${e.periodKey}`);
+      if (!r) {
         await prisma.trainingRecord.delete({ where: { id: e.id } }).catch(() => {});
+      } else if (r.origin !== e.origin || r.sectorName !== e.sectorName) {
+        await prisma.trainingRecord.update({ where: { id: e.id }, data: { origin: r.origin, sectorName: r.sectorName } }).catch(() => {});
       }
     }
   }
@@ -107,27 +132,38 @@ export async function reconcileAllTraining(): Promise<void> {
 }
 
 /* ───────── Board do gerente (por setor) ───────── */
-export interface TrainingItem { recordId: string; popId: string; popTitle: string; status: TrainingStatus; dueDate: string; periodKey: string }
+export interface TrainingItem { recordId: string; popId: string; popTitle: string; status: TrainingStatus; dueDate: string; periodKey: string; origin: TrainingOrigin }
 export interface TrainingCollab { collaboratorId: string; name: string; pending: number; done: number; missed: number; items: TrainingItem[] }
 export interface TrainingSectorGroup { sector: string; coverage: 'ok' | 'partial' | 'none'; collaborators: TrainingCollab[] }
+
+const GRUPO_INICIAIS = 'Treinamentos iniciais';
+const GRUPO_INDIVIDUAL = 'Atribuição individual';
+function grupoDoRegistro(origin: TrainingOrigin, sectorName: string | null, jobTitle: string | null): string {
+  if (origin === 'JOB_TITLE') return `Função: ${jobTitle ?? 'sem cargo'}`;
+  if (origin === 'INDIVIDUAL') return GRUPO_INDIVIDUAL;
+  if (origin === 'SECTOR') return sectorName ?? GRUPO_INICIAIS;
+  return GRUPO_INICIAIS;
+}
 
 export async function getTrainingBoard(unitId: string): Promise<TrainingSectorGroup[]> {
   await reconcileTrainingForUnit(unitId); // sempre fresco ao abrir
   const records = await prisma.trainingRecord.findMany({
     where: { unitId },
-    include: { pop: { select: { title: true } }, collaborator: { select: { name: true, active: true } } },
+    include: { pop: { select: { title: true } }, collaborator: { select: { name: true, active: true, jobTitle: true } } },
     orderBy: { dueDate: 'asc' },
   });
 
-  // agrupa por setor (null = "Iniciais"); colaborador aparece no(s) seu(s) grupo(s)
+  // agrupa pela ORIGEM da atribuição: iniciais, por função (o cargo da pessoa),
+  // por setor (regra anterior) e vínculos individuais. Colaborador aparece no(s)
+  // seu(s) grupo(s).
   const groups = new Map<string, Map<string, TrainingCollab>>();
   for (const r of records) {
     if (!r.collaborator.active) continue;
-    const sector = r.sectorName ?? 'Treinamentos iniciais';
+    const sector = grupoDoRegistro(r.origin, r.sectorName, r.collaborator.jobTitle);
     const byCollab = groups.get(sector) ?? new Map<string, TrainingCollab>();
     const c = byCollab.get(r.collaboratorId) ?? { collaboratorId: r.collaboratorId, name: r.collaborator.name, pending: 0, done: 0, missed: 0, items: [] };
     if (r.status === 'PENDING') c.pending++; else if (r.status === 'DONE') c.done++; else c.missed++;
-    c.items.push({ recordId: r.id, popId: r.popId, popTitle: r.pop.title, status: r.status, dueDate: r.dueDate.toISOString().slice(0, 10), periodKey: r.periodKey });
+    c.items.push({ recordId: r.id, popId: r.popId, popTitle: r.pop.title, status: r.status, dueDate: r.dueDate.toISOString().slice(0, 10), periodKey: r.periodKey, origin: r.origin });
     byCollab.set(r.collaboratorId, c);
     groups.set(sector, byCollab);
   }
@@ -140,8 +176,8 @@ export async function getTrainingBoard(unitId: string): Promise<TrainingSectorGr
     const coverage: TrainingSectorGroup['coverage'] = anyMissed ? 'none' : anyPending ? 'partial' : 'ok';
     out.push({ sector, coverage, collaborators });
   }
-  // "Iniciais" primeiro, depois setores em ordem alfabética
-  return out.sort((a, b) => (a.sector === 'Treinamentos iniciais' ? -1 : b.sector === 'Treinamentos iniciais' ? 1 : a.sector.localeCompare(b.sector)));
+  // "Iniciais" primeiro, depois os demais grupos em ordem alfabética
+  return out.sort((a, b) => (a.sector === GRUPO_INICIAIS ? -1 : b.sector === GRUPO_INICIAIS ? 1 : a.sector.localeCompare(b.sector, 'pt-BR')));
 }
 
 export type TrainResult = { ok: true } | { ok: false; reason: 'FORBIDDEN' | 'NOT_FOUND' };

@@ -50,7 +50,7 @@ export const AREAS: AreaDoMenu[] = [
     colunas: [
       { titulo: 'Do dia', keys: ['TASKS', 'TASKS_CORRECTIONS', 'TASKS_HISTORY'] },
       { titulo: 'Checklists', keys: ['CHECKLIST_FORMS', 'HYGIENE'] },
-      { titulo: 'Treinamento', keys: ['TRAINING', 'POPS'] },
+      { titulo: 'Treinamento', keys: ['TRAINING', 'TRAINING_PANEL', 'POPS'] },
     ],
   },
   {

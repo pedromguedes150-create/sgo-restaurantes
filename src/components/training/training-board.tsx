@@ -11,7 +11,9 @@ import { postAdmin } from '@/lib/admin-client';
 import { cn } from '@/lib/utils';
 
 type Status = 'PENDING' | 'DONE' | 'MISSED';
-interface Item { recordId: string; popId: string; popTitle: string; status: Status; dueDate: string; periodKey: string }
+type Origin = 'GENERAL' | 'JOB_TITLE' | 'SECTOR' | 'INDIVIDUAL';
+interface Item { recordId: string; popId: string; popTitle: string; status: Status; dueDate: string; periodKey: string; origin: Origin }
+const ORIGEM: Record<Origin, string> = { GENERAL: 'Geral', JOB_TITLE: 'Função', SECTOR: 'Setor', INDIVIDUAL: 'Vínculo individual' };
 interface Collab { collaboratorId: string; name: string; pending: number; done: number; missed: number; items: Item[] }
 interface Group { sector: string; coverage: 'ok' | 'partial' | 'none'; collaborators: Collab[] }
 
@@ -79,7 +81,7 @@ export function TrainingBoard({ board, isAdmin, weight }: { board: Group[]; isAd
                       <div key={it.recordId} className={cn('flex items-center justify-between gap-2 rounded-md p-2', it.status === 'MISSED' ? 'bg-danger/5' : 'bg-canvas')}>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium">{it.popTitle}</p>
-                          <p className="text-xs text-ink-500">prazo {it.dueDate} · <StatusBadge tone={ST[it.status].tone}>{ST[it.status].label}</StatusBadge></p>
+                          <p className="text-xs text-ink-500">prazo {it.dueDate} · {ORIGEM[it.origin]} · <StatusBadge tone={ST[it.status].tone}>{ST[it.status].label}</StatusBadge></p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
                           <Link href={`/modulos/pops/${it.popId}?treino=${it.recordId}`}><Button size="sm" variant="outline"><BookOpen className="h-4 w-4" /> Abrir POP</Button></Link>

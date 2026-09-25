@@ -9,12 +9,23 @@ import { Label } from '@/components/ui/label';
 import { MultiSelect } from '@/components/ui/multi-select';
 import type { PopBlock } from '@/lib/pops';
 import { Select } from '@/components/ui/ds/select';
+import { SegmentedControl } from '@/components/ui/ds/segmented-control';
+import type { OpcoesDePublico } from '@/lib/treinamentos/publico';
 
 export interface PopEdit {
   id: string; title: string; category: string | null;
   isInitial: boolean; recurrence: 'ONCE' | 'MONTHLY';
-  unitIds: string[]; sectorNames: string[]; blocks: PopBlock[];
+  unitIds: string[]; sectorNames: string[]; jobTitles: string[]; collaboratorIds: string[]; blocks: PopBlock[];
 }
+
+/**
+ * PÚBLICO do treinamento — a escolha central do editor.
+ *   GERAL: todos os colaboradores das unidades, independentemente da função.
+ *   DIRECIONADO: por FUNÇÃO (distribuição automática principal) + colaboradores
+ *   adicionais (exceção) + setores do Mapa (regra anterior, mantida).
+ * Um POP direcionado sem função, colaborador nem setor fica só como referência.
+ */
+type Publico = 'GERAL' | 'DIRECIONADO';
 
 interface EditorBlock { key: number; type: PopBlock['type']; text: string; url: string; items: string }
 
@@ -74,17 +85,23 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
 
 const BLOCK_LABEL: Record<PopBlock['type'], string> = { text: 'Texto', checklist: 'Checklist', image: 'Imagem', video: 'Vídeo' };
 
-export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
-  units: { id: string; name: string }[]; standardSectors: string[]; pop?: PopEdit; redirectOnDelete?: string;
+export function PopEditor({ units, standardSectors, publico, pop, redirectOnDelete }: {
+  units: { id: string; name: string }[]; standardSectors: string[]; publico: OpcoesDePublico; pop?: PopEdit; redirectOnDelete?: string;
 }) {
   const router = useRouter();
   const editing = Boolean(pop);
   const [open, setOpen] = useState(editing);
   const [title, setTitle] = useState(pop?.title ?? '');
   const [category, setCategory] = useState(pop?.category ?? '');
-  const [isInitial, setIsInitial] = useState(pop?.isInitial ?? false);
+  // POP existente que não é geral abre em Direcionado — inclusive o de referência
+  // (sem público), que assim mostra o aviso de que não gera treinamento.
+  const [tipo, setTipo] = useState<Publico>(pop ? (pop.isInitial ? 'GERAL' : 'DIRECIONADO') : 'GERAL');
+  const isInitial = tipo === 'GERAL';
   const [recurrence, setRecurrence] = useState<'ONCE' | 'MONTHLY'>(pop?.recurrence ?? 'ONCE');
+  const [jobTitles, setJobTitles] = useState<string[]>(pop?.jobTitles ?? []);
+  const [collaboratorIds, setCollaboratorIds] = useState<string[]>(pop?.collaboratorIds ?? []);
   const [sectors, setSectors] = useState<string[]>(pop?.sectorNames ?? []);
+  const [mostrarSetores, setMostrarSetores] = useState((pop?.sectorNames.length ?? 0) > 0);
   const [newSector, setNewSector] = useState('');
   const [blocks, setBlocks] = useState<EditorBlock[]>(toEditor(pop?.blocks ?? []));
   const [unitIds, setUnitIds] = useState<string[]>(pop?.unitIds ?? []);
@@ -92,7 +109,12 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  function addSector(name: string) { const n = name.trim(); if (n && !sectors.includes(n)) { setSectors((s) => [...s, n]); setIsInitial(false); } }
+  function addSector(name: string) { const n = name.trim(); if (n && !sectors.includes(n)) setSectors((s) => [...s, n]); }
+  // Colaboradores adicionais: só quem está nas unidades escolhidas (vínculo de
+  // fora não gera treinamento — a reconciliação anda por unidade do POP).
+  const colabsDasUnidades = publico.colaboradores.filter((c) => unitIds.length === 0 || c.unitIds.some((u) => unitIds.includes(u)));
+  const funcoesOpcoes = [...new Set([...publico.funcoes, ...jobTitles])].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const direcionadoVazio = tipo === 'DIRECIONADO' && jobTitles.length === 0 && collaboratorIds.length === 0 && sectors.length === 0;
   function removeSector(name: string) { setSectors((s) => s.filter((x) => x !== name)); }
   const suggest = standardSectors.filter((s) => !sectors.includes(s));
 
@@ -127,11 +149,17 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
     if (!title.trim() || unitIds.length === 0) { setMsg('Informe título e ao menos uma unidade.'); return; }
     setBusy(true); setMsg(null);
     try {
-      const body = { id: pop?.id, title, category, blocks: toPayload(blocks), unitIds, isInitial, recurrence, sectorNames: sectors };
+      const body = {
+        id: pop?.id, title, category, blocks: toPayload(blocks), unitIds, recurrence,
+        isInitial,
+        sectorNames: isInitial ? [] : sectors,
+        jobTitles: isInitial ? [] : jobTitles,
+        collaboratorIds: isInitial ? [] : collaboratorIds,
+      };
       const res = await fetch('/api/pops', { method: editing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setMsg(data.error ?? 'Falha'); return; }
-      if (!editing) { setTitle(''); setCategory(''); setSectors([]); setBlocks([]); setUnitIds([]); setIsInitial(false); setRecurrence('ONCE'); setOpen(false); }
+      if (!editing) { setTitle(''); setCategory(''); setSectors([]); setJobTitles([]); setCollaboratorIds([]); setBlocks([]); setUnitIds([]); setTipo('GERAL'); setRecurrence('ONCE'); setOpen(false); }
       router.refresh();
     } finally { setBusy(false); }
   }
@@ -158,45 +186,98 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
         <div><Label>Título</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
         <div><Label>Categoria</Label><Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Função/Equipamento/Processo" /></div>
 
-        {/* Treinamento */}
-        <div className="rounded-lg bg-sunken/40 p-2">
-          <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Treinamento — escolha UM tipo</p>
-          <label className={`flex items-center gap-2 text-sm ${sectors.length > 0 ? 'opacity-50' : ''}`}>
-            <input type="checkbox" checked={isInitial} disabled={sectors.length > 0} onChange={(e) => { setIsInitial(e.target.checked); if (e.target.checked) setSectors([]); }} />
-            Inicial — TODO colaborador da unidade faz (independe do setor)
-          </label>
-          <div className="mt-2">
-            <Label className="text-xs">Ou setorial — só os setores abaixo {isInitial && <span className="text-danger">(desmarque a opção Inicial para usar)</span>}</Label>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {sectors.map((s) => (
-                /* Token tingido, não sólido: é o desenho de etiqueta do iOS
-                   (destinatário no Mail). Sólido, uma fileira destas virava
-                   uma faixa de blocos de acento — no escuro, rosa. */
-                <span key={s} className="inline-flex items-center gap-1 rounded-full bg-brand-tint-2 px-2.5 py-1 text-xs font-semibold text-brand">{s}<button onClick={() => removeSector(s)} aria-label="Remover"><X className="h-3 w-3" /></button></span>
-              ))}
-              {sectors.length === 0 && <span className="text-xs text-ink-500">Nenhum setor — será só inicial/geral.</span>}
-            </div>
-            {suggest.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {suggest.map((s) => <button key={s} type="button" onClick={() => addSector(s)} className="rounded-full border px-2 py-0.5 text-xs hover:border-brand">+ {s}</button>)}
+        {/* Público do treinamento */}
+        <div className="space-y-2 rounded-lg bg-sunken/40 p-2">
+          <p className="sgo-type-11 font-semibold text-ink-500">Público do treinamento</p>
+          <SegmentedControl<Publico>
+            aria-label="Público do treinamento"
+            size="sm"
+            value={tipo}
+            onValueChange={setTipo}
+            options={[
+              { value: 'GERAL', label: 'Geral / Inicial' },
+              { value: 'DIRECIONADO', label: 'Direcionado' },
+            ]}
+          />
+          {tipo === 'GERAL' && (
+            <p className="text-xs text-ink-500">Todos os colaboradores das unidades selecionadas fazem, independentemente da função.</p>
+          )}
+          {tipo === 'DIRECIONADO' && (
+            <div className="space-y-2">
+              <div>
+                <Label>Funções</Label>
+                <p className="mb-1 text-xs text-ink-500">Distribuição automática principal: quem tem a função nas unidades escolhidas recebe o treinamento — e quem entra ou sai da função, também.</p>
+                <MultiSelect
+                  options={funcoesOpcoes.map((f) => ({ value: f, label: f }))}
+                  selected={jobTitles}
+                  onChange={setJobTitles}
+                  placeholder="Buscar função…"
+                  searchable
+                  allLabel="todas as funções"
+                  emptyLabel="Nenhuma função cadastrada nos colaboradores"
+                />
               </div>
-            )}
-            <div className="mt-1 flex gap-1">
-              <Input value={newSector} onChange={(e) => setNewSector(e.target.value)} placeholder="adicionar outro setor" className="h-9 text-sm" />
-              <Button size="sm" variant="outline" onClick={() => { addSector(newSector); setNewSector(''); }}>Adicionar</Button>
+              <div>
+                <Label>Colaboradores adicionais (opcional)</Label>
+                <p className="mb-1 text-xs text-ink-500">Exceção/complemento: quem executa a atividade sem ter a função oficial. Não muda a função no cadastro.</p>
+                <MultiSelect
+                  options={colabsDasUnidades.map((c) => ({ value: c.id, label: `${c.name}${c.jobTitle ? ` — ${c.jobTitle}` : ''} (${c.unitNames.join(', ')})` }))}
+                  selected={collaboratorIds}
+                  onChange={setCollaboratorIds}
+                  placeholder={unitIds.length === 0 ? 'Escolha as unidades primeiro…' : 'Buscar colaborador…'}
+                  searchable
+                  allLabel="todos"
+                  emptyLabel="Nenhum colaborador nas unidades escolhidas"
+                  disabled={unitIds.length === 0}
+                />
+              </div>
+              <div>
+                <button type="button" className="text-xs font-semibold text-brand" onClick={() => setMostrarSetores((v) => !v)}>
+                  {mostrarSetores ? '▾' : '▸'} Setores do Mapa de Funções (opcional){sectors.length > 0 ? ` · ${sectors.length}` : ''}
+                </button>
+                {mostrarSetores && (
+                  <div className="mt-1">
+                    <p className="mb-1 text-xs text-ink-500">Quem estiver alocado nestes setores também recebe. Regra anterior, mantida para os POPs já cadastrados.</p>
+                    <div className="flex flex-wrap gap-1">
+                      {sectors.map((s) => (
+                        /* Token tingido, não sólido: é o desenho de etiqueta do iOS
+                           (destinatário no Mail). Sólido, uma fileira destas virava
+                           uma faixa de blocos de acento — no escuro, rosa. */
+                        <span key={s} className="inline-flex items-center gap-1 rounded-full bg-brand-tint-2 px-2.5 py-1 text-xs font-semibold text-brand">{s}<button onClick={() => removeSector(s)} aria-label="Remover"><X className="h-3 w-3" /></button></span>
+                      ))}
+                      {sectors.length === 0 && <span className="text-xs text-ink-500">Nenhum setor.</span>}
+                    </div>
+                    {suggest.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {suggest.map((s) => <button key={s} type="button" onClick={() => addSector(s)} className="rounded-full border px-2 py-0.5 text-xs hover:border-brand">+ {s}</button>)}
+                      </div>
+                    )}
+                    <div className="mt-1 flex gap-1">
+                      <Input value={newSector} onChange={(e) => setNewSector(e.target.value)} placeholder="adicionar outro setor" className="h-9 text-sm" />
+                      <Button size="sm" variant="outline" onClick={() => { addSector(newSector); setNewSector(''); }}>Adicionar</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {direcionadoVazio && (
+                <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs font-medium text-warning">Sem função, colaborador nem setor, o POP fica só como referência: não gera treinamento para ninguém.</p>
+              )}
             </div>
+          )}
+          <div className="w-56">
+            <Select
+              label="Recorrência" size="sm" value={recurrence} onValueChange={(v) => setRecurrence(v as 'ONCE' | 'MONTHLY')}
+              options={[
+                { value: 'ONCE', label: 'Único', hint: 'faz uma vez' },
+                { value: 'MONTHLY', label: 'Mensal', hint: 'reciclagem todo mês' },
+              ]}
+            />
           </div>
-          <div className="mt-2">
-            <div className="w-56">
-              <Select
-                label="Recorrência" size="sm" value={recurrence} onValueChange={(v) => setRecurrence(v as 'ONCE' | 'MONTHLY')}
-                options={[
-                  { value: 'ONCE', label: 'Único', hint: 'faz uma vez' },
-                  { value: 'MONTHLY', label: 'Mensal', hint: 'reciclagem todo mês' },
-                ]}
-              />
-            </div>
-          </div>
+        </div>
+
+        <div>
+          <Label>Unidades</Label>
+          <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
         </div>
 
         {/* Blocos de conteúdo */}
@@ -244,10 +325,6 @@ export function PopEditor({ units, standardSectors, pop, redirectOnDelete }: {
           </div>
         </div>
 
-        <div>
-          <Label>Unidades</Label>
-          <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
-        </div>
         {editing && <p className="text-xs text-ink-500">Editar o conteúdo gera uma nova versão e os colaboradores precisarão refazer o treinamento.</p>}
         {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
         <div className="flex gap-2">
