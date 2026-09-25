@@ -100,30 +100,41 @@ export async function toggleSnackOption(user: SessionUser, id: string, active: b
 
 export interface SnackRowDTO { id: string; typeId: string; typeName: string; reasonId: string; reasonName: string; quantity: number }
 
-export async function getSnackDay(unitId: string, operationalDate: string): Promise<{ rows: SnackRowDTO[]; total: number; createdBy: string | null }> {
-  const rows = await prisma.wasteSnackDiscard.findMany({
-    where: { unitId, operationalDate },
-    orderBy: [{ typeName: 'asc' }, { reasonName: 'asc' }],
-    include: { createdBy: { select: { name: true } } },
-  });
+export async function getSnackDay(unitId: string, operationalDate: string): Promise<{ rows: SnackRowDTO[]; total: number; createdBy: string | null; evidencePath: string | null }> {
+  const [rows, evidence] = await Promise.all([
+    prisma.wasteSnackDiscard.findMany({
+      where: { unitId, operationalDate },
+      orderBy: [{ typeName: 'asc' }, { reasonName: 'asc' }],
+      include: { createdBy: { select: { name: true } } },
+    }),
+    prisma.wasteSnackDayEvidence.findUnique({ where: { unitId_operationalDate: { unitId, operationalDate } }, select: { path: true } }),
+  ]);
   return {
     rows: rows.map((r) => ({ id: r.id, typeId: r.typeId, typeName: r.typeName, reasonId: r.reasonId, reasonName: r.reasonName, quantity: r.quantity })),
     total: rows.reduce((s, r) => s + r.quantity, 0),
     createdBy: rows[0]?.createdBy?.name ?? null,
+    evidencePath: evidence?.path ?? null,
   };
 }
 
 /** Os últimos dias lançados da unidade — o histórico curto da própria tela. */
-export async function getSnackRecent(unitId: string, dias = 30): Promise<{ operationalDate: string; total: number; itens: { typeName: string; reasonName: string; quantity: number }[] }[]> {
+export async function getSnackRecent(unitId: string, dias = 30): Promise<{ operationalDate: string; total: number; evidencePath: string | null; itens: { typeName: string; reasonName: string; quantity: number }[] }[]> {
   const desde = new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10);
-  const rows = await prisma.wasteSnackDiscard.findMany({
-    where: { unitId, operationalDate: { gte: desde } },
-    orderBy: [{ operationalDate: 'desc' }, { typeName: 'asc' }],
-    select: { operationalDate: true, typeName: true, reasonName: true, quantity: true },
-  });
-  const porDia = new Map<string, { operationalDate: string; total: number; itens: { typeName: string; reasonName: string; quantity: number }[] }>();
+  const [rows, evidences] = await Promise.all([
+    prisma.wasteSnackDiscard.findMany({
+      where: { unitId, operationalDate: { gte: desde } },
+      orderBy: [{ operationalDate: 'desc' }, { typeName: 'asc' }],
+      select: { operationalDate: true, typeName: true, reasonName: true, quantity: true },
+    }),
+    prisma.wasteSnackDayEvidence.findMany({
+      where: { unitId, operationalDate: { gte: desde } },
+      select: { operationalDate: true, path: true },
+    }),
+  ]);
+  const evidenceMap = new Map(evidences.map((e) => [e.operationalDate, e.path]));
+  const porDia = new Map<string, { operationalDate: string; total: number; evidencePath: string | null; itens: { typeName: string; reasonName: string; quantity: number }[] }>();
   for (const r of rows) {
-    const d = porDia.get(r.operationalDate) ?? { operationalDate: r.operationalDate, total: 0, itens: [] };
+    const d = porDia.get(r.operationalDate) ?? { operationalDate: r.operationalDate, total: 0, evidencePath: evidenceMap.get(r.operationalDate) ?? null, itens: [] };
     d.total += r.quantity;
     d.itens.push({ typeName: r.typeName, reasonName: r.reasonName, quantity: r.quantity });
     porDia.set(r.operationalDate, d);
@@ -143,7 +154,7 @@ export type SaveSnackResult =
  */
 export async function saveSnackDay(
   user: SessionUser,
-  input: { unitId: string; operationalDate?: string; rows: SnackRowInput[] },
+  input: { unitId: string; operationalDate?: string; rows: SnackRowInput[]; evidencePath?: string },
   ctx: Ctx = {},
 ): Promise<SaveSnackResult> {
   try {
@@ -193,10 +204,19 @@ export async function saveSnackDay(
       });
     }
   });
+  // Foto geral do dia: upsert separado — não entra na transação dos descartes
+  // para não reverter uma foto já tirada se a regra de negócio recusar depois.
+  if (input.evidencePath) {
+    await prisma.wasteSnackDayEvidence.upsert({
+      where: { unitId_operationalDate: { unitId: input.unitId, operationalDate } },
+      create: { unitId: input.unitId, operationalDate, path: input.evidencePath, createdById: user.id },
+      update: { path: input.evidencePath },
+    });
+  }
   const total = linhas.reduce((s, l) => s + l.quantity, 0);
   await audit({
     userId: user.id, unitId: input.unitId, action: 'WASTE_SNACK_SAVE', module: 'WASTE', entity: 'waste_snack_discard',
-    metadata: { operationalDate, linhas: linhas.length, total }, ...ctx,
+    metadata: { operationalDate, linhas: linhas.length, total, comFoto: Boolean(input.evidencePath) }, ...ctx,
   });
   return { ok: true, total, operationalDate };
 }

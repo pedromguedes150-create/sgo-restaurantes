@@ -54,6 +54,7 @@ model Unit {
   taskInstances TaskInstance[]
   wasteEntries  WasteEntry[]
   snackDiscards WasteSnackDiscard[]
+  snackDayEvidences WasteSnackDayEvidence[]
   occurrences   Occurrence[]
   commandConfig       UnitCommandConfig?
   commandSequences    CommandSequence[]
@@ -140,6 +141,7 @@ model User {
   assignedTasks  TaskInstance[] @relation("AssignedTo")
   wasteEntries   WasteEntry[]   @relation("WasteCreatedBy")
   snackDiscards  WasteSnackDiscard[] @relation("SnackCreatedBy")
+  snackDayEvidences WasteSnackDayEvidence[] @relation("SnackDayEvidenceBy")
   pizzaClosings  PizzaClosing[] @relation("PizzaClosingCreatedBy")
   pizzaDoughChanges PizzaDoughChange[] @relation("PizzaDoughChangeBy")
   reportedOccurrences Occurrence[] @relation("OccReportedBy")
@@ -492,6 +494,7 @@ model WasteEntry {
   unit      Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
   createdBy User?            @relation("WasteCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   items     WasteEntryItem[]
+  photos    WasteEntryPhoto[]
 
   // Regra: 1 lançamento por unidade/dia operacional (conflito offline aplicado)
   @@unique([unitId, operationalDate])
@@ -515,6 +518,39 @@ model WasteEntryItem {
   @@unique([entryId, categoryId])
   @@index([categoryId])
   @@map("waste_entry_items")
+}
+
+/// Foto por procedimento (SS_ALMOCO | SS_JANTAR | PROD_ALMOCO | PROD_JANTAR)
+/// dentro de um lançamento de desperdício do restaurante. Migração 20260925.
+model WasteEntryPhoto {
+  id        String   @id @default(cuid())
+  entryId   String
+  typeCode  String
+  path      String
+  createdAt DateTime @default(now())
+
+  entry WasteEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, typeCode])
+  @@map("waste_entry_photos")
+}
+
+/// Foto geral do recipiente de descarte — UMA por unidade/dia operacional.
+/// Fica separada das linhas de salgado porque saveSnackDay substitui o dia
+/// inteiro; a foto não é re-tirada quando se corrige uma quantidade.
+model WasteSnackDayEvidence {
+  id              String   @id @default(cuid())
+  unitId          String
+  operationalDate String
+  path            String
+  createdById     String?
+  createdAt       DateTime @default(now())
+
+  unit      Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("SnackDayEvidenceBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([unitId, operationalDate])
+  @@map("waste_snack_day_evidences")
 }
 
 /// SOBRAS SALGADOS — a segunda frente do desperdício, em UNIDADES (nunca kg).

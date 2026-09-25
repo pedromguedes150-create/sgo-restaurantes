@@ -14,6 +14,11 @@ export interface WasteItemInput {
   subItems?: { name: string; qty: number }[];
 }
 
+export interface WasteEntryPhotoInput {
+  typeCode: string; // SS_ALMOCO | SS_JANTAR | PROD_ALMOCO | PROD_JANTAR
+  path: string;
+}
+
 export interface WasteAlert {
   categoryId: string;
   categoryName: string;
@@ -41,6 +46,7 @@ export async function saveWasteEntry(
     items: WasteItemInput[];
     observation?: string;
     evidencePath?: string;
+    entryPhotos?: WasteEntryPhotoInput[];
   },
   ctx: { ip?: string | null; userAgent?: string | null } = {},
 ): Promise<SaveWasteResult> {
@@ -83,7 +89,8 @@ export async function saveWasteEntry(
     include: { template: { select: { requiresEvidence: true } } },
   });
   const needsEvidence = wasteTasks.some((t) => t.template.requiresEvidence);
-  if (needsEvidence && !input.evidencePath) {
+  const hasAnyPhoto = input.evidencePath || (input.entryPhotos && input.entryPhotos.length > 0);
+  if (needsEvidence && !hasAnyPhoto) {
     return { ok: false, reason: 'EVIDENCE_REQUIRED' };
   }
 
@@ -107,6 +114,14 @@ export async function saveWasteEntry(
     if (items.length) {
       await tx.wasteEntryItem.createMany({
         data: items.map((i) => ({ entryId: e.id, categoryId: i.categoryId, kg: i.kg, subItems: i.subItems ?? undefined })),
+      });
+    }
+    // Upsert fotos por procedimento (typeCode). Foto nova substitui a anterior.
+    for (const p of input.entryPhotos ?? []) {
+      await tx.wasteEntryPhoto.upsert({
+        where: { entryId_typeCode: { entryId: e.id, typeCode: p.typeCode } },
+        create: { entryId: e.id, typeCode: p.typeCode, path: p.path },
+        update: { path: p.path },
       });
     }
     return e;

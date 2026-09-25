@@ -3,7 +3,7 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { saveWasteEntry, type WasteItemInput } from '@/lib/waste/save';
+import { saveWasteEntry, type WasteItemInput, type WasteEntryPhotoInput } from '@/lib/waste/save';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { saveEvidence, UploadError } from '@/lib/uploads';
 
@@ -24,6 +24,10 @@ export async function POST(req: Request) {
   let observation: string | undefined;
   let items: WasteItemInput[] = [];
   let evidencePath: string | undefined;
+  let entryPhotos: WasteEntryPhotoInput[] = [];
+
+  // Códigos de tipo fixo que podem receber foto por procedimento.
+  const PHOTO_CODES = ['SS_ALMOCO', 'SS_JANTAR', 'PROD_ALMOCO', 'PROD_JANTAR'] as const;
 
   const contentType = req.headers.get('content-type') ?? '';
   try {
@@ -40,6 +44,17 @@ export async function POST(req: Request) {
         }
         evidencePath = await saveEvidence(file, unitId, `waste-${operationalDate ?? 'hoje'}`);
       }
+      // Fotos por procedimento: evidence_SS_ALMOCO, evidence_SS_JANTAR, etc.
+      for (const code of PHOTO_CODES) {
+        const pf = form.get(`evidence_${code}`);
+        if (pf instanceof File && pf.size > 0) {
+          if (!unitId || !canAccessUnit(user, unitId)) {
+            return NextResponse.json({ error: 'Sem acesso a esta unidade' }, { status: 403 });
+          }
+          const path = await saveEvidence(pf, unitId, `waste-${code}-${operationalDate ?? 'hoje'}`);
+          entryPhotos.push({ typeCode: code, path });
+        }
+      }
     } else {
       const body = await req.json();
       unitId = body.unitId;
@@ -54,7 +69,7 @@ export async function POST(req: Request) {
 
   const result = await saveWasteEntry(
     user,
-    { unitId, operationalDate, items, observation, evidencePath },
+    { unitId, operationalDate, items, observation, evidencePath, entryPhotos: entryPhotos.length ? entryPhotos : undefined },
     requestContext(req),
   );
 

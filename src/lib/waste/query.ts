@@ -20,11 +20,11 @@ export async function getActiveCategories(): Promise<WasteCategoryDTO[]> {
   return cats;
 }
 
-/** Lançamento de um dia (mapa categoria→kg) + metadados. */
+/** Lançamento de um dia (mapa categoria→kg) + metadados + fotos por procedimento. */
 export async function getEntryForDay(unitId: string, operationalDate: string) {
   const entry = await prisma.wasteEntry.findUnique({
     where: { unitId_operationalDate: { unitId, operationalDate } },
-    include: { items: true, createdBy: { select: { name: true } } },
+    include: { items: true, createdBy: { select: { name: true } }, photos: true },
   });
   if (!entry) return null;
   const kgByCategory: Record<string, number> = {};
@@ -42,6 +42,8 @@ export async function getEntryForDay(unitId: string, operationalDate: string) {
     evidencePath: entry.evidencePath,
     kgByCategory,
     total,
+    /** typeCode → existe foto */
+    photosByCode: Object.fromEntries(entry.photos.map((p) => [p.typeCode, p.path])) as Record<string, string>,
   };
 }
 

@@ -91,7 +91,7 @@ export default async function DesperdiciosPage({
             <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} aba="salgados" />
             {isBackdated && <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs font-medium text-warning">Lançando para um dia anterior ({operationalDate}).</p>}
             {dia.createdBy && <p className="text-xs text-ink-500">Registrado por {dia.createdBy} · total atual {dia.total} un.</p>}
-            <SalgadosForm unitId={selected.id} operationalDate={operationalDate} tipos={opcoes.tipos} motivos={opcoes.motivos} initialRows={dia.rows} />
+            <SalgadosForm unitId={selected.id} operationalDate={operationalDate} tipos={opcoes.tipos} motivos={opcoes.motivos} initialRows={dia.rows} initialEvidencePath={dia.evidencePath} />
           </CardContent>
         </Card>
 
@@ -113,6 +113,12 @@ export default async function DesperdiciosPage({
                     </li>
                   ))}
                 </ul>
+                {d.evidencePath && (
+                  <a href={`/api/uploads/${d.evidencePath}`} target="_blank" rel="noreferrer"
+                    className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand hover:bg-brand/20">
+                    Ver evidência (foto do descarte)
+                  </a>
+                )}
               </details>
             ))}
             <p className="pt-1 text-xs text-ink-500">Para lançar/corrigir um dia, escolha a data acima. O histórico por tipo e motivo fica no Painel consolidado.</p>
@@ -140,7 +146,7 @@ export default async function DesperdiciosPage({
         where: { unitId: selected.id },
         orderBy: { operationalDate: 'desc' },
         take: 30,
-        include: { items: { select: { kg: true, category: { select: { name: true } } } }, createdBy: { select: { name: true } } },
+        include: { items: { select: { kg: true, category: { select: { name: true } } } }, createdBy: { select: { name: true } }, photos: { select: { typeCode: true, path: true } } },
       })
     : [];
 
@@ -166,6 +172,7 @@ export default async function DesperdiciosPage({
             initialObservation={entry?.observation ?? null}
             requiresEvidence={Boolean(wasteTemplate?.requiresEvidence)}
             hasEvidence={Boolean(entry?.evidencePath)}
+            initialPhotos={entry?.photosByCode ?? {}}
           />
         </CardContent>
       </Card>
@@ -198,6 +205,22 @@ export default async function DesperdiciosPage({
                         ))}
                       </ul>
                       {e.observation && <p className="mt-1 text-xs text-ink-500">Obs.: {e.observation}</p>}
+                      {e.photos.length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-2">
+                          {e.photos.map((p) => (
+                            <a key={p.typeCode} href={`/api/uploads/${p.path}`} target="_blank" rel="noreferrer"
+                              className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand hover:bg-brand/20">
+                              Ver evidência — {p.typeCode.replace('_', ' ')}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                      {e.evidencePath && (
+                        <a href={`/api/uploads/${e.evidencePath}`} target="_blank" rel="noreferrer"
+                          className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand hover:bg-brand/20">
+                          Ver foto da balança (legado)
+                        </a>
+                      )}
                     </details>
                   )}
                 </div>
