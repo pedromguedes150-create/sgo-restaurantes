@@ -118,6 +118,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/products/propostas': { modulo: 'CONFIG_PRODUCTS', exigir: 'editar' },
   // Correção de massas pela GESTÃO (qualquer dia, retroativo com motivo). O
   // perfil que corrige também é conferido em portaDaSessao (massas.ts).
+  '/api/pizzas/gestao': { modulo: 'PIZZAS', exigir: 'editar' },
   '/api/pizzas/massas/gestao': { modulo: 'PIZZAS', exigir: 'editar' },
 
   /* O importador e a configuração de participantes são portas diferentes: quem
