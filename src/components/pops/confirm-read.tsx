@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export function ConfirmRead({ popId, confirmed, trainingRecordId = null }: { popId: string; confirmed: boolean; trainingRecordId?: string | null }) {
+export function ConfirmRead({ popId, confirmed, trainingRecordId = null, rotulo }: { popId: string; confirmed: boolean; trainingRecordId?: string | null; rotulo?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   if (confirmed && !trainingRecordId) return <p className="rounded-lg bg-success/10 px-3 py-2 text-sm font-semibold text-success">✓ Leitura confirmada</p>;
@@ -29,7 +29,7 @@ export function ConfirmRead({ popId, confirmed, trainingRecordId = null }: { pop
         } finally { setBusy(false); }
       }}
     >
-      <CheckCircle2 className="h-5 w-5" /> {trainingRecordId ? 'Confirmar leitura e marcar treinado' : 'Confirmar leitura'}
+      <CheckCircle2 className="h-5 w-5" /> {rotulo ?? (trainingRecordId ? 'Confirmar leitura e marcar treinado' : 'Confirmar leitura')}
     </Button>
   );
 }

@@ -52,12 +52,11 @@ export default async function PopsPage() {
                   <p className="text-xs text-ink-500">
                     {[
                       p.category,
-                      p.isInitial ? 'Geral / Inicial' : null,
-                      p.jobTitles.length > 0 ? `Função: ${p.jobTitles.map((j) => j.jobTitle).join(', ')}` : null,
-                      p._count.collaborators > 0 ? `${p._count.collaborators} colaborador(es) adicional(is)` : null,
-                      p._count.sectors > 0 ? `${p._count.sectors} setor(es)` : null,
+                      p.modules.length > 0 ? `${p.modules.length} módulo(s): ${p.modules.map((m) => m.name).join(', ')}` : 'Sem módulos',
+                      p.modules.some((m) => m.allPublic) ? 'com módulo geral' : null,
+                      p.modules.some((m) => m.jobTitles.length || m._count.collaborators || m._count.sectors) ? 'direcionado por função' : null,
                       p.recurrence === 'MONTHLY' ? 'Mensal' : null,
-                    ].filter(Boolean).join(' · ') || 'Referência (sem treinamento)'}
+                    ].filter(Boolean).join(' · ')}
                   </p>
                 </div>
                 <StatusBadge tone={p.confirmed ? 'success' : 'medium'}>{p.confirmed ? 'Lido' : 'Confirmar'}</StatusBadge>

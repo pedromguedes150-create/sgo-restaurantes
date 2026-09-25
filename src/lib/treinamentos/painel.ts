@@ -20,6 +20,7 @@ export interface OpcoesDeFiltro {
   unidades: { id: string; name: string }[];
   funcoes: string[];
   treinamentos: { id: string; title: string }[];
+  modulos: { id: string; popId: string; name: string; popTitle: string }[];
   colaboradores: { id: string; name: string; unitName: string }[];
 }
 
@@ -43,9 +44,10 @@ export async function getPainelTreinamentos(user: SessionUser, filtros: FiltrosP
   const registros = await prisma.trainingRecord.findMany({
     where: { ...escopo, collaborator: { active: true }, unit: { active: true } },
     select: {
-      id: true, popId: true, popVersion: true, collaboratorId: true, unitId: true,
+      id: true, popId: true, moduleId: true, moduleName: true, moduleVersion: true, collaboratorId: true, unitId: true,
       origin: true, status: true, periodKey: true, dueDate: true, completedAt: true,
-      pop: { select: { title: true, version: true, recurrence: true } },
+      pop: { select: { title: true, recurrence: true } },
+      module: { select: { version: true, active: true } },
       collaborator: { select: { name: true, jobTitle: true } },
       unit: { select: { name: true } },
     },
@@ -55,8 +57,11 @@ export async function getPainelTreinamentos(user: SessionUser, filtros: FiltrosP
     recordId: r.id,
     popId: r.popId,
     popTitle: r.pop.title,
-    popVersion: r.popVersion,
-    popCurrentVersion: r.pop.version,
+    moduleId: r.moduleId,
+    moduleName: r.moduleName,
+    moduleVersion: r.moduleVersion,
+    moduleCurrentVersion: r.module.version,
+    moduleActive: r.module.active,
     recurrence: r.pop.recurrence,
     collaboratorId: r.collaboratorId,
     collaboratorName: r.collaborator.name,
@@ -77,17 +82,20 @@ export async function getPainelTreinamentos(user: SessionUser, filtros: FiltrosP
   const unidadesMap = new Map<string, string>();
   const funcoesSet = new Set<string>();
   const treinosMap = new Map<string, string>();
+  const modulosMap = new Map<string, { popId: string; name: string; popTitle: string }>();
   const colabsMap = new Map<string, { name: string; unitName: string }>();
   for (const l of linhas) {
     unidadesMap.set(l.unitId, l.unitName);
     if (l.jobTitle) funcoesSet.add(l.jobTitle);
     treinosMap.set(l.popId, l.popTitle);
+    modulosMap.set(l.moduleId, { popId: l.popId, name: l.moduleName, popTitle: l.popTitle });
     if (!colabsMap.has(l.collaboratorId)) colabsMap.set(l.collaboratorId, { name: l.collaboratorName, unitName: l.unitName });
   }
   const opcoes: OpcoesDeFiltro = {
     unidades: [...unidadesMap].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
     funcoes: [...funcoesSet].sort((a, b) => a.localeCompare(b, 'pt-BR')),
     treinamentos: [...treinosMap].map(([id, title]) => ({ id, title })).sort((a, b) => a.title.localeCompare(b.title, 'pt-BR')),
+    modulos: [...modulosMap].map(([id, m]) => ({ id, ...m })).sort((a, b) => a.popTitle.localeCompare(b.popTitle, 'pt-BR') || a.name.localeCompare(b.name, 'pt-BR')),
     colaboradores: [...colabsMap].map(([id, c]) => ({ id, ...c })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
   };
 
@@ -109,6 +117,7 @@ export function filtrosDaUrl(sp: Record<string, string | undefined>): FiltrosPai
     jobTitle: sp.funcao || undefined,
     collaboratorId: sp.colab || undefined,
     popId: sp.pop || undefined,
+    moduleId: sp.modulo || undefined,
     status: status === 'concluido' || status === 'pendente' || status === 'atrasado' ? status : 'todos',
     de: data(sp.start),
     ate: data(sp.end),
@@ -122,6 +131,7 @@ export function urlDosFiltros(f: FiltrosPainel, extra: Record<string, string | u
   if (f.jobTitle) p.set('funcao', f.jobTitle);
   if (f.collaboratorId) p.set('colab', f.collaboratorId);
   if (f.popId) p.set('pop', f.popId);
+  if (f.moduleId) p.set('modulo', f.moduleId);
   if (f.status && f.status !== 'todos') p.set('status', f.status);
   if (f.de) p.set('start', f.de);
   if (f.ate) p.set('end', f.ate);
