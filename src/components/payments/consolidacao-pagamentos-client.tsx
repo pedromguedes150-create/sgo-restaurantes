@@ -6,49 +6,55 @@ import { ChevronDown, ChevronRight, Download, FileText, ArrowUpDown, ArrowUp, Ar
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
-import { StatCard } from '@/components/ui/ds/stat-card';
 import { StatusBadge, type Tone } from '@/components/ui/ds/status-badge';
 import { Banner } from '@/components/ui/ds/banner';
+import { Table } from '@/components/ui/ds/table';
 import { formatBRL } from '@/lib/utils';
 import {
   PERIODOS_RAPIDOS, STATUS_CONS, STATUS_TEXTO, TIPO_TEXTO, TIPOS_CONS, emBR, entraNosTotais, ordenar, queryDoFiltro, textoHoras,
-  type Consolidacao, type FiltroConsolidacao, type Lancamento, type Ordem, type PeriodoRapido, type Visao,
+  type Aba, type Consolidacao, type FiltroConsolidacao, type Lancamento, type Ordem, type PeriodoRapido, type PeriodoResolvido,
+  type Recorrencia, type Visao,
 } from '@/lib/payments/consolidacao-calculo';
 
 const BASE = '/modulos/pagamentos/consolidacao';
 const TOM_STATUS: Record<Lancamento['status'], Tone> = { PENDING: 'warning', APPROVED: 'info', PAID: 'success', REJECTED: 'danger' };
 
 /**
- * CONSOLIDAÇÃO DE PAGAMENTOS — a tela (v1.126.0).
+ * CONSOLIDAÇÃO DE PAGAMENTOS — a tela (v1.126.0; duas visões na v1.127.0).
  *
- * Os filtros moram na URL: o servidor recalcula e o link que a Supervisão
- * manda abre igual. Ordenação e a troca Por lançamento / Por colaborador são
- * só de exibição, ficam aqui. Nenhum botão desta tela grava nada.
+ * VISÃO FINANCEIRA: quem recebe, por qual unidade e tipo, e quanto — o
+ * fechamento para o Financeiro. RECORRÊNCIA: o freelancer chamado de novo e
+ * de novo — a gestão. Mesma base, mesmos filtros de período e unidade.
+ *
+ * Os filtros moram na URL: o servidor recalcula e tela, Excel e PDF saem da
+ * MESMA conta. Ordenação e a troca Por lançamento / Por colaborador são só de
+ * exibição. Nenhum botão desta tela grava nada.
  */
-export function ConsolidacaoPagamentosClient({ dados, filtro }: { dados: Consolidacao; filtro: FiltroConsolidacao }) {
+export function ConsolidacaoPagamentosClient({ filtro, unidades, periodo, financeiro, recorrencia }: {
+  filtro: FiltroConsolidacao;
+  unidades: { id: string; name: string }[];
+  periodo: PeriodoResolvido;
+  financeiro?: Consolidacao;
+  recorrencia?: Recorrencia;
+}) {
   const router = useRouter();
-  const [visao, setVisao] = useState<Visao>('lancamento');
-  const [ordem, setOrdem] = useState<Ordem>('data');
-  const [dir, setDir] = useState<'asc' | 'desc'>('asc');
-  const [de, setDe] = useState(filtro.de ?? dados.periodo.de);
-  const [ate, setAte] = useState(filtro.ate ?? dados.periodo.ate);
-  const [aberto, setAberto] = useState<string | null>(null);
+  const aba: Aba = filtro.aba ?? 'financeiro';
+  const [de, setDe] = useState(filtro.de ?? periodo.de);
+  const [ate, setAte] = useState(filtro.ate ?? periodo.ate);
 
-  const ir = (mudar: Partial<FiltroConsolidacao>) => {
-    const novo: FiltroConsolidacao = { ...filtro, ...mudar };
-    router.push(`${BASE}?${queryDoFiltro(novo)}`);
-  };
+  const ir = (mudar: Partial<FiltroConsolidacao>) => router.push(`${BASE}?${queryDoFiltro({ ...filtro, ...mudar })}`);
   const q = queryDoFiltro(filtro);
-  const r = dados.resumo;
-
-  const linhas = useMemo(() => ordenar(dados.lancamentos, ordem, dir), [dados.lancamentos, ordem, dir]);
-  const ordenarPor = (o: Ordem) => {
-    if (o === ordem) setDir(dir === 'asc' ? 'desc' : 'asc');
-    else { setOrdem(o); setDir('asc'); }
-  };
 
   return (
     <div className="space-y-4">
+      {/* ── As duas visões ── */}
+      <SegmentedControl<Aba>
+        aria-label="Visão"
+        value={aba}
+        onValueChange={(v) => ir({ aba: v, pessoa: undefined })}
+        options={[{ value: 'financeiro', label: 'Visão financeira' }, { value: 'recorrencia', label: 'Recorrência de freelancers' }]}
+      />
+
       {/* ── Período ── */}
       <section className="space-y-2" aria-label="Período">
         <div className="flex flex-wrap gap-1.5">
@@ -68,35 +74,39 @@ export function ConsolidacaoPagamentosClient({ dados, filtro }: { dados: Consoli
         </div>
         {filtro.periodo === 'personalizado' && (
           <div className="flex flex-wrap items-end gap-2">
-            <div className="w-44"><DatePicker label="Data inicial" value={de || null} onValueChange={(v) => setDe(v ?? '')} /></div>
-            <div className="w-44"><DatePicker label="Data final" value={ate || null} onValueChange={(v) => setAte(v ?? '')} /></div>
+            <div className="w-44"><DatePicker label="De" value={de || null} onValueChange={(v) => setDe(v ?? '')} /></div>
+            <div className="w-44"><DatePicker label="Até" value={ate || null} onValueChange={(v) => setAte(v ?? '')} /></div>
             <button type="button" onClick={() => ir({ periodo: 'personalizado', de: de || undefined, ate: ate || undefined })} className="h-10 rounded-control bg-brand px-3 text-sm font-semibold text-on-brand">Aplicar</button>
           </div>
         )}
-        <p className="text-sm text-ink-700">Período: <b>{dados.periodo.rotulo}</b> · pela <b>data do serviço</b> (dia da hora extra ou do freelancer), não pela data em que a solicitação foi criada.</p>
+        <p className="text-sm text-ink-700">Período: <b>{periodo.rotulo}</b> · pela <b>data do serviço</b> (dia da hora extra ou do freelancer), não pela data em que a solicitação foi criada.</p>
       </section>
 
-      {/* ── Demais filtros ── */}
+      {/* ── Filtros ── */}
       <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="Filtros">
         <Select
           label="Unidade"
           value={filtro.unitId ?? ''}
           onValueChange={(v) => ir({ unitId: v || undefined, pessoa: undefined })}
-          options={[{ value: '', label: 'Todas as unidades' }, ...dados.unidades.map((u) => ({ value: u.id, label: u.name }))]}
+          options={[{ value: '', label: 'Todas as unidades' }, ...unidades.map((u) => ({ value: u.id, label: u.name }))]}
         />
-        <Select label="Tipo" value={filtro.tipo} onValueChange={(v) => ir({ tipo: v as FiltroConsolidacao['tipo'], pessoa: undefined })} options={TIPOS_CONS} />
-        <Select label="Status" value={filtro.status} onValueChange={(v) => ir({ status: v as FiltroConsolidacao['status'] })} options={STATUS_CONS} />
-        <Select
-          label="Colaborador"
-          searchable
-          searchPlaceholder="Pesquisar colaborador…"
-          value={filtro.pessoa ?? ''}
-          onValueChange={(v) => ir({ pessoa: v || undefined })}
-          options={[{ value: '', label: 'Todos' }, ...dados.pessoas]}
-        />
+        {aba === 'financeiro' && financeiro && (
+          <>
+            <Select label="Tipo" value={filtro.tipo} onValueChange={(v) => ir({ tipo: v as FiltroConsolidacao['tipo'], pessoa: undefined })} options={TIPOS_CONS} />
+            <Select label="Status" value={filtro.status} onValueChange={(v) => ir({ status: v as FiltroConsolidacao['status'] })} options={STATUS_CONS} />
+            <Select
+              label="Colaborador"
+              searchable
+              searchPlaceholder="Pesquisar colaborador…"
+              value={filtro.pessoa ?? ''}
+              onValueChange={(v) => ir({ pessoa: v || undefined })}
+              options={[{ value: '', label: 'Todos' }, ...financeiro.pessoas]}
+            />
+          </>
+        )}
       </section>
 
-      {/* ── Exportar ── */}
+      {/* ── Exportar: no alto, à vista ── */}
       <div className="flex flex-wrap items-center gap-2">
         <a href={`/api/payments/consolidacao/export?${q}`} className="inline-flex h-10 items-center gap-1.5 rounded-control bg-brand px-3 text-sm font-semibold text-on-brand hover:bg-brand-hover">
           <Download className="h-4 w-4" /> Exportar Excel
@@ -104,23 +114,73 @@ export function ConsolidacaoPagamentosClient({ dados, filtro }: { dados: Consoli
         <a href={`${BASE}/relatorio?${q}&imprimir=1`} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-1.5 rounded-control border border-line-strong px-3 text-sm font-semibold text-ink-900 hover:border-brand">
           <FileText className="h-4 w-4" /> Gerar PDF
         </a>
-        <p className="text-xs text-ink-500">Exportar ou gerar o PDF <b>não</b> marca nada como pago — o pagamento continua na aba Pagar.</p>
+        <p className="text-xs text-ink-500">
+          {aba === 'financeiro' ? 'Relatório financeiro — para o Financeiro.' : 'Relatório de recorrência — para Gestão/Diretoria.'}
+          {' '}Exportar <b>não</b> marca nada como pago.
+        </p>
       </div>
 
-      {/* ── Resumo financeiro ── */}
-      <section className="grid grid-cols-2 gap-2 lg:grid-cols-5" aria-label="Resumo do período">
-        <StatCard label="Solicitações" value={r.solicitacoes} />
-        <StatCard label="Freelancers" value={r.freelancers} hint={formatBRL(r.valorFreelancer)} />
-        <StatCard label="Horas extras" value={r.horasExtras} hint={formatBRL(r.valorHoraExtra)} />
-        <StatCard label="Vale-transporte" value={formatBRL(r.vt)} hint="já incluído no total" />
-        <StatCard label="Total do período" value={formatBRL(r.total)} className="col-span-2 lg:col-span-1" />
-      </section>
+      {aba === 'financeiro' && financeiro && <VisaoFinanceira dados={financeiro} filtro={filtro} />}
+      {aba === 'recorrencia' && recorrencia && <VisaoRecorrencia dados={recorrencia} />}
+    </div>
+  );
+}
+
+/* ───────────────────────── Visão financeira ───────────────────────── */
+
+function Faixa({ itens }: { itens: { rotulo: string; valor: string; destaque?: boolean; dica?: string }[] }) {
+  return (
+    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line bg-line sm:grid-cols-4 lg:grid-cols-7">
+      {itens.map((i) => (
+        <div key={i.rotulo} className={`bg-surface px-3 py-2 ${i.destaque ? 'col-span-2 sm:col-span-1' : ''}`}>
+          <dt className="sgo-type-11 font-semibold text-ink-500">{i.rotulo}</dt>
+          <dd className={`tabular-nums ${i.destaque ? 'sgo-type-17 font-bold text-brand' : 'sgo-type-15 font-semibold text-ink-900'}`}>{i.valor}</dd>
+          {i.dica && <dd className="text-xs text-ink-500">{i.dica}</dd>}
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function VisaoFinanceira({ dados, filtro }: { dados: Consolidacao; filtro: FiltroConsolidacao }) {
+  const [visao, setVisao] = useState<Visao>('lancamento');
+  const [ordem, setOrdem] = useState<Ordem>('data');
+  const [dir, setDir] = useState<'asc' | 'desc'>('asc');
+  const [aberto, setAberto] = useState<string | null>(null);
+  const r = dados.resumo;
+
+  const linhas = useMemo(() => ordenar(dados.lancamentos, ordem, dir), [dados.lancamentos, ordem, dir]);
+  const ordenarPor = (o: Ordem) => {
+    if (o === ordem) setDir(dir === 'asc' ? 'desc' : 'asc');
+    else { setOrdem(o); setDir(o === 'valor' ? 'desc' : 'asc'); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Faixa itens={[
+        { rotulo: 'Solicitações', valor: String(r.solicitacoes) },
+        { rotulo: 'Freelancers', valor: String(r.freelancers) },
+        { rotulo: 'Horas extras', valor: String(r.horasExtras) },
+        { rotulo: 'Valor freelancer', valor: formatBRL(r.valorFreelancer) },
+        { rotulo: 'Valor hora extra', valor: formatBRL(r.valorHoraExtra) },
+        { rotulo: 'Vale-transporte', valor: formatBRL(r.vt), dica: 'já dentro dos valores' },
+        { rotulo: 'Total geral', valor: formatBRL(r.total), destaque: true },
+      ]} />
+
+      {/* Status = Todos: o total separado pelo que ele é. */}
+      {filtro.status === 'TODOS' && (
+        <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-card border border-line bg-line sm:grid-cols-3" aria-label="Total por situação">
+          <div className="bg-surface px-3 py-2"><dt className="sgo-type-11 font-semibold text-warning">Solicitado — pendente</dt><dd className="sgo-type-15 font-semibold tabular-nums text-ink-900">{formatBRL(r.porStatus.pendente)}</dd><dd className="text-xs text-ink-500">ainda sem aprovação</dd></div>
+          <div className="bg-surface px-3 py-2"><dt className="sgo-type-11 font-semibold text-info">Aprovado — a pagar</dt><dd className="sgo-type-15 font-semibold tabular-nums text-ink-900">{formatBRL(r.porStatus.aprovado)}</dd><dd className="text-xs text-ink-500">na aba Pagar</dd></div>
+          <div className="bg-surface px-3 py-2"><dt className="sgo-type-11 font-semibold text-success">Pago</dt><dd className="sgo-type-15 font-semibold tabular-nums text-ink-900">{formatBRL(r.porStatus.pago)}</dd><dd className="text-xs text-ink-500">já pago</dd></div>
+        </dl>
+      )}
 
       {r.fora.qtd > 0 && (
         <Banner tone="info" title={`${r.fora.qtd} rejeitada(s) fora dos totais`} description={`Aparecem riscadas na lista (${formatBRL(r.fora.valor)}), mas não somam. Para somá-las, filtre o status Rejeitado.`} />
       )}
       {filtro.status === 'TODOS' && r.pendentes.qtd > 0 && (
-        <Banner tone="warning" title={`${r.pendentes.qtd} pendente(s) de aprovação dentro do total`} description={`${formatBRL(r.pendentes.valor)} ainda não foram aprovados. Para enviar ao Financeiro só o que está a pagar, filtre o status Aprovado.`} />
+        <Banner tone="warning" title={`${r.pendentes.qtd} pendente(s) de aprovação dentro do total`} description={`${formatBRL(r.pendentes.valor)} ainda não foram aprovados. Para mandar ao Financeiro só o que está a pagar, filtre o status Aprovado (a pagar).`} />
       )}
 
       {/* ── Por unidade: cada unidade no seu bloco ── */}
@@ -132,9 +192,10 @@ export function ConsolidacaoPagamentosClient({ dados, filtro }: { dados: Consoli
               <div key={u.unitId} className="rounded-card border border-line bg-surface p-3">
                 <p className="sgo-type-13 mb-1 font-semibold text-brand">{u.unidade.toUpperCase()}</p>
                 <dl className="space-y-0.5 text-sm">
+                  <div className="flex justify-between"><dt className="text-ink-500">Solicitações</dt><dd className="tabular-nums">{u.qtd}</dd></div>
                   <div className="flex justify-between"><dt className="text-ink-500">Freelancer</dt><dd className="tabular-nums">{formatBRL(u.freelancer)}</dd></div>
                   <div className="flex justify-between"><dt className="text-ink-500">Hora Extra</dt><dd className="tabular-nums">{formatBRL(u.horaExtra)}</dd></div>
-                  <div className="flex justify-between"><dt className="text-ink-500">Vale-transporte (incluído)</dt><dd className="tabular-nums">{formatBRL(u.vt)}</dd></div>
+                  <div className="flex justify-between"><dt className="text-ink-500">Vale-transporte (já dentro)</dt><dd className="tabular-nums">{formatBRL(u.vt)}</dd></div>
                   <div className="flex justify-between border-t border-line pt-1 font-semibold text-ink-900"><dt>TOTAL</dt><dd className="tabular-nums">{formatBRL(u.total)}</dd></div>
                 </dl>
               </div>
@@ -143,7 +204,7 @@ export function ConsolidacaoPagamentosClient({ dados, filtro }: { dados: Consoli
         </section>
       )}
 
-      {/* ── Lista ── */}
+      {/* ── Lançamentos ── */}
       <section aria-label="Lançamentos" className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="sgo-type-15 font-semibold text-ink-900">{dados.lancamentos.length} lançamento(s)</h2>
@@ -160,7 +221,7 @@ export function ConsolidacaoPagamentosClient({ dados, filtro }: { dados: Consoli
           <p className="rounded-card border border-dashed border-line p-4 text-sm text-ink-500">Nenhum Freelancer ou Hora Extra com esses filtros no período.</p>
         ) : visao === 'lancamento' ? (
           <div className="overflow-x-auto rounded-card border border-line">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[840px] text-sm">
               <thead className="bg-canvas text-left text-xs text-ink-500">
                 <tr>
                   <Th o="data" rotulo="Data" atual={ordem} dir={dir} onClick={ordenarPor} />
@@ -168,24 +229,28 @@ export function ConsolidacaoPagamentosClient({ dados, filtro }: { dados: Consoli
                   <Th o="tipo" rotulo="Tipo" atual={ordem} dir={dir} onClick={ordenarPor} />
                   <Th o="colaborador" rotulo="Colaborador" atual={ordem} dir={dir} onClick={ordenarPor} />
                   <th className="px-2 py-2 text-right font-semibold">Horas</th>
+                  <th className="px-2 py-2 font-semibold">Motivo</th>
                   <th className="px-2 py-2 text-right font-semibold">V.T.</th>
-                  <th className="px-2 py-2 text-right font-semibold">Valor</th>
+                  <Th o="valor" rotulo="Valor" atual={ordem} dir={dir} onClick={ordenarPor} direita />
                   <Th o="status" rotulo="Status" atual={ordem} dir={dir} onClick={ordenarPor} />
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {linhas.map((l) => <LinhaDoLancamento key={l.id} l={l} somando={entraNosTotais(l, filtro.status)} />)}
               </tbody>
+              <RodapeDeTotais resumo={r} colunas={9} colVt={6} />
             </table>
           </div>
         ) : (
           <div className="overflow-x-auto rounded-card border border-line">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="bg-canvas text-left text-xs text-ink-500">
                 <tr>
                   <th className="px-2 py-2 font-semibold">Colaborador</th>
-                  <th className="px-2 py-2 text-right font-semibold">Hora Extra</th>
+                  <th className="px-2 py-2 font-semibold">Unidade</th>
+                  <th className="px-2 py-2 text-right font-semibold">Lanç.</th>
                   <th className="px-2 py-2 text-right font-semibold">Freelancer</th>
+                  <th className="px-2 py-2 text-right font-semibold">Hora Extra</th>
                   <th className="px-2 py-2 text-right font-semibold">V.T.</th>
                   <th className="px-2 py-2 text-right font-semibold">Total</th>
                 </tr>
@@ -195,19 +260,52 @@ export function ConsolidacaoPagamentosClient({ dados, filtro }: { dados: Consoli
                   <PessoaComLancamentos key={p.chave} p={p} aberto={aberto === p.chave} alternar={() => setAberto(aberto === p.chave ? null : p.chave)} status={filtro.status} />
                 ))}
               </tbody>
+              <tfoot className="bg-sunken">
+                <tr className="border-t-2 border-line-strong font-semibold text-ink-900">
+                  <td className="px-2 py-2" colSpan={2}>TOTAL · {dados.porColaborador.length} pessoa(s)</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{r.solicitacoes}</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{formatBRL(r.valorFreelancer)}</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{formatBRL(r.valorHoraExtra)}</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{formatBRL(r.vt)}</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{formatBRL(r.total)}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
-        <p className="text-xs text-ink-500">Valor = o valor da solicitação, o mesmo pago na aba Pagar; o vale-transporte lançado já está dentro dele. Cada lançamento é uma linha — o mesmo colaborador em dias diferentes não é fundido.</p>
+        <p className="text-xs text-ink-500">
+          Valor = o valor da solicitação, o mesmo pago na aba Pagar. O vale-transporte lançado já está DENTRO dele — por isso o total geral é Freelancer + Hora Extra, sem somar o V.T. de novo.
+          Cada lançamento é uma linha: o mesmo colaborador em dias diferentes não é fundido.
+        </p>
       </section>
     </div>
   );
 }
 
-function Th({ o, rotulo, atual, dir, onClick }: { o: Ordem; rotulo: string; atual: Ordem; dir: 'asc' | 'desc'; onClick: (o: Ordem) => void }) {
+/** Os quatro totais no pé da tabela, somados pelo sistema (nada de calculadora). */
+function RodapeDeTotais({ resumo: r, colunas, colVt }: { resumo: Consolidacao['resumo']; colunas: number; colVt: number }) {
+  const linha = (rotulo: string, valor: number, emVt = false, forte = false) => (
+    <tr className={forte ? 'border-t-2 border-line-strong font-bold text-ink-900' : 'text-ink-700'}>
+      <td className="px-2 py-1.5 font-semibold" colSpan={colVt}>{rotulo}</td>
+      <td className="px-2 py-1.5 text-right tabular-nums">{emVt ? formatBRL(valor) : ''}</td>
+      <td className="px-2 py-1.5 text-right tabular-nums">{emVt ? '' : formatBRL(valor)}</td>
+      <td className="px-2 py-1.5" colSpan={colunas - colVt - 2} />
+    </tr>
+  );
+  return (
+    <tfoot className="bg-sunken">
+      {linha('TOTAL FREELANCER', r.valorFreelancer)}
+      {linha('TOTAL HORA EXTRA', r.valorHoraExtra)}
+      {linha('TOTAL VALE-TRANSPORTE (já dentro dos valores)', r.vt, true)}
+      {linha('TOTAL GERAL', r.total, false, true)}
+    </tfoot>
+  );
+}
+
+function Th({ o, rotulo, atual, dir, onClick, direita = false }: { o: Ordem; rotulo: string; atual: Ordem; dir: 'asc' | 'desc'; onClick: (o: Ordem) => void; direita?: boolean }) {
   const Icone = atual !== o ? ArrowUpDown : dir === 'asc' ? ArrowUp : ArrowDown;
   return (
-    <th className="px-2 py-2 font-semibold" aria-sort={atual === o ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}>
+    <th className={`px-2 py-2 font-semibold ${direita ? 'text-right' : ''}`} aria-sort={atual === o ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}>
       <button type="button" onClick={() => onClick(o)} className="inline-flex items-center gap-1 hover:text-ink-900">
         {rotulo} <Icone className="h-3 w-3" aria-hidden />
       </button>
@@ -226,6 +324,7 @@ function LinhaDoLancamento({ l, somando, recuo = false }: { l: Lancamento; soman
         {l.semVinculoRh && <span className="ml-1 text-xs text-warning" title="Lançada antes do vínculo com o RH: nome digitado">(nome digitado)</span>}
       </td>
       <td className="px-2 py-1.5 text-right tabular-nums">{textoHoras(l.horas)}</td>
+      <td className="max-w-[12rem] truncate px-2 py-1.5 text-ink-500" title={l.motivo ?? undefined}>{l.motivo ?? '–'}</td>
       <td className="px-2 py-1.5 text-right tabular-nums">{formatBRL(l.vt)}</td>
       <td className={`px-2 py-1.5 text-right font-semibold tabular-nums ${somando ? 'text-ink-900' : 'line-through'}`}>{formatBRL(l.valor)}</td>
       <td className="px-2 py-1.5"><StatusBadge tone={TOM_STATUS[l.status]}>{STATUS_TEXTO[l.status]}</StatusBadge></td>
@@ -242,17 +341,18 @@ function PessoaComLancamentos({ p, aberto, alternar, status }: { p: Consolidacao
           <button type="button" aria-expanded={aberto} className="inline-flex items-center gap-1 text-left font-medium text-ink-900">
             <Seta className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />
             {p.pessoa}
-            <span className="text-xs font-normal text-ink-500">· {p.lancamentos.length} lanç. · {p.unidades.join(', ')}</span>
           </button>
         </td>
-        <td className="px-2 py-1.5 text-right tabular-nums">{formatBRL(p.horaExtra)}</td>
+        <td className="px-2 py-1.5 text-ink-700">{p.unidades.join(', ')}</td>
+        <td className="px-2 py-1.5 text-right tabular-nums">{p.lancamentos.length}</td>
         <td className="px-2 py-1.5 text-right tabular-nums">{formatBRL(p.freelancer)}</td>
+        <td className="px-2 py-1.5 text-right tabular-nums">{formatBRL(p.horaExtra)}</td>
         <td className="px-2 py-1.5 text-right tabular-nums">{formatBRL(p.vt)}</td>
         <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-ink-900">{formatBRL(p.total)}</td>
       </tr>
       {aberto && (
         <tr>
-          <td colSpan={5} className="bg-canvas px-2 py-2">
+          <td colSpan={7} className="bg-canvas px-2 py-2">
             <table className="w-full text-sm">
               <tbody className="divide-y divide-line">
                 {p.lancamentos.map((l) => <LinhaDoLancamento key={l.id} l={l} somando={entraNosTotais(l, status)} recuo />)}
@@ -262,5 +362,43 @@ function PessoaComLancamentos({ p, aberto, alternar, status }: { p: Consolidacao
         </tr>
       )}
     </>
+  );
+}
+
+/* ───────────────────────── Recorrência ───────────────────────── */
+
+function VisaoRecorrencia({ dados }: { dados: Recorrencia }) {
+  const t = dados.totais;
+  return (
+    <div className="space-y-3">
+      <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-card border border-line bg-line sm:grid-cols-3" aria-label="Totais dos recorrentes">
+        <div className="bg-surface px-3 py-2"><dt className="sgo-type-11 font-semibold text-ink-500">Freelancers recorrentes</dt><dd className="sgo-type-17 font-bold tabular-nums text-warning">{t.freelancers}</dd></div>
+        <div className="bg-surface px-3 py-2"><dt className="sgo-type-11 font-semibold text-ink-500">Solicitações dos recorrentes</dt><dd className="sgo-type-17 font-bold tabular-nums text-ink-900">{t.solicitacoes}</dd></div>
+        <div className="bg-surface px-3 py-2"><dt className="sgo-type-11 font-semibold text-ink-500">Valor total dos recorrentes</dt><dd className="sgo-type-17 font-bold tabular-nums text-brand">{formatBRL(t.valor)}</dd></div>
+      </dl>
+      <p className="text-xs text-ink-500">
+        Recorrente = mais de {dados.limiteSemanal} solicitações do mesmo freelancer numa semana (segunda a domingo) — a mesma regra que avisa a supervisão ao lançar.
+        A contagem considera todas as unidades que você enxerga: o freelancer é o mesmo em qualquer unidade, e a coluna Unidade mostra onde ele trabalhou.
+      </p>
+      <Table
+        caption="Freelancers recorrentes por semana"
+        rows={dados.linhas}
+        getRowKey={(g) => g.chave}
+        empty={<p className="p-4 text-sm text-ink-500">Nenhum freelancer passou do limite semanal no período.</p>}
+        columns={[
+          { key: 'nome', header: 'Freelancer', cell: (g) => <span className="font-semibold text-ink-900">{g.nome}</span> },
+          { key: 'unidade', header: 'Unidade', cell: (g) => g.unidades.join(', ') },
+          { key: 'semana', header: 'Semana', width: '9rem', cell: (g) => `${emBR(g.semanaDe).slice(0, 5)} a ${emBR(g.semanaAte).slice(0, 5)}` },
+          { key: 'qtd', header: 'Solicitações na semana', numeric: true, width: '9rem', cell: (g) => g.solicitacoes },
+          { key: 'valor', header: 'Valor total', numeric: true, width: '8rem', cell: (g) => formatBRL(g.valor) },
+        ]}
+        footer={{
+          nome: `TOTAL · ${t.freelancers} freelancer(s)`,
+          semana: t.semanas !== t.freelancers ? `${t.semanas} semana(s)` : null,
+          qtd: t.solicitacoes,
+          valor: formatBRL(t.valor),
+        }}
+      />
+    </div>
   );
 }

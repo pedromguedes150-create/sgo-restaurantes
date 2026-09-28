@@ -33,12 +33,18 @@ export interface TableProps<T> {
   empty?: React.ReactNode;
   /** Descrição da tabela para leitor de tela. */
   caption?: string;
+  /**
+   * Linha de TOTAL no rodapé, por chave de coluna (v1.127.0). Toda tabela com
+   * dinheiro na tela deve somar sozinha — o pedido foi literal: "não quero
+   * precisar de calculadora". Coluna sem chave aqui fica vazia no rodapé.
+   */
+  footer?: Record<string, React.ReactNode>;
   className?: string;
 }
 
 const EMPTY = <span className="text-ink-500">–</span>;
 
-export function Table<T>({ columns, rows, getRowKey, onRowClick, empty, caption, className }: TableProps<T>) {
+export function Table<T>({ columns, rows, getRowKey, onRowClick, empty, caption, className, footer }: TableProps<T>) {
   if (rows.length === 0 && empty) {
     return <div className={cn('rounded-card border border-line bg-surface', className)}>{empty}</div>;
   }
@@ -97,6 +103,24 @@ export function Table<T>({ columns, rows, getRowKey, onRowClick, empty, caption,
             </tr>
           ))}
         </tbody>
+        {footer && (
+          <tfoot className="sticky bottom-0 bg-sunken">
+            <tr className="border-t-2 border-line-strong">
+              {columns.map((c) => (
+                <td
+                  key={c.key}
+                  className={cn(
+                    'px-3 py-2 font-semibold text-ink-900',
+                    c.numeric ? 'text-right tabular-nums' : 'text-left',
+                    c.hideOnMobile && 'hidden md:table-cell',
+                  )}
+                >
+                  {footer[c.key] ?? null}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   );

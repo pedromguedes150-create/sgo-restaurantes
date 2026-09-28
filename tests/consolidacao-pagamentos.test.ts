@@ -41,9 +41,16 @@ describe('períodos rápidos (pela data do serviço)', () => {
 
 describe('filtro na URL: a mesma leitura na tela, no PDF e no Excel', () => {
   it('ida e volta sem perder nada', () => {
-    const f = { periodo: 'personalizado' as const, de: '2026-09-01', ate: '2026-09-07', unitId: 'mo', tipo: 'OVERTIME' as const, status: 'APPROVED' as const, pessoa: 'C:joao' };
+    const f = { aba: 'financeiro' as const, periodo: 'personalizado' as const, de: '2026-09-01', ate: '2026-09-07', unitId: 'mo', tipo: 'OVERTIME' as const, status: 'APPROVED' as const, pessoa: 'C:joao' };
     expect(lerFiltro(new URLSearchParams(queryDoFiltro(f)))).toEqual(f);
   });
+  it('a aba de recorrência vai e volta pela URL (Excel e PDF sabem qual relatório gerar)', () => {
+    const f = lerFiltro(new URLSearchParams('aba=recorrencia&periodo=semana-passada'));
+    expect(f.aba).toBe('recorrencia');
+    expect(queryDoFiltro(f)).toBe('aba=recorrencia&periodo=semana-passada');
+    expect(lerFiltro(new URLSearchParams('aba=outra')).aba).toBe('financeiro');
+  });
+
   it('valor inválido cai no padrão, não em filtro vazio', () => {
     const f = lerFiltro(new URLSearchParams('periodo=xyz&tipo=MISC&status=ALGO&de=ontem'));
     expect(f).toMatchObject({ periodo: 'semana', tipo: 'TODOS', status: 'TODOS', de: undefined });
@@ -63,6 +70,13 @@ describe('totais: rejeitado não soma, a menos que se peça por ele', () => {
     expect(r).toMatchObject({ solicitacoes: 3, freelancers: 2, horasExtras: 1, vt: 12, valorFreelancer: 330, valorHoraExtra: 45, total: 375 });
     expect(r.fora).toEqual({ qtd: 1, valor: 99 });
     expect(r.pendentes).toEqual({ qtd: 1, valor: 180 });
+  });
+
+  it('solicitado, aprovado (a pagar) e pago separados — e a contagem por unidade', () => {
+    const r = resumir(xs, 'TODOS');
+    expect(r.porStatus).toEqual({ pendente: 180, aprovado: 195, pago: 0 });
+    expect(r.porStatus.pendente + r.porStatus.aprovado + r.porStatus.pago).toBe(r.total);
+    expect(porUnidade(xs, 'TODOS').map((u) => u.qtd)).toEqual([1, 2]); // KM13: 1 · Moreira: 2 (a rejeitada não conta)
   });
 
   it('pedir Rejeitado é pedir para somá-los', () => {
@@ -122,5 +136,6 @@ describe('cada lançamento continua rastreável', () => {
     expect(ordenar(xs, 'colaborador', 'asc').map((x) => x.id)).toEqual(['2', '1']);
     expect(ordenar(xs, 'tipo', 'asc').map((x) => x.id)).toEqual(['2', '1']);
     expect(ordenar(xs, 'status', 'asc').map((x) => x.id)).toEqual(['2', '1']);
+    expect(ordenar([l({ id: 'x', valor: 10 }), l({ id: 'y', valor: 90 })], 'valor', 'desc').map((x) => x.id)).toEqual(['y', 'x']);
   });
 });

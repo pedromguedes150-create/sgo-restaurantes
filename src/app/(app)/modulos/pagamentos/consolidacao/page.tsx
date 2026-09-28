@@ -5,7 +5,7 @@ import { permissoesEfetivasDoRequest } from '@/lib/permissions';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { Card, CardContent } from '@/components/ui/card';
 import { ConsolidacaoPagamentosClient } from '@/components/payments/consolidacao-pagamentos-client';
-import { getConsolidacaoPagamentos, lerFiltro } from '@/lib/payments/consolidacao';
+import { getConsolidacaoPagamentos, getRecorrenciaFreelancers, lerFiltro, unidadesDaConsolidacao } from '@/lib/payments/consolidacao';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,14 +25,18 @@ export default async function ConsolidacaoPagamentosPage({ searchParams }: { sea
   }
 
   const filtro = lerFiltro({ get: (k) => searchParams[k] ?? null });
-  const dados = await getConsolidacaoPagamentos(user, filtro);
+  /* Só a visão aberta é calculada: a outra custaria uma consulta à toa. */
+  const financeiro = filtro.aba === 'recorrencia' ? undefined : await getConsolidacaoPagamentos(user, filtro);
+  const recorrencia = filtro.aba === 'recorrencia' ? await getRecorrenciaFreelancers(user, filtro) : undefined;
+  const periodo = (financeiro ?? recorrencia)!.periodo;
+  const unidades = financeiro?.unidades ?? (await unidadesDaConsolidacao(user));
 
   return (
     <div className="space-y-4">
       <Link href="/modulos/pagamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pagamentos</Link>
-      <LargeTitle title="Consolidação de pagamentos" subtitle="Freelancers e Horas Extras do período, por unidade — para conferir e enviar ao Financeiro." />
+      <LargeTitle title="Consolidação de pagamentos" subtitle="Visão financeira (Freelancer + Hora Extra, para o Financeiro) e recorrência de freelancers (para a gestão)." />
       <Card><CardContent className="pt-4">
-        <ConsolidacaoPagamentosClient dados={dados} filtro={filtro} />
+        <ConsolidacaoPagamentosClient filtro={filtro} unidades={unidades} periodo={periodo} financeiro={financeiro} recorrencia={recorrencia} />
       </CardContent></Card>
     </div>
   );
