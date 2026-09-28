@@ -6,7 +6,8 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { resolveUnitFilter } from '@/lib/scope/unit-filter';
 import { getSelectedUnitId } from '@/lib/scope/selected-unit';
-import { getMyRequests, getToApprove, getToPay, getHistory, getMiscTypes, getPaymentCounts, LIMITE_DA_LISTA } from '@/lib/payments/query';
+import { getMyRequests, getToApprove, getToPay, getHistory, getUnitRequests, getMiscTypes, getPaymentCounts, LIMITE_DA_LISTA } from '@/lib/payments/query';
+import { activeOvertimeRatesByUnit } from '@/lib/overtime/rates';
 import { listSuppliers } from '@/lib/suppliers';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -70,6 +71,7 @@ function toDTO(r: ReqRow): PayReq {
       workSectorName: r.workSector?.name ?? null,
       collaboratorId: r.collaboratorId ?? null,
       collaboratorName: r.collaboratorName ?? null,
+      hourlyRate: r.hourlyRate != null ? Number(r.hourlyRate) : null,
       reason: r.reason ?? null,
       beneficiary: r.beneficiary ?? null,
       description: r.description ?? null,
@@ -103,7 +105,10 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
   const doFiltro = filtro.all ? undefined : filtro.ids;
   const filtradoPor = filtro.all ? [] : units.filter((u) => filtro.ids.includes(u.id)).map((u) => u.name);
 
-  const [mine, toApprove, toPay, history, totais, miscTypes, freelancers, suppliers, sectors, vinculos] = await Promise.all([
+  /* GERENTE (v1.130.0): a tela dele é Nova · Minhas · Solicitações da unidade.
+     A lista da unidade só é carregada para ele — o Supervisor segue igual. */
+  const isManagerView = user.role === 'MANAGER';
+  const [mine, toApprove, toPay, history, totais, miscTypes, freelancers, suppliers, sectors, vinculos, unitRequests, overtimeRatesByUnit] = await Promise.all([
     getMyRequests(user, doFiltro),
     getToApprove(user, doFiltro),
     getToPay(user, doFiltro),
@@ -123,6 +128,9 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
       select: { unitId: true, collaborator: { select: { id: true, name: true, jobTitle: true } } },
       orderBy: { collaborator: { name: 'asc' } },
     }),
+    isManagerView ? getUnitRequests(user, doFiltro) : Promise.resolve([]),
+    // Valores/hora AUTORIZADOS de hora extra, por unidade (só os ativos).
+    activeOvertimeRatesByUnit(idsAcessiveis),
   ]);
   const collaboratorsByUnit: Record<string, { id: string; name: string; jobTitle: string | null }[]> = {};
   for (const v of vinculos) (collaboratorsByUnit[v.unitId] ??= []).push(v.collaborator);
@@ -158,6 +166,9 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
             suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
             sectors={sectors}
             collaboratorsByUnit={collaboratorsByUnit}
+            overtimeRatesByUnit={overtimeRatesByUnit}
+            isManagerView={isManagerView}
+            unitRequests={(unitRequests as ReqRow[]).map(toDTO)}
             filtradoPor={filtradoPor}
             freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, defaultValue: Number(f.defaultValue), unitIds: f.units.map((u) => u.unitId), sectorRates: f.sectorRates.map((r) => ({ sectorName: r.sectorName, dayValue: Number(r.dayValue) })) }))}
             mine={(mine as ReqRow[]).map(toDTO)}

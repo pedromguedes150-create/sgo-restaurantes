@@ -2,15 +2,10 @@ import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import type { DayType } from '@prisma/client';
+import { horasEntre } from '@/lib/overtime/calculo';
 
-/** Minutos entre duas horas HH:MM (vira a meia-noite se fim < início). */
-function hoursBetween(start: string, end: string): number {
-  const m = (s: string) => { const x = /^(\d{1,2}):(\d{2})$/.exec(s.trim()); return x ? Number(x[1]) * 60 + Number(x[2]) : null; };
-  const a = m(start), b = m(end);
-  if (a == null || b == null) return 0;
-  const diff = b >= a ? b - a : b + 24 * 60 - a;
-  return Math.round((diff / 60) * 100) / 100;
-}
+/** Horas entre HH:MM (vira a meia-noite se fim < início). A conta mora em `overtime/calculo.ts`, compartilhada com a Hora Extra (v1.130.0). */
+const hoursBetween = horasEntre;
 
 /** Tipo de dia de uma data (yyyy-mm-dd): feriado > fim de semana > dia útil. */
 export async function resolveDayType(dateISO: string): Promise<DayType> {

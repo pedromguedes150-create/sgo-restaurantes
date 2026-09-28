@@ -5,6 +5,8 @@ import { notifyUnitRole, notifyRole } from '@/lib/notifications';
 import { avaliarRecorrencia, avisarRecorrencia, type Recorrencia } from '@/lib/payments/recorrencia';
 import type { SessionUser } from '@/lib/auth/session';
 import type { PaymentType, Role } from '@prisma/client';
+import { calcularHoraExtra, horarioValido } from '@/lib/overtime/calculo';
+import { overtimeRateAllowed } from '@/lib/overtime/rates';
 
 export interface CreatePaymentInput {
   type: PaymentType;
@@ -29,6 +31,8 @@ export interface CreatePaymentInput {
   collaboratorId?: string;
   /** Ignorado na criação: o nome vem do cadastro do colaborador, nunca do corpo. */
   collaboratorName?: string;
+  /** Valor/hora ESCOLHIDO entre os autorizados da unidade (v1.130.0) — obrigatório na Hora Extra. */
+  hourlyRate?: number;
   reason?: string;
   // misc
   miscTypeId?: string;
@@ -82,11 +86,25 @@ export async function createPaymentRequest(
      servidor, qualquer cliente antigo recriaria o problema por fora. */
   let collaboratorId: string | null = null;
   let collaboratorName: string | null = null;
+  /* HORA EXTRA por PERÍODO (v1.130.0): o gerente informa início e fim e ESCOLHE
+     o valor/hora entre os autorizados da unidade; horas, subtotal e total são
+     calculados AQUI (o valor do corpo é ignorado). O valor/hora fica gravado na
+     solicitação — mudar a configuração depois não reescreve o passado. */
+  let hourlyRate: number | null = null;
+  let heCalc: ReturnType<typeof calcularHoraExtra> | null = null;
   if (input.type === 'OVERTIME') {
     const r = await colaboradorDaUnidade(input.collaboratorId, input.unitId);
     if (!r.ok) return { ok: false, reason: 'INVALID', detail: r.detail };
     collaboratorId = r.id;
     collaboratorName = r.name;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.workDate ?? '')) return { ok: false, reason: 'INVALID', detail: 'Informe a data da hora extra.' };
+    if (!horarioValido(input.workStartTime) || !horarioValido(input.workEndTime)) return { ok: false, reason: 'INVALID', detail: 'Informe hora início e hora fim.' };
+    if (!(Number(input.hourlyRate) > 0) || !(await overtimeRateAllowed(input.unitId, Number(input.hourlyRate)))) {
+      return { ok: false, reason: 'INVALID', detail: 'Escolha um valor/hora autorizado para esta unidade (Configurações → Valor da hora extra).' };
+    }
+    hourlyRate = Math.round(Number(input.hourlyRate) * 100) / 100;
+    heCalc = calcularHoraExtra({ inicio: input.workStartTime!, fim: input.workEndTime!, valorHora: hourlyRate, vt: input.transportValue });
+    if (!(heCalc.horas > 0)) return { ok: false, reason: 'INVALID', detail: 'O período precisa ter pelo menos alguns minutos.' };
   }
 
   // Freelancer: se houver valor/hora cadastrado p/ a unidade+tipo de dia, o valor
@@ -120,8 +138,9 @@ export async function createPaymentRequest(
       const fr = await prisma.freelancer.findUnique({ where: { id: input.freelancerId }, select: { defaultValue: true } });
       if (fr) { standardValue = Number(fr.defaultValue); divergent = Math.abs(standardValue - effectiveAmount) > 0.001; }
     }
-  } else if (input.type === 'OVERTIME' && transportValue) {
-    effectiveAmount = input.amount + transportValue;
+  } else if (input.type === 'OVERTIME' && heCalc) {
+    effectiveAmount = heCalc.total;
+    effectiveHours = heCalc.horas;
   }
   if (!effectiveAmount || effectiveAmount <= 0) return { ok: false, reason: 'INVALID', detail: 'Informe o valor.' };
 
@@ -142,8 +161,9 @@ export async function createPaymentRequest(
       shift: input.shift || null,
       hours: effectiveHours,
       transportValue,
-      workStartTime: input.type === 'FREELANCER' ? (input.workStartTime?.trim() || null) : null,
-      workEndTime: input.type === 'FREELANCER' ? (input.workEndTime?.trim() || null) : null,
+      workStartTime: input.type === 'FREELANCER' || input.type === 'OVERTIME' ? (input.workStartTime?.trim() || null) : null,
+      workEndTime: input.type === 'FREELANCER' || input.type === 'OVERTIME' ? (input.workEndTime?.trim() || null) : null,
+      hourlyRate,
       workSectorId,
       coverageSector,
       collaboratorId,

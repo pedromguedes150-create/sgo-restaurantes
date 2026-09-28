@@ -36,6 +36,8 @@ export const ABAS: Record<string, AbaDef[]> = {
     { id: 'aprovar', key: 'PAYMENTS_TAB_APPROVE', label: 'Aprovar' },
     { id: 'pagar', key: 'PAYMENTS_TAB_PAY', label: 'Pagar' },
     { id: 'historico', key: 'PAYMENTS_TAB_HISTORY', label: 'Histórico', soVer: true },
+    // v1.130.0 — a visão do GERENTE: tudo da unidade selecionada, de qualquer solicitante
+    { id: 'unidade', key: 'PAYMENTS_TAB_UNIT', label: 'Solicitações da unidade', soVer: true },
   ],
 
   NOTES: [

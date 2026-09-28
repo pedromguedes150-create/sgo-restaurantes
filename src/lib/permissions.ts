@@ -149,6 +149,7 @@ const BASE: ModuleDef[] = [
   { key: 'CONFIG_TICKET_MEDIA', label: 'Ticket Médio (unidades participantes)', nav: '/configuracoes/ticket-medio', parent: 'CONFIG' },
   { key: 'CONFIG_PAYMENTS', label: 'Pagamentos (freelancers e avulsos)', nav: '/configuracoes/pagamentos', parent: 'CONFIG' },
   { key: 'CONFIG_FREELANCER_RATES', label: 'Valor do freelancer por setor', nav: '/configuracoes/freelancer-valores', parent: 'CONFIG' },
+  { key: 'CONFIG_OVERTIME_RATES', label: 'Valor da hora extra por unidade', nav: '/configuracoes/hora-extra-valores', parent: 'CONFIG' },
   { key: 'CONFIG_INTEGRATIONS', label: 'APIs e integrações', nav: '/configuracoes/integracoes', parent: 'CONFIG' },
   { key: 'CONFIG_RH_DIAG', label: 'Diagnóstico do RH', nav: '/configuracoes/integracoes/diagnostico', parent: 'CONFIG_INTEGRATIONS' },
 ];

@@ -74,7 +74,7 @@ describe('Fechando uma aba', () => {
     expect(podeAba(acesso, 'pagar')).toBe(true);
     /* Abrir numa aba fechada mostraria a tela vazia e pareceria defeito. */
     expect(abaInicial(acesso, 'PAYMENTS', 'nova')).toBe('minhas');
-    expect(abasVisiveis(acesso, 'PAYMENTS')).toHaveLength(4);
+    expect(abasVisiveis(acesso, 'PAYMENTS')).toHaveLength(5);
   });
 
   it('e o servidor recusa a gravação da aba fechada', async () => {

@@ -35,6 +35,8 @@ beforeAll(async () => {
   maria = await colab('Maria Souza', unitA);
   deB = await colab('Carlos Lima', unitB);
   inativo = await colab('Desligado', unitA, false);
+  // v1.130.0: HE é por período com valor/hora AUTORIZADO — 1h × valor = o amount que cada caso espera
+  await prisma.overtimeHourlyRate.createMany({ data: [10, 45, 50, 75, 80, 999].map((value) => ({ unitId: unitA, value })) });
 });
 
 afterAll(async () => {
@@ -47,11 +49,11 @@ afterAll(async () => {
 });
 
 const he = (p: { collaboratorId?: string; workDate?: string; amount?: number; unitId?: string }) =>
-  createPaymentRequest(gerenteA(), { type: 'OVERTIME', unitId: p.unitId ?? unitA, amount: p.amount ?? 45, hours: 2, reason: 'Evento', collaboratorId: p.collaboratorId, workDate: p.workDate });
+  createPaymentRequest(gerenteA(), { type: 'OVERTIME', unitId: p.unitId ?? unitA, amount: p.amount ?? 45, workStartTime: '18:00', workEndTime: '19:00', hourlyRate: p.amount ?? 45, reason: 'Evento', collaboratorId: p.collaboratorId, workDate: p.workDate });
 
 describe('Hora Extra escolhe o colaborador do RH', () => {
   it('grava o vínculo e CONGELA o nome do cadastro — nunca o nome digitado', async () => {
-    const r = await createPaymentRequest(gerenteA(), { type: 'OVERTIME', unitId: unitA, amount: 45, hours: 2, collaboratorId: joao, collaboratorName: 'joao digitado errado', workDate: '2026-09-28' });
+    const r = await createPaymentRequest(gerenteA(), { type: 'OVERTIME', unitId: unitA, amount: 45, workStartTime: '18:00', workEndTime: '19:00', hourlyRate: 45, collaboratorId: joao, collaboratorName: 'joao digitado errado', workDate: '2026-09-28' });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const row = await prisma.paymentRequest.findUniqueOrThrow({ where: { id: r.id } });
