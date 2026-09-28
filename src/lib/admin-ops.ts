@@ -222,8 +222,11 @@ export async function deleteMedicalCertificate(user: SessionUser, id: string, ct
   if (c.type !== 'HOURS') {
     const [ys, ms, ds] = c.startDate.split('-').map(Number);
     const [ye, me, de] = c.endDate.split('-').map(Number);
+    /* Os dias são gravados ao MEIO-DIA UTC (`dayUTC` da Escala): o limite de
+       cima precisa ir até o fim do último dia, senão o último dia do atestado
+       ficava marcado para sempre. E sem `unitId`: o Realizado é da pessoa. */
     await prisma.scheduleActual.deleteMany({
-      where: { collaboratorId: c.collaboratorId, unitId: c.unitId, status: 'ATESTADO', date: { gte: new Date(Date.UTC(ys, ms - 1, ds)), lte: new Date(Date.UTC(ye, me - 1, de)) } },
+      where: { collaboratorId: c.collaboratorId, status: 'ATESTADO', date: { gte: new Date(Date.UTC(ys, ms - 1, ds)), lte: new Date(Date.UTC(ye, me - 1, de, 23, 59, 59)) } },
     });
   }
   await audit({ userId: user.id, unitId: c.unitId, action: 'CERTIFICATE_DELETE', module: 'PEOPLE', entity: 'medical_certificate', entityId: id, metadata: { start: c.startDate, end: c.endDate, days: c.days }, ...ctx });

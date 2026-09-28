@@ -228,7 +228,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                 planejar — e planejar é o que o PLANEJADO faz sozinho. Aqui o
                 que se faz é registrar presença, e o nome tem de dizer isso. */}
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Completar os dias VAZIOS do Realizado com o Planejado?\n\nO que você já marcou não é tocado.')) postJson({ action: 'fill', unitId: selectedUnitId, year, month, mode: 'empty' }); }}><Wand2 className="h-4 w-4" /> Completar dias vazios</Button>
-            <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Copiar TODO o Planejado para o Realizado do mês?\n\nISTO SOBRESCREVE o que já foi marcado — faltas, atestados e férias do mês serão substituídos pelo previsto.')) postJson({ action: 'fill', unitId: selectedUnitId, year, month, mode: 'all' }); }}><CopyCheck className="h-4 w-4" /> Puxar Realizado = Planejado</Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Copiar TODO o Planejado para o Realizado do mês?\n\nISTO SOBRESCREVE o que já foi marcado — faltas, atrasos e férias do mês serão substituídos pelo previsto. Dias com ATESTADO lançado na Central de Atestados ficam como estão (para tirar, exclua o atestado).')) postJson({ action: 'fill', unitId: selectedUnitId, year, month, mode: 'all' }); }}><CopyCheck className="h-4 w-4" /> Puxar Realizado = Planejado</Button>
             <Button size="sm" variant="outline" onClick={() => setShowAbsence((v) => !v)}><CalendarPlus className="h-4 w-4" /> Registrar ausência</Button>
           </>
         )}
