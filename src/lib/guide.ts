@@ -438,6 +438,9 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Em Configurações → APIs & Integrações: API do RH (consumo), endpoints de recepção RH→SGO (URLs para colar no painel do RH) e webhook de férias SGO→RH.',
           'API DO RH v2 (v1.112.0): cartão próprio "API do RH — v2 (em preparação)" com a base, a chave mascarada e o botão "Testar conexão v2". O teste roda no servidor do SGO e mostra só o status, o tempo e os NOMES dos campos da resposta — nunca os dados. Enquanto a v2 não for validada, a sincronização continua na v1; nada muda no dia a dia.',
+          'API GLOBAL DO SGO (v1.129.0): o cartão "API Global do SGO" no topo da central é a porta para os OUTROS sistemas da empresa (RH, Financeiro, Estoque, Compras, BI…) consultarem o SGO. URL base: https://sgorestaurantesgbf.com.br/api/v1. Cada sistema recebe a SUA chave — "Criar nova chave", dê o nome do sistema e copie a chave na hora: ela aparece uma única vez; depois só a versão mascarada. Guarde-a no .env do sistema que vai chamar o SGO.',
+          'COMO OUTRO SISTEMA CHAMA: toda requisição leva o header X-API-Key com a chave. Teste: GET /api/v1/status responde {"status":"ok","service":"SGO","api_version":"v1"}. Sem chave ou chave errada/desativada/revogada: HTTP 401. Desativar PAUSA o sistema (reversível); Revogar é definitivo — para reconectar, crie outra chave. Tudo entra na Auditoria.',
+          'REGISTRO DAS CHAMADAS: "Últimas chamadas" mostra sistema, endpoint, data/hora, status e tempo de cada chamada — a chave nunca aparece nem é gravada (no banco fica só um hash). As integrações do RH (token no .env, /api/integracoes) continuam separadas e iguais: a chave da API Global não abre a recepção do RH, e vice-versa.',
           'Os tokens aparecem mascarados; os valores completos ficam no .env do servidor.',
           'A lista "Últimos eventos" mostra tudo que entrou/saiu (admissões, desligamentos, webhooks de férias) com status.',
         ],
@@ -915,6 +918,9 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Em Configurações → APIs & Integrações: API do RH (consumo), endpoints de recepção RH→SGO (URLs para colar no painel do RH) e webhook de férias SGO→RH.',
           'API DO RH v2 (v1.112.0): cartão próprio "API do RH — v2 (em preparação)" com a base, a chave mascarada e o botão "Testar conexão v2". O teste roda no servidor do SGO e mostra só o status, o tempo e os NOMES dos campos da resposta — nunca os dados. Enquanto a v2 não for validada, a sincronização continua na v1; nada muda no dia a dia.',
+          'API GLOBAL DO SGO (v1.129.0): o cartão "API Global do SGO" no topo da central é a porta para os OUTROS sistemas da empresa (RH, Financeiro, Estoque, Compras, BI…) consultarem o SGO. URL base: https://sgorestaurantesgbf.com.br/api/v1. Cada sistema recebe a SUA chave — "Criar nova chave", dê o nome do sistema e copie a chave na hora: ela aparece uma única vez; depois só a versão mascarada. Guarde-a no .env do sistema que vai chamar o SGO.',
+          'COMO OUTRO SISTEMA CHAMA: toda requisição leva o header X-API-Key com a chave. Teste: GET /api/v1/status responde {"status":"ok","service":"SGO","api_version":"v1"}. Sem chave ou chave errada/desativada/revogada: HTTP 401. Desativar PAUSA o sistema (reversível); Revogar é definitivo — para reconectar, crie outra chave. Tudo entra na Auditoria.',
+          'REGISTRO DAS CHAMADAS: "Últimas chamadas" mostra sistema, endpoint, data/hora, status e tempo de cada chamada — a chave nunca aparece nem é gravada (no banco fica só um hash). As integrações do RH (token no .env, /api/integracoes) continuam separadas e iguais: a chave da API Global não abre a recepção do RH, e vice-versa.',
           'Os tokens aparecem mascarados; os valores completos ficam no .env do servidor.',
           'A lista "Últimos eventos" mostra tudo que entrou/saiu (admissões, desligamentos, webhooks de férias) com status.',
         ],

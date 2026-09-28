@@ -13,12 +13,14 @@ import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/auth/cookies';
 // token Bearer DENTRO da rota (RH_INBOUND_TOKEN) — sem cookie de sessão.
 // '/checklists' e '/api/checklists/public' = fichas preenchidas por link, SEM login
 // (a config em /configuracoes/fichas e a API /api/checklist-forms seguem protegidas).
+// '/api/v1' = API GLOBAL do SGO (v1.129.0), máquina-a-máquina, autenticada por
+// X-API-Key DENTRO da rota (`comApiKey`): chave por sistema, hash no banco.
 // '/dev' = páginas de referência do design system (dev-only; cada página faz
 // notFound() em produção, então liberá-las do login não expõe nada em prod).
 // '/pizzas' e '/api/pizzas' = fechamento de pizzas preenchido por link interno,
 // SEM login (a unidade vem do token da URL). O painel em /modulos/pizzas e o
 // resto do módulo seguem protegidos.
-const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health', '/api/integracoes', '/higiene', '/api/higiene', '/checklists', '/api/checklists/public', '/pizzas', '/api/pizzas', '/dev'];
+const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health', '/api/integracoes', '/api/v1', '/higiene', '/api/higiene', '/checklists', '/api/checklists/public', '/pizzas', '/api/pizzas', '/dev'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
