@@ -1341,6 +1341,22 @@ export const GUIDE: GuideSection[] = [
         tips: ['Nos dias marcados como folga/férias, os checklists não aparecem na tela do gerente (ele ainda pode entrar no sistema).'],
       },
       {
+        id: 'controle-gerentes',
+        title: 'Controle de gerentes (consulta por unidade e da rede)',
+        roles: ['SUPERVISOR', 'ADMIN', 'CEO'],
+        summary: 'Quem está de folga hoje, nesta semana e no mês — cada unidade com a SUA escala.',
+        steps: [
+          'PESSOAS → Controle de gerentes. Em "Por unidade", escolha a UNIDADE e o MÊS/ANO (setas < agosto | outubro > andam um mês sem sair da unidade).',
+          'O resumo mostra Gerentes ativos, Folgas no mês, Folgas nesta semana (segunda a domingo) e quantos gerentes tiram Férias no mês.',
+          '"Quem está de folga": toque em Hoje, Esta semana, Próxima semana ou Mês. A lista vem dia a dia e o dia sem ninguém de folga aparece como "Nenhuma folga".',
+          '"Escala do mês" → Grade: um gerente por linha, um dia por coluna. F = folga · FE = férias · – = sem folga. A coluna vermelha é dia sem nenhum gerente trabalhando na unidade.',
+          '"Escala do mês" → Calendário: toque no dia para ver quem está fora e o status (ex.: 30/09/2026 · Krislley — Status: Folga).',
+          '"Visão da rede": cada unidade no SEU bloco, com as folgas do período escolhido. Não é uma escala única — gerente de uma unidade nunca aparece como cobertura de outra. Toque no nome da unidade para abrir a grade dela.',
+          'PDF para a diretoria: no fim da tela, escolha a unidade ou "Todas as unidades" e toque em "Gerar escala mensal PDF". Em "Todas", cada unidade sai no seu quadro numerado, uma por página.',
+        ],
+        tips: ['Esta tela é só de consulta. Folga, férias e horário continuam sendo lançados em PESSOAS → Escala de gerentes.'],
+      },
+      {
         id: 'escala-cadastro',
         title: 'Escala — cadastrar o padrão',
         roles: MANAGERLINE,

@@ -1,115 +1,146 @@
-﻿import Link from 'next/link';
+import { FileText } from 'lucide-react';
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { getSessionUser } from '@/lib/auth/session';
 import { permissoesEfetivasDoRequest } from '@/lib/permissions';
-import { getTeamLeaves } from '@/lib/manager-area';
-import { getManagerCoverageCalendar } from '@/lib/manager-schedule';
-import { ManagerCalendar } from '@/components/people/manager-calendar';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { SegmentedNav } from '@/components/ui/ds/segmented-nav';
-import { PeriodPicker } from '@/components/ui/ds/period-picker';
-import { List, ListRow } from '@/components/ui/ds/list-row';
-import { StatusBadge } from '@/components/ui/ds/status-badge';
-import { EmptyState } from '@/components/ui/ds/empty-state';
-import { shortUnitName } from '@/lib/unit-name';
-import { CalendarOff } from 'lucide-react';
+import { ControleGerentesClient } from '@/components/people/controle-gerentes-client';
+import { gerentesPorUnidade, hojeNaOperacao, unidadesDoControle } from '@/lib/controle-gerentes-dados';
+import {
+  MESES, PERIODOS, ROTULO, ausenciasNoPeriodo, diasDoMes, ehPeriodo, intervaloDoPeriodo, semanaDe, somarDias, textoDoIntervalo, ddmm,
+  type Periodo,
+} from '@/lib/controle-gerentes';
 
 export const dynamic = 'force-dynamic';
 
-function monthRange(): { start: string; end: string } {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  return { start: iso(start), end: iso(end) };
-}
-const fmtBR = (iso: string) => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
-const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-
-export default async function FolgasEquipePage({ searchParams }: { searchParams: { start?: string; end?: string; view?: string; ano?: string; mes?: string } }) {
+/**
+ * CONTROLE DE GERENTES.
+ *
+ * A UNIDADE controla, a REDE só consolida. "Por unidade" mostra os gerentes
+ * daquela unidade — resumo, quem folga hoje/esta semana/próxima, a grade do mês
+ * e o calendário. "Visão da rede" empilha as unidades, cada uma no seu bloco:
+ * não é uma escala única, e nenhum gerente aparece fora da unidade dele.
+ *
+ * Só leitura: o lançamento de folga, férias e horário segue na Escala de
+ * gerentes. Os registros são os mesmos (`ManagerLeave`, `ManagerWorkSchedule`).
+ */
+export default async function ControleDeGerentesPage({
+  searchParams,
+}: {
+  searchParams: { visao?: string; unit?: string; ano?: string; mes?: string; periodo?: string };
+}) {
   const user = (await getSessionUser())!;
   const perms = await permissoesEfetivasDoRequest(user.role);
   if (!perms.LEAVES_TEAM?.canView) {
     return <p className="text-sm text-ink-500">Acesso restrito. O Controle de gerentes é liberado pela Supervisão/Administração (Configurações → Perfis de acesso).</p>;
   }
 
-  const isCal = searchParams.view === 'calendario';
-  const now = new Date();
-  const year = Number(searchParams.ano) || now.getFullYear();
-  const month = Math.min(12, Math.max(1, Number(searchParams.mes) || now.getMonth() + 1));
-  const prevM = month === 1 ? { a: year - 1, m: 12 } : { a: year, m: month - 1 };
-  const nextM = month === 12 ? { a: year + 1, m: 1 } : { a: year, m: month + 1 };
+  const units = await unidadesDoControle(user);
+  const hoje = hojeNaOperacao();
+  const year = Number(searchParams.ano) || Number(hoje.slice(0, 4));
+  const month = Math.min(12, Math.max(1, Number(searchParams.mes) || Number(hoje.slice(5, 7))));
+  const rede = searchParams.visao === 'rede';
+  const base = `ano=${year}&mes=${month}`;
 
   const header = (
     <div className="space-y-3">
-      <LargeTitle
-        title="Controle de gerentes"
-        subtitle="Folgas, férias e cobertura de gerência por unidade. Escopo: suas unidades."
-      />
+      <LargeTitle title="Controle de gerentes" subtitle="Folgas e férias de gerência — cada unidade com a sua escala." />
       <FamilyTabs active="/modulos/folgas-equipe" />
       <SegmentedNav
         aria-label="Visão"
-        value={isCal ? 'calendario' : 'folgas'}
+        value={rede ? 'rede' : 'unidade'}
         options={[
-          { value: 'folgas', label: 'Folgas / férias', href: '/modulos/folgas-equipe' },
-          { value: 'calendario', label: 'Calendário de gerentes', href: '/modulos/folgas-equipe?view=calendario' },
+          { value: 'unidade', label: 'Por unidade', href: `/modulos/folgas-equipe?${base}${searchParams.unit ? `&unit=${searchParams.unit}` : ''}` },
+          { value: 'rede', label: 'Visão da rede', href: `/modulos/folgas-equipe?visao=rede&${base}` },
         ]}
       />
     </div>
   );
 
-  if (isCal) {
-    const cal = await getManagerCoverageCalendar(user, year, month);
+  if (units.length === 0) {
+    return <div className="space-y-4">{header}<p className="text-sm text-ink-500">Nenhuma unidade vinculada.</p></div>;
+  }
+
+  /* ─────────────────── Visão da rede: consolidada, NUNCA misturada ─────────────────── */
+  if (rede) {
+    const periodo: Periodo = ehPeriodo(searchParams.periodo) ? searchParams.periodo : 'semana';
+    const { de, ate } = intervaloDoPeriodo(periodo, hoje, year, month);
+    const porUnidade = await gerentesPorUnidade(units.map((u) => u.id), de, ate);
+    const titulo = periodo === 'hoje' ? `Folgas de hoje (${ddmm(hoje)})`
+      : periodo === 'mes' ? `Folgas de ${MESES[month - 1]}/${year}`
+      : `Folgas ${periodo === 'semana' ? 'desta semana' : 'da próxima semana'} (${ddmm(de)} a ${ddmm(ate)})`;
+
     return (
       <div className="space-y-4">
         {header}
-        <div className="flex items-center justify-between rounded-lg border border-dashed p-2">
-          <Link href={`/modulos/folgas-equipe?view=calendario&ano=${prevM.a}&mes=${prevM.m}`} className="rounded-lg border px-3 py-1.5 text-sm font-semibold">← anterior</Link>
-          <span className="text-sm font-bold text-ink-900">{MONTHS[month - 1]} de {year}</span>
-          <Link href={`/modulos/folgas-equipe?view=calendario&ano=${nextM.a}&mes=${nextM.m}`} className="rounded-lg border px-3 py-1.5 text-sm font-semibold">próximo →</Link>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <SegmentedNav
+            aria-label="Período"
+            value={periodo}
+            options={PERIODOS.map((p) => ({ value: p.value, label: p.label, href: `/modulos/folgas-equipe?visao=rede&${base}&periodo=${p.value}` }))}
+          />
+          <a
+            href={`/modulos/folgas-equipe/relatorio?${base}&unit=todas&imprimir=1`} target="_blank" rel="noreferrer"
+            className="sgo-control inline-flex h-9 items-center gap-1 rounded-control bg-brand px-3 text-sm font-semibold text-on-brand hover:bg-brand-hover"
+          >
+            <FileText className="h-4 w-4" /> Escala mensal PDF — todas as unidades
+          </a>
         </div>
-        <p className="text-xs text-ink-500">Baseado no horário de trabalho que cada gerente cadastra em <b>Minha área → Folgas / férias</b>, menos folgas e férias. Dias em vermelho = unidade sem gerente (realocar reserva).{user.role === 'ADMIN' || user.role === 'CEO' ? ' Como admin, você pode cadastrar/editar o horário de cada gerente clicando em “Editar horário”.' : ''}</p>
-        <ManagerCalendar data={cal} isAdmin={user.role === 'ADMIN' || user.role === 'CEO'} />
+        <p className="sgo-type-13 font-semibold text-ink-900">{titulo} — rede</p>
+        <p className="text-xs text-ink-500">Consolidado: cada unidade continua com a sua escala. Clique na unidade para abrir a grade e o calendário dela.</p>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {units.map((u) => {
+            const gerentes = porUnidade.get(u.id) ?? [];
+            const itens = ausenciasNoPeriodo(gerentes, de, ate);
+            return (
+              <section key={u.id} className="rounded-card border border-line bg-surface p-3">
+                <div className="mb-2 flex items-baseline justify-between gap-2">
+                  <a href={`/modulos/folgas-equipe?${base}&unit=${u.id}`} className="sgo-type-13 font-semibold text-brand hover:underline">{u.name}</a>
+                  <span className="text-xs text-ink-500">{gerentes.length} gerente(s)</span>
+                </div>
+                {itens.length === 0 ? (
+                  <p className="text-sm text-ink-500">Nenhuma folga ou férias no período.</p>
+                ) : (
+                  <ul className="divide-y divide-line">
+                    {itens.map((it, i) => (
+                      <li key={`${it.userId}-${i}`} className="flex items-center justify-between gap-2 py-1 text-sm">
+                        <span className="min-w-0 truncate"><b className="text-ink-900">{it.name}</b> — {textoDoIntervalo(it.de, it.ate)}</span>
+                        <span className={`shrink-0 rounded-pill px-2 py-0.5 text-xs font-semibold ${it.kind === 'FERIAS' ? 'bg-info/15 text-info' : 'bg-brand/15 text-brand'}`}>{ROTULO[it.kind]}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            );
+          })}
+        </div>
       </div>
     );
   }
 
-  const def = monthRange();
-  const re = /^\d{4}-\d{2}-\d{2}$/;
-  const start = re.test(searchParams.start ?? '') ? searchParams.start! : def.start;
-  const end = re.test(searchParams.end ?? '') && searchParams.end! >= start ? searchParams.end! : def.end;
-
-  const data = await getTeamLeaves(user, start, end);
+  /* ─────────────────── Por unidade: a unidade controla ─────────────────── */
+  const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
+  const mes = diasDoMes(year, month);
+  const proxima = semanaDe(somarDias(semanaDe(hoje).ate, 1));
+  /* Uma consulta cobre tudo que a tela mostra: o mês escolhido, os últimos 7
+     dias (alerta de folga) e esta semana + a próxima, que contam a partir de hoje. */
+  const de = [mes[0].iso, somarDias(hoje, -7)].sort()[0];
+  const ate = [mes[mes.length - 1].iso, proxima.ate].sort()[1];
+  const gerentes = (await gerentesPorUnidade([selected.id], de, ate)).get(selected.id) ?? [];
 
   return (
     <div className="space-y-4">
       {header}
-
-      {/* Período por ATALHO: o gestor quase sempre quer "este mês" ou "próximos
-          30 dias" — digitar duas datas para isso era trabalho à toa. O intervalo
-          exato continua acessível em "Escolher datas". */}
-      <PeriodPicker start={start} end={end} basePath="/modulos/folgas-equipe" />
-
-      <p className="text-xs tabular-nums text-ink-500">{data.total} registro(s) entre {fmtBR(start)} e {fmtBR(end)}.</p>
-
-      {data.groups.length === 0 && (
-        <EmptyState icon={CalendarOff} title="Nenhuma folga ou férias no período" description="Troque o período acima para ver outros registros." />
-      )}
-      {data.groups.map((g) => (
-        <section key={g.unit}>
-          <p className="sgo-type-11 mb-2 text-ink-500">{shortUnitName(g.unit)} <span className="font-normal">({g.items.length})</span></p>
-          <List>
-            {g.items.map((it, i) => (
-              <ListRow
-                key={i}
-                title={it.name}
-                subtitle={[it.note, it.startDate === it.endDate ? fmtBR(it.startDate) : `${fmtBR(it.startDate)} a ${fmtBR(it.endDate)}`].filter(Boolean).join(' · ')}
-                trailing={<StatusBadge tone={it.kind === 'FERIAS' ? 'info' : 'neutral'} dot>{it.kind === 'FERIAS' ? 'Férias' : 'Folga'}</StatusBadge>}
-              />
-            ))}
-          </List>
-        </section>
-      ))}
+      <ControleGerentesClient
+        units={units}
+        unitId={selected.id}
+        unitName={selected.name}
+        year={year}
+        month={month}
+        hoje={hoje}
+        gerentes={gerentes}
+      />
     </div>
   );
 }

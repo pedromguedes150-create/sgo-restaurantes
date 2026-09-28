@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/db/prisma';
-import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { notifyUnitRole, notifyRole, notifyAdmins } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 
@@ -55,76 +54,6 @@ export function daysOfMonth(year: number, month: number): { day: number; weekday
     out.push({ day: d, weekday: dt.getUTCDay(), iso: `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}` });
   }
   return out;
-}
-
-export interface CalManager { userId: string; name: string; hasSchedule: boolean; weekdays: number[]; time: string | null; startTime: string | null; endTime: string | null; note: string | null; missingFolga: boolean }
-export interface CalDay { day: number; weekday: number; iso: string; working: string[]; onLeave: { name: string; kind: string }[]; gap: boolean }
-export interface CalUnit { unitId: string; unitName: string; managers: CalManager[]; days: CalDay[]; gapDays: number; noScheduleCount: number; missingFolgaNames: string[] }
-export interface ManagerCalendar { year: number; month: number; firstWeekday: number; units: CalUnit[] }
-
-/**
- * Calendário consolidado de gerência (20/07): para cada unidade em escopo, quais
- * gerentes trabalham em cada dia do mês (padrão semanal − folgas/férias). Dia sem
- * nenhum gerente = "buraco de gerência" (gap) para o supervisor realocar reserva.
- */
-export async function getManagerCoverageCalendar(user: SessionUser, year: number, month: number): Promise<ManagerCalendar> {
-  const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
-  const days = daysOfMonth(year, month);
-  const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
-  const monthEnd = days[days.length - 1]?.iso ?? monthStart;
-
-  // Folga nos últimos 7 dias (relativo a HOJE) → quem não tem, entra no alerta da aba
-  const todayReal = new Date().toISOString().slice(0, 10);
-  const sevenAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  const recentFolgas = await prisma.managerLeave.findMany({
-    where: { kind: 'FOLGA', endDate: { gte: sevenAgo }, startDate: { lte: todayReal } },
-    select: { userId: true },
-  });
-  const hasRecentFolga = new Set(recentFolgas.map((f) => f.userId));
-
-  // Gerentes (e coordenadores) das unidades em escopo, com horário e folgas do mês
-  const managers = await prisma.user.findMany({
-    where: {
-      active: true,
-      role: { in: ['MANAGER', 'COORDINATOR'] },
-      memberships: { some: { unit: { id: { in: units.map((u) => u.id) } } } },
-    },
-    select: {
-      id: true, name: true,
-      memberships: { select: { unitId: true } },
-      managerWorkSchedule: true,
-      managerLeaves: { where: { startDate: { lte: monthEnd }, endDate: { gte: monthStart } }, select: { kind: true, startDate: true, endDate: true } },
-    },
-  });
-
-  const unitsOut: CalUnit[] = units.map((u) => {
-    const unitManagers = managers.filter((m) => m.memberships.some((mm) => mm.unitId === u.id));
-    const calManagers: CalManager[] = unitManagers.map((m) => {
-      const wd = parseWeekdays(m.managerWorkSchedule?.weekdays);
-      const st = m.managerWorkSchedule?.startTime ?? null; const en = m.managerWorkSchedule?.endTime ?? null;
-      return { userId: m.id, name: m.name, hasSchedule: Boolean(m.managerWorkSchedule) && wd.length > 0, weekdays: wd, time: st || en ? `${st ?? ''}${st || en ? '–' : ''}${en ?? ''}` : null, startTime: st, endTime: en, note: m.managerWorkSchedule?.note ?? null, missingFolga: !hasRecentFolga.has(m.id) };
-    });
-    const calDays: CalDay[] = days.map((d) => {
-      const working: string[] = [];
-      const onLeave: { name: string; kind: string }[] = [];
-      for (const m of unitManagers) {
-        const leave = m.managerLeaves.find((l) => l.startDate <= d.iso && l.endDate >= d.iso);
-        if (leave) { onLeave.push({ name: m.name, kind: leave.kind }); continue; }
-        const wd = parseWeekdays(m.managerWorkSchedule?.weekdays);
-        if (wd.includes(d.weekday)) working.push(m.name);
-      }
-      const anySchedule = calManagers.some((m) => m.hasSchedule);
-      return { day: d.day, weekday: d.weekday, iso: d.iso, working, onLeave, gap: anySchedule && working.length === 0 };
-    });
-    return {
-      unitId: u.id, unitName: u.name, managers: calManagers, days: calDays,
-      gapDays: calDays.filter((d) => d.gap).length,
-      noScheduleCount: calManagers.filter((m) => !m.hasSchedule).length,
-      missingFolgaNames: calManagers.filter((m) => m.hasSchedule && m.missingFolga).map((m) => m.name),
-    };
-  });
-
-  return { year, month, firstWeekday: new Date(Date.UTC(year, month - 1, 1)).getUTCDay(), units: unitsOut };
 }
 
 /**
