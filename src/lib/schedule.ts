@@ -96,11 +96,28 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
      aplicado. Data é dia; a hora dentro dele não pode decidir nada. */
   const doMes = { gte: new Date(Date.UTC(year, month - 1, 1)), lt: new Date(Date.UTC(year, month, 1)) };
 
-  const [collabs, patterns, overrides, actuals] = await Promise.all([
-    prisma.collaborator.findMany({ where: { active: true, units: { some: { unitId } } }, orderBy: { name: 'asc' }, select: { id: true, name: true, jobTitle: true } }),
+  const collabs = await prisma.collaborator.findMany({ where: { active: true, units: { some: { unitId } } }, orderBy: { name: 'asc' }, select: { id: true, name: true, jobTitle: true } });
+  const collabIds = collabs.map((c) => c.id);
+  const primeiroISO = `${year}-${String(month).padStart(2, '0')}-01`;
+  const ultimoISO = `${year}-${String(month).padStart(2, '0')}-${String(daysCount).padStart(2, '0')}`;
+  const [patterns, overrides, actuals, atestados] = await Promise.all([
     prisma.employeeSchedule.findMany({ where: { unitId, active: true }, orderBy: { startDate: 'asc' }, include: { shift: true, template: true } }),
     prisma.schedulePlanOverride.findMany({ where: { unitId, date: doMes } }),
-    prisma.scheduleActual.findMany({ where: { unitId, date: doMes } }),
+    /* O Realizado é da PESSOA (chave única colaborador+dia), não da unidade:
+       lido pela unidade, um atestado registrado pelo vínculo da outra unidade
+       ficava invisível aqui — e "Completar dias vazios" ainda o sobrescrevia
+       com T, porque a grade jurava que o dia estava vazio. */
+    prisma.scheduleActual.findMany({ where: { collaboratorId: { in: collabIds }, date: doMes } }),
+    /* Atestado na Escala é DERIVADO da Central de Atestados (v1.130.1): a
+       gravação em `schedule_actuals` continua existindo (anexo, aviso ao RH),
+       mas quem monta a grade pergunta ao documento. Assim um "Puxar Realizado =
+       Planejado", um mês limpo ou uma falha calada no lançamento não apagam
+       um afastamento que está registrado — o mesmo desenho da variação do gás
+       e da faixa de validade do estoque: quem pergunta calcula. */
+    prisma.medicalCertificate.findMany({
+      where: { collaboratorId: { in: collabIds }, type: { not: 'HOURS' }, startDate: { lte: ultimoISO }, endDate: { gte: primeiroISO } },
+      select: { collaboratorId: true, startDate: true, endDate: true },
+    }),
   ]);
 
   /* Um colaborador tem VÁRIAS vigências desde a parte 2. Um Map de uma versão
@@ -116,6 +133,12 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
   for (const o of overrides) overrideMap.set(`${o.collaboratorId}|${o.date.getUTCDate()}`, o.status);
   const actualMap = new Map<string, DayStatus>();
   for (const a of actuals) actualMap.set(`${a.collaboratorId}|${a.date.getUTCDate()}`, a.status);
+  for (const at of atestados) {
+    for (let d = 1; d <= daysCount; d++) {
+      const iso = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (iso >= at.startDate && iso <= at.endDate) actualMap.set(`${at.collaboratorId}|${d}`, 'ATESTADO');
+    }
+  }
 
   const rows: ScheduleRow[] = [];
   const withoutSchedule: { id: string; name: string }[] = [];
@@ -307,6 +330,10 @@ export async function fillActualFromPlan(
     for (let i = 0; i < row.days.length; i++) {
       const cell = row.days[i];
       if (input.mode === 'empty' && cell.actual !== null) continue;
+      /* Atestado vem da Central de Atestados: copiar o Planejado por cima
+         diria "trabalhou" num dia com afastamento documentado. Para tirar,
+         exclui-se o atestado — não se sobrescreve a Escala. */
+      if (cell.actual === 'ATESTADO') continue;
       const date = dayUTC(input.year, input.month, i + 1);
       await prisma.scheduleActual.upsert({
         where: { collaboratorId_date: { collaboratorId: row.collaboratorId, date } },
