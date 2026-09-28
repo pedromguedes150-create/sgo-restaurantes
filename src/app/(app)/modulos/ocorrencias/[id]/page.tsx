@@ -10,6 +10,7 @@ import { ProgressButton } from '@/components/occurrences/progress-button';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { ArrowLeft, Paperclip, FileText } from 'lucide-react';
 import { OccurrenceProgress } from '@/components/occurrences/occurrence-progress';
+import { voltarSeguro } from '@/lib/occurrences/contexto';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,8 +18,12 @@ function fmt(d: Date | null) {
   return d ? new Date(d).toLocaleString('pt-BR') : '—';
 }
 
-export default async function OcorrenciaDetailPage({ params }: { params: { id: string } }) {
+export default async function OcorrenciaDetailPage({ params, searchParams }: { params: { id: string }; searchParams: { voltar?: string } }) {
   const user = (await getSessionUser())!;
+  /* De onde o supervisor veio (v1.128.0): a lista manda o próprio endereço em
+     `voltar=`. Voltar, encerrar e excluir devolvem para lá — Abertas continua
+     Abertas, com a mesma unidade, gravidade e busca. Sem contexto, a lista. */
+  const voltar = voltarSeguro(searchParams.voltar) ?? '/modulos/ocorrencias';
   const o = await getOccurrence(user, params.id);
   const occTypes = await getOccurrenceTypes();
   if (!o) notFound();
@@ -29,7 +34,7 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/ocorrencias" className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
+      <Link href={voltar} className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </Link>
 
@@ -113,7 +118,7 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
             <CardTitle>Encerrar ocorrência</CardTitle>
           </CardHeader>
           <CardContent>
-            <CloseForm occurrenceId={o.id} />
+            <CloseForm occurrenceId={o.id} voltarPara={voltarSeguro(searchParams.voltar)} />
           </CardContent>
         </Card>
       )}
@@ -125,7 +130,7 @@ export default async function OcorrenciaDetailPage({ params }: { params: { id: s
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-3">
             <p className="text-xs text-ink-500">Remove a ocorrência e seus anexos. Registrado na Auditoria.</p>
-            <DeleteOpButton entity="occurrence" id={o.id} label={`a ocorrência #${o.number}`} redirectTo="/modulos/ocorrencias" />
+            <DeleteOpButton entity="occurrence" id={o.id} label={`a ocorrência #${o.number}`} redirectTo={voltar} />
           </CardContent>
         </Card>
       )}

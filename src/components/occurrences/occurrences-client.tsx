@@ -1,15 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ChevronDown, SlidersHorizontal, Search, Tags, X, CheckSquare } from 'lucide-react';
 import { SearchField } from '@/components/ui/ds/field';
 import { Select } from '@/components/ui/ds/select';
 import { EmptyState } from '@/components/ui/ds/empty-state';
+import { Modal } from '@/components/ui/ds/modal';
+import { Button } from '@/components/ui/ds/button';
+import { ToastProvider, useToast } from '@/components/ui/ds/toast';
 import { shortUnitName } from '@/lib/unit-name';
-import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { GRAVITY_META, STATUS_META } from '@/lib/occurrences/labels';
+import { ORDENS, linkDaLista, type FiltrosDaLista } from '@/lib/occurrences/contexto';
 import type { OccurrenceGravity, OccurrenceStatus } from '@prisma/client';
 
 export interface OccItem {
@@ -25,7 +29,13 @@ export interface OccItem {
   isRecurrence: boolean;
   attachments: number;
   createdAt: string; // ISO
+  /** Veio de um item de checklist. */
+  origemChecklist: boolean;
+  /** Quem marcou "Em andamento" e quando (da Auditoria); só para IN_PROGRESS. */
+  andamento?: { nome: string; em: string } | null;
 }
+
+export interface TypeOpt { id: string; name: string; categories: { id: string; name: string }[] }
 
 function fmtDateTime(iso: string): string {
   const d = new Date(iso);
@@ -33,117 +43,214 @@ function fmtDateTime(iso: string): string {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-/** Lista de ocorrências com busca, filtros na barra superior e unidades recolhidas (16/07). */
-export function OccurrencesClient({ items }: { items: OccItem[] }) {
-  const [q, setQ] = useState('');
-  const [unit, setUnit] = useState('ALL');
-  const [gravity, setGravity] = useState<'ALL' | OccurrenceGravity>('ALL');
+const numero = (o: OccItem) => `#${o.unitCode}-${String(o.number).padStart(4, '0')}`;
 
-  const unitNames = useMemo(
-    () => [...new Set(items.map((o) => o.unitName))].sort((a, b) => a.localeCompare(b, 'pt-BR')),
-    [items],
-  );
+/**
+ * Lista de ocorrências (v1.128.0 — tratamento em lote).
+ *
+ * Todo filtro mora na URL (`filtros`): trocar unidade, gravidade, busca ou ordem
+ * navega, o servidor refaz a lista, e o link de cada cartão carrega `voltar=`
+ * com este endereço — encerrar uma ocorrência devolve o supervisor a ESTA
+ * lista, com os mesmos filtros, e não a "Todas".
+ *
+ * Seleção e lote só nas situações Abertas/Em andamento e só para quem trata
+ * (Supervisor/Admin/CEO). Encerrar continua individual, dentro da ocorrência.
+ */
+interface Props {
+  items: OccItem[];
+  filtros: FiltrosDaLista;
+  unidades: { id: string; name: string }[];
+  tipos: TypeOpt[];
+  podeTratar: boolean;
+  /** Quantas vieram do servidor nesta página (para "N de M" quando a busca corta). */
+  totalNaPagina: number;
+}
 
-  const filtered = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    return items.filter((o) => {
-      if (unit !== 'ALL' && o.unitName !== unit) return false;
-      if (gravity !== 'ALL' && o.gravity !== gravity) return false;
-      if (!t) return true;
-      const num = `${o.unitCode}-${String(o.number).padStart(4, '0')}`.toLowerCase();
-      return (
-        num.includes(t) ||
-        o.typeName.toLowerCase().includes(t) ||
-        (o.categoryName ?? '').toLowerCase().includes(t) ||
-        (o.description ?? '').toLowerCase().includes(t) ||
-        o.unitName.toLowerCase().includes(t)
-      );
-    });
-  }, [items, q, unit, gravity]);
+/* O layout do app não monta o ToastProvider; a lista traz o seu. */
+export function OccurrencesClient(props: Props) {
+  return <ToastProvider><Lista {...props} /></ToastProvider>;
+}
+
+function Lista({ items, filtros, unidades, tipos, podeTratar, totalNaPagina }: Props) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [q, setQ] = useState(filtros.q ?? '');
+  const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
+  const [confirmar, setConfirmar] = useState<'progress' | 'reclassify' | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [typeId, setTypeId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+
+  const ir = (mudar: Partial<FiltrosDaLista>) => router.push(linkDaLista({ ...filtros, pagina: 1, ...mudar }));
+
+  /* Busca: digita → espera 400ms → navega. Um push por tecla seria uma ida ao
+     servidor por letra. */
+  const primeira = useRef(true);
+  useEffect(() => {
+    if (primeira.current) { primeira.current = false; return; }
+    if ((q.trim() || undefined) === filtros.q) return;
+    const t = setTimeout(() => ir({ q: q.trim() || undefined }), 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
+  // A lista mudou (navegação): o que estava marcado pode ter saído da tela.
+  useEffect(() => { setSelecionadas(new Set()); }, [items]);
+
+  const emLote = podeTratar && (filtros.status === 'OPEN' || filtros.status === 'IN_PROGRESS');
+  const voltar = linkDaLista(filtros);
 
   const groups = useMemo(() => {
     const m = new Map<string, OccItem[]>();
-    for (const o of filtered) {
-      const arr = m.get(o.unitName) ?? [];
-      arr.push(o);
-      m.set(o.unitName, arr);
-    }
+    for (const o of items) { const arr = m.get(o.unitName) ?? []; arr.push(o); m.set(o.unitName, arr); }
+    // A ordem escolhida vale DENTRO de cada unidade; os grupos seguem por nome.
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
-  }, [filtered]);
+  }, [items]);
 
+  const visiveisIds = items.map((o) => o.id);
+  const todasVisiveis = visiveisIds.length > 0 && visiveisIds.every((id) => selecionadas.has(id));
+  const alternar = (id: string) => setSelecionadas((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const selecionarVisiveis = () => setSelecionadas(todasVisiveis ? new Set() : new Set(visiveisIds));
 
-  const card = (o: OccItem) => (
-    <Link key={o.id} href={`/modulos/ocorrencias/${o.id}`}>
-      <Card className="transition-colors hover:border-brand">
-        <CardContent className="flex items-start justify-between gap-3 py-3">
-          <div className="min-w-0">
-            <p className="font-semibold text-ink-900">
-              {GRAVITY_META[o.gravity].emoji} #{o.unitCode}-{String(o.number).padStart(4, '0')} · {o.typeName}
-            </p>
-            <p className="truncate text-sm text-ink-500">{o.categoryName ? `${o.categoryName} — ` : ''}{o.description}</p>
-            <p className="mt-0.5 text-xs text-ink-500">
-              🕒 {fmtDateTime(o.createdAt)}
-              {o.isRecurrence && ' · ♻ reincidência'}
-              {o.attachments > 0 && ` · ${o.attachments} anexo(s)`}
-            </p>
+  async function executar(acao: 'progress' | 'reclassify', ids: string[]) {
+    setBusy(true);
+    try {
+      const body: Record<string, unknown> = { action: acao, ids };
+      if (acao === 'reclassify') Object.assign(body, { typeId, categoryId: categoryId || undefined });
+      const res = await fetch('/api/occurrences/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { toast({ tone: 'danger', title: d.error ?? 'Não foi possível aplicar' }); return; }
+      const n = d.feitas?.length ?? 0;
+      const puladas = d.puladas?.length ?? 0;
+      toast({
+        tone: puladas ? 'warning' : 'success',
+        title: acao === 'progress' ? `${n} ocorrência(s) marcada(s) como Em andamento.` : `${n} ocorrência(s) reclassificada(s).`,
+        description: puladas ? `${puladas} não mudou(aram): já encerrada(s), já em andamento ou fora do seu alcance.` : undefined,
+      });
+      setConfirmar(null);
+      setSelecionadas(new Set());
+      router.refresh();
+    } finally { setBusy(false); }
+  }
+
+  const tipo = tipos.find((t) => t.id === typeId);
+  const qtd = selecionadas.size;
+
+  const card = (o: OccItem) => {
+    const marcada = selecionadas.has(o.id);
+    return (
+      <div key={o.id} className={`rounded-card border bg-surface transition-colors ${marcada ? 'border-brand bg-brand-tint/30' : 'border-line hover:border-brand'}`}>
+        <div className="flex items-start gap-2 px-3 py-2.5">
+          {emLote && (
+            <input
+              type="checkbox"
+              aria-label={`Selecionar ${numero(o)}`}
+              checked={marcada}
+              onChange={() => alternar(o.id)}
+              className="mt-1 h-4 w-4 shrink-0 accent-brand"
+            />
+          )}
+          <div className="min-w-0 flex-1">
+            <Link href={`/modulos/ocorrencias/${o.id}?voltar=${encodeURIComponent(voltar)}`} className="block">
+              <p className="font-semibold text-ink-900">{numero(o)} <span className="font-normal text-ink-500">· {o.typeName}{o.categoryName ? ` — ${o.categoryName}` : ''}</span></p>
+              <p className="truncate text-sm text-ink-700">{o.description}</p>
+              <p className="mt-0.5 text-xs text-ink-500">
+                {`Origem: ${o.origemChecklist ? 'Checklist' : 'Manual'} · ${fmtDateTime(o.createdAt)}`}
+                {o.isRecurrence && ' · ♻ reincidência'}
+                {o.attachments > 0 && ` · ${o.attachments} anexo(s)`}
+              </p>
+            </Link>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-ink-700">{GRAVITY_META[o.gravity].emoji} {GRAVITY_META[o.gravity].label}</span>
+              <StatusBadge tone={STATUS_META[o.status].tone}>{STATUS_META[o.status].label}</StatusBadge>
+              {o.status === 'IN_PROGRESS' && o.andamento && (
+                <span className="text-xs text-ink-500">Responsável: <b className="text-ink-700">{o.andamento.nome}</b> · Desde: {fmtDateTime(o.andamento.em)}</span>
+              )}
+              <span className="ml-auto flex items-center gap-1">
+                <Link href={`/modulos/ocorrencias/${o.id}?voltar=${encodeURIComponent(voltar)}`} className="rounded-control border border-line px-2 py-1 text-xs font-semibold text-ink-700 hover:border-brand">Ver detalhes</Link>
+                {podeTratar && o.status === 'OPEN' && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => { setSelecionadas(new Set([o.id])); setConfirmar('progress'); }}
+                    className="rounded-control border border-line px-2 py-1 text-xs font-semibold text-brand hover:border-brand"
+                  >
+                    Marcar em andamento
+                  </button>
+                )}
+              </span>
+            </div>
           </div>
-          <StatusBadge tone={STATUS_META[o.status].tone}>{STATUS_META[o.status].label}</StatusBadge>
-        </CardContent>
-      </Card>
-    </Link>
-  );
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-3">
-      {/* Barra superior: busca + filtros */}
+      {/* Barra superior: busca + filtros (todos na URL) */}
       <div className="space-y-2 rounded-card border border-line bg-surface p-3">
-        <SearchField
-          value={q}
-          onValueChange={setQ}
-          placeholder="Buscar por nº, tipo, categoria, descrição…"
-          label="Busca"
-        />
+        <SearchField value={q} onValueChange={setQ} placeholder="Buscar por nº, tipo, categoria, descrição…" label="Busca" />
         <div className="flex flex-wrap items-end gap-2">
-          {unitNames.length > 1 && (
+          {unidades.length > 1 && (
             <div className="min-w-[10rem] flex-1">
               <Select
-                label="Unidade"
-                size="sm"
-                value={unit}
-                onValueChange={setUnit}
-                options={[{ value: 'ALL', label: 'Todas as unidades' }, ...unitNames.map((u) => ({ value: u, label: shortUnitName(u) }))]}
+                label="Unidade" size="sm" value={filtros.unitId ?? 'ALL'}
+                onValueChange={(v) => ir({ unitId: v === 'ALL' ? undefined : v })}
+                options={[{ value: 'ALL', label: 'Todas as unidades' }, ...unidades.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))]}
               />
             </div>
           )}
           <div className="min-w-[10rem] flex-1">
             <Select
-              label="Gravidade"
-              size="sm"
-              value={gravity}
-              onValueChange={(v) => setGravity(v as 'ALL' | OccurrenceGravity)}
+              label="Gravidade" size="sm" value={filtros.gravity ?? 'ALL'}
+              onValueChange={(v) => ir({ gravity: v === 'ALL' ? undefined : (v as OccurrenceGravity) })}
               options={[
                 { value: 'ALL', label: 'Todas as gravidades' },
-                { value: 'LOW', label: 'Baixa' },
-                { value: 'MEDIUM', label: 'Média' },
-                { value: 'HIGH', label: 'Alta' },
-                { value: 'CRITICAL', label: 'Crítica' },
+                { value: 'LOW', label: 'Baixa' }, { value: 'MEDIUM', label: 'Média' }, { value: 'HIGH', label: 'Alta' }, { value: 'CRITICAL', label: 'Crítica' },
               ]}
             />
           </div>
-          <span className="ml-auto pb-2 text-xs tabular-nums text-ink-500">{filtered.length} ocorrência(s)</span>
+          {filtros.status !== 'CLOSED' && (
+            <div className="min-w-[10rem] flex-1">
+              <Select label="Ordenar" size="sm" value={filtros.ordem} onValueChange={(v) => ir({ ordem: v as FiltrosDaLista['ordem'] })} options={[...ORDENS]} />
+            </div>
+          )}
+          <span className="ml-auto pb-2 text-xs tabular-nums text-ink-500">{items.length} ocorrência(s){items.length !== totalNaPagina ? ` de ${totalNaPagina}` : ''}</span>
         </div>
       </div>
 
-      {filtered.length === 0 && (
+      {/* Selecionar visíveis: só o que está NA TELA depois dos filtros. */}
+      {emLote && items.length > 0 && (
+        <label className="flex items-center gap-2 px-1 text-sm text-ink-700">
+          <input type="checkbox" checked={todasVisiveis} onChange={selecionarVisiveis} className="h-4 w-4 accent-brand" aria-label="Selecionar visíveis" />
+          Selecionar visíveis <span className="text-xs text-ink-500">({items.length} nesta página — o que os filtros escondem não entra)</span>
+        </label>
+      )}
+
+      {/* Barra de ações em lote */}
+      {emLote && qtd > 0 && (
+        <div className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-card border border-brand bg-surface px-3 py-2 shadow-sgo-card">
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-ink-900"><CheckSquare className="h-4 w-4 text-brand" /> {qtd} ocorrência(s) selecionada(s)</span>
+          <span className="ml-auto flex flex-wrap gap-1.5">
+            {filtros.status === 'OPEN' && (
+              <Button size="sm" onClick={() => setConfirmar('progress')} disabled={busy}><Search className="h-4 w-4" /> Marcar em andamento</Button>
+            )}
+            <Button size="sm" variant="secondary" onClick={() => { setTypeId(''); setCategoryId(''); setConfirmar('reclassify'); }} disabled={busy}><Tags className="h-4 w-4" /> Reclassificar</Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelecionadas(new Set())} disabled={busy}><X className="h-4 w-4" /> Limpar seleção</Button>
+          </span>
+        </div>
+      )}
+
+      {items.length === 0 && (
         <EmptyState icon={SlidersHorizontal} title="Nenhuma ocorrência encontrada" description="Limpe a busca ou troque os filtros." />
       )}
 
-      {/* Uma unidade: lista direta. Várias: cada unidade recolhida (fechada por padrão). */}
       {groups.length === 1 && <div className="space-y-2">{groups[0][1].map(card)}</div>}
       {groups.length > 1 && (
         <div className="space-y-2">
           {groups.map(([unitName, list]) => (
-            <details key={unitName} className="group rounded-lg border bg-surface">
+            <details key={unitName} className="group rounded-lg border bg-surface" open={emLote || undefined}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5">
                 <span className="sgo-type-11 font-semibold text-ink-900">
                   {unitName} <span className="font-normal">({list.length})</span>
@@ -155,6 +262,38 @@ export function OccurrencesClient({ items }: { items: OccItem[] }) {
           ))}
         </div>
       )}
+
+      {/* Confirmação: marcar em andamento */}
+      <Modal
+        open={confirmar === 'progress'}
+        onClose={() => !busy && setConfirmar(null)}
+        title={`Marcar ${qtd} ocorrência(s) como Em andamento?`}
+        description="Fica registrado quem marcou, a data e a hora, na Auditoria. Só as selecionadas mudam."
+        size="sm"
+        footer={<>
+          <Button variant="secondary" onClick={() => setConfirmar(null)} disabled={busy}>Cancelar</Button>
+          <Button onClick={() => executar('progress', [...selecionadas])} loading={busy}>Confirmar</Button>
+        </>}
+      />
+
+      {/* Reclassificar em lote */}
+      <Modal
+        open={confirmar === 'reclassify'}
+        onClose={() => !busy && setConfirmar(null)}
+        title={`Reclassificar ${qtd} ocorrência(s)`}
+        description="Todas as selecionadas passam para o tipo/categoria escolhidos. Tipos marcados como Manutenção/TI movem para a aba correspondente. Fica na Auditoria."
+        footer={<>
+          <Button variant="secondary" onClick={() => setConfirmar(null)} disabled={busy}>Cancelar</Button>
+          <Button onClick={() => executar('reclassify', [...selecionadas])} loading={busy} disabled={!typeId || (Boolean(tipo?.categories.length) && !categoryId)}>Confirmar</Button>
+        </>}
+      >
+        <div className="space-y-2">
+          <Select label="Novo tipo" placeholder="Selecione…" value={typeId} onValueChange={(v) => { setTypeId(v); setCategoryId(''); }} options={tipos.map((t) => ({ value: t.id, label: t.name }))} />
+          {tipo && tipo.categories.length > 0 && (
+            <Select label="Categoria" required placeholder="Selecione…" value={categoryId} onValueChange={setCategoryId} options={tipo.categories.map((c) => ({ value: c.id, label: c.name }))} />
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

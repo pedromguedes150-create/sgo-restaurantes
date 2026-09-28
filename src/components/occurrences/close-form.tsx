@@ -9,7 +9,11 @@ import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 
 /** Encerramento de ocorrência (Supervisor/Admin): justificativa + ação corretiva + data de revisão. */
-export function CloseForm({ occurrenceId }: { occurrenceId: string }) {
+export function CloseForm({ occurrenceId, voltarPara }: {
+  occurrenceId: string;
+  /** Endereço da lista de onde o supervisor veio; encerrou → volta para lá (v1.128.0). Sem ele, a página recarrega encerrada. */
+  voltarPara?: string | null;
+}) {
   const router = useRouter();
   const [justification, setJustification] = useState('');
   const [correctiveAction, setCorrectiveAction] = useState('');
@@ -35,7 +39,9 @@ export function CloseForm({ occurrenceId }: { occurrenceId: string }) {
         setError(data.error ?? 'Não foi possível encerrar');
         return;
       }
-      router.refresh();
+      /* Encerrou vindo de Abertas → volta para Abertas, com os mesmos filtros;
+         a encerrada já não está lá. Sem contexto, fica na ocorrência encerrada. */
+      if (voltarPara) router.push(voltarPara); else router.refresh();
     } catch {
       setError('Falha de conexão');
     } finally {

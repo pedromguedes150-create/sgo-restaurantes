@@ -155,3 +155,68 @@ describe('Ocorrências (Módulo 6)', () => {
     }
   });
 });
+
+describe('Tratamento em lote (v1.128.0)', () => {
+  it('marca várias como Em andamento, pula a encerrada e audita cada uma com quem/quando', async () => {
+    const { markManyInProgress, responsaveisDoAndamento } = await import('@/lib/occurrences/lote');
+    const nova = async (d: string) => { const r = await createOccurrence(mgr(), { unitId, typeId, categoryId: catId, gravity: 'LOW', description: d }); if (!r.ok) throw new Error('setup'); return r.id; };
+    const a = await nova('lote a'); const b = await nova('lote b'); const fechada = await nova('lote fechada');
+    await closeOccurrence(sup(), fechada, { justification: 'j', correctiveAction: 'c', reviewDate: new Date() });
+
+    const gerente = await markManyInProgress(mgr(), [a, b]);
+    expect(gerente.feitas).toEqual([]); // gerente não trata
+
+    const r = await markManyInProgress(sup(), [a, b, fechada, a, 'nao-existe']);
+    expect(r.feitas.sort()).toEqual([a, b].sort());
+    expect(r.puladas.map((p) => p.reason).sort()).toEqual(['ALREADY_CLOSED', 'NOT_FOUND']);
+    const rows = await prisma.occurrence.findMany({ where: { id: { in: [a, b, fechada] } }, select: { id: true, status: true } });
+    expect(rows.find((x) => x.id === a)?.status).toBe('IN_PROGRESS');
+    expect(rows.find((x) => x.id === fechada)?.status).toBe('CLOSED');
+
+    // Quem marcou e quando, lido da Auditoria — sem coluna nova.
+    const quem = await responsaveisDoAndamento([a, b, fechada]);
+    expect(quem.get(a)?.nome).toBe('S');
+    expect(quem.get(a)?.em).toBeInstanceOf(Date);
+    expect(quem.has(fechada)).toBe(false);
+    expect(await prisma.auditLog.count({ where: { action: 'OCC_IN_PROGRESS', entityId: { in: [a, b] } } })).toBe(2);
+  });
+
+  it('reclassifica várias com a MESMA regra da individual: tipo com categorias exige categoria', async () => {
+    const { reclassifyMany, reclassifyOccurrence } = await import('@/lib/occurrences/lote');
+    const tipoSem = await prisma.occurrenceType.create({ data: { code: `TS-${sfx}`, name: 'Tipo sem categoria' } });
+    try {
+      const nova = async (d: string) => { const r = await createOccurrence(mgr(), { unitId, typeId, categoryId: catId, gravity: 'LOW', description: d }); if (!r.ok) throw new Error('setup'); return r.id; };
+      const a = await nova('reclass a'); const b = await nova('reclass b');
+
+      const semCategoria = await reclassifyMany(sup(), [a, b], { typeId });
+      expect(semCategoria.feitas).toEqual([]);
+      expect(semCategoria.puladas.every((p) => p.reason === 'INVALID')).toBe(true);
+
+      const ok = await reclassifyMany(sup(), [a, b], { typeId: tipoSem.id });
+      expect(ok.feitas.sort()).toEqual([a, b].sort());
+      const rows = await prisma.occurrence.findMany({ where: { id: { in: [a, b] } }, select: { typeName: true, categoryId: true, categoryName: true } });
+      expect(rows.every((x) => x.typeName === 'Tipo sem categoria' && x.categoryId === null && x.categoryName === null)).toBe(true);
+
+      // A individual é a mesma função — e o gerente não reclassifica.
+      expect((await reclassifyOccurrence(mgr(), a, { typeId, categoryId: catId })).ok).toBe(false);
+      expect((await reclassifyOccurrence(sup(), a, { typeId, categoryId: catId2 })).ok).toBe(true);
+      expect(await prisma.auditLog.count({ where: { action: 'OCCURRENCE_RECLASSIFIED', entityId: { in: [a, b] } } })).toBe(3);
+    } finally {
+      await prisma.occurrence.updateMany({ where: { typeId: tipoSem.id }, data: { typeId, typeName: 'Tipo Teste' } });
+      await prisma.occurrenceType.delete({ where: { id: tipoSem.id } });
+    }
+  });
+
+  it('busca e ordem no banco: "antigas" inverte e a busca por texto acha pela descrição', async () => {
+    const { listOccurrences } = await import('@/lib/occurrences/query');
+    const r = await createOccurrence(mgr(), { unitId, typeId, categoryId: catId, gravity: 'CRITICAL', description: `xyzzy-${sfx} placa promocional` });
+    expect(r.ok).toBe(true);
+    const busca = await listOccurrences(sup(), { q: `xyzzy-${sfx}` });
+    expect(busca.total).toBe(1);
+    const recentes = await listOccurrences(sup(), { ordem: 'recentes', limit: 200 });
+    const antigas = await listOccurrences(sup(), { ordem: 'antigas', limit: 200 });
+    expect(antigas.items.map((o) => o.id)).toEqual([...recentes.items.map((o) => o.id)].reverse());
+    const porGravidade = await listOccurrences(sup(), { ordem: 'gravidade', limit: 200 });
+    expect(porGravidade.items[0].gravity).toBe('CRITICAL');
+  });
+});

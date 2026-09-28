@@ -5,6 +5,7 @@ import { requestContext } from '@/lib/auth/service';
 import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
+import { reclassifyOccurrence } from '@/lib/occurrences/lote';
 
 /**
  * Fases de andamento + reclassificação da ocorrência (16/07).
@@ -14,7 +15,6 @@ import { audit } from '@/lib/audit';
  *   a regra sempre foi essa no papel, mas até a auditoria de 04/09 a rota não
  *   conferia o perfil — qualquer um da unidade reclassificava.
  */
-const RECLASSIFICA: readonly string[] = ['SUPERVISOR', 'ADMIN', 'CEO'];
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -39,29 +39,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   if (b.action === 'reclassify') {
-    if (!RECLASSIFICA.includes(user.role)) return NextResponse.json({ error: 'Apenas Supervisor/Admin reclassificam' }, { status: 403 });
-    const type = b.typeId ? await prisma.occurrenceType.findUnique({ where: { id: String(b.typeId) }, include: { categories: true } }) : null;
-    if (!type) return NextResponse.json({ error: 'Escolha o tipo' }, { status: 400 });
-    const ativas = type.categories.filter((c) => c.active);
-    const category = b.categoryId ? ativas.find((c) => c.id === String(b.categoryId)) : null;
-    // O tipo novo TEM categorias? Então escolher uma é obrigatório aqui também.
-    if (!category && ativas.length > 0) {
-      return NextResponse.json({ error: 'Escolha a categoria do novo tipo' }, { status: 400 });
+    /* A regra mora em `reclassifyOccurrence` (v1.128.0) — é a mesma do lote. */
+    const r = await reclassifyOccurrence(user, params.id, { typeId: b.typeId, categoryId: b.categoryId }, ctx);
+    if (!r.ok) {
+      const map: Record<string, number> = { NOT_FOUND: 404, FORBIDDEN: 403, INVALID: 400, ALREADY_CLOSED: 409 };
+      return NextResponse.json({ error: r.detail ?? 'Operação não permitida' }, { status: map[r.reason] });
     }
-    await prisma.occurrence.update({
-      where: { id: params.id },
-      data: {
-        typeId: type.id, typeName: type.name,
-        // Escreve SEMPRE, inclusive null. Antes o campo era omitido quando não
-        // havia categoria, e a categoria ANTIGA continuava colada no tipo novo
-        // — dava "Manutenção e obras — Atendimento" na tela, uma categoria que
-        // não pertence ao tipo. Só deu para corrigir porque `categoryName`
-        // deixou de ser NOT NULL nesta mudança.
-        categoryId: category?.id ?? null,
-        categoryName: category?.name ?? null,
-      },
-    });
-    await audit({ userId: user.id, unitId: occ.unitId, action: 'OCCURRENCE_RECLASSIFIED', module: 'OCCURRENCES', entity: 'occurrence', entityId: params.id, metadata: { number: occ.number, type: type.name, category: category?.name }, ...ctx });
     return NextResponse.json({ ok: true });
   }
 
