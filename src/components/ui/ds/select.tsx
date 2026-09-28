@@ -27,26 +27,49 @@ export interface SelectProps {
   defaultOpen?: boolean;
   /** Avisa quando fecha (escolha, Esc ou clique fora) — encerra a edição inline. */
   onClose?: () => void;
+  /**
+   * Campo de busca no topo da lista (v1.126.0). Para listas longas de pessoas —
+   * colaboradores do RH, freelancers — em que rolar não serve. A busca ignora
+   * acento e caixa: "mar" acha "Márcia" e "MARCOS".
+   */
+  searchable?: boolean;
+  /** Texto do campo de busca. */
+  searchPlaceholder?: string;
+}
+
+/** Sem acento e em minúsculas — "Márcia" e "marcia" são a mesma busca. */
+export function normalizarBusca(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 
 export function Select({
   options, value, onValueChange, placeholder = 'Selecione…',
   label, hint, error, required, disabled, size = 'md', className,
   'aria-label': ariaLabel, defaultOpen = false, onClose,
+  searchable = false, searchPlaceholder = 'Pesquisar…',
 }: SelectProps) {
+  const [query, setQuery] = React.useState('');
+  const searchRef = React.useRef<HTMLInputElement>(null);
+  /* A lista navegável é a FILTRADA: setas, Enter e o destaque andam sobre o
+     que está visível, não sobre a lista inteira. */
+  const q = normalizarBusca(query);
+  const list = React.useMemo(
+    () => (searchable && q ? options.filter((o) => normalizarBusca(o.label).includes(q) || (o.hint ? normalizarBusca(o.hint).includes(q) : false)) : options),
+    [options, searchable, q],
+  );
   const id = React.useId();
   const listId = `${id}-list`;
   const { descId, describedBy } = useDescribedBy(id, hint, error);
   const [open, setOpen] = React.useState(defaultOpen);
 
   // Um só caminho de fechamento, para o onClose nunca ficar de fora.
-  const close = React.useCallback(() => { setOpen(false); onClose?.(); }, [onClose]);
+  const close = React.useCallback(() => { setOpen(false); setQuery(''); onClose?.(); }, [onClose]);
   const [active, setActive] = React.useState(0);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const listRef = React.useRef<HTMLUListElement>(null);
 
-  const selectedIdx = options.findIndex((o) => o.value === value);
-  const selected = selectedIdx >= 0 ? options[selectedIdx] : null;
+  const selected = options.find((o) => o.value === value) ?? null;
+  const selectedIdx = list.findIndex((o) => o.value === value);
 
   React.useEffect(() => {
     if (!open) return;
@@ -56,6 +79,11 @@ export function Select({
     return () => document.removeEventListener('mousedown', onDown);
   }, [open, selectedIdx, close]);
 
+  // Com busca, o foco vai para o campo assim que abre: quem abre quer digitar.
+  React.useEffect(() => { if (open && searchable) searchRef.current?.focus(); }, [open, searchable]);
+  // Mudou o filtro: o destaque volta para o primeiro resultado.
+  React.useEffect(() => { if (searchable) setActive(0); }, [q, searchable]);
+
   React.useEffect(() => {
     if (open) listRef.current?.querySelector<HTMLElement>(`[data-idx="${active}"]`)?.scrollIntoView({ block: 'nearest' });
   }, [active, open]);
@@ -63,16 +91,16 @@ export function Select({
   const step = (dir: 1 | -1) => {
     setActive((i) => {
       let n = i;
-      for (let k = 0; k < options.length; k++) {
-        n = (n + dir + options.length) % options.length;
-        if (!options[n].disabled) return n;
+      for (let k = 0; k < list.length; k++) {
+        n = (n + dir + list.length) % list.length;
+        if (!list[n].disabled) return n;
       }
       return i;
     });
   };
 
   const choose = (i: number) => {
-    const o = options[i];
+    const o = list[i];
     if (!o || o.disabled) return;
     onValueChange(o.value);
     close();
@@ -86,9 +114,10 @@ export function Select({
     }
     if (e.key === 'ArrowDown') { e.preventDefault(); step(1); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); step(-1); }
-    else if (e.key === 'Home') { e.preventDefault(); setActive(options.findIndex((o) => !o.disabled)); }
-    else if (e.key === 'End') { e.preventDefault(); for (let i = options.length - 1; i >= 0; i--) if (!options[i].disabled) { setActive(i); break; } }
-    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(active); }
+    // No campo de busca, Espaço/Home/End são do texto — não escolhem nem pulam.
+    else if (!searchable && e.key === 'Home') { e.preventDefault(); setActive(list.findIndex((o) => !o.disabled)); }
+    else if (!searchable && e.key === 'End') { e.preventDefault(); for (let i = list.length - 1; i >= 0; i--) if (!list[i].disabled) { setActive(i); break; } }
+    else if (e.key === 'Enter' || (!searchable && e.key === ' ')) { e.preventDefault(); choose(active); }
     else if (e.key === 'Escape') { e.preventDefault(); close(); }
   }
 
@@ -117,14 +146,32 @@ export function Select({
         </button>
 
         {open && (
+          <div className="absolute left-0 top-full z-40 mt-1 w-full rounded-card border border-line bg-surface p-1 shadow-lg">
+          {searchable && (
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
+              aria-controls={listId}
+              aria-activedescendant={list.length ? `${id}-opt-${active}` : undefined}
+              className="mb-1 h-9 w-full rounded-control border border-line bg-surface px-2 text-sm text-ink-900 outline-none focus:border-brand"
+            />
+          )}
           <ul
             id={listId}
             ref={listRef}
             role="listbox"
             aria-label={label ?? ariaLabel}
-            className="absolute left-0 top-full z-40 mt-1 max-h-64 w-full overflow-auto rounded-card border border-line bg-surface p-1 shadow-lg"
+            className="max-h-64 overflow-auto"
           >
-            {options.map((o, i) => {
+            {searchable && list.length === 0 && (
+              <li role="presentation" className="px-2 py-2 text-sm text-ink-500">Nenhum resultado para “{query}”.</li>
+            )}
+            {list.map((o, i) => {
               const isSel = o.value === value;
               return (
                 <li key={o.value} data-idx={i} id={`${id}-opt-${i}`} role="option" aria-selected={isSel} aria-disabled={o.disabled || undefined}>
@@ -149,6 +196,7 @@ export function Select({
               );
             })}
           </ul>
+          </div>
         )}
       </div>
     </Field>

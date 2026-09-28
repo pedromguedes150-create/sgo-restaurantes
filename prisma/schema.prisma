@@ -1655,6 +1655,10 @@ model PaymentRequest {
   transportValue Decimal?  @db.Decimal(10, 2)
 
   // Hora extra
+  /// Colaborador do RH (v1.126.0): a HE deixou de ser nome digitado. O nome
+  /// continua CONGELADO em collaboratorName (histórico legível após renome/saída);
+  /// lançamentos antigos só têm o nome.
+  collaboratorId   String?
   collaboratorName String?
   reason           String?
 
@@ -1689,8 +1693,10 @@ model PaymentRequest {
   miscType    MiscPaymentType? @relation(fields: [miscTypeId], references: [id], onDelete: SetNull)
   supplier    Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   workSector  Sector?          @relation("FreelancerSector", fields: [workSectorId], references: [id], onDelete: SetNull)
+  collaborator Collaborator?   @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
 
   @@index([unitId, status])
+  @@index([collaboratorId])
   @@index([status])
   @@index([requestedById])
   @@map("payment_requests")
@@ -1812,6 +1818,7 @@ model Collaborator {
   terminations        Termination[]
   popLinks            PopCollaborator[]
   moduleLinks         PopModuleCollaborator[]
+  paymentRequests     PaymentRequest[]
 
   @@index([cpf])
   @@map("collaborators")

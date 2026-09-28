@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       workEndTime: b.workEndTime,
       workSectorId: b.workSectorId,
       transportValue: b.transportValue != null ? Number(b.transportValue) : undefined,
-      collaboratorName: b.collaboratorName,
+      collaboratorId: typeof b.collaboratorId === 'string' ? b.collaboratorId : undefined,
       reason: b.reason,
       miscTypeId: b.miscTypeId,
       beneficiary: b.beneficiary,

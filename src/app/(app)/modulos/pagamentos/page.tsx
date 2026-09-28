@@ -1,5 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
 import { abasDoPerfil } from '@/lib/permissions/abas-server';
+import { permissoesEfetivasDoRequest } from '@/lib/permissions';
 
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -67,6 +68,7 @@ function toDTO(r: ReqRow): PayReq {
       coverageSector: r.coverageSector ?? null,
       workSectorId: r.workSectorId ?? null,
       workSectorName: r.workSector?.name ?? null,
+      collaboratorId: r.collaboratorId ?? null,
       collaboratorName: r.collaboratorName ?? null,
       reason: r.reason ?? null,
       beneficiary: r.beneficiary ?? null,
@@ -88,6 +90,9 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
   const user = (await getSessionUser())!;
   const isFinanceView = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO';
   const podeVerConsolidacao = isFinanceView || user.role === 'SUPERVISOR';
+  /* A consolidação de pagamentos (Freelancer + Hora Extra, para o Financeiro)
+     obedece a matriz de perfis — é o mesmo teste que a página faz para abrir. */
+  const podeVerConsolidacaoPagamentos = Boolean((await permissoesEfetivasDoRequest(user.role)).PAYMENTS_CONSOLIDATION?.canView);
 
   /* A tela OBEDECE o seletor de unidade do cabeçalho (pedido de 04/09: "está
      tudo misturado"). Mesma regra de precedência de Tarefas e Pessoas;
@@ -98,7 +103,7 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
   const doFiltro = filtro.all ? undefined : filtro.ids;
   const filtradoPor = filtro.all ? [] : units.filter((u) => filtro.ids.includes(u.id)).map((u) => u.name);
 
-  const [mine, toApprove, toPay, history, totais, miscTypes, freelancers, suppliers, sectors] = await Promise.all([
+  const [mine, toApprove, toPay, history, totais, miscTypes, freelancers, suppliers, sectors, vinculos] = await Promise.all([
     getMyRequests(user, doFiltro),
     getToApprove(user, doFiltro),
     getToPay(user, doFiltro),
@@ -111,7 +116,16 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
     listSuppliers({ activeOnly: true }),
     // Setores da unidade: o freelancer já nasce alocado (04/09).
     prisma.sector.findMany({ where: { active: true, ...unitScopeWhere(user, 'unitId') }, orderBy: [{ order: 'asc' }, { name: 'asc' }], select: { id: true, name: true, unitId: true } }),
+    /* Hora Extra pelo colaborador do RH (v1.126.0): os colaboradores ativos de
+       cada unidade do alcance — a mesma base de Pessoas, sem cadastro novo. */
+    prisma.collaboratorUnit.findMany({
+      where: { collaborator: { active: true }, ...unitScopeWhere(user, 'unitId') },
+      select: { unitId: true, collaborator: { select: { id: true, name: true, jobTitle: true } } },
+      orderBy: { collaborator: { name: 'asc' } },
+    }),
   ]);
+  const collaboratorsByUnit: Record<string, { id: string; name: string; jobTitle: string | null }[]> = {};
+  for (const v of vinculos) (collaboratorsByUnit[v.unitId] ??= []).push(v.collaborator);
 
   return (
     <div className="space-y-4">
@@ -126,6 +140,11 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
             <FileText className="h-4 w-4" /> Consolidação de freelancers
           </Link>
         )}
+        {podeVerConsolidacaoPagamentos && (
+          <Link href="/modulos/pagamentos/consolidacao" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
+            <FileText className="h-4 w-4" /> Consolidação de pagamentos
+          </Link>
+        )}
       </div>
       <Card>
         <CardContent className="pt-4">
@@ -138,6 +157,7 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
             miscTypes={miscTypes.map((t) => ({ id: t.id, name: t.name }))}
             suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
             sectors={sectors}
+            collaboratorsByUnit={collaboratorsByUnit}
             filtradoPor={filtradoPor}
             freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, defaultValue: Number(f.defaultValue), unitIds: f.units.map((u) => u.unitId), sectorRates: f.sectorRates.map((r) => ({ sectorName: r.sectorName, dayValue: Number(r.dayValue) })) }))}
             mine={(mine as ReqRow[]).map(toDTO)}

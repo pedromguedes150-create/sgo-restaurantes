@@ -27,7 +27,7 @@ export interface PayDetail {
   workDate: string | null; shift: string | null; workStartTime: string | null; workEndTime: string | null;
   hours: number | null; transportValue: number | null; coverageSector: string | null;
   workSectorId?: string | null; workSectorName?: string | null;
-  collaboratorName: string | null; reason: string | null; beneficiary: string | null; description: string | null;
+  collaboratorId?: string | null; collaboratorName: string | null; reason: string | null; beneficiary: string | null; description: string | null;
   pixKey: string | null; supplierName: string | null; miscTypeName: string | null;
   approvedBy: string | null; approvedAt: string | null; paidBy: string | null; paidAt: string | null;
   hasAttachment: boolean; attachmentPath: string | null;
@@ -64,6 +64,12 @@ interface MiscType { id: string; name: string }
 interface Supplier { id: string; name: string }
 /** Setor de uma unidade (Mapa de Funções): o freelancer já nasce alocado num deles. */
 interface SectorOpt { id: string; name: string; unitId: string }
+/** Colaborador do RH por unidade — a Hora Extra escolhe daqui (v1.126.0). */
+interface CollabOpt { id: string; name: string; jobTitle: string | null }
+type CollabsByUnit = Record<string, CollabOpt[]>;
+
+/** Opções do seletor de colaborador: o cargo vai de apoio, para distinguir homônimos. */
+const collabOptions = (xs: CollabOpt[]) => xs.map((c) => ({ value: c.id, label: c.name, hint: c.jobTitle ?? undefined }));
 
 const TYPE_LABEL = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra', MISC: 'Avulso' } as const;
 const STATUS: Record<PayReq['status'], { label: string; tone: StatusTone }> = {
@@ -111,6 +117,7 @@ export function PaymentsClient({
   miscTypes,
   suppliers = [],
   sectors = [],
+  collaboratorsByUnit = {},
   filtradoPor = [],
   mine,
   toApprove,
@@ -128,6 +135,8 @@ export function PaymentsClient({
   suppliers?: Supplier[];
   /** Setores ativos das unidades do usuário — obrigatório no freelancer (04/09). */
   sectors?: SectorOpt[];
+  /** Colaboradores ativos do RH por unidade — a Hora Extra escolhe daqui. */
+  collaboratorsByUnit?: CollabsByUnit;
   /** Nomes das unidades filtradas pelo seletor do cabeçalho; vazio = todas. */
   filtradoPor?: string[];
   mine: PayReq[];
@@ -284,7 +293,7 @@ export function PaymentsClient({
         </p>
       )}
 
-      {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} onDone={() => { setTab('minhas'); router.refresh(); }} />}
+      {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} onDone={() => { setTab('minhas'); router.refresh(); }} />}
 
       <ListaCortada mostrando={
         tab === 'minhas' ? mine.length : tab === 'aprovar' ? toApprove.length : tab === 'pagar' ? toPay.length : tab === 'historico' ? history.length : 0
@@ -333,7 +342,7 @@ export function PaymentsClient({
           )}
           <List
             items={toApprove}
-            editor={{ sectors }}
+            editor={{ sectors, collaboratorsByUnit }}
             selection={toApprove.length > 1 ? { ids: sel, onToggle: (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }) } : undefined}
             actions={(r) => (
               <div className="flex gap-2">
@@ -526,7 +535,7 @@ function List({ items, actions, selection, editor }: {
   /** Quando presente, cada linha ganha caixa de seleção (aprovação em lote). */
   selection?: { ids: Set<string>; onToggle: (id: string) => void };
   /** Quando presente, o detalhe ganha "Editar": o aprovador corrige antes de aprovar (04/09). */
-  editor?: { sectors: SectorOpt[] };
+  editor?: { sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit };
 }) {
   const router = useRouter();
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -593,6 +602,7 @@ function List({ items, actions, selection, editor }: {
           <ApproverEditForm
             r={detail}
             sectors={editor.sectors.filter((s) => s.unitId === detail.unitId)}
+            collaborators={detail.unitId ? editor.collaboratorsByUnit[detail.unitId] ?? [] : []}
             onDone={() => { setEditing(false); router.refresh(); }}
             onCancel={() => setEditing(false)}
           />
@@ -631,7 +641,7 @@ function List({ items, actions, selection, editor }: {
   );
 }
 
-function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; sectors: SectorOpt[]; onDone: () => void }) {
+function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collaboratorsByUnit, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit; onDone: () => void }) {
   const [supplierId, setSupplierId] = useState('');
   const [type, setType] = useState<'FREELANCER' | 'OVERTIME' | 'MISC'>('FREELANCER');
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
@@ -648,7 +658,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, onDone 
   const [coverageSector, setCoverageSector] = useState('');
   const [calc, setCalc] = useState<{ configured: boolean; hours: number; rate: number | null; amount: number; transport: number; dayTypeLabel: string } | null>(null);
   const [hours, setHours] = useState('');
-  const [collaboratorName, setCollaboratorName] = useState('');
+  const [collaboratorId, setCollaboratorId] = useState('');
   const [reason, setReason] = useState('');
   const [beneficiary, setBeneficiary] = useState('');
   const [description, setDescription] = useState('');
@@ -657,8 +667,9 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, onDone 
 
   const unitFreelancers = useMemo(() => freelancers.filter((f) => f.unitIds.includes(unitId)), [freelancers, unitId]);
   const unitSectors = useMemo(() => sectors.filter((s) => s.unitId === unitId), [sectors, unitId]);
-  // Trocou a unidade: o setor era da outra.
-  useEffect(() => { setWorkSectorId(''); }, [unitId]);
+  const unitCollabs = useMemo(() => collaboratorsByUnit[unitId] ?? [], [collaboratorsByUnit, unitId]);
+  // Trocou a unidade: o setor e o colaborador eram da outra.
+  useEffect(() => { setWorkSectorId(''); setCollaboratorId(''); }, [unitId]);
   // Cobertura de setor escolhida: o setor de mesmo nome já vem marcado.
   useEffect(() => {
     if (!coverage || !coverageSector) return;
@@ -692,12 +703,13 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, onDone 
       if (!workDate) { setErr('Informe o dia do trabalho.'); return; }
       if (!workSectorId) { setErr('Escolha o setor/função para o qual o freelancer foi contratado.'); return; }
     }
+    if (type === 'OVERTIME' && !collaboratorId) { setErr('Escolha o colaborador na lista.'); return; }
     if (!unitId || (!coverage && !autoPriced && !effAmt)) { setErr('Informe unidade e valor.'); return; }
     setBusy(true);
     try {
       const body: Record<string, unknown> = { type, unitId, amount: effAmt, description };
       if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workSectorId, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, hours: hours ? Number(hours) : undefined, coverageSector: coverage && coverageSector ? coverageSector : undefined });
-      if (type === 'OVERTIME') Object.assign(body, { collaboratorName, workDate, hours: hours ? Number(hours) : undefined, reason, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined });
+      if (type === 'OVERTIME') Object.assign(body, { collaboratorId, workDate, hours: hours ? Number(hours) : undefined, reason, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined });
       if (type === 'MISC') Object.assign(body, { miscTypeId, beneficiary, supplierId: supplierId || undefined });
       const res = await fetch('/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
@@ -733,7 +745,9 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, onDone 
         <>
           <DsSelect
             label="Freelancer"
-            placeholder="Selecione…"
+            placeholder="Pesquisar ou selecionar…"
+            searchable
+            searchPlaceholder="Pesquisar freelancer…"
             value={freelancerId}
             onValueChange={(v) => { setFreelancerId(v); const f = unitFreelancers.find((x) => x.id === v); if (f) setAmount(String(f.defaultValue)); }}
             options={unitFreelancers.map((f) => ({ value: f.id, label: f.name }))}
@@ -792,7 +806,18 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, onDone 
 
       {type === 'OVERTIME' && (
         <>
-          <div><Label>Colaborador</Label><Input value={collaboratorName} onChange={(e) => setCollaboratorName(e.target.value)} placeholder="nome (via RH)" /></div>
+          <DsSelect
+            label="Colaborador"
+            required
+            searchable
+            searchPlaceholder="Pesquisar colaborador…"
+            placeholder={unitCollabs.length ? 'Pesquisar ou selecionar…' : 'Nenhum colaborador do RH nesta unidade'}
+            value={collaboratorId}
+            onValueChange={setCollaboratorId}
+            disabled={unitCollabs.length === 0}
+            options={collabOptions(unitCollabs)}
+            hint={unitCollabs.length ? 'Colaboradores do RH desta unidade.' : 'Sincronize a unidade em Pessoas → Colaboradores para a lista aparecer.'}
+          />
           <div className="grid grid-cols-2 gap-2">
             <DatePicker label="Data" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
             <div><Label>Horas</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} /></div>
@@ -852,7 +877,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, onDone 
  * valor recalculado do horário (prévia igual à da tela Nova); cobertura de setor
  * tem valor fixo do dia. O servidor confere tudo de novo e registra antes/depois.
  */
-function ApproverEditForm({ r, sectors, onDone, onCancel }: { r: PayReq; sectors: SectorOpt[]; onDone: () => void; onCancel: () => void }) {
+function ApproverEditForm({ r, sectors, collaborators, onDone, onCancel }: { r: PayReq; sectors: SectorOpt[]; collaborators: CollabOpt[]; onDone: () => void; onCancel: () => void }) {
   const d = r.detail;
   const dec = (n: number | null | undefined) => (n == null ? '' : String(n).replace('.', ','));
   const num = (s: string) => parseFloat((s || '0').replace(/\./g, '').replace(',', '.')) || 0;
@@ -863,7 +888,9 @@ function ApproverEditForm({ r, sectors, onDone, onCancel }: { r: PayReq; sectors
   const [transport, setTransport] = useState(dec(d?.transportValue));
   const [amount, setAmount] = useState(dec(r.amount));
   const [description, setDescription] = useState(d?.description ?? '');
-  const [collaboratorName, setCollaboratorName] = useState(d?.collaboratorName ?? '');
+  /* Lançamento antigo só tem o nome digitado: o aprovador pode (não precisa)
+     apontar o colaborador do RH. Sem escolha, o nome antigo fica como está. */
+  const [collaboratorId, setCollaboratorId] = useState(d?.collaboratorId ?? '');
   const [hours, setHours] = useState(dec(d?.hours));
   const [reason, setReason] = useState(d?.reason ?? '');
   const [beneficiary, setBeneficiary] = useState(d?.beneficiary ?? '');
@@ -894,7 +921,7 @@ function ApproverEditForm({ r, sectors, onDone, onCancel }: { r: PayReq; sectors
       Object.assign(body, { workDate, workStartTime: start || null, workEndTime: end || null, workSectorId, transportValue: transport ? num(transport) : null });
       if (!autoPriced && !coverage) body.amount = num(amount);
     } else if (r.type === 'OVERTIME') {
-      Object.assign(body, { collaboratorName, workDate: workDate || '', hours: hours ? num(hours) : null, reason, transportValue: transport ? num(transport) : null, amount: num(amount) });
+      Object.assign(body, { ...(collaboratorId && collaboratorId !== (d?.collaboratorId ?? '') ? { collaboratorId } : {}), workDate: workDate || '', hours: hours ? num(hours) : null, reason, transportValue: transport ? num(transport) : null, amount: num(amount) });
     } else {
       Object.assign(body, { beneficiary, amount: num(amount) });
     }
@@ -947,7 +974,15 @@ function ApproverEditForm({ r, sectors, onDone, onCancel }: { r: PayReq; sectors
       )}
       {r.type === 'OVERTIME' && (
         <>
-          <div><Label>Colaborador</Label><Input value={collaboratorName} onChange={(e) => setCollaboratorName(e.target.value)} /></div>
+          <DsSelect
+            label="Colaborador"
+            searchable
+            searchPlaceholder="Pesquisar colaborador…"
+            placeholder={d?.collaboratorName && !d?.collaboratorId ? `${d.collaboratorName} (digitado — escolha na lista)` : 'Pesquisar ou selecionar…'}
+            value={collaboratorId}
+            onValueChange={setCollaboratorId}
+            options={collabOptions(collaborators)}
+          />
           <div className="grid grid-cols-2 gap-2">
             <DatePicker label="Data" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
             <div><Label>Horas</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} /></div>

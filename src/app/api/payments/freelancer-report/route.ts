@@ -11,7 +11,10 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const ym = url.searchParams.get('month') ?? new Date().toISOString().slice(0, 7);
   const semana = url.searchParams.get('semana');
-  const range = semana && /^d{4}-d{2}-d{2}$/.test(semana)
+  /* Era `/^d{4}-d{2}-d{2}$/` (`d` literal, sem a barra) — o mesmo defeito que a
+     v1.97.0 corrigiu na PÁGINA do fechamento, mas não aqui: o "Exportar" da
+     semana nunca casava e o arquivo saía com o MÊS inteiro, sem erro nenhum. */
+  const range = semana && /^\d{4}-\d{2}-\d{2}$/.test(semana)
     ? { from: semana, to: new Date(new Date(semana + 'T12:00:00Z').getTime() + 6 * 86400000).toISOString().slice(0, 10) }
     : undefined;
   const unitId = url.searchParams.get('unit') || undefined;

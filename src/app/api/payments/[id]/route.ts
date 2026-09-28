@@ -29,7 +29,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     workEndTime: body.workEndTime === null ? null : typeof body.workEndTime === 'string' ? body.workEndTime : undefined,
     workSectorId: typeof body.workSectorId === 'string' ? body.workSectorId : undefined,
     transportValue: body.transportValue === null ? null : body.transportValue !== undefined ? Number(body.transportValue) : undefined,
-    collaboratorName: typeof body.collaboratorName === 'string' ? body.collaboratorName : undefined,
+    collaboratorId: typeof body.collaboratorId === 'string' ? body.collaboratorId : undefined,
     hours: body.hours === null ? null : body.hours !== undefined ? Number(body.hours) : undefined,
     reason: typeof body.reason === 'string' ? body.reason : undefined,
     beneficiary: typeof body.beneficiary === 'string' ? body.beneficiary : undefined,

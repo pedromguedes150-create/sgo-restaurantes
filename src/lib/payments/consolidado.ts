@@ -90,7 +90,7 @@ export function periodoAnterior(p: Periodo, f: Pick<FiltroConsolidado, 'periodo'
 /* ───────────────────────── o consolidado ───────────────────────── */
 
 /** FINANCE e quem vê a rede não têm recorte; os demais, só as suas unidades. */
-function escopo(user: SessionUser): Prisma.PaymentRequestWhereInput {
+export function escopo(user: SessionUser): Prisma.PaymentRequestWhereInput {
   if (user.seesAllUnits || user.role === 'FINANCE') return {};
   return { unitId: { in: user.unitIds } };
 }
@@ -100,7 +100,7 @@ function escopo(user: SessionUser): Prisma.PaymentRequestWhereInput {
  * (é o que o gestor tem em mente), senão a data efetiva do lançamento, senão a
  * criação. Mesma cascata que a tela de Histórico usa para ordenar.
  */
-const noPeriodo = (de: string, ate: string): Prisma.PaymentRequestWhereInput => {
+export const noPeriodo = (de: string, ate: string): Prisma.PaymentRequestWhereInput => {
   const gte = dia(de);
   const lt = new Date(dia(ate).getTime() + 86400000);
   return {
@@ -112,7 +112,7 @@ const noPeriodo = (de: string, ate: string): Prisma.PaymentRequestWhereInput => 
   };
 };
 
-const dataDe = (r: { workDate: Date | null; entryDate: Date | null; createdAt: Date }) =>
+export const dataDe = (r: { workDate: Date | null; entryDate: Date | null; createdAt: Date }) =>
   (r.workDate ?? r.entryDate ?? r.createdAt).toISOString().slice(0, 10);
 
 const tipoWhere = (t: TipoFiltro): Prisma.PaymentRequestWhereInput =>
