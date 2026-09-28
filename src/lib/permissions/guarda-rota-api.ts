@@ -143,6 +143,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/rh/test': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'ver' },
   // Ping da v2: só status/erro/forma, sem dado do RH — por isso pode viver em produção.
   '/api/rh/v2/ping': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'ver' },
+  // chaves da API Global (criar / ativar / desativar / revogar): só quem edita Integrações
+  '/api/api-global/chaves': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
 
   '/api/schedule': { modulo: 'SCHEDULE', exigir: 'editar' },
   '/api/schedule/absence': { modulo: 'SCHEDULE_TAB_ACTUAL', exigir: 'editar' },
@@ -187,6 +189,7 @@ export const FORA_DA_MATRIZ: Record<string, string> = {
   '/api/manager-area': 'já tem guarda por aba (v1.64.0)',
   '/api/checklists/public': 'ficha preenchida por link, sem login',
   '/api/integracoes/rh/[evento]': 'webhook do RH, autenticado por chave própria',
+  '/api/v1/status': 'API Global do SGO — máquina-a-máquina, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts)',
   '/api/lgpd/collaborator/[id]/export': 'LGPD — só ADMIN/CEO, checado no próprio handler (lgpd/collaborator/[id]/export/route.ts); não há módulo LGPD na matriz',
   '/api/entry-date': 'editEntryDate (src/lib/late-entry.ts): só ADMIN/SUPERVISOR + canAccessUnit do lançamento',
   '/api/oil': 'já tem guarda por aba (v1.66.0)',

@@ -1,10 +1,13 @@
 import Link from 'next/link';
-import { ArrowLeft, Plug, CheckCircle2, XCircle, ArrowDownToLine, ArrowUpFromLine, Stethoscope } from 'lucide-react';
+import { ArrowLeft, Plug, CheckCircle2, XCircle, ArrowDownToLine, ArrowUpFromLine, Stethoscope, Globe } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { rhConfigured, rhV2Base, rhV2Configured } from '@/lib/rh/client';
 import { feriasWebhookConfigured } from '@/lib/rh/webhook';
 import { RhV2Ping } from '@/components/admin/rh-v2-ping';
+import { ApiGlobalClient } from '@/components/admin/api-global-client';
+import { listarSistemas, ultimasChamadas } from '@/lib/api-global/chaves';
+import { API_BASE_PATH, HEADER_API_KEY } from '@/lib/api-global/formato';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -30,7 +33,11 @@ export default async function IntegracoesPage() {
   const webhookToken = process.env.SGO_WEBHOOK_TOKEN ?? '';
   const webhookUrl = process.env.RH_WEBHOOK_FERIAS_URL ?? `${rhBase}/api/integracoes/sgo/ferias`;
 
-  const events = await prisma.rhInboundEvent.findMany({ orderBy: { createdAt: 'desc' }, take: 25 });
+  const [events, sistemas, chamadas] = await Promise.all([
+    prisma.rhInboundEvent.findMany({ orderBy: { createdAt: 'desc' }, take: 25 }),
+    listarSistemas(),
+    ultimasChamadas(30),
+  ]);
   const ST = { PROCESSED: { label: 'Processado', tone: 'success' as const }, RECEIVED: { label: 'Recebido', tone: 'medium' as const }, ERROR: { label: 'Erro', tone: 'critical' as const } };
 
   return (
@@ -40,6 +47,48 @@ export default async function IntegracoesPage() {
         <LargeTitle title="APIs &amp; Integrações" />
         <p className="text-sm text-ink-500">Tudo que o SGO consome e expõe. Toda nova API entra aqui. Os valores completos dos tokens ficam no <code>.env</code> do servidor.</p>
       </div>
+
+      {/* 0. API GLOBAL DO SGO (v1.129.0) — o que o SGO expõe para os outros
+          sistemas da empresa, com uma chave por sistema. Em paralelo às
+          integrações abaixo, que não mudaram. */}
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Globe className="h-4 w-4 text-brand" /> API Global do SGO</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="space-y-1">
+            <Row k="URL base" v={`${baseUrl}${API_BASE_PATH}`} mono />
+            <Row k="Autenticação" v={`header ${HEADER_API_KEY}: <chave do sistema>`} mono />
+            <Row k="Teste" v={`GET ${API_BASE_PATH}/status → {"status":"ok","service":"SGO","api_version":"v1"}`} mono />
+            <Row k="Sem chave / chave inválida" v="HTTP 401" />
+          </div>
+          <details className="rounded-lg border border-line bg-canvas p-2 text-xs">
+            <summary className="cursor-pointer font-semibold text-ink-900">Como conectar outro sistema</summary>
+            <ol className="mt-2 list-decimal space-y-1 pl-4 text-ink-700">
+              <li>Crie uma chave abaixo com o nome do sistema (RH, Financeiro, Estoque, Compras, BI…).</li>
+              <li>Copie a chave na hora — ela aparece uma única vez — e guarde no <code>.env</code> daquele sistema.</li>
+              <li>Toda chamada leva o header <code>{HEADER_API_KEY}</code>. Exemplo:</li>
+            </ol>
+            <pre className="mt-2 overflow-x-auto rounded bg-surface p-2 font-mono text-[11px] text-ink-900">{`curl -H "${HEADER_API_KEY}: sgo_live_…" ${baseUrl}${API_BASE_PATH}/status`}</pre>
+            <p className="mt-2 text-ink-500">Cada chamada fica registrada (sistema, endpoint, data/hora, status) — a chave, nunca. Desativar pausa; revogar é definitivo.</p>
+          </details>
+          <ApiGlobalClient sistemas={sistemas.map((s) => ({
+            id: s.id, name: s.name, description: s.description, keyPrefix: s.keyPrefix, keyLast4: s.keyLast4,
+            active: s.active, revokedAt: s.revokedAt?.toISOString() ?? null, lastUsedAt: s.lastUsedAt?.toISOString() ?? null,
+            createdAt: s.createdAt.toISOString(), createdBy: s.createdBy?.name ?? null, chamadas: s._count.requests,
+          }))} />
+          <div>
+            <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Últimas chamadas ({chamadas.length})</p>
+            {chamadas.length === 0 && <p className="text-xs text-ink-500">Nenhuma chamada ainda.</p>}
+            <div className="space-y-1">
+              {chamadas.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-2 rounded-md bg-canvas px-2 py-1 text-xs">
+                  <span className="min-w-0 truncate"><b className="text-ink-900">{c.clientName}</b> · <span className="font-mono">{c.method} {c.path}</span></span>
+                  <span className="shrink-0 tabular-nums text-ink-500">{c.createdAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · <b className={c.status < 400 ? 'text-success' : 'text-danger'}>{c.status}</b> · {c.durationMs} ms</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 1. API do RH (consumo/pull) */}
       <Card>

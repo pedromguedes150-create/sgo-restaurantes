@@ -137,6 +137,7 @@ model User {
   memberships             UnitMembership[]
   refreshTokens           RefreshToken[]
   auditLogs               AuditLog[]
+  apiClients              ApiClient[]
   completedTasks          TaskInstance[]           @relation("CompletedBy")
   assignedTasks           TaskInstance[]           @relation("AssignedTo")
   wasteEntries            WasteEntry[]             @relation("WasteCreatedBy")
@@ -2211,6 +2212,55 @@ enum RhEventStatus {
   PROCESSED // aplicado no SGO
   RECEIVED // recebido e registrado (processamento futuro)
   ERROR // payload inválido / colaborador não encontrado
+}
+
+// ===== API Global do SGO (v1.129.0) ==========================================
+/// Um SISTEMA conectado ao SGO pela API Global (/api/v1), com a sua própria
+/// chave. A chave completa NUNCA é guardada: só o SHA-256 (`keyHash`, como o
+/// refresh token) e o pedaço para reconhecer na tela (`keyPrefix` + `keyLast4`).
+/// Ela é mostrada UMA vez, na criação. Perdeu = revoga e cria outra.
+model ApiClient {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  /// Primeiros caracteres da chave (ex.: "sgo_live_ab12cd34") — só para reconhecer
+  keyPrefix   String
+  keyLast4    String
+  /// SHA-256 hex da chave completa — é o que autentica
+  keyHash     String    @unique
+  active      Boolean   @default(true)
+  revokedAt   DateTime?
+  lastUsedAt  DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  requests  ApiRequestLog[]
+
+  @@map("api_clients")
+}
+
+/// Cada chamada à API Global: quem (sistema), o quê (método + caminho), quando
+/// e o status devolvido. Sem a chave, nunca. Chamada sem chave válida fica com
+/// `clientId` nulo e `clientName` "não autenticado".
+model ApiRequestLog {
+  id         String   @id @default(cuid())
+  clientId   String?
+  /// Nome do sistema congelado (legível depois de revogar/renomear)
+  clientName String
+  method     String
+  path       String
+  status     Int
+  durationMs Int
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  client ApiClient? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([clientId, createdAt])
+  @@map("api_request_logs")
 }
 
 /// Evento recebido do RH (envio automático RH→SGO): admissões, desligamentos,
