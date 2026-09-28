@@ -91,6 +91,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
 
   '/api/occurrences': { modulo: 'OCCURRENCES_NEW', exigir: 'editar' },
   '/api/occurrences/[id]/update': { modulo: 'OCCURRENCES', exigir: 'editar' },
+  // lote (em andamento / reclassificar): a lib ainda exige Supervisor/Admin/CEO
+  '/api/occurrences/batch': { modulo: 'OCCURRENCES', exigir: 'editar' },
 
   '/api/payments': { modulo: 'PAYMENTS_TAB_NEW', exigir: 'editar' },
   // aprovar/reprovar em lote é a aba Aprovar (estava em Pagar até a v1.75.0)

@@ -3,6 +3,7 @@ import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import type { OccurrenceGravity, OccurrenceStatus } from '@prisma/client';
+import { ordenacaoDaLista, type OrdemDaLista } from '@/lib/occurrences/contexto';
 
 export async function getOccurrenceTypes() {
   return prisma.occurrenceType.findMany({
@@ -30,6 +31,11 @@ export interface OccurrenceScope {
    * caso mais grave. Aqui ela aparece nos dois lugares.
    */
   critical?: boolean;
+  /**
+   * Busca por texto (v1.128.0) — no BANCO, e não na página: com 124 abertas e
+   * páginas de 50, filtrar só o que estava carregado escondia o resto.
+   */
+  q?: string;
 }
 
 /** As gravidades que a aba Geral Crítico reúne. */
@@ -45,6 +51,13 @@ function occurrenceWhere(user: SessionUser, f: OccurrenceScope) {
     ...(f.critical ? { gravity: { in: GRAVIDADES_CRITICAS } } : {}),
     ...(f.maintenance !== undefined ? { type: { isMaintenance: f.maintenance } } : {}),
     ...(f.it !== undefined ? { type: { isIT: f.it } } : {}),
+    ...(f.q ? { OR: [
+      { description: { contains: f.q, mode: 'insensitive' as const } },
+      { typeName: { contains: f.q, mode: 'insensitive' as const } },
+      { categoryName: { contains: f.q, mode: 'insensitive' as const } },
+      { unit: { name: { contains: f.q, mode: 'insensitive' as const } } },
+      ...(/^d+$/.test(f.q) ? [{ number: Number(f.q) }] : []),
+    ] } : {}),
   };
 }
 
@@ -55,7 +68,7 @@ function occurrenceWhere(user: SessionUser, f: OccurrenceScope) {
  */
 export async function listOccurrences(
   user: SessionUser,
-  filters: OccurrenceScope & { limit?: number; page?: number } = {},
+  filters: OccurrenceScope & { limit?: number; page?: number; ordem?: OrdemDaLista } = {},
 ) {
   const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
   const page = Math.max(filters.page ?? 1, 1);
@@ -64,7 +77,7 @@ export async function listOccurrences(
   const [items, total] = await Promise.all([
     prisma.occurrence.findMany({
       where,
-      orderBy: [{ createdAt: 'desc' }],
+      orderBy: ordenacaoDaLista(filters.ordem ?? 'recentes'),
       skip: (page - 1) * limit,
       take: limit,
       include: {
@@ -129,7 +142,7 @@ export interface OccurrenceSummary {
  */
 export async function getOccurrenceSummary(
   user: SessionUser,
-  scope: Pick<OccurrenceScope, 'maintenance' | 'it' | 'unitId'> = {},
+  scope: Pick<OccurrenceScope, 'maintenance' | 'it' | 'unitId' | 'critical' | 'gravity' | 'q'> = {},
 ): Promise<OccurrenceSummary> {
   const all = await prisma.occurrence.findMany({
     where: occurrenceWhere(user, scope),
