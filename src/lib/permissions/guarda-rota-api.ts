@@ -97,6 +97,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/payments/batch': { modulo: 'PAYMENTS_TAB_APPROVE', exigir: 'editar' },
   '/api/payments/freelancer-calc': { modulo: 'PAYMENTS', exigir: 'ver' },
   '/api/payments/freelancer-report': { modulo: 'PAYMENTS_FREELANCER_REPORT', exigir: 'ver' },
+  // exportar a consolidação é leitura: quem vê a tela baixa o Excel dela
+  '/api/payments/consolidacao': { modulo: 'PAYMENTS_CONSOLIDATION', exigir: 'ver' },
 
   '/api/people/evaluation': { modulo: 'PEOPLE_EVALUATION', exigir: 'editar' },
   '/api/people/payouts': { modulo: 'PEOPLE_PAYOUTS', exigir: 'editar' },

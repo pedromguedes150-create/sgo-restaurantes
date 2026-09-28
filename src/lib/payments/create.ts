@@ -25,6 +25,9 @@ export interface CreatePaymentInput {
   /// Cobertura temporária de setor (16/07): valor por DIA do setor cadastrado
   coverageSector?: string;
   // overtime
+  /** Colaborador do RH (v1.126.0) — obrigatório na Hora Extra. */
+  collaboratorId?: string;
+  /** Ignorado na criação: o nome vem do cadastro do colaborador, nunca do corpo. */
   collaboratorName?: string;
   reason?: string;
   // misc
@@ -71,6 +74,19 @@ export async function createPaymentRequest(
     workSectorId = input.workSectorId;
     // Mesmo freelancer mais de N vezes na semana do dia de trabalho → marca e avisa.
     recorrencia = await avaliarRecorrencia(input.freelancerId!, input.workDate!);
+  }
+
+  /* HORA EXTRA pelo colaborador do RH (v1.126.0). O nome digitado à mão gerava
+     o mesmo funcionário escrito de três jeitos e a consolidação não fechava. O
+     vínculo é conferido AQUI e não só na tela: aberta a porta do texto livre no
+     servidor, qualquer cliente antigo recriaria o problema por fora. */
+  let collaboratorId: string | null = null;
+  let collaboratorName: string | null = null;
+  if (input.type === 'OVERTIME') {
+    const r = await colaboradorDaUnidade(input.collaboratorId, input.unitId);
+    if (!r.ok) return { ok: false, reason: 'INVALID', detail: r.detail };
+    collaboratorId = r.id;
+    collaboratorName = r.name;
   }
 
   // Freelancer: se houver valor/hora cadastrado p/ a unidade+tipo de dia, o valor
@@ -130,7 +146,8 @@ export async function createPaymentRequest(
       workEndTime: input.type === 'FREELANCER' ? (input.workEndTime?.trim() || null) : null,
       workSectorId,
       coverageSector,
-      collaboratorName: input.collaboratorName?.trim() || null,
+      collaboratorId,
+      collaboratorName,
       reason: input.reason?.trim() || null,
       miscTypeId: input.miscTypeId || null,
       beneficiary: input.beneficiary?.trim() || null,
@@ -170,4 +187,22 @@ export async function createPaymentRequest(
     await notifyUnitRole(input.unitId, approverRole, payload);
   }
   return { ok: true, id: req.id };
+}
+
+/**
+ * O colaborador da Hora Extra: ativo, vindo do cadastro de Pessoas (RH) e
+ * vinculado À UNIDADE da solicitação. Devolve o nome do cadastro, que é o que
+ * fica congelado na solicitação. Usado no lançamento e na correção do aprovador.
+ */
+export async function colaboradorDaUnidade(
+  collaboratorId: string | undefined | null,
+  unitId: string,
+): Promise<{ ok: true; id: string; name: string } | { ok: false; detail: string }> {
+  if (!collaboratorId) return { ok: false, detail: 'Escolha o colaborador na lista.' };
+  const c = await prisma.collaborator.findFirst({
+    where: { id: collaboratorId, active: true, units: { some: { unitId } } },
+    select: { id: true, name: true },
+  });
+  if (!c) return { ok: false, detail: 'Colaborador não encontrado nesta unidade.' };
+  return { ok: true, id: c.id, name: c.name };
 }

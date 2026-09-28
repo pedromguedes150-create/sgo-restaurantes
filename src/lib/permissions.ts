@@ -79,6 +79,7 @@ const BASE: ModuleDef[] = [
 
   { key: 'PAYMENTS', label: 'Pagamentos', nav: '/modulos/pagamentos' },
   { key: 'PAYMENTS_FREELANCER_REPORT', label: 'Relatório de freelancers', nav: '/modulos/pagamentos/relatorio-freelancers', parent: 'PAYMENTS' },
+  { key: 'PAYMENTS_CONSOLIDATION', label: 'Consolidação de pagamentos', nav: '/modulos/pagamentos/consolidacao', parent: 'PAYMENTS' },
 
   { key: 'PEOPLE', label: 'Pessoas / Escala / Mapa', nav: '/modulos/pessoas' },
   { key: 'PEOPLE_MAP', label: 'Mapa de funções', nav: '/modulos/pessoas/mapa', parent: 'PEOPLE' },
@@ -182,6 +183,10 @@ export interface Perm { canView: boolean; canEdit: boolean }
 // explícita (ADMIN/CEO sempre veem). Admin pode liberar/restringir na matriz.
 const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   LEAVES_TEAM: ['SUPERVISOR'],
+  /* Consolidação de pagamentos (v1.126.0): Freelancer + Hora Extra da rede para
+     o Financeiro. Nasce para Supervisão e Financeiro (+Admin/CEO); o gerente
+     segue com as abas de sempre. O Admin libera outros perfis na matriz. */
+  PAYMENTS_CONSOLIDATION: ['SUPERVISOR', 'FINANCE'],
   /* A separacao e do CD, nao das unidades: nasce so para o Separador (e
      ADMIN/CEO, que veem tudo). Gerente nao separa pedido. */
   PRODUCT_SEPARATION: ['SEPARATOR'],

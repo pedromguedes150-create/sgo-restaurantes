@@ -12,6 +12,8 @@ import type { SessionUser } from '@/lib/auth/session';
 
 const sfx = `lr${process.pid.toString(36)}`;
 let unitId: string; let mgrId: string; let supId: string;
+/** Hora Extra escolhe o colaborador do RH (v1.126.0). */
+const colabs = new Map<string, string>();
 const mgr = (): SessionUser => ({ id: mgrId, name: 'Gerente', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
 const sup = (): SessionUser => ({ id: supId, name: 'Supervisora', role: 'SUPERVISOR', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
 
@@ -27,12 +29,18 @@ afterAll(async () => {
   await prisma.notification.deleteMany({ where: { userId: mgrId } }).catch(() => {});
   await prisma.unitMembership.deleteMany({ where: { userId: { in: [mgrId, supId] } } }).catch(() => {});
   await prisma.unit.delete({ where: { id: unitId } }).catch(() => {});
+  await prisma.collaborator.deleteMany({ where: { id: { in: [...colabs.values()] } } }).catch(() => {});
   await prisma.user.deleteMany({ where: { id: { in: [mgrId, supId] } } }).catch(() => {});
   await prisma.$disconnect();
 });
 
 async function pendente(nome: string) {
-  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', unitId, amount: 50, collaboratorName: nome, hours: 1, reason: 'x' });
+  let collaboratorId = colabs.get(nome);
+  if (!collaboratorId) {
+    collaboratorId = (await prisma.collaborator.create({ data: { name: nome, units: { create: { unitId } } } })).id;
+    colabs.set(nome, collaboratorId);
+  }
+  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', unitId, amount: 50, collaboratorId, hours: 1, reason: 'x' });
   if (!r.ok) throw new Error('setup');
   return r.id;
 }

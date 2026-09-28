@@ -3,6 +3,7 @@ import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { notifyRole, notifyUsers } from '@/lib/notifications';
 import { avaliarRecorrencia, avisarRecorrencia, type Recorrencia } from '@/lib/payments/recorrencia';
+import { colaboradorDaUnidade } from '@/lib/payments/create';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
 
@@ -194,8 +195,8 @@ export interface ApproverEditInput {
   workEndTime?: string | null;
   workSectorId?: string;
   transportValue?: number | null;
-  // hora extra
-  collaboratorName?: string;
+  // hora extra — o colaborador do RH (v1.126.0), nunca nome digitado
+  collaboratorId?: string;
   hours?: number | null;
   reason?: string;
   // avulso
@@ -221,7 +222,7 @@ export async function approverEditRequest(user: SessionUser, id: string, input: 
     select: {
       unitId: true, status: true, approverRole: true, type: true, requestedById: true,
       amount: true, description: true, workDate: true, workStartTime: true, workEndTime: true, workSectorId: true,
-      transportValue: true, hours: true, coverageSector: true, standardValue: true, collaboratorName: true, reason: true, beneficiary: true,
+      transportValue: true, hours: true, coverageSector: true, standardValue: true, collaboratorId: true, collaboratorName: true, reason: true, beneficiary: true,
       freelancerId: true, weekCount: true, recurrent: true,
     },
   });
@@ -304,9 +305,11 @@ export async function approverEditRequest(user: SessionUser, id: string, input: 
     }
     muda('hours', req.hours, hours);
   } else if (req.type === 'OVERTIME') {
-    if (input.collaboratorName !== undefined) {
-      if (!input.collaboratorName.trim()) return { ok: false, reason: 'INVALID', detail: 'Informe o colaborador.' };
-      muda('collaboratorName', req.collaboratorName, input.collaboratorName.trim());
+    if (input.collaboratorId !== undefined) {
+      const c = await colaboradorDaUnidade(input.collaboratorId, req.unitId);
+      if (!c.ok) return { ok: false, reason: 'INVALID', detail: c.detail };
+      muda('collaboratorId', req.collaboratorId, c.id);
+      muda('collaboratorName', req.collaboratorName, c.name);
     }
     if (input.workDate !== undefined) {
       if (input.workDate && !YMD.test(input.workDate)) return { ok: false, reason: 'INVALID', detail: 'Data inválida.' };

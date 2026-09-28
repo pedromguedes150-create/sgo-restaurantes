@@ -8,6 +8,8 @@ import type { SessionUser } from '@/lib/auth/session';
 const sfx = process.pid.toString(36);
 let unitId: string;
 let mgrId: string, supId: string, coordId: string, finId: string;
+/** Hora Extra escolhe o colaborador do RH (v1.126.0) — um colaborador da unidade. */
+let colabId: string;
 
 const mgr = (): SessionUser => ({ id: mgrId, name: 'M', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
 const sup = (): SessionUser => ({ id: supId, name: 'S', role: 'SUPERVISOR', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
@@ -22,16 +24,18 @@ beforeAll(async () => {
   coordId = (await prisma.user.create({ data: { name: 'C', email: `pc-${sfx}@e.com`, role: 'COORDINATOR', passwordHash: 'x' } })).id;
   finId = (await prisma.user.create({ data: { name: 'F', email: `pf-${sfx}@e.com`, role: 'FINANCE', passwordHash: 'x' } })).id;
   await prisma.unitMembership.createMany({ data: [mgrId, supId, coordId].map((userId) => ({ userId, unitId })) });
+  colabId = (await prisma.collaborator.create({ data: { name: `Colab ${sfx}`, units: { create: { unitId } } } })).id;
 });
 
 afterAll(async () => {
   await prisma.unit.delete({ where: { id: unitId } }).catch(() => {});
+  await prisma.collaborator.delete({ where: { id: colabId } }).catch(() => {});
   await prisma.user.deleteMany({ where: { id: { in: [mgrId, supId, coordId, finId] } } }).catch(() => {});
   await prisma.$disconnect();
 });
 
 async function newOvertime() {
-  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', unitId, amount: 100, collaboratorName: 'X', hours: 2, reason: 'y' });
+  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', unitId, amount: 100, collaboratorId: colabId, hours: 2, reason: 'y' });
   if (!r.ok) throw new Error('create failed');
   return r.id;
 }
@@ -79,7 +83,7 @@ describe('Pagamentos (Módulo 7)', () => {
   });
 
   it('ninguém aprova a própria solicitação (segregação de funções)', async () => {
-    const created = await createPaymentRequest(sup(), { type: 'OVERTIME', unitId, amount: 50, collaboratorName: 'Y', hours: 1, reason: 'z' });
+    const created = await createPaymentRequest(sup(), { type: 'OVERTIME', unitId, amount: 50, collaboratorId: colabId, hours: 1, reason: 'z' });
     expect(created.ok).toBe(true);
     if (!created.ok) return;
     const denied = await approveRequest(sup(), created.id);
