@@ -18,7 +18,13 @@ export type PeriodoRapido = 'hoje' | 'ontem' | 'semana' | 'semana-passada' | 'me
 export type TipoCons = 'TODOS' | 'FREELANCER' | 'OVERTIME';
 export type StatusCons = 'TODOS' | PaymentStatus;
 export type Visao = 'lancamento' | 'colaborador';
-export type Ordem = 'data' | 'unidade' | 'colaborador' | 'tipo' | 'status';
+export type Ordem = 'data' | 'unidade' | 'colaborador' | 'tipo' | 'valor' | 'status';
+/**
+ * As duas visões da mesma base (v1.127.0): FINANCEIRA = quem recebe, por qual
+ * unidade e tipo, e quanto; RECORRÊNCIA = o freelancer chamado de novo e de
+ * novo. Objetivos diferentes, mesmos lançamentos.
+ */
+export type Aba = 'financeiro' | 'recorrencia';
 
 export const PERIODOS_RAPIDOS: { value: PeriodoRapido; label: string }[] = [
   { value: 'hoje', label: 'Hoje' },
@@ -45,7 +51,7 @@ export const TIPOS_CONS: { value: TipoCons; label: string }[] = [
 export const STATUS_CONS: { value: StatusCons; label: string; hint?: string }[] = [
   { value: 'TODOS', label: 'Todos' },
   { value: 'PENDING', label: 'Pendente', hint: 'aguardando aprovação' },
-  { value: 'APPROVED', label: 'Aprovado', hint: 'a pagar (aba Pagar)' },
+  { value: 'APPROVED', label: 'Aprovado (a pagar)', hint: 'aguardando pagamento na aba Pagar' },
   { value: 'PAID', label: 'Pago' },
   { value: 'REJECTED', label: 'Rejeitado' },
 ];
@@ -54,6 +60,8 @@ export const STATUS_TEXTO: Record<PaymentStatus, string> = { PENDING: 'Pendente'
 export const TIPO_TEXTO = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra' } as const;
 
 export interface FiltroConsolidacao {
+  /** Ausente = financeiro. */
+  aba?: Aba;
   periodo: PeriodoRapido;
   de?: string;
   ate?: string;
@@ -76,6 +84,7 @@ export function lerFiltro(sp: { get(k: string): string | null }): FiltroConsolid
   const de = sp.get('de') ?? '';
   const ate = sp.get('ate') ?? '';
   return {
+    aba: um<Aba>(sp.get('aba'), ['financeiro', 'recorrencia'], 'financeiro'),
     periodo: um<PeriodoRapido>(sp.get('periodo'), PERIODOS_RAPIDOS.map((p) => p.value), 'semana'),
     de: ISO.test(de) ? de : undefined,
     ate: ISO.test(ate) ? ate : undefined,
@@ -89,6 +98,7 @@ export function lerFiltro(sp: { get(k: string): string | null }): FiltroConsolid
 /** O inverso de `lerFiltro` — monta a query dos links de Excel e PDF. */
 export function queryDoFiltro(f: FiltroConsolidacao): string {
   const p = new URLSearchParams();
+  if (f.aba === 'recorrencia') p.set('aba', 'recorrencia');
   p.set('periodo', f.periodo);
   if (f.periodo === 'personalizado') {
     if (f.de) p.set('de', f.de);
@@ -225,6 +235,12 @@ export interface Resumo {
   fora: { qtd: number; valor: number };
   /** Pendentes dentro do total — ainda não aprovados, o Financeiro não paga. */
   pendentes: { qtd: number; valor: number };
+  /**
+   * O total separado pelo que ele É (v1.127.0): solicitado e ainda pendente,
+   * aprovado esperando pagamento, e já pago. Somar os três num número só
+   * esconderia justamente o que o Financeiro precisa saber: o que é para pagar.
+   */
+  porStatus: { pendente: number; aprovado: number; pago: number };
 }
 
 export function resumir(xs: Lancamento[], status: StatusCons): Resumo {
@@ -243,12 +259,19 @@ export function resumir(xs: Lancamento[], status: StatusCons): Resumo {
     total: soma(dentro.map((l) => l.valor)),
     fora: { qtd: fora.length, valor: soma(fora.map((l) => l.valor)) },
     pendentes: { qtd: pend.length, valor: soma(pend.map((l) => l.valor)) },
+    porStatus: {
+      pendente: soma(pend.map((l) => l.valor)),
+      aprovado: soma(dentro.filter((l) => l.status === 'APPROVED').map((l) => l.valor)),
+      pago: soma(dentro.filter((l) => l.status === 'PAID').map((l) => l.valor)),
+    },
   };
 }
 
 export interface ResumoDaUnidade {
   unitId: string;
   unidade: string;
+  /** Solicitações que entram nos totais. */
+  qtd: number;
   freelancer: number;
   horaExtra: number;
   vt: number;
@@ -264,9 +287,10 @@ export interface ResumoDaUnidade {
 export function porUnidade(xs: Lancamento[], status: StatusCons): ResumoDaUnidade[] {
   const m = new Map<string, ResumoDaUnidade>();
   for (const l of xs) {
-    const u = m.get(l.unitId) ?? { unitId: l.unitId, unidade: l.unidade, freelancer: 0, horaExtra: 0, vt: 0, total: 0, lancamentos: [] };
+    const u = m.get(l.unitId) ?? { unitId: l.unitId, unidade: l.unidade, qtd: 0, freelancer: 0, horaExtra: 0, vt: 0, total: 0, lancamentos: [] };
     u.lancamentos.push(l);
     if (entraNosTotais(l, status)) {
+      u.qtd++;
       if (l.tipo === 'FREELANCER') u.freelancer += l.valor; else u.horaExtra += l.valor;
       u.vt += l.vt;
       u.total += l.valor;
@@ -320,6 +344,7 @@ export function ordenar(xs: Lancamento[], ordem: Ordem, dir: 'asc' | 'desc'): La
       case 'colaborador': return pt(a.pessoa, b.pessoa);
       case 'tipo': return pt(TIPO_TEXTO[a.tipo], TIPO_TEXTO[b.tipo]);
       case 'status': return ORDEM_STATUS[a.status] - ORDEM_STATUS[b.status];
+      case 'valor': return a.valor - b.valor;
       default: return a.data.localeCompare(b.data);
     }
   };
@@ -340,4 +365,38 @@ export interface Consolidacao {
   resumo: Resumo;
   porUnidade: ResumoDaUnidade[];
   porColaborador: ResumoDaPessoa[];
+}
+
+/* ───────────────────────── recorrência ───────────────────────── */
+
+/** Uma semana de um freelancer que passou do limite — a MESMA linha do alerta ao supervisor. */
+export interface SemanaRecorrente {
+  chave: string;
+  freelancerId: string;
+  nome: string;
+  unidades: string[];
+  semanaDe: string;
+  semanaAte: string;
+  solicitacoes: number;
+  valor: number;
+}
+
+export interface Recorrencia {
+  periodo: PeriodoResolvido;
+  limiteSemanal: number;
+  linhas: SemanaRecorrente[];
+  totais: { freelancers: number; semanas: number; solicitacoes: number; valor: number };
+}
+
+/**
+ * Os totais que o supervisor fazia na calculadora (v1.127.0). "Freelancers" é
+ * de PESSOAS: quem foi recorrente em duas semanas é uma pessoa e duas linhas.
+ */
+export function totaisDaRecorrencia(linhas: SemanaRecorrente[]): Recorrencia['totais'] {
+  return {
+    freelancers: new Set(linhas.map((l) => l.freelancerId)).size,
+    semanas: linhas.length,
+    solicitacoes: linhas.reduce((n, l) => n + l.solicitacoes, 0),
+    valor: soma(linhas.map((l) => l.valor)),
+  };
 }

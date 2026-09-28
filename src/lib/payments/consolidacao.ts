@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/db/prisma';
-import { escopo, noPeriodo, dataDe } from '@/lib/payments/consolidado';
+import { escopo, noPeriodo, dataDe, getConsolidadoFreelancers } from '@/lib/payments/consolidado';
 import { hojeNaOperacao } from '@/lib/controle-gerentes-dados';
 import type { SessionUser } from '@/lib/auth/session';
 import {
-  chaveDaPessoa, filtrarLancamentos, ordenar, pessoasDoPeriodo, porColaborador, porUnidade, resolverPeriodo, resumir,
-  type Consolidacao, type FiltroConsolidacao, type Lancamento,
+  chaveDaPessoa, filtrarLancamentos, ordenar, pessoasDoPeriodo, porColaborador, porUnidade, resolverPeriodo, resumir, totaisDaRecorrencia,
+  type Consolidacao, type FiltroConsolidacao, type Lancamento, type Recorrencia,
 } from '@/lib/payments/consolidacao-calculo';
 
 export * from '@/lib/payments/consolidacao-calculo';
@@ -95,4 +95,25 @@ export async function getConsolidacaoPagamentos(user: SessionUser, filtro: Filtr
     porUnidade: porUnidade(lancamentos, filtro.status),
     porColaborador: porColaborador(lancamentos, filtro.status),
   };
+}
+
+/**
+ * RECORRÊNCIA DE FREELANCERS na consolidação (v1.127.0).
+ *
+ * NÃO é uma segunda conta: pergunta ao consolidado de freelancers
+ * (`getConsolidadoFreelancers`), que conta semanas inteiras segunda→domingo
+ * com o limite de `getFreelancerWeekLimit()` — a MESMA regra que avisa a
+ * supervisão no lançamento. Aqui só se acrescentam os totais e o recorte do
+ * período/unidade que a tela escolheu.
+ */
+export async function getRecorrenciaFreelancers(user: SessionUser, filtro: FiltroConsolidacao, hoje = hojeNaOperacao()): Promise<Recorrencia> {
+  const periodo = resolverPeriodo(filtro, hoje);
+  const unidades = await unidadesDaConsolidacao(user);
+  const unitId = filtro.unitId && unidades.some((u) => u.id === filtro.unitId) ? filtro.unitId : undefined;
+  const c = await getConsolidadoFreelancers(user, {
+    periodo: 'personalizado', de: periodo.de, ate: periodo.ate, unitId,
+    tipo: 'FREELANCER', status: 'TODOS', recorrencia: 'todos',
+  });
+  const linhas = c.recorrentesNaSemana.map((g) => ({ ...g }));
+  return { periodo, limiteSemanal: c.limiteSemanal, linhas, totais: totaisDaRecorrencia(linhas) };
 }

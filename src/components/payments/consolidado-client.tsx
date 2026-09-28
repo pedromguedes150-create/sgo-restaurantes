@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, TrendingUp, TrendingDown, Minus, AlertTriangle, Building2 } from 'lucide-react';
+import { Users, TrendingUp, TrendingDown, Minus, AlertTriangle, Building2, Download, FileText } from 'lucide-react';
 import { StatCard } from '@/components/ui/ds/stat-card';
 import { Banner } from '@/components/ui/ds/banner';
 import { Modal } from '@/components/ui/ds/modal';
@@ -18,6 +18,7 @@ import {
   type Consolidado, type FiltroConsolidado, type FreelancerNoPeriodo,
   type LinhaDoConsolidado, type PeriodoKey, type RecorrenciaFiltro, type StatusFiltro, type TipoFiltro,
 } from '@/lib/payments/consolidado-tipos';
+import { totaisDaRecorrencia } from '@/lib/payments/consolidacao-calculo';
 
 interface Unit { id: string; name: string }
 
@@ -57,6 +58,16 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
 
   const ativos = (filtro.unitId ? 1 : 0) + (filtro.tipo !== 'TODOS' ? 1 : 0) + (filtro.status !== 'TODOS' ? 1 : 0) + (filtro.recorrencia !== 'todos' ? 1 : 0);
   const r = dados.resumo;
+  /* Totais dos recorrentes (v1.127.0): eram somados na calculadora. */
+  const tRec = totaisDaRecorrencia(dados.recorrentesNaSemana);
+  /* Os relatórios de recorrência saem da Consolidação de pagamentos, com o
+     MESMO período e a mesma unidade desta tela. */
+  const qRec = new URLSearchParams({ aba: 'recorrencia', periodo: 'personalizado', de: dados.periodo.de, ate: dados.periodo.ate });
+  if (filtro.unitId) qRec.set('unidade', filtro.unitId);
+  /* Hora Extra entra na contagem quando o tipo é Todos/Hora Extra, mas esta
+     tela LISTA freelancers (por cadastro de freelancer): sem o aviso, elas
+     "somem" — estão no número e em linha nenhuma. */
+  const horasExtras = r.solicitacoes - dados.freelancers.reduce((n, f) => n + f.solicitacoes, 0);
 
   const unidades = useMemo(() => {
     const xs = [...dados.porUnidade];
@@ -141,9 +152,24 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
         </section>
       )}
 
+      {horasExtras > 0 && (
+        <Banner
+          tone="info"
+          title={`${horasExtras} hora(s) extra(s) no período`}
+          description="Elas entram na contagem de solicitações, mas esta tela lista só freelancers. Para ver cada hora extra (colaborador, horas, valor) e fechar com o Financeiro, use a Consolidação de pagamentos → Visão financeira."
+          action={<a href={`/modulos/pagamentos/consolidacao?periodo=personalizado&de=${dados.periodo.de}&ate=${dados.periodo.ate}${filtro.unitId ? `&unidade=${filtro.unitId}` : ''}`} className="text-sm font-semibold text-brand hover:underline">Abrir visão financeira</a>}
+        />
+      )}
+
       {/* ── Freelancers recorrentes ── */}
       <section className="space-y-1">
-        <h2 className="sgo-type-11 font-semibold text-ink-900">Freelancers recorrentes</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="sgo-type-11 font-semibold text-ink-900">Freelancers recorrentes</h2>
+          <div className="flex gap-2">
+            <a href={`/api/payments/consolidacao/export?${qRec.toString()}`} className="inline-flex h-8 items-center gap-1 rounded-control border border-line-strong px-2 text-xs font-semibold text-ink-900 hover:border-brand"><Download className="h-3.5 w-3.5" /> Excel</a>
+            <a href={`/modulos/pagamentos/consolidacao/relatorio?${qRec.toString()}&imprimir=1`} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1 rounded-control border border-line-strong px-2 text-xs font-semibold text-ink-900 hover:border-brand"><FileText className="h-3.5 w-3.5" /> PDF</a>
+          </div>
+        </div>
         <p className="text-xs text-ink-500">
           Mais de {dados.limiteSemanal} solicitações do mesmo freelancer numa semana (segunda a domingo) — a mesma regra que avisa a supervisão ao lançar.
           A contagem considera todas as unidades que você enxerga, mesmo com o filtro de unidade ligado: o freelancer é o mesmo em qualquer uma.
@@ -168,6 +194,11 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
               { key: 'qtd', header: 'Solicitações na semana', numeric: true, width: '8rem', cell: (g) => g.solicitacoes },
               { key: 'valor', header: 'Valor total', numeric: true, width: '8rem', cell: (g) => formatBRL(g.valor) },
             ]}
+            footer={{
+              nome: `TOTAL · ${tRec.freelancers} freelancer(s) recorrente(s)`,
+              qtd: tRec.solicitacoes,
+              valor: formatBRL(tRec.valor),
+            }}
           />
         )}
       </section>
@@ -196,6 +227,11 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
             { key: 'valor', header: 'Valor total', numeric: true, width: '8rem', cell: (u) => formatBRL(u.valor) },
             { key: 'pct', header: '% da rede', numeric: true, width: '6rem', hideOnMobile: true, cell: (u) => `${u.pctRede.toFixed(1).replace('.', ',')}%` },
           ]}
+          footer={{
+            unidade: 'TOTAL',
+            sol: unidades.reduce((n, u) => n + u.solicitacoes, 0),
+            valor: formatBRL(unidades.reduce((n, u) => n + u.valor, 0)),
+          }}
         />
       </section>
 
@@ -222,6 +258,11 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
             { key: 'sol', header: 'Solicitações', numeric: true, width: '7rem', cell: (f) => f.solicitacoes },
             { key: 'valor', header: 'Valor total', numeric: true, width: '8rem', cell: (f) => formatBRL(f.valor) },
           ]}
+          footer={{
+            nome: `TOTAL · ${dados.freelancers.length} freelancer(s)`,
+            sol: dados.freelancers.reduce((n, f) => n + f.solicitacoes, 0),
+            valor: formatBRL(dados.freelancers.reduce((n, f) => n + f.valor, 0)),
+          }}
         />
       </section>
 

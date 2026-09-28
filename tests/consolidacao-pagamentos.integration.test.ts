@@ -134,3 +134,64 @@ describe('Consolidação de pagamentos', () => {
     expect(depois).toEqual(antes);
   });
 });
+
+describe('v1.127.0 — Hora Extra na consolidação e recorrência com total', () => {
+  let frRec: string, frNao: string;
+  beforeAll(async () => {
+    frRec = (await prisma.freelancer.create({ data: { name: `Vinícius ${sfx}`, defaultValue: 100 } })).id;
+    frNao = (await prisma.freelancer.create({ data: { name: `Felipe ${sfx}`, defaultValue: 100 } })).id;
+  });
+  afterAll(async () => {
+    await prisma.paymentRequest.deleteMany({ where: { freelancerId: { in: [frRec, frNao] } } });
+    await prisma.freelancer.deleteMany({ where: { id: { in: [frRec, frNao] } } });
+  });
+
+  const dia = (iso: string) => new Date(`${iso}T00:00:00Z`);
+  const fl = (freelancerId: string, unitId: string, iso: string, amount: number, status: 'PENDING' | 'APPROVED' | 'REJECTED' = 'APPROVED') =>
+    prisma.paymentRequest.create({ data: { type: 'FREELANCER', unitId, freelancerId, amount, workDate: dia(iso), status } });
+  const periodo = (de: string, ate: string, p: Partial<FiltroConsolidacao> = {}) => filtro({ periodo: 'personalizado', de, ate, ...p });
+
+  it('Hora Extra feita em 25/09 e lançada depois aparece em 25/09 — e nos filtros de tipo certos', async () => {
+    await prisma.paymentRequest.deleteMany({ where: { unitId: { in: [unitA, unitB] } } });
+    const r = await he({ collaboratorId: joao, workDate: '2026-09-25', amount: 80 });
+    expect(r.ok).toBe(true);
+    await fl(frNao, unitA, '2026-09-25', 150);
+
+    const todos = await getConsolidacaoPagamentos(rede(), periodo('2026-09-25', '2026-09-25'), HOJE);
+    expect(todos.lancamentos.map((l) => l.tipo).sort()).toEqual(['FREELANCER', 'OVERTIME']);
+    expect(todos.resumo).toMatchObject({ solicitacoes: 2, valorHoraExtra: 80, valorFreelancer: 150, total: 230 });
+    expect((await getConsolidacaoPagamentos(rede(), periodo('2026-09-25', '2026-09-25', { tipo: 'OVERTIME' }), HOJE)).lancamentos.map((l) => l.tipo)).toEqual(['OVERTIME']);
+    expect((await getConsolidacaoPagamentos(rede(), periodo('2026-09-25', '2026-09-25', { tipo: 'FREELANCER' }), HOJE)).lancamentos.map((l) => l.tipo)).toEqual(['FREELANCER']);
+    // No dia em que foi LANÇADA (hoje), não aparece: o período é o do serviço.
+    expect((await getConsolidacaoPagamentos(rede(), filtro({ periodo: 'hoje', tipo: 'OVERTIME' }), HOJE)).lancamentos).toHaveLength(0);
+  });
+
+  it('Hora Extra sem data do serviço cai na data efetiva do lançamento, sem sumir', async () => {
+    await prisma.paymentRequest.create({ data: { type: 'OVERTIME', unitId: unitA, amount: 60, collaboratorName: 'Antigo', entryDate: dia('2026-09-24'), status: 'APPROVED' } });
+    const c = await getConsolidacaoPagamentos(rede(), periodo('2026-09-24', '2026-09-24', { tipo: 'OVERTIME' }), HOJE);
+    expect(c.lancamentos.map((l) => [l.pessoa, l.semVinculoRh])).toEqual([['Antigo', true]]);
+  });
+
+  it('recorrência: a MESMA regra do consolidado de freelancers, com os totais somados', async () => {
+    const { getConsolidadoFreelancers } = await import('@/lib/payments/consolidado');
+    const { getRecorrenciaFreelancers } = await import('@/lib/payments/consolidacao');
+    const base = await getRecorrenciaFreelancers(rede(), periodo('2026-09-21', '2026-09-27'), HOJE);
+    const limite = base.limiteSemanal;
+    // Vinícius: limite+1 na semana, em DUAS unidades → recorrente. Felipe: no limite → não.
+    // Uma rejeitada a mais do Vinícius não entra na conta (regra de sempre).
+    for (let i = 0; i <= limite; i++) await fl(frRec, i % 2 ? unitB : unitA, `2026-09-2${1 + i}`, 100 + i);
+    await fl(frRec, unitA, '2026-09-27', 500, 'REJECTED');
+    await prisma.paymentRequest.deleteMany({ where: { freelancerId: frNao } });
+    for (let i = 0; i < limite; i++) await fl(frNao, unitA, `2026-09-2${1 + i}`, 90);
+
+    const rc = await getRecorrenciaFreelancers(rede(), periodo('2026-09-21', '2026-09-27'), HOJE);
+    expect(rc.linhas.map((g) => g.freelancerId)).toEqual([frRec]);
+    const esperado = Array.from({ length: limite + 1 }, (_, i) => 100 + i).reduce((a, b) => a + b, 0);
+    expect(rc.totais).toEqual({ freelancers: 1, semanas: 1, solicitacoes: limite + 1, valor: esperado });
+    expect(rc.linhas[0].unidades.sort()).toEqual([`KM13 ${sfx}`, `Moreira ${sfx}`].sort());
+
+    // Nenhuma segunda conta: bate com o consolidado de freelancers de sempre.
+    const antigo = await getConsolidadoFreelancers(rede(), { periodo: 'personalizado', de: '2026-09-21', ate: '2026-09-27', tipo: 'FREELANCER', status: 'TODOS', recorrencia: 'todos' });
+    expect(antigo.recorrentesNaSemana.map((g) => [g.freelancerId, g.solicitacoes, g.valor])).toEqual(rc.linhas.map((g) => [g.freelancerId, g.solicitacoes, g.valor]));
+  });
+});

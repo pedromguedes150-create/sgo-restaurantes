@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import { getSessionUser } from '@/lib/auth/session';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import {
-  getConsolidacaoPagamentos, lerFiltro, STATUS_CONS, STATUS_TEXTO, TIPO_TEXTO, TIPOS_CONS, emBR,
+  getConsolidacaoPagamentos, getRecorrenciaFreelancers, unidadesDaConsolidacao, lerFiltro, STATUS_CONS, STATUS_TEXTO, TIPO_TEXTO, TIPOS_CONS, emBR,
 } from '@/lib/payments/consolidacao';
 
 /**
@@ -16,6 +16,7 @@ export async function GET(req: Request) {
   if (negado) return negado;
 
   const filtro = lerFiltro(new URL(req.url).searchParams);
+  if (filtro.aba === 'recorrencia') return exportarRecorrencia(user, filtro);
   const c = await getConsolidacaoPagamentos(user, filtro);
   const unidade = c.unidades.find((u) => u.id === filtro.unitId)?.name ?? 'Todas as unidades';
   const pessoa = c.pessoas.find((p) => p.value === filtro.pessoa)?.label ?? 'Todos';
@@ -39,8 +40,15 @@ export async function GET(req: Request) {
   aoa.push([]);
   aoa.push(['TOTAL HORA EXTRA', '', '', '', '', '', '', r.valorHoraExtra]);
   aoa.push(['TOTAL FREELANCER', '', '', '', '', '', '', r.valorFreelancer]);
-  aoa.push(['TOTAL VALE-TRANSPORTE (incluído nos valores)', '', '', '', '', '', r.vt, null]);
+  aoa.push(['TOTAL VALE-TRANSPORTE (já dentro dos valores)', '', '', '', '', '', r.vt, null]);
   aoa.push(['TOTAL GERAL', '', '', '', '', '', '', r.total]);
+  if (filtro.status === 'TODOS') {
+    /* O total separado pelo que ele é — solicitado não é "a pagar". */
+    aoa.push([]);
+    aoa.push(['Solicitado — pendente de aprovação', '', '', '', '', '', '', r.porStatus.pendente]);
+    aoa.push(['Aprovado — a pagar', '', '', '', '', '', '', r.porStatus.aprovado]);
+    aoa.push(['Pago', '', '', '', '', '', '', r.porStatus.pago]);
+  }
   if (r.fora.qtd > 0) aoa.push([`${r.fora.qtd} rejeitada(s) listada(s) e fora dos totais`, '', '', '', '', '', '', r.fora.valor]);
   if (r.pendentes.qtd > 0 && filtro.status === 'TODOS') aoa.push([`Atenção: ${r.pendentes.qtd} pendente(s) de aprovação dentro do total`, '', '', '', '', '', '', r.pendentes.valor]);
 
@@ -49,16 +57,17 @@ export async function GET(req: Request) {
   moeda(ws, 6, [6, 7]);
 
   /* Aba 2 — Por unidade: cada unidade na sua linha. */
-  const un: (string | number)[][] = [['Unidade', 'Freelancer', 'Hora Extra', 'Vale-transporte (incluído)', 'Total']];
-  for (const u of c.porUnidade) un.push([u.unidade, u.freelancer, u.horaExtra, u.vt, u.total]);
-  un.push(['TOTAL', r.valorFreelancer, r.valorHoraExtra, r.vt, r.total]);
+  const un: (string | number)[][] = [['Unidade', 'Solicitações', 'Freelancer', 'Hora Extra', 'Vale-transporte (já dentro)', 'Total']];
+  for (const u of c.porUnidade) un.push([u.unidade, u.qtd, u.freelancer, u.horaExtra, u.vt, u.total]);
+  un.push(['TOTAL', r.solicitacoes, r.valorFreelancer, r.valorHoraExtra, r.vt, r.total]);
   const wsU = XLSX.utils.aoa_to_sheet(un);
-  wsU['!cols'] = [28, 14, 14, 24, 14].map((wch) => ({ wch }));
-  moeda(wsU, 1, [1, 2, 3, 4]);
+  wsU['!cols'] = [28, 12, 14, 14, 24, 14].map((wch) => ({ wch }));
+  moeda(wsU, 1, [2, 3, 4, 5]);
 
   /* Aba 3 — Por colaborador: a conferência antes de mandar. */
-  const pc: (string | number)[][] = [['Colaborador', 'Unidade(s)', 'Hora Extra', 'Freelancer', 'Vale-transporte (incluído)', 'Total', 'Lançamentos']];
+  const pc: (string | number)[][] = [['Colaborador', 'Unidade(s)', 'Hora Extra', 'Freelancer', 'Vale-transporte (já dentro)', 'Total', 'Lançamentos']];
   for (const p of c.porColaborador) pc.push([p.pessoa, p.unidades.join(', '), p.horaExtra, p.freelancer, p.vt, p.total, p.lancamentos.length]);
+  pc.push(['TOTAL', '', r.valorHoraExtra, r.valorFreelancer, r.vt, r.total, r.solicitacoes]);
   const wsP = XLSX.utils.aoa_to_sheet(pc);
   wsP['!cols'] = [30, 28, 14, 14, 24, 14, 12].map((wch) => ({ wch }));
   moeda(wsP, 1, [2, 3, 4, 5]);
@@ -74,6 +83,40 @@ export async function GET(req: Request) {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${nome}"`,
+    },
+  });
+}
+
+/**
+ * RECORRÊNCIA em Excel (v1.127.0) — o relatório de GESTÃO, separado do
+ * financeiro. Mesma leitura da tela (`getRecorrenciaFreelancers`).
+ */
+async function exportarRecorrencia(user: NonNullable<Awaited<ReturnType<typeof getSessionUser>>>, filtro: ReturnType<typeof lerFiltro>) {
+  const rc = await getRecorrenciaFreelancers(user, filtro);
+  const unidade = (await unidadesDaConsolidacao(user)).find((u) => u.id === filtro.unitId)?.name ?? 'Todas as unidades';
+  const t = rc.totais;
+  const aoa: (string | number)[][] = [
+    ['GRUPO BEIJA-FLOR — RECORRÊNCIA DE FREELANCERS'],
+    [`Período: ${rc.periodo.rotulo} · Unidade: ${unidade}`],
+    [`Recorrente = mais de ${rc.limiteSemanal} solicitações do mesmo freelancer numa semana (segunda a domingo).`],
+    [],
+    ['Freelancer', 'Unidade', 'Semana', 'Solicitações na semana', 'Valor total'],
+  ];
+  for (const g of rc.linhas) aoa.push([g.nome, g.unidades.join(', '), `${emBR(g.semanaDe)} a ${emBR(g.semanaAte)}`, g.solicitacoes, g.valor]);
+  aoa.push([]);
+  aoa.push(['TOTAL DE FREELANCERS RECORRENTES', '', '', t.freelancers, '']);
+  aoa.push(['TOTAL DE SOLICITAÇÕES', '', '', t.solicitacoes, '']);
+  aoa.push(['VALOR TOTAL DOS RECORRENTES', '', '', '', t.valor]);
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [34, 28, 26, 22, 14].map((wch) => ({ wch }));
+  moeda(ws, 5, [4]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Recorrência');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+  return new Response(new Uint8Array(buf), {
+    headers: {
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="recorrencia-freelancers_${rc.periodo.de}_a_${rc.periodo.ate}.xlsx"`,
     },
   });
 }
