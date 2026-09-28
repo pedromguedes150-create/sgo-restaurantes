@@ -19,6 +19,7 @@ const sup = (): SessionUser => ({ id: supId, name: 'Supervisora', role: 'SUPERVI
 
 beforeAll(async () => {
   unitId = (await prisma.unit.create({ data: { code: `LR-${sfx}`, name: 'U Lote', timezone: 'America/Sao_Paulo', cutoffHour: 4 } })).id;
+  await prisma.overtimeHourlyRate.create({ data: { unitId, value: 50 } }); // v1.130.0: HE exige valor/hora autorizado
   mgrId = (await prisma.user.create({ data: { name: 'Gerente', email: `${sfx}-m@e.com`, role: 'MANAGER', passwordHash: 'x' } })).id;
   supId = (await prisma.user.create({ data: { name: 'Supervisora', email: `${sfx}-s@e.com`, role: 'SUPERVISOR', passwordHash: 'x' } })).id;
   await prisma.unitMembership.createMany({ data: [{ userId: mgrId, unitId }, { userId: supId, unitId }] });
@@ -40,7 +41,7 @@ async function pendente(nome: string) {
     collaboratorId = (await prisma.collaborator.create({ data: { name: nome, units: { create: { unitId } } } })).id;
     colabs.set(nome, collaboratorId);
   }
-  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', unitId, amount: 50, collaboratorId, hours: 1, reason: 'x' });
+  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', unitId, amount: 50, collaboratorId, workDate: '2026-09-20', workStartTime: '18:00', workEndTime: '19:00', hourlyRate: 50, reason: 'x' });
   if (!r.ok) throw new Error('setup');
   return r.id;
 }

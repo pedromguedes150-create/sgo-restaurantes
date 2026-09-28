@@ -22,10 +22,13 @@ import { SearchField } from '@/components/ui/ds/field';
 import { FilterBar, FilterSelect, FilterChip } from '@/components/ui/filter-bar';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
+import { calcularHoraExtra, textoHoras } from '@/lib/overtime/calculo';
 
 export interface PayDetail {
   workDate: string | null; shift: string | null; workStartTime: string | null; workEndTime: string | null;
   hours: number | null; transportValue: number | null; coverageSector: string | null;
+  /** Hora Extra por período (v1.130.0): valor/hora escolhido, gravado na solicitação. */
+  hourlyRate?: number | null;
   workSectorId?: string | null; workSectorName?: string | null;
   collaboratorId?: string | null; collaboratorName: string | null; reason: string | null; beneficiary: string | null; description: string | null;
   pixKey: string | null; supplierName: string | null; miscTypeName: string | null;
@@ -86,7 +89,8 @@ const DS_STATUS: Record<PayReq['status'], DsTone> = {
 
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 
-type Tab = 'nova' | 'minhas' | 'aprovar' | 'pagar' | 'historico';
+type Tab = 'nova' | 'minhas' | 'aprovar' | 'pagar' | 'historico' | 'unidade';
+type RatesByUnit = Record<string, number[]>;
 
 /**
  * Diz quando a lista não cabe inteira na tela.
@@ -118,6 +122,9 @@ export function PaymentsClient({
   suppliers = [],
   sectors = [],
   collaboratorsByUnit = {},
+  overtimeRatesByUnit = {},
+  isManagerView = false,
+  unitRequests = [],
   filtradoPor = [],
   mine,
   toApprove,
@@ -137,13 +144,19 @@ export function PaymentsClient({
   sectors?: SectorOpt[];
   /** Colaboradores ativos do RH por unidade — a Hora Extra escolhe daqui. */
   collaboratorsByUnit?: CollabsByUnit;
+  /** Valores/hora AUTORIZADOS de Hora Extra por unidade (v1.130.0) — o gerente escolhe, não digita. */
+  overtimeRatesByUnit?: RatesByUnit;
+  /** GERENTE (v1.130.0): Nova · Minhas solicitações · Solicitações da unidade. Supervisor segue igual. */
+  isManagerView?: boolean;
+  /** Tudo da unidade selecionada, de qualquer solicitante (só carregado para o gerente). */
+  unitRequests?: PayReq[];
   /** Nomes das unidades filtradas pelo seletor do cabeçalho; vazio = todas. */
   filtradoPor?: string[];
   mine: PayReq[];
   toApprove: PayReq[];
   toPay: PayReq[];
   /** Quantas existem DE VERDADE em cada fila (count, não tamanho da lista). */
-  totais?: { mine: number; toApprove: number; toPay: number; history: number };
+  totais?: { mine: number; toApprove: number; toPay: number; history: number; unit?: number };
   /** Teto de linhas por lista — acima dele a tela avisa que há mais. */
   limite?: number;
   history: PayReq[];
@@ -266,12 +279,15 @@ export function PaymentsClient({
 
   const tabs: { key: Tab; label: string; badge?: number; show: boolean }[] = [
     { key: 'nova', label: 'Nova', show: podeAba(abas, 'nova') },
-    { key: 'minhas', label: 'Minhas', show: podeAba(abas, 'minhas') },
+    { key: 'minhas', label: isManagerView ? 'Minhas solicitações' : 'Minhas', show: podeAba(abas, 'minhas') },
     /* O crachá vem do TOTAL de verdade. Com o tamanho da lista ele exibia o
        teto — 100 com 340 pendências — e ninguém tinha como saber das outras. */
-    { key: 'aprovar', label: 'Para Aprovar', badge: totais?.toApprove ?? toApprove.length, show: podeAba(abas, 'aprovar') },
+    /* Gerente (v1.130.0): a aba de aprovação só aparece se ele for aprovador de
+       algo pendente (tipo avulso aprovado pelo gerente, ou delegação). */
+    { key: 'aprovar', label: 'Para Aprovar', badge: totais?.toApprove ?? toApprove.length, show: podeAba(abas, 'aprovar') && (!isManagerView || toApprove.length > 0) },
     { key: 'pagar', label: 'Pagar', badge: totais?.toPay ?? toPay.length, show: isFinanceView && podeAba(abas, 'pagar') },
-    { key: 'historico', label: 'Histórico', show: podeAba(abas, 'historico') },
+    { key: 'historico', label: 'Histórico', show: !isManagerView && podeAba(abas, 'historico') },
+    { key: 'unidade', label: 'Solicitações da unidade', show: isManagerView && podeAba(abas, 'unidade') },
   ];
 
   return (
@@ -293,15 +309,16 @@ export function PaymentsClient({
         </p>
       )}
 
-      {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} onDone={() => { setTab('minhas'); router.refresh(); }} />}
+      {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} overtimeRatesByUnit={overtimeRatesByUnit} onDone={() => { setTab('minhas'); router.refresh(); }} />}
 
       <ListaCortada mostrando={
-        tab === 'minhas' ? mine.length : tab === 'aprovar' ? toApprove.length : tab === 'pagar' ? toPay.length : tab === 'historico' ? history.length : 0
+        tab === 'minhas' ? mine.length : tab === 'aprovar' ? toApprove.length : tab === 'pagar' ? toPay.length : tab === 'historico' ? history.length : tab === 'unidade' ? unitRequests.length : 0
       } total={
-        tab === 'minhas' ? totais?.mine : tab === 'aprovar' ? totais?.toApprove : tab === 'pagar' ? totais?.toPay : tab === 'historico' ? totais?.history : undefined
+        tab === 'minhas' ? totais?.mine : tab === 'aprovar' ? totais?.toApprove : tab === 'pagar' ? totais?.toPay : tab === 'historico' ? totais?.history : tab === 'unidade' ? totais?.unit : undefined
       } limite={limite} />
 
-      {tab === 'minhas' && <List items={mine} />}
+      {tab === 'minhas' && (isManagerView ? <HistoryTab items={mine} periodo /> : <List items={mine} />)}
+      {tab === 'unidade' && <HistoryTab items={unitRequests} periodo />}
 
       {tab === 'aprovar' && (
         <>
@@ -342,7 +359,7 @@ export function PaymentsClient({
           )}
           <List
             items={toApprove}
-            editor={{ sectors, collaboratorsByUnit }}
+            editor={{ sectors, collaboratorsByUnit, overtimeRatesByUnit }}
             selection={toApprove.length > 1 ? { ids: sel, onToggle: (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }) } : undefined}
             actions={(r) => (
               <div className="flex gap-2">
@@ -368,8 +385,24 @@ export function PaymentsClient({
   );
 }
 
-function HistoryTab({ items, actions }: { items: PayReq[]; actions?: (r: PayReq) => React.ReactNode }) {
+const PERIODOS: { value: string; label: string; dias: number }[] = [
+  { value: 'ALL', label: 'Todo o período', dias: 0 },
+  { value: '7', label: 'Últimos 7 dias', dias: 7 },
+  { value: '30', label: 'Últimos 30 dias', dias: 30 },
+  { value: '90', label: 'Últimos 90 dias', dias: 90 },
+];
+/** Dia de referência da linha: o dia do trabalho quando existe, senão a data da solicitação. */
+function diaDaLinha(i: PayReq): string { return i.detail?.workDate ?? i.day ?? (i.requestedAt?.slice(0, 10) ?? ''); }
+
+function HistoryTab({ items, actions, periodo = false }: { items: PayReq[]; actions?: (r: PayReq) => React.ReactNode; /** Filtro de período (v1.130.0, listas do gerente). */ periodo?: boolean }) {
   const [type, setType] = useState<'ALL' | PayReq['type']>('ALL');
+  const [per, setPer] = useState('ALL');
+  const desde = useMemo(() => {
+    const dias = PERIODOS.find((p) => p.value === per)?.dias ?? 0;
+    if (!periodo || !dias) return '';
+    const d = new Date(); d.setDate(d.getDate() - dias);
+    return d.toISOString().slice(0, 10);
+  }, [per, periodo]);
   const [unit, setUnit] = useState('ALL');
   const [status, setStatus] = useState<'ALL' | PayReq['status']>('ALL');
   const [q, setQ] = useState('');
@@ -378,24 +411,30 @@ function HistoryTab({ items, actions }: { items: PayReq[]; actions?: (r: PayReq)
     (type === 'ALL' || i.type === type) &&
     (unit === 'ALL' || i.unit === unit) &&
     (status === 'ALL' || i.status === status) &&
+    (!desde || diaDaLinha(i) >= desde) &&
     (!q.trim() || i.title.toLowerCase().includes(q.trim().toLowerCase()) || (i.requestedBy ?? '').toLowerCase().includes(q.trim().toLowerCase()))
-  ), [items, type, unit, status, q]);
+  ), [items, type, unit, status, q, desde]);
+  const totalFiltrado = useMemo(() => filtered.filter((i) => i.status !== 'REJECTED').reduce((s, i) => s + i.amount, 0), [filtered]);
   return (
     <div className="space-y-3">
       <FilterBar
         collapsible
-        active={(type !== 'ALL' ? 1 : 0) + (unit !== 'ALL' ? 1 : 0) + (status !== 'ALL' ? 1 : 0) + (q.trim() ? 1 : 0)}
-        onClear={type !== 'ALL' || unit !== 'ALL' || status !== 'ALL' || q.trim() ? () => { setType('ALL'); setUnit('ALL'); setStatus('ALL'); setQ(''); } : undefined}
+        active={(type !== 'ALL' ? 1 : 0) + (unit !== 'ALL' ? 1 : 0) + (status !== 'ALL' ? 1 : 0) + (per !== 'ALL' ? 1 : 0) + (q.trim() ? 1 : 0)}
+        onClear={type !== 'ALL' || unit !== 'ALL' || status !== 'ALL' || per !== 'ALL' || q.trim() ? () => { setType('ALL'); setUnit('ALL'); setStatus('ALL'); setPer('ALL'); setQ(''); } : undefined}
         search={<SearchField aria-label="Buscar pagamentos" value={q} onValueChange={setQ} placeholder="Buscar prestador ou beneficiário…" inputSize="sm" />}
         summary={
           <>
             {type !== 'ALL' && <FilterChip>{TYPE_LABEL[type as keyof typeof TYPE_LABEL]}</FilterChip>}
             {unit !== 'ALL' && <FilterChip>{shortUnitName(unit)}</FilterChip>}
             {status !== 'ALL' && <FilterChip>{STATUS[status as PayReq['status']].label}</FilterChip>}
+            {per !== 'ALL' && <FilterChip>{PERIODOS.find((p) => p.value === per)?.label}</FilterChip>}
           </>
         }
-        result={<>{filtered.length} de {items.length}</>}
+        result={<>{filtered.length} de {items.length}{periodo ? <> · {formatBRL(totalFiltrado)}</> : null}</>}
       >
+        {periodo && (
+          <FilterSelect label="Período" value={per} onValueChange={setPer} options={PERIODOS.map((p) => ({ value: p.value, label: p.label }))} />
+        )}
         <FilterSelect
           label="Tipo"
           value={type}
@@ -454,7 +493,12 @@ function DetailView({ r }: { r: PayReq }) {
   } else if (r.type === 'OVERTIME') {
     rows.push(['Colaborador', d?.collaboratorName ?? r.title]);
     if (d?.workDate) rows.push(['Data', fmtDay(d.workDate)]);
-    if (d?.hours != null) rows.push(['Horas', String(d.hours)]);
+    if (d?.workStartTime && d?.workEndTime) rows.push(['Horário', `${d.workStartTime} – ${d.workEndTime}`]);
+    if (d?.hours != null) rows.push(['Horas', textoHoras(d.hours)]);
+    if (d?.hourlyRate != null) {
+      rows.push(['Valor da hora', `${formatBRL(d.hourlyRate)}/h`]);
+      if (d?.hours != null) rows.push(['Subtotal (horas × valor/hora)', formatBRL(Math.round(d.hours * d.hourlyRate * 100) / 100)]);
+    }
     if (d?.reason) rows.push(['Motivo', d.reason]);
   } else {
     if (d?.miscTypeName) rows.push(['Tipo', d.miscTypeName]);
@@ -504,6 +548,10 @@ function Row({ r, onOpen, selected, onSelect }: { r: PayReq; onOpen: () => void;
       title={`${TYPE_LABEL[r.type]} · ${r.title}`}
       subtitle={[
         formatBRL(r.amount),
+        r.type !== 'MISC' && r.detail?.workDate ? `dia ${fmtDay(r.detail.workDate)}` : null,
+        r.type === 'OVERTIME' && r.detail?.hours != null
+          ? `${r.detail.workStartTime && r.detail.workEndTime ? `${r.detail.workStartTime}–${r.detail.workEndTime} · ` : ''}${textoHoras(r.detail.hours)}${r.detail.hourlyRate != null ? ` × ${formatBRL(r.detail.hourlyRate)}/h` : ''}`
+          : null,
         r.requestedBy ? `por ${r.requestedBy}` : null,
         r.requestedAt ? `solicitado ${new Date(r.requestedAt).toLocaleDateString('pt-BR')}` : null,
         marks || null,
@@ -535,7 +583,7 @@ function List({ items, actions, selection, editor }: {
   /** Quando presente, cada linha ganha caixa de seleção (aprovação em lote). */
   selection?: { ids: Set<string>; onToggle: (id: string) => void };
   /** Quando presente, o detalhe ganha "Editar": o aprovador corrige antes de aprovar (04/09). */
-  editor?: { sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit };
+  editor?: { sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit; overtimeRatesByUnit?: RatesByUnit };
 }) {
   const router = useRouter();
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -603,6 +651,7 @@ function List({ items, actions, selection, editor }: {
             r={detail}
             sectors={editor.sectors.filter((s) => s.unitId === detail.unitId)}
             collaborators={detail.unitId ? editor.collaboratorsByUnit[detail.unitId] ?? [] : []}
+            rates={detail.unitId ? editor.overtimeRatesByUnit?.[detail.unitId] ?? [] : []}
             onDone={() => { setEditing(false); router.refresh(); }}
             onCancel={() => setEditing(false)}
           />
@@ -641,7 +690,7 @@ function List({ items, actions, selection, editor }: {
   );
 }
 
-function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collaboratorsByUnit, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit; onDone: () => void }) {
+function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collaboratorsByUnit, overtimeRatesByUnit, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit; overtimeRatesByUnit: RatesByUnit; onDone: () => void }) {
   const [supplierId, setSupplierId] = useState('');
   const [type, setType] = useState<'FREELANCER' | 'OVERTIME' | 'MISC'>('FREELANCER');
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
@@ -657,7 +706,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
   const [coverage, setCoverage] = useState(false); // cobertura temporária de setor (16/07)
   const [coverageSector, setCoverageSector] = useState('');
   const [calc, setCalc] = useState<{ configured: boolean; hours: number; rate: number | null; amount: number; transport: number; dayTypeLabel: string } | null>(null);
-  const [hours, setHours] = useState('');
+  const [hourlyRate, setHourlyRate] = useState(''); // Hora Extra: valor/hora ESCOLHIDO entre os autorizados (v1.130.0)
   const [collaboratorId, setCollaboratorId] = useState('');
   const [reason, setReason] = useState('');
   const [beneficiary, setBeneficiary] = useState('');
@@ -668,8 +717,16 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
   const unitFreelancers = useMemo(() => freelancers.filter((f) => f.unitIds.includes(unitId)), [freelancers, unitId]);
   const unitSectors = useMemo(() => sectors.filter((s) => s.unitId === unitId), [sectors, unitId]);
   const unitCollabs = useMemo(() => collaboratorsByUnit[unitId] ?? [], [collaboratorsByUnit, unitId]);
-  // Trocou a unidade: o setor e o colaborador eram da outra.
-  useEffect(() => { setWorkSectorId(''); setCollaboratorId(''); }, [unitId]);
+  const unitRates = useMemo(() => overtimeRatesByUnit[unitId] ?? [], [overtimeRatesByUnit, unitId]);
+  // Trocou a unidade: o setor, o colaborador e o valor/hora eram da outra.
+  useEffect(() => { setWorkSectorId(''); setCollaboratorId(''); setHourlyRate(''); }, [unitId]);
+  /* Prévia da Hora Extra — a MESMA função que o servidor usa para gravar
+     (horas do período, × valor/hora, + VT). Nada de valor digitado. */
+  const heCalc = useMemo(() => {
+    if (type !== 'OVERTIME' || !workStartTime || !workEndTime || !hourlyRate) return null;
+    const c = calcularHoraExtra({ inicio: workStartTime, fim: workEndTime, valorHora: Number(hourlyRate), vt: parseFloat((transportValue || '0').replace(',', '.')) || 0 });
+    return c.horas > 0 ? c : null;
+  }, [type, workStartTime, workEndTime, hourlyRate, transportValue]);
   // Cobertura de setor escolhida: o setor de mesmo nome já vem marcado.
   useEffect(() => {
     if (!coverage || !coverageSector) return;
@@ -696,20 +753,26 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
     setErr(null);
     const manualAmt = parseFloat((amount || '0').replace(',', '.'));
     const covRate = coverage ? (selectedFreelancer?.sectorRates ?? []).find((r) => r.sectorName === coverageSector)?.dayValue ?? 0 : 0;
-    const effAmt = coverage ? covRate : autoPriced ? (calc?.amount ?? 0) : manualAmt;
+    const effAmt = type === 'OVERTIME' ? (heCalc?.total ?? 0) : coverage ? covRate : autoPriced ? (calc?.amount ?? 0) : manualAmt;
     if (coverage && !coverageSector) { setErr('Escolha o setor da cobertura.'); return; }
     if (type === 'FREELANCER') {
       if (!freelancerId) { setErr('Escolha o freelancer.'); return; }
       if (!workDate) { setErr('Informe o dia do trabalho.'); return; }
       if (!workSectorId) { setErr('Escolha o setor/função para o qual o freelancer foi contratado.'); return; }
     }
-    if (type === 'OVERTIME' && !collaboratorId) { setErr('Escolha o colaborador na lista.'); return; }
+    if (type === 'OVERTIME') {
+      if (!collaboratorId) { setErr('Escolha o colaborador na lista.'); return; }
+      if (!workDate) { setErr('Informe a data da hora extra.'); return; }
+      if (!workStartTime || !workEndTime) { setErr('Informe hora início e hora fim.'); return; }
+      if (!hourlyRate) { setErr(unitRates.length ? 'Escolha o valor da hora.' : 'Esta unidade não tem valor/hora de Hora Extra cadastrado. Peça ao Admin (Configurações → Valor da hora extra).'); return; }
+      if (!heCalc) { setErr('O período precisa ter pelo menos alguns minutos.'); return; }
+    }
     if (!unitId || (!coverage && !autoPriced && !effAmt)) { setErr('Informe unidade e valor.'); return; }
     setBusy(true);
     try {
       const body: Record<string, unknown> = { type, unitId, amount: effAmt, description };
-      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workSectorId, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, hours: hours ? Number(hours) : undefined, coverageSector: coverage && coverageSector ? coverageSector : undefined });
-      if (type === 'OVERTIME') Object.assign(body, { collaboratorId, workDate, hours: hours ? Number(hours) : undefined, reason, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined });
+      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workSectorId, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, coverageSector: coverage && coverageSector ? coverageSector : undefined });
+      if (type === 'OVERTIME') Object.assign(body, { collaboratorId, workDate, workStartTime, workEndTime, hourlyRate: Number(hourlyRate), reason, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined });
       if (type === 'MISC') Object.assign(body, { miscTypeId, beneficiary, supplierId: supplierId || undefined });
       const res = await fetch('/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
@@ -818,13 +881,34 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
             options={collabOptions(unitCollabs)}
             hint={unitCollabs.length ? 'Colaboradores do RH desta unidade.' : 'Sincronize a unidade em Pessoas → Colaboradores para a lista aparecer.'}
           />
+          <DatePicker label="Data" required value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
           <div className="grid grid-cols-2 gap-2">
-            <DatePicker label="Data" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
-            <div><Label>Horas</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} /></div>
+            <TimePicker label="Hora início" value={workStartTime || null} onValueChange={(v) => setWorkStartTime(v ?? '')} />
+            <TimePicker label="Hora fim" value={workEndTime || null} onValueChange={(v) => setWorkEndTime(v ?? '')} />
           </div>
+          <DsSelect
+            label="Valor da hora (R$/h)"
+            required
+            placeholder={unitRates.length ? 'Escolha o valor autorizado…' : 'Sem valor cadastrado nesta unidade'}
+            value={hourlyRate}
+            onValueChange={setHourlyRate}
+            disabled={unitRates.length === 0}
+            options={unitRates.map((v) => ({ value: String(v), label: `${formatBRL(v)}/h` }))}
+            hint={unitRates.length ? 'Só os valores autorizados pelo Admin para esta unidade.' : 'O Admin cadastra em Configurações → Valor da hora extra (por hora).'}
+          />
+          {unitRates.length === 0 && (
+            <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">Esta unidade ainda não tem valor/hora de Hora Extra cadastrado — não é possível lançar até o Admin cadastrar.</p>
+          )}
           <div><Label>Motivo</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} /></div>
           <div><Label>Vale transporte (R$, opcional — soma ao total)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>
-          <p className="text-xs text-ink-500">Valor é estimativa para aprovação; o cálculo final (50%/100%, reflexos) é do RH/folha.</p>
+          {heCalc && (
+            <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3" data-testid="he-previa">
+              <p className="text-xs text-ink-500">Valor calculado</p>
+              <p className="sgo-type-24 font-semibold text-ink-900">{formatBRL(heCalc.total)}</p>
+              <p className="text-xs text-ink-500">{textoHoras(heCalc.horas)} × {formatBRL(heCalc.valorHora)}/h{heCalc.vt > 0 ? ` + ${formatBRL(heCalc.vt)} de vale-transporte` : ''}</p>
+            </div>
+          )}
+          <p className="text-xs text-ink-500">Horas, subtotal e total são calculados pelo sistema (fim − início; passa da meia-noite: 22:00 → 02:00 = 4h). O cálculo final da folha (50%/100%, reflexos) é do RH.</p>
         </>
       )}
 
@@ -856,7 +940,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
         </>
       )}
 
-      {!autoPriced && <div><Label>Valor (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" /></div>}
+      {!autoPriced && type !== 'OVERTIME' && <div><Label>Valor (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" /></div>}
 
       {freelaDivergent && selectedFreelancer && (
         <p className="flex items-center gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm font-medium text-warning">
@@ -877,7 +961,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
  * valor recalculado do horário (prévia igual à da tela Nova); cobertura de setor
  * tem valor fixo do dia. O servidor confere tudo de novo e registra antes/depois.
  */
-function ApproverEditForm({ r, sectors, collaborators, onDone, onCancel }: { r: PayReq; sectors: SectorOpt[]; collaborators: CollabOpt[]; onDone: () => void; onCancel: () => void }) {
+function ApproverEditForm({ r, sectors, collaborators, rates = [], onDone, onCancel }: { r: PayReq; sectors: SectorOpt[]; collaborators: CollabOpt[]; /** Valores/hora autorizados na unidade (Hora Extra, v1.130.0). */ rates?: number[]; onDone: () => void; onCancel: () => void }) {
   const d = r.detail;
   const dec = (n: number | null | undefined) => (n == null ? '' : String(n).replace('.', ','));
   const num = (s: string) => parseFloat((s || '0').replace(/\./g, '').replace(',', '.')) || 0;
@@ -892,7 +976,23 @@ function ApproverEditForm({ r, sectors, collaborators, onDone, onCancel }: { r: 
      apontar o colaborador do RH. Sem escolha, o nome antigo fica como está. */
   const [collaboratorId, setCollaboratorId] = useState(d?.collaboratorId ?? '');
   const [hours, setHours] = useState(dec(d?.hours));
+  const [hourlyRate, setHourlyRate] = useState(d?.hourlyRate != null ? String(d.hourlyRate) : '');
   const [reason, setReason] = useState(d?.reason ?? '');
+  /* Hora Extra por período: com início e fim, horas e valor são RECALCULADOS
+     (aqui na prévia e no servidor). Lançamento antigo sem período segue com
+     horas e valor editáveis. O valor/hora gravado continua na lista mesmo se
+     o Admin o desativou depois — manter é sempre permitido. */
+  const hePeriodo = r.type === 'OVERTIME' && Boolean(start && end);
+  const rateOptions = useMemo(() => {
+    const atual = d?.hourlyRate;
+    const lista = atual != null && !rates.includes(atual) ? [atual, ...rates] : rates;
+    return lista.map((v) => ({ value: String(v), label: `${formatBRL(v)}/h${v === atual && !rates.includes(v) ? ' (gravado)' : ''}` }));
+  }, [rates, d?.hourlyRate]);
+  const heCalc = useMemo(() => {
+    if (!hePeriodo || !hourlyRate) return null;
+    const c = calcularHoraExtra({ inicio: start, fim: end, valorHora: Number(hourlyRate), vt: num(transport) });
+    return c.horas > 0 ? c : null;
+  }, [hePeriodo, start, end, hourlyRate, transport]); // eslint-disable-line react-hooks/exhaustive-deps
   const [beneficiary, setBeneficiary] = useState(d?.beneficiary ?? '');
   const [calc, setCalc] = useState<{ configured: boolean; hours: number; rate: number | null; amount: number; transport: number; dayTypeLabel: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -921,7 +1021,15 @@ function ApproverEditForm({ r, sectors, collaborators, onDone, onCancel }: { r: 
       Object.assign(body, { workDate, workStartTime: start || null, workEndTime: end || null, workSectorId, transportValue: transport ? num(transport) : null });
       if (!autoPriced && !coverage) body.amount = num(amount);
     } else if (r.type === 'OVERTIME') {
-      Object.assign(body, { ...(collaboratorId && collaboratorId !== (d?.collaboratorId ?? '') ? { collaboratorId } : {}), workDate: workDate || '', hours: hours ? num(hours) : null, reason, transportValue: transport ? num(transport) : null, amount: num(amount) });
+      if (Boolean(start) !== Boolean(end)) { setErr('Informe hora início e hora fim.'); return; }
+      if (hePeriodo && !hourlyRate) { setErr('Escolha o valor da hora.'); return; }
+      Object.assign(body, {
+        ...(collaboratorId && collaboratorId !== (d?.collaboratorId ?? '') ? { collaboratorId } : {}),
+        workDate: workDate || '', reason, transportValue: transport ? num(transport) : null,
+        ...(hePeriodo
+          ? { workStartTime: start, workEndTime: end, hourlyRate: Number(hourlyRate) }
+          : { workStartTime: null, workEndTime: null, hours: hours ? num(hours) : null, amount: num(amount) }),
+      });
     } else {
       Object.assign(body, { beneficiary, amount: num(amount) });
     }
@@ -983,13 +1091,34 @@ function ApproverEditForm({ r, sectors, collaborators, onDone, onCancel }: { r: 
             onValueChange={setCollaboratorId}
             options={collabOptions(collaborators)}
           />
+          <DatePicker label="Data" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
           <div className="grid grid-cols-2 gap-2">
-            <DatePicker label="Data" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
-            <div><Label>Horas</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} /></div>
+            <TimePicker label="Hora início" value={start || null} onValueChange={(v) => setStart(v ?? '')} />
+            <TimePicker label="Hora fim" value={end || null} onValueChange={(v) => setEnd(v ?? '')} />
           </div>
+          {hePeriodo ? (
+            <DsSelect
+              label="Valor da hora (R$/h)" required
+              placeholder={rateOptions.length ? 'Escolha o valor autorizado…' : 'Sem valor cadastrado nesta unidade'}
+              value={hourlyRate} onValueChange={setHourlyRate} disabled={rateOptions.length === 0}
+              options={rateOptions}
+            />
+          ) : (
+            <div><Label>Horas</Label><Input inputMode="decimal" value={hours} onChange={(e) => setHours(e.target.value)} /></div>
+          )}
           <div><Label>Motivo</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} /></div>
           <div><Label>Vale transporte (R$)</Label><Input inputMode="decimal" value={transport} onChange={(e) => setTransport(e.target.value)} placeholder="0,00" /></div>
-          <div><Label>Valor total (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+          {hePeriodo ? (
+            heCalc && (
+              <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
+                <p className="text-xs text-ink-500">Valor calculado</p>
+                <p className="sgo-type-24 font-semibold text-ink-900">{formatBRL(heCalc.total)}</p>
+                <p className="text-xs text-ink-500">{textoHoras(heCalc.horas)} × {formatBRL(heCalc.valorHora)}/h{heCalc.vt > 0 ? ` + ${formatBRL(heCalc.vt)} de vale-transporte` : ''}</p>
+              </div>
+            )
+          ) : (
+            <div><Label>Valor total (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
+          )}
         </>
       )}
       {r.type === 'MISC' && (

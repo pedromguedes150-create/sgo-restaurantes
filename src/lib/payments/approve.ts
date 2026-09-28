@@ -4,6 +4,8 @@ import { audit } from '@/lib/audit';
 import { notifyRole, notifyUsers } from '@/lib/notifications';
 import { avaliarRecorrencia, avisarRecorrencia, type Recorrencia } from '@/lib/payments/recorrencia';
 import { colaboradorDaUnidade } from '@/lib/payments/create';
+import { calcularHoraExtra, horarioValido } from '@/lib/overtime/calculo';
+import { overtimeRateAllowed } from '@/lib/overtime/rates';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
 
@@ -197,6 +199,8 @@ export interface ApproverEditInput {
   transportValue?: number | null;
   // hora extra — o colaborador do RH (v1.126.0), nunca nome digitado
   collaboratorId?: string;
+  /** Valor/hora escolhido entre os autorizados (v1.130.0). */
+  hourlyRate?: number;
   hours?: number | null;
   reason?: string;
   // avulso
@@ -222,7 +226,7 @@ export async function approverEditRequest(user: SessionUser, id: string, input: 
     select: {
       unitId: true, status: true, approverRole: true, type: true, requestedById: true,
       amount: true, description: true, workDate: true, workStartTime: true, workEndTime: true, workSectorId: true,
-      transportValue: true, hours: true, coverageSector: true, standardValue: true, collaboratorId: true, collaboratorName: true, reason: true, beneficiary: true,
+      transportValue: true, hours: true, coverageSector: true, standardValue: true, collaboratorId: true, collaboratorName: true, reason: true, beneficiary: true, hourlyRate: true,
       freelancerId: true, weekCount: true, recurrent: true,
     },
   });
@@ -316,12 +320,38 @@ export async function approverEditRequest(user: SessionUser, id: string, input: 
       muda('workDate', req.workDate, input.workDate || null);
       if (data.workDate !== undefined && input.workDate) data.workDate = new Date(input.workDate + 'T00:00:00.000Z');
     }
-    if (input.hours !== undefined) {
-      if (input.hours != null && !(input.hours > 0)) return { ok: false, reason: 'INVALID', detail: 'Horas inválidas.' };
-      muda('hours', req.hours, input.hours ?? null);
-    }
     if (input.reason !== undefined) muda('reason', req.reason, input.reason.trim() || null);
-    if (input.amount !== undefined) amount = Number(input.amount);
+    /* Fluxo por PERÍODO (v1.130.0): com início/fim e valor/hora, tudo é
+       recalculado aqui. O valor/hora novo precisa estar autorizado na unidade;
+       manter o já gravado é sempre permitido (pode ter sido desativado depois). */
+    const start = input.workStartTime !== undefined ? (input.workStartTime || null) : req.workStartTime;
+    const end = input.workEndTime !== undefined ? (input.workEndTime || null) : req.workEndTime;
+    const rateAtual = req.hourlyRate != null ? Number(req.hourlyRate) : null;
+    let rate = rateAtual;
+    if (input.hourlyRate !== undefined) {
+      const v = Math.round(Number(input.hourlyRate) * 100) / 100;
+      if (!(v > 0)) return { ok: false, reason: 'INVALID', detail: 'Valor/hora inválido.' };
+      if (v !== rateAtual && !(await overtimeRateAllowed(req.unitId, v))) return { ok: false, reason: 'INVALID', detail: 'Valor/hora não autorizado nesta unidade.' };
+      rate = v;
+    }
+    if (start && end) {
+      if (!horarioValido(start) || !horarioValido(end)) return { ok: false, reason: 'INVALID', detail: 'Horário inválido.' };
+      if (rate == null) return { ok: false, reason: 'INVALID', detail: 'Escolha o valor/hora.' };
+      const c = calcularHoraExtra({ inicio: start, fim: end, valorHora: rate, vt: transport });
+      if (!(c.horas > 0)) return { ok: false, reason: 'INVALID', detail: 'O período precisa ter pelo menos alguns minutos.' };
+      muda('workStartTime', req.workStartTime, start);
+      muda('workEndTime', req.workEndTime, end);
+      muda('hourlyRate', rateAtual, rate);
+      muda('hours', req.hours, c.horas);
+      amount = c.total;
+    } else {
+      // Lançamento antigo (sem período): horas e valor seguem editáveis como antes.
+      if (input.hours !== undefined) {
+        if (input.hours != null && !(input.hours > 0)) return { ok: false, reason: 'INVALID', detail: 'Horas inválidas.' };
+        muda('hours', req.hours, input.hours ?? null);
+      }
+      if (input.amount !== undefined) amount = Number(input.amount);
+    }
   } else {
     if (input.beneficiary !== undefined) muda('beneficiary', req.beneficiary, input.beneficiary.trim() || null);
     if (input.amount !== undefined) amount = Number(input.amount);

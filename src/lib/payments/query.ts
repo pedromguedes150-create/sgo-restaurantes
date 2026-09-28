@@ -47,6 +47,23 @@ export async function getMyRequests(user: SessionUser, unitIds?: string[]) {
   });
 }
 
+/**
+ * "Solicitações da UNIDADE" (v1.130.0, gerente): TODAS as solicitações da(s)
+ * unidade(s) selecionada(s), de qualquer solicitante e status. O recorte é a
+ * UNIDADE DA SOLICITAÇÃO, dentro do escopo do usuário — outra unidade não
+ * entra nem por URL: `paymentScope` é o limite, `porUnidade` o filtro —
+ * combinados com AND, porque os dois escrevem em `unitId` e um spread deixaria
+ * o filtro (que vem da URL) vencer o escopo.
+ */
+export async function getUnitRequests(user: SessionUser, unitIds?: string[]) {
+  return prisma.paymentRequest.findMany({
+    where: { AND: [paymentScope(user), porUnidade(unitIds)] },
+    orderBy: { createdAt: 'desc' },
+    take: LIMITE_DA_LISTA,
+    include: REQUEST_INCLUDE,
+  });
+}
+
 /** "Para Aprovar" — pendentes que este usuário pode aprovar (inclui delegação). */
 export async function getToApprove(user: SessionUser, unitIds?: string[]) {
   const roles = await approverRolesFor(user);
@@ -94,15 +111,16 @@ export async function getToApproveCount(user: SessionUser, unitIds?: string[]): 
 }
 
 /** Quantas há DE VERDADE em cada fila — é isto que os crachás mostram. */
-export async function getPaymentCounts(user: SessionUser, unitIds?: string[]): Promise<{ mine: number; toApprove: number; toPay: number; history: number }> {
+export async function getPaymentCounts(user: SessionUser, unitIds?: string[]): Promise<{ mine: number; toApprove: number; toPay: number; history: number; unit: number }> {
   const podePagar = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO';
-  const [mine, toApprove, toPay, history] = await Promise.all([
+  const [mine, toApprove, toPay, history, unit] = await Promise.all([
     prisma.paymentRequest.count({ where: { requestedById: user.id, ...porUnidade(unitIds) } }),
     getToApproveCount(user, unitIds),
     podePagar ? prisma.paymentRequest.count({ where: { status: 'APPROVED', ...paymentScope(user), ...porUnidade(unitIds) } }) : Promise.resolve(0),
     prisma.paymentRequest.count({ where: { status: { in: ['APPROVED', 'REJECTED', 'PAID'] }, ...paymentScope(user), ...porUnidade(unitIds) } }),
+    prisma.paymentRequest.count({ where: { AND: [paymentScope(user), porUnidade(unitIds)] } }),
   ]);
-  return { mine, toApprove, toPay, history };
+  return { mine, toApprove, toPay, history, unit };
 }
 
 export async function getFreelancersForUnit(unitId: string) {

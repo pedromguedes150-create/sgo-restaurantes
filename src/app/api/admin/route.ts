@@ -14,6 +14,7 @@ import { setGasAlertPct, setGasMaxPriceKg } from '@/lib/gas/query';
 import { setFreelancerWeekLimit } from '@/lib/payments/recorrencia';
 import { setChecklistToleranceMin } from '@/lib/tasks/tolerance';
 import { setHourlyRate, addHoliday, deleteHoliday } from '@/lib/freelancer/pricing';
+import { addOvertimeRate, toggleOvertimeRate, deleteOvertimeRate } from '@/lib/overtime/rates';
 import type { DayType } from '@prisma/client';
 import { createChecklistModel, updateChecklistModel, toggleChecklistModel, deleteChecklistModel, createTemplatesFromModels } from '@/lib/checklist-models';
 import { createSupervisorChecklist, updateSupervisorChecklist, toggleSupervisorChecklist, deleteSupervisorChecklist } from '@/lib/supervisor/visits';
@@ -101,6 +102,9 @@ export async function POST(req: Request) {
   else if (e === 'freelancerRate' && a === 'set') r = await setHourlyRate(user, b.unitId, b.dayType as DayType, Number(b.value), ctx);
   else if (e === 'holiday' && a === 'add') r = await addHoliday(user, b.date, b.name, ctx);
   else if (e === 'holiday' && a === 'delete') r = await deleteHoliday(user, b.id, ctx);
+  else if (e === 'overtimeRate' && a === 'add') r = await addOvertimeRate(user, b.unitId, Number(b.value), ctx);
+  else if (e === 'overtimeRate' && a === 'toggle') r = await toggleOvertimeRate(user, b.id, Boolean(b.active), ctx);
+  else if (e === 'overtimeRate' && a === 'delete') r = await deleteOvertimeRate(user, b.id, ctx);
 
   if (!r) return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });
   if (!r.ok) {
