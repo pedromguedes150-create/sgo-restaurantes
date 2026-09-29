@@ -58,8 +58,15 @@ export function headerValido(h: string): boolean {
  * A mesma régua do ping da v2 do RH.
  */
 export function caminhoValido(p: string): boolean {
-  return /^\/[A-Za-z0-9_\-/.]{0,200}(\?[A-Za-z0-9_\-=&%.]{0,300})?$/.test(p) && !p.includes('..') && !p.includes('//');
+  return /^\/[A-Za-z0-9_\-/.%]{0,300}(\?[A-Za-z0-9_\-=&%.]{0,300})?$/.test(p) && !p.includes('..') && !p.includes('//');
 }
+
+/** Papéis fixos que uma conexão pode assumir nas integrações do SGO. */
+export const PAPEIS: { value: string; label: string; hint: string }[] = [
+  { value: '', label: 'Nenhum papel fixo', hint: 'só administrativa / teste' },
+  { value: 'RH', label: 'Integração do RH', hint: 'Sincronizar, Diagnóstico e sync diário passam por esta conexão' },
+];
+export const PAPEL_TEXTO: Record<string, string> = { RH: 'Usada pelo RH' };
 
 /** Como a credencial aparece depois de guardada: nunca mais que os 4 últimos. */
 export function mascararCredencial(last4: string): string {

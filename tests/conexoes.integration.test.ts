@@ -61,7 +61,7 @@ describe('cadastro', () => {
     const row = await prisma.externalConnection.findUniqueOrThrow({ where: { id: r.id } });
     expect(row.credentialEnc).not.toContain('SEGREDO');
     expect(row.credentialEnc.startsWith('v1:')).toBe(true);
-    expect(decifrar(row.credentialEnc)).toBe(CREDENCIAL);
+    expect(await decifrar(row.credentialEnc)).toBe(CREDENCIAL);
     expect(row.credentialLast4).toBe(CREDENCIAL.slice(-4));
     expect(row.baseUrl).toBe('https://rh.exemplo.com/api/ext/v2/rh'); // sem a barra do fim
 
@@ -77,13 +77,13 @@ describe('cadastro', () => {
     const e1 = await editarConexao(admin(), id, { ...base(), credential: '', purpose: 'colaboradores e empresas' });
     expect(e1.ok).toBe(true);
     let row = await prisma.externalConnection.findUniqueOrThrow({ where: { id } });
-    expect(decifrar(row.credentialEnc)).toBe(CREDENCIAL);
+    expect(await decifrar(row.credentialEnc)).toBe(CREDENCIAL);
     expect(row.purpose).toBe('colaboradores e empresas');
 
     const e2 = await editarConexao(admin(), id, { ...base(), credential: `nova-${sfx}-TROCADA-1234` });
     expect(e2.ok).toBe(true);
     row = await prisma.externalConnection.findUniqueOrThrow({ where: { id } });
-    expect(decifrar(row.credentialEnc)).toBe(`nova-${sfx}-TROCADA-1234`);
+    expect(await decifrar(row.credentialEnc)).toBe(`nova-${sfx}-TROCADA-1234`);
     expect(row.credentialLast4).toBe('1234');
     // volta para a original, que os próximos casos conferem no header
     await editarConexao(admin(), id, { ...base() });
@@ -158,5 +158,35 @@ describe('separação das responsabilidades', () => {
     expect((await autenticarApiKey(req)).ok).toBe(false);
     const inbound = new Request('http://localhost/api/integracoes/rh/inclusao', { headers: { authorization: `Bearer ${CREDENCIAL}` } });
     expect(inboundAuthorized(inbound)).toBe(false);
+  });
+});
+
+describe('migração da cifra derivada → CONNECTIONS_ENC_KEY (v1.132.0)', () => {
+  it('credencial cifrada com a chave derivada continua legível e é recifrada com a dedicada, sem perda', async () => {
+    const { cifrar, decifrarDetalhado } = await import('@/lib/conexoes/cripto');
+    const { migrarCredenciaisParaChaveDedicada, estadoDaCifra } = await import('@/lib/conexoes/conexoes');
+    const dedicada = process.env.CONNECTIONS_ENC_KEY;
+    // simula o mundo ANTES da chave própria: cifra com a derivada do JWT
+    delete process.env.CONNECTIONS_ENC_KEY;
+    process.env.JWT_REFRESH_SECRET ||= 'segredo-jwt-de-teste';
+    const legado = await cifrar(`legado-${sfx}-SEGREDO`);
+    process.env.CONNECTIONS_ENC_KEY = dedicada;
+
+    const c = await prisma.externalConnection.create({ data: { name: `Legado ${sfx}`, baseUrl: 'https://legado.exemplo.com', credentialEnc: legado, credentialLast4: 'REDO' }, select: { id: true } });
+    ids.push(c.id);
+    expect(await decifrarDetalhado(legado)).toEqual({ texto: `legado-${sfx}-SEGREDO`, chave: 'derivada' });
+    expect((await estadoDaCifra()).pendentesNaDerivada).toBeGreaterThanOrEqual(1);
+
+    const m = await migrarCredenciaisParaChaveDedicada();
+    expect(m.origem).toBe('dedicada');
+    expect(m.migradas).toBeGreaterThanOrEqual(1);
+    const row = await prisma.externalConnection.findUniqueOrThrow({ where: { id: c.id } });
+    expect(row.credentialEnc).not.toBe(legado);
+    expect(await decifrarDetalhado(row.credentialEnc)).toEqual({ texto: `legado-${sfx}-SEGREDO`, chave: 'dedicada' });
+
+    // idempotente: rodar de novo não toca em nada
+    const m2 = await migrarCredenciaisParaChaveDedicada();
+    expect(m2.migradas).toBe(0);
+    expect((await estadoDaCifra()).pendentesNaDerivada).toBe(0);
   });
 });

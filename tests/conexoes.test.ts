@@ -10,25 +10,37 @@ import { urlBaseValida, normalizarUrlBase, caminhoValido, headerValido, mascarar
 beforeAll(() => { process.env.CONNECTIONS_ENC_KEY ||= 'chave-de-teste-das-conexoes'; });
 
 describe('cifra da credencial (AES-256-GCM)', () => {
-  it('cifra e decifra; o que vai ao banco não contém o texto', () => {
-    const blob = cifrar('sgo-rh-abc123XYZ');
+  it('cifra e decifra; o que vai ao banco não contém o texto', async () => {
+    const blob = await cifrar('sgo-rh-abc123XYZ');
     expect(blob.startsWith('v1:')).toBe(true);
     expect(blob).not.toContain('abc123');
-    expect(decifrar(blob)).toBe('sgo-rh-abc123XYZ');
+    expect(await decifrar(blob)).toBe('sgo-rh-abc123XYZ');
   });
-  it('dois cifrados do mesmo texto são diferentes (IV aleatório)', () => {
-    expect(cifrar('mesma')).not.toBe(cifrar('mesma'));
+  it('dois cifrados do mesmo texto são diferentes (IV aleatório)', async () => {
+    expect(await cifrar('mesma')).not.toBe(await cifrar('mesma'));
   });
-  it('blob adulterado ou de outra chave não decifra — erro claro, nunca lixo', () => {
-    const blob = cifrar('segredo');
+  it('o formato é o mesmo que o node:crypto gravava (AES-GCM, tag nos 16 bytes finais): o que já está no banco abre', async () => {
+    const { createCipheriv, createHash } = await import('node:crypto');
+    const key = createHash('sha256').update(`conexoes:${process.env.CONNECTIONS_ENC_KEY}`).digest();
+    const iv = Buffer.alloc(12, 7);
+    const c = createCipheriv('aes-256-gcm', key, iv);
+    const ct = Buffer.concat([c.update('gravado-pelo-node', 'utf8'), c.final()]);
+    const blob = ['v1', iv.toString('base64url'), c.getAuthTag().toString('base64url'), ct.toString('base64url')].join(':');
+    expect(await decifrar(blob)).toBe('gravado-pelo-node');
+  });
+  it('blob adulterado ou de outra chave não decifra — erro claro, nunca lixo', async () => {
+    const blob = await cifrar('segredo');
     const partes = blob.split(':');
     partes[3] = partes[3].slice(0, -2) + (partes[3].endsWith('AA') ? 'BB' : 'AA');
-    expect(() => decifrar(partes.join(':'))).toThrow(CifraInvalidaError);
-    expect(() => decifrar('lixo')).toThrow(CifraInvalidaError);
+    await expect(decifrar(partes.join(':'))).rejects.toThrow(CifraInvalidaError);
+    await expect(decifrar('lixo')).rejects.toThrow(CifraInvalidaError);
     const antes = process.env.CONNECTIONS_ENC_KEY;
+    const jwt = process.env.JWT_REFRESH_SECRET;
     process.env.CONNECTIONS_ENC_KEY = 'outra-chave';
-    expect(() => decifrar(blob)).toThrow(CifraInvalidaError);
+    delete process.env.JWT_REFRESH_SECRET; // senão a derivada seria tentada em seguida
+    await expect(decifrar(blob)).rejects.toThrow(CifraInvalidaError);
     process.env.CONNECTIONS_ENC_KEY = antes;
+    if (jwt) process.env.JWT_REFRESH_SECRET = jwt;
   });
   it('a origem da chave é informada (dedicada quando CONNECTIONS_ENC_KEY existe)', () => {
     expect(origemDaChave()).toBe('dedicada');

@@ -2308,6 +2308,8 @@ model ExternalConnection {
   active          Boolean          @default(true)
   /// Caminho usado por "Testar conexão" (relativo à base)
   testPath        String           @default("/")
+  /// Papel fixo na integração: 'RH' = é a conexão que o sync/diagnóstico do RH usam (uma só)
+  systemKey       String?
   lastUsedAt      DateTime?
   lastStatus      Int?
   lastOk          Boolean?

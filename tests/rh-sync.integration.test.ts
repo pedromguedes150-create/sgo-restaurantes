@@ -21,16 +21,21 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 let respostaDoRh: unknown = { data: [] };
 let lancarNoTransporte: Error | null = null;
 
-vi.mock('@/lib/rh/client', () => ({
-  rhConfigured: () => true,
-  RhApiError: class RhApiError extends Error {},
-  rh: {
-    colaboradoresDaUnidade: async () => {
-      if (lancarNoTransporte) throw lancarNoTransporte;
-      return respostaDoRh;
+vi.mock('@/lib/rh/transporte', async () => {
+  const real = await vi.importActual<typeof import('@/lib/rh/transporte')>('@/lib/rh/transporte');
+  return {
+    ...real,
+    rhDisponivel: async () => true,
+    rh: {
+      colaboradores: async () => { if (lancarNoTransporte) throw lancarNoTransporte; return respostaDoRh; },
+      colaboradoresDaUnidade: async () => {
+        if (lancarNoTransporte) throw lancarNoTransporte;
+        return respostaDoRh;
+      },
+      unidades: async () => ({ data: [] }),
     },
-  },
-}));
+  };
+});
 
 import { prisma } from '@/lib/db/prisma';
 import { syncCollaboratorsForUnit } from '@/lib/rh/sync';

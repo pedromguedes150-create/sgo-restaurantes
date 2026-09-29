@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
-import { rh, rhConfigured } from '@/lib/rh/client';
-import { unwrapColaboradores, isAtivo } from '@/lib/rh/normalize';
+import { rh, rhDisponivel, listaParaUnidade } from '@/lib/rh/transporte';
+import { unwrapColaboradores, isAtivo, type RhColaborador } from '@/lib/rh/normalize';
 import { audit } from '@/lib/audit';
 import { notifyAdmins } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
@@ -11,17 +11,23 @@ export type SyncResult =
 
 /**
  * Núcleo da sincronização de UMA unidade (sem checagem de papel — uso interno).
- * Casa pela razão social em Unit.rhUnitName. Upsert por matrícula (externalId);
- * vincula à unidade; inativa quem saiu da lista. `actorUserId` null = sistema.
+ * Casa pelo CNPJ da unidade (preferido, v1.132.0) ou pela razão social em
+ * Unit.rhUnitName (fallback). Upsert por matrícula (externalId); vincula à
+ * unidade; inativa quem saiu da lista. `actorUserId` null = sistema. `todos` é
+ * a lista completa do RH já buscada — o sync de várias unidades busca uma vez.
  */
-async function syncUnitCore(unitId: string, actorUserId: string | null): Promise<SyncResult> {
+async function syncUnitCore(unitId: string, actorUserId: string | null, todos?: RhColaborador[]): Promise<SyncResult> {
   const unit = await prisma.unit.findUnique({ where: { id: unitId } });
   if (!unit) return { ok: false, reason: 'NOT_FOUND' };
-  if (!unit.rhUnitName) return { ok: false, reason: 'NO_RH_NAME' };
+  if (!unit.rhUnitName && !unit.cnpj) return { ok: false, reason: 'NO_RH_NAME' };
 
-  let lista;
+  let lista: RhColaborador[];
+  let vinculo: 'CNPJ' | 'RAZAO_SOCIAL';
   try {
-    lista = unwrapColaboradores(await rh.colaboradoresDaUnidade(unit.rhUnitName));
+    const r = await listaParaUnidade({ cnpj: unit.cnpj, rhUnitName: unit.rhUnitName }, todos, rh);
+    if (!r.ok) return { ok: false, reason: 'NO_RH_NAME' };
+    lista = r.lista;
+    vinculo = r.vinculo;
   } catch (e) {
     return { ok: false, reason: 'RH_ERROR', message: e instanceof Error ? e.message : String(e) };
   }
@@ -93,7 +99,7 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
     action: actorUserId ? 'RH_SYNC_COLLABORATORS' : 'RH_SYNC_AUTO',
     module: 'PEOPLE',
     metadata: {
-      rhUnitName: unit.rhUnitName, total: lista.length, created, updated, deactivated: deactivated.count,
+      rhUnitName: unit.rhUnitName, cnpj: unit.cnpj, vinculo, total: lista.length, created, updated, deactivated: deactivated.count,
       ...(listaVaziaSuspeita ? { inativacaoPulada: ativosNaUnidade, motivo: 'RH devolveu lista vazia' } : {}),
     },
   });
@@ -119,18 +125,30 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
 /** Sincroniza os colaboradores de UMA unidade (acionado por Admin). */
 export async function syncCollaboratorsForUnit(user: SessionUser, unitId: string): Promise<SyncResult> {
   if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
-  if (!rhConfigured()) return { ok: false, reason: 'NOT_CONFIGURED' };
+  if (!(await rhDisponivel())) return { ok: false, reason: 'NOT_CONFIGURED' };
   return syncUnitCore(unitId, user.id);
+}
+
+/** Unidades que têm como se ligar ao RH: CNPJ ou razão social. */
+const COM_VINCULO = { active: true, OR: [{ rhUnitName: { not: null } }, { cnpj: { not: null } }] };
+
+/**
+ * A lista completa do RH, buscada UMA vez para o sync de várias unidades. Se
+ * falhar, devolve undefined e cada unidade tenta pelo caminho de sempre.
+ */
+async function listaCompletaOuNada(): Promise<RhColaborador[] | undefined> {
+  try { return unwrapColaboradores(await rh.colaboradores()); } catch { return undefined; }
 }
 
 /** Sincroniza TODAS as unidades do SGO com "Nome no RH" definido (acionado por Admin). */
 export async function syncAllRegisteredUnits(user: SessionUser): Promise<SyncResult & { units?: number }> {
   if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
-  if (!rhConfigured()) return { ok: false, reason: 'NOT_CONFIGURED' };
-  const units = await prisma.unit.findMany({ where: { active: true, rhUnitName: { not: null } }, select: { id: true } });
+  if (!(await rhDisponivel())) return { ok: false, reason: 'NOT_CONFIGURED' };
+  const units = await prisma.unit.findMany({ where: COM_VINCULO, select: { id: true } });
+  const todos = await listaCompletaOuNada();
   let created = 0, updated = 0, total = 0;
   for (const u of units) {
-    const r = await syncUnitCore(u.id, user.id);
+    const r = await syncUnitCore(u.id, user.id, todos);
     if (r.ok) { created += r.created; updated += r.updated; total += r.total; }
   }
   return { ok: true, created, updated, total, units: units.length };
@@ -141,11 +159,12 @@ export async function syncAllRegisteredUnits(user: SessionUser): Promise<SyncRes
  * Não exige sessão; só roda se o RH estiver configurado. Idempotente.
  */
 export async function runDailyRhSync(): Promise<{ ran: boolean; units?: number; created?: number; updated?: number }> {
-  if (!rhConfigured()) return { ran: false };
-  const units = await prisma.unit.findMany({ where: { active: true, rhUnitName: { not: null } }, select: { id: true } });
+  if (!(await rhDisponivel())) return { ran: false };
+  const units = await prisma.unit.findMany({ where: COM_VINCULO, select: { id: true } });
+  const todos = await listaCompletaOuNada();
   let created = 0, updated = 0;
   for (const u of units) {
-    const r = await syncUnitCore(u.id, null);
+    const r = await syncUnitCore(u.id, null, todos);
     if (r.ok) { created += r.created; updated += r.updated; }
   }
   return { ran: true, units: units.length, created, updated };

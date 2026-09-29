@@ -15,6 +15,8 @@ export interface RhColaborador {
   cpf: string | null;
   status: string; // "Ativo" | ...
   unidade: string; // razão social
+  /// CNPJ da empresa (v1.132.0) — o vínculo preferido com a unidade do SGO
+  unidade_cnpj?: string | null;
   cargo: string | null;
   admissao: string | null; // 'YYYY-MM-DD'
 }
@@ -50,7 +52,7 @@ export function unwrapColaboradores(resp: unknown): RhColaborador[] {
 }
 
 /** Como o SGO entende o status que veio do RH. */
-export type ClasseDeStatus = 'ATIVO' | 'DESLIGADO' | 'DESCONHECIDO';
+export type ClasseDeStatus = 'ATIVO' | 'FERIAS' | 'DESLIGADO' | 'DESCONHECIDO';
 
 /** Sem acento, sem caixa, sem espaço sobrando — "1ª Experiência" e "1a experiencia" viram o mesmo. */
 function normalizarStatus(status: string | null | undefined): string {
@@ -75,6 +77,14 @@ const DESLIGADO = /^(demit|deslig|resci|encerr|inativ|cancelad|baixad)/;
 const ATIVO = /^(ativ|experienc|\d+\s*a?\s*experienc|contrat|trabalh|efetiv|admitid)/;
 
 /**
+ * Férias (v1.132.0): vínculo ATIVO com ausência temporária. Continua no SGO
+ * como qualquer ativo; só o diagnóstico passa a nomear a situação em vez de
+ * "status novo". "Aposentado" NÃO entra aqui de propósito — segue desconhecido
+ * (presente por cautela) até a regra ser definida.
+ */
+const FERIAS = /^ferias/;
+
+/**
  * Classifica o status do colaborador no RH.
  *
  * **O caso real (14/09).** A regra antiga era `startsWith('ativ')`: qualquer
@@ -93,6 +103,7 @@ export function classificarStatus(status: string | null | undefined): ClasseDeSt
   const s = normalizarStatus(status);
   if (!s) return 'DESCONHECIDO';
   if (DESLIGADO.test(s)) return 'DESLIGADO';
+  if (FERIAS.test(s)) return 'FERIAS';
   if (ATIVO.test(s)) return 'ATIVO';
   /* "3ª Experiência", "Contrato de Experiência", o que o RH inventar: se contém
      "experienc" em qualquer posição, é alguém trabalhando. */

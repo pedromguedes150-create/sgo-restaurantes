@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
-import { cifrar, cifraConfigurada, decifrar, CifraInvalidaError, SemChaveDeCifraError } from '@/lib/conexoes/cripto';
+import { cifrar, cifraConfigurada, decifrar, decifrarDetalhado, origemDaChave, CifraInvalidaError, SemChaveDeCifraError } from '@/lib/conexoes/cripto';
 import { executarChamada, type ChamadaExterna } from '@/lib/conexoes/cliente';
 import { resumirForma, type FormaDaResposta } from '@/lib/rh/v2-ping';
 import {
@@ -34,6 +34,7 @@ export interface ConexaoDTO {
   credentialLast4: string;
   active: boolean;
   testPath: string;
+  systemKey: string | null;
   lastUsedAt: string | null;
   lastStatus: number | null;
   lastOk: boolean | null;
@@ -49,13 +50,13 @@ export async function listarConexoes(): Promise<ConexaoDTO[]> {
     orderBy: [{ active: 'desc' }, { name: 'asc' }],
     select: {
       id: true, name: true, purpose: true, baseUrl: true, authType: true, authHeader: true, credentialLast4: true,
-      active: true, testPath: true, lastUsedAt: true, lastStatus: true, lastOk: true, lastResult: true, createdAt: true,
+      active: true, testPath: true, systemKey: true, lastUsedAt: true, lastStatus: true, lastOk: true, lastResult: true, createdAt: true,
       createdBy: { select: { name: true } }, _count: { select: { requests: true } },
     },
   });
   return rows.map((r) => ({
     id: r.id, name: r.name, purpose: r.purpose, baseUrl: r.baseUrl, authType: r.authType, authHeader: r.authHeader,
-    credentialLast4: r.credentialLast4, active: r.active, testPath: r.testPath,
+    credentialLast4: r.credentialLast4, active: r.active, testPath: r.testPath, systemKey: r.systemKey,
     lastUsedAt: r.lastUsedAt?.toISOString() ?? null, lastStatus: r.lastStatus, lastOk: r.lastOk, lastResult: r.lastResult,
     createdAt: r.createdAt.toISOString(), createdBy: r.createdBy?.name ?? null, chamadas: r._count.requests,
   }));
@@ -74,13 +75,17 @@ export interface EntradaDaConexao {
   /** Obrigatória ao criar; ao editar, vazia = manter. */
   credential?: string | null;
   testPath?: string | null;
+  /** Papel fixo ('RH') ou vazio. */
+  systemKey?: string | null;
 }
+
+const PAPEIS_VALIDOS: readonly string[] = ['RH'];
 
 export type ResultadoDaConexao =
   | { ok: true; id: string }
   | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND' | 'SEM_CIFRA'; detail?: string };
 
-type Validado = { ok: true; data: { name: string; purpose: string | null; baseUrl: string; authType: TipoDeAuth; authHeader: string; testPath: string } } | { ok: false; detail: string };
+type Validado = { ok: true; data: { name: string; purpose: string | null; baseUrl: string; authType: TipoDeAuth; authHeader: string; testPath: string; systemKey: string | null } } | { ok: false; detail: string };
 
 function validar(input: EntradaDaConexao): Validado {
   const name = String(input.name ?? '').trim();
@@ -94,7 +99,9 @@ function validar(input: EntradaDaConexao): Validado {
   const testPath = String(input.testPath ?? '').trim() || '/';
   if (!caminhoValido(testPath)) return { ok: false, detail: 'Caminho de teste inválido: comece com / e não use ".." nem "//".' };
   const purpose = String(input.purpose ?? '').trim().slice(0, 300) || null;
-  return { ok: true, data: { name, purpose, baseUrl, authType, authHeader: authType === 'BEARER' ? 'Authorization' : authHeader, testPath } };
+  const systemKey = String(input.systemKey ?? '').trim().toUpperCase() || null;
+  if (systemKey && !PAPEIS_VALIDOS.includes(systemKey)) return { ok: false, detail: 'Papel desconhecido.' };
+  return { ok: true, data: { name, purpose, baseUrl, authType, authHeader: authType === 'BEARER' ? 'Authorization' : authHeader, testPath, systemKey } };
 }
 
 function credencialValida(c: string): boolean {
@@ -110,9 +117,10 @@ export async function criarConexao(user: SessionUser, input: EntradaDaConexao, c
   if (!credencialValida(credential)) return { ok: false, reason: 'INVALID', detail: 'Informe a chave/token (mínimo 8 caracteres, sem quebra de linha).' };
 
   const c = await prisma.externalConnection.create({
-    data: { ...v.data, credentialEnc: cifrar(credential), credentialLast4: credential.slice(-4), createdById: user.id },
+    data: { ...v.data, credentialEnc: await cifrar(credential), credentialLast4: credential.slice(-4), createdById: user.id },
     select: { id: true },
   });
+  await umPapelPorSistema(c.id, v.data.systemKey);
   /* A auditoria guarda nome, URL e tipo — nunca a credencial. */
   await audit({ userId: user.id, action: 'EXT_CONN_CREATE', module: 'INTEGRATIONS', entity: 'external_connection', entityId: c.id, metadata: { name: v.data.name, baseUrl: v.data.baseUrl, authType: v.data.authType }, ...ctx });
   return { ok: true, id: c.id };
@@ -129,15 +137,61 @@ export async function editarConexao(user: SessionUser, id: string, input: Entrad
   if (credential) {
     if (!cifraConfigurada()) return { ok: false, reason: 'SEM_CIFRA', detail: new SemChaveDeCifraError().message };
     if (!credencialValida(credential)) return { ok: false, reason: 'INVALID', detail: 'Chave/token inválido (mínimo 8 caracteres, sem quebra de linha).' };
-    credencialNova = { credentialEnc: cifrar(credential), credentialLast4: credential.slice(-4) };
+    credencialNova = { credentialEnc: await cifrar(credential), credentialLast4: credential.slice(-4) };
   }
   await prisma.externalConnection.update({ where: { id }, data: { ...v.data, ...(credencialNova ?? {}) } });
+  await umPapelPorSistema(id, v.data.systemKey);
   await audit({
     userId: user.id, action: 'EXT_CONN_UPDATE', module: 'INTEGRATIONS', entity: 'external_connection', entityId: id,
     metadata: { antes: { name: atual.name, baseUrl: atual.baseUrl, authType: atual.authType }, depois: { name: v.data.name, baseUrl: v.data.baseUrl, authType: v.data.authType }, credencialTrocada: Boolean(credencialNova) },
     ...ctx,
   });
   return { ok: true, id };
+}
+
+/** Um papel é de UMA conexão: marcar esta como RH desmarca a anterior — duas "conexões do RH" seria decidir pela ordem do banco. */
+async function umPapelPorSistema(id: string, systemKey: string | null) {
+  if (!systemKey) return;
+  await prisma.externalConnection.updateMany({ where: { systemKey, id: { not: id } }, data: { systemKey: null } });
+}
+
+/**
+ * MIGRAÇÃO DA CIFRA (v1.132.0): com CONNECTIONS_ENC_KEY definida, recifra com
+ * ela tudo o que ainda só abre com a chave derivada do JWT. Idempotente — o
+ * que já está na dedicada não é tocado; o que não abre com nenhuma é contado
+ * e deixado como está (nunca sobrescrito), para ser recadastrado à mão.
+ */
+export async function migrarCredenciaisParaChaveDedicada(): Promise<{ origem: ReturnType<typeof origemDaChave>; migradas: number; jaNaDedicada: number; ilegiveis: number }> {
+  const origem = origemDaChave();
+  const r = { origem, migradas: 0, jaNaDedicada: 0, ilegiveis: 0 };
+  if (origem !== 'dedicada') return r;
+  const rows = await prisma.externalConnection.findMany({ select: { id: true, credentialEnc: true } });
+  for (const row of rows) {
+    try {
+      const d = await decifrarDetalhado(row.credentialEnc);
+      if (d.chave === 'dedicada') { r.jaNaDedicada++; continue; }
+      const novo = await cifrar(d.texto);
+      if ((await decifrarDetalhado(novo)).chave !== 'dedicada') throw new CifraInvalidaError();
+      await prisma.externalConnection.update({ where: { id: row.id }, data: { credentialEnc: novo } });
+      r.migradas++;
+    } catch {
+      r.ilegiveis++;
+    }
+  }
+  if (r.migradas > 0) await audit({ userId: null, action: 'EXT_CONN_RECIPHER', module: 'INTEGRATIONS', entity: 'external_connection', metadata: { migradas: r.migradas, ilegiveis: r.ilegiveis } }).catch(() => {});
+  return r;
+}
+
+/** Estado da cifra para a Central: qual chave está em uso e se ainda há credencial na derivada. */
+export async function estadoDaCifra(): Promise<{ origem: ReturnType<typeof origemDaChave>; pendentesNaDerivada: number; ilegiveis: number }> {
+  const origem = origemDaChave();
+  if (origem === 'nenhuma') return { origem, pendentesNaDerivada: 0, ilegiveis: 0 };
+  const rows = await prisma.externalConnection.findMany({ select: { credentialEnc: true } });
+  let pendentesNaDerivada = 0, ilegiveis = 0;
+  for (const row of rows) {
+    try { if ((await decifrarDetalhado(row.credentialEnc)).chave === 'derivada' && origem === 'dedicada') pendentesNaDerivada++; } catch { ilegiveis++; }
+  }
+  return { origem, pendentesNaDerivada, ilegiveis };
 }
 
 export type AcaoNaConexao = 'ativar' | 'desativar';
@@ -182,7 +236,7 @@ export async function testarConexao(
     const path = String(alvo.path ?? '').trim() || c.testPath;
     if (!caminhoValido(path)) return { ok: false, reason: 'INVALID', detail: 'Caminho de teste inválido.' };
     let credential: string;
-    try { credential = decifrar(c.credentialEnc); } catch (e) {
+    try { credential = await decifrar(c.credentialEnc); } catch (e) {
       if (e instanceof SemChaveDeCifraError) return { ok: false, reason: 'SEM_CIFRA', detail: e.message };
       return { ok: false, reason: 'INVALID', detail: (e as CifraInvalidaError).message };
     }

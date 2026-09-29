@@ -24,6 +24,7 @@ function entrada(b: Record<string, unknown>): EntradaDaConexao {
     authHeader: b.authHeader != null ? String(b.authHeader) : null,
     credential: b.credential != null ? String(b.credential) : null,
     testPath: b.testPath != null ? String(b.testPath) : null,
+    systemKey: b.systemKey != null ? String(b.systemKey) : null,
   };
 }
 

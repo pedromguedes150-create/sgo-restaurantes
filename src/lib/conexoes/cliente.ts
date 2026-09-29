@@ -124,6 +124,6 @@ export async function chamarConexao(id: string, opts: OpcoesDaChamada = {}): Pro
   if (!c.active) throw new ConexaoIndisponivelError('INACTIVE');
   return executarChamada({
     connectionId: c.id, connectionName: c.name, baseUrl: c.baseUrl,
-    authType: c.authType, authHeader: c.authHeader, credential: decifrar(c.credentialEnc),
+    authType: c.authType, authHeader: c.authHeader, credential: await decifrar(c.credentialEnc),
   }, opts);
 }
