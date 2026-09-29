@@ -5,6 +5,9 @@ import { prisma } from '@/lib/db/prisma';
 import { rhConfigured, rhV2Base, rhV2Configured } from '@/lib/rh/client';
 import { feriasWebhookConfigured } from '@/lib/rh/webhook';
 import { RhV2Ping } from '@/components/admin/rh-v2-ping';
+import { ConexoesClient } from '@/components/admin/conexoes-client';
+import { listarConexoes, ultimasChamadasExternas } from '@/lib/conexoes/conexoes';
+import { origemDaChave } from '@/lib/conexoes/cripto';
 import { ApiGlobalClient } from '@/components/admin/api-global-client';
 import { listarSistemas, ultimasChamadas } from '@/lib/api-global/chaves';
 import { API_BASE_PATH, HEADER_API_KEY } from '@/lib/api-global/formato';
@@ -33,10 +36,12 @@ export default async function IntegracoesPage() {
   const webhookToken = process.env.SGO_WEBHOOK_TOKEN ?? '';
   const webhookUrl = process.env.RH_WEBHOOK_FERIAS_URL ?? `${rhBase}/api/integracoes/sgo/ferias`;
 
-  const [events, sistemas, chamadas] = await Promise.all([
+  const [events, sistemas, chamadas, conexoes, saidas] = await Promise.all([
     prisma.rhInboundEvent.findMany({ orderBy: { createdAt: 'desc' }, take: 25 }),
     listarSistemas(),
     ultimasChamadas(30),
+    listarConexoes(),
+    ultimasChamadasExternas(30),
   ]);
   const ST = { PROCESSED: { label: 'Processado', tone: 'success' as const }, RECEIVED: { label: 'Recebido', tone: 'medium' as const }, ERROR: { label: 'Erro', tone: 'critical' as const } };
 
@@ -83,6 +88,34 @@ export default async function IntegracoesPage() {
                 <div key={c.id} className="flex items-center justify-between gap-2 rounded-md bg-canvas px-2 py-1 text-xs">
                   <span className="min-w-0 truncate"><b className="text-ink-900">{c.clientName}</b> · <span className="font-mono">{c.method} {c.path}</span></span>
                   <span className="shrink-0 tabular-nums text-ink-500">{c.createdAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · <b className={c.status < 400 ? 'text-success' : 'text-danger'}>{c.status}</b> · {c.durationMs} ms</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 0b. CONEXÕES COM OUTROS SISTEMAS (v1.131.0) — o espelho da seção
+          acima: as APIs que ESTE SGO consome, com credencial cifrada no
+          servidor. Central administrativa, não API: nenhuma integração de
+          produção passa por aqui ainda (o RH segue na v1 do .env). */}
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Plug className="h-4 w-4 text-brand" /> Conexões com outros sistemas</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="space-y-1">
+            <Row k="O que é" v="APIs externas que este SGO consome — o sentido contrário da API Global (sistemas que consomem o SGO)" />
+            <Row k="Credencial" v={origemDaChave() === 'dedicada' ? 'cifrada no banco com CONNECTIONS_ENC_KEY' : origemDaChave() === 'derivada' ? 'cifrada no banco com chave derivada de JWT_REFRESH_SECRET' : 'SEM chave de cifra (CONNECTIONS_ENC_KEY)'} ok={origemDaChave() !== 'nenhuma'} />
+            <Row k="Em uso pelas integrações" v="Ainda não — o sync do RH continua na v1 (.env); a primeira conexão cadastrada será a API v2 do RH, para teste" />
+          </div>
+          <ConexoesClient conexoes={conexoes} cifra={origemDaChave()} />
+          <div>
+            <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Últimas chamadas de saída ({saidas.length})</p>
+            {saidas.length === 0 && <p className="text-xs text-ink-500">Nenhuma chamada ainda.</p>}
+            <div className="space-y-1">
+              {saidas.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-2 rounded-md bg-canvas px-2 py-1 text-xs">
+                  <span className="min-w-0 truncate"><b className="text-ink-900">{c.connectionName}</b> · <span className="font-mono">{c.method} {c.path}</span>{c.error ? <span className="text-danger"> · {c.error}</span> : null}</span>
+                  <span className="shrink-0 tabular-nums text-ink-500">{c.createdAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · <b className={c.ok ? 'text-success' : 'text-danger'}>{c.status ?? 'sem resposta'}</b> · {c.durationMs} ms</span>
                 </div>
               ))}
             </div>

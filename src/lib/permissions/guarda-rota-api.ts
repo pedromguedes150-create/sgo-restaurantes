@@ -145,6 +145,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/rh/v2/ping': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'ver' },
   // chaves da API Global (criar / ativar / desativar / revogar): só quem edita Integrações
   '/api/api-global/chaves': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
+  '/api/conexoes': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
 
   '/api/schedule': { modulo: 'SCHEDULE', exigir: 'editar' },
   '/api/schedule/absence': { modulo: 'SCHEDULE_TAB_ACTUAL', exigir: 'editar' },
