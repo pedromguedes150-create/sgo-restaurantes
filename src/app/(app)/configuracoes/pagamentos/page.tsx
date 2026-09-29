@@ -33,7 +33,7 @@ export default async function PagamentosAdminPage() {
           units={units}
           weekLimit={weekLimit}
           users={users}
-          freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, defaultValue: Number(f.defaultValue), pixKey: f.pixKey, active: f.active, units: f.units.map((u) => u.unit.name), unitIds: f.units.map((u) => u.unit.id), sectorRates: f.sectorRates.map((r) => ({ sectorName: r.sectorName, dayValue: Number(r.dayValue) })) }))}
+          freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, cpf: f.cpf, defaultValue: Number(f.defaultValue), pixKey: f.pixKey, active: f.active, units: f.units.map((u) => u.unit.name), unitIds: f.units.map((u) => u.unit.id), sectorRates: f.sectorRates.map((r) => ({ sectorName: r.sectorName, dayValue: Number(r.dayValue) })) }))}
           miscTypes={miscTypes.map((m) => ({ id: m.id, name: m.name, approverRole: m.approverRole, active: m.active }))}
           delegations={delegations.map((x) => ({ id: x.id, from: x.fromUser.name, to: x.toUser.name, period: `${d(x.startsAt)} a ${d(x.endsAt)}` }))}
         />

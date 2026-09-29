@@ -77,6 +77,8 @@ export interface LinhaDoConsolidado {
 export interface FreelancerNoPeriodo {
   freelancerId: string;
   nome: string;
+  cpf: string | null;
+  pixKey: string | null;
   solicitacoes: number;
   valor: number;
   recorrente: boolean;
@@ -90,6 +92,8 @@ export interface RecorrenteNaSemana {
   chave: string;
   freelancerId: string;
   nome: string;
+  cpf: string | null;
+  pixKey: string | null;
   unidades: string[];
   semanaDe: string;
   semanaAte: string;

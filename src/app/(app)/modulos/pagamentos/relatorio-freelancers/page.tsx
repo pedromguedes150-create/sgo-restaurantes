@@ -199,7 +199,7 @@ async function Fechamento({ user, searchParams, units }: { user: NonNullable<Ses
             <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="font-semibold text-ink-900">{g.name}</p>
-                <p className="text-xs text-ink-500">PIX: {g.pixKey || <span className="text-danger">não cadastrada</span>}</p>
+                <p className="text-xs text-ink-500">{g.cpf ? `CPF: ${g.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}` : <span className="text-warning">CPF não cadastrado</span>} · PIX: {g.pixKey || <span className="text-danger">não cadastrada</span>}</p>
               </div>
               <span className="text-right">
                 <span className="block font-bold text-ink-900">{formatBRL(g.total)}</span>
