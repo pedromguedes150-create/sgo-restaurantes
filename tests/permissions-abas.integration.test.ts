@@ -58,9 +58,13 @@ describe('O registro de abas e a matriz não podem divergir', () => {
 });
 
 describe('Sem ninguém mexer, nada muda', () => {
-  it('o Gerente enxerga todas as abas de Pagamentos', async () => {
+  it('o Gerente enxerga todas as abas de Pagamentos — menos Pagar, que nasce para Coordenador/Financeiro (v1.133.0)', async () => {
     const acesso = acessoDasAbas(await effectivePermissions('MANAGER'), 'PAYMENTS');
-    for (const a of ABAS.PAYMENTS) expect(podeAba(acesso, a.id), a.id).toBe(true);
+    for (const a of ABAS.PAYMENTS) expect(podeAba(acesso, a.id), a.id).toBe(a.id !== 'pagar');
+    /* Antes a matriz dizia "sim" para o Gerente e a tela escondia Pagar por perfil fixo; agora a matriz diz a verdade. */
+    const coord = acessoDasAbas(await effectivePermissions('COORDINATOR'), 'PAYMENTS');
+    expect(podeAba(coord, 'pagar')).toBe(true);
+    expect(podeAba(acessoDasAbas(await effectivePermissions('SUPERVISOR'), 'PAYMENTS'), 'pagar')).toBe(false);
   });
 });
 
@@ -71,10 +75,10 @@ describe('Fechando uma aba', () => {
 
     expect(podeAba(acesso, 'nova')).toBe(false);
     expect(podeAba(acesso, 'minhas')).toBe(true);
-    expect(podeAba(acesso, 'pagar')).toBe(true);
+    expect(podeAba(acesso, 'pagar')).toBe(false); // Gerente não paga (v1.133.0)
     /* Abrir numa aba fechada mostraria a tela vazia e pareceria defeito. */
     expect(abaInicial(acesso, 'PAYMENTS', 'nova')).toBe('minhas');
-    expect(abasVisiveis(acesso, 'PAYMENTS')).toHaveLength(5);
+    expect(abasVisiveis(acesso, 'PAYMENTS')).toHaveLength(4);
   });
 
   it('e o servidor recusa a gravação da aba fechada', async () => {

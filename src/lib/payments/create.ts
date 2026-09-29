@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { notifyUnitRole, notifyRole } from '@/lib/notifications';
+import { papeisQueAprovam } from '@/lib/payments/aprovadores';
 import { avaliarRecorrencia, avisarRecorrencia, type Recorrencia } from '@/lib/payments/recorrencia';
 import type { SessionUser } from '@/lib/auth/session';
 import type { PaymentType, Role } from '@prisma/client';
@@ -204,7 +205,9 @@ export async function createPaymentRequest(
   if (approverRole === 'ADMIN' || approverRole === 'CEO' || approverRole === 'FINANCE') {
     await notifyRole(approverRole, payload);
   } else {
-    await notifyUnitRole(input.unitId, approverRole, payload);
+    /* Quem aprova recebe o aviso — para Freelancer/HE são o Supervisor E o
+       Coordenador da unidade (v1.133.0, `papeisQueAprovam`). */
+    for (const papel of papeisQueAprovam({ type: input.type, approverRole })) await notifyUnitRole(input.unitId, papel, payload);
   }
   return { ok: true, id: req.id };
 }

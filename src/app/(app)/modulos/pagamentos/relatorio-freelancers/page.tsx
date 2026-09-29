@@ -61,8 +61,8 @@ interface Params {
  */
 export default async function RelatorioFreelancersPage({ searchParams }: { searchParams: Params }) {
   const user = (await getSessionUser())!;
-  const canSee = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO' || user.role === 'SUPERVISOR';
-  if (!canSee) return <p className="text-sm text-ink-500">Relatório restrito a Financeiro/Supervisão/Admin.</p>;
+  const canSee = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO' || user.role === 'SUPERVISOR' || user.role === 'COORDINATOR';
+  if (!canSee) return <p className="text-sm text-ink-500">Relatório restrito a Coordenação/Supervisão/Financeiro/Admin.</p>;
 
   const aba = searchParams.aba === 'fechamento' ? 'fechamento' : 'consolidado';
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
@@ -72,7 +72,7 @@ export default async function RelatorioFreelancersPage({ searchParams }: { searc
       <div className="print:hidden">
         <Link href="/modulos/pagamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pagamentos</Link>
       </div>
-      <LargeTitle title="Consolidação de Freelancers" />
+      <LargeTitle title="Recorrência de Freelancers" subtitle="Visão gerencial: frequência e recorrência de freelancers por semana. Não altera o status de nenhum pagamento." />
 
       {/* Duas abas, dois públicos. Links de servidor: cada aba tem os seus
           próprios filtros na URL e não faz sentido carregar os dois de uma vez. */}

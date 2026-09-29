@@ -28,7 +28,7 @@ const he: PayReq = {
 function render(props: Record<string, unknown> = {}) {
   return renderToString(
     React.createElement(PaymentsClient, {
-      isFinanceView: false, units, freelancers: [], miscTypes: [], mine: [], toApprove: [], toPay: [], history: [], ...props,
+      podePagar: false, units, freelancers: [], miscTypes: [], mine: [], toApprove: [], toPay: [], history: [], ...props,
     } as React.ComponentProps<typeof PaymentsClient>),
   );
 }

@@ -21,7 +21,7 @@ export default async function ConsolidacaoPagamentosPage({ searchParams }: { sea
   const user = (await getSessionUser())!;
   const perms = await permissoesEfetivasDoRequest(user.role);
   if (!perms.PAYMENTS_CONSOLIDATION?.canView) {
-    return <p className="text-sm text-ink-500">Acesso restrito. A Consolidação de pagamentos é liberada pela Administração (Configurações → Perfis de acesso).</p>;
+    return <p className="text-sm text-ink-500">Acesso restrito. Pagamentos de Freelancers é liberado pela Administração (Configurações → Perfis de acesso).</p>;
   }
 
   const filtro = lerFiltro({ get: (k) => searchParams[k] ?? null });
@@ -34,7 +34,7 @@ export default async function ConsolidacaoPagamentosPage({ searchParams }: { sea
   return (
     <div className="space-y-4">
       <Link href="/modulos/pagamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pagamentos</Link>
-      <LargeTitle title="Consolidação de pagamentos" subtitle="Visão financeira (Freelancer + Hora Extra, para o Financeiro) e recorrência de freelancers (para a gestão)." />
+      <LargeTitle title="Pagamentos de Freelancers" subtitle="Conferência e preparação do pagamento via PIX. A Visão financeira junta Freelancer e Hora Extra só para consulta." />
       <Card><CardContent className="pt-4">
         <ConsolidacaoPagamentosClient filtro={filtro} unidades={unidades} periodo={periodo} financeiro={financeiro} recorrencia={recorrencia} />
       </CardContent></Card>

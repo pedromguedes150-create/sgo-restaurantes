@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, X, Banknote, Plus, Pencil, Trash2, AlertTriangle, ChevronDown, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/ds/segmented-control';
+import { FILTROS_DE_TIPO, filtrarPorTipo, type FiltroDeTipo } from '@/lib/payments/aprovadores';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
@@ -113,7 +114,7 @@ function ListaCortada({ mostrando, total, limite }: { mostrando: number; total?:
 
 export function PaymentsClient({
   abas = {},
-  isFinanceView,
+  podePagar = false,
   isAdmin = false,
   canEditDate = false,
   units,
@@ -133,7 +134,8 @@ export function PaymentsClient({
   limite = 500,
   history,
 }: {
-  isFinanceView: boolean;
+  /** Quem marca pago (Coordenador, Financeiro, Admin/CEO — v1.133.0) E tem a aba Pagar na matriz. */
+  podePagar?: boolean;
   isAdmin?: boolean;
   canEditDate?: boolean;
   units: Unit[];
@@ -167,6 +169,15 @@ export function PaymentsClient({
   /* Abre na aba que o perfil PODE ver — abrir numa aba fechada mostraria a
      tela vazia e pareceria defeito. */
   const [tab, setTab] = useState<Tab>(abaInicial(abas, 'PAYMENTS', toApprove.length > 0 ? 'aprovar' : 'nova') as Tab);
+  /* TIPO DE PAGAMENTO (v1.133.0): um filtro compacto, o mesmo em todas as abas,
+     em cima dos demais filtros. A central continua UMA — o Coordenador escolhe
+     qual modalidade está analisando, sem tela separada por tipo. */
+  const [tipo, setTipo] = useState<FiltroDeTipo>('ALL');
+  const mineV = useMemo(() => filtrarPorTipo(mine, tipo), [mine, tipo]);
+  const toApproveV = useMemo(() => filtrarPorTipo(toApprove, tipo), [toApprove, tipo]);
+  const toPayV = useMemo(() => filtrarPorTipo(toPay, tipo), [toPay, tipo]);
+  const historyV = useMemo(() => filtrarPorTipo(history, tipo), [history, tipo]);
+  const unitRequestsV = useMemo(() => filtrarPorTipo(unitRequests, tipo), [unitRequests, tipo]);
   const [busy, setBusy] = useState(false);
   const [dateEditId, setDateEditId] = useState<string | null>(null);
   // Seleção para aprovação em lote (aba "Para Aprovar").
@@ -285,7 +296,7 @@ export function PaymentsClient({
     /* Gerente (v1.130.0): a aba de aprovação só aparece se ele for aprovador de
        algo pendente (tipo avulso aprovado pelo gerente, ou delegação). */
     { key: 'aprovar', label: 'Para Aprovar', badge: totais?.toApprove ?? toApprove.length, show: podeAba(abas, 'aprovar') && (!isManagerView || toApprove.length > 0) },
-    { key: 'pagar', label: 'Pagar', badge: totais?.toPay ?? toPay.length, show: isFinanceView && podeAba(abas, 'pagar') },
+    { key: 'pagar', label: 'Pagar', badge: totais?.toPay ?? toPay.length, show: podePagar && podeAba(abas, 'pagar') },
     { key: 'historico', label: 'Histórico', show: !isManagerView && podeAba(abas, 'historico') },
     { key: 'unidade', label: 'Solicitações da unidade', show: isManagerView && podeAba(abas, 'unidade') },
   ];
@@ -309,36 +320,49 @@ export function PaymentsClient({
         </p>
       )}
 
+      {tab !== 'nova' && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="sgo-type-11 font-semibold uppercase tracking-wide text-ink-500">Tipo de pagamento</span>
+          <SegmentedControl
+            aria-label="Tipo de pagamento"
+            size="sm"
+            value={tipo}
+            onValueChange={(v) => { setTipo(v as FiltroDeTipo); setSel(new Set()); }}
+            options={FILTROS_DE_TIPO.map((f) => ({ value: f.value, label: f.label }))}
+          />
+        </div>
+      )}
+
       {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} overtimeRatesByUnit={overtimeRatesByUnit} onDone={() => { setTab('minhas'); router.refresh(); }} />}
 
       <ListaCortada mostrando={
-        tab === 'minhas' ? mine.length : tab === 'aprovar' ? toApprove.length : tab === 'pagar' ? toPay.length : tab === 'historico' ? history.length : tab === 'unidade' ? unitRequests.length : 0
+        tab === 'minhas' ? mineV.length : tab === 'aprovar' ? toApproveV.length : tab === 'pagar' ? toPayV.length : tab === 'historico' ? historyV.length : tab === 'unidade' ? unitRequestsV.length : 0
       } total={
-        tab === 'minhas' ? totais?.mine : tab === 'aprovar' ? totais?.toApprove : tab === 'pagar' ? totais?.toPay : tab === 'historico' ? totais?.history : tab === 'unidade' ? totais?.unit : undefined
+        tipo !== 'ALL' ? undefined : tab === 'minhas' ? totais?.mine : tab === 'aprovar' ? totais?.toApprove : tab === 'pagar' ? totais?.toPay : tab === 'historico' ? totais?.history : tab === 'unidade' ? totais?.unit : undefined
       } limite={limite} />
 
-      {tab === 'minhas' && (isManagerView ? <HistoryTab items={mine} periodo /> : <List items={mine} />)}
-      {tab === 'unidade' && <HistoryTab items={unitRequests} periodo />}
+      {tab === 'minhas' && (isManagerView ? <HistoryTab items={mineV} periodo /> : <List items={mineV} />)}
+      {tab === 'unidade' && <HistoryTab items={unitRequestsV} periodo />}
 
       {tab === 'aprovar' && (
         <>
-          {toApprove.length > 1 && (
+          {toApproveV.length > 1 && (
             // Barra de lote: gruda no topo para o gestor não precisar rolar de
             // volta depois de marcar dezenas de itens.
             <div className="sticky top-14 z-20 -mx-1 flex flex-wrap items-center gap-2 rounded-card border border-line bg-glass px-3 py-2 backdrop-blur-xl">
               <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-ink-700">
                 <input
                   type="checkbox"
-                  checked={sel.size === toApprove.length && toApprove.length > 0}
-                  ref={(el) => { if (el) el.indeterminate = sel.size > 0 && sel.size < toApprove.length; }}
-                  onChange={() => setSel((s) => (s.size === toApprove.length ? new Set() : new Set(toApprove.map((r) => r.id))))}
+                  checked={sel.size === toApproveV.length && toApproveV.length > 0}
+                  ref={(el) => { if (el) el.indeterminate = sel.size > 0 && sel.size < toApproveV.length; }}
+                  onChange={() => setSel((s) => (s.size === toApproveV.length ? new Set() : new Set(toApproveV.map((r) => r.id))))}
                   style={{ accentColor: 'var(--sgo-brand)' }}
                   className="h-4 w-4 rounded outline-none focus-visible:shadow-sgo-focus"
                 />
                 {/* "todas" só é verdade quando a lista não foi cortada. Com o
                     teto atingido, dizer "todas" faria o gestor aprovar 500 e
                     achar que zerou a fila. */}
-                Selecionar {toApprove.length >= limite ? 'as carregadas' : 'todas'} ({toApprove.length})
+                Selecionar {toApproveV.length >= limite ? 'as carregadas' : 'todas'} ({toApproveV.length})
               </label>
               <span className="text-xs tabular-nums text-ink-500">
                 {sel.size} selecionada(s) · {formatBRL(selTotal)}
@@ -358,9 +382,9 @@ export function PaymentsClient({
             <Banner tone={batchMsg.tone} title={batchMsg.title} description={batchMsg.description} onDismiss={() => setBatchMsg(null)} />
           )}
           <List
-            items={toApprove}
+            items={toApproveV}
             editor={{ sectors, collaboratorsByUnit, overtimeRatesByUnit }}
-            selection={toApprove.length > 1 ? { ids: sel, onToggle: (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }) } : undefined}
+            selection={toApproveV.length > 1 ? { ids: sel, onToggle: (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }) } : undefined}
             actions={(r) => (
               <div className="flex gap-2">
                 <Button size="sm" disabled={busy} onClick={() => act(r.id, 'approve')}><Check className="h-4 w-4" /> Aprovar</Button>
@@ -373,14 +397,14 @@ export function PaymentsClient({
 
       {tab === 'pagar' && (
         <List
-          items={toPay}
+          items={toPayV}
           actions={(r) => (
             <Button size="sm" variant="gold" disabled={busy} onClick={() => act(r.id, 'pay')}><Banknote className="h-4 w-4" /> Marcar paga</Button>
           )}
         />
       )}
 
-      {tab === 'historico' && <HistoryTab items={history} actions={isAdmin || canEditDate ? adminActions : undefined} />}
+      {tab === 'historico' && <HistoryTab items={historyV} actions={isAdmin || canEditDate ? adminActions : undefined} />}
     </div>
   );
 }
@@ -395,7 +419,6 @@ const PERIODOS: { value: string; label: string; dias: number }[] = [
 function diaDaLinha(i: PayReq): string { return i.detail?.workDate ?? i.day ?? (i.requestedAt?.slice(0, 10) ?? ''); }
 
 function HistoryTab({ items, actions, periodo = false }: { items: PayReq[]; actions?: (r: PayReq) => React.ReactNode; /** Filtro de período (v1.130.0, listas do gerente). */ periodo?: boolean }) {
-  const [type, setType] = useState<'ALL' | PayReq['type']>('ALL');
   const [per, setPer] = useState('ALL');
   const desde = useMemo(() => {
     const dias = PERIODOS.find((p) => p.value === per)?.dias ?? 0;
@@ -408,23 +431,21 @@ function HistoryTab({ items, actions, periodo = false }: { items: PayReq[]; acti
   const [q, setQ] = useState('');
   const unitNames = useMemo(() => [...new Set(items.map((i) => i.unit))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [items]);
   const filtered = useMemo(() => items.filter((i) =>
-    (type === 'ALL' || i.type === type) &&
     (unit === 'ALL' || i.unit === unit) &&
     (status === 'ALL' || i.status === status) &&
     (!desde || diaDaLinha(i) >= desde) &&
     (!q.trim() || i.title.toLowerCase().includes(q.trim().toLowerCase()) || (i.requestedBy ?? '').toLowerCase().includes(q.trim().toLowerCase()))
-  ), [items, type, unit, status, q, desde]);
+  ), [items, unit, status, q, desde]);
   const totalFiltrado = useMemo(() => filtered.filter((i) => i.status !== 'REJECTED').reduce((s, i) => s + i.amount, 0), [filtered]);
   return (
     <div className="space-y-3">
       <FilterBar
         collapsible
-        active={(type !== 'ALL' ? 1 : 0) + (unit !== 'ALL' ? 1 : 0) + (status !== 'ALL' ? 1 : 0) + (per !== 'ALL' ? 1 : 0) + (q.trim() ? 1 : 0)}
-        onClear={type !== 'ALL' || unit !== 'ALL' || status !== 'ALL' || per !== 'ALL' || q.trim() ? () => { setType('ALL'); setUnit('ALL'); setStatus('ALL'); setPer('ALL'); setQ(''); } : undefined}
+        active={(unit !== 'ALL' ? 1 : 0) + (status !== 'ALL' ? 1 : 0) + (per !== 'ALL' ? 1 : 0) + (q.trim() ? 1 : 0)}
+        onClear={unit !== 'ALL' || status !== 'ALL' || per !== 'ALL' || q.trim() ? () => { setUnit('ALL'); setStatus('ALL'); setPer('ALL'); setQ(''); } : undefined}
         search={<SearchField aria-label="Buscar pagamentos" value={q} onValueChange={setQ} placeholder="Buscar prestador ou beneficiário…" inputSize="sm" />}
         summary={
           <>
-            {type !== 'ALL' && <FilterChip>{TYPE_LABEL[type as keyof typeof TYPE_LABEL]}</FilterChip>}
             {unit !== 'ALL' && <FilterChip>{shortUnitName(unit)}</FilterChip>}
             {status !== 'ALL' && <FilterChip>{STATUS[status as PayReq['status']].label}</FilterChip>}
             {per !== 'ALL' && <FilterChip>{PERIODOS.find((p) => p.value === per)?.label}</FilterChip>}
@@ -435,17 +456,6 @@ function HistoryTab({ items, actions, periodo = false }: { items: PayReq[]; acti
         {periodo && (
           <FilterSelect label="Período" value={per} onValueChange={setPer} options={PERIODOS.map((p) => ({ value: p.value, label: p.label }))} />
         )}
-        <FilterSelect
-          label="Tipo"
-          value={type}
-          onValueChange={(v) => setType(v as typeof type)}
-          options={[
-            { value: 'ALL', label: 'Todos os tipos' },
-            { value: 'FREELANCER', label: 'Freelancer' },
-            { value: 'OVERTIME', label: 'Hora Extra' },
-            { value: 'MISC', label: 'Avulso' },
-          ]}
-        />
         {unitNames.length > 1 && (
           <FilterSelect
             label="Unidade"

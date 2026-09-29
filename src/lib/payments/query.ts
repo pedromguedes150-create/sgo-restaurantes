@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/db/prisma';
 import { approverRolesFor } from '@/lib/payments/approve';
+import { podePagarPorPerfil, TIPOS_DA_OPERACAO } from '@/lib/payments/aprovadores';
 import type { SessionUser } from '@/lib/auth/session';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, Role } from '@prisma/client';
 
 const REQUEST_INCLUDE = {
   unit: { select: { name: true, code: true } },
@@ -64,16 +65,29 @@ export async function getUnitRequests(user: SessionUser, unitIds?: string[]) {
   });
 }
 
+/**
+ * A mesma pergunta de `papeisQueAprovam`, em forma de filtro do banco: o que o
+ * usuário aprova é o que tem o aprovador gravado entre os papéis dele — e,
+ * para Freelancer/Hora Extra do Supervisor, também o Coordenador (v1.133.0).
+ */
+function filtroDeAprovador(roles: Set<Role>): Prisma.PaymentRequestWhereInput {
+  const lista = [...roles];
+  if (!roles.has('COORDINATOR')) return { approverRole: { in: lista } };
+  return { OR: [{ approverRole: { in: lista } }, { approverRole: 'SUPERVISOR', type: { in: TIPOS_DA_OPERACAO } }] };
+}
+
 /** "Para Aprovar" — pendentes que este usuário pode aprovar (inclui delegação). */
 export async function getToApprove(user: SessionUser, unitIds?: string[]) {
   const roles = await approverRolesFor(user);
   const isAdminLike = user.role === 'ADMIN' || user.role === 'CEO';
   return prisma.paymentRequest.findMany({
     where: {
-      status: 'PENDING',
-      ...paymentScope(user),
-      ...porUnidade(unitIds),
-      ...(isAdminLike ? {} : { approverRole: { in: [...roles] } }),
+      AND: [
+        { status: 'PENDING' },
+        paymentScope(user),
+        porUnidade(unitIds),
+        isAdminLike ? {} : filtroDeAprovador(roles),
+      ],
     },
     orderBy: { createdAt: 'asc' },
     take: LIMITE_DA_LISTA,
@@ -81,9 +95,9 @@ export async function getToApprove(user: SessionUser, unitIds?: string[]) {
   });
 }
 
-/** Fila do Financeiro: aprovadas aguardando pagamento. */
+/** Fila de quem paga (Coordenador, Financeiro, Admin/CEO): aprovadas aguardando pagamento. */
 export async function getToPay(user: SessionUser, unitIds?: string[]) {
-  if (user.role !== 'FINANCE' && user.role !== 'ADMIN' && user.role !== 'CEO') return [];
+  if (!podePagarPorPerfil(user.role)) return [];
   return prisma.paymentRequest.findMany({
     where: { status: 'APPROVED', ...paymentScope(user), ...porUnidade(unitIds) },
     orderBy: { approvedAt: 'asc' },
@@ -106,13 +120,13 @@ export async function getToApproveCount(user: SessionUser, unitIds?: string[]): 
   const roles = await approverRolesFor(user);
   const isAdminLike = user.role === 'ADMIN' || user.role === 'CEO';
   return prisma.paymentRequest.count({
-    where: { status: 'PENDING', ...paymentScope(user), ...porUnidade(unitIds), ...(isAdminLike ? {} : { approverRole: { in: [...roles] } }) },
+    where: { AND: [{ status: 'PENDING' }, paymentScope(user), porUnidade(unitIds), isAdminLike ? {} : filtroDeAprovador(roles)] },
   });
 }
 
 /** Quantas há DE VERDADE em cada fila — é isto que os crachás mostram. */
 export async function getPaymentCounts(user: SessionUser, unitIds?: string[]): Promise<{ mine: number; toApprove: number; toPay: number; history: number; unit: number }> {
-  const podePagar = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO';
+  const podePagar = podePagarPorPerfil(user.role);
   const [mine, toApprove, toPay, history, unit] = await Promise.all([
     prisma.paymentRequest.count({ where: { requestedById: user.id, ...porUnidade(unitIds) } }),
     getToApproveCount(user, unitIds),

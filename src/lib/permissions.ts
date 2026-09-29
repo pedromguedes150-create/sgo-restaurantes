@@ -78,8 +78,8 @@ const BASE: ModuleDef[] = [
   { key: 'STOCK', label: 'Estoque (validade e lotes)', nav: '/modulos/estoque' },
 
   { key: 'PAYMENTS', label: 'Pagamentos', nav: '/modulos/pagamentos' },
-  { key: 'PAYMENTS_FREELANCER_REPORT', label: 'Relatório de freelancers', nav: '/modulos/pagamentos/relatorio-freelancers', parent: 'PAYMENTS' },
-  { key: 'PAYMENTS_CONSOLIDATION', label: 'Consolidação de pagamentos', nav: '/modulos/pagamentos/consolidacao', parent: 'PAYMENTS' },
+  { key: 'PAYMENTS_FREELANCER_REPORT', label: 'Recorrência de freelancers', nav: '/modulos/pagamentos/relatorio-freelancers', parent: 'PAYMENTS' },
+  { key: 'PAYMENTS_CONSOLIDATION', label: 'Pagamentos de freelancers (PIX)', nav: '/modulos/pagamentos/consolidacao', parent: 'PAYMENTS' },
 
   { key: 'PEOPLE', label: 'Pessoas / Escala / Mapa', nav: '/modulos/pessoas' },
   { key: 'PEOPLE_MAP', label: 'Mapa de funções', nav: '/modulos/pessoas/mapa', parent: 'PEOPLE' },
@@ -187,7 +187,11 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   /* Consolidação de pagamentos (v1.126.0): Freelancer + Hora Extra da rede para
      o Financeiro. Nasce para Supervisão e Financeiro (+Admin/CEO); o gerente
      segue com as abas de sempre. O Admin libera outros perfis na matriz. */
-  PAYMENTS_CONSOLIDATION: ['SUPERVISOR', 'FINANCE'],
+  PAYMENTS_CONSOLIDATION: ['SUPERVISOR', 'FINANCE', 'COORDINATOR'],
+  /* Aba "Pagar" da central (v1.133.0): quem marca pago é o Coordenador (a
+     operação), o Financeiro e Admin/CEO. Antes o perfil era comparado no
+     código; agora a matriz diz a mesma coisa e o Admin pode mudar. */
+  PAYMENTS_TAB_PAY: ['COORDINATOR', 'FINANCE'],
   /* A separacao e do CD, nao das unidades: nasce so para o Separador (e
      ADMIN/CEO, que veem tudo). Gerente nao separa pedido. */
   PRODUCT_SEPARATION: ['SEPARATOR'],
