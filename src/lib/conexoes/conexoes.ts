@@ -161,11 +161,17 @@ async function umPapelPorSistema(id: string, systemKey: string | null) {
  * que já está na dedicada não é tocado; o que não abre com nenhuma é contado
  * e deixado como está (nunca sobrescrito), para ser recadastrado à mão.
  */
-export async function migrarCredenciaisParaChaveDedicada(): Promise<{ origem: ReturnType<typeof origemDaChave>; migradas: number; jaNaDedicada: number; ilegiveis: number }> {
+export async function migrarCredenciaisParaChaveDedicada(
+  /* Sem filtro, migra todas — é o uso do servidor. Um TESTE precisa restringir
+     às suas próprias linhas: rodando contra o banco de dev com a chave de teste,
+     a migração sem filtro recifrava a conexão de desenvolvimento com uma chave
+     que o servidor de dev não tem — e ela virava "ilegível" na Central. */
+  apenasIds?: string[],
+): Promise<{ origem: ReturnType<typeof origemDaChave>; migradas: number; jaNaDedicada: number; ilegiveis: number }> {
   const origem = origemDaChave();
   const r = { origem, migradas: 0, jaNaDedicada: 0, ilegiveis: 0 };
   if (origem !== 'dedicada') return r;
-  const rows = await prisma.externalConnection.findMany({ select: { id: true, credentialEnc: true } });
+  const rows = await prisma.externalConnection.findMany({ where: apenasIds ? { id: { in: apenasIds } } : undefined, select: { id: true, credentialEnc: true } });
   for (const row of rows) {
     try {
       const d = await decifrarDetalhado(row.credentialEnc);

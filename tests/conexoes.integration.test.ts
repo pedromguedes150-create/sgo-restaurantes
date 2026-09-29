@@ -177,7 +177,7 @@ describe('migração da cifra derivada → CONNECTIONS_ENC_KEY (v1.132.0)', () =
     expect(await decifrarDetalhado(legado)).toEqual({ texto: `legado-${sfx}-SEGREDO`, chave: 'derivada' });
     expect((await estadoDaCifra()).pendentesNaDerivada).toBeGreaterThanOrEqual(1);
 
-    const m = await migrarCredenciaisParaChaveDedicada();
+    const m = await migrarCredenciaisParaChaveDedicada([c.id]); // só a própria linha: o banco de dev tem conexões de outra chave
     expect(m.origem).toBe('dedicada');
     expect(m.migradas).toBeGreaterThanOrEqual(1);
     const row = await prisma.externalConnection.findUniqueOrThrow({ where: { id: c.id } });
@@ -185,7 +185,7 @@ describe('migração da cifra derivada → CONNECTIONS_ENC_KEY (v1.132.0)', () =
     expect(await decifrarDetalhado(row.credentialEnc)).toEqual({ texto: `legado-${sfx}-SEGREDO`, chave: 'dedicada' });
 
     // idempotente: rodar de novo não toca em nada
-    const m2 = await migrarCredenciaisParaChaveDedicada();
+    const m2 = await migrarCredenciaisParaChaveDedicada([c.id]);
     expect(m2.migradas).toBe(0);
     expect((await estadoDaCifra()).pendentesNaDerivada).toBe(0);
   });

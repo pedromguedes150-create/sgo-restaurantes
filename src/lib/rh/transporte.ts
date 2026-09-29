@@ -3,7 +3,7 @@ import { rhConfigured, RhApiError } from '@/lib/rh/client';
 import { executarChamada } from '@/lib/conexoes/cliente';
 import { decifrar } from '@/lib/conexoes/cripto';
 import { unwrapColaboradores, type RhColaborador } from '@/lib/rh/normalize';
-import { filtrarPorCnpj, normalizarCnpj, type Vinculo } from '@/lib/rh/vinculo';
+import { filtrarPorCnpj, filtrarPorRazaoSocial, normalizarCnpj, type Vinculo } from '@/lib/rh/vinculo';
 
 export { RhApiError };
 
@@ -86,10 +86,21 @@ export interface RhApi {
   unidades: () => Promise<unknown>;
   colaboradoresDaUnidade: (unidade: string) => Promise<unknown>;
 }
+/**
+ * Segmento de URL à prova de razão social: `encodeURIComponent` deixa
+ * `( ) ! ' *` sem codificar (RFC 2396); a validação de caminho da Central segue
+ * a RFC 3986 e os recusa. Codifica esses também.
+ */
+export function codificarSegmento(s: string): string {
+  return encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
 export const rh: RhApi = {
   colaboradores: () => rhGetCentral('/api/ext/colaboradores'),
   unidades: () => rhGetCentral('/api/ext/colaboradores/unidades'),
-  colaboradoresDaUnidade: (unidade: string) => rhGetCentral(`/api/ext/colaboradores/unidade/${encodeURIComponent(unidade)}`),
+  /* Mantido por compatibilidade (rota real da v1); o sync e o diagnóstico NÃO
+     o usam mais — filtram a lista completa no SGO (ver listaParaUnidade). */
+  colaboradoresDaUnidade: (unidade: string) => rhGetCentral(`/api/ext/colaboradores/unidade/${codificarSegmento(unidade)}`),
 };
 
 export interface ListaDaUnidade {
@@ -101,9 +112,14 @@ export interface ListaDaUnidade {
 export type ResultadoDaLista = { ok: true } & ListaDaUnidade | { ok: false; reason: 'SEM_VINCULO' };
 
 /**
- * A lista do RH para UMA unidade do SGO, pelo vínculo certo:
- *   1. CNPJ — filtra a lista completa do RH pelo `unidade_cnpj`;
- *   2. razão social — o endpoint por unidade, como sempre.
+ * A lista do RH para UMA unidade do SGO, pelo vínculo certo — os DOIS a partir
+ * da lista completa (`/api/ext/colaboradores`, o endpoint que a conexão testou
+ * com 200), filtrada no SGO:
+ *   1. CNPJ — pelo `unidade_cnpj`;
+ *   2. razão social — pelo `unidade`, comparando sem acento/caixa/espaços.
+ * Nenhuma URL é montada com nome de empresa. Qualquer falha na consulta (4xx,
+ * 5xx, timeout, formato inesperado) LANÇA — o sync aborta a unidade sem tocar
+ * em ninguém; erro nunca vira "lista vazia".
  * `todos` é a lista completa já buscada (o sync de todas as unidades busca uma
  * vez e reaproveita). Empresas do RH sem unidade correspondente ficam de fora.
  */
@@ -114,13 +130,11 @@ export async function listaParaUnidade(
   api: RhApi = rh,
 ): Promise<ResultadoDaLista> {
   const cnpj = normalizarCnpj(u.cnpj);
+  if (!cnpj && !u.rhUnitName) return { ok: false, reason: 'SEM_VINCULO' };
+  const completa = todos ?? unwrapColaboradores(await api.colaboradores());
   if (cnpj) {
-    const completa = todos ?? unwrapColaboradores(await api.colaboradores());
     const porCnpj = filtrarPorCnpj(completa, cnpj);
     if (porCnpj.length > 0 || !u.rhUnitName) return { ok: true, lista: porCnpj, vinculo: 'CNPJ', cnpj };
   }
-  if (u.rhUnitName) {
-    return { ok: true, lista: unwrapColaboradores(await api.colaboradoresDaUnidade(u.rhUnitName)), vinculo: 'RAZAO_SOCIAL', cnpj };
-  }
-  return { ok: false, reason: 'SEM_VINCULO' };
+  return { ok: true, lista: filtrarPorRazaoSocial(completa, u.rhUnitName!), vinculo: 'RAZAO_SOCIAL', cnpj };
 }
