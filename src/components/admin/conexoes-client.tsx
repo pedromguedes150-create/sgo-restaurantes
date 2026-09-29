@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/ds/modal';
 import { Banner } from '@/components/ui/ds/banner';
 import { StatusBadge } from '@/components/ui/status-badge';
 import {
-  AUTH_OPCOES, HEADER_PADRAO, descreverAuth, mascararCredencial, textoDoResultado, tomDoResultado, SITUACAO_TEXTO,
+  AUTH_OPCOES, HEADER_PADRAO, PAPEIS, PAPEL_TEXTO, descreverAuth, mascararCredencial, textoDoResultado, tomDoResultado, SITUACAO_TEXTO,
   type TipoDeAuth,
 } from '@/lib/conexoes/formato';
 
@@ -24,6 +24,7 @@ export interface ConexaoNaTela {
   credentialLast4: string;
   active: boolean;
   testPath: string;
+  systemKey: string | null;
   lastUsedAt: string | null;
   lastStatus: number | null;
   lastOk: boolean | null;
@@ -37,7 +38,7 @@ interface Teste { ok: boolean; status: number | null; durationMs: number; error:
 
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—');
 
-const VAZIO = { name: '', purpose: '', baseUrl: '', authType: 'API_KEY_HEADER' as TipoDeAuth, authHeader: HEADER_PADRAO, credential: '', testPath: '/' };
+const VAZIO = { name: '', purpose: '', baseUrl: '', authType: 'API_KEY_HEADER' as TipoDeAuth, authHeader: HEADER_PADRAO, credential: '', testPath: '/', systemKey: '' };
 
 function TesteResumo({ t }: { t: Teste }) {
   return (
@@ -70,7 +71,7 @@ export function ConexoesClient({ conexoes, cifra }: { conexoes: ConexaoNaTela[];
 
   function abrirNova() { setForm({ ...VAZIO }); setErro(null); setTesteForm(null); setAberto({ id: null }); }
   function abrirEdicao(c: ConexaoNaTela) {
-    setForm({ name: c.name, purpose: c.purpose ?? '', baseUrl: c.baseUrl, authType: c.authType, authHeader: c.authType === 'BEARER' ? HEADER_PADRAO : c.authHeader, credential: '', testPath: c.testPath });
+    setForm({ name: c.name, purpose: c.purpose ?? '', baseUrl: c.baseUrl, authType: c.authType, authHeader: c.authType === 'BEARER' ? HEADER_PADRAO : c.authHeader, credential: '', testPath: c.testPath, systemKey: c.systemKey ?? '' });
     setErro(null); setTesteForm(null); setAberto({ id: c.id });
   }
 
@@ -159,7 +160,7 @@ export function ConexoesClient({ conexoes, cifra }: { conexoes: ConexaoNaTela[];
                 return (
                   <tr key={c.id} className={c.active ? '' : 'text-ink-400'}>
                     <td className="px-2 py-2">
-                      <p className="font-semibold text-ink-900">{c.name}</p>
+                      <p className="font-semibold text-ink-900">{c.name}{c.systemKey && PAPEL_TEXTO[c.systemKey] ? <StatusBadge tone="success" className="ml-2 align-middle">{PAPEL_TEXTO[c.systemKey]}</StatusBadge> : null}</p>
                       <p className="font-mono text-xs text-ink-500">{c.baseUrl}</p>
                       <p className="text-xs text-ink-500">{descreverAuth(c.authType, c.authHeader)} · credencial {mascararCredencial(c.credentialLast4)}</p>
                     </td>
@@ -212,6 +213,7 @@ export function ConexoesClient({ conexoes, cifra }: { conexoes: ConexaoNaTela[];
           />
           <Textarea label="Finalidade" value={form.purpose} onChange={(e) => set('purpose')(e.target.value)} placeholder="ex.: colaboradores e empresas do RH para o sync" rows={2} maxLength={300} />
           <Input label="Caminho de teste (relativo à base)" value={form.testPath} onChange={(e) => set('testPath')(e.target.value)} placeholder="/recursos" maxLength={200} />
+          <DsSelect label="Papel na integração" value={form.systemKey} onValueChange={(v) => set('systemKey')(v)} options={PAPEIS} hint="Marcar como Integração do RH faz Sincronizar, Diagnóstico e o sync diário usarem esta conexão (só uma pode ter o papel)." />
           {erro && <p className="text-sm text-danger">{erro}</p>}
           {testeForm && <TesteResumo t={testeForm} />}
         </div>

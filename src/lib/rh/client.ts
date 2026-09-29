@@ -17,14 +17,16 @@
  * com uma unidade real. A v1 continua sendo a produção.
  */
 
-const BASE = process.env.RH_API_BASE_URL ?? 'https://gbf-rh.replit.app';
-const KEY = process.env.RH_API_KEY ?? '';
+/* Lidos a cada uso, não na carga do módulo: o fallback da Central (v1.132.0)
+   precisa enxergar o .env do momento, e os testes trocam o ambiente em voo. */
+const BASE = () => process.env.RH_API_BASE_URL ?? 'https://gbf-rh.replit.app';
+const KEY = () => process.env.RH_API_KEY ?? '';
 
 const BASE_V2 = (process.env.RH_API_V2_URL ?? 'https://gbf-rh.replit.app/api/ext/v2/rh').replace(/\/+$/, '');
 const KEY_V2 = process.env.RH_API_V2_KEY ?? '';
 
 export function rhConfigured(): boolean {
-  return Boolean(KEY);
+  return Boolean(KEY());
 }
 
 export function rhV2Configured(): boolean {
@@ -98,7 +100,7 @@ async function doGet<T>(t: Transporte, path: string): Promise<T> {
 
 /** GET genérico autenticado na v1. Lança RhApiError em falha. */
 export async function rhGet<T = unknown>(path: string): Promise<T> {
-  return doGet<T>({ base: BASE, key: KEY, keyVar: 'RH_API_KEY' }, path);
+  return doGet<T>({ base: BASE(), key: KEY(), keyVar: 'RH_API_KEY' }, path);
 }
 
 /**

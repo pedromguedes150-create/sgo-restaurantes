@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
-import { rh, rhConfigured, RhApiError } from '@/lib/rh/client';
-import { unwrapColaboradores, unwrapUnidades, classificarStatus, RhFormatoInesperadoError } from '@/lib/rh/normalize';
+import { rh, rhDisponivel, listaParaUnidade, RhApiError } from '@/lib/rh/transporte';
+import { unwrapUnidades, classificarStatus, RhFormatoInesperadoError } from '@/lib/rh/normalize';
+import type { Vinculo } from '@/lib/rh/vinculo';
 import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
 
@@ -25,6 +26,7 @@ import type { SessionUser } from '@/lib/auth/session';
 export type Decisao =
   | 'ATIVO_NO_SGO'
   | 'ATIVO_STATUS_DESCONHECIDO'
+  | 'ATIVO_EM_FERIAS'
   | 'INATIVO_POR_STATUS'
   | 'PULADO_SEM_MATRICULA'
   | 'NAO_ENCONTRADO_NO_SGO';
@@ -32,6 +34,7 @@ export type Decisao =
 export const DECISAO_LABEL: Record<Decisao, string> = {
   ATIVO_NO_SGO: 'Ativo no SGO',
   ATIVO_STATUS_DESCONHECIDO: 'Ativo, status novo',
+  ATIVO_EM_FERIAS: 'Ausência temporária — Férias',
   INATIVO_POR_STATUS: 'Desligado no SGO',
   PULADO_SEM_MATRICULA: 'Nunca entrou',
   NAO_ENCONTRADO_NO_SGO: 'Ainda não sincronizado',
@@ -40,6 +43,7 @@ export const DECISAO_LABEL: Record<Decisao, string> = {
 export const DECISAO_MOTIVO: Record<Decisao, string> = {
   ATIVO_NO_SGO: 'Aparece normalmente em Pessoas, Escala e Mapa de Funções.',
   ATIVO_STATUS_DESCONHECIDO: 'O SGO não conhece este status do RH. A pessoa APARECE normalmente (some do sistema é pior do que aparecer a mais), mas confira se ela realmente trabalha — se for um status de desligamento, me avise para eu incluí-lo na regra.',
+  ATIVO_EM_FERIAS: 'Vínculo ativo, pessoa afastada temporariamente (férias). Continua cadastrada e ativa no SGO; nada é alterado no cadastro.',
   INATIVO_POR_STATUS: 'O status no RH não começa com "Ativo", então o sync marcou a pessoa como inativa — e inativo SOME de Pessoas, da Escala e do Mapa.',
   PULADO_SEM_MATRICULA: 'O RH mandou esta pessoa SEM matrícula. O sync pula quem não tem matrícula, então ela nunca chegou ao SGO.',
   NAO_ENCONTRADO_NO_SGO: 'O RH devolve a pessoa, mas ela não está no banco do SGO. Rode a sincronização desta unidade.',
@@ -71,8 +75,12 @@ export interface DiagnosticoDaUnidade {
   /** Razões sociais do RH parecidas com a configurada — para achar o erro de grafia. */
   parecidas: string[];
   erro: string | null;
-  /** Quantos o RH devolveu para esta razão social. */
+  /** Quantos o RH devolveu para esta unidade. */
   totalNoRh: number;
+  /** Como a unidade foi casada com o RH: pelo CNPJ (preferido) ou pela razão social (fallback). */
+  vinculo: Vinculo | null;
+  /** CNPJ da unidade (só dígitos), quando cadastrado. */
+  cnpj: string | null;
   pessoas: PessoaDoDiagnostico[];
   /** Está no SGO vinculado à unidade, mas o RH não devolveu. */
   soNoSgo: SoNoSgo[];
@@ -96,15 +104,16 @@ function chaveDeComparacao(s: string): string {
 
 export async function diagnosticarUnidade(user: SessionUser, unitId: string): Promise<DiagnosticoDaUnidade | null> {
   if (!canAccessUnit(user, unitId)) return null;
-  const unit = await prisma.unit.findUnique({ where: { id: unitId }, select: { id: true, name: true, rhUnitName: true } });
+  const unit = await prisma.unit.findUnique({ where: { id: unitId }, select: { id: true, name: true, rhUnitName: true, cnpj: true } });
   if (!unit) return null;
 
   const base: DiagnosticoDaUnidade = {
     unitId: unit.id, unitName: unit.name, rhUnitName: unit.rhUnitName,
     nomeConfere: null, parecidas: [], erro: null,
     totalNoRh: 0, pessoas: [], soNoSgo: [],
-    resumo: { ATIVO_NO_SGO: 0, ATIVO_STATUS_DESCONHECIDO: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
+    resumo: { ATIVO_NO_SGO: 0, ATIVO_STATUS_DESCONHECIDO: 0, ATIVO_EM_FERIAS: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
     ativosNoSgo: 0,
+    vinculo: null, cnpj: null,
   };
 
   /* O que o SGO tem hoje — levantado sempre, mesmo se o RH falhar: é metade da
@@ -116,12 +125,12 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
   });
   base.ativosNoSgo = noSgo.filter((c) => c.active).length;
 
-  if (!rhConfigured()) {
-    base.erro = 'RH_API_KEY não configurada neste servidor — o sync não roda.';
+  if (!(await rhDisponivel())) {
+    base.erro = 'RH não configurado neste servidor (nenhuma conexão ativa na Central nem RH_API_KEY no .env) — o sync não roda.';
     return base;
   }
-  if (!unit.rhUnitName) {
-    base.erro = 'Esta unidade não tem "Nome no RH" definido. Sem ele o sync nem tenta (Configurações → Unidades).';
+  if (!unit.rhUnitName && !unit.cnpj) {
+    base.erro = 'Esta unidade não tem CNPJ nem "Nome no RH" definidos. Sem um dos dois o sync nem tenta (Configurações → Unidades).';
     return base;
   }
 
@@ -129,7 +138,7 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
      comum de "não veio ninguém": um espaço ou um acento de diferença. */
   try {
     const unidadesDoRh = unwrapUnidades(await rh.unidades());
-    if (unidadesDoRh.length > 0) {
+    if (unidadesDoRh.length > 0 && unit.rhUnitName) {
       const alvo = chaveDeComparacao(unit.rhUnitName);
       base.nomeConfere = unidadesDoRh.some((u) => u === unit.rhUnitName);
       if (!base.nomeConfere) {
@@ -147,7 +156,11 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
 
   let lista;
   try {
-    lista = unwrapColaboradores(await rh.colaboradoresDaUnidade(unit.rhUnitName));
+    const r = await listaParaUnidade({ cnpj: unit.cnpj, rhUnitName: unit.rhUnitName }, undefined, rh);
+    if (!r.ok) { base.erro = 'Esta unidade não tem CNPJ nem "Nome no RH" definidos.'; base.soNoSgo = noSgo; return base; }
+    lista = r.lista;
+    base.vinculo = r.vinculo;
+    base.cnpj = r.cnpj;
   } catch (e) {
     base.erro = e instanceof RhFormatoInesperadoError
       ? `O RH respondeu num formato que o SGO não sabe ler. O sync ABORTA esta unidade (não desliga ninguém). Detalhe: ${e.message}`
@@ -178,6 +191,7 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
       const classe = classificarStatus(c.status);
       if (!doSgo) decisao = 'NAO_ENCONTRADO_NO_SGO';
       else if (classe === 'DESLIGADO') decisao = 'INATIVO_POR_STATUS';
+      else if (classe === 'FERIAS') decisao = 'ATIVO_EM_FERIAS';
       else if (classe === 'DESCONHECIDO') decisao = 'ATIVO_STATUS_DESCONHECIDO';
       else decisao = 'ATIVO_NO_SGO';
     }
@@ -189,7 +203,7 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
   /* Ordem: primeiro o que está errado. Quem abre esta tela está procurando
      problema, não conferindo quem está bem. */
   const peso: Record<Decisao, number> = {
-    PULADO_SEM_MATRICULA: 0, INATIVO_POR_STATUS: 1, ATIVO_STATUS_DESCONHECIDO: 2, NAO_ENCONTRADO_NO_SGO: 3, ATIVO_NO_SGO: 4,
+    PULADO_SEM_MATRICULA: 0, INATIVO_POR_STATUS: 1, ATIVO_STATUS_DESCONHECIDO: 2, ATIVO_EM_FERIAS: 3, NAO_ENCONTRADO_NO_SGO: 4, ATIVO_NO_SGO: 5,
   };
   base.pessoas.sort((a, b) => peso[a.decisao] - peso[b.decisao] || a.nome.localeCompare(b.nome, 'pt-BR'));
 

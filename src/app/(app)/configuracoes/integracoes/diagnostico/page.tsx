@@ -15,13 +15,14 @@ export const dynamic = 'force-dynamic';
 const TOM: Record<Decisao, 'success' | 'warning' | 'danger' | 'info'> = {
   ATIVO_NO_SGO: 'success',
   ATIVO_STATUS_DESCONHECIDO: 'warning',
+  ATIVO_EM_FERIAS: 'info',
   INATIVO_POR_STATUS: 'danger',
   PULADO_SEM_MATRICULA: 'danger',
   NAO_ENCONTRADO_NO_SGO: 'warning',
 };
 
 /* Só o que explica gente faltando — "Ativo no SGO" não precisa de explicação. */
-const ORDEM_DO_RESUMO: Decisao[] = ['PULADO_SEM_MATRICULA', 'INATIVO_POR_STATUS', 'ATIVO_STATUS_DESCONHECIDO', 'NAO_ENCONTRADO_NO_SGO', 'ATIVO_NO_SGO'];
+const ORDEM_DO_RESUMO: Decisao[] = ['PULADO_SEM_MATRICULA', 'INATIVO_POR_STATUS', 'ATIVO_STATUS_DESCONHECIDO', 'ATIVO_EM_FERIAS', 'NAO_ENCONTRADO_NO_SGO', 'ATIVO_NO_SGO'];
 
 /**
  * Diagnóstico do RH — por que falta gente numa unidade.
@@ -78,6 +79,10 @@ export default async function DiagnosticoRhPage({ searchParams }: { searchParams
             <p className="text-sm">
               <span className="text-ink-500">Nome no RH configurado:</span>{' '}
               {d.rhUnitName ? <b className="text-ink-900">{d.rhUnitName}</b> : <i className="text-danger">não definido</i>}
+              {' · '}
+              <span className="text-ink-500">CNPJ:</span>{' '}
+              {d.cnpj ? <b className="text-ink-900">{d.cnpj}</b> : <i className="text-ink-500">não cadastrado</i>}
+              {d.vinculo && <>{' · '}<span className="text-ink-500">Vínculo usado:</span> <b className="text-ink-900">{d.vinculo === 'CNPJ' ? 'CNPJ' : 'razão social (fallback)'}</b></>}
             </p>
             {d.nomeConfere === true && (
               <p className="flex items-center gap-1.5 text-sm text-success">

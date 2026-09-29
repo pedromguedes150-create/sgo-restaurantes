@@ -5,8 +5,8 @@ import { syncCollaboratorsForUnit, syncAllRegisteredUnits } from '@/lib/rh/sync'
 
 const MSG: Record<string, { msg: string; status: number }> = {
   FORBIDDEN: { msg: 'Apenas o Administrador', status: 403 },
-  NOT_CONFIGURED: { msg: 'RH_API_KEY não configurada no .env', status: 400 },
-  NO_RH_NAME: { msg: 'Defina o "Nome no RH" desta unidade antes de sincronizar', status: 400 },
+  NOT_CONFIGURED: { msg: 'RH não configurado: cadastre a conexão do RH na Central (ou RH_API_KEY no .env)', status: 400 },
+  NO_RH_NAME: { msg: 'Defina o CNPJ ou o "Nome no RH" desta unidade antes de sincronizar', status: 400 },
   NOT_FOUND: { msg: 'Unidade não encontrada', status: 404 },
   RH_ERROR: { msg: 'Erro ao consultar o RH', status: 502 },
 };

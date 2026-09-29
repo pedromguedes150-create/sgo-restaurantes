@@ -93,9 +93,27 @@ describe('Status do colaborador', () => {
     /* Uma pessoa a mais na tela é visível e alguém corrige. Uma pessoa a menos
        é invisível, e ninguém procura o que não sabe que falta. Foi exatamente
        assim que as 8 de Jardim Teresópolis passaram despercebidas. */
-    for (const s of ['Afastado', 'Férias', 'Licença Maternidade', 'Coisa que o RH inventar', '', null, undefined]) {
+    for (const s of ['Afastado', 'Aposentado', 'Licença Maternidade', 'Coisa que o RH inventar', '', null, undefined]) {
       expect(classificarStatus(s), String(s)).toBe('DESCONHECIDO');
       expect(isAtivo(s), String(s)).toBe(true);
     }
+  });
+});
+
+describe('Férias e Aposentado (v1.132.0)', () => {
+  it('Férias é vínculo ATIVO com ausência temporária — classe própria, pessoa continua no SGO', () => {
+    for (const s of ['Férias', 'FÉRIAS', ' ferias ', 'Férias coletivas']) {
+      expect(classificarStatus(s), s).toBe('FERIAS');
+      expect(isAtivo(s), s).toBe(true);
+    }
+  });
+  it('Aposentado segue DESCONHECIDO de propósito: presente por cautela até a regra ser definida', () => {
+    expect(classificarStatus('Aposentado')).toBe('DESCONHECIDO');
+    expect(isAtivo('Aposentado')).toBe(true);
+  });
+  it('os status já reconhecidos não mudaram', () => {
+    expect(classificarStatus('Ativo')).toBe('ATIVO');
+    expect(classificarStatus('1ª Experiência')).toBe('ATIVO');
+    expect(classificarStatus('Demitido')).toBe('DESLIGADO');
   });
 });
