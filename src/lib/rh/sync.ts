@@ -64,34 +64,27 @@ async function syncUnitCore(unitId: string, actorUserId: string | null, todos?: 
     });
   }
 
-  // Quem veio do RH antes mas NÃO está mais na lista (demissão/transferência) é inativado.
-  const matriculas = lista.filter((c) => c.matricula).map((c) => String(c.matricula));
-
   /**
-   * GUARDA: lista vazia NÃO inativa ninguém.
+   * REGRA (v1.132.1): a AUSÊNCIA de uma pessoa na resposta do RH NUNCA a
+   * inativa. Só inativa quem o RH devolve, pela matrícula, com status de
+   * desligamento — e isso já aconteceu no upsert acima (`active: isAtivo`).
    *
-   * `notIn: []` não filtra nada — o Prisma descarta a condição, e o `updateMany`
-   * passa a casar com TODOS os colaboradores de RH da unidade. Medido: com a
-   * lista vazia, 3 de 3 ativos casavam; com uma matrícula inexistente, 0.
-   *
-   * Ou seja: um `200 { data: [] }` — um "Nome no RH" com um espaço a mais, uma
-   * unidade que o RH devolveu vazia por um instante — apagava o quadro inteiro
-   * da unidade, em silêncio, num job que roda sozinho 1×/dia.
-   *
-   * Zero colaboradores numa unidade que tem gente ativa nunca é uma informação
-   * boa o bastante para desligar todo mundo. Pula a inativação e chama alguém.
+   * Por quê: a lista de uma unidade pode vir diferente por transferência, por
+   * um "Nome no RH" com um espaço a mais, por CNPJ que casa com outra empresa,
+   * por uma resposta vazia momentânea. Nenhuma dessas coisas é um desligamento,
+   * e a versão anterior desta função tratava todas como se fossem — a rodada
+   * da v1.132.0 marcou 49 pessoas inativas por causa disso. Quem não veio
+   * aparece no Diagnóstico como "não retornado pelo RH", e fica como está.
+   * Nada é excluído automaticamente, nunca.
    */
-  const ativosNaUnidade = await prisma.collaborator.count({
+  const matriculas = new Set(lista.filter((c) => c.matricula).map((c) => String(c.matricula)));
+  const inativadosPorStatus = lista.filter((c) => c.matricula && !isAtivo(c.status)).length;
+  const ativosDaUnidade = await prisma.collaborator.findMany({
     where: { source: 'RH', active: true, units: { some: { unitId } } },
+    select: { externalId: true },
   });
-  const listaVaziaSuspeita = matriculas.length === 0 && ativosNaUnidade > 0;
-
-  const deactivated = listaVaziaSuspeita
-    ? { count: 0 }
-    : await prisma.collaborator.updateMany({
-      where: { source: 'RH', active: true, externalId: { notIn: matriculas }, units: { some: { unitId } } },
-      data: { active: false },
-    });
+  const naoRetornados = ativosDaUnidade.filter((c) => !c.externalId || !matriculas.has(c.externalId)).length;
+  const listaVazia = lista.length === 0 && ativosDaUnidade.length > 0;
 
   await audit({
     userId: actorUserId,
@@ -99,15 +92,17 @@ async function syncUnitCore(unitId: string, actorUserId: string | null, todos?: 
     action: actorUserId ? 'RH_SYNC_COLLABORATORS' : 'RH_SYNC_AUTO',
     module: 'PEOPLE',
     metadata: {
-      rhUnitName: unit.rhUnitName, cnpj: unit.cnpj, vinculo, total: lista.length, created, updated, deactivated: deactivated.count,
-      ...(listaVaziaSuspeita ? { inativacaoPulada: ativosNaUnidade, motivo: 'RH devolveu lista vazia' } : {}),
+      rhUnitName: unit.rhUnitName, cnpj: unit.cnpj, vinculo, total: lista.length, created, updated,
+      /* `deactivated` = só quem o RH devolveu como desligado. Ausência não conta. */
+      deactivated: inativadosPorStatus, naoRetornados,
+      ...(listaVazia ? { motivo: 'RH devolveu lista vazia — ninguém foi inativado' } : {}),
     },
   });
 
-  if (listaVaziaSuspeita) {
+  if (listaVazia) {
     await notifyAdmins({
-      title: '⚠ RH devolveu lista vazia — sincronização incompleta',
-      body: `A unidade ${unit.name} tem ${ativosNaUnidade} colaborador(es) ativo(s), mas o RH não devolveu nenhum para "${unit.rhUnitName}". Ninguém foi inativado. Confira o "Nome no RH" da unidade em Configurações → Unidades.`,
+      title: '⚠ RH devolveu lista vazia para uma unidade',
+      body: `A unidade ${unit.name} tem ${ativosDaUnidade.length} colaborador(es) ativo(s), mas o RH não devolveu nenhum. Ninguém foi inativado. Confira o CNPJ e o "Nome no RH" da unidade em Configurações → Unidades.`,
       link: '/configuracoes/integracoes',
       module: 'PEOPLE',
     }).catch(() => {});

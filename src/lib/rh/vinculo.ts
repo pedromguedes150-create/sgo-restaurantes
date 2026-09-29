@@ -24,6 +24,27 @@ export function filtrarPorCnpj(lista: RhColaborador[], cnpj: string): RhColabora
   return lista.filter((c) => normalizarCnpj(c.unidade_cnpj) === alvo);
 }
 
+/**
+ * Razão social comparável: sem acento, sem caixa, sem espaço sobrando. "LTDA (CENTRO)"
+ * e "Ltda  (Centro)" são a mesma empresa; "&" e parênteses ficam como estão.
+ */
+export function normalizarRazaoSocial(s: string | null | undefined): string {
+  return String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+}
+
+/**
+ * Fallback por razão social FEITO NO SGO, sobre a lista completa do RH — e não
+ * por um caminho `/unidade/<razão social>` montado na URL. Foi um caminho
+ * assim, com "(CENTRO DE DISTRIBUIÇÃO)" sem codificar, que a validação da
+ * Central recusou como "Caminho inválido" (503) na v1.132.0. Nome de empresa
+ * não é lugar para viver numa URL.
+ */
+export function filtrarPorRazaoSocial(lista: RhColaborador[], razaoSocial: string): RhColaborador[] {
+  const alvo = normalizarRazaoSocial(razaoSocial);
+  if (!alvo) return [];
+  return lista.filter((c) => normalizarRazaoSocial(c.unidade) === alvo);
+}
+
 export type Vinculo = 'CNPJ' | 'RAZAO_SOCIAL';
 
 /**

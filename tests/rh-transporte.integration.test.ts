@@ -2,7 +2,8 @@ import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { criarConexao, alterarConexao } from '@/lib/conexoes/conexoes';
-import { resolverRh, rhGetCentral, listaParaUnidade, NOME_DO_FALLBACK, RhApiError } from '@/lib/rh/transporte';
+import { resolverRh, rhGetCentral, listaParaUnidade, codificarSegmento, NOME_DO_FALLBACK, RhApiError } from '@/lib/rh/transporte';
+import { caminhoValido } from '@/lib/conexoes/formato';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -116,12 +117,17 @@ describe('lista para a unidade — CNPJ primeiro, razão social depois', () => {
     expect(r.ok && r.vinculo === 'CNPJ' && r.lista.map((c) => c.matricula)).toEqual(['1', '2']);
   });
 
-  it('CNPJ sem correspondência cai na razão social (endpoint por unidade)', async () => {
-    const r = await listaParaUnidade({ cnpj: '11111111000111', rhUnitName: 'B LTDA' }, todos).catch((e) => ({ ok: false as const, erro: String(e) }));
-    /* O fallback chama o RH de verdade pela conexão marcada; sem fetch falso
-       aqui, o que interessa é que ele TENTOU a razão social (falha de rede),
-       e não devolveu a lista vazia do CNPJ como se fosse a resposta. */
-    expect('erro' in r ? r.erro : 'sem erro').not.toBe('sem erro');
+  it('CNPJ sem correspondência cai na razão social — filtrada da MESMA lista, sem nova chamada', async () => {
+    const r = await listaParaUnidade({ cnpj: '11111111000111', rhUnitName: 'B LTDA' }, todos);
+    expect(r.ok && r.vinculo === 'RAZAO_SOCIAL' && r.lista.map((c) => c.matricula)).toEqual(['3']);
+  });
+
+  it('o caminho por unidade, se alguém o usar, sai codificado à RFC 3986 e passa na validação da Central', () => {
+    const seg = codificarSegmento('COMERCIAL LINS & GUEDES LTDA (CENTRO DE DISTRIBUIÇÃO)');
+    expect(seg).not.toMatch(/[()& ]/);
+    expect(caminhoValido(`/api/ext/colaboradores/unidade/${seg}`)).toBe(true);
+    /* encodeURIComponent puro deixava "(" e ")" — era o "Caminho inválido" (503). */
+    expect(caminhoValido(`/api/ext/colaboradores/unidade/${encodeURIComponent('X (Y)')}`)).toBe(false);
   });
 
   it('sem CNPJ nem razão social: SEM_VINCULO', async () => {

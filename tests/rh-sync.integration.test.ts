@@ -112,16 +112,21 @@ describe('O caminho normal continua igual', () => {
     expect(await ativosNaUnidade()).toEqual(['ALESSANDRA', 'BRUNO']);
   });
 
-  it('quem SAI da lista é inativado — é para isso que a regra existe', async () => {
+  it('quem SAI da lista NÃO é inativado (v1.132.1) — ausência não é desligamento; a auditoria conta os não retornados', async () => {
     respostaDoRh = { data: [colaboradorRh(`T${sfx}-1`, 'ALESSANDRA')] };
     const r = await syncCollaboratorsForUnit(admin, unitId);
     expect(r.ok).toBe(true);
-    expect(await ativosNaUnidade()).toEqual(['ALESSANDRA']);
+    expect(await ativosNaUnidade()).toEqual(['ALESSANDRA', 'BRUNO']);
+    const log = await prisma.auditLog.findFirst({ where: { unitId, action: 'RH_SYNC_COLLABORATORS' }, orderBy: { createdAt: 'desc' } });
+    const meta = log?.metadata as Record<string, unknown>;
+    expect(meta.deactivated).toBe(0);
+    expect(meta.naoRetornados).toBe(1);
   });
 
-  it('quem volta à lista é reativado', async () => {
-    respostaDoRh = { data: [colaboradorRh(`T${sfx}-1`, 'ALESSANDRA')] };
+  it('quem foi desligado pelo RH e volta à lista ativo é reativado', async () => {
+    respostaDoRh = { data: [colaboradorRh(`T${sfx}-1`, 'ALESSANDRA'), { ...colaboradorRh(`T${sfx}-2`, 'BRUNO'), status: 'Demitido' }] };
     await syncCollaboratorsForUnit(admin, unitId);
+    expect(await ativosNaUnidade()).toEqual(['ALESSANDRA']);
     respostaDoRh = { data: [colaboradorRh(`T${sfx}-1`, 'ALESSANDRA'), colaboradorRh(`T${sfx}-2`, 'BRUNO')] };
     await syncCollaboratorsForUnit(admin, unitId);
     expect(await ativosNaUnidade()).toEqual(['ALESSANDRA', 'BRUNO']);
@@ -161,7 +166,7 @@ describe('Lista VAZIA não desliga a unidade', () => {
     expect(await ativosNaUnidade()).toEqual(['ALESSANDRA', 'BRUNO']);
   });
 
-  it('e a auditoria registra que a inativação foi pulada, e por quê', async () => {
+  it('e a auditoria registra a lista vazia, com os dois como não retornados', async () => {
     respostaDoRh = { data: [] };
     await syncCollaboratorsForUnit(admin, unitId);
     const log = await prisma.auditLog.findFirst({
@@ -169,7 +174,7 @@ describe('Lista VAZIA não desliga a unidade', () => {
     });
     const meta = log?.metadata as Record<string, unknown> | null;
     expect(meta?.deactivated).toBe(0);
-    expect(meta?.inativacaoPulada).toBe(2);
+    expect(meta?.naoRetornados).toBe(2);
     expect(String(meta?.motivo)).toContain('vazia');
   });
 
@@ -185,7 +190,7 @@ describe('Lista VAZIA não desliga a unidade', () => {
     const log = await prisma.auditLog.findFirst({
       where: { unitId, action: 'RH_SYNC_COLLABORATORS' }, orderBy: { createdAt: 'desc' },
     });
-    expect((log?.metadata as Record<string, unknown>)?.inativacaoPulada).toBeUndefined();
+    expect((log?.metadata as Record<string, unknown>)?.motivo).toBeUndefined();
   });
 });
 

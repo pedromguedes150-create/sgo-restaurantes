@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizarCnpj, filtrarPorCnpj, decidirVinculo } from '@/lib/rh/vinculo';
+import { normalizarCnpj, filtrarPorCnpj, decidirVinculo, filtrarPorRazaoSocial, normalizarRazaoSocial } from '@/lib/rh/vinculo';
 import type { RhColaborador } from '@/lib/rh/normalize';
 
 /**
@@ -34,5 +34,18 @@ describe('decidirVinculo', () => {
     expect(decidirVinculo({ cnpj: null, rhUnitName: 'RAZAO' }, null)).toEqual({ vinculo: 'RAZAO_SOCIAL' });
     expect(decidirVinculo({ cnpj: '12345678000190', rhUnitName: null }, [])).toEqual({ vinculo: 'CNPJ' });
     expect(decidirVinculo({ cnpj: null, rhUnitName: null }, null)).toEqual({ vinculo: null, motivo: 'SEM_VINCULO' });
+  });
+});
+
+describe('filtrarPorRazaoSocial (fallback feito no SGO)', () => {
+  it('casa sem acento, caixa e espaço sobrando; "&" e parênteses contam; outra empresa fica de fora', () => {
+    const lista = [
+      p('1', null, 'COMERCIAL LINS & GUEDES LTDA (CENTRO DE DISTRIBUIÇÃO)'),
+      p('2', null, 'Comercial Lins & Guedes Ltda  (Centro de Distribuicao)'),
+      p('3', null, 'COMERCIAL LINS & GUEDES LTDA (JARDIM TERESÓPOLIS)'),
+    ];
+    expect(filtrarPorRazaoSocial(lista, 'COMERCIAL LINS & GUEDES LTDA (CENTRO DE DISTRIBUIÇÃO)').map((c) => c.matricula)).toEqual(['1', '2']);
+    expect(filtrarPorRazaoSocial(lista, '')).toEqual([]);
+    expect(normalizarRazaoSocial('  Ção  X ')).toBe('CAO X');
   });
 });

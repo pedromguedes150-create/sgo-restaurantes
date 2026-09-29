@@ -92,13 +92,37 @@ describe('sync por CNPJ', () => {
     expect(await nomesAtivos(unitA)).toEqual([`ANA MARIA ${sfx}`, `APOSENTADO ${sfx}`]);
   });
 
-  it('unidade sem CNPJ continua pela razão social; sync de todas busca a lista completa uma vez', async () => {
-    todosDoRh = { data: [colab(`M${sfx}1`, `ANA MARIA ${sfx}`, CNPJ_A, 'A LTDA'), colab(`M${sfx}2`, `BIA ${sfx}`, CNPJ_B, 'B LTDA')] };
-    porRazao = { data: [colab(`M${sfx}6`, `CARLA ${sfx}`, null, `C LTDA ${sfx}`)] };
+  it('unidade sem CNPJ continua pela razão social — filtrando a MESMA lista completa, sem montar URL com o nome', async () => {
+    todosDoRh = { data: [colab(`M${sfx}1`, `ANA MARIA ${sfx}`, CNPJ_A, 'A LTDA'), colab(`M${sfx}2`, `BIA ${sfx}`, CNPJ_B, 'B LTDA'), colab(`M${sfx}6`, `CARLA ${sfx}`, null, `C LTDA ${sfx}`)] };
+    porRazao = { data: [] }; // o endpoint por unidade não é mais consultado
     const r = await syncAllRegisteredUnits(admin());
     expect(r.ok).toBe(true);
     expect(await nomesAtivos(unitB)).toEqual([`BIA ${sfx}`]);
     expect(await nomesAtivos(unitC)).toEqual([`CARLA ${sfx}`]);
     expect(await prisma.collaborator.count({ where: { externalId: `M${sfx}1` } })).toBe(1);
+  });
+
+  it('razão social com "&", parênteses e acento (o caso do Centro de Distribuição) casa sem passar por URL', async () => {
+    const razao = `COMERCIAL LINS & GUEDES LTDA (CENTRO DE DISTRIBUIÇÃO ${sfx})`;
+    const unitCd = (await prisma.unit.create({ data: { code: `SC-CD-${sfx}`, name: 'U CD', timezone: 'America/Sao_Paulo', cutoffHour: 4, rhUnitName: razao } })).id;
+    try {
+      todosDoRh = { data: [colab(`M${sfx}7`, `DANI ${sfx}`, null, `Comercial Lins & Guedes Ltda (Centro de Distribuicao ${sfx})`), colab(`M${sfx}1`, `ANA MARIA ${sfx}`, CNPJ_A, 'A LTDA')] };
+      const r = await syncCollaboratorsForUnit(admin(), unitCd);
+      expect(r.ok && r.total === 1).toBe(true);
+      expect(await nomesAtivos(unitCd)).toEqual([`DANI ${sfx}`]);
+    } finally {
+      await prisma.collaboratorUnit.deleteMany({ where: { unitId: unitCd } });
+      await prisma.unit.delete({ where: { id: unitCd } });
+    }
+  });
+
+  it('erro na consulta (4xx/5xx/timeout/formato) ABORTA a unidade: nada criado, atualizado ou inativado, e nunca vira lista vazia', async () => {
+    const antes = await prisma.collaborator.findMany({ where: { externalId: { startsWith: `M${sfx}` } }, select: { externalId: true, name: true, active: true }, orderBy: { externalId: 'asc' } });
+    todosDoRh = { success: false, error: 'Service Unavailable' }; // formato de erro que escapou
+    const r = await syncCollaboratorsForUnit(admin(), unitA);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('RH_ERROR');
+    const depois = await prisma.collaborator.findMany({ where: { externalId: { startsWith: `M${sfx}` } }, select: { externalId: true, name: true, active: true }, orderBy: { externalId: 'asc' } });
+    expect(depois).toEqual(antes);
   });
 });

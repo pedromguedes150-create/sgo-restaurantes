@@ -108,13 +108,13 @@ describe('O nome que não bate é o aviso mais alto', () => {
 });
 
 describe('Quem está no SGO e o RH não devolve', () => {
-  it('é listado, com aviso de que seria desligado', async () => {
+  it('é listado como não retornado, com aviso de que NÃO é inativado automaticamente', async () => {
     diagnostico = base({
       soNoSgo: [{ id: 'c1', name: 'FANTASMA', externalId: '77', active: true }],
     });
     const html = await render();
     expect(html).toContain('FANTASMA');
-    expect(html).toContain('o RH não devolveu');
+    expect(html).toContain('não retornado(s) pelo RH');
   });
 });
 
