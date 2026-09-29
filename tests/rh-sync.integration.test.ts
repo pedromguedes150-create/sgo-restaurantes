@@ -21,21 +21,16 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 let respostaDoRh: unknown = { data: [] };
 let lancarNoTransporte: Error | null = null;
 
-vi.mock('@/lib/rh/transporte', async () => {
-  const real = await vi.importActual<typeof import('@/lib/rh/transporte')>('@/lib/rh/transporte');
-  return {
-    ...real,
-    rhDisponivel: async () => true,
-    rh: {
-      colaboradores: async () => { if (lancarNoTransporte) throw lancarNoTransporte; return respostaDoRh; },
-      colaboradoresDaUnidade: async () => {
-        if (lancarNoTransporte) throw lancarNoTransporte;
-        return respostaDoRh;
-      },
-      unidades: async () => ({ data: [] }),
+vi.mock('@/lib/rh/client', () => ({
+  rhConfigured: () => true,
+  RhApiError: class RhApiError extends Error {},
+  rh: {
+    colaboradoresDaUnidade: async () => {
+      if (lancarNoTransporte) throw lancarNoTransporte;
+      return respostaDoRh;
     },
-  };
-});
+  },
+}));
 
 import { prisma } from '@/lib/db/prisma';
 import { syncCollaboratorsForUnit } from '@/lib/rh/sync';
@@ -112,7 +107,7 @@ describe('O caminho normal continua igual', () => {
     expect(await ativosNaUnidade()).toEqual(['ALESSANDRA', 'BRUNO']);
   });
 
-  it('quem SAI da lista NÃO é inativado (v1.132.1) — ausência não é desligamento; a auditoria conta os não retornados', async () => {
+  it('quem SAI da lista NÃO é inativado (v1.132.2) — ausência não é desligamento; a auditoria conta os não retornados', async () => {
     respostaDoRh = { data: [colaboradorRh(`T${sfx}-1`, 'ALESSANDRA')] };
     const r = await syncCollaboratorsForUnit(admin, unitId);
     expect(r.ok).toBe(true);
@@ -123,10 +118,12 @@ describe('O caminho normal continua igual', () => {
     expect(meta.naoRetornados).toBe(1);
   });
 
-  it('quem foi desligado pelo RH e volta à lista ativo é reativado', async () => {
+  it('só inativa quem o RH devolve, pela matrícula, com status de desligamento — e quem volta ativo é reativado', async () => {
     respostaDoRh = { data: [colaboradorRh(`T${sfx}-1`, 'ALESSANDRA'), { ...colaboradorRh(`T${sfx}-2`, 'BRUNO'), status: 'Demitido' }] };
     await syncCollaboratorsForUnit(admin, unitId);
     expect(await ativosNaUnidade()).toEqual(['ALESSANDRA']);
+    const log = await prisma.auditLog.findFirst({ where: { unitId, action: 'RH_SYNC_COLLABORATORS' }, orderBy: { createdAt: 'desc' } });
+    expect((log?.metadata as Record<string, unknown>).deactivated).toBe(1);
     respostaDoRh = { data: [colaboradorRh(`T${sfx}-1`, 'ALESSANDRA'), colaboradorRh(`T${sfx}-2`, 'BRUNO')] };
     await syncCollaboratorsForUnit(admin, unitId);
     expect(await ativosNaUnidade()).toEqual(['ALESSANDRA', 'BRUNO']);

@@ -15,13 +15,12 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 let respostaDoRh: unknown = { data: [] };
 let unidadesDoRh: unknown = { data: [] };
 
-vi.mock('@/lib/rh/transporte', async () => {
-  const real = await vi.importActual<typeof import('@/lib/rh/transporte')>('@/lib/rh/transporte');
+vi.mock('@/lib/rh/client', async () => {
+  const real = await vi.importActual<typeof import('@/lib/rh/client')>('@/lib/rh/client');
   return {
     ...real,
-    rhDisponivel: async () => true,
+    rhConfigured: () => true,
     rh: {
-      colaboradores: async () => respostaDoRh,
       colaboradoresDaUnidade: async () => respostaDoRh,
       unidades: async () => unidadesDoRh,
     },

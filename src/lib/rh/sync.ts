@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
-import { rh, rhDisponivel, listaParaUnidade } from '@/lib/rh/transporte';
-import { unwrapColaboradores, isAtivo, type RhColaborador } from '@/lib/rh/normalize';
+import { rh, rhConfigured } from '@/lib/rh/client';
+import { unwrapColaboradores, isAtivo } from '@/lib/rh/normalize';
 import { audit } from '@/lib/audit';
 import { notifyAdmins } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
@@ -11,29 +11,33 @@ export type SyncResult =
 
 /**
  * Núcleo da sincronização de UMA unidade (sem checagem de papel — uso interno).
- * Casa pelo CNPJ da unidade (preferido, v1.132.0) ou pela razão social em
- * Unit.rhUnitName (fallback). Upsert por matrícula (externalId); vincula à
- * unidade; inativa quem saiu da lista. `actorUserId` null = sistema. `todos` é
- * a lista completa do RH já buscada — o sync de várias unidades busca uma vez.
+ * Casa pela razão social em Unit.rhUnitName. Upsert por matrícula (externalId);
+ * vincula à unidade. `actorUserId` null = sistema.
+ *
+ * REGRA DE INATIVAÇÃO (v1.132.2 — a única coisa preservada da v1.132.1):
+ * ausência na resposta do RH NUNCA inativa. Só muda `active` para `false` quem
+ * o PRÓPRIO RH devolve, pela matrícula, com status reconhecido como desligamento
+ * (`isAtivo` no upsert). Lista vazia, resposta parcial, transferência entre
+ * empresas, timeout ou erro da API não tocam em ninguém: o erro aborta a
+ * unidade antes de qualquer escrita, e quem não veio na lista é apenas CONTADO
+ * na auditoria (`naoRetornados`). A regra antiga "quem não veio é inativado"
+ * marcou 49 pessoas inativas em 29/09/2026 sem que tivessem sido desligadas.
  */
-async function syncUnitCore(unitId: string, actorUserId: string | null, todos?: RhColaborador[]): Promise<SyncResult> {
+async function syncUnitCore(unitId: string, actorUserId: string | null): Promise<SyncResult> {
   const unit = await prisma.unit.findUnique({ where: { id: unitId } });
   if (!unit) return { ok: false, reason: 'NOT_FOUND' };
-  if (!unit.rhUnitName && !unit.cnpj) return { ok: false, reason: 'NO_RH_NAME' };
+  if (!unit.rhUnitName) return { ok: false, reason: 'NO_RH_NAME' };
 
-  let lista: RhColaborador[];
-  let vinculo: 'CNPJ' | 'RAZAO_SOCIAL';
+  let lista;
   try {
-    const r = await listaParaUnidade({ cnpj: unit.cnpj, rhUnitName: unit.rhUnitName }, todos, rh);
-    if (!r.ok) return { ok: false, reason: 'NO_RH_NAME' };
-    lista = r.lista;
-    vinculo = r.vinculo;
+    lista = unwrapColaboradores(await rh.colaboradoresDaUnidade(unit.rhUnitName));
   } catch (e) {
     return { ok: false, reason: 'RH_ERROR', message: e instanceof Error ? e.message : String(e) };
   }
 
   let created = 0;
   let updated = 0;
+  let inativadosPorStatus = 0;
   for (const c of lista) {
     if (!c.matricula) continue;
     const data = {
@@ -49,6 +53,7 @@ async function syncUnitCore(unitId: string, actorUserId: string | null, todos?: 
     const existing = await prisma.collaborator.findFirst({ where: { externalId: data.externalId } });
     let collaboratorId: string;
     if (existing) {
+      if (existing.active && !data.active) inativadosPorStatus++;
       await prisma.collaborator.update({ where: { id: existing.id }, data });
       collaboratorId = existing.id;
       updated++;
@@ -65,26 +70,17 @@ async function syncUnitCore(unitId: string, actorUserId: string | null, todos?: 
   }
 
   /**
-   * REGRA (v1.132.1): a AUSÊNCIA de uma pessoa na resposta do RH NUNCA a
-   * inativa. Só inativa quem o RH devolve, pela matrícula, com status de
-   * desligamento — e isso já aconteceu no upsert acima (`active: isAtivo`).
-   *
-   * Por quê: a lista de uma unidade pode vir diferente por transferência, por
-   * um "Nome no RH" com um espaço a mais, por CNPJ que casa com outra empresa,
-   * por uma resposta vazia momentânea. Nenhuma dessas coisas é um desligamento,
-   * e a versão anterior desta função tratava todas como se fossem — a rodada
-   * da v1.132.0 marcou 49 pessoas inativas por causa disso. Quem não veio
-   * aparece no Diagnóstico como "não retornado pelo RH", e fica como está.
-   * Nada é excluído automaticamente, nunca.
+   * Quem está ativo na unidade e NÃO veio na resposta é só contado — nunca
+   * inativado. Lista vazia com gente ativa continua avisando os Admins (é sinal
+   * de "Nome no RH" errado ou de resposta incompleta), mas sem agir.
    */
   const matriculas = new Set(lista.filter((c) => c.matricula).map((c) => String(c.matricula)));
-  const inativadosPorStatus = lista.filter((c) => c.matricula && !isAtivo(c.status)).length;
   const ativosDaUnidade = await prisma.collaborator.findMany({
     where: { source: 'RH', active: true, units: { some: { unitId } } },
     select: { externalId: true },
   });
   const naoRetornados = ativosDaUnidade.filter((c) => !c.externalId || !matriculas.has(c.externalId)).length;
-  const listaVazia = lista.length === 0 && ativosDaUnidade.length > 0;
+  const listaVaziaSuspeita = matriculas.size === 0 && ativosDaUnidade.length > 0;
 
   await audit({
     userId: actorUserId,
@@ -92,17 +88,18 @@ async function syncUnitCore(unitId: string, actorUserId: string | null, todos?: 
     action: actorUserId ? 'RH_SYNC_COLLABORATORS' : 'RH_SYNC_AUTO',
     module: 'PEOPLE',
     metadata: {
-      rhUnitName: unit.rhUnitName, cnpj: unit.cnpj, vinculo, total: lista.length, created, updated,
-      /* `deactivated` = só quem o RH devolveu como desligado. Ausência não conta. */
-      deactivated: inativadosPorStatus, naoRetornados,
-      ...(listaVazia ? { motivo: 'RH devolveu lista vazia — ninguém foi inativado' } : {}),
+      rhUnitName: unit.rhUnitName, total: lista.length, created, updated,
+      /** só por status de desligamento devolvido pelo RH — ausência não conta */
+      deactivated: inativadosPorStatus,
+      naoRetornados,
+      ...(listaVaziaSuspeita ? { motivo: 'RH devolveu lista vazia' } : {}),
     },
   });
 
-  if (listaVazia) {
+  if (listaVaziaSuspeita) {
     await notifyAdmins({
-      title: '⚠ RH devolveu lista vazia para uma unidade',
-      body: `A unidade ${unit.name} tem ${ativosDaUnidade.length} colaborador(es) ativo(s), mas o RH não devolveu nenhum. Ninguém foi inativado. Confira o CNPJ e o "Nome no RH" da unidade em Configurações → Unidades.`,
+      title: '⚠ RH devolveu lista vazia — sincronização incompleta',
+      body: `A unidade ${unit.name} tem ${ativosDaUnidade.length} colaborador(es) ativo(s), mas o RH não devolveu nenhum para "${unit.rhUnitName}". Ninguém foi inativado. Confira o "Nome no RH" da unidade em Configurações → Unidades.`,
       link: '/configuracoes/integracoes',
       module: 'PEOPLE',
     }).catch(() => {});
@@ -120,30 +117,18 @@ async function syncUnitCore(unitId: string, actorUserId: string | null, todos?: 
 /** Sincroniza os colaboradores de UMA unidade (acionado por Admin). */
 export async function syncCollaboratorsForUnit(user: SessionUser, unitId: string): Promise<SyncResult> {
   if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
-  if (!(await rhDisponivel())) return { ok: false, reason: 'NOT_CONFIGURED' };
+  if (!rhConfigured()) return { ok: false, reason: 'NOT_CONFIGURED' };
   return syncUnitCore(unitId, user.id);
-}
-
-/** Unidades que têm como se ligar ao RH: CNPJ ou razão social. */
-const COM_VINCULO = { active: true, OR: [{ rhUnitName: { not: null } }, { cnpj: { not: null } }] };
-
-/**
- * A lista completa do RH, buscada UMA vez para o sync de várias unidades. Se
- * falhar, devolve undefined e cada unidade tenta pelo caminho de sempre.
- */
-async function listaCompletaOuNada(): Promise<RhColaborador[] | undefined> {
-  try { return unwrapColaboradores(await rh.colaboradores()); } catch { return undefined; }
 }
 
 /** Sincroniza TODAS as unidades do SGO com "Nome no RH" definido (acionado por Admin). */
 export async function syncAllRegisteredUnits(user: SessionUser): Promise<SyncResult & { units?: number }> {
   if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
-  if (!(await rhDisponivel())) return { ok: false, reason: 'NOT_CONFIGURED' };
-  const units = await prisma.unit.findMany({ where: COM_VINCULO, select: { id: true } });
-  const todos = await listaCompletaOuNada();
+  if (!rhConfigured()) return { ok: false, reason: 'NOT_CONFIGURED' };
+  const units = await prisma.unit.findMany({ where: { active: true, rhUnitName: { not: null } }, select: { id: true } });
   let created = 0, updated = 0, total = 0;
   for (const u of units) {
-    const r = await syncUnitCore(u.id, user.id, todos);
+    const r = await syncUnitCore(u.id, user.id);
     if (r.ok) { created += r.created; updated += r.updated; total += r.total; }
   }
   return { ok: true, created, updated, total, units: units.length };
@@ -153,13 +138,23 @@ export async function syncAllRegisteredUnits(user: SessionUser): Promise<SyncRes
  * Sincronização AUTOMÁTICA (sistema) — chamada pelo scheduler ~1x/dia.
  * Não exige sessão; só roda se o RH estiver configurado. Idempotente.
  */
-export async function runDailyRhSync(): Promise<{ ran: boolean; units?: number; created?: number; updated?: number }> {
-  if (!(await rhDisponivel())) return { ran: false };
-  const units = await prisma.unit.findMany({ where: COM_VINCULO, select: { id: true } });
-  const todos = await listaCompletaOuNada();
+/**
+ * SUSPENSÃO TEMPORÁRIA do sync automático (v1.132.2, decisão do Pedro em
+ * 29/09/2026): enquanto os 49 colaboradores inativados em 29/09 não forem
+ * conferidos, NENHUMA sincronização roda sozinha — nem no boot, nem no
+ * scheduler de hora em hora. Só o botão Sincronizar (manual, com ator) segue
+ * disponível. `RH_API_KEY` e a integração não são tocadas. Para voltar ao
+ * normal, troque para `false`.
+ */
+export const RH_AUTO_SYNC_SUSPENSO = true;
+
+export async function runDailyRhSync(): Promise<{ ran: boolean; motivo?: 'SUSPENSO' | 'NAO_CONFIGURADO'; units?: number; created?: number; updated?: number }> {
+  if (RH_AUTO_SYNC_SUSPENSO) return { ran: false, motivo: 'SUSPENSO' };
+  if (!rhConfigured()) return { ran: false, motivo: 'NAO_CONFIGURADO' };
+  const units = await prisma.unit.findMany({ where: { active: true, rhUnitName: { not: null } }, select: { id: true } });
   let created = 0, updated = 0;
   for (const u of units) {
-    const r = await syncUnitCore(u.id, null, todos);
+    const r = await syncUnitCore(u.id, null);
     if (r.ok) { created += r.created; updated += r.updated; }
   }
   return { ran: true, units: units.length, created, updated };

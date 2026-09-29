@@ -139,7 +139,6 @@ model User {
   refreshTokens           RefreshToken[]
   auditLogs               AuditLog[]
   apiClients              ApiClient[]
-  externalConnections     ExternalConnection[] @relation("ExternalConnectionBy")
   completedTasks          TaskInstance[]           @relation("CompletedBy")
   assignedTasks           TaskInstance[]           @relation("AssignedTo")
   wasteEntries            WasteEntry[]             @relation("WasteCreatedBy")
@@ -2283,67 +2282,6 @@ model ApiRequestLog {
   @@index([createdAt])
   @@index([clientId, createdAt])
   @@map("api_request_logs")
-}
-
-/// Como este SGO se autentica na API de OUTRO sistema (v1.131.0).
-enum ExternalAuthType {
-  API_KEY_HEADER // header <authHeader>: <credencial> (padrão x-api-key)
-  BEARER // Authorization: Bearer <credencial>
-}
-
-/// CONEXÃO COM OUTRO SISTEMA (v1.131.0): uma API externa que este SGO CONSOME.
-/// Espelho do ApiClient (quem consome a NOSSA API): aqui a credencial é deles e
-/// precisa ser recuperável, então vai CIFRADA (AES-256-GCM, chave no .env), e
-/// só os 4 últimos caracteres ficam legíveis para a tela.
-model ExternalConnection {
-  id              String           @id @default(cuid())
-  name            String
-  purpose         String?
-  baseUrl         String
-  authType        ExternalAuthType @default(API_KEY_HEADER)
-  authHeader      String           @default("x-api-key")
-  /// v1:<iv>:<tag>:<ciphertext> (base64url) — ver src/lib/conexoes/cripto.ts
-  credentialEnc   String
-  credentialLast4 String
-  active          Boolean          @default(true)
-  /// Caminho usado por "Testar conexão" (relativo à base)
-  testPath        String           @default("/")
-  /// Papel fixo na integração: 'RH' = é a conexão que o sync/diagnóstico do RH usam (uma só)
-  systemKey       String?
-  lastUsedAt      DateTime?
-  lastStatus      Int?
-  lastOk          Boolean?
-  lastResult      String?
-  createdById     String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  createdBy User?                @relation("ExternalConnectionBy", fields: [createdById], references: [id], onDelete: SetNull)
-  requests  ExternalRequestLog[]
-
-  @@map("external_connections")
-}
-
-/// Cada chamada que este SGO FAZ a um sistema externo — o mesmo espírito do
-/// ApiRequestLog, no sentido contrário. A credencial nunca entra aqui.
-model ExternalRequestLog {
-  id             String   @id @default(cuid())
-  connectionId   String?
-  /// Nome congelado (legível depois de renomear/desativar)
-  connectionName String
-  method         String
-  path           String
-  status         Int?
-  durationMs     Int
-  ok             Boolean
-  error          String?
-  createdAt      DateTime @default(now())
-
-  connection ExternalConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
-
-  @@index([createdAt])
-  @@index([connectionId, createdAt])
-  @@map("external_request_logs")
 }
 
 /// Evento recebido do RH (envio automático RH→SGO): admissões, desligamentos,

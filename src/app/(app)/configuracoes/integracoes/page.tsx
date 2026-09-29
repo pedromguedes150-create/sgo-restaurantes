@@ -3,11 +3,9 @@ import { ArrowLeft, Plug, CheckCircle2, XCircle, ArrowDownToLine, ArrowUpFromLin
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { rhConfigured, rhV2Base, rhV2Configured } from '@/lib/rh/client';
+import { RH_AUTO_SYNC_SUSPENSO } from '@/lib/rh/sync';
 import { feriasWebhookConfigured } from '@/lib/rh/webhook';
 import { RhV2Ping } from '@/components/admin/rh-v2-ping';
-import { ConexoesClient } from '@/components/admin/conexoes-client';
-import { listarConexoes, ultimasChamadasExternas, migrarCredenciaisParaChaveDedicada, estadoDaCifra } from '@/lib/conexoes/conexoes';
-import { resolverRh } from '@/lib/rh/transporte';
 import { ApiGlobalClient } from '@/components/admin/api-global-client';
 import { listarSistemas, ultimasChamadas } from '@/lib/api-global/chaves';
 import { API_BASE_PATH, HEADER_API_KEY } from '@/lib/api-global/formato';
@@ -36,26 +34,11 @@ export default async function IntegracoesPage() {
   const webhookToken = process.env.SGO_WEBHOOK_TOKEN ?? '';
   const webhookUrl = process.env.RH_WEBHOOK_FERIAS_URL ?? `${rhBase}/api/integracoes/sgo/ferias`;
 
-  /* Migração da cifra (v1.132.0): com CONNECTIONS_ENC_KEY definida, o que ainda
-     está na chave derivada é recifrado AQUI, antes de a tela ler o estado —
-     idempotente, e nada é sobrescrito se não abrir. */
-  const migracao = await migrarCredenciaisParaChaveDedicada().catch(() => null);
-  const [events, sistemas, chamadas, conexoes, saidas, cifra, rhOrigem] = await Promise.all([
+  const [events, sistemas, chamadas] = await Promise.all([
     prisma.rhInboundEvent.findMany({ orderBy: { createdAt: 'desc' }, take: 25 }),
     listarSistemas(),
     ultimasChamadas(30),
-    listarConexoes(),
-    ultimasChamadasExternas(30),
-    estadoDaCifra(),
-    resolverRh(),
   ]);
-  const rhPelaCentral = rhOrigem.origem === 'conexao';
-  const textoDaCifra = cifra.origem === 'dedicada'
-    ? (cifra.pendentesNaDerivada > 0 ? `cifrada com CONNECTIONS_ENC_KEY — ${cifra.pendentesNaDerivada} credencial(is) ainda na chave derivada` : 'cifrada no banco com CONNECTIONS_ENC_KEY (chave própria)')
-    : cifra.origem === 'derivada' ? 'cifrada no banco com chave derivada de JWT_REFRESH_SECRET' : 'SEM chave de cifra (CONNECTIONS_ENC_KEY)';
-  const textoDoUso = rhPelaCentral
-    ? `RH — Sincronizar, Diagnóstico e sync diário usam a conexão «${rhOrigem.nome}»${rhOrigem.marcada ? '' : ' (reconhecida pelo endereço; marque o papel "Integração do RH" na conexão para deixar explícito)'}`
-    : rhOrigem.origem === 'env' ? 'RH em FALLBACK: nenhuma conexão ativa do RH na Central — usando a configuração antiga do .env' : 'RH sem configuração (nem conexão na Central, nem .env)';
   const ST = { PROCESSED: { label: 'Processado', tone: 'success' as const }, RECEIVED: { label: 'Recebido', tone: 'medium' as const }, ERROR: { label: 'Erro', tone: 'critical' as const } };
 
   return (
@@ -108,46 +91,14 @@ export default async function IntegracoesPage() {
         </CardContent>
       </Card>
 
-      {/* 0b. CONEXÕES COM OUTROS SISTEMAS (v1.131.0) — o espelho da seção
-          acima: as APIs que ESTE SGO consome, com credencial cifrada no
-          servidor. Central administrativa, não API: nenhuma integração de
-          produção passa por aqui ainda (o RH segue na v1 do .env). */}
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Plug className="h-4 w-4 text-brand" /> Conexões com outros sistemas</CardTitle></CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="space-y-1">
-            <Row k="O que é" v="APIs externas que este SGO consome — o sentido contrário da API Global (sistemas que consomem o SGO)" />
-            <Row k="Credencial" v={textoDaCifra} ok={cifra.origem === 'dedicada' && cifra.pendentesNaDerivada === 0} />
-            {migracao && migracao.migradas > 0 && <Row k="Migração da cifra" v={`${migracao.migradas} credencial(is) recifrada(s) com CONNECTIONS_ENC_KEY agora`} ok />}
-            {cifra.ilegiveis > 0 && <Row k="Atenção" v={`${cifra.ilegiveis} credencial(is) não abrem com nenhuma chave — recadastre a chave nessas conexões`} ok={false} />}
-            <Row k="Em uso pelas integrações" v={textoDoUso} ok={rhPelaCentral} />
-          </div>
-          <ConexoesClient conexoes={conexoes} cifra={cifra.origem === 'dedicada' && cifra.pendentesNaDerivada === 0 ? 'dedicada' : cifra.origem} />
-          <div>
-            <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Últimas chamadas de saída ({saidas.length})</p>
-            {saidas.length === 0 && <p className="text-xs text-ink-500">Nenhuma chamada ainda.</p>}
-            <div className="space-y-1">
-              {saidas.map((c) => (
-                <div key={c.id} className="flex items-center justify-between gap-2 rounded-md bg-canvas px-2 py-1 text-xs">
-                  <span className="min-w-0 truncate"><b className="text-ink-900">{c.connectionName}</b> · <span className="font-mono">{c.method} {c.path}</span>{c.error ? <span className="text-danger"> · {c.error}</span> : null}</span>
-                  <span className="shrink-0 tabular-nums text-ink-500">{c.createdAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · <b className={c.ok ? 'text-success' : 'text-danger'}>{c.status ?? 'sem resposta'}</b> · {c.durationMs} ms</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* 1. API do RH (consumo/pull) */}
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ArrowDownToLine className="h-4 w-4 text-brand" /> API do RH (consumo — colaboradores/financeiro)</CardTitle></CardHeader>
         <CardContent className="space-y-1 text-sm">
-          <Row k="Base" v={rhPelaCentral ? rhOrigem.baseUrl : rhBase} />
-          <Row k="Autenticação" v={rhPelaCentral ? `${rhOrigem.authType === 'BEARER' ? 'Authorization: Bearer' : `header ${rhOrigem.authHeader}`} — credencial da conexão «${rhOrigem.nome}», cifrada no servidor` : `header x-api-key = ${mask(process.env.RH_API_KEY)} (.env)`} />
-          <Row k="Status" v={rhPelaCentral ? 'Conectado pela Central — sync automático diário ativo' : rhConfigured() ? 'Fallback .env ativo — sync automático diário ativo' : 'SEM CONFIGURAÇÃO (nem conexão na Central, nem RH_API_KEY)'} ok={rhPelaCentral || rhConfigured()} />
-          <Row k="Fallback (.env)" v={rhConfigured() ? `RH_API_KEY ${mask(process.env.RH_API_KEY)} em ${rhBase} — usado só se a conexão da Central estiver desativada` : 'não configurado'} />
-          <Row k="Endpoints usados" v="/api/ext/colaboradores (vínculo por CNPJ), /api/ext/colaboradores/unidade/:razaoSocial (fallback), /unidades (diagnóstico)" />
-          <Row k="Vínculo das unidades" v="CNPJ da unidade ↔ unidade_cnpj do RH; sem CNPJ ou sem correspondência, a razão social (Nome no RH). Empresas do RH sem unidade no SGO são ignoradas" />
+          <Row k="Base" v={rhBase} />
+          <Row k="Autenticação" v={`header x-api-key = ${mask(process.env.RH_API_KEY)}`} />
+          <Row k="Status" v={rhConfigured() ? (RH_AUTO_SYNC_SUSPENSO ? 'Configurada — sync automático SUSPENSO temporariamente (só o botão Sincronizar)' : 'Configurada — sync automático diário ativo') : 'SEM CHAVE (RH_API_KEY)'} ok={rhConfigured()} />
+          <Row k="Endpoints usados" v="/api/ext/colaboradores (sync), /api/ext/financeiro/* (disponível)" />
           {/* O sync decide calado (pula quem não tem matrícula, desliga quem não
               está "Ativo") e desligado some de Pessoas, da Escala e do Mapa. O
               atalho fica aqui porque é aqui que se vem quando falta gente. */}

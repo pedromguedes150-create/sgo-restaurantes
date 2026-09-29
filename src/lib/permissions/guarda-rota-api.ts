@@ -140,13 +140,11 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/products/setores': { modulo: 'CONFIG_CD_SECTORS', exigir: 'editar' },
 
   '/api/rh/sync': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
-  '/api/rh/recuperacao': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
   '/api/rh/test': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'ver' },
   // Ping da v2: só status/erro/forma, sem dado do RH — por isso pode viver em produção.
   '/api/rh/v2/ping': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'ver' },
   // chaves da API Global (criar / ativar / desativar / revogar): só quem edita Integrações
   '/api/api-global/chaves': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
-  '/api/conexoes': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
 
   '/api/schedule': { modulo: 'SCHEDULE', exigir: 'editar' },
   '/api/schedule/absence': { modulo: 'SCHEDULE_TAB_ACTUAL', exigir: 'editar' },
