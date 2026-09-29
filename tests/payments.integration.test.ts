@@ -7,7 +7,7 @@ import type { SessionUser } from '@/lib/auth/session';
 
 const sfx = process.pid.toString(36);
 let unitId: string;
-let mgrId: string, supId: string, coordId: string, finId: string;
+let mgrId: string, supId: string, coordId: string, finId: string, mgr2Id: string;
 /** Hora Extra escolhe o colaborador do RH (v1.126.0) — um colaborador da unidade. */
 let colabId: string;
 
@@ -15,6 +15,7 @@ const mgr = (): SessionUser => ({ id: mgrId, name: 'M', role: 'MANAGER', unitIds
 const sup = (): SessionUser => ({ id: supId, name: 'S', role: 'SUPERVISOR', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
 const coord = (): SessionUser => ({ id: coordId, name: 'C', role: 'COORDINATOR', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
 const fin = (): SessionUser => ({ id: finId, name: 'F', role: 'FINANCE', unitIds: [], seesAllUnits: false, needsTerms: false });
+const mgr2 = (): SessionUser => ({ id: mgr2Id, name: 'M2', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
 
 beforeAll(async () => {
   const unit = await prisma.unit.create({ data: { code: `PAY-${sfx}`, name: 'U Pay', timezone: 'America/Sao_Paulo', cutoffHour: 4 } });
@@ -24,14 +25,15 @@ beforeAll(async () => {
   supId = (await prisma.user.create({ data: { name: 'S', email: `ps-${sfx}@e.com`, role: 'SUPERVISOR', passwordHash: 'x' } })).id;
   coordId = (await prisma.user.create({ data: { name: 'C', email: `pc-${sfx}@e.com`, role: 'COORDINATOR', passwordHash: 'x' } })).id;
   finId = (await prisma.user.create({ data: { name: 'F', email: `pf-${sfx}@e.com`, role: 'FINANCE', passwordHash: 'x' } })).id;
-  await prisma.unitMembership.createMany({ data: [mgrId, supId, coordId].map((userId) => ({ userId, unitId })) });
+  mgr2Id = (await prisma.user.create({ data: { name: 'M2', email: `pm2-${sfx}@e.com`, role: 'MANAGER', passwordHash: 'x' } })).id;
+  await prisma.unitMembership.createMany({ data: [mgrId, supId, coordId, mgr2Id].map((userId) => ({ userId, unitId })) });
   colabId = (await prisma.collaborator.create({ data: { name: `Colab ${sfx}`, units: { create: { unitId } } } })).id;
 });
 
 afterAll(async () => {
   await prisma.unit.delete({ where: { id: unitId } }).catch(() => {});
   await prisma.collaborator.delete({ where: { id: colabId } }).catch(() => {});
-  await prisma.user.deleteMany({ where: { id: { in: [mgrId, supId, coordId, finId] } } }).catch(() => {});
+  await prisma.user.deleteMany({ where: { id: { in: [mgrId, supId, coordId, finId, mgr2Id] } } }).catch(() => {});
   await prisma.$disconnect();
 });
 
@@ -64,17 +66,23 @@ describe('Pagamentos (Módulo 7)', () => {
     expect(fresh?.status).toBe('REJECTED');
   });
 
-  it('delegação: coordenador aprova no lugar do supervisor durante o período', async () => {
+  it('delegação: quem recebe a delegação aprova no lugar do supervisor durante o período', async () => {
+    /* v1.133.0: o Coordenador já aprova HE por regra própria, então a delegação
+       é demonstrada com um segundo gerente — que só aprova delegado. */
     const id = await newOvertime();
-    // sem delegação, coordenador não pode
-    expect((await approveRequest(coord(), id)).ok).toBe(false);
-    // cria delegação supervisor -> coordenador
+    expect((await approveRequest(mgr2(), id)).ok).toBe(false);
     await prisma.approvalDelegation.create({
-      data: { fromUserId: supId, toUserId: coordId, startsAt: new Date(Date.now() - 3600_000), endsAt: new Date(Date.now() + 3600_000) },
+      data: { fromUserId: supId, toUserId: mgr2Id, startsAt: new Date(Date.now() - 3600_000), endsAt: new Date(Date.now() + 3600_000) },
     });
-    expect((await approveRequest(coord(), id)).ok).toBe(true);
+    expect((await approveRequest(mgr2(), id)).ok).toBe(true);
     const fresh = await prisma.paymentRequest.findUnique({ where: { id } });
-    expect(fresh?.approvedById).toBe(coordId);
+    expect(fresh?.approvedById).toBe(mgr2Id);
+  });
+
+  it('coordenador aprova Hora Extra da unidade SEM delegação (v1.133.0)', async () => {
+    const id = await newOvertime();
+    expect((await approveRequest(coord(), id)).ok).toBe(true);
+    expect((await prisma.paymentRequest.findUnique({ where: { id } }))?.approvedById).toBe(coordId);
   });
 
   it('nega solicitação fora do escopo', async () => {

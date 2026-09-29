@@ -7,6 +7,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { resolveUnitFilter } from '@/lib/scope/unit-filter';
 import { getSelectedUnitId } from '@/lib/scope/selected-unit';
 import { getMyRequests, getToApprove, getToPay, getHistory, getUnitRequests, getMiscTypes, getPaymentCounts, LIMITE_DA_LISTA } from '@/lib/payments/query';
+import { podePagarPorPerfil } from '@/lib/payments/aprovadores';
 import { activeOvertimeRatesByUnit } from '@/lib/overtime/rates';
 import { listSuppliers } from '@/lib/suppliers';
 import Link from 'next/link';
@@ -90,8 +91,10 @@ function toDTO(r: ReqRow): PayReq {
 
 export default async function PagamentosPage({ searchParams }: { searchParams: { unit?: string; unidade?: string } }) {
   const user = (await getSessionUser())!;
-  const isFinanceView = user.role === 'FINANCE' || user.role === 'ADMIN' || user.role === 'CEO';
-  const podeVerConsolidacao = isFinanceView || user.role === 'SUPERVISOR';
+  /* Quem paga (v1.133.0): Coordenador, Financeiro, Admin/CEO — a lista pura de
+     `aprovadores.ts`; a aba Pagar da matriz é conferida no cliente e na rota. */
+  const podePagar = podePagarPorPerfil(user.role);
+  const podeVerConsolidacao = podePagar || user.role === 'SUPERVISOR';
   /* A consolidação de pagamentos (Freelancer + Hora Extra, para o Financeiro)
      obedece a matriz de perfis — é o mesmo teste que a página faz para abrir. */
   const podeVerConsolidacaoPagamentos = Boolean((await permissoesEfetivasDoRequest(user.role)).PAYMENTS_CONSOLIDATION?.canView);
@@ -145,12 +148,12 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
             a mesma que a própria página usa para deixar entrar. */}
         {podeVerConsolidacao && (
           <Link href="/modulos/pagamentos/relatorio-freelancers" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
-            <FileText className="h-4 w-4" /> Consolidação de freelancers
+            <FileText className="h-4 w-4" /> Recorrência de Freelancers
           </Link>
         )}
         {podeVerConsolidacaoPagamentos && (
           <Link href="/modulos/pagamentos/consolidacao" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
-            <FileText className="h-4 w-4" /> Consolidação de pagamentos
+            <FileText className="h-4 w-4" /> Pagamentos de Freelancers
           </Link>
         )}
       </div>
@@ -158,7 +161,7 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
         <CardContent className="pt-4">
           <PaymentsClient
             abas={await abasDoPerfil(user.role, 'PAYMENTS')}
-            isFinanceView={isFinanceView}
+            podePagar={podePagar}
             isAdmin={user.role === 'ADMIN'}
             canEditDate={user.role === 'ADMIN' || user.role === 'SUPERVISOR'}
             units={units}

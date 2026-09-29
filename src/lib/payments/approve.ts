@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { notifyRole, notifyUsers } from '@/lib/notifications';
+import { aprovaCom, podePagarPorPerfil } from '@/lib/payments/aprovadores';
 import { avaliarRecorrencia, avisarRecorrencia, type Recorrencia } from '@/lib/payments/recorrencia';
 import { colaboradorDaUnidade } from '@/lib/payments/create';
 import { calcularHoraExtra, horarioValido } from '@/lib/overtime/calculo';
@@ -30,10 +31,10 @@ export async function approverRolesFor(user: SessionUser, now: Date = new Date()
 }
 
 export async function canApprove(user: SessionUser, requestId: string): Promise<boolean> {
-  const req = await prisma.paymentRequest.findUnique({ where: { id: requestId }, select: { unitId: true, status: true, approverRole: true } });
+  const req = await prisma.paymentRequest.findUnique({ where: { id: requestId }, select: { unitId: true, status: true, approverRole: true, type: true } });
   if (!req || req.status !== 'PENDING' || !canAccessUnit(user, req.unitId)) return false;
   const roles = await approverRolesFor(user);
-  return roles.has(req.approverRole);
+  return aprovaCom(roles, req);
 }
 
 /**
@@ -108,7 +109,7 @@ export async function approveRequest(user: SessionUser, id: string, ctx: Ctx = {
   // Segregação de funções: quem lança não aprova o próprio — EXCETO ADMIN/CEO (decisão do Pedro, 21/07).
   if (req.requestedById === user.id && user.role !== 'ADMIN' && user.role !== 'CEO') return { ok: false, reason: 'FORBIDDEN' };
   const roles = await approverRolesFor(user);
-  if (!roles.has(req.approverRole)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!aprovaCom(roles, req)) return { ok: false, reason: 'FORBIDDEN' };
 
   const res = await prisma.paymentRequest.updateMany({
     where: { id, status: 'PENDING' },
@@ -140,12 +141,12 @@ export async function approveRequest(user: SessionUser, id: string, ctx: Ctx = {
 
 export async function rejectRequest(user: SessionUser, id: string, reason: string, ctx: Ctx = {}): Promise<PayActionResult> {
   if (!reason?.trim()) return { ok: false, reason: 'INVALID' };
-  const req = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true, status: true, approverRole: true } });
+  const req = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true, status: true, approverRole: true, type: true } });
   if (!req) return { ok: false, reason: 'NOT_FOUND' };
   if (!canAccessUnit(user, req.unitId)) return { ok: false, reason: 'FORBIDDEN' };
   if (req.status !== 'PENDING') return { ok: false, reason: 'STATE' };
   const roles = await approverRolesFor(user);
-  if (!roles.has(req.approverRole)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!aprovaCom(roles, req)) return { ok: false, reason: 'FORBIDDEN' };
 
   const res = await prisma.paymentRequest.updateMany({
     where: { id, status: 'PENDING' },
@@ -165,11 +166,14 @@ export async function rejectRequest(user: SessionUser, id: string, reason: strin
   return { ok: true };
 }
 
-/** Financeiro/Admin marca como paga. */
+/** Marca como paga: Coordenador (a operação, v1.133.0), Financeiro e Admin/CEO — `PERFIS_QUE_PAGAM`; a aba "Pagar" da matriz é a outra porta, conferida na rota. */
 export async function markPaid(user: SessionUser, id: string, ctx: Ctx = {}): Promise<PayActionResult> {
-  if (user.role !== 'FINANCE' && user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
+  if (!podePagarPorPerfil(user.role)) return { ok: false, reason: 'FORBIDDEN' };
   const req = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true, status: true, requestedById: true, amount: true } });
   if (!req) return { ok: false, reason: 'NOT_FOUND' };
+  /* O Coordenador paga só o da(s) unidade(s) dele. O Financeiro é global por
+     desenho (não tem unidade) e Admin/CEO veem tudo — para eles nada muda. */
+  if (user.role === 'COORDINATOR' && !canAccessUnit(user, req.unitId)) return { ok: false, reason: 'FORBIDDEN' };
   if (req.status !== 'APPROVED') return { ok: false, reason: 'STATE' };
 
   const res = await prisma.paymentRequest.updateMany({ where: { id, status: 'APPROVED' }, data: { status: 'PAID', paidById: user.id, paidAt: new Date() } });
@@ -235,7 +239,7 @@ export async function approverEditRequest(user: SessionUser, id: string, input: 
   if (req.status !== 'PENDING') return { ok: false, reason: 'STATE' };
   if (req.requestedById === user.id && user.role !== 'ADMIN' && user.role !== 'CEO') return { ok: false, reason: 'FORBIDDEN' };
   const roles = await approverRolesFor(user);
-  if (!roles.has(req.approverRole)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!aprovaCom(roles, req)) return { ok: false, reason: 'FORBIDDEN' };
 
   const data: Record<string, unknown> = {};
   const antes: Record<string, unknown> = {};
