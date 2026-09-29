@@ -3,6 +3,7 @@ import { ArrowLeft, Plug, CheckCircle2, XCircle, ArrowDownToLine, ArrowUpFromLin
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { rhConfigured, rhV2Base, rhV2Configured } from '@/lib/rh/client';
+import { RH_AUTO_SYNC_SUSPENSO } from '@/lib/rh/sync';
 import { feriasWebhookConfigured } from '@/lib/rh/webhook';
 import { RhV2Ping } from '@/components/admin/rh-v2-ping';
 import { ApiGlobalClient } from '@/components/admin/api-global-client';
@@ -96,7 +97,7 @@ export default async function IntegracoesPage() {
         <CardContent className="space-y-1 text-sm">
           <Row k="Base" v={rhBase} />
           <Row k="Autenticação" v={`header x-api-key = ${mask(process.env.RH_API_KEY)}`} />
-          <Row k="Status" v={rhConfigured() ? 'Configurada — sync automático diário ativo' : 'SEM CHAVE (RH_API_KEY)'} ok={rhConfigured()} />
+          <Row k="Status" v={rhConfigured() ? (RH_AUTO_SYNC_SUSPENSO ? 'Configurada — sync automático SUSPENSO temporariamente (só o botão Sincronizar)' : 'Configurada — sync automático diário ativo') : 'SEM CHAVE (RH_API_KEY)'} ok={rhConfigured()} />
           <Row k="Endpoints usados" v="/api/ext/colaboradores (sync), /api/ext/financeiro/* (disponível)" />
           {/* O sync decide calado (pula quem não tem matrícula, desliga quem não
               está "Ativo") e desligado some de Pessoas, da Escala e do Mapa. O

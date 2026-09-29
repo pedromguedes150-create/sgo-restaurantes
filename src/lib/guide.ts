@@ -112,7 +112,7 @@ export const GUIDE: GuideSection[] = [
           'Em Unidades, informe o "Nome no RH" e sincronize os colaboradores.',
         ],
         tips: [
-          'A sincronização do RH também roda sozinha 1×/dia.',
+          'A sincronização do RH normalmente roda sozinha 1×/dia — mas está SUSPENSA temporariamente (v1.132.2) até a conferência dos colaboradores: só o botão Sincronizar funciona, e ele não deve ser usado antes da conferência.',
           'Quem NÃO vem na resposta do RH não é inativado (v1.132.2): só é marcado inativo quem o RH devolve, pela matrícula, com status de desligamento. Lista vazia, erro ou resposta incompleta não mudam ninguém — a auditoria só conta os "não retornados".',
         ],
       },

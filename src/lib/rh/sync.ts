@@ -138,8 +138,19 @@ export async function syncAllRegisteredUnits(user: SessionUser): Promise<SyncRes
  * Sincronização AUTOMÁTICA (sistema) — chamada pelo scheduler ~1x/dia.
  * Não exige sessão; só roda se o RH estiver configurado. Idempotente.
  */
-export async function runDailyRhSync(): Promise<{ ran: boolean; units?: number; created?: number; updated?: number }> {
-  if (!rhConfigured()) return { ran: false };
+/**
+ * SUSPENSÃO TEMPORÁRIA do sync automático (v1.132.2, decisão do Pedro em
+ * 29/09/2026): enquanto os 49 colaboradores inativados em 29/09 não forem
+ * conferidos, NENHUMA sincronização roda sozinha — nem no boot, nem no
+ * scheduler de hora em hora. Só o botão Sincronizar (manual, com ator) segue
+ * disponível. `RH_API_KEY` e a integração não são tocadas. Para voltar ao
+ * normal, troque para `false`.
+ */
+export const RH_AUTO_SYNC_SUSPENSO = true;
+
+export async function runDailyRhSync(): Promise<{ ran: boolean; motivo?: 'SUSPENSO' | 'NAO_CONFIGURADO'; units?: number; created?: number; updated?: number }> {
+  if (RH_AUTO_SYNC_SUSPENSO) return { ran: false, motivo: 'SUSPENSO' };
+  if (!rhConfigured()) return { ran: false, motivo: 'NAO_CONFIGURADO' };
   const units = await prisma.unit.findMany({ where: { active: true, rhUnitName: { not: null } }, select: { id: true } });
   let created = 0, updated = 0;
   for (const u of units) {
