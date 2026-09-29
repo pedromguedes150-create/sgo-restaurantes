@@ -13,6 +13,7 @@ import { FilterBar, FilterSelect, FilterDate } from '@/components/ui/filter-bar'
 import { Group } from '@/components/ui/ds/group';
 import { shortUnitName } from '@/lib/unit-name';
 import { formatBRL } from '@/lib/utils';
+import { formatarCpf } from '@/lib/cpf';
 import {
   PERIODO_LABEL, TIPO_LABEL, STATUS_LABEL, emBR,
   type Consolidado, type FiltroConsolidado, type FreelancerNoPeriodo,
@@ -189,6 +190,8 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
                   <span className="rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] font-semibold text-warning">Recorrente</span>
                 </span>
               ) },
+              { key: 'cpf', header: 'CPF', hideOnMobile: true, width: '9rem', cell: (g) => g.cpf ? formatarCpf(g.cpf) : <span className="text-ink-400">—</span> },
+              { key: 'pix', header: 'Chave PIX', hideOnMobile: true, width: '10rem', cell: (g) => g.pixKey ?? <span className="text-ink-400">—</span> },
               { key: 'unidade', header: 'Unidade', cell: (g) => g.unidades.map(shortUnitName).join(', ') },
               { key: 'semana', header: 'Semana', hideOnMobile: true, width: '10rem', cell: (g) => `${emBR(g.semanaDe).slice(0, 5)} a ${emBR(g.semanaAte).slice(0, 5)}` },
               { key: 'qtd', header: 'Solicitações na semana', numeric: true, width: '8rem', cell: (g) => g.solicitacoes },
@@ -249,11 +252,11 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
               <span className="flex flex-wrap items-center gap-1">
                 <span className="font-semibold text-ink-900">{f.nome}</span>
                 {f.recorrente && <span className="rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] font-semibold text-warning">Recorrente</span>}
-                {/* Sem isto, quem teve a única solicitação rejeitada aparecia
-                    como "1 solicitação · R$ 0,00" e parecia defeito. */}
                 {f.rejeitadas > 0 && <span className="text-[10px] text-ink-500">{f.rejeitadas} rejeitada(s)</span>}
               </span>
             ) },
+            { key: 'cpf', header: 'CPF', hideOnMobile: true, width: '9rem', cell: (f) => f.cpf ? formatarCpf(f.cpf) : <span className="text-ink-400">—</span> },
+            { key: 'pix', header: 'Chave PIX', hideOnMobile: true, width: '10rem', cell: (f) => f.pixKey ?? <span className="text-ink-400">—</span> },
             { key: 'unidades', header: 'Unidade', hideOnMobile: true, cell: (f) => f.unidades.map(shortUnitName).join(', ') },
             { key: 'sol', header: 'Solicitações', numeric: true, width: '7rem', cell: (f) => f.solicitacoes },
             { key: 'valor', header: 'Valor total', numeric: true, width: '8rem', cell: (f) => formatBRL(f.valor) },

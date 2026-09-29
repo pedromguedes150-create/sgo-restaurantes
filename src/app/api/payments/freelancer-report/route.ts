@@ -24,15 +24,16 @@ export async function GET(req: Request) {
 
   const sep = ';';
   const brl = (n: number) => n.toFixed(2).replace('.', ',');
-  const lines = [['Freelancer', 'Chave PIX', 'Data', 'Unidade', 'Status', 'Valor (R$)', 'Divergência'].join(sep)];
+  const fmtCpf = (d: string | null) => d && d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : '';
+  const lines = [['Freelancer', 'CPF', 'Chave PIX', 'Data', 'Unidade', 'Status', 'Valor (R$)', 'Divergência'].join(sep)];
   for (const g of data.groups) {
     for (const l of g.lines) {
-      lines.push([`"${g.name}"`, `"${g.pixKey ?? ''}"`, l.date, `"${l.unit}"`, l.status, brl(l.amount), l.divergent ? `padrão ${l.standardValue != null ? brl(l.standardValue) : '—'}` : ''].join(sep));
+      lines.push([`"${g.name}"`, `"${fmtCpf(g.cpf)}"`, `"${g.pixKey ?? ''}"`, l.date, `"${l.unit}"`, l.status, brl(l.amount), l.divergent ? `padrão ${l.standardValue != null ? brl(l.standardValue) : '—'}` : ''].join(sep));
     }
-    lines.push([`"${g.name} — TOTAL"`, `"${g.pixKey ?? ''}"`, '', '', `${g.count} pagto(s)`, brl(g.total), ''].join(sep));
+    lines.push([`"${g.name} — TOTAL"`, `"${fmtCpf(g.cpf)}"`, `"${g.pixKey ?? ''}"`, '', '', `${g.count} pagto(s)`, brl(g.total), ''].join(sep));
     lines.push('');
   }
-  lines.push(['TOTAL GERAL', '', '', '', `${data.grandCount} pagto(s)`, brl(data.grandTotal), ''].join(sep));
+  lines.push(['TOTAL GERAL', '', '', '', '', `${data.grandCount} pagto(s)`, brl(data.grandTotal), ''].join(sep));
 
   const title = `Consolidacao de Freelancers - ${ym}`;
   const csv = '﻿' + `"${title}"\n` + lines.join('\n');

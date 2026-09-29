@@ -374,6 +374,8 @@ export interface SemanaRecorrente {
   chave: string;
   freelancerId: string;
   nome: string;
+  cpf: string | null;
+  pixKey: string | null;
   unidades: string[];
   semanaDe: string;
   semanaAte: string;

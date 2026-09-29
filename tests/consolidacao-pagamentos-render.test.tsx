@@ -114,7 +114,7 @@ describe('Visão financeira: somas na própria tela', () => {
 describe('Visão de recorrência: o total que era feito na calculadora', () => {
   /* O print do Pedro: seis recorrentes da semana de 21/09 no Jardim Teresópolis. */
   const semana = (nome: string, solicitacoes: number, valor: number, id = nome): SemanaRecorrente => ({
-    chave: `${id}|2026-09-21`, freelancerId: id, nome, unidades: ['Jardim Teresópolis'], semanaDe: '2026-09-21', semanaAte: '2026-09-27', solicitacoes, valor,
+    chave: `${id}|2026-09-21`, freelancerId: id, nome, cpf: null, pixKey: null, unidades: ['Jardim Teresópolis'], semanaDe: '2026-09-21', semanaAte: '2026-09-27', solicitacoes, valor,
   });
   const linhas = [semana('Vinícius', 6, 675), semana('Felipe', 6, 660), semana('Junior', 5, 405), semana('César', 4, 545), semana('Harison', 4, 523.7), semana('Jociele', 4, 425)];
 

@@ -1590,7 +1590,7 @@ export const GUIDE: GuideSection[] = [
           'Em "Biblioteca de modelos" (ou Configurações → Modelos de checklist) o Admin cria, edita e exclui os modelos — clique no modelo para visualizá-lo; o lápis edita.',
           'Modelos: "Exportar (Excel)" baixa a planilha; edite (altere/adicione modelos e etapas) e use "Importar (Excel)" para atualizar a biblioteca em lote. "Imprimir (PDF)" gera a folha para conferência in loco.',
           'Excluir checklist: se ele já tiver execuções, o sistema bloqueia e oferece a exclusão definitiva (apaga histórico/fotos) — ideal para checklists de teste.',
-          'Pagamentos: o cadastro de freelancers e tipos de avulso é só aqui. No freelancer, a chave PIX é obrigatória.',
+          'Pagamentos: o cadastro de freelancers e tipos de avulso é só aqui. No freelancer, CPF (com validação) e chave PIX são obrigatórios. Freelancer sem CPF aparece com a marca "Cadastro incompleto" — edite e informe o CPF. O CPF aparece nas tabelas de Recorrência de Freelancers, no Fechamento (PIX) e nos relatórios exportados.',
           'VALOR DA HORA EXTRA (v1.130.0): em Configurações → Valor da hora extra (por hora), o Admin cadastra, por unidade, os valores/hora que o gerente pode escolher ao lançar Hora Extra (ex.: 15, 20, 25, 30). Desativar tira o valor da lista sem apagar; excluir também é seguro — a solicitação guarda o valor usado. Unidade sem valor cadastrado não consegue lançar Hora Extra até haver um.',
           'Fornecedores: lista única (Admin/CEO/Supervisão) usada em Gás, Notas Recebidas e Pagamentos.',
           'Tudo tem editar e excluir; a exclusão é bloqueada quando há histórico (nesse caso, inative).',

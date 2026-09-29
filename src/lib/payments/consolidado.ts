@@ -140,7 +140,7 @@ export async function getConsolidadoFreelancers(user: SessionUser, filtro: Filtr
     prisma.unit.count({ where: { active: true, ...(user.seesAllUnits || user.role === 'FINANCE' ? {} : { id: { in: user.unitIds } }) } }),
     prisma.paymentRequest.findMany({
       where: { ...base, ...daUnidade, ...noPeriodo(periodo.de, periodo.ate) },
-      include: { unit: { select: { name: true } }, freelancer: { select: { id: true, name: true } } },
+      include: { unit: { select: { name: true } }, freelancer: { select: { id: true, name: true, cpf: true, pixKey: true } } },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.paymentRequest.findMany({
@@ -151,7 +151,7 @@ export async function getConsolidadoFreelancers(user: SessionUser, filtro: Filtr
         freelancerId: { not: null },
         workDate: { gte: dia(janelaDeSemanas.de), lt: new Date(dia(janelaDeSemanas.ate).getTime() + 86400000) },
       },
-      select: { freelancerId: true, workDate: true, amount: true, unitId: true, unit: { select: { name: true } }, freelancer: { select: { name: true } } },
+      select: { freelancerId: true, workDate: true, amount: true, unitId: true, unit: { select: { name: true } }, freelancer: { select: { name: true, cpf: true, pixKey: true } } },
     }),
     prisma.paymentRequest.count({ where: { ...base, ...daUnidade, ...noPeriodo(anterior.de, anterior.ate) } }),
     getFreelancerWeekLimit(),
@@ -165,6 +165,7 @@ export async function getConsolidadoFreelancers(user: SessionUser, filtro: Filtr
     const chave = `${r.freelancerId}|${s.de}`;
     const g = porFreelancerSemana.get(chave) ?? {
       chave, freelancerId: r.freelancerId, nome: r.freelancer?.name ?? 'Freelancer',
+      cpf: r.freelancer?.cpf ?? null, pixKey: r.freelancer?.pixKey ?? null,
       unidades: [], semanaDe: s.de, semanaAte: s.ate, solicitacoes: 0, valor: 0,
     };
     g.solicitacoes++;
@@ -212,9 +213,10 @@ export async function getConsolidadoFreelancers(user: SessionUser, filtro: Filtr
   const porFreelancer = new Map<string, FreelancerNoPeriodo>();
   for (const l of visiveis) {
     if (!l.freelancerId) continue;
+    const fl = linhasBrutas.find((r) => r.freelancerId === l.freelancerId)?.freelancer;
     const g = porFreelancer.get(l.freelancerId) ?? {
-      freelancerId: l.freelancerId, nome: l.pessoa, solicitacoes: 0, valor: 0,
-      recorrente: idsRecorrentes.has(l.freelancerId), rejeitadas: 0, unidades: [], linhas: [],
+      freelancerId: l.freelancerId, nome: l.pessoa, cpf: fl?.cpf ?? null, pixKey: fl?.pixKey ?? null,
+      solicitacoes: 0, valor: 0, recorrente: idsRecorrentes.has(l.freelancerId), rejeitadas: 0, unidades: [], linhas: [],
     };
     g.solicitacoes++;
     if (l.status === 'REJECTED') g.rejeitadas++; else g.valor += l.valor;

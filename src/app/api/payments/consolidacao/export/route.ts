@@ -100,16 +100,17 @@ async function exportarRecorrencia(user: NonNullable<Awaited<ReturnType<typeof g
     [`Período: ${rc.periodo.rotulo} · Unidade: ${unidade}`],
     [`Recorrente = mais de ${rc.limiteSemanal} solicitações do mesmo freelancer numa semana (segunda a domingo).`],
     [],
-    ['Freelancer', 'Unidade', 'Semana', 'Solicitações na semana', 'Valor total'],
+    ['Freelancer', 'CPF', 'Chave PIX', 'Unidade', 'Semana', 'Solicitações na semana', 'Valor total'],
   ];
-  for (const g of rc.linhas) aoa.push([g.nome, g.unidades.join(', '), `${emBR(g.semanaDe)} a ${emBR(g.semanaAte)}`, g.solicitacoes, g.valor]);
+  const fmtCpf = (d: string | null) => d && d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : '';
+  for (const g of rc.linhas) aoa.push([g.nome, fmtCpf(g.cpf), g.pixKey ?? '', g.unidades.join(', '), `${emBR(g.semanaDe)} a ${emBR(g.semanaAte)}`, g.solicitacoes, g.valor]);
   aoa.push([]);
-  aoa.push(['TOTAL DE FREELANCERS RECORRENTES', '', '', t.freelancers, '']);
-  aoa.push(['TOTAL DE SOLICITAÇÕES', '', '', t.solicitacoes, '']);
-  aoa.push(['VALOR TOTAL DOS RECORRENTES', '', '', '', t.valor]);
+  aoa.push(['TOTAL DE FREELANCERS RECORRENTES', '', '', '', '', t.freelancers, '']);
+  aoa.push(['TOTAL DE SOLICITAÇÕES', '', '', '', '', t.solicitacoes, '']);
+  aoa.push(['VALOR TOTAL DOS RECORRENTES', '', '', '', '', '', t.valor]);
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [34, 28, 26, 22, 14].map((wch) => ({ wch }));
-  moeda(ws, 5, [4]);
+  ws['!cols'] = [34, 16, 22, 28, 26, 22, 14].map((wch) => ({ wch }));
+  moeda(ws, 5, [6]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Recorrência');
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;

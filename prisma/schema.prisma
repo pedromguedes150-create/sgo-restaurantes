@@ -1570,6 +1570,8 @@ model ManagerWorkSchedule {
 model Freelancer {
   id           String                 @id @default(cuid())
   name         String
+  /// CPF do freelancer — obrigatório no cadastro novo (nullable p/ legado).
+  cpf          String?                @unique
   defaultValue Decimal                @db.Decimal(10, 2)
   /// Chave PIX para pagamento (obrigatória no cadastro) — Módulo 7.
   pixKey       String?

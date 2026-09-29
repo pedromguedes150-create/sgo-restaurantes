@@ -12,10 +12,11 @@ import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 import { formatBRL } from '@/lib/utils';
+import { formatarCpf, validarCpf, limparCpf } from '@/lib/cpf';
 
 interface Unit { id: string; name: string }
 interface UserOpt { id: string; name: string; role: string }
-export interface FreelancerRow { id: string; name: string; defaultValue: number; pixKey: string | null; active: boolean; units: string[]; unitIds: string[]; sectorRates: { sectorName: string; dayValue: number }[] }
+export interface FreelancerRow { id: string; name: string; cpf: string | null; defaultValue: number; pixKey: string | null; active: boolean; units: string[]; unitIds: string[]; sectorRates: { sectorName: string; dayValue: number }[] }
 export interface MiscTypeRow { id: string; name: string; approverRole: string; active: boolean }
 export interface DelegationRow { id: string; from: string; to: string; period: string }
 
@@ -28,6 +29,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
 
   // Freelancer
   const [fName, setFName] = useState('');
+  const [fCpf, setFCpf] = useState('');
   const [fValue, setFValue] = useState('');
   const [fPix, setFPix] = useState('');
   const [fUnits, setFUnits] = useState<string[]>([]);
@@ -73,9 +75,12 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
         <div className="rounded-lg border border-dashed p-3 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Nome</Label><Input value={fName} onChange={(e) => setFName(e.target.value)} /></div>
-            <div><Label>Valor padrão (R$)</Label><Input inputMode="decimal" value={fValue} onChange={(e) => setFValue(e.target.value)} /></div>
+            <div><Label>CPF (obrigatório)</Label><Input inputMode="numeric" value={fCpf} onChange={(e) => { const d = limparCpf(e.target.value); setFCpf(d.length <= 11 ? formatarCpf(d) : fCpf); }} placeholder="000.000.000-00" maxLength={14} /></div>
           </div>
-          <div><Label>Chave PIX (obrigatória)</Label><Input value={fPix} onChange={(e) => setFPix(e.target.value)} placeholder="CPF, CNPJ, e-mail, telefone ou aleatória" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>Valor padrão (R$)</Label><Input inputMode="decimal" value={fValue} onChange={(e) => setFValue(e.target.value)} /></div>
+            <div><Label>Chave PIX (obrigatória)</Label><Input value={fPix} onChange={(e) => setFPix(e.target.value)} placeholder="CPF, CNPJ, e-mail, telefone ou aleatória" /></div>
+          </div>
           <div>
             <Label>Unidades</Label>
             <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={fUnits} onChange={setFUnits} placeholder="Escolha as unidades…" searchable={units.length > 6} />
@@ -84,10 +89,11 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
             setFErr(null);
             const valor = parseFloat((fValue || '').replace(/\./g, '').replace(',', '.'));
             if (!fName.trim()) { setFErr('Informe o nome do freelancer.'); return; }
+            if (!validarCpf(fCpf)) { setFErr('CPF inválido. Informe os 11 dígitos.'); return; }
             if (!(valor > 0)) { setFErr('Informe o valor padrão (maior que zero).'); return; }
             if (!fPix.trim()) { setFErr('Informe a chave PIX do freelancer.'); return; }
             if (fUnits.length === 0) { setFErr('Selecione ao menos uma unidade (toque no nome da unidade acima).'); return; }
-            if (await run({ entity: 'freelancer', action: 'create', name: fName, defaultValue: valor, pixKey: fPix, unitIds: fUnits })) { setFName(''); setFValue(''); setFPix(''); setFUnits([]); }
+            if (await run({ entity: 'freelancer', action: 'create', name: fName, cpf: limparCpf(fCpf), defaultValue: valor, pixKey: fPix, unitIds: fUnits })) { setFName(''); setFCpf(''); setFValue(''); setFPix(''); setFUnits([]); }
           }}><Plus className="h-4 w-4" /> Adicionar freelancer</Button>
           {fErr && <p className="text-sm font-medium text-danger">{fErr}</p>}
         </div>
@@ -139,6 +145,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
 function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[]; onChange: () => void }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(f.name);
+  const [cpf, setCpf] = useState(f.cpf ? formatarCpf(f.cpf) : '');
   const [value, setValue] = useState(String(f.defaultValue).replace('.', ','));
   const [pix, setPix] = useState(f.pixKey ?? '');
   const [unitIds, setUnitIds] = useState<string[]>(f.unitIds);
@@ -158,7 +165,10 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
   return (
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
-        <div><p className="font-semibold text-ink-900">{f.name}</p><p className="text-xs text-ink-500">{formatBRL(f.defaultValue)} · PIX: {f.pixKey || <span className="text-danger">não cadastrada</span>} · {f.units.join(', ')}{f.sectorRates.length > 0 ? ` · ${f.sectorRates.length} setor(es) c/ valor-dia` : ''}</p></div>
+        <div>
+          <p className="font-semibold text-ink-900">{f.name}{!f.cpf && <span className="ml-2 rounded-full bg-warning-bg px-2 py-0.5 text-[11px] font-semibold text-warning">Cadastro incompleto</span>}</p>
+          <p className="text-xs text-ink-500">{f.cpf ? `CPF: ${formatarCpf(f.cpf)}` : <span className="text-warning">CPF não cadastrado</span>} · {formatBRL(f.defaultValue)} · PIX: {f.pixKey || <span className="text-danger">não cadastrada</span>} · {f.units.join(', ')}{f.sectorRates.length > 0 ? ` · ${f.sectorRates.length} setor(es) c/ valor-dia` : ''}</p>
+        </div>
         <div className="flex items-center gap-1">
           <button onClick={() => call({ entity: 'freelancer', action: 'toggle', id: f.id, active: !f.active })}><StatusBadge tone={f.active ? 'success' : 'critical'}>{f.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
@@ -169,14 +179,21 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
         <div className="mt-2 space-y-2 rounded-lg bg-sunken/40 p-2">
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
-            <div><Label className="text-xs">Valor padrão (R$)</Label><Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} className="h-10 text-sm" /></div>
+            <div><Label className="text-xs">CPF</Label><Input inputMode="numeric" value={cpf} onChange={(e) => { const d = limparCpf(e.target.value); setCpf(d.length <= 11 ? formatarCpf(d) : cpf); }} className="h-10 text-sm" placeholder="000.000.000-00" maxLength={14} /></div>
           </div>
-          <div><Label className="text-xs">Chave PIX</Label><Input value={pix} onChange={(e) => setPix(e.target.value)} className="h-10 text-sm" placeholder="chave PIX" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Valor padrão (R$)</Label><Input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} className="h-10 text-sm" /></div>
+            <div><Label className="text-xs">Chave PIX</Label><Input value={pix} onChange={(e) => setPix(e.target.value)} className="h-10 text-sm" placeholder="chave PIX" /></div>
+          </div>
           <div>
             <Label className="text-xs">Unidades</Label>
             <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
           </div>
-          <Button size="sm" className="w-full" disabled={busy} onClick={() => { if (!pix.trim()) { setMsg('Informe a chave PIX.'); return; } call({ entity: 'freelancer', action: 'update', id: f.id, name, defaultValue: parseFloat((value || '0').replace(',', '.')), pixKey: pix, unitIds }, () => setEditing(false)); }}><Save className="h-4 w-4" /> Salvar alterações</Button>
+          <Button size="sm" className="w-full" disabled={busy} onClick={() => {
+            if (cpf.trim() && !validarCpf(cpf)) { setMsg('CPF inválido. Informe os 11 dígitos.'); return; }
+            if (!pix.trim()) { setMsg('Informe a chave PIX.'); return; }
+            call({ entity: 'freelancer', action: 'update', id: f.id, name, ...(cpf.trim() ? { cpf: limparCpf(cpf) } : {}), defaultValue: parseFloat((value || '0').replace(',', '.')), pixKey: pix, unitIds }, () => setEditing(false));
+          }}><Save className="h-4 w-4" /> Salvar alterações</Button>
 
           {/* Cobertura temporária de setor (16/07): valor por DIA por setor */}
           <div className="rounded-md border border-dashed p-2">

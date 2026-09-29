@@ -4,6 +4,7 @@ import { hashPassword } from '@/lib/auth/password';
 import { fromZonedTime } from 'date-fns-tz';
 import { audit } from '@/lib/audit';
 import { ALL_ROLES } from '@/lib/permissions';
+import { validarCpf, limparCpf } from '@/lib/cpf';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role, TaskModule } from '@prisma/client';
 
@@ -663,10 +664,14 @@ export async function setTemplateUnits(user: SessionUser, id: string, unitIds: s
 }
 
 /* ──────────────────────── Pagamentos: cadastros ───────────────────── */
-export async function createFreelancer(user: SessionUser, input: { name: string; defaultValue: number; pixKey?: string; unitIds: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function createFreelancer(user: SessionUser, input: { name: string; cpf: string; defaultValue: number; pixKey?: string; unitIds: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!input.name?.trim() || !(input.defaultValue > 0) || !input.pixKey?.trim() || input.unitIds.length === 0) return { ok: false, reason: 'INVALID' };
-  const f = await prisma.freelancer.create({ data: { name: input.name.trim(), defaultValue: input.defaultValue, pixKey: input.pixKey.trim(), units: { create: input.unitIds.map((unitId) => ({ unitId })) } } });
+  const cpfDigits = limparCpf(input.cpf ?? '');
+  if (!validarCpf(cpfDigits)) return { ok: false, reason: 'INVALID', message: 'CPF inválido.' };
+  const existing = await prisma.freelancer.findUnique({ where: { cpf: cpfDigits } });
+  if (existing) return { ok: false, reason: 'CONFLICT', message: `CPF já cadastrado para o freelancer "${existing.name}".` };
+  const f = await prisma.freelancer.create({ data: { name: input.name.trim(), cpf: cpfDigits, defaultValue: input.defaultValue, pixKey: input.pixKey.trim(), units: { create: input.unitIds.map((unitId) => ({ unitId })) } } });
   await audit({ userId: user.id, action: 'FREELANCER_CREATE', module: 'CONFIG', entity: 'freelancer', entityId: f.id, ...ctx });
   return { ok: true, id: f.id };
 }
@@ -699,17 +704,25 @@ export async function toggleFreelancer(user: SessionUser, id: string, active: bo
   return { ok: true };
 }
 
-export async function updateFreelancer(user: SessionUser, id: string, input: { name?: string; defaultValue?: number; pixKey?: string; unitIds?: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateFreelancer(user: SessionUser, id: string, input: { name?: string; cpf?: string; defaultValue?: number; pixKey?: string; unitIds?: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
   if (input.defaultValue !== undefined && !(input.defaultValue > 0)) return { ok: false, reason: 'INVALID' };
   if (input.pixKey !== undefined && !input.pixKey.trim()) return { ok: false, reason: 'INVALID' };
   if (input.unitIds !== undefined && input.unitIds.length === 0) return { ok: false, reason: 'INVALID' };
+  let cpfDigits: string | undefined;
+  if (input.cpf !== undefined) {
+    cpfDigits = limparCpf(input.cpf);
+    if (!validarCpf(cpfDigits)) return { ok: false, reason: 'INVALID', message: 'CPF inválido.' };
+    const existing = await prisma.freelancer.findUnique({ where: { cpf: cpfDigits } });
+    if (existing && existing.id !== id) return { ok: false, reason: 'CONFLICT', message: `CPF já cadastrado para o freelancer "${existing.name}".` };
+  }
   await prisma.$transaction(async (tx) => {
     await tx.freelancer.update({
       where: { id },
       data: {
         ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(cpfDigits !== undefined ? { cpf: cpfDigits } : {}),
         ...(input.defaultValue !== undefined ? { defaultValue: input.defaultValue } : {}),
         ...(input.pixKey !== undefined ? { pixKey: input.pixKey.trim() } : {}),
       },

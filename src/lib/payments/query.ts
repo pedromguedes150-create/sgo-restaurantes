@@ -151,7 +151,7 @@ export async function getMiscTypes() {
 
 /* ───────────────────────── Consolidação mensal de freelancers ───────────────────────── */
 export interface FreelancerPayLine { id: string; date: string; unit: string; status: string; amount: number; divergent: boolean; standardValue: number | null }
-export interface FreelancerConsolidationGroup { freelancerId: string; name: string; pixKey: string | null; count: number; total: number; lines: FreelancerPayLine[] }
+export interface FreelancerConsolidationGroup { freelancerId: string; name: string; cpf: string | null; pixKey: string | null; count: number; total: number; lines: FreelancerPayLine[] }
 export interface FreelancerConsolidation { yearMonth: string; groups: FreelancerConsolidationGroup[]; grandTotal: number; grandCount: number }
 
 const PAY_STATUS_LABEL: Record<string, string> = { PENDING: 'Pendente', APPROVED: 'Aprovada', PAID: 'Paga', REJECTED: 'Rejeitada' };
@@ -189,7 +189,7 @@ export async function getFreelancerConsolidation(user: SessionUser, yearMonth: s
       ...(unitId ? { unitId } : {}),
     },
     orderBy: { createdAt: 'asc' },
-    include: { unit: { select: { name: true } }, freelancer: { select: { id: true, name: true, pixKey: true } } },
+    include: { unit: { select: { name: true } }, freelancer: { select: { id: true, name: true, cpf: true, pixKey: true } } },
   });
 
   const map = new Map<string, FreelancerConsolidationGroup>();
@@ -197,7 +197,7 @@ export async function getFreelancerConsolidation(user: SessionUser, yearMonth: s
   for (const r of rows) {
     const key = r.freelancerId ?? r.id;
     const name = r.freelancer?.name ?? 'Freelancer';
-    const g = map.get(key) ?? { freelancerId: key, name, pixKey: r.freelancer?.pixKey ?? null, count: 0, total: 0, lines: [] };
+    const g = map.get(key) ?? { freelancerId: key, name, cpf: r.freelancer?.cpf ?? null, pixKey: r.freelancer?.pixKey ?? null, count: 0, total: 0, lines: [] };
     const amount = Number(r.amount);
     g.lines.push({
       id: r.id,
