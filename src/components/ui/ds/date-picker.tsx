@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Field, controlBase, controlSize, controlTone, useDescribedBy } from './field';
@@ -16,6 +17,7 @@ import { toISO, parseISO, daysInMonth, firstWeekday, addDays, addMonths, formatB
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const DIAS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+const POP_W = 280; // 17.5rem
 
 export interface DatePickerProps {
   value: string | null; // 'AAAA-MM-DD'
@@ -39,33 +41,76 @@ export function DatePicker({
   const { descId, describedBy } = useDescribedBy(id, hint, error);
   const [open, setOpen] = React.useState(false);
   const [cursor, setCursor] = React.useState(() => value ?? todayISO());
-  /* De que lado o calendário abre. Ancorado sempre em `left-0`, um campo na
-     coluna direita de uma grade de 2 colunas (Início/Fim num celular de 375px)
-     jogava o popover de 280px para fora da tela — o calendário aparecia cortado,
-     com só 4 das 7 colunas visíveis. Ao abrir, medimos: se abrir pela esquerda
-     estoura a borda direita, ancoramos à direita. Vale para todo DatePicker. */
-  const [alignRight, setAlignRight] = React.useState(false);
+  /* O calendário é PORTALADO para `document.body` e posicionado com
+     `position: fixed` a partir do retângulo do botão — não mais `absolute`
+     dentro do próprio campo.
+     Por quê: um DatePicker "Início"/"Fim" lado a lado (grade de 2 colunas) num
+     Sheet (modal com `overflow-y-auto` e altura travada) tinha o popup preso
+     DENTRO daquele contêiner rolável — o CSS corta (clip) qualquer parte de um
+     elemento `absolute` que ultrapasse um ancestral com overflow, não importa
+     o `z-index`. O calendário abria com a grade de dias e as setas cortadas,
+     e uma barra de rolagem aparecia em cima do card inteiro (visto no relato
+     da "Folga/férias" em Escala de gerentes). Com portal + `fixed` calculado
+     pela posição na VIEWPORT, o popup flutua por cima de tudo, imune a
+     qualquer `overflow` de ancestrais. */
+  const [coords, setCoords] = React.useState<{ top: number; left: number }>({ top: -9999, left: -9999 });
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const popupRef = React.useRef<HTMLDivElement>(null);
   const gridRef = React.useRef<HTMLDivElement>(null);
 
   const today = todayISO();
   const blocked = React.useCallback((iso: string) => (min && iso < min) || (max && iso > max), [min, max]);
 
+  const reposition = React.useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    /* Altura real do popup — medida do próprio DOM (já montado, mesmo que fora
+       da tela) em vez de estimada: o mês pode ter 5 ou 6 semanas na grade. */
+    const popH = popupRef.current?.offsetHeight ?? 360;
+    const MARGEM = 8;
+    const espacoAbaixo = window.innerHeight - rect.bottom;
+    const espacoAcima = rect.top;
+    /* Abre para BAIXO por padrão; só sobe se faltar espaço embaixo E houver
+       mais espaço em cima — sem isto, um campo no meio de um formulário longo
+       dentro de um Sheet abria sempre para baixo e era cortado pelo rodapé do
+       modal, mesmo quando "virar para cima" resolveria. */
+      const openUp = espacoAbaixo < popH + MARGEM && espacoAcima > espacoAbaixo;
+    const top = openUp ? rect.top - popH - 4 : rect.bottom + 4;
+    const left = rect.left + POP_W > window.innerWidth - MARGEM ? rect.right - POP_W : rect.left;
+    setCoords({
+      top: Math.max(MARGEM, Math.min(top, window.innerHeight - MARGEM)),
+      left: Math.max(MARGEM, Math.min(left, window.innerWidth - POP_W - MARGEM)),
+    });
+  }, []);
+
   React.useEffect(() => {
     if (!open) return;
     setCursor(value ?? todayISO());
-    const onDown = (e: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false); };
+    const onDown = (e: MouseEvent) => {
+      const alvo = e.target as Node;
+      /* O popup agora vive fora de `rootRef` (portalado) — o clique dentro
+         dele não pode fechar o calendário. */
+      if (rootRef.current?.contains(alvo) || popupRef.current?.contains(alvo)) return;
+      setOpen(false);
+    };
     document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
+    /* Fecha ao rolar: reposicionar em tempo real acompanhando o scroll de um
+       contêiner interno (o Sheet, por exemplo) exigiria recalcular a cada
+       evento — fechar é o mesmo comportamento já usado pelo `ActionMenu` do
+       sistema para o mesmo problema. `capture: true` porque o scroll de um
+       contêiner interno não borbulha até o document na fase normal. */
+    const onScroll = () => setOpen(false);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      window.removeEventListener('scroll', onScroll, true);
+    };
   }, [open, value]);
 
   React.useLayoutEffect(() => {
-    if (!open || !rootRef.current) return;
-    const POP_W = 280; // 17.5rem
-    const rect = rootRef.current.getBoundingClientRect();
-    // Sobra da borda direita da viewport (com folga de 8px): se não couber, ancora à direita.
-    setAlignRight(rect.left + POP_W > window.innerWidth - 8);
-  }, [open]);
+    if (open) reposition();
+  }, [open, cursor, reposition]);
 
   React.useEffect(() => {
     if (open) gridRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.focus();
@@ -89,6 +134,7 @@ export function DatePicker({
     <Field label={label} hint={hint} error={error} required={required} htmlFor={id} descId={descId}>
       <div className="relative" ref={rootRef}>
         <button
+          ref={triggerRef}
           id={id}
           type="button"
           disabled={disabled}
@@ -105,15 +151,14 @@ export function DatePicker({
           <span className={cn('flex-1', !value && 'text-ink-500')}>{value ? formatBr(value) : placeholder}</span>
         </button>
 
-        {open && (
+        {open && createPortal(
           <div
+            ref={popupRef}
             role="dialog"
             aria-label="Escolher data"
             onKeyDown={onKeyDown}
-            className={cn(
-              'absolute top-full z-40 mt-1 w-[17.5rem] max-w-[calc(100vw-1rem)] rounded-card border border-line bg-surface p-3 shadow-lg',
-              alignRight ? 'right-0' : 'left-0',
-            )}
+            style={{ position: 'fixed', top: coords.top, left: coords.left }}
+            className="z-50 w-[17.5rem] max-w-[calc(100vw-1rem)] rounded-card border border-line bg-surface p-3 shadow-lg"
           >
             <div className="mb-2 flex items-center justify-between">
               <button type="button" aria-label="Mês anterior" onClick={() => setCursor((c) => addMonths(c, -1))}
@@ -178,7 +223,8 @@ export function DatePicker({
                 </button>
               )}
             </div>
-          </div>
+          </div>,
+          document.body,
         )}
       </div>
     </Field>

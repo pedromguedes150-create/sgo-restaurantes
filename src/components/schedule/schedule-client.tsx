@@ -144,8 +144,26 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
 
   const exportUrl = (m: 'realizado' | 'planejado') => `/api/schedule/export?unit=${selectedUnitId}&year=${year}&month=${month}&mode=${m}`;
 
+  const unitName = units.find((u) => u.id === selectedUnitId)?.name ?? '';
+  const modeLabel = mode === 'planejado' ? 'Planejado' : mode === 'realizado' ? 'Realizado' : 'Comparação';
+
   return (
     <div className="space-y-4">
+      {/* A4 paisagem, numa folha só: sem isto o print cai no padrão do
+          navegador (retrato) e a grade de até 31 colunas nasce pedindo mais
+          largura do que a folha tem. Um `<style>` dentro do componente vale
+          só enquanto esta tela está montada — não afeta a impressão de mais
+          nenhum outro relatório do sistema. */}
+      <style>{'@page { size: landscape; margin: 8mm; }'}</style>
+
+      {/* Cabeçalho só de impressão: os seletores de unidade/mês/ano ficam
+          `print:hidden` (fazem parte da barra de ações), e sem isto a folha
+          impressa — que vai para o quadro da unidade — não diria nem de qual
+          unidade nem de qual mês ela é. */}
+      <div className="hidden print:block">
+        <p className="font-bold text-ink-900 sgo-type-15">Escala — {shortUnitName(unitName)} · {MONTHS[month - 1]}/{year} · {modeLabel}</p>
+      </div>
+
       {/* Filtros + ações */}
       <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
         <div className="flex flex-wrap items-end gap-2">
@@ -386,21 +404,28 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
           Ninguém corresponde aos filtros. <button onClick={() => setFiltros({})} className="font-semibold text-brand underline">Limpar filtros</button>
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="min-w-full border-collapse text-center text-xs">
+        <div className="overflow-x-auto rounded-lg border print:overflow-visible print:border-0">
+          {/* `print:table-fixed` + uma largura fixa por coluna (declarada na
+              PRIMEIRA linha, aqui no `thead`) é o que faz até 31 colunas de
+              dia caberem na largura de uma A4 paisagem — sem isto o navegador
+              paginava a mesma grade larga do celular em 4 folhas lado a lado.
+              `print:min-w-0` cancela o `min-w-[…]` de tela nas duas colunas
+              fixas (nome e totais), que senão venceria a largura menor do
+              print (min-width nunca cede para um width menor). */}
+          <table className="min-w-full border-collapse text-center text-xs print:w-full print:table-fixed">
             <thead>
               <tr className="bg-brand text-on-brand">
-                <th className="sticky left-0 z-10 min-w-[184px] bg-brand px-2 py-2 text-left">Colaborador</th>
+                <th className="sticky left-0 z-10 min-w-[184px] bg-brand px-2 py-2 text-left print:static print:min-w-0 print:w-[112px] print:px-1 print:py-0.5">Colaborador</th>
                 {Array.from({ length: grid.daysCount }, (_, i) => i + 1).map((d) => (
-                  <th key={d} className={cn('px-1 py-1 font-medium', isWeekend(d) && 'bg-white/10')}>
-                    <div className="text-[10px] opacity-80">{wdOf(d)}</div>
-                    <div>{d}</div>
+                  <th key={d} className={cn('px-1 py-1 font-medium print:w-[24px] print:px-0 print:py-0', isWeekend(d) && 'bg-white/10')}>
+                    <div className="text-[10px] opacity-80 print:text-[6px]">{wdOf(d)}</div>
+                    <div className="print:text-[8px]">{d}</div>
                   </th>
                 ))}
                 {/* Totais por pessoa (fase 2): T · F · ausências — no mês, na aba. */}
-                <th className="min-w-[88px] px-2 py-1 font-medium" title="Trabalho · Folgas · Ausências no mês">
-                  <div className="text-[10px] opacity-80">{mode === 'comparacao' ? 'Diverg.' : 'Totais'}</div>
-                  <div>{mode === 'comparacao' ? 'dias' : 'T · F · Aus'}</div>
+                <th className="min-w-[88px] px-2 py-1 font-medium print:min-w-0 print:w-[48px] print:px-0.5 print:py-0" title="Trabalho · Folgas · Ausências no mês">
+                  <div className="text-[10px] opacity-80 print:text-[6px]">{mode === 'comparacao' ? 'Diverg.' : 'Totais'}</div>
+                  <div className="print:text-[7px]">{mode === 'comparacao' ? 'dias' : 'T · F · Aus'}</div>
                 </th>
               </tr>
             </thead>
@@ -412,13 +437,16 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                   <Fragment key={row.collaboratorId}>
                     {showGroup && (
                       <tr className="bg-sunken">
-                        <td colSpan={grid.daysCount + 2} className="px-2 py-1 text-left sgo-type-11 font-semibold tracking-wide text-ink-500">{row.typeLabel}</td>
+                        <td colSpan={grid.daysCount + 2} className="px-2 py-1 text-left sgo-type-11 font-semibold tracking-wide text-ink-500 print:px-1 print:py-0.5">{row.typeLabel}</td>
                       </tr>
                     )}
                     <tr className="border-t">
-                      <td className="sticky left-0 z-10 min-w-[184px] bg-surface px-2 py-1.5 text-left">
-                        <div className="font-semibold text-ink-900">{row.name}</div>
-                        <div className="text-[10px] text-ink-500">
+                      <td className="sticky left-0 z-10 min-w-[184px] bg-surface px-2 py-1.5 text-left print:static print:min-w-0 print:w-[112px] print:px-1 print:py-0.5">
+                        <div className="font-semibold text-ink-900 print:truncate print:text-[8px]">{row.name}</div>
+                        {/* O cargo/turno/setor ajuda na tela; na folha do quadro o
+                            que importa é o dia-a-dia — tirá-lo dá mais espaço à
+                            grade sem perder nenhuma informação da letra do dia. */}
+                        <div className="text-[10px] text-ink-500 print:hidden">
                           {row.jobTitle ?? ''}{row.shiftLabel ? ` · ${row.shiftLabel}` : ''}
                           {row.setores && row.setores.length > 0 ? ` · ${row.setores.join(', ')}` : ''}
                         </div>
@@ -430,16 +458,16 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                           const act = cell.actual;
                           const diff = celulaDivergente(cell);
                           return (
-                            <td key={day} className={cn('px-0.5 py-0.5', diff && 'bg-danger/10', isWeekend(day) && !diff && 'bg-sunken/40')}>
-                              <div className={cn('mx-auto flex h-5 w-6 items-center justify-center rounded text-[10px] font-bold', STATUS[cell.planned].cls)}>{STATUS[cell.planned].code}</div>
-                              <div className={cn('mx-auto mt-0.5 flex h-5 w-6 items-center justify-center rounded text-[10px] font-bold', act ? STATUS[act].cls : 'text-ink-500')}>{act ? STATUS[act].code : '—'}</div>
+                            <td key={day} className={cn('px-0.5 py-0.5 print:w-[24px] print:px-0 print:py-0', diff && 'bg-danger/10', isWeekend(day) && !diff && 'bg-sunken/40')}>
+                              <div className={cn('mx-auto flex h-5 w-6 items-center justify-center rounded text-[10px] font-bold print:h-3 print:w-full print:rounded-none print:text-[7px]', STATUS[cell.planned].cls)}>{STATUS[cell.planned].code}</div>
+                              <div className={cn('mx-auto mt-0.5 flex h-5 w-6 items-center justify-center rounded text-[10px] font-bold print:mt-0 print:h-3 print:w-full print:rounded-none print:text-[7px]', act ? STATUS[act].cls : 'text-ink-500')}>{act ? STATUS[act].code : '—'}</div>
                             </td>
                           );
                         }
                         const st = mode === 'planejado' ? cell.planned : cell.actual;
                         if (mode === 'realizado' && edit === key) {
                           return (
-                            <td key={day} className="px-0.5 py-0.5">
+                            <td key={day} className="px-0.5 py-0.5 print:w-[24px] print:px-0 print:py-0">
                               {/* Editor da célula: abre já aberto (o clique na
                                   célula é que abriu) e fecha ao escolher/sair. */}
                               <div className="w-16">
@@ -457,18 +485,18 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                           );
                         }
                         return (
-                          <td key={day} className={cn('px-0.5 py-0.5', isWeekend(day) && 'bg-sunken/40')}>
+                          <td key={day} className={cn('px-0.5 py-0.5 print:w-[24px] print:px-0 print:py-0', isWeekend(day) && 'bg-sunken/40')}>
                             <button
                               disabled={mode !== 'realizado'}
                               onClick={() => mode === 'realizado' && setEdit(key)}
-                              className={cn('mx-auto flex h-6 w-7 items-center justify-center rounded text-[11px] font-bold', st ? STATUS[st].cls : 'border border-dashed border-line-strong text-ink-500', mode === 'realizado' && 'cursor-pointer hover:ring-2 hover:ring-brand')}
+                              className={cn('mx-auto flex h-6 w-7 items-center justify-center rounded text-[11px] font-bold print:h-4 print:w-full print:rounded-none print:text-[8px]', st ? STATUS[st].cls : 'border border-dashed border-line-strong text-ink-500', mode === 'realizado' && 'cursor-pointer hover:ring-2 hover:ring-brand')}
                             >
                               {st ? STATUS[st].code : ''}
                             </button>
                           </td>
                         );
                       })}
-                      <td className="px-2 py-1.5 tabular-nums text-ink-700">
+                      <td className="px-2 py-1.5 tabular-nums text-ink-700 print:w-[48px] print:px-0.5 print:py-0.5 print:text-[7px]">
                         {mode === 'comparacao'
                           ? <span className={cn('font-semibold', tot.divergencias > 0 ? 'text-danger' : 'text-ink-500')}>{tot.divergencias}</span>
                           : <>
