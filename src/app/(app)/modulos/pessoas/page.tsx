@@ -29,7 +29,7 @@ const DESTINOS = [
   { href: '/modulos/pessoas/experiencia', icon: UserCheck, title: 'Período de Experiência', subtitle: 'Avaliações dentro dos 90 dias' },
   { href: '/modulos/pessoas/avaliacao', icon: Star, title: 'Avaliação do colaborador', subtitle: 'Observações e nota mensal' },
   { href: '/modulos/pessoas/mudancas', icon: ArrowRightLeft, title: 'Mudanças de função/setor', subtitle: 'Solicitações enviadas ao RH' },
-  { href: '/modulos/pessoas/comissoes', icon: HandCoins, title: 'Comissões & Mobilidade', subtitle: 'Lançamentos e tendência do mês' },
+  { href: '/modulos/pessoas/comissoes', icon: HandCoins, title: 'Pagamento Extra / Mobilidade', subtitle: 'Horas extras aprovadas por competência e mobilidade' },
 ];
 
 function d(date: Date) { return new Date(date).toLocaleDateString('pt-BR'); }

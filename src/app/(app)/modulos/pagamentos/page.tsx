@@ -97,7 +97,11 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
   const podeVerConsolidacao = podePagar || user.role === 'SUPERVISOR';
   /* A consolidação de pagamentos (Freelancer + Hora Extra, para o Financeiro)
      obedece a matriz de perfis — é o mesmo teste que a página faz para abrir. */
-  const podeVerConsolidacaoPagamentos = Boolean((await permissoesEfetivasDoRequest(user.role)).PAYMENTS_CONSOLIDATION?.canView);
+  const permissoes = await permissoesEfetivasDoRequest(user.role);
+  const podeVerConsolidacaoPagamentos = Boolean(permissoes.PAYMENTS_CONSOLIDATION?.canView);
+  /* Pagamento Extra (v1.135.0): a hora extra aprovada aqui é paga lá, na
+     competência do mês seguinte — quem aprova precisa achar o caminho. */
+  const podeVerPagamentoExtra = Boolean(permissoes.PEOPLE_PAYOUTS?.canView);
 
   /* A tela OBEDECE o seletor de unidade do cabeçalho (pedido de 04/09: "está
      tudo misturado"). Mesma regra de precedência de Tarefas e Pessoas;
@@ -154,6 +158,11 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
         {podeVerConsolidacaoPagamentos && (
           <Link href="/modulos/pagamentos/consolidacao" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
             <FileText className="h-4 w-4" /> Pagamentos de Freelancers
+          </Link>
+        )}
+        {podeVerPagamentoExtra && (
+          <Link href="/modulos/pessoas/comissoes" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
+            <FileText className="h-4 w-4" /> Pagamento Extra
           </Link>
         )}
       </div>

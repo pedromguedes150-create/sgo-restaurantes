@@ -1960,8 +1960,9 @@ model RoleChange {
 
 // ===== Pessoas 9.x — Comissões/Mobilidade (item 14, Onda 3) ==================
 enum PayoutType {
-  COMMISSION // comissão (valores do Teknisa, lançados manualmente)
+  COMMISSION // comissão (valores do Teknisa, lançados manualmente) — fora da tela desde a v1.135.0
   MOBILITY // mobilidade (manual)
+  EXTRA // pagamento extra (v1.135.0): DERIVADO das horas extras aprovadas — só entrega e fechamento gravam
 }
 
 /// Lançamento de comissão/mobilidade por colaborador/unidade/mês.

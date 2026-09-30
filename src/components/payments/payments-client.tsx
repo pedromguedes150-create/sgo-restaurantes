@@ -24,6 +24,7 @@ import { FilterBar, FilterSelect, FilterChip } from '@/components/ui/filter-bar'
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
 import { calcularHoraExtra, textoHoras } from '@/lib/overtime/calculo';
+import { competenciaDaHoraExtra, rotuloDaCompetencia } from '@/lib/people/pagamento-extra-calculo';
 
 export interface PayDetail {
   workDate: string | null; shift: string | null; workStartTime: string | null; workEndTime: string | null;
@@ -510,6 +511,9 @@ function DetailView({ r }: { r: PayReq }) {
       if (d?.hours != null) rows.push(['Subtotal (horas × valor/hora)', formatBRL(Math.round(d.hours * d.hourlyRate * 100) / 100)]);
     }
     if (d?.reason) rows.push(['Motivo', d.reason]);
+    /* Aprovada, a HE é paga pelo Pagamento Extra do MÊS SEGUINTE ao trabalho. */
+    const comp = d?.workDate ? competenciaDaHoraExtra(d.workDate) : null;
+    if (comp) rows.push(['Pagamento Extra', `competência ${rotuloDaCompetencia(comp)}`]);
   } else {
     if (d?.miscTypeName) rows.push(['Tipo', d.miscTypeName]);
     if (d?.beneficiary) rows.push(['Beneficiário', d.beneficiary]);
@@ -892,6 +896,11 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
             hint={unitCollabs.length ? 'Colaboradores do RH desta unidade.' : 'Sincronize a unidade em Pessoas → Colaboradores para a lista aparecer.'}
           />
           <DatePicker label="Data" required value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
+          {workDate && competenciaDaHoraExtra(workDate) && (
+            <p className="sgo-type-11 text-ink-500">
+              Depois de aprovada, entra no Pagamento Extra da competência <b>{rotuloDaCompetencia(competenciaDaHoraExtra(workDate)!)}</b> — paga no mês seguinte ao trabalho.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <TimePicker label="Hora início" value={workStartTime || null} onValueChange={(v) => setWorkStartTime(v ?? '')} />
             <TimePicker label="Hora fim" value={workEndTime || null} onValueChange={(v) => setWorkEndTime(v ?? '')} />
