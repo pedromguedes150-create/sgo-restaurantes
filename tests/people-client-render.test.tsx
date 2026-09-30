@@ -86,3 +86,20 @@ describe('Cadastrar a escala dentro do colaborador', () => {
     expect(html).toContain('ADAIR');
   });
 });
+
+describe('Editar unidades (30/09/2026) — corrigir vínculo do RH que ficou preso', () => {
+  it('só aparece para quem pode editar unidades (Admin)', () => {
+    const com = render({ podeEditarUnidades: true, podeConfigurar: false });
+    expect(com).toContain('Editar unidades');
+    const sem = render({ podeEditarUnidades: false, podeConfigurar: false });
+    expect(sem).not.toContain('Editar unidades');
+  });
+
+  it('convive com "Configurar escala" na mesma linha, sem aninhar botão dentro de botão', () => {
+    /* Um <button> dentro de outro é HTML inválido — é por isso que a linha
+       deixou de ser um único botão quando as duas ações existem. */
+    const html = render({ podeEditarUnidades: true, podeConfigurar: true });
+    expect(html).toContain('Editar unidades');
+    expect(html).toContain('Configurar escala');
+  });
+});

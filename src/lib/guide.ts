@@ -1683,6 +1683,7 @@ export const GUIDE: GuideSection[] = [
           'Os colaboradores vêm do RH (não se cria/exclui na plataforma).',
           'Em Unidades, defina o "Nome no RH" e clique em Sincronizar (também roda sozinho 1×/dia).',
           'Quem estiver "Férias" no RH ganha o dia de hoje marcado como Férias (FE) na Escala de funcionários, sozinho, a cada sincronização — veja o detalhe em "Diagnóstico do RH".',
+          'EDITAR UNIDADES (30/09/2026): o sync só ADICIONA vínculo de unidade — nunca remove. Um colaborador transferido no RH fica ligado à unidade antiga E à nova para sempre, porque ausência numa sincronização não pode decidir sozinha (foi o mesmo tipo de erro que inativou 49 colaboradores em 29/09). Em Pessoas → Colaboradores, o ícone de prédio ao lado do nome (só Admin) abre "Unidades de [nome]" com uma seleção múltipla das unidades atuais — tire a antiga, salve. ⚠️ Se o RH continuar devolvendo a pessoa para a unidade removida, a PRÓXIMA sincronização recria o vínculo — a correção só "gruda" se o RH de fato não devolver mais a pessoa para lá.',
         ],
       },
       {
