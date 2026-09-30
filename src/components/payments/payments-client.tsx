@@ -181,10 +181,39 @@ export function PaymentsClient({
   const unitRequestsV = useMemo(() => filtrarPorTipo(unitRequests, tipo), [unitRequests, tipo]);
   const [busy, setBusy] = useState(false);
   const [dateEditId, setDateEditId] = useState<string | null>(null);
-  // Seleção para aprovação em lote (aba "Para Aprovar").
+  // Seleção para lote: aprovar/reprovar (aba "Para Aprovar") e marcar pagas (aba "Pagar").
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [batchMsg, setBatchMsg] = useState<{ tone: 'success' | 'warning' | 'danger'; title: string; description?: string } | null>(null);
-  const selTotal = useMemo(() => toApprove.filter((r) => sel.has(r.id)).reduce((s, r) => s + r.amount, 0), [toApprove, sel]);
+  const selTotal = useMemo(
+    () => (tab === 'pagar' ? toPay : toApprove).filter((r) => sel.has(r.id)).reduce((s, r) => s + r.amount, 0),
+    [tab, toApprove, toPay, sel],
+  );
+
+  async function paySelected() {
+    if (sel.size === 0) return;
+    const ids = [...sel];
+    if (!confirm(`Marcar ${ids.length} pagamento(s) como pagos, somando ${formatBRL(selTotal)}?\n\nCada um passa pela mesma conferência da baixa individual e fica na Auditoria.`)) return;
+    setBusy(true);
+    setBatchMsg(null);
+    try {
+      const res = await fetch('/api/payments/pay-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setBatchMsg({ tone: 'danger', title: d.error ?? 'Falha ao marcar pagas em lote' }); return; }
+      setSel(new Set());
+      setBatchMsg(
+        d.failed?.length
+          ? { tone: 'warning', title: `${d.paid} marcada(s) como paga(s), ${d.failed.length} não passaram`, description: 'As que falharam podem já ter sido pagas por outra pessoa ou estar fora da(s) sua(s) unidade(s).' }
+          : { tone: 'success', title: `${d.paid} pagamento(s) marcado(s) como pago(s)`, description: 'Cada solicitante recebeu um único aviso com o total do que é dele.' },
+      );
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function approveSelected() {
     if (sel.size === 0) return;
@@ -307,7 +336,7 @@ export function PaymentsClient({
       <SegmentedControl
         aria-label="Seções de Pagamentos"
         value={tab}
-        onValueChange={(v) => setTab(v as typeof tab)}
+        onValueChange={(v) => { setTab(v as typeof tab); setSel(new Set()); setBatchMsg(null); }}
         options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label, badge: t.badge, badgeTone: 'danger' as const }))}
       />
 
@@ -397,12 +426,44 @@ export function PaymentsClient({
       )}
 
       {tab === 'pagar' && (
-        <List
-          items={toPayV}
-          actions={(r) => (
-            <Button size="sm" variant="gold" disabled={busy} onClick={() => act(r.id, 'pay')}><Banknote className="h-4 w-4" /> Marcar paga</Button>
+        <>
+          {toPayV.length > 1 && (
+            /* A mesma barra da aba Para Aprovar: com 282 aprovadas na fila, a
+               baixa uma a uma era 282 cliques + 282 recarregamentos. */
+            <div className="sticky top-14 z-20 -mx-1 flex flex-wrap items-center gap-2 rounded-card border border-line bg-glass px-3 py-2 backdrop-blur-xl">
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-ink-700">
+                <input
+                  type="checkbox"
+                  checked={sel.size === toPayV.length && toPayV.length > 0}
+                  ref={(el) => { if (el) el.indeterminate = sel.size > 0 && sel.size < toPayV.length; }}
+                  onChange={() => setSel((s) => (s.size === toPayV.length ? new Set() : new Set(toPayV.map((r) => r.id))))}
+                  style={{ accentColor: 'var(--sgo-brand)' }}
+                  className="h-4 w-4 rounded outline-none focus-visible:shadow-sgo-focus"
+                />
+                Selecionar {toPayV.length >= limite ? 'as carregadas' : 'todas'} ({toPayV.length})
+              </label>
+              <span className="text-xs tabular-nums text-ink-500">
+                {sel.size} selecionada(s) · {formatBRL(selTotal)}
+              </span>
+              <span className="ml-auto flex gap-2">
+                {sel.size > 0 && <DsButton size="sm" variant="ghost" onClick={() => setSel(new Set())}>Limpar</DsButton>}
+                <DsButton size="sm" disabled={sel.size === 0} loading={busy} onClick={paySelected}>
+                  <Banknote className="h-4 w-4" /> Marcar {sel.size > 0 ? `${sel.size} ` : ''}como pagas
+                </DsButton>
+              </span>
+            </div>
           )}
-        />
+          {batchMsg && (
+            <Banner tone={batchMsg.tone} title={batchMsg.title} description={batchMsg.description} onDismiss={() => setBatchMsg(null)} />
+          )}
+          <List
+            items={toPayV}
+            selection={toPayV.length > 1 ? { ids: sel, onToggle: (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }) } : undefined}
+            actions={(r) => (
+              <Button size="sm" variant="gold" disabled={busy} onClick={() => act(r.id, 'pay')}><Banknote className="h-4 w-4" /> Marcar paga</Button>
+            )}
+          />
+        </>
       )}
 
       {tab === 'historico' && <HistoryTab items={historyV} actions={isAdmin || canEditDate ? adminActions : undefined} />}
