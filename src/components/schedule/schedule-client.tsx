@@ -154,14 +154,25 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
           largura do que a folha tem. Um `<style>` dentro do componente vale
           só enquanto esta tela está montada — não afeta a impressão de mais
           nenhum outro relatório do sistema. */}
-      <style>{'@page { size: landscape; margin: 8mm; }'}</style>
+      {/* Margem enxuta: com 25+ linhas numa unidade, cada mm de margem é
+          espaço que sai das linhas da grade — 5mm ainda imprime sem cortar
+          nada na maioria das impressoras. */}
+      <style>{'@page { size: landscape; margin: 5mm; }'}</style>
 
       {/* Cabeçalho só de impressão: os seletores de unidade/mês/ano ficam
           `print:hidden` (fazem parte da barra de ações), e sem isto a folha
           impressa — que vai para o quadro da unidade — não diria nem de qual
           unidade nem de qual mês ela é. */}
-      <div className="hidden print:block">
-        <p className="font-bold text-ink-900 sgo-type-15">Escala — {shortUnitName(unitName)} · {MONTHS[month - 1]}/{year} · {modeLabel}</p>
+      {/* `print:mt-0`: o `space-y-4` do container conta QUALQUER irmão
+          anterior no DOM para decidir a margem — inclusive o `<style>` acima
+          e as barras `print:hidden` — então sem isto sobrariam ~3×16px de
+          espaço em branco na impressão antes de cada bloco visível, espaço
+          que falta exatamente para a última linha da grade caber. */}
+      <div className="hidden print:mt-0 print:block">
+        {/* Só aparece na impressão — usa um tamanho pequeno e fixo (não a
+            escala tipográfica da tela), porque aqui cada px conta para caber
+            a grade inteira numa folha só. */}
+        <p className="text-xs font-bold leading-tight text-ink-900">Escala — {shortUnitName(unitName)} · {MONTHS[month - 1]}/{year} · {modeLabel}</p>
       </div>
 
       {/* Filtros + ações */}
@@ -287,10 +298,13 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
       </div>
 
       {/* Legenda */}
-      <div className="flex flex-wrap gap-2 text-xs print:gap-3">
+      {/* Legenda compacta na impressão: numa unidade com 25+ colaboradores, cada
+          px daqui é um px a menos para as linhas da grade — é o que faz a
+          folha sobrar para a SEGUNDA página, mesmo com a largura já resolvida. */}
+      <div className="flex flex-wrap gap-2 text-xs print:gap-1 print:leading-none">
         {STATUS_ORDER.map((s) => (
-          <span key={s} className="inline-flex items-center gap-1">
-            <span className={cn('inline-flex h-5 w-6 items-center justify-center rounded text-[11px] font-bold', STATUS[s].cls)}>{STATUS[s].code}</span>
+          <span key={s} className="inline-flex items-center gap-1 print:text-[7px]">
+            <span className={cn('inline-flex h-5 w-6 items-center justify-center rounded text-[11px] font-bold print:h-3 print:w-4 print:text-[7px]', STATUS[s].cls)}>{STATUS[s].code}</span>
             {s === 'WORK' ? 'Trabalho' : s === 'ATRASO' ? 'Atraso' : s === 'OFF' ? 'Folga' : s === 'FALTA_INJUST' ? 'Falta injustificada' : s === 'FALTA_JUST' ? 'Falta justificada' : s === 'ATESTADO' ? 'Atestado' : 'Férias'}
           </span>
         ))}
@@ -415,7 +429,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
           <table className="min-w-full border-collapse text-center text-xs print:w-full print:table-fixed">
             <thead>
               <tr className="bg-brand text-on-brand">
-                <th className="sticky left-0 z-10 min-w-[184px] bg-brand px-2 py-2 text-left print:static print:min-w-0 print:w-[112px] print:px-1 print:py-0.5">Colaborador</th>
+                <th className="sticky left-0 z-10 min-w-[184px] bg-brand px-2 py-2 text-left print:static print:min-w-0 print:w-[112px] print:px-1 print:py-0">Colaborador</th>
                 {Array.from({ length: grid.daysCount }, (_, i) => i + 1).map((d) => (
                   <th key={d} className={cn('px-1 py-1 font-medium print:w-[24px] print:px-0 print:py-0', isWeekend(d) && 'bg-white/10')}>
                     <div className="text-[10px] opacity-80 print:text-[6px]">{wdOf(d)}</div>
@@ -437,11 +451,11 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                   <Fragment key={row.collaboratorId}>
                     {showGroup && (
                       <tr className="bg-sunken">
-                        <td colSpan={grid.daysCount + 2} className="px-2 py-1 text-left sgo-type-11 font-semibold tracking-wide text-ink-500 print:px-1 print:py-0.5">{row.typeLabel}</td>
+                        <td colSpan={grid.daysCount + 2} className="px-2 py-1 text-left sgo-type-11 font-semibold tracking-wide text-ink-500 print:px-1 print:py-0">{row.typeLabel}</td>
                       </tr>
                     )}
                     <tr className="border-t">
-                      <td className="sticky left-0 z-10 min-w-[184px] bg-surface px-2 py-1.5 text-left print:static print:min-w-0 print:w-[112px] print:px-1 print:py-0.5">
+                      <td className="sticky left-0 z-10 min-w-[184px] bg-surface px-2 py-1.5 text-left print:static print:min-w-0 print:w-[112px] print:px-1 print:py-0">
                         <div className="font-semibold text-ink-900 print:truncate print:text-[8px]">{row.name}</div>
                         {/* O cargo/turno/setor ajuda na tela; na folha do quadro o
                             que importa é o dia-a-dia — tirá-lo dá mais espaço à
@@ -489,14 +503,14 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                             <button
                               disabled={mode !== 'realizado'}
                               onClick={() => mode === 'realizado' && setEdit(key)}
-                              className={cn('mx-auto flex h-6 w-7 items-center justify-center rounded text-[11px] font-bold print:h-4 print:w-full print:rounded-none print:text-[8px]', st ? STATUS[st].cls : 'border border-dashed border-line-strong text-ink-500', mode === 'realizado' && 'cursor-pointer hover:ring-2 hover:ring-brand')}
+                              className={cn('mx-auto flex h-6 w-7 items-center justify-center rounded text-[11px] font-bold print:h-3 print:w-full print:rounded-none print:text-[8px]', st ? STATUS[st].cls : 'border border-dashed border-line-strong text-ink-500', mode === 'realizado' && 'cursor-pointer hover:ring-2 hover:ring-brand')}
                             >
                               {st ? STATUS[st].code : ''}
                             </button>
                           </td>
                         );
                       })}
-                      <td className="px-2 py-1.5 tabular-nums text-ink-700 print:w-[48px] print:px-0.5 print:py-0.5 print:text-[7px]">
+                      <td className="px-2 py-1.5 tabular-nums text-ink-700 print:w-[48px] print:px-0.5 print:py-0 print:text-[7px]">
                         {mode === 'comparacao'
                           ? <span className={cn('font-semibold', tot.divergencias > 0 ? 'text-danger' : 'text-ink-500')}>{tot.divergencias}</span>
                           : <>

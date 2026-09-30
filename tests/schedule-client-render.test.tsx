@@ -133,7 +133,7 @@ describe('Impressão — a grade cabe numa folha A4 paisagem', () => {
 
   it('a orientação paisagem é fixada só para esta tela, via @page', () => {
     const html = render();
-    expect(html).toContain('@page { size: landscape; margin: 8mm; }');
+    expect(html).toContain('@page { size: landscape; margin: 5mm; }');
   });
 
   it('a tabela vira table-fixed e ganha largura por coluna só na impressão', () => {
