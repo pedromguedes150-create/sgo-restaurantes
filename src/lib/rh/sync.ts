@@ -1,8 +1,10 @@
 import { prisma } from '@/lib/db/prisma';
 import { rh, rhConfigured } from '@/lib/rh/client';
-import { unwrapColaboradores, isAtivo } from '@/lib/rh/normalize';
+import { unwrapColaboradores, isAtivo, classificarStatus } from '@/lib/rh/normalize';
 import { audit } from '@/lib/audit';
 import { notifyAdmins } from '@/lib/notifications';
+import { dayUTC } from '@/lib/schedule';
+import { currentOperationalDate } from '@/lib/date/operational';
 import type { SessionUser } from '@/lib/auth/session';
 
 export type SyncResult =
@@ -22,6 +24,20 @@ export type SyncResult =
  * unidade antes de qualquer escrita, e quem não veio na lista é apenas CONTADO
  * na auditoria (`naoRetornados`). A regra antiga "quem não veio é inativado"
  * marcou 49 pessoas inativas em 29/09/2026 sem que tivessem sido desligadas.
+ *
+ * FÉRIAS → ESCALA (30/09/2026): quando o RH diz que alguém está de férias, o
+ * dia OPERACIONAL de hoje da unidade vira FE em `schedule_actuals` — pelo
+ * MESMO caminho que uma ausência lançada à mão (`ScheduleActual.upsert`,
+ * status `FERIAS`, auditoria `SCHEDULE_ABSENCE`), só que sem passar por
+ * `registerAbsence`: aquela função exige um `SessionUser` de verdade (o FK de
+ * `createdById` rejeitaria um ator inventado para o sync automático), e aqui
+ * o ator É o `actorUserId` que a própria função já recebe — `null` no
+ * automático, o Admin no manual; ambos são válidos porque a coluna aceita
+ * nulo. **Só o dia de hoje**: o RH não manda data de início/fim, então não há
+ * como adivinhar quando a férias começou nem quando volta — dias antes desta
+ * sincronização (se ela atrasou) e o dia da volta não são preenchidos
+ * sozinhos. Repetir a marcação no mesmo dia é idempotente (upsert pela chave
+ * `collaboratorId+date`).
  */
 async function syncUnitCore(unitId: string, actorUserId: string | null): Promise<SyncResult> {
   const unit = await prisma.unit.findUnique({ where: { id: unitId } });
@@ -38,8 +54,14 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
   let created = 0;
   let updated = 0;
   let inativadosPorStatus = 0;
+  const feriasMarcadas: string[] = [];
+  const hoje = currentOperationalDate({ timezone: unit.timezone, cutoffHour: unit.cutoffHour });
+  const [hy, hm, hd] = hoje.split('-').map(Number);
+  const hojeDate = dayUTC(hy, hm, hd);
+
   for (const c of lista) {
     if (!c.matricula) continue;
+    const classe = classificarStatus(c.status);
     const data = {
       name: c.nome?.trim() || `Matrícula ${c.matricula}`,
       jobTitle: c.cargo?.trim() || null,
@@ -67,6 +89,20 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
       create: { collaboratorId, unitId },
       update: {},
     });
+
+    if (classe === 'FERIAS') {
+      await prisma.scheduleActual.upsert({
+        where: { collaboratorId_date: { collaboratorId, date: hojeDate } },
+        create: { collaboratorId, unitId, date: hojeDate, status: 'FERIAS', reason: 'RH: em férias', createdById: actorUserId },
+        update: { status: 'FERIAS', reason: 'RH: em férias', createdById: actorUserId },
+      });
+      await audit({
+        userId: actorUserId, unitId, action: 'SCHEDULE_ABSENCE', module: 'SCHEDULE',
+        entity: 'collaborator', entityId: collaboratorId,
+        metadata: { status: 'FERIAS', start: hoje, end: hoje, origem: 'RH_SYNC' },
+      });
+      feriasMarcadas.push(data.name);
+    }
   }
 
   /**
@@ -92,6 +128,7 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
       /** só por status de desligamento devolvido pelo RH — ausência não conta */
       deactivated: inativadosPorStatus,
       naoRetornados,
+      feriasMarcadas: feriasMarcadas.length,
       ...(listaVaziaSuspeita ? { motivo: 'RH devolveu lista vazia' } : {}),
     },
   });
@@ -102,6 +139,18 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
       body: `A unidade ${unit.name} tem ${ativosDaUnidade.length} colaborador(es) ativo(s), mas o RH não devolveu nenhum para "${unit.rhUnitName}". Ninguém foi inativado. Confira o "Nome no RH" da unidade em Configurações → Unidades.`,
       link: '/configuracoes/integracoes',
       module: 'PEOPLE',
+    }).catch(() => {});
+  }
+
+  /* Visível, não calado: quem marcou o dia como FE precisa de rastro fácil de
+     achar, já que é um efeito novo de um clique em "Sincronizar" (ou do
+     scheduler) que ninguém pediu tela por tela. */
+  if (feriasMarcadas.length > 0) {
+    await notifyAdmins({
+      title: `🏖️ ${feriasMarcadas.length} colaborador(es) marcado(s) de férias hoje — ${unit.name}`,
+      body: `Conforme o RH: ${feriasMarcadas.join(', ')}. Hoje (${hoje}) virou Férias (FE) na Escala de funcionários. Só o dia de hoje — o RH não manda data de início/fim; confira o período completo em Escala.`,
+      link: `/modulos/escala?unit=${unitId}`,
+      module: 'SCHEDULE',
     }).catch(() => {});
   }
 
@@ -139,14 +188,27 @@ export async function syncAllRegisteredUnits(user: SessionUser): Promise<SyncRes
  * Não exige sessão; só roda se o RH estiver configurado. Idempotente.
  */
 /**
- * SUSPENSÃO TEMPORÁRIA do sync automático (v1.132.2, decisão do Pedro em
- * 29/09/2026): enquanto os 49 colaboradores inativados em 29/09 não forem
- * conferidos, NENHUMA sincronização roda sozinha — nem no boot, nem no
- * scheduler de hora em hora. Só o botão Sincronizar (manual, com ator) segue
- * disponível. `RH_API_KEY` e a integração não são tocadas. Para voltar ao
- * normal, troque para `false`.
+ * REATIVADA em 30/09/2026, a pedido direto do Pedro — depois de conferidos os
+ * 49 colaboradores inativados em 29/09/2026 e do período em SUSPENSO (v1.132.2).
+ *
+ * O que causou o incidente NÃO volta: era um `updateMany({ externalId: {
+ * notIn: matriculas } }, { active: false })` — quem não voltasse na lista do
+ * RH numa chamada era inativado, e uma resposta vazia/parcial derrubava a
+ * unidade inteira calada. Esse trecho foi REMOVIDO do código (não é uma flag
+ * que liga/desliga um comportamento perigoso — o comportamento perigoso não
+ * existe mais): hoje `syncUnitCore` só inativa quem o PRÓPRIO RH devolve, pela
+ * matrícula, com status de desligamento; ausência, lista vazia, formato
+ * inesperado ou falha de transporte apenas CONTAM (`naoRetornados`) e nunca
+ * escrevem `active: false`. A MESMA função roda para o botão manual e para o
+ * automático — não há um caminho "rápido" separado para o automático que
+ * pudesse reintroduzir o atalho perigoso.
+ *
+ * Coberto em `tests/rh-sync.integration.test.ts` (lista vazia, formato
+ * inesperado, falha de transporte, período de experiência, férias — nenhum
+ * inativa ninguém) e `tests/rh-sync-automatico.integration.test.ts` (o
+ * caminho automático, ator nulo, com a mesma garantia).
  */
-export const RH_AUTO_SYNC_SUSPENSO = true;
+export const RH_AUTO_SYNC_SUSPENSO = false;
 
 export async function runDailyRhSync(): Promise<{ ran: boolean; motivo?: 'SUSPENSO' | 'NAO_CONFIGURADO'; units?: number; created?: number; updated?: number }> {
   if (RH_AUTO_SYNC_SUSPENSO) return { ran: false, motivo: 'SUSPENSO' };

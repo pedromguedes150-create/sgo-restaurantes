@@ -10,7 +10,9 @@ export async function register() {
   const { ensureTaskMaintenance } = await import('@/lib/tasks/maintenance');
   const { ensureMaintenanceCategories } = await import('@/lib/occurrences/maintenance-categories');
   const { runDailyRhSync, recentlyAutoSynced, RH_AUTO_SYNC_SUSPENSO } = await import('@/lib/rh/sync');
-  if (RH_AUTO_SYNC_SUSPENSO) console.log('[rh-sync] automático SUSPENSO (v1.132.2): nenhuma sincronização roda sozinha até a conferência dos colaboradores; só o botão manual.');
+  console.log(RH_AUTO_SYNC_SUSPENSO
+    ? '[rh-sync] automático SUSPENSO (v1.132.2): nenhuma sincronização roda sozinha até a conferência dos colaboradores; só o botão manual.'
+    : '[rh-sync] automático ATIVO (reativado em 30/09/2026): roda ~1x/dia por unidade, protegido contra ausência/lista vazia/formato inesperado (ver rh-sync.integration.test.ts).');
   const { reconcileAllTraining } = await import('@/lib/training');
   const { notifyDueSoonTasks } = await import('@/lib/tasks/notify');
   const { notifyDueSoonCommunications } = await import('@/lib/communications/notify');

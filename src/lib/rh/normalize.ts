@@ -50,7 +50,7 @@ export function unwrapColaboradores(resp: unknown): RhColaborador[] {
 }
 
 /** Como o SGO entende o status que veio do RH. */
-export type ClasseDeStatus = 'ATIVO' | 'DESLIGADO' | 'DESCONHECIDO';
+export type ClasseDeStatus = 'ATIVO' | 'DESLIGADO' | 'FERIAS' | 'DESCONHECIDO';
 
 /** Sem acento, sem caixa, sem espaço sobrando — "1ª Experiência" e "1a experiencia" viram o mesmo. */
 function normalizarStatus(status: string | null | undefined): string {
@@ -88,6 +88,11 @@ const ATIVO = /^(ativ|experienc|\d+\s*a?\s*experienc|contrat|trabalh|efetiv|admi
  * pessoa que aparece a mais é visível e alguém corrige; uma pessoa que some é
  * invisível, e ninguém procura o que não sabe que falta. O diagnóstico marca o
  * status desconhecido para o vocabulário ser revisto — não para escondê-la.
+ *
+ * **FÉRIAS é classe própria, não "desconhecido" (30/09).** Continua contando
+ * como presente (`isAtivo` não muda), mas o sync usa esta classe — e só
+ * ela — para marcar o dia na Escala (ver `sync.ts`); "desconhecido" não deve
+ * disparar isso, porque é justamente o status que o SGO ainda não entende.
  */
 export function classificarStatus(status: string | null | undefined): ClasseDeStatus {
   const s = normalizarStatus(status);
@@ -97,6 +102,9 @@ export function classificarStatus(status: string | null | undefined): ClasseDeSt
   /* "3ª Experiência", "Contrato de Experiência", o que o RH inventar: se contém
      "experienc" em qualquer posição, é alguém trabalhando. */
   if (s.includes('experienc')) return 'ATIVO';
+  /* "Férias", "De férias", "Licença/Férias" — o que o RH inventar em volta da
+     palavra. Sem acento por causa do `normalizarStatus` acima. */
+  if (s.includes('ferias')) return 'FERIAS';
   return 'DESCONHECIDO';
 }
 
