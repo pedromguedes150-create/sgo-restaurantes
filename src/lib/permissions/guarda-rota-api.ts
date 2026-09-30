@@ -99,6 +99,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/payments': { modulo: 'PAYMENTS_TAB_NEW', exigir: 'editar' },
   // aprovar/reprovar em lote é a aba Aprovar (estava em Pagar até a v1.75.0)
   '/api/payments/batch': { modulo: 'PAYMENTS_TAB_APPROVE', exigir: 'editar' },
+  // marcar pagas em lote é a aba Pagar — rota separada para a matriz valer
+  '/api/payments/pay-batch': { modulo: 'PAYMENTS_TAB_PAY', exigir: 'editar' },
   '/api/payments/freelancer-calc': { modulo: 'PAYMENTS', exigir: 'ver' },
   '/api/payments/freelancer-report': { modulo: 'PAYMENTS_FREELANCER_REPORT', exigir: 'ver' },
   // exportar a consolidação é leitura: quem vê a tela baixa o Excel dela

@@ -167,7 +167,7 @@ export async function rejectRequest(user: SessionUser, id: string, reason: strin
 }
 
 /** Marca como paga: Coordenador (a operação, v1.133.0), Financeiro e Admin/CEO — `PERFIS_QUE_PAGAM`; a aba "Pagar" da matriz é a outra porta, conferida na rota. */
-export async function markPaid(user: SessionUser, id: string, ctx: Ctx = {}): Promise<PayActionResult> {
+export async function markPaid(user: SessionUser, id: string, ctx: Ctx = {}, opts: { skipRequesterNotice?: boolean } = {}): Promise<PayActionResult> {
   if (!podePagarPorPerfil(user.role)) return { ok: false, reason: 'FORBIDDEN' };
   const req = await prisma.paymentRequest.findUnique({ where: { id }, select: { unitId: true, status: true, requestedById: true, amount: true } });
   if (!req) return { ok: false, reason: 'NOT_FOUND' };
@@ -179,7 +179,7 @@ export async function markPaid(user: SessionUser, id: string, ctx: Ctx = {}): Pr
   const res = await prisma.paymentRequest.updateMany({ where: { id, status: 'APPROVED' }, data: { status: 'PAID', paidById: user.id, paidAt: new Date() } });
   if (res.count === 0) return { ok: false, reason: 'STATE' };
   await audit({ userId: user.id, unitId: req.unitId, action: 'PAYMENT_PAID', module: 'PAYMENTS', entity: 'payment_request', entityId: id, ...ctx });
-  if (req.requestedById) {
+  if (req.requestedById && !opts.skipRequesterNotice) {
     await notifyUsers([req.requestedById], {
       title: 'Pagamento realizado',
       body: `O pagamento de R$ ${Number(req.amount).toFixed(2)} foi efetuado.`,
@@ -188,6 +188,47 @@ export async function markPaid(user: SessionUser, id: string, ctx: Ctx = {}): Pr
     });
   }
   return { ok: true };
+}
+
+/**
+ * Marca VÁRIAS como pagas de uma vez (v1.135.2). Reusa `markPaid` item a item:
+ * perfil que paga, unidade do Coordenador, só APROVADA, guarda contra dupla
+ * baixa e auditoria são exatamente os da baixa individual — o lote é um
+ * comando só, não uma regra nova.
+ *
+ * O aviso é o que muda: com 280 na fila, o gerente que lançou 40 receberia 40
+ * "Pagamento realizado". Cada solicitante recebe UM aviso, com a contagem e o
+ * total do que é dele.
+ */
+export async function payManyRequests(
+  user: SessionUser,
+  ids: string[],
+  ctx: Ctx = {},
+): Promise<{ paid: number; failed: { id: string; reason: string }[] }> {
+  const failed: { id: string; reason: string }[] = [];
+  const porSolicitante = new Map<string, { qtd: number; total: number }>();
+  let paid = 0;
+  for (const id of [...new Set(ids)].slice(0, MAX_BATCH)) {
+    const before = await prisma.paymentRequest.findUnique({ where: { id }, select: { amount: true, requestedById: true } });
+    const r = await markPaid(user, id, ctx, { skipRequesterNotice: true });
+    if (!r.ok) { failed.push({ id, reason: r.reason }); continue; }
+    paid += 1;
+    if (before?.requestedById) {
+      const s = porSolicitante.get(before.requestedById) ?? { qtd: 0, total: 0 };
+      s.qtd += 1;
+      s.total += Number(before.amount);
+      porSolicitante.set(before.requestedById, s);
+    }
+  }
+  for (const [quem, s] of porSolicitante) {
+    await notifyUsers([quem], {
+      title: s.qtd === 1 ? 'Pagamento realizado' : `${s.qtd} pagamentos realizados`,
+      body: `Total de R$ ${s.total.toFixed(2)} pago por ${user.name}.`,
+      link: '/modulos/pagamentos',
+      module: 'PAYMENTS',
+    });
+  }
+  return { paid, failed };
 }
 
 /* ───────── Aprovador: ajustar a solicitação ANTES de aprovar (04/09) ───────── */
