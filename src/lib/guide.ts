@@ -1087,6 +1087,24 @@ export const GUIDE: GuideSection[] = [
         tips: ['Itens com saldo abaixo do mínimo ganham selo "baixo". A lista de fornecedores é a mesma das Configurações.'],
       },
       {
+        id: 'despesas-cofre',
+        title: 'Despesas (retiradas do cofre)',
+        roles: [...MANAGERLINE, 'CEO'],
+        summary: 'Despesa = dinheiro que saiu do COFRE da unidade e o escritório devolve depois.',
+        steps: [
+          'Em Operação → Despesas, o gerente registra TODA despesa paga com dinheiro retirado do cofre da unidade. Não existe "origem do dinheiro" para escolher: aqui é sempre o cofre — a operação não autoriza usar o caixa, e o SGO não abre essa possibilidade.',
+          'NOVA DESPESA (rápido, no celular): Data (hoje por padrão, ajuste se foi outro dia; nunca futura) → Valor → Categoria (Manutenção, Compra emergencial, Alimentação, Transporte/Frete, Material, Outros) → Descrição/motivo (curta, ex.: "Compra emergencial de registro para banheiro") → Foto do comprovante (OPCIONAL; abre a câmera) → Salvar. Unidade e responsável saem sozinhos da sua sessão.',
+          'Ao salvar: "Despesa registrada com sucesso. Aguardando devolução do escritório." A despesa nasce PENDENTE DE DEVOLUÇÃO (🟡).',
+          'DEVOLUÇÃO: Coordenação, Supervisão, Financeiro ou Admin abrem a despesa e usam "Registrar devolução" quando o valor volta ao cofre. Fica DEVOLVIDA (🟢) com quem/quando/quanto; o lançamento original não muda, e quem lançou é avisado. O gerente que retirou não dá a própria baixa.',
+          'CARTÕES: Total de despesas (o que saiu do cofre), Pendente de devolução (em destaque: ainda falta recompor) e Devolvido. Filtros: período, categoria e situação; quem enxerga a rede vê a unidade e o responsável em cada linha.',
+          'Nada é excluído: a estrutura já prevê cancelamento com motivo e histórico, sem tela por enquanto. Tudo fica na Auditoria.',
+        ],
+        tips: [
+          'A tela obedece o seletor de unidade do cabeçalho: em "Toda a Rede" o escritório vê todas as unidades; o gerente vê só a dele.',
+          'Comprovante não é obrigatório nesta versão — a falta dele não impede o lançamento. Quando existir, aparece ao abrir a despesa.',
+        ],
+      },
+      {
         id: 'oleo',
         title: 'Coleta de Óleo',
         roles: [...MANAGERLINE, 'CEO'],

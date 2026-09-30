@@ -59,7 +59,7 @@ export const AREAS: AreaDoMenu[] = [
     icone: 'grid',
     colunas: [
       { titulo: 'Rotinas da unidade', keys: ['OIL', 'PIZZAS', 'GAS'] },
-      { titulo: 'Controles', keys: ['WASTE', 'OCCURRENCES', 'MAINTENANCE', 'COMMANDS', 'CASH', 'CANCELLATIONS'] },
+      { titulo: 'Controles', keys: ['WASTE', 'OCCURRENCES', 'MAINTENANCE', 'COMMANDS', 'CASH', 'EXPENSES', 'CANCELLATIONS'] },
       { titulo: 'Suprimentos', keys: ['STOCK', 'NOTES', 'INVENTORY', 'PRODUCTS', 'PRODUCT_SEPARATION'] },
       { titulo: 'Conferências', keys: ['COMMANDS_SCAN', 'COMMANDS_SESSIONS', 'COMMANDS_OPEN', 'CANCELLATIONS_ITEMS', 'CASH_OFFICE'] },
     ],

@@ -74,6 +74,8 @@ const BASE: ModuleDef[] = [
   { key: 'GAS_REPORT', label: 'Relatório de gás', nav: '/modulos/gas/relatorio', parent: 'GAS' },
 
   { key: 'OIL', label: 'Coleta de Óleo', nav: '/modulos/oleo' },
+  // Despesas pagas com dinheiro do COFRE (v1.136.0): gerente lança, escritório devolve.
+  { key: 'EXPENSES', label: 'Despesas (retiradas do cofre)', nav: '/modulos/despesas' },
 
   { key: 'STOCK', label: 'Estoque (validade e lotes)', nav: '/modulos/estoque' },
 
@@ -184,6 +186,8 @@ export interface Perm { canView: boolean; canEdit: boolean }
 // explícita (ADMIN/CEO sempre veem). Admin pode liberar/restringir na matriz.
 const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   LEAVES_TEAM: ['SUPERVISOR'],
+  // Despesas do cofre: quem opera a unidade lança; o escritório vê a rede e devolve.
+  EXPENSES: ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'FINANCE'],
   /* Consolidação de pagamentos (v1.126.0): Freelancer + Hora Extra da rede para
      o Financeiro. Nasce para Supervisão e Financeiro (+Admin/CEO); o gerente
      segue com as abas de sempre. O Admin libera outros perfis na matriz. */
