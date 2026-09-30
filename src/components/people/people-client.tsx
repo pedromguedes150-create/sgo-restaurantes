@@ -13,7 +13,8 @@ import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { Group } from '@/components/ui/ds/group';
 import { Sheet } from '@/components/ui/ds/sheet';
-import { CalendarCog } from 'lucide-react';
+import { CalendarCog, Building2 } from 'lucide-react';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { EmployeeScheduleForm, type TipoDeEscala, type Turno, type EscalaAtual } from '@/components/schedule/employee-schedule-form';
 
 export interface Collab { id: string; name: string; jobTitle: string | null; units: string[]; unitIds: string[] }
@@ -38,6 +39,7 @@ const VAR_LABEL = { NONE: 'OK', ABSENCE: 'Falta', LATE: 'Atraso', SWAP: 'Troca' 
 export function PeopleClient({
   collaborators, vacations, schedule, canRequestVacation, abas = {},
   unidades = [], tipos = [], turnos = [], configs = {}, filtradoPor = [], total = 0, limite = 0, podeConfigurar = false,
+  podeEditarUnidades = false,
 }: {
   collaborators: Collab[]; vacations: Vac[]; schedule: Sched[]; canRequestVacation?: boolean; abas?: AcessoAbas;
   unidades?: UnidadeOpt[];
@@ -50,12 +52,37 @@ export function PeopleClient({
   total?: number;
   limite?: number;
   podeConfigurar?: boolean;
+  /** Corrigir a QUAIS unidades o colaborador está ligado — só Admin (o sync só adiciona vínculo, nunca remove). */
+  podeEditarUnidades?: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<'col' | 'fer' | 'esc'>(abaInicial(abas, 'PEOPLE', 'col') as 'col' | 'fer' | 'esc');
   const [busy, setBusy] = useState(false);
   /** Colaborador aberto na folha de configuração de escala. */
   const [aberto, setAberto] = useState<Collab | null>(null);
+  /** Colaborador aberto na folha de "Editar unidades". */
+  const [editandoUnidades, setEditandoUnidades] = useState<Collab | null>(null);
+  const [unidadesSelecionadas, setUnidadesSelecionadas] = useState<string[]>([]);
+  const [erroUnidades, setErroUnidades] = useState('');
+
+  async function salvarUnidades() {
+    if (!editandoUnidades) return;
+    if (unidadesSelecionadas.length === 0) { setErroUnidades('Escolha ao menos uma unidade.'); return; }
+    setBusy(true); setErroUnidades('');
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity: 'collaborator', action: 'setUnits', id: editandoUnidades.id, unitIds: unidadesSelecionadas }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setErroUnidades(d.error ?? 'Falha ao salvar.'); return; }
+      setEditandoUnidades(null);
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   // Solicitar férias ao RH (item 11 — provisório até a API do RH)
   const [vCollab, setVCollab] = useState('');
   const [vStart, setVStart] = useState('');
@@ -123,6 +150,39 @@ export function PeopleClient({
         </Sheet>
       )}
 
+      {editandoUnidades && (
+        <Sheet
+          open
+          onClose={() => setEditandoUnidades(null)}
+          title={`Unidades de ${editandoUnidades.name}`}
+          description="O sync do RH só ADICIONA vínculo — nunca remove. Depois de uma transferência, a unidade antiga fica ligada até alguém tirar manualmente aqui."
+          footer={
+            <div className="flex w-full items-center justify-between gap-2">
+              <span className="text-xs text-danger">{erroUnidades}</span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="ghost" onClick={() => setEditandoUnidades(null)} disabled={busy}>Cancelar</Button>
+                <Button size="sm" onClick={salvarUnidades} disabled={busy}>Salvar</Button>
+              </div>
+            </div>
+          }
+        >
+          <div className="space-y-1">
+            <Label>Unidades</Label>
+            <MultiSelect
+              options={unidades.map((u) => ({ value: u.id, label: u.name }))}
+              selected={unidadesSelecionadas}
+              onChange={setUnidadesSelecionadas}
+              placeholder="Selecionar unidades…"
+              searchable
+            />
+            {/* ⚠️ Se o RH continuar devolvendo a pessoa para uma unidade que
+                você tirou daqui, a PRÓXIMA sincronização recria o vínculo — a
+                correção só "gruda" se o RH de fato não devolver mais a pessoa
+                para lá. */}
+          </div>
+        </Sheet>
+      )}
+
       {tab === 'col' && (
         <>
           {/* Estado vazio FORA do grupo: dentro, a caixa emolduraria uma frase
@@ -147,12 +207,35 @@ export function PeopleClient({
                   )}
                 </>
               );
-              if (!podeConfigurar) return <div key={c.id} className="p-3">{linha}</div>;
+              if (!podeConfigurar && !podeEditarUnidades) return <div key={c.id} className="p-3">{linha}</div>;
+              /* Duas ações por linha (escala + unidades) não cabem dentro de UM
+                 <button> só — botão dentro de botão é HTML inválido e rouba o
+                 clique um do outro. A linha virou `div`, com cada ação como seu
+                 próprio botão; "Configurar escala" continua sendo a maior área
+                 clicável (é a ação do dia a dia), "Editar unidades" é o ícone à
+                 parte, só para o Admin. */
               return (
-                <button key={c.id} type="button" onClick={() => setAberto(c)} className="flex w-full items-center gap-2 p-3 text-left hover:bg-sunken">
-                  <span className="min-w-0 flex-1">{linha}</span>
-                  <CalendarCog className="h-4 w-4 shrink-0 text-ink-500" />
-                </button>
+                <div key={c.id} className="flex w-full items-center gap-2 p-3 hover:bg-sunken">
+                  {podeConfigurar ? (
+                    <button type="button" title="Configurar escala" onClick={() => setAberto(c)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                      <span className="min-w-0 flex-1">{linha}</span>
+                      <CalendarCog className="h-4 w-4 shrink-0 text-ink-500" />
+                    </button>
+                  ) : (
+                    <span className="min-w-0 flex-1">{linha}</span>
+                  )}
+                  {podeEditarUnidades && (
+                    <button
+                      type="button"
+                      title="Editar unidades"
+                      aria-label={`Editar unidades de ${c.name}`}
+                      onClick={() => { setEditandoUnidades(c); setUnidadesSelecionadas(c.unitIds); setErroUnidades(''); }}
+                      className="shrink-0 rounded-control p-1.5 text-ink-500 hover:bg-sunken hover:text-brand"
+                    >
+                      <Building2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               );
             })}
           </Group>

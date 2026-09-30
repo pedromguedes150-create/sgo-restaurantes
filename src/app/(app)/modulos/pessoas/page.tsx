@@ -118,6 +118,12 @@ export default async function PessoasModulePage({ searchParams }: { searchParams
             limite={LIMITE_DA_LISTA}
             /* Cadastrar escala é ato de gestão: quem só consulta Pessoas não abre a folha. */
             podeConfigurar={await canEditModule(user.role, 'SCHEDULE')}
+            /* Corrigir a quais unidades o colaborador está ligado é só do Admin: o
+               sync do RH só ADICIONA vínculo (nunca remove, de propósito — ver
+               src/lib/admin.ts setCollaboratorUnits), e um vínculo antigo que
+               sobra depois de uma transferência precisa de alguém decidindo, não
+               do próprio sync concluindo sozinho por ausência numa resposta. */
+            podeEditarUnidades={user.role === 'ADMIN'}
             vacations={vacations.map((v) => ({ id: v.id, collaborator: v.collaborator.name, unit: v.unit.name, start: d(v.startDate), end: d(v.endDate), status: v.status, changeNote: v.changeNote }))}
             schedule={schedule.map((s) => ({ id: s.id, collaborator: s.collaborator.name, unit: s.unit.name, date: d(s.date), planned: s.planned, variation: s.variation, note: s.variationNote }))}
           />

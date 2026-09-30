@@ -45,6 +45,7 @@ export async function POST(req: Request) {
   else if (e === 'user' && a === 'toggle') r = await admin.toggleUser(user, b.id, b.active, ctx);
   else if (e === 'user' && a === 'delete') r = await admin.deleteUser(user, b.id, ctx);
   else if (e === 'user' && a === 'setUnits') r = await admin.setUserUnits(user, b.id, b.unitIds ?? [], ctx);
+  else if (e === 'collaborator' && a === 'setUnits') r = await admin.setCollaboratorUnits(user, b.id, b.unitIds ?? [], ctx);
   else if (e === 'commandSequence' && a === 'create') r = await admin.createCommandSequence(user, b, ctx);
   else if (e === 'commandSequence' && a === 'update') r = await admin.updateCommandSequence(user, b.id, b, ctx);
   else if (e === 'commandSequence' && a === 'delete') r = await admin.deleteCommandSequence(user, b.id, ctx);
