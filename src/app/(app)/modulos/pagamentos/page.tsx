@@ -10,10 +10,9 @@ import { getMyRequests, getToApprove, getToPay, getHistory, getUnitRequests, get
 import { podePagarPorPerfil } from '@/lib/payments/aprovadores';
 import { activeOvertimeRatesByUnit } from '@/lib/overtime/rates';
 import { listSuppliers } from '@/lib/suppliers';
-import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { PaymentsClient, type PayReq } from '@/components/payments/payments-client';
-import { FileText } from 'lucide-react';
+import { RelatoriosMenu } from '@/components/payments/relatorios-menu';
 import type { PaymentRequest } from '@prisma/client';
 import { LargeTitle } from '@/components/layout/page-chrome';
 
@@ -146,25 +145,15 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <LargeTitle title="Pagamentos" />
-        {/* A Supervisão abria a consolidação se digitasse o endereço, mas não
-            tinha link — e é ela quem recebe o alerta de freelancer recorrente,
-            ou seja, a primeira a precisar do consolidado. A condição passa a ser
-            a mesma que a própria página usa para deixar entrar. */}
-        {podeVerConsolidacao && (
-          <Link href="/modulos/pagamentos/relatorio-freelancers" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
-            <FileText className="h-4 w-4" /> Recorrência de Freelancers
-          </Link>
-        )}
-        {podeVerConsolidacaoPagamentos && (
-          <Link href="/modulos/pagamentos/consolidacao" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
-            <FileText className="h-4 w-4" /> Pagamentos de Freelancers
-          </Link>
-        )}
-        {podeVerPagamentoExtra && (
-          <Link href="/modulos/pessoas/comissoes" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
-            <FileText className="h-4 w-4" /> Pagamento Extra
-          </Link>
-        )}
+        {/* Um menu só, com uma linha explicando cada tela. As condições são as
+            MESMAS que cada página usa para deixar entrar: a Supervisão recebe
+            o alerta de freelancer recorrente, então precisa achar o consolidado;
+            as demais obedecem a matriz. */}
+        <RelatoriosMenu itens={[
+          ...(podeVerConsolidacao ? [{ href: '/modulos/pagamentos/relatorio-freelancers', titulo: 'Recorrência de Freelancers', descricao: 'Quem repete na mesma semana, por unidade — e o fechamento semanal com PIX.' }] : []),
+          ...(podeVerConsolidacaoPagamentos ? [{ href: '/modulos/pagamentos/consolidacao', titulo: 'Pagamentos de Freelancers', descricao: 'Conferência do período para o PIX: por lançamento, por unidade e por colaborador.' }] : []),
+          ...(podeVerPagamentoExtra ? [{ href: '/modulos/pessoas/comissoes', titulo: 'Pagamento Extra', descricao: 'Horas extras aprovadas por competência (mês seguinte ao trabalho) e mobilidade.' }] : []),
+        ]} />
       </div>
       <Card>
         <CardContent className="pt-4">
