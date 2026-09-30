@@ -24,6 +24,7 @@ import type { SessionUser } from '@/lib/auth/session';
 /** O que aconteceu com uma pessoa que o RH devolveu. */
 export type Decisao =
   | 'ATIVO_NO_SGO'
+  | 'ATIVO_DE_FERIAS'
   | 'ATIVO_STATUS_DESCONHECIDO'
   | 'INATIVO_POR_STATUS'
   | 'PULADO_SEM_MATRICULA'
@@ -31,6 +32,7 @@ export type Decisao =
 
 export const DECISAO_LABEL: Record<Decisao, string> = {
   ATIVO_NO_SGO: 'Ativo no SGO',
+  ATIVO_DE_FERIAS: 'De férias (RH)',
   ATIVO_STATUS_DESCONHECIDO: 'Ativo, status novo',
   INATIVO_POR_STATUS: 'Desligado no SGO',
   PULADO_SEM_MATRICULA: 'Nunca entrou',
@@ -39,6 +41,7 @@ export const DECISAO_LABEL: Record<Decisao, string> = {
 
 export const DECISAO_MOTIVO: Record<Decisao, string> = {
   ATIVO_NO_SGO: 'Aparece normalmente em Pessoas, Escala e Mapa de Funções.',
+  ATIVO_DE_FERIAS: 'O RH diz que esta pessoa está de férias. Ao sincronizar, o SGO marca o DIA DE HOJE como Férias (FE) na Escala de funcionários — só o dia da sincronização, porque o RH não manda data de início/fim; dias antes (se a sincronização atrasou) e o dia de volta não são adivinhados. Se precisar do período completo, lance manualmente em Escala → Registrar ausência.',
   ATIVO_STATUS_DESCONHECIDO: 'O SGO não conhece este status do RH. A pessoa APARECE normalmente (some do sistema é pior do que aparecer a mais), mas confira se ela realmente trabalha — se for um status de desligamento, me avise para eu incluí-lo na regra.',
   INATIVO_POR_STATUS: 'O status no RH não começa com "Ativo", então o sync marcou a pessoa como inativa — e inativo SOME de Pessoas, da Escala e do Mapa.',
   PULADO_SEM_MATRICULA: 'O RH mandou esta pessoa SEM matrícula. O sync pula quem não tem matrícula, então ela nunca chegou ao SGO.',
@@ -103,7 +106,7 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
     unitId: unit.id, unitName: unit.name, rhUnitName: unit.rhUnitName,
     nomeConfere: null, parecidas: [], erro: null,
     totalNoRh: 0, pessoas: [], soNoSgo: [],
-    resumo: { ATIVO_NO_SGO: 0, ATIVO_STATUS_DESCONHECIDO: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
+    resumo: { ATIVO_NO_SGO: 0, ATIVO_DE_FERIAS: 0, ATIVO_STATUS_DESCONHECIDO: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
     ativosNoSgo: 0,
   };
 
@@ -178,6 +181,7 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
       const classe = classificarStatus(c.status);
       if (!doSgo) decisao = 'NAO_ENCONTRADO_NO_SGO';
       else if (classe === 'DESLIGADO') decisao = 'INATIVO_POR_STATUS';
+      else if (classe === 'FERIAS') decisao = 'ATIVO_DE_FERIAS';
       else if (classe === 'DESCONHECIDO') decisao = 'ATIVO_STATUS_DESCONHECIDO';
       else decisao = 'ATIVO_NO_SGO';
     }
@@ -189,7 +193,7 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
   /* Ordem: primeiro o que está errado. Quem abre esta tela está procurando
      problema, não conferindo quem está bem. */
   const peso: Record<Decisao, number> = {
-    PULADO_SEM_MATRICULA: 0, INATIVO_POR_STATUS: 1, ATIVO_STATUS_DESCONHECIDO: 2, NAO_ENCONTRADO_NO_SGO: 3, ATIVO_NO_SGO: 4,
+    PULADO_SEM_MATRICULA: 0, INATIVO_POR_STATUS: 1, ATIVO_DE_FERIAS: 2, ATIVO_STATUS_DESCONHECIDO: 3, NAO_ENCONTRADO_NO_SGO: 4, ATIVO_NO_SGO: 5,
   };
   base.pessoas.sort((a, b) => peso[a.decisao] - peso[b.decisao] || a.nome.localeCompare(b.nome, 'pt-BR'));
 

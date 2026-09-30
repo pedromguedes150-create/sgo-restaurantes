@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic';
 /* A cor diz a gravidade antes de a pessoa ler a linha. */
 const TOM: Record<Decisao, 'success' | 'warning' | 'danger' | 'info'> = {
   ATIVO_NO_SGO: 'success',
+  ATIVO_DE_FERIAS: 'info',
   ATIVO_STATUS_DESCONHECIDO: 'warning',
   INATIVO_POR_STATUS: 'danger',
   PULADO_SEM_MATRICULA: 'danger',
@@ -21,7 +22,7 @@ const TOM: Record<Decisao, 'success' | 'warning' | 'danger' | 'info'> = {
 };
 
 /* Só o que explica gente faltando — "Ativo no SGO" não precisa de explicação. */
-const ORDEM_DO_RESUMO: Decisao[] = ['PULADO_SEM_MATRICULA', 'INATIVO_POR_STATUS', 'ATIVO_STATUS_DESCONHECIDO', 'NAO_ENCONTRADO_NO_SGO', 'ATIVO_NO_SGO'];
+const ORDEM_DO_RESUMO: Decisao[] = ['PULADO_SEM_MATRICULA', 'INATIVO_POR_STATUS', 'ATIVO_DE_FERIAS', 'ATIVO_STATUS_DESCONHECIDO', 'NAO_ENCONTRADO_NO_SGO', 'ATIVO_NO_SGO'];
 
 /**
  * Diagnóstico do RH — por que falta gente numa unidade.

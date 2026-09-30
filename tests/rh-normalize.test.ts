@@ -93,9 +93,22 @@ describe('Status do colaborador', () => {
     /* Uma pessoa a mais na tela é visível e alguém corrige. Uma pessoa a menos
        é invisível, e ninguém procura o que não sabe que falta. Foi exatamente
        assim que as 8 de Jardim Teresópolis passaram despercebidas. */
-    for (const s of ['Afastado', 'Férias', 'Licença Maternidade', 'Coisa que o RH inventar', '', null, undefined]) {
+    for (const s of ['Afastado', 'Licença Maternidade', 'Coisa que o RH inventar', '', null, undefined]) {
       expect(classificarStatus(s), String(s)).toBe('DESCONHECIDO');
       expect(isAtivo(s), String(s)).toBe(true);
+    }
+  });
+
+  /* FÉRIAS ganhou classe própria em 30/09/2026 — deixou de cair em
+     DESCONHECIDO. Continua contando como presente (o `isAtivo` não muda: é
+     gente empregada, só afastada por um tempo), mas agora o sync a reconhece
+     e usa para marcar o dia na Escala (ver `sync.ts`) — DESCONHECIDO
+     continua existindo para o que o SGO ainda não entende, e nunca deve
+     disparar essa marcação. */
+  it('FÉRIAS é classe própria — continua visível, mas não é mais "status novo"', () => {
+    for (const s of ['Férias', 'FÉRIAS', ' férias ', 'De férias', 'Ferias']) {
+      expect(classificarStatus(s), s).toBe('FERIAS');
+      expect(isAtivo(s), s).toBe(true);
     }
   });
 });

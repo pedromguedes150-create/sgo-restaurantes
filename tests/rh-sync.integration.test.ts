@@ -191,6 +191,69 @@ describe('Lista VAZIA não desliga a unidade', () => {
   });
 });
 
+describe('FÉRIAS do RH vira FE na Escala (30/09/2026)', () => {
+  /* O RH só manda um status, sem data de início/fim — por isso só o dia
+     OPERACIONAL de hoje da unidade é marcado, nunca um período inteiro. */
+  async function feDeHoje(collaboratorId: string) {
+    return prisma.scheduleActual.findFirst({
+      where: { collaboratorId, status: 'FERIAS' },
+      orderBy: { date: 'desc' },
+    });
+  }
+
+  it('ao sincronizar, quem está de férias no RH ganha FE no dia de hoje', async () => {
+    respostaDoRh = { data: [colaboradorRh(`T${sfx}-1`, 'ALESSANDRA'), { ...colaboradorRh(`T${sfx}-2`, 'BRUNO'), status: 'Férias' }] };
+    await syncCollaboratorsForUnit(admin, unitId);
+    const bruno = await prisma.collaborator.findFirst({ where: { externalId: `T${sfx}-2` } });
+    const fe = await feDeHoje(bruno!.id);
+    expect(fe).not.toBeNull();
+    expect(fe?.reason).toContain('férias');
+    /* Quem NÃO está de férias não ganha marcação nenhuma. */
+    const ale = await prisma.collaborator.findFirst({ where: { externalId: `T${sfx}-1` } });
+    expect(await feDeHoje(ale!.id)).toBeNull();
+  });
+
+  it('continua ATIVO no SGO — férias não é desligamento', async () => {
+    respostaDoRh = { data: [colaboradorRh(`T${sfx}-1`, 'ALESSANDRA'), { ...colaboradorRh(`T${sfx}-2`, 'BRUNO'), status: 'Férias' }] };
+    await syncCollaboratorsForUnit(admin, unitId);
+    expect(await ativosNaUnidade()).toEqual(['ALESSANDRA', 'BRUNO']);
+  });
+
+  it('fica na Auditoria como SCHEDULE_ABSENCE, com a origem RH_SYNC', async () => {
+    respostaDoRh = { data: [{ ...colaboradorRh(`T${sfx}-2`, 'BRUNO'), status: 'Férias' }] };
+    await syncCollaboratorsForUnit(admin, unitId);
+    const bruno = await prisma.collaborator.findFirst({ where: { externalId: `T${sfx}-2` } });
+    const log = await prisma.auditLog.findFirst({
+      where: { action: 'SCHEDULE_ABSENCE', entityId: bruno!.id }, orderBy: { createdAt: 'desc' },
+    });
+    expect(log).not.toBeNull();
+    expect((log?.metadata as Record<string, unknown>)?.origem).toBe('RH_SYNC');
+    expect((log?.metadata as Record<string, unknown>)?.status).toBe('FERIAS');
+  });
+
+  it('sincronizar duas vezes no mesmo dia não duplica — upsert pela chave do dia', async () => {
+    respostaDoRh = { data: [{ ...colaboradorRh(`T${sfx}-2`, 'BRUNO'), status: 'Férias' }] };
+    await syncCollaboratorsForUnit(admin, unitId);
+    await syncCollaboratorsForUnit(admin, unitId);
+    const bruno = await prisma.collaborator.findFirst({ where: { externalId: `T${sfx}-2` } });
+    const todas = await prisma.scheduleActual.findMany({ where: { collaboratorId: bruno!.id, status: 'FERIAS' } });
+    expect(todas).toHaveLength(1);
+  });
+
+  it('quando o RH volta a dizer "Ativo", a Escala simplesmente para de ganhar FE novo — o dia já marcado fica (histórico)', async () => {
+    respostaDoRh = { data: [{ ...colaboradorRh(`T${sfx}-2`, 'BRUNO'), status: 'Férias' }] };
+    await syncCollaboratorsForUnit(admin, unitId);
+    const bruno = await prisma.collaborator.findFirst({ where: { externalId: `T${sfx}-2` } });
+    const feAntes = await feDeHoje(bruno!.id);
+    expect(feAntes).not.toBeNull();
+
+    respostaDoRh = { data: [colaboradorRh(`T${sfx}-2`, 'BRUNO')] }; // volta a "Ativo"
+    await syncCollaboratorsForUnit(admin, unitId);
+    const total = await prisma.scheduleActual.count({ where: { collaboratorId: bruno!.id, status: 'FERIAS' } });
+    expect(total).toBe(1); // o registro de hoje não é apagado nem duplicado
+  });
+});
+
 describe('Formato inesperado é ERRO, não lista vazia', () => {
   it('envelope trocado aborta a unidade sem tocar em ninguém', async () => {
     /* Se o RH renomear o campo, o sync tem de parar — não concluir que a
