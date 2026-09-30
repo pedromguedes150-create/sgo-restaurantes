@@ -4,23 +4,35 @@ import React from 'react';
 import { RelatoriosMenu } from '@/components/payments/relatorios-menu';
 
 /**
- * O cabeçalho de Pagamentos tinha três botões soltos; agora é um menu. O que
- * se prova: ele nasce FECHADO (só o botão), some quando não há o que mostrar
- * e é um menu de verdade para o leitor de tela.
+ * O cabeçalho de Pagamentos tinha três botões soltos, com aparência solta e
+ * poluída; uma primeira correção os escondeu atrás de um menu suspenso, mas
+ * isso trocou a LÓGICA de navegação (um clique a mais para um link de uso
+ * semanal) — não era o pedido, que era só organizar a aparência. Agora os
+ * três continuam visíveis e clicáveis de cara, só reunidos numa tira só.
  */
 const itens = [
   { href: '/modulos/pagamentos/relatorio-freelancers', titulo: 'Recorrência de Freelancers', descricao: 'Quem repete na semana.' },
   { href: '/modulos/pessoas/comissoes', titulo: 'Pagamento Extra', descricao: 'Horas extras por competência.' },
 ];
 
-describe('Menu de relatórios de Pagamentos', () => {
-  it('nasce fechado: só o botão, com aria-haspopup', () => {
+describe('Relatórios de Pagamentos: visíveis de cara, não atrás de um menu', () => {
+  it('cada link já está na tela — nenhum clique extra para descobrir que existem', () => {
     const h = renderToString(<RelatoriosMenu itens={itens} />);
-    /* Não é só "Relatórios": a barra de navegação já tem uma área com esse nome. */
-    expect(h).toContain('Relatórios de Pagamentos');
-    expect(h).toContain('aria-haspopup="menu"');
-    expect(h).toContain('aria-expanded="false"');
-    expect(h).not.toContain('Recorrência de Freelancers');
+    expect(h).toContain('Recorrência de Freelancers');
+    expect(h).toContain('Pagamento Extra');
+    expect(h).toContain('href="/modulos/pagamentos/relatorio-freelancers"');
+    expect(h).toContain('href="/modulos/pessoas/comissoes"');
+  });
+
+  it('não há mais menu suspenso — sem aria-haspopup/aria-expanded escondendo conteúdo', () => {
+    const h = renderToString(<RelatoriosMenu itens={itens} />);
+    expect(h).not.toContain('aria-haspopup');
+    expect(h).not.toContain('aria-expanded');
+  });
+
+  it('a explicação de cada um vira tooltip nativo (title), não texto escondido atrás de clique', () => {
+    const h = renderToString(<RelatoriosMenu itens={itens} />);
+    expect(h).toContain('title="Quem repete na semana."');
   });
 
   it('sem itens (perfil sem nenhum relatório) não renderiza nada', () => {
