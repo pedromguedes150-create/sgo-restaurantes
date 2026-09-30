@@ -118,3 +118,34 @@ describe('Fase 2 — barra de três botões, filtros, quatro blocos e totais', (
     expect(html).not.toContain('Na grade');
   });
 });
+
+describe('Impressão — a grade cabe numa folha A4 paisagem', () => {
+  /* Antes a grade larga (até 31 colunas de dia) saía do mesmo tamanho da
+     tela e o navegador paginava em várias folhas lado a lado — o relato do
+     Pedro mostrou 4 páginas para uma unidade só. A correção: `@page` força
+     paisagem SÓ nesta tela (a regra vive num <style> que só existe enquanto
+     o componente está montado) e as colunas ganham largura fixa print:w-[…]
+     pequena o bastante para caber, sem mexer na tela normal. */
+  it('a folha diz a unidade, o mês e a visão — sem isso o papel no quadro não diz de quando é', () => {
+    const html = render({ selectedUnitId: 'u1', year: 2026, month: 8 });
+    expect(html).toContain('Escala — Jardim Teresópolis · Agosto/2026 · Realizado');
+  });
+
+  it('a orientação paisagem é fixada só para esta tela, via @page', () => {
+    const html = render();
+    expect(html).toContain('@page { size: landscape; margin: 8mm; }');
+  });
+
+  it('a tabela vira table-fixed e ganha largura por coluna só na impressão', () => {
+    const html = render();
+    expect(html).toContain('print:table-fixed');
+    expect(html).toContain('print:w-[112px]'); // coluna do colaborador
+    expect(html).toContain('print:w-[24px]'); // coluna do dia
+    expect(html).toContain('print:w-[48px]'); // coluna de totais
+  });
+
+  it('cargo/turno/setor some da impressão — sobra espaço para os dias, sem perder a letra do dia', () => {
+    const html = render();
+    expect(html).toContain('print:hidden');
+  });
+});
