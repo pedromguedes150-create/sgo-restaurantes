@@ -268,6 +268,40 @@ export async function setUserUnits(user: SessionUser, id: string, unitIds: strin
   return { ok: true };
 }
 
+/**
+ * Corrige as unidades de um colaborador do RH (30/09/2026).
+ *
+ * O sync (`src/lib/rh/sync.ts`) só ADICIONA vínculo — nunca remove. Um
+ * colaborador transferido de unidade no RH fica, no SGO, ligado às DUAS: a
+ * nova (onde o RH volta a confirmá-lo a cada sincronização) e a antiga (que
+ * ninguém nunca tira). Não é o sync que deveria consertar isso: remover um
+ * vínculo só porque a RESPOSTA de uma sincronização não trouxe a pessoa é
+ * exatamente o padrão que inativou 49 colaboradores em 29/09/2026 — a
+ * ausência não pode decidir sozinha. A correção é manual, pelo Admin, aqui.
+ *
+ * ⚠️ Se o RH continuar devolvendo a pessoa para a unidade removida, a PRÓXIMA
+ * sincronização recria o vínculo (o sync só sabe ADICIONAR) — a correção só
+ * "gruda" se o RH de fato não devolver mais a pessoa para lá.
+ */
+export async function setCollaboratorUnits(user: SessionUser, id: string, unitIds: string[], ctx: Ctx = {}): Promise<AdminResult> {
+  if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const ids = [...new Set(unitIds)].filter(Boolean);
+  if (ids.length === 0) return { ok: false, reason: 'INVALID', message: 'Escolha ao menos uma unidade.' };
+  const unidadesValidas = await prisma.unit.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
+  if (unidadesValidas.length !== ids.length) return { ok: false, reason: 'INVALID', message: 'Uma das unidades escolhidas não existe.' };
+
+  const antes = await prisma.collaboratorUnit.findMany({ where: { collaboratorId: id }, select: { unit: { select: { name: true } } } });
+  await prisma.$transaction([
+    prisma.collaboratorUnit.deleteMany({ where: { collaboratorId: id } }),
+    prisma.collaboratorUnit.createMany({ data: ids.map((unitId) => ({ collaboratorId: id, unitId })), skipDuplicates: true }),
+  ]);
+  await audit({
+    userId: user.id, action: 'COLLABORATOR_UNITS', module: 'PEOPLE', entity: 'collaborator', entityId: id,
+    metadata: { antes: antes.map((a) => a.unit.name), depois: unidadesValidas.map((u) => u.name) }, ...ctx,
+  });
+  return { ok: true };
+}
+
 /* ──────────────────────── Categorias de desperdício ──────────────────── */
 function slugCode(s: string) { return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 30) || 'CAT'; }
 
