@@ -88,6 +88,7 @@ model Unit {
   communicationRecipients   CommunicationRecipient[]
   gasReceipts               GasReceipt[]
   oilCollections            OilCollection[]
+  cashExpenses              CashExpense[]
   inventoryItems            InventoryItem[]
   inventoryMovements        InventoryMovement[]
   medicalCertificates       MedicalCertificate[]
@@ -177,6 +178,8 @@ model User {
   gasContractDocuments    GasContractDocument[]    @relation("GasContractDocBy")
   suppliersCreated        Supplier[]               @relation("SupplierBy")
   oilCollections          OilCollection[]          @relation("OilBy")
+  cashExpensesCreated     CashExpense[]            @relation("ExpenseBy")
+  cashExpensesRefunded    CashExpense[]            @relation("ExpenseRefundBy")
   inventoryItemsCreated   InventoryItem[]          @relation("InvItemBy")
   inventoryMovements      InventoryMovement[]      @relation("InvMoveBy")
   checklistModels         ChecklistModel[]         @relation("ChecklistModelBy")
@@ -1684,7 +1687,7 @@ model PaymentRequest {
   reason           String?
   /// Valor/hora ESCOLHIDO na Hora Extra (v1.130.0) — snapshot: mudar a
   /// configuração da unidade não reescreve solicitação antiga.
-  hourlyRate       Decimal?  @db.Decimal(10, 2)
+  hourlyRate       Decimal? @db.Decimal(10, 2)
 
   // Avulso
   miscTypeId     String?
@@ -1709,15 +1712,15 @@ model PaymentRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  unit        Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  requestedBy User?            @relation("PayRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
-  approvedBy  User?            @relation("PayApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-  paidBy      User?            @relation("PayPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
-  freelancer  Freelancer?      @relation(fields: [freelancerId], references: [id], onDelete: SetNull)
-  miscType    MiscPaymentType? @relation(fields: [miscTypeId], references: [id], onDelete: SetNull)
-  supplier    Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  workSector  Sector?          @relation("FreelancerSector", fields: [workSectorId], references: [id], onDelete: SetNull)
-  collaborator Collaborator?   @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
+  unit         Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  requestedBy  User?            @relation("PayRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+  approvedBy   User?            @relation("PayApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  paidBy       User?            @relation("PayPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  freelancer   Freelancer?      @relation(fields: [freelancerId], references: [id], onDelete: SetNull)
+  miscType     MiscPaymentType? @relation(fields: [miscTypeId], references: [id], onDelete: SetNull)
+  supplier     Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  workSector   Sector?          @relation("FreelancerSector", fields: [workSectorId], references: [id], onDelete: SetNull)
+  collaborator Collaborator?    @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
 
   @@index([unitId, status])
   @@index([collaboratorId])
@@ -4078,4 +4081,63 @@ model PizzaDoughChange {
   @@index([unitId, operationalDate])
   @@index([entityId])
   @@map("pizza_dough_changes")
+}
+
+// ===== Despesas — retiradas do COFRE da unidade (v1.136.0) ==================
+/// Origem do dinheiro. SÓ existe `SAFE`: o valor é rastreabilidade, não escolha.
+/// A tela e a rota nunca oferecem outra origem — a operação não autoriza usar o
+/// caixa para estas despesas, e o SGO não cria essa segunda possibilidade.
+enum ExpenseSource {
+  SAFE
+}
+
+enum ExpenseCategory {
+  MAINTENANCE
+  EMERGENCY_PURCHASE
+  FOOD
+  TRANSPORT
+  MATERIAL
+  OTHER
+}
+
+/// PENDING_REFUND → REFUNDED. CANCELED está preparado (motivo + quem/quando) e
+/// sem tela: cancelar não apaga — o registro fica, com o histórico.
+enum ExpenseStatus {
+  PENDING_REFUND
+  REFUNDED
+  CANCELED
+}
+
+/// Uma despesa = dinheiro que saiu do COFRE da unidade e o escritório precisa
+/// recompor. Nunca é excluída: cancelamento é status, não delete.
+model CashExpense {
+  id             String          @id @default(cuid())
+  unitId         String
+  source         ExpenseSource   @default(SAFE)
+  /// 'AAAA-MM-DD' — o dia da despesa (padrão hoje, editável, nunca futuro).
+  expenseDate    String
+  amount         Decimal         @db.Decimal(10, 2)
+  category       ExpenseCategory
+  description    String
+  /// Foto/arquivo do comprovante — opcional nesta versão.
+  receiptPath    String?
+  status         ExpenseStatus   @default(PENDING_REFUND)
+  createdById    String?
+  createdByName  String
+  createdAt      DateTime        @default(now())
+  refundedAt     DateTime?
+  refundedById   String?
+  refundedByName String?
+  refundedAmount Decimal?        @db.Decimal(10, 2)
+  canceledAt     DateTime?
+  canceledById   String?
+  cancelReason   String?
+
+  unit       Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy  User? @relation("ExpenseBy", fields: [createdById], references: [id], onDelete: SetNull)
+  refundedBy User? @relation("ExpenseRefundBy", fields: [refundedById], references: [id], onDelete: SetNull)
+
+  @@index([unitId, expenseDate])
+  @@index([status])
+  @@map("cash_expenses")
 }

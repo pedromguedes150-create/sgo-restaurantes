@@ -130,6 +130,7 @@ const ENTITIES: [string, string][] = [
   ['WASTE', 'Desperdício'],
   ['NOTE', 'Nota'],
   ['OIL', 'Óleo'],
+  ['EXPENSE', 'Despesa (cofre)'],
   ['OCC', 'Ocorrência'],
   ['POP', 'POP'],
   ['CASH', 'Cofre'],
