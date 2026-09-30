@@ -84,7 +84,7 @@ const BASE: ModuleDef[] = [
   { key: 'PEOPLE', label: 'Pessoas / Escala / Mapa', nav: '/modulos/pessoas' },
   { key: 'PEOPLE_MAP', label: 'Mapa de funções', nav: '/modulos/pessoas/mapa', parent: 'PEOPLE' },
   { key: 'PEOPLE_EVALUATION', label: 'Avaliação do colaborador', nav: '/modulos/pessoas/avaliacao', parent: 'PEOPLE' },
-  { key: 'PEOPLE_PAYOUTS', label: 'Comissões e mobilidade', nav: '/modulos/pessoas/comissoes', parent: 'PEOPLE' },
+  { key: 'PEOPLE_PAYOUTS', label: 'Pagamento Extra e mobilidade', nav: '/modulos/pessoas/comissoes', parent: 'PEOPLE' },
   { key: 'PEOPLE_PROBATION', label: 'Período de experiência', nav: '/modulos/pessoas/experiencia', parent: 'PEOPLE' },
   { key: 'PEOPLE_ROLE_CHANGES', label: 'Mudanças de função', nav: '/modulos/pessoas/mudancas', parent: 'PEOPLE' },
   // A Escala não tinha módulo dono: qualquer usuário logado abria a grade de

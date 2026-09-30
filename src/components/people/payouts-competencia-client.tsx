@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
-  ChevronDown, ChevronRight, Download, Lock, LockOpen, Pencil, Plus, Trash2, Truck, X,
+  AlertTriangle, ChevronDown, ChevronRight, Clock, Download, Lock, LockOpen, Pencil, Plus, Trash2, Truck, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,22 +15,41 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { formatBRL } from '@/lib/utils';
 import { formatarCpf } from '@/lib/people/payouts-export';
+import { rotuloDaCompetencia } from '@/lib/people/pagamento-extra-calculo';
+import { textoHoras } from '@/lib/overtime/calculo';
 
 /**
- * COMISSÃO E MOBILIDADE — mesma tela, duas abas INDEPENDENTES.
+ * PAGAMENTO EXTRA E MOBILIDADE — mesma tela, duas abas INDEPENDENTES.
  *
  * A independência não é só visual: cada aba tem a sua entrega, o seu
  * fechamento e o seu arquivo. Não existe botão de "exportar tudo" nesta tela —
  * misturar as duas num Excel foi o que o pedido proibiu, e a forma de garantir
  * é não oferecer o caminho.
  *
+ * As duas abas têm origens diferentes. MOBILIDADE é lançada aqui, à mão. O
+ * PAGAMENTO EXTRA não tem "Lançar": ele É a hora extra aprovada em Pagamentos,
+ * lida na hora (competência = mês seguinte ao dia trabalhado). Corrigir uma HE
+ * se faz onde ela nasce; aqui se confere, se registra a entrega, se finaliza —
+ * e finalizar marca as HE como pagas.
+ *
  * O agrupamento por UNIDADE é o desenho do SGO dos postos: a linha da unidade
- * responde "quanto e quantos", e só quem precisa do detalhe expande. Com
- * duzentos e setenta lançamentos, a lista corrida não responde nada.
+ * responde "quanto e quantos", e só quem precisa do detalhe expande.
  */
 
-export type Tipo = 'COMMISSION' | 'MOBILITY';
+export type Tipo = 'EXTRA' | 'MOBILITY';
 
+export interface HoraExtraUI {
+  id: string;
+  dia: string;
+  inicio: string | null;
+  fim: string | null;
+  horas: number | null;
+  valorHora: number | null;
+  vt: number;
+  valor: number;
+  status: 'APPROVED' | 'PAID';
+  aprovadoPor: string | null;
+}
 export interface LinhaUI {
   id: string;
   collaboratorId: string;
@@ -38,6 +58,10 @@ export interface LinhaUI {
   valor: number;
   observacao: string | null;
   lancadoPor: string;
+  /** Só no Pagamento Extra. */
+  horas?: number;
+  status?: 'PAID' | 'APPROVED' | 'MISTO';
+  horasExtras?: HoraExtraUI[];
 }
 export interface GrupoUI {
   unitId: string;
@@ -54,12 +78,21 @@ export interface QuadroUI {
   fechada: boolean;
   fechadaPor: string | null;
   unidadesSemLancamento: { id: string; name: string }[];
+  extra?: {
+    mesTrabalhado: string;
+    rotuloMesTrabalhado: string;
+    colaboradores: number;
+    pendentes: { qtd: number; valor: number };
+    aposFechamento: { qtd: number; valor: number; linhas: (HoraExtraUI & { colaborador: string })[] };
+  };
 }
 export interface ColaboradorUI {
   id: string; nome: string; cpf: string | null; unitId: string; unidade: string;
 }
 
-const ROTULO: Record<Tipo, string> = { COMMISSION: 'Comissão', MOBILITY: 'Mobilidade' };
+const ROTULO: Record<Tipo, string> = { EXTRA: 'Pagamento Extra', MOBILITY: 'Mobilidade' };
+/** O que se conta em cada aba: HE não é "lançamento". */
+const UNIDADE_DE_CONTAGEM: Record<Tipo, string> = { EXTRA: 'hora(s) extra(s)', MOBILITY: 'lançamento(s)' };
 
 async function acao(body: Record<string, unknown>): Promise<{ ok: boolean; error?: string } & Record<string, unknown>> {
   const r = await fetch('/api/people/payouts', {
@@ -69,21 +102,25 @@ async function acao(body: Record<string, unknown>): Promise<{ ok: boolean; error
 }
 
 export function PayoutsCompetenciaClient({
-  competencia, meses, comissao, mobilidade, colaboradores, podeLancar, isAdmin,
+  competencia, meses, extra, mobilidade, colaboradores, podeLancar, podeFecharExtra, isAdmin, abaInicial = 'EXTRA',
 }: {
   competencia: string;
   meses: string[];
-  comissao: QuadroUI;
+  /** `?aba=mobilidade` abre direto na Mobilidade (link da Ajuda e do histórico). */
+  abaInicial?: Tipo;
+  extra: QuadroUI;
   mobilidade: QuadroUI;
   colaboradores: ColaboradorUI[];
   podeLancar: boolean;
+  /** Finalizar o Pagamento Extra marca HE como pagas: Admin/CEO/Financeiro. */
+  podeFecharExtra: boolean;
   isAdmin: boolean;
 }) {
   const router = useRouter();
-  const [tipo, setTipo] = useState<Tipo>('COMMISSION');
-  const quadro = tipo === 'COMMISSION' ? comissao : mobilidade;
+  const [tipo, setTipo] = useState<Tipo>(abaInicial);
+  const quadro = tipo === 'EXTRA' ? extra : mobilidade;
 
-  const trocarMes = (m: string) => router.push(`/modulos/pessoas/comissoes?mes=${m}`);
+  const trocarMes = (m: string) => router.push(`/modulos/pessoas/comissoes?mes=${m}${tipo === 'MOBILITY' ? '&aba=mobilidade' : ''}`);
 
   return (
     <div className="space-y-4">
@@ -93,7 +130,7 @@ export function PayoutsCompetenciaClient({
         value={tipo}
         onValueChange={(v) => setTipo(v as Tipo)}
         options={[
-          { value: 'COMMISSION', label: `Comissão (${comissao.totalLancamentos})` },
+          { value: 'EXTRA', label: `Pagamento Extra (${extra.totalLancamentos})` },
           { value: 'MOBILITY', label: `Mobilidade (${mobilidade.totalLancamentos})` },
         ]}
       />
@@ -106,6 +143,7 @@ export function PayoutsCompetenciaClient({
         meses={meses}
         colaboradores={colaboradores}
         podeLancar={podeLancar}
+        podeFecharExtra={podeFecharExtra}
         isAdmin={isAdmin}
         onTrocarMes={trocarMes}
         onMudou={() => router.refresh()}
@@ -114,9 +152,9 @@ export function PayoutsCompetenciaClient({
   );
 }
 
-function Aba({ tipo, quadro, competencia, meses, colaboradores, podeLancar, isAdmin, onTrocarMes, onMudou }: {
+function Aba({ tipo, quadro, competencia, meses, colaboradores, podeLancar, podeFecharExtra, isAdmin, onTrocarMes, onMudou }: {
   tipo: Tipo; quadro: QuadroUI; competencia: string; meses: string[];
-  colaboradores: ColaboradorUI[]; podeLancar: boolean; isAdmin: boolean;
+  colaboradores: ColaboradorUI[]; podeLancar: boolean; podeFecharExtra: boolean; isAdmin: boolean;
   onTrocarMes: (m: string) => void; onMudou: () => void;
 }) {
   const [lancando, setLancando] = useState(false);
@@ -124,7 +162,12 @@ function Aba({ tipo, quadro, competencia, meses, colaboradores, podeLancar, isAd
   const [erro, setErro] = useState('');
   const [msg, setMsg] = useState('');
 
-  const editavel = podeLancar && !quadro.fechada;
+  const ehExtra = tipo === 'EXTRA';
+  /* Mobilidade: quem lança edita e exclui. Pagamento Extra: ninguém edita aqui
+     (a HE se corrige em Pagamentos); só a entrega por unidade é gravada. */
+  const editavel = podeLancar && !quadro.fechada && !ehExtra;
+  const entregaEditavel = podeLancar && !quadro.fechada;
+  const podeFinalizar = !quadro.fechada && (ehExtra ? podeFecharExtra : podeLancar);
 
   async function executar(body: Record<string, unknown>, sucesso?: string) {
     setBusy(true); setErro(''); setMsg('');
@@ -136,13 +179,23 @@ function Aba({ tipo, quadro, competencia, meses, colaboradores, podeLancar, isAd
     return true;
   }
 
+  function finalizar() {
+    if (ehExtra) {
+      const n = quadro.totalLancamentos;
+      if (!confirm(`Finalizar a competência ${rotuloDaCompetencia(competencia)} do Pagamento Extra?\n\nAs ${n} hora(s) extra(s) aprovada(s) serão marcadas como PAGAS em Pagamentos (pago por você, agora). Só o Administrador reabre.`)) return;
+      void executar({ action: 'fechar' }, `Competência finalizada: ${n} hora(s) extra(s) marcada(s) como paga(s).`);
+      return;
+    }
+    void executar({ action: 'fechar' }, 'Competência finalizada.');
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div className="w-48">
           <Select
             label="Competência" size="sm" value={competencia} onValueChange={onTrocarMes}
-            options={meses.map((m) => ({ value: m, label: rotuloDoMes(m) }))}
+            options={meses.map((m) => ({ value: m, label: rotuloDaCompetencia(m) }))}
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -154,9 +207,9 @@ function Aba({ tipo, quadro, competencia, meses, colaboradores, podeLancar, isAd
           >
             <Download className="h-4 w-4" /> Exportar {ROTULO[tipo]} XLSX
           </a>
-          {podeLancar && !quadro.fechada && (
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => void executar({ action: 'fechar' }, 'Competência finalizada.')}>
-              <Lock className="h-4 w-4" /> Finalizar competência
+          {podeFinalizar && (
+            <Button size="sm" variant="outline" disabled={busy} onClick={finalizar}>
+              <Lock className="h-4 w-4" /> {ehExtra ? 'Finalizar competência e marcar pagas' : 'Finalizar competência'}
             </Button>
           )}
           {quadro.fechada && isAdmin && (
@@ -167,29 +220,70 @@ function Aba({ tipo, quadro, competencia, meses, colaboradores, podeLancar, isAd
         </div>
       </div>
 
+      {ehExtra && quadro.extra && (
+        /* A regra da competência escrita na tela — é a pergunta que todo mundo
+           faz na frente do quadro: "isto é de que mês?". */
+        <p className="rounded-lg bg-brand-tint px-3 py-2 sgo-type-13 text-ink-900">
+          <Clock className="mr-1 inline h-4 w-4 text-brand" />
+          Horas extras <b>aprovadas em Pagamentos</b> com dia trabalhado em <b>{quadro.extra.rotuloMesTrabalhado}</b> — a competência paga o mês anterior ao trabalho.
+          {' '}Correções são feitas na própria hora extra, em Pagamentos; aqui se confere, registra a entrega e finaliza.
+        </p>
+      )}
+
+      {ehExtra && !podeFecharExtra && !quadro.fechada && (
+        <p className="sgo-type-11 text-ink-500">Finalizar esta competência é do Admin, CEO ou Financeiro — o fechamento marca as horas extras como pagas.</p>
+      )}
+
       {quadro.fechada && (
         <div className="rounded-lg border border-line bg-sunken p-3">
           <p className="sgo-type-15 font-semibold text-ink-900">
             <Lock className="mr-1 inline h-4 w-4" /> Competência finalizada{quadro.fechadaPor ? ` por ${quadro.fechadaPor}` : ''}.
           </p>
           <p className="sgo-type-13 text-ink-700">
-            Lançamentos desta modalidade não podem ser editados nem excluídos. {isAdmin ? 'Use "Reabrir" para alterar.' : 'Peça ao Administrador para reabrir.'}
+            {ehExtra
+              ? `As horas extras desta competência foram marcadas como pagas em Pagamentos; a data de entrega não pode mais ser alterada. ${isAdmin ? 'Use "Reabrir" para incluir uma hora extra aprovada depois e finalizar de novo — o que já está pago continua pago.' : 'Peça ao Administrador para reabrir.'}`
+              : `Lançamentos desta modalidade não podem ser editados nem excluídos. ${isAdmin ? 'Use "Reabrir" para alterar.' : 'Peça ao Administrador para reabrir.'}`}
           </p>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <StatCard label={`Total de ${ROTULO[tipo].toLowerCase()}`} value={formatBRL(quadro.totalGeral)} className="col-span-2 sm:col-span-1" />
-        <StatCard label="Lançamentos" value={String(quadro.totalLancamentos)} />
-        <StatCard label="Unidades com lançamento" value={String(quadro.grupos.length)} />
-        <StatCard label="Unidades sem lançamento" value={String(quadro.unidadesSemLancamento.length)} />
+        <StatCard label={ehExtra ? 'Horas extras' : 'Lançamentos'} value={String(quadro.totalLancamentos)} />
+        {ehExtra && quadro.extra
+          ? <StatCard label="Colaboradores" value={String(quadro.extra.colaboradores)} />
+          : <StatCard label="Unidades com lançamento" value={String(quadro.grupos.length)} />}
+        <StatCard label={ehExtra ? 'Unidades sem hora extra' : 'Unidades sem lançamento'} value={String(quadro.unidadesSemLancamento.length)} />
       </div>
+
+      {ehExtra && quadro.extra && quadro.extra.pendentes.qtd > 0 && (
+        <p className="rounded-lg bg-warning/10 px-3 py-2 sgo-type-13 text-ink-900">
+          <AlertTriangle className="mr-1 inline h-4 w-4 text-warning" />
+          <b>{quadro.extra.pendentes.qtd} hora(s) extra(s) ainda aguardando aprovação</b> ({formatBRL(quadro.extra.pendentes.valor)}) — só entram aqui depois de aprovadas.
+          {' '}<Link href="/modulos/pagamentos" className="font-semibold text-brand underline">Abrir Pagamentos</Link>
+        </p>
+      )}
+
+      {ehExtra && quadro.extra && quadro.extra.aposFechamento.qtd > 0 && (
+        <div className="rounded-lg border border-danger/40 bg-danger/10 p-3 sgo-type-13 text-ink-900">
+          <p>
+            <AlertTriangle className="mr-1 inline h-4 w-4 text-danger" />
+            <b>{quadro.extra.aposFechamento.qtd} hora(s) extra(s) aprovada(s) DEPOIS do fechamento</b> ({formatBRL(quadro.extra.aposFechamento.valor)}) — fora do total e do arquivo.
+            {' '}{isAdmin ? 'Reabra e finalize de novo para incluí-las (o que já está pago continua pago).' : 'Peça ao Administrador para reabrir e finalizar de novo.'}
+          </p>
+          <ul className="mt-1 list-inside list-disc">
+            {quadro.extra.aposFechamento.linhas.map((h) => (
+              <li key={h.id}>{h.colaborador} · {dataBr(h.dia)} · {formatBRL(h.valor)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {quadro.unidadesSemLancamento.length > 0 && (
         /* Sem esta linha, uma unidade esquecida só aparece quando a
            administradora reclama. */
         <p className="rounded-lg bg-warning/10 px-3 py-2 sgo-type-13 text-ink-900">
-          <b>Ainda sem {ROTULO[tipo].toLowerCase()} nesta competência:</b>{' '}
+          <b>Ainda sem {ehExtra ? 'hora extra' : ROTULO[tipo].toLowerCase()} nesta competência:</b>{' '}
           {quadro.unidadesSemLancamento.map((u) => u.name).join(' · ')}
         </p>
       )}
@@ -213,9 +307,13 @@ function Aba({ tipo, quadro, competencia, meses, colaboradores, podeLancar, isAd
         />
       )}
 
-      {quadro.grupos.length === 0 && <p className="text-sm text-ink-500">Nenhum lançamento de {ROTULO[tipo].toLowerCase()} nesta competência.</p>}
+      {quadro.grupos.length === 0 && (
+        <p className="text-sm text-ink-500">
+          {ehExtra ? 'Nenhuma hora extra aprovada nesta competência.' : `Nenhum lançamento de ${ROTULO[tipo].toLowerCase()} nesta competência.`}
+        </p>
+      )}
       {quadro.grupos.map((g) => (
-        <Unidade key={g.unitId} grupo={g} tipo={tipo} editavel={editavel} busy={busy} onExecutar={executar} />
+        <Unidade key={g.unitId} grupo={g} tipo={tipo} editavel={editavel} entregaEditavel={entregaEditavel} busy={busy} onExecutar={executar} />
       ))}
     </div>
   );
@@ -223,13 +321,15 @@ function Aba({ tipo, quadro, competencia, meses, colaboradores, podeLancar, isAd
 
 /* ───────────────────────── UNIDADE (expansível) ───────────────────────── */
 
-function Unidade({ grupo, tipo, editavel, busy, onExecutar }: {
-  grupo: GrupoUI; tipo: Tipo; editavel: boolean; busy: boolean;
+function Unidade({ grupo, tipo, editavel, entregaEditavel, busy, onExecutar }: {
+  grupo: GrupoUI; tipo: Tipo; editavel: boolean; entregaEditavel: boolean; busy: boolean;
   onExecutar: (body: Record<string, unknown>, sucesso?: string) => Promise<boolean>;
 }) {
   const [aberta, setAberta] = useState(false);
   const [editandoEntrega, setEditandoEntrega] = useState(false);
   const [entrega, setEntrega] = useState(grupo.entregaEm ?? '');
+  const ehExtra = tipo === 'EXTRA';
+  const contagem = ehExtra ? grupo.lancamentos.reduce((s, l) => s + (l.horasExtras?.length ?? 0), 0) : grupo.lancamentos.length;
 
   return (
     <div className="overflow-hidden rounded-card border border-line bg-surface shadow-sgo-card">
@@ -241,7 +341,8 @@ function Unidade({ grupo, tipo, editavel, busy, onExecutar }: {
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {aberta ? <ChevronDown className="h-4 w-4 shrink-0 text-ink-500" /> : <ChevronRight className="h-4 w-4 shrink-0 text-ink-500" />}
           <span className="truncate sgo-type-15 font-semibold text-ink-900">{grupo.unidade}</span>
-          <StatusBadge tone="neutral">{grupo.lancamentos.length} lançamento(s)</StatusBadge>
+          <StatusBadge tone="neutral">{contagem} {UNIDADE_DE_CONTAGEM[tipo]}</StatusBadge>
+          {ehExtra && <StatusBadge tone="neutral">{grupo.lancamentos.length} colaborador(es)</StatusBadge>}
           {grupo.entregaEm
             ? <StatusBadge tone="success">Entregue: {dataBr(grupo.entregaEm)}</StatusBadge>
             : <StatusBadge tone="medium">Sem data de entrega</StatusBadge>}
@@ -254,7 +355,7 @@ function Unidade({ grupo, tipo, editavel, busy, onExecutar }: {
 
       {aberta && (
         <div className="border-t border-line">
-          {editavel && (
+          {entregaEditavel && (
             <div className="flex flex-wrap items-end gap-2 border-b border-line bg-sunken p-3">
               {editandoEntrega ? (
                 <>
@@ -283,14 +384,17 @@ function Unidade({ grupo, tipo, editavel, busy, onExecutar }: {
                 <tr className="border-b border-line sgo-type-11 uppercase text-ink-500">
                   <th className="p-2 font-semibold">Colaborador</th>
                   <th className="p-2 font-semibold">CPF</th>
+                  {ehExtra && <th className="p-2 text-right font-semibold">Horas</th>}
                   <th className="p-2 text-right font-semibold">Valor (R$)</th>
-                  <th className="p-2 font-semibold">Observação</th>
+                  {ehExtra ? <th className="p-2 font-semibold">Situação</th> : <th className="p-2 font-semibold">Observação</th>}
                   {editavel && <th className="p-2 font-semibold">Ações</th>}
                 </tr>
               </thead>
               <tbody>
                 {grupo.lancamentos.map((l) => (
-                  <Lancamento key={l.id} l={l} tipo={tipo} editavel={editavel} busy={busy} onExecutar={onExecutar} />
+                  ehExtra
+                    ? <LinhaDeHoraExtra key={l.id} l={l} />
+                    : <Lancamento key={l.id} l={l} tipo={tipo} editavel={editavel} busy={busy} onExecutar={onExecutar} />
                 ))}
               </tbody>
             </table>
@@ -300,6 +404,59 @@ function Unidade({ grupo, tipo, editavel, busy, onExecutar }: {
     </div>
   );
 }
+
+/* ───────────────── PAGAMENTO EXTRA: colaborador → cada HE ───────────────── */
+
+const SITUACAO: Record<NonNullable<LinhaUI['status']>, { rotulo: string; tone: 'success' | 'medium' | 'neutral' }> = {
+  PAID: { rotulo: 'Paga', tone: 'success' },
+  APPROVED: { rotulo: 'Aprovada — a pagar', tone: 'medium' },
+  MISTO: { rotulo: 'Parte paga', tone: 'neutral' },
+};
+
+/**
+ * A linha soma o mês do colaborador; o detalhe abre cada hora extra (dia,
+ * horário, horas × valor/hora, VT, quem aprovou). Nada é editável aqui — a
+ * correção é feita na HE, em Pagamentos, e reflete sozinha.
+ */
+function LinhaDeHoraExtra({ l }: { l: LinhaUI }) {
+  const [aberta, setAberta] = useState(false);
+  const hes = l.horasExtras ?? [];
+  const sit = SITUACAO[l.status ?? 'APPROVED'];
+  return (
+    <>
+      <tr className="border-b border-line last:border-b-0">
+        <td className="p-2 sgo-type-15 font-medium text-ink-900">
+          <button type="button" className="inline-flex items-center gap-1 text-left hover:text-brand" onClick={() => setAberta((v) => !v)} aria-expanded={aberta}>
+            {aberta ? <ChevronDown className="h-4 w-4 shrink-0 text-ink-500" /> : <ChevronRight className="h-4 w-4 shrink-0 text-ink-500" />}
+            {l.colaborador}
+            <span className="sgo-type-11 font-normal text-ink-500">· {hes.length} HE</span>
+          </button>
+        </td>
+        <td className="p-2 sgo-type-13 tabular-nums text-ink-700">{formatarCpf(l.cpf) || <span className="text-warning">sem CPF</span>}</td>
+        <td className="p-2 text-right sgo-type-15 tabular-nums text-ink-900">{l.horas != null ? textoHoras(l.horas) : '—'}</td>
+        <td className="p-2 text-right sgo-type-15 tabular-nums text-ink-900">{formatBRL(l.valor)}</td>
+        <td className="p-2"><StatusBadge tone={sit.tone}>{sit.rotulo}</StatusBadge></td>
+      </tr>
+      {aberta && hes.map((h) => (
+        <tr key={h.id} className="border-b border-line bg-sunken last:border-b-0">
+          <td className="p-2 pl-8 sgo-type-13 text-ink-700" colSpan={2}>
+            {dataBr(h.dia)}{h.inicio && h.fim ? ` · ${h.inicio}–${h.fim}` : ''}
+            {h.aprovadoPor ? <span className="text-ink-500"> · aprovada por {h.aprovadoPor}</span> : null}
+          </td>
+          <td className="p-2 text-right sgo-type-13 tabular-nums text-ink-700">
+            {h.horas != null ? textoHoras(h.horas) : '—'}{h.valorHora != null ? ` × ${formatBRL(h.valorHora)}/h` : ''}
+          </td>
+          <td className="p-2 text-right sgo-type-13 tabular-nums text-ink-700">
+            {formatBRL(h.valor)}{h.vt > 0 ? <span className="text-ink-500"> (VT {formatBRL(h.vt)})</span> : null}
+          </td>
+          <td className="p-2"><StatusBadge tone={h.status === 'PAID' ? 'success' : 'medium'}>{h.status === 'PAID' ? 'Paga' : 'Aprovada'}</StatusBadge></td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+/* ───────────────────────── MOBILIDADE: linha editável ───────────────────────── */
 
 function Lancamento({ l, editavel, busy, onExecutar }: {
   l: LinhaUI; tipo: Tipo; editavel: boolean; busy: boolean;
@@ -468,11 +625,6 @@ function LancarEmLote({ tipo, colaboradores, busy, onGravar }: {
 
 /* ───────────────────────── auxiliares de formato ───────────────────────── */
 
-const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-function rotuloDoMes(m: string): string {
-  const [y, mm] = m.split('-');
-  return `${MESES[Number(mm) - 1]} de ${y}`;
-}
 function dataBr(iso: string): string {
   const [y, m, d] = iso.split('-');
   return d ? `${d}/${m}/${y}` : iso;

@@ -63,7 +63,9 @@ export async function PATCH(req: Request) {
   const b = await req.json().catch(() => null);
   const acao = String(b?.action ?? '');
   const ctx = requestContext(req);
-  const tipo = b?.tipo === 'COMMISSION' || b?.tipo === 'MOBILITY' ? b.tipo : null;
+  /* EXTRA (v1.135.0) entra só em entrega/fechar/reabrir: o lote é recusado na
+     própria função, porque Pagamento Extra é derivado das horas extras. */
+  const tipo = b?.tipo === 'COMMISSION' || b?.tipo === 'MOBILITY' || b?.tipo === 'EXTRA' ? b.tipo : null;
 
   let r: Awaited<ReturnType<typeof lancarEmLote>> | null = null;
   if (acao === 'lote' && tipo) {
@@ -95,7 +97,7 @@ export async function PATCH(req: Request) {
   if (!r.ok) {
     const status: Record<string, number> = { FORBIDDEN: 403, NOT_FOUND: 404, INVALID: 400, FECHADA: 409 };
     const padrao: Record<string, string> = {
-      FORBIDDEN: 'Apenas Supervisão/Admin lançam comissões e mobilidade',
+      FORBIDDEN: 'Apenas Supervisão/Admin lançam mobilidade',
       NOT_FOUND: 'Lançamento não encontrado',
       INVALID: 'Dados inválidos',
       FECHADA: 'Competência finalizada.',

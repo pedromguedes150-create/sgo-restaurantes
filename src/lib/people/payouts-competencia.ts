@@ -3,14 +3,22 @@ import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import type { PayoutType } from '@prisma/client';
+import { fecharPagamentoExtra, getQuadroPagamentoExtra } from '@/lib/people/pagamento-extra';
+import type { HoraExtraDoQuadro } from '@/lib/people/pagamento-extra-calculo';
 
 /**
- * COMISSÃO E MOBILIDADE — a competência, por unidade.
+ * PAGAMENTO EXTRA E MOBILIDADE — a competência, por unidade.
  *
- * As duas modalidades vivem na mesma tabela (`CollaboratorPayout.type`) e são
- * INDEPENDENTES em tudo o mais: entrega, fechamento e arquivo. Misturá-las no
- * mesmo Excel foi o que o pedido proibiu, e a separação começa aqui, no tipo
- * entrar em toda chave — não só no filtro da tela.
+ * As modalidades são INDEPENDENTES em tudo: entrega, fechamento e arquivo.
+ * Misturá-las no mesmo Excel foi o que o pedido proibiu, e a separação começa
+ * aqui, no tipo entrar em toda chave — não só no filtro da tela.
+ *
+ * Duas fontes, um quadro: MOBILIDADE (e a COMISSÃO antiga, fora da tela desde
+ * a v1.135.0 mas com o histórico intacto no banco) são lançadas à mão em
+ * `CollaboratorPayout`; o PAGAMENTO EXTRA é DERIVADO das horas extras
+ * aprovadas em Pagamentos (`pagamento-extra.ts`) e não tem lançamento manual —
+ * `getQuadroDaCompetencia` e `fecharCompetencia` despacham por tipo, e o resto
+ * (entrega, reabertura, arquivo) é o mesmo código para as três.
  *
  * NADA de cadastro paralelo de gente: o colaborador é sempre o do SGO
  * (`Collaborator`), e **CPF e unidade são lidos do cadastro na hora de exibir e
@@ -42,6 +50,10 @@ export interface LinhaDaUnidade {
   observacao: string | null;
   lancadoPor: string;
   lancadoEm: Date;
+  /** Só no Pagamento Extra: a soma das horas, o status das HE e cada uma delas. */
+  horas?: number;
+  status?: 'PAID' | 'APPROVED' | 'MISTO';
+  horasExtras?: HoraExtraDoQuadro[];
 }
 
 export interface GrupoDeUnidade {
@@ -65,6 +77,17 @@ export interface QuadroDaCompetencia {
   fechadaEm: Date | null;
   /** Unidades do escopo sem nenhum lançamento — o que ainda falta. */
   unidadesSemLancamento: { id: string; name: string }[];
+  /** Só no Pagamento Extra (derivado das horas extras). */
+  extra?: {
+    /** O mês das horas: a competência paga o mês ANTERIOR. */
+    mesTrabalhado: string;
+    rotuloMesTrabalhado: string;
+    colaboradores: number;
+    /** HE ainda pendentes de aprovação no mês — fora do total até serem aprovadas. */
+    pendentes: { qtd: number; valor: number };
+    /** HE aprovadas DEPOIS do fechamento — fora do total e do arquivo. */
+    aposFechamento: { qtd: number; valor: number; linhas: HoraExtraDoQuadro[] };
+  };
 }
 
 /** O quadro de uma competência, para UMA modalidade. */
@@ -73,6 +96,7 @@ export async function getQuadroDaCompetencia(
   competencia: string,
   tipo: PayoutType,
 ): Promise<QuadroDaCompetencia> {
+  if (tipo === 'EXTRA') return getQuadroPagamentoExtra(user, competencia);
   const [lancamentos, unidades, entregas, fechamento] = await Promise.all([
     prisma.collaboratorPayout.findMany({
       where: { yearMonth: competencia, type: tipo, ...unitScopeWhere(user, 'unitId') },
@@ -147,8 +171,10 @@ async function estaFechada(competencia: string, tipo: PayoutType): Promise<boole
  * fechamento único travaria uma por causa da outra.
  */
 export async function fecharCompetencia(user: SessionUser, competencia: string, tipo: PayoutType, ctx: Ctx = {}): Promise<ResultadoPayout> {
-  if (!PODE_LANCAR.has(user.role)) return { ok: false, reason: 'FORBIDDEN' };
   if (!COMPETENCIA.test(competencia)) return { ok: false, reason: 'INVALID' };
+  /* O Pagamento Extra fecha E marca as HE como pagas — porta própria. */
+  if (tipo === 'EXTRA') return fecharPagamentoExtra(user, competencia, ctx);
+  if (!PODE_LANCAR.has(user.role)) return { ok: false, reason: 'FORBIDDEN' };
   await prisma.payoutClosure.upsert({
     where: { yearMonth_type: { yearMonth: competencia, type: tipo } },
     create: { yearMonth: competencia, type: tipo, closedById: user.id, closedByName: user.name },
@@ -227,6 +253,8 @@ export async function lancarEmLote(
 ): Promise<ResultadoPayout> {
   if (!PODE_LANCAR.has(user.role)) return { ok: false, reason: 'FORBIDDEN' };
   if (!COMPETENCIA.test(input.competencia)) return { ok: false, reason: 'INVALID' };
+  /* Pagamento Extra não se lança aqui: ele É a hora extra aprovada em Pagamentos. */
+  if (input.tipo === 'EXTRA') return { ok: false, reason: 'INVALID', message: 'Pagamento Extra vem das horas extras aprovadas em Pagamentos — não há lançamento manual.' };
   if (await estaFechada(input.competencia, input.tipo)) return { ok: false, reason: 'FECHADA', message: 'Competência finalizada. Reabra para lançar.' };
 
   const limpos = input.itens.filter((i) => {

@@ -19,9 +19,9 @@ import type { PayoutType } from '@prisma/client';
  * real é um número curto.
  */
 
-const TIPOS: Record<string, PayoutType> = { COMMISSION: 'COMMISSION', MOBILITY: 'MOBILITY' };
-const ROTULO: Record<PayoutType, string> = { COMMISSION: 'comissao', MOBILITY: 'mobilidade' };
-const ABA: Record<PayoutType, string> = { COMMISSION: 'Comissão', MOBILITY: 'Mobilidade' };
+const TIPOS: Record<string, PayoutType> = { COMMISSION: 'COMMISSION', MOBILITY: 'MOBILITY', EXTRA: 'EXTRA' };
+const ROTULO: Record<PayoutType, string> = { COMMISSION: 'comissao', MOBILITY: 'mobilidade', EXTRA: 'pagamento-extra' };
+const ABA: Record<PayoutType, string> = { COMMISSION: 'Comissão', MOBILITY: 'Mobilidade', EXTRA: 'Pagamento Extra' };
 
 export async function GET(req: Request) {
   const user = await getSessionUser();
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
   const competencia = sp.get('mes') ?? '';
   const tipo = TIPOS[String(sp.get('tipo') ?? '').toUpperCase()];
   if (!tipo || !/^\d{4}-\d{2}$/.test(competencia)) {
-    return NextResponse.json({ error: 'Informe a competência (AAAA-MM) e o tipo (COMMISSION ou MOBILITY).' }, { status: 400 });
+    return NextResponse.json({ error: 'Informe a competência (AAAA-MM) e o tipo (EXTRA, MOBILITY ou COMMISSION).' }, { status: 400 });
   }
 
   const quadro = await getQuadroDaCompetencia(user, competencia, tipo);

@@ -117,7 +117,7 @@ const ENTITIES: [string, string][] = [
   ['TEMPLATE', 'Checklist'],
   ['TRAINING', 'Treinamento'],
   ['PAYMENT', 'Pagamento'],
-  ['PAYOUT', 'Comissão'],
+  ['PAYOUT', 'Pagamento Extra / Mobilidade'],
   ['VACATION', 'Férias'],
   ['HOLIDAY', 'Feriado'],
   ['HYGIENE', 'Higiene'],
