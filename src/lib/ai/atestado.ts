@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { env } from '@/lib/env';
+import { conciliarPeriodo } from '@/lib/certificates/periodo';
 
 /**
  * Leitura de atestado médico por IA (Claude visão) — extrai os campos da foto e
@@ -19,7 +20,9 @@ export interface CertReadResult {
     collaboratorName?: string | null;
     issueDate?: string | null; // yyyy-mm-dd
     startDate?: string | null; // yyyy-mm-dd
-    endDate?: string | null; // yyyy-mm-dd
+    endDate?: string | null; // yyyy-mm-dd — ÚLTIMO dia afastado (nunca o retorno)
+    /** Dia em que volta ao trabalho, quando o documento o traz ("Retorno:"). */
+    returnDate?: string | null;
     days?: number | null;
     hours?: number | null;
     type?: CertType | null;
@@ -59,6 +62,10 @@ export async function readMedicalCertificate(input: {
         'Você lê atestados médicos brasileiros. Extraia os campos abaixo da imagem. ' +
         'Datas SEMPRE no formato yyyy-mm-dd. Se um campo não estiver legível ou ausente, use null ' +
         'e inclua o nome dele em "lowConfidence". ' +
+        'ATENÇÃO ÀS DATAS: "startDate" = primeiro dia de afastamento ("Início"); "endDate" = ÚLTIMO dia afastado. ' +
+        'Muitos atestados trazem "Retorno" — é o dia em que a pessoa VOLTA ao trabalho, NÃO o fim do afastamento: ' +
+        'devolva-o em "returnDate" e NUNCA o copie em "endDate". Com "N dia(s)" e início, o fim é início + N − 1 ' +
+        '(ex.: 2 dias a partir de 29/09 → endDate 30/09, returnDate 01/10). ' +
         'Para "type": FULL_DAY = afastamento de um ou mais DIAS; HOURS = atestado de horas/consulta (não afasta o dia todo); ' +
         'COMPANION = acompanhamento de familiar / declaração de comparecimento. ' +
         '"days" = número de dias de afastamento (inteiro). "hours" = horas, só quando type=HOURS. ' +
@@ -66,7 +73,7 @@ export async function readMedicalCertificate(input: {
         '"cidDescription" = a descrição do que esse CID significa, em português (ex.: "J11" → "Influenza (gripe), vírus não identificado"). ' +
         'Preencha pela descrição padrão da CID-10 mesmo que não esteja escrita no documento; se não houver código CID, use null. ' +
         'Responda APENAS em JSON, sem texto fora do JSON, no formato exato: ' +
-        '{"collaboratorName":string|null,"issueDate":string|null,"startDate":string|null,"endDate":string|null,' +
+        '{"collaboratorName":string|null,"issueDate":string|null,"startDate":string|null,"endDate":string|null,"returnDate":string|null,' +
         '"days":number|null,"hours":number|null,"type":"FULL_DAY"|"HOURS"|"COMPANION"|null,' +
         '"doctorName":string|null,"doctorCrm":string|null,"cid":string|null,"cidDescription":string|null,"lowConfidence":string[]}.',
     },
@@ -89,15 +96,22 @@ export async function readMedicalCertificate(input: {
     const type = (v: unknown): CertType | null => (['FULL_DAY', 'HOURS', 'COMPANION'].includes(v as string) ? (v as CertType) : null);
     const low = Array.isArray(parsed.lowConfidence) ? (parsed.lowConfidence as unknown[]).map(String) : [];
 
+    /* O período é CONCILIADO com o que o documento repete (nº de dias,
+       retorno): se a IA copiou o "Retorno" como fim, o fim é refeito e o campo
+       fica marcado para conferência. Ver src/lib/certificates/periodo.ts. */
+    const periodo = conciliarPeriodo({ startDate: date(parsed.startDate), endDate: date(parsed.endDate), returnDate: date(parsed.returnDate), days: num(parsed.days) });
+    if (periodo.fimAjustado && !low.includes('endDate')) low.push('endDate');
+
     return {
       configured: true,
       ok: true,
       fields: {
         collaboratorName: str(parsed.collaboratorName),
         issueDate: date(parsed.issueDate),
-        startDate: date(parsed.startDate),
-        endDate: date(parsed.endDate),
-        days: num(parsed.days),
+        startDate: periodo.startDate,
+        endDate: periodo.endDate,
+        returnDate: date(parsed.returnDate),
+        days: periodo.days ?? num(parsed.days),
         hours: num(parsed.hours),
         type: type(parsed.type),
         doctorName: str(parsed.doctorName),

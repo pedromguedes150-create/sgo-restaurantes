@@ -1443,6 +1443,7 @@ export const GUIDE: GuideSection[] = [
           'Em ATESTADOS → aba "Lançar", tire a foto do atestado (ou anexe um PDF).',
           'A IA lê os campos e pré-preenche o formulário; confira os campos destacados em amarelo (baixa confiança).',
           'Selecione o colaborador na lista (a IA mostra o nome lido como dica), confirme as datas e salve.',
+          '"RETORNO" NÃO É O FIM (v1.141.1): muitos atestados trazem "Início", "N dia(s)" e "Retorno" — o retorno é o dia em que a pessoa VOLTA, e o fim do afastamento é o dia anterior. O SGO concilia: o nº de dias escrito vence (fim = início + dias − 1); sem ele, o retorno define o fim. Se o fim lido foi refeito, o campo aparece destacado para você conferir. Ex.: 2 dias a partir de 29/09, retorno 01/10 → fim 30/09.',
           'Ao salvar, os dias do período são marcados automaticamente como "Atestado" na Escala — não precisa lançar de novo lá.',
           'ATESTADO NÃO SOME DA ESCALA (v1.130.1): a Escala passou a ler o atestado direto da Central de Atestados ao montar a grade. "Completar dias vazios", "Puxar Realizado = Planejado" ou um lançamento feito pelo vínculo de outra unidade não trocam mais o "A" por "T" — e o total de ausências e a Comparação contam o afastamento. Para tirar um atestado da Escala, exclua o atestado (Admin) — não adianta editar a célula.',
           'Atestado de horas (consulta) não afasta o dia todo; acompanhamento de familiar marca o(s) dia(s).',

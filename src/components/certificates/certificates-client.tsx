@@ -201,7 +201,7 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
           : <DatePicker label="Fim do afastamento" className={ring('endDate')} min={startDate || undefined} value={endDate || null} onValueChange={(v) => setEndDate(v ?? '')} />}
       </div>
       {type !== 'HOURS' && startDate && endDate && (
-        <p className="text-xs font-semibold text-ink-900">{days} dia(s) de afastamento — serão marcados como “Atestado” na Escala.</p>
+        <p className="text-xs font-semibold text-ink-900">{days} dia(s) de afastamento — serão marcados como “Atestado” na Escala. <span className="font-normal text-ink-500">O “Retorno” do atestado é o dia da volta; o fim é o dia anterior.</span></p>
       )}
 
       <div className="grid grid-cols-2 gap-2">
