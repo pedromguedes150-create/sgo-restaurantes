@@ -49,8 +49,11 @@ function base(over: Partial<ConsolidadoDeDesperdicio> = {}): ConsolidadoDeDesper
   };
 }
 
+/* O mês vai SEMPRE na URL: a página cai no mês ATUAL quando `mes` falta, e a
+   massa de teste é de setembro/2026 — sem isto o teste passava só enquanto o
+   calendário estava em setembro (quebrou em 01/10/2026). */
 const render = async (sp: { ano?: string; mes?: string } = {}) =>
-  renderToString(await Page({ searchParams: sp })).split('<!-- -->').join('');
+  renderToString(await Page({ searchParams: { ano: '2026', mes: '9', ...sp } })).split('<!-- -->').join('');
 
 beforeEach(() => {
   sessao = { id: 'u1', name: 'Alan', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false };

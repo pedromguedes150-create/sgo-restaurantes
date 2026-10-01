@@ -135,6 +135,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/ticket-medio/participantes': { modulo: 'CONFIG_TICKET_MEDIA', exigir: 'editar' },
 
   '/api/pops': { modulo: 'POPS', exigir: 'editar' },
+  // Padronização de Preparo: criar/importar/editar/foto/situação gravam; a lib ainda exige ADMIN.
+  '/api/padronizacao': { modulo: 'PREP_STANDARDS', exigir: 'editar' },
   '/api/product-standards': { modulo: 'CONFIG_PRODUCT_STANDARDS', exigir: 'editar' },
   '/api/products/pedido': { modulo: 'PRODUCTS', exigir: 'editar' },
   '/api/products/separacao': { modulo: 'PRODUCT_SEPARATION', exigir: 'editar' },
