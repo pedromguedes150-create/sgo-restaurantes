@@ -13,10 +13,12 @@ import { DatePicker } from '@/components/ui/ds/date-picker';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 import { formatBRL } from '@/lib/utils';
 import { formatarCpf, validarCpf, limparCpf } from '@/lib/cpf';
+import { possiveisDuplicados } from '@/lib/payments/duplicados';
+import { MesclarFreelancer } from './mesclar-freelancer';
 
 interface Unit { id: string; name: string }
 interface UserOpt { id: string; name: string; role: string }
-export interface FreelancerRow { id: string; name: string; cpf: string | null; defaultValue: number; pixKey: string | null; active: boolean; units: string[]; unitIds: string[]; sectorRates: { sectorName: string; dayValue: number }[] }
+export interface FreelancerRow { id: string; name: string; cpf: string | null; defaultValue: number; pixKey: string | null; active: boolean; units: string[]; unitIds: string[]; sectorRates: { sectorName: string; dayValue: number }[]; requestCount: number }
 export interface MiscTypeRow { id: string; name: string; approverRole: string; active: boolean }
 export interface DelegationRow { id: string; from: string; to: string; period: string }
 
@@ -44,6 +46,9 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
   const [dEnd, setDEnd] = useState('');
   const [busy, setBusy] = useState(false);
   const [limite, setLimite] = useState(String(weekLimit));
+  const duplicados = possiveisDuplicados(freelancers);
+  /* A linha do duplicado some depois da mesclagem — a confirmação precisa viver aqui. */
+  const [mesclagem, setMesclagem] = useState<string | null>(null);
 
   async function run(payload: Record<string, unknown>) {
     setBusy(true);
@@ -97,8 +102,12 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
           }}><Plus className="h-4 w-4" /> Adicionar freelancer</Button>
           {fErr && <p className="text-sm font-medium text-danger">{fErr}</p>}
         </div>
+        {mesclagem && <p className="rounded-lg border border-success bg-success-bg px-3 py-2 text-sm text-success">{mesclagem}</p>}
+        {duplicados.size > 0 && (
+          <p className="text-xs text-warning">{duplicados.size} cadastro(s) com o mesmo nome de outro ativo — provável duplicidade. Use o botão de mesclar na linha para unir o histórico num cadastro só.</p>
+        )}
         {freelancers.map((f) => (
-          <FreelancerItem key={f.id} f={f} units={units} onChange={() => router.refresh()} />
+          <FreelancerItem key={f.id} f={f} units={units} todos={freelancers} duplicado={duplicados.has(f.id)} onChange={() => router.refresh()} onMesclou={(m) => { setMesclagem(m); router.refresh(); }} />
         ))}
       </section>
 
@@ -142,7 +151,7 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
 }
 
 
-function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[]; onChange: () => void }) {
+function FreelancerItem({ f, units, todos, duplicado, onChange, onMesclou }: { f: FreelancerRow; units: Unit[]; todos: FreelancerRow[]; duplicado: boolean; onChange: () => void; onMesclou: (msg: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(f.name);
   const [cpf, setCpf] = useState(f.cpf ? formatarCpf(f.cpf) : '');
@@ -166,12 +175,13 @@ function FreelancerItem({ f, units, onChange }: { f: FreelancerRow; units: Unit[
     <div className="rounded-lg border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="font-semibold text-ink-900">{f.name}{!f.cpf && <span className="ml-2 rounded-full bg-warning-bg px-2 py-0.5 text-[11px] font-semibold text-warning">Cadastro incompleto</span>}</p>
+          <p className="font-semibold text-ink-900">{f.name}{!f.cpf && <span className="ml-2 rounded-full bg-warning-bg px-2 py-0.5 text-[11px] font-semibold text-warning">Cadastro incompleto</span>}{duplicado && <span className="ml-2 rounded-full bg-warning-bg px-2 py-0.5 text-[11px] font-semibold text-warning">Possível duplicado</span>}</p>
           <p className="text-xs text-ink-500">{f.cpf ? `CPF: ${formatarCpf(f.cpf)}` : <span className="text-warning">CPF não cadastrado</span>} · {formatBRL(f.defaultValue)} · PIX: {f.pixKey || <span className="text-danger">não cadastrada</span>} · {f.units.join(', ')}{f.sectorRates.length > 0 ? ` · ${f.sectorRates.length} setor(es) c/ valor-dia` : ''}</p>
         </div>
         <div className="flex items-center gap-1">
           <button onClick={() => call({ entity: 'freelancer', action: 'toggle', id: f.id, active: !f.active })}><StatusBadge tone={f.active ? 'success' : 'critical'}>{f.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
+          <MesclarFreelancer duplicado={f} todos={todos} onMesclou={onMesclou} />
           <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm(`Excluir o freelancer "${f.name}"? Só é possível se não houver pagamentos vinculados. Caso contrário, inative-o.`)) call({ entity: 'freelancer', action: 'delete', id: f.id }); }} aria-label="Excluir" className="text-danger"><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>

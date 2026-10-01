@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.141.0 — 2026-10-01 (Pagamentos: mesclar cadastros duplicados de freelancer)
+### Adicionado
+- **Mesclar cadastros** em Configurações → Pagamentos → Freelancers (só Admin). Caso real: "Arthur Diogo" duas vezes — um sem CPF, outro completo, os dois com solicitações — e excluir perderia o histórico (o FK é SetNull: as solicitações ficariam "sem freelancer"). O botão de mesclar na linha abre a escolha do cadastro DEFINITIVO (homônimos primeiro) e mostra o que vai acontecer antes de confirmar. Numa transação: as solicitações do duplicado passam a apontar para o definitivo **sem reescrever nome/valor/PIX gravados em cada uma**; as unidades são somadas; valores por setor que faltam são copiados; CPF/PIX preenchem o definitivo se ele estiver sem; só então o duplicado, já vazio, é removido. Fica na Auditoria (`FREELANCER_MERGE`) com os números. CPFs diferentes nos dois cadastros bloqueiam a mesclagem.
+- Crachá **"Possível duplicado"** na lista quando outro cadastro ativo tem o mesmo nome (sem acento/caixa) — a pista de quem ainda precisa ser unido. Recorrência e consolidados passam a ver a pessoa como uma só, porque leem por id.
+
 ## v1.140.2 — 2026-10-01 (Ticket Médio: unidade com dois PDVs na planilha de produtos)
 ### Corrigido
 - A importação recusava a planilha "Produtos Mais Vendidos" de Jardim Teresópolis como se fossem "2 unidades": o Teknisa escreve a mesma unidade uma vez por PDV — "0002 - CHURRASCARIA BF TERESOPOLIS - Loja: 001 - LANCHONETE" e "… - Loja: 002 - CHURRASCARIA". Agora a leitura agrupa pelo **código da unidade** (o que vem antes de "Loja:"), **soma as lojas** (é a mesma unidade) e avisa na prévia quantos PDVs entraram; só recusa quando há **códigos de unidade diferentes** no mesmo arquivo (exportação da rede). Não foi erro de ninguém: é a forma do relatório.

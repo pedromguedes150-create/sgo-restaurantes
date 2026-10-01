@@ -347,6 +347,7 @@ export const GUIDE: GuideSection[] = [
           'No lançamento Freelancer, marque "Cobertura temporária de setor", escolha o setor — o valor do dia sai automático (+ VT opcional).',
           'Na Hora Extra também dá para somar o vale-transporte ao total.',
           'Na Consolidação de freelancers → aba "Fechamento (PIX)", além do mês dá para fechar por SEMANA (segunda→domingo) — como o pagamento de segunda. CONSERTADO na v1.97.0: o botão "Ver semana" não funcionava (a tela voltava para o mês, sem erro) e as linhas mostravam a data em que o lançamento foi digitado, não o dia trabalhado. Agora a folha traz o dia do trabalho, em dd/mm/aaaa.',
+          'CADASTRO DUPLICADO (v1.141.0): o mesmo freelancer cadastrado duas vezes (um sem CPF, outro completo, os dois com histórico) NÃO se resolve excluindo — perderia as solicitações. Em Configurações → Pagamentos a linha ganha o crachá "Possível duplicado" e o botão de MESCLAR: escolha o cadastro definitivo, confira o resumo (solicitações transferidas, unidades somadas, CPF/PIX completados) e confirme. O histórico muda de dono sem ser reescrito e o duplicado some. Um freelancer pode estar em VÁRIAS unidades: no cadastro/edição marque todas no campo Unidades.',
         ],
       },
       {
@@ -833,6 +834,7 @@ export const GUIDE: GuideSection[] = [
           'No lançamento Freelancer, marque "Cobertura temporária de setor", escolha o setor — o valor do dia sai automático (+ VT opcional).',
           'Na Hora Extra também dá para somar o vale-transporte ao total.',
           'Na Consolidação de freelancers → aba "Fechamento (PIX)", além do mês dá para fechar por SEMANA (segunda→domingo) — como o pagamento de segunda. CONSERTADO na v1.97.0: o botão "Ver semana" não funcionava (a tela voltava para o mês, sem erro) e as linhas mostravam a data em que o lançamento foi digitado, não o dia trabalhado. Agora a folha traz o dia do trabalho, em dd/mm/aaaa.',
+          'CADASTRO DUPLICADO (v1.141.0): o mesmo freelancer cadastrado duas vezes (um sem CPF, outro completo, os dois com histórico) NÃO se resolve excluindo — perderia as solicitações. Em Configurações → Pagamentos a linha ganha o crachá "Possível duplicado" e o botão de MESCLAR: escolha o cadastro definitivo, confira o resumo (solicitações transferidas, unidades somadas, CPF/PIX completados) e confirme. O histórico muda de dono sem ser reescrito e o duplicado some. Um freelancer pode estar em VÁRIAS unidades: no cadastro/edição marque todas no campo Unidades.',
         ],
       },
       {
