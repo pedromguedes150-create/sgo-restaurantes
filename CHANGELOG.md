@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.140.2 — 2026-10-01 (Ticket Médio: unidade com dois PDVs na planilha de produtos)
+### Corrigido
+- A importação recusava a planilha "Produtos Mais Vendidos" de Jardim Teresópolis como se fossem "2 unidades": o Teknisa escreve a mesma unidade uma vez por PDV — "0002 - CHURRASCARIA BF TERESOPOLIS - Loja: 001 - LANCHONETE" e "… - Loja: 002 - CHURRASCARIA". Agora a leitura agrupa pelo **código da unidade** (o que vem antes de "Loja:"), **soma as lojas** (é a mesma unidade) e avisa na prévia quantos PDVs entraram; só recusa quando há **códigos de unidade diferentes** no mesmo arquivo (exportação da rede). Não foi erro de ninguém: é a forma do relatório.
+
 ## v1.140.1 — 2026-10-01 (Padronização de Preparo: acabamento da ficha conforme a referência)
 ### Alterado
 - A ficha ficou com a cara da referência do Pedro: cabeçalho em cartão com categoria/nome/código à esquerda e, à direita, as setas Anterior/Próximo com "N de M" e o botão de fechar (volta ao catálogo); as três seções viraram **botões com ícone** (Ingredientes · Modo de Preparo · Observações, a ativa em bordô); a tabela de ingredientes ganhou um **ícone por item** escolhido pelo nome (pão, linguiça, ovo, queijo, alface, tomate, saco…; nome desconhecido cai num talher neutro — é acabamento, nada é gravado) dentro de um cartão com cabeçalho discreto.

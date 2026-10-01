@@ -333,16 +333,42 @@ export function lerPlanilhaDeProdutos(linhas: unknown[][]): LeituraDeProdutos {
 
   if (produtos === 0) return vazioProdutos('Não encontrei nenhuma linha de produto com "Vr. Total" na planilha. Confira se o arquivo não veio vazio ou filtrado.');
 
-  /* A planilha é por unidade; mais de uma dentro do mesmo arquivo é sinal de
-     exportação da rede inteira — a receita viraria a soma de várias lojas. */
-  const nomes = [...unidades.keys()];
-  if (nomes.length > 1) {
-    return vazioProdutos(`A planilha traz ${nomes.length} unidades (${nomes.map((n) => n.slice(0, 40)).join('; ')}). Exporte o relatório de UMA unidade por vez.`);
+  /* A planilha é por UNIDADE, mas uma unidade pode ter mais de um PDV: o
+     Teknisa escreve "0002 - CHURRASCARIA BF TERESOPOLIS - Loja: 001 - LANCHONETE"
+     e "… - Loja: 002 - CHURRASCARIA" na mesma exportação (relato do Pedro,
+     01/10/2026). As lojas são a MESMA unidade e somam. O que não pode é
+     código de unidade diferente no mesmo arquivo — isso é exportação da rede,
+     e a receita viraria a soma de várias unidades. */
+  const porUnidade = new Map<string, string[]>();
+  for (const nome of unidades.keys()) {
+    const chave = codigoDaUnidade(nome);
+    porUnidade.set(chave, [...(porUnidade.get(chave) ?? []), nome]);
+  }
+  if (porUnidade.size > 1) {
+    const codigos = [...porUnidade.keys()];
+    return vazioProdutos(`A planilha traz ${codigos.length} unidades (${codigos.map((n) => n.slice(0, 40)).join('; ')}). Exporte o relatório de UMA unidade por vez.`);
   }
   if (col.quantidade === undefined) avisos.push('A planilha não tem a coluna "Qtde." — os itens vendidos não foram contados (não afeta a receita).');
 
+  const [unidade, lojas] = [...porUnidade.entries()][0] ?? [null, []];
+  if (lojas.length > 1) {
+    avisos.push(`A unidade tem ${lojas.length} PDVs/lojas na planilha (${lojas.map(lojaDe).join('; ')}) — as receitas foram somadas, porque são a mesma unidade.`);
+  }
+
   return {
     ok: true, netSales, discounts, itens: Math.round(itens), produtos,
-    unidadeDeclarada: nomes[0] ?? null, avisos,
+    unidadeDeclarada: unidade === null ? null : (lojas.length > 1 ? `${unidade} (${lojas.length} lojas)` : lojas[0]),
+    avisos,
   };
+}
+
+/** "0002 - CHURRASCARIA BF TERESOPOLIS - Loja: 001 - LANCHONETE" → "0002 - CHURRASCARIA BF TERESOPOLIS". */
+export function codigoDaUnidade(nome: string): string {
+  return nome.split(/\s*-\s*loja\s*:/i)[0].trim();
+}
+
+/** "… - Loja: 001 - LANCHONETE" → "Loja 001 - LANCHONETE". */
+function lojaDe(nome: string): string {
+  const m = nome.match(/loja\s*:\s*(.+)$/i);
+  return m ? `Loja ${m[1].trim()}` : nome;
 }
