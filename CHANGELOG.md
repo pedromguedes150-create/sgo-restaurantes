@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.140.1 — 2026-10-01 (Padronização de Preparo: acabamento da ficha conforme a referência)
+### Alterado
+- A ficha ficou com a cara da referência do Pedro: cabeçalho em cartão com categoria/nome/código à esquerda e, à direita, as setas Anterior/Próximo com "N de M" e o botão de fechar (volta ao catálogo); as três seções viraram **botões com ícone** (Ingredientes · Modo de Preparo · Observações, a ativa em bordô); a tabela de ingredientes ganhou um **ícone por item** escolhido pelo nome (pão, linguiça, ovo, queijo, alface, tomate, saco…; nome desconhecido cai num talher neutro — é acabamento, nada é gravado) dentro de um cartão com cabeçalho discreto.
+- **Foto em quadro de proporção fixa (4:3, `object-cover`)** dentro de um cartão com a legenda "Imagem de referência": antes a imagem ditava a altura da coluna e aparecia gigante/esticada. Nada mudou na gravação ou na regra.
+
 ## v1.140.0 — 2026-10-01 (Ticket Médio: a receita passa a ser o "Vr. Total" da planilha Produtos Mais Vendidos)
 ### Alterado
 - **A regra da receita mudou, a pedido do Pedro** (o "venda − desconto" da Relação de Cupons foi um engano dele): a importação mensal passa a pedir **DUAS planilhas** do Teknisa, do mesmo mês e da mesma unidade — **"Produtos Mais Vendidos"**, de onde sai a RECEITA (Σ "Vr. Total", que já vem líquido: Vr. Unit × Qtde − Desc), e a **"Relação de Cupons SAT/NFC-e"**, que fica só para **contar os cupons** (uma linha por cupom; cancelados fora) e **conferir o mês** pela data de emissão (a planilha de produtos não tem data). Ticket = receita ÷ cupons, como sempre.
