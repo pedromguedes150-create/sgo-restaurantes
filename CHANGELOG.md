@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.141.1 — 2026-10-01 (Atestados: "Retorno" não é o fim do afastamento)
+### Corrigido
+- A leitura por IA copiava a data de **"Retorno"** (o dia em que a pessoa volta ao trabalho) como fim do afastamento, e o SGO contava um dia a mais: atestado de **2 dias, início 29/09, retorno 01/10** entrava como 29/09 → 01/10 = **3 dias** (relato do Pedro, caso real). Agora o período é **conciliado** com o que o documento repete (`src/lib/certificates/periodo.ts`, puro): o **número de dias** escrito vence (fim = início + dias − 1); sem ele, o retorno define o fim (retorno − 1); só sem os dois vale a data lida. A IA passou a devolver `returnDate` separado e é instruída a nunca o copiar em `endDate`. Quando o fim lido é refeito, o campo "Fim do afastamento" fica marcado para conferência antes de salvar. ⚠️ Atestado já lançado com um dia a mais: o Admin exclui (a Escala é revertida) e lança de novo.
+
 ## v1.141.0 — 2026-10-01 (Pagamentos: mesclar cadastros duplicados de freelancer)
 ### Adicionado
 - **Mesclar cadastros** em Configurações → Pagamentos → Freelancers (só Admin). Caso real: "Arthur Diogo" duas vezes — um sem CPF, outro completo, os dois com solicitações — e excluir perderia o histórico (o FK é SetNull: as solicitações ficariam "sem freelancer"). O botão de mesclar na linha abre a escolha do cadastro DEFINITIVO (homônimos primeiro) e mostra o que vai acontecer antes de confirmar. Numa transação: as solicitações do duplicado passam a apontar para o definitivo **sem reescrever nome/valor/PIX gravados em cada uma**; as unidades são somadas; valores por setor que faltam são copiados; CPF/PIX preenchem o definitivo se ele estiver sem; só então o duplicado, já vazio, é removido. Fica na Auditoria (`FREELANCER_MERGE`) com os números. CPFs diferentes nos dois cadastros bloqueiam a mesclagem.
