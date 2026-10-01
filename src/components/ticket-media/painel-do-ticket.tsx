@@ -112,7 +112,7 @@ export function PainelDoTicketClient({
 
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard label="Ticket Médio" value={emReal(painel.total.ticket)} delta={painel.comparacao.ticket} hint={`vs. ${rotuloDaCompetencia(painel.anterior)}`} />
-        <StatCard label="Receita" value={emReal(painel.total.receita)} delta={painel.comparacao.receita} hint="venda − desconto" />
+        <StatCard label="Receita" value={emReal(painel.total.receita)} delta={painel.comparacao.receita} hint="Σ Vr. Total (Produtos Mais Vendidos)" />
         <StatCard label="Cupons" value={emNumero(painel.total.coupons)} delta={painel.comparacao.coupons} />
         <StatCard label="Vendas" value={emReal(painel.total.grossSales)} delta={painel.comparacao.grossSales} />
         <StatCard label="Descontos" value={emReal(painel.total.discounts)} delta={painel.comparacao.discounts} invertDelta />

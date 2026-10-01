@@ -7,11 +7,14 @@ import { canEditModule } from '@/lib/permissions';
 import { gravarImportacao, lerParaPrevia, type MotivoDaImportacao } from '@/lib/ticket-media/importar';
 
 /**
- * IMPORTAÇÃO da planilha mensal — duas etapas na MESMA rota.
+ * IMPORTAÇÃO mensal — duas etapas na MESMA rota, com DUAS planilhas.
+ *
+ * `arquivo` = Relação de Cupons (conta cupons e confere o mês);
+ * `produtos` = Produtos Mais Vendidos (a receita, Σ "Vr. Total").
  *
  * `acao=previa` lê e devolve os números sem gravar nada; `acao=confirmar`
- * grava. As duas recebem o ARQUIVO: a confirmação lê a planilha de novo em vez
- * de aceitar os totais que a prévia devolveu. Números vindos do navegador
+ * grava. As duas recebem os ARQUIVOS: a confirmação lê as planilhas de novo em
+ * vez de aceitar os totais que a prévia devolveu. Números vindos do navegador
  * seriam números que qualquer um pode editar antes de mandar — e o consolidado
  * do mês passaria a valer o que o cliente disser.
  */
@@ -22,8 +25,15 @@ const STATUS: Record<MotivoDaImportacao, number> = {
   DUPLICADO: 409, SEM_PERMISSAO_SUBSTITUIR: 403,
 };
 
-/** Teto de 20 MB: a planilha real tem ~7.500 linhas e não chega perto disso. */
+/** Teto de 20 MB por arquivo: a Relação de Cupons real tem ~22.000 linhas e não chega perto disso. */
 const TETO_BYTES = 20 * 1024 * 1024;
+
+function abrir(arquivo: File, buf: Buffer): unknown[][] {
+  const wb = XLSX.read(buf, { type: 'buffer', cellDates: true });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  if (!ws) throw new Error('sem aba');
+  return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) as unknown[][];
+}
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -39,33 +49,35 @@ export async function POST(req: Request) {
   }
 
   const arquivo = form.get('arquivo');
+  const produtos = form.get('produtos');
   const unitId = String(form.get('unitId') ?? '');
   const competencia = String(form.get('competencia') ?? '');
   const acao = String(form.get('acao') ?? 'previa');
   const substituir = String(form.get('substituir') ?? '') === 'true';
 
-  if (!(arquivo instanceof File) || arquivo.size === 0) {
-    return NextResponse.json({ error: 'Selecione a planilha do mês.', reason: 'ARQUIVO' }, { status: 400 });
+  if (!(produtos instanceof File) || produtos.size === 0) {
+    return NextResponse.json({ error: 'Selecione a planilha "Produtos Mais Vendidos" do mês (é dela que sai a receita).', reason: 'ARQUIVO' }, { status: 400 });
   }
-  if (arquivo.size > TETO_BYTES) {
+  if (!(arquivo instanceof File) || arquivo.size === 0) {
+    return NextResponse.json({ error: 'Selecione a "Relação de Cupons SAT/NFC-e" do mês (é dela que sai o número de cupons).', reason: 'ARQUIVO' }, { status: 400 });
+  }
+  if (arquivo.size > TETO_BYTES || produtos.size > TETO_BYTES) {
     return NextResponse.json({ error: 'Arquivo acima de 20 MB.', reason: 'ARQUIVO' }, { status: 400 });
   }
 
   let linhas: unknown[][];
+  let linhasProdutos: unknown[][];
   try {
-    const buf = Buffer.from(await arquivo.arrayBuffer());
-    const wb = XLSX.read(buf, { type: 'buffer', cellDates: true });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    if (!ws) throw new Error('sem aba');
-    linhas = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) as unknown[][];
+    linhas = abrir(arquivo, Buffer.from(await arquivo.arrayBuffer()));
+    linhasProdutos = abrir(produtos, Buffer.from(await produtos.arrayBuffer()));
   } catch {
     return NextResponse.json(
-      { error: 'Não consegui abrir o arquivo. Envie a planilha em .xlsx ou .xls, sem proteção por senha.', reason: 'ARQUIVO' },
+      { error: 'Não consegui abrir um dos arquivos. Envie as planilhas em .xlsx ou .xls, sem proteção por senha.', reason: 'ARQUIVO' },
       { status: 400 },
     );
   }
 
-  const entrada = { unitId, competencia, fileName: arquivo.name, linhas };
+  const entrada = { unitId, competencia, fileName: arquivo.name, linhas, produtosFileName: produtos.name, linhasProdutos };
 
   if (acao === 'previa') {
     const r = await lerParaPrevia(user, entrada);

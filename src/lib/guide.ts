@@ -1132,10 +1132,10 @@ export const GUIDE: GuideSection[] = [
         roles: [...MANAGERLINE, 'CEO'],
         summary: 'O acompanhamento mensal: quanto cada churrascaria fatura por cupom.',
         steps: [
-          'O módulo é alimentado UMA VEZ POR MÊS, por unidade, com a planilha "Relação de Cupons SAT/NFC-e" exportada do Teknisa. Você não digita valor nenhum: o SGO abre o arquivo e soma os cupons.',
+          'O módulo é alimentado UMA VEZ POR MÊS, por unidade, com DUAS planilhas do Teknisa (v1.140.0): "Produtos Mais Vendidos" (a RECEITA — o SGO soma a coluna "Vr. Total", que já vem líquida de desconto) e "Relação de Cupons SAT/NFC-e" (o NÚMERO DE CUPONS, uma linha por cupom, e a conferência do mês). Você não digita valor nenhum.',
           'TICKET MÉDIO → "Importar planilha": escolha o mês, o ano, a unidade e o arquivo, e toque em "Ler planilha e conferir".',
-          'CONFIRA ANTES DE GRAVAR: aparece a prévia com cupons, Vr. Venda, Vr. Desc., receita e ticket médio. Nada foi gravado ainda. Só depois de "Confirmar importação" o número entra no consolidado.',
-          'A CONTA: RECEITA = Vr. Venda − Vr. Desc. (o desconto SAI da venda, não entra). TICKET MÉDIO = Receita ÷ Cupons. As duas fórmulas ficam escritas na própria prévia.',
+          'CONFIRA ANTES DE GRAVAR: aparece a prévia com os dois arquivos, cupons, Vr. Desc. (já abatido), receita e ticket médio — e a unidade que a planilha de produtos declara, para você conferir com a escolhida. Nada foi gravado ainda. Só depois de "Confirmar importação" o número entra no consolidado.',
+          'A CONTA: RECEITA = Σ "Vr. Total" da Produtos Mais Vendidos (NÃO se subtrai o desconto de novo — ele já está abatido no Vr. Total; a regra antiga venda − desconto descontava duas vezes). TICKET MÉDIO = Receita ÷ Cupons. Meses importados antes da v1.140.0 continuam com a conta antiga; não são reescritos.',
           'CUPOM CANCELADO não é somado — a prévia diz quantos foram deixados de fora e quanto eles valiam. Cancelado não é venda.',
           'Se você escolher o mês errado, o SGO recusa: ele lê a data dos cupons e avisa "a planilha é de Agosto/2026, mas a competência escolhida foi Setembro/2026". É o engano mais comum da rotina.',
           'Se a unidade já tiver aquele mês importado, o SGO NÃO sobrescreve calado: avisa quem importou, quando e com qual arquivo. Substituir é permitido só a quem administra o módulo.',

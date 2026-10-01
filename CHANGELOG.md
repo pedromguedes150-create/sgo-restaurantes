@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.140.0 — 2026-10-01 (Ticket Médio: a receita passa a ser o "Vr. Total" da planilha Produtos Mais Vendidos)
+### Alterado
+- **A regra da receita mudou, a pedido do Pedro** (o "venda − desconto" da Relação de Cupons foi um engano dele): a importação mensal passa a pedir **DUAS planilhas** do Teknisa, do mesmo mês e da mesma unidade — **"Produtos Mais Vendidos"**, de onde sai a RECEITA (Σ "Vr. Total", que já vem líquido: Vr. Unit × Qtde − Desc), e a **"Relação de Cupons SAT/NFC-e"**, que fica só para **contar os cupons** (uma linha por cupom; cancelados fora) e **conferir o mês** pela data de emissão (a planilha de produtos não tem data). Ticket = receita ÷ cupons, como sempre.
+  - Nos números reais de setembro/2026 (BF Esmeraldas): 22.284 cupons; receita R$ 796.788,80 (era R$ 729.465,06 pela regra antiga); ticket R$ 35,76 (era R$ 32,73).
+  - ⚠️ **Meses já importados NÃO são reescritos**: a coluna nova `netSales` fica nula neles e a conta antiga (venda − desconto) continua valendo lá; o consolidado soma cada mês pela regra dele (`somar` guarda Σreceita em `netSales`, então não há como descontar duas vezes ao misturar). Quem quiser recalcular um mês antigo substitui a importação com as duas planilhas.
+  - A prévia mostra os dois arquivos, cupons, "Vr. Desc." (já abatido), receita = Σ Vr. Total, ticket, e a **unidade que a planilha de produtos declara** (para conferir com a escolhida — o SGO não decide a unidade pelo arquivo). Arquivo de produtos com **mais de uma unidade** é recusado (a receita viraria a soma de várias lojas).
+  - Migração aditiva: `ticket_media_entries.netSales` e `productsFileName`. Guia da Ajuda e painel ("Σ Vr. Total") atualizados. Testes antigos passaram a enviar as duas planilhas; 7 casos novos (regra nova, mês antigo, mistura, recusa sem a planilha de produtos, leitura da Produtos Mais Vendidos).
+
 ## v1.139.0 — 2026-10-01 (Padronização de Preparo — fichas de preparo dos produtos, importadas por IA e conferidas pelo Admin)
 ### Adicionado
 - **Módulo Padronização de Preparo** (`/modulos/padronizacao`, Tarefas → Treinamento, ao lado dos POPs). Qualquer perfil da operação consulta a FICHA do produto: foto de como deve ficar (em destaque), tabela de ingredientes (ingrediente, quantidade, peso em g, observação), modo de preparo e observações; busca por **nome, código ou INGREDIENTE** ("linguiça" acha o Pão c/ Linguiça), filtro de categoria, Anterior/Próximo entre fichas e "Voltar para Padronização". Desktop em duas colunas (tabela × foto); celular em uma coluna com a foto antes dos ingredientes. O catálogo mostra cards compactos (foto, nome, categoria, código, "Ver padrão") — os ingredientes ficam só dentro da ficha.

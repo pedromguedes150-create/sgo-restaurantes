@@ -3750,10 +3750,15 @@ model TicketMediaEntry {
   competence String
 
   coupons    Int
-  /// Soma de "Vr. Venda" dos cupons válidos da planilha.
+  /// Soma de "Vr. Venda" dos cupons válidos da Relação de Cupons (informativo desde a v1.140.0).
   grossSales Decimal @db.Decimal(14, 2)
-  /// Soma de "Vr. Desc.".
+  /// Soma de "Vr. Desc." da Relação de Cupons.
   discounts  Decimal @db.Decimal(14, 2)
+  /// Σ "Vr. Total" da planilha "Produtos Mais Vendidos" — a RECEITA desde a
+  /// v1.140.0. Nulo nos meses importados antes (que seguem em venda − desconto).
+  netSales   Decimal? @db.Decimal(14, 2)
+  /// Nome do arquivo "Produtos Mais Vendidos" (o `fileName` é a Relação de Cupons).
+  productsFileName String?
 
   /// Cupons descartados na leitura (cancelados, status não reconhecido) e o
   /// porquê — o número que a tela mostra para o conferente não ficar no escuro.

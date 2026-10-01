@@ -242,3 +242,107 @@ export function resumoDosDescartes(ds: CupomDescartado[]): string | null {
   if (ds.length === 0) return null;
   return ds.map((d) => `${d.quantidade}× ${d.status}`).join('; ');
 }
+
+/* ───────────────────────── Produtos Mais Vendidos ───────────────────────── */
+
+/**
+ * LEITURA da planilha "Produtos Mais Vendidos" (Teknisa) — a fonte da RECEITA
+ * desde a v1.140.0.
+ *
+ * Uma linha por PRODUTO, com "Vr. Total" já líquido (Vr. Unit × Qtde − Desc).
+ * A receita do mês é Σ "Vr. Total", sem conta por cima. O que ela NÃO tem —
+ * número de cupons e datas — continua vindo da Relação de Cupons.
+ *
+ * O arquivo real de setembro/2026 (BF Esmeraldas): 722 produtos, Σ Vr. Total
+ * R$ 796.788,80; a Relação de Cupons do mesmo mês dá 22.284 cupons.
+ */
+const COLUNAS_PRODUTOS = {
+  total: ['vr. total', 'vr.total', 'vr total', 'valor total', 'vlr total'],
+  desconto: ['vr.desc.', 'vr. desc.', 'vr desc', 'valor desconto', 'vlr desconto'],
+  quantidade: ['qtde.', 'qtde', 'qtd', 'quantidade'],
+  unidade: ['unidade', 'loja'],
+  produto: ['produto', 'descricao', 'item'],
+} as const;
+
+type CampoProduto = keyof typeof COLUNAS_PRODUTOS;
+
+export interface LeituraDeProdutos {
+  ok: boolean;
+  erro?: string;
+  /** Σ "Vr. Total" — a receita do mês. */
+  netSales: number;
+  /** Σ "Vr. Desc." — só informativo: já está abatido no Vr. Total. */
+  discounts: number;
+  /** Σ "Qtde." — itens vendidos, informativo. */
+  itens: number;
+  /** Linhas de produto somadas. */
+  produtos: number;
+  /** O que a coluna "Unidade" declara. Exibido, nunca usado para decidir a unidade. */
+  unidadeDeclarada: string | null;
+  avisos: string[];
+}
+
+const vazioProdutos = (erro: string): LeituraDeProdutos => ({
+  ok: false, erro, netSales: 0, discounts: 0, itens: 0, produtos: 0, unidadeDeclarada: null, avisos: [],
+});
+
+function acharCabecalhoDeProdutos(linhas: unknown[][]): { linha: number; col: Partial<Record<CampoProduto, number>> } | null {
+  const limite = Math.min(linhas.length, 30);
+  for (let i = 0; i < limite; i++) {
+    const celulas = (linhas[i] ?? []).map(normalizar);
+    const col: Partial<Record<CampoProduto, number>> = {};
+    for (const campo of Object.keys(COLUNAS_PRODUTOS) as CampoProduto[]) {
+      const aceitos = COLUNAS_PRODUTOS[campo] as readonly string[];
+      const idx = celulas.findIndex((c) => c !== '' && aceitos.includes(c));
+      if (idx >= 0) col[campo] = idx;
+    }
+    if (col.total !== undefined) return { linha: i, col };
+  }
+  return null;
+}
+
+export function lerPlanilhaDeProdutos(linhas: unknown[][]): LeituraDeProdutos {
+  if (!Array.isArray(linhas) || linhas.length === 0) return vazioProdutos('A planilha de produtos está vazia.');
+  const cab = acharCabecalhoDeProdutos(linhas);
+  if (!cab) {
+    return vazioProdutos('Não encontrei a coluna "Vr. Total" na planilha. Confira se o arquivo é o relatório "Produtos Mais Vendidos" exportado do Teknisa.');
+  }
+  const { col } = cab;
+  const avisos: string[] = [];
+  let netSales = 0;
+  let discounts = 0;
+  let itens = 0;
+  let produtos = 0;
+  const unidades = new Map<string, number>();
+
+  for (let i = cab.linha + 1; i < linhas.length; i++) {
+    const l = linhas[i] ?? [];
+    const primeira = String(l[0] ?? '').trim();
+    if (/^total\b/i.test(primeira)) continue;
+    const total = numeroDaCelula(l[col.total!]);
+    if (total === null) continue;
+    produtos += 1;
+    netSales = arredondar(netSales + total);
+    if (col.desconto !== undefined) discounts = arredondar(discounts + (numeroDaCelula(l[col.desconto]) ?? 0));
+    if (col.quantidade !== undefined) itens += numeroDaCelula(l[col.quantidade]) ?? 0;
+    if (col.unidade !== undefined) {
+      const u = String(l[col.unidade] ?? '').trim();
+      if (u) unidades.set(u, (unidades.get(u) ?? 0) + 1);
+    }
+  }
+
+  if (produtos === 0) return vazioProdutos('Não encontrei nenhuma linha de produto com "Vr. Total" na planilha. Confira se o arquivo não veio vazio ou filtrado.');
+
+  /* A planilha é por unidade; mais de uma dentro do mesmo arquivo é sinal de
+     exportação da rede inteira — a receita viraria a soma de várias lojas. */
+  const nomes = [...unidades.keys()];
+  if (nomes.length > 1) {
+    return vazioProdutos(`A planilha traz ${nomes.length} unidades (${nomes.map((n) => n.slice(0, 40)).join('; ')}). Exporte o relatório de UMA unidade por vez.`);
+  }
+  if (col.quantidade === undefined) avisos.push('A planilha não tem a coluna "Qtde." — os itens vendidos não foram contados (não afeta a receita).');
+
+  return {
+    ok: true, netSales, discounts, itens: Math.round(itens), produtos,
+    unidadeDeclarada: nomes[0] ?? null, avisos,
+  };
+}
