@@ -102,6 +102,10 @@ const BASE: ModuleDef[] = [
 
   { key: 'TERMINATIONS', label: 'Desligamentos', nav: '/modulos/desligamentos' },
   { key: 'POPS', label: 'POPs', nav: '/modulos/pops' },
+  /* Fichas de preparo dos produtos (v1.139.0): consulta aberta a todos os
+     perfis, como os POPs; quem edita é só o Admin — conferido na lib
+     (src/lib/preparo/write.ts), não apenas na matriz. */
+  { key: 'PREP_STANDARDS', label: 'Padronização de Preparo', nav: '/modulos/padronizacao' },
   { key: 'TRAINING', label: 'Treinamentos', nav: '/modulos/treinamentos' },
   // Acompanhamento da REDE (Supervisor/Admin/CEO): quem deve o quê, concluído, pendente, atrasado — e o PDF.
   { key: 'TRAINING_PANEL', label: 'Treinamentos — Acompanhamento', nav: '/modulos/treinamentos/acompanhamento', parent: 'TRAINING' },

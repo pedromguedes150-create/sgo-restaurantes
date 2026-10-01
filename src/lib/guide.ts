@@ -1468,6 +1468,42 @@ export const GUIDE: GuideSection[] = [
     title: 'Treinamentos e POPs',
     guides: [
       {
+        id: 'padronizacao-consultar',
+        title: 'Padronização de Preparo — consultar a ficha do produto',
+        roles: ALL_ROLES,
+        summary: 'Como o produto deve ficar, o que leva, quanto leva e como preparar — com a foto do padrão.',
+        steps: [
+          'Entre em Tarefas → Treinamento → PADRONIZAÇÃO DE PREPARO (v1.139.0). A tela é um catálogo: foto, nome, categoria e código de cada produto.',
+          'BUSQUE pelo nome ("pão linguiça"), pelo CÓDIGO ("910000000501") ou por um INGREDIENTE ("linguiça" acha todo produto que leva linguiça). Sem acento e sem caixa. O filtro Categoria estreita a lista.',
+          'Toque em "Ver padrão": a ficha abre com a FOTO do produto pronto (é o padrão esperado) e a tabela de INGREDIENTES — Ingrediente, Quantidade, Peso em gramas e Observação ("fatia na largura da espátula").',
+          'As abas Modo de Preparo e Observações mostram o passo a passo e os cuidados, quando a ficha os tem.',
+          '"< Anterior" e "Próximo >" passam de ficha em ficha na ordem do catálogo; "Voltar para Padronização" volta à lista.',
+          'No celular a ficha vira uma coluna: nome e código, foto, ingredientes, preparo, observações.',
+        ],
+        tips: ['Quantidade ou peso em branco quer dizer que a ficha não informa (um saco para lanche não tem peso) — não é zero.'],
+      },
+      {
+        id: 'padronizacao-admin',
+        title: 'Padronização de Preparo — importar, editar e trocar a foto (Admin)',
+        roles: ['ADMIN'],
+        summary: 'A IA lê a ficha e sugere; o Administrador confere e publica. Nada entra sem revisão.',
+        steps: [
+          'IMPORTAR FICHA: envie a foto (JPG/PNG/WEBP) ou o PDF da ficha. A IA interpreta o conteúdo — nome, código, categoria, ingredientes com quantidade/unidade/peso/observação, modo de preparo — sem depender da posição no papel.',
+          'PRÉ-VISUALIZAÇÃO: nada é gravado ainda. O que a IA não leu com segurança fica em branco e marcado "Revisar informação" (ela NÃO inventa peso, quantidade nem código). Corrija o que precisar, adicione/remova/reordene ingredientes e só então "Salvar e publicar".',
+          'FOTO DO PRODUTO: se o arquivo-fonte é uma imagem e a IA achou a foto do produto nela, a prévia já mostra o recorte sugerido para você confirmar; em PDF, envie a foto do produto no próprio formulário. A foto é um campo próprio da ficha, separado do arquivo importado.',
+          'CÓDIGO REPETIDO: ao salvar uma ficha com código que já existe ativo, o sistema avisa e pergunta — "Atualizar ficha existente" (abre a comparação ANTES → NOVO campo a campo para você confirmar), "Criar nova ficha" (a nova entra e a antiga fica INATIVA, com o motivo no histórico das duas) ou "Cancelar". Nunca sobrescreve sozinho.',
+          'EDITAR FICHA: dentro da ficha, "Editar ficha" altera nome, código, categoria, ingredientes (quantidade, unidade, peso, observação, ordem), modo de preparo e observações — sem precisar reimportar. "Nova ficha" cadastra à mão, sem arquivo.',
+          'ALTERAR FOTO: substitui, remove ou cancela — só a foto muda; ingredientes, pesos e código ficam exatamente como estão. É o caminho para trocar as fotos operacionais pelas profissionais.',
+          'DESATIVAR: a ficha some do catálogo dos funcionários e continua no histórico administrativo (filtro Situação → Inativas); dá para reativar. Nada é excluído.',
+          'HISTÓRICO: na ficha, a seção "Histórico de alterações" (só o Admin vê) lista quem, quando, campo, valor anterior e novo — "Linguiça · Peso: 120 g → 110 g", "Imagem atualizada". Tudo vai também para a Auditoria.',
+        ],
+        tips: [
+          'A IA só EXTRAI e SUGERE: a fonte da verdade é a sua confirmação. Se ela falhar ("Não foi possível interpretar completamente esta ficha"), o arquivo fica guardado e você preenche no editor — nenhuma ficha incompleta nasce em silêncio.',
+          'Sem ANTHROPIC_API_KEY no servidor a importação ainda funciona: o arquivo é guardado e o editor abre em branco para preencher.',
+          'Só o perfil Administrador cria, importa, edita, troca foto e desativa — e isso é conferido também no servidor, não só pelo botão.',
+        ],
+      },
+      {
         id: 'pops-criar',
         title: 'Criar POP / Treinamento (Admin)',
         roles: ['ADMIN'],

@@ -180,6 +180,9 @@ model User {
   oilCollections          OilCollection[]          @relation("OilBy")
   cashExpensesCreated     CashExpense[]            @relation("ExpenseBy")
   cashExpensesRefunded    CashExpense[]            @relation("ExpenseRefundBy")
+  prepStandardsCreated    PrepStandard[]           @relation("PrepStandardBy")
+  prepStandardsUpdated    PrepStandard[]           @relation("PrepStandardUpdatedBy")
+  prepStandardChanges     PrepStandardChange[]     @relation("PrepStandardChangeBy")
   inventoryItemsCreated   InventoryItem[]          @relation("InvItemBy")
   inventoryMovements      InventoryMovement[]      @relation("InvMoveBy")
   checklistModels         ChecklistModel[]         @relation("ChecklistModelBy")
@@ -4140,4 +4143,80 @@ model CashExpense {
   @@index([unitId, expenseDate])
   @@index([status])
   @@map("cash_expenses")
+}
+
+/// Situação de uma ficha de padronização de preparo: nunca se exclui — inativa.
+enum PrepStandardStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// Ficha de PADRONIZAÇÃO DE PREPARO de um produto da operação (v1.139.0):
+/// como monta, o que leva, quanto, e a foto do padrão esperado.
+/// A foto é campo PRÓPRIO (`imagePath`), separado do arquivo-fonte da
+/// importação (`sourceFilePath`): trocar a foto não mexe em nenhum outro dado.
+model PrepStandard {
+  id                String             @id @default(cuid())
+  name              String
+  /// Código do produto (ex.: 910000000501). Não é único no banco de propósito:
+  /// a regra "não duplicar calado" vive em `write.ts` (409 com as opções).
+  code              String
+  category          String             @default("Geral")
+  imagePath         String?
+  preparationMethod String?
+  generalNotes      String?
+  status            PrepStandardStatus @default(ACTIVE)
+  sourceFilePath    String?
+  createdById       String?
+  createdByName     String
+  updatedById       String?
+  updatedByName     String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  createdBy User?                @relation("PrepStandardBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?                @relation("PrepStandardUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  items     PrepStandardItem[]
+  changes   PrepStandardChange[]
+
+  @@index([code])
+  @@index([status, category])
+  @@map("prep_standards")
+}
+
+/// Um ingrediente da ficha. Quantidade/peso nulos = não informado na ficha
+/// (um "Saco para lanche" não tem peso), nunca zero inventado.
+model PrepStandardItem {
+  id             String   @id @default(cuid())
+  standardId     String
+  ingredientName String
+  quantity       Decimal? @db.Decimal(10, 3)
+  unit           String?
+  weightGrams    Decimal? @db.Decimal(10, 2)
+  notes          String?
+  sortOrder      Int      @default(0)
+
+  standard PrepStandard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+
+  @@index([standardId, sortOrder])
+  @@map("prep_standard_items")
+}
+
+/// Histórico IMUTÁVEL da ficha: campo, antes, depois, quem, quando.
+/// Vive à parte da Auditoria porque é lido na própria ficha (área do Admin).
+model PrepStandardChange {
+  id         String   @id @default(cuid())
+  standardId String
+  userId     String?
+  userName   String
+  field      String
+  oldValue   String?
+  newValue   String?
+  createdAt  DateTime @default(now())
+
+  standard PrepStandard @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  user     User?        @relation("PrepStandardChangeBy", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([standardId, createdAt])
+  @@map("prep_standard_changes")
 }
