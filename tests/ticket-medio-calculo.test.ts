@@ -4,7 +4,7 @@ import {
   deslocarCompetencia, montarCompetencia, receita, rotuloDaCompetencia, somar,
   ticketConsolidado, ticketMedio, variacao,
 } from '@/lib/ticket-media/calculo';
-import { lerPlanilhaDeCupons, lerPlanilhaDeProdutos, numeroDaCelula, competenciaDaData } from '@/lib/ticket-media/planilha';
+import { lerPlanilhaDeCupons, lerPlanilhaDeProdutos, codigoDaUnidade, numeroDaCelula, competenciaDaData } from '@/lib/ticket-media/planilha';
 
 /**
  * AS REGRAS DO TICKET MÉDIO.
@@ -288,11 +288,24 @@ describe('Leitura da Produtos Mais Vendidos', () => {
     expect(r.netSales).toBe(1234.56);
     expect(r.discounts).toBe(0.5);
   });
-  it('recusa sem a coluna Vr. Total, recusa sem produto nenhum, e recusa arquivo com DUAS unidades', () => {
+  it('recusa sem a coluna Vr. Total, recusa sem produto nenhum, e recusa arquivo com DUAS unidades (códigos diferentes)', () => {
     expect(lerPlanilhaDeProdutos([['Produto', 'Qtde.'], ['X', 1]]).ok).toBe(false);
     expect(lerPlanilhaDeProdutos([CAB]).ok).toBe(false);
-    const duas = lerPlanilhaDeProdutos([CAB, [U, 'X', 1, 1, 1, 0, 0, 10, 1], ['0007 - OUTRA LOJA', 'Y', 1, 1, 1, 0, 0, 10, 1]]);
+    const duas = lerPlanilhaDeProdutos([CAB, [U, 'X', 1, 1, 1, 0, 0, 10, 1], ['0007 - OUTRA UNIDADE - Loja: 001 - X', 'Y', 1, 1, 1, 0, 0, 10, 1]]);
     expect(duas.ok).toBe(false);
     expect(duas.erro).toContain('2 unidades');
+  });
+
+  it('a MESMA unidade com dois PDVs/lojas (Teresópolis: Lanchonete + Churrascaria) soma, não é "duas unidades"', () => {
+    /* Relato do Pedro (01/10/2026): o arquivo real traz "0002 - CHURRASCARIA BF
+       TERESOPOLIS - Loja: 001 - LANCHONETE" e "… - Loja: 002 - CHURRASCARIA". */
+    const L1 = '0002 - CHURRASCARIA BF TERESOPOLIS - Loja: 001 - LANCHONETE';
+    const L2 = '0002 - CHURRASCARIA BF TERESOPOLIS - Loja: 002 - CHURRASCARIA';
+    const r = lerPlanilhaDeProdutos([CAB, [L1, 'PAO DE QUEIJO', 10, 1, 1, 0, 0, 56256.14, 1], [L2, 'BUFFET', 5, 1, 1, 0, 0, 360448.76, 1]]);
+    expect(r.ok).toBe(true);
+    expect(r.netSales).toBe(416704.9);
+    expect(r.unidadeDeclarada).toBe('0002 - CHURRASCARIA BF TERESOPOLIS (2 lojas)');
+    expect(r.avisos.some((a) => a.includes('2 PDVs/lojas') && a.includes('Loja 001 - LANCHONETE'))).toBe(true);
+    expect(codigoDaUnidade(L1)).toBe('0002 - CHURRASCARIA BF TERESOPOLIS');
   });
 });
