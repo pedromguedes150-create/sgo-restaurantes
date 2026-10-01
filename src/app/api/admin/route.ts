@@ -12,6 +12,7 @@ import { setLateEntryPenaltyPct } from '@/lib/late-entry';
 import { setWasteMetaWeight, setCommandsMetaWeight } from '@/lib/metas/config';
 import { setGasAlertPct, setGasMaxPriceKg } from '@/lib/gas/query';
 import { setFreelancerWeekLimit } from '@/lib/payments/recorrencia';
+import { mesclarFreelancers } from '@/lib/payments/mesclar-freelancers';
 import { setChecklistToleranceMin } from '@/lib/tasks/tolerance';
 import { setHourlyRate, addHoliday, deleteHoliday } from '@/lib/freelancer/pricing';
 import { addOvertimeRate, toggleOvertimeRate, deleteOvertimeRate } from '@/lib/overtime/rates';
@@ -77,6 +78,7 @@ export async function POST(req: Request) {
   else if (e === 'freelancer' && a === 'update') r = await admin.updateFreelancer(user, b.id, b, ctx);
   else if (e === 'freelancer' && a === 'toggle') r = await admin.toggleFreelancer(user, b.id, b.active, ctx);
   else if (e === 'freelancer' && a === 'delete') r = await admin.deleteFreelancer(user, b.id, ctx);
+  else if (e === 'freelancer' && a === 'merge') r = await mesclarFreelancers(user, { duplicadoId: String(b.duplicadoId ?? ''), destinoId: String(b.destinoId ?? '') }, ctx);
   else if (e === 'freelancerSector' && a === 'set') r = await admin.setFreelancerSectorRate(user, { freelancerId: b.freelancerId, sectorName: b.sectorName, dayValue: Number(b.dayValue) }, ctx);
   else if (e === 'freelancerSector' && a === 'delete') r = await admin.deleteFreelancerSectorRate(user, { freelancerId: b.freelancerId, sectorName: b.sectorName }, ctx);
   else if (e === 'miscType' && a === 'create') r = await admin.createMiscType(user, b, ctx);

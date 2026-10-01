@@ -18,7 +18,7 @@ export default async function PagamentosAdminPage() {
   const [units, users, freelancers, miscTypes, delegations, weekLimit] = await Promise.all([
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     prisma.user.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, role: true } }),
-    prisma.freelancer.findMany({ orderBy: { name: 'asc' }, include: { units: { include: { unit: { select: { id: true, name: true } } } }, sectorRates: true } }),
+    prisma.freelancer.findMany({ orderBy: { name: 'asc' }, include: { units: { include: { unit: { select: { id: true, name: true } } } }, sectorRates: true, _count: { select: { requests: true } } } }),
     prisma.miscPaymentType.findMany({ orderBy: { order: 'asc' } }),
     prisma.approvalDelegation.findMany({ orderBy: { startsAt: 'desc' }, include: { fromUser: { select: { name: true } }, toUser: { select: { name: true } } } }),
     getFreelancerWeekLimit(),
@@ -33,7 +33,7 @@ export default async function PagamentosAdminPage() {
           units={units}
           weekLimit={weekLimit}
           users={users}
-          freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, cpf: f.cpf, defaultValue: Number(f.defaultValue), pixKey: f.pixKey, active: f.active, units: f.units.map((u) => u.unit.name), unitIds: f.units.map((u) => u.unit.id), sectorRates: f.sectorRates.map((r) => ({ sectorName: r.sectorName, dayValue: Number(r.dayValue) })) }))}
+          freelancers={freelancers.map((f) => ({ id: f.id, name: f.name, cpf: f.cpf, defaultValue: Number(f.defaultValue), pixKey: f.pixKey, active: f.active, units: f.units.map((u) => u.unit.name), unitIds: f.units.map((u) => u.unit.id), sectorRates: f.sectorRates.map((r) => ({ sectorName: r.sectorName, dayValue: Number(r.dayValue) })), requestCount: f._count.requests }))}
           miscTypes={miscTypes.map((m) => ({ id: m.id, name: m.name, approverRole: m.approverRole, active: m.active }))}
           delegations={delegations.map((x) => ({ id: x.id, from: x.fromUser.name, to: x.toUser.name, period: `${d(x.startsAt)} a ${d(x.endsAt)}` }))}
         />
