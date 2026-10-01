@@ -3,19 +3,18 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Camera, ChevronLeft, ChevronRight, History, ImageOff, Pencil, Power, Trash2 } from 'lucide-react';
+import { Camera, ChefHat, ChevronLeft, ChevronRight, History, ImageOff, Info, List, Pencil, Power, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/ds/button';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
-import { Table } from '@/components/ui/ds/table';
 import { Modal } from '@/components/ui/ds/modal';
 import { Banner } from '@/components/ui/ds/banner';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
 import { compressImage } from '@/lib/image-compress';
 import { cn } from '@/lib/utils';
-import { textoQuantidade, textoPeso, CAMPO_FOTO, type ItemDaFicha } from '@/lib/preparo/tipos';
+import { textoQuantidade, CAMPO_FOTO } from '@/lib/preparo/tipos';
 import type { FichaCompleta, LinhaDoHistorico } from '@/lib/preparo/query';
 import { paraEditavel } from './editor-ficha';
 import { FormularioFicha } from './formulario-ficha';
+import { IconeIngrediente } from './icone-ingrediente';
 
 /**
  * A FICHA — o que o funcionário vê em poucos segundos: qual é o produto, como
@@ -57,66 +56,99 @@ export function FichaClient({ ficha, vizinhos, isAdmin, historico, categorias }:
     }
   }
 
-  const colunas = [
-    { key: 'ingrediente', header: 'Ingrediente / Produto', cell: (i: ItemDaFicha) => <span className="font-medium text-ink-900">{i.ingredientName}</span> },
-    { key: 'qtd', header: 'Quantidade', cell: (i: ItemDaFicha) => textoQuantidade(i) || null },
-    { key: 'peso', header: 'Peso (g)', numeric: true, cell: (i: ItemDaFicha) => (i.weightGrams === null ? null : String(i.weightGrams).replace('.', ',')) },
-    { key: 'obs', header: 'Observação', cell: (i: ItemDaFicha) => i.notes },
+  const ABAS: { value: Aba; label: string; Icone: React.ComponentType<{ className?: string }> }[] = [
+    { value: 'ingredientes', label: 'Ingredientes', Icone: List },
+    { value: 'preparo', label: 'Modo de Preparo', Icone: ChefHat },
+    { value: 'observacoes', label: 'Observações', Icone: Info },
   ];
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link href="/modulos/padronizacao" className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline">
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Voltar para Padronização
-        </Link>
-        <div className="flex items-center gap-1">
-          <NavLink id={vizinhos.prevId} rotulo="Anterior" icone={<ChevronLeft className="h-4 w-4" aria-hidden />} />
-          <span className="px-2 text-xs tabular-nums text-ink-500">{vizinhos.posicao > 0 ? `${vizinhos.posicao} de ${vizinhos.total}` : '—'}</span>
-          <NavLink id={vizinhos.nextId} rotulo="Próximo" icone={<ChevronRight className="h-4 w-4" aria-hidden />} depois />
-        </div>
-      </div>
-
-      <header className="rounded-card border border-line bg-surface p-4 shadow-sgo-card">
+      <header className="rounded-card border border-line bg-surface p-4 shadow-sgo-card sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="sgo-type-11 font-semibold text-brand">{ficha.category}</p>
             <h2 className="sgo-type-24 mt-1 font-bold text-ink-900">{ficha.name}</h2>
             <p className="mt-1 text-sm text-ink-500">Código: <span className="font-semibold tabular-nums text-ink-900">{ficha.code}</span>{inativa && <StatusBadge tone="neutral" className="ml-2">Inativa</StatusBadge>}</p>
           </div>
-          {isAdmin && (
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" variant="secondary" onClick={() => { setAviso(null); setEditando(true); }}><Pencil className="h-4 w-4" /> Editar ficha</Button>
-              <Button type="button" size="sm" variant="secondary" onClick={() => { setAviso(null); setFoto(true); }}><Camera className="h-4 w-4" /> Alterar foto</Button>
-              <Button type="button" size="sm" variant={inativa ? 'secondary' : 'danger'} onClick={alternarStatus} loading={mudandoStatus}><Power className="h-4 w-4" /> {inativa ? 'Reativar' : 'Desativar'}</Button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-control border border-line-strong bg-surface p-1">
+              <NavLink id={vizinhos.prevId} rotulo="Anterior" icone={<ChevronLeft className="h-4 w-4" aria-hidden />} />
+              <span className="px-2 text-sm tabular-nums text-ink-700">{vizinhos.posicao > 0 ? `${vizinhos.posicao} de ${vizinhos.total}` : '—'}</span>
+              <NavLink id={vizinhos.nextId} rotulo="Próximo" icone={<ChevronRight className="h-4 w-4" aria-hidden />} />
             </div>
-          )}
+            <Link href="/modulos/padronizacao" aria-label="Voltar para Padronização" title="Voltar para Padronização"
+              className="flex h-10 w-10 items-center justify-center rounded-control bg-sunken text-ink-700 hover:bg-brand-tint hover:text-brand">
+              <X className="h-5 w-5" aria-hidden />
+            </Link>
+          </div>
         </div>
+        {isAdmin && (
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
+            <Button type="button" size="sm" variant="secondary" onClick={() => { setAviso(null); setEditando(true); }}><Pencil className="h-4 w-4" /> Editar ficha</Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => { setAviso(null); setFoto(true); }}><Camera className="h-4 w-4" /> Alterar foto</Button>
+            <Button type="button" size="sm" variant={inativa ? 'secondary' : 'danger'} onClick={alternarStatus} loading={mudandoStatus}><Power className="h-4 w-4" /> {inativa ? 'Reativar' : 'Desativar'}</Button>
+          </div>
+        )}
       </header>
 
       {aviso && <Banner tone={aviso.tone} title={aviso.title} onDismiss={() => setAviso(null)} />}
 
-      <SegmentedControl<Aba>
-        aria-label="Seção da ficha"
-        value={aba}
-        onValueChange={setAba}
-        options={[
-          { value: 'ingredientes', label: 'Ingredientes', badge: ficha.items.length || undefined },
-          { value: 'preparo', label: 'Modo de Preparo' },
-          { value: 'observacoes', label: 'Observações' },
-        ]}
-      />
+      <div role="tablist" aria-label="Seção da ficha" className="flex flex-wrap gap-2">
+        {ABAS.map(({ value, label, Icone }) => {
+          const ativa = aba === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={ativa}
+              onClick={() => setAba(value)}
+              className={cn(
+                'inline-flex h-12 items-center gap-2 rounded-card border px-5 text-sm font-semibold transition-colors duration-sgo-1 ease-sgo-std focus-visible:shadow-sgo-focus',
+                ativa ? 'border-brand bg-brand text-on-brand' : 'border-line-strong bg-surface text-ink-700 hover:border-brand hover:text-brand',
+              )}
+            >
+              <Icone className="h-5 w-5" aria-hidden /> {label}
+            </button>
+          );
+        })}
+      </div>
 
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(280px,40%)] md:items-start">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(320px,42%)] md:items-start">
         <section className="order-last min-w-0 md:order-first">
           {aba === 'ingredientes' && (
-            <Table<ItemDaFicha>
-              columns={colunas}
-              rows={ficha.items}
-              getRowKey={(_, i) => String(i)}
-              caption={`Ingredientes de ${ficha.name}`}
-              empty={<p className="p-4 text-sm text-ink-500">Esta ficha não lista ingredientes.</p>}
-            />
+            <div className="overflow-hidden rounded-card border border-line bg-surface shadow-sgo-card">
+              <table className="w-full border-collapse text-sm">
+                <caption className="sr-only">Ingredientes de {ficha.name}</caption>
+                <thead>
+                  <tr className="bg-sunken text-left text-xs font-semibold text-ink-700">
+                    <th scope="col" className="px-4 py-3">Ingrediente / Produto</th>
+                    <th scope="col" className="px-4 py-3">Quantidade</th>
+                    <th scope="col" className="px-4 py-3">Peso (g)</th>
+                    <th scope="col" className="px-4 py-3">Observação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {ficha.items.length === 0 && (
+                    <tr><td colSpan={4} className="px-4 py-6 text-center text-ink-500">Esta ficha não lista ingredientes.</td></tr>
+                  )}
+                  {ficha.items.map((i, k) => (
+                    <tr key={k}>
+                      <td className="px-4 py-2.5">
+                        <span className="flex items-center gap-3">
+                          <IconeIngrediente nome={i.ingredientName} />
+                          <span className="font-medium text-ink-900">{i.ingredientName}</span>
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-ink-700">{textoQuantidade(i) || <span className="text-ink-400">—</span>}</td>
+                      <td className="px-4 py-2.5 tabular-nums text-ink-700">{i.weightGrams === null ? <span className="text-ink-400">—</span> : String(i.weightGrams).replace('.', ',')}</td>
+                      <td className="px-4 py-2.5 text-ink-700">{i.notes ?? <span className="text-ink-400">—</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           {aba === 'preparo' && (
             <Texto titulo="Modo de preparo" texto={ficha.preparationMethod} vazio="A ficha não traz modo de preparo." />
@@ -126,17 +158,21 @@ export function FichaClient({ ficha, vizinhos, isAdmin, historico, categorias }:
           )}
         </section>
 
-        <figure className="order-first md:order-last">
-          {ficha.imagePath ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={`/${ficha.imagePath}`} alt={`Foto de referência: ${ficha.name}`} className="w-full rounded-card border border-line object-cover" />
-          ) : (
-            <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-2 rounded-card border border-dashed border-line-strong bg-sunken text-ink-400">
-              <ImageOff className="h-6 w-6" aria-hidden />
-              <span className="text-xs">Sem foto de referência</span>
-            </div>
-          )}
-          <figcaption className="mt-1 text-right text-xs text-ink-500">Imagem de referência — como o produto deve ficar</figcaption>
+        <figure className="order-first rounded-card border border-line bg-surface p-3 shadow-sgo-card md:order-last">
+          {/* Quadro de proporção FIXA: a foto preenche o quadro (object-cover) em vez de
+              ditar a altura da coluna — era o que deixava a imagem gigante e esticada. */}
+          <div className="aspect-[4/3] w-full overflow-hidden rounded-control bg-sunken">
+            {ficha.imagePath ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`/${ficha.imagePath}`} alt={`Foto de referência: ${ficha.name}`} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-ink-400">
+                <ImageOff className="h-6 w-6" aria-hidden />
+                <span className="text-xs">Sem foto de referência</span>
+              </div>
+            )}
+          </div>
+          <figcaption className="mt-2 text-right text-xs text-ink-500">Imagem de referência</figcaption>
         </figure>
       </div>
 
@@ -177,11 +213,10 @@ export function FichaClient({ ficha, vizinhos, isAdmin, historico, categorias }:
   );
 }
 
-function NavLink({ id, rotulo, icone, depois }: { id: string | null; rotulo: string; icone: React.ReactNode; depois?: boolean }) {
-  const classes = cn('inline-flex h-8 items-center gap-1 rounded-control border border-line-strong bg-surface px-2 text-xs font-semibold text-ink-900 hover:bg-sunken', !id && 'pointer-events-none opacity-40');
-  const conteudo = depois ? <>{rotulo}{icone}</> : <>{icone}{rotulo}</>;
-  if (!id) return <span className={classes} aria-disabled>{conteudo}</span>;
-  return <Link href={`/modulos/padronizacao/${id}`} className={classes}>{conteudo}</Link>;
+function NavLink({ id, rotulo, icone }: { id: string | null; rotulo: string; icone: React.ReactNode }) {
+  const classes = cn('flex h-8 w-8 items-center justify-center rounded-control text-ink-700 hover:bg-sunken hover:text-brand', !id && 'pointer-events-none opacity-40');
+  if (!id) return <span className={classes} aria-disabled aria-label={rotulo}>{icone}</span>;
+  return <Link href={`/modulos/padronizacao/${id}`} className={classes} aria-label={rotulo} title={rotulo}>{icone}</Link>;
 }
 
 function Texto({ titulo, texto, vazio }: { titulo: string; texto: string | null; vazio: string }) {

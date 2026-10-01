@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.140.1 — 2026-10-01 (Padronização de Preparo: acabamento da ficha conforme a referência)
+### Alterado
+- A ficha ficou com a cara da referência do Pedro: cabeçalho em cartão com categoria/nome/código à esquerda e, à direita, as setas Anterior/Próximo com "N de M" e o botão de fechar (volta ao catálogo); as três seções viraram **botões com ícone** (Ingredientes · Modo de Preparo · Observações, a ativa em bordô); a tabela de ingredientes ganhou um **ícone por item** escolhido pelo nome (pão, linguiça, ovo, queijo, alface, tomate, saco…; nome desconhecido cai num talher neutro — é acabamento, nada é gravado) dentro de um cartão com cabeçalho discreto.
+- **Foto em quadro de proporção fixa (4:3, `object-cover`)** dentro de um cartão com a legenda "Imagem de referência": antes a imagem ditava a altura da coluna e aparecia gigante/esticada. Nada mudou na gravação ou na regra.
+
 ## v1.139.0 — 2026-10-01 (Padronização de Preparo — fichas de preparo dos produtos, importadas por IA e conferidas pelo Admin)
 ### Adicionado
 - **Módulo Padronização de Preparo** (`/modulos/padronizacao`, Tarefas → Treinamento, ao lado dos POPs). Qualquer perfil da operação consulta a FICHA do produto: foto de como deve ficar (em destaque), tabela de ingredientes (ingrediente, quantidade, peso em g, observação), modo de preparo e observações; busca por **nome, código ou INGREDIENTE** ("linguiça" acha o Pão c/ Linguiça), filtro de categoria, Anterior/Próximo entre fichas e "Voltar para Padronização". Desktop em duas colunas (tabela × foto); celular em uma coluna com a foto antes dos ingredientes. O catálogo mostra cards compactos (foto, nome, categoria, código, "Ver padrão") — os ingredientes ficam só dentro da ficha.
