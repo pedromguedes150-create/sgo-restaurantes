@@ -15,19 +15,23 @@ import {
 /**
  * IMPORTAR TICKET MÉDIO — competência, unidade, arquivo, CONFERIR, gravar.
  *
- * A prévia não é enfeite. A planilha é a relação de cupons crua (uma linha por
- * cupom, milhares delas): ninguém confere isso no Excel antes de mandar, e
- * depois de gravado o número vira o consolidado do mês. A tela mostra o que o
- * SGO somou — e o que ele DESCARTOU — antes de qualquer gravação.
+ * Desde a v1.140.0 são DUAS planilhas: "Produtos Mais Vendidos" dá a receita
+ * (Σ Vr. Total) e a "Relação de Cupons" dá o número de cupons e o mês.
  *
- * O arquivo é reenviado na confirmação de propósito; o servidor soma de novo.
+ * A prévia não é enfeite. A relação de cupons é crua (uma linha por cupom,
+ * milhares delas): ninguém confere isso no Excel antes de mandar, e depois de
+ * gravado o número vira o consolidado do mês. A tela mostra o que o SGO somou
+ * — e o que ele DESCARTOU — antes de qualquer gravação.
+ *
+ * Os arquivos são reenviados na confirmação de propósito; o servidor soma de novo.
  * Mandar de volta os totais da prévia seria confiar num número que passou pelo
  * navegador.
  */
 
 interface Previa {
-  unitId: string; unitName: string; competencia: string; fileName: string;
-  coupons: number; grossSales: number; discounts: number; receita: number; ticket: number | null;
+  unitId: string; unitName: string; competencia: string; fileName: string; produtosFileName: string;
+  coupons: number; grossSales: number; discounts: number; netSales: number; descontoProdutos: number;
+  itens: number; produtos: number; unidadeDeclarada: string | null; receita: number; ticket: number | null;
   descartados: { status: string; quantidade: number; venda: number }[];
   avisos: string[]; rodape: string | null;
   jaExiste: boolean;
@@ -50,12 +54,14 @@ export function Importador({
   const [competencia, setCompetencia] = useState<Competencia>(competenciaInicial);
   const [unitId, setUnitId] = useState<string | null>(unidades.length === 1 ? unidades[0].id : null);
   const [arquivo, setArquivo] = useState<File | null>(null);
+  const [produtos, setProdutos] = useState<File | null>(null);
   const [previa, setPrevia] = useState<Previa | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [duplicado, setDuplicado] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [pronto, setPronto] = useState<{ substituiu: boolean; previa: Previa } | null>(null);
   const campoArquivo = useRef<HTMLInputElement>(null);
+  const campoProdutos = useRef<HTMLInputElement>(null);
 
   const { ano, mes } = partesDaCompetencia(competencia);
 
@@ -67,12 +73,14 @@ export function Importador({
 
   async function enviar(acao: 'previa' | 'confirmar', substituir = false) {
     if (!unitId) { setErro('Escolha a unidade.'); return; }
-    if (!arquivo) { setErro('Selecione a planilha do mês.'); return; }
+    if (!produtos) { setErro('Selecione a planilha "Produtos Mais Vendidos" do mês.'); return; }
+    if (!arquivo) { setErro('Selecione a "Relação de Cupons SAT/NFC-e" do mês.'); return; }
     setOcupado(true);
     setErro(null);
     try {
       const fd = new FormData();
       fd.set('arquivo', arquivo);
+      fd.set('produtos', produtos);
       fd.set('unitId', unitId);
       fd.set('competencia', competencia);
       fd.set('acao', acao);
@@ -113,7 +121,7 @@ export function Importador({
             {p.unitName} — {rotuloDaCompetencia(p.competencia)} · {emNumero(p.coupons)} cupons · ticket {emReal(p.ticket)}
           </p>
           <div className="flex flex-wrap justify-center gap-2 pt-1">
-            <Button variant="secondary" onClick={() => { setPronto(null); setArquivo(null); limparResultado(); if (campoArquivo.current) campoArquivo.current.value = ''; }}>
+            <Button variant="secondary" onClick={() => { setPronto(null); setArquivo(null); setProdutos(null); limparResultado(); if (campoArquivo.current) campoArquivo.current.value = ''; if (campoProdutos.current) campoProdutos.current.value = ''; }}>
               Importar outra unidade
             </Button>
             <Button onClick={() => router.push(`/modulos/ticket-medio?competencia=${p.competencia}`)}>
@@ -157,26 +165,44 @@ export function Importador({
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink-900" htmlFor="planilha">
-              Planilha <span className="text-danger">*</span>
-            </label>
-            <input
-              id="planilha"
-              ref={campoArquivo}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={(e) => { setArquivo(e.target.files?.[0] ?? null); limparResultado(); }}
-              className="sgo-control block w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-sm text-ink-700 file:mr-3 file:rounded-control file:border-0 file:bg-sunken file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-ink-900"
-            />
-            <p className="mt-1 text-xs text-ink-500">
-              Relação de Cupons SAT/NFC-e exportada do Teknisa, em .xlsx. O SGO soma os cupons — não é preciso preencher nada à mão.
-            </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-900" htmlFor="planilha-produtos">
+                Produtos Mais Vendidos <span className="text-danger">*</span>
+              </label>
+              <input
+                id="planilha-produtos"
+                ref={campoProdutos}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => { setProdutos(e.target.files?.[0] ?? null); limparResultado(); }}
+                className="sgo-control block w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-sm text-ink-700 file:mr-3 file:rounded-control file:border-0 file:bg-sunken file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-ink-900"
+              />
+              <p className="mt-1 text-xs text-ink-500">
+                A RECEITA: o SGO soma a coluna &ldquo;Vr. Total&rdquo; (já líquida de desconto). Relatório do Teknisa, em .xlsx, de UMA unidade.
+              </p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink-900" htmlFor="planilha">
+                Relação de Cupons SAT/NFC-e <span className="text-danger">*</span>
+              </label>
+              <input
+                id="planilha"
+                ref={campoArquivo}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => { setArquivo(e.target.files?.[0] ?? null); limparResultado(); }}
+                className="sgo-control block w-full rounded-control border border-line-strong bg-surface px-3 py-2 text-sm text-ink-700 file:mr-3 file:rounded-control file:border-0 file:bg-sunken file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-ink-900"
+              />
+              <p className="mt-1 text-xs text-ink-500">
+                O NÚMERO DE CUPONS: uma linha por cupom (cancelados ficam de fora) e a conferência do mês pela data de emissão.
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => enviar('previa')} loading={ocupado && !previa} disabled={!unitId || !arquivo}>
-              <FileSpreadsheet className="h-4 w-4" /> Ler planilha e conferir
+            <Button onClick={() => enviar('previa')} loading={ocupado && !previa} disabled={!unitId || !arquivo || !produtos}>
+              <FileSpreadsheet className="h-4 w-4" /> Ler planilhas e conferir
             </Button>
           </div>
         </CardContent>
@@ -229,13 +255,19 @@ function PreviaDaImportacao({ previa: p }: { previa: Previa }) {
         <dl className="divide-y divide-line">
           <Linha rotulo="Unidade" valor={p.unitName} />
           <Linha rotulo="Competência" valor={rotuloDaCompetencia(p.competencia)} />
-          <Linha rotulo="Arquivo" valor={p.fileName} />
-          <Linha rotulo="Cupons" valor={emNumero(p.coupons)} />
-          <Linha rotulo="Vr. Venda" valor={emReal(p.grossSales)} />
-          <Linha rotulo="Vr. Desc." valor={emReal(p.discounts)} />
-          <Linha rotulo="Receita" valor={emReal(p.receita)} forte apoio="Receita = Venda − Desconto" />
+          <Linha rotulo="Produtos Mais Vendidos" valor={p.produtosFileName} apoio={`${emNumero(p.produtos)} produtos · ${emNumero(p.itens)} itens`} />
+          <Linha rotulo="Relação de Cupons" valor={p.fileName} />
+          <Linha rotulo="Cupons" valor={emNumero(p.coupons)} apoio="da Relação de Cupons" />
+          <Linha rotulo="Vr. Desc." valor={emReal(p.descontoProdutos)} apoio="já abatido no Vr. Total" />
+          <Linha rotulo="Receita" valor={emReal(p.receita)} forte apoio="Receita = Σ Vr. Total" />
           <Linha rotulo="Ticket Médio" valor={emReal(p.ticket)} forte apoio="Ticket = Receita ÷ Cupons" />
         </dl>
+
+        {p.unidadeDeclarada && (
+          <p className="text-xs text-ink-500">
+            A planilha de produtos declara: <span className="text-ink-700">{p.unidadeDeclarada}</span>. Confira se confere com a unidade escolhida — o SGO não decide a unidade pelo arquivo.
+          </p>
+        )}
 
         {descartados > 0 && (
           <Banner

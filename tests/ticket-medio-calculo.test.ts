@@ -4,7 +4,7 @@ import {
   deslocarCompetencia, montarCompetencia, receita, rotuloDaCompetencia, somar,
   ticketConsolidado, ticketMedio, variacao,
 } from '@/lib/ticket-media/calculo';
-import { lerPlanilhaDeCupons, numeroDaCelula, competenciaDaData } from '@/lib/ticket-media/planilha';
+import { lerPlanilhaDeCupons, lerPlanilhaDeProdutos, numeroDaCelula, competenciaDaData } from '@/lib/ticket-media/planilha';
 
 /**
  * AS REGRAS DO TICKET MÉDIO.
@@ -77,7 +77,7 @@ describe('Regra 3 — consolidado = Σreceita ÷ Σcupons', () => {
   });
 
   it('soma componente a componente', () => {
-    expect(somar([A, B])).toEqual({ coupons: 7000, grossSales: 400000, discounts: 0 });
+    expect(somar([A, B])).toEqual({ coupons: 7000, grossSales: 400000, discounts: 0, netSales: 400000 });
   });
 });
 
@@ -244,5 +244,55 @@ describe('Números e datas de célula', () => {
     expect(competenciaDaData('01/08/2026 11:42:33')).toBe('2026-08');
     expect(competenciaDaData(new Date(2026, 7, 15))).toBe('2026-08');
     expect(competenciaDaData('sem data')).toBeNull();
+  });
+});
+
+describe('v1.140.0 — receita declarada (netSales) vence venda − desconto', () => {
+  it('com netSales, a receita é ele — e NÃO subtrai o desconto de novo', () => {
+    expect(receita({ coupons: 10, grossSales: 1000, discounts: 100, netSales: 950 })).toBe(950);
+    expect(ticketMedio({ coupons: 10, grossSales: 1000, discounts: 100, netSales: 950 })).toBe(95);
+  });
+  it('sem netSales (mês antigo) segue venda − desconto', () => {
+    expect(receita({ coupons: 10, grossSales: 1000, discounts: 100 })).toBe(900);
+    expect(receita({ coupons: 10, grossSales: 1000, discounts: 100, netSales: null })).toBe(900);
+  });
+  it('somar mistura meses novos e antigos pela regra de cada um; o consolidado é Σreceita ÷ Σcupons', () => {
+    const novo = { coupons: 2000, grossSales: 100000, discounts: 5000, netSales: 100000 };
+    const antigo = { coupons: 5000, grossSales: 300000, discounts: 0 };
+    const s = somar([novo, antigo]);
+    expect(receita(s)).toBe(400000);
+    expect(ticketConsolidado([novo, antigo])).toBeCloseTo(57.14, 2);
+  });
+});
+
+describe('Leitura da Produtos Mais Vendidos', () => {
+  const CAB = ['Unidade', 'Produto', 'Qtde.', 'Pr. Médio', 'Vr. Unit.', 'Vr.Acrés.', 'Vr.Desc.', 'Vr. Total', 'Perc. (%)'];
+  const U = '0006 - CHURRASCARIA BF ESMERALDAS - Loja: 001';
+  it('soma o Vr. Total (já líquido), conta produtos e itens, e declara a unidade', () => {
+    const r = lerPlanilhaDeProdutos([
+      CAB,
+      [U, '905005000000 - PAO DE QUEIJO UN', 5822, 7.35, 8, 0, 3794.84, 42781.16, 5.37],
+      [U, '805015001000 - CAFE', 4810, 3.72, 4, 0, 1348.46, 17891.54, 2.25],
+      ['Total', '', '', '', '', '', '', '', ''],
+    ]);
+    expect(r.ok).toBe(true);
+    expect(r.netSales).toBe(60672.7);
+    expect(r.discounts).toBe(5143.3);
+    expect(r.itens).toBe(10632);
+    expect(r.produtos).toBe(2);
+    expect(r.unidadeDeclarada).toBe(U);
+  });
+  it('aceita texto pt-BR nos números e acha o cabeçalho abaixo de um título', () => {
+    const r = lerPlanilhaDeProdutos([['Produtos Mais Vendidos — Setembro'], [], CAB, [U, 'X', '2', '1', '1', '0', '0,50', '1.234,56', '1']]);
+    expect(r.ok).toBe(true);
+    expect(r.netSales).toBe(1234.56);
+    expect(r.discounts).toBe(0.5);
+  });
+  it('recusa sem a coluna Vr. Total, recusa sem produto nenhum, e recusa arquivo com DUAS unidades', () => {
+    expect(lerPlanilhaDeProdutos([['Produto', 'Qtde.'], ['X', 1]]).ok).toBe(false);
+    expect(lerPlanilhaDeProdutos([CAB]).ok).toBe(false);
+    const duas = lerPlanilhaDeProdutos([CAB, [U, 'X', 1, 1, 1, 0, 0, 10, 1], ['0007 - OUTRA LOJA', 'Y', 1, 1, 1, 0, 0, 10, 1]]);
+    expect(duas.ok).toBe(false);
+    expect(duas.erro).toContain('2 unidades');
   });
 });

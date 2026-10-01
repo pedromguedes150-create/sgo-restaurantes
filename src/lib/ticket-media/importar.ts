@@ -3,17 +3,23 @@ import { audit } from '@/lib/audit';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
 import { competenciaValida, receita, ticketMedio, type Competencia } from './calculo';
-import { lerPlanilhaDeCupons, resumoDosDescartes, type LeituraDaPlanilha } from './planilha';
+import { lerPlanilhaDeCupons, lerPlanilhaDeProdutos, resumoDosDescartes, type LeituraDaPlanilha } from './planilha';
 import { unidadeParticipa } from './participacao';
 
 /**
  * IMPORTAÇÃO mensal — ler, conferir, só então gravar.
  *
+ * Desde a v1.140.0 são DUAS planilhas do mesmo mês e da mesma unidade:
+ *   - "Produtos Mais Vendidos" → a RECEITA (Σ Vr. Total, já líquido);
+ *   - "Relação de Cupons SAT/NFC-e" → o NÚMERO DE CUPONS (uma linha por cupom)
+ *     e a conferência do MÊS (pela data de emissão) — ela não traz receita.
+ * Ticket = receita ÷ cupons. Nenhum número é digitado à mão.
+ *
  * A leitura e a gravação são DUAS chamadas de propósito. A prévia existe para
  * alguém olhar os números antes de eles virarem o consolidado do mês, e uma
- * prévia que já gravou não é prévia. O arquivo é lido de novo na confirmação:
- * carregar o resultado da primeira leitura num campo escondido deixaria a
- * gravação acreditar em número vindo do navegador.
+ * prévia que já gravou não é prévia. Os arquivos são lidos de novo na
+ * confirmação: carregar o resultado da primeira leitura num campo escondido
+ * deixaria a gravação acreditar em número vindo do navegador.
  */
 
 export type MotivoDaImportacao =
@@ -25,10 +31,22 @@ export interface Previa {
   unitId: string;
   unitName: string;
   competencia: Competencia;
+  /** Relação de Cupons. */
   fileName: string;
+  /** Produtos Mais Vendidos. */
+  produtosFileName: string;
   coupons: number;
+  /** Σ "Vr. Venda" da Relação de Cupons — informativo: a receita NÃO sai daqui. */
   grossSales: number;
+  /** Σ "Vr. Desc." da Relação de Cupons — informativo. */
   discounts: number;
+  /** Σ "Vr. Total" da Produtos Mais Vendidos — a receita. */
+  netSales: number;
+  /** Σ "Vr. Desc." da planilha de produtos (já abatido no Vr. Total). */
+  descontoProdutos: number;
+  itens: number;
+  produtos: number;
+  unidadeDeclarada: string | null;
   receita: number;
   ticket: number | null;
   descartados: LeituraDaPlanilha['descartados'];
@@ -46,11 +64,15 @@ export type ResultadoDaLeitura =
 interface Entrada {
   unitId: string;
   competencia: string;
+  /** Relação de Cupons. */
   fileName: string;
   linhas: unknown[][];
+  /** Produtos Mais Vendidos. */
+  produtosFileName: string;
+  linhasProdutos: unknown[][];
 }
 
-/** Valida a porta (unidade, competência, participação) e lê a planilha. */
+/** Valida a porta (unidade, competência, participação) e lê as duas planilhas. */
 export async function lerParaPrevia(user: SessionUser, e: Entrada): Promise<ResultadoDaLeitura> {
   if (!competenciaValida(e.competencia)) {
     return { ok: false, reason: 'COMPETENCIA', erro: 'Competência inválida.' };
@@ -67,17 +89,19 @@ export async function lerParaPrevia(user: SessionUser, e: Entrada): Promise<Resu
     };
   }
 
-  const leitura = lerPlanilhaDeCupons(e.linhas);
-  if (!leitura.ok) return { ok: false, reason: 'PLANILHA', erro: leitura.erro! };
+  const cupons = lerPlanilhaDeCupons(e.linhas);
+  if (!cupons.ok) return { ok: false, reason: 'PLANILHA', erro: `Relação de Cupons: ${cupons.erro!}` };
+  const produtos = lerPlanilhaDeProdutos(e.linhasProdutos ?? []);
+  if (!produtos.ok) return { ok: false, reason: 'PLANILHA', erro: `Produtos Mais Vendidos: ${produtos.erro!}` };
 
   /* O ENGANO MAIS PROVÁVEL da rotina: importar o arquivo do mês passado na
      competência nova. O total sai plausível e ninguém percebe — por isso a
      recusa é dura, e não um aviso. A conferência é pela data dos próprios
-     cupons, não pelo rodapé, que nem todo relatório traz. */
-  if (leitura.competenciaDoArquivo && leitura.competenciaDoArquivo !== e.competencia) {
+     cupons (a planilha de produtos não tem data nenhuma). */
+  if (cupons.competenciaDoArquivo && cupons.competenciaDoArquivo !== e.competencia) {
     return {
       ok: false, reason: 'MES_TROCADO',
-      erro: `A planilha é de ${rotulo(leitura.competenciaDoArquivo)}, mas a competência escolhida foi ${rotulo(e.competencia)}. Confira o arquivo ou troque a competência.`,
+      erro: `A Relação de Cupons é de ${rotulo(cupons.competenciaDoArquivo)}, mas a competência escolhida foi ${rotulo(e.competencia)}. Confira o arquivo ou troque a competência.`,
     };
   }
 
@@ -86,18 +110,28 @@ export async function lerParaPrevia(user: SessionUser, e: Entrada): Promise<Resu
     select: { importedByName: true, importedAt: true, fileName: true, coupons: true, replacedCount: true },
   });
 
-  const numeros = { coupons: leitura.coupons, grossSales: leitura.grossSales, discounts: leitura.discounts };
+  const numeros = { coupons: cupons.coupons, grossSales: cupons.grossSales, discounts: cupons.discounts, netSales: produtos.netSales };
+  const avisos = [
+    ...produtos.avisos,
+    ...cupons.avisos.filter((a) => !/NÃO entram na receita/.test(a)),
+    `A Relação de Cupons soma ${produtos.netSales === cupons.grossSales ? 'o mesmo valor' : `R$ ${cupons.grossSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em "Vr. Venda"`} — ela é usada só para CONTAR os cupons e conferir o mês; a receita vem do "Vr. Total" da Produtos Mais Vendidos.`,
+  ];
+
   return {
     ok: true,
     previa: {
       unitId: unidade.id, unitName: unidade.name,
-      competencia: e.competencia, fileName: e.fileName,
+      competencia: e.competencia, fileName: e.fileName, produtosFileName: e.produtosFileName,
       ...numeros,
+      descontoProdutos: produtos.discounts,
+      itens: produtos.itens,
+      produtos: produtos.produtos,
+      unidadeDeclarada: produtos.unidadeDeclarada,
       receita: receita(numeros),
       ticket: ticketMedio(numeros),
-      descartados: leitura.descartados,
-      avisos: leitura.avisos,
-      rodape: leitura.rodape,
+      descartados: cupons.descartados,
+      avisos,
+      rodape: cupons.rodape,
       jaExiste: Boolean(existente),
       existente: existente ?? undefined,
     },
@@ -142,10 +176,13 @@ export async function gravarImportacao(
     coupons: p.coupons,
     grossSales: p.grossSales,
     discounts: p.discounts,
+    netSales: p.netSales,
     skipped: p.descartados.reduce((s, d) => s + d.quantidade, 0),
     skippedDetail: resumoDosDescartes(p.descartados),
     fileName: p.fileName,
+    productsFileName: p.produtosFileName,
   };
+  const numerosParaAuditoria = { cupons: p.coupons, vrTotal: p.netSales, vendaCupons: p.grossSales, descontoCupons: p.discounts, receita: p.receita, ticket: p.ticket };
 
   if (p.jaExiste) {
     const antes = await prisma.ticketMediaEntry.findUnique({
@@ -163,9 +200,9 @@ export async function gravarImportacao(
       userId: user.id, unitId: p.unitId, action: 'TICKET_MEDIA_REPLACE', module: 'TICKET_MEDIA',
       entity: 'ticket_media_entry', entityId: `${p.unitId}:${p.competencia}`,
       metadata: {
-        competencia: p.competencia, unidade: p.unitName, arquivo: p.fileName,
-        antes: antes && { cupons: antes.coupons, venda: Number(antes.grossSales), desconto: Number(antes.discounts), arquivo: antes.fileName },
-        depois: { cupons: p.coupons, venda: p.grossSales, desconto: p.discounts },
+        competencia: p.competencia, unidade: p.unitName, arquivos: [p.fileName, p.produtosFileName],
+        antes: antes && { cupons: antes.coupons, venda: Number(antes.grossSales), desconto: Number(antes.discounts), vrTotal: antes.netSales === null ? null : Number(antes.netSales), arquivo: antes.fileName },
+        depois: numerosParaAuditoria,
       },
       ...ctx,
     });
@@ -182,9 +219,8 @@ export async function gravarImportacao(
     userId: user.id, unitId: p.unitId, action: 'TICKET_MEDIA_IMPORT', module: 'TICKET_MEDIA',
     entity: 'ticket_media_entry', entityId: `${p.unitId}:${p.competencia}`,
     metadata: {
-      competencia: p.competencia, unidade: p.unitName, arquivo: p.fileName,
-      cupons: p.coupons, venda: p.grossSales, desconto: p.discounts,
-      receita: p.receita, ticket: p.ticket, descartados: comum.skippedDetail,
+      competencia: p.competencia, unidade: p.unitName, arquivos: [p.fileName, p.produtosFileName],
+      ...numerosParaAuditoria, descartados: comum.skippedDetail,
     },
     ...ctx,
   });

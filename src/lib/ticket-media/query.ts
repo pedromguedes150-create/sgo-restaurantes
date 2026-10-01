@@ -55,10 +55,11 @@ export interface PainelDoTicket {
   evolucao: { competencia: Competencia; ticket: number | null; receita: number; coupons: number }[];
 }
 
-const numeros = (e: { coupons: number; grossSales: unknown; discounts: unknown }): NumerosBrutos => ({
+const numeros = (e: { coupons: number; grossSales: unknown; discounts: unknown; netSales?: unknown }): NumerosBrutos => ({
   coupons: e.coupons,
   grossSales: Number(e.grossSales),
   discounts: Number(e.discounts),
+  netSales: e.netSales === null || e.netSales === undefined ? null : Number(e.netSales),
 });
 
 /**
@@ -70,7 +71,7 @@ async function lancamentos(unitIds: string[], competencias: Competencia[]) {
   return prisma.ticketMediaEntry.findMany({
     where: { unitId: { in: unitIds }, competence: { in: competencias } },
     select: {
-      unitId: true, competence: true, coupons: true, grossSales: true, discounts: true,
+      unitId: true, competence: true, coupons: true, grossSales: true, discounts: true, netSales: true,
       importedByName: true, importedAt: true, replacedCount: true, replacedByName: true, replacedAt: true,
     },
   });
@@ -101,7 +102,7 @@ export async function getPainel(
   const linhas: LinhaDaUnidade[] = participantes.map((p: UnidadeParticipante) => {
     const e = doMes.get(p.unitId);
     const ant = doAnterior.get(p.unitId);
-    const n = e ? numeros(e) : { coupons: 0, grossSales: 0, discounts: 0 };
+    const n = e ? numeros(e) : { coupons: 0, grossSales: 0, discounts: 0, netSales: null };
     const t = e ? ticketMedio(n) : null;
     const tAnt = ant ? ticketMedio(numeros(ant)) : null;
     return {

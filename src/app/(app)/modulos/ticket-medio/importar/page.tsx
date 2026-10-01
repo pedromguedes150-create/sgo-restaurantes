@@ -37,7 +37,7 @@ export default async function ImportarTicketMedioPage({
       </Link>
       <LargeTitle
         title="Importar Ticket Médio"
-        subtitle="Uma planilha por unidade e competência. O SGO lê, soma e mostra o resultado antes de gravar."
+        subtitle="Duas planilhas por unidade e competência: Produtos Mais Vendidos (receita) e Relação de Cupons (nº de cupons). O SGO lê, soma e mostra o resultado antes de gravar."
       />
 
       {participantes.length === 0 && (

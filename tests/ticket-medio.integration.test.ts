@@ -41,12 +41,33 @@ const admin = (): SessionUser => ({ id: adminId, name: 'Ana Admin', role: 'SUPER
 const gerente = (): SessionUser => ({ id: gerenteId, name: 'Gabriel', role: 'MANAGER', unitIds: [churras1], seesAllUnits: false, needsTerms: false });
 
 const CAB = ['Caixa', 'Dt. Emis.', 'Status', 'Vr. Venda', 'Vr. Desc.'];
-/** Uma planilha com N cupons iguais, na competência pedida. */
+/** Uma Relação de Cupons com N cupons iguais, na competência pedida. */
 function planilha(qtd: number, venda: number, desconto: number, competencia = '2026-08'): unknown[][] {
   const [ano, mes] = competencia.split('-');
   const linhas: unknown[][] = [CAB];
   for (let i = 0; i < qtd; i++) linhas.push(['001', `15/${mes}/${ano} 12:00:00`, 'Aceita', venda, desconto]);
   return linhas;
+}
+
+const CAB_PRODUTOS = ['Unidade', 'Produto', 'Qtde.', 'Pr. Médio', 'Vr. Unit.', 'Vr.Acrés.', 'Vr.Desc.', 'Vr. Total', 'Perc. (%)'];
+/** Uma "Produtos Mais Vendidos" cujo Σ Vr. Total é `total` (duas linhas de produto). */
+function produtos(total: number, desconto = 0): unknown[][] {
+  return [
+    CAB_PRODUTOS,
+    ['0006 - CHURRASCARIA BF TESTE', '905005000000 - PAO DE QUEIJO UN', 10, 1, 1, 0, desconto, total / 2, 50],
+    ['0006 - CHURRASCARIA BF TESTE', '805015001000 - CAFE', 5, 1, 1, 0, 0, total / 2, 50],
+  ];
+}
+
+/**
+ * As duas planilhas de uma vez. Sem `total`, a receita da planilha de produtos
+ * é igual a venda − desconto dos cupons — assim os casos antigos seguem valendo.
+ */
+function planilhas(qtd: number, venda: number, desconto: number, competencia = '2026-08', total?: number) {
+  return {
+    fileName: 'cupons.xlsx', linhas: planilha(qtd, venda, desconto, competencia),
+    produtosFileName: 'produtos.xlsx', linhasProdutos: produtos(total ?? qtd * (venda - desconto)),
+  };
 }
 
 beforeAll(async () => {
@@ -112,8 +133,8 @@ describe('Vigência — tirar do controle não apaga o histórico', () => {
   it('o consolidado de um mês antigo continua contando a unidade que saiu', async () => {
     await ligar([churras1], '2026-01');
     await gravarImportacao(admin(), {
-      unitId: churras1, competencia: '2026-03', fileName: 'marco.xlsx',
-      linhas: planilha(100, 50, 0, '2026-03'), podeSubstituir: true,
+      unitId: churras1, competencia: '2026-03', ...planilhas(100, 50, 0, '2026-03'), fileName: 'marco.xlsx',
+      podeSubstituir: true,
     });
     await ligar([], '2026-09');
 
@@ -160,7 +181,7 @@ describe('Importação', () => {
 
   it('soma a planilha e calcula receita e ticket', async () => {
     const r = await lerParaPrevia(admin(), {
-      unitId: churras1, competencia: '2026-08', fileName: 'agosto.xlsx', linhas: planilha(200, 100, 20),
+      unitId: churras1, competencia: '2026-08', ...planilhas(200, 100, 20), fileName: 'agosto.xlsx',
     });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -173,7 +194,7 @@ describe('Importação', () => {
 
   it('recusa unidade que não participa da competência', async () => {
     const r = await lerParaPrevia(admin(), {
-      unitId: cd, competencia: '2026-08', fileName: 'cd.xlsx', linhas: planilha(10, 10, 0),
+      unitId: cd, competencia: '2026-08', ...planilhas(10, 10, 0), fileName: 'cd.xlsx',
     });
     expect(r.ok).toBe(false);
     if (r.ok) return;
@@ -182,7 +203,7 @@ describe('Importação', () => {
 
   it('RECUSA o arquivo do mês errado — o engano mais provável da rotina', async () => {
     const r = await lerParaPrevia(admin(), {
-      unitId: churras1, competencia: '2026-09', fileName: 'agosto.xlsx', linhas: planilha(10, 10, 0, '2026-08'),
+      unitId: churras1, competencia: '2026-09', ...planilhas(10, 10, 0, '2026-08'), fileName: 'agosto.xlsx',
     });
     expect(r.ok).toBe(false);
     if (r.ok) return;
@@ -192,12 +213,12 @@ describe('Importação', () => {
   });
 
   it('a prévia NÃO grava nada', async () => {
-    await lerParaPrevia(admin(), { unitId: churras1, competencia: '2026-08', fileName: 'x.xlsx', linhas: planilha(10, 10, 0) });
+    await lerParaPrevia(admin(), { unitId: churras1, competencia: '2026-08', ...planilhas(10, 10, 0), fileName: 'x.xlsx' });
     expect(await prisma.ticketMediaEntry.count({ where: { unitId: churras1 } })).toBe(0);
   });
 
   it('a segunda importação do mesmo mês é recusada, não duplicada', async () => {
-    const entrada = { unitId: churras1, competencia: '2026-08', fileName: 'a.xlsx', linhas: planilha(10, 10, 0), podeSubstituir: true };
+    const entrada = { unitId: churras1, competencia: '2026-08', ...planilhas(10, 10, 0), fileName: 'a.xlsx', podeSubstituir: true };
     expect((await gravarImportacao(admin(), entrada)).ok).toBe(true);
     const segunda = await gravarImportacao(admin(), entrada);
     expect(segunda.ok).toBe(false);
@@ -207,7 +228,7 @@ describe('Importação', () => {
   });
 
   it('substituir exige permissão — e quem não tem não sobrescreve', async () => {
-    const base = { unitId: churras1, competencia: '2026-08', linhas: planilha(10, 10, 0) };
+    const base = { unitId: churras1, competencia: '2026-08', ...planilhas(10, 10, 0) };
     await gravarImportacao(admin(), { ...base, fileName: 'a.xlsx', podeSubstituir: true });
 
     const semPermissao = await gravarImportacao(admin(), { ...base, fileName: 'b.xlsx', substituir: true, podeSubstituir: false });
@@ -222,8 +243,8 @@ describe('Importação', () => {
 
   it('substituir registra quem, quando e quantas vezes', async () => {
     const base = { unitId: churras1, competencia: '2026-08', podeSubstituir: true };
-    await gravarImportacao(admin(), { ...base, fileName: 'a.xlsx', linhas: planilha(10, 10, 0) });
-    const r = await gravarImportacao(admin(), { ...base, fileName: 'b.xlsx', linhas: planilha(20, 10, 0), substituir: true });
+    await gravarImportacao(admin(), { ...base, ...planilhas(10, 10, 0), fileName: 'a.xlsx' });
+    const r = await gravarImportacao(admin(), { ...base, ...planilhas(20, 10, 0), fileName: 'b.xlsx', substituir: true });
     expect(r.ok).toBe(true);
 
     const e = await prisma.ticketMediaEntry.findFirst({ where: { unitId: churras1 } });
@@ -242,7 +263,7 @@ describe('Importação', () => {
   it('cupom cancelado fica de fora e é registrado no lançamento', async () => {
     const linhas = planilha(10, 100, 0);
     linhas.push(['001', '15/08/2026 12:00:00', 'Cancelada', 500, 0]);
-    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', fileName: 'c.xlsx', linhas, podeSubstituir: true });
+    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', fileName: 'c.xlsx', linhas, produtosFileName: 'p.xlsx', linhasProdutos: produtos(1000), podeSubstituir: true });
 
     const e = await prisma.ticketMediaEntry.findFirst({ where: { unitId: churras1 } });
     expect(e!.coupons).toBe(10);
@@ -257,8 +278,8 @@ describe('Painel e consolidado', () => {
     await ligar([churras1, churras2], '2026-01');
     /* A (R$ 100.000 / 2.000 cupons) e B (R$ 300.000 / 5.000) — os números do
        pedido: consolidado R$ 57,14, média simples R$ 55,00. */
-    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', fileName: 'a.xlsx', linhas: planilha(2000, 50, 0), podeSubstituir: true });
-    await gravarImportacao(admin(), { unitId: churras2, competencia: '2026-08', fileName: 'b.xlsx', linhas: planilha(5000, 60, 0), podeSubstituir: true });
+    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', ...planilhas(2000, 50, 0), fileName: 'a.xlsx', podeSubstituir: true });
+    await gravarImportacao(admin(), { unitId: churras2, competencia: '2026-08', ...planilhas(5000, 60, 0), fileName: 'b.xlsx', podeSubstituir: true });
   });
 
   it('o consolidado é Σreceita ÷ Σcupons, não a média dos tickets', async () => {
@@ -288,7 +309,7 @@ describe('Painel e consolidado', () => {
   it('a comparação com o mês anterior usa só as unidades presentes nos dois', async () => {
     /* Julho só tem a unidade 1. Se o comparativo somasse o mês cheio contra um
        julho incompleto, acusaria uma queda que é só de importação faltando. */
-    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-07', fileName: 'j.xlsx', linhas: planilha(2000, 40, 0, '2026-07'), podeSubstituir: true });
+    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-07', ...planilhas(2000, 40, 0, '2026-07'), fileName: 'j.xlsx', podeSubstituir: true });
     const p = await getPainel(admin(), { competencia: '2026-08' });
     expect(p.comparacao.ticket).toBeCloseTo(25, 1); // 50 vs 40, só a unidade 1
   });
@@ -314,7 +335,7 @@ describe('Painel e consolidado', () => {
   });
 
   it('a evolução traz os meses com lançamento', async () => {
-    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-07', fileName: 'j.xlsx', linhas: planilha(1000, 40, 0, '2026-07'), podeSubstituir: true });
+    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-07', ...planilhas(1000, 40, 0, '2026-07'), fileName: 'j.xlsx', podeSubstituir: true });
     const p = await getPainel(admin(), { competencia: '2026-08' });
     const julho = p.evolucao.find((e) => e.competencia === '2026-07');
     const agosto = p.evolucao.find((e) => e.competencia === '2026-08');
@@ -335,8 +356,8 @@ describe('O cartão do Dashboard fica no mês corrente', () => {
   beforeEach(async () => { await ligar([churras1, churras2], '2026-01'); });
 
   it('NÃO mostra o mês passado quando o mês corrente está vazio', async () => {
-    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', fileName: 'a.xlsx', linhas: planilha(100, 50, 0), podeSubstituir: true });
-    await gravarImportacao(admin(), { unitId: churras2, competencia: '2026-08', fileName: 'b.xlsx', linhas: planilha(100, 50, 0), podeSubstituir: true });
+    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', ...planilhas(100, 50, 0), fileName: 'a.xlsx', podeSubstituir: true });
+    await gravarImportacao(admin(), { unitId: churras2, competencia: '2026-08', ...planilhas(100, 50, 0), fileName: 'b.xlsx', podeSubstituir: true });
 
     const r = await resumoParaODashboard(admin(), { competencia: '2026-09', unitIds: [churras1, churras2] });
     expect(r!.competencia).toBe('2026-09');
@@ -347,8 +368,8 @@ describe('O cartão do Dashboard fica no mês corrente', () => {
   });
 
   it('com o mês corrente parcial, conta só o que já entrou nele', async () => {
-    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', fileName: 'a.xlsx', linhas: planilha(100, 50, 0), podeSubstituir: true });
-    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-09', fileName: 'c.xlsx', linhas: planilha(100, 70, 0, '2026-09'), podeSubstituir: true });
+    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', ...planilhas(100, 50, 0), fileName: 'a.xlsx', podeSubstituir: true });
+    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-09', ...planilhas(100, 70, 0, '2026-09'), fileName: 'c.xlsx', podeSubstituir: true });
 
     const r = await resumoParaODashboard(admin(), { competencia: '2026-09', unitIds: [churras1, churras2] });
     expect(r!.competencia).toBe('2026-09');
@@ -360,7 +381,7 @@ describe('O cartão do Dashboard fica no mês corrente', () => {
 
   it('com o mês corrente fechado, marca completo', async () => {
     for (const u of [churras1, churras2]) {
-      await gravarImportacao(admin(), { unitId: u, competencia: '2026-09', fileName: 'c.xlsx', linhas: planilha(100, 70, 0, '2026-09'), podeSubstituir: true });
+      await gravarImportacao(admin(), { unitId: u, competencia: '2026-09', ...planilhas(100, 70, 0, '2026-09'), fileName: 'c.xlsx', podeSubstituir: true });
     }
     const r = await resumoParaODashboard(admin(), { competencia: '2026-09', unitIds: [churras1, churras2] });
     expect(r!.completo).toBe(true);
@@ -372,5 +393,72 @@ describe('O cartão do Dashboard fica no mês corrente', () => {
     expect(r!.competencia).toBe('2026-09');
     expect(r!.ticket).toBeNull();
     expect(r!.importadas).toBe(0);
+  });
+});
+
+/**
+ * v1.140.0 — A RECEITA VEM DA "PRODUTOS MAIS VENDIDOS" (Σ Vr. Total).
+ *
+ * Pedido do Pedro (01/10/2026): a conta anterior (venda − desconto da Relação
+ * de Cupons) era um engano dele — o "Vr. Total" do Teknisa já vem líquido. A
+ * Relação de Cupons fica só para contar cupons e conferir o mês.
+ */
+describe('Receita = Σ Vr. Total da Produtos Mais Vendidos (v1.140.0)', () => {
+  beforeEach(async () => { await ligar([churras1, churras2], '2026-01'); });
+
+  it('a receita é o Σ Vr. Total, NÃO venda − desconto dos cupons; o ticket divide pelos cupons da Relação', async () => {
+    /* Os números reais de setembro/2026 (BF Esmeraldas), em escala: a Relação
+       de Cupons dá 22.284 cupons e venda − desconto R$ 729.465; a Produtos Mais
+       Vendidos dá Σ Vr. Total R$ 796.788,80. O ticket certo é 796.788,80 ÷ 22.284. */
+    const r = await lerParaPrevia(admin(), {
+      unitId: churras1, competencia: '2026-09',
+      ...planilhas(22284, 35.2, 2.46, '2026-09', 796788.8),
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.previa.coupons).toBe(22284);
+    expect(r.previa.netSales).toBe(796788.8);
+    expect(r.previa.receita).toBe(796788.8);
+    expect(r.previa.ticket).toBeCloseTo(35.76, 2);
+    /* Venda e desconto dos cupons seguem na prévia só como informação. */
+    expect(r.previa.grossSales).toBeCloseTo(22284 * 35.2, 0);
+    expect(r.previa.avisos.some((a) => a.includes('usada só para CONTAR'))).toBe(true);
+  });
+
+  it('sem a planilha de produtos a importação é recusada — não cai na conta antiga em silêncio', async () => {
+    const r = await lerParaPrevia(admin(), {
+      unitId: churras1, competencia: '2026-08', fileName: 'cupons.xlsx', linhas: planilha(10, 10, 0),
+      produtosFileName: '', linhasProdutos: [],
+    });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.reason).toBe('PLANILHA');
+    expect(r.erro).toContain('Produtos Mais Vendidos');
+  });
+
+  it('grava netSales e o nome do arquivo de produtos; o painel lê a receita de lá', async () => {
+    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', ...planilhas(100, 50, 10, '2026-08', 4900), podeSubstituir: true });
+    const e = await prisma.ticketMediaEntry.findFirst({ where: { unitId: churras1, competence: '2026-08' } });
+    expect(Number(e!.netSales)).toBe(4900);
+    expect(e!.productsFileName).toBe('produtos.xlsx');
+    expect(Number(e!.grossSales)).toBe(5000);
+    const p = await getPainel(admin(), { competencia: '2026-08', unitId: churras1 });
+    expect(p.linhas[0].receita).toBe(4900);
+    expect(p.linhas[0].ticket).toBe(49);
+  });
+
+  it('mês antigo (sem netSales) continua na conta anterior, e o consolidado mistura os dois sem descontar duas vezes', async () => {
+    await gravarImportacao(admin(), { unitId: churras1, competencia: '2026-08', ...planilhas(100, 50, 10, '2026-08', 4900), podeSubstituir: true });
+    await gravarImportacao(admin(), { unitId: churras2, competencia: '2026-08', ...planilhas(100, 60, 0), podeSubstituir: true });
+    /* Simula um lançamento anterior à v1.140.0: netSales nulo. */
+    await prisma.ticketMediaEntry.update({ where: { unitId_competence: { unitId: churras2, competence: '2026-08' } }, data: { netSales: null, productsFileName: null, discounts: 1000 } });
+    const p = await getPainel(admin(), { competencia: '2026-08' });
+    const l2 = p.linhas.find((l) => l.unitId === churras2)!;
+    expect(l2.receita).toBe(5000); // 6000 − 1000, regra antiga
+    const l1 = p.linhas.find((l) => l.unitId === churras1)!;
+    expect(l1.receita).toBe(4900); // Σ Vr. Total, regra nova
+    const minhas = p.linhas.filter((l) => [churras1, churras2].includes(l.unitId));
+    expect(p.total.receita).toBeGreaterThanOrEqual(9900);
+    expect(minhas.reduce((s, l) => s + l.receita, 0)).toBe(9900);
   });
 });

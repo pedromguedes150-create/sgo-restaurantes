@@ -8,8 +8,9 @@
  *
  * Três regras mandam aqui, e as três já foram erradas em planilha:
  *
- *   1. RECEITA = venda − desconto.   (somar o desconto infla o faturamento)
- *   2. TICKET  = receita ÷ cupons.   (nunca venda ÷ cupons)
+ *   1. RECEITA = Σ "Vr. Total" (Produtos Mais Vendidos, já líquido); meses
+ *      antigos: venda − desconto.   (descontar de novo desconta duas vezes)
+ *   2. TICKET  = receita ÷ cupons.   (os cupons vêm da Relação de Cupons)
  *   3. CONSOLIDADO = Σreceita ÷ Σcupons, e NUNCA a média dos tickets.
  *
  * A terceira é a mais traiçoeira porque o número sai plausível: a média simples
@@ -75,21 +76,31 @@ export function competenciaDeHoje(agora = new Date()): Competencia {
 
 // ── As três regras ────────────────────────────────────────────────────────
 
-/** Os números crus de uma unidade num mês — o que a planilha somou. */
+/** Os números crus de uma unidade num mês — o que as planilhas somaram. */
 export interface NumerosBrutos {
   coupons: number;
   grossSales: number;
   discounts: number;
+  /**
+   * RECEITA DECLARADA pela planilha "Produtos Mais Vendidos" (Σ "Vr. Total",
+   * já líquida de desconto). Desde a v1.140.0 é a base do ticket. Nula nos
+   * meses importados antes disso, que seguem na conta antiga (venda − desconto)
+   * — o histórico não é reescrito.
+   */
+  netSales?: number | null;
 }
 
 /**
- * REGRA 1 — receita = venda − desconto.
+ * REGRA 1 — receita = Σ "Vr. Total" da planilha Produtos Mais Vendidos.
  *
- * O desconto SAI da venda; ele não é receita adicional. Somar (150.000 + 30.000
- * = 180.000 em vez de 120.000) é o erro que motivou escrever a regra por
- * extenso no pedido, e é por isso que ele mora numa função só.
+ * O "Vr. Total" do Teknisa já vem líquido (Vr. Unit × Qtde − Vr. Desc), então
+ * ele é a receita, sem conta nenhuma por cima — subtrair o desconto DE NOVO
+ * seria descontar duas vezes (foi o engano da regra anterior, apontado pelo
+ * Pedro em 01/10/2026). Mês antigo, sem `netSales`, cai na regra de antes:
+ * venda − desconto da Relação de Cupons.
  */
 export function receita(n: NumerosBrutos): number {
+  if (n.netSales !== undefined && n.netSales !== null) return arredondar(n.netSales);
   return arredondar(n.grossSales - n.discounts);
 }
 
@@ -105,15 +116,23 @@ export function ticketMedio(n: NumerosBrutos): number | null {
   return arredondar(receita(n) / n.coupons);
 }
 
-/** Soma componente a componente. Base do consolidado. */
+/**
+ * Soma componente a componente. Base do consolidado.
+ *
+ * A receita somada é Σ receita(l) — cada mês/unidade pela SUA regra (nova ou
+ * legada) — e vai em `netSales`, para `receita(somar(...))` devolver
+ * exatamente Σreceita. Sem isso um consolidado misturando meses antigos e
+ * novos descontaria duas vezes nos novos.
+ */
 export function somar(linhas: NumerosBrutos[]): NumerosBrutos {
   return linhas.reduce<NumerosBrutos>(
     (a, l) => ({
       coupons: a.coupons + l.coupons,
       grossSales: arredondar(a.grossSales + l.grossSales),
       discounts: arredondar(a.discounts + l.discounts),
+      netSales: arredondar((a.netSales ?? 0) + receita(l)),
     }),
-    { coupons: 0, grossSales: 0, discounts: 0 },
+    { coupons: 0, grossSales: 0, discounts: 0, netSales: 0 },
   );
 }
 
