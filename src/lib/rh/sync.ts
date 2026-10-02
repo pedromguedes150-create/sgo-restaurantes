@@ -8,26 +8,60 @@ import { currentOperationalDate } from '@/lib/date/operational';
 import type { SessionUser } from '@/lib/auth/session';
 
 export const FERIAS_ORIGEM_RH = 'RH_SYNC';
+/** A marcação diária que o sync grava em `schedule_actuals` — é a evidência que o backfill lê. */
+export const MOTIVO_FE_DO_RH = 'RH: em férias';
+/**
+ * Dias sem sincronização que NÃO quebram o período (v1.142.2). O status
+ * "Férias" não some por um dia e volta: um buraco de 1–3 dias entre duas
+ * leituras é o scheduler que não rodou (deploy, reinício), não a pessoa que
+ * voltou ao trabalho. Acima disso, é outro período.
+ */
+export const TOLERANCIA_DIAS_SEM_SYNC = 3;
+
+const DIA_MS = 86_400_000;
+
+/**
+ * O primeiro dia de evidência contígua de férias do RH antes de `hoje`: a
+ * marcação diária em `schedule_actuals` (`MOTIVO_FE_DO_RH`) que o código de
+ * antes da v1.142.1 gravava — um dia por sincronização. Anda para trás
+ * enquanto houver marcação, tolerando buracos de até TOLERANCIA_DIAS_SEM_SYNC.
+ * Sem evidência, o início é hoje (nada é adivinhado).
+ */
+async function inicioPelaEvidencia(collaboratorId: string, hoje: Date): Promise<Date> {
+  const marcas = await prisma.scheduleActual.findMany({
+    where: { collaboratorId, status: 'FERIAS', reason: MOTIVO_FE_DO_RH, date: { lt: hoje, gte: new Date(hoje.getTime() - 120 * DIA_MS) } },
+    select: { date: true }, orderBy: { date: 'desc' },
+  });
+  let inicio = hoje;
+  for (const m of marcas) {
+    const dias = Math.round((inicio.getTime() - m.date.getTime()) / DIA_MS);
+    if (dias > TOLERANCIA_DIAS_SEM_SYNC + 1) break;
+    inicio = m.date;
+  }
+  return inicio;
+}
 
 /**
  * Abre ou estende o período de férias de origem RH para o dia `hoje` (v1.142.1).
- * Contíguo = o período RH_SYNC que termina ontem ou hoje; existe → endDate
- * vira hoje. Qualquer período (de qualquer origem) que já cubra hoje é
- * respeitado e não duplicado. Devolve o que fez, para o teste e o log.
+ * Contíguo = o período RH_SYNC que terminou há no máximo TOLERANCIA_DIAS_SEM_SYNC
+ * dias; existe → endDate vira hoje (o buraco de sync fica coberto). Ao ABRIR,
+ * o início recua até a primeira evidência contígua (v1.142.2). Qualquer
+ * período (de qualquer origem) que já cubra hoje é respeitado e não duplicado.
  */
 export async function estenderFeriasDoRh(collaboratorId: string, unitId: string, hoje: Date): Promise<'ABERTO' | 'ESTENDIDO' | 'JA_COBERTO'> {
-  const ontem = new Date(hoje.getTime() - 86_400_000);
+  const limite = new Date(hoje.getTime() - TOLERANCIA_DIAS_SEM_SYNC * DIA_MS);
   const cobre = await prisma.vacation.findFirst({ where: { collaboratorId, startDate: { lte: hoje }, endDate: { gte: hoje } }, select: { id: true } });
   if (cobre) return 'JA_COBERTO';
   const contiguo = await prisma.vacation.findFirst({
-    where: { collaboratorId, source: FERIAS_ORIGEM_RH, endDate: { gte: ontem, lt: hoje } },
+    where: { collaboratorId, source: FERIAS_ORIGEM_RH, endDate: { gte: limite, lt: hoje } },
     orderBy: { endDate: 'desc' }, select: { id: true },
   });
   if (contiguo) {
     await prisma.vacation.update({ where: { id: contiguo.id }, data: { endDate: hoje } });
     return 'ESTENDIDO';
   }
-  await prisma.vacation.create({ data: { collaboratorId, unitId, startDate: hoje, endDate: hoje, status: 'CONFIRMED', source: FERIAS_ORIGEM_RH, changeNote: 'Aberto pela sincronização do RH (status "Férias")' } });
+  const inicio = await inicioPelaEvidencia(collaboratorId, hoje);
+  await prisma.vacation.create({ data: { collaboratorId, unitId, startDate: inicio, endDate: hoje, status: 'CONFIRMED', source: FERIAS_ORIGEM_RH, changeNote: 'Aberto pela sincronização do RH (status "Férias")' } });
   return 'ABERTO';
 }
 
@@ -125,8 +159,8 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
       await estenderFeriasDoRh(collaboratorId, unitId, hojeDate);
       await prisma.scheduleActual.upsert({
         where: { collaboratorId_date: { collaboratorId, date: hojeDate } },
-        create: { collaboratorId, unitId, date: hojeDate, status: 'FERIAS', reason: 'RH: em férias', createdById: actorUserId },
-        update: { status: 'FERIAS', reason: 'RH: em férias', createdById: actorUserId },
+        create: { collaboratorId, unitId, date: hojeDate, status: 'FERIAS', reason: MOTIVO_FE_DO_RH, createdById: actorUserId },
+        update: { status: 'FERIAS', reason: MOTIVO_FE_DO_RH, createdById: actorUserId },
       });
       await audit({
         userId: actorUserId, unitId, action: 'SCHEDULE_ABSENCE', module: 'SCHEDULE',
@@ -254,12 +288,41 @@ export async function runDailyRhSync(): Promise<{ ran: boolean; motivo?: 'SUSPEN
   return { ran: true, units: units.length, created, updated };
 }
 
-/** True se já houve uma sincronização automática nas últimas `hours` horas. */
-export async function recentlyAutoSynced(hours = 23): Promise<boolean> {
-  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
-  const last = await prisma.auditLog.findFirst({
-    where: { action: 'RH_SYNC_AUTO', createdAt: { gte: since } },
-    select: { id: true },
-  });
+/**
+ * A hora (em Brasília) a partir da qual o sync automático do dia pode rodar
+ * (v1.142.2). Antes de amanhecer a operação não abriu; depois disso, o FE de
+ * quem está de férias precisa estar na Escala ANTES de o gerente olhar o dia.
+ */
+export const HORA_MINIMA_SYNC_BRT = 5;
+
+/** 'AAAA-MM-DD' e a hora em Brasília de um instante. */
+export function emBrasilia(now: Date = new Date()): { dia: string; hora: number } {
+  const partes = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false }).formatToParts(now);
+  const v = (t: string) => partes.find((p) => p.type === t)?.value ?? '00';
+  return { dia: `${v('year')}-${v('month')}-${v('day')}`, hora: Number(v('hour')) % 24 };
+}
+
+/**
+ * Já houve sincronização automática HOJE (dia de Brasília)? v1.142.2: o
+ * critério antigo era "nas últimas 23h", que escorregava — rodava às 13h num
+ * dia, às 12h no outro, e um reinício na hora errada deixava um dia sem FE.
+ * Por dia civil, o sync acontece UMA vez por dia e sempre no mesmo dia.
+ */
+export async function autoSyncFeitaHoje(now: Date = new Date()): Promise<boolean> {
+  const { dia } = emBrasilia(now);
+  const inicioDoDia = new Date(`${dia}T00:00:00-03:00`);
+  const last = await prisma.auditLog.findFirst({ where: { action: 'RH_SYNC_AUTO', createdAt: { gte: inicioDoDia, lte: now } }, select: { id: true } });
   return Boolean(last);
+}
+
+/**
+ * Deve rodar agora? Uma vez por dia de Brasília, a partir das
+ * HORA_MINIMA_SYNC_BRT — no boot também, se o dia ainda não teve (um deploy
+ * às 13h não pode deixar o dia sem sincronização).
+ */
+export async function deveRodarSyncAutomatico(now: Date = new Date(), boot = false): Promise<boolean> {
+  if (RH_AUTO_SYNC_SUSPENSO) return false;
+  const { hora } = emBrasilia(now);
+  if (!boot && hora < HORA_MINIMA_SYNC_BRT) return false;
+  return !(await autoSyncFeitaHoje(now));
 }

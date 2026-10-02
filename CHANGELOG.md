@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.142.2 — 2026-10-02 (RH: sincronização UMA vez por dia, de manhã; férias recupera os dias já vistos)
+### Corrigido
+- **"Não faz sentido eu ter que ir em Sincronizar todos os dias"** (Pedro, depois do print com FE só no dia 02/10). A sincronização automática já existia, mas rodava "23h depois da última" — o horário escorregava (13h num dia, 12h no outro) e um reinício na hora errada pulava um dia. Agora roda **uma vez por DIA de Brasília, a partir das 05h** (`deveRodarSyncAutomatico`/`autoSyncFeitaHoje`), e no boot também se o dia ainda não teve. O FE de quem está de férias passa a existir na Escala antes de o gerente olhar o dia.
+- **Backfill pela evidência**: ao abrir o período de férias de origem RH, o início recua até a primeira marcação diária contígua que o código antigo gravava (`schedule_actuals` com "RH: em férias") — os dias já sincronizados antes da v1.142.1 entram no período em vez de ficarem como "T".
+- **Buraco de sincronização não quebra férias**: se o scheduler não rodou por até 3 dias (`TOLERANCIA_DIAS_SEM_SYNC`), o período é estendido por cima do buraco; acima disso é outro período. ⚠️ Continua valendo: dias anteriores à PRIMEIRA leitura "Férias" não são adivinhados — o RH não manda início/fim.
+
 ## v1.142.1 — 2026-10-02 (Escala: férias passa a ser DERIVADA do período — o FE que não aparecia)
 ### Corrigido
 - **Relato do Pedro (print)**: colaboradores de férias no RH apareciam com "T" o mês inteiro na Escala de funcionários. Quatro causas, nenhuma era "o RH mandou errado": (1) o FE do sync do RH gravava **só o dia da sincronização** em `schedule_actuals`; (2) o **Planejado nunca via** o Realizado, e a grade do print é o Planejado (6x1 com F a cada 6 dias); (3) **"Puxar Realizado = Planejado" apagava o FE** (só poupava atestado); (4) a tabela de férias do SGO (Pessoas → Férias) **não era lida pela grade**.

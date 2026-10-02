@@ -1,18 +1,20 @@
 /**
  * Scheduler interno do servidor (Next.js instrumentation hook).
  * - Manutenção diária das tarefas (backfill + "não realizada"), no boot e a cada 30 min.
- * - Sincronização automática do RH ~1x/dia (controlada por log de auditoria,
- *   robusta a reinícios: só roda se não houve RH_SYNC_AUTO nas últimas 23h).
+ * - Sincronização automática do RH 1x por DIA de Brasília, a partir das 05h
+ *   (controlada por log de auditoria, robusta a reinícios: no boot roda se o
+ *   dia ainda não teve; de hora em hora confere de novo). v1.142.2 — antes era
+ *   "23h desde a última", que escorregava de horário e podia pular um dia.
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;
 
   const { ensureTaskMaintenance } = await import('@/lib/tasks/maintenance');
   const { ensureMaintenanceCategories } = await import('@/lib/occurrences/maintenance-categories');
-  const { runDailyRhSync, recentlyAutoSynced, RH_AUTO_SYNC_SUSPENSO } = await import('@/lib/rh/sync');
+  const { runDailyRhSync, deveRodarSyncAutomatico, RH_AUTO_SYNC_SUSPENSO, HORA_MINIMA_SYNC_BRT } = await import('@/lib/rh/sync');
   console.log(RH_AUTO_SYNC_SUSPENSO
     ? '[rh-sync] automático SUSPENSO (v1.132.2): nenhuma sincronização roda sozinha até a conferência dos colaboradores; só o botão manual.'
-    : '[rh-sync] automático ATIVO (reativado em 30/09/2026): roda ~1x/dia por unidade, protegido contra ausência/lista vazia/formato inesperado (ver rh-sync.integration.test.ts).');
+    : `[rh-sync] automático ATIVO: roda 1x por dia (Brasília) a partir das ${HORA_MINIMA_SYNC_BRT}h por unidade, protegido contra ausência/lista vazia/formato inesperado (ver rh-sync.integration.test.ts).`);
   const { reconcileAllTraining } = await import('@/lib/training');
   const { notifyDueSoonTasks } = await import('@/lib/tasks/notify');
   const { notifyDueSoonCommunications } = await import('@/lib/communications/notify');
@@ -58,10 +60,9 @@ export async function register() {
     catch (e) { console.error('[gerentes] falha no alerta de folga:', e); }
   }
 
-  async function maybeSyncRh() {
+  async function maybeSyncRh(boot = false) {
     try {
-      if (RH_AUTO_SYNC_SUSPENSO) return;
-      if (await recentlyAutoSynced(23)) return;
+      if (!(await deveRodarSyncAutomatico(new Date(), boot))) return;
       const r = await runDailyRhSync();
       if (r.ran) console.log(`[rh-sync] automático: ${r.units} unidade(s), +${r.created} novos, ${r.updated} atualizados`);
     } catch (e) {
@@ -82,7 +83,7 @@ export async function register() {
   setTimeout(() => {
     void semearCategoriasDeManutencao();
     void ensureTaskMaintenance(true);
-    void maybeSyncRh();
+    void maybeSyncRh(true);
     void maintainTraining();
     void checkDueSoon();
     void checkCommunications();

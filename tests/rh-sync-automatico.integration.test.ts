@@ -31,7 +31,7 @@ vi.mock('@/lib/rh/client', () => ({
   rh: { colaboradoresDaUnidade: async () => respostaDoRh },
 }));
 
-import { runDailyRhSync, RH_AUTO_SYNC_SUSPENSO } from '@/lib/rh/sync';
+import { runDailyRhSync, RH_AUTO_SYNC_SUSPENSO, autoSyncFeitaHoje, deveRodarSyncAutomatico, emBrasilia, HORA_MINIMA_SYNC_BRT } from '@/lib/rh/sync';
 
 const sfx = `auto${Date.now().toString(36)}`;
 const RH_NAME = `CHURRASCARIA TESTE AUTO ${sfx}`;
@@ -90,6 +90,34 @@ describe('Sync automático do RH — reativado', () => {
       expect(depois.map((c) => c.name)).toEqual(['DIEGO ATOR NULO']); // continua ativo
     } finally {
       await limpar(unit.id);
+    }
+  });
+});
+
+describe('Uma vez por DIA de Brasília, a partir das 05h (v1.142.2)', () => {
+  it('a conta do dia e da hora é em Brasília, não em UTC', () => {
+    /* 01:30 UTC de 03/10 ainda é 22:30 de 02/10 em Brasília. */
+    expect(emBrasilia(new Date('2026-10-03T01:30:00Z'))).toEqual({ dia: '2026-10-02', hora: 22 });
+    expect(emBrasilia(new Date('2026-10-03T08:10:00Z'))).toEqual({ dia: '2026-10-03', hora: 5 });
+  });
+
+  it('antes das 05h não roda (fora do boot); no boot roda se o dia ainda não teve; depois do sync do dia, não repete', async () => {
+    expect(HORA_MINIMA_SYNC_BRT).toBe(5);
+    /* Um dia distante, sem nenhum RH_SYNC_AUTO gravado. */
+    const madrugada = new Date('2030-01-15T06:00:00Z'); // 03:00 BRT
+    const manha = new Date('2030-01-15T09:00:00Z'); // 06:00 BRT
+    expect(await deveRodarSyncAutomatico(madrugada, false)).toBe(false);
+    expect(await deveRodarSyncAutomatico(madrugada, true)).toBe(true);
+    expect(await deveRodarSyncAutomatico(manha, false)).toBe(true);
+    const log = await prisma.auditLog.create({ data: { action: 'RH_SYNC_AUTO', module: 'PEOPLE', createdAt: new Date('2030-01-15T08:30:00Z') } });
+    try {
+      expect(await autoSyncFeitaHoje(manha)).toBe(true);
+      expect(await deveRodarSyncAutomatico(new Date('2030-01-15T20:00:00Z'), false)).toBe(false);
+      /* O dia seguinte em Brasília (03:30 BRT ainda não é hora; 06:00 é). */
+      expect(await deveRodarSyncAutomatico(new Date('2030-01-16T06:30:00Z'), false)).toBe(false);
+      expect(await deveRodarSyncAutomatico(new Date('2030-01-16T09:00:00Z'), false)).toBe(true);
+    } finally {
+      await prisma.auditLog.delete({ where: { id: log.id } });
     }
   });
 });
