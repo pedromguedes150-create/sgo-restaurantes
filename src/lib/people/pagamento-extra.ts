@@ -107,7 +107,7 @@ export async function getQuadroPagamentoExtra(user: SessionUser, competencia: st
 
   /* CPF e admissão saem do CADASTRO, como em Mobilidade. */
   const ids = [...new Set(noQuadro.map((h) => h.collaboratorId).filter((x): x is string => Boolean(x)))];
-  const colaboradores = ids.length ? await prisma.collaborator.findMany({ where: { id: { in: ids } }, select: { id: true, cpf: true, hireDate: true } }) : [];
+  const colaboradores = ids.length ? await prisma.collaborator.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, cpf: true, hireDate: true } }) : [];
   const cadastro = new Map(colaboradores.map((c) => [c.id, c]));
   const entregaPor = new Map(entregas.map((e) => [e.unitId, e.deliveredAt]));
   const nomePor = new Map(unidades.map((u) => [u.id, u.name]));
@@ -118,7 +118,9 @@ export async function getQuadroPagamentoExtra(user: SessionUser, competencia: st
     const linha: LinhaDaUnidade = {
       id: c.chave,
       collaboratorId: c.collaboratorId ?? '',
-      colaborador: c.colaborador,
+      /* Nome do CADASTRO quando há vínculo (v1.142.0): a HE antiga vinculada
+         depois deixa de aparecer com a grafia digitada. */
+      colaborador: cad?.name ?? c.colaborador,
       cpf: cad?.cpf ?? null,
       admissaoEm: cad?.hireDate ?? null,
       valor: c.valor,

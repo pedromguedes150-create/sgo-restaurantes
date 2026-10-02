@@ -1,3 +1,4 @@
+import { motivoHE } from './helpers/motivo-he';
 import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
@@ -46,7 +47,7 @@ afterAll(async () => {
 });
 
 async function novaHE() {
-  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', unitId, amount: 100, collaboratorId: colabId, workDate: '2026-09-21', workStartTime: '18:00', workEndTime: '20:00', hourlyRate: 50, reason: 'evento' });
+  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', overtimeReasonId: await motivoHE(), unitId, amount: 100, collaboratorId: colabId, workDate: '2026-09-21', workStartTime: '18:00', workEndTime: '20:00', hourlyRate: 50, reason: 'evento' });
   if (!r.ok) throw new Error(`create HE: ${r.reason} ${r.detail ?? ''}`);
   return r.id;
 }
@@ -113,7 +114,7 @@ describe('Coordenador aprova e paga', () => {
   });
 
   it('quem lança não aprova o próprio, mesmo sendo Coordenador', async () => {
-    const r = await createPaymentRequest(coord(), { type: 'OVERTIME', unitId, amount: 100, collaboratorId: colabId, workDate: '2026-09-22', workStartTime: '18:00', workEndTime: '20:00', hourlyRate: 50, reason: 'evento' });
+    const r = await createPaymentRequest(coord(), { type: 'OVERTIME', overtimeReasonId: await motivoHE(), unitId, amount: 100, collaboratorId: colabId, workDate: '2026-09-22', workStartTime: '18:00', workEndTime: '20:00', hourlyRate: 50, reason: 'evento' });
     if (!r.ok) throw new Error('create');
     expect((await approveRequest(coord(), r.id)).ok).toBe(false);
     expect((await approveRequest(sup(), r.id)).ok).toBe(true);

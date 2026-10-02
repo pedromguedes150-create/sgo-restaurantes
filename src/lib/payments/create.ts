@@ -8,6 +8,7 @@ import type { SessionUser } from '@/lib/auth/session';
 import type { PaymentType, Role } from '@prisma/client';
 import { calcularHoraExtra, horarioValido } from '@/lib/overtime/calculo';
 import { overtimeRateAllowed } from '@/lib/overtime/rates';
+import { overtimeReasonAllowed } from '@/lib/overtime/reasons';
 
 export interface CreatePaymentInput {
   type: PaymentType;
@@ -34,6 +35,8 @@ export interface CreatePaymentInput {
   collaboratorName?: string;
   /** Valor/hora ESCOLHIDO entre os autorizados da unidade (v1.130.0) — obrigatório na Hora Extra. */
   hourlyRate?: number;
+  /** Motivo do CATÁLOGO (v1.142.0) — obrigatório na Hora Extra; `reason` vira o detalhe em texto. */
+  overtimeReasonId?: string;
   reason?: string;
   // misc
   miscTypeId?: string;
@@ -106,6 +109,11 @@ export async function createPaymentRequest(
     hourlyRate = Math.round(Number(input.hourlyRate) * 100) / 100;
     heCalc = calcularHoraExtra({ inicio: input.workStartTime!, fim: input.workEndTime!, valorHora: hourlyRate, vt: input.transportValue });
     if (!(heCalc.horas > 0)) return { ok: false, reason: 'INVALID', detail: 'O período precisa ter pelo menos alguns minutos.' };
+    /* Motivo do catálogo: é o que o painel compara. Id inventado por fora da
+       tela ou motivo desativado são recusados — texto livre fica no detalhe. */
+    if (!(await overtimeReasonAllowed(input.overtimeReasonId))) {
+      return { ok: false, reason: 'INVALID', detail: 'Escolha o motivo da hora extra na lista (Configurações → Pagamentos → Motivos de hora extra).' };
+    }
   }
 
   // Freelancer: se houver valor/hora cadastrado p/ a unidade+tipo de dia, o valor
@@ -170,6 +178,7 @@ export async function createPaymentRequest(
       collaboratorId,
       collaboratorName,
       reason: input.reason?.trim() || null,
+      overtimeReasonId: input.type === 'OVERTIME' ? input.overtimeReasonId! : null,
       miscTypeId: input.miscTypeId || null,
       beneficiary: input.beneficiary?.trim() || null,
       attachmentPath: input.attachmentPath || null,

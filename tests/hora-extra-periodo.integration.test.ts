@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
+import { motivoHE } from './helpers/motivo-he';
 import { createPaymentRequest } from '@/lib/payments/create';
 import { approverEditRequest } from '@/lib/payments/approve';
 import { getUnitRequests, getMyRequests, getPaymentCounts } from '@/lib/payments/query';
@@ -27,6 +28,7 @@ const sup = (): SessionUser => ({ id: supId, name: 'Supervisora', role: 'SUPERVI
 const admin = (): SessionUser => ({ id: adminId, name: 'Admin', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false });
 
 beforeAll(async () => {
+  motivoId = await motivoHE();
   unitId = (await prisma.unit.create({ data: { code: `HE-${sfx}`, name: 'U Hora Extra', timezone: 'America/Sao_Paulo', cutoffHour: 4 } })).id;
   outraUnitId = (await prisma.unit.create({ data: { code: `HE2-${sfx}`, name: 'U Outra', timezone: 'America/Sao_Paulo', cutoffHour: 4 } })).id;
   mgrId = (await prisma.user.create({ data: { name: 'Gerente', email: `${sfx}-m@e.com`, role: 'MANAGER', passwordHash: 'x' } })).id;
@@ -48,8 +50,9 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+let motivoId = '';
 const he = (extra: Record<string, unknown> = {}) => ({
-  type: 'OVERTIME' as const, unitId, amount: 999, collaboratorId: colabId,
+  type: 'OVERTIME' as const, unitId, amount: 999, collaboratorId: colabId, overtimeReasonId: motivoId,
   workDate: '2026-09-20', workStartTime: '22:00', workEndTime: '02:00', hourlyRate: 25, reason: 'Evento', ...extra,
 });
 

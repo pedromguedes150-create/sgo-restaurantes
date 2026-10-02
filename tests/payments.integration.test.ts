@@ -1,3 +1,4 @@
+import { motivoHE } from './helpers/motivo-he';
 import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
@@ -38,7 +39,7 @@ afterAll(async () => {
 });
 
 async function newOvertime() {
-  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', unitId, amount: 100, collaboratorId: colabId, workDate: '2026-09-20', workStartTime: '18:00', workEndTime: '20:00', hourlyRate: 50, reason: 'y' });
+  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', overtimeReasonId: await motivoHE(), unitId, amount: 100, collaboratorId: colabId, workDate: '2026-09-20', workStartTime: '18:00', workEndTime: '20:00', hourlyRate: 50, reason: 'y' });
   if (!r.ok) throw new Error('create failed');
   return r.id;
 }
@@ -87,12 +88,12 @@ describe('Pagamentos (Módulo 7)', () => {
 
   it('nega solicitação fora do escopo', async () => {
     const outsider: SessionUser = { id: mgrId, name: 'X', role: 'MANAGER', unitIds: ['outra'], seesAllUnits: false, needsTerms: false };
-    const r = await createPaymentRequest(outsider, { type: 'OVERTIME', unitId, amount: 10 });
+    const r = await createPaymentRequest(outsider, { type: 'OVERTIME', overtimeReasonId: await motivoHE(), unitId, amount: 10 });
     expect(r.ok).toBe(false);
   });
 
   it('ninguém aprova a própria solicitação (segregação de funções)', async () => {
-    const created = await createPaymentRequest(sup(), { type: 'OVERTIME', unitId, amount: 50, collaboratorId: colabId, workDate: '2026-09-20', workStartTime: '18:00', workEndTime: '19:00', hourlyRate: 50, reason: 'z' });
+    const created = await createPaymentRequest(sup(), { type: 'OVERTIME', overtimeReasonId: await motivoHE(), unitId, amount: 50, collaboratorId: colabId, workDate: '2026-09-20', workStartTime: '18:00', workEndTime: '19:00', hourlyRate: 50, reason: 'z' });
     expect(created.ok).toBe(true);
     if (!created.ok) return;
     const denied = await approveRequest(sup(), created.id);

@@ -12,7 +12,7 @@ import { RelatoriosMenu } from '@/components/payments/relatorios-menu';
  */
 const itens = [
   { href: '/modulos/pagamentos/relatorio-freelancers', titulo: 'Recorrência de Freelancers', descricao: 'Quem repete na semana.' },
-  { href: '/modulos/pessoas/comissoes', titulo: 'Pagamento Extra', descricao: 'Horas extras por competência.' },
+  { href: '/modulos/hora-extra', titulo: 'Pagamento Extra', descricao: 'Horas extras por competência.' },
 ];
 
 describe('Relatórios de Pagamentos: visíveis de cara, não atrás de um menu', () => {
@@ -21,7 +21,7 @@ describe('Relatórios de Pagamentos: visíveis de cara, não atrás de um menu',
     expect(h).toContain('Recorrência de Freelancers');
     expect(h).toContain('Pagamento Extra');
     expect(h).toContain('href="/modulos/pagamentos/relatorio-freelancers"');
-    expect(h).toContain('href="/modulos/pessoas/comissoes"');
+    expect(h).toContain('href="/modulos/hora-extra"');
   });
 
   it('não há mais menu suspenso — sem aria-haspopup/aria-expanded escondendo conteúdo', () => {

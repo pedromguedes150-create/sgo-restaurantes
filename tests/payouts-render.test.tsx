@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: () => {}, push: () => {}, replace: () => {} }),
   useSearchParams: () => new URLSearchParams(),
-  usePathname: () => '/modulos/pessoas/comissoes',
+  usePathname: () => '/modulos/hora-extra',
 }));
 
 import { renderToString } from 'react-dom/server';
@@ -67,13 +67,16 @@ function extra(over: Partial<QuadroUI> = {}): QuadroUI {
   };
 }
 
+/* Desde a v1.142.0 cada modalidade tem a sua tela: o componente recebe UM tipo
+   e UM quadro, e `basePath` diz para onde a troca de mês navega. */
 const tela = (props: Partial<React.ComponentProps<typeof PayoutsCompetenciaClient>> = {}) =>
   semSeparadores(renderToString(
     <PayoutsCompetenciaClient
+      tipo="EXTRA"
+      quadro={extra()}
+      basePath="/modulos/hora-extra?aba=fechamento"
       competencia="2026-10"
       meses={['2026-11', '2026-10', '2026-09']}
-      extra={extra()}
-      mobilidade={mobilidade({ totalGeral: 900, totalLancamentos: 5 })}
       colaboradores={[{ id: 'c1', nome: 'Ana Souza', cpf: '09494305604', unitId: 'u1', unidade: 'Beija Flor Centro' }]}
       podeLancar
       podeFecharExtra
@@ -82,28 +85,24 @@ const tela = (props: Partial<React.ComponentProps<typeof PayoutsCompetenciaClien
     />,
   ));
 
-describe('Duas abas, e nunca um arquivo misto', () => {
-  it('as duas modalidades aparecem como abas, com as suas contagens — e Comissão não existe mais', () => {
+describe('Uma modalidade por tela, e nunca um arquivo misto', () => {
+  it('Comissão não existe mais; cada tela exporta só o seu tipo', () => {
+    /* Não existe "exportar tudo": a forma de garantir que as modalidades não
+       se misturem é não oferecer o caminho. */
     const h = tela();
-    expect(h).toContain('Pagamento Extra (2)');
-    expect(h).toContain('Mobilidade (5)');
     expect(h).not.toContain('Comissão');
-  });
-
-  it('o botão de exportar leva o TIPO no rótulo e no endereço', () => {
-    /* Um botão por aba. Não existe "exportar tudo": a forma de garantir que
-       as modalidades não se misturem é não oferecer o caminho. */
-    const h = tela();
-    expect(h).toContain('Exportar Pagamento Extra XLSX');
+    expect(h).toContain('Arquivo da administradora (XLSX)');
     expect(h).toContain('tipo=EXTRA&amp;mes=2026-10');
     expect(h).not.toContain('Exportar tudo');
-    const m = tela({ abaInicial: 'MOBILITY' });
+    expect(h).not.toContain('tipo=MOBILITY');
+    const m = tela({ tipo: 'MOBILITY', quadro: mobilidade() });
     expect(m).toContain('Exportar Mobilidade XLSX');
     expect(m).toContain('tipo=MOBILITY&amp;mes=2026-10');
+    expect(m).not.toContain('tipo=EXTRA');
   });
 });
 
-describe('Pagamento Extra: derivado das horas extras, sem lançamento aqui', () => {
+describe('Fechamento da Hora extra: derivado das horas extras, sem lançamento aqui', () => {
   it('diz de que mês são as horas e que a correção é em Pagamentos', () => {
     const h = tela();
     expect(h).toContain('setembro de 2026');
@@ -133,14 +132,14 @@ describe('Pagamento Extra: derivado das horas extras, sem lançamento aqui', () 
   });
 
   it('pendentes de aprovação aparecem como aviso, com valor, e link para Pagamentos', () => {
-    const h = tela({ extra: extra({ extra: { ...extra().extra!, pendentes: { qtd: 3, valor: 120 } } }) });
+    const h = tela({ quadro: extra({ extra: { ...extra().extra!, pendentes: { qtd: 3, valor: 120 } } }) });
     expect(h).toContain('3 hora(s) extra(s) ainda aguardando aprovação');
     expect(h).toMatch(/R\$\s120,00/);
     expect(h).toContain('/modulos/pagamentos');
   });
 
   it('aprovada DEPOIS do fechamento: bloco à parte, nomeada, com o caminho (reabrir)', () => {
-    const h = tela({ extra: extra({
+    const h = tela({ quadro: extra({
       fechada: true, fechadaPor: 'Marcelo',
       extra: { ...extra().extra!, aposFechamento: { qtd: 1, valor: 30, linhas: [{ id: 'h9', dia: '2026-09-20', inicio: null, fim: null, horas: 2, valorHora: 15, vt: 0, valor: 30, status: 'APPROVED', aprovadoPor: 'Sup', colaborador: 'Carla Dias' }] } },
     }) });
@@ -151,21 +150,21 @@ describe('Pagamento Extra: derivado das horas extras, sem lançamento aqui', () 
   });
 
   it('fechada: avisa que as HE foram marcadas como pagas', () => {
-    const h = tela({ extra: extra({ fechada: true, fechadaPor: 'Marcelo' }) });
+    const h = tela({ quadro: extra({ fechada: true, fechadaPor: 'Marcelo' }) });
     expect(h).toContain('Competência finalizada por Marcelo');
     expect(h).toContain('marcadas como pagas');
     expect(h).toContain('Reabrir');
   });
 
   it('nomeia as unidades sem hora extra', () => {
-    const h = tela({ extra: extra({ unidadesSemLancamento: [{ id: 'u2', name: 'Beija Flor Orla' }] }) });
+    const h = tela({ quadro: extra({ unidadesSemLancamento: [{ id: 'u2', name: 'Beija Flor Orla' }] }) });
     expect(h).toContain('Ainda sem hora extra nesta competência');
     expect(h).toContain('Beija Flor Orla');
   });
 });
 
 describe('Mobilidade: intocada', () => {
-  const m = (props: Partial<React.ComponentProps<typeof PayoutsCompetenciaClient>> = {}) => tela({ abaInicial: 'MOBILITY', ...props });
+  const m = (props: Partial<React.ComponentProps<typeof PayoutsCompetenciaClient>> = {}) => tela({ tipo: 'MOBILITY', quadro: mobilidade(), basePath: '/modulos/mobilidade', ...props });
 
   it('a linha da unidade responde "quanto e quantos" sem expandir, com a entrega', () => {
     const h = m();
@@ -176,14 +175,14 @@ describe('Mobilidade: intocada', () => {
 
   it('quem lança vê "Lançar mobilidade"; competência fechada some com ele', () => {
     expect(m()).toContain('Lançar mobilidade');
-    const f = m({ mobilidade: mobilidade({ fechada: true, fechadaPor: 'Marcelo' }) });
+    const f = m({ quadro: mobilidade({ fechada: true, fechadaPor: 'Marcelo' }) });
     expect(f).toContain('Competência finalizada por Marcelo');
     expect(f).not.toContain('Lançar mobilidade');
     expect(f).toContain('Exportar Mobilidade XLSX');
   });
 
   it('só o Admin vê "Reabrir"; os demais leem para quem pedir', () => {
-    const sup = m({ mobilidade: mobilidade({ fechada: true, fechadaPor: 'Marcelo' }), isAdmin: false });
+    const sup = m({ quadro: mobilidade({ fechada: true, fechadaPor: 'Marcelo' }), isAdmin: false });
     expect(sup).not.toContain('Reabrir');
     expect(sup).toContain('Peça ao Administrador');
   });
@@ -196,7 +195,7 @@ describe('Mobilidade: intocada', () => {
   });
 
   it('nomeia as unidades sem lançamento', () => {
-    const h = m({ mobilidade: mobilidade({ unidadesSemLancamento: [{ id: 'u2', name: 'Beija Flor Orla' }] }) });
+    const h = m({ quadro: mobilidade({ unidadesSemLancamento: [{ id: 'u2', name: 'Beija Flor Orla' }] }) });
     expect(h).toContain('Ainda sem mobilidade nesta competência');
   });
 });

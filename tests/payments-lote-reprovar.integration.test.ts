@@ -1,3 +1,4 @@
+import { motivoHE } from './helpers/motivo-he';
 import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
@@ -41,7 +42,7 @@ async function pendente(nome: string) {
     collaboratorId = (await prisma.collaborator.create({ data: { name: nome, units: { create: { unitId } } } })).id;
     colabs.set(nome, collaboratorId);
   }
-  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', unitId, amount: 50, collaboratorId, workDate: '2026-09-20', workStartTime: '18:00', workEndTime: '19:00', hourlyRate: 50, reason: 'x' });
+  const r = await createPaymentRequest(mgr(), { type: 'OVERTIME', overtimeReasonId: await motivoHE(), unitId, amount: 50, collaboratorId, workDate: '2026-09-20', workStartTime: '18:00', workEndTime: '19:00', hourlyRate: 50, reason: 'x' });
   if (!r.ok) throw new Error('setup');
   return r.id;
 }

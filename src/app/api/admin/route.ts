@@ -16,6 +16,7 @@ import { mesclarFreelancers } from '@/lib/payments/mesclar-freelancers';
 import { setChecklistToleranceMin } from '@/lib/tasks/tolerance';
 import { setHourlyRate, addHoliday, deleteHoliday } from '@/lib/freelancer/pricing';
 import { addOvertimeRate, toggleOvertimeRate, deleteOvertimeRate } from '@/lib/overtime/rates';
+import { addOvertimeReason, renameOvertimeReason, toggleOvertimeReason, deleteOvertimeReason } from '@/lib/overtime/reasons';
 import type { DayType } from '@prisma/client';
 import { createChecklistModel, updateChecklistModel, toggleChecklistModel, deleteChecklistModel, createTemplatesFromModels } from '@/lib/checklist-models';
 import { createSupervisorChecklist, updateSupervisorChecklist, toggleSupervisorChecklist, deleteSupervisorChecklist } from '@/lib/supervisor/visits';
@@ -108,6 +109,11 @@ export async function POST(req: Request) {
   else if (e === 'overtimeRate' && a === 'add') r = await addOvertimeRate(user, b.unitId, Number(b.value), ctx);
   else if (e === 'overtimeRate' && a === 'toggle') r = await toggleOvertimeRate(user, b.id, Boolean(b.active), ctx);
   else if (e === 'overtimeRate' && a === 'delete') r = await deleteOvertimeRate(user, b.id, ctx);
+  // Motivos de Hora Extra (v1.142.0) — catálogo do comparativo por motivo
+  else if (e === 'overtimeReason' && a === 'add') r = await addOvertimeReason(user, String(b.name ?? ''), ctx);
+  else if (e === 'overtimeReason' && a === 'rename') r = await renameOvertimeReason(user, b.id, String(b.name ?? ''), ctx);
+  else if (e === 'overtimeReason' && a === 'toggle') r = await toggleOvertimeReason(user, b.id, Boolean(b.active), ctx);
+  else if (e === 'overtimeReason' && a === 'delete') r = await deleteOvertimeReason(user, b.id, ctx);
 
   if (!r) return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });
   if (!r.ok) {

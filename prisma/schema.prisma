@@ -1147,6 +1147,19 @@ model OvertimeHourlyRate {
   @@map("overtime_hourly_rates")
 }
 
+/// Motivos de Hora Extra (v1.142.0): catálogo configurável (Configurações →
+/// Pagamentos). Motivo usado em solicitação não se exclui — desativa.
+model OvertimeReason {
+  id        String   @id @default(cuid())
+  name      String
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  requests  PaymentRequest[]
+
+  @@map("overtime_reasons")
+}
+
 /// Valor da hora do freelancer por unidade × tipo de dia (Módulo 7 / v1.2).
 model FreelancerHourlyRate {
   id      String  @id @default(cuid())
@@ -1691,6 +1704,10 @@ model PaymentRequest {
   /// Valor/hora ESCOLHIDO na Hora Extra (v1.130.0) — snapshot: mudar a
   /// configuração da unidade não reescreve solicitação antiga.
   hourlyRate       Decimal? @db.Decimal(10, 2)
+  /// Motivo do CATÁLOGO (v1.142.0): o comparativo por motivo precisa de chave,
+  /// não de texto livre. `reason` continua como detalhe/texto (e é o que a HE
+  /// antiga tem — ela cai em "Outro" na leitura).
+  overtimeReasonId String?
 
   // Avulso
   miscTypeId     String?
@@ -1724,6 +1741,7 @@ model PaymentRequest {
   supplier     Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   workSector   Sector?          @relation("FreelancerSector", fields: [workSectorId], references: [id], onDelete: SetNull)
   collaborator Collaborator?    @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
+  overtimeReason OvertimeReason? @relation(fields: [overtimeReasonId], references: [id], onDelete: SetNull)
 
   @@index([unitId, status])
   @@index([collaboratorId])
