@@ -7,6 +7,30 @@ import { dayUTC } from '@/lib/schedule';
 import { currentOperationalDate } from '@/lib/date/operational';
 import type { SessionUser } from '@/lib/auth/session';
 
+export const FERIAS_ORIGEM_RH = 'RH_SYNC';
+
+/**
+ * Abre ou estende o período de férias de origem RH para o dia `hoje` (v1.142.1).
+ * Contíguo = o período RH_SYNC que termina ontem ou hoje; existe → endDate
+ * vira hoje. Qualquer período (de qualquer origem) que já cubra hoje é
+ * respeitado e não duplicado. Devolve o que fez, para o teste e o log.
+ */
+export async function estenderFeriasDoRh(collaboratorId: string, unitId: string, hoje: Date): Promise<'ABERTO' | 'ESTENDIDO' | 'JA_COBERTO'> {
+  const ontem = new Date(hoje.getTime() - 86_400_000);
+  const cobre = await prisma.vacation.findFirst({ where: { collaboratorId, startDate: { lte: hoje }, endDate: { gte: hoje } }, select: { id: true } });
+  if (cobre) return 'JA_COBERTO';
+  const contiguo = await prisma.vacation.findFirst({
+    where: { collaboratorId, source: FERIAS_ORIGEM_RH, endDate: { gte: ontem, lt: hoje } },
+    orderBy: { endDate: 'desc' }, select: { id: true },
+  });
+  if (contiguo) {
+    await prisma.vacation.update({ where: { id: contiguo.id }, data: { endDate: hoje } });
+    return 'ESTENDIDO';
+  }
+  await prisma.vacation.create({ data: { collaboratorId, unitId, startDate: hoje, endDate: hoje, status: 'CONFIRMED', source: FERIAS_ORIGEM_RH, changeNote: 'Aberto pela sincronização do RH (status "Férias")' } });
+  return 'ABERTO';
+}
+
 export type SyncResult =
   | { ok: true; created: number; updated: number; total: number }
   | { ok: false; reason: 'FORBIDDEN' | 'NOT_CONFIGURED' | 'NO_RH_NAME' | 'NOT_FOUND' | 'RH_ERROR'; message?: string };
@@ -91,6 +115,14 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
     });
 
     if (classe === 'FERIAS') {
+      /* O PERÍODO (v1.142.1): o RH só diz "Férias", sem início nem fim. Em
+         vez de ficar só com a marcação do dia, o sync abre um período de
+         férias de origem RH_SYNC começando hoje e o ESTENDE a cada
+         sincronização enquanto o status persistir — a Escala deriva o FE
+         desse período (Planejado e Realizado), e nada além do observado é
+         inventado: quando o RH volta a "Ativo", o período para de crescer.
+         A marcação do dia em schedule_actuals continua (histórico/aviso). */
+      await estenderFeriasDoRh(collaboratorId, unitId, hojeDate);
       await prisma.scheduleActual.upsert({
         where: { collaboratorId_date: { collaboratorId, date: hojeDate } },
         create: { collaboratorId, unitId, date: hojeDate, status: 'FERIAS', reason: 'RH: em férias', createdById: actorUserId },
@@ -148,7 +180,7 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
   if (feriasMarcadas.length > 0) {
     await notifyAdmins({
       title: `🏖️ ${feriasMarcadas.length} colaborador(es) marcado(s) de férias hoje — ${unit.name}`,
-      body: `Conforme o RH: ${feriasMarcadas.join(', ')}. Hoje (${hoje}) virou Férias (FE) na Escala de funcionários. Só o dia de hoje — o RH não manda data de início/fim; confira o período completo em Escala.`,
+      body: `Conforme o RH: ${feriasMarcadas.join(', ')}. O período de férias (Pessoas → Férias) foi aberto/estendido até hoje (${hoje}) e a Escala mostra FE nesses dias. O RH não manda início/fim: dias ANTES da primeira sincronização não são adivinhados — ajuste o período em Pessoas → Férias se precisar.`,
       link: `/modulos/escala?unit=${unitId}`,
       module: 'SCHEDULE',
     }).catch(() => {});

@@ -2442,12 +2442,17 @@ model Vacation {
   endDate        DateTime
   status         VacationStatus @default(CONFIRMED)
   changeNote     String?
+  /// De onde veio o período (v1.142.1): "SGO" (lançado/solicitado aqui) ou
+  /// "RH_SYNC" (aberto pela sincronização quando o RH diz "Férias" e
+  /// ESTENDIDO a cada sync enquanto o status persistir).
+  source         String         @default("SGO")
   createdAt      DateTime       @default(now())
 
   collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
   unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
   @@index([unitId])
+  @@index([collaboratorId, endDate])
   @@map("vacations")
 }
 

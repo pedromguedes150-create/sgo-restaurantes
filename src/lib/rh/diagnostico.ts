@@ -41,7 +41,7 @@ export const DECISAO_LABEL: Record<Decisao, string> = {
 
 export const DECISAO_MOTIVO: Record<Decisao, string> = {
   ATIVO_NO_SGO: 'Aparece normalmente em Pessoas, Escala e Mapa de Funções.',
-  ATIVO_DE_FERIAS: 'O RH diz que esta pessoa está de férias. Ao sincronizar, o SGO marca o DIA DE HOJE como Férias (FE) na Escala de funcionários — só o dia da sincronização, porque o RH não manda data de início/fim; dias antes (se a sincronização atrasou) e o dia de volta não são adivinhados. Se precisar do período completo, lance manualmente em Escala → Registrar ausência.',
+  ATIVO_DE_FERIAS: 'O RH diz que esta pessoa está de férias. Ao sincronizar, o SGO abre um período de férias (Pessoas → Férias) começando hoje e o estende a cada sincronização enquanto o RH mantiver o status — a Escala deriva o FE desse período, no Planejado e no Realizado. O RH não manda início/fim: dias ANTES da primeira sincronização não são adivinhados; se precisar, corrija o período em Pessoas → Férias.',
   ATIVO_STATUS_DESCONHECIDO: 'O SGO não conhece este status do RH. A pessoa APARECE normalmente (some do sistema é pior do que aparecer a mais), mas confira se ela realmente trabalha — se for um status de desligamento, me avise para eu incluí-lo na regra.',
   INATIVO_POR_STATUS: 'O status no RH não começa com "Ativo", então o sync marcou a pessoa como inativa — e inativo SOME de Pessoas, da Escala e do Mapa.',
   PULADO_SEM_MATRICULA: 'O RH mandou esta pessoa SEM matrícula. O sync pula quem não tem matrícula, então ela nunca chegou ao SGO.',
