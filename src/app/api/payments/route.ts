@@ -36,6 +36,7 @@ export async function POST(req: Request) {
       collaboratorId: typeof b.collaboratorId === 'string' ? b.collaboratorId : undefined,
       hourlyRate: b.hourlyRate != null ? Number(b.hourlyRate) : undefined,
       reason: b.reason,
+      overtimeReasonId: typeof b.overtimeReasonId === 'string' ? b.overtimeReasonId : undefined,
       miscTypeId: b.miscTypeId,
       beneficiary: b.beneficiary,
       supplierId: b.supplierId,

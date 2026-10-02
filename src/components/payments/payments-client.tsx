@@ -25,6 +25,7 @@ import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
 import { calcularHoraExtra, textoHoras } from '@/lib/overtime/calculo';
 import { competenciaDaHoraExtra, rotuloDaCompetencia } from '@/lib/people/pagamento-extra-calculo';
+import { FormularioHoraExtra, type MotivoOpt } from '@/components/payments/formulario-hora-extra';
 
 export interface PayDetail {
   workDate: string | null; shift: string | null; workStartTime: string | null; workEndTime: string | null;
@@ -125,6 +126,7 @@ export function PaymentsClient({
   sectors = [],
   collaboratorsByUnit = {},
   overtimeRatesByUnit = {},
+  motivosHoraExtra = [],
   isManagerView = false,
   unitRequests = [],
   filtradoPor = [],
@@ -149,6 +151,8 @@ export function PaymentsClient({
   collaboratorsByUnit?: CollabsByUnit;
   /** Valores/hora AUTORIZADOS de Hora Extra por unidade (v1.130.0) — o gerente escolhe, não digita. */
   overtimeRatesByUnit?: RatesByUnit;
+  /** Motivos de Hora Extra do catálogo (v1.142.0) — o formulário escolhe daqui. */
+  motivosHoraExtra?: MotivoOpt[];
   /** GERENTE (v1.130.0): Nova · Minhas solicitações · Solicitações da unidade. Supervisor segue igual. */
   isManagerView?: boolean;
   /** Tudo da unidade selecionada, de qualquer solicitante (só carregado para o gerente). */
@@ -363,7 +367,7 @@ export function PaymentsClient({
         </div>
       )}
 
-      {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} overtimeRatesByUnit={overtimeRatesByUnit} onDone={() => { setTab('minhas'); router.refresh(); }} />}
+      {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} overtimeRatesByUnit={overtimeRatesByUnit} motivosHoraExtra={motivosHoraExtra} onDone={() => { setTab('minhas'); router.refresh(); }} />}
 
       <ListaCortada mostrando={
         tab === 'minhas' ? mineV.length : tab === 'aprovar' ? toApproveV.length : tab === 'pagar' ? toPayV.length : tab === 'historico' ? historyV.length : tab === 'unidade' ? unitRequestsV.length : 0
@@ -574,7 +578,7 @@ function DetailView({ r }: { r: PayReq }) {
     if (d?.reason) rows.push(['Motivo', d.reason]);
     /* Aprovada, a HE é paga pelo Pagamento Extra do MÊS SEGUINTE ao trabalho. */
     const comp = d?.workDate ? competenciaDaHoraExtra(d.workDate) : null;
-    if (comp) rows.push(['Pagamento Extra', `competência ${rotuloDaCompetencia(comp)}`]);
+    if (comp) rows.push(['Fechamento (Hora extra)', `competência ${rotuloDaCompetencia(comp)}`]);
   } else {
     if (d?.miscTypeName) rows.push(['Tipo', d.miscTypeName]);
     if (d?.beneficiary) rows.push(['Beneficiário', d.beneficiary]);
@@ -765,7 +769,7 @@ function List({ items, actions, selection, editor }: {
   );
 }
 
-function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collaboratorsByUnit, overtimeRatesByUnit, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit; overtimeRatesByUnit: RatesByUnit; onDone: () => void }) {
+function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collaboratorsByUnit, overtimeRatesByUnit, motivosHoraExtra, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit; overtimeRatesByUnit: RatesByUnit; motivosHoraExtra: MotivoOpt[]; onDone: () => void }) {
   const [supplierId, setSupplierId] = useState('');
   const [type, setType] = useState<'FREELANCER' | 'OVERTIME' | 'MISC'>('FREELANCER');
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
@@ -781,9 +785,6 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
   const [coverage, setCoverage] = useState(false); // cobertura temporária de setor (16/07)
   const [coverageSector, setCoverageSector] = useState('');
   const [calc, setCalc] = useState<{ configured: boolean; hours: number; rate: number | null; amount: number; transport: number; dayTypeLabel: string } | null>(null);
-  const [hourlyRate, setHourlyRate] = useState(''); // Hora Extra: valor/hora ESCOLHIDO entre os autorizados (v1.130.0)
-  const [collaboratorId, setCollaboratorId] = useState('');
-  const [reason, setReason] = useState('');
   const [beneficiary, setBeneficiary] = useState('');
   const [description, setDescription] = useState('');
   const [busy, setBusy] = useState(false);
@@ -791,17 +792,8 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
 
   const unitFreelancers = useMemo(() => freelancers.filter((f) => f.unitIds.includes(unitId)), [freelancers, unitId]);
   const unitSectors = useMemo(() => sectors.filter((s) => s.unitId === unitId), [sectors, unitId]);
-  const unitCollabs = useMemo(() => collaboratorsByUnit[unitId] ?? [], [collaboratorsByUnit, unitId]);
-  const unitRates = useMemo(() => overtimeRatesByUnit[unitId] ?? [], [overtimeRatesByUnit, unitId]);
-  // Trocou a unidade: o setor, o colaborador e o valor/hora eram da outra.
-  useEffect(() => { setWorkSectorId(''); setCollaboratorId(''); setHourlyRate(''); }, [unitId]);
-  /* Prévia da Hora Extra — a MESMA função que o servidor usa para gravar
-     (horas do período, × valor/hora, + VT). Nada de valor digitado. */
-  const heCalc = useMemo(() => {
-    if (type !== 'OVERTIME' || !workStartTime || !workEndTime || !hourlyRate) return null;
-    const c = calcularHoraExtra({ inicio: workStartTime, fim: workEndTime, valorHora: Number(hourlyRate), vt: parseFloat((transportValue || '0').replace(',', '.')) || 0 });
-    return c.horas > 0 ? c : null;
-  }, [type, workStartTime, workEndTime, hourlyRate, transportValue]);
+  // Trocou a unidade: o setor era da outra.
+  useEffect(() => { setWorkSectorId(''); }, [unitId]);
   // Cobertura de setor escolhida: o setor de mesmo nome já vem marcado.
   useEffect(() => {
     if (!coverage || !coverageSector) return;
@@ -828,26 +820,18 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
     setErr(null);
     const manualAmt = parseFloat((amount || '0').replace(',', '.'));
     const covRate = coverage ? (selectedFreelancer?.sectorRates ?? []).find((r) => r.sectorName === coverageSector)?.dayValue ?? 0 : 0;
-    const effAmt = type === 'OVERTIME' ? (heCalc?.total ?? 0) : coverage ? covRate : autoPriced ? (calc?.amount ?? 0) : manualAmt;
+    const effAmt = coverage ? covRate : autoPriced ? (calc?.amount ?? 0) : manualAmt;
     if (coverage && !coverageSector) { setErr('Escolha o setor da cobertura.'); return; }
     if (type === 'FREELANCER') {
       if (!freelancerId) { setErr('Escolha o freelancer.'); return; }
       if (!workDate) { setErr('Informe o dia do trabalho.'); return; }
       if (!workSectorId) { setErr('Escolha o setor/função para o qual o freelancer foi contratado.'); return; }
     }
-    if (type === 'OVERTIME') {
-      if (!collaboratorId) { setErr('Escolha o colaborador na lista.'); return; }
-      if (!workDate) { setErr('Informe a data da hora extra.'); return; }
-      if (!workStartTime || !workEndTime) { setErr('Informe hora início e hora fim.'); return; }
-      if (!hourlyRate) { setErr(unitRates.length ? 'Escolha o valor da hora.' : 'Esta unidade não tem valor/hora de Hora Extra cadastrado. Peça ao Admin (Configurações → Valor da hora extra).'); return; }
-      if (!heCalc) { setErr('O período precisa ter pelo menos alguns minutos.'); return; }
-    }
     if (!unitId || (!coverage && !autoPriced && !effAmt)) { setErr('Informe unidade e valor.'); return; }
     setBusy(true);
     try {
       const body: Record<string, unknown> = { type, unitId, amount: effAmt, description };
       if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workSectorId, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, coverageSector: coverage && coverageSector ? coverageSector : undefined });
-      if (type === 'OVERTIME') Object.assign(body, { collaboratorId, workDate, workStartTime, workEndTime, hourlyRate: Number(hourlyRate), reason, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined });
       if (type === 'MISC') Object.assign(body, { miscTypeId, beneficiary, supplierId: supplierId || undefined });
       const res = await fetch('/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
@@ -943,53 +927,8 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
       )}
 
       {type === 'OVERTIME' && (
-        <>
-          <DsSelect
-            label="Colaborador"
-            required
-            searchable
-            searchPlaceholder="Pesquisar colaborador…"
-            placeholder={unitCollabs.length ? 'Pesquisar ou selecionar…' : 'Nenhum colaborador do RH nesta unidade'}
-            value={collaboratorId}
-            onValueChange={setCollaboratorId}
-            disabled={unitCollabs.length === 0}
-            options={collabOptions(unitCollabs)}
-            hint={unitCollabs.length ? 'Colaboradores do RH desta unidade.' : 'Sincronize a unidade em Pessoas → Colaboradores para a lista aparecer.'}
-          />
-          <DatePicker label="Data" required value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
-          {workDate && competenciaDaHoraExtra(workDate) && (
-            <p className="sgo-type-11 text-ink-500">
-              Depois de aprovada, entra no Pagamento Extra da competência <b>{rotuloDaCompetencia(competenciaDaHoraExtra(workDate)!)}</b> — paga no mês seguinte ao trabalho.
-            </p>
-          )}
-          <div className="grid grid-cols-2 gap-2">
-            <TimePicker label="Hora início" value={workStartTime || null} onValueChange={(v) => setWorkStartTime(v ?? '')} />
-            <TimePicker label="Hora fim" value={workEndTime || null} onValueChange={(v) => setWorkEndTime(v ?? '')} />
-          </div>
-          <DsSelect
-            label="Valor da hora (R$/h)"
-            required
-            placeholder={unitRates.length ? 'Escolha o valor autorizado…' : 'Sem valor cadastrado nesta unidade'}
-            value={hourlyRate}
-            onValueChange={setHourlyRate}
-            disabled={unitRates.length === 0}
-            options={unitRates.map((v) => ({ value: String(v), label: `${formatBRL(v)}/h` }))}
-            hint={unitRates.length ? 'Só os valores autorizados pelo Admin para esta unidade.' : 'O Admin cadastra em Configurações → Valor da hora extra (por hora).'}
-          />
-          {unitRates.length === 0 && (
-            <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">Esta unidade ainda não tem valor/hora de Hora Extra cadastrado — não é possível lançar até o Admin cadastrar.</p>
-          )}
-          <div><Label>Motivo</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} /></div>
-          <div><Label>Vale transporte (R$, opcional — soma ao total)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>
-          {heCalc && (
-            <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3" data-testid="he-previa">
-              <p className="text-xs text-ink-500">Valor calculado</p>
-              <p className="sgo-type-24 font-semibold text-ink-900">{formatBRL(heCalc.total)}</p>
-              <p className="text-xs text-ink-500">{textoHoras(heCalc.horas)} × {formatBRL(heCalc.valorHora)}/h{heCalc.vt > 0 ? ` + ${formatBRL(heCalc.vt)} de vale-transporte` : ''}</p>
-            </div>
-          )}
-          <p className="text-xs text-ink-500">Horas, subtotal e total são calculados pelo sistema (fim − início; passa da meia-noite: 22:00 → 02:00 = 4h). O cálculo final da folha (50%/100%, reflexos) é do RH.</p>
-        </>
+        /* Um formulário só para Pagamentos e para a tela Hora extra (v1.142.0). */
+        <FormularioHoraExtra units={units} unitId={unitId} collaboratorsByUnit={collaboratorsByUnit} overtimeRatesByUnit={overtimeRatesByUnit} motivos={motivosHoraExtra} onDone={onDone} />
       )}
 
       {type === 'MISC' && (
@@ -1029,8 +968,8 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
         </p>
       )}
 
-      {err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
-      <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Plus className="h-5 w-5" /> Enviar solicitação</Button>
+      {type !== 'OVERTIME' && err && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{err}</p>}
+      {type !== 'OVERTIME' && <Button onClick={submit} disabled={busy} size="lg" className="w-full"><Plus className="h-5 w-5" /> Enviar solicitação</Button>}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { getSelectedUnitId } from '@/lib/scope/selected-unit';
 import { getMyRequests, getToApprove, getToPay, getHistory, getUnitRequests, getMiscTypes, getPaymentCounts, LIMITE_DA_LISTA } from '@/lib/payments/query';
 import { podePagarPorPerfil } from '@/lib/payments/aprovadores';
 import { activeOvertimeRatesByUnit } from '@/lib/overtime/rates';
+import { activeOvertimeReasons } from '@/lib/overtime/reasons';
 import { listSuppliers } from '@/lib/suppliers';
 import { Card, CardContent } from '@/components/ui/card';
 import { PaymentsClient, type PayReq } from '@/components/payments/payments-client';
@@ -100,7 +101,7 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
   const podeVerConsolidacaoPagamentos = Boolean(permissoes.PAYMENTS_CONSOLIDATION?.canView);
   /* Pagamento Extra (v1.135.0): a hora extra aprovada aqui é paga lá, na
      competência do mês seguinte — quem aprova precisa achar o caminho. */
-  const podeVerPagamentoExtra = Boolean(permissoes.PEOPLE_PAYOUTS?.canView);
+  const podeVerHoraExtra = Boolean(permissoes.HORA_EXTRA?.canView);
 
   /* A tela OBEDECE o seletor de unidade do cabeçalho (pedido de 04/09: "está
      tudo misturado"). Mesma regra de precedência de Tarefas e Pessoas;
@@ -114,7 +115,7 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
   /* GERENTE (v1.130.0): a tela dele é Nova · Minhas · Solicitações da unidade.
      A lista da unidade só é carregada para ele — o Supervisor segue igual. */
   const isManagerView = user.role === 'MANAGER';
-  const [mine, toApprove, toPay, history, totais, miscTypes, freelancers, suppliers, sectors, vinculos, unitRequests, overtimeRatesByUnit] = await Promise.all([
+  const [mine, toApprove, toPay, history, totais, miscTypes, freelancers, suppliers, sectors, vinculos, unitRequests, overtimeRatesByUnit, motivosHoraExtra] = await Promise.all([
     getMyRequests(user, doFiltro),
     getToApprove(user, doFiltro),
     getToPay(user, doFiltro),
@@ -137,6 +138,8 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
     isManagerView ? getUnitRequests(user, doFiltro) : Promise.resolve([]),
     // Valores/hora AUTORIZADOS de hora extra, por unidade (só os ativos).
     activeOvertimeRatesByUnit(idsAcessiveis),
+    // Motivos de Hora Extra do catálogo (v1.142.0).
+    activeOvertimeReasons(),
   ]);
   const collaboratorsByUnit: Record<string, { id: string; name: string; jobTitle: string | null }[]> = {};
   for (const v of vinculos) (collaboratorsByUnit[v.unitId] ??= []).push(v.collaborator);
@@ -152,7 +155,7 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
         <RelatoriosMenu itens={[
           ...(podeVerConsolidacao ? [{ href: '/modulos/pagamentos/relatorio-freelancers', titulo: 'Recorrência de Freelancers', descricao: 'Quem repete na mesma semana, por unidade — e o fechamento semanal com PIX.' }] : []),
           ...(podeVerConsolidacaoPagamentos ? [{ href: '/modulos/pagamentos/consolidacao', titulo: 'Pagamentos de Freelancers', descricao: 'Conferência do período para o PIX: por lançamento, por unidade e por colaborador.' }] : []),
-          ...(podeVerPagamentoExtra ? [{ href: '/modulos/pessoas/comissoes', titulo: 'Pagamento Extra', descricao: 'Horas extras aprovadas por competência (mês seguinte ao trabalho) e mobilidade.' }] : []),
+          ...(podeVerHoraExtra ? [{ href: '/modulos/hora-extra', titulo: 'Hora extra', descricao: 'Painel por motivo e período, lista de solicitações e o fechamento da competência (mês seguinte ao trabalho).' }] : []),
         ]} />
       </div>
       <Card>
@@ -168,6 +171,7 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
             sectors={sectors}
             collaboratorsByUnit={collaboratorsByUnit}
             overtimeRatesByUnit={overtimeRatesByUnit}
+            motivosHoraExtra={motivosHoraExtra}
             isManagerView={isManagerView}
             unitRequests={(unitRequests as ReqRow[]).map(toDTO)}
             filtradoPor={filtradoPor}

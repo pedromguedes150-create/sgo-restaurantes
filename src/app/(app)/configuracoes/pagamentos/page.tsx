@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { PaymentsAdmin } from '@/components/admin/payments-admin';
 import { getFreelancerWeekLimit } from '@/lib/payments/recorrencia';
+import { listOvertimeReasons } from '@/lib/overtime/reasons';
+import { OvertimeReasonsConfig } from '@/components/admin/overtime-reasons-config';
 import { ArrowLeft } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
 
@@ -15,13 +17,14 @@ export default async function PagamentosAdminPage() {
   const user = (await getSessionUser())!;
   if (user.role !== 'ADMIN') return <p className="text-sm text-ink-500">Restrito ao Administrador.</p>;
 
-  const [units, users, freelancers, miscTypes, delegations, weekLimit] = await Promise.all([
+  const [units, users, freelancers, miscTypes, delegations, weekLimit, motivos] = await Promise.all([
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     prisma.user.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, role: true } }),
     prisma.freelancer.findMany({ orderBy: { name: 'asc' }, include: { units: { include: { unit: { select: { id: true, name: true } } } }, sectorRates: true, _count: { select: { requests: true } } } }),
     prisma.miscPaymentType.findMany({ orderBy: { order: 'asc' } }),
     prisma.approvalDelegation.findMany({ orderBy: { startsAt: 'desc' }, include: { fromUser: { select: { name: true } }, toUser: { select: { name: true } } } }),
     getFreelancerWeekLimit(),
+    listOvertimeReasons(),
   ]);
 
   return (
@@ -37,6 +40,10 @@ export default async function PagamentosAdminPage() {
           miscTypes={miscTypes.map((m) => ({ id: m.id, name: m.name, approverRole: m.approverRole, active: m.active }))}
           delegations={delegations.map((x) => ({ id: x.id, from: x.fromUser.name, to: x.toUser.name, period: `${d(x.startsAt)} a ${d(x.endsAt)}` }))}
         />
+      </CardContent></Card>
+      <Card><CardContent className="pt-4">
+        <p className="mb-2 sgo-type-15 font-semibold text-ink-900">Motivos de hora extra</p>
+        <OvertimeReasonsConfig reasons={motivos} />
       </CardContent></Card>
     </div>
   );

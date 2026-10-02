@@ -107,6 +107,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/payments/consolidacao': { modulo: 'PAYMENTS_CONSOLIDATION', exigir: 'ver' },
 
   '/api/people/evaluation': { modulo: 'PEOPLE_EVALUATION', exigir: 'editar' },
+  '/api/hora-extra/export': { modulo: 'HORA_EXTRA', exigir: 'ver' },
+  '/api/hora-extra/vinculo': { modulo: 'HORA_EXTRA', exigir: 'editar' },
   '/api/people/payouts': { modulo: 'PEOPLE_PAYOUTS', exigir: 'editar' },
   '/api/people/payouts/export': { modulo: 'PEOPLE_PAYOUTS', exigir: 'ver' },
   '/api/people/probation': { modulo: 'PEOPLE_PROBATION', exigir: 'editar' },

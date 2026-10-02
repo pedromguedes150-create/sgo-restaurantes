@@ -16,7 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PeopleClient } from '@/components/people/people-client';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { List, ListRow } from '@/components/ui/ds/list-row';
-import { Grid3x3, CalendarDays, CalendarRange, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft, HandCoins } from 'lucide-react';
+import { Grid3x3, CalendarDays, CalendarRange, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft, HandCoins, Clock } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +29,8 @@ const DESTINOS = [
   { href: '/modulos/pessoas/experiencia', icon: UserCheck, title: 'Período de Experiência', subtitle: 'Avaliações dentro dos 90 dias' },
   { href: '/modulos/pessoas/avaliacao', icon: Star, title: 'Avaliação do colaborador', subtitle: 'Observações e nota mensal' },
   { href: '/modulos/pessoas/mudancas', icon: ArrowRightLeft, title: 'Mudanças de função/setor', subtitle: 'Solicitações enviadas ao RH' },
-  { href: '/modulos/pessoas/comissoes', icon: HandCoins, title: 'Pagamento Extra / Mobilidade', subtitle: 'Horas extras aprovadas por competência e mobilidade' },
+  { href: '/modulos/hora-extra', icon: Clock, title: 'Hora extra', subtitle: 'Painel, solicitações e fechamento por competência' },
+  { href: '/modulos/mobilidade', icon: HandCoins, title: 'Mobilidade', subtitle: 'Lançamento por competência e arquivo da administradora' },
 ];
 
 function d(date: Date) { return new Date(date).toLocaleDateString('pt-BR'); }

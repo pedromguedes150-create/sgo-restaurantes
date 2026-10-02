@@ -82,11 +82,14 @@ const BASE: ModuleDef[] = [
   { key: 'PAYMENTS', label: 'Pagamentos', nav: '/modulos/pagamentos' },
   { key: 'PAYMENTS_FREELANCER_REPORT', label: 'Recorrência de freelancers', nav: '/modulos/pagamentos/relatorio-freelancers', parent: 'PAYMENTS' },
   { key: 'PAYMENTS_CONSOLIDATION', label: 'Pagamentos de freelancers (PIX)', nav: '/modulos/pagamentos/consolidacao', parent: 'PAYMENTS' },
+  // Hora extra (v1.142.0): painel, solicitações e o Fechamento por competência (era "Pagamento Extra")
+  { key: 'HORA_EXTRA', label: 'Hora extra (painel e fechamento)', nav: '/modulos/hora-extra', parent: 'PAYMENTS' },
 
   { key: 'PEOPLE', label: 'Pessoas / Escala / Mapa', nav: '/modulos/pessoas' },
   { key: 'PEOPLE_MAP', label: 'Mapa de funções', nav: '/modulos/pessoas/mapa', parent: 'PEOPLE' },
   { key: 'PEOPLE_EVALUATION', label: 'Avaliação do colaborador', nav: '/modulos/pessoas/avaliacao', parent: 'PEOPLE' },
-  { key: 'PEOPLE_PAYOUTS', label: 'Pagamento Extra e mobilidade', nav: '/modulos/pessoas/comissoes', parent: 'PEOPLE' },
+  // chave mantida (há linhas gravadas na matriz); desde a v1.142.0 a tela é só Mobilidade — a Hora extra tem módulo próprio
+  { key: 'PEOPLE_PAYOUTS', label: 'Mobilidade (competência e arquivo)', nav: '/modulos/mobilidade', parent: 'PEOPLE' },
   { key: 'PEOPLE_PROBATION', label: 'Período de experiência', nav: '/modulos/pessoas/experiencia', parent: 'PEOPLE' },
   { key: 'PEOPLE_ROLE_CHANGES', label: 'Mudanças de função', nav: '/modulos/pessoas/mudancas', parent: 'PEOPLE' },
   // A Escala não tinha módulo dono: qualquer usuário logado abria a grade de
@@ -196,6 +199,9 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
      o Financeiro. Nasce para Supervisão e Financeiro (+Admin/CEO); o gerente
      segue com as abas de sempre. O Admin libera outros perfis na matriz. */
   PAYMENTS_CONSOLIDATION: ['SUPERVISOR', 'FINANCE', 'COORDINATOR'],
+  /* Hora extra (v1.142.0): quem lança (gerente), quem aprova (coordenação e
+     supervisão) e quem fecha a competência (financeiro); Admin/CEO sempre. */
+  HORA_EXTRA: ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'FINANCE'],
   /* Aba "Pagar" da central (v1.133.0): quem marca pago é o Coordenador (a
      operação), o Financeiro e Admin/CEO. Antes o perfil era comparado no
      código; agora a matriz diz a mesma coisa e o Admin pode mudar. */

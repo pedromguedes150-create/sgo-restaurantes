@@ -9,7 +9,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/ds/select';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { StatCard } from '@/components/ui/ds/stat-card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { DatePicker } from '@/components/ui/ds/date-picker';
@@ -90,7 +89,7 @@ export interface ColaboradorUI {
   id: string; nome: string; cpf: string | null; unitId: string; unidade: string;
 }
 
-const ROTULO: Record<Tipo, string> = { EXTRA: 'Pagamento Extra', MOBILITY: 'Mobilidade' };
+const ROTULO: Record<Tipo, string> = { EXTRA: 'Hora extra', MOBILITY: 'Mobilidade' };
 /** O que se conta em cada aba: HE não é "lançamento". */
 const UNIDADE_DE_CONTAGEM: Record<Tipo, string> = { EXTRA: 'hora(s) extra(s)', MOBILITY: 'lançamento(s)' };
 
@@ -101,54 +100,43 @@ async function acao(body: Record<string, unknown>): Promise<{ ok: boolean; error
   return r.json().catch(() => ({ ok: false, error: 'Falha de comunicação.' }));
 }
 
+/**
+ * Desde a v1.142.0 cada modalidade tem a SUA tela (decisão do Pedro: "uma aba
+ * para cada finalidade"): a Hora extra em /modulos/hora-extra (aba Fechamento)
+ * e a Mobilidade em /modulos/mobilidade. Este componente é o quadro de UMA
+ * competência de UM tipo; `basePath` diz para onde a troca de mês navega.
+ */
 export function PayoutsCompetenciaClient({
-  competencia, meses, extra, mobilidade, colaboradores, podeLancar, podeFecharExtra, isAdmin, abaInicial = 'EXTRA',
+  tipo, quadro, competencia, meses, colaboradores, podeLancar, podeFecharExtra, isAdmin, basePath,
 }: {
+  tipo: Tipo;
+  quadro: QuadroUI;
   competencia: string;
   meses: string[];
-  /** `?aba=mobilidade` abre direto na Mobilidade (link da Ajuda e do histórico). */
-  abaInicial?: Tipo;
-  extra: QuadroUI;
-  mobilidade: QuadroUI;
   colaboradores: ColaboradorUI[];
   podeLancar: boolean;
-  /** Finalizar o Pagamento Extra marca HE como pagas: Admin/CEO/Financeiro. */
+  /** Finalizar a Hora extra marca HE como pagas: Admin/CEO/Financeiro. */
   podeFecharExtra: boolean;
   isAdmin: boolean;
+  /** Endereço da tela (com os demais parâmetros já na query, se houver). */
+  basePath: string;
 }) {
   const router = useRouter();
-  const [tipo, setTipo] = useState<Tipo>(abaInicial);
-  const quadro = tipo === 'EXTRA' ? extra : mobilidade;
-
-  const trocarMes = (m: string) => router.push(`/modulos/pessoas/comissoes?mes=${m}${tipo === 'MOBILITY' ? '&aba=mobilidade' : ''}`);
+  const trocarMes = (m: string) => router.push(`${basePath}${basePath.includes('?') ? '&' : '?'}mes=${m}`);
 
   return (
-    <div className="space-y-4">
-      {/* As DUAS abas, no topo: a modalidade decide tudo o que vem abaixo. */}
-      <SegmentedControl
-        aria-label="Modalidade"
-        value={tipo}
-        onValueChange={(v) => setTipo(v as Tipo)}
-        options={[
-          { value: 'EXTRA', label: `Pagamento Extra (${extra.totalLancamentos})` },
-          { value: 'MOBILITY', label: `Mobilidade (${mobilidade.totalLancamentos})` },
-        ]}
-      />
-
-      <Aba
-        key={tipo}
-        tipo={tipo}
-        quadro={quadro}
-        competencia={competencia}
-        meses={meses}
-        colaboradores={colaboradores}
-        podeLancar={podeLancar}
-        podeFecharExtra={podeFecharExtra}
-        isAdmin={isAdmin}
-        onTrocarMes={trocarMes}
-        onMudou={() => router.refresh()}
-      />
-    </div>
+    <Aba
+      tipo={tipo}
+      quadro={quadro}
+      competencia={competencia}
+      meses={meses}
+      colaboradores={colaboradores}
+      podeLancar={podeLancar}
+      podeFecharExtra={podeFecharExtra}
+      isAdmin={isAdmin}
+      onTrocarMes={trocarMes}
+      onMudou={() => router.refresh()}
+    />
   );
 }
 
@@ -205,7 +193,7 @@ function Aba({ tipo, quadro, competencia, meses, colaboradores, podeLancar, pode
             href={`/api/people/payouts/export?tipo=${tipo}&mes=${competencia}`}
             className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand"
           >
-            <Download className="h-4 w-4" /> Exportar {ROTULO[tipo]} XLSX
+            <Download className="h-4 w-4" /> {ehExtra ? 'Arquivo da administradora (XLSX)' : `Exportar ${ROTULO[tipo]} XLSX`}
           </a>
           {podeFinalizar && (
             <Button size="sm" variant="outline" disabled={busy} onClick={finalizar}>

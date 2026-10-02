@@ -35,7 +35,7 @@ describe('Guarda de rota — o Caixa só alcança a conferência', () => {
 
   it('bloqueia também as telas internas, não só a raiz do módulo', async () => {
     expect(await canOpenPath('CASHIER', '/modulos/atestados/relatorio')).toBe(false);
-    expect(await canOpenPath('CASHIER', '/modulos/pessoas/comissoes')).toBe(false);
+    expect(await canOpenPath('CASHIER', '/modulos/mobilidade')).toBe(false);
   });
 
   it('manda o Caixa para a bipagem, nunca para uma porta fechada', async () => {
