@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { getScheduleGrid, fillActualFromPlan, dayUTC } from '@/lib/schedule';
-import { estenderFeriasDoRh, FERIAS_ORIGEM_RH } from '@/lib/rh/sync';
+import { estenderFeriasDoRh, FERIAS_ORIGEM_RH, MOTIVO_FE_DO_RH, TOLERANCIA_DIAS_SEM_SYNC } from '@/lib/rh/sync';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -107,13 +107,37 @@ describe('o sync do RH abre e ESTENDE o período, sem adivinhar', () => {
     expect(l.days[7].planned).not.toBe('FERIAS');
   });
 
-  it('o RH voltou a "Ativo" por dois dias e disse "Férias" de novo: é OUTRO período, o anterior não cresce', async () => {
+  it('buraco de até 3 dias sem sincronização NÃO quebra o período (o scheduler falhou, a pessoa não voltou); acima disso é OUTRO período', async () => {
     await estenderFeriasDoRh(ale, unitId, d('2026-10-05'));
     await estenderFeriasDoRh(ale, unitId, d('2026-10-06'));
-    expect(await estenderFeriasDoRh(ale, unitId, d('2026-10-09'))).toBe('ABERTO');
+    expect(TOLERANCIA_DIAS_SEM_SYNC).toBe(3);
+    expect(await estenderFeriasDoRh(ale, unitId, d('2026-10-09'))).toBe('ESTENDIDO'); // 07 e 08 sem sync
+    expect(await estenderFeriasDoRh(ale, unitId, d('2026-10-14'))).toBe('ABERTO'); // 4 dias: outro período
     const v = await prisma.vacation.findMany({ where: { collaboratorId: ale }, orderBy: { startDate: 'asc' } });
-    expect(v.map((x) => [x.startDate.toISOString().slice(0, 10), x.endDate.toISOString().slice(0, 10)])).toEqual([['2026-10-05', '2026-10-06'], ['2026-10-09', '2026-10-09']]);
-    expect((await linha()).days[6].planned).not.toBe('FERIAS'); // 07/10 não foi inventado
+    expect(v.map((x) => [x.startDate.toISOString().slice(0, 10), x.endDate.toISOString().slice(0, 10)])).toEqual([['2026-10-05', '2026-10-09'], ['2026-10-14', '2026-10-14']]);
+    const l = await linha();
+    expect(l.days[6].planned).toBe('FERIAS'); // 07/10 coberto pelo buraco tolerado
+    expect(l.days[10].planned).not.toBe('FERIAS'); // 11/10 não foi inventado
+  });
+
+  it('BACKFILL pela evidência: as marcações diárias do código antigo (um FE por sync) viram o INÍCIO do período', async () => {
+    /* Antes da v1.142.1 o sync gravava só o dia em schedule_actuals. A
+       Aparecida do print: 30/09 e 01/10 marcados assim; em 02/10 o período é
+       aberto — e começa em 30/09, não em 02/10. */
+    for (const dia of ['2026-09-30', '2026-10-01']) {
+      await prisma.scheduleActual.create({ data: { collaboratorId: ale, unitId, date: d(dia), status: 'FERIAS', reason: MOTIVO_FE_DO_RH, createdById: adminId } });
+    }
+    /* Marcação de FE manual (outro motivo) e marcação antiga demais NÃO entram na evidência. */
+    await prisma.scheduleActual.create({ data: { collaboratorId: ale, unitId, date: d('2026-09-29'), status: 'FERIAS', reason: 'lançada à mão', createdById: adminId } });
+    await prisma.scheduleActual.create({ data: { collaboratorId: ale, unitId, date: d('2026-09-20'), status: 'FERIAS', reason: MOTIVO_FE_DO_RH, createdById: adminId } });
+    expect(await estenderFeriasDoRh(ale, unitId, d('2026-10-02'))).toBe('ABERTO');
+    const v = await prisma.vacation.findFirst({ where: { collaboratorId: ale } });
+    expect(v!.startDate.toISOString().slice(0, 10)).toBe('2026-09-30');
+    expect(v!.endDate.toISOString().slice(0, 10)).toBe('2026-10-02');
+    const set = await linha(9);
+    expect(set.days[29].planned).toBe('FERIAS'); // 30/09
+    expect(set.days[19].planned).not.toBe('FERIAS'); // 20/09: fora da contiguidade
+    expect((await linha(10)).days[0].planned).toBe('FERIAS'); // 01/10
   });
 
   it('férias lançada à mão cobrindo hoje é respeitada: o sync não abre um segundo período', async () => {

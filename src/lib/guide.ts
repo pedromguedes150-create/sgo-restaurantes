@@ -463,7 +463,7 @@ export const GUIDE: GuideSection[] = [
           'A tela só LÊ. Para aplicar, use o botão Sincronizar da unidade em Configurações → Unidades — ou aguarde a sincronização automática (~1×/dia).',
         ],
         tips: [
-          'RH → FÉRIAS (v1.142.1): a cada sincronização (manual ou automática), quem estiver "Férias" no RH ganha um PERÍODO de férias em Pessoas → Férias — aberto no primeiro dia em que o RH disse "Férias" e estendido a cada sincronização enquanto o status persistir; quando o RH volta a "Ativo", o período para de crescer. A ESCALA DERIVA O FE DESSE PERÍODO, no Planejado e no Realizado (antes era uma marcação solta de um dia só, que o Planejado não via e "Puxar Realizado = Planejado" apagava). Férias lançada em Pessoas → Férias (confirmada/aprovada) aparece do mesmo jeito; a solicitada ao RH ainda não. Dias anteriores à primeira sincronização não são adivinhados — ajuste o período. Os Admins são avisados (nome + unidade) sempre que alguém for marcado.',
+          'RH → FÉRIAS (v1.142.1/v1.142.2): a sincronização automática roda UMA vez por dia, a partir das 05h (sem precisar clicar em Sincronizar); quem estiver "Férias" no RH ganha um PERÍODO de férias em Pessoas → Férias — aberto no primeiro dia em que o RH disse "Férias" e estendido a cada sincronização enquanto o status persistir; quando o RH volta a "Ativo", o período para de crescer. A ESCALA DERIVA O FE DESSE PERÍODO, no Planejado e no Realizado (antes era uma marcação solta de um dia só, que o Planejado não via e "Puxar Realizado = Planejado" apagava). Férias lançada em Pessoas → Férias (confirmada/aprovada) aparece do mesmo jeito; a solicitada ao RH ainda não. Dias anteriores à primeira sincronização não são adivinhados — ajuste o período. Os Admins são avisados (nome + unidade) sempre que alguém for marcado.',
         ],
       },
       {
@@ -955,7 +955,7 @@ export const GUIDE: GuideSection[] = [
           'A tela só LÊ. Para aplicar, use o botão Sincronizar da unidade em Configurações → Unidades — ou aguarde a sincronização automática (~1×/dia).',
         ],
         tips: [
-          'RH → FÉRIAS (30/09/2026): a cada sincronização (manual ou automática), quem estiver "Férias" no RH ganha FE (Férias) no dia de HOJE na Escala de funcionários — sozinho, sem precisar lançar na mão. Só o dia de hoje: o RH não manda data de início/fim, então dias anteriores (se a sincronização atrasou) e o dia da volta não são adivinhados. Para o período completo, lance manualmente em Escala → Registrar ausência. Os Admins são avisados (nome + unidade) sempre que alguém for marcado.',
+          'RH → FÉRIAS: a sincronização automática roda UMA vez por dia (a partir das 05h) e, para quem estiver "Férias" no RH, abre ou estende um PERÍODO de férias em Pessoas → Férias — a Escala deriva o FE desse período, no Planejado e no Realizado. Os dias já sincronizados antes entram no período; dias anteriores à primeira leitura "Férias" não são adivinhados (ajuste o período em Pessoas → Férias). Os Admins são avisados (nome + unidade) sempre que alguém for marcado.',
         ],
       },
       {
