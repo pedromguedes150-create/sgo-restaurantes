@@ -5,11 +5,16 @@ import { getSessionUser } from '@/lib/auth/session';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getSelectedUnitId } from '@/lib/scope/selected-unit';
 import { roleLabel } from '@/lib/roles';
-import { AppHeader } from '@/components/layout/app-header';
+import { Suspense } from 'react';
+import { SgoNavbar } from '@/components/layout/sgo-navbar';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { CommandPalette } from '@/components/layout/command-palette';
-import { TopNav } from '@/components/layout/top-nav';
 import { PageChromeProvider } from '@/components/layout/page-chrome';
+import { TabsProvider } from '@/components/layout/tabs-context';
+import { WorkspaceTabs } from '@/components/layout/workspace-tabs';
+import { AmbientBackground } from '@/components/sgo/ambient-background';
+import { SUBNAV_PORTAL_ID } from '@/components/sgo/module-shell';
+import { APP_VERSION_LABEL } from '@/lib/version';
 import { unreadCount } from '@/lib/notifications';
 import { viewableNavHrefs } from '@/lib/permissions';
 import { montarMenu } from '@/lib/nav/menu';
@@ -54,37 +59,46 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const permitido = new Set(viewable);
   const areas = await montarMenu(user.role, (href) => permitido.has(href));
 
+  /* Data da publicação para o tooltip do logo (o kit mostra versão e data). */
+  const atualizadoEm = new Date().toLocaleDateString('pt-BR');
+
   return (
-    <div className="min-h-dvh bg-canvas print:min-h-0 print:bg-white">
-       <PageChromeProvider>
-        {/* Quem tem perfil personalizado vê o NOME do perfil, não o do perfil
-            base: o Admin criou "Supervisor Regional" justamente para distinguir,
-            e o cabeçalho dizer "Supervisor" desfaria a distinção. */}
-        <AppHeader userName={user.name} roleLabel={user.profileName ?? roleLabel(user.role)} unread={unread} commPending={commPending} units={units} selectedUnitId={selectedUnitId} areas={areas} />
-        {/* A navegação por ÁREAS substitui a sidebar no desktop: sete botões
-            sempre à vista e o mega menu com tudo o que há dentro de cada um.
-            No celular quem navega é a barra de baixo + o hub de módulos. */}
-        <TopNav areas={areas} />
-        {/*
-          Largura do conteúdo. Mobile-first: `max-w-3xl` (768px) coincide com o
-          breakpoint `md`, então os overrides `md:` abaixo NÃO alteram o celular —
-          lá o conteúdo já é mais estreito que o limite. No desktop o conteúdo usa
-          o espaço restante do envelope.
-
-          Tetos de largura (o desconto fixo é a sidebar + 48px de px-6):
-          - até `lg`: `max-w-6xl` (1152px)
-          - de `lg` a `2xl`: sem teto — o envelope acompanha a viewport, porque
-            entre 1024 e 1535px o limite antigo só desperdiçava espaço
-          - `2xl` (≥1536px): teto de 1760px, deixando ~80px de respiro por lado
-            em 1920px sem esticar demais as linhas de texto
-
-          O header usa EXATAMENTE o mesmo envelope internamente, para que o
-          conteúdo dele alinhe com a sidebar e o main em qualquer largura.
-        */}
-        <div className="mx-auto flex w-full max-w-6xl lg:max-w-none 2xl:max-w-[1760px] print:block print:max-w-none">
-          <main className="w-full max-w-3xl flex-1 px-4 pb-24 pt-4 md:max-w-none md:px-6 md:pb-8 print:max-w-none print:p-0">{children}</main>
-        </div>
-       </PageChromeProvider>
+    /* MOLDURA DO KIT DE LAYOUT (v1.143.0): fundo contínuo montado UMA vez
+       atrás de tudo; barra global flutuante de vidro (68px, fixa); <main> com
+       o padding-top reservado por .sgo-shell__main (NÃO pôr utilitário de
+       padding vertical nele — venceria a reserva e o título ficaria atrás da barra);
+       dock de abas de trabalho no rodapé; rodapé com a versão.
+       O que é do Restaurante e continua: barra de baixo no celular, ⌘K,
+       interstício de comunicados e o service worker do push. */
+    <div className="sgo-shell flex min-h-dvh w-full flex-col print:min-h-0 print:bg-white">
+      <AmbientBackground />
+      <PageChromeProvider>
+        <Suspense fallback={null}>
+          <TabsProvider areas={areas}>
+            <SgoNavbar
+              userName={user.name}
+              roleLabel={user.profileName ?? roleLabel(user.role)}
+              unread={unread}
+              commPending={commPending}
+              units={units}
+              selectedUnitId={selectedUnitId}
+              areas={areas}
+              podeConfigurar={permitido.has('/configuracoes')}
+              versao={APP_VERSION_LABEL}
+              atualizadoEm={atualizadoEm}
+            />
+            <main className="sgo-shell__main flex-1 px-4 pb-24 md:pb-16 print:p-0">
+              {/* Alvo do trilho de módulo (ModuleShell): no fluxo, altura zero quando vazio. */}
+              <div id={SUBNAV_PORTAL_ID} className="-mx-4 shrink-0" />
+              {children}
+            </main>
+            <WorkspaceTabs areas={areas} />
+          </TabsProvider>
+        </Suspense>
+      </PageChromeProvider>
+      <footer className="px-2 py-px text-center print:hidden">
+        <span className="font-mono text-[8px] text-ink-400" data-testid="versao-publicada">{APP_VERSION_LABEL} · {atualizadoEm}</span>
+      </footer>
       <BottomNav />
       <CommandPalette units={units} viewable={viewable} isAdmin={isAdmin} areas={areas} />
       <ServiceWorkerRegister />

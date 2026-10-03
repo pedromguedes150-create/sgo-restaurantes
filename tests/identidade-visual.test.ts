@@ -50,12 +50,30 @@ describe('Onde a marca aparece', () => {
   const nav = readFileSync('src/components/layout/top-nav.tsx', 'utf8');
   const central = readFileSync('src/components/dashboard/central-da-rede.tsx', 'utf8');
 
-  it('o item ATIVO do menu superior usa a marca', () => {
-    expect(nav).toMatch(/estaAtiva[\s\S]{0,120}bg-brand-tint-2[\s\S]{0,60}text-brand/);
+  const kit = readFileSync('src/styles/sgo-kit.css', 'utf8');
+
+  it('o item ATIVO do menu superior usa a marca (via tokens do kit, que apontam para o bordô)', () => {
+    /* Desde o kit de layout (v1.143.0) o ativo é `.sgo-navitem.on`, e a tinta
+       dele vem de --sgo-nav-item-active-bg e --sgo-blue-600 — que, no CSS
+       GERADO, são o bordô. É isso que se trava aqui, dos dois lados. */
+    expect(nav).toMatch(/'sgo-navitem', \(ativa \|\| open\) && 'on'/);
+    expect(kit).toMatch(/--sgo-nav-item-active-bg:\s*rgb\(var\(--sgo-brand-rgb\)/);
+    expect(kit).toMatch(/--sgo-blue-600:\s*var\(--sgo-brand\)/);
+    expect(kit).toMatch(/--sgo-accent:\s*var\(--sgo-brand\)/);
   });
 
   it('o menu superior não introduz azul', () => {
     expect(nav).not.toMatch(/\b(bg|text|border|ring)-info\b/);
+  });
+
+  it('o CSS do kit não carrega NENHUM azul de marca do SGO dos Postos', () => {
+    /* Se um deles voltar — por regerar o CSS com o script errado, por exemplo —
+       o Restaurante vira azul em silêncio. */
+    for (const azul of ['#0A4DA8', '#1159BD', '#003068', '#2E7CD6', '#1B5FA8', '#144B86', '#5B9BF0', '#7FB3F5', '#3D7FE0', '#2B66C6', '#0B3B8C', '#93C5FD', '#0F4C81', '#08306F']) {
+      expect(kit.toUpperCase(), `azul ${azul} no sgo-kit.css`).not.toContain(azul);
+    }
+    expect(kit).not.toMatch(/rgba\(10,\s*77,\s*168/);
+    expect(kit).not.toMatch(/rgba\(46,\s*124,\s*214/);
   });
 
   it('o chip do cartão do Dashboard tem a MARCA como padrão', () => {

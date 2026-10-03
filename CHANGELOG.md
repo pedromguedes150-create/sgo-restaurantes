@@ -9,6 +9,19 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.143.0 — 2026-10-03 (Kit de layout do SGO — Fase 2, fundação: moldura, tema, fundo, componentes)
+### Adicionado
+- **Fundação do kit de layout do SGO dos Postos** (`kit-layout-sgo`), com a identidade bordô do Restaurante. Regra de decisão: estrutura, dimensões, grades, componentes e comportamento vêm do KIT; cor, dados, APIs, permissões e regras vêm do RESTAURANTE.
+- `src/styles/sgo-kit.css` **gerado** por `scripts/build-kit-css.cjs` a partir dos arquivos originais do kit (guardados em `docs/kit-layout-sgo/1-estilos`): todas as classes `.sgo-*` (navbar, trilho, cabeçalho de página, KPI, painel, tabela, selo, botão, campo, modal, drawer, chip, vidro, fundo, dock de abas) com os tokens de marca do kit (`--sgo-royal`, `--sgo-accent`, `--sgo-blue-*`) apontando para `--sgo-brand*` e os neutros apontando para os tokens do Restaurante. Nenhum azul de marca sobrevive (o teste `identidade-visual` trava a lista).
+- **Moldura**: barra global flutuante de vidro (68px, recuo 16px, raio 14px) com logo em squircle + "SGO", módulos em tab bar (ícone em cima, nome embaixo, pílula bordô no ativo, mega menu por colunas do catálogo), seletor de unidade, busca (⌘K), Comunicação, Notificações, tema, Configurações e avatar com menu; **menu móvel** em gaveta (hambúrguer abaixo de lg); **abas de trabalho** no rodapé (dock no desktop, botão + folha no celular; título pelo catálogo de menu, 14 no máximo, Ctrl+Tab/W/T/1–9 no PWA); **fundo contínuo** (`AmbientBackground`) com marca d'água do beija-flor em bordô; rodapé com a versão.
+- **Componentes do kit** em `src/components/sgo/`: `SgoKpi`/`SgoKpis`, `SgoPageHeader`, `ModuleShell` (trilho por portal), `SgoModal` (+`SgoModalGrid`/`SgoField`/`SgoModalSection`), `SgoDrawer`, `panel` (Card com a API de sempre), `SgoBar`, `SgoTimeline`, `NavBadge`, `tones`, `AmbientBackground`.
+- Tema escuro pela classe `dark` no `<html>` (contrato do kit) emitida a partir do MESMO cookie `data-theme` de sempre, sem flash; alternância de tema na barra (claro → escuro → aparelho). Roboto Mono (números) via next/font.
+### Alterado
+- `LargeTitle` (usado por ~190 telas) passou a emitir o cabeçalho do kit (`SgoPageHeader`: 20px/600 + subtítulo + ações) **sem mudar a assinatura** — todas as telas ganharam a hierarquia nova sem reescrita. O cabeçalho antigo com migalha e título colapsável saiu.
+- Guards do design system: `sgo-kit.css` é a segunda fonte de tokens (hex/rgba liberados só nele); nada muda para os `.tsx`.
+### Divergências do kit (registradas)
+- Sem Radix, framer-motion e TanStack: diálogos sobre `useDialogBehavior` do DS e entrada dos painéis em CSS; abas sem keep-alive (o App Router desmonta a rota); notificações seguem por polling; a barra de baixo do celular continua (operação do gerente); busca é o ⌘K; `@media print` próprio (o kit não tem).
+
 ## v1.142.2 — 2026-10-02 (RH: sincronização UMA vez por dia, de manhã; férias recupera os dias já vistos)
 ### Corrigido
 - **"Não faz sentido eu ter que ir em Sincronizar todos os dias"** (Pedro, depois do print com FE só no dia 02/10). A sincronização automática já existia, mas rodava "23h depois da última" — o horário escorregava (13h num dia, 12h no outro) e um reinício na hora errada pulava um dia. Agora roda **uma vez por DIA de Brasília, a partir das 05h** (`deveRodarSyncAutomatico`/`autoSyncFeitaHoje`), e no boot também se o dia ainda não teve. O FE de quem está de férias passa a existir na Escala antes de o gerente olhar o dia.

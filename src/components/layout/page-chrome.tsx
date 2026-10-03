@@ -1,53 +1,40 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { SgoPageHeader } from '@/components/sgo/sgo-page-header';
 
 /**
- * "Chrome" da página (Onda 1): coordena o título grande (34px) do conteúdo com
- * o header persistente. Ao rolar, o título grande sai de cena e o header mostra
- * o título inline (17px); a barra só ganha borda depois de 28px de scroll.
- *
- * Context com default não-lançável: o header funciona mesmo sem provider
- * (degradado — mostra o rótulo do breadcrumb sempre, como as telas legadas).
+ * "Chrome" da página: o título registrado aqui alimenta quem precisar dele
+ * (abas de trabalho, `document.title`). O cabeçalho persistente que colapsava
+ * o título saiu com o kit de layout (v1.143.0): a barra flutuante do kit não
+ * tem migalha nem título inline — o título da tela vive no `SgoPageHeader`.
  */
 interface PageChromeValue {
   title: string | null;
   setTitle: (t: string | null) => void;
-  scrolled: boolean; // > 28px → borda no header
-  collapsed: boolean; // > 72px → título inline no header
 }
 
-const PageChromeContext = createContext<PageChromeValue>({ title: null, setTitle: () => {}, scrolled: false, collapsed: false });
+const PageChromeContext = createContext<PageChromeValue>({ title: null, setTitle: () => {} });
 export const usePageChrome = () => useContext(PageChromeContext);
-
-const SCROLL_BORDER = 28;
-const SCROLL_COLLAPSE = 72;
 
 export function PageChromeProvider({ children }: { children: React.ReactNode }) {
   const [title, setTitle] = useState<string | null>(null);
-  const [scrollY, setScrollY] = useState(0);
-
-  useEffect(() => {
-    const onScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
   const setTitleCb = useCallback((t: string | null) => setTitle(t), []);
-
-  return (
-    <PageChromeContext.Provider value={{ title, setTitle: setTitleCb, scrolled: scrollY > SCROLL_BORDER, collapsed: scrollY > SCROLL_COLLAPSE }}>
-      {children}
-    </PageChromeContext.Provider>
-  );
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.title = title ? `${title} · SGO Beija Flor` : 'SGO Beija Flor';
+  }, [title]);
+  return <PageChromeContext.Provider value={{ title, setTitle: setTitleCb }}>{children}</PageChromeContext.Provider>;
 }
 
 /**
- * Título grande da página (34px). Registra o título no chrome para o header
- * poder colapsá-lo ao rolar. Use no topo do conteúdo de cada tela redesenhada.
+ * Título de página — desde a v1.143.0 é o cabeçalho do kit de layout
+ * (`SgoPageHeader`: 20px/600 + subtítulo 12,5px + ações à direita). A
+ * assinatura não mudou de propósito: as ~190 telas que o chamam ganham o
+ * cabeçalho novo sem reescrita. A margem negativa cancela o `px-4` do <main>,
+ * porque no kit o cabeçalho vai de borda a borda e o conteúdo é que recua.
  */
-export function LargeTitle({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) {
+export function LargeTitle({ title, subtitle, actions }: { title: string; subtitle?: React.ReactNode; actions?: React.ReactNode }) {
   const { setTitle } = usePageChrome();
   useEffect(() => {
     setTitle(title);
@@ -55,12 +42,8 @@ export function LargeTitle({ title, subtitle, actions }: { title: string; subtit
   }, [title, setTitle]);
 
   return (
-    <div className="mb-6 flex items-start justify-between gap-4">
-      <div className="min-w-0">
-        <h1 className="sgo-type-34 font-bold text-ink-900">{title}</h1>
-        {subtitle && <p className="sgo-body mt-1 text-ink-500">{subtitle}</p>}
-      </div>
-      {actions && <div className="shrink-0">{actions}</div>}
+    <div className="-mx-4 mb-2">
+      <SgoPageHeader title={title} subtitle={subtitle} actions={actions} />
     </div>
   );
 }

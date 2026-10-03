@@ -10,7 +10,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { TSX_SCOPE_DIRS, TOKENS_FILE, ALLOW_MARK } = require('./ds-scope.cjs');
+const { TSX_SCOPE_DIRS, TOKENS_FILES, ALLOW_MARK } = require('./ds-scope.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 const HEX = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/;
@@ -30,7 +30,7 @@ function walk(dir) {
   return out;
 }
 
-const files = [...new Set(TSX_SCOPE_DIRS.flatMap(walk))].filter((f) => f !== TOKENS_FILE);
+const files = [...new Set(TSX_SCOPE_DIRS.flatMap(walk))].filter((f) => !TOKENS_FILES.includes(f));
 
 /**
  * Dispensa por LINHA, não por arquivo: a linha traz `ds-allow-hex: <motivo>`.
