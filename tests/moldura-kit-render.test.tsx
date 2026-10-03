@@ -69,7 +69,7 @@ describe('cabeçalho de página e KPIs', () => {
     expect(h).toContain('class="sgo-phdr__sub"');
     expect(h).toMatch(/class="sgo-phdr__tab on" aria-current="page"[^>]*href="\/modulos\/hora-extra"/);
     expect(h).toContain('<span class="sgo-navbadge">2</span>');
-    expect(h).toContain('<div class="sgo-phdr__actions">');
+    expect(h).toContain('<div class="sgo-phdr__actions max-w-full">');
   });
 
   it('LargeTitle manteve a assinatura e passou a emitir o cabeçalho do kit', () => {

@@ -11,11 +11,9 @@ import { podePagarPorPerfil } from '@/lib/payments/aprovadores';
 import { activeOvertimeRatesByUnit } from '@/lib/overtime/rates';
 import { activeOvertimeReasons } from '@/lib/overtime/reasons';
 import { listSuppliers } from '@/lib/suppliers';
-import { Card, CardContent } from '@/components/ui/card';
 import { PaymentsClient, type PayReq } from '@/components/payments/payments-client';
 import { RelatoriosMenu } from '@/components/payments/relatorios-menu';
 import type { PaymentRequest } from '@prisma/client';
-import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -146,21 +144,17 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <LargeTitle title="Pagamentos" />
-        {/* Um menu só, com uma linha explicando cada tela. As condições são as
-            MESMAS que cada página usa para deixar entrar: a Supervisão recebe
-            o alerta de freelancer recorrente, então precisa achar o consolidado;
-            as demais obedecem a matriz. */}
-        <RelatoriosMenu itens={[
-          ...(podeVerConsolidacao ? [{ href: '/modulos/pagamentos/relatorio-freelancers', titulo: 'Recorrência de Freelancers', descricao: 'Quem repete na mesma semana, por unidade — e o fechamento semanal com PIX.' }] : []),
-          ...(podeVerConsolidacaoPagamentos ? [{ href: '/modulos/pagamentos/consolidacao', titulo: 'Pagamentos de Freelancers', descricao: 'Conferência do período para o PIX: por lançamento, por unidade e por colaborador.' }] : []),
-          ...(podeVerHoraExtra ? [{ href: '/modulos/hora-extra', titulo: 'Hora extra', descricao: 'Painel por motivo e período, lista de solicitações e o fechamento da competência (mês seguinte ao trabalho).' }] : []),
-        ]} />
-      </div>
-      <Card>
-        <CardContent className="pt-4">
-          <PaymentsClient
+      {/* O cabeçalho (título + abas + relatórios) vive no cliente, no padrão
+          do kit. Os relatórios: uma linha explicando cada tela, e as condições
+          são as MESMAS que cada página usa para deixar entrar — a Supervisão
+          recebe o alerta de freelancer recorrente, então precisa achar o
+          consolidado; as demais obedecem a matriz. */}
+      <PaymentsClient
+            acoes={<RelatoriosMenu itens={[
+              ...(podeVerConsolidacao ? [{ href: '/modulos/pagamentos/relatorio-freelancers', titulo: 'Recorrência de Freelancers', descricao: 'Quem repete na mesma semana, por unidade — e o fechamento semanal com PIX.' }] : []),
+              ...(podeVerConsolidacaoPagamentos ? [{ href: '/modulos/pagamentos/consolidacao', titulo: 'Pagamentos de Freelancers', descricao: 'Conferência do período para o PIX: por lançamento, por unidade e por colaborador.' }] : []),
+              ...(podeVerHoraExtra ? [{ href: '/modulos/hora-extra', titulo: 'Hora extra', descricao: 'Painel por motivo e período, lista de solicitações e o fechamento da competência (mês seguinte ao trabalho).' }] : []),
+            ]} />}
             abas={await abasDoPerfil(user.role, 'PAYMENTS')}
             podePagar={podePagar}
             isAdmin={user.role === 'ADMIN'}
@@ -182,9 +176,7 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
             history={(history as ReqRow[]).map(toDTO)}
             totais={totais}
             limite={LIMITE_DA_LISTA}
-          />
-        </CardContent>
-      </Card>
+      />
     </div>
   );
 }

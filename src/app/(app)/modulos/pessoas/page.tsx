@@ -12,11 +12,10 @@ import { permissaoDeRota } from '@/lib/permissions/links';
 
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { listCollaborators, countCollaborators, listVacations, listSchedule, LIMITE_DA_LISTA } from '@/lib/people';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, PanelHeader } from '@/components/sgo/panel';
 import { PeopleClient } from '@/components/people/people-client';
-import { LargeTitle } from '@/components/layout/page-chrome';
-import { List, ListRow } from '@/components/ui/ds/list-row';
-import { Grid3x3, CalendarDays, CalendarRange, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft, HandCoins, Clock } from 'lucide-react';
+import Link from 'next/link';
+import { Grid3x3, CalendarDays, CalendarRange, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft, HandCoins, Clock, ChevronRight, LayoutGrid } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,37 +72,41 @@ export default async function PessoasModulePage({ searchParams }: { searchParams
 
   return (
     <div className="space-y-4">
-      <LargeTitle
-        title="Gestão de Pessoas"
-        subtitle="Fonte primária: API do RH · fallback manual. Escala é somente leitura (registre variações)."
-      />
-      <FamilyTabs active="/modulos/pessoas" />
-
-      {/* Destinos do módulo: uma lista em duas colunas, com o subtítulo dizendo
-          o que cada tela resolve — antes eram 8 blocos só com o nome. */}
-      {/* Destinos do módulo numa lista só, com o subtítulo dizendo o que cada
-          tela resolve — antes eram 8 blocos soltos só com o nome. */}
-      <List>
-        {DESTINOS.filter((x) => podeVer(x.href)).map((d) => (
-          <ListRow
-            key={d.href}
-            href={d.href}
-            title={d.title}
-            subtitle={d.subtitle}
-            leading={<d.icon className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
-          />
-        ))}
-      </List>
-      <Card>
-        <CardContent className="pt-4">
-          <PeopleClient
-            abas={await abasDoPerfil(user.role, 'PEOPLE')}
-            canRequestVacation={user.role !== 'FINANCE' && user.role !== 'CEO'}
-            collaborators={collaborators.map((c) => ({ id: c.id, name: c.name, jobTitle: c.jobTitle, units: c.units.map((u) => u.unit.name), unitIds: c.units.map((u) => u.unit.id) }))}
-            unidades={unidades}
-            tipos={tipos.map((t) => ({ id: t.id, name: t.name, workDays: t.workDays, offDays: t.offDays, startTime: t.startTime, breakTime: t.breakTime, endTime: t.endTime }))}
-            turnos={turnos}
-            configs={Object.fromEntries([...configPorColab].map(([id, c]) => [id, {
+      {/* O cabeçalho (título + abas Colaboradores/Férias/Escala) vive no
+          cliente, no padrão do kit; o subtítulo é o de sempre. */}
+      <PeopleClient
+        subtitulo={(
+          <>
+            Fonte primária: API do RH · fallback manual. Escala é somente leitura (registre variações).
+            <span className="block"><FamilyTabs active="/modulos/pessoas" /></span>
+          </>
+        )}
+        ferramentas={(
+          /* Destinos do módulo (kit: painel com linhas em duas colunas, cápsula
+             de ícone e o subtítulo dizendo o que cada tela resolve). */
+          <Card data-testid="ferramentas-de-pessoas">
+            <PanelHeader title="Ferramentas de Pessoas" icon={<span className="sgo-panel__ic sgo-panel__ic--brand" aria-hidden><LayoutGrid className="h-4 w-4" /></span>} count={DESTINOS.filter((x) => podeVer(x.href)).length} />
+            <div className="grid grid-cols-1 gap-1 p-2 md:grid-cols-2">
+              {DESTINOS.filter((x) => podeVer(x.href)).map((d) => (
+                <Link key={d.href} href={d.href} className="sgo-row group min-h-12 outline-none focus-visible:shadow-sgo-focus" style={{ borderTop: 0 }}>
+                  <span className="sgo-ric sgo-ric--blue" aria-hidden><d.icon className="h-4 w-4" /></span>
+                  <span className="sgo-row__main">
+                    <span className="sgo-row__title block">{d.title}</span>
+                    <span className="sgo-row__sub block">{d.subtitle}</span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-sgo-1 ease-sgo-std group-hover:translate-x-0.5" style={{ color: 'var(--sgo-ink-3)' }} aria-hidden />
+                </Link>
+              ))}
+            </div>
+          </Card>
+        )}
+        abas={await abasDoPerfil(user.role, 'PEOPLE')}
+        canRequestVacation={user.role !== 'FINANCE' && user.role !== 'CEO'}
+        collaborators={collaborators.map((c) => ({ id: c.id, name: c.name, jobTitle: c.jobTitle, units: c.units.map((u) => u.unit.name), unitIds: c.units.map((u) => u.unit.id) }))}
+        unidades={unidades}
+        tipos={tipos.map((t) => ({ id: t.id, name: t.name, workDays: t.workDays, offDays: t.offDays, startTime: t.startTime, breakTime: t.breakTime, endTime: t.endTime }))}
+        turnos={turnos}
+        configs={Object.fromEntries([...configPorColab].map(([id, c]) => [id, {
               tipo: c.template?.name ?? null,
               folga: resumoDaFolga(c.offMode, c.weeklyOffDay, c.sundayOfMonth),
               desde: d(c.startDate),
@@ -114,22 +117,20 @@ export default async function PessoasModulePage({ searchParams }: { searchParams
                 startTime: c.startTime, breakTime: c.breakTime, endTime: c.endTime,
               },
             }]))}
-            filtradoPor={nomesFiltrados}
-            total={total}
-            limite={LIMITE_DA_LISTA}
-            /* Cadastrar escala é ato de gestão: quem só consulta Pessoas não abre a folha. */
-            podeConfigurar={await canEditModule(user.role, 'SCHEDULE')}
-            /* Corrigir a quais unidades o colaborador está ligado é só do Admin: o
+        filtradoPor={nomesFiltrados}
+        total={total}
+        limite={LIMITE_DA_LISTA}
+        /* Cadastrar escala é ato de gestão: quem só consulta Pessoas não abre a folha. */
+        podeConfigurar={await canEditModule(user.role, 'SCHEDULE')}
+        /* Corrigir a quais unidades o colaborador está ligado é só do Admin: o
                sync do RH só ADICIONA vínculo (nunca remove, de propósito — ver
                src/lib/admin.ts setCollaboratorUnits), e um vínculo antigo que
                sobra depois de uma transferência precisa de alguém decidindo, não
                do próprio sync concluindo sozinho por ausência numa resposta. */
-            podeEditarUnidades={user.role === 'ADMIN'}
-            vacations={vacations.map((v) => ({ id: v.id, collaborator: v.collaborator.name, unit: v.unit.name, start: d(v.startDate), end: d(v.endDate), status: v.status, changeNote: v.changeNote }))}
-            schedule={schedule.map((s) => ({ id: s.id, collaborator: s.collaborator.name, unit: s.unit.name, date: d(s.date), planned: s.planned, variation: s.variation, note: s.variationNote }))}
-          />
-        </CardContent>
-      </Card>
+        podeEditarUnidades={user.role === 'ADMIN'}
+        vacations={vacations.map((v) => ({ id: v.id, collaborator: v.collaborator.name, unit: v.unit.name, start: d(v.startDate), end: d(v.endDate), status: v.status, changeNote: v.changeNote }))}
+        schedule={schedule.map((s) => ({ id: s.id, collaborator: s.collaborator.name, unit: s.unit.name, date: d(s.date), planned: s.planned, variation: s.variation, note: s.variationNote }))}
+      />
     </div>
   );
 }

@@ -107,7 +107,10 @@ export function SgoPageHeader({ title, subtitle, tabs, actions, testId }: SgoPag
         </nav>
       )}
 
-      {actions && <div className="sgo-phdr__actions">{actions}</div>}
+      {/* `max-w-full`: o kit dá `flex-shrink:0` às ações, e sem um teto a
+          linha delas sai da tela no celular em vez de quebrar (visto na Escala a
+          375px: o Excel e o PDF ficavam fora da tela). */}
+      {actions && <div className="sgo-phdr__actions max-w-full">{actions}</div>}
     </header>
   );
 }
