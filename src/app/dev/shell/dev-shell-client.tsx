@@ -1,10 +1,13 @@
 'use client';
 
-import { AppHeader } from '@/components/layout/app-header';
+import { SgoNavbar } from '@/components/layout/sgo-navbar';
 import { CommandPalette } from '@/components/layout/command-palette';
-import { TopNav } from '@/components/layout/top-nav';
 import { PageChromeProvider, LargeTitle } from '@/components/layout/page-chrome';
 import { BottomNav } from '@/components/layout/bottom-nav';
+import { TabsProvider } from '@/components/layout/tabs-context';
+import { WorkspaceTabs } from '@/components/layout/workspace-tabs';
+import { AmbientBackground } from '@/components/sgo/ambient-background';
+import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
 import type { AreaMontada } from '@/lib/nav/areas';
 
 const UNITS = [
@@ -43,21 +46,23 @@ const AREAS: AreaMontada[] = [
 export function DevShellClient() {
   return (
     <PageChromeProvider>
-      <div className="min-h-screen bg-canvas">
-        <div className="flex items-center gap-3 border-b border-line bg-surface px-4 py-2">
-          <span className="sgo-type-13 font-semibold text-ink-900">Harness do shell</span>
-          <span className="sgo-type-12 text-ink-500">Sem banco/login — só valida a navegação.</span>
-        </div>
-        <AppHeader userName="Alan Silva" roleLabel="Administrador" unread={7} commPending={3} units={UNITS} selectedUnitId="todas" areas={AREAS} />
-        <TopNav areas={AREAS} />
-        <CommandPalette units={UNITS} isAdmin areas={AREAS} />
-        <BottomNav />
-        <main className="p-6">
-          <LargeTitle title="Comandas" subtitle="Título grande (34px) que colapsa no header ao rolar." />
+      <div className="sgo-shell flex min-h-screen flex-col">
+        <AmbientBackground />
+        <TabsProvider areas={AREAS}>
+          <SgoNavbar userName="Alan Silva" roleLabel="Administrador" unread={7} commPending={3} units={UNITS} selectedUnitId="todas" areas={AREAS} podeConfigurar versao="v-dev" atualizadoEm="hoje" />
+          <CommandPalette units={UNITS} isAdmin areas={AREAS} />
+          <BottomNav />
+          <WorkspaceTabs areas={AREAS} />
+        <main className="sgo-shell__main flex-1 px-4">
+          <LargeTitle title="Comandas" subtitle="Cabeçalho do kit (20px) — harness sem banco/login, só valida a moldura." />
+          <SgoKpis>
+            <SgoKpi label="Conferidas" value="423" meta="de 504" tone="green" />
+            <SgoKpi label="Não localizadas" value="81" meta="16%" metaTone="down" tone="red" />
+            <SgoKpi label="Em uso" value="12" tone="blue" />
+          </SgoKpis>
           <p className="sgo-body text-ink-500">
-            Role a página: a barra ganha borda após 28px e o título inline aparece
-            após 72px. Passe o mouse pelas áreas para abrir o mega menu, favorite
-            um item na estrela e confira o estado ativo e o anel de foco pelo teclado.
+            Passe o mouse pelas áreas para abrir o mega menu, favorite um item na
+            estrela e confira o estado ativo e o anel de foco pelo teclado.
           </p>
           <div className="mt-6 space-y-3">
             {Array.from({ length: 40 }).map((_, i) => (
@@ -67,6 +72,7 @@ export function DevShellClient() {
             ))}
           </div>
         </main>
+        </TabsProvider>
       </div>
     </PageChromeProvider>
   );

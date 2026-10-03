@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Roboto_Mono } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import { THEME_COOKIE, THEME_DEFAULT, isThemeChoice, type ThemeChoice } from '@/lib/theme';
 import '@/styles/sgo-design-system.css';
+import '@/styles/sgo-kit.css';
 import '@/styles/globals.css';
 
 // Inter Variable auto-hospedada e pré-carregada pelo next/font, com fallback de
@@ -11,6 +12,14 @@ import '@/styles/globals.css';
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
+  display: 'swap',
+});
+/* Números e códigos do kit de layout (v1.143.0): Roboto Mono, como no SGO dos
+   Postos — auto-hospedada pelo next/font, igual à Inter. */
+const robotoMono = Roboto_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-roboto-mono',
   display: 'swap',
 });
 
@@ -49,10 +58,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="pt-BR"
-      className={inter.variable}
+      /* A classe `dark` é o contrato do kit de layout (html.dark); o atributo
+         data-theme continua sendo o do Restaurante. Os dois saem do MESMO
+         cookie: 'dark' já vem com a classe do servidor; 'system' ganha a classe
+         no script bloqueante abaixo, antes do 1º paint, lendo o aparelho. */
+      className={`${inter.variable} ${robotoMono.variable}${theme === 'dark' ? ' dark' : ''}`}
       suppressHydrationWarning
       data-theme={theme}
     >
+      <head>
+        {theme === 'system' && (
+          <script
+            // Sem isto quem segue o aparelho no escuro veria a tela clara por um
+            // quadro. É CSS do kit (html.dark), não preferência: a preferência
+            // continua no cookie e no ThemeProvider.
+            dangerouslySetInnerHTML={{ __html: "try{if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark')}catch(e){}" }}
+          />
+        )}
+      </head>
       <body>
         <ThemeProvider initial={theme}>{children}</ThemeProvider>
       </body>

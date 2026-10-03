@@ -1,0 +1,2236 @@
+/* =============================================================================
+   SGO — KIT DE LAYOUT (estrutura do SGO dos Postos, identidade do Restaurante)
+   Gerado de kit-layout-sgo/1-estilos por scripts/build-kit-css.cjs — NÃO edite
+   à mão o miolo; mude o script e gere de novo.
+
+   O que é do KIT: classes .sgo-* (navbar, trilho, cabeçalho, KPI, painel,
+   tabela, selo, botão, campo, modal, drawer, chip, vidro, fundo), dimensões,
+   raios, sombras, grades, breakpoints, tema escuro (html.dark).
+   O que é do RESTAURANTE: toda cor. Os tokens de marca do kit (--sgo-royal,
+   --sgo-accent, --sgo-blue-*) apontam para --sgo-brand*; os neutros
+   (--sgo-ink*, --sgo-panel*, --sgo-bg, --sgo-hair*) apontam para os tokens
+   do sgo-design-system.css, que já mudam por tema. Por isso os blocos
+   html.dark do kit continuam, mas só carregam o que é de VIDRO/moldura.
+
+   Carregado DEPOIS de sgo-design-system.css (os tokens de lá precisam existir).
+   ========================================================================== */
+
+/* Tokens que o kit lê e o Restaurante ainda não tinha. */
+:root {
+  --sgo-font-mono: var(--font-roboto-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sgo-on-strong: var(--sgo-on-brand);
+}
+/* ============================================================
+   SGO · DESIGN SYSTEM — Grupo Beija-Flor
+   v1.0 · Fundação visual do Sistema de Gestão Operacional
+   ------------------------------------------------------------
+   COMO USAR:
+   1. Importe este arquivo uma única vez no topo do app.
+   2. Use as variáveis (var(--...)) e as classes (.sgo-*) em
+      todas as telas. NUNCA use cores fixas (#hex) direto.
+   3. O modo escuro é automático: basta adicionar a classe
+      "dark" no elemento <html>.
+   ============================================================ */
+
+/* ---------- 1. TOKENS (tema claro) ---------- */
+:root{
+  /* Marca */
+  --sgo-royal: var(--sgo-brand);
+  --sgo-royal-2: var(--sgo-brand-hover);
+  --sgo-navy: var(--sgo-brand-active);
+  --sgo-plumage-a: var(--sgo-brand-hover);
+  --sgo-plumage-b: var(--sgo-brand);
+  --sgo-plumage-c: var(--sgo-ink-700);
+  --sgo-irid: linear-gradient(115deg, var(--sgo-brand-hover), var(--sgo-brand) 55%, var(--sgo-ink-700));
+
+  /* Superfícies */
+  --sgo-bg: var(--sgo-canvas);
+  --sgo-panel: var(--sgo-surface);
+  --sgo-panel-2: var(--sgo-sunken);
+
+  /* Texto */
+  --sgo-ink: var(--sgo-ink-900);
+  --sgo-ink-2: var(--sgo-ink-500);
+  --sgo-ink-3: var(--sgo-ink-400);
+
+  /* Ação */
+  --sgo-accent: var(--sgo-brand);
+  --sgo-accent-soft: rgb(var(--sgo-brand-rgb) / 0.10);
+
+  /* Semânticas (impacto) — verde=ganho, vermelho=perda, âmbar=neutro */
+  --sgo-ok: var(--sgo-success);
+  --sgo-warn: var(--sgo-warning);
+  --sgo-bad: var(--sgo-danger);
+
+  /* Auxiliares de estado/dataviz — derivadas da plumagem, mas escurecidas até
+     passarem em contraste sobre --sgo-panel. Existem porque há domínios com
+     mais de quatro estados (ex.: os 8 status de férias), e ok/warn/bad/accent
+     sozinhos forçariam duas categorias distintas a dividir a mesma cor.
+     NÃO use como quinta cor "decorativa": só quando o estado for real. */
+  --sgo-sky: var(--sgo-info);
+  --sgo-violet:#514BA0;  --sgo-violet-soft:rgba(81,75,160,.11);
+
+  /* Superfície NEUTRA de estado — o par soft de --sgo-ink-3, que já servia de
+     tinta neutra mas não tinha fundo. É o mesmo valor que .sgo-tag--gray usa
+     desde sempre; virou token porque agora há estado de domínio que é
+     deliberadamente neutro (ex.: "Não programado" na Conferência da Logística),
+     e ele precisa ser distinguível de âmbar/pendente sem virar rgba solta no
+     meio da tela. NÃO usar para "sem informação" nem como cinza decorativo. */
+  --sgo-neutral-soft:rgba(125,125,135,.13);
+
+  /* Linhas e sombras */
+  --sgo-hair: var(--sgo-line);
+  --sgo-hair-2: var(--sgo-line-strong);
+  --sgo-sh-panel:0 0 0 1px var(--sgo-hair), 0 1px 2px rgb(var(--sgo-ink-900-rgb) / .04), 0 10px 28px -14px rgb(var(--sgo-ink-900-rgb) / .10);
+  --sgo-sh-pop:0 0 0 1px var(--sgo-hair), 0 18px 48px -16px rgb(var(--sgo-ink-900-rgb) / .26);
+
+  /* Raio, espaçamento (grade 8pt), tipografia */
+  --sgo-r-sm:8px; --sgo-r-md:12px; --sgo-r-lg:16px;
+  --sgo-gap:16px;
+  --sgo-ease:cubic-bezier(.32,.72,.28,1);
+}
+
+/* ---------- 2. TOKENS (tema escuro) ---------- */
+html.dark{
+  --sgo-bg: var(--sgo-canvas);
+  --sgo-panel: var(--sgo-surface);
+  --sgo-panel-2: var(--sgo-sunken);
+  --sgo-ink: var(--sgo-ink-900);
+  --sgo-ink-2: var(--sgo-ink-500);
+  --sgo-ink-3: var(--sgo-ink-400);
+  --sgo-accent: var(--sgo-brand);
+  --sgo-accent-soft: rgb(var(--sgo-brand-rgb) / 0.10);
+  --sgo-ok: var(--sgo-success);
+  --sgo-warn: var(--sgo-warning);
+  --sgo-bad: var(--sgo-danger);
+  --sgo-sky: var(--sgo-info);
+  --sgo-violet:#A79FF0; --sgo-violet-soft:rgba(167,159,240,.15);
+  /* No escuro o cinza precisa de mais opacidade para se descolar do painel. */
+  --sgo-neutral-soft:rgba(150,150,160,.16);
+  --sgo-hair: var(--sgo-line);
+  --sgo-hair-2: var(--sgo-line-strong);
+  --sgo-sh-panel:0 0 0 1px var(--sgo-hair), 0 1px 2px rgba(0,0,0,.35);
+  --sgo-sh-pop:0 0 0 1px var(--sgo-hair), 0 14px 40px -12px rgba(0,0,0,.6);
+}
+
+/* ---------- 3. BASE ---------- */
+/* O fundo é TRANSPARENTE de propósito desde a v18: quem pinta é o
+   <AmbientBackground /> (seção 20a), renderizado uma única vez atrás do app.
+   Se .sgo-app voltasse a ter --sgo-bg sólido, cada tela taparia esse fundo e o
+   sistema perderia a continuidade — que é a premissa do protótipo.
+   Superfícies que PRECISAM de fundo próprio o declaram: .sgo-panel, .sgo-kpi e
+   .sgo-app.sgo-modal (esta em (0,2,0), então não depende desta regra). */
+.sgo-app{
+  font-family:var(--sgo-font);font-size:13px;line-height:1.45;color:var(--sgo-ink);
+  background:transparent;-webkit-font-smoothing:antialiased;letter-spacing:-.006em;
+}
+.sgo-app *{box-sizing:border-box}
+.sgo-app ::selection{background:rgb(var(--sgo-brand-rgb) / .20)}
+
+/* ---------- 4. TÍTULOS DE TELA ---------- */
+/* Título de página do legado (~64 telas). MESMOS valores do .sgo-phdr__title
+   — os dois são o mesmo objeto de design, e antes divergiam em peso e tracking
+   (750/-.024em aqui, 600/-.5px lá). Ajustar a classe evita tocar as telas.
+   O peso caiu de 750 para 600: a 20px, 750 lê como grito. */
+.sgo-h1{font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.2;color:var(--sgo-ink)}
+/* Mesma cor e mesmo motivo do .sgo-phdr__sub: nas ~29 telas legadas em que o
+   h1 fica solto sobre o papel, este subtítulo também não tem vidro embaixo.
+   Com var(--sgo-ink-2) dava 3,49:1 no fundo de hoje e 2,48:1 na variante B.
+   Dentro de cartão a troca é inofensiva — sobe de 4,5 para 8,8:1.
+   O escuro segue no token: lá o fundo é escuro e o problema se inverte. */
+.sgo-sub{font-size:12.5px;color:var(--sgo-ink-500);margin-top:2px;line-height:1.35}
+html.dark .sgo-sub{color:var(--sgo-ink-2)}
+
+/* ---------- 5. BOTÕES ---------- */
+.sgo-btn{
+  height:30px;padding:0 13px;border-radius:var(--sgo-r-sm);border:1px solid var(--sgo-hair-2);
+  background:var(--sgo-panel);color:var(--sgo-ink);font:inherit;font-size:12.5px;font-weight:500;
+  cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  transition:transform .15s var(--sgo-ease),background .15s,border-color .15s;
+}
+.sgo-btn:hover{background:var(--sgo-panel-2);border-color:var(--sgo-ink-3)}
+.sgo-btn:active{transform:scale(.97)}
+.sgo-btn--primary{
+  background:linear-gradient(180deg,var(--sgo-royal-2),var(--sgo-royal));border-color:transparent;color:var(--sgo-surface);font-weight:600;
+  box-shadow:0 6px 14px -7px rgb(var(--sgo-brand-rgb) / .55),inset 0 1px 0 rgba(255,255,255,.14);
+}
+/* Redeclara o fundo: .sgo-btn:hover (0,2,0) vence .sgo-btn--primary (0,1,0) e
+   trocaria o background por --sgo-panel-2, deixando o botão primário branco
+   com o texto branco por cima — invisível. Declarar só `filter` aqui não
+   protege: sem redeclarar `background`, quem ganha continua sendo
+   .sgo-btn:hover. NÃO remover. */
+.sgo-btn--primary:hover{
+  background:linear-gradient(180deg,var(--sgo-royal-2),var(--sgo-royal));
+  border-color:transparent;filter:brightness(1.07);
+}
+html.dark .sgo-btn--primary{background:linear-gradient(180deg,var(--sgo-brand),var(--sgo-brand-active))}
+html.dark .sgo-btn--primary:hover{background:linear-gradient(180deg,var(--sgo-brand),var(--sgo-brand-active));border-color:transparent}
+
+/* Botão só-de-ícone: a ação repetida por linha de tabela/lista (abrir, editar,
+   excluir). O .sgo-btn tem padding lateral de 13px porque foi desenhado para
+   botão COM rótulo — um ícone sozinho ali dentro vira uma pílula larga. Sem
+   esta regra as telas remendavam na mão: DashboardGerentePista trazia
+   style={{width:30,height:30,padding:0,justifyContent:"center"}} inline. */
+.sgo-btn--icon{width:30px;padding:0;justify-content:center;flex-shrink:0}
+
+/* Botão compacto: barra de ação dentro de tabela densa, onde 30px empurra a
+   linha. Espelha o --h-btn-sm (26px) que o index.css já expunha e que o
+   size="sm" do shadcn consumia — sem isto, migrar um size="sm" para o DS
+   engordaria a linha em 4px. */
+.sgo-btn--sm{height:26px;padding:0 10px;font-size:11.5px}
+.sgo-btn--sm.sgo-btn--icon{width:26px;padding:0}
+
+/* Variante fantasma: ação secundária que se repete a cada linha, onde uma
+   borda visível em cada botão pesaria a tabela inteira. Só ganha superfície e
+   contorno no hover — é o papel que o variant="ghost" do shadcn fazia. */
+.sgo-btn--ghost{background:transparent;border-color:transparent;color:var(--sgo-ink-2)}
+.sgo-btn--ghost:hover{background:var(--sgo-panel-2);border-color:var(--sgo-hair-2);color:var(--sgo-ink)}
+
+/* Ação destrutiva (excluir, reprovar, encerrar conta). Mesma anatomia do
+   --primary, sobre --sgo-bad em vez do azul da marca: é o único caso em que
+   a cor do botão carrega significado, não hierarquia. Sem esta variante, as
+   telas caíam no variant="destructive" do shadcn, que pinta o botão pela
+   paleta antiga e não acompanha o tema.
+   O :hover redeclara o background pelo mesmo motivo do --primary: sem isso
+   .sgo-btn:hover (0,2,0) venceria e deixaria o botão claro com texto branco. */
+.sgo-btn--danger{
+  background:var(--sgo-bad);border-color:transparent;color:var(--sgo-surface);font-weight:600;
+  box-shadow:0 6px 14px -7px rgba(200,40,40,.5),inset 0 1px 0 rgba(255,255,255,.14);
+}
+.sgo-btn--danger:hover{background:var(--sgo-bad);border-color:transparent;filter:brightness(1.07)}
+
+/* ---------- 6. SEGMENTED CONTROL ---------- */
+.sgo-seg{display:inline-flex;background:rgba(125,125,135,.11);border-radius:9px;padding:2px;gap:2px}
+.sgo-seg button{border:0;background:transparent;cursor:pointer;font:inherit;font-size:12px;font-weight:500;
+  color:var(--sgo-ink-2);padding:4px 13px;border-radius:7px;transition:all .25s var(--sgo-ease)}
+.sgo-seg button.on{background:var(--sgo-panel);color:var(--sgo-ink);font-weight:600;
+  box-shadow:0 1px 3px rgb(var(--sgo-ink-900-rgb) / .14),0 0 0 .5px var(--sgo-hair)}
+
+/* ---------- 6b. SELETOR DE RESPOSTA DO CHECKLIST ----------
+   Sim / Não / Em resolução / N/A. Diferente do .sgo-seg: aqui NÃO existe
+   trilho comum — são quatro botões independentes, cada um com sua borda,
+   separados por 8px. O data-resp carrega o valor que vai ser gravado, então
+   a cor do estado ativo é derivada do dado, não de uma classe paralela. */
+.sgo-app .sgo-resp{display:flex;gap:8px;flex-wrap:wrap}
+.sgo-app .sgo-resp button{
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  font:inherit;font-size:12px;font-weight:550;line-height:1.2;
+  padding:7px 15px;border-radius:9px;white-space:nowrap;
+  border:1px solid var(--sgo-hair-2);background:var(--sgo-panel);color:var(--sgo-ink-2);
+  transition:all .2s var(--sgo-ease)}
+.sgo-app .sgo-resp button:hover{border-color:var(--sgo-ink-3);background:var(--sgo-panel-2)}
+.sgo-app .sgo-resp button.on{font-weight:650}
+.sgo-app .sgo-resp button.on[data-resp="sim"]{border-color:var(--sgo-ok);color:var(--sgo-ok);background:var(--sgo-ok-soft)}
+.sgo-app .sgo-resp button.on[data-resp="nao"]{border-color:var(--sgo-bad);color:var(--sgo-bad);background:var(--sgo-bad-soft)}
+.sgo-app .sgo-resp button.on[data-resp="problema_resolucao"]{border-color:var(--sgo-warn);color:var(--sgo-warn);background:var(--sgo-warn-soft)}
+.sgo-app .sgo-resp button.on[data-resp="nao_aplica"]{border-color:var(--sgo-ink-3);color:var(--sgo-ink);background:var(--sgo-panel-2)}
+/* A Vistoria Operacional grava o status do item com outro vocabulário
+   (OK / ATENCAO / NAO_CONFORME / NA). Mesma regra: a cor vem do valor gravado. */
+.sgo-app .sgo-resp button.on[data-resp="OK"]{border-color:var(--sgo-ok);color:var(--sgo-ok);background:var(--sgo-ok-soft)}
+.sgo-app .sgo-resp button.on[data-resp="ATENCAO"]{border-color:var(--sgo-warn);color:var(--sgo-warn);background:var(--sgo-warn-soft)}
+.sgo-app .sgo-resp button.on[data-resp="NAO_CONFORME"]{border-color:var(--sgo-bad);color:var(--sgo-bad);background:var(--sgo-bad-soft)}
+.sgo-app .sgo-resp button.on[data-resp="NA"]{border-color:var(--sgo-ink-3);color:var(--sgo-ink);background:var(--sgo-panel-2)}
+/* Terceiro vocabulário: a Fiscalização Operacional das Visitas nas Unidades grava
+   conforme / nao_conforme / nao_se_aplica, e o Checklist de Ativos grava
+   funcionando / com_problema / nao_se_aplica — o neutro é o mesmo valor nos dois,
+   por isso ele aparece uma vez só. Regras ADITIVAS: nenhuma tela usava esses
+   valores de data-resp antes, então nada muda no que já estava no ar. */
+.sgo-app .sgo-resp button.on[data-resp="conforme"]{border-color:var(--sgo-ok);color:var(--sgo-ok);background:var(--sgo-ok-soft)}
+.sgo-app .sgo-resp button.on[data-resp="nao_conforme"]{border-color:var(--sgo-bad);color:var(--sgo-bad);background:var(--sgo-bad-soft)}
+.sgo-app .sgo-resp button.on[data-resp="funcionando"]{border-color:var(--sgo-ok);color:var(--sgo-ok);background:var(--sgo-ok-soft)}
+.sgo-app .sgo-resp button.on[data-resp="com_problema"]{border-color:var(--sgo-bad);color:var(--sgo-bad);background:var(--sgo-bad-soft)}
+.sgo-app .sgo-resp button.on[data-resp="nao_se_aplica"]{border-color:var(--sgo-ink-3);color:var(--sgo-ink);background:var(--sgo-panel-2)}
+.sgo-app .sgo-resp__ic{font-size:11px;line-height:1}
+/* Item de pergunta: uma linha por pergunta, hairline própria */
+.sgo-app .sgo-resp-item{
+  padding:9px 14px;border:1px solid var(--sgo-hair);border-radius:10px;background:var(--sgo-panel)}
+/* No mobile as opções ocupam a linha inteira e dividem o espaço */
+@media(max-width:640px){
+  .sgo-app .sgo-resp{width:100%}
+  .sgo-app .sgo-resp button{flex:1;justify-content:center;padding:7px 8px}
+}
+
+/* ---------- 6c. DENSIDADE COMPACTA (.sgo-dense) ----------
+   Modificador OPCIONAL da casca: aperta o respiro vertical dos primitivos do
+   DS para o nível do Dashboard e da Central de Tarefas. É escopado de
+   propósito — os tokens abaixo valem para todos os módulos, e as telas que já
+   estão densas simplesmente não recebem a classe.
+
+   Os valores abaixo NÃO são escolhidos a olho: cada um espelha o que a Central
+   de Tarefas já aplica em marcação Tailwind. A referência está anotada regra a
+   regra, para que uma futura mudança lá possa ser reproduzida aqui.
+
+   O que NÃO entra aqui: tamanho de fonte e altura de .sgo-btn/.sgo-input
+   (30px) — já no limite da área de toque. .sgo-row cai para min-height 32px,
+   que é o piso da área de toque, e não abaixo disso. */
+.sgo-app.sgo-dense{--sgo-gap:10px}                        /* = space-y-2.5 entre painéis */
+.sgo-dense .sgo-kpis{gap:8px;margin-bottom:10px}
+.sgo-dense .sgo-kpi{padding:9px 12px 8px}
+.sgo-dense .sgo-panel__hdr{padding:7px 14px}
+.sgo-dense .sgo-rows{padding:3px 4px}
+/* Linha de lista: espelha o `px-4 py-2` das listas agrupadas da Central de
+   Tarefas. O min-height é o que segura a área de toque — sem ele a linha
+   colapsaria para a altura do texto. */
+.sgo-dense .sgo-row{padding:5px 10px;min-height:32px}
+/* Tabela .sgo-tbl: espelha o `px-3 py-2` do <th> e o `px-3 py-1` do <td> da
+   Central de Tarefas. Dois seletores de classe vencem o `.sgo-tbl thead th`
+   (0,1,2) da seção 11 sem precisar de !important. */
+.sgo-dense .sgo-tbl th,.sgo-dense .sgo-tbl thead th{padding:5px 12px}
+.sgo-dense .sgo-tbl td,.sgo-dense .sgo-tbl tbody td{padding:4px 12px}
+/* Tabela do shadcn (<Table>): a altura vem de um custom property lido em
+   `style={{height:var(--h-table-row)}}` dentro de ui/table.tsx. Como custom
+   property é herdado, basta redeclarar aqui — o :root do index.css continua
+   valendo para todo o resto do sistema, que não recebe .sgo-dense.
+
+   Esta regra usa `.sgo-dense` SOZINHO, sem exigir `.sgo-app` junto: as telas
+   de Config da Operação (metas de desempenho, perguntas do checklist, metas e
+   valores) ainda não foram migradas para o DS, e receber `.sgo-app` mudaria
+   cor e tipografia delas. Só com `.sgo-dense` elas herdam a altura de linha
+   sem nenhum efeito colateral visual além do espaçamento. */
+.sgo-dense{--h-table-row:28px;--h-table-header:26px}
+/* Entorno do seletor de resposta do checklist/vistoria. Os BOTÕES .sgo-resp
+   não são tocados: o padding deles é o que sustenta a área de toque e o
+   desenho já aprovado. Aqui muda só a caixa que os envolve. */
+.sgo-dense .sgo-resp-item{padding:6px 12px}
+.sgo-dense .sgo-field{gap:4px}
+
+/* ---------- 7. PAINEL ---------- */
+/* v18: o painel passa a ser VIDRO. É uma troca centralizada de propósito —
+   são mais de 700 usos de .sgo-panel no sistema, e migrar arquivo por arquivo
+   levaria a metade ficar para trás. Aqui a mudança é uma regra só e a volta
+   atrás também.
+
+   Por que isto era o item que faltava: o fundo contínuo já estava pintado,
+   mas os painéis opacos cobriam quase toda a área útil — as manchas de luz só
+   sobravam nas frestas. Com o painel translúcido, o ambiente atravessa.
+
+   .sgo-panel--solid existe para o que NÃO pode ser translúcido: menu suspenso
+   e popover, onde o texto de trás atravessaria e embaralharia a leitura. */
+/* CAMADA 3 — cartão sobre o papel de parede.
+   O sistema tem DUAS famílias de cartão: .sgo-panel (ponte do DS, 22 telas)
+   e .shadcn-card (components/ui/card.tsx, 30 telas). As duas carregam
+   classe-gancho fixa, então uma regra global cobre as 52 sem abrir tela
+   nenhuma — que é o ponto de fazer isto no layout raiz.
+
+   Modal NÃO entra: `.sgo-app.sgo-modal` é (0,2,0) e vence esta regra por
+   especificidade, então continua opaco. Vidro atrás de formulário atrapalha
+   a leitura, e é de propósito que ele fique de fora. */
+.sgo-panel,.shadcn-card{
+  /* O desfoque VOLTOU por pedido explícito, depois de ter saído por custo
+     de FPS. 10px é metade do que havia antes.
+     ORDEM DE CORTE se o FPS cair em lista longa (Colaboradores é o caso
+     limite): primeiro este blur — trocar por --sgo-card-glass-solid (.92)
+     sem backdrop-filter; a barra é a ÚLTIMA a perder o dela, porque é o
+     único ponto em que o vidro fosco tem função. */
+  background:var(--sgo-card-glass);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border:1px solid var(--sgo-card-glass-border);
+  border-radius:16px;
+  box-shadow:0 2px 12px rgb(var(--sgo-brand-rgb) / .05);
+  transition:transform .2s var(--sgo-nav-ease),background .2s var(--sgo-nav-ease),box-shadow .2s var(--sgo-nav-ease);
+}
+/* Tabela densa pede mais corpo: texto pequeno em muitas linhas sobre vidro
+   translúcido cansa. :has() resolve sem tocar nas telas; onde não houver
+   suporte o cartão fica no valor padrão, que ainda é legível. */
+.sgo-panel:has(table),.shadcn-card:has(table){background:var(--sgo-card-glass-solid)}
+.sgo-panel--solid{
+  background:var(--sgo-panel);-webkit-backdrop-filter:none;backdrop-filter:none;
+  border:0;border-radius:var(--sgo-r-lg);box-shadow:var(--sgo-sh-pop);
+}
+.sgo-panel__hdr{display:flex;align-items:center;gap:9px;padding:11px 15px;border-bottom:1px solid var(--sgo-hair)}
+.sgo-panel__title{font-size:14px;font-weight:700;letter-spacing:-.012em;display:inline-flex;align-items:center;gap:8px}
+/* A barrinha vertical de plumagem saiu no v18: o protótipo pede cápsula de
+   ícone + título, e a barrinha competia com ela do lado esquerdo do mesmo
+   título. O gradiente da plumagem continua vivo na marca e no filete do
+   login — deixou de ser o marcador de todo painel. */
+.sgo-count{font-size:10.5px;font-weight:700;background:rgba(125,125,135,.13);color:var(--sgo-ink-2);
+  padding:0 7px;border-radius:99px;line-height:17px}
+.sgo-count--red{background:var(--sgo-bad-soft);color:var(--sgo-bad)}
+.sgo-link{margin-left:auto;border:0;background:none;font:inherit;font-size:12px;font-weight:600;color:var(--sgo-accent);cursor:pointer}
+
+/* ---------- 8. KPI CARD (com cápsula de ícone) ---------- */
+.sgo-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin-bottom:18px}
+/* Cartão de métrica: mesmo vidro do painel (v18). A cápsula do ícone cresce
+   para 40px e o valor para 23px, que é o porte do protótipo — o rótulo
+   pequeno em cima do número era o formato antigo. */
+/* KPI é cartão e rola junto: mesma regra do .sgo-panel — só opacidade. */
+.sgo-kpi{
+  background:var(--sgo-card-glass);
+  border:1px solid var(--sgo-card-glass-border);
+  border-radius:18px;padding:15px 16px 14px;
+  box-shadow:var(--sgo-glass-card-shadow);
+  transition:transform .2s var(--sgo-nav-ease),background .2s var(--sgo-nav-ease),box-shadow .2s var(--sgo-nav-ease);
+}
+.sgo-kpi:hover{transform:translateY(-2px);background:var(--sgo-card-glass-solid);box-shadow:var(--sgo-glass-card-shadow-hover)}
+.sgo-kpi--hero{background:linear-gradient(135deg,rgb(var(--sgo-brand-rgb) / .055),rgb(var(--sgo-brand-rgb) / .05)),var(--sgo-panel)}
+/* 40px/raio 12 é o porte do protótipo v18. O margin-bottom continua para os
+   KPIs em coluna que ainda existem; quem monta em linha zera pelo style. */
+.sgo-kpi__ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:16px;margin-bottom:10px;flex-shrink:0}
+/* Cápsula do CABEÇALHO DE PAINEL (v18): 28px/raio 9, metade do porte da do
+   KPI. É menor porque acompanha um título de 14px e não um número de 23px —
+   no porte de 40px ela dominava a linha do título.
+
+   Os tons abaixo são compartilhados com .sgo-kpi__ic de propósito: mesma
+   escala, uma fonte só. Se virarem duas listas, um dia divergem. */
+.sgo-panel__ic{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex-shrink:0}
+.sgo-kpi__ic--blue,.sgo-panel__ic--blue{background:var(--sgo-accent-soft);color:var(--sgo-accent)}
+.sgo-kpi__ic--green,.sgo-panel__ic--green{background:var(--sgo-ok-soft);color:var(--sgo-ok)}
+.sgo-kpi__ic--red,.sgo-panel__ic--red{background:var(--sgo-bad-soft);color:var(--sgo-bad)}
+.sgo-kpi__ic--amber,.sgo-panel__ic--amber{background:var(--sgo-warn-soft);color:var(--sgo-warn)}
+/* Auxiliares: mesmos tons que .sgo-tag--sky / --violet já expõem na seção 10.
+   Existem porque há KPIs cujo estado não é ganho/perda/alerta (ex.: "Planejados"
+   nas férias). Regras ADITIVAS — nenhuma tela usava estas classes antes. */
+.sgo-kpi__ic--sky,.sgo-panel__ic--sky{background:var(--sgo-sky-soft);color:var(--sgo-sky)}
+.sgo-kpi__ic--violet,.sgo-panel__ic--violet{background:var(--sgo-violet-soft);color:var(--sgo-violet)}
+.sgo-kpi__ic--gray,.sgo-panel__ic--gray{background:rgba(125,125,135,.13);color:var(--sgo-ink-2)}
+.sgo-kpi__ic--brand,.sgo-panel__ic--brand{background:var(--sgo-irid);color:var(--sgo-surface);box-shadow:0 5px 12px -5px rgb(var(--sgo-brand-rgb) / .55)}
+/* v18: o rótulo deixa de ser caixa-alta espaçada. No formato novo ele fica
+   ABAIXO do número, e caixa-alta ali brigava com o valor pela hierarquia. */
+.sgo-kpi__label{font-size:11.5px;font-weight:550;letter-spacing:0;text-transform:none;color:var(--sgo-ink-2)}
+.sgo-kpi__value{font-size:23px;font-weight:800;letter-spacing:-.5px;margin-top:5px;font-variant-numeric:tabular-nums;
+  font-variant-numeric:tabular-nums;line-height:1.05}
+.sgo-kpi__value small{font-size:13px;font-weight:600;color:var(--sgo-ink-3)}
+.sgo-kpi__meta{font-size:11.5px;color:var(--sgo-ink-3);margin-top:3px}
+.sgo-kpi__meta--up{color:var(--sgo-ok)} .sgo-kpi__meta--down{color:var(--sgo-bad)} .sgo-kpi__meta--warn{color:var(--sgo-warn)}
+
+/* ---------- 9. LISTA (linha com ícone de contexto) ---------- */
+.sgo-rows{padding:6px 8px}
+.sgo-row{display:flex;align-items:center;gap:11px;padding:7px 10px;border-radius:9px;cursor:pointer;
+  transition:background .13s;min-height:36px}
+.sgo-row:hover{background:rgba(125,125,135,.08);box-shadow:inset 2px 0 0 var(--sgo-accent)}
+.sgo-row + .sgo-row{border-top:1px solid var(--sgo-hair)}
+.sgo-ric{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font-size:14px;flex-shrink:0}
+.sgo-ric--blue{background:var(--sgo-accent-soft);color:var(--sgo-accent)}
+.sgo-ric--green{background:var(--sgo-ok-soft);color:var(--sgo-ok)}
+.sgo-ric--red{background:var(--sgo-bad-soft);color:var(--sgo-bad)}
+.sgo-ric--amber{background:var(--sgo-warn-soft);color:var(--sgo-warn)}
+.sgo-ric--sky{background:var(--sgo-sky-soft);color:var(--sgo-sky)}
+.sgo-ric--violet{background:var(--sgo-violet-soft);color:var(--sgo-violet)}
+.sgo-row__main{flex:1;min-width:0}
+.sgo-row__title{font-size:13px;font-weight:650;letter-spacing:-.010em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sgo-row__sub{font-size:11.5px;color:var(--sgo-ink-2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- 10. TAG DE STATUS ---------- */
+.sgo-tag{font-size:10.5px;font-weight:650;padding:2px 9px 2px 7px;border-radius:99px;letter-spacing:.01em;
+  white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.sgo-tag::before{content:"";width:4px;height:4px;border-radius:99px;background:currentColor;flex-shrink:0}
+/* Selo que já traz ícone não leva bolinha: o ícone É o sinal, e os dois juntos
+   viram dois marcadores disputando a mesma função à esquerda do rótulo.
+   Vale para qualquer selo com <svg> dentro — inclusive os que vierem depois. */
+.sgo-tag:has(svg)::before{display:none}
+.sgo-tag--red{background:var(--sgo-bad-soft);color:var(--sgo-bad)}
+.sgo-tag--green{background:var(--sgo-ok-soft);color:var(--sgo-ok)}
+.sgo-tag--amber{background:var(--sgo-warn-soft);color:var(--sgo-warn)}
+.sgo-tag--gray{background:rgba(125,125,135,.13);color:var(--sgo-ink-2)}
+.sgo-tag--gray::before{display:none}
+/* Estados que não são ganho/perda/alerta: azul = ação disponível,
+   sky = agendado/futuro, violeta = encerrado. Ver os auxiliares na seção 1. */
+.sgo-tag--blue{background:var(--sgo-accent-soft);color:var(--sgo-accent)}
+.sgo-tag--sky{background:var(--sgo-sky-soft);color:var(--sgo-sky)}
+.sgo-tag--violet{background:var(--sgo-violet-soft);color:var(--sgo-violet)}
+
+/* ── Escala de gravidade (Monitoramento/CFTV) ────────────────────────────────
+   Quatro degraus, e não os três de ganho/alerta/perda: a diferença entre
+   "grave" e "gravíssima" é justamente o que o auditor precisa enxergar de
+   relance na tabela, e as duas cairiam no mesmo .sgo-tag--red.
+
+   Os três primeiros reusam os tokens de impacto já existentes. Só o último
+   inverte — fundo cheio em vez de fundo suave — porque em uma lista longa o
+   contraste de INTENSIDADE separa melhor que o de matiz: com quatro tons de
+   fundo suave, grave e gravíssima viram a mesma mancha de longe.
+
+   NÃO usar para nota ou score. Isto sinaliza a gravidade do TIPO da falta,
+   que é um dado do catálogo; a fórmula de pontuação é da Onda 4. */
+.sgo-grav{font-size:10.5px;font-weight:650;padding:2px 9px;border-radius:99px;
+  letter-spacing:.01em;display:inline-flex;align-items:center;white-space:nowrap}
+.sgo-grav--leve{background:rgba(125,125,135,.13);color:var(--sgo-ink-2)}
+.sgo-grav--media{background:var(--sgo-warn-soft);color:var(--sgo-warn)}
+.sgo-grav--grave{background:var(--sgo-bad-soft);color:var(--sgo-bad)}
+.sgo-grav--gravissima{background:var(--sgo-bad);color:var(--sgo-on-strong);font-weight:700}
+
+/* ---------- 11. TABELA ----------
+   Os seletores compostos (.sgo-tbl thead th / .sgo-tbl tbody td) somam
+   dois seletores de elemento, o que dá especificidade (0,1,2) — suficiente
+   para vencer as utilitárias do Tailwind (text-[11px], (0,1,0)) que a
+   <Table> do shadcn injeta, sem precisar de !important nem remendo por
+   tela. NÃO troque por :where(.sgo-tbl) — :where() zera a especificidade
+   interna e a tabela voltaria a herdar o tamanho do Tailwind. */
+.sgo-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.sgo-tbl th, .sgo-tbl thead th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--sgo-ink-3);padding:9px 14px;border-bottom:1px solid var(--sgo-hair);
+  position:sticky;top:0;background:var(--sgo-panel);z-index:1}
+.sgo-tbl th.r,.sgo-tbl td.r{text-align:right}
+.sgo-tbl td, .sgo-tbl tbody td{padding:8px 14px;border-bottom:1px solid var(--sgo-hair);
+  font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sgo-tbl td:first-child{font-weight:550}
+.sgo-tbl tbody tr:hover{background:rgba(125,125,135,.07)}
+/* Ponte para o <Table> do shadcn quando ele recebe .sgo-tbl: o <TableRow>
+   traz `border-b` próprio e a linha da tabela já vem do td, então sem isto
+   aparecem duas réguas coladas. Escopado em .sgo-tbl — tabelas escritas em
+   <table> puro não têm a classe do Tailwind e a regra é inócua nelas. */
+.sgo-tbl tbody tr{border-bottom:0}
+.sgo-pos{color:var(--sgo-ok);font-weight:650}
+.sgo-neg{color:var(--sgo-bad);font-weight:650}
+.sgo-mid{color:var(--sgo-warn);font-weight:650}   /* faixa intermediária (ex.: margem 5–10%) */
+
+/* ---------- 12. CAMADA DE INTELIGÊNCIA (IA) ---------- */
+.sgo-ai-chip{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;
+  letter-spacing:.03em;padding:1px 7px;border-radius:99px;color:var(--sgo-surface);background:var(--sgo-irid);white-space:nowrap}
+.sgo-ai-line{display:flex;align-items:center;gap:5px;font-size:10.5px;margin-top:4px;font-weight:600;
+  background:linear-gradient(115deg,var(--sgo-brand-hover),var(--sgo-brand) 55%,var(--sgo-ink-700));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.sgo-panel--ai{position:relative;overflow:hidden}
+.sgo-panel--ai::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--sgo-irid)}
+
+/* ---------- 13. CHECKBOX (redondo, iOS) ---------- */
+.sgo-ck{width:18px;height:18px;border-radius:99px;border:1.5px solid var(--sgo-hair-2);flex-shrink:0;
+  cursor:pointer;position:relative;transition:all .25s var(--sgo-ease);background:var(--sgo-panel)}
+.sgo-ck:hover{border-color:var(--sgo-accent)}
+.sgo-ck.done{background:var(--sgo-irid);border-color:transparent}
+.sgo-ck.done::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;color:var(--sgo-surface);font-size:11px;font-weight:800}
+
+/* ---------- 14. GRADES DOS MOLDES ---------- */
+.sgo-grid-2{display:grid;grid-template-columns:1.5fr 1fr;gap:var(--sgo-gap)}
+.sgo-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sgo-gap)}
+@media(max-width:1000px){.sgo-grid-2,.sgo-grid-3{grid-template-columns:1fr}}
+
+/* ---------- 16. FORMULÁRIO (campo, rótulo, select, input) ----------
+   Use quando NÃO for possível reaproveitar o componente Radix/shadcn
+   compartilhado. Para telas que já usam ui/ shared, prefira só ajustar
+   altura/tipografia via as variáveis abaixo, sem trocar o componente. */
+.sgo-field{display:flex;flex-direction:column;gap:5px}
+.sgo-label{font-size:10.5px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;color:var(--sgo-ink-3)}
+.sgo-input,.sgo-select{
+  height:30px;padding:0 10px;font:inherit;font-size:12.5px;color:var(--sgo-ink);
+  background:var(--sgo-panel);border:1px solid var(--sgo-hair-2);border-radius:var(--sgo-r-sm);
+  transition:border-color .15s,box-shadow .15s;width:100%;
+}
+.sgo-input:hover,.sgo-select:hover{border-color:var(--sgo-ink-3)}
+.sgo-input:focus,.sgo-select:focus{outline:none;border-color:var(--sgo-accent);box-shadow:0 0 0 3px var(--sgo-accent-soft)}
+.sgo-select{cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M3 5l3 3 3-3' fill='none' stroke='%239C9CA4' stroke-width='1.4' stroke-linecap='round'/></svg>");
+  background-repeat:no-repeat;background-position:right 9px center;padding-right:28px}
+
+/* Ponte para o <FormLabel> do react-hook-form (ui/form.tsx). O componente
+   carimba data-sgo-form-label; aqui ele ganha a tipografia do .sgo-label.
+   Dois seletores (0,2,0) para vencer o `text-xs font-medium` que o <Label>
+   traz — o DS é importado antes do @tailwind utilities, então empate de
+   especificidade seria decidido pela ordem, e a utility ganharia.
+   Fora de .sgo-app a regra não alcança: telas não migradas ficam iguais. */
+.sgo-app [data-sgo-form-label]{
+  font-size:10.5px;font-weight:650;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--sgo-ink-3);line-height:1.3}
+/* Estado de erro do RHF — equivale ao text-destructive, mas em token do DS */
+.sgo-app [data-sgo-form-label][data-error]{color:var(--sgo-bad)}
+/* Escape para rótulo clicável de checkbox/switch, que é frase e não rótulo de
+   campo: mantém caixa normal e cor de texto. */
+.sgo-app [data-sgo-form-label].sgo-label--plain{
+  font-size:12.5px;font-weight:500;letter-spacing:normal;text-transform:none;
+  color:var(--sgo-ink)}
+
+/* Ponte para telas que mantêm o Radix/shadcn: aplique .sgo-form-scope no
+   container e os gatilhos de Select/Input herdam a altura e a tipografia
+   do SGO, sem precisar trocar o componente compartilhado. */
+.sgo-form-scope [role=combobox],
+.sgo-form-scope input:not([type=checkbox]):not([type=radio]){
+  height:30px;font-size:12.5px;border-radius:var(--sgo-r-sm)}
+
+/* ---------- 17. MODAL PADRÃO (criar / editar) ----------
+   Casca única de todos os modais do SGO. Consumida pelo componente
+   <SgoModal> (components/sgo/SgoModal.tsx) — não usar estas classes soltas
+   em telas: sempre pelo componente, senão o padrão volta a divergir.
+
+   Por que os seletores são `.sgo-app .sgo-modal__*` e não `.sgo-modal__*`:
+   este arquivo é importado ANTES do @tailwind utilities, então uma utility
+   de mesma especificidade (ex.: o `text-[13px]` que o DialogTitle do shadcn
+   já traz) venceria por ordem de cascata. Com dois seletores de classe
+   (0,2,0) a regra do DS vence por especificidade, independentemente da
+   ordem — e a tela não precisa neutralizar utility por utility. */
+.sgo-app.sgo-modal{
+  display:flex;flex-direction:column;padding:0;gap:0;overflow:hidden;
+  background:var(--sgo-panel);border:1px solid var(--sgo-hair);
+  border-radius:var(--sgo-r-lg);box-shadow:var(--sgo-sh-pop);
+}
+/* Largura do size="wide" do SgoModal (modais de tabela larga, ex.: a
+   pré-visualização da importação de comissões). Fica aqui, e não numa
+   utilitária `max-w-[min(96vw,1200px)]`, porque o JIT do Tailwind não gera
+   arbitrária com min() e o modal cairia sem max-width nenhum. Dois seletores
+   de classe (0,2,0) vencem o `max-w-lg` que o DialogContent traz de base. */
+.sgo-app.sgo-modal--wide{max-width:min(96vw,1200px)}
+
+/* Barrinha de plumagem: mesma assinatura visual do .sgo-panel--ai */
+.sgo-app .sgo-modal__plume{height:3px;background:var(--sgo-irid);flex-shrink:0}
+
+.sgo-app .sgo-modal__hdr{display:flex;align-items:flex-start;gap:11px;
+  padding:14px 16px 13px;border-bottom:1px solid var(--sgo-hair);
+  background:var(--sgo-panel);flex-shrink:0}
+.sgo-app .sgo-modal__ic{width:34px;height:34px;border-radius:11px;display:grid;
+  place-items:center;font-size:15px;flex-shrink:0}
+.sgo-app .sgo-modal__ic--brand{background:var(--sgo-irid);color:var(--sgo-surface);
+  box-shadow:0 5px 12px -5px rgb(var(--sgo-brand-rgb) / .55)}
+.sgo-app .sgo-modal__ic--blue{background:var(--sgo-accent-soft);color:var(--sgo-accent)}
+.sgo-app .sgo-modal__ic--green{background:var(--sgo-ok-soft);color:var(--sgo-ok)}
+.sgo-app .sgo-modal__ic--amber{background:var(--sgo-warn-soft);color:var(--sgo-warn)}
+.sgo-app .sgo-modal__ic--red{background:var(--sgo-bad-soft);color:var(--sgo-bad)}
+.sgo-app .sgo-modal__head{flex:1;min-width:0}
+.sgo-app .sgo-modal__title{font-size:15px;font-weight:700;letter-spacing:-.022em;
+  line-height:1.2;color:var(--sgo-ink);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sgo-app .sgo-modal__sub{font-size:12px;font-weight:400;line-height:1.35;
+  color:var(--sgo-ink-2);margin-top:3px}
+.sgo-app .sgo-modal__hdr-extra{display:flex;align-items:center;gap:6px;flex-shrink:0}
+/* Em 390px de largura, um extra com botão de carrinho + indicador comia a
+   linha e espremia o título numa coluna de ~150px, quebrando o subtítulo em
+   uma ou duas palavras por linha. Abaixo de 640px o extra cede espaço e os
+   rótulos de texto dos seus filhos somem (ver .sgo-cart-btn__txt /
+   .sgo-save__txt) — sobram o ícone e o contador, que é o que importa ali. */
+@media (max-width:640px){
+  .sgo-app .sgo-modal__hdr{gap:8px;padding:12px 12px 11px}
+  .sgo-app .sgo-modal__hdr-extra{gap:4px}
+  .sgo-app .sgo-modal__head{flex:1 1 60%}
+}
+.sgo-app .sgo-modal__x{width:28px;height:28px;border-radius:8px;border:0;flex-shrink:0;
+  background:transparent;color:var(--sgo-ink-3);display:grid;place-items:center;
+  cursor:pointer;transition:background .15s,color .15s}
+.sgo-app .sgo-modal__x:hover{background:rgba(125,125,135,.13);color:var(--sgo-ink)}
+
+/* min-height:0 é o que permite o corpo rolar dentro do flex sem estourar */
+.sgo-app .sgo-modal__form{display:flex;flex-direction:column;flex:1;min-height:0}
+.sgo-app .sgo-modal__body{padding:16px;overflow-y:auto;flex:1;min-height:0;
+  background:var(--sgo-panel)}
+.sgo-app .sgo-modal__body--flush{padding:0}
+
+.sgo-app .sgo-modal__ftr{display:flex;align-items:center;gap:8px;padding:11px 16px;
+  border-top:1px solid var(--sgo-hair);background:var(--sgo-panel-2);flex-shrink:0}
+.sgo-app .sgo-modal__ftr-l{flex:1;min-width:0;font-size:11.5px;color:var(--sgo-ink-3)}
+.sgo-app .sgo-modal__ftr-r{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-shrink:0}
+
+/* Celular estreito: o rodapé transbordava.
+   `.sgo-modal__ftr-r` tinha `flex-shrink:0` e os botões não encolhem, então em
+   390px de largura a AÇÃO PRIMÁRIA saía pela direita — no Pedido, o rótulo é a
+   data que libera o envio ("Envio libera em 07/09/2026") e ficava cortado no
+   meio, junto com o texto auxiliar da esquerda, que aparecia por baixo dos
+   botões. Abaixo de 560px o rodapé empilha: auxiliar em cima, ações embaixo
+   ocupando a linha inteira, na ordem em que se lê. */
+@media (max-width:560px){
+  .sgo-app .sgo-modal__ftr{flex-direction:column;align-items:stretch;gap:9px}
+  .sgo-app .sgo-modal__ftr-l{flex:none;order:-1}
+  .sgo-app .sgo-modal__ftr-r{flex-shrink:1;flex-wrap:wrap;justify-content:stretch}
+  .sgo-app .sgo-modal__ftr-r > *{flex:1 1 auto;min-width:0;justify-content:center}
+}
+
+/* Grid de 2 colunas do corpo. `.sgo-span-2` ocupa a linha inteira. */
+.sgo-app .sgo-modal__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.sgo-app .sgo-modal__grid .sgo-span-2{grid-column:1/-1}
+@media(max-width:640px){
+  .sgo-app .sgo-modal__grid{grid-template-columns:minmax(0,1fr)}
+  .sgo-app .sgo-modal__grid .sgo-span-2{grid-column:auto}
+}
+
+/* Grade COMPACTA: mantém 2 colunas no celular.
+   Declarada DEPOIS do bloco acima de propósito — as duas regras têm a mesma
+   especificidade (0,2,0), então quem vence é a última. Declarada antes, o
+   colapso para 1 coluna sobrescrevia esta e a classe não fazia nada.
+
+   O `.sgo-modal__grid` colapsa porque foi feito para CAMPOS DE FORMULÁRIO, que
+   precisam da largura. Num modal de LEITURA os valores são curtos ("Urgente",
+   "26/08/2026") e uma coluna só empurrava a linha do tempo e os produtos para
+   ~450px abaixo da dobra — o gerente rolava por quatro rótulos antes de ver o
+   andamento, que é o motivo de ele ter aberto a tela. */
+.sgo-app .sgo-modal__grid--compacto{gap:10px}
+@media(max-width:640px){
+  .sgo-app .sgo-modal__grid--compacto{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* Separador de seção dentro do corpo (ex.: "Endereço", "Responsáveis") */
+.sgo-app .sgo-modal__sec{grid-column:1/-1;display:flex;align-items:center;gap:8px;
+  font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--sgo-ink-3);margin-top:4px}
+.sgo-app .sgo-modal__sec::after{content:"";flex:1;height:1px;background:var(--sgo-hair)}
+/* Asterisco de obrigatório sem precisar de <span> na tela */
+.sgo-app .sgo-label--req::after{content:" *";color:var(--sgo-bad)}
+
+/* Estado desabilitado do botão (pendências de mutation). O DS não tinha —
+   sem isto o botão primário fica idêntico ao habilitado durante o submit. */
+.sgo-btn:disabled,.sgo-btn[aria-disabled=true]{opacity:.5;cursor:not-allowed;
+  transform:none;filter:none}
+
+/* ---------- 18. DRAWER LATERAL (painel de detalhe) ----------
+   Mesma anatomia do modal padrão: plumagem, cápsula de ícone, título,
+   subtítulo, corpo rolável e rodapé em --sgo-panel-2. Por isso o cabeçalho,
+   o corpo e o rodapé REAPROVEITAM as classes .sgo-modal__* — quem muda é só
+   a casca, que cola na borda direita e ocupa a altura inteira.
+
+   Consumido pelo componente <SgoDrawer> (components/sgo/SgoDrawer.tsx).
+
+   Quando usar drawer e não modal: conteúdo de leitura/consulta ligado a um
+   item da lista (ficha, histórico, timeline), em que o usuário quer manter o
+   contexto da tela atrás. Criar/editar continua em modal. */
+.sgo-app.sgo-drawer{
+  display:flex;flex-direction:column;padding:0;gap:0;overflow:hidden;
+  background:var(--sgo-panel);border-left:1px solid var(--sgo-hair);
+  box-shadow:var(--sgo-sh-pop);
+}
+/* A plumagem no drawer fica na borda de encosto (esquerda), não no topo:
+   é a aresta que o olho encontra primeiro quando o painel entra. */
+.sgo-app .sgo-drawer__plume{
+  position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--sgo-irid)}
+
+/* ---------- 19. ACESSIBILIDADE ---------- */
+.sgo-app :focus-visible{outline:2px solid var(--sgo-accent);outline-offset:2px;border-radius:8px}
+@media(prefers-reduced-motion:reduce){.sgo-app *{animation:none!important;transition:none!important}}
+
+/* ---------- 20. BASE VISUAL v18 — VIDRO SOBRE FUNDO CONTÍNUO ----------
+   Protótipo v18. A ideia é a do macOS/iOS: um fundo contínuo que atravessa o
+   app inteiro e superfícies translúcidas que deixam esse fundo transparecer.
+   Por isso o fundo é renderizado UMA vez (<AmbientBackground />) e as telas
+   passam a ser transparentes — ver a nota em .sgo-app, seção 3.
+
+   Todos os valores do protótipo viram token aqui; nenhum componente carrega
+   hex. Os nomes da família blue, red e text existem porque é assim que o
+   protótipo os chama; apontam para a escala que o DS já tinha, para não criar
+   uma segunda paleta paralela. */
+:root{
+  /* Manchas de luz do fundo contínuo */
+  --sgo-ambient-blue:rgb(var(--sgo-brand-rgb) / .16);
+  --sgo-ambient-purple:rgba(90,77,196,.10);
+  --sgo-ambient-green:rgba(22,165,111,.08);
+  --sgo-ambient-base-1:var(--sgo-canvas);
+  --sgo-ambient-base-2:var(--sgo-canvas);
+  --sgo-ambient-base-3:var(--sgo-canvas);
+
+  /* Apelidos do protótipo -> escala já existente do DS */
+  --sgo-blue-500: var(--sgo-brand-hover);
+  --sgo-blue-600: var(--sgo-brand);
+  --sgo-blue-700: var(--sgo-brand-active);
+  --sgo-red-500: var(--sgo-danger);
+  --sgo-text-2:var(--sgo-ink-2);
+
+  /* Vidro da barra de navegação.
+
+     Os dois valores abaixo saíram do protótipo em .60/.55 e blur(28px), e
+     nessa dosagem o vidro não LIA como vidro: 28px de desfoque esmagam texto
+     de 12-22px até virar campo uniforme, e 60% de branco por cima terminam de
+     apagar o que sobrou. Sobre o fundo contínuo — que é quase branco — o
+     resultado era uma barra chapada, mesmo com o backdrop-filter funcionando
+     (auditado: nenhuma regra opaca concorre no elemento).
+
+     Menos branco e menos desfoque deixam a linha de tabela atravessar
+     reconhecível como borrão em movimento, que é o efeito pedido. O
+     saturate(190%) fica: é ele que puxa a mancha do ambiente para dentro da
+     barra e a impede de virar cinza. */
+  /* 0.62 e nao 0.55: medido sobre a marca d'agua do papel de parede, a
+     0.55 o item inativo da 4,47:1 e nao passa em AA. A 0.62 da 4,84:1 —
+     a subida ja estava prevista no proprio desenho. */
+  --sgo-glass-nav-bg:rgba(255,255,255,.60);
+  --sgo-glass-nav-blur:blur(20px) saturate(1.5);
+  --sgo-glass-nav-border:rgba(255,255,255,.55);
+  --sgo-glass-nav-shadow:0 2px 16px rgb(var(--sgo-brand-rgb) / .08);
+  --sgo-glass-nav-fallback:rgba(255,255,255,.94);
+
+  /* Vidro dos cartões */
+  --sgo-glass-card-bg:rgba(255,255,255,.62);
+  --sgo-glass-card-bg-hover:rgba(255,255,255,.75);
+  --sgo-glass-card-blur:blur(20px) saturate(160%);
+  --sgo-glass-card-border:rgba(255,255,255,.75);
+  --sgo-glass-card-shadow:0 1px 2px rgb(var(--sgo-ink-900-rgb) / .04), 0 8px 24px rgb(var(--sgo-ink-900-rgb) / .05);
+  --sgo-glass-card-shadow-hover:0 2px 4px rgb(var(--sgo-ink-900-rgb) / .05), 0 14px 34px rgb(var(--sgo-ink-900-rgb) / .09);
+
+  /* Estados do item de menu */
+  /* Pill no azul DO SISTEMA (--sgo-blue-500 var(--sgo-brand-hover)) em opacidade — nenhum
+     azul novo, e sem degrade nem glow, que competiriam com o vidro. */
+  --sgo-nav-item-hover-bg:rgb(var(--sgo-brand-rgb) / .06);
+  --sgo-nav-item-hover-shadow:none;
+  --sgo-nav-item-active-bg:rgb(var(--sgo-brand-rgb) / .12);
+  --sgo-nav-item-active-shadow:none;
+  --sgo-nav-item-active-icon-shadow:none;
+  --sgo-nav-divider:rgb(var(--sgo-ink-900-rgb) / .10);
+  --sgo-nav-ease:cubic-bezier(.22,.8,.36,1);
+
+  /* Controles do lado direito da barra */
+  --sgo-nav-ctl-bg:rgba(255,255,255,.55);
+  --sgo-nav-ctl-bg-hover:rgba(255,255,255,.85);
+  --sgo-nav-ctl-border:rgba(255,255,255,.80);
+  --sgo-nav-ctl-inset:inset 0 1px 2px rgb(var(--sgo-ink-900-rgb) / .05);
+  --sgo-nav-kbd-bg:rgb(var(--sgo-ink-900-rgb) / .06);
+  --sgo-nav-iconbtn-hover-bg:rgba(255,255,255,.70);
+  --sgo-nav-avatar-ring:rgba(255,255,255,.70);
+  --sgo-nav-logo-shadow:0 2px 6px rgb(var(--sgo-brand-rgb) / .35);
+  --sgo-nav-badge-border:rgba(250,252,255,.95);
+  --sgo-nav-badge-shadow:0 1px 3px rgba(140,15,20,.30);
+
+  /* Altura da barra. É token porque três coisas dependem dela e não podem
+     divergir: a própria barra, o padding-top do main e o `top` de tudo que
+     gruda no topo dentro do main. */
+  /* ATENÇÃO ao significado: --sgo-navbar-h é o espaço que a barra ocupa a
+     partir do topo da janela — 10px de folga + 68px de barra. Ele é lido
+     pelo padding do <main>, pelo `top` do que gruda no topo e pelo diálogo
+     de tela cheia de AfericaoBicos; manter o SIGNIFICADO é o que permite a
+     barra virar flutuante sem editar nenhuma tela. A altura da barra em si
+     é --sgo-navbar-bar. */
+  /* Texto sobre superfície de cor CHEIA (botão perigo, selo de gravíssima).
+     Existe como token, e não como `var(--sgo-surface)` solto, porque o valor é o mesmo em
+     tema claro e escuro — o fundo é que é forte nos dois — e porque `var(--sgo-surface)`
+     espalhado em CSS e JSX é exatamente o que a regra de tokens do projeto
+     proíbe. Os hex remanescentes em .sgo-btn--danger e afins são anteriores a
+     este token e não foram migrados aqui para não misturar assunto. */
+  --sgo-on-strong:var(--sgo-surface);
+
+  --sgo-navbar-gap:10px;
+  --sgo-navbar-bar:68px;
+  --sgo-navbar-h:calc(var(--sgo-navbar-bar) + var(--sgo-navbar-gap));
+
+  /* ── Escala de empilhamento ──────────────────────────────────────────────
+     Camada ÚNICA de z-index do SGO. Antes disso o app tinha 35 `z-50` em JSX
+     (navbar, overlay de modal, popover e select TODOS no mesmo valor) e 13
+     `z-[9999]` espalhados em telas — remendos de quem esbarrou no empate e
+     resolveu na tela em vez de na camada.
+
+     Regra: nada de número solto no JSX. Quem precisa empilhar usa uma das
+     classes .sgo-z-* abaixo.
+
+     ORDEM e por quê:
+       navbar  (50) — barra flutuante; fica acima do conteúdo da página.
+       dropdown(60) — select/popover/menu ABERTOS a partir da página. Acima da
+                      navbar (senão a lista some atrás dela) e abaixo do modal
+                      (um menu da página não pode furar o overlay do modal).
+       modal   (70) — overlay e conteúdo de Dialog/Sheet/AlertDialog.
+       dropdown-in-modal (80) — o MESMO dropdown, quando aberto DE DENTRO de um
+                      modal. Precisa furar o modal, senão a lista abre atrás do
+                      formulário. Quem decide entre 60 e 80 é o contexto React
+                      de components/ui/overlay-layer.tsx, não a tela.
+       toast   (90) — sempre o topo. Está em 90 e não em 80 de propósito: com
+                      80 empataria com dropdown-in-modal e, no empate, quem
+                      monta depois vence — o aviso de "salvo com sucesso"
+                      apareceria ATRÁS de uma lista aberta. */
+  --sgo-z-base:0;
+  --sgo-z-navbar:50;
+  --sgo-z-dropdown:60;
+  --sgo-z-modal:70;
+  --sgo-z-dropdown-in-modal:80;
+  --sgo-z-toast:90;
+}
+
+/* As classes vivem fora do :root e sem aninhamento em .sgo-app de propósito:
+   overlay portalizado é filho de <body>, não do .sgo-app da tela. */
+.sgo-z-navbar{z-index:var(--sgo-z-navbar)}
+.sgo-z-dropdown{z-index:var(--sgo-z-dropdown)}
+.sgo-z-modal{z-index:var(--sgo-z-modal)}
+.sgo-z-dropdown-in-modal{z-index:var(--sgo-z-dropdown-in-modal)}
+.sgo-z-toast{z-index:var(--sgo-z-toast)}
+
+/* O v18 é desenhado sobre luz. No tema escuro as mesmas manchas continuam,
+   mas sobre base escura, e o vidro inverte — senão o app fica com uma barra
+   branca leitosa por cima de um fundo preto. */
+html.dark{
+  --sgo-ambient-blue:rgb(var(--sgo-brand-rgb) / .20);
+  --sgo-ambient-purple:rgba(90,77,196,.16);
+  --sgo-ambient-green:rgba(22,165,111,.10);
+  --sgo-ambient-base-1:var(--sgo-canvas);
+  --sgo-ambient-base-2:var(--sgo-canvas);
+  --sgo-ambient-base-3:var(--sgo-canvas);
+
+  --sgo-blue-500: var(--sgo-brand-hover);
+  --sgo-blue-600: var(--sgo-brand);
+  --sgo-blue-700: var(--sgo-brand-active);
+
+  --sgo-glass-nav-bg:rgb(var(--sgo-surface-rgb) / .62);
+  --sgo-glass-nav-border:rgba(255,255,255,.08);
+  --sgo-glass-nav-shadow:0 1px 10px rgba(0,0,0,.28);
+  --sgo-glass-nav-fallback:rgb(var(--sgo-surface-rgb) / .94);
+
+  --sgo-glass-card-bg:rgb(var(--sgo-surface-rgb) / .62);
+  --sgo-glass-card-bg-hover:rgb(var(--sgo-surface-rgb) / .75);
+  --sgo-glass-card-border:rgba(255,255,255,.10);
+  --sgo-glass-card-shadow:0 1px 2px rgba(0,0,0,.30), 0 8px 24px rgba(0,0,0,.28);
+  --sgo-glass-card-shadow-hover:0 2px 4px rgba(0,0,0,.32), 0 14px 34px rgba(0,0,0,.40);
+
+  --sgo-nav-item-hover-bg:rgb(var(--sgo-brand-rgb) / .08);
+  --sgo-nav-item-hover-shadow:none;
+  --sgo-nav-item-active-bg:rgb(var(--sgo-brand-rgb) / .16);
+  --sgo-nav-item-active-shadow:none;
+  --sgo-nav-item-active-icon-shadow:none;
+  --sgo-nav-divider:rgba(255,255,255,.12);
+
+  --sgo-nav-ctl-bg:rgba(255,255,255,.06);
+  --sgo-nav-ctl-bg-hover:rgba(255,255,255,.12);
+  --sgo-nav-ctl-border:rgba(255,255,255,.10);
+  --sgo-nav-ctl-inset:inset 0 1px 2px rgba(0,0,0,.30);
+  --sgo-nav-kbd-bg:rgba(255,255,255,.10);
+  --sgo-nav-iconbtn-hover-bg:rgba(255,255,255,.10);
+  --sgo-nav-avatar-ring:rgba(255,255,255,.18);
+  --sgo-nav-badge-border:rgb(var(--sgo-surface-rgb) / .95);
+}
+
+/* ---------- 20a. PAPEL DE PAREDE ----------
+   Camada 1 da casca iOS: um fundo fixo atrás de tudo, que não rola e não
+   anima. Quem o monta é <AmbientBackground /> (App.tsx), UMA vez, fora do
+   layout autenticado — não é por tela.
+
+   z-index:-1 e não 0. Com 0 o elemento é posicionado e passa a pintar DEPOIS
+   do conteúdo em fluxo normal do mesmo contexto de empilhamento, ou seja,
+   por cima da tela inteira. -1 é o que o coloca atrás sem exigir z-index em
+   cada tela — a intenção do desenho, com o valor que a realiza.
+
+   As marcas d'água usam mask-image com o PNG do beija-flor: o projeto não
+   tem SVG, e a máscara resolve o mesmo problema — recorta pelo canal alfa e
+   deixa a COR vir do background, então dá para tingir em var(--sgo-brand) sem
+   precisar de um asset novo. */
+:root{
+  /* Gradiente com COR: branco desfocado sobre fundo quase branco é vidro
+     invisível. Os dois blobs existem para o mesmo fim — dar ao
+     backdrop-filter da barra algo que valha a pena desfocar. Estáticos,
+     sem animação, e declarados ANTES do gradiente para ficarem por cima
+     dele na ordem de pintura de background-image. */
+  --sgo-wallpaper:
+    radial-gradient(40vw 40vw at 32% -6%, rgb(var(--sgo-brand-rgb) / .22), transparent 62%),
+    radial-gradient(30vw 30vw at 82% 78%, rgb(var(--sgo-brand-rgb) / .16), transparent 64%),
+    linear-gradient(175deg, rgb(var(--sgo-brand-rgb) / 0.14) 0%, rgb(var(--sgo-brand-rgb) / 0.07) 52%, rgb(var(--sgo-brand-rgb) / 0.03) 100%);
+  --sgo-wallpaper-base:var(--sgo-canvas);
+  --sgo-wallpaper-mark: var(--sgo-brand);
+  --sgo-wallpaper-mark-1:.035;
+  --sgo-wallpaper-mark-2:.035;
+  --sgo-card-glass:rgba(255,255,255,.78);
+  --sgo-card-glass-solid:rgba(255,255,255,.92);
+  --sgo-card-glass-border:rgba(255,255,255,.85);
+}
+
+/* ---------- 20a-bis. CHIP DE VIDRO ----------
+   Selo de filtro/estado que fica SOLTO sobre o papel de parede, fora de
+   cartão. Diferente do .sgo-tag, que vive dentro de superfície opaca e
+   por isso é chapado: aqui o vidro é o que integra o chip ao fundo. */
+.sgo-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  height:30px;min-height:30px;padding:0 12px;border-radius:999px;
+  background:rgba(255,255,255,.55);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.6);
+  font:inherit;font-size:12px;line-height:1;font-weight:500;color:var(--sgo-ink-700);
+  white-space:nowrap;cursor:default;box-sizing:border-box;
+}
+/* Nenhuma utility de tamanho pode vencer o chip: dois seletores (0,2,0)
+   contra o (0,1,0) do Tailwind. Era por ai que um chip saia maior que o
+   irmao. */
+.sgo-app .sgo-chip{height:30px;padding:0 12px;font-size:12px}
+.sgo-chip svg{width:14px;height:14px;flex-shrink:0}
+button.sgo-chip,a.sgo-chip{cursor:pointer;transition:background 200ms ease-out}
+button.sgo-chip:hover,a.sgo-chip:hover{background:rgba(255,255,255,.75)}
+html.dark .sgo-chip{background:rgb(var(--sgo-surface-rgb) / .55);border-color:rgba(255,255,255,.08);color:var(--sgo-ink-700)}
+
+/* ---------- 20b. CARTÃO DE VIDRO ---------- */
+/* Mesma regra do .sgo-panel: cartão não desfoca, só translucidez. Hoje esta
+   classe não tem consumidor em nenhuma tela, mas fica alinhada para não
+   voltar a divergir quando alguém a usar. */
+.sgo-glass{
+  background:var(--sgo-card-glass);
+  border:1px solid var(--sgo-card-glass-border);
+  border-radius:18px;
+  box-shadow:var(--sgo-glass-card-shadow);
+  transition:transform 200ms var(--sgo-nav-ease), background 200ms var(--sgo-nav-ease), box-shadow 200ms var(--sgo-nav-ease);
+}
+.sgo-glass:hover{
+  transform:translateY(-2px);
+  background:var(--sgo-card-glass-solid);
+  box-shadow:var(--sgo-glass-card-shadow-hover);
+}
+
+/* ---------- 20c. BARRA DE NAVEGAÇÃO ---------- */
+/* A barra SAI DO FLUXO de propósito. Com `sticky` dentro do flex column ela
+   nunca sobrepunha nada: o <main> é um contêiner de rolagem próprio que
+   começava logo abaixo dela, então nada passava atrás e o backdrop-filter não
+   tinha o que desfocar — a barra lia como chapada por mais translúcida que o
+   token fosse. Fixa, o main ocupa da altura zero e o conteúdo corre por baixo.
+   Quem reserva o espaço é o padding-top do main (.sgo-shell__main). */
+/* Barra FLUTUANTE em vidro. Continua `fixed`, e isso e obrigatorio, nao
+   preferencia: o <header> e IRMAO do <main>, e sticky so gruda dentro do
+   container que rola. Fora dele sticky degenera para static — a barra
+   entraria no fluxo, deixaria de sobrepor, e sem conteudo passando por
+   tras nao existe vidro fosco: o backdrop-filter ficaria desfocando o
+   papel de parede, que ja e liso. `fixed` com left/right/top recuados da
+   o mesmo desenho flutuante E preserva o efeito. */
+.sgo-navbar{
+  position:fixed;top:var(--sgo-navbar-gap);left:16px;right:16px;z-index:var(--sgo-z-navbar);
+  height:var(--sgo-navbar-bar);padding:8px 12px;border-radius:14px;
+  display:flex;align-items:center;gap:8px;
+  background:var(--sgo-glass-nav-bg);
+  -webkit-backdrop-filter:var(--sgo-glass-nav-blur);
+  backdrop-filter:var(--sgo-glass-nav-blur);
+  border:1px solid var(--sgo-glass-nav-border);
+  box-shadow:var(--sgo-glass-nav-shadow);
+}
+
+/* Marca: squircle com o beija-flor + "SGO" */
+.sgo-navlogo{display:flex;align-items:center;gap:8px;flex-shrink:0;text-decoration:none}
+.sgo-navlogo__mark{
+  width:27px;height:27px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,var(--sgo-blue-500),var(--sgo-blue-600));
+  box-shadow:var(--sgo-nav-logo-shadow);
+}
+.sgo-navlogo__mark img,.sgo-navlogo__mark svg{width:16px;height:16px;display:block;filter:brightness(0) invert(1)}
+.sgo-navlogo__word{font-size:14px;font-weight:800;letter-spacing:-.01em;color:var(--sgo-ink);line-height:1;user-select:none}
+.sgo-navdivider{width:1px;height:22px;background:var(--sgo-nav-divider);flex-shrink:0;margin:0 4px}
+
+/* Item de nível 1: ícone em cima, nome embaixo (tab bar) */
+/* Item EMPILHADO: ícone de 20px em cima, rótulo de 12px embaixo. O formato
+   deitado foi testado e revertido — ele deixava a barra mais baixa, mas
+   alargava tanto o menu que a busca e o avatar eram espremidos, e o preço
+   era esconder rótulo em tela média. Empilhado, o menu inteiro cabe com
+   folga e nenhum rótulo precisa sumir.
+   O que ficou da rodada anterior: o vidro da barra, o pill do ativo — que
+   agora envolve o conjunto ícone+rótulo — e a cor de texto que deu o
+   contraste. */
+.sgo-navitem{
+  display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  min-width:64px;padding:8px 14px;border-radius:12px;
+  border:0;background:transparent;cursor:pointer;font:inherit;text-decoration:none;
+  font-size:12px;font-weight:500;letter-spacing:.01em;color:var(--sgo-ink-700);
+  transition:background 200ms var(--sgo-nav-ease),color 200ms var(--sgo-nav-ease);
+}
+.sgo-navitem__ic{position:relative;display:flex;align-items:center;justify-content:center;transition:transform 200ms var(--sgo-nav-ease)}
+.sgo-navitem__ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sgo-navitem:hover{background:var(--sgo-nav-item-hover-bg);color:var(--sgo-ink)}
+/* Pill compacto: sem sombra e sem inset — não pode parecer cartão elevado
+   por cima do vidro. O ícone herda a cor pelo currentColor. */
+.sgo-navitem.on{
+  background:var(--sgo-nav-item-active-bg);color:var(--sgo-blue-600);font-weight:600;
+  box-shadow:none;
+}
+.sgo-navitem.on .sgo-navitem__ic svg{stroke-width:2.1;filter:var(--sgo-nav-item-active-icon-shadow)}
+.sgo-navitem__label{line-height:1;white-space:nowrap}
+
+/* Selo de notificação — um único componente para o sistema todo. A cor NÃO
+   varia por módulo de propósito: se cada item tivesse a sua, o selo deixaria
+   de significar "tem pendência" e viraria decoração. */
+.sgo-navbadge{
+  position:absolute;top:-6px;right:-12px;
+  min-width:17px;text-align:center;font-size:8.5px;font-weight:800;line-height:1.35;
+  padding:1.5px 5px;border-radius:100px;
+  background:var(--sgo-red-500);color:var(--sgo-surface);
+  border:1.5px solid var(--sgo-nav-badge-border);
+  box-shadow:var(--sgo-nav-badge-shadow);
+}
+
+/* Busca */
+.sgo-navsearch{
+  display:inline-flex;align-items:center;gap:8px;
+  height:32px;min-width:185px;padding:0 10px;border-radius:100px;
+  background:var(--sgo-nav-ctl-bg);border:.5px solid var(--sgo-nav-ctl-border);
+  box-shadow:var(--sgo-nav-ctl-inset);
+  font-size:12.5px;color:var(--sgo-text-2);cursor:pointer;
+  transition:background 200ms var(--sgo-nav-ease);
+}
+.sgo-navsearch:hover{background:var(--sgo-nav-ctl-bg-hover)}
+.sgo-navsearch__kbd{
+  margin-left:auto;font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;
+  background:var(--sgo-nav-kbd-bg);color:var(--sgo-text-2);white-space:nowrap;
+}
+
+/* Botões circulares (sino, tema, engrenagem) */
+.sgo-naviconbtn{
+  position:relative;width:32px;height:32px;border-radius:100px;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:0;background:transparent;cursor:pointer;color:var(--sgo-text-2);
+  transition:background 200ms var(--sgo-nav-ease), box-shadow 200ms var(--sgo-nav-ease), color 200ms var(--sgo-nav-ease);
+}
+.sgo-naviconbtn:hover{background:var(--sgo-nav-iconbtn-hover-bg);color:var(--sgo-ink);box-shadow:var(--sgo-nav-item-hover-shadow)}
+
+/* Área de conteúdo. Ocupa da altura zero (por baixo da barra fixa) e reserva o
+   espaço dela no padding — é o padding, e não uma margem, que permite ao
+   conteúdo rolado aparecer DESFOCADO atrás da barra: a caixa de recorte da
+   rolagem inclui o padding.
+
+   O padding VERTICAL inteiro mora aqui, e não em utilitário no <main>. Motivo:
+   este arquivo é importado ANTES de `@tailwind utilities`, e as duas regras têm
+   a mesma especificidade (0,1,0). O `py-3` que estava no elemento vinha depois
+   na ordem de origem e ganhava a cascata, deixando o padding-top em 9.75px no
+   lugar dos 68px da barra — era isso que jogava o título da tela e a primeira
+   fileira de cards para trás do menu. Enquanto a reserva depender desta classe,
+   NÃO voltar a pôr py-* / pt-* no <main>. */
+.sgo-shell__main{padding-top:calc(var(--sgo-navbar-h) + .75rem);padding-bottom:.75rem}
+
+/* Cabeçalho de tabela grudado no topo: o `top` correto depende de QUEM rola,
+   e isso não é dedutível em CSS. A regra anterior deslocava todo .sgo-tbl
+   dentro do main e quebrou a tabela do Dashboard — o motivo é sutil e vale
+   registrar: `overflow-x:auto` num wrapper faz o eixo Y virar `auto` também
+   (quando um eixo não é `visible`, o outro deixa de ser). Ou seja, quase toda
+   tabela do sistema está dentro de um scroller próprio, e o th gruda NELE.
+
+   O deslocamento de 68px que existia aqui era ERRADO mesmo para quem rola
+   junto com o main: o retângulo em que o sticky se prende é o CONTENT BOX do
+   contêiner de rolagem, ou seja, o padding-top do main (que já reserva a
+   barra) JÁ ESTÁ descontado. Somar a altura da barra outra vez empurrava o
+   cabeçalho 68px para dentro da tela. O `top:0` da seção 11 já é o valor
+   correto nos dois casos, então a regra vira só a marcação da intenção. */
+.sgo-tbl--main-scroll th,
+.sgo-tbl--main-scroll thead th{top:0}
+
+/* Item horizontal é MUITO mais largo que o empilhado: com as 9 seções de
+   nível 1 o menu mede 1034px, e a 1280 sobra menos que o necessário para a
+   busca, os três botões e o avatar — medido, o "Buscar" ficava cortado e o
+   avatar saía da barra. Os degraus abaixo devolvem espaço na ordem certa:
+   primeiro o supérfluo (atalho de teclado, largura mínima da busca), depois o
+   respiro do item, e só no fim o rótulo — que vira ícone puro, como o iOS faz
+   em largura compacta. O item continua com aria/label no DOM: some o texto,
+   não a acessibilidade. */
+@media(max-width:1600px){
+  .sgo-navsearch{min-width:0}
+  .sgo-navsearch__kbd{display:none}
+}
+
+.sgo-navavatar{
+  width:30px;height:30px;border-radius:100px;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--sgo-surface);
+  background:linear-gradient(135deg,var(--sgo-blue-500),var(--sgo-blue-700));
+  box-shadow:0 0 0 2px var(--sgo-nav-avatar-ring);
+}
+
+/* Fallback: sem backdrop-filter o vidro vira superfície quase opaca, senão a
+   barra fica ilegível por cima do conteúdo que rola atrás dela. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .sgo-navbar,.sgo-glass,.sgo-panel,.shadcn-card,.subnav-strip{background:var(--sgo-glass-nav-fallback)}
+}
+
+/* Quem pede menos transparência recebe superfície quase opaca — e sem blur,
+   que é o que custa caro em rolagem longa. */
+@media(prefers-reduced-transparency:reduce){
+  .sgo-navbar,.sgo-panel,.shadcn-card,.sgo-glass,.subnav-strip,.sgo-trilho{
+    background:var(--sgo-glass-nav-fallback);
+    -webkit-backdrop-filter:none;backdrop-filter:none;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .sgo-glass,.sgo-navitem,.sgo-navitem__ic,.sgo-navsearch,.sgo-naviconbtn{transition:none}
+  .sgo-glass:hover{transform:none}
+  .sgo-navitem:hover .sgo-navitem__ic{transform:none}
+}
+
+/* ---------- 22. CABEÇALHO DE PÁGINA (SgoPageHeader) ----------
+   Padrão único: [título + subtítulo] — [sub-abas] — [ações], numa linha só.
+   Substitui os dois padrões que conviviam no sistema ("abas acima do título"
+   e "abas abaixo do título"). A referência é a Central de Tarefas.
+
+   Fundo transparente de propósito: o cabeçalho fica sobre o fundo contínuo,
+   e só a hairline de baixo o separa do conteúdo. */
+.sgo-phdr{
+  display:flex;align-items:center;gap:20px;padding:14px 16px;
+  background:transparent;border-bottom:0;
+}
+.sgo-phdr__id{min-width:0;flex-shrink:0}
+/* Fica FORA de qualquer barra, direto sobre o papel de parede.
+   Era o large title do iOS, 30px. Em uso real ficou desproporcional: gritava,
+   comia altura que o conteúdo queria e empurrava os KPIs para baixo da dobra.
+   20px/600 é o mesmo valor do .sgo-h1 — um título de página só, em vez de dois
+   tamanhos convivendo conforme a tela ter migrado ou não. */
+.sgo-phdr__title{font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.2;color:var(--sgo-ink-900)}
+/* var(--sgo-ink-500) e não o var(--sgo-ink-500) de antes. O subtítulo é o ÚNICO texto do sistema que
+   fica direto sobre o papel de parede sem vidro nenhum embaixo, e a 12.5px o AA
+   pede 4,5:1. No fundo atual ele dava 3,23:1 — já reprovava, e a conta só
+   apareceu ao medir para as variantes novas. Escurecer o texto é a saída que
+   sobra: não há vidro para engrossar, e clarear o fundo anularia a proposta.
+   Passa nas três (atual 6,38 / A 5,52 / B 4,53) e mantém 1,93:1 contra o
+   título, então a hierarquia entre os dois continua legível. */
+.sgo-phdr__sub{font-size:12.5px;color:var(--sgo-ink-500);margin-top:2px;line-height:1.35}
+html.dark .sgo-phdr__title{color:var(--sgo-ink)}
+html.dark .sgo-phdr__sub{color:var(--sgo-ink-2)}
+
+/* Trilho de sub-abas — MESMO tratamento do .subnav-strip, porque e ESTE o
+   componente que a Central de Tarefas usa. O vidro da iteracao anterior foi
+   para o .subnav-strip (ModuleSubnav), que aquela tela nao renderiza.
+
+   QUEBRA DE LINHA no lugar de rolagem. Medido com as 9 abas do perfil admin:
+   elas pedem 1383px, e a linha inteira (titulo + abas + acoes) pede 1888px.
+   A 1280 sobram 1232 — reduzir respiro devolve ~100px, longe dos ~420 que
+   faltam. Como rolagem horizontal e item cortado estao proibidos, a saida e
+   deixar quebrar: nada some, nada corta, e a altura do cabecalho cresce de
+   forma previsivel em tela estreita.
+
+   A mascara de fade das bordas saiu junto com a rolagem: sem overflow nao ha
+   o que esconder, e mascarar sem motivo apagava a primeira e a ultima aba. O
+   data-fade que o componente escreve vira inerte. */
+.sgo-phdr__tabs{
+  flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:3px;
+  padding:5px;border-radius:12px;
+  background:rgba(255,255,255,.45);
+  -webkit-backdrop-filter:blur(12px) saturate(1.3);backdrop-filter:blur(12px) saturate(1.3);
+  border:1px solid rgba(255,255,255,.5);
+  box-shadow:0 1px 8px rgb(var(--sgo-brand-rgb) / .05);
+}
+html.dark .sgo-phdr__tabs{background:rgb(var(--sgo-surface-rgb) / .45);border-color:rgba(255,255,255,.07)}
+.sgo-phdr__tab{
+  position:relative;display:inline-flex;align-items:center;gap:6px;flex-shrink:0;
+  height:30px;padding:0 11px;border-radius:9px;border:0;
+  background:transparent;cursor:pointer;text-decoration:none;
+  font:inherit;font-size:12.5px;font-weight:500;color:var(--sgo-ink-700);
+  transition:background 200ms var(--sgo-nav-ease),color 200ms var(--sgo-nav-ease);
+}
+.sgo-phdr__tab svg{width:14px;height:14px;flex-shrink:0}
+.sgo-phdr__tab:hover{background:rgba(255,255,255,.45);color:var(--sgo-ink)}
+.sgo-phdr__tab.on{
+  background:var(--sgo-surface);font-weight:600;color:var(--sgo-blue-600);
+  box-shadow:0 1px 3px rgb(var(--sgo-brand-rgb) / .10);
+}
+html.dark .sgo-phdr__tab.on{background:rgba(255,255,255,.10);color:var(--sgo-brand-hover)}
+/* O selo da aba é o MESMO da barra de navegação; só a âncora muda, porque
+   aqui ele acompanha o rótulo em vez de um ícone isolado. */
+.sgo-phdr__tab .sgo-navbadge{position:static;margin-left:2px}
+
+.sgo-phdr__actions{display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
+
+/* Controle de filtro que sobe para a linha do título (Período, Unidade,
+   Competência). Mesmo vidro do .sgo-chip, porque os dois convivem lado a lado
+   ali — mas canto de 10px em vez de pill: select e caixa de texto, e pill em
+   campo de formulário lê como tag, não como controle.
+   Nasceu ao dissolver as faixas brancas: sem a faixa, o filtro perdeu o fundo
+   que o separava do papel de parede e precisava de superfície própria. */
+.sgo-filtro-glass{
+  background:rgba(255,255,255,.55);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.6);
+  border-radius:10px;
+}
+html.dark .sgo-filtro-glass{background:rgb(var(--sgo-surface-rgb) / .55);border-color:rgba(255,255,255,.08)}
+
+/* Abaixo de 1100px o cabeçalho vira duas linhas: identidade + ações em cima,
+   sub-abas embaixo, ainda com rolagem horizontal. */
+/* 1800 e nao 1100: medido, a linha unica so cabe a partir de ~1888px de
+   janela. Abaixo disso as abas descem para uma faixa propria de largura
+   inteira, onde cabem sem espremer o titulo nem as acoes. */
+@media(max-width:1799px){
+  .sgo-phdr{flex-wrap:wrap;gap:12px}
+  .sgo-phdr__id{flex:1}
+  .sgo-phdr__tabs{order:3;flex-basis:100%}
+}
+@media(max-width:640px){
+  .sgo-phdr{padding:14px 16px}
+  .sgo-phdr__title{font-size:18px}
+}
+
+/* ---------- 24. TRILHO DO MÓDULO (ModuleShell) ----------
+   Nível 2 da hierarquia: as seções do módulo, logo abaixo da navbar global.
+   O desenho é o segmented control de vidro que o módulo Pessoas já usava.
+
+   Classes NOVAS em vez de reaproveitar .subnav-* de propósito: o
+   ContextActionsBar, o ModuleSubnav e o NestedSubnav dividem aquelas classes,
+   e mexer nelas agora mudaria as três de uma vez, incluindo o NestedSubnav,
+   que não entra nesta migração. Quando o último consumidor do .subnav-*
+   migrar, aquele bloco morre junto com o ModuleSubnav.
+
+   QUEBRA DE LINHA, não rolagem. Relatórios tem 11 seções e Logística tem 10:
+   com overflow-x elas cortariam. Aqui o trilho quebra em duas linhas e nada
+   some — mesma decisão já tomada para as abas do cabeçalho de página. */
+.sgo-trilho{
+  display:flex;flex-wrap:wrap;align-items:center;gap:3px;
+  padding:6px;margin:12px 16px 0;border-radius:12px;
+  background:rgba(255,255,255,.45);
+  -webkit-backdrop-filter:blur(12px) saturate(1.3);backdrop-filter:blur(12px) saturate(1.3);
+  border:1px solid rgba(255,255,255,.5);
+  box-shadow:0 1px 8px rgb(var(--sgo-brand-rgb) / .05);
+}
+html.dark .sgo-trilho{background:rgb(var(--sgo-surface-rgb) / .45);border-color:rgba(255,255,255,.07)}
+
+.sgo-trilho__item{
+  display:inline-flex;align-items:center;gap:6px;flex-shrink:0;
+  height:30px;padding:0 11px;border-radius:9px;border:0;
+  background:transparent;cursor:pointer;text-decoration:none;white-space:nowrap;
+  font:inherit;font-size:12.5px;font-weight:500;color:var(--sgo-ink-700);
+  transition:background 200ms ease-out,color 200ms ease-out;
+}
+.sgo-trilho__item svg{width:14px;height:14px;flex-shrink:0}
+.sgo-trilho__item:hover{background:rgba(255,255,255,.45);color:var(--sgo-ink)}
+.sgo-trilho__item.on{
+  background:var(--sgo-surface);color:var(--sgo-blue-600);font-weight:600;
+  box-shadow:0 1px 3px rgb(var(--sgo-brand-rgb) / .10);
+}
+html.dark .sgo-trilho__item.on{background:rgba(255,255,255,.10);color:var(--sgo-brand-hover)}
+
+/* Nível 4: chips de filtro da página, alinhados à esquerda com a margem do
+   conteúdo. Só a caixa — o desenho de cada chip é o .sgo-chip. */
+.sgo-filtros{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 16px;margin-bottom:12px}
+/* Atalhos do módulo: encostam à direita do trilho. */
+.sgo-trilho__atalhos{margin-left:auto;display:flex;align-items:center;gap:2px}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   21. VITRINE DE PRODUTOS  (GP — Pedido e Transferência, Fase 2)
+
+   Substitui a tabela de "Produtos disponíveis" por uma grade de cards. O
+   desenho é ditado pelo aparelho onde o pedido de verdade é feito: o CELULAR
+   do gerente, no balcão do posto. Daí três decisões que não são estéticas:
+
+   • 1 coluna no celular, 2 no tablet, 4 no desktop. Card em duas colunas no
+     celular (foto à esquerda, texto à direita) em vez de foto no topo: cabem
+     ~4 produtos na tela em vez de 1,5, e a rolagem para achar um item deixa
+     de ser o gargalo.
+   • O alvo de toque de "Adicionar" tem 36px de altura e ocupa a largura do
+     card. Botão pequeno em card pequeno é o defeito clássico de vitrine
+     portada de desktop.
+   • O selo de SEM SALDO é uma faixa de largura total, não um badge no canto.
+     Saldo zero é o principal motivo de o gerente estar nesta tela — precisa
+     ser a primeira coisa que ele lê, não a última que ele procura.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sgo-vitrine{display:flex;flex-direction:column;gap:10px;min-height:0}
+
+/* ── Barra de filtros: busca + ordenação + chips ─────────────────────────── */
+.sgo-vitrine__barra{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sgo-vitrine__busca{position:relative;flex:1 1 220px;min-width:0}
+
+/* Trilha horizontal de departamentos. No celular rola de lado; no desktop
+   quebra em linhas. `scrollbar-width:none` porque a barra de rolagem nativa
+   sobre 30px de altura come metade do chip. */
+/* UMA LINHA de chips, em qualquer largura.
+
+   A regra `@media (min-width:900px){flex-wrap:wrap}` que existia aqui é o que
+   produzia as QUATRO fileiras do print: com 22 chips (grafia livre de
+   categoria), o bloco chegava a 176px de altura e empurrava a grade para fora
+   da tela — num viewport de 660px sobrava espaço para 2 cards. Envolver para
+   baixo parece generoso e é o contrário: come justamente o espaço do produto,
+   que é o que a tela existe para mostrar.
+
+   Rola na horizontal (polegar no celular, roda com shift no desktop) e o botão
+   "mais N" do VitrineProdutos.tsx abre o resto num painel. A barra de rolagem
+   fica escondida de propósito: ela cobriria a borda de baixo dos chips numa
+   faixa de 28px de altura. */
+.sgo-vitrine__deptos-linha{display:flex;gap:6px;align-items:center;min-width:0}
+.sgo-vitrine__deptos{
+  display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;overflow-y:hidden;
+  padding-bottom:2px;flex:1;min-width:0;
+  scrollbar-width:none;-ms-overflow-style:none;
+  /* Encaixa o chip no início da rolagem: meio-chip cortado na borda esquerda
+     parece chip quebrado, não conteúdo que continua. */
+  scroll-snap-type:x proximity;
+}
+.sgo-vitrine__deptos > *{scroll-snap-align:start;flex-shrink:0}
+.sgo-vitrine__deptos::-webkit-scrollbar{display:none}
+
+/* Botão "mais N" — fora da faixa que rola, senão ele sairia da tela junto com
+   os chips e o resto dos departamentos ficaria inalcançável. */
+.sgo-chip--mais{flex-shrink:0;border-style:dashed}
+
+/* Painel de todos os departamentos: envolve para baixo por ESCOLHA de quem
+   abriu, com teto de altura para não empurrar a grade quando são muitos. */
+.sgo-vitrine__deptos-painel{
+  display:flex;flex-wrap:wrap;gap:6px;padding:9px;
+  border:1px dashed var(--sgo-hair-2);border-radius:var(--sgo-r-md);
+  background:var(--sgo-panel-2);max-height:31vh;overflow-y:auto;
+}
+
+/* Ponto no chip cujo departamento veio de mais de uma grafia do cadastro. O
+   `title` do botão lista as grafias: o gerente que estranhar "1.483" em
+   FILTROS onde antes lia "1.354" tem a explicação no lugar, sem abrir suporte. */
+.sgo-chip__u{opacity:.5;margin-left:1px}
+
+/* Estado ligado do chip de filtro. O .sgo-chip base é translúcido sobre o
+   papel de parede; ligado, ele encorpa e ganha a cor do estado que
+   representa — zerado é vermelho, mínimo é âmbar, departamento é azul. */
+.sgo-chip--on{background:var(--sgo-accent-soft);border-color:var(--sgo-accent);color:var(--sgo-accent);font-weight:650}
+.sgo-chip--on.sgo-chip--bad{background:var(--sgo-bad-soft);border-color:var(--sgo-bad);color:var(--sgo-bad)}
+.sgo-chip--on.sgo-chip--warn{background:var(--sgo-warn-soft);border-color:var(--sgo-warn);color:var(--sgo-warn)}
+.sgo-chip__n{opacity:.65;font-variant-numeric:tabular-nums}
+html.dark .sgo-chip--on{background:var(--sgo-accent-soft);border-color:var(--sgo-accent);color:var(--sgo-accent)}
+
+/* ── Grade ───────────────────────────────────────────────────────────────── */
+/* `auto-fill` + `minmax`, NÃO media query.
+   A vitrine vive dentro de um modal de 1024px, não da viewport: com
+   `@media (min-width:1400px)` a grade abria 4 colunas de ~110px de texto num
+   contêiner de 1024px, e o nome do produto virava "ZZ Vitrine Demo Aditiv…".
+   Media query mede a JANELA; o que manda aqui é a largura do contêiner. Com
+   auto-fill a mesma regra serve o modal de hoje e a página inteira de amanhã,
+   sem ninguém ter de lembrar de reajustar os pontos de quebra. */
+.sgo-vitrine__grade{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,236px),1fr));
+  gap:9px;align-content:start;padding:2px;
+}
+
+/* SEM `overflow-y:auto` aqui, e isto não é detalhe de estilo — é a correção do
+   defeito que fazia a vitrine parecer travada com o catálogo inteiro.
+
+   A grade tinha `overflow-y:auto` + `max-height:44vh` DENTRO do corpo do modal,
+   que também rola. Dois roladores aninhados: num viewport de 660px, com os 22
+   chips de departamento ocupando 176px, a grade começava em y=559 e só 101px
+   dela apareciam — a borda de cima da primeira fileira de cards, três tarjas
+   cinzas que parecem esqueleto e nunca viram card. A roda do mouse sobre essa
+   faixa rolava o contêiner de dentro, que quase não aparece, então o corpo do
+   modal nunca rolava. E a sentinela da rolagem infinita, no fim do contêiner
+   interno, ficava recortada pelo corpo do modal: `rootMargin` não alcança alvo
+   recortado por ancestral, então a lista ficava presa nos 50 primeiros
+   produtos. Medido no navegador em 2026-08-26.
+
+   Quem rola é o corpo do modal (`.sgo-modal__body`), um rolador só. A pilha de
+   lotes cresce por inteiro e a sentinela alcança a tela. O custo em DOM é
+   contido pela janela de lotes do VitrineProdutos.tsx (36 a 108 cards
+   montados), não por um `max-height` que esconde a grade. */
+.sgo-vitrine__lotes{display:flex;flex-direction:column;gap:9px}
+
+/* ── Esqueleto do lote em voo ────────────────────────────────────────────── */
+/* Cinza que PULSA de propósito: tarja cinza parada é exatamente o que o defeito
+   acima produzia, e o gerente não tem como distinguir "carregando" de
+   "quebrado" sem o movimento. */
+.sgo-esq{
+  display:block;border-radius:6px;background:var(--sgo-panel-2);
+  background-image:linear-gradient(90deg,transparent 0%,rgba(125,125,135,.18) 50%,transparent 100%);
+  background-size:220% 100%;background-repeat:no-repeat;
+  animation:sgo-esq-brilho 1.35s ease-in-out infinite;
+}
+@keyframes sgo-esq-brilho{0%{background-position:120% 0}100%{background-position:-120% 0}}
+@media (prefers-reduced-motion:reduce){.sgo-esq{animation:none}}
+.sgo-vcard--esq{pointer-events:none}
+.sgo-vcard--esq .sgo-vcard__foto{background:var(--sgo-panel-2)}
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.sgo-vcard{
+  /* `height:100%` + `margin-top:auto` na ação: sem isso, o card com a faixa
+     "SEM SALDO" (duas linhas) empurrava o botão para baixo e os "Adicionar" da
+     mesma fileira saíam desalinhados — o alvo de toque mudava de lugar a cada
+     card, que no celular é onde o dedo erra. */
+  height:100%;
+  display:flex;flex-direction:column;gap:0;
+  background:var(--sgo-panel);border:1px solid var(--sgo-hair);
+  border-radius:var(--sgo-r-md);overflow:hidden;
+  transition:border-color 160ms var(--sgo-ease),box-shadow 160ms var(--sgo-ease);
+}
+.sgo-vcard:hover{border-color:var(--sgo-hair-2);box-shadow:0 2px 10px -6px rgb(var(--sgo-ink-900-rgb) / .25)}
+.sgo-vcard--on{border-color:var(--sgo-accent);box-shadow:0 0 0 1px var(--sgo-accent) inset}
+
+/* Corpo clicável: abre a ficha. É <button> de propósito — teclado e leitor de
+   tela precisam alcançar a ficha, e um <div onClick> não é alcançável. */
+.sgo-vcard__corpo{
+  display:flex;gap:10px;padding:9px;text-align:left;width:100%;
+  background:none;border:0;font:inherit;color:inherit;cursor:pointer;align-items:flex-start;
+}
+.sgo-vcard__foto{
+  width:60px;height:60px;flex-shrink:0;border-radius:9px;overflow:hidden;
+  display:grid;place-items:center;position:relative;
+}
+@media (min-width:640px){.sgo-vcard__foto{width:68px;height:68px}}
+.sgo-vcard__foto img{width:100%;height:100%;object-fit:cover;display:block}
+.sgo-vcard__txt{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+.sgo-vcard__nome{
+  font-size:12.5px;font-weight:600;line-height:1.25;color:var(--sgo-ink);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.sgo-vcard__meta{font-size:10.5px;color:var(--sgo-ink-3);display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.sgo-vcard__meta .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* Faixa de saldo — largura total, não badge de canto. */
+.sgo-vcard__saldo{
+  margin-top:3px;display:inline-flex;align-items:center;gap:5px;align-self:flex-start;
+  padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;line-height:1.5;
+  font-variant-numeric:tabular-nums;
+}
+.sgo-vcard__saldo--ok{background:var(--sgo-ok-soft);color:var(--sgo-ok)}
+.sgo-vcard__saldo--warn{background:var(--sgo-warn-soft);color:var(--sgo-warn)}
+.sgo-vcard__saldo--zero{background:var(--sgo-bad-soft);color:var(--sgo-bad);width:100%;justify-content:center;align-self:stretch;text-align:center;letter-spacing:.01em}
+
+/* ── Rodapé de ação ──────────────────────────────────────────────────────── */
+.sgo-vcard__acao{margin-top:auto;padding:0 9px 9px;display:flex;flex-direction:column;gap:6px}
+.sgo-vcard__add{
+  width:100%;height:36px;border-radius:9px;border:1px solid var(--sgo-accent);
+  background:var(--sgo-accent-soft);color:var(--sgo-accent);
+  font:inherit;font-size:12.5px;font-weight:650;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  transition:background 160ms var(--sgo-ease);
+}
+.sgo-vcard__add:hover{background:var(--sgo-accent);color:var(--sgo-surface)}
+.sgo-vcard__add:active{transform:scale(.985)}
+
+/* Passo de quantidade. 34px de lado nos botões — abaixo disso o polegar erra,
+   e errar aqui significa pedir 20 onde se queria 2. */
+.sgo-passo{display:flex;align-items:center;gap:6px}
+.sgo-passo__b{
+  width:34px;height:34px;flex-shrink:0;border-radius:9px;
+  border:1px solid var(--sgo-hair-2);background:var(--sgo-panel-2);
+  color:var(--sgo-ink);font:inherit;font-size:16px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;
+}
+.sgo-passo__b:hover{background:var(--sgo-panel);border-color:var(--sgo-ink-3)}
+.sgo-passo__b:disabled{opacity:.4;cursor:not-allowed}
+.sgo-passo__i{
+  flex:1;min-width:0;height:34px;border-radius:9px;text-align:center;
+  border:1px solid var(--sgo-hair-2);background:var(--sgo-panel);
+  font:inherit;font-size:13px;font-weight:650;color:var(--sgo-ink);
+  font-variant-numeric:tabular-nums;
+}
+.sgo-vcard__conv{font-size:10.5px;color:var(--sgo-ink-3);text-align:center;font-variant-numeric:tabular-nums}
+
+/* ── Estados vazios / rodapé da lista ───────────────────────────────────── */
+.sgo-vitrine__vazio{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;padding:34px 16px;text-align:center;
+  border:1px solid var(--sgo-hair);border-radius:var(--sgo-r-md);
+  font-size:12.5px;color:var(--sgo-ink-3);
+}
+.sgo-vitrine__contador{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
+  font-size:11px;color:var(--sgo-ink-3);padding:0 2px;
+}
+
+/* ── Sugestões da busca (typeahead) ─────────────────────────────────────── */
+.sgo-sug{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:60;
+  background:var(--sgo-panel);border:1px solid var(--sgo-hair-2);
+  border-radius:var(--sgo-r-md);box-shadow:var(--sgo-sh-pop);
+  overflow:hidden;max-height:min(52vh,360px);overflow-y:auto;
+}
+.sgo-sug__i{
+  display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;
+  background:none;border:0;border-bottom:1px solid var(--sgo-hair);
+  font:inherit;text-align:left;cursor:pointer;color:inherit;
+}
+.sgo-sug__i:last-child{border-bottom:0}
+.sgo-sug__i:hover,.sgo-sug__i[data-on="1"]{background:var(--sgo-accent-soft)}
+.sgo-sug__foto{width:32px;height:32px;border-radius:7px;overflow:hidden;flex-shrink:0;display:grid;place-items:center}
+.sgo-sug__foto img{width:100%;height:100%;object-fit:cover}
+.sgo-sug__rodape{
+  display:block;width:100%;padding:8px 10px;background:var(--sgo-panel-2);
+  border:0;border-top:1px solid var(--sgo-hair);font:inherit;font-size:11.5px;
+  font-weight:600;color:var(--sgo-accent);cursor:pointer;text-align:center;
+}
+
+/* ── Ficha do produto ───────────────────────────────────────────────────── */
+.sgo-ficha__hero{display:flex;gap:12px;align-items:flex-start}
+.sgo-ficha__foto{
+  width:96px;height:96px;flex-shrink:0;border-radius:var(--sgo-r-md);
+  overflow:hidden;display:grid;place-items:center;
+}
+@media (min-width:640px){.sgo-ficha__foto{width:132px;height:132px}}
+.sgo-ficha__foto img{width:100%;height:100%;object-fit:cover}
+.sgo-ficha__sec{
+  font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--sgo-ink-3);margin:2px 0 6px;
+}
+/* Linha da rede: nome à esquerda, saldo tabular à direita, ação encostada.
+   No celular a ação desce para a segunda linha em vez de espremer o nome. */
+.sgo-rede__l{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:7px 9px;border:1px solid var(--sgo-hair);border-radius:9px;
+  background:var(--sgo-panel);
+}
+.sgo-rede__l+.sgo-rede__l{margin-top:5px}
+.sgo-rede__n{flex:1;min-width:120px;font-size:12.5px;font-weight:550;color:var(--sgo-ink)}
+.sgo-rede__s{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--sgo-ok)}
+.sgo-rede__eu{background:var(--sgo-accent-soft);border-color:var(--sgo-accent)}
+
+/* Barras do histórico de consumo. Gráfico de 6 barras não precisa de
+   biblioteca — precisa de altura mínima para o mês com 1 unidade não sumir. */
+.sgo-consumo{display:flex;align-items:flex-end;gap:6px;height:56px}
+.sgo-consumo__c{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.sgo-consumo__b{width:100%;background:var(--sgo-accent-soft);border-radius:4px 4px 0 0;min-height:3px}
+.sgo-consumo__m{font-size:9.5px;color:var(--sgo-ink-3);white-space:nowrap}
+
+/* Placeholder de produto sem foto. A MAIORIA dos 2.438 produtos não vai ter
+   foto no começo, então o placeholder não é um caso de erro — é o estado
+   normal da vitrine no dia 1, e precisa ficar apresentável. Ícone e matiz vêm
+   da CATEGORIA (ver categoriaVisual em ProdutoFoto.tsx): o gerente aprende a
+   reconhecer "azul com gota = lubrificante" e varre a grade pela forma, não
+   pelo texto. Um ícone quebrado cinza para tudo perderia essa leitura. */
+.sgo-ph{
+  width:100%;height:100%;display:grid;place-items:center;
+  background:hsl(var(--ph-h) 62% 52% / .13);color:hsl(var(--ph-h) 48% 40%);
+}
+html.dark .sgo-ph{background:hsl(var(--ph-h) 62% 60% / .16);color:hsl(var(--ph-h) 60% 68%)}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   22. CARRINHO E REVISÃO  (GP — Fase 2, etapa 4)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Botão-contador do carrinho. Fica na barra do modal, visível em qualquer
+   ponto do fluxo — o gerente precisa saber quantos itens já pôs sem sair de
+   onde está. */
+.sgo-cart-btn{
+  position:relative;display:inline-flex;align-items:center;gap:6px;
+  height:32px;padding:0 12px;border-radius:999px;cursor:pointer;font:inherit;
+  font-size:12.5px;font-weight:650;
+  background:var(--sgo-accent);color:var(--sgo-surface);border:1px solid transparent;
+}
+.sgo-cart-btn:disabled{opacity:.5;cursor:not-allowed}
+@media (max-width:640px){
+  .sgo-cart-btn__txt{display:none}
+  .sgo-cart-btn{padding:0 9px;gap:5px}
+}
+.sgo-cart-btn__n{
+  min-width:19px;height:19px;padding:0 5px;border-radius:999px;
+  background:var(--sgo-surface);color:var(--sgo-accent);
+  font-size:11px;font-weight:800;display:grid;place-items:center;
+  font-variant-numeric:tabular-nums;
+}
+
+/* Indicador de gravação. Nunca diz "salvo" sem ter salvado — ver useCarrinho. */
+.sgo-save{display:inline-flex;align-items:center;gap:5px;font-size:11px;white-space:nowrap}
+/* No celular sobra o ícone: verde = salvo, girando = salvando, nuvem cortada =
+   na fila. O texto volta a partir de 640px. */
+@media (max-width:640px){.sgo-save__txt{display:none}}
+.sgo-save--ok{color:var(--sgo-ok)}
+.sgo-save--indo{color:var(--sgo-ink-3)}
+.sgo-save--fila{color:var(--sgo-warn)}
+
+/* Painel lateral do carrinho. No celular sobe do rodapé e ocupa quase a tela
+   inteira; no desktop desliza da direita. Em ambos fica SOBRE a vitrine, sem
+   desmontá-la — voltar para a lista não pode custar uma nova consulta. */
+/* `fixed`, não `absolute`.
+   O drawer é renderizado DENTRO do corpo do modal, que tem `overflow-y:auto`.
+   Um `absolute; inset:0` ali se ancora na origem do CONTEÚDO rolável: bastava
+   o gerente ter rolado a vitrine para o painel aparecer fora da tela. `fixed`
+   se ancora na viewport, que é onde o painel precisa estar. A vitrine continua
+   montada por baixo — voltar para a lista não custa nova consulta. */
+.sgo-drawer-fundo{
+  position:fixed;inset:0;z-index:60;display:flex;
+  background:rgb(var(--sgo-ink-900-rgb) / .34);
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+}
+.sgo-drawer__painel{
+  margin-left:auto;width:min(100%,420px);height:100%;
+  display:flex;flex-direction:column;min-height:0;
+  background:var(--sgo-panel);border-left:1px solid var(--sgo-hair);
+  box-shadow:var(--sgo-sh-pop);
+}
+@media (max-width:640px){
+  .sgo-drawer__painel{width:100%;margin-top:auto;height:92%;border-left:0;border-radius:16px 16px 0 0}
+}
+.sgo-drawer__hdr{
+  display:flex;align-items:center;gap:8px;padding:11px 14px;flex-shrink:0;
+  border-bottom:1px solid var(--sgo-hair);
+}
+.sgo-drawer__corpo{flex:1;min-height:0;overflow-y:auto;padding:10px 12px}
+.sgo-drawer__ftr{
+  flex-shrink:0;padding:11px 12px;border-top:1px solid var(--sgo-hair);
+  background:var(--sgo-panel-2);display:flex;flex-direction:column;gap:8px;
+}
+
+/* Linha de item do carrinho. */
+.sgo-citem{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid var(--sgo-hair)}
+.sgo-citem:last-child{border-bottom:0}
+.sgo-citem__foto{width:46px;height:46px;border-radius:8px;overflow:hidden;flex-shrink:0;display:grid;place-items:center}
+.sgo-citem__foto img{width:100%;height:100%;object-fit:cover}
+.sgo-citem__c{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.sgo-citem__nome{font-size:12.5px;font-weight:600;line-height:1.25;color:var(--sgo-ink)}
+.sgo-citem__meta{font-size:10.5px;color:var(--sgo-ink-3)}
+/* Autoria: só no PEDIDO, onde o carrinho é do posto e não seu. */
+.sgo-citem__autor{font-size:10.5px;color:var(--sgo-ink-3);display:flex;align-items:center;gap:4px}
+.sgo-citem__conflito{
+  font-size:10.5px;color:var(--sgo-warn);background:var(--sgo-warn-soft);
+  border-radius:7px;padding:5px 7px;line-height:1.35;
+}
+
+/* Avisos da revisão — o ponto da tela de checkout. */
+.sgo-aviso{
+  display:flex;gap:8px;padding:8px 10px;border-radius:9px;font-size:12px;line-height:1.35;
+  align-items:flex-start;
+}
+.sgo-aviso+.sgo-aviso{margin-top:6px}
+.sgo-aviso--atencao{background:var(--sgo-warn-soft);color:var(--sgo-warn)}
+.sgo-aviso--bloqueio{background:var(--sgo-bad-soft);color:var(--sgo-bad)}
+.sgo-aviso svg{width:15px;height:15px;flex-shrink:0;margin-top:1px}
+
+/* Grupo de origem na revisão da transferência: deixa explícito que sairá uma
+   transferência para cada bloco. */
+.sgo-origem{border:1px solid var(--sgo-hair);border-radius:var(--sgo-r-md);overflow:hidden}
+.sgo-origem+.sgo-origem{margin-top:10px}
+.sgo-origem__hdr{
+  display:flex;align-items:center;gap:8px;padding:8px 11px;
+  background:var(--sgo-panel-2);border-bottom:1px solid var(--sgo-hair);
+  font-size:12px;font-weight:650;
+}
+.sgo-origem__corpo{padding:4px 11px}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   23. LINHA DO TEMPO E RASTREIO POR ITEM  (GP — Fase 2, etapa 5)
+
+   Sempre VERTICAL, inclusive no desktop. Uma trilha horizontal com 9 etapas —
+   que é o tamanho do fluxo da transferência — ou vira rolagem lateral no
+   celular (e rolagem lateral esconde etapa), ou espreme o rótulo até virar
+   reticências. Vertical cabe em qualquer largura e ainda deixa lugar para a
+   data e o responsável de cada degrau, que é metade da informação.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sgo-tl{display:flex;flex-direction:column;gap:0}
+.sgo-tl__e{display:flex;gap:10px;position:relative;padding-bottom:14px}
+.sgo-tl__e:last-child{padding-bottom:0}
+/* O fio que liga os degraus. Sai do marcador e para no último. */
+.sgo-tl__e:not(:last-child)::before{
+  content:"";position:absolute;left:8px;top:19px;bottom:2px;width:2px;
+  background:var(--sgo-hair-2);border-radius:2px;
+}
+.sgo-tl__e--concluida:not(:last-child)::before{background:var(--sgo-ok)}
+.sgo-tl__pt{
+  width:18px;height:18px;border-radius:999px;flex-shrink:0;margin-top:1px;
+  display:grid;place-items:center;border:2px solid var(--sgo-hair-2);
+  background:var(--sgo-panel);position:relative;z-index:1;
+}
+.sgo-tl__pt svg{width:10px;height:10px}
+.sgo-tl__e--concluida .sgo-tl__pt{border-color:var(--sgo-ok);background:var(--sgo-ok);color:var(--sgo-surface)}
+.sgo-tl__e--atual .sgo-tl__pt{
+  border-color:var(--sgo-accent);background:var(--sgo-accent);color:var(--sgo-surface);
+  box-shadow:0 0 0 4px var(--sgo-accent-soft);
+}
+.sgo-tl__e--negativa .sgo-tl__pt{border-color:var(--sgo-bad);background:var(--sgo-bad);color:var(--sgo-surface)}
+.sgo-tl__c{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
+.sgo-tl__r{font-size:12.5px;font-weight:600;color:var(--sgo-ink-3);line-height:1.25}
+.sgo-tl__e--concluida .sgo-tl__r{color:var(--sgo-ink)}
+.sgo-tl__e--atual .sgo-tl__r{color:var(--sgo-accent);font-weight:700}
+.sgo-tl__e--negativa .sgo-tl__r{color:var(--sgo-bad);font-weight:700}
+.sgo-tl__m{font-size:10.5px;color:var(--sgo-ink-3);line-height:1.3}
+.sgo-tl__obs{
+  font-size:11px;color:var(--sgo-ink-2);background:var(--sgo-panel-2);
+  border-radius:7px;padding:4px 7px;margin-top:3px;line-height:1.35;
+}
+
+/* ── Rastreio por item ─────────────────────────────────────────────────────
+   As quantidades ficam numa fita horizontal de "degraus" — a única coisa
+   horizontal aqui, porque são no máximo 5 números curtos e cabem em 390px. */
+.sgo-rastro{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-top:5px}
+.sgo-rastro__e{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:52px}
+.sgo-rastro__q{
+  font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;
+  color:var(--sgo-ink);line-height:1.15;
+}
+/* Etapa NÃO ALCANÇADA — não é zero. O travessão diz "ainda não aconteceu",
+   que é informação diferente de "aconteceu e deu zero". */
+.sgo-rastro__q--vazio{color:var(--sgo-ink-3);font-weight:500}
+.sgo-rastro__q--caiu{color:var(--sgo-bad)}
+.sgo-rastro__r{font-size:9.5px;color:var(--sgo-ink-3);text-transform:uppercase;letter-spacing:.03em}
+.sgo-rastro__seta{color:var(--sgo-hair-2);flex-shrink:0}
+.sgo-rastro__seta svg{width:13px;height:13px;display:block}
+
+.sgo-item-div{
+  display:flex;gap:6px;align-items:flex-start;margin-top:5px;
+  font-size:11.5px;line-height:1.35;color:var(--sgo-bad);
+  background:var(--sgo-bad-soft);border-radius:8px;padding:5px 8px;
+}
+.sgo-item-div svg{width:14px;height:14px;flex-shrink:0;margin-top:1px}
+/* Item com divergência sobe para o topo da lista e ganha borda — ver o
+   ordenamento em LinhaDoTempo.tsx. */
+.sgo-citem--div{border-left:3px solid var(--sgo-bad);padding-left:8px;margin-left:-11px}
+
+/* KPI que precisa caber inteiro no celular (heroes do link publico do fechamento):
+   abaixo de 640px o icone decorativo sai e a fonte encolhe ate ~14px, para o
+   numero aparecer completo em vez de truncado. Acima, nada muda. */
+@media (max-width:640px){
+  .sgo-kpi--fit .sgo-kpi__ic{display:none}
+  .sgo-kpi--fit .sgo-kpi__value{font-size:clamp(14px,4.4vw,23px);letter-spacing:-.3px;white-space:nowrap;overflow:visible}
+}
+
+
+/* ---------- 25. DOCK DE ABAS DE TRABALHO (WorkspaceTabs) — index.css do kit ---------- */
+/* ── Workspace Dock — browser-style tab bar (bottom edge) ──────── */
+/* Dock em vidro, no mesmo tratamento da navbar e do subnav. É a barra de
+   ABAS DE TRABALHO (WorkspaceTabs + TabsContext): cada aba guarda uma rota
+   com o estado preservado pelo keep-alive. Só a superfície mudou —
+   comportamento, ordem e fechamento das abas intactos. */
+.workspace-dock {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 10px;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  background: rgba(255,255,255,0.55);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  backdrop-filter: blur(12px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: 12px;
+  box-shadow: 0 2px 16px rgb(var(--sgo-brand-rgb) / 0.08);
+}
+.dark .workspace-dock {
+  background: rgb(var(--sgo-surface-rgb) / 0.55);
+  border-color: rgba(255,255,255,0.08);
+}
+
+.workspace-dock-scroll {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  scrollbar-width: none;
+}
+.workspace-dock-scroll::-webkit-scrollbar { display: none; }
+
+.workspace-dock-tab {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  flex: 1 1 0;
+  max-width: 240px;
+  min-width: 80px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sgo-ink-700);
+  border: 1px solid transparent;
+  border-bottom: none;
+  transition: background 0.1s ease, color 0.1s ease, height 0.1s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.workspace-dock-tab:hover:not(.active) {
+  background: rgb(var(--sgo-sunken-rgb) / 0.85);
+  color: var(--sgo-ink-700);
+}
+
+.dark .workspace-dock-tab {
+  background: rgb(var(--sgo-surface-rgb) / 0.65);
+  border-color: rgba(51,65,85,0.5);
+  color: var(--sgo-ink-400);
+}
+
+.dark .workspace-dock-tab:hover:not(.active) {
+  background: rgb(var(--sgo-surface-rgb) / 0.9);
+  color: var(--sgo-ink-700);
+}
+
+.workspace-dock-tab.active {
+  background: var(--sgo-surface);
+  color: var(--sgo-blue-600);
+  border-color: transparent;
+  box-shadow: 0 1px 3px rgb(var(--sgo-brand-rgb) / 0.10);
+}
+
+.dark .workspace-dock-tab.active {
+  background: rgba(255,255,255,.10);
+  color: var(--sgo-brand-hover);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.workspace-dock-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  padding: 0 6px 0 8px;
+  overflow: hidden;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  min-width: 0;
+}
+
+.workspace-dock-tab-icon {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  opacity: 0.65;
+}
+
+.workspace-dock-tab.active .workspace-dock-tab-icon {
+  opacity: 1;
+}
+
+.workspace-dock-tab-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1;
+}
+
+.workspace-dock-tab.active .workspace-dock-tab-label {
+  font-weight: 600;
+}
+
+.workspace-dock-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  margin-left: 1px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+
+.workspace-dock-tab:hover .workspace-dock-tab-close,
+.workspace-dock-tab.active .workspace-dock-tab-close {
+  opacity: 0.45;
+}
+
+.workspace-dock-tab-close:hover {
+  opacity: 1 !important;
+  background: rgb(var(--sgo-ink-400-rgb) / 0.3);
+}
+
+.workspace-dock-tab.active .workspace-dock-tab-close:hover {
+  background: rgb(var(--sgo-brand-rgb) / 0.12);
+}
+
+/* ── Botão nova aba (+) ── */
+.workspace-dock-new-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 22px;
+  margin-left: 3px;
+  align-self: flex-end;
+  margin-bottom: 2px;
+  border-radius: 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--sgo-ink-400);
+  opacity: 0.7;
+  transition: opacity 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+
+.workspace-dock-new-tab:hover {
+  opacity: 1;
+  background: rgb(var(--sgo-ink-400-rgb) / 0.25);
+  color: var(--sgo-ink-700);
+}
+
+.dark .workspace-dock-new-tab {
+  color: var(--sgo-ink-400);
+}
+
+.dark .workspace-dock-new-tab:hover {
+  background: rgba(51,65,85,0.5);
+  color: var(--sgo-ink-400);
+}
+
+/* Mobile breakpoint — esconde o dock e mostra o FAB */
+@media (max-width: 768px) {
+  .workspace-dock {
+    display: none;
+  }
+  .workspace-mobile-fab {
+    display: flex;
+  }
+}
+
+/* Desktop — esconde FAB e sheet */
+@media (min-width: 769px) {
+  .workspace-mobile-fab {
+    display: none;
+  }
+  .workspace-sheet-backdrop,
+  .workspace-sheet {
+    display: none !important;
+  }
+}
+
+/* Ajuste fino para mobile pequeno */
+@media (max-width: 640px) {
+  .workspace-dock-tab {
+    min-width: 60px;
+    max-width: 160px;
+  }
+}
+
+/* ── Botão flutuante mobile (FAB) ─────────────────────────────────── */
+.workspace-mobile-fab {
+  position: fixed;
+  left: 12px;
+  bottom: 16px;
+  z-index: 50;
+  display: none; /* padrão oculto; ativado pelo media query acima */
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px 0 8px;
+  height: 38px;
+  border-radius: 999px;
+  background: rgb(var(--sgo-brand-rgb) / 0.93);
+  color: var(--sgo-surface);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgb(var(--sgo-ink-900-rgb) / 0.22);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.workspace-mobile-fab:active {
+  transform: scale(0.96);
+  background: rgb(var(--sgo-brand-rgb) / 1);
+}
+
+.dark .workspace-mobile-fab {
+  background: rgb(var(--sgo-brand-rgb) / 0.93);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.workspace-mobile-fab-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.workspace-mobile-fab-count {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  min-width: 10px;
+  text-align: center;
+}
+
+/* ── Backdrop do bottom sheet ─────────────────────────────────────── */
+.workspace-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: ws-fade-in 0.18s ease;
+}
+
+@keyframes ws-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Bottom sheet ─────────────────────────────────────────────────── */
+.workspace-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 56;
+  background: hsl(var(--background));
+  border-radius: 16px 16px 0 0;
+  max-height: 72vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
+  animation: ws-slide-up 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@keyframes ws-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.workspace-sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: hsl(var(--muted-foreground) / 0.3);
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+/* Header do sheet */
+.workspace-sheet-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+  flex-shrink: 0;
+}
+
+.workspace-sheet-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  flex: 1;
+}
+
+.workspace-sheet-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.workspace-sheet-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: hsl(var(--muted) / 0.6);
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s ease;
+}
+
+.workspace-sheet-close-btn:active {
+  background: hsl(var(--muted));
+}
+
+/* Lista rolável */
+.workspace-sheet-list {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Item da lista */
+.workspace-sheet-item {
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+  transition: background 0.1s ease;
+  overflow: hidden;
+}
+
+.workspace-sheet-item:active {
+  background: hsl(var(--muted) / 0.6);
+}
+
+.workspace-sheet-item.active {
+  background: hsl(var(--muted) / 0.5);
+}
+
+.workspace-sheet-item-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+  min-width: 0;
+}
+
+.workspace-sheet-item-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: hsl(var(--muted));
+  flex-shrink: 0;
+}
+
+.workspace-sheet-item.active .workspace-sheet-item-icon-wrap {
+  background: rgb(var(--sgo-brand-rgb) / 0.12);
+}
+
+.dark .workspace-sheet-item.active .workspace-sheet-item-icon-wrap {
+  background: rgb(var(--sgo-brand-rgb) / 0.2);
+}
+
+.workspace-sheet-item-icon {
+  width: 16px;
+  height: 16px;
+  color: hsl(var(--muted-foreground));
+}
+
+.workspace-sheet-item.active .workspace-sheet-item-icon {
+  color: var(--sgo-brand);
+}
+
+.dark .workspace-sheet-item.active .workspace-sheet-item-icon {
+  color: var(--sgo-brand);
+}
+
+.workspace-sheet-item-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workspace-sheet-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.workspace-sheet-item.active .workspace-sheet-item-title {
+  font-weight: 600;
+  color: var(--sgo-brand);
+}
+
+.dark .workspace-sheet-item.active .workspace-sheet-item-title {
+  color: var(--sgo-brand);
+}
+
+.workspace-sheet-item-sub {
+  font-size: 11.5px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.workspace-sheet-item-active-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sgo-brand);
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.dark .workspace-sheet-item-active-dot {
+  background: var(--sgo-brand);
+}
+
+.workspace-sheet-item-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 6px;
+  opacity: 0.5;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+
+.workspace-sheet-item-close:hover,
+.workspace-sheet-item-close:active {
+  opacity: 1;
+  background: hsl(var(--muted));
+}
+
+.workspace-sheet-item-close:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+/* ---------- IMPRESSÃO (do Restaurante) ----------
+   O kit não tem @media print. Na folha impressa não há fundo contínuo, barra
+   flutuante nem dock de abas; os vidros viram superfície opaca. */
+@media print {
+  .sgo-ambient, .sgo-navbar, .workspace-dock, .workspace-mobile-fab, .workspace-sheet, .workspace-sheet-backdrop { display: none !important; }
+  .sgo-panel, .sgo-kpi, .sgo-glass, .sgo-phdr__tabs, .sgo-trilho { background: var(--sgo-surface) !important; backdrop-filter: none !important; box-shadow: none !important; }
+  .sgo-shell__main { padding-top: 0 !important; }
+  body { background: var(--sgo-surface) !important; }
+}

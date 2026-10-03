@@ -1,4 +1,4 @@
-const { CSS_SCOPE, TOKENS_FILE } = require('./scripts/ds-scope.cjs');
+const { CSS_SCOPE, TOKENS_FILES } = require('./scripts/ds-scope.cjs');
 
 /**
  * Stylelint do design system (Onda 0+). Duas camadas:
@@ -21,7 +21,7 @@ module.exports = {
     },
     {
       // Fonte de verdade dos tokens — hex e rgb permitidos só aqui.
-      files: [TOKENS_FILE],
+      files: TOKENS_FILES,
       rules: {
         'color-no-hex': null,
         'function-disallowed-list': null,

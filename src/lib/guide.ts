@@ -57,6 +57,19 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'layout-kit',
+        title: 'Novo visual (kit de layout do SGO)',
+        roles: ALL_ROLES,
+        summary: 'A moldura do SGO dos Postos com a identidade bordô: barra flutuante, menu móvel, abas de trabalho e tema.',
+        steps: [
+          'BARRA NO TOPO (v1.143.0): flutuante, de vidro. À esquerda o logo "SGO"; no meio as áreas (Início, Tarefas, Operação, Pessoas, Performance, Relatórios, Administrativo) — passe o mouse ou clique para abrir o menu da área em colunas; a área da tela atual fica marcada em bordô. À direita: unidade selecionada, Buscar (Ctrl K), Comunicação, Notificações, tema, Configurações (Admin) e o seu avatar (Meu Perfil, Ajuda, Sair).',
+          'CELULAR E TABLET: o botão de menu (canto esquerdo da barra) abre o menu completo em gaveta, com as áreas em grupos; no celular a barra de baixo (Início, Tarefas, Módulos, Pessoas, Buscar) continua.',
+          'ABAS DE TRABALHO: no rodapé do computador fica uma faixa com as telas que você abriu (como abas de navegador): clique para voltar a uma, o "x" fecha, o "+" abre outra. No celular é o botão flutuante com o número de janelas. As abas ficam guardadas no aparelho.',
+          'TEMA: o ícone de sol/lua/monitor na barra alterna claro, escuro e seguir o aparelho. Também em Meu Perfil → Aparência.',
+          'O que NÃO mudou: nenhuma tela perdeu função, nenhum cálculo ou regra mudou — só a moldura e os componentes visuais. As telas vão sendo organizadas no novo padrão aos poucos.',
+        ],
+      },
+      {
         id: 'home-gerente',
         title: 'Sua tela inicial',
         roles: MANAGERLINE,

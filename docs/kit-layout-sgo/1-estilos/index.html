@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR" translate="no">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover: sem isso o app instalado no iOS deixa faixa branca
+         nas áreas seguras (notch e barra inferior) em vez de ocupar a tela. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+    <title>SGO | Gestão Operacional</title>
+    <meta name="description" content="Sistema completo de gestão operacional e financeira para múltiplas unidades com controle de mobilidade, horas extras, estoque, compras e manutenção." />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/beija-flor-icon.png" />
+
+    <!-- PWA. Sem manifest o iOS não entrega push, e sem `display: standalone`
+         o Safari não oferece "Adicionar à Tela de Início" como app. -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0A4DA8" />
+    <!-- iOS IGNORA o manifest para o ícone da tela de início: só lê esta tag,
+         e não lida bem com transparência — por isso o arquivo tem fundo sólido. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="SGO" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!--
+      Tema antes do primeiro paint.
+
+      A classe `dark` era aplicada por um useEffect do ThemeToggle, ou seja,
+      DEPOIS de a aplicação pintar: quem tinha escuro salvo via a tela inteira
+      aparecer clara e virar escura no quadro seguinte. Não era um defeito de
+      CSS, e sim de ordem de execução — por isso a correção mora aqui, num
+      script bloqueante, e não numa folha de estilo.
+
+      O localStorage aqui é CACHE, não fonte da verdade: quem manda é
+      `user_preferences.theme` no banco. Este script só evita o flash enquanto a
+      resposta da API não chega — e o ThemeProvider (client/src/contexts/
+      ThemeContext.tsx) corrige a tela e o cache se os dois divergirem. Este é o
+      ÚNICO lugar fora daquele contexto autorizado a mexer na classe `dark`.
+
+      São três valores possíveis: "light", "dark" e "system". Só "light" e
+      "dark" são decisões do usuário; "system" (e a ausência de valor, que é o
+      primeiro acesso) delegam ao sistema operacional.
+
+      As leituras vão dentro de try/catch porque localStorage lança em navegação
+      privativa de alguns navegadores, e falhar aqui deixaria a aplicação sem
+      pintar.
+
+      NÃO altera o tema claro: sem preferência escura, nenhuma classe é
+      adicionada e o documento segue exatamente como estava.
+    -->
+    <script>
+      (function () {
+        try {
+          var salvo = localStorage.getItem("theme");
+          var escuro =
+            salvo === "dark" ||
+            ((salvo === "system" || !salvo) &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (escuro) document.documentElement.classList.add("dark");
+        } catch (e) {
+          /* sem acesso a localStorage/matchMedia: segue no claro, que é o padrão */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

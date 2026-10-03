@@ -47,3 +47,10 @@
 .pop-rich a { color: var(--sgo-brand); text-decoration: underline; }
 .pop-rich b, .pop-rich strong { font-weight: 700; }
 .pop-rich p { margin: 0.25rem 0; }
+
+/* Painéis que abrem da barra (menu de área, menu do avatar) — kit de layout.
+   O kit usa framer-motion; aqui a MESMA entrada (opacidade + 8px + escala .96,
+   180ms) em CSS puro. Respeita prefers-reduced-motion. */
+.sgo-navpanel-enter { animation: sgo-navpanel 180ms var(--sgo-nav-ease, ease-out) both; }
+@keyframes sgo-navpanel { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .sgo-navpanel-enter { animation: none; } }

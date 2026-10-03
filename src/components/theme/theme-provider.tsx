@@ -20,7 +20,16 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
  * data-theme="system". Sem atributo, o padrão de :root (claro) vale.
  */
 function applyTheme(theme: ThemeChoice) {
-  document.documentElement.setAttribute('data-theme', theme);
+  const html = document.documentElement;
+  html.setAttribute('data-theme', theme);
+  /* A classe `dark` é o contrato do kit de layout (html.dark). 'system' segue
+     o aparelho; o listener abaixo acompanha a troca sem recarregar. */
+  html.classList.toggle('dark', resolvido(theme) === 'dark');
+}
+
+function resolvido(theme: ThemeChoice): 'light' | 'dark' {
+  if (theme === 'system') return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return theme;
 }
 
 /**
@@ -45,6 +54,11 @@ export function ThemeProvider({
   // Mantém o atributo coerente com o estado (no-op quando já bate com o servidor).
   useEffect(() => {
     applyTheme(theme);
+    if (theme !== 'system') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => applyTheme('system');
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
   }, [theme]);
 
   return (

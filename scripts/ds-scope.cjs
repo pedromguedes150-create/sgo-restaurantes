@@ -23,7 +23,14 @@ const TSX_SCOPE_DIRS = ['src'];
  */
 const ALLOW_MARK = 'ds-allow-hex';
 
-// Única fonte de verdade dos tokens: o ÚNICO arquivo onde hex/rgb são permitidos.
+// Fonte de verdade dos tokens: o arquivo onde hex/rgb são permitidos.
 const TOKENS_FILE = 'src/styles/sgo-design-system.css';
+/**
+ * Segunda fonte (v1.143.0): o CSS do kit de layout do SGO dos Postos, GERADO
+ * por scripts/build-kit-css.cjs. Ele é todo tokens + classes .sgo-* e carrega
+ * os vidros em rgba — é um arquivo de tokens tanto quanto o primeiro, e por
+ * isso entra na mesma exceção. Nenhum .tsx ganha isenção com isto.
+ */
+const TOKENS_FILES = [TOKENS_FILE, 'src/styles/sgo-kit.css'];
 
-module.exports = { CSS_SCOPE, TSX_SCOPE_DIRS, ALLOW_MARK, TOKENS_FILE };
+module.exports = { CSS_SCOPE, TSX_SCOPE_DIRS, ALLOW_MARK, TOKENS_FILE, TOKENS_FILES };
