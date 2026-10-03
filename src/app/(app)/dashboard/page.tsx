@@ -10,12 +10,13 @@ import { montarMenu } from '@/lib/nav/menu';
 import { recortarPizzas } from '@/lib/pizzas/acesso';
 import { getCentralDaRede } from '@/lib/dashboard/central';
 import { getUnitsOverview, aggregateDay } from '@/lib/tasks/overview';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, PanelHeader } from '@/components/sgo/panel';
+import { SgoBar } from '@/components/sgo/sgo-bar';
 import { ProgressRing } from '@/components/dashboard/progress-ring';
 import { CentralOperacional, AlertasDaRede } from '@/components/dashboard/central-da-rede';
 import { AcessosRapidos } from '@/components/dashboard/acessos-rapidos';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
-import { ScrollText } from 'lucide-react';
+import { ChevronRight, ListChecks, ScrollText, Target } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,10 @@ export const dynamic = 'force-dynamic';
  *
  * Os dois caminhos obedecem o SELETOR GLOBAL: escolhida uma unidade lá em
  * cima, a central passa a falar só dela.
+ *
+ * Fase 4 do kit (v1.145.0): cabeçalho do kit, painéis `.sgo-panel` com
+ * cabeçalho em linha, KPIs `.sgo-kpi` e linhas `.sgo-row`. Nenhum número,
+ * link ou regra mudou de lugar.
  */
 export default async function DashboardPage({ searchParams }: { searchParams: { unit?: string; unidade?: string } }) {
   const user = (await getSessionUser())!;
@@ -44,18 +49,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
     return (
       <div className="space-y-4">
         <AutoRefresh />
-        <LargeTitle title={`Olá, ${user.name.split(' ')[0]} 👋`} />
+        <LargeTitle title={`Olá, ${user.name.split(' ')[0]} 👋`} subtitle="Seu perfil (Financeiro) recebe demandas aprovadas para pagamento." />
         <Card>
-          <CardContent className="py-6 text-sm text-ink-500">
-            Seu perfil (Financeiro) recebe demandas aprovadas para pagamento.
-          </CardContent>
+          <div className="sgo-rows">
+            <Link href="/modulos/pagamentos" className="sgo-row min-h-12 outline-none focus-visible:shadow-sgo-focus">
+              <span className="sgo-ric sgo-ric--blue" aria-hidden><ScrollText className="h-4 w-4" /></span>
+              <span className="sgo-row__main"><span className="sgo-row__title">Pagamentos a processar</span></span>
+              <ChevronRight className="h-4 w-4 shrink-0" style={{ color: 'var(--sgo-ink-3)' }} aria-hidden />
+            </Link>
+          </div>
         </Card>
-        <Link
-          href="/modulos/pagamentos"
-          className="flex items-center gap-2 rounded-lg border bg-surface px-4 py-3 text-sm font-semibold text-brand"
-        >
-          <ScrollText className="h-5 w-5 text-brand" /> Pagamentos a processar
-        </Link>
       </div>
     );
   }
@@ -85,7 +88,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   const nomeDaUnidade = filtro.all ? null : unidades.find((u) => u.id === filtro.ids[0])?.name ?? null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <AutoRefresh seconds={60} />
       <LargeTitle
         title={`Olá, ${user.name.split(' ')[0]} 👋`}
@@ -120,7 +123,7 @@ function HomeDoGerente({
   const unidade = overviews.length === 1 ? overviews[0].unit.name : null;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <AutoRefresh seconds={60} />
       <LargeTitle title={`Olá, ${nome.split(' ')[0]} 👋`} subtitle={unidade ?? `${overviews.length} unidade(s) sob sua gestão.`} />
 
@@ -128,22 +131,25 @@ function HomeDoGerente({
 
       {/* MEU DIA */}
       <section>
-        <h2 className="mb-2 sgo-type-11 font-semibold text-ink-500">Meu dia</h2>
-        <Card>
-          <CardContent className="flex items-center gap-5 py-5">
+        <Card data-testid="meu-dia">
+          <PanelHeader
+            title="Meu dia"
+            icon={<span className="sgo-panel__ic sgo-panel__ic--blue" aria-hidden><ListChecks className="h-4 w-4" /></span>}
+            action={<Link href="/tarefas" className="sgo-link">Ir para as tarefas →</Link>}
+          />
+          <div className="flex items-center gap-5 px-4 py-4">
             <ProgressRing value={agg.progressPct} sublabel="do dia" />
             <div className="space-y-1 text-sm">
-              <p className="font-semibold text-ink-900">{agg.done} de {agg.total} tarefas concluídas</p>
+              <p className="font-semibold" style={{ color: 'var(--sgo-ink)' }}>{agg.done} de {agg.total} tarefas concluídas</p>
               {agg.overdue > 0 && (
-                <Link href="/tarefas?filter=atrasadas" className="block font-semibold text-danger underline">
+                <Link href="/tarefas?filter=atrasadas" className="block font-semibold underline" style={{ color: 'var(--sgo-bad)' }}>
                   ⚠ {agg.overdue} atrasada(s) — resolver agora →
                 </Link>
               )}
-              {agg.missed > 0 && <p className="text-danger">✖ {agg.missed} não realizada(s)</p>}
-              {agg.overdue === 0 && agg.missed === 0 && <p className="text-success">No prazo 🎉</p>}
-              <Link href="/tarefas" className="inline-block pt-1 font-semibold text-brand underline">Ir para as tarefas →</Link>
+              {agg.missed > 0 && <p style={{ color: 'var(--sgo-bad)' }}>✖ {agg.missed} não realizada(s)</p>}
+              {agg.overdue === 0 && agg.missed === 0 && <p style={{ color: 'var(--sgo-ok)' }}>No prazo 🎉</p>}
             </div>
-          </CardContent>
+          </div>
         </Card>
       </section>
 
@@ -152,17 +158,19 @@ function HomeDoGerente({
       {/* MINHA META DO MÊS — continua onde estava, no fim: ela orienta o mês,
           não o próximo passo do turno. */}
       <section>
-        <Card>
-          <CardHeader><CardTitle>Minha Meta do Mês</CardTitle></CardHeader>
-          <CardContent>
-            <div className="mb-1 flex items-center justify-between text-sm">
-              <span className="font-semibold text-ink-900">{metaPct}%</span>
-              <span className="text-ink-500">{doneW}/{resW} pts</span>
+        <Card data-testid="minha-meta">
+          <PanelHeader
+            title="Minha Meta do Mês"
+            icon={<span className="sgo-panel__ic sgo-panel__ic--brand" aria-hidden><Target className="h-4 w-4" /></span>}
+            action={<Link href="/modulos/metas" className="sgo-link">Ver metas</Link>}
+          />
+          <div className="px-4 py-4">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="sgo-kpi__value" style={{ marginTop: 0 }}>{metaPct}%</span>
+              <span className="tabular-nums" style={{ color: 'var(--sgo-ink-2)' }}>{doneW}/{resW} pts</span>
             </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-sunken">
-              <div className="h-full rounded-full bg-brand" style={{ width: `${metaPct}%` }} />
-            </div>
-          </CardContent>
+            <SgoBar value={metaPct} tone="blue" height={10} data-testid="meta-barra" />
+          </div>
         </Card>
       </section>
     </div>

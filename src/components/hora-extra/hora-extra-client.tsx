@@ -3,18 +3,20 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, Clock, Download, Link2, Plus, Settings, Users } from 'lucide-react';
+import { AlertTriangle, BarChart3, CalendarCheck, Clock, Download, Gauge, Link2, ListChecks, Plus, Receipt, Settings, Users, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { StatCard } from '@/components/ui/ds/stat-card';
-import { SegmentedNav } from '@/components/ui/ds/segmented-nav';
-import { Sheet } from '@/components/ui/ds/sheet';
-import { Modal } from '@/components/ui/ds/modal';
 import { Table } from '@/components/ui/ds/table';
 import { Select as DsSelect } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { SearchField } from '@/components/ui/ds/field';
 import { StatusBadge, type Tone } from '@/components/ui/ds/status-badge';
 import { FilterBar, FilterSelect } from '@/components/ui/filter-bar';
+import { LargeTitle } from '@/components/layout/page-chrome';
+import { Card, PanelHeader } from '@/components/sgo/panel';
+import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
+import { SgoBar } from '@/components/sgo/sgo-bar';
+import { SgoModal } from '@/components/sgo/sgo-modal';
+import { SgoDrawer } from '@/components/sgo/sgo-drawer';
 import { formatBRL } from '@/lib/utils';
 import { shortUnitName } from '@/lib/unit-name';
 import { textoHoras } from '@/lib/overtime/calculo';
@@ -41,10 +43,17 @@ import type { PendenciaDeVinculo } from '@/lib/hora-extra/vinculo';
  *
  * O filtro vive na URL (`queryDoFiltroHE`): o Excel sai do mesmo endereço, e o
  * link que o supervisor manda já abre certo.
+ *
+ * Fase 4 do kit (v1.145.0): cabeçalho [título] — [abas] — [ações] do kit,
+ * `.sgo-filtros`, `.sgo-kpis`, painéis `.sgo-panel`, tabela `.sgo-tbl`,
+ * SgoModal para criar e SgoDrawer para consultar. Dados, filtros e regras: os
+ * mesmos.
  */
 
 const TONE: Record<HoraExtra['status'], Tone> = { PENDING: 'warning', APPROVED: 'info', PAID: 'success', REJECTED: 'danger' };
-const COR_STATUS: Record<HoraExtra['status'], string> = { PENDING: 'bg-warning', APPROVED: 'bg-brand', PAID: 'bg-success', REJECTED: 'bg-danger' };
+/* A mesma cor do selo, no gráfico de status: pendente âmbar, aprovada azul-claro
+   (`sky`, o tom semântico do kit — não a marca), paga verde, reprovada vermelha. */
+const COR_STATUS: Record<HoraExtra['status'], string> = { PENDING: 'var(--sgo-warn)', APPROVED: 'var(--sgo-sky)', PAID: 'var(--sgo-ok)', REJECTED: 'var(--sgo-bad)' };
 
 export interface FechamentoUI { quadro: QuadroUI; competencia: string; meses: string[] }
 
@@ -77,43 +86,47 @@ export function HoraExtraClient(p: HoraExtraClientProps) {
     router.push(q ? `${base}?${q}` : base);
   };
   const queryAtual = queryDoFiltroHE({ ...p.filtro, aba: 'dashboard' });
+  const linkDaAba = (aba: FiltroHE['aba']) => `${base}?${queryDoFiltroHE({ ...p.filtro, aba })}`;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <SegmentedNav
-          aria-label="Seção"
-          options={[
-            { value: 'dashboard', label: 'Dashboard', href: `${base}?${queryDoFiltroHE({ ...p.filtro, aba: 'dashboard' })}` },
-            { value: 'solicitacoes', label: 'Solicitações', badge: p.resumo.pendentes.qtd || undefined, href: `${base}?${queryDoFiltroHE({ ...p.filtro, aba: 'solicitacoes' })}` },
-            { value: 'fechamento', label: 'Fechamento', href: `${base}?${queryDoFiltroHE({ ...p.filtro, aba: 'fechamento' })}` },
-          ]}
-          value={p.filtro.aba}
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          {p.filtro.aba !== 'fechamento' && (
-            <a href={`/api/hora-extra/export?${queryAtual}`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
-              <Download className="h-4 w-4" /> Exportar xlsx
-            </a>
-          )}
-          {p.isAdmin && (
-            <Link href="/configuracoes/pagamentos#motivos-hora-extra" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">
-              <Settings className="h-4 w-4" /> Configurar
-            </Link>
-          )}
-          {p.podeLancar && (
-            <Button size="sm" onClick={() => setNovaAberta(true)}><Plus className="h-4 w-4" /> Nova solicitação</Button>
-          )}
-        </div>
-      </div>
+      {/* As abas são de ESTADO (mesma rota, `?aba=`): `active` explícito, senão
+          as três casariam a mesma rota e ficariam todas acesas. */}
+      <LargeTitle
+        title="Hora extra"
+        subtitle="Painel por motivo e período, lista para conferência e o fechamento da competência (paga no mês seguinte ao trabalho)."
+        tabs={[
+          { label: 'Dashboard', icon: <BarChart3 className="h-3.5 w-3.5" />, href: linkDaAba('dashboard'), active: p.filtro.aba === 'dashboard', testId: 'aba-dashboard' },
+          { label: 'Solicitações', icon: <ListChecks className="h-3.5 w-3.5" />, href: linkDaAba('solicitacoes'), active: p.filtro.aba === 'solicitacoes', badge: p.resumo.pendentes.qtd || undefined, testId: 'aba-solicitacoes' },
+          { label: 'Fechamento', icon: <CalendarCheck className="h-3.5 w-3.5" />, href: linkDaAba('fechamento'), active: p.filtro.aba === 'fechamento', testId: 'aba-fechamento' },
+        ]}
+        actions={(
+          /* As ações quebram linha no celular (o kit as mantém numa linha só). */
+          <div className="flex flex-wrap items-center gap-2">
+            {p.filtro.aba !== 'fechamento' && (
+              <a href={`/api/hora-extra/export?${queryAtual}`} className="sgo-btn">
+                <Download className="h-3.5 w-3.5" /> Exportar xlsx
+              </a>
+            )}
+            {p.isAdmin && (
+              <Link href="/configuracoes/pagamentos#motivos-hora-extra" className="sgo-btn">
+                <Settings className="h-3.5 w-3.5" /> Configurar
+              </Link>
+            )}
+            {p.podeLancar && (
+              <button type="button" className="sgo-btn sgo-btn--primary" onClick={() => setNovaAberta(true)}><Plus className="h-3.5 w-3.5" /> Nova solicitação</button>
+            )}
+          </div>
+        )}
+      />
 
       {p.podeVincular && p.semVinculo.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 sgo-type-13 text-ink-900" data-testid="aviso-sem-vinculo">
-          <span>
-            <AlertTriangle className="mr-1 inline h-4 w-4 text-warning" />
+        <div className="sgo-aviso sgo-aviso--atencao flex-wrap items-center justify-between" data-testid="aviso-sem-vinculo">
+          <AlertTriangle />
+          <span className="min-w-[14rem] flex-1">
             <b>{p.semVinculo.length} hora(s) extra(s) antiga(s) sem vínculo com o RH</b> — saem sem CPF e matrícula, e a mesma pessoa pode aparecer com dois nomes. O sistema já vinculou sozinho as que batiam com um só colaborador; estas precisam de você.
           </span>
-          <Button size="sm" variant="outline" onClick={() => setVinculoAberto(true)}><Link2 className="h-4 w-4" /> Vincular agora</Button>
+          <button type="button" className="sgo-btn sgo-btn--sm" onClick={() => setVinculoAberto(true)}><Link2 className="h-3.5 w-3.5" /> Vincular agora</button>
         </div>
       )}
 
@@ -135,7 +148,17 @@ export function HoraExtraClient(p: HoraExtraClientProps) {
         />
       )}
 
-      <Sheet open={novaAberta} onClose={() => setNovaAberta(false)} title="Nova solicitação de hora extra" description="Entra no mesmo fluxo de Pagamentos: aprovação pela coordenação/supervisão e pagamento pelo Fechamento da competência.">
+      {/* Criar = modal do kit (decisão, bloqueia o fundo). O formulário traz o
+          próprio botão de enviar, então o modal não tem rodapé. */}
+      <SgoModal
+        open={novaAberta}
+        onClose={() => setNovaAberta(false)}
+        title="Nova solicitação de hora extra"
+        subtitle="Entra no mesmo fluxo de Pagamentos: aprovação pela coordenação/supervisão e pagamento pelo Fechamento da competência."
+        icon={<Clock className="h-4 w-4" />}
+        tone="brand"
+        size="sm"
+      >
         {novaAberta && (
           <FormularioHoraExtra
             units={p.form.units}
@@ -145,11 +168,20 @@ export function HoraExtraClient(p: HoraExtraClientProps) {
             onDone={() => { setNovaAberta(false); router.refresh(); }}
           />
         )}
-      </Sheet>
+      </SgoModal>
 
-      <Sheet open={vinculoAberto} onClose={() => setVinculoAberto(false)} title="Vincular hora extra ao colaborador do RH" description="Hora extra lançada antes do cadastro por RH guarda só o nome digitado. Escolha quem é cada uma — o nome original fica no histórico, e CPF e matrícula passam a vir do cadastro.">
+      {/* A fila de vínculo é trabalho em sequência com a tela atrás: painel lateral. */}
+      <SgoDrawer
+        open={vinculoAberto}
+        onClose={() => setVinculoAberto(false)}
+        title="Vincular hora extra ao colaborador do RH"
+        subtitle="Hora extra lançada antes do cadastro por RH guarda só o nome digitado. Escolha quem é cada uma — o nome original fica no histórico, e CPF e matrícula passam a vir do cadastro."
+        icon={<Link2 className="h-4 w-4" />}
+        tone="amber"
+        size="lg"
+      >
         {vinculoAberto && <FilaDeVinculo itens={p.semVinculo} onMudou={() => router.refresh()} />}
-      </Sheet>
+      </SgoDrawer>
     </div>
   );
 }
@@ -171,8 +203,8 @@ function Filtros({ filtro, periodo, unidades, motivos, onChange }: {
       <FilterSelect label="Período" value={filtro.periodo} onValueChange={(v) => onChange({ periodo: v as FiltroHE['periodo'] })} options={PERIODOS_HE} />
       {filtro.periodo === 'personalizado' && (
         <>
-          <div className="min-w-[8.5rem] flex-1"><DatePicker label="De" value={filtro.de ?? periodo.de} onValueChange={(v) => onChange({ de: v ?? undefined })} /></div>
-          <div className="min-w-[8.5rem] flex-1"><DatePicker label="Até" value={filtro.ate ?? periodo.ate} onValueChange={(v) => onChange({ ate: v ?? undefined })} /></div>
+          <div className="min-w-[8.5rem] flex-1"><DatePicker label="De" value={filtro.de ?? periodo.de} onValueChange={(v) => onChange({ de: v ?? undefined })} size="sm" /></div>
+          <div className="min-w-[8.5rem] flex-1"><DatePicker label="Até" value={filtro.ate ?? periodo.ate} onValueChange={(v) => onChange({ ate: v ?? undefined })} size="sm" /></div>
         </>
       )}
       {unidades.length > 1 && (
@@ -194,75 +226,81 @@ function Dashboard({ resumo, motivos, status, evolucao, periodo, onMotivo }: {
   const totalStatus = status.reduce((s, x) => s + x.qtd, 0);
   return (
     <div className="space-y-4" data-testid="he-dashboard">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Total pago" value={formatBRL(resumo.totalPago)} hint={`a pagar: ${formatBRL(resumo.aPagar)}`} tone="success" />
-        <StatCard label="Total de horas" value={textoHoras(resumo.horas)} icon={Clock} />
-        <StatCard label="Solicitações" value={String(resumo.solicitacoes)} hint={resumo.reprovadas ? `${resumo.reprovadas} reprovada(s) fora` : `${resumo.colaboradores} colaborador(es)`} icon={Users} />
-        <StatCard label="Média / solicitação" value={resumo.mediaPorSolicitacao != null ? formatBRL(resumo.mediaPorSolicitacao) : null} />
-        <StatCard label="Valor médio / hora" value={resumo.valorPorHora != null ? formatBRL(resumo.valorPorHora) : null} hint="valor ÷ horas (VT incluso)" />
-        <StatCard label="Pendentes" value={String(resumo.pendentes.qtd)} hint={formatBRL(resumo.pendentes.valor)} tone={resumo.pendentes.qtd ? 'warning' : 'default'} />
+      <div>
+        <SgoKpis className="grid-cols-2 md:grid-cols-3 lg:grid-cols-6" flush>
+          <SgoKpi label="Total pago" value={formatBRL(resumo.totalPago)} meta={`a pagar: ${formatBRL(resumo.aPagar)}`} icon={Wallet} tone="green" />
+          <SgoKpi label="Total de horas" value={textoHoras(resumo.horas)} icon={Clock} tone="blue" />
+          <SgoKpi label="Solicitações" value={String(resumo.solicitacoes)} meta={resumo.reprovadas ? `${resumo.reprovadas} reprovada(s) fora` : `${resumo.colaboradores} colaborador(es)`} icon={Users} tone="violet" />
+          <SgoKpi label="Média / solicitação" value={resumo.mediaPorSolicitacao != null ? formatBRL(resumo.mediaPorSolicitacao) : '–'} icon={Receipt} tone="sky" />
+          <SgoKpi label="Valor médio / hora" value={resumo.valorPorHora != null ? formatBRL(resumo.valorPorHora) : '–'} meta="valor ÷ horas (VT incluso)" icon={Gauge} tone="gray" />
+          <SgoKpi label="Pendentes" value={String(resumo.pendentes.qtd)} meta={formatBRL(resumo.pendentes.valor)} metaTone={resumo.pendentes.qtd ? 'warn' : undefined} icon={AlertTriangle} tone={resumo.pendentes.qtd ? 'amber' : 'gray'} valueColor={resumo.pendentes.qtd ? 'var(--sgo-warn)' : undefined} />
+        </SgoKpis>
+        <p className="mt-2 text-xs" style={{ color: 'var(--sgo-ink-2)' }}>Valores das solicitações não reprovadas em <b>{periodo.rotulo}</b>, pelo dia trabalhado. O VT já está dentro de cada valor.</p>
       </div>
-      <p className="sgo-type-11 text-ink-500">Valores das solicitações não reprovadas em <b>{periodo.rotulo}</b>, pelo dia trabalhado. O VT já está dentro de cada valor.</p>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-card border border-line bg-surface p-4">
-          <h3 className="sgo-type-15 font-semibold text-ink-900">Comparativo por motivo</h3>
-          <p className="sgo-type-11 text-ink-500">Valor por motivo do catálogo — clique para ver as solicitações.</p>
-          {motivos.length === 0 ? <p className="mt-3 text-sm text-ink-500">Nenhuma hora extra no período.</p> : (
-            <ul className="mt-3 space-y-2" data-testid="por-motivo">
-              {motivos.map((m) => (
-                <li key={m.motivoId ?? 'outro'}>
-                  <button type="button" onClick={() => onMotivo(m.motivoId ?? FILTRO_OUTRO)} className="w-full text-left">
-                    <div className="flex items-center justify-between gap-2 sgo-type-13">
-                      <span className="font-semibold text-ink-900">{m.motivo}</span>
-                      <span className="tabular-nums text-ink-700">{formatBRL(m.valor)} · {m.qtd} · {textoHoras(m.horas)} · {m.pct}%</span>
-                    </div>
-                    <div className="mt-1 h-2 w-full overflow-hidden rounded-pill bg-sunken">
-                      <div className="h-full rounded-pill bg-brand" style={{ width: `${Math.max(2, Math.round((m.valor / maxMotivo) * 100))}%` }} />
-                    </div>
-                  </button>
+        <Card>
+          <PanelHeader title="Comparativo por motivo" icon={<span className="sgo-panel__ic sgo-panel__ic--blue" aria-hidden><BarChart3 className="h-4 w-4" /></span>} count={motivos.length} />
+          <div className="px-4 py-3">
+            <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>Valor por motivo do catálogo — clique para ver as solicitações.</p>
+            {motivos.length === 0 ? <p className="mt-3 text-sm" style={{ color: 'var(--sgo-ink-2)' }}>Nenhuma hora extra no período.</p> : (
+              <ul className="mt-3 space-y-2.5" data-testid="por-motivo">
+                {motivos.map((m) => (
+                  <li key={m.motivoId ?? 'outro'}>
+                    <button type="button" onClick={() => onMotivo(m.motivoId ?? FILTRO_OUTRO)} className="w-full rounded-md text-left outline-none focus-visible:shadow-sgo-focus">
+                      <div className="flex items-center justify-between gap-2 text-sm">
+                        <span className="font-semibold" style={{ color: 'var(--sgo-ink)' }}>{m.motivo}</span>
+                        <span className="text-xs tabular-nums" style={{ color: 'var(--sgo-ink-2)' }}>{formatBRL(m.valor)} · {m.qtd} · {textoHoras(m.horas)} · {m.pct}%</span>
+                      </div>
+                      <SgoBar value={Math.max(2, Math.round((m.valor / maxMotivo) * 100))} tone="blue" className="mt-1.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Card>
+
+        <Card>
+          <PanelHeader title="Status das solicitações" icon={<span className="sgo-panel__ic sgo-panel__ic--amber" aria-hidden><ListChecks className="h-4 w-4" /></span>} count={totalStatus} />
+          <div className="px-4 py-3">
+            <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>Todas as solicitações do período, inclusive reprovadas.</p>
+            <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-pill" style={{ background: 'rgb(var(--sgo-ink-500-rgb) / 0.16)' }} aria-hidden>
+              {status.filter((s) => s.qtd > 0).map((s) => (
+                <div key={s.status} style={{ width: `${(s.qtd / Math.max(1, totalStatus)) * 100}%`, background: COR_STATUS[s.status] }} />
+              ))}
+            </div>
+            <ul className="mt-3 grid grid-cols-2 gap-2" data-testid="por-status">
+              {status.map((s) => (
+                <li key={s.status} className="flex items-center gap-2 text-sm">
+                  <span className="inline-block h-2.5 w-2.5 rounded-pill" style={{ background: COR_STATUS[s.status] }} aria-hidden />
+                  <span style={{ color: 'var(--sgo-ink)' }}>{s.rotulo}</span>
+                  <span className="ml-auto text-xs tabular-nums" style={{ color: 'var(--sgo-ink-2)' }}>{s.qtd} · {formatBRL(s.valor)}</span>
                 </li>
               ))}
             </ul>
-          )}
-        </section>
-
-        <section className="rounded-card border border-line bg-surface p-4">
-          <h3 className="sgo-type-15 font-semibold text-ink-900">Status das solicitações</h3>
-          <p className="sgo-type-11 text-ink-500">Todas as solicitações do período, inclusive reprovadas.</p>
-          <div className="mt-3 flex h-3 w-full overflow-hidden rounded-pill bg-sunken" aria-hidden>
-            {status.filter((s) => s.qtd > 0).map((s) => (
-              <div key={s.status} className={COR_STATUS[s.status]} style={{ width: `${(s.qtd / Math.max(1, totalStatus)) * 100}%` }} />
-            ))}
           </div>
-          <ul className="mt-3 grid grid-cols-2 gap-2" data-testid="por-status">
-            {status.map((s) => (
-              <li key={s.status} className="flex items-center gap-2 sgo-type-13">
-                <span className={`inline-block h-2.5 w-2.5 rounded-pill ${COR_STATUS[s.status]}`} aria-hidden />
-                <span className="text-ink-900">{s.rotulo}</span>
-                <span className="ml-auto tabular-nums text-ink-700">{s.qtd} · {formatBRL(s.valor)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
+        </Card>
       </div>
 
-      <section className="rounded-card border border-line bg-surface p-4">
-        <h3 className="sgo-type-15 font-semibold text-ink-900">Evolução mensal</h3>
-        <p className="sgo-type-11 text-ink-500">Valor e horas por mês do dia trabalhado.</p>
-        <div className="mt-3 flex items-end gap-2 overflow-x-auto" data-testid="evolucao">
-          {evolucao.map((m) => (
-            <div key={m.mes} className="flex min-w-[3.5rem] flex-1 flex-col items-center gap-1">
-              <span className="sgo-type-11 tabular-nums text-ink-700">{m.valor ? formatBRL(m.valor) : '–'}</span>
-              <div className="flex h-32 w-full items-end rounded bg-sunken px-1">
-                <div className="w-full rounded-t bg-brand" style={{ height: `${m.valor ? Math.max(4, Math.round((m.valor / maxMes) * 100)) : 0}%` }} title={`${m.qtd} solicitação(ões) · ${textoHoras(m.horas)}`} />
+      <Card>
+        <PanelHeader title="Evolução mensal" icon={<span className="sgo-panel__ic sgo-panel__ic--green" aria-hidden><Clock className="h-4 w-4" /></span>} />
+        <div className="px-4 py-3">
+          <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>Valor e horas por mês do dia trabalhado.</p>
+          <div className="mt-3 flex items-end gap-2 overflow-x-auto" data-testid="evolucao">
+            {evolucao.map((m) => (
+              <div key={m.mes} className="flex min-w-[3.5rem] flex-1 flex-col items-center gap-1">
+                <span className="text-xs tabular-nums" style={{ color: 'var(--sgo-ink-2)' }}>{m.valor ? formatBRL(m.valor) : '–'}</span>
+                <div className="flex h-32 w-full items-end rounded-md px-1" style={{ background: 'rgb(var(--sgo-ink-500-rgb) / 0.10)' }}>
+                  <div className="w-full rounded-t-md" style={{ height: `${m.valor ? Math.max(4, Math.round((m.valor / maxMes) * 100)) : 0}%`, background: 'var(--sgo-accent)' }} title={`${m.qtd} solicitação(ões) · ${textoHoras(m.horas)}`} />
+                </div>
+                <span className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>{m.rotulo}</span>
+                <span className="text-xs tabular-nums" style={{ color: 'var(--sgo-ink-3)' }}>{m.qtd ? `${m.qtd} · ${textoHoras(m.horas)}` : ''}</span>
               </div>
-              <span className="sgo-type-11 text-ink-500">{m.rotulo}</span>
-              <span className="sgo-type-11 tabular-nums text-ink-500">{m.qtd ? `${m.qtd} · ${textoHoras(m.horas)}` : ''}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </section>
+      </Card>
     </div>
   );
 }
@@ -277,17 +315,19 @@ function Solicitacoes({ hes, resumo }: { hes: HoraExtra[]; resumo: ResumoHE }) {
   return (
     <div className="space-y-3" data-testid="he-solicitacoes">
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <p className="sgo-type-13 text-ink-700">
-          <b>{hes.length}</b> solicitação(ões) · {formatBRL(total)} (sem reprovadas) · {resumo.colaboradores} colaborador(es)
-          {resumo.semVinculo > 0 && <> · <span className="text-warning">{resumo.semVinculo} sem vínculo com o RH</span></>}
-        </p>
+        <div>
+          <p className="text-sm" style={{ color: 'var(--sgo-ink)' }}>
+            <b>{hes.length}</b> solicitação(ões) · {formatBRL(total)} (sem reprovadas) · {resumo.colaboradores} colaborador(es)
+            {resumo.semVinculo > 0 && <> · <span style={{ color: 'var(--sgo-warn)' }}>{resumo.semVinculo} sem vínculo com o RH</span></>}
+          </p>
+          <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>Aprovar, reprovar e corrigir continuam em <Link href="/modulos/pagamentos" className="font-semibold underline" style={{ color: 'var(--sgo-accent)' }}>Pagamentos</Link>. O pagamento é pelo Fechamento da competência.</p>
+        </div>
         <div className="w-44">
           <DsSelect label="Ordenar por" size="sm" value={ordem} onValueChange={(v) => setOrdem(v as OrdemHE)} options={[
             { value: 'data', label: 'Data (recentes)' }, { value: 'colaborador', label: 'Colaborador' }, { value: 'unidade', label: 'Unidade' }, { value: 'valor', label: 'Maior valor' }, { value: 'status', label: 'Status' },
           ]} />
         </div>
       </div>
-      <p className="sgo-type-11 text-ink-500">Aprovar, reprovar e corrigir continuam em <Link href="/modulos/pagamentos" className="font-semibold text-brand underline">Pagamentos</Link>. O pagamento é pelo Fechamento da competência.</p>
       <Table<HoraExtra>
         rows={linhas}
         getRowKey={(h) => h.id}
@@ -296,26 +336,35 @@ function Solicitacoes({ hes, resumo }: { hes: HoraExtra[]; resumo: ResumoHE }) {
         columns={[
           { key: 'colaborador', header: 'Colaborador', cell: (h) => (
             <div className="min-w-0">
-              <p className="truncate font-semibold text-ink-900">{h.colaborador}{!h.collaboratorId && <AlertTriangle className="ml-1 inline h-3.5 w-3.5 text-warning" aria-label="Sem vínculo com o RH" />}</p>
-              <p className="sgo-type-11 text-ink-500">{h.matricula ? `Matr. ${h.matricula}` : 'sem matrícula'}{h.cpf ? ` · ${cpfBr(h.cpf)}` : ''}</p>
+              <p className="truncate font-semibold" style={{ color: 'var(--sgo-ink)' }}>{h.colaborador}{!h.collaboratorId && <AlertTriangle className="ml-1 inline h-3.5 w-3.5" style={{ color: 'var(--sgo-warn)' }} aria-label="Sem vínculo com o RH" />}</p>
+              <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>{h.matricula ? `Matr. ${h.matricula}` : 'sem matrícula'}{h.cpf ? ` · ${cpfBr(h.cpf)}` : ''}</p>
             </div>
           ) },
           { key: 'unidade', header: 'Unidade', cell: (h) => shortUnitName(h.unidade), hideOnMobile: true },
           { key: 'dia', header: 'Data', cell: (h) => dataBr(h.dia) },
           { key: 'detalhes', header: 'Detalhes', cell: (h) => <span className="tabular-nums">{h.inicio && h.fim ? `${h.inicio}–${h.fim}` : '—'}{h.horas != null ? ` (${textoHoras(h.horas)})` : ''}</span>, hideOnMobile: true },
-          { key: 'motivo', header: 'Motivo', cell: (h) => (
+          { key: 'motivo', header: 'Motivo', wrap: true, cell: (h) => (
             <div className="min-w-0">
               <p>{h.motivo}</p>
-              {h.detalhe && <p className="truncate sgo-type-11 text-ink-500" title={h.detalhe}>{h.detalhe}</p>}
+              {h.detalhe && <p className="truncate text-xs" style={{ color: 'var(--sgo-ink-2)' }} title={h.detalhe}>{h.detalhe}</p>}
             </div>
           ), hideOnMobile: true },
           { key: 'valor', header: 'Valor', numeric: true, cell: (h) => <span className="font-semibold tabular-nums">{formatBRL(h.valor)}</span> },
           { key: 'status', header: 'Status', cell: (h) => <StatusBadge tone={TONE[h.status]}>{STATUS_TEXTO[h.status]}</StatusBadge> },
         ]}
       />
-      <Modal open={aberta != null} onClose={() => setAberta(null)} title={aberta ? aberta.colaborador : ''} description={aberta ? `${shortUnitName(aberta.unidade)} · ${dataBr(aberta.dia)}` : undefined}>
+      {/* Consultar = painel lateral do kit: a ficha abre e a lista fica atrás. */}
+      <SgoDrawer
+        open={aberta != null}
+        onClose={() => setAberta(null)}
+        title={aberta ? aberta.colaborador : ''}
+        subtitle={aberta ? `${shortUnitName(aberta.unidade)} · ${dataBr(aberta.dia)}` : undefined}
+        icon={<Clock className="h-4 w-4" />}
+        tone="blue"
+        size="sm"
+      >
         {aberta && <DetalheDaHE h={aberta} />}
-      </Modal>
+      </SgoDrawer>
     </div>
   );
 }
@@ -339,10 +388,10 @@ function DetalheDaHE({ h }: { h: HoraExtra }) {
   ];
   if (h.status === 'REJECTED') linhas.push(['Motivo da reprovação', h.motivoReprovacao ?? '—']);
   return (
-    <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 sgo-type-13">
-      {linhas.map(([k, v]) => (<div key={k} className="contents"><dt className="text-ink-500">{k}</dt><dd className="text-ink-900">{v}</dd></div>))}
-      {!h.collaboratorId && <p className="col-span-2 mt-2 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">Sem vínculo com o cadastro do RH — por isso sem CPF e matrícula. Use &ldquo;Vincular agora&rdquo; no alto da tela.</p>}
-      <p className="col-span-2 mt-2"><Link href="/modulos/pagamentos" className="font-semibold text-brand underline">Abrir em Pagamentos</Link></p>
+    <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1.5 text-sm">
+      {linhas.map(([k, v]) => (<div key={k} className="contents"><dt className="sgo-label self-center">{k}</dt><dd style={{ color: 'var(--sgo-ink)' }}>{v}</dd></div>))}
+      {!h.collaboratorId && <p className="sgo-aviso sgo-aviso--atencao col-span-2 mt-2"><AlertTriangle /><span>Sem vínculo com o cadastro do RH — por isso sem CPF e matrícula. Use &ldquo;Vincular agora&rdquo; no alto da tela.</span></p>}
+      <p className="col-span-2 mt-2"><Link href="/modulos/pagamentos" className="sgo-btn">Abrir em Pagamentos</Link></p>
     </dl>
   );
 }
@@ -368,10 +417,10 @@ function FilaDeVinculo({ itens, onMudou }: { itens: PendenciaDeVinculo[]; onMudo
   }
 
   const pendentes = itens.filter((i) => !feitas.has(i.id));
-  if (pendentes.length === 0) return <p className="text-sm text-success">Tudo vinculado.</p>;
+  if (pendentes.length === 0) return <p className="text-sm" style={{ color: 'var(--sgo-ok)' }}>Tudo vinculado.</p>;
   return (
     <div className="space-y-3">
-      {erro && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{erro}</p>}
+      {erro && <p className="sgo-aviso sgo-aviso--bloqueio"><AlertTriangle /><span>{erro}</span></p>}
       {pendentes.map((i) => {
         const sug = new Set(i.sugestoes.map((s) => s.id));
         const opcoes = [
@@ -379,8 +428,8 @@ function FilaDeVinculo({ itens, onMudou }: { itens: PendenciaDeVinculo[]; onMudo
           ...i.opcoes.filter((o) => !sug.has(o.id)).map((o) => ({ value: o.id, label: o.name, hint: o.jobTitle ?? undefined })),
         ];
         return (
-          <div key={i.id} className="rounded-lg border border-line p-3">
-            <p className="sgo-type-13 font-semibold text-ink-900">&ldquo;{i.nome}&rdquo; <span className="font-normal text-ink-500">· {shortUnitName(i.unidade)} · {i.dia ? dataBr(i.dia) : '—'} · {formatBRL(i.valor)}</span></p>
+          <div key={i.id} className="sgo-panel sgo-panel--solid p-3">
+            <p className="text-sm font-semibold" style={{ color: 'var(--sgo-ink)' }}>&ldquo;{i.nome}&rdquo; <span className="font-normal" style={{ color: 'var(--sgo-ink-2)' }}>· {shortUnitName(i.unidade)} · {i.dia ? dataBr(i.dia) : '—'} · {formatBRL(i.valor)}</span></p>
             <div className="mt-2 flex items-end gap-2">
               <div className="min-w-0 flex-1">
                 <DsSelect label="Colaborador do RH" size="sm" searchable searchPlaceholder="Pesquisar…" placeholder={opcoes.length ? (i.sugestoes.length ? 'Sugestões primeiro…' : 'Escolha…') : 'Sem colaboradores nesta unidade'} value={escolha[i.id] ?? ''} onValueChange={(v) => setEscolha((e) => ({ ...e, [i.id]: v }))} options={opcoes} disabled={opcoes.length === 0} />
