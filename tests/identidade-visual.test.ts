@@ -76,10 +76,16 @@ describe('Onde a marca aparece', () => {
     expect(kit).not.toMatch(/rgba\(46,\s*124,\s*214/);
   });
 
-  it('o chip do cartão do Dashboard tem a MARCA como padrão', () => {
-    /* Vermelho e âmbar ficam para crítico e atenção; o resto é bordô. Um chip
-       cinza por padrão devolveria o painel ao visual de planilha. */
-    expect(central).toMatch(/ok:\s*'bg-brand-tint-2 text-brand'/);
+  it('a cápsula do cartão do Dashboard tem a MARCA como padrão', () => {
+    /* Vermelho e âmbar ficam para crítico e atenção; o resto é bordô. Uma
+       cápsula cinza por padrão devolveria o painel ao visual de planilha.
+       Desde a Fase 4 do kit o cartão é o SgoKpi: o tom padrão é `blue`, o nome
+       do kit para o tom de AÇÃO — que no Restaurante é o bordô, porque o CSS do
+       kit resolve a cápsula `--blue` em `--sgo-accent` e o accent é a marca
+       (conferido no caso acima). Se alguém trocar o tom padrão por `gray` ou
+       `sky`, ou remapear a cápsula, o painel perde a marca em silêncio. */
+    expect(central).toMatch(/ok:\s*'blue'/);
+    expect(kit).toMatch(/\.sgo-kpi__ic--blue[^{]*\{background:var\(--sgo-accent-soft\);color:var\(--sgo-accent\)\}/);
   });
 
   it('o Dashboard não introduz azul', () => {

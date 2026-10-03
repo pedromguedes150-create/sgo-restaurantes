@@ -893,6 +893,39 @@ html.dark{
   --sgo-card-glass-border:rgba(255,255,255,.85);
 }
 
+html.dark{
+  --sgo-wallpaper:linear-gradient(175deg, rgb(var(--sgo-brand-rgb) / 0.10) 0%, rgb(var(--sgo-brand-rgb) / 0.03) 100%);
+  --sgo-wallpaper-base:var(--sgo-canvas);
+  --sgo-wallpaper-mark: var(--sgo-brand);
+  --sgo-wallpaper-mark-1:.04;
+  --sgo-wallpaper-mark-2:.03;
+  --sgo-card-glass:rgb(var(--sgo-surface-rgb) / .72);
+  --sgo-card-glass-solid:rgb(var(--sgo-surface-rgb) / .88);
+  --sgo-card-glass-border:rgba(255,255,255,.08);
+}
+.sgo-ambient{
+  position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;
+  background:var(--sgo-wallpaper);
+}
+/* Largura EXPLÍCITA, não aspect-ratio. Caixa absoluta com right/bottom e
+   content vazio resolve a largura por shrink-to-fit, que dá 0 — e com
+   largura 0 a máscara não pinta nada. O PNG é 345x349, praticamente
+   quadrado, então largura = altura com mask-size:contain centraliza. */
+.sgo-ambient::before,
+.sgo-ambient::after{
+  content:"";position:absolute;
+  background:var(--sgo-wallpaper-mark);
+  -webkit-mask-image:url("/sgo-bird-only.png");mask-image:url("/sgo-bird-only.png");
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-size:contain;mask-size:contain;
+  -webkit-mask-position:center;mask-position:center;
+}
+.sgo-ambient::before{width:55vh;height:55vh;right:-6%;bottom:-10%;transform:rotate(-12deg);opacity:var(--sgo-wallpaper-mark-1)}
+.sgo-ambient::after{width:20vh;height:20vh;left:-3%;top:15%;transform:rotate(15deg);opacity:var(--sgo-wallpaper-mark-2)}
+/* Base chapada por baixo: evita branco piscando antes do papel de parede
+   pintar, e cobre o caso de a máscara falhar. */
+body{background:var(--sgo-wallpaper-base)}
+
 /* ---------- 20a-bis. CHIP DE VIDRO ----------
    Selo de filtro/estado que fica SOLTO sobre o papel de parede, fora de
    cartão. Diferente do .sgo-tag, que vive dentro de superfície opaca e

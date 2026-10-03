@@ -12,8 +12,6 @@ import { activeOvertimeReasons } from '@/lib/overtime/reasons';
 import { getQuadroDaCompetencia } from '@/lib/people/payouts-competencia';
 import { podeFecharPagamentoExtra } from '@/lib/people/pagamento-extra';
 import { competencias, paraTelaDoQuadro } from '@/lib/people/quadro-ui';
-import { Card, CardContent } from '@/components/ui/card';
-import { LargeTitle } from '@/components/layout/page-chrome';
 import { HoraExtraClient } from '@/components/hora-extra/hora-extra-client';
 
 export const dynamic = 'force-dynamic';
@@ -54,28 +52,26 @@ export default async function HoraExtraPage({ searchParams }: { searchParams: Re
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/pagamentos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pagamentos</Link>
-      <LargeTitle title="Hora extra" subtitle="Solicitações e aprovações de hora extra: painel por motivo e período, lista para conferência e o fechamento da competência (paga no mês seguinte ao trabalho)." />
-      <Card><CardContent className="pt-4">
-        <HoraExtraClient
-          filtro={painel.filtro}
-          periodo={painel.periodo}
-          hes={painel.hes}
-          resumo={painel.resumo}
-          motivos={painel.motivos}
-          status={painel.status}
-          evolucao={painel.evolucao}
-          unidades={painel.unidades}
-          motivosCatalogo={motivosCatalogo}
-          semVinculo={semVinculo}
-          fechamento={quadro ? { quadro: paraTelaDoQuadro(quadro), competencia, meses } : undefined}
-          form={{ units: painel.unidades, collaboratorsByUnit, overtimeRatesByUnit }}
-          podeLancar={podeLancar}
-          podeFechar={podeFecharPagamentoExtra(user.role)}
-          podeVincular={podeVincular}
-          isAdmin={user.role === 'ADMIN'}
-        />
-      </CardContent></Card>
+      {/* Volta para o módulo-pai; o cabeçalho (título, abas, ações) vive no cliente, no padrão do kit. */}
+      <Link href="/modulos/pagamentos" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: 'var(--sgo-accent)' }}><ArrowLeft className="h-4 w-4" /> Pagamentos</Link>
+      <HoraExtraClient
+        filtro={painel.filtro}
+        periodo={painel.periodo}
+        hes={painel.hes}
+        resumo={painel.resumo}
+        motivos={painel.motivos}
+        status={painel.status}
+        evolucao={painel.evolucao}
+        unidades={painel.unidades}
+        motivosCatalogo={motivosCatalogo}
+        semVinculo={semVinculo}
+        fechamento={quadro ? { quadro: paraTelaDoQuadro(quadro), competencia, meses } : undefined}
+        form={{ units: painel.unidades, collaboratorsByUnit, overtimeRatesByUnit }}
+        podeLancar={podeLancar}
+        podeFechar={podeFecharPagamentoExtra(user.role)}
+        podeVincular={podeVincular}
+        isAdmin={user.role === 'ADMIN'}
+      />
     </div>
   );
 }

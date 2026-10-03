@@ -8,13 +8,14 @@ import { DatePicker } from '@/components/ui/ds/date-picker';
 import { Input } from '@/components/ui/ds/field';
 
 /**
- * Barra de filtros PADRÃO do sistema — compacta, responsiva e consistente.
+ * Barra de filtros PADRÃO do sistema — desde a Fase 4 do kit (v1.145.0) é a
+ * LINHA DE FILTROS do kit de layout (`.sgo-filtros`, sgo-kit.css seção 22):
+ * uma fileira que quebra linha, logo abaixo do cabeçalho da página, sem
+ * cartão em volta. Ordem: [busca] [controles…] [resultado] [limpar].
  *
- * Onda 6: os controles passaram a ser os do design system. O FilterSelect era
- * um <select> NATIVO (regra 6) e recebia <option> como filhos; agora recebe
- * `options` e cada controle traz o próprio rótulo, com a associação
- * label↔campo feita pelo <Field> (antes o <label> envolvia o controle, o que
- * não associa quando o controle é um botão).
+ * Os controles continuam os do design system (regra 6: nunca <select>
+ * nativo) e a API não mudou — as 8 telas que a usam só trocaram de pele.
+ * `collapsible` segue recolhendo os controles atrás do botão "Filtros".
  *
  * Uso:
  *   <FilterBar onClear={...} active={2}>
@@ -53,46 +54,41 @@ export function FilterBar({
   const mostrarControles = !collapsible || aberto;
 
   return (
-    <div className={cn('rounded-card border border-line bg-surface p-3', className)}>
-      <div className={cn('flex flex-wrap items-center gap-x-3 gap-y-2', mostrarControles && 'mb-2')}>
-        {search && <div className="min-w-[12rem] flex-1">{search}</div>}
+    <div className={cn('sgo-filtros -mx-4 items-end', className)} data-testid="filter-bar">
+      {search && <div className="min-w-[12rem] flex-1">{search}</div>}
 
-        {collapsible ? (
-          <button
-            type="button"
-            onClick={() => setAberto((v) => !v)}
-            aria-expanded={aberto}
-            className="sgo-control inline-flex items-center gap-1.5 rounded-control border border-line-strong px-2.5 py-1 text-xs font-semibold text-ink-700 outline-none transition-colors duration-sgo-2 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus"
-          >
-            <Filter className="h-3.5 w-3.5" aria-hidden /> {title}
-            {active ? <span className="rounded-pill bg-brand-tint-2 px-1.5 text-[11px] font-bold tabular-nums text-brand">{active}</span> : null}
-          </button>
-        ) : (
-          <p className="sgo-type-11 flex items-center gap-1.5 text-ink-500">
-            <Filter className="h-3.5 w-3.5" aria-hidden /> {title}
-            {active ? <span className="rounded-pill bg-brand-tint-2 px-1.5 text-[11px] font-bold tabular-nums text-ink-900">{active}</span> : null}
-          </p>
-        )}
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={() => setAberto((v) => !v)}
+          aria-expanded={aberto}
+          className="sgo-btn sgo-btn--sm"
+        >
+          <Filter className="h-3.5 w-3.5" aria-hidden /> {title}
+          {active ? <span className="sgo-count">{active}</span> : null}
+        </button>
+      ) : (
+        <span className="sgo-label inline-flex h-8 items-center gap-1.5 self-end">
+          <Filter className="h-3.5 w-3.5" aria-hidden /> {title}
+          {active ? <span className="sgo-count">{active}</span> : null}
+        </span>
+      )}
 
-        {!mostrarControles && summary}
+      {!mostrarControles && summary}
 
-        {result && <span className="ml-auto text-xs font-semibold tabular-nums text-ink-900">{result}</span>}
+      {mostrarControles && children}
 
-        {onClear && active ? (
-          <button
-            type="button"
-            onClick={onClear}
-            className={cn(
-              'flex items-center gap-1 rounded-control px-1.5 py-0.5 text-xs font-semibold text-ink-500 outline-none hover:text-danger focus-visible:shadow-sgo-focus',
-              !result && 'ml-auto',
-            )}
-          >
-            <X className="h-3.5 w-3.5" aria-hidden /> Limpar
-          </button>
-        ) : null}
-      </div>
+      {result && <span className="ml-auto self-center text-xs font-semibold tabular-nums" style={{ color: 'var(--sgo-ink)' }}>{result}</span>}
 
-      {mostrarControles && <div className="flex flex-wrap items-end gap-2">{children}</div>}
+      {onClear && active ? (
+        <button
+          type="button"
+          onClick={onClear}
+          className={cn('sgo-btn sgo-btn--sm sgo-btn--ghost self-center', !result && 'ml-auto')}
+        >
+          <X className="h-3.5 w-3.5" aria-hidden /> Limpar
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -100,7 +96,7 @@ export function FilterBar({
 /** Etiqueta do resumo: o que está filtrado, quando a barra está recolhida. */
 export function FilterChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-pill bg-sunken px-2 py-0.5 text-xs font-medium text-ink-700">{children}</span>
+    <span className="sgo-tag sgo-tag--gray">{children}</span>
   );
 }
 
@@ -156,7 +152,7 @@ export function FilterInput({
 export function FilterField({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <div className={cn('flex min-w-[8.5rem] flex-1 flex-col gap-0.5', className)}>
-      <span className="text-[11px] font-semibold text-ink-500">{label}</span>
+      <span className="sgo-label">{label}</span>
       {children}
     </div>
   );

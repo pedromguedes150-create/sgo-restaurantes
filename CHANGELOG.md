@@ -9,6 +9,19 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.145.0 — 2026-10-03 (Kit de layout — Fase 4, lote 1: primitivos no padrão do kit + Dashboard e Hora extra)
+### Alterado
+- **Primitivos compartilhados emitem o kit sem mudar de API**: `Card` (ui/card) é o painel `.sgo-panel`; `StatCard` é o KPI `.sgo-kpi` (cápsula de ícone no tom do estado, valor 23px tabular, linha de apoio); `Table` (ds) é painel + `.sgo-tbl` (cabeçalho em caixa alta, linhas densas, numérica à direita, rodapé de total, `wrap` e `dense` opcionais); `StatusBadge` (os dois) é o selo `.sgo-tag` (info → sky, brand → accent/bordô); `FilterBar` é a linha `.sgo-filtros` sem cartão. As ~90 telas que os usam saem no padrão do kit sem reescrita.
+- **Dashboard**: alertas em painel com contador e linhas `.sgo-row` (cápsula na cor da gravidade + selo em palavra); indicadores em `.sgo-kpis`/`SgoKpi` como CARTÃO-LINK já filtrado (`href` novo no SgoKpi); "Unidades hoje", "Meu dia", "Acessos rápidos" (com o ícone da área) e "Minha Meta do Mês" (barra do kit) em painéis com cabeçalho em linha. Nenhum número, link, ordem ou regra mudou.
+- **Hora extra**: cabeçalho do kit [título] — [abas Dashboard/Solicitações/Fechamento, a ativa pelo `?aba=`, selo de pendentes] — [ações `.sgo-btn`]; aviso de vínculo em `.sgo-aviso`; filtros na linha do kit; 6 KPIs do kit; painéis com cabeçalho e barras `SgoBar`; tabela densa; detalhe da solicitação em **SgoDrawer** (consultar) e Nova solicitação em **SgoModal** (criar); fila de vínculo em drawer. Aprovar/reprovar continuam fora da tela (decisão mantida).
+- `LargeTitle` aceita `tabs` (sub-abas do kit na linha do título, continuando a registrar o título no chrome).
+### Corrigido
+- **Tema escuro com painel branco**: a geração do CSS do kit (Fase 2) cortava, junto com as variantes de papel de parede, o bloco `html.dark` que define o vidro escuro dos cartões (`--sgo-card-glass*`) e as regras do `.sgo-ambient` (fundo contínuo com a marca d'água). No escuro o painel saía vidro branco com texto claro, ilegível, e o fundo não tinha a marca d'água em tema nenhum. O corte foi estreitado no `build-kit-css.cjs` e o CSS regerado.
+### Divergências do kit
+- Botões: as ações de página usam `.sgo-btn` (30px) como no kit; os botões de formulário e de linha continuam os do Restaurante (44px no toque — regra do gerente no celular).
+- No celular as ações do cabeçalho e o aviso quebram linha (o kit as mantém numa linha só); o título da linha de alerta quebra linha em vez de truncar.
+- Grade de KPIs: 2 colunas no celular (o auto-fit do kit daria 1 coluna de 185px e seis cartões empilhados).
+
 ## v1.144.0 — 2026-10-03 (Kit de layout — Fase 3, navegação: selos de pendência, sino com menu, busca inline)
 ### Adicionado
 - **Selos de pendência por área** na barra e no menu móvel (kit: `NavBadge` somado por seção). A chave é a do MÓDULO e a área soma o que contém, pelo mesmo catálogo do menu (`badgesPorArea`, pura). Conta o que precisa da SUA ação, cada módulo com o próprio recorte: pagamentos na sua fila de aprovação, comunicados não confirmados, tarefas com prazo vencido nas suas unidades, ocorrências críticas abertas. Rota `GET /api/nav/pendencias`, consultada a cada 2 minutos pela barra (como no kit), não no render do layout.

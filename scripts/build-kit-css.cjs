@@ -16,7 +16,12 @@ const idx = fs.readFileSync(path.join(KIT, '1-estilos/index.css'), 'utf8').split
 const cortes = [
   [457, 506],   // 11b ponte do DataTable dos postos
   [528, 545],   // 15 chips de bandeira de combustível
-  [945, 1069],  // 20a-ter variantes temporárias do papel de parede
+  /* 20a-ter: só as VARIANTES (?bg=a/b/c). O bloco html.dark que define o
+     vidro escuro dos cartões (--sgo-card-glass*) e as regras do .sgo-ambient
+     vêm logo depois, dentro da mesma seção, e FICAM — o corte até 1069 os
+     levava junto: no tema escuro o painel era vidro branco com texto claro
+     (achado na Fase 4, ao migrar o Dashboard). */
+  [945, 1036],  // 20a-ter variantes temporárias do papel de parede
   [1282, 1609], // 21 tela de login dos postos
 ];
 const fora = (n) => cortes.some(([a, b]) => n >= a && n <= b);

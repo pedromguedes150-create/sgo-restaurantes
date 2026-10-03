@@ -68,6 +68,7 @@ export const GUIDE: GuideSection[] = [
           'TEMA: o ícone de sol/lua/monitor na barra alterna claro, escuro e seguir o aparelho. Também em Meu Perfil → Aparência.',
           'SELOS VERMELHOS nas áreas (v1.144.0): o número é o que precisa da SUA ação dentro daquela área — pagamentos na sua fila, comunicados não confirmados, tarefas vencidas, ocorrências críticas. Atualiza a cada 2 minutos.',
           'SINO: clique para ver os avisos sem sair da tela — marcar como lido, apagar, "Marcar todas como lidas" e "Ver todas". BUSCA: clique em "Buscar..." (ou Ctrl K) e digite o nome da tela; Enter abre.',
+          'TELAS NO PADRÃO (v1.145.0): cartões, indicadores, tabelas, selos e filtros de todo o sistema passaram ao desenho do kit; o Dashboard e a Hora extra foram organizados na hierarquia completa — cabeçalho com abas, filtros, indicadores (cada um abre a tela já filtrada), painéis e tabela; detalhe abre em painel lateral e "Nova solicitação" em janela. As demais telas seguem, uma a uma.',
           'O que NÃO mudou: nenhuma tela perdeu função, nenhum cálculo ou regra mudou — só a moldura e os componentes visuais. As telas vão sendo organizadas no novo padrão aos poucos.',
         ],
       },

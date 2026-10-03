@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { SgoPageHeader } from '@/components/sgo/sgo-page-header';
+import { SgoPageHeader, type SgoPageTab } from '@/components/sgo/sgo-page-header';
 
 /**
  * "Chrome" da página: o título registrado aqui alimenta quem precisar dele
@@ -33,8 +33,12 @@ export function PageChromeProvider({ children }: { children: React.ReactNode }) 
  * assinatura não mudou de propósito: as ~190 telas que o chamam ganham o
  * cabeçalho novo sem reescrita. A margem negativa cancela o `px-4` do <main>,
  * porque no kit o cabeçalho vai de borda a borda e o conteúdo é que recua.
+ *
+ * `tabs` (Fase 4): as sub-abas do kit na mesma linha do título — a tela que
+ * tinha um SegmentedNav solto passa a ter o cabeçalho [título] — [abas] —
+ * [ações] do kit, e continua registrando o título no chrome.
  */
-export function LargeTitle({ title, subtitle, actions }: { title: string; subtitle?: React.ReactNode; actions?: React.ReactNode }) {
+export function LargeTitle({ title, subtitle, actions, tabs }: { title: string; subtitle?: React.ReactNode; actions?: React.ReactNode; tabs?: SgoPageTab[] }) {
   const { setTitle } = usePageChrome();
   useEffect(() => {
     setTitle(title);
@@ -43,7 +47,7 @@ export function LargeTitle({ title, subtitle, actions }: { title: string; subtit
 
   return (
     <div className="-mx-4 mb-2">
-      <SgoPageHeader title={title} subtitle={subtitle} actions={actions} />
+      <SgoPageHeader title={title} subtitle={subtitle} actions={actions} tabs={tabs} />
     </div>
   );
 }
