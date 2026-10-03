@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.144.0 — 2026-10-03 (Kit de layout — Fase 3, navegação: selos de pendência, sino com menu, busca inline)
+### Adicionado
+- **Selos de pendência por área** na barra e no menu móvel (kit: `NavBadge` somado por seção). A chave é a do MÓDULO e a área soma o que contém, pelo mesmo catálogo do menu (`badgesPorArea`, pura). Conta o que precisa da SUA ação, cada módulo com o próprio recorte: pagamentos na sua fila de aprovação, comunicados não confirmados, tarefas com prazo vencido nas suas unidades, ocorrências críticas abertas. Rota `GET /api/nav/pendencias`, consultada a cada 2 minutos pela barra (como no kit), não no render do layout.
+- **Sino com menu suspenso** (kit `NotificationsDropdown`): painel de 380px com a lista paginada (20 por vez, "Carregar mais"), "Marcar todas como lidas", marcar/apagar por aviso, clique abre o link e marca lido, "Ver todas" leva à página. Rotas `GET /api/notifications` (paginada por cursor, com contagem de não lidos) e `DELETE /api/notifications/[id]` (só o próprio aviso).
+- **Busca inline na barra** (kit `GlobalSearch`): o botão "Buscar... Ctrl K" vira campo com os resultados embaixo (8, setas, Enter, Esc); busca o catálogo inteiro do menu com a ordem "usar antes de configurar". No celular o Ctrl+K e o botão da barra de baixo seguem abrindo o ⌘K em tela cheia (o palette deixou de capturar o Ctrl+K sozinho).
+### Divergências do kit
+- Tempo real do sino por consulta a cada 2 minutos, não WebSocket; "há N minutos" sem date-fns (`tempoRelativo`, pura).
+- A busca aberta ocupa a largura do botão fechado (não os 224px do kit): a 1280px, com o seletor de unidade que o kit não tem, o sino e o avatar saíam da barra.
+
 ## v1.143.0 — 2026-10-03 (Kit de layout do SGO — Fase 2, fundação: moldura, tema, fundo, componentes)
 ### Adicionado
 - **Fundação do kit de layout do SGO dos Postos** (`kit-layout-sgo`), com a identidade bordô do Restaurante. Regra de decisão: estrutura, dimensões, grades, componentes e comportamento vêm do KIT; cor, dados, APIs, permissões e regras vêm do RESTAURANTE.

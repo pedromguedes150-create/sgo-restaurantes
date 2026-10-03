@@ -57,8 +57,8 @@ describe('a navegação não deixa faixa de largura descoberta', () => {
   });
 
   it('a busca da barra entra em sm; no celular quem busca é a barra de baixo', () => {
-    const barra = ler('src/components/layout/sgo-navbar.tsx');
-    const botao = barra.match(/className="sgo-navsearch ([^"]+)"/)?.[1] ?? '';
+    const busca = ler('src/components/layout/nav-search.tsx');
+    const botao = busca.match(/className="sgo-navsearch ([^"]+)"/)?.[1] ?? '';
     expect(botao, 'não achei o botão de busca da barra').not.toBe('');
     expect(apareceEm(botao)).toBe('sm');
     expect(baixo).toContain('aria-label="Buscar"');

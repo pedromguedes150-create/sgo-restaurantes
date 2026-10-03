@@ -13,6 +13,8 @@ import { MobileNav } from '@/components/layout/mobile-nav';
 import { SgoPageHeader } from '@/components/sgo/sgo-page-header';
 import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
 import { NavBadge } from '@/components/sgo/nav-badge';
+import { NavSearch } from '@/components/layout/nav-search';
+import { NotificationsDropdown } from '@/components/layout/notifications-dropdown';
 import { LargeTitle, PageChromeProvider } from '@/components/layout/page-chrome';
 import type { AreaMontada } from '@/lib/nav/areas';
 
@@ -83,5 +85,26 @@ describe('cabeçalho de página e KPIs', () => {
     expect(h).not.toContain('sgo-kpi__ic');
     expect(renderToString(<NavBadge count={0} />)).toBe('');
     expect(renderToString(<NavBadge count={120} />)).toContain('99+');
+  });
+});
+
+describe('busca e notificações da barra (Fase 3)', () => {
+  it('a busca nasce como botão "Buscar... Ctrl K" (kit), só a partir de sm', () => {
+    const h = semSeparadores(renderToString(<NavSearch areas={AREAS} />));
+    expect(h).toContain('class="sgo-navsearch hidden sm:inline-flex"');
+    expect(h).toContain('<kbd class="sgo-navsearch__kbd">Ctrl K</kbd>');
+    expect(h).not.toContain('<input');
+  });
+
+  it('o sino mostra o selo inicial (teto 9+) e o painel nasce fechado', () => {
+    const h = semSeparadores(renderToString(<NotificationsDropdown inicial={12} />));
+    expect(h).toContain('<span class="sgo-navbadge">9+</span>');
+    expect(h).not.toContain('notifications-panel');
+    expect(semSeparadores(renderToString(<NotificationsDropdown inicial={0} />))).not.toContain('sgo-navbadge');
+  });
+
+  it('o menu móvel mostra o selo da área', () => {
+    const h = semSeparadores(renderToString(<MobileNav areas={AREAS} badges={{ pessoas: 4 }} />));
+    expect(h).toContain('sgo-btn--ghost lg:hidden'); // só o gatilho: a gaveta é portal e nasce fechada
   });
 });

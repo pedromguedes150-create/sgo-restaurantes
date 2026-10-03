@@ -66,6 +66,8 @@ export const GUIDE: GuideSection[] = [
           'CELULAR E TABLET: o botão de menu (canto esquerdo da barra) abre o menu completo em gaveta, com as áreas em grupos; no celular a barra de baixo (Início, Tarefas, Módulos, Pessoas, Buscar) continua.',
           'ABAS DE TRABALHO: no rodapé do computador fica uma faixa com as telas que você abriu (como abas de navegador): clique para voltar a uma, o "x" fecha, o "+" abre outra. No celular é o botão flutuante com o número de janelas. As abas ficam guardadas no aparelho.',
           'TEMA: o ícone de sol/lua/monitor na barra alterna claro, escuro e seguir o aparelho. Também em Meu Perfil → Aparência.',
+          'SELOS VERMELHOS nas áreas (v1.144.0): o número é o que precisa da SUA ação dentro daquela área — pagamentos na sua fila, comunicados não confirmados, tarefas vencidas, ocorrências críticas. Atualiza a cada 2 minutos.',
+          'SINO: clique para ver os avisos sem sair da tela — marcar como lido, apagar, "Marcar todas como lidas" e "Ver todas". BUSCA: clique em "Buscar..." (ou Ctrl K) e digite o nome da tela; Enter abre.',
           'O que NÃO mudou: nenhuma tela perdeu função, nenhum cálculo ou regra mudou — só a moldura e os componentes visuais. As telas vão sendo organizadas no novo padrão aos poucos.',
         ],
       },
