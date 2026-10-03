@@ -74,6 +74,31 @@ export async function listNotifications(user: SessionUser, limit = 50) {
   return prisma.notification.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' }, take: limit });
 }
 
+/**
+ * Página de avisos para o menu suspenso da barra (kit de layout, Fase 3):
+ * `limit` itens a partir de `cursor` (id do último visto), mais recentes
+ * primeiro. Devolve também se há mais e quantos não lidos existem.
+ */
+export async function listNotificationsPage(user: SessionUser, opts: { limit?: number; cursor?: string | null } = {}) {
+  const limit = Math.min(Math.max(opts.limit ?? 20, 1), 50);
+  const itens = await prisma.notification.findMany({
+    where: { userId: user.id },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: limit + 1,
+    ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
+  });
+  const temMais = itens.length > limit;
+  const pagina = temMais ? itens.slice(0, limit) : itens;
+  const naoLidas = await unreadCount(user);
+  return { itens: pagina, proximoCursor: temMais ? pagina[pagina.length - 1].id : null, temMais, naoLidas };
+}
+
+/** Só o dono apaga o próprio aviso; id de outro usuário não encontra nada. */
+export async function deleteNotification(user: SessionUser, id: string): Promise<boolean> {
+  const r = await prisma.notification.deleteMany({ where: { id, userId: user.id } });
+  return r.count > 0;
+}
+
 export async function unreadCount(user: SessionUser): Promise<number> {
   return prisma.notification.count({ where: { userId: user.id, read: false } });
 }

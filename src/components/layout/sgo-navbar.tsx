@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { Bell, GraduationCap, Inbox, LogOut, Search, Settings, UserCircle } from 'lucide-react';
-import { OPEN_COMMAND_EVENT } from '@/components/layout/command-palette';
+import { GraduationCap, Inbox, LogOut, Settings, UserCircle } from 'lucide-react';
 import { MobileNav } from '@/components/layout/mobile-nav';
+import { NavSearch } from '@/components/layout/nav-search';
+import { NotificationsDropdown } from '@/components/layout/notifications-dropdown';
+import { badgesPorArea, type Pendencias } from '@/lib/nav/pendencias-puro';
 import { TopNav } from '@/components/layout/top-nav';
 import { UnitSwitcher, type UnitOption } from '@/components/layout/unit-switcher';
 import { ThemeNavToggle } from '@/components/theme/theme-nav-toggle';
@@ -36,6 +38,19 @@ export function SgoNavbar({
   const router = useRouter();
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  /* Selos por área: consultados a cada 2 minutos, como no kit — e não no
+     render do layout, para a troca de tela não pagar quatro contagens. */
+  const [pendencias, setPendencias] = useState<Pendencias>({});
+  useEffect(() => {
+    let vivo = true;
+    const ler = async () => {
+      try { const r = await fetch('/api/nav/pendencias', { cache: 'no-store' }); if (r.ok && vivo) setPendencias(await r.json()); } catch { /* sem rede: fica o último */ }
+    };
+    void ler();
+    const id = window.setInterval(ler, 120_000);
+    return () => { vivo = false; window.clearInterval(id); };
+  }, []);
+  const badges = badgesPorArea(areas, pendencias);
 
   useEffect(() => {
     if (!menu) return;
@@ -58,7 +73,7 @@ export function SgoNavbar({
   return (
     <header className="sgo-app sgo-navbar print:hidden" data-testid="sgo-navbar">
       <div className="flex w-full items-center gap-1">
-        <MobileNav areas={areas} />
+        <MobileNav areas={areas} badges={badges} />
 
         <Link href="/dashboard" className="sgo-navlogo" title={`${versao} · Sistema de Gestão Operacional · Grupo Beija-Flor · atualizado em ${atualizadoEm}`} data-testid="link-home-logo">
           <span className="sgo-navlogo__mark"><img src="/sgo-bird-only.png" alt="" aria-hidden /></span>
@@ -69,7 +84,7 @@ export function SgoNavbar({
 
         <div className="sgo-navdivider hidden lg:block" />
 
-        <TopNav areas={areas} />
+        <TopNav areas={areas} badges={badges} />
 
         <div className="flex-1" />
 
@@ -78,19 +93,12 @@ export function SgoNavbar({
             <div className="min-w-0"><UnitSwitcher units={units} selectedId={selectedUnitId} /></div>
           )}
 
-          {/* A busca é o ⌘K que já existia: o mesmo catálogo, em tela cheia no celular. */}
-          <button type="button" className="sgo-navsearch hidden sm:inline-flex" onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_EVENT))} data-testid="button-global-search">
-            <Search className="h-3.5 w-3.5" />
-            <span>Buscar...</span>
-            <kbd className="sgo-navsearch__kbd">Ctrl K</kbd>
-          </button>
+          <NavSearch areas={areas} />
 
           <Link href="/modulos/comunicacao" className="sgo-naviconbtn" aria-label="Comunicação" title="Comunicação">
             <span className="sgo-navitem__ic"><Inbox style={ICONE_18} /><NavBadge count={commPending} cap={9} /></span>
           </Link>
-          <Link href="/notificacoes" className="sgo-naviconbtn" aria-label="Notificações" title="Notificações">
-            <span className="sgo-navitem__ic"><Bell style={ICONE_18} /><NavBadge count={unread} cap={9} /></span>
-          </Link>
+          <NotificationsDropdown inicial={unread} />
           <span className="hidden sm:inline-flex"><ThemeNavToggle /></span>
           {podeConfigurar && (
             <Link href="/configuracoes" className="sgo-naviconbtn hidden sm:inline-flex" aria-label="Configurações" title="Configurações">

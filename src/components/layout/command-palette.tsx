@@ -63,15 +63,13 @@ export function CommandPalette({ units = [], viewable, isAdmin = false, areas = 
 
   useEffect(() => { setActive(0); }, [query]);
 
-  // Atalho global ⌘K / Ctrl+K + evento do botão de busca no header.
+  /* Abre pelo EVENTO (botão "Buscar" da barra de baixo e, no celular, o Ctrl+K
+     da busca da barra). O Ctrl+K no desktop passou a ser da busca inline do
+     kit (nav-search.tsx) — dois ouvintes abririam os dois ao mesmo tempo. */
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setOpen((v) => !v); }
-    };
     const onOpen = () => setOpen(true);
-    window.addEventListener('keydown', onKey);
     window.addEventListener(OPEN_COMMAND_EVENT, onOpen);
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener(OPEN_COMMAND_EVENT, onOpen); };
+    return () => window.removeEventListener(OPEN_COMMAND_EVENT, onOpen);
   }, []);
 
   useEffect(() => {

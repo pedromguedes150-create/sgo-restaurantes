@@ -25,7 +25,7 @@ const STORAGE_KEY = 'sgo.navigation.openMenuGroups';
  * Adaptação: o kit usa o Sheet do Radix; aqui a gaveta é um diálogo do design
  * system (foco preso, Esc, clique fora, portal).
  */
-export function MobileNav({ areas }: { areas: AreaMontada[] }) {
+export function MobileNav({ areas, badges = {} }: { areas: AreaMontada[]; badges?: Record<string, number> }) {
   const [open, setOpen] = useState(false);
   const [abertos, setAbertos] = useState<Record<string, boolean>>({});
   const pathname = usePathname() ?? '';
@@ -78,7 +78,8 @@ export function MobileNav({ areas }: { areas: AreaMontada[] }) {
                   const item = area.colunas[0].itens[0];
                   return (
                     <Link key={area.id} href={item.href} className={cn('flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium', estaAtiva ? 'bg-[var(--sgo-accent-soft)] text-[var(--sgo-accent)]' : 'text-[var(--sgo-ink)]')}>
-                      <Icone className="h-4 w-4" /> {area.titulo}
+                      <Icone className="h-4 w-4" /> <span className="flex-1">{area.titulo}</span>
+                      {badges[area.id] ? <span className="sgo-count sgo-count--red">{badges[area.id]}</span> : null}
                     </Link>
                   );
                 }
@@ -88,6 +89,7 @@ export function MobileNav({ areas }: { areas: AreaMontada[] }) {
                     <button type="button" onClick={() => alternar(area.id)} aria-expanded={aberto} className={cn('flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium', estaAtiva && !aberto ? 'bg-[var(--sgo-accent-soft)] text-[var(--sgo-accent)]' : 'text-[var(--sgo-ink)]')}>
                       <Icone className="h-4 w-4" />
                       <span className="flex-1 text-left">{area.titulo}</span>
+                      {badges[area.id] ? <span className="sgo-count sgo-count--red">{badges[area.id]}</span> : null}
                       <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', aberto && 'rotate-90')} />
                     </button>
                     {aberto && (
