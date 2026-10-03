@@ -3,14 +3,15 @@
 import { useState, useMemo, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
-import { Wand2, CopyCheck, FileSpreadsheet, Printer, CalendarPlus, Settings2, Trash2, Filter, X } from 'lucide-react';
+import { Wand2, CopyCheck, FileSpreadsheet, Printer, CalendarPlus, Settings2, Trash2, Filter, X, ArrowRightLeft, BellRing, CalendarCheck, CalendarDays, GitCompare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/ds/select';
-import { Sheet } from '@/components/ui/ds/sheet';
+import { SgoModal } from '@/components/sgo/sgo-modal';
+import { SgoKpis } from '@/components/sgo/sgo-kpi';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { DatePicker } from '@/components/ui/ds/date-picker';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { StatCard } from '@/components/ui/ds/stat-card';
 import { shortUnitName } from '@/lib/unit-name';
 import { cn } from '@/lib/utils';
@@ -65,12 +66,14 @@ import { MigrateLegacyPanel } from './migrate-legacy-panel';
 import Link from 'next/link';
 import { CalendarRange } from 'lucide-react';
 
-export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false, podeVerFolgas = true, abas = {}, preenchimento = null, podePreencher = false, podeLimpar = false, nomeDaUnidade = '', resumoDoMes = null }: {
+export function ScheduleClient({ units, selectedUnitId, year, month, grid, collaborators, turnos, patterns, tiposDeEscala = [], escalasLegadas = 0, isAdmin = false, podeVerFolgas = true, abas = {}, preenchimento = null, podePreencher = false, podeLimpar = false, nomeDaUnidade = '', resumoDoMes = null, links = { trocas: true, avisos: true } }: {
   units: Unit[]; selectedUnitId: string; year: number; month: number; grid: Grid; collaborators: Unit[]; turnos: Turno[]; patterns: Pattern[];
   /** Tipos cadastrados em Configurações → Tipos de escala. */
   tiposDeEscala?: TipoDeEscala[];
   /** A tela de Folgas da unidade é uma parte própria na matriz de perfis. */
   podeVerFolgas?: boolean;
+  /** Quais atalhos do módulo o perfil pode abrir (Trocas de escala, Avisos ao RH). */
+  links?: { trocas: boolean; avisos: boolean };
   /** Quem preencheu o Planejado deste mês, e quando (nulo = ainda calculado). */
   preenchimento?: { por: string; em: string; primeiro: string } | null;
   /** O perfil pode congelar o mês (aba Planejado com Editar). */
@@ -175,41 +178,45 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
         <p className="text-xs font-bold leading-tight text-ink-900">Escala — {shortUnitName(unitName)} · {MONTHS[month - 1]}/{year} · {modeLabel}</p>
       </div>
 
-      {/* Filtros + ações */}
-      <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="w-44"><Select label="Unidade" size="sm" value={selectedUnitId} onValueChange={(v) => nav({ unit: v })} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} /></div>
-          <div className="w-36"><Select label="Mês" size="sm" value={String(month)} onValueChange={(v) => nav({ month: v })} options={MONTHS.map((mn, i) => ({ value: String(i + 1), label: mn }))} /></div>
-          <div className="w-28"><Select label="Ano" size="sm" value={String(year)} onValueChange={(v) => nav({ year: v })} options={[year - 1, year, year + 1].map((y) => ({ value: String(y), label: String(y) }))} /></div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <a href={exportUrl(mode === 'planejado' ? 'planejado' : 'realizado')}><Button size="sm" variant="outline"><FileSpreadsheet className="h-4 w-4" /> Excel</Button></a>
-          <Button size="sm" variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> PDF</Button>
-        </div>
+      {/* Cabeçalho do kit (Fase 4): [título] — [Planejado · Realizado ·
+          Comparação, abas de ESTADO com o nº de pessoas divergentes] — [ações
+          do módulo: Trocas, Avisos ao RH, Excel, PDF]. */}
+      <div className="print:hidden">
+        <LargeTitle
+          title="Escala de funcionários"
+          subtitle="Controle de presença mensal — Planejado, Realizado e Comparação."
+          tabs={(['planejado', 'realizado', 'comparacao'] as const).filter((m) => podeAba(abas, m)).map((m) => ({
+            label: m === 'planejado' ? 'Planejado' : m === 'realizado' ? 'Realizado' : 'Comparação',
+            icon: m === 'planejado' ? <CalendarDays className="h-3.5 w-3.5" /> : m === 'realizado' ? <CalendarCheck className="h-3.5 w-3.5" /> : <GitCompare className="h-3.5 w-3.5" />,
+            active: mode === m,
+            badge: m === 'comparacao' ? resumo.pessoasDivergentes : undefined,
+            testId: `aba-${m}`,
+            onClick: () => setMode(m),
+          }))}
+          actions={(
+            <div className="flex flex-wrap items-center gap-2">
+              {links.trocas && <Link href={`/modulos/escala/trocas?unit=${selectedUnitId}`} className="sgo-btn"><ArrowRightLeft className="h-3.5 w-3.5" /> Trocas de escala (RH)</Link>}
+              {links.avisos && <Link href={`/modulos/escala/avisos-rh?unit=${selectedUnitId}`} className="sgo-btn"><BellRing className="h-3.5 w-3.5" /> Avisos ao RH</Link>}
+              <a href={exportUrl(mode === 'planejado' ? 'planejado' : 'realizado')} className="sgo-btn"><FileSpreadsheet className="h-3.5 w-3.5" /> Excel</a>
+              <button type="button" className="sgo-btn" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" /> PDF</button>
+            </div>
+          )}
+        />
       </div>
 
-      {/* A barra de três botões (fase 2): Planejado · Realizado · Comparação.
-          Os botões de AÇÃO ficam na linha de baixo, porque misturados aqui a
-          aba parecia mais um botão entre nove. */}
-      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <SegmentedControl
-          aria-label="Visão da escala"
-          size="sm"
-          value={mode}
-          onValueChange={(v) => setMode(v)}
-          options={(['planejado', 'realizado', 'comparacao'] as const).filter((m) => podeAba(abas, m)).map((m) => ({
-            value: m,
-            label: m === 'planejado' ? 'Planejado' : m === 'realizado' ? 'Realizado' : 'Comparação',
-            ...(m === 'comparacao' && resumo.pessoasDivergentes > 0 ? { badge: resumo.pessoasDivergentes, badgeTone: 'danger' as const } : {}),
-          }))}
-        />
-        <Button size="sm" variant={filtrosAtivos > 0 ? 'default' : 'outline'} onClick={() => setMostrarFiltros((v) => !v)}>
-          <Filter className="h-4 w-4" /> Filtros{filtrosAtivos > 0 ? ` (${filtrosAtivos})` : ''}
-        </Button>
+      {/* Linha de filtros do kit: unidade, mês, ano e o botão que abre os
+          filtros da grade. */}
+      <div className="sgo-filtros -mx-4 items-end print:hidden">
+        <div className="w-44"><Select label="Unidade" size="sm" value={selectedUnitId} onValueChange={(v) => nav({ unit: v })} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} /></div>
+        <div className="w-36"><Select label="Mês" size="sm" value={String(month)} onValueChange={(v) => nav({ month: v })} options={MONTHS.map((mn, i) => ({ value: String(i + 1), label: mn }))} /></div>
+        <div className="w-28"><Select label="Ano" size="sm" value={String(year)} onValueChange={(v) => nav({ year: v })} options={[year - 1, year, year + 1].map((y) => ({ value: String(y), label: String(y) }))} /></div>
+        <button type="button" className={cn('sgo-btn ml-auto', filtrosAtivos > 0 && 'sgo-btn--primary')} aria-expanded={mostrarFiltros} onClick={() => setMostrarFiltros((v) => !v)}>
+          <Filter className="h-3.5 w-3.5" /> Filtros{filtrosAtivos > 0 ? ` (${filtrosAtivos})` : ''}
+        </button>
       </div>
 
       {mostrarFiltros && (
-        <div className="flex flex-wrap items-end gap-2 rounded-lg border border-line bg-sunken/40 p-3 print:hidden">
+        <div className="sgo-panel sgo-panel--solid flex flex-wrap items-end gap-2 p-3 print:hidden">
           <div className="w-48">
             <Label htmlFor="esc-nome" className="text-xs">Nome ou função</Label>
             <Input id="esc-nome" value={filtros.nome ?? ''} onChange={(e) => setFiltros((f) => ({ ...f, nome: e.target.value || undefined }))} placeholder="Procurar…" className="mt-1 h-9 text-sm" />
@@ -239,14 +246,14 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
           Cozinha, os números são da Cozinha — um bloco da unidade inteira ao
           lado de uma grade filtrada diria dois números que não conversam. */}
       {grid.rows.length > 0 && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 print:hidden">
+        <SgoKpis className="grid-cols-2 sm:grid-cols-4 print:hidden" flush>
           <StatCard label="Na grade" value={resumo.pessoas} hint={filtrosAtivos > 0 ? `de ${grid.rows.length} na unidade` : 'colaboradores com escala'} />
           <StatCard label="Dias de trabalho" value={resumo.trabalho} hint={mode === 'realizado' && resumo.vazios > 0 ? `${resumo.vazios} dia(s) sem marcação` : mode === 'planejado' ? 'previstos no mês' : 'registrados'} />
           <StatCard label="Folgas" value={resumo.folgas} hint={mode === 'planejado' ? 'previstas no mês' : 'registradas'} />
           {mode === 'comparacao'
             ? <StatCard label="Divergências" value={resumo.divergencias} tone={resumo.divergencias > 0 ? 'danger' : 'default'} hint={resumo.pessoasDivergentes > 0 ? `em ${resumo.pessoasDivergentes} pessoa(s)` : 'realizado = planejado'} />
             : <StatCard label="Ausências" value={resumo.ausencias} tone={resumo.ausencias > 0 ? 'warning' : 'default'} hint={detalheDasAusencias(resumo) || 'faltas, atestados e férias'} />}
-        </div>
+        </SgoKpis>
       )}
 
       {/* Ações da aba */}
@@ -312,11 +319,14 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
 
       {showAbsence && mode === 'realizado' && <AbsencePanel unitId={selectedUnitId} collaborators={collaborators} onDone={() => { setShowAbsence(false); router.refresh(); }} />}
       {limpando && (
-        <Sheet
+        <SgoModal
           open
           onClose={() => setLimpando(false)}
           title="Limpar o mês desta unidade"
-          description={`${MONTHS[month - 1]} de ${year} · ${nomeDaUnidade}`}
+          subtitle={`${MONTHS[month - 1]} de ${year} · ${nomeDaUnidade}`}
+          icon={<Trash2 className="h-4 w-4" />}
+          tone="red"
+          size="sm"
         >
           <div className="space-y-3">
             <p className="rounded-md bg-danger/10 p-2 text-sm text-danger">
@@ -350,11 +360,11 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
               ><Trash2 className="h-4 w-4" /> Limpar o mês</Button>
             </div>
           </div>
-        </Sheet>
+        </SgoModal>
       )}
 
       {showPattern && (
-        <div className="space-y-3 print:hidden">
+        <div className="sgo-panel sgo-panel--solid space-y-3 p-3 print:hidden">
           {isAdmin && <MigrateLegacyPanel unitId={selectedUnitId} quantidade={escalasLegadas} busy={busy} />}
           {/* A configuração NOVA vem primeiro: é a que tem dia de folga e
               vigência. A antiga fica abaixo, para quem já usava. */}
@@ -365,7 +375,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
               Nenhum tipo de escala cadastrado. Peça ao Admin para criar em <b>Configurações → Tipos de escala</b>.
             </p>
           )}
-          <details className="rounded-lg border bg-surface p-2">
+          <details className="sgo-panel sgo-panel--solid p-2">
             <summary className="cursor-pointer text-xs font-semibold text-ink-500">Cadastro antigo (sem dia de folga)</summary>
             <div className="mt-2">
               <PatternPanel unitId={selectedUnitId} collaborators={collaborators} turnos={turnos} patterns={patterns} onDone={() => router.refresh()} busy={busy} post={postJson} />
@@ -378,19 +388,19 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
           aparece em nenhuma delas, e o gerente vive no Realizado: mostrar só no
           Planejado esconderia o aviso justamente de quem precisa vê-lo. */}
       {grid.withoutSchedule.length > 0 && (
-        <div className="rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-xs print:hidden">
-          <span className="block font-semibold text-danger">
+        <div className="sgo-aviso sgo-aviso--bloqueio block print:hidden">
+          <span className="block font-semibold">
             {grid.withoutSchedule.length} colaborador(es) fora da grade, por não terem escala cadastrada:
           </span>
-          <span className="block text-ink-700">{grid.withoutSchedule.map((c) => c.name).join(' · ')}</span>
-          <button onClick={() => setShowPattern(true)} className="mt-1 font-semibold text-brand underline">
+          <span className="block" style={{ color: 'var(--sgo-ink)' }}>{grid.withoutSchedule.map((c) => c.name).join(' · ')}</span>
+          <button onClick={() => setShowPattern(true)} className="mt-1 font-semibold underline">
             Cadastrar a escala deles
           </button>
         </div>
       )}
 
       {mode === 'planejado' && (
-        <p className="rounded-lg bg-sunken/50 px-3 py-2 text-xs text-ink-500 print:hidden">
+        <p className="sgo-aviso print:hidden" style={{ background: 'var(--sgo-panel-2)', color: 'var(--sgo-ink-2)' }}>
           {preenchimento ? (
             <>
               Planejado <b>montado por {preenchimento.por}</b> em {preenchimento.em}
@@ -408,17 +418,17 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
         </p>
       )}
 
-      {mode === 'comparacao' && <p className="rounded-lg bg-sunken/50 px-3 py-2 text-xs text-ink-500 print:hidden">Em cada dia: <b>linha de cima = Planejado</b>, <b>linha de baixo = Realizado</b>. Células destacadas indicam divergência.</p>}
+      {mode === 'comparacao' && <p className="sgo-aviso print:hidden" style={{ background: 'var(--sgo-panel-2)', color: 'var(--sgo-ink-2)' }}>Em cada dia: <b>linha de cima = Planejado</b>, <b>linha de baixo = Realizado</b>. Células destacadas indicam divergência.</p>}
 
       {/* Grade */}
       {grid.rows.length === 0 ? (
         <p className="text-sm text-ink-500">Nenhum colaborador com escala cadastrada nesta unidade. Use “Cadastrar escala”.</p>
       ) : linhasVisiveis.length === 0 ? (
-        <p className="rounded-lg border border-line bg-sunken/40 px-3 py-4 text-center text-sm text-ink-500">
+        <p className="sgo-panel sgo-panel--solid px-3 py-4 text-center text-sm" style={{ color: 'var(--sgo-ink-2)' }}>
           Ninguém corresponde aos filtros. <button onClick={() => setFiltros({})} className="font-semibold text-brand underline">Limpar filtros</button>
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border print:overflow-visible print:border-0">
+        <div className="sgo-panel overflow-x-auto print:overflow-visible print:border-0">
           {/* `print:table-fixed` + uma largura fixa por coluna (declarada na
               PRIMEIRA linha, aqui no `thead`) é o que faz até 31 colunas de
               dia caberem na largura de uma A4 paisagem — sem isto o navegador
@@ -560,7 +570,7 @@ function AbsencePanel({ unitId, collaborators, onDone }: { unitId: string; colla
   }
 
   return (
-    <div className="rounded-lg border bg-surface p-3 print:hidden">
+    <div className="sgo-panel sgo-panel--solid p-3 print:hidden">
       <h3 className="mb-2 text-sm font-bold text-ink-900">Registrar ausência</h3>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
         <div className="col-span-2 md:col-span-1">
@@ -611,7 +621,7 @@ function PatternPanel({ unitId, collaborators, turnos, patterns, post, busy }: {
   }
 
   return (
-    <div className="rounded-lg border bg-surface p-3 print:hidden">
+    <div className="sgo-panel sgo-panel--solid p-3 print:hidden">
       <h3 className="mb-2 text-sm font-bold text-ink-900">Cadastrar / editar escala do colaborador</h3>
       <p className="mb-2 text-xs text-ink-500">O padrão gera o <b>Planejado</b>. 12x36 usa dias pares/ímpares do mês; 6x1/5x2/personalizada usam a data de início do ciclo.</p>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3">

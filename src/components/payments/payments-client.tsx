@@ -15,7 +15,9 @@ import { Button as DsButton } from '@/components/ui/ds/button';
 import { Banner } from '@/components/ui/ds/banner';
 import { List as DsList, ListRow } from '@/components/ui/ds/list-row';
 import { StatusBadge as DsStatusBadge, type Tone as DsTone } from '@/components/ui/ds/status-badge';
-import { Sheet } from '@/components/ui/ds/sheet';
+import { SgoDrawer } from '@/components/sgo/sgo-drawer';
+import { Card, CardContent } from '@/components/sgo/panel';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { ActionMenu } from '@/components/ui/ds/action-menu';
 import { Select as DsSelect } from '@/components/ui/ds/select';
 import { TimePicker } from '@/components/ui/ds/time-picker';
@@ -130,6 +132,7 @@ export function PaymentsClient({
   isManagerView = false,
   unitRequests = [],
   filtradoPor = [],
+  acoes,
   mine,
   toApprove,
   toPay,
@@ -159,6 +162,8 @@ export function PaymentsClient({
   unitRequests?: PayReq[];
   /** Nomes das unidades filtradas pelo seletor do cabeçalho; vazio = todas. */
   filtradoPor?: string[];
+  /** Ações do cabeçalho (os relatórios de Pagamentos), vindas da página. */
+  acoes?: React.ReactNode;
   mine: PayReq[];
   toApprove: PayReq[];
   toPay: PayReq[];
@@ -337,11 +342,19 @@ export function PaymentsClient({
 
   return (
     <div className="space-y-4">
-      <SegmentedControl
-        aria-label="Seções de Pagamentos"
-        value={tab}
-        onValueChange={(v) => { setTab(v as typeof tab); setSel(new Set()); setBatchMsg(null); }}
-        options={tabs.filter((t) => t.show).map((t) => ({ value: t.key, label: t.label, badge: t.badge, badgeTone: 'danger' as const }))}
+      {/* Cabeçalho do kit (Fase 4): [título] — [abas de ESTADO, com o
+          crachá vermelho da fila] — [relatórios]. As abas trocam estado, não
+          rota, então `active` é explícito. */}
+      <LargeTitle
+        title="Pagamentos"
+        tabs={tabs.filter((t) => t.show).map((t) => ({
+          label: t.label,
+          badge: t.badge,
+          active: tab === t.key,
+          testId: `aba-${t.key}`,
+          onClick: () => { setTab(t.key); setSel(new Set()); setBatchMsg(null); },
+        }))}
+        actions={acoes}
       />
 
       {/* De qual unidade é o que está na tela — antes a rede inteira vinha
@@ -356,7 +369,7 @@ export function PaymentsClient({
 
       {tab !== 'nova' && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="sgo-type-11 font-semibold uppercase tracking-wide text-ink-500">Tipo de pagamento</span>
+          <span className="sgo-label">Tipo de pagamento</span>
           <SegmentedControl
             aria-label="Tipo de pagamento"
             size="sm"
@@ -367,7 +380,7 @@ export function PaymentsClient({
         </div>
       )}
 
-      {tab === 'nova' && <NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} overtimeRatesByUnit={overtimeRatesByUnit} motivosHoraExtra={motivosHoraExtra} onDone={() => { setTab('minhas'); router.refresh(); }} />}
+      {tab === 'nova' && <Card><CardContent className="pt-4"><NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} overtimeRatesByUnit={overtimeRatesByUnit} motivosHoraExtra={motivosHoraExtra} onDone={() => { setTab('minhas'); router.refresh(); }} /></CardContent></Card>}
 
       <ListaCortada mostrando={
         tab === 'minhas' ? mineV.length : tab === 'aprovar' ? toApproveV.length : tab === 'pagar' ? toPayV.length : tab === 'historico' ? historyV.length : tab === 'unidade' ? unitRequestsV.length : 0
@@ -383,7 +396,7 @@ export function PaymentsClient({
           {toApproveV.length > 1 && (
             // Barra de lote: gruda no topo para o gestor não precisar rolar de
             // volta depois de marcar dezenas de itens.
-            <div className="sticky top-14 z-20 -mx-1 flex flex-wrap items-center gap-2 rounded-card border border-line bg-glass px-3 py-2 backdrop-blur-xl">
+            <div className="sgo-panel sticky top-20 z-20 flex flex-wrap items-center gap-2 px-3 py-2">
               <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-ink-700">
                 <input
                   type="checkbox"
@@ -434,7 +447,7 @@ export function PaymentsClient({
           {toPayV.length > 1 && (
             /* A mesma barra da aba Para Aprovar: com 282 aprovadas na fila, a
                baixa uma a uma era 282 cliques + 282 recarregamentos. */
-            <div className="sticky top-14 z-20 -mx-1 flex flex-wrap items-center gap-2 rounded-card border border-line bg-glass px-3 py-2 backdrop-blur-xl">
+            <div className="sgo-panel sticky top-20 z-20 flex flex-wrap items-center gap-2 px-3 py-2">
               <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-ink-700">
                 <input
                   type="checkbox"
@@ -686,9 +699,9 @@ function List({ items, actions, selection, editor }: {
         const dayTotal = dayItems.reduce((s, r) => s + r.amount, 0);
         return (
           <div key={day} className="space-y-2">
-            <div className="flex items-center justify-between border-b pb-1">
-              <p className="text-sm font-bold text-ink-900">📅 {fmtDay(day)}</p>
-              <span className="text-xs text-ink-500">{dayItems.length} lançamento(s) · {formatBRL(dayTotal)}</span>
+            <div className="flex items-center justify-between pb-1" style={{ borderBottom: '1px solid var(--sgo-hair)' }}>
+              <p className="sgo-row__title">📅 {fmtDay(day)}</p>
+              <span className="text-xs tabular-nums" style={{ color: 'var(--sgo-ink-2)' }}>{dayItems.length} lançamento(s) · {formatBRL(dayTotal)}</span>
             </div>
             {unitNames.map((u) => (
               <div key={u} className="space-y-1.5">
@@ -711,11 +724,15 @@ function List({ items, actions, selection, editor }: {
       })}
 
       {/* Detalhe fora do fluxo: a lista não se mexe quando se abre um item. */}
-      <Sheet
+      {/* Consultar = painel lateral do kit; a lista fica atrás. */}
+      <SgoDrawer
         open={!!detail}
         onClose={() => { setDetailId(null); setEditing(false); }}
         title={detail ? `${editing ? 'Editar · ' : ''}${TYPE_LABEL[detail.type]} · ${detail.title}` : ''}
-        description={detail ? `${formatBRL(detail.amount)} · ${shortUnitName(detail.unit)}` : undefined}
+        subtitle={detail ? `${formatBRL(detail.amount)} · ${shortUnitName(detail.unit)}` : undefined}
+        icon={<Banknote className="h-4 w-4" />}
+        tone="blue"
+        size="lg"
         footer={detail && !editing && (actions || editor) ? (
           <div className="flex flex-wrap items-center justify-end gap-2">
             {editor && detail.status === 'PENDING' && (
@@ -764,7 +781,7 @@ function List({ items, actions, selection, editor }: {
             <DetailView r={detail} />
           </>
         )}
-      </Sheet>
+      </SgoDrawer>
     </div>
   );
 }

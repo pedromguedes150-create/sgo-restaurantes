@@ -9,11 +9,9 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getScheduleGrid } from '@/lib/schedule';
 import { listShifts } from '@/lib/workforce';
-import { Card, CardContent } from '@/components/ui/card';
 import { ScheduleClient } from '@/components/schedule/schedule-client';
 import { contarEscalasLegadas } from '@/lib/schedule/migrate';
-import { ArrowLeft, ArrowRightLeft, BellRing } from 'lucide-react';
-import { LargeTitle } from '@/components/layout/page-chrome';
+import { ArrowLeft } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,23 +57,10 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand print:hidden"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
-      <div className="flex flex-wrap items-end justify-between gap-2 print:hidden">
-        <div>
-          <LargeTitle title="Escala de funcionários" subtitle="Controle de presença mensal — Planejado, Realizado e Comparação." />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/modulos/escala/trocas?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-brand">
-            <ArrowRightLeft className="h-4 w-4 text-brand" /> Trocas de escala (RH)
-          </Link>
-          <Link href={`/modulos/escala/avisos-rh?unit=${selected.id}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-2 text-sm font-semibold text-brand transition-colors hover:border-brand">
-            <BellRing className="h-4 w-4 text-brand" /> Avisos ao RH
-          </Link>
-        </div>
-      </div>
-
-      <Card><CardContent className="pt-4">
-        <ScheduleClient
+      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold print:hidden" style={{ color: 'var(--sgo-accent)' }}><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
+      {/* O cabeçalho (título, abas Planejado/Realizado/Comparação e as ações
+          do módulo) vive no cliente, no padrão do kit. */}
+      <ScheduleClient
           podeVerFolgas={podeVer('/modulos/escala/folgas')}
           abas={await abasDoPerfil(user.role, 'SCHEDULE')}
           preenchimento={fill ? { por: fill.filledByName, em: fill.filledAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), primeiro: fill.firstFilledAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) } : null}
@@ -94,8 +79,7 @@ export default async function EscalaPage({ searchParams }: { searchParams: { uni
           tiposDeEscala={tipos.map((t) => ({ id: t.id, name: t.name, workDays: t.workDays, offDays: t.offDays, startTime: t.startTime, breakTime: t.breakTime, endTime: t.endTime }))}
           escalasLegadas={legadas}
           isAdmin={user.role === 'ADMIN'}
-        />
-      </CardContent></Card>
+      />
     </div>
   );
 }

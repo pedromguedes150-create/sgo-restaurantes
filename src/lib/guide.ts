@@ -69,6 +69,7 @@ export const GUIDE: GuideSection[] = [
           'SELOS VERMELHOS nas áreas (v1.144.0): o número é o que precisa da SUA ação dentro daquela área — pagamentos na sua fila, comunicados não confirmados, tarefas vencidas, ocorrências críticas. Atualiza a cada 2 minutos.',
           'SINO: clique para ver os avisos sem sair da tela — marcar como lido, apagar, "Marcar todas como lidas" e "Ver todas". BUSCA: clique em "Buscar..." (ou Ctrl K) e digite o nome da tela; Enter abre.',
           'TELAS NO PADRÃO (v1.145.0): cartões, indicadores, tabelas, selos e filtros de todo o sistema passaram ao desenho do kit; o Dashboard e a Hora extra foram organizados na hierarquia completa — cabeçalho com abas, filtros, indicadores (cada um abre a tela já filtrada), painéis e tabela; detalhe abre em painel lateral e "Nova solicitação" em janela. As demais telas seguem, uma a uma.',
+          'PAGAMENTOS, ESCALA e PESSOAS (v1.146.0): as abas de cada tela (Nova/Minhas/Para Aprovar…, Planejado/Realizado/Comparação, Colaboradores/Férias/Escala) ficam na linha do título, com as ações à direita (relatórios, Trocas de escala, Avisos ao RH, Excel, PDF). Em Pessoas as ferramentas do módulo viraram um painel com ícones. O detalhe de um pagamento abre em painel lateral.',
           'O que NÃO mudou: nenhuma tela perdeu função, nenhum cálculo ou regra mudou — só a moldura e os componentes visuais. As telas vão sendo organizadas no novo padrão aos poucos.',
         ],
       },

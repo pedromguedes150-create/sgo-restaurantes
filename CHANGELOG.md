@@ -9,6 +9,18 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.146.0 — 2026-10-03 (Kit de layout — Fase 4, lote 2: Pagamentos, Escala e Pessoas)
+### Alterado
+- **Primitivos**: `List` (ds/list-row) e `Group` (ds/group) viram o painel SÓLIDO do kit (`.sgo-panel--solid`) — as ~30 telas que os usam saem no padrão sem reescrita.
+- **Pagamentos**: cabeçalho do kit [título] — [abas Nova/Minhas/Para Aprovar/Pagar/Histórico (ou as do gerente), com o crachá da fila] — [relatórios como botões `.sgo-btn`]; "Tipo de pagamento" com rótulo do kit; barra de lote em painel do kit (sem o vidro antigo); "Nova" num painel; lista por dia em painel sólido; detalhe da solicitação em **SgoDrawer** (consultar), com Editar/Aprovar/Rejeitar no rodapé como antes.
+- **Escala de funcionários**: cabeçalho do kit com as abas Planejado/Realizado/Comparação (a Comparação com o nº de pessoas divergentes) e as ações do módulo à direita (Trocas de escala, Avisos ao RH, Excel, PDF); unidade/mês/ano e o botão Filtros na linha `.sgo-filtros`; filtros abertos, painéis de ausência/cadastro e a grade em painel do kit; os quatro blocos em `.sgo-kpis`; "fora da grade" em `.sgo-aviso`; "Limpar o mês" em **SgoModal**. A grade (31 colunas, impressão A4 paisagem) não mudou.
+- **Gestão de Pessoas**: cabeçalho do kit com as abas Colaboradores/Férias/Escala; as 10 ferramentas do módulo num painel "Ferramentas de Pessoas" em duas colunas com cápsula de ícone; férias e escala importada em painel sólido; "Solicitar férias ao RH" num painel com cabeçalho; "Configurar escala" e "Editar unidades" em **SgoModal**.
+### Preservado
+Abas, rótulos, filtros, ações, listas, regras, permissões e rotas das três telas. Sem migração, sem mudança de API. Os links Trocas de escala e Avisos ao RH continuam visíveis para todos que abrem a Escala, como antes.
+### Divergências do kit
+- As ações de página usam `.sgo-btn` (30px); os botões de formulário e de linha seguem os do Restaurante (44px no toque).
+- O filtro "Tipo de pagamento" continua o controle segmentado do Restaurante (36px), não o `.sgo-seg` de 26px do kit — é o filtro mais tocado pelo gerente no celular.
+
 ## v1.145.0 — 2026-10-03 (Kit de layout — Fase 4, lote 1: primitivos no padrão do kit + Dashboard e Hora extra)
 ### Alterado
 - **Primitivos compartilhados emitem o kit sem mudar de API**: `Card` (ui/card) é o painel `.sgo-panel`; `StatCard` é o KPI `.sgo-kpi` (cápsula de ícone no tom do estado, valor 23px tabular, linha de apoio); `Table` (ds) é painel + `.sgo-tbl` (cabeçalho em caixa alta, linhas densas, numérica à direita, rodapé de total, `wrap` e `dense` opcionais); `StatusBadge` (os dois) é o selo `.sgo-tag` (info → sky, brand → accent/bordô); `FilterBar` é a linha `.sgo-filtros` sem cartão. As ~90 telas que os usam saem no padrão do kit sem reescrita.

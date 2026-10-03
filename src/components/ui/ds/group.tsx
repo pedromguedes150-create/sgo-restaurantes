@@ -47,7 +47,8 @@ export function Group({
   return (
     <div
       className={cn(
-        'sgo-group overflow-hidden rounded-card border border-line bg-surface',
+        /* Fase 4 do kit: a caixa é o painel sólido do kit (`.sgo-panel--solid`). */
+        'sgo-group sgo-panel sgo-panel--solid overflow-hidden',
         !inset && 'sgo-group-flush',
         className,
       )}

@@ -82,12 +82,15 @@ describe('Fase 2 — barra de três botões, filtros, quatro blocos e totais', (
   const grade = (rows: Props['grid']['rows']) => ({ year: 2026, month: 8, daysCount: 31, rows, withoutSchedule: [] });
   const semSeparadores = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '');
 
-  it('as três visões viram um controle segmentado e o botão de filtros aparece', () => {
-    const html = render();
-    expect(html).toContain('role="radiogroup"');
-    expect(html).toContain('aria-label="Visão da escala"');
+  it('as três visões são as abas do cabeçalho do kit (Fase 4) e o botão de filtros aparece', () => {
+    /* Fase 2 as pôs num controle segmentado; a Fase 4 do kit as levou para as
+       sub-abas do cabeçalho da página, com a ativa marcada por estado. */
+    const html = semSeparadores(render());
+    expect(html).toContain('<h1 class="sgo-phdr__title">Escala de funcionários</h1>');
+    expect(html).toMatch(/class="sgo-phdr__tab on" aria-current="page"[^>]*data-testid="aba-realizado"/);
     for (const r of ['Planejado', 'Realizado', 'Comparação']) expect(html).toContain(r);
     expect(html).toContain('Filtros');
+    expect(html).toContain('class="sgo-filtros');
   });
 
   it('os quatro blocos somam a grade — no Realizado, dias sem marcação ficam ditos', () => {

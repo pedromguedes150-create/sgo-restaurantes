@@ -11,9 +11,10 @@ import { cn } from '@/lib/utils';
  * Substitui os "cartões por registro" das telas legadas (Onda 3).
  */
 
+/** Desde a Fase 4 do kit (v1.145.0+) a caixa da lista é o painel do kit, sólido (lista é leitura densa, não vidro). */
 export function List({ children, stagger = true, className }: { children: React.ReactNode; stagger?: boolean; className?: string }) {
   return (
-    <ul className={cn('overflow-hidden rounded-card border border-line bg-surface', stagger && 'sgo-stagger', className)}>
+    <ul className={cn('sgo-panel sgo-panel--solid overflow-hidden', stagger && 'sgo-stagger', className)}>
       {children}
     </ul>
   );

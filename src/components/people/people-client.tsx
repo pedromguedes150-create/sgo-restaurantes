@@ -4,15 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus } from 'lucide-react';
+import { Plus, Users, Palmtree, CalendarDays } from 'lucide-react';
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { Group } from '@/components/ui/ds/group';
-import { Sheet } from '@/components/ui/ds/sheet';
+import { Card, PanelHeader } from '@/components/sgo/panel';
+import { SgoModal } from '@/components/sgo/sgo-modal';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { CalendarCog, Building2 } from 'lucide-react';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { EmployeeScheduleForm, type TipoDeEscala, type Turno, type EscalaAtual } from '@/components/schedule/employee-schedule-form';
@@ -36,10 +37,17 @@ const VAC_ST: Record<Vac['status'], { label: string; tone: StatusTone }> = {
 };
 const VAR_LABEL = { NONE: 'OK', ABSENCE: 'Falta', LATE: 'Atraso', SWAP: 'Troca' } as const;
 
+/**
+ * Pessoas — Colaboradores · Férias · Escala (Fase 4 do kit, v1.146.0): o
+ * cabeçalho do kit com as três abas de ESTADO; listas em painel sólido com
+ * linhas; o formulário de férias num painel com cabeçalho; "Configurar
+ * escala" e "Editar unidades" em modal do kit (criar/editar). Dados, ações e
+ * regras: as mesmas.
+ */
 export function PeopleClient({
   collaborators, vacations, schedule, canRequestVacation, abas = {},
   unidades = [], tipos = [], turnos = [], configs = {}, filtradoPor = [], total = 0, limite = 0, podeConfigurar = false,
-  podeEditarUnidades = false,
+  podeEditarUnidades = false, subtitulo, ferramentas,
 }: {
   collaborators: Collab[]; vacations: Vac[]; schedule: Sched[]; canRequestVacation?: boolean; abas?: AcessoAbas;
   unidades?: UnidadeOpt[];
@@ -54,6 +62,10 @@ export function PeopleClient({
   podeConfigurar?: boolean;
   /** Corrigir a QUAIS unidades o colaborador está ligado — só Admin (o sync só adiciona vínculo, nunca remove). */
   podeEditarUnidades?: boolean;
+  /** Subtítulo do cabeçalho da página (vem da página de servidor). */
+  subtitulo?: React.ReactNode;
+  /** Painel com os destinos do módulo (vem da página de servidor, já filtrado pela permissão). */
+  ferramentas?: React.ReactNode;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<'col' | 'fer' | 'esc'>(abaInicial(abas, 'PEOPLE', 'col') as 'col' | 'fer' | 'esc');
@@ -109,26 +121,34 @@ export function PeopleClient({
     try { const r = await fetch(`/api/people/schedule/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ variation, note }) }); if (r.ok) router.refresh(); } finally { setBusy(false); }
   }
 
+  const abasDaTela = [
+    { value: 'col' as const, label: 'Colaboradores', icon: <Users className="h-3.5 w-3.5" /> },
+    { value: 'fer' as const, label: 'Férias', icon: <Palmtree className="h-3.5 w-3.5" /> },
+    { value: 'esc' as const, label: 'Escala', icon: <CalendarDays className="h-3.5 w-3.5" /> },
+  ].filter((o) => podeAba(abas, o.value));
+
   return (
     <div className="space-y-4">
-      <SegmentedControl
-        aria-label="Seções de Pessoas"
-        value={tab}
-        onValueChange={(v) => setTab(v as typeof tab)}
-        options={[{ value: 'col', label: 'Colaboradores' }, { value: 'fer', label: 'Férias' }, { value: 'esc', label: 'Escala' }].filter((o) => podeAba(abas, o.value))}
+      <LargeTitle
+        title="Gestão de Pessoas"
+        subtitle={subtitulo}
+        tabs={abasDaTela.map((o) => ({ label: o.label, icon: o.icon, active: tab === o.value, testId: `aba-${o.value}`, onClick: () => setTab(o.value) }))}
       />
 
       {/* De qual unidade é o que está na tela. Antes a lista trazia a rede
           inteira enquanto o cabeçalho dizia uma unidade só. */}
-      <p className="text-xs text-ink-500">
+      <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>
         {filtradoPor.length > 0
-          ? <>Mostrando <strong className="text-ink-900">{filtradoPor.join(', ')}</strong>. <a href="?unit=todas" className="font-semibold text-brand hover:underline">Ver todas as unidades</a></>
-          : <>Mostrando <strong className="text-ink-900">todas as unidades</strong> do seu acesso.</>}
+          ? <>Mostrando <strong style={{ color: 'var(--sgo-ink)' }}>{filtradoPor.join(', ')}</strong>. <a href="?unit=todas" className="font-semibold hover:underline" style={{ color: 'var(--sgo-accent)' }}>Ver todas as unidades</a></>
+          : <>Mostrando <strong style={{ color: 'var(--sgo-ink)' }}>todas as unidades</strong> do seu acesso.</>}
         {limite > 0 && total > collaborators.length && <> · lista cortada em {limite} de {total} — refine pela unidade.</>}
       </p>
 
+      {ferramentas}
+
+      {/* Editar = modal do kit. O formulário de escala traz o próprio botão de salvar. */}
       {aberto && (
-        <Sheet open onClose={() => setAberto(null)} title={aberto.name} description="Configuração de escala do colaborador">
+        <SgoModal open onClose={() => setAberto(null)} title={aberto.name} subtitle="Configuração de escala do colaborador" icon={<CalendarCog className="h-4 w-4" />} tone="brand" size="sm">
           <EmployeeScheduleForm
             unitId={aberto.unitIds[0] ?? ''}
             unidades={unidades.filter((u) => aberto.unitIds.includes(u.id))}
@@ -147,23 +167,24 @@ export function PeopleClient({
               } finally { setBusy(false); }
             }}
           />
-        </Sheet>
+        </SgoModal>
       )}
 
       {editandoUnidades && (
-        <Sheet
+        <SgoModal
           open
           onClose={() => setEditandoUnidades(null)}
           title={`Unidades de ${editandoUnidades.name}`}
-          description="O sync do RH só ADICIONA vínculo — nunca remove. Depois de uma transferência, a unidade antiga fica ligada até alguém tirar manualmente aqui."
+          subtitle="O sync do RH só ADICIONA vínculo — nunca remove. Depois de uma transferência, a unidade antiga fica ligada até alguém tirar manualmente aqui."
+          icon={<Building2 className="h-4 w-4" />}
+          tone="amber"
+          size="sm"
+          footerLeft={<span className="text-xs" style={{ color: 'var(--sgo-bad)' }}>{erroUnidades}</span>}
           footer={
-            <div className="flex w-full items-center justify-between gap-2">
-              <span className="text-xs text-danger">{erroUnidades}</span>
-              <div className="flex gap-2">
-                <Button size="sm" variant="ghost" onClick={() => setEditandoUnidades(null)} disabled={busy}>Cancelar</Button>
-                <Button size="sm" onClick={salvarUnidades} disabled={busy}>Salvar</Button>
-              </div>
-            </div>
+            <>
+              <button type="button" className="sgo-btn" onClick={() => setEditandoUnidades(null)} disabled={busy}>Cancelar</button>
+              <button type="button" className="sgo-btn sgo-btn--primary" onClick={salvarUnidades} disabled={busy}>Salvar</button>
+            </>
           }
         >
           <div className="space-y-1">
@@ -180,30 +201,30 @@ export function PeopleClient({
                 correção só "gruda" se o RH de fato não devolver mais a pessoa
                 para lá. */}
           </div>
-        </Sheet>
+        </SgoModal>
       )}
 
       {tab === 'col' && (
         <>
           {/* Estado vazio FORA do grupo: dentro, a caixa emolduraria uma frase
               e o texto ficaria sem respiro, parecendo um item da lista. */}
-          {collaborators.length === 0 && <p className="text-sm text-ink-500">Nenhum colaborador.</p>}
+          {collaborators.length === 0 && <p className="text-sm" style={{ color: 'var(--sgo-ink-2)' }}>Nenhum colaborador.</p>}
           <Group>
             {collaborators.map((c) => {
               const cfg = configs[c.id];
               const linha = (
                 <>
-                  <p className="font-semibold text-ink-900">{c.name}</p>
-                  <p className="text-xs text-ink-500">{c.jobTitle ?? '—'} · {c.units.join(', ')}</p>
+                  <p className="font-semibold" style={{ color: 'var(--sgo-ink)' }}>{c.name}</p>
+                  <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>{c.jobTitle ?? '—'} · {c.units.join(', ')}</p>
                   {/* O que já está cadastrado aparece na própria linha: sem isso,
                       saber quem tem escala exigia abrir um por um. */}
                   {cfg ? (
-                    <p className="mt-0.5 text-xs text-ink-500">
-                      <span className="font-semibold text-ink-900">{cfg.tipo ?? 'Escala'}</span>
+                    <p className="mt-0.5 text-xs" style={{ color: 'var(--sgo-ink-2)' }}>
+                      <span className="font-semibold" style={{ color: 'var(--sgo-ink)' }}>{cfg.tipo ?? 'Escala'}</span>
                       {cfg.horario ? ` · ${cfg.horario}` : ''} · {cfg.folga} · desde {cfg.desde}
                     </p>
                   ) : (
-                    <p className="mt-0.5 text-xs text-warning">Sem escala cadastrada</p>
+                    <p className="mt-0.5 text-xs" style={{ color: 'var(--sgo-warn)' }}>Sem escala cadastrada</p>
                   )}
                 </>
               );
@@ -219,7 +240,7 @@ export function PeopleClient({
                   {podeConfigurar ? (
                     <button type="button" title="Configurar escala" onClick={() => setAberto(c)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
                       <span className="min-w-0 flex-1">{linha}</span>
-                      <CalendarCog className="h-4 w-4 shrink-0 text-ink-500" />
+                      <CalendarCog className="h-4 w-4 shrink-0" style={{ color: 'var(--sgo-ink-2)' }} />
                     </button>
                   ) : (
                     <span className="min-w-0 flex-1">{linha}</span>
@@ -230,7 +251,7 @@ export function PeopleClient({
                       title="Editar unidades"
                       aria-label={`Editar unidades de ${c.name}`}
                       onClick={() => { setEditandoUnidades(c); setUnidadesSelecionadas(c.unitIds); setErroUnidades(''); }}
-                      className="shrink-0 rounded-control p-1.5 text-ink-500 hover:bg-sunken hover:text-brand"
+                      className="sgo-btn sgo-btn--icon sgo-btn--ghost shrink-0"
                     >
                       <Building2 className="h-4 w-4" />
                     </button>
@@ -243,11 +264,11 @@ export function PeopleClient({
       )}
 
       {tab === 'fer' && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {canRequestVacation && (
-            <div className="rounded-lg border border-dashed p-3">
-              <p className="mb-2 sgo-type-11 font-semibold text-ink-500">Solicitar férias ao RH</p>
-              <div className="space-y-2">
+            <Card>
+              <PanelHeader title="Solicitar férias ao RH" icon={<span className="sgo-panel__ic sgo-panel__ic--green" aria-hidden><Palmtree className="h-4 w-4" /></span>} />
+              <div className="space-y-2 px-4 py-3">
                 <Select
                   aria-label="Colaborador" placeholder="Selecione o colaborador…" value={vCollab} onValueChange={setVCollab}
                   options={collaborators.map((c) => ({ value: c.id, label: c.name, hint: c.jobTitle ?? undefined }))}
@@ -258,42 +279,46 @@ export function PeopleClient({
                 </div>
                 <Input value={vNote} onChange={(e) => setVNote(e.target.value)} placeholder="Observação (opcional)" className="h-10 text-sm" />
                 <Button className="w-full" disabled={busy || !vCollab || !vStart || !vEnd} onClick={vacRequest}><Plus className="h-4 w-4" /> Pedir ao RH</Button>
-                <p className="text-xs text-ink-500">O pedido avisa os Admins para levar ao RH. Quando o RH confirmar, o status muda aqui.</p>
+                <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>O pedido avisa os Admins para levar ao RH. Quando o RH confirmar, o status muda aqui.</p>
               </div>
-            </div>
+            </Card>
           )}
-          {vacations.length === 0 && <p className="text-sm text-ink-500">Sem férias programadas.</p>}
-          {vacations.map((v) => (
-            <div key={v.id} className="rounded-lg border bg-surface p-3">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-ink-900">{v.collaborator}</p>
-                <StatusBadge tone={VAC_ST[v.status].tone}>{VAC_ST[v.status].label}</StatusBadge>
+          {vacations.length === 0 && <p className="text-sm" style={{ color: 'var(--sgo-ink-2)' }}>Sem férias programadas.</p>}
+          <Group>
+            {vacations.map((v) => (
+              <div key={v.id} className="p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold" style={{ color: 'var(--sgo-ink)' }}>{v.collaborator}</p>
+                  <StatusBadge tone={VAC_ST[v.status].tone}>{VAC_ST[v.status].label}</StatusBadge>
+                </div>
+                <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>{v.unit} · {v.start} a {v.end}</p>
+                {v.changeNote && <p className="mt-1 text-xs" style={{ color: 'var(--sgo-warn)' }}>Alteração: {v.changeNote}</p>}
+                {v.status === 'CONFIRMED' && <button type="button" className="sgo-btn sgo-btn--sm mt-2" disabled={busy} onClick={() => vacChange(v.id)}>Solicitar alteração</button>}
               </div>
-              <p className="text-xs text-ink-500">{v.unit} · {v.start} a {v.end}</p>
-              {v.changeNote && <p className="mt-1 text-xs text-warning">Alteração: {v.changeNote}</p>}
-              {v.status === 'CONFIRMED' && <Button size="sm" variant="outline" className="mt-2" disabled={busy} onClick={() => vacChange(v.id)}>Solicitar alteração</Button>}
-            </div>
-          ))}
+            ))}
+          </Group>
         </div>
       )}
 
       {tab === 'esc' && (
         <div className="space-y-2">
-          {schedule.length === 0 && <p className="text-sm text-ink-500">Sem escala importada.</p>}
-          {schedule.map((s) => (
-            <div key={s.id} className="rounded-lg border bg-surface p-3">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-ink-900">{s.collaborator}</p>
-                <StatusBadge tone={s.variation === 'NONE' ? 'neutral' : 'medium'}>{VAR_LABEL[s.variation]}</StatusBadge>
+          {schedule.length === 0 && <p className="text-sm" style={{ color: 'var(--sgo-ink-2)' }}>Sem escala importada.</p>}
+          <Group>
+            {schedule.map((s) => (
+              <div key={s.id} className="p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold" style={{ color: 'var(--sgo-ink)' }}>{s.collaborator}</p>
+                  <StatusBadge tone={s.variation === 'NONE' ? 'neutral' : 'medium'}>{VAR_LABEL[s.variation]}</StatusBadge>
+                </div>
+                <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>{s.unit} · {s.date} · planejado {s.planned}{s.note ? ` · ${s.note}` : ''}</p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {(['ABSENCE', 'LATE', 'SWAP', 'NONE'] as const).map((vv) => (
+                    <button key={vv} type="button" disabled={busy} onClick={() => setVar(s.id, vv)} className="sgo-btn sgo-btn--sm">{VAR_LABEL[vv]}</button>
+                  ))}
+                </div>
               </div>
-              <p className="text-xs text-ink-500">{s.unit} · {s.date} · planejado {s.planned}{s.note ? ` · ${s.note}` : ''}</p>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {(['ABSENCE', 'LATE', 'SWAP', 'NONE'] as const).map((vv) => (
-                  <button key={vv} disabled={busy} onClick={() => setVar(s.id, vv)} className="rounded border px-2 py-1 text-xs">{VAR_LABEL[vv]}</button>
-                ))}
-              </div>
-            </div>
-          ))}
+            ))}
+          </Group>
         </div>
       )}
     </div>
