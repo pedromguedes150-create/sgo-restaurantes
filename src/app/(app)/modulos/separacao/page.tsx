@@ -41,25 +41,23 @@ export default async function SeparacaoPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <LargeTitle title="Separação de pedidos" />
-        <p className="text-sm text-ink-500">
-          {setorNome ? <>Setor <b>{setorNome}</b> — você vê apenas os itens do seu setor.</> : 'Todos os setores do CD.'}
-        </p>
-      </div>
-
-      {/* ROMANEIO POR SETOR: tudo que o setor precisa separar, somando as
-          unidades. O separador tem o do setor dele; ADMIN/CEO escolhem. */}
-      {setorId && (
-        <Link href={`/modulos/separacao/romaneio-setor/${setorId}`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
-          <Printer className="h-4 w-4" /> Romaneio do setor {setorNome} (todas as unidades)
-        </Link>
-      )}
+      {/* Cabeçalho do kit (Fase 4). ROMANEIO POR SETOR: tudo que o setor
+          precisa separar, somando as unidades — o separador tem o do setor
+          dele (ação do cabeçalho); ADMIN/CEO escolhem na linha de filtros. */}
+      <LargeTitle
+        title="Separação de pedidos"
+        subtitle={setorNome ? <>Setor <b>{setorNome}</b> — você vê apenas os itens do seu setor.</> : 'Todos os setores do CD.'}
+        actions={setorId ? (
+          <Link href={`/modulos/separacao/romaneio-setor/${setorId}`} className="sgo-btn">
+            <Printer className="h-3.5 w-3.5" /> Romaneio do setor {setorNome} (todas as unidades)
+          </Link>
+        ) : undefined}
+      />
       {vejoTudo && setores.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="inline-flex items-center gap-1 text-ink-500"><Printer className="h-4 w-4" /> Romaneio por setor:</span>
+        <div className="sgo-filtros -mx-4">
+          <span className="sgo-label inline-flex items-center gap-1"><Printer className="h-3.5 w-3.5" /> Romaneio por setor</span>
           {setores.map((s) => (
-            <Link key={s.id} href={`/modulos/separacao/romaneio-setor/${s.id}`} className="rounded-control border border-line px-2 py-1 text-xs font-semibold text-ink-700 hover:border-brand hover:text-brand">
+            <Link key={s.id} href={`/modulos/separacao/romaneio-setor/${s.id}`} className="sgo-btn sgo-btn--sm">
               {s.name}
             </Link>
           ))}

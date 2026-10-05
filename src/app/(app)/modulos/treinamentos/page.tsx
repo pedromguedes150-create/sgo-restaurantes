@@ -32,11 +32,17 @@ export default async function TreinamentosPage({ searchParams }: { searchParams:
           </Link>
         )}
       </div>
-      <LargeTitle title="Treinamentos" />
-      <FamilyTabs active="/modulos/treinamentos" />
-      <p className="text-sm text-ink-500">Cada colaborador vê só o que deve realizar: os treinamentos gerais da unidade, os da sua função e os atribuídos a ele. Conta na meta (peso {weight}).</p>
+      <LargeTitle
+        title="Treinamentos"
+        subtitle={<>Cada colaborador vê só o que deve realizar: os treinamentos gerais da unidade, os da sua função e os atribuídos a ele. Conta na meta (peso {weight}).<span className="block"><FamilyTabs active="/modulos/treinamentos" /></span></>}
+      />
 
-      {units.length > 1 && <UnitSelectNav units={units} selected={selected.id} />}
+      {units.length > 1 && (
+        <div className="sgo-filtros -mx-4">
+          <span className="sgo-label">Unidade</span>
+          <UnitSelectNav units={units} selected={selected.id} />
+        </div>
+      )}
 
       <Card><CardContent className="pt-4">
         <TrainingBoard isAdmin={user.role === 'ADMIN'} weight={weight} board={board} />

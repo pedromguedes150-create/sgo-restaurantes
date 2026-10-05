@@ -6,9 +6,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getMyInbox, getAuthoredCommunications } from '@/lib/communications/query';
 import { canAuthorCommunications } from '@/lib/communications/create';
 import { getCommunicationWeight } from '@/lib/communications/meta';
-import { Card, CardContent } from '@/components/ui/card';
 import { CommunicationsClient, type InboxItem, type AuthoredItem } from '@/components/communications/communications-client';
-import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,10 +56,10 @@ export default async function ComunicacaoPage() {
   return (
     <div className="space-y-5">
       <div>
-        <LargeTitle title="Central de Comunicação" subtitle="Comunicados oficiais com confirmação de leitura — substitui a cobrança por WhatsApp." />
+        {/* O cabeçalho (título + abas) vive no cliente, no padrão do kit. */}
       </div>
-      <Card><CardContent className="pt-4">
         <CommunicationsClient
+          subtitulo="Comunicados oficiais com confirmação de leitura — substitui a cobrança por WhatsApp."
             abas={await abasDoPerfil(user.role, 'COMMUNICATION')}
           canAuthor={canAuthor}
           isAdmin={user.role === 'ADMIN'}
@@ -71,7 +69,7 @@ export default async function ComunicacaoPage() {
           inbox={inbox}
           authored={authored}
         />
-      </CardContent></Card>
+      
     </div>
   );
 }

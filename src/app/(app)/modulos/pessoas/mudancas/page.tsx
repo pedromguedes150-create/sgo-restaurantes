@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRightLeft } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { listRoleChanges } from '@/lib/people/role-change';
 import { Card, CardContent } from '@/components/ui/card';
+import { Group } from '@/components/ui/ds/group';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { LargeTitle } from '@/components/layout/page-chrome';
 
@@ -21,18 +22,17 @@ export default async function MudancasPage() {
     <div className="space-y-4">
       <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
       <div>
-        <LargeTitle title="Mudanças de função/setor" />
-        <p className="text-sm text-ink-500">
-          Registro consolidado para informar o RH. Mudança de <strong>setor</strong> vale no SGO na hora (Mapa de Funções);
-          mudança de <strong>função</strong> é solicitação — efetiva no RH e o cargo atualiza no próximo sync.
-        </p>
+        <LargeTitle
+          title="Mudanças de função/setor"
+          subtitle={<>Registro consolidado para informar o RH. Mudança de <strong>setor</strong> vale no SGO na hora (Mapa de Funções); mudança de <strong>função</strong> é solicitação — efetiva no RH e o cargo atualiza no próximo sync.</>}
+        />
       </div>
       <Card>
         <CardContent className="pt-4">
           {rows.length === 0 && <p className="text-sm text-ink-500">Nenhuma mudança registrada ainda. Edite função/setor no Mapa de Funções.</p>}
-          <div className="space-y-2">
+          <Group>
             {rows.map((r) => (
-              <div key={r.id} className="rounded-lg border bg-surface p-3">
+              <div key={r.id} className="p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-ink-900">{r.collaboratorName}</p>
@@ -49,7 +49,7 @@ export default async function MudancasPage() {
                 </div>
               </div>
             ))}
-          </div>
+          </Group>
         </CardContent>
       </Card>
     </div>

@@ -30,11 +30,10 @@ export default async function AvaliacaoPage({ searchParams }: { searchParams: { 
     <div className="space-y-4">
       <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
       <div>
-        <LargeTitle title="Avaliação do colaborador" />
-        <p className="text-sm text-ink-500">
-          Observações do dia a dia + avaliação mensal (o cadastro continua vindo do RH).{' '}
-          {pendentes > 0 ? `${pendentes} a avaliar no mês.` : 'Todos avaliados no mês.'}
-        </p>
+        <LargeTitle
+          title="Avaliação do colaborador"
+          subtitle={<>Observações do dia a dia + avaliação mensal (o cadastro continua vindo do RH).{' '}{pendentes > 0 ? `${pendentes} a avaliar no mês.` : 'Todos avaliados no mês.'}</>}
+        />
       </div>
       <Card>
         <CardContent className="pt-4">

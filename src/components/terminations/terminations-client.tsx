@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 
 import { Plus, FileText, UserMinus, Check, X } from 'lucide-react';
@@ -27,7 +28,9 @@ const STw: Record<TermRow['status'], { label: string; tone: 'medium' | 'success'
   REJECTED: { label: 'Recusado', tone: 'critical' },
 };
 
-export function TerminationsClient({ canRequest, canDecide, units, collaboratorsByUnit, rows, abas = {} }: {
+export function TerminationsClient({ canRequest, canDecide, units, collaboratorsByUnit, rows, abas = {}, subtitulo }: {
+  /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
+  subtitulo?: React.ReactNode;
   canRequest: boolean; canDecide: boolean; units: Unit[]; collaboratorsByUnit: Record<string, Collab[]>; rows: TermRow[];
 
   /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
@@ -37,10 +40,15 @@ export function TerminationsClient({ canRequest, canDecide, units, collaborators
   const [tab, setTab] = useState<'solicitar' | 'lista'>(abaInicial(abas, 'TERMINATIONS', canRequest ? 'solicitar' : 'lista') as 'solicitar' | 'lista');
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-1">
-        {canRequest && podeAba(abas, 'solicitar') && <button onClick={() => setTab('solicitar')} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === 'solicitar' ? 'bg-brand text-on-brand' : 'border'}`}><Plus className="h-4 w-4" /> Solicitar</button>}
-        {podeAba(abas, 'lista') && <button onClick={() => setTab('lista')} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === 'lista' ? 'bg-brand text-on-brand' : 'border'}`}><UserMinus className="h-4 w-4" /> Solicitações</button>}
-      </div>
+      {/* Cabeçalho do kit (Fase 4): Solicitar / Solicitações como abas de ESTADO. */}
+      <LargeTitle
+        title="Desligamentos"
+        subtitle={subtitulo}
+        tabs={[
+          ...(canRequest && podeAba(abas, 'solicitar') ? [{ value: 'solicitar' as const, label: 'Solicitar', icon: <Plus className="h-3.5 w-3.5" /> }] : []),
+          ...(podeAba(abas, 'lista') ? [{ value: 'lista' as const, label: 'Solicitações', icon: <UserMinus className="h-3.5 w-3.5" /> }] : []),
+        ].map((o) => ({ label: o.label, icon: o.icon, active: tab === o.value, testId: `aba-${o.value}`, onClick: () => setTab(o.value) }))}
+      />
       {tab === 'solicitar' && canRequest && <RequestForm units={units} collaboratorsByUnit={collaboratorsByUnit} onDone={() => { setTab('lista'); router.refresh(); }} />}
       {tab === 'lista' && <List rows={rows} canDecide={canDecide} onChanged={() => router.refresh()} />}
     </div>

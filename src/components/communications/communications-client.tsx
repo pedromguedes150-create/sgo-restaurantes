@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Megaphone, Plus, X, Paperclip, LinkIcon, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
@@ -35,7 +35,9 @@ const PRIO: Record<Priority, { label: string; tone: StatusTone } | null> = {
 
 function fmt(d: string) { return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
 
-export function CommunicationsClient({ canAuthor, isAdmin, weight, units, people, inbox, authored, abas = {} }: {
+export function CommunicationsClient({ canAuthor, isAdmin, weight, units, people, inbox, authored, abas = {}, subtitulo }: {
+  /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
+  subtitulo?: React.ReactNode;
   canAuthor: boolean; isAdmin: boolean; weight: number; units: Unit[]; people: Person[]; inbox: InboxItem[]; authored: AuthoredItem[];
 
   /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
@@ -52,11 +54,11 @@ export function CommunicationsClient({ canAuthor, isAdmin, weight, units, people
 
   return (
     <div className="space-y-4">
-      <SegmentedControl
-        aria-label="Seções da Central de Comunicação"
-        value={tab}
-        onValueChange={(v) => setTab(v as typeof tab)}
-        options={tabs.filter((t) => t.show && podeAba(abas, t.key)).map((t) => ({ value: t.key, label: t.label, badge: t.badge, badgeTone: 'danger' as const }))}
+      {/* Cabeçalho do kit (Fase 4): abas de ESTADO com o crachá dos pendentes. */}
+      <LargeTitle
+        title="Central de Comunicação"
+        subtitle={subtitulo}
+        tabs={tabs.filter((t) => t.show && podeAba(abas, t.key)).map((t) => ({ label: t.label, badge: t.badge, active: tab === t.key, testId: `aba-${t.key}`, onClick: () => setTab(t.key) }))}
       />
 
       {tab === 'recebidos' && <Inbox items={inbox} />}

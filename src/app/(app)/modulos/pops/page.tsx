@@ -7,7 +7,7 @@ import { listPopsForUser } from '@/lib/pops';
 import { STANDARD_SECTORS } from '@/lib/workforce';
 import { opcoesDePublico } from '@/lib/treinamentos/publico';
 import { permissaoDeRota } from '@/lib/permissions/links';
-import { Card, CardContent } from '@/components/ui/card';
+import { Group } from '@/components/ui/ds/group';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { PopEditor } from '@/components/pops/pop-editor';
 import { BarChart3, GraduationCap } from 'lucide-react';
@@ -28,26 +28,28 @@ export default async function PopsPage() {
 
   return (
     <div className="space-y-4">
-      <LargeTitle title="POPs" />
-      <FamilyTabs active="/modulos/pops" />
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Link href="/modulos/treinamentos" className="flex items-center gap-2 rounded-lg border bg-surface px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-brand">
-          <GraduationCap className="h-5 w-5 text-brand" /> Treinamentos da unidade
-        </Link>
-        {veAcompanhamento && (
-          <Link href="/modulos/treinamentos/acompanhamento" className="flex items-center gap-2 rounded-lg border bg-surface px-4 py-3 text-sm font-semibold text-brand transition-colors hover:border-brand">
-            <BarChart3 className="h-5 w-5 text-brand" /> Treinamentos — Acompanhamento da rede
-          </Link>
-        )}
-      </div>
+      {/* Cabeçalho do kit (Fase 4): família no subtítulo e os dois atalhos de
+          Treinamentos como ações. */}
+      <LargeTitle
+        title="POPs"
+        subtitle={<FamilyTabs active="/modulos/pops" />}
+        actions={
+          <>
+            <Link href="/modulos/treinamentos" className="sgo-btn"><GraduationCap className="h-3.5 w-3.5" /> Treinamentos da unidade</Link>
+            {veAcompanhamento && (
+              <Link href="/modulos/treinamentos/acompanhamento" className="sgo-btn"><BarChart3 className="h-3.5 w-3.5" /> Treinamentos — Acompanhamento da rede</Link>
+            )}
+          </>
+        }
+      />
       {isAdmin && <PopEditor units={units} standardSectors={STANDARD_SECTORS} publico={publico} />}
+      {/* A lista de POPs em painel sólido com uma linha por POP. */}
       <div className="space-y-2">
         {pops.length === 0 && <p className="text-sm text-ink-500">Nenhum POP publicado.</p>}
+        <Group>
         {pops.map((p) => (
-          <Link key={p.id} href={`/modulos/pops/${p.id}`}>
-            <Card className="transition-colors hover:border-brand">
-              <CardContent className="flex items-center justify-between py-3">
-                <div>
+          <Link key={p.id} href={`/modulos/pops/${p.id}`} className="sgo-row min-h-12 outline-none focus-visible:shadow-sgo-focus" style={{ borderTop: 0 }}>
+                <div className="sgo-row__main">
                   <p className="font-semibold text-ink-900">{p.title} <span className="text-xs font-normal text-ink-500">v{p.version}</span></p>
                   <p className="text-xs text-ink-500">
                     {[
@@ -60,10 +62,9 @@ export default async function PopsPage() {
                   </p>
                 </div>
                 <StatusBadge tone={p.confirmed ? 'success' : 'medium'}>{p.confirmed ? 'Lido' : 'Confirmar'}</StatusBadge>
-              </CardContent>
-            </Card>
           </Link>
         ))}
+        </Group>
       </div>
     </div>
   );
