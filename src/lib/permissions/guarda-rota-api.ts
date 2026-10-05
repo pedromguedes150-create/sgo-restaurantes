@@ -115,6 +115,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/people/vacations': { modulo: 'PEOPLE_TAB_VACATION', exigir: 'editar' },
   '/api/people/vacations/[id]': { modulo: 'PEOPLE_TAB_VACATION', exigir: 'editar' },
   '/api/people/vacations/abono': { modulo: 'PEOPLE_TAB_VACATION', exigir: 'editar' },
+  '/api/people/vacations/ajuste': { modulo: 'PEOPLE_TAB_VACATION', exigir: 'editar' },
   '/api/people/schedule/[id]': { modulo: 'SCHEDULE', exigir: 'editar' },
 
   '/api/perfis': { modulo: 'CONFIG_PROFILES', exigir: 'editar' },

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   ArrowLeft, Award, BadgeCheck, Briefcase, Building2, CalendarClock, CalendarDays, Car, Clock3, FileHeart, GraduationCap,
-  HandCoins, History, IdCard, Palmtree, Percent, Timer,
+  HandCoins, History, IdCard, Palmtree, PencilLine, Percent, Timer,
 } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { permissaoDeRota } from '@/lib/permissions/links';
@@ -81,7 +81,7 @@ export default async function Perfil360Page({ params }: { params: { id: string }
           <p className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-500">
             {c.cpf && <span className="inline-flex items-center gap-1"><IdCard className="h-3.5 w-3.5" /> {c.cpf}</span>}
             {c.matricula && <span>Matrícula {c.matricula}</span>}
-            <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> Adm. {br(c.admissao)}</span>
+            <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> Adm. {br(c.admissao)}{c.admissaoCorrigida && <> (corrigida à mão; RH: {br(c.admissaoRh)})</>}</span>
             <span>{c.origem === 'RH' ? 'Cadastro do RH' : 'Cadastro manual'}</span>
           </p>
         </div>
@@ -89,6 +89,7 @@ export default async function Perfil360Page({ params }: { params: { id: string }
           {pode('/modulos/escala') && unidadePrincipal && <Link className="sgo-btn sgo-btn--sm" href={`/modulos/escala?unit=${unidadePrincipal.id}`}><CalendarClock className="h-3.5 w-3.5" /> Escala</Link>}
           <Link className="sgo-btn sgo-btn--sm" href={`/modulos/pessoas/ferias${unidadePrincipal ? `?unidade=${unidadePrincipal.id}` : ''}`}><Palmtree className="h-3.5 w-3.5" /> Controle de férias</Link>
           <Link className="sgo-btn sgo-btn--sm" href={`/modulos/pessoas/ferias?aba=abono${unidadePrincipal ? `&unidade=${unidadePrincipal.id}` : ''}`}><HandCoins className="h-3.5 w-3.5" /> Vender dias</Link>
+          <Link className="sgo-btn sgo-btn--sm" href={`/modulos/pessoas/ferias?aba=ajustes&colaborador=${c.id}`} data-testid="corrigir-ferias"><PencilLine className="h-3.5 w-3.5" /> Corrigir férias</Link>
           {p.podeVer.horaExtra && pode('/modulos/hora-extra') && <Link className="sgo-btn sgo-btn--sm" href="/modulos/hora-extra"><Timer className="h-3.5 w-3.5" /> Hora extra</Link>}
           {p.podeVer.avaliacao && <Link className="sgo-btn sgo-btn--sm" href="/modulos/pessoas/avaliacao"><Award className="h-3.5 w-3.5" /> Avaliar</Link>}
         </div>
@@ -141,7 +142,7 @@ export default async function Perfil360Page({ params }: { params: { id: string }
             {f.abonos.length > 0 && <p className="text-sm text-ink-700">Vendeu férias (abono): {f.abonos.map((a) => `${a.dias} dia(s) do período iniciado em ${br(a.periodoInicio)}`).join(' · ')}.</p>}
             {f.programadas.length > 0 && <p className="text-sm text-ink-700">Programadas: {f.programadas.map((x) => `${br(x.inicio)} a ${br(x.fim)}`).join(' · ')}</p>}
             <p className="text-xs text-ink-500">
-              Calculado pela <b>admissão do RH</b> (CLT: 12 meses para adquirir, 12 para conceder) e pelas férias registradas no SGO.
+              Calculado pela <b>admissão do RH</b> (ou a corrigida à mão) (CLT: 12 meses para adquirir, 12 para conceder) e pelas férias registradas no SGO.
               Períodos que venceram antes de o SGO começar a registrar férias aparecem como “Anterior ao SGO”; os que começaram antes podem ter gozo que não consta.
             </p>
             {f.eventosRh.length > 0 && (

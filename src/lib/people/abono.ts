@@ -38,7 +38,7 @@ export async function registrarAbono(
 
   const c = await prisma.collaborator.findUnique({
     where: { id: input.collaboratorId },
-    select: { id: true, name: true, hireDate: true, units: { select: { unitId: true } }, vacations: { where: { status: { in: FERIAS_QUE_CONTAM } }, select: { startDate: true, endDate: true } } },
+    select: { id: true, name: true, hireDate: true, hireDateManual: true, units: { select: { unitId: true } }, vacations: { where: { status: { in: FERIAS_QUE_CONTAM } }, select: { startDate: true, endDate: true } }, vacationAjustes: { select: { periodoInicio: true, diasGozados: true } } },
   });
   if (!c) return { ok: false, reason: 'NAO_ENCONTRADO' };
   const unitId = c.units.map((u) => u.unitId).find((u) => canAccessUnit(user, u));
@@ -47,7 +47,7 @@ export async function registrarAbono(
   /* O período precisa existir pela admissão do RH e ter saldo para os dias. */
   const outros = await prisma.vacationAbono.findMany({ where: { collaboratorId: c.id }, select: { periodoInicio: true, dias: true } });
   if (outros.some((a) => a.periodoInicio === input.periodoInicio)) return { ok: false, reason: 'JA_EXISTE' };
-  const periodos = periodosAquisitivos(c.hireDate, c.vacations.map((v) => ({ inicio: isoDia(v.startDate), fim: isoDia(v.endDate) })), hojeBR(), undefined, outros);
+  const periodos = periodosAquisitivos(c.hireDateManual || c.hireDate, c.vacations.map((v) => ({ inicio: isoDia(v.startDate), fim: isoDia(v.endDate) })), hojeBR(), undefined, outros, c.vacationAjustes);
   const p = periodos.find((x) => x.inicio === input.periodoInicio);
   if (!p || p.situacao === 'ANTERIOR_AO_SGO') return { ok: false, reason: 'PERIODO' };
   if (dias > p.saldo) return { ok: false, reason: 'SALDO' };

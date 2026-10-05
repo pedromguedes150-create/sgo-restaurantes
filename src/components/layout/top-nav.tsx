@@ -9,6 +9,7 @@ import { FavoriteStar } from '@/components/layout/favoritos';
 import { ICONES_DE_AREA } from '@/components/layout/icones-de-area';
 import { NavBadge } from '@/components/sgo/nav-badge';
 import type { AreaMontada } from '@/lib/nav/areas';
+import { textoDaPendencia, type Pendencias } from '@/lib/nav/pendencias-puro';
 
 /**
  * BARRA DE MÓDULOS do kit de layout (2-moldura/TopNav.tsx), com as áreas do
@@ -44,12 +45,16 @@ function NavItemContent({ area, badge }: { area: AreaMontada; badge?: number }) 
   );
 }
 
-function DropdownItem({ area, ativa, ativo, badge }: { area: AreaMontada; ativa: boolean; ativo: (href: string) => boolean; badge?: number }) {
+function DropdownItem({ area, ativa, ativo, badge, pendencias }: { area: AreaMontada; ativa: boolean; ativo: (href: string) => boolean; badge?: number; pendencias: Pendencias }) {
   const [open, setOpen] = useState(false);
   const fechar = useRef<number>();
   const raiz = useRef<HTMLDivElement>(null);
   const painel = useRef<HTMLDivElement>(null);
-  const [align, setAlign] = useState<'left' | 'right'>('left');
+  /* Deslocamento horizontal que mantém o painel INTEIRO na tela (16px de
+     respiro dos dois lados). Alinhar à direita do botão, como antes, jogava o
+     painel largo de Administrativo para fora da borda esquerda. */
+  const [dx, setDx] = useState(0);
+  const dxAtual = useRef(0); // o efeito lê o deslocamento atual sem depender dele
 
   const entrar = () => { window.clearTimeout(fechar.current); setOpen(true); };
   const sair = () => { fechar.current = window.setTimeout(() => setOpen(false), 120); };
@@ -69,7 +74,10 @@ function DropdownItem({ area, ativa, ativo, badge }: { area: AreaMontada; ativa:
   useLayoutEffect(() => {
     if (!open || !painel.current) return;
     const r = painel.current.getBoundingClientRect();
-    setAlign(r.right > window.innerWidth - 8 ? 'right' : 'left');
+    const base = r.left - dxAtual.current; // posição com deslocamento zero
+    let novo = Math.min(0, window.innerWidth - 16 - (base + r.width));
+    if (base + novo < 16) novo = 16 - base;
+    if (novo !== dxAtual.current) { dxAtual.current = novo; setDx(novo); }
   }, [open]);
 
   const colunas = area.colunas;
@@ -85,26 +93,35 @@ function DropdownItem({ area, ativa, ativo, badge }: { area: AreaMontada; ativa:
           ref={painel}
           className="sgo-panel sgo-panel--solid sgo-navpanel-enter overflow-hidden"
           style={{
-            position: 'absolute', left: align === 'left' ? 0 : 'auto', right: align === 'right' ? 0 : 'auto',
+            position: 'absolute', left: dx,
             top: 'calc(100% + 10px)', zIndex: 'var(--sgo-z-dropdown)' as unknown as number,
-            minWidth: mega ? Math.min(colunas.length * 240, 720) : 240,
-            transformOrigin: align === 'left' ? 'top left' : 'top right',
+            /* Largura pela quantidade de colunas (240px cada) e nunca maior que a
+               tela: nome longo QUEBRA LINHA dentro da coluna (v1.154.0) — antes
+               ele era cortado ou invadia a coluna vizinha. */
+            width: mega ? colunas.length * 240 : 260,
+            maxWidth: 'calc(100vw - 32px)',
+            transformOrigin: 'top left',
             boxShadow: 'var(--sgo-sh-pop)', color: 'var(--sgo-ink)',
           }}
         >
-          <div className={cn('grid gap-x-1 p-2', !mega && 'p-1.5')} style={mega ? { gridTemplateColumns: `repeat(${colunas.length}, minmax(0, 1fr))` } : undefined}>
+          <div className={cn('grid gap-x-1 p-2', !mega && 'p-1.5')} style={mega ? { gridTemplateColumns: `repeat(${colunas.length}, minmax(0, 1fr))` } : undefined} data-testid="mega-menu">
             {colunas.map((coluna, i) => (
               <div key={coluna.titulo} className={cn('min-w-0', mega && i < colunas.length - 1 && 'mr-1 border-r border-[var(--sgo-hair)] pr-2')}>
                 {mega && <div className="sgo-kpi__label px-2.5 pb-1.5 pt-1">{coluna.titulo}</div>}
-                <ul className="grid gap-px">
-                  {coluna.itens.map((item) => (
-                    <li key={item.href} className="group/item flex items-center gap-1">
-                      <Link href={item.href} onClick={() => setOpen(false)} className={cn(NAV_CHILD, 'min-w-0 flex-1', ativo(item.href) ? NAV_CHILD_ACTIVE : NAV_CHILD_IDLE)}>
-                        <span className="flex-1 truncate">{item.label}</span>
+                <ul className="grid grid-cols-1 gap-px">
+                  {coluna.itens.map((item) => {
+                    const n = pendencias[item.key] ?? 0;
+                    return (
+                    <li key={item.href} className="group/item flex min-w-0 items-center gap-1">
+                      <Link href={item.href} onClick={() => setOpen(false)} title={n ? textoDaPendencia(item.key, n) : undefined}
+                        className={cn(NAV_CHILD, 'min-w-0 flex-1', ativo(item.href) ? NAV_CHILD_ACTIVE : NAV_CHILD_IDLE)}>
+                        <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{item.label}</span>
+                        {n > 0 && <span className="sgo-count sgo-count--red shrink-0" data-testid={`pendencia-${item.key}`} aria-label={textoDaPendencia(item.key, n)}>{n > 99 ? '99+' : n}</span>}
                       </Link>
                       <FavoriteStar href={item.href} label={item.label} className="opacity-0 transition-opacity duration-sgo-1 ease-sgo-std group-hover/item:opacity-100 group-focus-within/item:opacity-100" />
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </div>
             ))}
@@ -115,7 +132,13 @@ function DropdownItem({ area, ativa, ativo, badge }: { area: AreaMontada; ativa:
   );
 }
 
-export function TopNav({ areas, badges = {} }: { areas: AreaMontada[]; /** Pendências por área (chave = id da área). */ badges?: Record<string, number> }) {
+export function TopNav({ areas, badges = {}, pendencias = {} }: {
+  areas: AreaMontada[];
+  /** Pendências por área (chave = id da área) — o selo da barra. */
+  badges?: Record<string, number>;
+  /** Pendências por módulo (chave = MODULES[].key) — o selo do item no painel. */
+  pendencias?: Pendencias;
+}) {
   const pathname = usePathname() ?? '';
   const ativo = (href: string) => pathname === href || pathname.startsWith(href + '/');
   const areaAtiva = areas.find((a) => a.colunas.some((c) => c.itens.some((i) => ativo(i.href))))?.id;
@@ -134,7 +157,7 @@ export function TopNav({ areas, badges = {} }: { areas: AreaMontada[]; /** Pend�
             </Link>
           );
         }
-        return <DropdownItem key={area.id} area={area} ativa={estaAtiva} ativo={ativo} badge={badges[area.id]} />;
+        return <DropdownItem key={area.id} area={area} ativa={estaAtiva} ativo={ativo} badge={badges[area.id]} pendencias={pendencias} />;
       })}
     </nav>
   );
