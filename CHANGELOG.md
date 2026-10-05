@@ -9,6 +9,22 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.155.0 — 2026-10-05 (Rotina do Supervisor: Acompanhamento Operacional)
+### Adicionado
+- **Aba "Acompanhamento operacional"** na Rotina do Supervisor (as abas Painel de uso e Visitas & Feedbacks continuam iguais). Separa **aderência ao sistema** (o que foi registrado) de **aderência operacional** (o que a visita conferiu no local). As metas não mudam.
+- **Resumo pré-visita**: ao iniciar a visita, o SGO lê os dados da unidade e monta os pontos de atenção — desperdício sem lançamento, checklists não realizados ou com item que falha sempre, ocorrências críticas ou antigas, validade vencida/próxima, comandas sem conferência ou com divergência, treinamentos atrasados, retirada do cofre, equipe sem escala e ausências, ações anteriores vencidas ou a validar. **Cada alerta vem de dado real e mostra a fonte**; o que o módulo não tem não vira alerta nem zero.
+- **Roteiro dinâmico A/B/C**: B = itens direcionados pelos alertas; A = primordiais; C = complementares (recolhidos). Aplicável pelo **tipo da unidade** (Restaurante, Lanchonete, CD, Fábrica; pizzaria como adicional).
+- **Visita no celular**: Conforme / Não conforme / N/A em botões grandes, **amostragem** (conferidos × conformes), **temperatura** (faixa configurável pelo Admin; sem faixa, o supervisor marca), e na não conformidade abrem gravidade, observação, **foto pela câmera**, **ação com responsável e prazo** e **gerar ocorrência** (manutenção/estrutura). Cada resposta salva na hora; dá para continuar a visita depois.
+- **Resultado da visita** (tela, PDF pela impressão e Excel): aderência, conformes, não conformes, N/A, críticos, reincidências, principais desvios, pendências anteriores e plano de ação.
+- **Plano de ação da visita** (lista própria — decisão do Pedro) e tela **"Plano de ação"** para a unidade informar "Em andamento" ou "Resolvido"; **só a validação presencial do supervisor** na visita seguinte resolve. "Vencido" é calculado pelo prazo.
+- **Indicadores da rede** (aderência média vs mês anterior, visitas, unidades sem visita, não conformidades, críticas, ações vencidas, reincidências, taxa de resolução, principais desvios) e **visão da unidade** (uso × aderência por 6 meses, pendências e visitas).
+- **Configurações**: catálogo de itens da visita (Checklists → Checklists de supervisor), semeado com o roteiro padrão; **tipo de operação** em Unidades.
+### Preservado
+- Agendar, concluir e cancelar visita simples, checklists de visita antigos, recorrência e o resumo semanal: iguais. Visita operacional em andamento não pode ser concluída pelo botão da visita simples.
+- Nada de checklist, estoque, desperdício, escala ou cofre é alterado pela conferência; o cofre só é observado.
+### Banco
+- Migração aditiva: `units.operationType`, colunas novas em `supervisor_visits` (`kind`, `startedAt`, `preVisitSnapshot`, `summary`) e tabelas `visit_audit_items`, `visit_audit_responses`, `visit_actions`.
+
 ## v1.154.0 — 2026-10-05 (Férias preenchidas à mão + menu que diz onde está a pendência)
 ### Adicionado
 - **Controle de Férias → aba "Ajustes manuais"**: para o que vem errado do RH ou é de antes do SGO.

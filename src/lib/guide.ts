@@ -1362,6 +1362,21 @@ export const GUIDE: GuideSection[] = [
     title: 'Pessoas e Escala',
     guides: [
       {
+        id: 'acompanhamento-operacional',
+        title: 'Acompanhamento operacional (visita)',
+        roles: ['SUPERVISOR', 'COORDINATOR', 'ADMIN', 'MANAGER'],
+        summary: 'A visita confere no local o que o SGO informa; o que estiver errado vira ação com responsável e prazo.',
+        steps: [
+          'Em Rotina do Supervisor → aba "Acompanhamento operacional", toque em "Visitar agora" na unidade (ou "Iniciar acompanhamento" numa visita agendada). O SGO monta o RESUMO PRÉ-VISITA com os pontos de atenção que os dados mostram — cada um diz de onde veio.',
+          'O ROTEIRO tem três partes: B — conferências DIRECIONADAS pelos dados daquela unidade; A — primordiais (desperdício, checklists, validade, higiene, temperatura, estrutura, pragas, equipe, treinamentos, comandas, cofre, ocorrências); C — complementares (salão, banheiros, cozinha…), recolhidas. Só aparecem itens do tipo da unidade (restaurante, lanchonete, CD, fábrica, pizzaria).',
+          'Em cada item: Conforme, Não conforme ou N/A. Itens por AMOSTRAGEM pedem quantos você conferiu e quantos estavam certos; TEMPERATURA pede o valor (com faixa configurada, o SGO decide; sem faixa, você marca). Cada resposta salva na hora — dá para continuar a visita depois.',
+          'Na NÃO CONFORMIDADE abrem: gravidade, observação, foto pela câmera, "Criar ação" (responsável e prazo) e "Gerar ocorrência" para manutenção/estrutura.',
+          'Ao FINALIZAR sai o resultado: aderência operacional (conformes ÷ conferidos, N/A fora), não conformidades, críticos, reincidências, desvios e o plano de ação — em tela, PDF (Imprimir) e Excel.',
+          'GERENTE: em Performance → Plano de ação, informe "Em andamento" ou "Resolvido pela unidade". A ação só fica RESOLVIDA quando o supervisor confere no local, na próxima visita.',
+          'Aderência ao SISTEMA (o que foi registrado) e aderência OPERACIONAL (o que a visita conferiu) são números diferentes, e as metas não mudam.',
+        ],
+      },
+      {
         id: 'perfil-360',
         title: 'Perfil 360 e Controle de Férias',
         roles: MANAGERLINE,

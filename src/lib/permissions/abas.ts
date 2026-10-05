@@ -65,6 +65,7 @@ export const ABAS: Record<string, AbaDef[]> = {
   SUPERVISION: [
     { id: 'PAINEL', key: 'SUPERVISION_TAB_PANEL', label: 'Painel de uso', soVer: true },
     { id: 'VISITAS', key: 'SUPERVISION_TAB_VISITS', label: 'Visitas' },
+    { id: 'OPERACIONAL', key: 'SUPERVISION_TAB_OPERATIONAL', label: 'Acompanhamento operacional' },
   ],
 
   PRODUCTS: [

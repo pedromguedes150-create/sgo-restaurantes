@@ -6,6 +6,8 @@ import { TemplatesAdmin } from '@/components/admin/templates-admin';
 import { ChecklistToleranceConfig } from '@/components/admin/checklist-tolerance-config';
 import { ChecklistModelsAdmin } from '@/components/admin/checklist-models-admin';
 import { SupervisorChecklistsAdmin } from '@/components/admin/supervisor-checklists-admin';
+import { CatalogoVisitaAdmin } from '@/components/admin/catalogo-visita-admin';
+import { ensureDefaultAuditItems, listarCatalogo } from '@/lib/supervisor/operacional';
 import { ChecklistCoverageMatrix } from '@/components/admin/checklist-coverage-matrix';
 import { ensureDefaultModels, listChecklistModels } from '@/lib/checklist-models';
 import { listSupervisorChecklists } from '@/lib/supervisor/visits';
@@ -93,9 +95,16 @@ export default async function ChecklistsAdminPage({ searchParams }: { searchPara
       )}
 
       {tab === 'supervisor' && (
+        <>
+          <Card><CardContent className="pt-4">
+            <p className="mb-1 sgo-type-15 font-semibold text-ink-900">Visita operacional — roteiro de conferência</p>
+            <p className="mb-3 text-xs text-ink-500">Itens que a supervisão confere no local (Rotina do Supervisor → Acompanhamento operacional). Primordiais entram em toda visita aplicável; complementares ficam recolhidos. O roteiro também ganha itens DIRECIONADOS pelos dados do SGO de cada unidade.</p>
+            <CatalogoVisitaAdmin itens={await (async () => { await ensureDefaultAuditItems().catch(() => {}); return listarCatalogo(); })()} />
+          </CardContent></Card>
         <Card><CardContent className="pt-4">
           <SupervisorChecklistsAdmin checklists={supChecklists.map((c) => ({ id: c.id, name: c.name, items: Array.isArray(c.items) ? (c.items as string[]) : [], active: c.active }))} />
         </CardContent></Card>
+        </>
       )}
     </div>
   );

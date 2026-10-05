@@ -61,8 +61,9 @@ export async function createUnit(user: SessionUser, input: { name: string; code:
   return { ok: true, id: u.id };
 }
 
-export async function updateUnit(user: SessionUser, id: string, input: { name?: string; address?: string; cutoffHour?: number; timezone?: string; active?: boolean; rhUnitName?: string; cnpj?: string; hasPizzeria?: boolean }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateUnit(user: SessionUser, id: string, input: { name?: string; address?: string; cutoffHour?: number; timezone?: string; active?: boolean; rhUnitName?: string; cnpj?: string; hasPizzeria?: boolean; operationType?: string }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  if (input.operationType !== undefined && !['RESTAURANTE', 'LANCHONETE', 'CD', 'FABRICA'].includes(input.operationType)) return { ok: false, reason: 'INVALID' };
   let cnpjPatch: { cnpj?: string | null } = {};
   if (input.cnpj !== undefined) {
     const c = normUnitCnpj(input.cnpj);
@@ -82,6 +83,8 @@ export async function updateUnit(user: SessionUser, id: string, input: { name?: 
          nome da unidade fixo no código — que faz o módulo existir, então abrir
          uma segunda pizzaria é uma caixa marcada aqui, não um deploy. */
       ...(input.hasPizzeria !== undefined ? { hasPizzeria: input.hasPizzeria } : {}),
+      /* Tipo de operação (v1.155.0): decide quais itens da visita operacional se aplicam. */
+      ...(input.operationType !== undefined ? { operationType: input.operationType as 'RESTAURANTE' | 'LANCHONETE' | 'CD' | 'FABRICA' } : {}),
       ...cnpjPatch,
     },
   });

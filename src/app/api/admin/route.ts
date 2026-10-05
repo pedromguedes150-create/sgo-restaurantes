@@ -15,6 +15,7 @@ import { setFreelancerWeekLimit } from '@/lib/payments/recorrencia';
 import { mesclarFreelancers } from '@/lib/payments/mesclar-freelancers';
 import { setChecklistToleranceMin } from '@/lib/tasks/tolerance';
 import { setWastePhotoRequired } from '@/lib/waste/foto-config';
+import { salvarItemDoCatalogo } from '@/lib/supervisor/operacional';
 import { setHourlyRate, addHoliday, deleteHoliday } from '@/lib/freelancer/pricing';
 import { addOvertimeRate, toggleOvertimeRate, deleteOvertimeRate } from '@/lib/overtime/rates';
 import { addOvertimeReason, renameOvertimeReason, toggleOvertimeReason, deleteOvertimeReason } from '@/lib/overtime/reasons';
@@ -108,6 +109,7 @@ export async function POST(req: Request) {
   else if (e === 'freelancerRate' && a === 'set') r = await setHourlyRate(user, b.unitId, b.dayType as DayType, Number(b.value), ctx);
   else if (e === 'holiday' && a === 'add') r = await addHoliday(user, b.date, b.name, ctx);
   else if (e === 'holiday' && a === 'delete') r = await deleteHoliday(user, b.id, ctx);
+  else if (e === 'visitAuditItem' && a === 'save') { const x = await salvarItemDoCatalogo(user, b.id ? String(b.id) : null, b.item, ctx); r = x.ok ? { ok: true, id: x.id } : { ok: false, reason: x.reason === 'FORBIDDEN' ? 'FORBIDDEN' : 'INVALID' }; }
   else if (e === 'overtimeRate' && a === 'add') r = await addOvertimeRate(user, b.unitId, Number(b.value), ctx);
   else if (e === 'overtimeRate' && a === 'toggle') r = await toggleOvertimeRate(user, b.id, Boolean(b.active), ctx);
   else if (e === 'overtimeRate' && a === 'delete') r = await deleteOvertimeRate(user, b.id, ctx);

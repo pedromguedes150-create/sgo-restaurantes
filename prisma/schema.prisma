@@ -26,27 +26,30 @@ enum Role {
 
 /// Unidade (restaurante). Toda lógica diária usa a data operacional desta unidade.
 model Unit {
-  id               String   @id @default(cuid())
+  id               String            @id @default(cuid())
   name             String
-  code             String   @unique // sigla curta p/ exibição
+  code             String            @unique // sigla curta p/ exibição
   address          String?
   cnpj             String?
   /// Razão social correspondente na API do RH (para casar/sincronizar colaboradores)
   rhUnitName       String?
   /// Fuso da unidade (exibição). Banco grava em UTC. Padrão America/Sao_Paulo.
-  timezone         String   @default("America/Sao_Paulo")
+  timezone         String            @default("America/Sao_Paulo")
   /// Hora de corte da data operacional (0-23). Padrão 04:00 (regra nº 4).
-  cutoffHour       Int      @default(4)
+  cutoffHour       Int               @default(4)
   /// Só a unidade com pizzaria enxerga o Controle de Pizzas. É marcador de
   /// cadastro, e não o nome da unidade fixo no código: corrigir a grafia de
   /// "Jardim Teresópolis" não pode derrubar o módulo.
-  hasPizzeria      Boolean  @default(false)
+  hasPizzeria      Boolean           @default(false)
+  /// Tipo de operação (v1.155.0) — decide quais itens da visita operacional se
+  /// aplicam. Pizzaria continua sendo o marcador `hasPizzeria` (adicional).
+  operationType    UnitOperationType @default(RESTAURANTE)
   /// Segredo do link interno de fechamento de pizzas (sem login). Trocar o
   /// valor revoga o link antigo.
-  pizzaPublicToken String?  @unique
-  active           Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  pizzaPublicToken String?           @unique
+  active           Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   memberships               UnitMembership[]
   auditLogs                 AuditLog[]
@@ -2217,6 +2220,156 @@ model CashDenomination {
 }
 
 // ===== Módulo 17 — Rotina do Supervisor (Onda 4) =============================
+/// Tipo de operação da unidade (v1.155.0).
+enum UnitOperationType {
+  RESTAURANTE
+  LANCHONETE
+  CD
+  FABRICA
+}
+
+enum VisitKind {
+  SIMPLES
+  OPERACIONAL
+}
+
+enum AuditItemLevel {
+  PRIMORDIAL
+  COMPLEMENTAR
+}
+
+/// Como o item é respondido: C/NC/NA, por amostragem (conferidos × conformes)
+/// ou com temperatura (faixa configurável pelo Admin — nenhum limite no código).
+enum AuditItemMode {
+  SIMPLES
+  AMOSTRAGEM
+  TEMPERATURA
+}
+
+enum AuditAnswer {
+  CONFORME
+  NAO_CONFORME
+  NAO_SE_APLICA
+}
+
+enum AuditGravity {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+/// Plano de ação da visita (lista PRÓPRIA da visita — decisão do Pedro, 05/10/2026).
+/// "Vencido" é derivado (prazo passado e não resolvido), não é status gravado.
+enum VisitActionStatus {
+  ABERTO
+  EM_ANDAMENTO
+  AGUARDANDO_VALIDACAO
+  RESOLVIDO
+}
+
+/// Catálogo configurável de itens da visita operacional (v1.155.0). Semeado com
+/// o roteiro padrão; o Admin ativa/desativa, ordena, define aplicabilidade por
+/// tipo de unidade, nível, modo e exigências na não conformidade.
+model VisitAuditItem {
+  id               String              @id @default(cuid())
+  /// Chave da semente (idempotência): itens criados pelo Admin ficam nulos.
+  seedKey          String?             @unique
+  section          String
+  text             String
+  order            Int                 @default(0)
+  level            AuditItemLevel      @default(COMPLEMENTAR)
+  mode             AuditItemMode       @default(SIMPLES)
+  unitTypes        UnitOperationType[]
+  requiresPizzeria Boolean             @default(false)
+  photoOnNc        Boolean             @default(false)
+  noteOnNc         Boolean             @default(false)
+  tempMin          Decimal?            @db.Decimal(6, 2)
+  tempMax          Decimal?            @db.Decimal(6, 2)
+  active           Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@map("visit_audit_items")
+}
+
+/// Um item do roteiro de UMA visita (criado ao iniciar, respondido no local).
+/// Texto, seção e nível CONGELADOS — editar o catálogo não reescreve visitas.
+model VisitAuditResponse {
+  id             String        @id @default(cuid())
+  visitId        String
+  /// id do item do catálogo, ou "dir:<chave do alerta>" para os direcionados.
+  itemKey        String
+  itemId         String?
+  section        String
+  text           String
+  /// PRIMORDIAL | DIRECIONADA | COMPLEMENTAR
+  level          String
+  mode           AuditItemMode @default(SIMPLES)
+  tempMin        Decimal?      @db.Decimal(6, 2)
+  tempMax        Decimal?      @db.Decimal(6, 2)
+  photoOnNc      Boolean       @default(false)
+  noteOnNc       Boolean       @default(false)
+  order          Int           @default(0)
+  answer         AuditAnswer?
+  note           String?
+  gravity        AuditGravity?
+  photos         Json?
+  sampleChecked  Int?
+  sampleOk       Int?
+  temperature    Decimal?      @db.Decimal(6, 2)
+  answeredById   String?
+  answeredByName String?
+  answeredAt     DateTime?
+  createdAt      DateTime      @default(now())
+
+  visit SupervisorVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@unique([visitId, itemKey])
+  @@index([visitId])
+  @@map("visit_audit_responses")
+}
+
+/// Ação do plano de ação da visita. A unidade atualiza (em andamento /
+/// resolvido pela unidade → aguardando validação); o supervisor VALIDA
+/// presencialmente na visita seguinte.
+model VisitAction {
+  id               String            @id @default(cuid())
+  visitId          String
+  responseId       String?
+  unitId           String
+  problem          String
+  category         String
+  responsibleName  String?
+  /// Prazo (AAAA-MM-DD).
+  dueDate          String?
+  gravity          AuditGravity      @default(MEDIA)
+  photoPath        String?
+  note             String?
+  status           VisitActionStatus @default(ABERTO)
+  /// Ocorrência gerada a partir da não conformidade (quando for caso de manutenção).
+  occurrenceId     String?
+  createdById      String?
+  createdByName    String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  unitNote         String?
+  unitUpdatedBy    String?
+  unitUpdatedAt    DateTime?
+  validatedById    String?
+  validatedByName  String?
+  validatedAt      DateTime?
+  validatedVisitId String?
+  /// Validação negativa: o supervisor achou que NÃO foi resolvido.
+  rejectedCount    Int               @default(0)
+
+  visit SupervisorVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId, status])
+  @@index([visitId])
+  @@map("visit_actions")
+}
+
 enum VisitStatus {
   PLANNED
   DONE
@@ -2227,6 +2380,14 @@ enum VisitStatus {
 /// (Fase C — resultados congelados em JSON: [{ item, ok, note }]).
 model SupervisorVisit {
   id               String      @id @default(cuid())
+  /// SIMPLES = a visita de sempre (feedback + checklist simples);
+  /// OPERACIONAL = acompanhamento operacional (v1.155.0) com roteiro e respostas.
+  kind             VisitKind   @default(SIMPLES)
+  startedAt        DateTime?
+  /// Alertas do resumo pré-visita CONGELADOS ao iniciar (o histórico não muda).
+  preVisitSnapshot Json?
+  /// Resultado CONGELADO ao finalizar (aderência, contagens, desvios, ações).
+  summary          Json?
   unitId           String
   supervisorId     String
   supervisorName   String
@@ -2238,6 +2399,9 @@ model SupervisorVisit {
   checklistResults Json?
   doneAt           DateTime?
   createdAt        DateTime    @default(now())
+
+  responses VisitAuditResponse[]
+  actions   VisitAction[]
 
   @@index([unitId, scheduledDate])
   @@index([supervisorId, status])
