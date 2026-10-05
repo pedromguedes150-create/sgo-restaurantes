@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useBodyPortal, useDialogBehavior } from '@/components/ui/ds/modal';
 import { ICONES_DE_AREA } from '@/components/layout/icones-de-area';
 import type { AreaMontada } from '@/lib/nav/areas';
+import { textoDaPendencia, type Pendencias } from '@/lib/nav/pendencias-puro';
 
 const STORAGE_KEY = 'sgo.navigation.openMenuGroups';
 
@@ -25,7 +26,7 @@ const STORAGE_KEY = 'sgo.navigation.openMenuGroups';
  * Adaptação: o kit usa o Sheet do Radix; aqui a gaveta é um diálogo do design
  * system (foco preso, Esc, clique fora, portal).
  */
-export function MobileNav({ areas, badges = {} }: { areas: AreaMontada[]; badges?: Record<string, number> }) {
+export function MobileNav({ areas, badges = {}, pendencias = {} }: { areas: AreaMontada[]; badges?: Record<string, number>; pendencias?: Pendencias }) {
   const [open, setOpen] = useState(false);
   const [abertos, setAbertos] = useState<Record<string, boolean>>({});
   const pathname = usePathname() ?? '';
@@ -99,7 +100,8 @@ export function MobileNav({ areas, badges = {} }: { areas: AreaMontada[]; badges
                             {area.colunas.length > 1 && <div className="sgo-kpi__label px-2.5 pb-1 pt-2">{coluna.titulo}</div>}
                             {coluna.itens.map((item) => (
                               <Link key={item.href} href={item.href} className={cn('flex items-center gap-2 rounded-md px-2.5 py-2 text-xs', area.colunas.length > 1 && 'pl-4', ativo(item.href) ? 'bg-[var(--sgo-accent-soft)] font-semibold text-[var(--sgo-accent)]' : 'text-[var(--sgo-ink-2)]')}>
-                                <span className="truncate">{item.label}</span>
+                                <span className="min-w-0 flex-1 whitespace-normal break-words">{item.label}</span>
+                                {(pendencias[item.key] ?? 0) > 0 && <span className="sgo-count sgo-count--red shrink-0" aria-label={textoDaPendencia(item.key, pendencias[item.key])}>{pendencias[item.key]}</span>}
                               </Link>
                             ))}
                           </div>

@@ -1842,17 +1842,23 @@ enum CollaboratorSource {
 
 /// Colaborador (Módulo 9). Fonte primária: API RH; fallback manual.
 model Collaborator {
-  id         String             @id @default(cuid())
-  name       String
-  jobTitle   String?
-  active     Boolean            @default(true)
-  source     CollaboratorSource @default(MANUAL)
-  externalId String? // id no RH
+  id                 String             @id @default(cuid())
+  name               String
+  jobTitle           String?
+  active             Boolean            @default(true)
+  source             CollaboratorSource @default(MANUAL)
+  externalId         String? // id no RH
   /// CPF (só dígitos, do RH) — casa os eventos de desligamento da integração
-  cpf        String?
+  cpf                String?
   /// Data de admissão (do RH, 'YYYY-MM-DD') — base do tempo de empresa
-  hireDate   String?
-  createdAt  DateTime           @default(now())
+  hireDate           String?
+  /// Admissão CORRIGIDA à mão (v1.154.0) quando o RH manda errado. O sync do RH
+  /// nunca escreve aqui; o controle de férias usa esta quando existir.
+  hireDateManual     String?
+  hireDateManualNote String?
+  hireDateManualBy   String?
+  hireDateManualAt   DateTime?
+  createdAt          DateTime           @default(now())
 
   units               CollaboratorUnit[]
   vacations           Vacation[]
@@ -1868,6 +1874,7 @@ model Collaborator {
   moduleLinks         PopModuleCollaborator[]
   paymentRequests     PaymentRequest[]
   vacationAbonos      VacationAbono[]
+  vacationAjustes     VacationPeriodAdjust[]
 
   @@index([cpf])
   @@map("collaborators")
@@ -2432,6 +2439,31 @@ enum VacationStatus {
   CHANGE_REQUESTED // alteração solicitada pelo gerente
   APPROVED // aprovada
   REQUESTED // solicitada ao RH pelo gerente (item 11, Onda 3 — provisório até a API do RH)
+}
+
+/// FÉRIAS INFORMADAS À MÃO por período aquisitivo (v1.154.0): dias já gozados
+/// que NÃO estão lançados no SGO — de antes do SGO (que começou em junho/julho
+/// de 2026) ou que o RH não mandou. Abatem o saldo do período, e um período
+/// com dado informado passa a ser julgado mesmo se for "anterior ao SGO".
+model VacationPeriodAdjust {
+  id               String   @id @default(cuid())
+  collaboratorId   String
+  collaboratorName String
+  unitId           String
+  /// Início do período aquisitivo (AAAA-MM-DD).
+  periodoInicio    String
+  diasGozados      Int
+  observacao       String?
+  createdById      String?
+  createdByName    String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+
+  @@unique([collaboratorId, periodoInicio])
+  @@index([unitId])
+  @@map("vacation_period_adjusts")
 }
 
 /// ABONO PECUNIÁRIO (v1.153.0) — a VENDA de dias de férias (CLT art. 143: até

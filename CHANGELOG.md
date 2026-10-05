@@ -9,6 +9,19 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.154.0 — 2026-10-05 (Férias preenchidas à mão + menu que diz onde está a pendência)
+### Adicionado
+- **Controle de Férias → aba "Ajustes manuais"**: para o que vem errado do RH ou é de antes do SGO.
+  - **Corrigir a admissão** (Supervisão/Admin/CEO, com motivo). A admissão do RH continua gravada e visível; o sync não sobrescreve a corrigida; "Usar a do RH" desfaz.
+  - **Dias já gozados fora do SGO** por período aquisitivo (com observação). Abatem o saldo; um período "anterior ao SGO" com dias informados passa a ser cobrado normalmente. Salvar 0 remove.
+  - Registro (venda ou dias informados) que fica sem período depois de mudar a admissão é **apontado** na tela, não some calado.
+- Perfil 360: botão "Corrigir férias" e a admissão mostra "(corrigida à mão; RH: …)".
+### Corrigido
+- **Menu**: o selo da área (ex.: "Operação 3") não dizia ONDE estava a pendência. Agora o **item** no painel mostra o número e, ao passar o mouse, o que ele conta (ex.: "3 ocorrências críticas em aberto"); vale também no menu do celular.
+- **Menu**: nomes longos ("Despesas (retiradas do cofre)", "Ticket Médio (unidades participantes)", "Pagamentos (freelancers e avulsos)") invadiam a coluna vizinha ou eram cortados. Agora quebram linha dentro da própria coluna; colunas de 240px e o painel nunca sai da tela.
+### Banco
+- Migração aditiva: colunas `hireDateManual*` em `collaborators` e tabela `vacation_period_adjusts`.
+
 ## v1.153.0 — 2026-10-05 (Perfil 360 do colaborador, Controle de Férias por período aquisitivo e venda de dias)
 ### Adicionado
 - **Perfil 360** (Pessoas → Colaboradores → ícone de olho, "Ver perfil"): tudo sobre o colaborador em uma tela — tempo de empresa, função e unidade (do RH), situação das férias, hora extra dos últimos 12 meses (horas, valor, lançamentos), mobilidade e comissão, última avaliação e média, atestados, treinamentos, escala vigente, tabela dos períodos aquisitivos e um histórico com busca. **Só leitura**: cada número vem do módulo de origem, e cada bloco só aparece se o perfil de quem abre pode ver aquele módulo. CPF completo só para Admin/CEO/Supervisão/Financeiro.

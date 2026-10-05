@@ -45,11 +45,18 @@ export interface PeriodoAquisitivo {
   diasParaVencer: number;
   /** O concessivo começou antes de o SGO registrar férias: pode haver gozo que não consta. */
   parcial: boolean;
+  /** Dias gozados INFORMADOS À MÃO (fora do SGO) — v1.154.0. */
+  diasInformados: number;
+  /** Há informação manual para este período: ele é julgado mesmo se anterior ao SGO. */
+  informado: boolean;
 }
 
 export interface FeriasGozada { inicio: string; fim: string }
 /** Abono pecuniário registrado: dias vendidos de um período (pelo início do período). */
 export interface AbonoDoPeriodo { periodoInicio: string; dias: number }
+
+/** Dias já gozados informados à mão para um período (pelo início). */
+export interface AjusteDoPeriodo { periodoInicio: string; diasGozados: number }
 
 /** Máximo vendável por período: 1/3 do direito (CLT art. 143). */
 export const MAX_DIAS_ABONO = Math.floor(30 / 3);
@@ -78,7 +85,7 @@ export function diasDoGozo(f: FeriasGozada): number {
  * mais antigo para o mais novo (é assim que a empresa quita: o período velho
  * primeiro). Gozo antes de o período começar não o abate.
  */
-export function periodosAquisitivos(admissao: string | null, ferias: FeriasGozada[], hoje: string, inicioDoControle = INICIO_DO_CONTROLE_DE_FERIAS, abonos: AbonoDoPeriodo[] = []): PeriodoAquisitivo[] {
+export function periodosAquisitivos(admissao: string | null, ferias: FeriasGozada[], hoje: string, inicioDoControle = INICIO_DO_CONTROLE_DE_FERIAS, abonos: AbonoDoPeriodo[] = [], ajustes: AjusteDoPeriodo[] = []): PeriodoAquisitivo[] {
   if (!admissao || !ISO.test(admissao) || admissao > hoje) return [];
   const periodos: PeriodoAquisitivo[] = [];
   for (let n = 0; ; n++) {
@@ -86,7 +93,7 @@ export function periodosAquisitivos(admissao: string | null, ferias: FeriasGozad
     if (inicio > hoje) break;
     const fim = menosUmDia(maisAnos(admissao, n + 1));
     const limite = menosUmDia(maisAnos(admissao, n + 2));
-    periodos.push({ numero: n + 1, inicio, fim, limite, diasDireito: DIAS_DE_DIREITO, diasGozados: 0, diasVendidos: 0, saldo: DIAS_DE_DIREITO, situacao: 'EM_AQUISICAO', diasParaVencer: 0, parcial: false });
+    periodos.push({ numero: n + 1, inicio, fim, limite, diasDireito: DIAS_DE_DIREITO, diasGozados: 0, diasVendidos: 0, saldo: DIAS_DE_DIREITO, situacao: 'EM_AQUISICAO', diasParaVencer: 0, parcial: false, diasInformados: 0, informado: false });
   }
 
   /* Abono primeiro: os dias vendidos são do período a que o abono pertence, e o
@@ -98,6 +105,15 @@ export function periodosAquisitivos(admissao: string | null, ferias: FeriasGozad
     p.diasVendidos += v; p.saldo -= v;
   }
 
+  /* Dias informados à mão (gozo fora do SGO): entram depois da venda e antes
+     do gozo registrado no SGO, e tornam o período "julgável". */
+  for (const a of ajustes) {
+    const p = periodos.find((x) => x.inicio === a.periodoInicio);
+    if (!p) continue;
+    const v = Math.max(0, Math.min(Math.floor(a.diasGozados), p.saldo));
+    p.diasInformados += v; p.diasGozados += v; p.saldo -= v; p.informado = true;
+  }
+
   const gozos = ferias.filter((f) => ISO.test(f.inicio) && ISO.test(f.fim) && f.fim >= f.inicio && f.inicio <= hoje)
     .sort((a, b) => a.inicio.localeCompare(b.inicio));
   for (const g of gozos) {
@@ -107,7 +123,7 @@ export function periodosAquisitivos(admissao: string | null, ferias: FeriasGozad
       if (resta <= 0) break;
       // período anterior ao SGO não recebe gozo: o SGO não sabe se já foi
       // quitado, e abater nele roubaria o dia do período que importa agora.
-      if (p.limite < inicioDoControle || p.saldo <= 0 || g.inicio < p.inicio) continue;
+      if ((p.limite < inicioDoControle && !p.informado) || p.saldo <= 0 || g.inicio < p.inicio) continue;
       const usa = Math.min(p.saldo, resta);
       p.saldo -= usa; p.diasGozados += usa; resta -= usa;
     }
@@ -115,8 +131,8 @@ export function periodosAquisitivos(admissao: string | null, ferias: FeriasGozad
 
   for (const p of periodos) {
     p.diasParaVencer = diasEntre(hoje, p.limite);
-    p.parcial = p.fim < inicioDoControle; // o concessivo começou antes do SGO
-    if (p.limite < inicioDoControle) p.situacao = 'ANTERIOR_AO_SGO';
+    p.parcial = p.fim < inicioDoControle && !p.informado; // o concessivo começou antes do SGO e ninguém informou
+    if (p.limite < inicioDoControle && !p.informado) p.situacao = 'ANTERIOR_AO_SGO';
     else if (p.fim >= hoje) p.situacao = 'EM_AQUISICAO';
     else if (p.saldo <= 0) p.situacao = 'QUITADO';
     else if (p.limite < hoje) p.situacao = 'VENCIDO';

@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { AlertOctagon, AlertTriangle, ArrowLeft, CalendarCheck, CalendarClock, Clock, HandCoins, Palmtree, UserX, Users } from 'lucide-react';
+import { AlertOctagon, AlertTriangle, ArrowLeft, CalendarCheck, CalendarClock, Clock, HandCoins, Palmtree, PencilLine, UserX, Users } from 'lucide-react';
 import { listarAbonos, podeExcluirAbono } from '@/lib/people/abono';
 import { MAX_DIAS_ABONO } from '@/lib/people/periodo-aquisitivo';
 import { AbonoFerias } from '@/components/people/abono-ferias';
+import { AjustesFerias } from '@/components/people/ajustes-ferias';
+import { colaboradoresParaAjuste, getFeriasDoColaborador, podeCorrigirAdmissao } from '@/lib/people/ferias-manual';
 import { getSessionUser } from '@/lib/auth/session';
 import { abasDoPerfil } from '@/lib/permissions/abas-server';
 import { getControleDeFerias, type LinhaDoControle } from '@/lib/people/perfil-360';
@@ -30,16 +32,16 @@ const ROTULO: Record<Filtro, string> = {
  * ativo, calculado pela admissão do RH (ver `periodo-aquisitivo.ts`). Só
  * leitura: o lançamento de férias segue em Pessoas → Férias.
  */
-export default async function ControleDeFeriasPage({ searchParams }: { searchParams: { unidade?: string; ver?: string; aba?: string } }) {
+export default async function ControleDeFeriasPage({ searchParams }: { searchParams: { unidade?: string; ver?: string; aba?: string; colaborador?: string } }) {
   const user = (await getSessionUser())!;
   const abas = await abasDoPerfil(user.role, 'PEOPLE');
   if (abas.fer?.canView === false) notFound();
   const unidade = searchParams.unidade && searchParams.unidade !== TODAS ? searchParams.unidade : null;
   const ver: Filtro = (Object.keys(ROTULO) as Filtro[]).includes(searchParams.ver as Filtro) ? (searchParams.ver as Filtro) : 'VENCIDA';
-  const aba = searchParams.aba === 'abono' ? 'abono' : 'situacao';
+  const aba = searchParams.aba === 'abono' || searchParams.aba === 'ajustes' ? searchParams.aba : 'situacao';
   const d = await getControleDeFerias(user, unidade);
   const r = d.resumo;
-  const linkAba = (a: 'situacao' | 'abono') => `/modulos/pessoas/ferias?aba=${a}${unidade ? `&unidade=${unidade}` : ''}`;
+  const linkAba = (a: 'situacao' | 'abono' | 'ajustes') => `/modulos/pessoas/ferias?aba=${a}${unidade ? `&unidade=${unidade}` : ''}`;
   const cabecalho = (
     <>
       <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand print:hidden"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
@@ -49,6 +51,7 @@ export default async function ControleDeFeriasPage({ searchParams }: { searchPar
         tabs={[
           { label: 'Situação', icon: <Palmtree className="h-3.5 w-3.5" />, href: linkAba('situacao'), active: aba === 'situacao', testId: 'aba-situacao' },
           { label: 'Abono (venda de dias)', icon: <HandCoins className="h-3.5 w-3.5" />, href: linkAba('abono'), active: aba === 'abono', testId: 'aba-abono' },
+          { label: 'Ajustes manuais', icon: <PencilLine className="h-3.5 w-3.5" />, href: linkAba('ajustes'), active: aba === 'ajustes', testId: 'aba-ajustes' },
         ]}
       />
       {d.unidades.length > 1 && (
@@ -59,6 +62,24 @@ export default async function ControleDeFeriasPage({ searchParams }: { searchPar
       )}
     </>
   );
+
+  if (aba === 'ajustes') {
+    const [lista, ficha] = await Promise.all([
+      colaboradoresParaAjuste(user, unidade),
+      searchParams.colaborador ? getFeriasDoColaborador(user, searchParams.colaborador) : Promise.resolve(null),
+    ]);
+    return (
+      <div className="space-y-4" data-testid="controle-ferias">
+        {cabecalho}
+        <AjustesFerias
+          colaboradores={lista.map((c) => ({ id: c.id, nome: c.name, hint: [c.jobTitle, c.hireDateManual ? `adm. ${br(c.hireDateManual)} (corrigida)` : c.hireDate ? `adm. ${br(c.hireDate)}` : 'sem admissão'].filter(Boolean).join(' · ') }))}
+          ficha={ficha}
+          podeEditar={abas.fer?.canEdit !== false}
+          podeAdmissao={abas.fer?.canEdit !== false && podeCorrigirAdmissao(user)}
+        />
+      </div>
+    );
+  }
 
   if (aba === 'abono') {
     const abonos = await listarAbonos(user, unidade);
@@ -135,12 +156,12 @@ export default async function ControleDeFeriasPage({ searchParams }: { searchPar
                       <span className="block text-xs text-ink-500">{l.funcao ?? '—'}</span>
                     </td>
                     <td className="text-ink-700">{shortUnitName(l.unidade)}</td>
-                    <td className="tabular-nums">{br(l.admissao)}</td>
+                    <td className="tabular-nums">{br(l.admissao)}{l.admissaoCorrigida && <span className="block text-xs text-ink-500">corrigida à mão</span>}</td>
                     <td className="tabular-nums">{l.foco ? `${br(l.foco.inicio)} a ${br(l.foco.fim)}` : '—'}</td>
                     <td className="tabular-nums">{l.foco ? br(l.foco.limite) : '—'}</td>
                     <td className="text-right font-semibold tabular-nums">{l.foco ? `${l.foco.saldo}d` : '—'}{l.vencidos > 1 && <span className="block text-xs text-danger">{l.vencidos} vencidos</span>}</td>
                     <td className="text-right tabular-nums text-ink-700">{l.foco?.diasVendidos ? `${l.foco.diasVendidos}d` : '—'}</td>
-                    <td>{situacao(l)}{l.foco?.parcial && <span className="block text-xs text-ink-500">pode haver gozo antes do SGO</span>}</td>
+                    <td>{situacao(l)}{l.foco?.parcial && <Link href={`/modulos/pessoas/ferias?aba=ajustes&colaborador=${l.id}`} className="block text-xs text-brand underline">pode haver gozo antes do SGO — informar</Link>}</td>
                     <td className="tabular-nums text-ink-700">{l.emGozo ? <span className="sgo-tag sgo-tag--green">Em gozo</span> : l.programada ? `${br(l.programada.inicio)} a ${br(l.programada.fim)}` : '—'}</td>
                   </tr>
                 ))}
@@ -179,7 +200,7 @@ export default async function ControleDeFeriasPage({ searchParams }: { searchPar
       <p className="text-xs text-ink-500">
         Como é calculado: a cada 12 meses desde a <b>admissão informada pelo RH</b> o colaborador adquire 30 dias, que precisam ser concedidos nos 12 meses seguintes.
         O gozo vem das férias registradas no SGO (Pessoas → Férias e o status “Férias” do RH). Períodos que venceram antes de o SGO começar a registrar férias (12/06/2026) não são julgados.
-        Dias vendidos (abono, até 10 por período) abatem o saldo — registre na aba “Abono (venda de dias)”. Para lançar ou pedir férias, use Pessoas → Férias.
+        Admissão errada ou férias de antes do SGO: corrija na aba “Ajustes manuais”. Dias vendidos (abono, até 10 por período) abatem o saldo — registre na aba “Abono (venda de dias)”. Para lançar ou pedir férias, use Pessoas → Férias.
       </p>
     </div>
   );

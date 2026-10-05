@@ -6,6 +6,7 @@ import {
   type FaixaDeFerias, type PeriodoAquisitivo,
 } from '@/lib/people/periodo-aquisitivo';
 import type { SessionUser } from '@/lib/auth/session';
+import { admissaoEfetiva } from '@/lib/people/ferias-manual';
 
 /**
  * PERFIL 360 DO COLABORADOR (v1.153.0) — tudo sobre a pessoa em um lugar.
@@ -63,9 +64,11 @@ export async function getPerfil360(user: SessionUser, id: string, pode: Pode, ag
   const veTreino = pode('/modulos/treinamentos');
   const veMudanca = pode('/modulos/pessoas/mudancas');
 
-  const [ferias, abonos, he, payouts, avaliacoes, observacoes, atestados, treinos, mudancas, escala, experiencia, desligamento, eventosRh] = await Promise.all([
+  const adm = admissaoEfetiva(c);
+  const [ferias, abonos, ajustes, he, payouts, avaliacoes, observacoes, atestados, treinos, mudancas, escala, experiencia, desligamento, eventosRh] = await Promise.all([
     prisma.vacation.findMany({ where: { collaboratorId: id }, orderBy: { startDate: 'desc' }, select: { startDate: true, endDate: true, status: true, source: true } }),
     prisma.vacationAbono.findMany({ where: { collaboratorId: id }, orderBy: { periodoInicio: 'desc' }, select: { id: true, periodoInicio: true, dias: true, observacao: true, createdByName: true, createdById: true, createdAt: true } }),
+    prisma.vacationPeriodAdjust.findMany({ where: { collaboratorId: id }, select: { periodoInicio: true, diasGozados: true } }),
     veHE ? prisma.paymentRequest.findMany({
       where: { collaboratorId: id, type: 'OVERTIME', OR: [{ workDate: { gte: desde12 } }, { workDate: null, createdAt: { gte: desde12 } }] },
       orderBy: [{ workDate: 'desc' }, { createdAt: 'desc' }],
@@ -98,7 +101,7 @@ export async function getPerfil360(user: SessionUser, id: string, pode: Pode, ag
 
   /* ── férias / período aquisitivo ── */
   const gozos = ferias.filter((f) => FERIAS_QUE_CONTAM.includes(f.status)).map((f) => ({ inicio: isoDia(f.startDate), fim: isoDia(f.endDate) }));
-  const periodos = periodosAquisitivos(c.hireDate, gozos, hoje, undefined, abonos);
+  const periodos = periodosAquisitivos(adm, gozos, hoje, undefined, abonos, ajustes);
   const foco = periodoEmFoco(periodos);
   const emGozo = gozos.find((g) => g.inicio <= hoje && g.fim >= hoje) ?? null;
   const programadas = ferias.filter((f) => isoDia(f.startDate) > hoje).map((f) => ({ inicio: isoDia(f.startDate), fim: isoDia(f.endDate), status: f.status }));
@@ -130,7 +133,7 @@ export async function getPerfil360(user: SessionUser, id: string, pode: Pode, ag
 
   /* ── histórico (linha do tempo) ── */
   const historico: ItemDoHistorico[] = [];
-  if (c.hireDate) historico.push({ data: c.hireDate, tipo: 'Admissão', titulo: 'Admissão', detalhe: c.jobTitle ?? undefined });
+  if (adm) historico.push({ data: adm, tipo: 'Admissão', titulo: 'Admissão', detalhe: [c.jobTitle, c.hireDateManual ? `corrigida à mão (RH: ${c.hireDate ? c.hireDate.split('-').reverse().join('/') : '—'})` : null].filter(Boolean).join(' · ') || undefined });
   for (const f of ferias) historico.push({ data: isoDia(f.startDate), tipo: 'Férias', titulo: `Férias ${isoDia(f.startDate).split('-').reverse().join('/')} a ${isoDia(f.endDate).split('-').reverse().join('/')}`, detalhe: f.source === 'RH_SYNC' ? 'aberta pelo sync do RH' : undefined });
   for (const h of he) historico.push({ data: isoDia(h.workDate ?? h.createdAt), tipo: 'Hora extra', titulo: `Hora extra ${h.hours ? `${h.hours.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} h` : ''} · R$ ${Number(h.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, detalhe: [STATUS_HE[h.status], h.reason].filter(Boolean).join(' · ') });
   for (const p of payouts) historico.push({ data: `${p.yearMonth}-01`, tipo: p.type === 'MOBILITY' ? 'Mobilidade' : p.type === 'COMMISSION' ? 'Comissão' : 'Pagamento extra', titulo: `${p.type === 'MOBILITY' ? 'Mobilidade' : p.type === 'COMMISSION' ? 'Comissão' : 'Pagamento extra'} ${p.yearMonth.split('-').reverse().join('/')} · R$ ${Number(p.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` });
@@ -145,12 +148,12 @@ export async function getPerfil360(user: SessionUser, id: string, pode: Pode, ag
   return {
     colaborador: {
       id: c.id, nome: c.name, funcao: c.jobTitle, ativo: c.active, origem: c.source, matricula: c.externalId,
-      cpf: cpfParaExibir(c.cpf, user.role), admissao: c.hireDate,
+      cpf: cpfParaExibir(c.cpf, user.role), admissao: adm, admissaoRh: c.hireDate, admissaoCorrigida: Boolean(c.hireDateManual),
       unidades: c.units.map((u) => ({ id: u.unit.id, nome: u.unit.name })),
     },
     hoje,
-    tempo: tempoDeEmpresa(c.hireDate, hoje),
-    ferias: { periodos, foco, faixa: faixaDeFerias(foco, Boolean(c.hireDate)), emGozo, programadas, abonos: abonos.map((a) => ({ id: a.id, periodoInicio: a.periodoInicio, dias: a.dias, observacao: a.observacao, por: a.createdByName, em: isoDia(a.createdAt), createdById: a.createdById })), eventosRh: eventosRh.map((e) => ({ evento: e.event, recebidoEm: isoDia(e.createdAt), datas: datasDoEvento(e.payload) })) },
+    tempo: tempoDeEmpresa(adm, hoje),
+    ferias: { periodos, foco, faixa: faixaDeFerias(foco, Boolean(adm)), emGozo, programadas, abonos: abonos.map((a) => ({ id: a.id, periodoInicio: a.periodoInicio, dias: a.dias, observacao: a.observacao, por: a.createdByName, em: isoDia(a.createdAt), createdById: a.createdById })), eventosRh: eventosRh.map((e) => ({ evento: e.event, recebidoEm: isoDia(e.createdAt), datas: datasDoEvento(e.payload) })) },
     horaExtra,
     mobilidade: vePayout ? somaTipo('MOBILITY') : null,
     comissao: vePayout ? somaTipo('COMMISSION') : null,
@@ -162,7 +165,7 @@ export async function getPerfil360(user: SessionUser, id: string, pode: Pode, ag
       atrasados: treinos.filter((t) => t.status === 'PENDING' && isoDia(t.dueDate) < hoje).length,
     } : null,
     escala: escala ? { tipo: escala.scheduleType, horario: escala.startTime && escala.endTime ? `${escala.startTime}–${escala.endTime}` : null, desde: isoDia(escala.startDate) } : null,
-    experiencia: c.hireDate && tempoDeEmpresa(c.hireDate, hoje) && (tempoDeEmpresa(c.hireDate, hoje)!.anos === 0 && tempoDeEmpresa(c.hireDate, hoje)!.meses < 3)
+    experiencia: adm && tempoDeEmpresa(adm, hoje) && (tempoDeEmpresa(adm, hoje)!.anos === 0 && tempoDeEmpresa(adm, hoje)!.meses < 3)
       ? { status: experiencia?.status ?? 'PENDING' } : null,
     desligamento: desligamento ? { status: desligamento.status, desde: isoDia(desligamento.createdAt) } : null,
     historico,
@@ -182,6 +185,8 @@ export interface LinhaDoControle {
   unidade: string;
   unitId: string;
   admissao: string | null;
+  /** A admissão em uso foi corrigida à mão (a do RH estava errada ou faltava). */
+  admissaoCorrigida: boolean;
   faixa: FaixaDeFerias;
   foco: PeriodoAquisitivo | null;
   vencidos: number;
@@ -206,8 +211,9 @@ export async function getControleDeFerias(user: SessionUser, unitId?: string | n
     where: { active: true, units: { some: { unitId: { in: ids } } } },
     orderBy: { name: 'asc' },
     select: {
-      id: true, name: true, jobTitle: true, hireDate: true,
+      id: true, name: true, jobTitle: true, hireDate: true, hireDateManual: true,
       units: { where: { unitId: { in: ids } }, select: { unitId: true }, take: 1 },
+      vacationAjustes: { select: { periodoInicio: true, diasGozados: true } },
       vacations: { where: { status: { in: FERIAS_QUE_CONTAM } }, select: { startDate: true, endDate: true } },
       vacationAbonos: { select: { periodoInicio: true, dias: true } },
     },
@@ -215,13 +221,14 @@ export async function getControleDeFerias(user: SessionUser, unitId?: string | n
 
   const linhas: LinhaDoControle[] = colabs.map((c) => {
     const gozos = c.vacations.map((v) => ({ inicio: isoDia(v.startDate), fim: isoDia(v.endDate) }));
-    const periodos = periodosAquisitivos(c.hireDate, gozos, hoje, undefined, c.vacationAbonos);
+    const adm = admissaoEfetiva(c);
+    const periodos = periodosAquisitivos(adm, gozos, hoje, undefined, c.vacationAbonos, c.vacationAjustes);
     const foco = periodoEmFoco(periodos);
     const futura = gozos.filter((g) => g.inicio > hoje).sort((a, b) => a.inicio.localeCompare(b.inicio))[0] ?? null;
     const uId = c.units[0]?.unitId ?? '';
     return {
-      id: c.id, nome: c.name, funcao: c.jobTitle, unitId: uId, unidade: nomeUnidade.get(uId) ?? '', admissao: c.hireDate,
-      faixa: faixaDeFerias(foco, Boolean(c.hireDate)), foco,
+      id: c.id, nome: c.name, funcao: c.jobTitle, unitId: uId, unidade: nomeUnidade.get(uId) ?? '', admissao: adm, admissaoCorrigida: Boolean(c.hireDateManual),
+      faixa: faixaDeFerias(foco, Boolean(adm)), foco,
       vencidos: periodos.filter((p) => p.situacao === 'VENCIDO').length,
       emGozo: gozos.some((g) => g.inicio <= hoje && g.fim >= hoje),
       programada: futura,

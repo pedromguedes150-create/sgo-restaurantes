@@ -102,3 +102,23 @@ describe('tempo de empresa e eventos do RH', () => {
     expect(datas).toEqual([{ campo: 'periodo.inicio', data: '2025-04-06' }, { campo: 'periodo.fim', data: '2026-04-05' }]);
   });
 });
+
+describe('dias informados à mão (v1.154.0)', () => {
+  it('período anterior ao SGO com dias informados passa a ser julgado', () => {
+    const [p1] = periodosAquisitivos('2022-03-01', [], '2026-10-05', CONTROLE, [], [{ periodoInicio: '2022-03-01', diasGozados: 20 }]);
+    expect(p1).toMatchObject({ informado: true, diasInformados: 20, saldo: 10, situacao: 'VENCIDO' });
+  });
+  it('30 dias informados quitam; sem informação o anterior segue fora da conta', () => {
+    const ps = periodosAquisitivos('2022-03-01', [], '2026-10-05', CONTROLE, [], [{ periodoInicio: '2022-03-01', diasGozados: 30 }]);
+    expect(ps[0].situacao).toBe('QUITADO');
+    expect(ps[1].situacao).toBe('ANTERIOR_AO_SGO');
+  });
+  it('informado + vendido nunca passa de 30', () => {
+    const [p] = periodosAquisitivos('2024-11-01', [], '2026-10-05', CONTROLE, [{ periodoInicio: '2024-11-01', dias: 10 }], [{ periodoInicio: '2024-11-01', diasGozados: 30 }]);
+    expect(p).toMatchObject({ diasVendidos: 10, diasInformados: 20, saldo: 0 });
+  });
+  it('período informado também recebe gozo do SGO (não é pulado como anterior)', () => {
+    const ps = periodosAquisitivos('2022-03-01', [{ inicio: '2026-07-01', fim: '2026-07-10' }], '2026-10-05', CONTROLE, [], [{ periodoInicio: '2022-03-01', diasGozados: 20 }]);
+    expect(ps[0]).toMatchObject({ diasGozados: 30, saldo: 0, situacao: 'QUITADO' });
+  });
+});

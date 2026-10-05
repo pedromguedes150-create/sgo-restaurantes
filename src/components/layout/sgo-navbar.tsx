@@ -73,7 +73,7 @@ export function SgoNavbar({
   return (
     <header className="sgo-app sgo-navbar print:hidden" data-testid="sgo-navbar">
       <div className="flex w-full items-center gap-1">
-        <MobileNav areas={areas} badges={badges} />
+        <MobileNav areas={areas} badges={badges} pendencias={pendencias} />
 
         <Link href="/dashboard" className="sgo-navlogo" title={`${versao} · Sistema de Gestão Operacional · Grupo Beija-Flor · atualizado em ${atualizadoEm}`} data-testid="link-home-logo">
           <span className="sgo-navlogo__mark"><img src="/sgo-bird-only.png" alt="" aria-hidden /></span>
@@ -84,7 +84,7 @@ export function SgoNavbar({
 
         <div className="sgo-navdivider hidden lg:block" />
 
-        <TopNav areas={areas} badges={badges} />
+        <TopNav areas={areas} badges={badges} pendencias={pendencias} />
 
         <div className="flex-1" />
 
