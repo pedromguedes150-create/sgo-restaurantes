@@ -182,6 +182,15 @@ export interface Lancamento {
   dataSolicitacao: string;
   /** Hora Extra lançada antes do vínculo com o RH: só o nome digitado. */
   semVinculoRh: boolean;
+  /**
+   * CPF e chave PIX LIDOS DO CADASTRO na hora (freelancer: os dois; hora
+   * extra: o CPF do colaborador do RH, sem PIX) — não copiados para o
+   * lançamento: correção no cadastro aparece na próxima planilha sem
+   * reescrever histórico. Pedido do Pedro (05/10/2026): o Financeiro baixa a
+   * planilha e precisa do CPF e da chave para pagar sem abrir cadastro a cadastro.
+   */
+  cpf: string | null;
+  pixKey: string | null;
 }
 
 /**
@@ -193,6 +202,12 @@ export function chaveDaPessoa(r: { tipo: 'FREELANCER' | 'OVERTIME'; freelancerId
   if (r.tipo === 'FREELANCER') return r.freelancerId ? `F:${r.freelancerId}` : `N:${norm(r.nome)}`;
   return r.collaboratorId ? `C:${r.collaboratorId}` : `N:${norm(r.nome)}`;
 }
+/** CPF com pontuação (000.000.000-00); fora dos 11 dígitos, como veio. */
+export const cpfFormatado = (cpf: string | null | undefined): string => {
+  if (!cpf) return '';
+  const d = cpf.replace(/\D/g, '');
+  return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : cpf;
+};
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
 /**
@@ -310,6 +325,9 @@ export interface ResumoDaPessoa {
   vt: number;
   total: number;
   unidades: string[];
+  /** Do cadastro (o primeiro lançamento que trouxer; são a mesma pessoa). */
+  cpf: string | null;
+  pixKey: string | null;
   /** Os lançamentos ORIGINAIS que compõem o total — um por linha, nada fundido. */
   lancamentos: Lancamento[];
 }
@@ -317,8 +335,10 @@ export interface ResumoDaPessoa {
 export function porColaborador(xs: Lancamento[], status: StatusCons): ResumoDaPessoa[] {
   const m = new Map<string, ResumoDaPessoa>();
   for (const l of xs) {
-    const p = m.get(l.pessoaChave) ?? { chave: l.pessoaChave, pessoa: l.pessoa, horaExtra: 0, freelancer: 0, vt: 0, total: 0, unidades: [], lancamentos: [] };
+    const p = m.get(l.pessoaChave) ?? { chave: l.pessoaChave, pessoa: l.pessoa, horaExtra: 0, freelancer: 0, vt: 0, total: 0, unidades: [], cpf: null, pixKey: null, lancamentos: [] };
     p.lancamentos.push(l);
+    if (!p.cpf && l.cpf) p.cpf = l.cpf;
+    if (!p.pixKey && l.pixKey) p.pixKey = l.pixKey;
     if (!p.unidades.includes(l.unidade)) p.unidades.push(l.unidade);
     if (entraNosTotais(l, status)) {
       if (l.tipo === 'FREELANCER') p.freelancer += l.valor; else p.horaExtra += l.valor;

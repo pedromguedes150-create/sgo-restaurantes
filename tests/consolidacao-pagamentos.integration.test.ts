@@ -94,6 +94,26 @@ describe('Consolidação de pagamentos', () => {
     expect(passada.lancamentos.map((l) => l.valor)).toEqual([10]);
   });
 
+  it('CPF e chave PIX saem do CADASTRO na leitura: freelancer traz os dois, hora extra só o CPF do RH', async () => {
+    const cpfFree = String(Date.now()).slice(-11).padStart(11, '7');
+    const free = await prisma.freelancer.create({ data: { name: `Free ${sfx}`, cpf: cpfFree, pixKey: `free.${sfx}@pix.com`, defaultValue: 100, units: { create: { unitId: unitB } } } });
+    const req = await prisma.paymentRequest.create({ data: { type: 'FREELANCER', unitId: unitB, freelancerId: free.id, amount: 100, workDate: new Date('2026-09-30T00:00:00Z'), status: 'APPROVED' } });
+    await prisma.collaborator.update({ where: { id: joao }, data: { cpf: '09494305604' } });
+    try {
+      const c = await getConsolidacaoPagamentos(rede(), filtro(), HOJE);
+      const doFree = c.lancamentos.find((l) => l.id === req.id)!;
+      expect(doFree).toMatchObject({ cpf: cpfFree, pixKey: `free.${sfx}@pix.com` });
+      const heDoJoao = c.lancamentos.filter((l) => l.pessoaChave === `C:${joao}`);
+      expect(heDoJoao.length).toBeGreaterThan(0);
+      for (const l of heDoJoao) expect(l).toMatchObject({ cpf: '09494305604', pixKey: null });
+      expect(c.porColaborador.find((p) => p.chave === `F:${free.id}`)).toMatchObject({ cpf: cpfFree, pixKey: `free.${sfx}@pix.com` });
+      expect(c.porColaborador.find((p) => p.chave === `C:${joao}`)).toMatchObject({ cpf: '09494305604', pixKey: null });
+    } finally {
+      await prisma.paymentRequest.delete({ where: { id: req.id } });
+      await prisma.freelancer.delete({ where: { id: free.id } });
+    }
+  });
+
   it('mesmo colaborador em dias diferentes = lançamentos separados; por colaborador soma sem fundir', async () => {
     const c = await getConsolidacaoPagamentos(rede(), filtro(), HOJE);
     const p = c.porColaborador.find((x) => x.chave === `C:${joao}`)!;

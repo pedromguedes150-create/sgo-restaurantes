@@ -77,7 +77,11 @@ export function SgoPageHeader({ title, subtitle, tabs, actions, testId }: SgoPag
 
   return (
     <header className="sgo-phdr" data-testid={testId}>
-      <div className="sgo-phdr__id">
+      {/* `min-w-[14rem]`: o kit deixa o bloco do título encolher a zero; no
+          celular, com ações ao lado, "Tarefas de hoje" quebrava em duas linhas e
+          os links do subtítulo ficavam por baixo dos botões. Com um piso de
+          largura as ações descem para a linha seguinte. */}
+      <div className="sgo-phdr__id min-w-[14rem]">
         <h1 className="sgo-phdr__title">{title}</h1>
         {subtitle && <div className="sgo-phdr__sub">{subtitle}</div>}
       </div>

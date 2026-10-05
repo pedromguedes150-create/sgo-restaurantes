@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, SlidersHorizontal, Search, Tags, X, CheckSquare } from 'lucide-react';
+import { ChevronDown, SlidersHorizontal, Search, Tags, X, CheckSquare, AlertTriangle } from 'lucide-react';
 import { SearchField } from '@/components/ui/ds/field';
 import { Select } from '@/components/ui/ds/select';
 import { EmptyState } from '@/components/ui/ds/empty-state';
-import { Modal } from '@/components/ui/ds/modal';
+import { SgoModal } from '@/components/sgo/sgo-modal';
 import { Button } from '@/components/ui/ds/button';
 import { ToastProvider, useToast } from '@/components/ui/ds/toast';
 import { shortUnitName } from '@/lib/unit-name';
@@ -139,7 +139,7 @@ function Lista({ items, filtros, unidades, tipos, podeTratar, totalNaPagina }: P
   const card = (o: OccItem) => {
     const marcada = selecionadas.has(o.id);
     return (
-      <div key={o.id} className={`rounded-card border bg-surface transition-colors ${marcada ? 'border-brand bg-brand-tint/30' : 'border-line hover:border-brand'}`}>
+      <div key={o.id} className={`sgo-panel sgo-panel--solid transition-colors ${marcada ? 'bg-brand-tint/30' : ''}`} style={marcada ? { borderColor: 'var(--sgo-accent)' } : undefined}>
         <div className="flex items-start gap-2 px-3 py-2.5">
           {emLote && (
             <input
@@ -167,13 +167,14 @@ function Lista({ items, filtros, unidades, tipos, podeTratar, totalNaPagina }: P
                 <span className="text-xs text-ink-500">Responsável: <b className="text-ink-700">{o.andamento.nome}</b> · Desde: {fmtDateTime(o.andamento.em)}</span>
               )}
               <span className="ml-auto flex items-center gap-1">
-                <Link href={`/modulos/ocorrencias/${o.id}?voltar=${encodeURIComponent(voltar)}`} className="rounded-control border border-line px-2 py-1 text-xs font-semibold text-ink-700 hover:border-brand">Ver detalhes</Link>
+                <Link href={`/modulos/ocorrencias/${o.id}?voltar=${encodeURIComponent(voltar)}`} className="sgo-btn sgo-btn--sm">Ver detalhes</Link>
                 {podeTratar && o.status === 'OPEN' && (
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => { setSelecionadas(new Set([o.id])); setConfirmar('progress'); }}
-                    className="rounded-control border border-line px-2 py-1 text-xs font-semibold text-brand hover:border-brand"
+                    className="sgo-btn sgo-btn--sm"
+                    style={{ color: 'var(--sgo-accent)' }}
                   >
                     Marcar em andamento
                   </button>
@@ -189,7 +190,7 @@ function Lista({ items, filtros, unidades, tipos, podeTratar, totalNaPagina }: P
   return (
     <div className="space-y-3">
       {/* Barra superior: busca + filtros (todos na URL) */}
-      <div className="space-y-2 rounded-card border border-line bg-surface p-3">
+      <div className="sgo-panel sgo-panel--solid space-y-2 p-3">
         <SearchField value={q} onValueChange={setQ} placeholder="Buscar por nº, tipo, categoria, descrição…" label="Busca" />
         <div className="flex flex-wrap items-end gap-2">
           {unidades.length > 1 && (
@@ -230,7 +231,7 @@ function Lista({ items, filtros, unidades, tipos, podeTratar, totalNaPagina }: P
 
       {/* Barra de ações em lote */}
       {emLote && qtd > 0 && (
-        <div className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-card border border-brand bg-surface px-3 py-2 shadow-sgo-card">
+        <div className="sgo-panel sticky top-20 z-20 flex flex-wrap items-center gap-2 px-3 py-2" style={{ borderColor: 'var(--sgo-accent)' }}>
           <span className="inline-flex items-center gap-1 text-sm font-semibold text-ink-900"><CheckSquare className="h-4 w-4 text-brand" /> {qtd} ocorrência(s) selecionada(s)</span>
           <span className="ml-auto flex flex-wrap gap-1.5">
             {filtros.status === 'OPEN' && (
@@ -250,38 +251,45 @@ function Lista({ items, filtros, unidades, tipos, podeTratar, totalNaPagina }: P
       {groups.length > 1 && (
         <div className="space-y-2">
           {groups.map(([unitName, list]) => (
-            <details key={unitName} className="group rounded-lg border bg-surface" open={emLote || undefined}>
+            <details key={unitName} className="group sgo-panel sgo-panel--solid" open={emLote || undefined}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5">
                 <span className="sgo-type-11 font-semibold text-ink-900">
                   {unitName} <span className="font-normal">({list.length})</span>
                 </span>
                 <ChevronDown className="h-4 w-4 shrink-0 text-ink-500 transition-transform group-open:rotate-180" />
               </summary>
-              <div className="space-y-2 border-t p-2">{list.map(card)}</div>
+              <div className="space-y-2 p-2" style={{ borderTop: '1px solid var(--sgo-hair)' }}>{list.map(card)}</div>
             </details>
           ))}
         </div>
       )}
 
       {/* Confirmação: marcar em andamento */}
-      <Modal
+      <SgoModal
         open={confirmar === 'progress'}
         onClose={() => !busy && setConfirmar(null)}
         title={`Marcar ${qtd} ocorrência(s) como Em andamento?`}
-        description="Fica registrado quem marcou, a data e a hora, na Auditoria. Só as selecionadas mudam."
+        subtitle="Fica registrado quem marcou, a data e a hora, na Auditoria. Só as selecionadas mudam."
+        icon={<Search className="h-4 w-4" />}
+        tone="blue"
         size="sm"
         footer={<>
           <Button variant="secondary" onClick={() => setConfirmar(null)} disabled={busy}>Cancelar</Button>
           <Button onClick={() => executar('progress', [...selecionadas])} loading={busy}>Confirmar</Button>
         </>}
-      />
+      >
+        <p className="text-sm" style={{ color: 'var(--sgo-ink-2)' }}>As selecionadas passam a <b>Em andamento</b>; encerrar continua individual, dentro de cada ocorrência.</p>
+      </SgoModal>
 
       {/* Reclassificar em lote */}
-      <Modal
+      <SgoModal
         open={confirmar === 'reclassify'}
         onClose={() => !busy && setConfirmar(null)}
         title={`Reclassificar ${qtd} ocorrência(s)`}
-        description="Todas as selecionadas passam para o tipo/categoria escolhidos. Tipos marcados como Manutenção/TI movem para a aba correspondente. Fica na Auditoria."
+        subtitle="Todas as selecionadas passam para o tipo/categoria escolhidos. Tipos marcados como Manutenção/TI movem para a aba correspondente. Fica na Auditoria."
+        icon={<AlertTriangle className="h-4 w-4" />}
+        tone="amber"
+        size="sm"
         footer={<>
           <Button variant="secondary" onClick={() => setConfirmar(null)} disabled={busy}>Cancelar</Button>
           <Button onClick={() => executar('reclassify', [...selecionadas])} loading={busy} disabled={!typeId || (Boolean(tipo?.categories.length) && !categoryId)}>Confirmar</Button>
@@ -293,7 +301,7 @@ function Lista({ items, filtros, unidades, tipos, podeTratar, totalNaPagina }: P
             <Select label="Categoria" required placeholder="Selecione…" value={categoryId} onValueChange={setCategoryId} options={tipo.categories.map((c) => ({ value: c.id, label: c.name }))} />
           )}
         </div>
-      </Modal>
+      </SgoModal>
     </div>
   );
 }

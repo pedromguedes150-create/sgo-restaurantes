@@ -9,6 +9,7 @@ import { listOccurrences, getOccurrenceSummary, getOccurrenceTypes } from '@/lib
 import { responsaveisDoAndamento, TRATA_OCORRENCIA } from '@/lib/occurrences/lote';
 import { lerFiltrosDaLista, linkDaLista, SITUACOES, type FiltrosDaLista } from '@/lib/occurrences/contexto';
 import { Button } from '@/components/ui/ds/button';
+import { SgoKpis } from '@/components/sgo/sgo-kpi';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { StatCard } from '@/components/ui/ds/stat-card';
 import { Banner } from '@/components/ui/ds/banner';
@@ -98,31 +99,22 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
   const ondeEstou = isMaint ? 'de manutenção' : isIT ? 'de TI' : isCritico ? 'críticas' : '';
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      {/* Cabeçalho do kit (Fase 4): o eixo 1 — ASSUNTO — são as sub-abas do
+          cabeçalho (links, a ativa pela URL), e "Nova" é a ação primária. */}
       <LargeTitle
         title="Ocorrências"
         subtitle="Registre o que saiu do padrão na operação. A supervisão acompanha e encerra com ação corretiva."
+        tabs={[
+          { value: 'geral', label: 'Geral', href: link({ view: null, pagina: 1 }) },
+          { value: 'critico', label: 'Geral Crítico', href: link({ view: 'critico', pagina: 1 }) },
+          { value: 'manutencao', label: 'Manutenção', href: link({ view: 'manutencao', pagina: 1 }) },
+          { value: 'ti', label: 'TI', href: link({ view: 'ti', pagina: 1 }) },
+        ].filter((o) => podeAba(abasOcorrencias, o.value)).map((o) => ({ label: o.label, href: o.href, active: (view ?? 'geral') === o.value, testId: `assunto-${o.value}` }))}
         actions={
-          <Link href="/modulos/ocorrencias/nova">
-            <Button size="sm"><Plus className="h-4 w-4" /> Nova</Button>
-          </Link>
+          <Link href="/modulos/ocorrencias/nova" className="sgo-btn sgo-btn--primary"><Plus className="h-3.5 w-3.5" /> Nova</Link>
         }
       />
-
-      {/* Eixo 1 — ASSUNTO. */}
-      <div className="space-y-1.5">
-        <p className="sgo-type-11 px-1 text-ink-500">ASSUNTO</p>
-        <SegmentedNav
-          aria-label="Assunto das ocorrências"
-          value={view ?? 'geral'}
-          options={[
-            { value: 'geral', label: 'Geral', href: link({ view: null, pagina: 1 }) },
-            { value: 'critico', label: 'Geral Crítico', href: link({ view: 'critico', pagina: 1 }) },
-            { value: 'manutencao', label: 'Manutenção', href: link({ view: 'manutencao', pagina: 1 }) },
-            { value: 'ti', label: 'TI', href: link({ view: 'ti', pagina: 1 }) },
-          ].filter((o) => podeAba(abasOcorrencias, o.value))}
-        />
-      </div>
 
       {isCritico && (
         <Banner
@@ -142,11 +134,11 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
         />
       )}
 
-      <div className="grid grid-cols-3 gap-3">
+      <SgoKpis className="grid-cols-3" flush>
         <StatCard label="Abertas" value={abertas} hint={ondeEstou ? `ocorrências ${ondeEstou}` : 'em toda a operação'} />
         <StatCard label="Críticas" value={summary.criticalOpen} hint={summary.criticalOpen > 0 ? 'exigem ação hoje' : 'nenhuma no momento'} />
         <StatCard label="Há mais de 48h" value={summary.openOver48h} hint={abertas > 0 ? `de ${abertas} abertas` : undefined} />
-      </div>
+      </SgoKpis>
 
       {summary.criticalOpen > 0 && (
         <Banner
@@ -157,9 +149,10 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
         />
       )}
 
-      {/* Eixo 2 — SITUAÇÃO, com a contagem do que está filtrado. */}
-      <div className="space-y-1.5">
-        <p className="sgo-type-11 px-1 text-ink-500">SITUAÇÃO</p>
+      {/* Eixo 2 — SITUAÇÃO, com a contagem do que está filtrado: fica na linha
+          de filtros do kit, abaixo das abas de assunto. */}
+      <div className="sgo-filtros -mx-4">
+        <span className="sgo-label">Situação</span>
         <SegmentedNav
           aria-label="Filtrar por situação"
           value={status ?? 'TODAS'}
@@ -181,8 +174,8 @@ export default async function OcorrenciasPage({ searchParams }: { searchParams: 
       />
 
       {lista.total > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-line bg-surface px-3 py-2">
-          <p className="sgo-type-13 text-ink-500">
+        <div className="sgo-panel sgo-panel--solid flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+          <p className="text-sm" style={{ color: 'var(--sgo-ink-2)' }}>
             Mostrando <span className="font-semibold text-ink-900">{primeiro}–{ultimo}</span> de{' '}
             <span className="font-semibold text-ink-900">{lista.total}</span>
             {lista.total > POR_PAGINA ? ' — use as setas para ver o resto' : ''}

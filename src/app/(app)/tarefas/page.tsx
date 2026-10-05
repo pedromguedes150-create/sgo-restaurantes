@@ -14,7 +14,7 @@ import { LargeTitle } from '@/components/layout/page-chrome';
 import { Banner } from '@/components/ui/ds/banner';
 import { EmptyState } from '@/components/ui/ds/empty-state';
 import { shortUnitName } from '@/lib/unit-name';
-import { Building2 } from 'lucide-react';
+import { Building2, History, Wrench, ListChecks } from 'lucide-react';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
 
 export const dynamic = 'force-dynamic';
@@ -59,7 +59,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
   const overdueCount = groups.reduce((s, g) => s + g.tasks.filter(isOverdueTask).length, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <AutoRefresh seconds={60} />
       <LargeTitle
         title={onlyOverdue ? 'Tarefas atrasadas' : 'Tarefas de hoje'}
@@ -69,13 +69,14 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
             : units.length > 1 ? 'Todas as unidades' : undefined
         }
         actions={
+          /* Ações do cabeçalho como botões do kit (Fase 4). */
           onlyOverdue ? (
-            <Link href={withUnit('/tarefas')} className="text-sm font-semibold text-brand hover:underline">Ver todas</Link>
+            <Link href={withUnit('/tarefas')} className="sgo-btn"><ListChecks className="h-3.5 w-3.5" /> Ver todas</Link>
           ) : (
-            <span className="flex gap-4">
-              {podeVer('/tarefas/correcoes') && <Link href={withUnit('/tarefas/correcoes')} className="text-sm font-semibold text-brand hover:underline">Correções do dia</Link>}
-              {podeVer('/tarefas/historico') && <Link href={withUnit('/tarefas/historico')} className="text-sm font-semibold text-brand hover:underline">Histórico</Link>}
-            </span>
+            <>
+              {podeVer('/tarefas/correcoes') && <Link href={withUnit('/tarefas/correcoes')} className="sgo-btn"><Wrench className="h-3.5 w-3.5" /> Correções do dia</Link>}
+              {podeVer('/tarefas/historico') && <Link href={withUnit('/tarefas/historico')} className="sgo-btn"><History className="h-3.5 w-3.5" /> Histórico</Link>}
+            </>
           )
         }
       />
@@ -83,7 +84,8 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
       {filteredNames.length > 0 && units.length > 1 && (
         <Link
           href={onlyOverdue ? `/tarefas?filter=atrasadas&unit=${TODAS_AS_UNIDADES}` : `/tarefas?unit=${TODAS_AS_UNIDADES}`}
-          className="inline-block text-xs font-semibold text-brand hover:underline"
+          className="inline-block text-xs font-semibold hover:underline"
+          style={{ color: 'var(--sgo-accent)' }}
         >
           Ver todas as unidades
         </Link>
@@ -141,7 +143,7 @@ export default async function TarefasPage({ searchParams }: { searchParams: { fi
               };
               return <TaskItem key={t.id} task={data} unitParam={searchParams.unit} />;
             })}
-            {tasks.length === 0 && <li className="px-4 py-6 text-center text-sm text-ink-500">Sem tarefas para hoje.</li>}
+            {tasks.length === 0 && <li className="px-4 py-6 text-center text-sm" style={{ color: 'var(--sgo-ink-2)' }}>Sem tarefas para hoje.</li>}
           </UnitTasksSection>
         );
       })}

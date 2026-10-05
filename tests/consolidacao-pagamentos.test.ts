@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  chaveDaPessoa, filtrarLancamentos, lerFiltro, ordenar, pessoasDoPeriodo, porColaborador, porUnidade, queryDoFiltro,
+  chaveDaPessoa, cpfFormatado, filtrarLancamentos, lerFiltro, ordenar, pessoasDoPeriodo, porColaborador, porUnidade, queryDoFiltro,
   resolverPeriodo, resumir, type Lancamento,
 } from '@/lib/payments/consolidacao-calculo';
 
@@ -12,7 +12,7 @@ import {
 const HOJE = '2026-09-30';
 const l = (p: Partial<Lancamento> & { id: string }): Lancamento => ({
   data: '2026-09-28', unitId: 'mo', unidade: 'Moreira', tipo: 'OVERTIME', pessoaChave: 'C:joao', pessoa: 'João Silva',
-  horas: 2, vt: 0, valor: 45, status: 'APPROVED', motivo: null, solicitadoPor: 'Gerente', dataSolicitacao: '2026-09-28', semVinculoRh: false,
+  horas: 2, vt: 0, valor: 45, status: 'APPROVED', motivo: null, solicitadoPor: 'Gerente', dataSolicitacao: '2026-09-28', semVinculoRh: false, cpf: null, pixKey: null,
   ...p,
 });
 
@@ -110,6 +110,23 @@ describe('cada lançamento continua rastreável', () => {
     const [joao] = porColaborador(xs, 'TODOS');
     expect(joao).toMatchObject({ pessoa: 'João Silva', horaExtra: 125, freelancer: 150, vt: 10, total: 275 });
     expect(joao.lancamentos.map((x) => x.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('por colaborador carrega CPF e chave PIX do cadastro (o primeiro lançamento que trouxer)', () => {
+    /* Pedido do Financeiro (05/10/2026): a planilha precisa do CPF e da chave
+       para pagar sem abrir cadastro a cadastro. A linha da pessoa pega o
+       primeiro lançamento que os traz — são a mesma pessoa, o dado é um só. */
+    const xs = [
+      l({ id: 'a', tipo: 'FREELANCER', pessoaChave: 'F:ana', pessoa: 'Ana', cpf: null, pixKey: null }),
+      l({ id: 'b', tipo: 'FREELANCER', pessoaChave: 'F:ana', pessoa: 'Ana', cpf: '09494305604', pixKey: 'ana@pix.com' }),
+      l({ id: 'c', tipo: 'OVERTIME', cpf: '12345678901', pixKey: null }),
+    ];
+    const [ana, joao] = porColaborador(xs, 'TODOS');
+    expect(ana).toMatchObject({ pessoa: 'Ana', cpf: '09494305604', pixKey: 'ana@pix.com' });
+    expect(joao).toMatchObject({ pessoa: 'João Silva', cpf: '12345678901', pixKey: null });
+    expect(cpfFormatado('09494305604')).toBe('094.943.056-04');
+    expect(cpfFormatado(null)).toBe('');
+    expect(cpfFormatado('123')).toBe('123'); // fora dos 11 dígitos sai como veio — nunca inventado
   });
 
   it('a chave da pessoa: cadastro do freelancer, colaborador do RH, ou nome digitado (antigo)', () => {

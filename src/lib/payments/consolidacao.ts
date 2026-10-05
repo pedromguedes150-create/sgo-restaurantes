@@ -53,7 +53,9 @@ export async function getConsolidacaoPagamentos(user: SessionUser, filtro: Filtr
       freelancerId: true, collaboratorId: true, collaboratorName: true,
       reason: true, description: true, coverageSector: true,
       unit: { select: { name: true } },
-      freelancer: { select: { name: true } },
+      freelancer: { select: { name: true, cpf: true, pixKey: true } },
+      /* CPF do colaborador do RH para a hora extra — lido do cadastro, não copiado. */
+      collaborator: { select: { cpf: true } },
       requestedBy: { select: { name: true } },
     },
   });
@@ -79,6 +81,8 @@ export async function getConsolidacaoPagamentos(user: SessionUser, filtro: Filtr
       solicitadoPor: r.requestedBy?.name ?? null,
       dataSolicitacao: diaEmBrasilia(r.createdAt),
       semVinculoRh: tipo === 'OVERTIME' && !r.collaboratorId,
+      cpf: tipo === 'FREELANCER' ? (r.freelancer?.cpf ?? null) : (r.collaborator?.cpf ?? null),
+      pixKey: tipo === 'FREELANCER' ? (r.freelancer?.pixKey ?? null) : null,
     };
   });
 
