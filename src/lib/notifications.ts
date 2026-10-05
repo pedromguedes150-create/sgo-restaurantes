@@ -10,6 +10,14 @@ export interface NotifyPayload {
   link?: string;
   module?: string;
   critical?: boolean;
+  /**
+   * Alerta com toque PRÓPRIO no celular (v1.156.0). Hoje só 'higiene': o
+   * service worker usa uma vibração longa e diferente, a notificação fica na
+   * tela até ser tocada, e com o SGO aberto toca um som próprio.
+   */
+  alerta?: 'higiene';
+  /** Etiqueta da notificação no aparelho (a mesma etiqueta substitui; outra empilha). */
+  tag?: string;
 }
 
 /**

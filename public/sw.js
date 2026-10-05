@@ -7,7 +7,13 @@
  * (evita servir tela velha, lição do deploy de imagem antiga).
  */
 
-const VERSION = 'sgo-sw-v1';
+const VERSION = 'sgo-sw-v2';
+
+/* Alerta do BANHEIRO (v1.156.0): vibração longa e diferente das demais, para o
+   gerente reconhecer sem olhar. O SOM da notificação do sistema é o do
+   aparelho/navegador (a Web Push não deixa trocar); com o SGO aberto, a página
+   toca um som próprio — o SW avisa as abas abertas por mensagem. */
+const VIBRA_HIGIENE = [500, 150, 500, 150, 500, 150, 900];
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -27,6 +33,7 @@ self.addEventListener('push', (event) => {
   }
 
   const title = data.title || 'SGO Beija Flor';
+  const higiene = data.alerta === 'higiene';
   const options = {
     body: data.body || '',
     icon: '/icon-192.png',
@@ -34,12 +41,16 @@ self.addEventListener('push', (event) => {
     lang: 'pt-BR',
     tag: data.tag || undefined,
     renotify: Boolean(data.tag),
-    requireInteraction: Boolean(data.critical),
-    vibrate: data.critical ? [200, 100, 200] : [120],
+    requireInteraction: higiene || Boolean(data.critical),
+    vibrate: higiene ? VIBRA_HIGIENE : data.critical ? [200, 100, 200] : [120],
+    silent: false,
     timestamp: data.at || Date.now(),
     data: { link: data.link || '/notificacoes' },
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  const avisaAbas = higiene
+    ? self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => list.forEach((c) => c.postMessage({ tipo: 'sgo-alerta', alerta: 'higiene', title, body: options.body, link: options.data.link })))
+    : Promise.resolve();
+  event.waitUntil(Promise.all([self.registration.showNotification(title, options), avisaAbas]));
 });
 
 self.addEventListener('notificationclick', (event) => {

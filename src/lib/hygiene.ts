@@ -4,7 +4,19 @@ import { audit } from '@/lib/audit';
 import { notifyUnitRole } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 
-export const HYGIENE_ISSUES = ['Papel/insumos', 'Lixo cheio', 'Piso/cheiro', 'Vaso/pia', 'Outro'] as const;
+/**
+ * O que o cliente informa ao ler o QR (v1.156.0) — um toque e está enviado.
+ * Pedido do Pedro: "o banheiro está precisando de limpeza ou está faltando
+ * sabonete e papel". Os rótulos antigos ('Papel/insumos', 'Piso/cheiro',
+ * 'Vaso/pia') continuam valendo no histórico e na análise.
+ */
+export const HYGIENE_ISSUES = ['Precisa de limpeza', 'Falta papel', 'Falta sabonete', 'Lixo cheio', 'Outro'] as const;
+
+/** O mesmo aviso (banheiro + motivo) repetido dentro desta janela não vira outro alerta. */
+export const JANELA_REPETICAO_MIN = 5;
+
+/** Hora em Brasília (o servidor roda em UTC — getHours() daria 3h a mais). */
+const horaBR = (d: Date) => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false }).format(d)) % 24;
 
 /* ───────── Público (QR do banheiro) ───────── */
 export async function getPublicHygieneUnit(unitId: string) {
@@ -14,7 +26,7 @@ export async function getPublicHygieneUnit(unitId: string) {
   return { unit, locations };
 }
 
-export async function createHygieneRequest(input: { unitId: string; locationId?: string | null; issue?: string | null; rating?: number | null; comment?: string | null }): Promise<{ ok: true } | { ok: false }> {
+export async function createHygieneRequest(input: { unitId: string; locationId?: string | null; issue?: string | null; rating?: number | null; comment?: string | null }): Promise<{ ok: true; id: string; repetido: boolean } | { ok: false }> {
   const unit = await prisma.unit.findFirst({ where: { id: input.unitId, active: true }, select: { id: true, name: true } });
   if (!unit) return { ok: false };
   let locationName = 'Banheiro';
@@ -23,18 +35,54 @@ export async function createHygieneRequest(input: { unitId: string; locationId?:
     if (loc && loc.unitId === input.unitId) locationName = loc.name;
   }
   const rating = input.rating && input.rating >= 1 && input.rating <= 5 ? Math.round(input.rating) : null;
-  await prisma.hygieneRequest.create({
+  const issue = input.issue?.trim().slice(0, 60) || null;
+
+  /* Link público: o mesmo aviso (banheiro + motivo) em ABERTO nos últimos
+     minutos não vira outro alerta — três clientes lendo o mesmo QR não podem
+     fazer o celular do gerente tocar três vezes pela mesma coisa. */
+  const recente = await prisma.hygieneRequest.findFirst({
+    where: { unitId: input.unitId, locationName, issue, status: 'OPEN', createdAt: { gte: new Date(Date.now() - JANELA_REPETICAO_MIN * 60_000) } },
+    select: { id: true },
+  });
+  if (recente) return { ok: true, id: recente.id, repetido: true };
+
+  const r = await prisma.hygieneRequest.create({
     data: {
       unitId: input.unitId, locationId: input.locationId || null, locationName,
-      issue: input.issue?.trim() || null, rating, comment: input.comment?.trim()?.slice(0, 300) || null,
+      issue, rating, comment: input.comment?.trim()?.slice(0, 300) || null,
     },
   });
-  await notifyUnitRole(input.unitId, 'MANAGER', {
-    title: '🚻 Banheiro precisa de higienização',
-    body: `${locationName} em ${unit.name}${input.issue ? ` — ${input.issue}` : ''}. Solicitação registrada agora.`,
-    link: '/modulos/higiene', module: 'TASKS', critical: false,
-  }).catch(() => {});
-  return { ok: true };
+  /* Alerta PRÓPRIO (v1.156.0): crítico (passa por cima da preferência de
+     categoria e fica na tela até ser tocado), vibração diferente no celular e
+     som no SGO aberto. Vai para o gerente E o coordenador da unidade. */
+  const aviso = {
+    title: `🚨 Banheiro ${locationName}: ${issue ?? 'precisa de atenção'}`,
+    body: `${unit.name} — um cliente avisou agora pelo QR. Toque para ver.`,
+    link: '/modulos/higiene', module: 'TASKS', critical: true, alerta: 'higiene' as const, tag: `sgo-higiene-${r.id}`,
+  };
+  await Promise.all([notifyUnitRole(input.unitId, 'MANAGER', aviso), notifyUnitRole(input.unitId, 'COORDINATOR', aviso)]).catch(() => {});
+  return { ok: true, id: r.id, repetido: false };
+}
+
+/** Avaliação opcional DEPOIS do envio (página pública): só uma vez e só na primeira hora. */
+export async function avaliarHygieneRequest(id: string, rating: number): Promise<{ ok: boolean }> {
+  const n = Math.round(Number(rating));
+  if (!(n >= 1 && n <= 5)) return { ok: false };
+  const r = await prisma.hygieneRequest.updateMany({ where: { id, rating: null, createdAt: { gte: new Date(Date.now() - 3_600_000) } }, data: { rating: n } });
+  return { ok: r.count > 0 };
+}
+
+/** Avisos em aberto mais novos que `desde` no alcance do usuário — o "apito" do SGO aberto. */
+export async function alertasDeHigiene(user: SessionUser, desde: Date) {
+  const unidades = (await prisma.unit.findMany({ where: { active: true }, select: { id: true, name: true } })).filter((u) => canAccessUnit(user, u.id));
+  if (!unidades.length) return [];
+  const nome = new Map(unidades.map((u) => [u.id, u.name]));
+  const rs = await prisma.hygieneRequest.findMany({
+    where: { unitId: { in: unidades.map((u) => u.id) }, status: 'OPEN', createdAt: { gt: desde } },
+    orderBy: { createdAt: 'desc' }, take: 20,
+    select: { id: true, unitId: true, locationName: true, issue: true, createdAt: true },
+  });
+  return rs.map((r) => ({ id: r.id, unidade: nome.get(r.unitId) ?? '', banheiro: r.locationName, motivo: r.issue, em: r.createdAt.toISOString() }));
 }
 
 /* ───────── Interno (gestão + análise) ───────── */
@@ -68,7 +116,7 @@ export async function getHygieneAnalytics(user: SessionUser, unitId: string, day
   let respSum = 0, respN = 0, open = 0;
   for (const r of rows) {
     byLoc.set(r.locationName, (byLoc.get(r.locationName) ?? 0) + 1);
-    const h = new Date(r.createdAt).getHours();
+    const h = horaBR(new Date(r.createdAt));
     byHour.set(h, (byHour.get(h) ?? 0) + 1);
     if (r.issue) byIssue.set(r.issue, (byIssue.get(r.issue) ?? 0) + 1);
     if (r.status !== 'RESOLVED') open++;

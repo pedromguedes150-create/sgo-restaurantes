@@ -14,12 +14,14 @@ export default async function HigienePublicPage({ params, searchParams }: { para
       </div>
     );
   }
+  /* QR de um banheiro específico (?loc=): o nome aparece no topo e já vem escolhido. */
+  const banheiro = data.locations.find((l) => l.id === searchParams.loc) ?? null;
   return (
     <div className="mx-auto min-h-dvh max-w-md bg-canvas p-4">
       <div className="mb-4 rounded-2xl bg-brand p-5 text-center text-on-brand">
         <p className="sgo-type-11 font-semibold opacity-90">Beija Flor</p>
         <h1 className="text-xl font-bold">Este local precisa de higienização?</h1>
-        <p className="mt-1 text-sm opacity-90">{data.unit.name}</p>
+        <p className="mt-1 text-sm opacity-90">{data.unit.name}{banheiro ? ` · ${banheiro.name}` : ''}</p>
       </div>
       <HygienePublicForm unitId={data.unit.id} locations={data.locations} preselect={searchParams.loc ?? null} />
     </div>

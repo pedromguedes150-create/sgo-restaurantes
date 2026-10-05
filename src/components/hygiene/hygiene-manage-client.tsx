@@ -34,8 +34,22 @@ export function HygieneManageClient({ unitId, canManage, requests, locations }: 
       {/* QR / link público */}
       {canManage && (
         <Card><CardContent className="pt-4">
-          <p className="mb-1 flex items-center gap-1 text-sm font-bold text-ink-900"><QrCode className="h-4 w-4" /> Link do QR do banheiro (desta unidade)</p>
-          <p className="mb-2 text-xs text-ink-500">Gere o QR Code apontando para este endereço e cole no banheiro. Sem login — o cliente só toca e envia.</p>
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <p className="flex items-center gap-1 text-sm font-bold text-ink-900"><QrCode className="h-4 w-4" /> QR Codes dos banheiros (desta unidade)</p>
+            <a href={`/modulos/higiene/cartazes?unit=${unitId}`} className="sgo-btn sgo-btn--sm sgo-btn--primary ml-auto" data-testid="imprimir-cartazes"><QrCode className="h-3.5 w-3.5" /> Imprimir cartazes com QR</a>
+          </div>
+          <p className="mb-2 text-xs text-ink-500">Um cartaz por banheiro (o cliente já cai no banheiro certo e só toca o motivo) e um geral da unidade. Sem login. Cada aviso chega ao gerente e ao coordenador da unidade com alerta próprio no celular.</p>
+          {locations.filter((l) => l.active).map((l) => {
+            const url = `${publicUrl}?loc=${l.id}`;
+            return (
+              <div key={l.id} className="mb-1.5 flex items-center gap-2">
+                <span className="w-28 shrink-0 truncate text-xs font-semibold text-ink-900">{l.name}</span>
+                <code className="flex-1 truncate rounded-lg border bg-canvas px-2 py-1.5 text-xs">{url}</code>
+                <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(url)} aria-label={`Copiar link do banheiro ${l.name}`}><Copy className="h-4 w-4" /></Button>
+              </div>
+            );
+          })}
+          <p className="mb-1 mt-2 text-xs font-semibold text-ink-700">Geral da unidade (o cliente escolhe o banheiro)</p>
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded-lg border bg-canvas px-2 py-1.5 text-xs">{publicUrl}</code>
             <Button size="sm" variant="outline" onClick={() => { navigator.clipboard?.writeText(publicUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}><Copy className="h-4 w-4" /> {copied ? 'Copiado' : 'Copiar'}</Button>

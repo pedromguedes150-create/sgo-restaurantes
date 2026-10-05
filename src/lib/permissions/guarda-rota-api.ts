@@ -75,6 +75,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/gas/export': { modulo: 'GAS', exigir: 'ver' },
 
   '/api/higiene/manage': { modulo: 'HYGIENE', exigir: 'editar' },
+  '/api/higiene/manage/alertas': { modulo: 'HYGIENE', exigir: 'ver' },
 
   '/api/inventory': { modulo: 'INVENTORY', exigir: 'editar' },
   '/api/inventory/[id]/confirm': { modulo: 'INVENTORY', exigir: 'editar' },
