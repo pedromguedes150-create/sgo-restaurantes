@@ -79,9 +79,11 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
 
   return (
     <div className="space-y-4">
-      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
-      <LargeTitle title="Mapa de Funções" />
-      <p className="text-sm text-ink-500">Monte o <b>quadro padrão</b> uma vez; o <b>mapa da unidade</b> mostra automaticamente quem está trabalhando agora (segue a Escala). Cobertura 🟢 ok · 🟡 parcial · 🔴 sem cobertura.</p>
+      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: 'var(--sgo-accent)' }}><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
+      <LargeTitle
+        title="Mapa de Funções"
+        subtitle={<>Monte o <b>quadro padrão</b> uma vez; o <b>mapa da unidade</b> mostra automaticamente quem está trabalhando agora (segue a Escala). Cobertura 🟢 ok · 🟡 parcial · 🔴 sem cobertura.</>}
+      />
 
       {cobertura && (
         <Card><CardContent className="pt-4">
@@ -95,7 +97,12 @@ export default async function MapaFuncoesPage({ searchParams }: { searchParams: 
         </CardContent></Card>
       )}
 
-      {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
+      {units.length > 1 && (
+        <div className="sgo-filtros -mx-4">
+          <span className="sgo-label">Unidade</span>
+          <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />
+        </div>
+      )}
 
       <Card><CardContent className="pt-4">
         <NecessidadePorSetor setores={setoresComFaixas} podeEditar={podeEditarMapa} />

@@ -28,8 +28,7 @@ export default async function InventarioPage() {
 
   return (
     <div className="space-y-5">
-      <LargeTitle title="Inventário" />
-      <FamilyTabs active="/modulos/inventario" />
+      <LargeTitle title="Inventário" subtitle={<FamilyTabs active="/modulos/inventario" />} />
 
       {/* Seção 1: inventário do Teknisa (acompanhamento da tarefa) */}
       <Card>

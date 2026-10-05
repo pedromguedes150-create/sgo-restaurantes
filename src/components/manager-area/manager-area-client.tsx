@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { Plus, Trash2, Square, CheckSquare, Clock, StickyNote, CalendarOff, ListTodo, Pencil, X, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,7 +58,7 @@ const TODAS_LIBERADAS: AcessoAbas = {
   folgas: { canView: true, canEdit: true },
 };
 
-export function ManagerAreaClient({ tasks, notes, leaves, schedule = null, canSeeTeam = false, abas = TODAS_LIBERADAS }: { tasks: MTask[]; notes: MNote[]; leaves: MLeave[]; schedule?: MWorkSchedule | null; canSeeTeam?: boolean; abas?: AcessoAbas }) {
+export function ManagerAreaClient({ tasks, notes, leaves, schedule = null, canSeeTeam = false, abas = TODAS_LIBERADAS, subtitulo }: { tasks: MTask[]; notes: MNote[]; leaves: MLeave[]; schedule?: MWorkSchedule | null; canSeeTeam?: boolean; abas?: AcessoAbas; subtitulo?: React.ReactNode }) {
   const router = useRouter();
   /* A primeira aba que o perfil pode ver — abrir numa aba fechada mostraria a
      tela vazia e pareceria defeito. */
@@ -79,18 +80,19 @@ export function ManagerAreaClient({ tasks, notes, leaves, schedule = null, canSe
   }
 
   const icones: Record<AbaMinhaArea, React.ReactNode> = {
-    tarefas: <ListTodo className="h-4 w-4" />,
-    notas: <StickyNote className="h-4 w-4" />,
-    folgas: <CalendarOff className="h-4 w-4" />,
+    tarefas: <ListTodo className="h-3.5 w-3.5" />,
+    notas: <StickyNote className="h-3.5 w-3.5" />,
+    folgas: <CalendarOff className="h-3.5 w-3.5" />,
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-1">
-        {visiveis.map((a) => (
-          <TabBtn key={a.id} active={tab === a.id} onClick={() => setTab(a.id)} icon={icones[a.id]}>{a.label}</TabBtn>
-        ))}
-      </div>
+      {/* Cabeçalho do kit (Fase 4): só as abas que o perfil pode ver. */}
+      <LargeTitle
+        title="Minha área"
+        subtitle={subtitulo}
+        tabs={visiveis.map((a) => ({ label: a.label, icon: icones[a.id], active: tab === a.id, testId: `aba-${a.id}`, onClick: () => setTab(a.id) }))}
+      />
       {tab === 'tarefas' && abas.tarefas.canView && <TasksTab tasks={tasks} busy={busy} post={post} ro={!abas.tarefas.canEdit} />}
       {tab === 'notas' && abas.notas.canView && <NotesTab notes={notes} busy={busy} post={post} ro={!abas.notas.canEdit} />}
       {tab === 'folgas' && abas.folgas.canView && <LeavesTab leaves={leaves} schedule={schedule} busy={busy} post={post} canSeeTeam={canSeeTeam} ro={!abas.folgas.canEdit} />}
@@ -101,10 +103,6 @@ export function ManagerAreaClient({ tasks, notes, leaves, schedule = null, canSe
 /** Aviso de aba que o perfil só pode consultar — o botão some, e o servidor recusa de todo jeito. */
 function SomenteLeitura() {
   return <p className="rounded-md bg-info-bg p-2 text-xs text-info">Somente leitura: seu perfil pode consultar, mas não alterar esta aba.</p>;
-}
-
-function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
-  return <button onClick={onClick} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${active ? 'bg-brand text-on-brand' : 'border'}`}>{icon}{children}</button>;
 }
 
 type Post = (b: Record<string, unknown>) => Promise<boolean>;

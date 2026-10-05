@@ -4,9 +4,7 @@ import { abasDoPerfil } from '@/lib/permissions/abas-server';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listTerminations } from '@/lib/terminations';
-import { Card, CardContent } from '@/components/ui/card';
 import { TerminationsClient, type TermRow } from '@/components/terminations/terminations-client';
-import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,11 +31,9 @@ export default async function DesligamentosPage() {
   return (
     <div className="space-y-4">
       <div>
-        <LargeTitle title="Desligamentos" subtitle="Solicitação do gerente → aprovação do supervisor → encaminhar ao RH." />
+        {/* O cabeçalho (título + abas) vive no cliente, no padrão do kit. */}
       </div>
-      <Card><CardContent className="pt-4">
-        <TerminationsClient abas={await abasDoPerfil(user.role, 'TERMINATIONS')} canRequest={canRequest} canDecide={canDecide} units={units} collaboratorsByUnit={collaboratorsByUnit} rows={rows} />
-      </CardContent></Card>
+      <TerminationsClient subtitulo="Solicitação do gerente → aprovação do supervisor → encaminhar ao RH." abas={await abasDoPerfil(user.role, 'TERMINATIONS')} canRequest={canRequest} canDecide={canDecide} units={units} collaboratorsByUnit={collaboratorsByUnit} rows={rows} />
     </div>
   );
 }

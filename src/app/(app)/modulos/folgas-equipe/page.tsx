@@ -42,19 +42,22 @@ export default async function ControleDeGerentesPage({
   const rede = searchParams.visao === 'rede';
   const base = `ano=${year}&mes=${month}`;
 
+  /* Cabeçalho do kit (Fase 4): Por unidade / Visão da rede como sub-abas
+     (links; a ativa pela URL), família no subtítulo. */
   const header = (
-    <div className="space-y-3">
-      <LargeTitle title="Controle de gerentes" subtitle="Folgas e férias de gerência — cada unidade com a sua escala." />
-      <FamilyTabs active="/modulos/folgas-equipe" />
-      <SegmentedNav
-        aria-label="Visão"
-        value={rede ? 'rede' : 'unidade'}
-        options={[
-          { value: 'unidade', label: 'Por unidade', href: `/modulos/folgas-equipe?${base}${searchParams.unit ? `&unit=${searchParams.unit}` : ''}` },
-          { value: 'rede', label: 'Visão da rede', href: `/modulos/folgas-equipe?visao=rede&${base}` },
-        ]}
-      />
-    </div>
+    <LargeTitle
+      title="Controle de gerentes"
+      subtitle={<>Folgas e férias de gerência — cada unidade com a sua escala.<span className="block"><FamilyTabs active="/modulos/folgas-equipe" /></span></>}
+      tabs={[
+        { label: 'Por unidade', href: `/modulos/folgas-equipe?${base}${searchParams.unit ? `&unit=${searchParams.unit}` : ''}`, active: !rede, testId: 'visao-unidade' },
+        { label: 'Visão da rede', href: `/modulos/folgas-equipe?visao=rede&${base}`, active: rede, testId: 'visao-rede' },
+      ]}
+      actions={rede ? (
+        <a href={`/modulos/folgas-equipe/relatorio?${base}&unit=todas&imprimir=1`} target="_blank" rel="noreferrer" className="sgo-btn sgo-btn--primary">
+          <FileText className="h-3.5 w-3.5" /> Escala mensal PDF — todas as unidades
+        </a>
+      ) : undefined}
+    />
   );
 
   if (units.length === 0) {
@@ -73,18 +76,13 @@ export default async function ControleDeGerentesPage({
     return (
       <div className="space-y-4">
         {header}
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="sgo-filtros -mx-4">
+          <span className="sgo-label">Período</span>
           <SegmentedNav
             aria-label="Período"
             value={periodo}
             options={PERIODOS.map((p) => ({ value: p.value, label: p.label, href: `/modulos/folgas-equipe?visao=rede&${base}&periodo=${p.value}` }))}
           />
-          <a
-            href={`/modulos/folgas-equipe/relatorio?${base}&unit=todas&imprimir=1`} target="_blank" rel="noreferrer"
-            className="sgo-control inline-flex h-9 items-center gap-1 rounded-control bg-brand px-3 text-sm font-semibold text-on-brand hover:bg-brand-hover"
-          >
-            <FileText className="h-4 w-4" /> Escala mensal PDF — todas as unidades
-          </a>
         </div>
         <p className="sgo-type-13 font-semibold text-ink-900">{titulo} — rede</p>
         <p className="text-xs text-ink-500">Consolidado: cada unidade continua com a sua escala. Clique na unidade para abrir a grade e o calendário dela.</p>
@@ -94,7 +92,7 @@ export default async function ControleDeGerentesPage({
             const gerentes = porUnidade.get(u.id) ?? [];
             const itens = ausenciasNoPeriodo(gerentes, de, ate);
             return (
-              <section key={u.id} className="rounded-card border border-line bg-surface p-3">
+              <section key={u.id} className="sgo-panel sgo-panel--solid p-3">
                 <div className="mb-2 flex items-baseline justify-between gap-2">
                   <a href={`/modulos/folgas-equipe?${base}&unit=${u.id}`} className="sgo-type-13 font-semibold text-brand hover:underline">{u.name}</a>
                   <span className="text-xs text-ink-500">{gerentes.length} gerente(s)</span>

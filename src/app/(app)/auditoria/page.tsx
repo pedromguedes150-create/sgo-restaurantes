@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { listAuditLogs, canViewAudit } from '@/lib/audit-query';
 import { LargeTitle } from '@/components/layout/page-chrome';
-import { Button } from '@/components/ui/ds/button';
 import { AuditClient } from '@/components/audit/audit-client';
 import { FileText } from 'lucide-react';
 
@@ -23,11 +22,7 @@ export default async function AuditoriaPage() {
       <LargeTitle
         title="Log de Auditoria"
         subtitle="Registro imutável de ações críticas. Acessos a dados sensíveis também são auditados (LGPD)."
-        actions={
-          <Link href="/auditoria/relatorio">
-            <Button size="sm" variant="secondary"><FileText className="h-4 w-4" /> Relatório / Export</Button>
-          </Link>
-        }
+        actions={<Link href="/auditoria/relatorio" className="sgo-btn"><FileText className="h-3.5 w-3.5" /> Relatório / Export</Link>}
       />
 
       <AuditClient

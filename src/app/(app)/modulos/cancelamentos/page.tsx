@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { StatCard } from '@/components/ui/ds/stat-card';
+import { SgoKpis } from '@/components/sgo/sgo-kpi';
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { FileText } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
@@ -37,25 +38,28 @@ export default async function CancelamentosPage() {
     : [[], []];
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <LargeTitle title="Cancelamento de Cupons" />
-        <FamilyTabs active="/modulos/cancelamentos" />
-        <div className="flex flex-wrap gap-2">
-          {['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role) && podeVer('/modulos/cancelamentos/analise') && <Link href="/modulos/cancelamentos/analise" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🛡️ Análise antifraude (PDF)</Link>}
-          {/* Cancelamento de ITEM (antes de virar cupom) mora ao lado: e o mesmo
-              assunto visto antes do fechamento da conta. */}
-          {podeVer('/modulos/cancelamentos/itens') && <Link href="/modulos/cancelamentos/itens" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:border-brand">🍽️ Cancelamento de itens</Link>}
-          {podeVer('/modulos/cancelamentos/relatorio') && <Link href="/modulos/cancelamentos/relatorio" className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-semibold hover:bg-sunken"><FileText className="h-4 w-4" /> Relatório</Link>}
-        </div>
-      </div>
+    <div className="space-y-4">
+      {/* Cabeçalho do kit (Fase 4): família no subtítulo, as três telas irmãs
+          como ações. Cancelamento de ITEM (antes de virar cupom) mora ao lado:
+          é o mesmo assunto visto antes do fechamento da conta. */}
+      <LargeTitle
+        title="Cancelamento de Cupons"
+        subtitle={<FamilyTabs active="/modulos/cancelamentos" />}
+        actions={
+          <>
+            {['ADMIN', 'CEO', 'SUPERVISOR'].includes(user.role) && podeVer('/modulos/cancelamentos/analise') && <Link href="/modulos/cancelamentos/analise" className="sgo-btn">🛡️ Análise antifraude (PDF)</Link>}
+            {podeVer('/modulos/cancelamentos/itens') && <Link href="/modulos/cancelamentos/itens" className="sgo-btn">🍽️ Cancelamento de itens</Link>}
+            {podeVer('/modulos/cancelamentos/relatorio') && <Link href="/modulos/cancelamentos/relatorio" className="sgo-btn"><FileText className="h-3.5 w-3.5" /> Relatório</Link>}
+          </>
+        }
+      />
 
       {/* Resumo do mês */}
-      <div className="grid grid-cols-3 gap-2">
+      <SgoKpis className="grid-cols-3" flush>
         <StatCard label="no mês" value={summary.monthTotal} />
         <StatCard label="justificados" value={`${summary.justifiedPct}%`} tone="success" />
         <StatCard label="pendentes" value={summary.pending} tone="danger" />
-      </div>
+      </SgoKpis>
 
       <Card>
         <CardContent className="pt-4">

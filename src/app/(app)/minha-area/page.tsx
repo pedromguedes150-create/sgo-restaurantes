@@ -3,9 +3,7 @@ import { listManagerTasks, listManagerNotes, listManagerLeaves } from '@/lib/man
 import { getMyWorkSchedule } from '@/lib/manager-schedule';
 import { permissoesEfetivasDoRequest } from '@/lib/permissions';
 import { acessoDasAbas } from '@/lib/permissions/manager-area';
-import { Card, CardContent } from '@/components/ui/card';
 import { ManagerAreaClient } from '@/components/manager-area/manager-area-client';
-import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,10 +22,10 @@ export default async function MinhaAreaPage() {
   return (
     <div className="space-y-4">
       <div>
-        <LargeTitle title="Minha área" subtitle="Sua agenda pessoal, bloco de notas e folgas/férias." />
+        {/* O cabeçalho (título + abas) vive no cliente, no padrão do kit. */}
       </div>
-      <Card><CardContent className="pt-4">
         <ManagerAreaClient
+          subtitulo="Sua agenda pessoal, bloco de notas e folgas/férias."
           tasks={tasks.map((t) => ({ id: t.id, title: t.title, notes: t.notes, dueAt: t.dueAt ? t.dueAt.toISOString() : null, done: t.done }))}
           notes={notes.map((n) => ({ id: n.id, title: n.title, content: n.content, createdAt: n.createdAt.toISOString() }))}
           leaves={leaves.map((l) => ({ id: l.id, kind: l.kind, startDate: l.startDate, endDate: l.endDate, note: l.note }))}
@@ -35,7 +33,6 @@ export default async function MinhaAreaPage() {
           canSeeTeam={canSeeTeam}
           abas={abas}
         />
-      </CardContent></Card>
     </div>
   );
 }

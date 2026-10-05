@@ -9,6 +9,18 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.150.0 — 2026-10-05 (Kit de layout — Fase 4, lote 6: Comunicação, Minha área, Desligamentos, Cancelamentos, Separação, Mapa de Funções, Controle de gerentes, POPs, Treinamentos, Mudanças, Auditoria, Inventário e Avaliação)
+### Alterado
+- **Central de Comunicação**, **Minha área** e **Desligamentos**: as abas (Recebidos com o nº de pendentes / Novo comunicado / Painel & Histórico; Tarefas / Notas / Folgas; Solicitar / Solicitações) passaram ao cabeçalho do kit; os botões-pílula próprios dessas telas saíram.
+- **Cancelamento de Cupons**: Análise antifraude, Cancelamento de itens e Relatório como ações do cabeçalho; família no subtítulo; indicadores em `.sgo-kpis`.
+- **Separação de pedidos**: o romaneio do setor como ação do cabeçalho; "Romaneio por setor" (Admin/CEO) na linha de filtros com botões do kit.
+- **Mapa de Funções**, **Treinamentos**: descrição no subtítulo; unidade na linha de filtros do kit.
+- **Controle de gerentes**: Por unidade / Visão da rede como sub-abas do cabeçalho (links); PDF da rede como ação; período na linha de filtros; cartões por unidade em painel sólido.
+- **POPs**: atalhos de Treinamentos como ações; a lista de POPs em painel sólido, uma linha por POP.
+- **Mudanças de função/setor**, **Avaliação**, **Inventário**: descrição e família no subtítulo; lista de mudanças em painel sólido. **Auditoria**: "Relatório / Export" como botão do kit.
+### Preservado
+Rotas, filtros, permissões (abas fechadas na matriz continuam fora — com teste), formulários, regras e exportações. Sem migração, sem mudança de API.
+
 ## v1.149.0 — 2026-10-05 (Kit de layout — Fase 4, lote 5: Supervisão, Painel da unidade, Executivo, Ticket Médio, Gás, Óleo, Troco, Pizzas, Atestados e Manutenção)
 ### Alterado
 - **Rotina do Supervisor**, **Coleta de Óleo**, **Gestão de Troco**, **Central de Atestados**, **Manutenção** e **Análise de gás**: as abas de cada tela (Painel de uso/Visitas; Lançar coleta/Dashboard/Histórico; Cofre/Histórico; Lançar/Histórico/Painel; Chamados/Preventiva; Dashboard/Histórico/Contratos) passaram ao cabeçalho do kit, na linha do título, com a família do módulo no subtítulo e as ações à direita ("Painel da unidade (reunião)", "Escritório — fila de envio"). Em Manutenção o título solto (h1 próprio) virou o cabeçalho do kit.
