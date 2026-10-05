@@ -1,4 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
+import { getWastePhotoRequired } from '@/lib/waste/foto-config';
+import { procedimentosSemFoto } from '@/lib/waste/foto-regra';
+import { ehTipoFixo } from '@/lib/waste/tipos';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { audit } from '@/lib/audit';
@@ -86,12 +89,20 @@ export async function saveWasteEntry(
   // Tarefas WASTE do dia para esta unidade (deep-link/conclusão)
   const wasteTasks = await prisma.taskInstance.findMany({
     where: { unitId: unit.id, operationalDate, template: { module: 'WASTE' } },
-    include: { template: { select: { requiresEvidence: true } } },
   });
-  const needsEvidence = wasteTasks.some((t) => t.template.requiresEvidence);
-  const hasAnyPhoto = input.evidencePath || (input.entryPhotos && input.entryPhotos.length > 0);
-  if (needsEvidence && !hasAnyPhoto) {
-    return { ok: false, reason: 'EVIDENCE_REQUIRED' };
+
+  /* FOTO (v1.152.0): a regra é UMA só — a chave WASTE_PHOTO_REQUIRED, a mesma
+     que a tela lê. Desligada (padrão), a foto é opcional. Ligada, cada
+     procedimento com peso precisa da SUA foto (nova ou já gravada no dia).
+     O `requiresEvidence` do checklist WASTE deixou de decidir isto: ele e a
+     tela exigiam coisas diferentes, e o Pedro pediu foto opcional por ora. */
+  if (await getWastePhotoRequired()) {
+    const cats = await prisma.wasteCategory.findMany({ where: { id: { in: items.map((i) => i.categoryId) } }, select: { id: true, code: true } });
+    const codigoDe = new Map(cats.map((c) => [c.id, c.code]));
+    const comPeso = items.filter((i) => i.kg > 0).map((i) => codigoDe.get(i.categoryId)).filter((c): c is string => Boolean(c && ehTipoFixo(c)));
+    const jaGravadas = await prisma.wasteEntryPhoto.findMany({ where: { entry: { unitId: unit.id, operationalDate } }, select: { typeCode: true } });
+    const faltam = procedimentosSemFoto(comPeso, [...jaGravadas.map((f) => f.typeCode), ...(input.entryPhotos ?? []).map((f) => f.typeCode)]);
+    if (faltam.length) return { ok: false, reason: 'EVIDENCE_REQUIRED' };
   }
 
   // Upsert do lançamento + substituição dos itens (transação)

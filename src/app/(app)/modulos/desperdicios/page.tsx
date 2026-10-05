@@ -15,7 +15,11 @@ import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { SgoBar } from '@/components/sgo/sgo-bar';
 import { Group } from '@/components/ui/ds/group';
-import { BarChart3, Download, Utensils, Cookie } from 'lucide-react';
+import { BarChart3, Download, Utensils, Cookie, CameraOff, ClipboardCheck } from 'lucide-react';
+import { FotosDoLancamento } from '@/components/waste/fotos-do-lancamento';
+import { getWastePhotoRequired } from '@/lib/waste/foto-config';
+import { dataBR } from '@/lib/waste/painel-calculo';
+import { tipoPorCodigo } from '@/lib/waste/tipos';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +60,7 @@ export default async function DesperdiciosPage({
     <>
       <LargeTitle
         title="Desperdícios"
-        subtitle={`Dia operacional ${operationalDate} · ${aba === 'restaurante' ? 'Restaurante em kg' : 'Salgados em unidades'}`}
+        subtitle={`Dia operacional ${dataBR(operationalDate)} · ${aba === 'restaurante' ? 'Restaurante em kg' : 'Salgados em unidades'}`}
         tabs={[
           { label: 'Sobras Restaurante', icon: <Utensils className="h-3.5 w-3.5" />, href: linkAba('restaurante'), active: aba === 'restaurante', testId: 'aba-restaurante' },
           { label: 'Sobras Salgados', icon: <Cookie className="h-3.5 w-3.5" />, href: linkAba('salgados'), active: aba === 'salgados', testId: 'aba-salgados' },
@@ -64,7 +68,10 @@ export default async function DesperdiciosPage({
         actions={
           <>
             {podeVerConsolidado && (
-              <Link href={`/modulos/desperdicios/consolidado?aba=${aba}`} className="sgo-btn"><BarChart3 className="h-3.5 w-3.5" /> Painel consolidado</Link>
+              <>
+                <Link href={`/modulos/desperdicios/consolidado?aba=${aba}&visao=conferencia&unidade=${selected.id}`} className="sgo-btn"><ClipboardCheck className="h-3.5 w-3.5" /> Conferência (fotos)</Link>
+                <Link href={`/modulos/desperdicios/consolidado?aba=${aba}`} className="sgo-btn"><BarChart3 className="h-3.5 w-3.5" /> Painel consolidado</Link>
+              </>
             )}
             {aba === 'restaurante' && (
               <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="sgo-btn"><Download className="h-3.5 w-3.5" /> Exportar (Excel)</a>
@@ -91,12 +98,13 @@ export default async function DesperdiciosPage({
         {cabecalho}
         <Card>
           <CardHeader>
-            <CardTitle>{isBackdated ? `Salgados de ${operationalDate}` : 'Salgados de hoje'} — {selected.name}</CardTitle>
+            <CardTitle>{isBackdated ? `Salgados de ${dataBR(operationalDate)}` : 'Salgados de hoje'} — {selected.name}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} aba="salgados" />
-            {isBackdated && <p className="sgo-aviso sgo-aviso--atencao">Lançando para um dia anterior ({operationalDate}).</p>}
+            {isBackdated && <p className="sgo-aviso sgo-aviso--atencao">Lançando para um dia anterior ({dataBR(operationalDate)}).</p>}
             {dia.createdBy && <p className="text-xs text-ink-500">Registrado por {dia.createdBy} · total atual {dia.total} un.</p>}
+            {dia.evidencePath && <FotosDoLancamento fotos={[{ rotulo: 'Recipiente de descarte', path: dia.evidencePath }]} titulo={`Salgados · ${dataBR(operationalDate)}`} tamanho="sm" />}
             <SalgadosForm unitId={selected.id} operationalDate={operationalDate} tipos={opcoes.tipos} motivos={opcoes.motivos} initialRows={dia.rows} initialEvidencePath={dia.evidencePath} />
           </CardContent>
         </Card>
@@ -108,8 +116,9 @@ export default async function DesperdiciosPage({
             <Group>
             {recentes.map((d) => (
               <details key={d.operationalDate} className="p-2.5">
-                <summary className="flex cursor-pointer items-center justify-between text-sm">
-                  <span className="font-semibold text-ink-900">{d.operationalDate}</span>
+                <summary className="flex cursor-pointer items-center justify-between gap-2 text-sm">
+                  <span className="font-semibold text-ink-900">{dataBR(d.operationalDate)}</span>
+                  <span className="ml-auto">{d.evidencePath ? <span className="sgo-tag sgo-tag--green">Com foto</span> : <span className="sgo-tag sgo-tag--amber">Sem foto</span>}</span>
                   <span className="font-bold tabular-nums text-brand">{d.total} un.</span>
                 </summary>
                 <ul className="mt-1.5 space-y-0.5">
@@ -120,16 +129,15 @@ export default async function DesperdiciosPage({
                     </li>
                   ))}
                 </ul>
-                {d.evidencePath && (
-                  <a href={`/api/uploads/${d.evidencePath}`} target="_blank" rel="noreferrer"
-                    className="sgo-btn sgo-btn--sm mt-1.5">
-                    Ver evidência (foto do descarte)
-                  </a>
-                )}
+                <div className="mt-2">
+                  {d.evidencePath
+                    ? <FotosDoLancamento fotos={[{ rotulo: 'Recipiente de descarte', path: d.evidencePath }]} titulo={`Salgados · ${dataBR(d.operationalDate)}`} tamanho="sm" />
+                    : <p className="flex items-center gap-1.5 text-xs text-ink-500"><CameraOff className="h-3.5 w-3.5" /> Sem foto neste dia.</p>}
+                </div>
               </details>
             ))}
             </Group>
-            <p className="pt-1 text-xs text-ink-500">Para lançar/corrigir um dia, escolha a data acima. O histórico por tipo e motivo fica no Painel consolidado.</p>
+            <p className="pt-1 text-xs text-ink-500">Toque num dia para ver os itens e a foto. Para lançar/corrigir um dia, escolha a data acima. A conferência de todas as unidades e os gráficos ficam no Painel consolidado.</p>
           </CardContent>
         </Card>
       </div>
@@ -137,26 +145,26 @@ export default async function DesperdiciosPage({
   }
 
   /* ───────────────────────── SOBRAS RESTAURANTE ───────────────────────── */
-  const [categories, entry, series, wasteTemplate] = await Promise.all([
+  const [categories, entry, series, fotoObrigatoria] = await Promise.all([
     getActiveCategories(),
     getEntryForDay(selected.id, operationalDate),
     getWasteSeries(selected.id, 30, now),
-    prisma.taskTemplate.findFirst({ where: { unitId: selected.id, module: 'WASTE', active: true }, select: { requiresEvidence: true } }),
+    getWastePhotoRequired(),
   ]);
 
   const canCompare = user.seesAllUnits || user.role === 'SUPERVISOR';
   const cross = canCompare ? await getCrossUnitWaste(user, 30, now) : [];
   const maxCat = Math.max(1, ...series.byCategory.map((c) => c.total));
 
+  /* Histórico com as fotos: visível a quem abre a unidade (era só do Admin, e
+     com o link da foto quebrado). Excluir continua só do Admin. */
   const isAdmin = user.role === 'ADMIN';
-  const recent = isAdmin
-    ? await prisma.wasteEntry.findMany({
-        where: { unitId: selected.id },
-        orderBy: { operationalDate: 'desc' },
-        take: 30,
-        include: { items: { select: { kg: true, category: { select: { name: true } } } }, createdBy: { select: { name: true } }, photos: { select: { typeCode: true, path: true } } },
-      })
-    : [];
+  const recent = await prisma.wasteEntry.findMany({
+    where: { unitId: selected.id },
+    orderBy: { operationalDate: 'desc' },
+    take: 30,
+    include: { items: { select: { kg: true, category: { select: { name: true } } } }, createdBy: { select: { name: true } }, photos: { select: { typeCode: true, path: true } } },
+  });
 
   return (
     <div className="space-y-4">
@@ -164,11 +172,12 @@ export default async function DesperdiciosPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>{isBackdated ? `Lançamento de ${operationalDate}` : 'Lançamento de hoje'} — {selected.name}</CardTitle>
+          <CardTitle>{isBackdated ? `Lançamento de ${dataBR(operationalDate)}` : 'Lançamento de hoje'} — {selected.name}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} aba="restaurante" />
-          {isBackdated && <p className="sgo-aviso sgo-aviso--atencao">Lançando para um dia anterior ({operationalDate}).</p>}
+          {isBackdated && <p className="sgo-aviso sgo-aviso--atencao">Lançando para um dia anterior ({dataBR(operationalDate)}).</p>}
+          {!fotoObrigatoria && <p className="text-xs text-ink-500">Foto dos procedimentos: <b>opcional</b> por enquanto — se tirar, ela aparece na conferência.</p>}
           {entry?.createdBy && (
             <p className="mb-3 text-xs text-ink-500">Registrado por {entry.createdBy} · total atual {entry.total.toFixed(2)} KG</p>
           )}
@@ -178,68 +187,54 @@ export default async function DesperdiciosPage({
             categories={categories.map((c) => ({ id: c.id, code: c.code, name: c.name, measure: (c.measure === 'un' ? 'un' : 'kg') as 'kg' | 'un' }))}
             initialKg={entry?.kgByCategory ?? {}}
             initialObservation={entry?.observation ?? null}
-            requiresEvidence={Boolean(wasteTemplate?.requiresEvidence)}
-            hasEvidence={Boolean(entry?.evidencePath)}
+            fotoObrigatoria={fotoObrigatoria}
             initialPhotos={entry?.photosByCode ?? {}}
           />
         </CardContent>
       </Card>
 
-      {isAdmin && (
-        <Card>
-          <CardHeader><CardTitle>Histórico de lançamentos (admin)</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            {recent.length === 0 && <p className="text-sm text-ink-500">Nenhum lançamento.</p>}
-            <Group>
-            {recent.map((e) => {
-              const total = e.items.reduce((s, i) => s + Number(i.kg), 0);
-              return (
-                <div key={e.id} className="p-2.5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-ink-900">{e.operationalDate}</p>
-                      <p className="text-xs text-ink-500">{total.toFixed(2)} KG · {e.items.length} categoria(s){e.createdBy ? ` · ${e.createdBy.name}` : ''}</p>
-                    </div>
-                    <DeleteOpButton entity="waste" id={e.id} label={`o desperdício de ${e.operationalDate}`} />
+      <Card>
+        <CardHeader><CardTitle>Últimos lançamentos — {selected.name}</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          {recent.length === 0 && <p className="text-sm text-ink-500">Nenhum lançamento.</p>}
+          <Group>
+          {recent.map((e) => {
+            const total = e.items.reduce((s, i) => s + Number(i.kg), 0);
+            const fotos = [
+              ...e.photos.map((p) => ({ rotulo: tipoPorCodigo(p.typeCode)?.name ?? p.typeCode, path: p.path })),
+              ...(e.evidencePath ? [{ rotulo: 'Foto da balança (antiga)', path: e.evidencePath }] : []),
+            ];
+            return (
+              <details key={e.id} className="p-2.5">
+                <summary className="flex cursor-pointer items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-ink-900">{dataBR(e.operationalDate)}</p>
+                    <p className="text-xs text-ink-500">{total.toFixed(2)} KG · {e.items.length} item(ns){e.createdBy ? ` · ${e.createdBy.name}` : ''}</p>
                   </div>
-                  {e.items.length > 0 && (
-                    <details className="mt-1">
-                      <summary className="cursor-pointer text-xs font-medium text-brand">Ver itens lançados</summary>
-                      <ul className="mt-1 space-y-0.5">
-                        {e.items.map((i, idx) => (
-                          <li key={idx} className="flex justify-between text-xs">
-                            <span>{i.category?.name ?? 'Categoria'}</span>
-                            <span className="font-medium">{Number(i.kg).toFixed(2)} KG</span>
-                          </li>
-                        ))}
-                      </ul>
-                      {e.observation && <p className="mt-1 text-xs text-ink-500">Obs.: {e.observation}</p>}
-                      {e.photos.length > 0 && (
-                        <div className="mt-1.5 flex flex-wrap gap-2">
-                          {e.photos.map((p) => (
-                            <a key={p.typeCode} href={`/api/uploads/${p.path}`} target="_blank" rel="noreferrer"
-                              className="sgo-btn sgo-btn--sm">
-                              Ver evidência — {p.typeCode.replace('_', ' ')}
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                      {e.evidencePath && (
-                        <a href={`/api/uploads/${e.evidencePath}`} target="_blank" rel="noreferrer"
-                          className="sgo-btn sgo-btn--sm mt-1.5">
-                          Ver foto da balança (legado)
-                        </a>
-                      )}
-                    </details>
-                  )}
+                  <span className="ml-auto">{fotos.length ? <span className="sgo-tag sgo-tag--green">{fotos.length} foto(s)</span> : <span className="sgo-tag sgo-tag--gray">Sem foto</span>}</span>
+                  {isAdmin && <DeleteOpButton entity="waste" id={e.id} label={`o desperdício de ${dataBR(e.operationalDate)}`} />}
+                </summary>
+                <ul className="mt-1.5 space-y-0.5">
+                  {e.items.map((i, idx) => (
+                    <li key={idx} className="flex justify-between text-xs">
+                      <span>{i.category?.name ?? 'Categoria'}</span>
+                      <span className="font-medium">{Number(i.kg).toFixed(2)} KG</span>
+                    </li>
+                  ))}
+                </ul>
+                {e.observation && <p className="mt-1 text-xs text-ink-500">Obs.: {e.observation}</p>}
+                <div className="mt-2">
+                  {fotos.length
+                    ? <FotosDoLancamento fotos={fotos} titulo={`Restaurante · ${dataBR(e.operationalDate)}`} tamanho="sm" />
+                    : <p className="flex items-center gap-1.5 text-xs text-ink-500"><CameraOff className="h-3.5 w-3.5" /> Sem foto neste dia.</p>}
                 </div>
-              );
-            })}
-            </Group>
-            <p className="pt-1 text-xs text-ink-500">Para lançar/corrigir um dia específico, escolha a data no formulário acima.</p>
-          </CardContent>
-        </Card>
-      )}
+              </details>
+            );
+          })}
+          </Group>
+          <p className="pt-1 text-xs text-ink-500">Toque num dia para ver os itens e as fotos. Para lançar/corrigir um dia específico, escolha a data no formulário acima.</p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle>Por categoria (30 dias)</CardTitle></CardHeader>

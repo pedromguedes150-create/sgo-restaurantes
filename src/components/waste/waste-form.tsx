@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/ds/field';
 import { Banner } from '@/components/ui/ds/banner';
 import { Plus, X } from 'lucide-react';
 import { GRUPOS, LABEL_TOTAL_GERAL, totaisDoDia, tipoPorCodigo, TURNO_LABEL } from '@/lib/waste/tipos';
+import { procedimentosSemFoto, urlDoUpload } from '@/lib/waste/foto-regra';
 
 interface Category {
   id: string;
@@ -33,8 +34,7 @@ export function WasteForm({
   categories,
   initialKg,
   initialObservation,
-  requiresEvidence,
-  hasEvidence,
+  fotoObrigatoria,
   initialPhotos = {},
 }: {
   unitId: string;
@@ -42,8 +42,8 @@ export function WasteForm({
   categories: Category[];
   initialKg: Record<string, number>;
   initialObservation: string | null;
-  requiresEvidence: boolean;
-  hasEvidence: boolean;
+  /** Chave WASTE_PHOTO_REQUIRED (Configurações → Desperdícios). Desligada = foto opcional. */
+  fotoObrigatoria: boolean;
   /** typeCode → path: fotos já salvas no banco para este lançamento. */
   initialPhotos?: Record<string, string>;
 }) {
@@ -93,8 +93,9 @@ export function WasteForm({
   async function save() {
     setMsg(null);
 
-    // Valida: cada código com peso > 0 precisa de foto.
-    const semFoto = codigosComPeso.filter((c) => !temFoto(c));
+    // Valida (só quando a foto está ligada como obrigatória): cada código com
+    // peso > 0 precisa da sua foto — a MESMA regra que o servidor confere.
+    const semFoto = fotoObrigatoria ? procedimentosSemFoto(codigosComPeso, [...Object.keys(fotos), ...Object.keys(initialPhotos)]) : [];
     if (semFoto.length > 0) {
       const primeiro = semFoto[0];
       setMsg({
@@ -188,9 +189,10 @@ export function WasteForm({
                           value={kg[c.id] ?? ''}
                           onChange={(e) => setKg((s) => ({ ...s, [c.id]: e.target.value }))}
                         />
-                        {/* Foto obrigatória quando há peso. Aparece logo abaixo do campo. */}
+                        {/* Foto do procedimento quando há peso. Obrigatória só com a
+                            chave ligada; desligada, fica oferecida como opcional. */}
                         {precisaFoto && code && (
-                          <div className={`rounded-lg border px-3 py-2 ${fotoOk ? 'border-success/40 bg-success/5' : 'border-warning/40 bg-warning/5'}`}>
+                          <div className={`rounded-lg border px-3 py-2 ${fotoOk ? 'border-success/40 bg-success/5' : fotoObrigatoria ? 'border-warning/40 bg-warning/5' : 'border-line bg-sunken'}`}>
                             {fotoNova ? (
                               <div className="flex items-center gap-2">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -207,7 +209,7 @@ export function WasteForm({
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-1.5">
                                   <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-                                  <p className="text-xs text-ink-700">Foto já registrada</p>
+                                  <a href={urlDoUpload(initialPhotos[code])} target="_blank" rel="noreferrer" className="text-xs font-semibold text-brand underline">Foto já registrada — ver</a>
                                 </div>
                                 <Button size="sm" variant="ghost" onClick={() => abrirCamera(code)}>
                                   <Camera className="h-3.5 w-3.5" /> Substituir
@@ -215,7 +217,7 @@ export function WasteForm({
                               </div>
                             ) : (
                               <div className="flex items-center justify-between gap-2">
-                                <p className="text-xs text-warning">Foto obrigatória do procedimento</p>
+                                <p className={`text-xs ${fotoObrigatoria ? 'text-warning' : 'text-ink-500'}`}>{fotoObrigatoria ? 'Foto obrigatória do procedimento' : 'Foto do procedimento (opcional)'}</p>
                                 <Button size="sm" variant="ghost" onClick={() => abrirCamera(code)}>
                                   <Camera className="h-4 w-4" /> Tirar foto
                                 </Button>

@@ -9,7 +9,7 @@ import { saveEvidence, UploadError } from '@/lib/uploads';
 
 const REASONS: Record<string, { msg: string; status: number }> = {
   FORBIDDEN: { msg: 'Sem acesso a esta unidade', status: 403 },
-  EVIDENCE_REQUIRED: { msg: 'Esta tarefa exige a foto da balança', status: 422 },
+  EVIDENCE_REQUIRED: { msg: 'Falta a foto de um procedimento com peso. Tire a foto de cada procedimento lançado.', status: 422 },
   INVALID: { msg: 'Dados inválidos', status: 400 },
 };
 
