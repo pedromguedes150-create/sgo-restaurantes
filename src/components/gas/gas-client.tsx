@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ScanLine, Save, AlertTriangle, TrendingUp, TrendingDown, Pencil, X, Trash2, CalendarClock, Plus, Scale, Power, Paperclip, Download, FileText, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
@@ -61,7 +61,11 @@ const br = (iso: string) => { const [y, m, d] = iso.split('-'); return d ? `${d}
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 function mlabel(m: string) { const [y, mm] = m.split('-'); return `${MONTHS[Number(mm) - 1]}/${y.slice(2)}`; }
 
-export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, receipts, contracts = [], unitsWithoutContract = [], purchased, canManageContracts = false, filter, basePath = '/modulos/gas', abas = {} }: {
+export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, suppliers, dashboard, receipts, contracts = [], unitsWithoutContract = [], purchased, canManageContracts = false, filter, basePath = '/modulos/gas', abas = {}, titulo = 'Recebimento de Gás', subtitulo }: {
+  /** Título do cabeçalho do kit — a página de Notas chama de "Análise de gás". */
+  titulo?: string;
+  /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
+  subtitulo?: React.ReactNode;
   canLaunch: boolean; isAdmin: boolean; canEditDate?: boolean; units: Unit[]; suppliers: Supplier[]; dashboard: GasDash; receipts: GasRow[];
   contracts?: GasContractUI[]; unitsWithoutContract?: UnidadeSemContratoUI[]; purchased?: PurchasedUI; canManageContracts?: boolean; filter?: { unitId: string; supplierId: string; mes: string }; basePath?: string;
 
@@ -77,11 +81,11 @@ export function GasClient({ canLaunch, isAdmin, canEditDate = false, units, supp
   ];
   return (
     <div className="space-y-4">
-      <SegmentedControl
-        aria-label="Seções de Recebimento de Gás"
-        value={tab}
-        onValueChange={(v) => setTab(v as typeof tab)}
-        options={tabs.filter((t) => t.show && podeAba(abas, t.key)).map((t) => ({ value: t.key, label: t.label }))}
+      {/* Cabeçalho do kit (Fase 4): abas de ESTADO na linha do título. */}
+      <LargeTitle
+        title={titulo}
+        subtitle={subtitulo}
+        tabs={tabs.filter((t) => t.show && podeAba(abas, t.key)).map((t) => ({ label: t.label, active: tab === t.key, testId: `aba-${t.key}`, onClick: () => setTab(t.key as typeof tab) }))}
       />
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} />}
       {tab === 'painel' && (

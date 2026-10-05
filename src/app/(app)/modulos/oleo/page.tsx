@@ -6,9 +6,7 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getOilDashboard, listOilCollections, janelaValida } from '@/lib/oil/query';
 import { listSuppliers } from '@/lib/suppliers';
-import { Card, CardContent } from '@/components/ui/card';
 import { OilClient, type OilDash, type OilRow } from '@/components/oil/oil-client';
-import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,25 +39,21 @@ export default async function OleoPage({ searchParams }: { searchParams: { dias?
   }));
 
   return (
-    <div className="space-y-5">
-      <div>
-        <LargeTitle title="Coleta de Óleo" subtitle="Controle da coleta de óleo usado (recebemos por ela): litros, valor/litro, total e forma de recebimento." />
-        <FamilyTabs active="/modulos/oleo" />
-      </div>
-      <Card><CardContent className="pt-4">
-        <OilClient
-            abas={await abasDoPerfil(user.role, 'OIL')}
-          canLaunch={canLaunch}
-          isAdmin={user.role === 'ADMIN'}
-          canEditDate={user.role === 'ADMIN' || user.role === 'SUPERVISOR'}
-          meuNome={user.name}
-          dias={dias}
-          units={units}
-          suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
-          dashboard={dashboard}
-          rows={list}
-        />
-      </CardContent></Card>
+    <div className="space-y-4">
+      {/* O cabeçalho (título + abas) vive no cliente, no padrão do kit. */}
+      <OilClient
+        subtitulo={<>Controle da coleta de óleo usado (recebemos por ela): litros, valor/litro, total e forma de recebimento.<span className="block"><FamilyTabs active="/modulos/oleo" /></span></>}
+        abas={await abasDoPerfil(user.role, 'OIL')}
+        canLaunch={canLaunch}
+        isAdmin={user.role === 'ADMIN'}
+        canEditDate={user.role === 'ADMIN' || user.role === 'SUPERVISOR'}
+        meuNome={user.name}
+        dias={dias}
+        units={units}
+        suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
+        dashboard={dashboard}
+        rows={list}
+      />
     </div>
   );
 }

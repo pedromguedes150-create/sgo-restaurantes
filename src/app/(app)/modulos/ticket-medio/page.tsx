@@ -51,21 +51,17 @@ export default async function TicketMedioPage({
 
   return (
     <div className="space-y-4">
+      {/* Cabeçalho do kit (Fase 4): a configuração como ação; a competência na linha de filtros. */}
       <LargeTitle
         title="Ticket Médio"
         subtitle="Acompanhamento mensal das churrascarias — receita, cupons e ticket por unidade e consolidado."
+        actions={podeConfigurar ? (
+          <Link href="/configuracoes/ticket-medio" className="sgo-btn"><Settings2 className="h-3.5 w-3.5" /> Unidades participantes</Link>
+        ) : undefined}
       />
 
-      <div className="flex flex-wrap items-end justify-between gap-2">
+      <div className="sgo-filtros -mx-4 items-end">
         <SeletorDeCompetencia competencia={competencia} anos={anos} />
-        {podeConfigurar && (
-          <Link
-            href="/configuracoes/ticket-medio"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline"
-          >
-            <Settings2 className="h-4 w-4" /> Unidades participantes
-          </Link>
-        )}
       </div>
 
       {pedida && !participa && (

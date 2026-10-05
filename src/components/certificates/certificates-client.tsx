@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 
 import { Plus, Sparkles, Trash2, FileText, Stethoscope, CalendarDays, TrendingUp, BarChart3, Printer } from 'lucide-react';
@@ -45,7 +46,9 @@ function daysBetween(start: string, end: string): number {
 }
 function fmtDate(s: string | null): string { if (!s) return '—'; const [y, m, d] = s.split('-'); return `${d}/${m}/${y}`; }
 
-export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, collaboratorsByUnit, rows, report, abas = {} }: {
+export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, collaboratorsByUnit, rows, report, abas = {}, subtitulo }: {
+  /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
+  subtitulo?: React.ReactNode;
   canLaunch: boolean; isAdmin: boolean; showCid: boolean; ym: string;
   units: Unit[]; collaboratorsByUnit: Record<string, Collab[]>; rows: CertListItem[]; report: CertReport;
   /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
@@ -56,11 +59,16 @@ export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, col
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-1">
-        {canLaunch && podeAba(abas, 'lancar') && <TabBtn active={tab === 'lancar'} onClick={() => setTab('lancar')} icon={<Plus className="h-4 w-4" />}>Lançar</TabBtn>}
-        {podeAba(abas, 'historico') && <TabBtn active={tab === 'historico'} onClick={() => setTab('historico')} icon={<FileText className="h-4 w-4" />}>Histórico</TabBtn>}
-        {podeAba(abas, 'painel') && <TabBtn active={tab === 'painel'} onClick={() => setTab('painel')} icon={<BarChart3 className="h-4 w-4" />}>Painel</TabBtn>}
-      </div>
+      {/* Cabeçalho do kit (Fase 4): Lançar / Histórico / Painel como abas de ESTADO. */}
+      <LargeTitle
+        title="Central de Atestados"
+        subtitle={subtitulo}
+        tabs={[
+          ...(canLaunch && podeAba(abas, 'lancar') ? [{ value: 'lancar' as const, label: 'Lançar', icon: <Plus className="h-3.5 w-3.5" /> }] : []),
+          ...(podeAba(abas, 'historico') ? [{ value: 'historico' as const, label: 'Histórico', icon: <FileText className="h-3.5 w-3.5" /> }] : []),
+          ...(podeAba(abas, 'painel') ? [{ value: 'painel' as const, label: 'Painel', icon: <BarChart3 className="h-3.5 w-3.5" /> }] : []),
+        ].map((o) => ({ label: o.label, icon: o.icon, active: tab === o.value, testId: `aba-${o.value}`, onClick: () => setTab(o.value) }))}
+      />
 
       {tab === 'lancar' && canLaunch && (
         <LaunchForm units={units} collaboratorsByUnit={collaboratorsByUnit} showCid={showCid} onSaved={() => { setTab('historico'); router.refresh(); }} />
@@ -68,12 +76,6 @@ export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, col
       {tab === 'historico' && <History rows={rows} isAdmin={isAdmin} showCid={showCid} onChanged={() => router.refresh()} />}
       {tab === 'painel' && <Panel report={report} ym={ym} />}
     </div>
-  );
-}
-
-function TabBtn({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <button onClick={onClick} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${active ? 'bg-brand text-on-brand' : 'border'}`}>{icon}{children}</button>
   );
 }
 

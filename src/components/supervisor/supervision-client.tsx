@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Check, X, Trash2, CalendarDays, FileSpreadsheet, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -37,7 +37,11 @@ const fmtMonthLong = (ym: string) => {
 };
 const TONE_DOT = { success: 'bg-success', medium: 'bg-warning', critical: 'bg-danger' } as const;
 
-export function SupervisionClient({ usage, yearMonth, months, board, units, checklists, plans, canOperate, isAdmin, abas = {} }: {
+export function SupervisionClient({ usage, yearMonth, months, board, units, checklists, plans, canOperate, isAdmin, abas = {}, subtitulo, acoes }: {
+  /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
+  subtitulo?: React.ReactNode;
+  /** Ações do cabeçalho do kit (vêm da página de servidor). */
+  acoes?: React.ReactNode;
   usage: UsageRowUI[]; yearMonth: string; months: string[];
   board: { upcoming: VisitRowUI[]; history: VisitRowUI[]; month: { done: number; planned: number; overdue: number } };
   units: UnitOpt[]; checklists: ChecklistOpt[]; plans: PlanRowUI[]; canOperate: boolean; isAdmin: boolean;
@@ -64,11 +68,12 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
 
   return (
     <div className="space-y-4">
-      <SegmentedControl
-        aria-label="Seções da Rotina do Supervisor"
-        value={tab}
-        onValueChange={(v) => setTab(v as typeof tab)}
-        options={[{ value: 'PAINEL', label: 'Painel de uso' }, { value: 'VISITAS', label: 'Visitas & Feedbacks' }].filter((o) => podeAba(abas, o.value))}
+      {/* Cabeçalho do kit (Fase 4): abas de ESTADO na linha do título. */}
+      <LargeTitle
+        title="Rotina do Supervisor"
+        subtitle={subtitulo}
+        tabs={[{ value: 'PAINEL' as const, label: 'Painel de uso' }, { value: 'VISITAS' as const, label: 'Visitas & Feedbacks' }].filter((o) => podeAba(abas, o.value)).map((o) => ({ label: o.label, active: tab === o.value, testId: `aba-${o.value.toLowerCase()}`, onClick: () => setTab(o.value) }))}
+        actions={acoes}
       />
 
       {tab === 'PAINEL' && (

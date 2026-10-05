@@ -14,6 +14,7 @@ import { Button as DsButton } from '@/components/ui/ds/button';
 import { List, ListRow } from '@/components/ui/ds/list-row';
 import { Banner } from '@/components/ui/ds/banner';
 import { Select } from '@/components/ui/ds/select';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { shortUnitName } from '@/lib/unit-name';
 import { cn } from '@/lib/utils';
 
@@ -101,7 +102,12 @@ function describeSides(r: ChangeRequest, list: DenomView[]): string {
 const emptyForm = (keys: string[]) => Object.fromEntries(keys.map((k) => [k, ''])) as Record<string, string>;
 const toNumbers = (keys: string[], v: Record<string, string>): Bal => Object.fromEntries(keys.map((k) => [k, parseNum(v[k] || '0')]));
 
-export function VaultClient({ units, selectedUnitId, vault, alerts, openRequestsNetwork, canOperate, canManageBuckets, canResolve, abas = {} }: {
+export function VaultClient({ units, selectedUnitId, vault, alerts, openRequestsNetwork, canOperate, canManageBuckets, canResolve, abas = {} , subtitulo, acoes }: {
+  /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
+  subtitulo?: React.ReactNode;
+  /** Ações do cabeçalho do kit (vêm da página de servidor). */
+  acoes?: React.ReactNode;
+
   units: UnitOpt[]; selectedUnitId: string; vault: VaultUI; alerts: VaultAlertUI[] | null; openRequestsNetwork: ChangeRequest[];
   canOperate: boolean; canManageBuckets: boolean; canResolve: boolean;
   /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
@@ -192,6 +198,13 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
 
   return (
     <div className="space-y-4">
+      {/* Cabeçalho do kit (Fase 4): Cofre / Histórico como abas de ESTADO. */}
+      <LargeTitle
+        title="Gestão de Troco"
+        subtitle={subtitulo}
+        tabs={([['cofre', 'Cofre'], ['historico', 'Histórico']] as const).filter(([key]) => podeAba(abas, key)).map(([key, label]) => ({ label, active: tab === key, testId: `aba-${key}`, onClick: () => setTab(key) }))}
+        actions={acoes}
+      />
       {units.length > 1 && (
         <div className="max-w-xs">
           <Select
@@ -218,15 +231,6 @@ export function VaultClient({ units, selectedUnitId, vault, alerts, openRequests
           </div>
         </div>
       )}
-
-      {/* Abas */}
-      <div className="flex gap-1 border-b">
-        {([['cofre', 'Cofre', Wallet], ['historico', 'Histórico', History]] as const).filter(([key]) => podeAba(abas, key)).map(([key, label, Icon]) => (
-          <button key={key} onClick={() => setTab(key)} className={cn('flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold', tab === key ? 'border-brand text-brand' : 'border-transparent text-ink-500 hover:text-brand')}>
-            <Icon className="h-4 w-4" /> {label}
-          </button>
-        ))}
-      </div>
 
       {tab === 'cofre' && (
         <>

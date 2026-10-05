@@ -43,22 +43,21 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
   for (let i = 0; i < 12; i++) { const d = new Date(y, (m - 1) - i, 1); months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
   const mesOptions = months.map((mm) => { const [yy, m2] = mm.split('-'); return { value: mm, label: `${MONTHS[Number(m2) - 1]}/${yy}` }; });
 
-  const toggle = (
-    <div className="inline-flex overflow-hidden rounded-control border border-line print:hidden">
-      <Link href={`/modulos/painel-unidade?visao=rede&mes=${ym}`} className={`px-3 py-1.5 sgo-type-13 font-semibold ${visao === 'rede' ? 'bg-brand text-on-brand' : 'bg-surface text-ink-700 hover:bg-sunken'}`}>Rede geral</Link>
-      <Link href={`/modulos/painel-unidade?visao=unidade&mes=${ym}${searchParams.unit ? `&unit=${searchParams.unit}` : ''}`} className={`px-3 py-1.5 sgo-type-13 font-semibold ${visao === 'unidade' ? 'bg-brand text-on-brand' : 'bg-surface text-ink-700 hover:bg-sunken'}`}>Unidade</Link>
-    </div>
-  );
-
+  /* Cabeçalho do kit (Fase 4): Rede geral / Unidade como sub-abas (links; a
+     ativa pela URL) e o PDF como ação. */
   const header = (
     <>
       <div className="print:hidden">
-        <Link href="/modulos/supervisao" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Supervisão</Link>
+        <Link href="/modulos/supervisao" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: 'var(--sgo-accent)' }}><ArrowLeft className="h-4 w-4" /> Supervisão</Link>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <LargeTitle title={visao === 'rede' ? 'Painel executivo da rede' : 'Painel da unidade'} />
-        <div className="flex flex-wrap items-center gap-2">{toggle}<PrintButton /></div>
-      </div>
+      <LargeTitle
+        title={visao === 'rede' ? 'Painel executivo da rede' : 'Painel da unidade'}
+        tabs={[
+          { label: 'Rede geral', href: `/modulos/painel-unidade?visao=rede&mes=${ym}`, active: visao === 'rede', testId: 'visao-rede' },
+          { label: 'Unidade', href: `/modulos/painel-unidade?visao=unidade&mes=${ym}${searchParams.unit ? `&unit=${searchParams.unit}` : ''}`, active: visao === 'unidade', testId: 'visao-unidade' },
+        ]}
+        actions={<PrintButton />}
+      />
     </>
   );
 
@@ -68,12 +67,12 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
     return (
       <div className="space-y-4">
         {header}
-        <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3 print:hidden">
+        <form method="get" className="sgo-filtros -mx-4 items-end print:hidden">
           <input type="hidden" name="visao" value="rede" />
           <FormSelect name="mes" label="Mês" defaultValue={ym} className="w-44" options={mesOptions} />
-          <button type="submit" className="h-10 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand">Ver</button>
+          <button type="submit" className="sgo-btn sgo-btn--primary">Ver</button>
         </form>
-        <div className="rounded-card border border-line bg-surface p-4">
+        <div className="sgo-panel sgo-panel--solid p-4">
           <p className="text-lg font-bold text-ink-900">Consolidado da rede</p>
           <p className="text-sm text-ink-500">{dados.resumo.unidades} unidade(s) · {MONTHS[m - 1]}/{y} · gerado em {now.toLocaleDateString('pt-BR')}</p>
         </div>
@@ -100,14 +99,14 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
   return (
     <div className="space-y-4">
       {header}
-      <form method="get" className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3 print:hidden">
+      <form method="get" className="sgo-filtros -mx-4 items-end print:hidden">
         <input type="hidden" name="visao" value="unidade" />
         <FormSelect name="unit" label="Unidade" defaultValue={selUnit.id} className="w-52" options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
         <FormSelect name="mes" label="Mês" defaultValue={ym} className="w-44" options={mesOptions} />
-        <button type="submit" className="h-10 rounded-lg bg-brand px-4 text-sm font-semibold text-on-brand">Ver</button>
+        <button type="submit" className="sgo-btn sgo-btn--primary">Ver</button>
       </form>
 
-      <div className="rounded-card border border-line bg-surface p-4">
+      <div className="sgo-panel sgo-panel--solid p-4">
         <p className="text-lg font-bold text-ink-900">{selUnit.name}</p>
         <p className="text-sm text-ink-500">Resumo de {MONTHS[m - 1]}/{y} · gerado em {now.toLocaleDateString('pt-BR')}</p>
       </div>

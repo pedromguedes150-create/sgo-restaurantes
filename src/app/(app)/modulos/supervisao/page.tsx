@@ -9,9 +9,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getUsageBoard } from '@/lib/supervisor/usage';
 import { getVisitBoard, listSupervisorChecklists } from '@/lib/supervisor/visits';
 import { listVisitPlans } from '@/lib/supervisor/visit-plans';
-import { Card, CardContent } from '@/components/ui/card';
 import { SupervisionClient } from '@/components/supervisor/supervision-client';
-import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,29 +38,21 @@ export default async function SupervisaoPage({ searchParams }: { searchParams: {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <LargeTitle title="Rotina do Supervisor" subtitle="Painel de uso dos gerentes, visitas com feedback e checklists de visita." />
-          <FamilyTabs active="/modulos/supervisao" />
-        </div>
-        <Link href="/modulos/painel-unidade" className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-semibold hover:border-brand">📋 Painel da unidade (reunião)</Link>
-      </div>
-      <Card>
-        <CardContent className="pt-4">
-          <SupervisionClient
-            abas={await abasDoPerfil(user.role, 'SUPERVISION')}
-            usage={usage}
-            yearMonth={yearMonth}
-            months={months}
-            board={board}
-            units={units}
-            checklists={checklists.map((c) => ({ id: c.id, name: c.name, items: Array.isArray(c.items) ? (c.items as string[]) : [] }))}
-            plans={plans}
-            canOperate={user.role === 'SUPERVISOR' || user.role === 'ADMIN'}
-            isAdmin={user.role === 'ADMIN'}
-          />
-        </CardContent>
-      </Card>
+      {/* O cabeçalho (título, abas, ação) vive no cliente, no padrão do kit. */}
+      <SupervisionClient
+        subtitulo={<>Painel de uso dos gerentes, visitas com feedback e checklists de visita.<span className="block"><FamilyTabs active="/modulos/supervisao" /></span></>}
+        acoes={<Link href="/modulos/painel-unidade" className="sgo-btn">📋 Painel da unidade (reunião)</Link>}
+        abas={await abasDoPerfil(user.role, 'SUPERVISION')}
+        usage={usage}
+        yearMonth={yearMonth}
+        months={months}
+        board={board}
+        units={units}
+        checklists={checklists.map((c) => ({ id: c.id, name: c.name, items: Array.isArray(c.items) ? (c.items as string[]) : [] }))}
+        plans={plans}
+        canOperate={user.role === 'SUPERVISOR' || user.role === 'ADMIN'}
+        isAdmin={user.role === 'ADMIN'}
+      />
     </div>
   );
 }
