@@ -126,3 +126,33 @@ describe('visita operacional', () => {
     expect(ind.rede.taxaResolucao).toBe(100);
   });
 });
+
+describe('itens direcionados — Verificado / Requer ação / Não se aplica (v1.155.1)', () => {
+  it('Verificado só registra; Requer ação e Não se aplica exigem texto; ficam fora da aderência', async () => {
+    // força um alerta real: ação vencida da unidade → item direcionado no roteiro
+    await prisma.visitAction.create({ data: { visitId: visita1, unitId: unitA, problem: 'Pendência antiga', category: 'Geral', dueDate: '2020-01-01', createdByName: 'Sup' } });
+    const r = await iniciarVisita(supervisor(), { unitId: unitA });
+    const v = r.ok ? r.id : '';
+    const d = (await getVisitaOperacional(supervisor(), v))!;
+    const dirs = d.respostas.filter((x) => x.level === 'DIRECIONADA');
+    expect(dirs.length).toBeGreaterThan(0);
+    const [primeiro] = dirs;
+    const acoesAntes = await prisma.visitAction.count({ where: { visitId: v } });
+    const occAntes = await prisma.occurrence.count({ where: { unitId: unitA } });
+    expect((await responderItem(supervisor(), { responseId: primeiro.id, answer: 'CONFORME' })).ok).toBe(true);
+    expect(await prisma.visitAction.count({ where: { visitId: v } })).toBe(acoesAntes);
+    expect(await prisma.occurrence.count({ where: { unitId: unitA } })).toBe(occAntes);
+    expect(await responderItem(supervisor(), { responseId: primeiro.id, answer: 'NAO_SE_APLICA' })).toMatchObject({ ok: false, reason: 'INVALID' });
+    expect((await responderItem(supervisor(), { responseId: primeiro.id, answer: 'NAO_SE_APLICA', note: 'pendência já não existe' })).ok).toBe(true);
+    expect(await responderItem(supervisor(), { responseId: primeiro.id, answer: 'NAO_CONFORME' })).toMatchObject({ ok: false, reason: 'INVALID' });
+    expect((await responderItem(supervisor(), { responseId: primeiro.id, answer: 'NAO_CONFORME', note: 'continua pendente' })).ok).toBe(true);
+    const simples = d.respostas.find((x) => x.level !== 'DIRECIONADA' && x.mode === 'SIMPLES')!;
+    await responderItem(supervisor(), { responseId: simples.id, answer: 'CONFORME' });
+    const f = await finalizarVisita(supervisor(), { visitId: v });
+    expect(f.ok).toBe(true);
+    if (f.ok) {
+      expect(f.resumo.aderencia).toMatchObject({ conformes: 1, naoConformes: 0, pct: 100 }); // direcionada fora da conta
+      expect(f.resumo.dadosSgo).toMatchObject({ requerAcao: 1 });
+    }
+  });
+});

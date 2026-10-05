@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { getVisitaOperacional } from '@/lib/supervisor/operacional';
-import { ROTULO_SITUACAO } from '@/lib/supervisor/operacional-calculo';
+import { contagemDirecionadas, ROTULO_DIRECIONADA, ROTULO_SITUACAO } from '@/lib/supervisor/operacional-calculo';
 
 /** Excel da visita operacional (v1.155.0): Resumo · Itens · Plano de ação. */
 const RESP: Record<string, string> = { CONFORME: 'Conforme', NAO_CONFORME: 'Não conforme', NAO_SE_APLICA: 'Não se aplica' };
@@ -28,13 +28,14 @@ export async function GET(req: Request) {
     [],
     ['Principais desvios'], ...d.resumo.desvios.map((x) => [x.secao, x.qtd]),
     [],
+    ['Dados do SGO (seção B)', (() => { const x = d.resumo.dadosSgo ?? contagemDirecionadas(d.respostas); return `${x.verificados} verificado(s) · ${x.requerAcao} requer(em) ação · ${x.naoSeAplica} não se aplica(m)`; })()],
     ['Pendências anteriores verificadas', d.resumo.pendenciasAnteriores.verificadas], ['Resolvidas', d.resumo.pendenciasAnteriores.resolvidas], ['Permanecem', d.resumo.pendenciasAnteriores.permanecem],
     ['Ações abertas', d.resumo.acoes.abertas], ['Ações críticas', d.resumo.acoes.criticas],
     [],
     ['Comentário', d.visita.feedback ?? ''],
   ]), 'Resumo');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(d.respostas.map((r) => ({
-    Seção: r.section, Item: r.text, Nível: r.level, Resposta: r.answer ? RESP[r.answer] : 'Pendente', Gravidade: r.gravity ?? '',
+    Seção: r.section, Item: r.text, Nível: r.level, Resposta: r.answer ? (r.level === 'DIRECIONADA' ? ROTULO_DIRECIONADA[r.answer] : RESP[r.answer]) : 'Pendente', Gravidade: r.gravity ?? '',
     'Conferidos (amostra)': r.sampleChecked ?? '', 'Conformes (amostra)': r.sampleOk ?? '', Temperatura: r.temperature ?? '',
     Observação: r.note ?? '', Fotos: r.photos.length, 'Respondido por': r.answeredByName ?? '',
   }))), 'Itens');

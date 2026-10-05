@@ -9,6 +9,16 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.155.1 — 2026-10-05 (Visita operacional: itens direcionados pelos dados do SGO)
+### Alterado
+- Na seção **"B · Direcionadas pelos dados do SGO"** as respostas passam a ser **✓ Verificado**, **⚠ Requer ação** e **— Não se aplica** (antes: Conforme / Não conforme / N/A).
+  - **Verificado**: o supervisor confirmou o dado do SGO (ex.: "6 checklists não realizados nos últimos 7 dias"). Só registra — nada é gerado, porque costuma ser fato passado.
+  - **Requer ação**: há uma situação ATUAL a tratar. Observação obrigatória; gravidade, foto, ação e "Gerar ocorrência" seguem como antes.
+  - **Não se aplica**: o dado não corresponde à unidade. Justificativa obrigatória.
+- Esses itens **não entram na aderência operacional** nem nos principais desvios (validam um dado, não medem conformidade). O resultado e o Excel ganham o bloco "Dados do SGO conferidos no local".
+### Preservado
+- Itens primordiais e complementares, checklists tradicionais e as demais regras: sem mudança. Sem migração (mesmo campo de resposta, outro significado só na seção B).
+
 ## v1.155.0 — 2026-10-05 (Rotina do Supervisor: Acompanhamento Operacional)
 ### Adicionado
 - **Aba "Acompanhamento operacional"** na Rotina do Supervisor (as abas Painel de uso e Visitas & Feedbacks continuam iguais). Separa **aderência ao sistema** (o que foi registrado) de **aderência operacional** (o que a visita conferiu no local). As metas não mudam.

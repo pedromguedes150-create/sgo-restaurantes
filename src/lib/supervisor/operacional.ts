@@ -6,7 +6,7 @@ import { faixaDaValidade, precisaTratativa } from '@/lib/stock/validade';
 import { createOccurrence } from '@/lib/occurrences/create';
 import { getUsageBoard } from '@/lib/supervisor/usage';
 import {
-  aderencia, GRAVIDADE_OCORRENCIA, montarAlertas, pctBR, montarRoteiro, principaisDesvios, reincidencias, respostaDerivada, situacaoDaAcao,
+  aderencia, contagemDirecionadas, direcionadaExigeTexto, GRAVIDADE_OCORRENCIA, montarAlertas, pctBR, montarRoteiro, principaisDesvios, reincidencias, respostaDerivada, situacaoDaAcao,
   type Alerta, type DadosPreVisita, type Gravidade, type ItemDoCatalogo, type Modo, type Resposta, type RespostaParaConta, type TipoUnidade,
 } from '@/lib/supervisor/operacional-calculo';
 import { ROTEIRO_PADRAO } from '@/lib/supervisor/operacional-catalogo';
@@ -239,6 +239,11 @@ export async function responderItem(user: SessionUser, e: EntradaResposta, ctx: 
   const temp = e.temperature == null || `${e.temperature}` === '' ? null : Number(e.temperature);
   if (temp != null && !Number.isFinite(temp)) return { ok: false, reason: 'INVALID' };
   const answer = respostaDerivada({ mode: r.mode, answer: e.answer ?? null, sampleChecked: sc, sampleOk: so, temperature: temp, tempMin: num(r.tempMin), tempMax: num(r.tempMax) });
+  /* Direcionada (v1.155.1): "Requer ação" pede observação e "Não se aplica" pede
+     justificativa; "Verificado" só registra a validação. */
+  if (r.level === 'DIRECIONADA' && direcionadaExigeTexto(answer) && !e.note?.trim()) {
+    return { ok: false, reason: 'INVALID', detail: answer === 'NAO_SE_APLICA' ? 'Escreva a justificativa: por que o dado não corresponde à unidade.' : 'Escreva a observação: qual é a situação atual que requer ação.' };
+  }
   const fotos = Array.isArray(r.photos) ? (r.photos as string[]) : [];
   const novasFotos = [...fotos.filter((f) => f !== e.removerFoto), ...(e.photoPath ? [e.photoPath] : [])];
   await prisma.visitAuditResponse.update({
@@ -324,6 +329,8 @@ export async function atualizarAcaoPelaUnidade(user: SessionUser, e: { actionId:
 
 export interface ResumoDaVisita {
   aderencia: ReturnType<typeof aderencia>;
+  /** Itens direcionados pelos dados do SGO (v1.155.1). Resultados antigos não têm. */
+  dadosSgo?: ReturnType<typeof contagemDirecionadas>;
   desvios: { secao: string; qtd: number }[];
   reincidencias: number;
   pendenciasAnteriores: { verificadas: number; resolvidas: number; permanecem: number };
@@ -343,6 +350,7 @@ async function montarResumo(visitId: string, unitId: string): Promise<ResumoDaVi
   const alertas = Array.isArray(visita?.preVisitSnapshot) ? (visita!.preVisitSnapshot as unknown as Alerta[]).filter((a) => a.nivel !== 'ok').length : 0;
   return {
     aderencia: aderencia(conta),
+    dadosSgo: contagemDirecionadas(conta),
     desvios: principaisDesvios(conta),
     reincidencias: reincidencias(conta, new Set(anteriores.map((a) => a.itemId as string))).length,
     pendenciasAnteriores: { verificadas: validadas.length, resolvidas: validadas.filter((v) => v.status === 'RESOLVIDO').length, permanecem: validadas.filter((v) => v.status !== 'RESOLVIDO').length },
@@ -404,7 +412,7 @@ async function agregadoDoMes(unitIds: string[], ym: string) {
     select: { id: true, unitId: true, summary: true },
   });
   const ids = visitas.map((v) => v.id);
-  const respostas = ids.length ? await prisma.visitAuditResponse.findMany({ where: { visitId: { in: ids }, answer: 'NAO_CONFORME' }, select: { visitId: true, section: true, answer: true } }) : [];
+  const respostas = ids.length ? await prisma.visitAuditResponse.findMany({ where: { visitId: { in: ids }, answer: 'NAO_CONFORME' }, select: { visitId: true, section: true, answer: true, level: true } }) : [];
   return { visitas, respostas };
 }
 

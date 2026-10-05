@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  aderencia, itemSeAplica, montarAlertas, montarRoteiro, pctBR, principaisDesvios, reincidencias, respostaDerivada, situacaoDaAcao,
+  aderencia, contagemDirecionadas, direcionadaExigeTexto, itemSeAplica, montarAlertas, ROTULO_DIRECIONADA, montarRoteiro, pctBR, principaisDesvios, reincidencias, respostaDerivada, situacaoDaAcao,
   type DadosPreVisita, type ItemDoCatalogo, type RespostaParaConta,
 } from '@/lib/supervisor/operacional-calculo';
 import { ROTEIRO_PADRAO } from '@/lib/supervisor/operacional-catalogo';
@@ -111,5 +111,24 @@ describe('situação da ação', () => {
     expect(situacaoDaAcao({ status: 'AGUARDANDO_VALIDACAO', dueDate: '2026-10-01' }, '2026-10-05')).toBe('AGUARDANDO_VALIDACAO');
     expect(situacaoDaAcao({ status: 'RESOLVIDO', dueDate: '2026-10-01' }, '2026-10-05')).toBe('RESOLVIDO');
     expect(situacaoDaAcao({ status: 'EM_ANDAMENTO', dueDate: null }, '2026-10-05')).toBe('EM_ANDAMENTO');
+  });
+});
+
+describe('itens direcionados (seção B) — v1.155.1', () => {
+  const r = (over: Partial<RespostaParaConta>): RespostaParaConta => ({ itemKey: 'k', itemId: null, section: 'Checklists', level: 'DIRECIONADA', mode: 'SIMPLES', answer: null, gravity: null, sampleChecked: null, sampleOk: null, ...over });
+  it('não entram na aderência nem nos desvios; só no progresso', () => {
+    const a = aderencia([r({ answer: 'CONFORME' }), r({ answer: 'NAO_CONFORME' }), { ...r({ answer: 'CONFORME' }), level: 'PRIMORDIAL', itemId: 'x' }]);
+    expect(a).toMatchObject({ total: 3, respondidos: 3, conformes: 1, naoConformes: 0, pontosConferidos: 1, pct: 100 });
+    expect(principaisDesvios([r({ answer: 'NAO_CONFORME' })])).toEqual([]);
+  });
+  it('rótulos e contagem próprios', () => {
+    expect(ROTULO_DIRECIONADA).toEqual({ CONFORME: 'Verificado', NAO_CONFORME: 'Requer ação', NAO_SE_APLICA: 'Não se aplica' });
+    expect(contagemDirecionadas([r({ answer: 'CONFORME' }), r({ answer: 'NAO_CONFORME' }), r({ answer: 'NAO_SE_APLICA' }), r({}), { ...r({ answer: 'CONFORME' }), level: 'PRIMORDIAL' }]))
+      .toEqual({ total: 4, verificados: 1, requerAcao: 1, naoSeAplica: 1, pendentes: 1 });
+  });
+  it('Requer ação e Não se aplica exigem texto; Verificado não', () => {
+    expect(direcionadaExigeTexto('CONFORME')).toBe(false);
+    expect(direcionadaExigeTexto('NAO_CONFORME')).toBe(true);
+    expect(direcionadaExigeTexto('NAO_SE_APLICA')).toBe(true);
   });
 });
