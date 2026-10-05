@@ -1361,6 +1361,18 @@ export const GUIDE: GuideSection[] = [
     title: 'Pessoas e Escala',
     guides: [
       {
+        id: 'perfil-360',
+        title: 'Perfil 360 e Controle de Férias',
+        roles: MANAGERLINE,
+        summary: 'Tudo sobre o colaborador em uma tela; férias por período aquisitivo e venda de dias.',
+        steps: [
+          'PERFIL 360 (v1.153.0): em Pessoas → Colaboradores, toque no ícone de OLHO ("Ver perfil"). Aparecem tempo de empresa, função e unidade (do RH), situação das férias, hora extra dos últimos 12 meses, mobilidade e comissão, avaliação, atestados, treinamentos, escala e um histórico com busca. É só consulta: para corrigir algo, use o módulo de origem.',
+          'CONTROLE DE FÉRIAS: em Pessoas → Ferramentas → Controle de Férias. O período aquisitivo é calculado pela ADMISSÃO informada pelo RH: a cada 12 meses o colaborador ganha 30 dias, que precisam ser concedidos nos 12 meses seguintes. Os cartões mostram vencidas, a vencer em 30/60/90 dias, em gozo, programadas e quem está sem admissão no RH; toque num cartão para ver a lista.',
+          'Períodos que venceram antes de o SGO começar a registrar férias (12/06/2026) aparecem como "Anterior ao SGO" e não são cobrados — o SGO não tem as férias de antes dele.',
+          'VENDA DE DIAS (abono pecuniário): na aba "Abono (venda de dias)" do Controle de Férias, escolha o colaborador, o período e quantos dias foram vendidos (até 10 — por exemplo, tirou 20 e vendeu 10). Os dias vendidos abatem o saldo do período. Um registro por período; quem registrou ou a Supervisão pode excluir.',
+        ],
+      },
+      {
         id: 'mapa',
         title: 'Mapa de Funções',
         roles: MANAGERLINE,

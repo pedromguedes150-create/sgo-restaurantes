@@ -15,7 +15,7 @@ import { listCollaborators, countCollaborators, listVacations, listSchedule, LIM
 import { Card, PanelHeader } from '@/components/sgo/panel';
 import { PeopleClient } from '@/components/people/people-client';
 import Link from 'next/link';
-import { Grid3x3, CalendarDays, CalendarRange, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft, HandCoins, Clock, ChevronRight, LayoutGrid } from 'lucide-react';
+import { Grid3x3, CalendarDays, CalendarRange, Stethoscope, UserMinus, UserCheck, Star, ArrowRightLeft, HandCoins, Clock, ChevronRight, LayoutGrid, Palmtree } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +30,7 @@ const DESTINOS = [
   { href: '/modulos/pessoas/mudancas', icon: ArrowRightLeft, title: 'Mudanças de função/setor', subtitle: 'Solicitações enviadas ao RH' },
   { href: '/modulos/hora-extra', icon: Clock, title: 'Hora extra', subtitle: 'Painel, solicitações e fechamento por competência' },
   { href: '/modulos/mobilidade', icon: HandCoins, title: 'Mobilidade', subtitle: 'Lançamento por competência e arquivo da administradora' },
+  { href: '/modulos/pessoas/ferias', icon: Palmtree, title: 'Controle de Férias', subtitle: 'Período aquisitivo pela admissão do RH: vencidas e a vencer' },
 ];
 
 function d(date: Date) { return new Date(date).toLocaleDateString('pt-BR'); }
@@ -38,7 +39,10 @@ export default async function PessoasModulePage({ searchParams }: { searchParams
   const user = (await getSessionUser())!;
   /* Cartão de tela que o perfil não pode abrir não é oferecido — clicar nele
      só devolveria a pessoa para onde ela estava. */
-  const podeVer = await permissaoDeRota(user.role);
+  const podeRota = await permissaoDeRota(user.role);
+  const abasDePessoas = await abasDoPerfil(user.role, 'PEOPLE');
+  /* O destino pode depender de uma ABA de Pessoas (Controle de Férias = aba Férias). */
+  const podeVer = (href: string) => podeRota(href) && (href !== '/modulos/pessoas/ferias' || abasDePessoas.fer?.canView !== false);
   /* A tela OBEDECE o seletor de unidade do cabeçalho. Sem isto o Admin via a
      rede inteira misturada — KM13, Vespasiano e Moreira na mesma lista —
      enquanto o chip lá em cima dizia uma unidade só. */
@@ -100,7 +104,7 @@ export default async function PessoasModulePage({ searchParams }: { searchParams
             </div>
           </Card>
         )}
-        abas={await abasDoPerfil(user.role, 'PEOPLE')}
+        abas={abasDePessoas}
         canRequestVacation={user.role !== 'FINANCE' && user.role !== 'CEO'}
         collaborators={collaborators.map((c) => ({ id: c.id, name: c.name, jobTitle: c.jobTitle, units: c.units.map((u) => u.unit.name), unitIds: c.units.map((u) => u.unit.id) }))}
         unidades={unidades}

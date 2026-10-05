@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
@@ -14,7 +15,7 @@ import { Group } from '@/components/ui/ds/group';
 import { Card, PanelHeader } from '@/components/sgo/panel';
 import { SgoModal } from '@/components/sgo/sgo-modal';
 import { LargeTitle } from '@/components/layout/page-chrome';
-import { CalendarCog, Building2 } from 'lucide-react';
+import { CalendarCog, Building2, Eye } from 'lucide-react';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { EmployeeScheduleForm, type TipoDeEscala, type Turno, type EscalaAtual } from '@/components/schedule/employee-schedule-form';
 
@@ -228,7 +229,20 @@ export function PeopleClient({
                   )}
                 </>
               );
-              if (!podeConfigurar && !podeEditarUnidades) return <div key={c.id} className="p-3">{linha}</div>;
+              /* Perfil 360 (v1.153.0): o olho abre tudo sobre a pessoa — para
+                 qualquer perfil que vê a lista. */
+              const verPerfil = (
+                <Link
+                  href={`/modulos/pessoas/colaborador/${c.id}`}
+                  title="Ver perfil"
+                  aria-label={`Ver perfil de ${c.name}`}
+                  className="sgo-btn sgo-btn--icon sgo-btn--ghost shrink-0"
+                  data-testid="ver-perfil"
+                >
+                  <Eye className="h-4 w-4" />
+                </Link>
+              );
+              if (!podeConfigurar && !podeEditarUnidades) return <div key={c.id} className="flex items-center gap-2 p-3"><span className="min-w-0 flex-1">{linha}</span>{verPerfil}</div>;
               /* Duas ações por linha (escala + unidades) não cabem dentro de UM
                  <button> só — botão dentro de botão é HTML inválido e rouba o
                  clique um do outro. A linha virou `div`, com cada ação como seu
@@ -245,6 +259,7 @@ export function PeopleClient({
                   ) : (
                     <span className="min-w-0 flex-1">{linha}</span>
                   )}
+                  {verPerfil}
                   {podeEditarUnidades && (
                     <button
                       type="button"
