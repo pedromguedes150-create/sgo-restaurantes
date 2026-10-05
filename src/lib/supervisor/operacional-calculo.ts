@@ -189,12 +189,20 @@ export interface Aderencia {
   pct: number | null;
 }
 
-/** Aderência operacional = pontos conformes ÷ pontos conferidos; N/A fora. */
+/**
+ * Aderência operacional = pontos conformes ÷ pontos conferidos; N/A fora.
+ *
+ * ⚠️ Itens DIRECIONADOS (seção B) NÃO entram na conta (v1.155.1): eles não
+ * medem conformidade — validam um DADO do SGO ("6 checklists não realizados"),
+ * muitas vezes um fato passado. Contam só no progresso (total/respondidos) e
+ * têm a própria contagem em `contagemDirecionadas`.
+ */
 export function aderencia(rs: RespostaParaConta[]): Aderencia {
   let conf = 0, nc = 0, na = 0, crit = 0, pc = 0, pok = 0, resp = 0;
   for (const r of rs) {
     if (!r.answer) continue;
     resp++;
+    if (r.level === 'DIRECIONADA') continue;
     if (r.answer === 'NAO_SE_APLICA') { na++; continue; }
     if (r.answer === 'CONFORME') conf++; else nc++;
     if (r.answer === 'NAO_CONFORME' && r.gravity === 'CRITICA') crit++;
@@ -209,10 +217,10 @@ export function aderencia(rs: RespostaParaConta[]): Aderencia {
   };
 }
 
-/** Seções com mais não conformidades (os "principais desvios"). */
-export function principaisDesvios(rs: Pick<RespostaParaConta, 'section' | 'answer'>[], n = 5): { secao: string; qtd: number }[] {
+/** Seções com mais não conformidades (os "principais desvios"). Direcionadas ficam fora. */
+export function principaisDesvios(rs: (Pick<RespostaParaConta, 'section' | 'answer'> & { level?: string })[], n = 5): { secao: string; qtd: number }[] {
   const m = new Map<string, number>();
-  for (const r of rs) if (r.answer === 'NAO_CONFORME') m.set(r.section, (m.get(r.section) ?? 0) + 1);
+  for (const r of rs) if (r.answer === 'NAO_CONFORME' && r.level !== 'DIRECIONADA') m.set(r.section, (m.get(r.section) ?? 0) + 1);
   return [...m.entries()].map(([secao, qtd]) => ({ secao, qtd })).sort((a, b) => b.qtd - a.qtd || a.secao.localeCompare(b.secao, 'pt-BR')).slice(0, n);
 }
 
@@ -251,4 +259,39 @@ export const SECOES_PRIMORDIAIS = [
 /** "85,7%" (pt-BR) — ou "—" quando não há o que medir (ausência não é 0%). */
 export function pctBR(n: number | null | undefined): string {
   return n == null ? '—' : `${n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+}
+
+/* ─────────────────────── itens DIRECIONADOS (seção B) ─────────────────────── */
+
+/**
+ * Nos itens direcionados pelos dados do SGO a pergunta não é "está conforme?",
+ * é "o que o SGO diz confere?" (pedido do Pedro, 05/10/2026). Grava-se no mesmo
+ * campo `answer`, com outro significado:
+ *  - CONFORME      → ✓ Verificado: o supervisor confirmou o dado. Só registra; nada é gerado.
+ *  - NAO_CONFORME  → ⚠ Requer ação: há uma situação ATUAL a tratar; observação obrigatória
+ *                    e o fluxo de ação/ocorrência de sempre fica disponível.
+ *  - NAO_SE_APLICA → — Não se aplica: o dado não corresponde à unidade; justificativa obrigatória.
+ */
+export const ROTULO_DIRECIONADA: Record<Resposta, string> = {
+  CONFORME: 'Verificado',
+  NAO_CONFORME: 'Requer ação',
+  NAO_SE_APLICA: 'Não se aplica',
+};
+
+/** Direcionada precisa de texto? (Requer ação e Não se aplica, sim; Verificado, não.) */
+export function direcionadaExigeTexto(answer: Resposta | null): boolean {
+  return answer === 'NAO_CONFORME' || answer === 'NAO_SE_APLICA';
+}
+
+export interface ContagemDirecionadas { total: number; verificados: number; requerAcao: number; naoSeAplica: number; pendentes: number }
+
+export function contagemDirecionadas(rs: Pick<RespostaParaConta, 'level' | 'answer'>[]): ContagemDirecionadas {
+  const d = rs.filter((r) => r.level === 'DIRECIONADA');
+  return {
+    total: d.length,
+    verificados: d.filter((r) => r.answer === 'CONFORME').length,
+    requerAcao: d.filter((r) => r.answer === 'NAO_CONFORME').length,
+    naoSeAplica: d.filter((r) => r.answer === 'NAO_SE_APLICA').length,
+    pendentes: d.filter((r) => !r.answer).length,
+  };
 }

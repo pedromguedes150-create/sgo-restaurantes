@@ -48,9 +48,12 @@ function ItemDaVisita({ r: inicial, visitId, tipos, acoes, onMudou, editavel }: 
   const foto = useRef<HTMLInputElement>(null);
   const acao = acoes.find((a) => a.responseId === r.id) ?? null;
   const nc = r.answer === 'NAO_CONFORME';
+  /* Seção B (v1.155.1): valida um DADO do SGO — Verificado / Requer ação / Não se aplica. */
+  const direcionada = r.level === 'DIRECIONADA';
+  const [pendente, setPendente] = useState<Resposta | null>(null);
   const comLimite = r.tempMin != null || r.tempMax != null;
 
-  async function salvar(campos: Record<string, string | null | undefined>, arquivo?: File) {
+  async function salvar(campos: Record<string, string | null | undefined>, arquivo?: File): Promise<boolean> {
     setBusy(true); setErro(null);
     const fd = new FormData();
     fd.append('responseId', r.id);
@@ -60,7 +63,7 @@ function ItemDaVisita({ r: inicial, visitId, tipos, acoes, onMudou, editavel }: 
     try {
       const res = await fetch('/api/supervision/operacional', { method: 'POST', body: fd });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) { setErro(d.error ?? 'Não foi possível salvar.'); return; }
+      if (!res.ok) { setErro(d.error ?? 'Não foi possível salvar.'); return false; }
       const novo: RespostaUI = {
         ...r, answer: d.answer ?? null, note: atual.note || null, gravity: d.answer === 'NAO_CONFORME' ? ((atual.gravity || 'MEDIA') as Gravidade) : null,
         sampleChecked: atual.sampleChecked ? Number(atual.sampleChecked) : null, sampleOk: atual.sampleOk ? Number(atual.sampleOk) : null,
@@ -68,8 +71,21 @@ function ItemDaVisita({ r: inicial, visitId, tipos, acoes, onMudou, editavel }: 
         photos: [...r.photos.filter((p) => p !== campos.removerFoto), ...(d.foto ? [d.foto as string] : [])],
       };
       setR(novo); onMudou(novo);
+      return true;
     } finally { setBusy(false); }
   }
+  async function confirmarDirecionada() {
+    if (!pendente || !nota.trim()) { setErro(pendente === 'NAO_SE_APLICA' ? 'Escreva a justificativa.' : 'Escreva a observação.'); return; }
+    if (await salvar({ answer: pendente, note: nota })) setPendente(null);
+  }
+  const botaoDir = (v: Resposta, rotulo: string, cor: string, acao: () => void) => {
+    const marcado = (pendente ?? r.answer) === v;
+    return (
+      <button type="button" disabled={!editavel || busy} onClick={acao} aria-pressed={marcado}
+        className={`flex min-h-12 flex-1 items-center justify-center gap-1 rounded-control border-2 px-2 text-sm font-semibold transition ${marcado ? cor : 'border-line bg-surface text-ink-700'}`}
+        data-testid={`dir-${v}`}>{rotulo}</button>
+    );
+  };
 
   async function criarAcao() {
     setBusy(true); setMsg(null);
@@ -128,6 +144,30 @@ function ItemDaVisita({ r: inicial, visitId, tipos, acoes, onMudou, editavel }: 
         </div>
       )}
 
+      {direcionada ? (
+        <>
+          <div className="flex gap-2">
+            {botaoDir('CONFORME', '✓ Verificado', 'border-success bg-success/10 text-success', () => { setPendente(null); void salvar({ answer: 'CONFORME' }); })}
+            {botaoDir('NAO_CONFORME', '⚠ Requer ação', 'border-danger bg-danger/10 text-danger', () => setPendente('NAO_CONFORME'))}
+            {botaoDir('NAO_SE_APLICA', '— Não se aplica', 'border-ink-400 bg-sunken text-ink-700', () => setPendente('NAO_SE_APLICA'))}
+          </div>
+          {r.answer === 'CONFORME' && !pendente && <p className="text-xs text-ink-500">Dado do SGO confirmado no local. Só fica registrado — nada é gerado.</p>}
+          {pendente && pendente !== r.answer && (
+            <div className="space-y-2 rounded-control border border-line bg-sunken p-2.5">
+              <label className="block"><span className="sgo-label mb-1 block">{pendente === 'NAO_SE_APLICA' ? 'Justificativa (obrigatória)' : 'Observação (obrigatória)'}</span>
+                <textarea value={nota} onChange={(e) => setNota(e.target.value)} rows={2} maxLength={500} autoFocus
+                  className="w-full rounded-control border border-line bg-surface px-3 py-2 text-sm" data-testid="texto-direcionada"
+                  placeholder={pendente === 'NAO_SE_APLICA' ? 'Por que o dado não corresponde à unidade' : 'Qual é a situação atual que precisa de tratamento'} />
+              </label>
+              <div className="flex gap-2">
+                <button type="button" className="sgo-btn sgo-btn--primary" disabled={busy || !nota.trim()} onClick={() => void confirmarDirecionada()} data-testid="salvar-direcionada">Salvar</button>
+                <button type="button" className="sgo-btn" onClick={() => setPendente(null)}>Cancelar</button>
+              </div>
+            </div>
+          )}
+          {r.answer === 'NAO_SE_APLICA' && !pendente && r.note && <p className="text-xs text-ink-700">Justificativa: {r.note}</p>}
+        </>
+      ) : (
       <div className="flex gap-2">
         {(r.mode === 'SIMPLES' || (r.mode === 'TEMPERATURA' && !comLimite)) && (
           <>
@@ -137,8 +177,9 @@ function ItemDaVisita({ r: inicial, visitId, tipos, acoes, onMudou, editavel }: 
         )}
         {botao('NAO_SE_APLICA', 'N/A', <Minus className="h-4 w-4" />, 'border-ink-400 bg-sunken text-ink-700')}
       </div>
+      )}
 
-      {nc && (
+      {nc && !pendente && (
         <div className="space-y-2 rounded-control border border-danger/30 bg-danger/5 p-2.5">
           <div>
             <span className="sgo-label mb-1 block">Gravidade</span>
@@ -149,7 +190,7 @@ function ItemDaVisita({ r: inicial, visitId, tipos, acoes, onMudou, editavel }: 
               ))}
             </div>
           </div>
-          <label className="block"><span className="sgo-label mb-1 block">Observação{r.noteOnNc ? ' (obrigatória)' : ''}</span>
+          <label className="block"><span className="sgo-label mb-1 block">Observação{r.noteOnNc || direcionada ? ' (obrigatória)' : ''}</span>
             <textarea value={nota} disabled={!editavel} onChange={(e) => setNota(e.target.value)} onBlur={() => nota !== (r.note ?? '') && void salvar({ note: nota })} rows={2} maxLength={500}
               className="w-full rounded-control border border-line bg-surface px-3 py-2 text-sm" placeholder="O que foi encontrado" />
           </label>
@@ -230,7 +271,7 @@ export function VisitaOperacionalClient({ visita, unidade, alertas, respostas: i
       return { nivel, itens, secoes };
     }).filter((g) => g.itens.length);
   }, [respostas]);
-  const TITULO: Record<string, string> = { DIRECIONADA: 'B · Direcionadas pelos dados do SGO', PRIMORDIAL: 'A · Conferências primordiais', COMPLEMENTAR: 'C · Conferências complementares' };
+  const TITULO: Record<string, string> = { DIRECIONADA: 'B · Direcionadas pelos dados do SGO (confira se o dado bate)', PRIMORDIAL: 'A · Conferências primordiais', COMPLEMENTAR: 'C · Conferências complementares' };
 
   async function validar(id: string, resolvido: boolean) {
     setValidando(id); setErro(null);

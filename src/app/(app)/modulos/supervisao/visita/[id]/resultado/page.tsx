@@ -4,7 +4,7 @@ import { AlertOctagon, ArrowLeft, CheckCircle2, ClipboardCheck, Download, Flag, 
 import { getSessionUser } from '@/lib/auth/session';
 import { abasDoPerfil } from '@/lib/permissions/abas-server';
 import { getVisitaOperacional } from '@/lib/supervisor/operacional';
-import { pctBR, ROTULO_SITUACAO } from '@/lib/supervisor/operacional-calculo';
+import { contagemDirecionadas, pctBR, ROTULO_DIRECIONADA, ROTULO_SITUACAO } from '@/lib/supervisor/operacional-calculo';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { Card, CardContent, PanelHeader } from '@/components/sgo/panel';
 import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
@@ -25,7 +25,11 @@ export default async function ResultadoDaVisitaPage({ params }: { params: { id: 
   const d = await getVisitaOperacional(user, params.id);
   if (!d || !d.unidade) notFound();
   const a = d.resumo.aderencia;
-  const ncs = d.respostas.filter((r) => r.answer === 'NAO_CONFORME');
+  const ncs = d.respostas.filter((r) => r.answer === 'NAO_CONFORME' && r.level !== 'DIRECIONADA');
+  /* Seção B: validação dos DADOS do SGO (Verificado / Requer ação / Não se aplica) — fora da aderência. */
+  const direcionadas = d.respostas.filter((r) => r.level === 'DIRECIONADA');
+  const dir = d.resumo.dadosSgo ?? contagemDirecionadas(d.respostas);
+  const DIR_TAG: Record<string, string> = { CONFORME: 'sgo-tag--green', NAO_CONFORME: 'sgo-tag--red', NAO_SE_APLICA: 'sgo-tag--gray' };
 
   return (
     <div className="sgo-print space-y-4" data-testid="resultado-visita">
@@ -71,6 +75,21 @@ export default async function ResultadoDaVisitaPage({ params }: { params: { id: 
         </Card>
       </div>
 
+      {direcionadas.length > 0 && (
+        <div className="sgo-panel overflow-hidden" data-testid="dados-sgo">
+          <PanelHeader title="Dados do SGO conferidos no local" count={direcionadas.length} />
+          <p className="px-4 pt-2 text-xs text-ink-500">{dir.verificados} verificado(s) · {dir.requerAcao} requer(em) ação · {dir.naoSeAplica} não se aplica(m){dir.pendentes ? ` · ${dir.pendentes} sem resposta` : ''}. Não entram na aderência operacional: validam o que o SGO informava.</p>
+          <ul className="divide-y divide-line">
+            {direcionadas.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-start gap-2 p-3 text-sm">
+                <span className="min-w-0 flex-1 text-ink-900">{r.text.replace(/^Conferir no local: /, '')}{r.note && <span className="block text-xs text-ink-700">{r.answer === 'NAO_SE_APLICA' ? 'Justificativa' : 'Observação'}: {r.note}</span>}</span>
+                {r.answer ? <span className={`sgo-tag ${DIR_TAG[r.answer]}`}>{ROTULO_DIRECIONADA[r.answer]}</span> : <span className="text-xs text-ink-500">sem resposta</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {ncs.length > 0 && (
         <div className="sgo-panel overflow-hidden">
           <PanelHeader title="Não conformidades" count={ncs.length} countTone="red" />
@@ -109,7 +128,7 @@ export default async function ResultadoDaVisitaPage({ params }: { params: { id: 
           <table className="sgo-tbl w-full text-sm">
             <thead><tr><th className="text-left">Seção</th><th className="text-left">Item</th><th className="text-left">Resposta</th></tr></thead>
             <tbody>{d.respostas.map((r) => (
-              <tr key={r.id}><td className="text-ink-700">{r.section}</td><td>{r.text}</td><td>{r.answer ? <span className={`sgo-tag ${RESP[r.answer].c}`}>{RESP[r.answer].t}</span> : <span className="text-xs text-ink-500">sem resposta</span>}</td></tr>
+              <tr key={r.id}><td className="text-ink-700">{r.section}</td><td>{r.text}</td><td>{r.answer ? <span className={`sgo-tag ${RESP[r.answer].c}`}>{r.level === 'DIRECIONADA' ? ROTULO_DIRECIONADA[r.answer] : RESP[r.answer].t}</span> : <span className="text-xs text-ink-500">sem resposta</span>}</td></tr>
             ))}</tbody>
           </table>
         </div>
