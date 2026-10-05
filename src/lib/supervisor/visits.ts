@@ -54,10 +54,13 @@ export async function completeVisit(
   ctx: Ctx = {},
 ): Promise<Result> {
   if (!canOperate(user)) return { ok: false, reason: 'FORBIDDEN' };
-  const v = await prisma.supervisorVisit.findUnique({ where: { id }, select: { unitId: true, status: true } });
+  const v = await prisma.supervisorVisit.findUnique({ where: { id }, select: { unitId: true, status: true, kind: true } });
   if (!v) return { ok: false, reason: 'NOT_FOUND' };
   if (!canAccessUnit(user, v.unitId)) return { ok: false, reason: 'FORBIDDEN' };
   if (v.status !== 'PLANNED') return { ok: false, reason: 'INVALID', detail: 'Esta visita já foi concluída/cancelada.' };
+  /* Visita operacional (v1.155.0) se encerra pela própria tela, que congela o
+     resultado; concluir por aqui deixaria a visita sem aderência nem resumo. */
+  if (v.kind === 'OPERACIONAL') return { ok: false, reason: 'INVALID', detail: 'Esta é uma visita operacional: finalize pela tela da visita (Acompanhamento operacional).' };
   const feedback = input.feedback?.trim();
   if (!feedback) return { ok: false, reason: 'INVALID', detail: 'Escreva o feedback da visita.' };
 

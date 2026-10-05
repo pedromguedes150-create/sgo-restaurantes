@@ -37,7 +37,9 @@ const fmtMonthLong = (ym: string) => {
 };
 const TONE_DOT = { success: 'bg-success', medium: 'bg-warning', critical: 'bg-danger' } as const;
 
-export function SupervisionClient({ usage, yearMonth, months, board, units, checklists, plans, canOperate, isAdmin, abas = {}, subtitulo, acoes }: {
+export function SupervisionClient({ usage, yearMonth, months, board, units, checklists, plans, canOperate, isAdmin, abas = {}, subtitulo, acoes, operacional }: {
+  /** Aba "Acompanhamento operacional" (v1.155.0), montada no servidor. */
+  operacional?: React.ReactNode;
   /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
   subtitulo?: React.ReactNode;
   /** Ações do cabeçalho do kit (vêm da página de servidor). */
@@ -50,7 +52,7 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
   abas?: AcessoAbas;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'PAINEL' | 'VISITAS'>(abaInicial(abas, 'SUPERVISION', 'PAINEL') as 'PAINEL' | 'VISITAS');
+  const [tab, setTab] = useState<'PAINEL' | 'VISITAS' | 'OPERACIONAL'>(abaInicial(abas, 'SUPERVISION', 'PAINEL') as 'PAINEL' | 'VISITAS' | 'OPERACIONAL');
   const [busy, setBusy] = useState(false);
   const [vUnit, setVUnit] = useState('');
   const [vDate, setVDate] = useState('');
@@ -72,9 +74,11 @@ export function SupervisionClient({ usage, yearMonth, months, board, units, chec
       <LargeTitle
         title="Rotina do Supervisor"
         subtitle={subtitulo}
-        tabs={[{ value: 'PAINEL' as const, label: 'Painel de uso' }, { value: 'VISITAS' as const, label: 'Visitas & Feedbacks' }].filter((o) => podeAba(abas, o.value)).map((o) => ({ label: o.label, active: tab === o.value, testId: `aba-${o.value.toLowerCase()}`, onClick: () => setTab(o.value) }))}
+        tabs={[{ value: 'PAINEL' as const, label: 'Painel de uso' }, { value: 'VISITAS' as const, label: 'Visitas & Feedbacks' }, ...(operacional ? [{ value: 'OPERACIONAL' as const, label: 'Acompanhamento operacional' }] : [])].filter((o) => podeAba(abas, o.value)).map((o) => ({ label: o.label, active: tab === o.value, testId: `aba-${o.value.toLowerCase()}`, onClick: () => setTab(o.value) }))}
         actions={acoes}
       />
+
+      {tab === 'OPERACIONAL' && operacional}
 
       {tab === 'PAINEL' && (
         <div className="space-y-3">

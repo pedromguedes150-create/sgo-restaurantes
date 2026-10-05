@@ -10,7 +10,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Sheet } from '@/components/ui/ds/sheet';
 import { postAdmin } from '@/lib/admin-client';
 
-export interface UnitRow { id: string; name: string; code: string; address: string | null; cutoffHour: number; timezone: string; active: boolean; rhUnitName: string | null; cnpj: string | null; hasPizzeria: boolean }
+export interface UnitRow { id: string; name: string; code: string; address: string | null; cutoffHour: number; timezone: string; active: boolean; rhUnitName: string | null; cnpj: string | null; hasPizzeria: boolean; operationType?: string }
 
 /** Formata 14 dígitos como CNPJ; devolve o valor cru se não tiver 14 dígitos. */
 function formatCnpj(d: string | null): string | null {
@@ -100,6 +100,13 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
     onChange();
   }
+  async function mudarTipo(t: string) {
+    setBusy(true); setMsg(null);
+    const r = await postAdmin({ entity: 'unit', action: 'update', id: unit.id, operationType: t });
+    setBusy(false);
+    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    onChange();
+  }
   async function remove() {
     if (!confirm(`Excluir a unidade "${unit.name}"? Só é possível se não houver nenhum dado operacional (tarefas, lançamentos, etc.). Caso contrário, inative-a.`)) return;
     setBusy(true); setMsg(null);
@@ -126,6 +133,7 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
           {/* O selo só aparece quando LIGADO: mostrar "sem pizzaria" em toda
               unidade encheria a lista com a ausência de um recurso que é de
               uma só. Quem liga/desliga usa a caixa dentro da edição. */}
+          {unit.operationType && unit.operationType !== 'RESTAURANTE' && <StatusBadge tone="neutral">{({ LANCHONETE: 'Lanchonete', CD: 'CD', FABRICA: 'Fábrica' } as Record<string, string>)[unit.operationType]}</StatusBadge>}
           {unit.hasPizzeria && <StatusBadge tone="success">Com pizzaria</StatusBadge>}
           <button onClick={toggle}><StatusBadge tone={unit.active ? 'success' : 'critical'}>{unit.active ? 'Ativa' : 'Inativa'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
@@ -151,6 +159,16 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
             <Button size="sm" variant="outline" className="mt-2" disabled={busy} onClick={togglePizzaria}>
               <Pizza className="h-4 w-4" /> {unit.hasPizzeria ? 'Desligar pizzaria' : 'Esta unidade tem pizzaria'}
             </Button>
+          </div>
+          <div className="col-span-2 rounded-lg border border-line bg-surface p-2">
+            <Label className="text-xs">Tipo de operação</Label>
+            <p className="mt-0.5 text-xs text-ink-500">Decide quais itens a visita operacional da supervisão confere aqui (ex.: buffet só em restaurante; separação só no CD).</p>
+            <div className="mt-2 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Tipo de operação">
+              {([['RESTAURANTE', 'Restaurante'], ['LANCHONETE', 'Lanchonete'], ['CD', 'Centro de Distribuição'], ['FABRICA', 'Fábrica']] as const).map(([v, t]) => (
+                <button key={v} type="button" role="radio" aria-checked={(unit.operationType ?? 'RESTAURANTE') === v} disabled={busy} onClick={() => void mudarTipo(v)}
+                  className={`sgo-btn sgo-btn--sm ${(unit.operationType ?? 'RESTAURANTE') === v ? 'sgo-btn--primary' : ''}`} data-testid={`tipo-${v}`}>{t}</button>
+              ))}
+            </div>
           </div>
           <Button size="sm" className="col-span-2" disabled={busy} onClick={saveEdit}><Save className="h-4 w-4" /> Salvar alterações</Button>
         </div>

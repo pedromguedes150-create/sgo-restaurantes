@@ -10,6 +10,8 @@ import { getUsageBoard } from '@/lib/supervisor/usage';
 import { getVisitBoard, listSupervisorChecklists } from '@/lib/supervisor/visits';
 import { listVisitPlans } from '@/lib/supervisor/visit-plans';
 import { SupervisionClient } from '@/components/supervisor/supervision-client';
+import { PainelOperacional } from '@/components/supervisor/painel-operacional';
+import { ensureDefaultAuditItems, getIndicadoresOperacionais, podeConduzirVisita } from '@/lib/supervisor/operacional';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,13 +38,36 @@ export default async function SupervisaoPage({ searchParams }: { searchParams: {
     listVisitPlans(user),
   ]);
 
+  /* Aba "Acompanhamento operacional" (v1.155.0): só é montada para quem a vê. */
+  const abas = await abasDoPerfil(user.role, 'SUPERVISION');
+  let operacional: React.ReactNode = null;
+  if (abas.OPERACIONAL?.canView !== false) {
+    await ensureDefaultAuditItems().catch(() => {});
+    const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const nomes = new Map(units.map((u) => [u.id, u.name]));
+    const [dados, andamento, planejadas] = await Promise.all([
+      getIndicadoresOperacionais(user, yearMonth),
+      prisma.supervisorVisit.findMany({ where: { kind: 'OPERACIONAL', status: 'PLANNED', startedAt: { not: null }, ...unitScopeWhere(user, 'unitId') }, orderBy: { scheduledDate: 'asc' }, select: { id: true, unitId: true, scheduledDate: true, responses: { select: { answer: true } } } }),
+      prisma.supervisorVisit.findMany({ where: { kind: 'SIMPLES', status: 'PLANNED', scheduledDate: { gte: new Date(Date.parse(`${hoje}T12:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10) }, ...unitScopeWhere(user, 'unitId') }, orderBy: { scheduledDate: 'asc' }, take: 20, select: { id: true, unitId: true, scheduledDate: true } }),
+    ]);
+    operacional = (
+      <PainelOperacional
+        d={dados}
+        podeConduzir={podeConduzirVisita(user)}
+        emAndamento={andamento.map((v) => ({ id: v.id, unitName: nomes.get(v.unitId) ?? '', data: v.scheduledDate, respondidos: v.responses.filter((r) => r.answer).length, total: v.responses.length }))}
+        planejadas={planejadas.map((v) => ({ id: v.id, unitName: nomes.get(v.unitId) ?? '', data: v.scheduledDate }))}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* O cabeçalho (título, abas, ação) vive no cliente, no padrão do kit. */}
       <SupervisionClient
-        subtitulo={<>Painel de uso dos gerentes, visitas com feedback e checklists de visita.<span className="block"><FamilyTabs active="/modulos/supervisao" /></span></>}
+        subtitulo={<>Painel de uso dos gerentes, visitas com feedback e o acompanhamento operacional (o que a visita confere no local).<span className="block"><FamilyTabs active="/modulos/supervisao" /></span></>}
         acoes={<Link href="/modulos/painel-unidade" className="sgo-btn">📋 Painel da unidade (reunião)</Link>}
-        abas={await abasDoPerfil(user.role, 'SUPERVISION')}
+        abas={abas}
+        operacional={operacional}
         usage={usage}
         yearMonth={yearMonth}
         months={months}

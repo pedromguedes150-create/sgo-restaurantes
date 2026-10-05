@@ -165,6 +165,9 @@ export const REGRAS: Record<string, RegraDeRota> = {
 
   '/api/supervision': { modulo: 'SUPERVISION', exigir: 'editar' },
   '/api/supervision/export': { modulo: 'SUPERVISION', exigir: 'ver' },
+  '/api/supervision/operacional': { modulo: 'SUPERVISION_TAB_OPERATIONAL', exigir: 'editar' },
+  '/api/supervision/operacional/export': { modulo: 'SUPERVISION_TAB_OPERATIONAL', exigir: 'ver' },
+  '/api/plano-de-acao': { modulo: 'VISIT_ACTIONS', exigir: 'editar' },
 
   '/api/suppliers': { modulo: 'CONFIG_SUPPLIERS', exigir: 'editar' },
 
