@@ -9,6 +9,24 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.152.0 — 2026-10-05 (Desperdícios: fotos que abrem, Conferência e Performance no painel)
+### Corrigido
+- **As fotos do desperdício não abriam.** A tela montava o endereço `/api/uploads/…`, rota que não existe (404); os arquivos são servidos em `/uploads/…`. Valia para a foto do recipiente dos Salgados e para as fotos por procedimento do Restaurante. O endereço agora sai de uma função só (`urlDoUpload`), com teste.
+### Adicionado
+- **Painel de desperdício com três abas**: **Resumo** (o de sempre), **Conferência** e **Performance**, para Restaurante (kg) e Salgados (un.), por mês e com filtro de unidade.
+- **Conferência**: indicadores (lançamentos × esperados, dias sem lançamento, com foto, sem foto, lançados depois do dia), **mapa unidade × dia** (com foto / sem foto / sem peso / não lançou; tocar leva ao lançamento) e a lista de cada lançamento com itens, total, quem registrou e quando, observação e as **fotos em miniatura** que ampliam num modal com Anterior/Próximo e "abrir em nova aba". Filtros "sem foto" e "lançados depois".
+- **Performance**: veredito Aumentou/Diminuiu/Estável vs o mês anterior pela **média por dia lançado** (lançar menos dias não é desperdiçar menos), gráfico por dia com a média do mês anterior tracejada, tendência de 6 meses, unidades que aumentaram e diminuíram, comparativo por unidade com minitendência, por tipo (e por motivo nos Salgados), por turno (Restaurante) e por dia da semana.
+- **Foto do Restaurante opcional, com chave para cobrar depois**: Configurações → Desperdícios → "Exigir foto no desperdício do Restaurante" (desligada). Ligada, cada procedimento com peso precisa da sua foto — na tela e no servidor. Salgados continua exigindo a foto do recipiente.
+### Alterado
+- Tela de Desperdícios: histórico do Restaurante com as fotos passa a aparecer para quem abre a unidade (era só do Admin; excluir continua só do Admin); lista dos Salgados mostra "Com foto / Sem foto" e a miniatura; datas em dd/mm/aaaa; botão "Conferência (fotos)".
+
+## v1.151.0 — 2026-10-05 (Kit de layout — Fase 4, lote 7 (último): Configurações e varredura final)
+### Alterado
+- **Configurações → Checklists**: as quatro seções (Checklists das unidades / Resumo por unidade / Biblioteca de modelos / Checklists de supervisor) viraram as sub-abas do cabeçalho do kit (links; a ativa pela URL). As demais 20 telas de Configurações já estavam no padrão (cabeçalho do kit + painel) desde o lote 1 e não precisaram de mudança.
+### Verificado
+- **Varredura final**: todas as rotas do sistema medidas a 375px (iframe, sessão do Admin) — sem transbordo horizontal — e as telas principais conferidas no tema escuro. Foram 88 rotas; as 3 que estouraram o tempo de compilação do servidor de desenvolvimento (/modulos, /modulos/comandas/conferencia, /modulos/estoque) foram reconferidas uma a uma, sem transbordo. Tema escuro conferido pelo cookie real (sgo-theme=dark): painel sólido, indicadores e cabeçalho com os tokens escuros. Teste de fonte telas-kit-lote7 trava as sub-abas de Checklists.
+- Com este lote a **Fase 4 está concluída**: as 7 entregas (lotes 1–7) levaram todas as telas à hierarquia do kit — barra → cabeçalho com abas → filtros → indicadores → painéis/tabelas → modal/painel lateral — mantendo a identidade bordô, os dados, as regras e as permissões do Restaurante.
+
 ## v1.150.0 — 2026-10-05 (Kit de layout — Fase 4, lote 6: Comunicação, Minha área, Desligamentos, Cancelamentos, Separação, Mapa de Funções, Controle de gerentes, POPs, Treinamentos, Mudanças, Auditoria, Inventário e Avaliação)
 ### Alterado
 - **Central de Comunicação**, **Minha área** e **Desligamentos**: as abas (Recebidos com o nº de pendentes / Novo comunicado / Painel & Histórico; Tarefas / Notas / Folgas; Solicitar / Solicitações) passaram ao cabeçalho do kit; os botões-pílula próprios dessas telas saíram.

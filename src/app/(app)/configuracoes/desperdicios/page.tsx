@@ -5,6 +5,8 @@ import { ensureDefaultSnackOptions, getSnackOptions } from '@/lib/waste/salgados
 import { Card, CardContent } from '@/components/ui/card';
 import { WasteCategoriesAdmin } from '@/components/admin/waste-categories-admin';
 import { SnackOptionsAdmin } from '@/components/admin/snack-options-admin';
+import { WastePhotoConfig } from '@/components/admin/waste-photo-config';
+import { getWastePhotoRequired } from '@/lib/waste/foto-config';
 import { ArrowLeft } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
 
@@ -16,15 +18,20 @@ export default async function DesperdiciosConfigPage() {
   /* Semeia o catálogo de salgados na primeira abertura — o Pedro cadastra os
      dele depois, editando/acrescentando aqui. */
   await ensureDefaultSnackOptions().catch(() => {});
-  const [categories, opcoes] = await Promise.all([
+  const [categories, opcoes, fotoObrigatoria] = await Promise.all([
     prisma.wasteCategory.findMany({ orderBy: [{ active: 'desc' }, { order: 'asc' }, { name: 'asc' }], select: { id: true, name: true, active: true, measure: true } }),
     getSnackOptions({ includeInactive: true }),
+    getWastePhotoRequired(),
   ]);
 
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
       <LargeTitle title="Desperdícios" subtitle="Restaurante (kg) e Salgados (unidades) são frentes separadas." />
+
+      <Card><CardContent className="pt-4">
+        <WastePhotoConfig required={fotoObrigatoria} />
+      </CardContent></Card>
 
       <Card><CardContent className="pt-4">
         <p className="mb-2 sgo-type-15 font-semibold text-ink-900">Sobras Restaurante — categorias (kg)</p>

@@ -14,6 +14,7 @@ import { setGasAlertPct, setGasMaxPriceKg } from '@/lib/gas/query';
 import { setFreelancerWeekLimit } from '@/lib/payments/recorrencia';
 import { mesclarFreelancers } from '@/lib/payments/mesclar-freelancers';
 import { setChecklistToleranceMin } from '@/lib/tasks/tolerance';
+import { setWastePhotoRequired } from '@/lib/waste/foto-config';
 import { setHourlyRate, addHoliday, deleteHoliday } from '@/lib/freelancer/pricing';
 import { addOvertimeRate, toggleOvertimeRate, deleteOvertimeRate } from '@/lib/overtime/rates';
 import { addOvertimeReason, renameOvertimeReason, toggleOvertimeReason, deleteOvertimeReason } from '@/lib/overtime/reasons';
@@ -103,6 +104,7 @@ export async function POST(req: Request) {
   else if (e === 'gas' && a === 'setMaxPriceKg') r = await setGasMaxPriceKg(user, Number(b.teto));
   else if (e === 'freelancer' && a === 'setWeekLimit') r = await setFreelancerWeekLimit(user, Number(b.limit));
   else if (e === 'checklistTolerance' && a === 'set') r = await setChecklistToleranceMin(user, Number(b.minutes), ctx);
+  else if (e === 'wastePhoto' && a === 'setRequired') r = await setWastePhotoRequired(user, b.required === true, ctx);
   else if (e === 'freelancerRate' && a === 'set') r = await setHourlyRate(user, b.unitId, b.dayType as DayType, Number(b.value), ctx);
   else if (e === 'holiday' && a === 'add') r = await addHoliday(user, b.date, b.name, ctx);
   else if (e === 'holiday' && a === 'delete') r = await deleteHoliday(user, b.id, ctx);

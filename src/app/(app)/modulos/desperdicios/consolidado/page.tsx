@@ -1,6 +1,8 @@
 import Link from 'next/link';
-import { ArrowLeft, TrendingUp, TrendingDown, TriangleAlert, Printer } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, TriangleAlert, Printer, LayoutGrid, ClipboardCheck, LineChart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
+import { prisma } from '@/lib/db/prisma';
+import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getConsolidadoDeDesperdicio } from '@/lib/waste/consolidado';
 import { getEvolucaoDesperdicioKg } from '@/lib/waste/evolucao';
 import { getConsolidadoSalgados } from '@/lib/waste/salgados';
@@ -8,10 +10,18 @@ import { TIPOS_DE_DESPERDICIO, GRUPOS, LABEL_TOTAL_GERAL, LABEL_TOTAL_GERAL_MES 
 import { Card, CardContent } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { shortUnitName } from '@/lib/unit-name';
+import { getConferencia, getPerformance } from '@/lib/waste/painel';
+import { getWastePhotoRequired } from '@/lib/waste/foto-config';
+import { PainelConferencia, type FiltroConferencia } from '@/components/waste/painel-conferencia';
+import { PainelPerformance } from '@/components/waste/painel-performance';
+import { UnitSelectNav } from '@/components/ui/unit-select-nav';
+import { SegmentedNav } from '@/components/ui/ds/segmented-nav';
 
 export const dynamic = 'force-dynamic';
 
 type Aba = 'restaurante' | 'salgados';
+type Visao = 'resumo' | 'conferencia' | 'performance';
+const TODAS = 'todas';
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const MES_CURTO = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
@@ -57,37 +67,90 @@ function Evolucao({ pontos, unidade }: { pontos: { ym: string; valor: number }[]
 export default async function ConsolidadoDesperdicioPage({
   searchParams,
 }: {
-  searchParams: { ano?: string; mes?: string; aba?: string };
+  searchParams: { ano?: string; mes?: string; aba?: string; visao?: string; unidade?: string; filtro?: string };
 }) {
   const user = (await getSessionUser())!;
   const agora = new Date();
   const year = Number(searchParams.ano) || agora.getFullYear();
   const month = Math.min(12, Math.max(1, Number(searchParams.mes) || agora.getMonth() + 1));
   const aba: Aba = searchParams.aba === 'salgados' ? 'salgados' : 'restaurante';
+  const visao: Visao = searchParams.visao === 'conferencia' || searchParams.visao === 'performance' ? searchParams.visao : 'resumo';
+  const unidade = searchParams.unidade && searchParams.unidade !== TODAS ? searchParams.unidade : null;
+  const filtro: FiltroConferencia = searchParams.filtro === 'sem-foto' || searchParams.filtro === 'depois' ? searchParams.filtro : 'todos';
 
   const ant = month === 1 ? { a: year - 1, m: 12 } : { a: year, m: month - 1 };
   const prox = month === 12 ? { a: year + 1, m: 1 } : { a: year, m: month + 1 };
-  const link = (a: number, m: number, ab: Aba = aba) => `/modulos/desperdicios/consolidado?ano=${a}&mes=${m}&aba=${ab}`;
+  /* Todo estado do painel mora na URL (o link que o supervisor manda já abre
+     no lugar certo e a impressão sai igual à tela). */
+  const link = (a: number, m: number, ab: Aba = aba, v: Visao = visao, extra: Record<string, string> = {}) => {
+    const q = new URLSearchParams({ ano: String(a), mes: String(m), aba: ab, visao: v });
+    if (unidade && v !== 'resumo') q.set('unidade', unidade);
+    for (const [k, val] of Object.entries(extra)) q.set(k, val);
+    return `/modulos/desperdicios/consolidado?${q.toString()}`;
+  };
 
+  const unidadesDoFiltro = visao === 'resumo' ? [] : await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
+  const subtitulos: Record<Visao, string> = {
+    resumo: 'O mês da rede, unidade por unidade.',
+    conferencia: 'Cada lançamento com quem lançou, quando e as fotos.',
+    performance: 'Aumentou ou diminuiu? Gráficos e comparação com o mês anterior.',
+  };
   const cabecalho = (
     <>
       <Link href={`/modulos/desperdicios?aba=${aba}`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand print:hidden">
         <ArrowLeft className="h-4 w-4" /> Desperdícios
       </Link>
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <LargeTitle title="Painel consolidado" subtitle={aba === 'restaurante' ? 'Sobras Restaurante — todas as unidades, em kg.' : 'Sobras Salgados — todas as unidades, em unidades.'} />
-        <div className="inline-flex overflow-hidden rounded-control border border-line print:hidden">
-          <Link href={link(year, month, 'restaurante')} className={`px-3 py-1.5 sgo-type-13 font-semibold ${aba === 'restaurante' ? 'bg-brand text-on-brand' : 'bg-surface text-ink-700 hover:bg-sunken'}`}>Restaurante</Link>
-          <Link href={link(year, month, 'salgados')} className={`px-3 py-1.5 sgo-type-13 font-semibold ${aba === 'salgados' ? 'bg-brand text-on-brand' : 'bg-surface text-ink-700 hover:bg-sunken'}`}>Salgados</Link>
+      {/* Cabeçalho do kit: as três visões são as abas; frente, mês e unidade
+          ficam na linha de filtros. Restaurante (kg) e Salgados (un.) nunca se somam. */}
+      <LargeTitle
+        title="Painel de desperdício"
+        subtitle={`${aba === 'restaurante' ? 'Sobras Restaurante (kg)' : 'Sobras Salgados (unidades)'} · ${subtitulos[visao]}`}
+        tabs={[
+          { label: 'Resumo', icon: <LayoutGrid className="h-3.5 w-3.5" />, href: link(year, month, aba, 'resumo'), active: visao === 'resumo', testId: 'visao-resumo' },
+          { label: 'Conferência', icon: <ClipboardCheck className="h-3.5 w-3.5" />, href: link(year, month, aba, 'conferencia'), active: visao === 'conferencia', testId: 'visao-conferencia' },
+          { label: 'Performance', icon: <LineChart className="h-3.5 w-3.5" />, href: link(year, month, aba, 'performance'), active: visao === 'performance', testId: 'visao-performance' },
+        ]}
+        actions={<span className="hidden items-center gap-1.5 text-xs text-ink-500 sm:inline-flex"><Printer className="h-4 w-4" /> Imprimir do navegador gera o PDF</span>}
+      />
+      <div className="sgo-filtros -mx-4 print:hidden">
+        <span className="sgo-label">Frente</span>
+        <SegmentedNav aria-label="Frente do desperdício" value={aba}
+          options={[{ value: 'restaurante', label: 'Restaurante (kg)', href: link(year, month, 'restaurante') }, { value: 'salgados', label: 'Salgados (un.)', href: link(year, month, 'salgados') }]} />
+        <span className="sgo-label">Mês</span>
+        <div className="inline-flex items-center gap-1">
+          <Link href={link(ant.a, ant.m)} className="sgo-btn sgo-btn--sm" aria-label="Mês anterior"><ChevronLeft className="h-3.5 w-3.5" /></Link>
+          <span className="min-w-32 text-center text-sm font-bold capitalize text-ink-900">{MESES[month - 1]} de {year}</span>
+          <Link href={link(prox.a, prox.m)} className="sgo-btn sgo-btn--sm" aria-label="Próximo mês"><ChevronRight className="h-3.5 w-3.5" /></Link>
         </div>
-      </div>
-      <div className="flex items-center justify-between rounded-lg border border-dashed p-2 print:hidden">
-        <Link href={link(ant.a, ant.m)} className="rounded-lg border px-3 py-1.5 text-sm font-semibold">← anterior</Link>
-        <span className="text-sm font-bold text-ink-900">{MESES[month - 1]} de {year}</span>
-        <Link href={link(prox.a, prox.m)} className="rounded-lg border px-3 py-1.5 text-sm font-semibold">próximo →</Link>
+        {visao !== 'resumo' && unidadesDoFiltro.length > 1 && (
+          <>
+            <span className="sgo-label">Unidade</span>
+            <UnitSelectNav paramName="unidade" units={[{ id: TODAS, name: 'Todas as unidades' }, ...unidadesDoFiltro.map((u) => ({ id: u.id, name: shortUnitName(u.name) }))]} selected={unidade ?? TODAS} />
+          </>
+        )}
       </div>
     </>
   );
+
+  /* ───────────────────────── CONFERÊNCIA / PERFORMANCE ───────────────────────── */
+  if (visao === 'conferencia') {
+    const [dados, fotoObrigatoria] = await Promise.all([getConferencia(user, aba, year, month, unidade), getWastePhotoRequired()]);
+    return (
+      <div className="space-y-4">
+        {cabecalho}
+        <PainelConferencia d={dados} filtro={filtro} fotoObrigatoria={fotoObrigatoria} linkFiltro={(f) => link(year, month, aba, 'conferencia', f === 'todos' ? {} : { filtro: f })} />
+      </div>
+    );
+  }
+  if (visao === 'performance') {
+    const dados = await getPerformance(user, aba, year, month, unidade);
+    return (
+      <div className="space-y-4">
+        {cabecalho}
+        <PainelPerformance d={dados} />
+      </div>
+    );
+  }
 
   /* ───────────────────────── SALGADOS (unidades) ───────────────────────── */
   if (aba === 'salgados') {
@@ -131,6 +194,8 @@ export default async function ConsolidadoDesperdicioPage({
           <Evolucao pontos={s.evolucao.map((e) => ({ ym: e.ym, valor: e.total }))} unidade="un" />
         </CardContent></Card>
 
+        <p className="text-xs text-ink-500 print:hidden">Para ver cada lançamento com a foto do recipiente, abra <Link className="font-semibold text-brand underline" href={link(year, month, aba, 'conferencia')}>Conferência</Link>; para saber se aumentou ou diminuiu, <Link className="font-semibold text-brand underline" href={link(year, month, aba, 'performance')}>Performance</Link>.</p>
+
         {semLancamento.length > 0 && (
           <p className="flex items-start gap-2 rounded-lg border border-warning bg-warning-bg p-2 text-sm text-warning print:hidden">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
@@ -171,7 +236,6 @@ export default async function ConsolidadoDesperdicioPage({
             </tfoot>
           </table>
         </div>
-        <p className="flex items-center gap-1.5 text-xs text-ink-500 print:hidden"><Printer className="h-4 w-4" /> Use Imprimir do navegador para gerar o PDF.</p>
       </div>
     );
   }
@@ -280,7 +344,6 @@ export default async function ConsolidadoDesperdicioPage({
       <p className="text-xs text-ink-500">
         <b>Dias lançados</b> é a cobertura: uma unidade com poucos dias lançados pode parecer que desperdiça pouco só porque quase não registrou. Leia a variação junto com essa coluna. As colunas “Refeitório (histórico)” existem só para os meses anteriores à mudança — não se lança mais nelas.
       </p>
-      <p className="flex items-center gap-1.5 text-xs text-ink-500 print:hidden"><Printer className="h-4 w-4" /> Use Imprimir do navegador para gerar o PDF desta tabela.</p>
     </div>
   );
 }
