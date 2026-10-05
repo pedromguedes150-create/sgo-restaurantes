@@ -7,6 +7,7 @@ import { getSelectedUnitId } from '@/lib/scope/selected-unit';
 import { roleLabel } from '@/lib/roles';
 import { Suspense } from 'react';
 import { SgoNavbar } from '@/components/layout/sgo-navbar';
+import { AlertaHigiene } from '@/components/hygiene/alerta-higiene';
 import { BottomNav } from '@/components/layout/bottom-nav';
 import { CommandPalette } from '@/components/layout/command-palette';
 import { PageChromeProvider } from '@/components/layout/page-chrome';
@@ -87,6 +88,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               versao={APP_VERSION_LABEL}
               atualizadoEm={atualizadoEm}
             />
+            {/* Apito do banheiro (v1.156.0): quem recebe o aviso do QR — gerente e coordenador. */}
+            {(user.role === 'MANAGER' || user.role === 'COORDINATOR') && <AlertaHigiene />}
             <main className="sgo-shell__main flex-1 px-4 pb-24 md:pb-16 print:p-0">
               {/* Alvo do trilho de módulo (ModuleShell): no fluxo, altura zero quando vazio. */}
               <div id={SUBNAV_PORTAL_ID} className="-mx-4 shrink-0" />

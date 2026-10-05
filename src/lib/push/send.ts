@@ -40,6 +40,8 @@ export interface PushPayload {
   link?: string;
   module?: string;
   critical?: boolean;
+  alerta?: 'higiene';
+  tag?: string;
 }
 
 /** Corta o texto para caber no limite de payload do serviço de push (~4KB). */
@@ -76,8 +78,9 @@ export async function sendPushToUsers(userIds: string[], p: PushPayload): Promis
     title: trim(p.title, 120),
     body: trim(p.body, 300),
     link: p.link ?? '/notificacoes',
-    tag: p.module ? `sgo-${p.module.toLowerCase()}` : undefined,
+    tag: p.tag ?? (p.module ? `sgo-${p.module.toLowerCase()}` : undefined),
     critical: Boolean(p.critical),
+    alerta: p.alerta,
     at: Date.now(),
   });
 

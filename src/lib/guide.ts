@@ -1362,6 +1362,19 @@ export const GUIDE: GuideSection[] = [
     title: 'Pessoas e Escala',
     guides: [
       {
+        id: 'higiene-qr',
+        title: 'Higiene dos banheiros (QR)',
+        roles: ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'ADMIN'],
+        summary: 'O cliente lê o QR e avisa; o celular do gerente apita.',
+        steps: [
+          'CARTAZES: em Tarefas → Higiene dos banheiros, cadastre os banheiros da unidade (ex.: Masculino, Feminino, PCD) e toque em "Imprimir cartazes com QR". Sai um cartaz por banheiro e um geral da unidade — cada QR é da SUA unidade. Cole perto da pia ou da porta.',
+          'CLIENTE: aponta a câmera, cai no banheiro certo e toca UMA vez: Precisa de limpeza, Falta papel, Falta sabonete ou Lixo cheio (ou "Outro problema"). Avaliar com estrelas é opcional, depois.',
+          'GERENTE e COORDENADOR: o aviso chega na hora, fica na tela até ser tocado e vibra diferente dos outros. Com o SGO aberto aparece uma faixa vermelha com som próprio e o botão "Ver"; dá para desligar o som pela própria faixa.',
+          'Para o celular apitar com a tela bloqueada: ative as notificações em Meu Perfil (no iPhone, instale o SGO na tela inicial antes). O som da notificação com a tela bloqueada é o padrão do celular; o som próprio toca com o SGO aberto.',
+          'O mesmo aviso repetido em até 5 minutos não apita de novo. Resolvido o problema, marque como resolvido em Higiene dos banheiros — o tempo de resposta entra na análise.',
+        ],
+      },
+      {
         id: 'acompanhamento-operacional',
         title: 'Acompanhamento operacional (visita)',
         roles: ['SUPERVISOR', 'COORDINATOR', 'ADMIN', 'MANAGER'],

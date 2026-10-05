@@ -9,6 +9,18 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.156.0 — 2026-10-05 (Higiene dos banheiros: QR por banheiro e alerta com toque próprio no celular do gerente)
+### Alterado
+- **Página do QR (cliente)**: um toque já avisa — botões grandes **Precisa de limpeza · Falta papel · Falta sabonete · Lixo cheio** (+ "Outro problema" com texto). O QR de cada banheiro já abre com ele escolhido; o QR geral da unidade pergunta o banheiro antes. A avaliação por estrelas ficou DEPOIS do envio, opcional.
+- **Alerta do gerente**: o aviso vai para o **gerente e o coordenador da unidade**, como **crítico** (passa por cima da preferência de notificações e fica na tela até ser tocado), com **vibração longa e diferente** das demais no celular. Com o SGO aberto (inclusive em aba de fundo no computador), aparece uma faixa vermelha com **som próprio** e botão "Ver".
+- O mesmo aviso (mesmo banheiro e motivo) repetido em até 5 minutos **não toca de novo**.
+### Adicionado
+- **Cartazes para imprimir com QR** (Higiene dos banheiros → "Imprimir cartazes com QR"): um por banheiro + um geral da unidade, cada QR vinculado à sua unidade. O QR é gerado no próprio SGO.
+### Corrigido
+- "Horário de pico" era calculado no fuso do servidor (UTC, 3h adiantado); agora é o horário de Brasília.
+### Observação
+- O **som** do aviso com a tela bloqueada é o padrão de notificação do celular — o navegador não permite som personalizado em notificação Web. O que é próprio no celular é a **vibração** (Android) e a notificação que fica fixa; o **som próprio** toca com o SGO aberto. Para o celular apitar bloqueado, o gerente precisa ativar as notificações em Meu Perfil (no iPhone, com o SGO instalado na tela inicial).
+
 ## v1.155.1 — 2026-10-05 (Visita operacional: itens direcionados pelos dados do SGO)
 ### Alterado
 - Na seção **"B · Direcionadas pelos dados do SGO"** as respostas passam a ser **✓ Verificado**, **⚠ Requer ação** e **— Não se aplica** (antes: Conforme / Não conforme / N/A).
