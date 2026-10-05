@@ -1150,11 +1150,11 @@ model OvertimeHourlyRate {
 /// Motivos de Hora Extra (v1.142.0): catálogo configurável (Configurações →
 /// Pagamentos). Motivo usado em solicitação não se exclui — desativa.
 model OvertimeReason {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   name      String
-  active    Boolean  @default(true)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
+  active    Boolean          @default(true)
+  order     Int              @default(0)
+  createdAt DateTime         @default(now())
   requests  PaymentRequest[]
 
   @@map("overtime_reasons")
@@ -1732,16 +1732,16 @@ model PaymentRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  unit         Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  requestedBy  User?            @relation("PayRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
-  approvedBy   User?            @relation("PayApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-  paidBy       User?            @relation("PayPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
-  freelancer   Freelancer?      @relation(fields: [freelancerId], references: [id], onDelete: SetNull)
-  miscType     MiscPaymentType? @relation(fields: [miscTypeId], references: [id], onDelete: SetNull)
-  supplier     Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  workSector   Sector?          @relation("FreelancerSector", fields: [workSectorId], references: [id], onDelete: SetNull)
-  collaborator Collaborator?    @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
-  overtimeReason OvertimeReason? @relation(fields: [overtimeReasonId], references: [id], onDelete: SetNull)
+  unit           Unit             @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  requestedBy    User?            @relation("PayRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+  approvedBy     User?            @relation("PayApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  paidBy         User?            @relation("PayPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  freelancer     Freelancer?      @relation(fields: [freelancerId], references: [id], onDelete: SetNull)
+  miscType       MiscPaymentType? @relation(fields: [miscTypeId], references: [id], onDelete: SetNull)
+  supplier       Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  workSector     Sector?          @relation("FreelancerSector", fields: [workSectorId], references: [id], onDelete: SetNull)
+  collaborator   Collaborator?    @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
+  overtimeReason OvertimeReason?  @relation(fields: [overtimeReasonId], references: [id], onDelete: SetNull)
 
   @@index([unitId, status])
   @@index([collaboratorId])
@@ -1867,6 +1867,7 @@ model Collaborator {
   popLinks            PopCollaborator[]
   moduleLinks         PopModuleCollaborator[]
   paymentRequests     PaymentRequest[]
+  vacationAbonos      VacationAbono[]
 
   @@index([cpf])
   @@map("collaborators")
@@ -2431,6 +2432,31 @@ enum VacationStatus {
   CHANGE_REQUESTED // alteração solicitada pelo gerente
   APPROVED // aprovada
   REQUESTED // solicitada ao RH pelo gerente (item 11, Onda 3 — provisório até a API do RH)
+}
+
+/// ABONO PECUNIÁRIO (v1.153.0) — a VENDA de dias de férias (CLT art. 143: até
+/// 1/3 do período, ou seja, até 10 dos 30 dias). Ex.: tira 20 e vende 10.
+/// Fica preso ao PERÍODO AQUISITIVO (identificado pelo início, AAAA-MM-DD,
+/// derivado da admissão do RH) — um abono por período. Os dias vendidos
+/// abatem o saldo do período junto com o gozo. Nomes congelados (snapshot).
+model VacationAbono {
+  id               String   @id @default(cuid())
+  collaboratorId   String
+  collaboratorName String
+  unitId           String
+  /// Início do período aquisitivo a que o abono pertence (AAAA-MM-DD).
+  periodoInicio    String
+  dias             Int
+  observacao       String?
+  createdById      String?
+  createdByName    String
+  createdAt        DateTime @default(now())
+
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+
+  @@unique([collaboratorId, periodoInicio])
+  @@index([unitId])
+  @@map("vacation_abonos")
 }
 
 /// Férias (Módulo 9.1). Programação via RH; gerente solicita alteração.
@@ -3772,14 +3798,14 @@ model TicketMediaEntry {
   /// "AAAA-MM".
   competence String
 
-  coupons    Int
+  coupons          Int
   /// Soma de "Vr. Venda" dos cupons válidos da Relação de Cupons (informativo desde a v1.140.0).
-  grossSales Decimal @db.Decimal(14, 2)
+  grossSales       Decimal  @db.Decimal(14, 2)
   /// Soma de "Vr. Desc." da Relação de Cupons.
-  discounts  Decimal @db.Decimal(14, 2)
+  discounts        Decimal  @db.Decimal(14, 2)
   /// Σ "Vr. Total" da planilha "Produtos Mais Vendidos" — a RECEITA desde a
   /// v1.140.0. Nulo nos meses importados antes (que seguem em venda − desconto).
-  netSales   Decimal? @db.Decimal(14, 2)
+  netSales         Decimal? @db.Decimal(14, 2)
   /// Nome do arquivo "Produtos Mais Vendidos" (o `fileName` é a Relação de Cupons).
   productsFileName String?
 

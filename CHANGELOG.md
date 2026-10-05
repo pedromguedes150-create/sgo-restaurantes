@@ -9,6 +9,16 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.153.0 — 2026-10-05 (Perfil 360 do colaborador, Controle de Férias por período aquisitivo e venda de dias)
+### Adicionado
+- **Perfil 360** (Pessoas → Colaboradores → ícone de olho, "Ver perfil"): tudo sobre o colaborador em uma tela — tempo de empresa, função e unidade (do RH), situação das férias, hora extra dos últimos 12 meses (horas, valor, lançamentos), mobilidade e comissão, última avaliação e média, atestados, treinamentos, escala vigente, tabela dos períodos aquisitivos e um histórico com busca. **Só leitura**: cada número vem do módulo de origem, e cada bloco só aparece se o perfil de quem abre pode ver aquele módulo. CPF completo só para Admin/CEO/Supervisão/Financeiro.
+- **Controle de Férias** (Pessoas → Ferramentas): período aquisitivo de cada colaborador ativo calculado pela **admissão do RH** (CLT: 12 meses para adquirir, 12 para conceder) — vencidas, a vencer em 30/60/90 dias, em gozo, programadas, sem admissão; tabela por unidade.
+- **Abono pecuniário (venda de dias)**: aba no Controle de Férias para registrar a venda de até **10 dias** (1/3) de um período — ex.: tirou 20 e vendeu 10. Os dias vendidos abatem o saldo junto com o gozo; um registro por período; auditado.
+### Observações
+- A API do RH que o SGO lê entrega a admissão, não os períodos. Os eventos "período aquisitivo" que o RH envia pelo webhook continuam gravados e aparecem no perfil para conferência; quando o formato for documentado, passam a ser a fonte.
+- Períodos que venceram antes de o SGO registrar férias (12/06/2026) não são julgados ("Anterior ao SGO"), para não acusar como vencidas férias gozadas antes do sistema.
+- Migração aditiva: tabela `vacation_abonos`. Nenhuma regra existente mudou.
+
 ## v1.152.0 — 2026-10-05 (Desperdícios: fotos que abrem, Conferência e Performance no painel)
 ### Corrigido
 - **As fotos do desperdício não abriam.** A tela montava o endereço `/api/uploads/…`, rota que não existe (404); os arquivos são servidos em `/uploads/…`. Valia para a foto do recipiente dos Salgados e para as fotos por procedimento do Restaurante. O endereço agora sai de uma função só (`urlDoUpload`), com teste.
