@@ -11,7 +11,7 @@ import { LateEntryConfig } from '@/components/metas/late-entry-config';
 import { PrintButton } from '@/components/ui/print-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { LargeTitle } from '@/components/layout/page-chrome';
-import { Button as DsButton } from '@/components/ui/ds/button';
+import { Card, PanelHeader } from '@/components/sgo/panel';
 import { List, ListRow } from '@/components/ui/ds/list-row';
 import { ProgressBar } from '@/components/ui/ds/progress-bar';
 import { shortUnitName } from '@/lib/unit-name';
@@ -53,15 +53,16 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
   const exportHref = `/api/metas/export?month=${ym}${selected ? `&unit=${selected.id}` : ''}`;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      {/* Cabeçalho do kit (Fase 4). A família do módulo estava, por engano,
+          dentro da linha de ações — passou ao subtítulo, onde vive nas demais telas. */}
       <LargeTitle
         title="Metas e Performance"
-        subtitle={`Mês ${monthLabel}`}
+        subtitle={<>Mês {monthLabel}<span className="block"><FamilyTabs active="/modulos/metas" /></span></>}
         actions={
-          <div className="flex gap-2 print:hidden">
-            <a href={exportHref}><DsButton size="sm" variant="secondary"><Download className="h-4 w-4" /> Excel</DsButton></a>
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
+            <a href={exportHref} className="sgo-btn"><Download className="h-3.5 w-3.5" /> Excel</a>
             <PrintButton label="PDF" />
-      <FamilyTabs active="/modulos/metas" />
           </div>
         }
       />
@@ -71,7 +72,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
           <List>
             <ListRow
               href="/modulos/metas/config"
-              leading={<Settings className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
+              leading={<span className="sgo-ric sgo-ric--blue" aria-hidden><Settings className="h-4 w-4" /></span>}
               title="Configuração da Meta"
               subtitle="Todos os componentes e seus pesos"
             />
@@ -80,18 +81,22 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
       )}
       {lateEntryPct != null && <LateEntryConfig current={lateEntryPct} />}
 
-      {/* Mês de referência (histórico) */}
-      <div className="max-w-xs print:hidden">
-        <p className="sgo-type-11 mb-1 text-ink-500">Mês de referência</p>
-        <UnitSelectNav units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" />
+      {/* Linha de filtros do kit: mês de referência e unidade. */}
+      <div className="sgo-filtros -mx-4 print:hidden">
+        <span className="sgo-label">Mês de referência</span>
+        <UnitSelectNav className="w-48" units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" />
+        {units.length > 1 && (
+          <>
+            <span className="sgo-label ml-2">Unidade</span>
+            <UnitSelectNav className="w-64" units={units} selected={selected?.id ?? ''} />
+          </>
+        )}
       </div>
 
       {isAdminView && ranking.length > 0 && (
-        <section>
-          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink-900">
-            <Trophy className="h-4 w-4 text-ink-400" aria-hidden /> Ranking de metas
-          </h2>
-          <List>
+        <Card>
+          <PanelHeader title="Ranking de metas" icon={<span className="sgo-panel__ic sgo-panel__ic--amber" aria-hidden><Trophy className="h-4 w-4" /></span>} count={ranking.length} />
+          <List className="rounded-none border-0 bg-transparent shadow-none" stagger={false}>
             {ranking.map((r, i) => (
               <ListRow
                 key={r.unitId}
@@ -103,13 +108,11 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
               />
             ))}
           </List>
-        </section>
+        </Card>
       )}
 
-      {units.length > 1 && <UnitSelectNav units={units} selected={selected?.id ?? ''} />}
-
       {selected && score && (
-        <section className="rounded-card border border-line bg-surface p-4">
+        <section className="sgo-panel sgo-panel--solid p-4">
           <ProgressBar
             label={isAdminView ? shortUnitName(selected.name) : 'Minha Meta do Mês'}
             value={score.scorePct}

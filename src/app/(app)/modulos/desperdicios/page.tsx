@@ -13,6 +13,9 @@ import { WasteDatePicker } from '@/components/waste/waste-date-picker';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { LargeTitle } from '@/components/layout/page-chrome';
+import { SgoBar } from '@/components/sgo/sgo-bar';
+import { Group } from '@/components/ui/ds/group';
+import { BarChart3, Download, Utensils, Cookie } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,33 +48,36 @@ export default async function DesperdiciosPage({
   const podeVerConsolidado = (await permissaoDeRota(user.role))('/modulos/desperdicios/consolidado');
 
   const linkAba = (a: Aba) => `/modulos/desperdicios?aba=${a}&unit=${selected.id}${isBackdated ? `&date=${operationalDate}` : ''}`;
-  const abas = (
-    <div className="inline-flex overflow-hidden rounded-control border border-line">
-      <Link href={linkAba('restaurante')} className={`px-3 py-1.5 sgo-type-13 font-semibold ${aba === 'restaurante' ? 'bg-brand text-on-brand' : 'bg-surface text-ink-700 hover:bg-sunken'}`}>Sobras Restaurante</Link>
-      <Link href={linkAba('salgados')} className={`px-3 py-1.5 sgo-type-13 font-semibold ${aba === 'salgados' ? 'bg-brand text-on-brand' : 'bg-surface text-ink-700 hover:bg-sunken'}`}>Sobras Salgados</Link>
-    </div>
-  );
 
+  /* Cabeçalho do kit (Fase 4): as duas frentes são as sub-abas (links que
+     preservam unidade e data; a ativa pela URL), as ações à direita e a
+     unidade na linha de filtros. kg e unidades continuam separados. */
   const cabecalho = (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <LargeTitle title="Desperdícios" />
-          <p className="text-sm text-ink-500">Dia operacional {operationalDate} · {aba === 'restaurante' ? 'Restaurante em kg' : 'Salgados em unidades'}</p>
+      <LargeTitle
+        title="Desperdícios"
+        subtitle={`Dia operacional ${operationalDate} · ${aba === 'restaurante' ? 'Restaurante em kg' : 'Salgados em unidades'}`}
+        tabs={[
+          { label: 'Sobras Restaurante', icon: <Utensils className="h-3.5 w-3.5" />, href: linkAba('restaurante'), active: aba === 'restaurante', testId: 'aba-restaurante' },
+          { label: 'Sobras Salgados', icon: <Cookie className="h-3.5 w-3.5" />, href: linkAba('salgados'), active: aba === 'salgados', testId: 'aba-salgados' },
+        ]}
+        actions={
+          <>
+            {podeVerConsolidado && (
+              <Link href={`/modulos/desperdicios/consolidado?aba=${aba}`} className="sgo-btn"><BarChart3 className="h-3.5 w-3.5" /> Painel consolidado</Link>
+            )}
+            {aba === 'restaurante' && (
+              <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="sgo-btn"><Download className="h-3.5 w-3.5" /> Exportar (Excel)</a>
+            )}
+          </>
+        }
+      />
+      {units.length > 1 && (
+        <div className="sgo-filtros -mx-4">
+          <span className="sgo-label">Unidade</span>
+          <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />
         </div>
-        <div className="flex flex-wrap gap-2">
-          {podeVerConsolidado && (
-            <Link href={`/modulos/desperdicios/consolidado?aba=${aba}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">
-              Painel consolidado
-            </Link>
-          )}
-          {aba === 'restaurante' && (
-            <a href={`/api/waste/export?unit=${selected.id}&year=${operationalDate.slice(0, 4)}&month=${Number(operationalDate.slice(5, 7))}`} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand">Exportar (Excel)</a>
-          )}
-        </div>
-      </div>
-      {abas}
-      {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
+      )}
     </>
   );
 
@@ -81,7 +87,7 @@ export default async function DesperdiciosPage({
     const [opcoes, dia, recentes] = await Promise.all([getSnackOptions(), getSnackDay(selected.id, operationalDate), getSnackRecent(selected.id, 30)]);
     const totalPeriodo = recentes.reduce((s, d) => s + d.total, 0);
     return (
-      <div className="space-y-5">
+      <div className="space-y-4">
         {cabecalho}
         <Card>
           <CardHeader>
@@ -89,7 +95,7 @@ export default async function DesperdiciosPage({
           </CardHeader>
           <CardContent className="space-y-3">
             <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} aba="salgados" />
-            {isBackdated && <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs font-medium text-warning">Lançando para um dia anterior ({operationalDate}).</p>}
+            {isBackdated && <p className="sgo-aviso sgo-aviso--atencao">Lançando para um dia anterior ({operationalDate}).</p>}
             {dia.createdBy && <p className="text-xs text-ink-500">Registrado por {dia.createdBy} · total atual {dia.total} un.</p>}
             <SalgadosForm unitId={selected.id} operationalDate={operationalDate} tipos={opcoes.tipos} motivos={opcoes.motivos} initialRows={dia.rows} initialEvidencePath={dia.evidencePath} />
           </CardContent>
@@ -99,8 +105,9 @@ export default async function DesperdiciosPage({
           <CardHeader><CardTitle>Últimos 30 dias — {totalPeriodo} un.</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {recentes.length === 0 && <p className="text-sm text-ink-500">Nenhum descarte de salgado lançado no período.</p>}
+            <Group>
             {recentes.map((d) => (
-              <details key={d.operationalDate} className="rounded-lg border bg-surface p-2.5">
+              <details key={d.operationalDate} className="p-2.5">
                 <summary className="flex cursor-pointer items-center justify-between text-sm">
                   <span className="font-semibold text-ink-900">{d.operationalDate}</span>
                   <span className="font-bold tabular-nums text-brand">{d.total} un.</span>
@@ -115,12 +122,13 @@ export default async function DesperdiciosPage({
                 </ul>
                 {d.evidencePath && (
                   <a href={`/api/uploads/${d.evidencePath}`} target="_blank" rel="noreferrer"
-                    className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand hover:bg-brand/20">
+                    className="sgo-btn sgo-btn--sm mt-1.5">
                     Ver evidência (foto do descarte)
                   </a>
                 )}
               </details>
             ))}
+            </Group>
             <p className="pt-1 text-xs text-ink-500">Para lançar/corrigir um dia, escolha a data acima. O histórico por tipo e motivo fica no Painel consolidado.</p>
           </CardContent>
         </Card>
@@ -151,7 +159,7 @@ export default async function DesperdiciosPage({
     : [];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {cabecalho}
 
       <Card>
@@ -160,7 +168,7 @@ export default async function DesperdiciosPage({
         </CardHeader>
         <CardContent className="space-y-3">
           <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} aba="restaurante" />
-          {isBackdated && <p className="rounded-lg bg-warning/10 px-3 py-2 text-xs font-medium text-warning">Lançando para um dia anterior ({operationalDate}).</p>}
+          {isBackdated && <p className="sgo-aviso sgo-aviso--atencao">Lançando para um dia anterior ({operationalDate}).</p>}
           {entry?.createdBy && (
             <p className="mb-3 text-xs text-ink-500">Registrado por {entry.createdBy} · total atual {entry.total.toFixed(2)} KG</p>
           )}
@@ -182,10 +190,11 @@ export default async function DesperdiciosPage({
           <CardHeader><CardTitle>Histórico de lançamentos (admin)</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             {recent.length === 0 && <p className="text-sm text-ink-500">Nenhum lançamento.</p>}
+            <Group>
             {recent.map((e) => {
               const total = e.items.reduce((s, i) => s + Number(i.kg), 0);
               return (
-                <div key={e.id} className="rounded-lg border bg-surface p-2.5">
+                <div key={e.id} className="p-2.5">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-ink-900">{e.operationalDate}</p>
@@ -209,7 +218,7 @@ export default async function DesperdiciosPage({
                         <div className="mt-1.5 flex flex-wrap gap-2">
                           {e.photos.map((p) => (
                             <a key={p.typeCode} href={`/api/uploads/${p.path}`} target="_blank" rel="noreferrer"
-                              className="inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand hover:bg-brand/20">
+                              className="sgo-btn sgo-btn--sm">
                               Ver evidência — {p.typeCode.replace('_', ' ')}
                             </a>
                           ))}
@@ -217,7 +226,7 @@ export default async function DesperdiciosPage({
                       )}
                       {e.evidencePath && (
                         <a href={`/api/uploads/${e.evidencePath}`} target="_blank" rel="noreferrer"
-                          className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand hover:bg-brand/20">
+                          className="sgo-btn sgo-btn--sm mt-1.5">
                           Ver foto da balança (legado)
                         </a>
                       )}
@@ -226,6 +235,7 @@ export default async function DesperdiciosPage({
                 </div>
               );
             })}
+            </Group>
             <p className="pt-1 text-xs text-ink-500">Para lançar/corrigir um dia específico, escolha a data no formulário acima.</p>
           </CardContent>
         </Card>
@@ -250,9 +260,7 @@ export default async function DesperdiciosPage({
                   <span>{c.name}</span>
                   <span className="font-semibold">{c.total.toFixed(1)} KG</span>
                 </div>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-sunken">
-                  <div className="h-full rounded-full bg-brand" style={{ width: `${(c.total / maxCat) * 100}%` }} />
-                </div>
+                <SgoBar value={(c.total / maxCat) * 100} tone="blue" height={8} />
               </div>
             ))}
           </div>

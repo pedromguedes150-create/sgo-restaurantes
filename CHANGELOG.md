@@ -9,6 +9,16 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.148.0 — 2026-10-05 (Kit de layout — Fase 4, lote 4: Comandas, Desperdícios, Metas, Estoque e Produtos)
+### Alterado
+- **Contagem de Comandas**: ações do módulo (Conferir com leitor, Análise de comandas em aberto) como botões do kit; a família no subtítulo; a unidade na linha de filtros do kit; os quatro indicadores em `.sgo-kpis`; aviso de conferência completa atrasada em `.sgo-aviso`; rótulos de seção do kit no bloco do Admin.
+- **Desperdícios**: as duas frentes (Sobras Restaurante / Sobras Salgados) viraram as sub-abas do cabeçalho do kit (links que preservam unidade e data; a ativa pela URL) com Painel consolidado e Exportar à direita; a unidade na linha de filtros; "Lançando para um dia anterior" em `.sgo-aviso`; últimos 30 dias de salgados e o histórico do Admin em painel sólido; barras por categoria com a barra do kit; links de evidência como botões do kit. kg e unidades continuam separados.
+- **Metas e Performance**: Excel e PDF como botões do kit; mês de referência e unidade na linha de filtros do kit; ranking em painel com cabeçalho (troféu e contagem); meta da unidade em painel sólido; "Configuração da Meta" com cápsula de ícone. 🔴 A família do módulo estava, por engano, DENTRO da linha de ações do cabeçalho — passou ao subtítulo, onde vive nas demais telas.
+- **Estoque**: cabeçalho do kit com as abas Bipar / Estoque / Validade (ativa por estado); aviso de recebimentos a lançar em `.sgo-aviso`; indicadores de validade em `.sgo-kpis`.
+- **Solicitação de Produtos**: cabeçalho do kit com as abas Novo pedido / Meus pedidos / Fábrica-CD (ativa por estado); listas de pedidos em painel sólido com selo `.sgo-tag` de status.
+### Preservado
+Rotas, filtros, contagens, permissões, formulários, grade de conferência, impressão e exportações. Sem migração, sem mudança de API.
+
 ## v1.147.0 — 2026-10-05 (Kit de layout — Fase 4, lote 3: Tarefas, Ocorrências, Notas e Configurações)
 ### Alterado
 - **Tarefas de hoje**: ações do cabeçalho (Correções do dia, Histórico, Ver todas) como botões do kit; a seção de cada unidade é o painel sólido do kit, com o nome da unidade como título do painel. Resumo, barra e lista de tarefas: os mesmos.

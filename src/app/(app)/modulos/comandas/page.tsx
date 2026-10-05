@@ -11,7 +11,7 @@ import { getActiveSequence } from '@/lib/commands/active';
 import { getLastFullCount } from '@/lib/commands/full-count';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
-import { Button } from '@/components/ui/ds/button';
+import { SgoKpis } from '@/components/sgo/sgo-kpi';
 import { StatCard } from '@/components/ui/ds/stat-card';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
 import { List, ListRow } from '@/components/ui/ds/list-row';
@@ -103,26 +103,28 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
     : [[], []];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      {/* Cabeçalho do kit (Fase 4): ações do módulo como botões do kit; a
+          família no subtítulo; a unidade na linha de filtros. */}
       <LargeTitle
         title="Contagem de Comandas"
-        subtitle={`Dia operacional ${operationalDate}`}
+        subtitle={<>Dia operacional {operationalDate}<span className="block"><FamilyTabs active="/modulos/comandas" /></span></>}
         actions={
-          <div className="flex flex-wrap gap-2">
-            {podeVer('/modulos/comandas/conferencia') && <Link href={`/modulos/comandas/conferencia?unit=${selected.id}`}>
-              <Button size="sm" variant="secondary"><ScanLine className="h-4 w-4" /> Conferir com leitor</Button>
-            </Link>}
+          <>
+            {podeVer('/modulos/comandas/conferencia') && <Link href={`/modulos/comandas/conferencia?unit=${selected.id}`} className="sgo-btn"><ScanLine className="h-3.5 w-3.5" /> Conferir com leitor</Link>}
             {canResolve && podeVer('/modulos/comandas/analise-aberto') && (
-              <Link href="/modulos/comandas/analise-aberto">
-                <Button size="sm" variant="secondary"><ShieldAlert className="h-4 w-4" /> Análise de comandas em aberto</Button>
-              </Link>
+              <Link href="/modulos/comandas/analise-aberto" className="sgo-btn"><ShieldAlert className="h-3.5 w-3.5" /> Análise de comandas em aberto</Link>
             )}
-          </div>
+          </>
         }
       />
-      <FamilyTabs active="/modulos/comandas" />
 
-      {units.length > 1 && <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />}
+      {units.length > 1 && (
+        <div className="sgo-filtros -mx-4">
+          <span className="sgo-label">Unidade</span>
+          <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />
+        </div>
+      )}
 
       <Card><CardContent className="pt-4">
         <IniciarConferencia
@@ -152,7 +154,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
           deles respondia a pergunta que se faz ao abrir a tela: "quando foi a
           última conferência e tem coisa em apuração?". */}
       {state.config && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <SgoKpis className="grid-cols-2 sm:grid-cols-4" flush>
           <StatCard label="Ativas" value={state.activeCount} />
           <StatCard
             label="Última conferência"
@@ -160,14 +162,14 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
           />
           <StatCard label="Em apuração" value={state.openDivergences.length} />
           <StatCard label="Baixadas" value={state.lostCount} />
-        </div>
+        </SgoKpis>
       )}
 
       {/* A parcial roda toda madrugada; sem este aviso, "contagem de hoje
           registrada" esconderia a completa não acontecer há semanas. */}
       {state.config && (ultimaCompleta.overdue || ultimaCompleta.never) && (
-        <p className="flex items-start gap-2 rounded-lg border border-warning bg-warning-bg p-2 text-sm text-warning">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+        <p className="sgo-aviso sgo-aviso--atencao">
+          <ShieldAlert />
           <span>
             {ultimaCompleta.never
               ? <>Esta unidade <b>nunca teve uma conferência completa</b> registrada.</>
@@ -228,7 +230,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="sgo-type-11 mb-2 text-ink-500">Contagens diárias</p>
+              <p className="sgo-label mb-2">Contagens diárias</p>
               {recentCounts.length === 0 ? (
                 <EmptyState size="sm" icon={ClipboardList} title="Nenhuma contagem" />
               ) : (
@@ -245,7 +247,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
               )}
             </div>
             <div>
-              <p className="sgo-type-11 mb-2 text-ink-500">Divergências</p>
+              <p className="sgo-label mb-2">Divergências</p>
               {recentDivs.length === 0 ? (
                 <EmptyState size="sm" icon={ClipboardList} title="Nenhuma divergência" />
               ) : (

@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/ds/select';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
+import { LargeTitle } from '@/components/layout/page-chrome';
+import { SgoKpis } from '@/components/sgo/sgo-kpi';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
 import { StatCard } from '@/components/ui/ds/stat-card';
 import { Group } from '@/components/ui/ds/group';
@@ -48,7 +49,9 @@ async function post(body: Record<string, unknown>): Promise<{ ok: boolean; error
   return r.json().catch(() => ({ ok: false, error: 'Falha de comunicação.' }));
 }
 
-export function EstoqueClient({ podeLancar, units, unitId, estoque, unidadesDestino = [], recebimentosPendentes = [] }: {
+export function EstoqueClient({ podeLancar, units, unitId, estoque, unidadesDestino = [], recebimentosPendentes = [], subtitulo }: {
+  /** Subtítulo do cabeçalho (vem da página de servidor). */
+  subtitulo?: React.ReactNode;
   podeLancar: boolean; units: UnidadeUI[]; unitId: string | null; estoque: EstoqueUI;
   /** Para onde um lote pode ser transferido: toda unidade ativa da rede, menos esta. */
   unidadesDestino?: UnidadeUI[];
@@ -63,24 +66,29 @@ export function EstoqueClient({ podeLancar, units, unitId, estoque, unidadesDest
   const unidade = units.find((u) => u.id === unitId);
 
   const abas = [
-    ...(podeLancar ? [{ value: 'bipar', label: 'Bipar' }] : []),
-    { value: 'estoque', label: `Estoque (${estoque.contagens.lotes})` },
-    { value: 'validade', label: estoque.pendencias.length ? `Validade (${estoque.pendencias.length})` : 'Validade' },
+    ...(podeLancar ? [{ value: 'bipar' as const, label: 'Bipar' }] : []),
+    { value: 'estoque' as const, label: `Estoque (${estoque.contagens.lotes})` },
+    { value: 'validade' as const, label: estoque.pendencias.length ? `Validade (${estoque.pendencias.length})` : 'Validade' },
   ];
 
   return (
     <div className="space-y-4">
+      {/* Cabeçalho do kit (Fase 4): as três abas de ESTADO na linha do título. */}
+      <LargeTitle
+        title="Estoque"
+        subtitle={subtitulo}
+        tabs={abas.map((a) => ({ label: a.label, active: aba === a.value, testId: `aba-${a.value}`, onClick: () => setAba(a.value) }))}
+      />
       {units.length > 1 && (
         <p className="sgo-type-13 text-ink-500">Unidade: <b className="text-ink-900">{unidade?.name}</b> — troque no seletor do cabeçalho.</p>
       )}
-      <SegmentedControl aria-label="Seções do Estoque" value={aba} onValueChange={(v) => setAba(v as typeof aba)} options={abas} />
 
       {/* O gancho com o pedido (etapa 2): o que a unidade recebeu do CD e ainda
           não virou lote. Fica em toda aba porque é trabalho parado — e o
           lançamento se faz no próprio pedido, onde estão as quantidades. */}
       {podeLancar && recebimentosPendentes.length > 0 && (
-        <div className="rounded-lg border border-warning/40 bg-warning-bg px-3 py-2 text-sm">
-          <p className="flex items-center gap-1.5 font-semibold text-ink-900"><Truck className="h-4 w-4" /> {recebimentosPendentes.length} recebimento(s) da Fábrica/CD ainda não lançado(s) no estoque</p>
+        <div className="sgo-aviso sgo-aviso--atencao block text-sm">
+          <p className="flex items-center gap-1.5 font-semibold" style={{ color: 'var(--sgo-ink)' }}><Truck className="h-4 w-4" /> {recebimentosPendentes.length} recebimento(s) da Fábrica/CD ainda não lançado(s) no estoque</p>
           <ul className="mt-1 space-y-0.5">
             {recebimentosPendentes.map((r) => (
               <li key={r.requestId}>
@@ -552,12 +560,12 @@ function Validade({ estoque, podeLancar, unidadesDestino }: { estoque: EstoqueUI
   const emAlerta = estoque.linhas.filter((l) => l.faixa);
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <SgoKpis className="grid-cols-2 sm:grid-cols-4" flush>
         <StatCard label="Vencidos" value={String(estoque.contagens.vencidos)} />
         <StatCard label="Críticos (até 2 dias)" value={String(estoque.contagens.criticos)} />
         <StatCard label="Atenção (até 7 dias)" value={String(estoque.contagens.atencao)} />
         <StatCard label="Próximos" value={String(estoque.contagens.proximos)} />
-      </div>
+      </SgoKpis>
 
       {estoque.pendencias.length > 0 && podeLancar && (
         <div className="space-y-2">

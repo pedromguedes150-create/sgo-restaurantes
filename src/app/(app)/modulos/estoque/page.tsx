@@ -7,8 +7,6 @@ import { canEditModule } from '@/lib/permissions';
 import { getEstoqueDaUnidade } from '@/lib/stock/query';
 import { recebimentosPendentesDeEstoque } from '@/lib/stock/recebimento';
 import { numeroDoPedido } from '@/lib/products/numero-do-pedido';
-import { Card, CardContent } from '@/components/ui/card';
-import { LargeTitle } from '@/components/layout/page-chrome';
 import { FamilyTabs } from '@/components/layout/family-tabs';
 import { EstoqueClient } from '@/components/stock/estoque-client';
 
@@ -45,16 +43,10 @@ export default async function EstoquePage() {
   const unidadesDestino = todas.filter((u) => u.id !== selecionada);
 
   return (
-    <div className="space-y-5">
-      <div>
-        <LargeTitle
-          title="Estoque"
-          subtitle="Bipe o produto, informe o que encontrou e siga. O saldo é o que você declara — o SGO cobra a validade por lote, não a saída do dia a dia."
-        />
-        <FamilyTabs active="/modulos/estoque" />
-      </div>
-      <Card><CardContent className="pt-4">
+    <div className="space-y-4">
+      {/* O cabeçalho (título + abas Bipar/Estoque/Validade) vive no cliente, no padrão do kit. */}
         <EstoqueClient
+          subtitulo={<>Bipe o produto, informe o que encontrou e siga. O saldo é o que você declara — o SGO cobra a validade por lote, não a saída do dia a dia.<span className="block"><FamilyTabs active="/modulos/estoque" /></span></>}
           podeLancar={podeLancar}
           units={units}
           unitId={selecionada}
@@ -66,8 +58,7 @@ export default async function EstoquePage() {
             recebidoEm: r.recebidoEm.toLocaleDateString('pt-BR'),
             itensPendentes: r.itensPendentes,
           }))}
-        />
-      </CardContent></Card>
+      />
     </div>
   );
 }
