@@ -74,7 +74,8 @@ export const GUIDE: GuideSection[] = [
           'COMANDAS, DESPERDÍCIOS, METAS, ESTOQUE e PRODUTOS (v1.148.0): as abas (Sobras Restaurante/Salgados, Bipar/Estoque/Validade, Novo pedido/Meus pedidos/Fábrica-CD) ficam na linha do título; unidade e mês na linha de filtros; ações (Conferir com leitor, Painel consolidado, Exportar, Excel, PDF) à direita do título.',
           'SUPERVISÃO, PAINEL DA UNIDADE, EXECUTIVO, TICKET MÉDIO, GÁS, ÓLEO, TROCO, PIZZAS, ATESTADOS e MANUTENÇÃO (v1.149.0): as abas de cada tela ficam na linha do título, os filtros (mês, unidade, competência, período) logo abaixo, e as ações (PDF, Escritório, Painel da unidade, Unidades participantes) à direita do título.',
           'COMUNICAÇÃO, MINHA ÁREA, DESLIGAMENTOS, CANCELAMENTOS, SEPARAÇÃO, MAPA DE FUNÇÕES, CONTROLE DE GERENTES, POPs, TREINAMENTOS (v1.150.0): as abas na linha do título, os atalhos (Análise antifraude, Romaneio, Treinamentos, PDF) à direita e a unidade/período na linha de filtros, como nas demais telas.',
-          'O que NÃO mudou: nenhuma tela perdeu função, nenhum cálculo ou regra mudou — só a moldura e os componentes visuais. As telas vão sendo organizadas no novo padrão aos poucos.',
+          'CONFIGURAÇÕES (v1.151.0): em Checklists as quatro seções ficam na linha do título. Com isso TODAS as telas do SGO estão no novo padrão: título com abas, filtros logo abaixo, indicadores, painéis e tabelas, e janelas/painéis laterais para criar e consultar.',
+          'O que NÃO mudou: nenhuma tela perdeu função, nenhum cálculo ou regra mudou — só a moldura e os componentes visuais.',
         ],
       },
       {

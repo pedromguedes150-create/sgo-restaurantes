@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { SegmentedNav } from '@/components/ui/ds/segmented-nav';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
@@ -62,11 +61,10 @@ export default async function ChecklistsAdminPage({ searchParams }: { searchPara
   return (
     <div className="space-y-4">
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
-      <LargeTitle title="Checklists" />
-      <SegmentedNav
-        aria-label="Seções de Checklists"
-        value={tab}
-        options={TABS.map((t) => ({ value: t.key, label: t.label, href: `/configuracoes/checklists?tab=${t.key}` }))}
+      {/* Cabeçalho do kit (Fase 4): as quatro seções como sub-abas (links; a ativa pela URL). */}
+      <LargeTitle
+        title="Checklists"
+        tabs={TABS.map((t) => ({ label: t.label, href: `/configuracoes/checklists?tab=${t.key}`, active: tab === t.key, testId: `aba-${t.key}` }))}
       />
 
       {tab === 'unidades' && (

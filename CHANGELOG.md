@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.151.0 — 2026-10-05 (Kit de layout — Fase 4, lote 7 (último): Configurações e varredura final)
+### Alterado
+- **Configurações → Checklists**: as quatro seções (Checklists das unidades / Resumo por unidade / Biblioteca de modelos / Checklists de supervisor) viraram as sub-abas do cabeçalho do kit (links; a ativa pela URL). As demais 20 telas de Configurações já estavam no padrão (cabeçalho do kit + painel) desde o lote 1 e não precisaram de mudança.
+### Verificado
+- **Varredura final**: todas as rotas do sistema medidas a 375px (iframe, sessão do Admin) — sem transbordo horizontal — e as telas principais conferidas no tema escuro. Foram 88 rotas; as 3 que estouraram o tempo de compilação do servidor de desenvolvimento (/modulos, /modulos/comandas/conferencia, /modulos/estoque) foram reconferidas uma a uma, sem transbordo. Tema escuro conferido pelo cookie real (sgo-theme=dark): painel sólido, indicadores e cabeçalho com os tokens escuros. Teste de fonte telas-kit-lote7 trava as sub-abas de Checklists.
+- Com este lote a **Fase 4 está concluída**: as 7 entregas (lotes 1–7) levaram todas as telas à hierarquia do kit — barra → cabeçalho com abas → filtros → indicadores → painéis/tabelas → modal/painel lateral — mantendo a identidade bordô, os dados, as regras e as permissões do Restaurante.
+
 ## v1.150.0 — 2026-10-05 (Kit de layout — Fase 4, lote 6: Comunicação, Minha área, Desligamentos, Cancelamentos, Separação, Mapa de Funções, Controle de gerentes, POPs, Treinamentos, Mudanças, Auditoria, Inventário e Avaliação)
 ### Alterado
 - **Central de Comunicação**, **Minha área** e **Desligamentos**: as abas (Recebidos com o nº de pendentes / Novo comunicado / Painel & Histórico; Tarefas / Notas / Folgas; Solicitar / Solicitações) passaram ao cabeçalho do kit; os botões-pílula próprios dessas telas saíram.
