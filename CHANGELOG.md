@@ -9,6 +9,17 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.147.0 — 2026-10-05 (Kit de layout — Fase 4, lote 3: Tarefas, Ocorrências, Notas e Configurações)
+### Alterado
+- **Tarefas de hoje**: ações do cabeçalho (Correções do dia, Histórico, Ver todas) como botões do kit; a seção de cada unidade é o painel sólido do kit, com o nome da unidade como título do painel. Resumo, barra e lista de tarefas: os mesmos.
+- **Ocorrências**: o eixo ASSUNTO (Geral / Geral Crítico / Manutenção / TI) virou as sub-abas do cabeçalho do kit (links, a ativa pela URL) e "Nova" é a ação primária; o eixo SITUAÇÃO (com as contagens) fica na linha de filtros do kit; os três indicadores em `.sgo-kpis`; busca/filtros, cartões, grupos por unidade, barra de lote e paginação em painel do kit; "Ver detalhes" e "Marcar em andamento" como `.sgo-btn`; as duas confirmações de lote em **SgoModal**.
+- **Notas Recebidas**: cabeçalho do kit com as abas Notas / Vencimentos / Análise de gás (continuam links com endereço, preservando `?dias=`) e as ações "Importar em lote (XLSX)" e "Nova nota"; indicadores do mês em `.sgo-kpis`; Excel/Imprimir como `.sgo-btn`; boletos a vencer em painel sólido; "Nova nota" em **SgoModal**. O componente `NotesTabs` saiu (as abas vivem no cabeçalho).
+- **Configurações**: rótulos de seção do kit, cápsula de ícone (`.sgo-ric`) em cada destino, bloco LGPD em painel sólido. As listas já eram o painel do kit desde o lote 2.
+### Adicionado
+- **Pagamentos de Freelancers (Excel) com CPF e Chave PIX** (pedido do Financeiro, 05/10/2026): as abas "Lançamentos" e "Por colaborador" ganharam as colunas CPF e Chave PIX ao lado do nome, lidas do CADASTRO na hora (freelancer: os dois; hora extra: o CPF do colaborador do RH e PIX vazio, porque é paga pela competência no cartão). Correção no cadastro aparece na próxima planilha, sem reescrever histórico. `Lancamento` e `ResumoDaPessoa` ganharam `cpf`/`pixKey`; `cpfFormatado` (puro) formata 000.000.000-00 e devolve como veio fora dos 11 dígitos. A aba Recorrência já tinha as duas colunas e passou a usar o mesmo formatador.
+### Preservado
+Rotas, filtros na URL, contagens, permissões, lote de ocorrências, impressão e exportações. Sem migração, sem mudança de API.
+
 ## v1.146.0 — 2026-10-03 (Kit de layout — Fase 4, lote 2: Pagamentos, Escala e Pessoas)
 ### Alterado
 - **Primitivos**: `List` (ds/list-row) e `Group` (ds/group) viram o painel SÓLIDO do kit (`.sgo-panel--solid`) — as ~30 telas que os usam saem no padrão sem reescrita.

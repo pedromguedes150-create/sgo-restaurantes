@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StatCard } from '@/components/ui/ds/stat-card';
 import { useRouter } from 'next/navigation';
-import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock, Plus } from 'lucide-react';
+import { ScanLine, Save, AlertTriangle, Pencil, X, Trash2, Undo2, FileSpreadsheet, Printer, CalendarClock, Plus, Receipt, CalendarClock as Vencimentos, Flame } from 'lucide-react';
 import { InlineDateEdit } from '@/components/shared/inline-date-edit';
 import { Button } from '@/components/ui/button';
 import { ActionMenu, type ActionMenuItem } from '@/components/ui/ds/action-menu';
@@ -20,9 +20,9 @@ import { formatBRL } from '@/lib/utils';
 import { parseChaveAcesso } from '@/lib/notes/chave';
 import { GasImportModal } from '@/components/notes/gas-import-modal';
 import { Group } from '@/components/ui/ds/group';
-import { Sheet } from '@/components/ui/ds/sheet';
-import { type AcessoAbas } from '@/lib/permissions/abas';
-import { NotesTabs } from '@/components/notes/notes-tabs';
+import { SgoModal } from '@/components/sgo/sgo-modal';
+import { LargeTitle } from '@/components/layout/page-chrome';
+import { podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 
 interface Unit { id: string; name: string }
 interface Supplier { id: string; name: string; cnpj: string | null; isGas?: boolean }
@@ -66,7 +66,7 @@ const PERIODS = [
   { dias: 365, label: 'Último ano' },
 ];
 
-export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false, sinceDays = 60, aba = 'lista', abas = {}, podeGas = true }: {
+export function NotesClient({ units, notes, suppliers = [], canManage = false, canEditDate = false, sinceDays = 60, aba = 'lista', abas = {}, podeGas = true, subtitulo, indicadores }: {
   units: Unit[]; notes: NoteDTO[]; suppliers?: Supplier[]; canManage?: boolean; canEditDate?: boolean; sinceDays?: number;
   /** Aba ativa, vinda da URL (`?aba=`). Deixou de ser estado quando o gás ganhou rota própria. */
   aba?: 'lista' | 'venc';
@@ -74,6 +74,10 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
   abas?: AcessoAbas;
   /** A análise de gás é tela própria (guarda de rota). */
   podeGas?: boolean;
+  /** Subtítulo do cabeçalho (a família do módulo), vindo da página. */
+  subtitulo?: React.ReactNode;
+  /** Os indicadores do mês, vindos da página (servidor). */
+  indicadores?: React.ReactNode;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -106,29 +110,52 @@ export function NotesClient({ units, notes, suppliers = [], canManage = false, c
    * "Análise de gás" ganhou rota própria (`/modulos/notas/gas`), então some o
    * segundo trilho de abas que existia empilhado sob o primeiro.
    */
+  /* As três abas são NAVEGAÇÃO (cada uma tem endereço; o período `?dias=` é
+     preservado ao trocar). Desde a Fase 4 do kit elas são as sub-abas do
+     cabeçalho da página, com "Nova nota" como ação primária. */
+  const dias = sinceDays && sinceDays !== 60 ? `dias=${sinceDays}` : '';
+  const abasDaTela = [
+    { value: 'lista', label: 'Notas', icon: <Receipt className="h-3.5 w-3.5" />, href: `/modulos/notas${dias ? `?${dias}` : ''}` },
+    { value: 'venc', label: 'Vencimentos', icon: <Vencimentos className="h-3.5 w-3.5" />, href: `/modulos/notas?aba=venc${dias ? `&${dias}` : ''}` },
+    { value: 'gas', label: 'Análise de gás', icon: <Flame className="h-3.5 w-3.5" />, href: '/modulos/notas/gas' },
+  ].filter((o) => (o.value === 'gas' ? podeGas : podeAba(abas, o.value)));
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 print:hidden">
-        <NotesTabs value={aba} sinceDays={sinceDays} abas={abas} podeGas={podeGas} />
-        <Button size="sm" className="ml-auto" onClick={() => setNovaNota(true)}>
-          <Plus className="h-4 w-4" /> Nova nota
-        </Button>
-        {canManage && (
-          <button onClick={() => setShowImport(true)} className="inline-flex items-center gap-1.5 rounded-full border-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10">
-            <FileSpreadsheet className="h-4 w-4" /> Importar em lote (XLSX)
-          </button>
-        )}
+      <div className="print:hidden">
+        <LargeTitle
+          title="Notas Recebidas"
+          subtitle={subtitulo}
+          tabs={abasDaTela.map((o) => ({ label: o.label, icon: o.icon, href: o.href, active: aba === o.value, testId: `aba-${o.value}` }))}
+          actions={(
+            <>
+              {canManage && (
+                <button type="button" className="sgo-btn" onClick={() => setShowImport(true)}>
+                  <FileSpreadsheet className="h-3.5 w-3.5" /> Importar em lote (XLSX)
+                </button>
+              )}
+              <button type="button" className="sgo-btn sgo-btn--primary" onClick={() => setNovaNota(true)}>
+                <Plus className="h-3.5 w-3.5" /> Nova nota
+              </button>
+            </>
+          )}
+        />
       </div>
+      {indicadores}
       {showImport && <GasImportModal onClose={() => setShowImport(false)} />}
 
-      <Sheet
+      {/* Criar = modal do kit; o formulário traz o próprio botão de salvar. */}
+      <SgoModal
         open={novaNota}
         onClose={() => setNovaNota(false)}
         title="Nova nota"
-        description="Leia o QR/DANFE ou preencha à mão. A nota entra na lista assim que salvar."
+        subtitle="Leia o QR/DANFE ou preencha à mão. A nota entra na lista assim que salvar."
+        icon={<Receipt className="h-4 w-4" />}
+        tone="brand"
+        size="sm"
       >
         <NewNote units={units} suppliers={suppliers} onDone={() => { setNovaNota(false); router.refresh(); }} />
-      </Sheet>
+      </SgoModal>
 
       {aba === 'venc' && <DueTracking units={units} />}
       {aba === 'lista' && (
@@ -235,13 +262,15 @@ function FilterableNotes({ notes, units, sinceDays, canManage, canEditDate, busy
           Mesmo público de antes (canManage) — só deixou de custar uma aba. */}
       {canManage && (
         <div className="flex flex-wrap items-center gap-2 print:hidden">
-          <div className="grid flex-1 grid-cols-2 gap-2">
+          {/* Piso de largura: no celular os dois cartões apertavam "R$ 2.870,50"
+              em três linhas para caber ao lado dos botões; agora os botões descem. */}
+          <div className="grid min-w-[16rem] flex-1 grid-cols-2 gap-2">
             <StatCard label="notas" value={filtered.length} />
             <StatCard label="valor total" value={formatBRL(total)} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <a href={exportHref} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"><FileSpreadsheet className="h-3.5 w-3.5 text-brand" /> Excel</a>
-            <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border bg-surface px-3 py-1.5 text-xs font-semibold text-brand hover:border-brand"><Printer className="h-3.5 w-3.5 text-brand" /> Imprimir/PDF</button>
+            <a href={exportHref} className="sgo-btn"><FileSpreadsheet className="h-3.5 w-3.5" /> Excel</a>
+            <button type="button" onClick={() => window.print()} className="sgo-btn"><Printer className="h-3.5 w-3.5" /> Imprimir/PDF</button>
           </div>
         </div>
       )}
@@ -497,7 +526,7 @@ function DueTracking({ units }: { units: Unit[] }) {
 
   return (
     <div className="space-y-3">
-      <p className="rounded-md bg-brand/10 px-3 py-2 text-xs text-ink-500">
+      <p className="sgo-aviso" style={{ background: 'var(--sgo-accent-soft)', color: 'var(--sgo-ink-2)' }}>
         Foco nos boletos <strong>a vencer</strong> — a supervisão e o financeiro são avisados automaticamente dos próximos vencimentos (o pagamento em si é controlado pelo financeiro). Inclui notas comuns e recebimentos de gás.
       </p>
       <FilterBar
@@ -550,9 +579,9 @@ function DueTracking({ units }: { units: Unit[] }) {
       ) : rows.length === 0 ? (
         <p className="text-sm text-ink-500">Nenhum boleto a vencer nesta janela.</p>
       ) : (
-        <div className="space-y-1.5">
+        <Group>
           {rows.map((r) => (
-            <div key={`${r.kind}-${r.id}`} className={`rounded-lg border p-2.5 ${r.daysToDue <= 3 ? 'border-danger/40 bg-danger/5' : 'bg-surface'}`}>
+            <div key={`${r.kind}-${r.id}`} className={`p-2.5 ${r.daysToDue <= 3 ? 'bg-danger/5' : ''}`}>
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-ink-900">{r.supplier}{r.kind === 'GAS' ? <span className="ml-1 rounded bg-info-bg px-1 text-[10px] font-bold text-info">GÁS</span> : null}</p>
                 <StatusBadge tone={tone(r.daysToDue)}>{dueLabel(r.daysToDue)}</StatusBadge>
@@ -563,7 +592,7 @@ function DueTracking({ units }: { units: Unit[] }) {
               </p>
             </div>
           ))}
-        </div>
+        </Group>
       )}
     </div>
   );

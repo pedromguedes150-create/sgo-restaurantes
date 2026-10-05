@@ -85,12 +85,12 @@ export default async function ConfiguracoesPage() {
             href="/perfil"
             title="Meu Perfil"
             subtitle="Dados pessoais e troca de senha"
-            leading={<Users className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
+            leading={<span className="sgo-ric sgo-ric--blue" aria-hidden><Users className="h-4 w-4" /></span>}
           />
         </List>
         {secoes.map((s) => (
           <section key={s.titulo}>
-            <h2 className="sgo-type-11 mb-2 text-ink-500">{s.titulo}</h2>
+            <h2 className="sgo-label mb-2">{s.titulo}</h2>
             <List>
               {s.itens.map((it) => (
                 <ListRow
@@ -98,7 +98,7 @@ export default async function ConfiguracoesPage() {
                   href={it.href}
                   title={it.title}
                   subtitle={it.subtitle}
-                  leading={<it.icon className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
+                  leading={<span className="sgo-ric sgo-ric--blue" aria-hidden><it.icon className="h-4 w-4" /></span>}
                 />
               ))}
             </List>
@@ -115,14 +115,14 @@ export default async function ConfiguracoesPage() {
   ]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <LargeTitle title="Configurações" subtitle="Cadastros e regras que valem para toda a rede." />
 
       {/* 16 destinos em 4 seções: quem procura sabe onde olhar, em vez de
           varrer uma grade plana lendo rótulo por rótulo. */}
       {secoes.map((s) => (
         <section key={s.titulo}>
-          <h2 className="sgo-type-11 mb-2 text-ink-500">{s.titulo}</h2>
+          <h2 className="sgo-label mb-2">{s.titulo}</h2>
           <List>
             {s.itens.map((it) => (
               <ListRow
@@ -130,7 +130,7 @@ export default async function ConfiguracoesPage() {
                 href={it.href}
                 title={it.title}
                 subtitle={it.subtitle}
-                leading={<it.icon className="h-8 w-8 shrink-0 rounded-control bg-sunken p-2 text-ink-500" />}
+                leading={<span className="sgo-ric sgo-ric--blue" aria-hidden><it.icon className="h-4 w-4" /></span>}
               />
             ))}
           </List>
@@ -138,7 +138,7 @@ export default async function ConfiguracoesPage() {
       ))}
 
       <section>
-        <h2 className="sgo-type-11 mb-2 text-ink-500">Unidades ({units.length})</h2>
+        <h2 className="sgo-label mb-2">Unidades ({units.length})</h2>
         <List>
           {units.map((u) => (
             <ListRow
@@ -153,7 +153,7 @@ export default async function ConfiguracoesPage() {
       </section>
 
       <section>
-        <h2 className="sgo-type-11 mb-2 text-ink-500">Usuários ({users.length})</h2>
+        <h2 className="sgo-label mb-2">Usuários ({users.length})</h2>
         <List>
           {users.map((u) => (
             <ListRow
@@ -173,8 +173,8 @@ export default async function ConfiguracoesPage() {
       </section>
 
       <section>
-        <h2 className="sgo-type-11 mb-2 text-ink-500">LGPD</h2>
-        <div className="rounded-card border border-line bg-surface p-4">
+        <h2 className="sgo-label mb-2">LGPD</h2>
+        <div className="sgo-panel sgo-panel--solid p-4">
           <dl className="space-y-1.5 text-sm">
             <div className="flex justify-between gap-2">
               <dt className="text-ink-500">Versão do termo</dt>

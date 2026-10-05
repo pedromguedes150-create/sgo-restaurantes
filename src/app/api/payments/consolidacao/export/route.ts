@@ -4,6 +4,7 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import {
   getConsolidacaoPagamentos, getRecorrenciaFreelancers, unidadesDaConsolidacao, lerFiltro, STATUS_CONS, STATUS_TEXTO, TIPO_TEXTO, TIPOS_CONS, emBR,
 } from '@/lib/payments/consolidacao';
+import { cpfFormatado } from '@/lib/payments/consolidacao-calculo';
 
 /**
  * CONSOLIDAÇÃO DE PAGAMENTOS em Excel (v1.126.0) — os MESMOS filtros da tela,
@@ -29,32 +30,37 @@ export async function GET(req: Request) {
     [`Unidade: ${unidade} · Tipo: ${TIPOS_CONS.find((t) => t.value === filtro.tipo)?.label} · Status: ${STATUS_CONS.find((s) => s.value === filtro.status)?.label} · Colaborador: ${pessoa}`],
     ['Data = dia do serviço. Valor = valor da solicitação (já inclui o vale-transporte lançado).'],
     [],
-    ['Data', 'Unidade', 'Tipo', 'Colaborador', 'Horas', 'Motivo', 'Vale-transporte', 'Valor', 'Status', 'Solicitado por', 'Data da solicitação'],
+    /* CPF e Chave PIX ao lado do nome (pedido do Financeiro, 05/10/2026): a
+       planilha baixada é a base do pagamento, e sem eles era preciso abrir o
+       cadastro de cada freelancer. Hora extra traz o CPF do RH e PIX vazio
+       (é paga pela competência, no cartão). */
+    ['Data', 'Unidade', 'Tipo', 'Colaborador', 'CPF', 'Chave PIX', 'Horas', 'Motivo', 'Vale-transporte', 'Valor', 'Status', 'Solicitado por', 'Data da solicitação'],
   ];
   for (const l of c.lancamentos) {
     aoa.push([
-      emBR(l.data), l.unidade, TIPO_TEXTO[l.tipo], l.pessoa, l.horas, l.motivo ?? '', l.vt, l.valor,
+      emBR(l.data), l.unidade, TIPO_TEXTO[l.tipo], l.pessoa, cpfFormatado(l.cpf), l.pixKey ?? '', l.horas, l.motivo ?? '', l.vt, l.valor,
       STATUS_TEXTO[l.status], l.solicitadoPor ?? '', emBR(l.dataSolicitacao),
     ]);
   }
+  const V = ['', '', '', '', '', '', '', '', ''] as const; // 9 colunas vazias até "Valor"
   aoa.push([]);
-  aoa.push(['TOTAL HORA EXTRA', '', '', '', '', '', '', r.valorHoraExtra]);
-  aoa.push(['TOTAL FREELANCER', '', '', '', '', '', '', r.valorFreelancer]);
-  aoa.push(['TOTAL VALE-TRANSPORTE (já dentro dos valores)', '', '', '', '', '', r.vt, null]);
-  aoa.push(['TOTAL GERAL', '', '', '', '', '', '', r.total]);
+  aoa.push(['TOTAL HORA EXTRA', ...V, r.valorHoraExtra]);
+  aoa.push(['TOTAL FREELANCER', ...V, r.valorFreelancer]);
+  aoa.push(['TOTAL VALE-TRANSPORTE (já dentro dos valores)', '', '', '', '', '', '', '', r.vt, null]);
+  aoa.push(['TOTAL GERAL', ...V, r.total]);
   if (filtro.status === 'TODOS') {
     /* O total separado pelo que ele é — solicitado não é "a pagar". */
     aoa.push([]);
-    aoa.push(['Solicitado — pendente de aprovação', '', '', '', '', '', '', r.porStatus.pendente]);
-    aoa.push(['Aprovado — a pagar', '', '', '', '', '', '', r.porStatus.aprovado]);
-    aoa.push(['Pago', '', '', '', '', '', '', r.porStatus.pago]);
+    aoa.push(['Solicitado — pendente de aprovação', ...V, r.porStatus.pendente]);
+    aoa.push(['Aprovado — a pagar', ...V, r.porStatus.aprovado]);
+    aoa.push(['Pago', ...V, r.porStatus.pago]);
   }
-  if (r.fora.qtd > 0) aoa.push([`${r.fora.qtd} rejeitada(s) listada(s) e fora dos totais`, '', '', '', '', '', '', r.fora.valor]);
-  if (r.pendentes.qtd > 0 && filtro.status === 'TODOS') aoa.push([`Atenção: ${r.pendentes.qtd} pendente(s) de aprovação dentro do total`, '', '', '', '', '', '', r.pendentes.valor]);
+  if (r.fora.qtd > 0) aoa.push([`${r.fora.qtd} rejeitada(s) listada(s) e fora dos totais`, ...V, r.fora.valor]);
+  if (r.pendentes.qtd > 0 && filtro.status === 'TODOS') aoa.push([`Atenção: ${r.pendentes.qtd} pendente(s) de aprovação dentro do total`, ...V, r.pendentes.valor]);
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [12, 22, 12, 30, 7, 30, 14, 12, 11, 22, 16].map((wch) => ({ wch }));
-  moeda(ws, 6, [6, 7]);
+  ws['!cols'] = [12, 22, 12, 30, 16, 26, 7, 30, 14, 12, 11, 22, 16].map((wch) => ({ wch }));
+  moeda(ws, 6, [8, 9]);
 
   /* Aba 2 — Por unidade: cada unidade na sua linha. */
   const un: (string | number)[][] = [['Unidade', 'Solicitações', 'Freelancer', 'Hora Extra', 'Vale-transporte (já dentro)', 'Total']];
@@ -65,12 +71,12 @@ export async function GET(req: Request) {
   moeda(wsU, 1, [2, 3, 4, 5]);
 
   /* Aba 3 — Por colaborador: a conferência antes de mandar. */
-  const pc: (string | number)[][] = [['Colaborador', 'Unidade(s)', 'Hora Extra', 'Freelancer', 'Vale-transporte (já dentro)', 'Total', 'Lançamentos']];
-  for (const p of c.porColaborador) pc.push([p.pessoa, p.unidades.join(', '), p.horaExtra, p.freelancer, p.vt, p.total, p.lancamentos.length]);
-  pc.push(['TOTAL', '', r.valorHoraExtra, r.valorFreelancer, r.vt, r.total, r.solicitacoes]);
+  const pc: (string | number)[][] = [['Colaborador', 'CPF', 'Chave PIX', 'Unidade(s)', 'Hora Extra', 'Freelancer', 'Vale-transporte (já dentro)', 'Total', 'Lançamentos']];
+  for (const p of c.porColaborador) pc.push([p.pessoa, cpfFormatado(p.cpf), p.pixKey ?? '', p.unidades.join(', '), p.horaExtra, p.freelancer, p.vt, p.total, p.lancamentos.length]);
+  pc.push(['TOTAL', '', '', '', r.valorHoraExtra, r.valorFreelancer, r.vt, r.total, r.solicitacoes]);
   const wsP = XLSX.utils.aoa_to_sheet(pc);
-  wsP['!cols'] = [30, 28, 14, 14, 24, 14, 12].map((wch) => ({ wch }));
-  moeda(wsP, 1, [2, 3, 4, 5]);
+  wsP['!cols'] = [30, 16, 26, 28, 14, 14, 24, 14, 12].map((wch) => ({ wch }));
+  moeda(wsP, 1, [4, 5, 6, 7]);
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Lançamentos');
@@ -102,8 +108,7 @@ async function exportarRecorrencia(user: NonNullable<Awaited<ReturnType<typeof g
     [],
     ['Freelancer', 'CPF', 'Chave PIX', 'Unidade', 'Semana', 'Solicitações na semana', 'Valor total'],
   ];
-  const fmtCpf = (d: string | null) => d && d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : '';
-  for (const g of rc.linhas) aoa.push([g.nome, fmtCpf(g.cpf), g.pixKey ?? '', g.unidades.join(', '), `${emBR(g.semanaDe)} a ${emBR(g.semanaAte)}`, g.solicitacoes, g.valor]);
+  for (const g of rc.linhas) aoa.push([g.nome, cpfFormatado(g.cpf), g.pixKey ?? '', g.unidades.join(', '), `${emBR(g.semanaDe)} a ${emBR(g.semanaAte)}`, g.solicitacoes, g.valor]);
   aoa.push([]);
   aoa.push(['TOTAL DE FREELANCERS RECORRENTES', '', '', '', '', t.freelancers, '']);
   aoa.push(['TOTAL DE SOLICITAÇÕES', '', '', '', '', t.solicitacoes, '']);
