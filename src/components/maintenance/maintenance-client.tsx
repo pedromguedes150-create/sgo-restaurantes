@@ -7,7 +7,7 @@ import { Wrench, Plus, Play, Check, X, RotateCcw, Pencil } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { StatusBadge, type StatusTone } from '@/components/ui/status-badge';
@@ -55,15 +55,11 @@ export function MaintenanceClient({ view, isAdmin, units, equipment, suppliers, 
   const [tab, setTab] = useState<'chamados' | 'preventiva'>(abaInicial(abas, 'MAINTENANCE', view) as 'chamados' | 'preventiva');
   return (
     <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-xl font-bold text-ink-900"><Wrench className="h-5 w-5 text-ink-900" /> Manutenção</h1>
-      {/* Sem ícone nos segmentos: o segmented control do iOS é texto puro OU
-          ícone puro, nunca os dois juntos — e com dois rótulos curtos o ícone
-          não acrescentava informação. */}
-      <SegmentedControl
-        aria-label="Seções de Manutenção"
-        value={tab}
-        onValueChange={(v) => setTab(v as typeof tab)}
-        options={[{ value: 'chamados', label: 'Chamados' }, { value: 'preventiva', label: 'Preventiva' }].filter((o) => podeAba(abas, o.value))}
+      {/* Cabeçalho do kit (Fase 4): Chamados / Preventiva como abas de ESTADO. */}
+      <LargeTitle
+        title="Manutenção"
+        subtitle="Chamados por equipamento e prestador, e os planos preventivos com a próxima data."
+        tabs={[{ value: 'chamados' as const, label: 'Chamados', icon: <Wrench className="h-3.5 w-3.5" /> }, { value: 'preventiva' as const, label: 'Preventiva', icon: <RotateCcw className="h-3.5 w-3.5" /> }].filter((o) => podeAba(abas, o.value)).map((o) => ({ label: o.label, icon: o.icon, active: tab === o.value, testId: `aba-${o.value}`, onClick: () => setTab(o.value) }))}
       />
 
       {tab === 'chamados'

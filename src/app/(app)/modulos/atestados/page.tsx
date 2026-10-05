@@ -5,9 +5,7 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listCertificates, getCertificatesReport } from '@/lib/certificates/query';
 import { canSeeCid } from '@/lib/certificates/labels';
-import { Card, CardContent } from '@/components/ui/card';
 import { CertificatesClient } from '@/components/certificates/certificates-client';
-import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,23 +40,20 @@ export default async function AtestadosPage({ searchParams }: { searchParams: { 
   }
 
   return (
-    <div className="space-y-5">
-      <div>
-        <LargeTitle title="Central de Atestados" subtitle="Lance o atestado por foto (a IA lê e pré-preenche), acompanhe quantidade e dias por unidade." />
-      </div>
-      <Card><CardContent className="pt-4">
-        <CertificatesClient
-            abas={await abasDoPerfil(user.role, 'CERTIFICATES')}
-          canLaunch={canLaunch}
-          isAdmin={user.role === 'ADMIN'}
-          showCid={showCid}
-          ym={ym}
-          units={units}
-          collaboratorsByUnit={collaboratorsByUnit}
-          rows={rows}
-          report={report}
-        />
-      </CardContent></Card>
+    <div className="space-y-4">
+      {/* O cabeçalho (título + abas) vive no cliente, no padrão do kit. */}
+      <CertificatesClient
+        subtitulo="Lance o atestado por foto (a IA lê e pré-preenche), acompanhe quantidade e dias por unidade."
+        abas={await abasDoPerfil(user.role, 'CERTIFICATES')}
+        canLaunch={canLaunch}
+        isAdmin={user.role === 'ADMIN'}
+        showCid={showCid}
+        ym={ym}
+        units={units}
+        collaboratorsByUnit={collaboratorsByUnit}
+        rows={rows}
+        report={report}
+      />
     </div>
   );
 }

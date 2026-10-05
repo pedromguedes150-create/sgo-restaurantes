@@ -2,6 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: () => {}, push: () => {}, replace: () => {} }),
+  /* O cabeçalho do kit (Fase 4) lê a rota para marcar a aba ativa. */
+  usePathname: () => '/modulos/troco',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 import { renderToString } from 'react-dom/server';

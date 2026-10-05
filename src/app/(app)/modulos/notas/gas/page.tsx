@@ -9,9 +9,7 @@ import { listSuppliers } from '@/lib/suppliers';
 import { getGasDashboard, getVariacoesPorNota, listGasReceipts } from '@/lib/gas/query';
 import { listGasContracts, getGasPurchasedInFilter, listUnitsWithReceiptsWithoutActiveContract } from '@/lib/gas/contracts';
 import { isSupervisory } from '@/lib/roles';
-import { Card, CardContent } from '@/components/ui/card';
 import { GasClient } from '@/components/gas/gas-client';
-import { LargeTitle } from '@/components/layout/page-chrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,44 +55,39 @@ export default async function AnaliseGasPage({
   ]);
 
   return (
-    <div className="space-y-5">
-      <Link href="/modulos/notas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
+    <div className="space-y-4">
+      <Link href="/modulos/notas" className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: 'var(--sgo-accent)' }}>
         <ArrowLeft className="h-4 w-4" /> Notas Recebidas
       </Link>
-      <LargeTitle
-        title="Análise de gás"
-        subtitle="Preço por kg, histórico de recebimentos e andamento dos contratos. Os recebimentos entram pelo lançamento de nota, quando o fornecedor é de gás."
-      />
       {/* De propósito SEM as abas de Notas aqui. Repeti-las nesta página
-          empilharia dois trilhos outra vez — o defeito que esta rota existe
-          para eliminar. O caminho de volta é o link acima; o único trilho da
-          tela é o do próprio gás (Dashboard/Histórico/Contratos). */}
-      <Card>
-        <CardContent className="pt-4">
-          <GasClient
-            abas={await abasDoPerfil(user.role, 'GAS')}
-            basePath="/modulos/notas/gas"
-            canLaunch={false}
-            isAdmin={user.role === 'ADMIN'}
-            canEditDate={user.role === 'ADMIN' || user.role === 'SUPERVISOR'}
-            canManageContracts={isSupervisory(user.role) || user.role === 'CEO'}
-            units={units}
-            suppliers={suppliers.filter((s) => s.isGas).map((s) => ({ id: s.id, name: s.name, cnpj: s.cnpj }))}
-            dashboard={dashboard}
-            purchased={purchased}
-            filter={{ unitId: fUnit ?? '', supplierId: fSupplier ?? '', mes: fMes ?? '' }}
-            receipts={receipts.map((r) => ({
-              id: r.id, unitId: r.unitId, date: r.operationalDate, unit: r.unit.name,
-              supplier: r.supplier?.name ?? 'Sem fornecedor',
-              qty: Number(r.quantityKg), total: Number(r.totalValue), price: Number(r.pricePerKg),
-              variation: variacoes.get(r.id)?.variationPct ?? null, alerted: r.alerted,
-              by: r.createdBy?.name ?? '', dateEdited: r.dateEdited, dateEditedByName: r.dateEditedByName,
+      empilharia dois trilhos outra vez — o defeito que esta rota existe
+      para eliminar. O caminho de volta é o link acima; o único trilho da
+      tela é o do próprio gás (Dashboard/Histórico/Contratos), no cabeçalho
+      do kit, dentro do cliente. */}
+      <GasClient
+        titulo="Análise de gás"
+        subtitulo="Preço por kg, histórico de recebimentos e andamento dos contratos. Os recebimentos entram pelo lançamento de nota, quando o fornecedor é de gás."
+        abas={await abasDoPerfil(user.role, 'GAS')}
+        basePath="/modulos/notas/gas"
+        canLaunch={false}
+        isAdmin={user.role === 'ADMIN'}
+        canEditDate={user.role === 'ADMIN' || user.role === 'SUPERVISOR'}
+        canManageContracts={isSupervisory(user.role) || user.role === 'CEO'}
+        units={units}
+        suppliers={suppliers.filter((s) => s.isGas).map((s) => ({ id: s.id, name: s.name, cnpj: s.cnpj }))}
+        dashboard={dashboard}
+        purchased={purchased}
+        filter={{ unitId: fUnit ?? '', supplierId: fSupplier ?? '', mes: fMes ?? '' }}
+        receipts={receipts.map((r) => ({
+          id: r.id, unitId: r.unitId, date: r.operationalDate, unit: r.unit.name,
+          supplier: r.supplier?.name ?? 'Sem fornecedor',
+          qty: Number(r.quantityKg), total: Number(r.totalValue), price: Number(r.pricePerKg),
+          variation: variacoes.get(r.id)?.variationPct ?? null, alerted: r.alerted,
+          by: r.createdBy?.name ?? '', dateEdited: r.dateEdited, dateEditedByName: r.dateEditedByName,
             }))}
-            contracts={contracts}
-            unitsWithoutContract={unitsWithoutContract}
-          />
-        </CardContent>
-      </Card>
+        contracts={contracts}
+        unitsWithoutContract={unitsWithoutContract}
+      />
     </div>
   );
 }

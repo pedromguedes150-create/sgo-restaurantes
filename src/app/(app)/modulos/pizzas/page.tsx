@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Pizza } from 'lucide-react';
+import { Pizza, Wheat } from 'lucide-react';
+import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
+import { SgoBar } from '@/components/sgo/sgo-bar';
 import { getSessionUser } from '@/lib/auth/session';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { Card, CardContent } from '@/components/ui/card';
@@ -60,34 +62,39 @@ export default async function PizzasPage({
       {/* A unidade vai no subtítulo porque o seletor do cabeçalho pode estar em
           OUTRA unidade: o módulo existe só onde há pizzaria, e ler "Centro" no
           topo enquanto a tela mostra os números da pizzaria confundiria. */}
+      {/* Cabeçalho do kit (Fase 4): Pizzas / Massas como sub-abas (links que
+          preservam unidade e período; a ativa pela URL); unidade e período na
+          linha de filtros. */}
       <LargeTitle
         title="Controle de Pizzas"
         subtitle={`${unidade.name} — fechamento diário por canal e tamanho, preenchido pelo link interno da pizzaria.`}
+        tabs={[
+          { label: 'Pizzas', icon: <Pizza className="h-3.5 w-3.5" />, href: `/modulos/pizzas?unit=${unidade.id}&periodo=${dias}&aba=pizzas`, active: aba === 'pizzas', testId: 'aba-pizzas' },
+          { label: 'Massas e desperdícios', icon: <Wheat className="h-3.5 w-3.5" />, href: `/modulos/pizzas?unit=${unidade.id}&periodo=${dias}&aba=massas`, active: aba === 'massas', testId: 'aba-massas' },
+        ]}
       />
 
-      {unidades.length > 1 && <UnitSelectNav units={unidades.map((u) => ({ id: u.id, name: u.name }))} selected={unidade.id} />}
-
-      <PizzaLinkCard token={token} />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <nav aria-label="Abas do Controle de Pizzas" className="flex gap-1 rounded-control bg-sunken p-1">
-          <AbaLink ativa={aba === 'pizzas'} href={`/modulos/pizzas?unit=${unidade.id}&periodo=${dias}&aba=pizzas`} rotulo="Pizzas" />
-          <AbaLink ativa={aba === 'massas'} href={`/modulos/pizzas?unit=${unidade.id}&periodo=${dias}&aba=massas`} rotulo="Massas e desperdícios" />
-        </nav>
-        <span className="flex-1" />
+      <div className="sgo-filtros -mx-4">
+        {unidades.length > 1 && (
+          <>
+            <span className="sgo-label">Unidade</span>
+            <UnitSelectNav className="w-56" units={unidades.map((u) => ({ id: u.id, name: u.name }))} selected={unidade.id} />
+          </>
+        )}
+        <span className="sgo-label ml-auto">Período</span>
         {PERIODOS_EM_DIAS.map((d) => (
           <Link
             key={d}
             href={`/modulos/pizzas?unit=${unidade.id}&periodo=${d}&aba=${aba}`}
             scroll={false}
-            className={`sgo-control rounded-control border px-3 py-1.5 text-xs font-semibold ${
-              d === dias ? 'border-brand bg-brand text-on-brand' : 'border-line-strong text-ink-700'
-            }`}
+            className={`sgo-btn sgo-btn--sm ${d === dias ? 'sgo-btn--primary' : ''}`}
           >
             {d} dias
           </Link>
         ))}
       </div>
+
+      <PizzaLinkCard token={token} />
 
       {massas && (
         <MassasPainel painel={massas} unitId={unidade.id} hoje={hoje} dias={dias} podeCorrigir={podeCorrigirMassas} />
@@ -95,19 +102,19 @@ export default async function PizzasPage({
 
       {aba === 'pizzas' && (<>
       {podeCorrigirFechamento && (
-        <div className="flex items-center justify-between gap-2 rounded-card border border-line bg-surface px-3 py-2">
+        <div className="sgo-panel sgo-panel--solid flex items-center justify-between gap-2 px-3 py-2">
           <span className="sgo-type-11 text-ink-700">Funcionário lançou errado? Audite e corrija o fechamento de qualquer dia.</span>
           <FechamentoEditor unitId={unidade.id} hoje={hoje} dataInicial={hoje} />
         </div>
       )}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Kpi label="Pizzas hoje" value={String(painel.hoje)} destaque />
-        <Kpi label={`Total em ${dias} dias`} value={String(painel.total)} />
-        <Kpi label="Teknisa" value={String(teknisa.total)} />
-        <Kpi label="iFood" value={String(ifood.total)} />
-        <Kpi label="Média por dia lançado" value={painel.mediaDiaria.toLocaleString('pt-BR')} />
-        <Kpi label="Dias lançados" value={String(painel.diasComRegistro)} />
-      </div>
+      <SgoKpis className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" flush>
+        <SgoKpi label="Pizzas hoje" value={String(painel.hoje)} valueColor="var(--sgo-accent)" />
+        <SgoKpi label={`Total em ${dias} dias`} value={String(painel.total)} />
+        <SgoKpi label="Teknisa" value={String(teknisa.total)} />
+        <SgoKpi label="iFood" value={String(ifood.total)} />
+        <SgoKpi label="Média por dia lançado" value={painel.mediaDiaria.toLocaleString('pt-BR')} />
+        <SgoKpi label="Dias lançados" value={String(painel.diasComRegistro)} />
+      </SgoKpis>
 
       {painel.total === 0 ? (
         <EmptyState
@@ -214,32 +221,6 @@ export default async function PizzasPage({
   );
 }
 
-function AbaLink({ ativa, href, rotulo }: { ativa: boolean; href: string; rotulo: string }) {
-  return (
-    <Link
-      href={href}
-      scroll={false}
-      aria-current={ativa ? 'page' : undefined}
-      className={ativa
-        ? 'rounded-control bg-brand px-3 py-1.5 text-xs font-semibold text-on-brand'
-        : 'rounded-control px-3 py-1.5 text-xs font-semibold text-ink-700 hover:text-ink-900'}
-    >
-      {rotulo}
-    </Link>
-  );
-}
-
-function Kpi({ label, value, destaque }: { label: string; value: string; destaque?: boolean }) {
-  return (
-    <Card>
-      <CardContent className="py-3 text-center">
-        <p className={`sgo-type-24 font-semibold tabular-nums ${destaque ? 'text-brand' : 'text-ink-900'}`}>{value}</p>
-        <p className="text-xs text-ink-500">{label}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function Barra({ rotulo, valor, maximo }: { rotulo: string; valor: number; maximo: number }) {
   return (
     <div>
@@ -247,9 +228,7 @@ function Barra({ rotulo, valor, maximo }: { rotulo: string; valor: number; maxim
         <span className="text-ink-700">{rotulo}</span>
         <span className="font-semibold tabular-nums text-ink-900">{valor}</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-sunken">
-        <div className="h-full rounded-full bg-brand" style={{ width: `${maximo > 0 ? (valor / maximo) * 100 : 0}%` }} />
-      </div>
+      <SgoBar value={maximo > 0 ? (valor / maximo) * 100 : 0} tone="blue" height={8} />
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Save, Droplets, Pencil, Camera, Check, ImageOff, Maximize2, ExternalLink, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
-import { SegmentedControl } from '@/components/ui/ds/segmented-control';
+import { LargeTitle } from '@/components/layout/page-chrome';
 import { Input } from '@/components/ui/ds/field';
 import { Banner } from '@/components/ui/ds/banner';
 import { Modal, useBodyPortal, useDialogBehavior } from '@/components/ui/ds/modal';
@@ -56,7 +56,9 @@ const JANELAS = [
   { value: '0', label: 'Todo o histórico' },
 ];
 
-export function OilClient({ canLaunch, isAdmin, canEditDate = false, meuNome, dias, units, suppliers, dashboard, rows, abas = {} }: {
+export function OilClient({ canLaunch, isAdmin, canEditDate = false, meuNome, dias, units, suppliers, dashboard, rows, abas = {}, subtitulo }: {
+  /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
+  subtitulo?: React.ReactNode;
   canLaunch: boolean; isAdmin: boolean; canEditDate?: boolean;
   /** Nome de quem está logado — vira o "Responsável pelo lançamento". */
   meuNome: string;
@@ -75,11 +77,11 @@ export function OilClient({ canLaunch, isAdmin, canEditDate = false, meuNome, di
   ];
   return (
     <div className="space-y-4">
-      <SegmentedControl
-        aria-label="Seções de Coleta de Óleo"
-        value={tab}
-        onValueChange={(v) => setTab(v as typeof tab)}
-        options={tabs.filter((t) => t.show && podeAba(abas, t.key)).map((t) => ({ value: t.key, label: t.label }))}
+      {/* Cabeçalho do kit (Fase 4): abas de ESTADO na linha do título. */}
+      <LargeTitle
+        title="Coleta de Óleo"
+        subtitle={subtitulo}
+        tabs={tabs.filter((t) => t.show && podeAba(abas, t.key)).map((t) => ({ label: t.label, active: tab === t.key, testId: `aba-${t.key}`, onClick: () => setTab(t.key as typeof tab) }))}
       />
       {tab === 'lancar' && canLaunch && <Launch units={units} suppliers={suppliers} meuNome={meuNome} />}
       {tab === 'painel' && <Dashboard d={dashboard} />}

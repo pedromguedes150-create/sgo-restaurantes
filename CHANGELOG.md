@@ -9,6 +9,16 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.149.0 — 2026-10-05 (Kit de layout — Fase 4, lote 5: Supervisão, Painel da unidade, Executivo, Ticket Médio, Gás, Óleo, Troco, Pizzas, Atestados e Manutenção)
+### Alterado
+- **Rotina do Supervisor**, **Coleta de Óleo**, **Gestão de Troco**, **Central de Atestados**, **Manutenção** e **Análise de gás**: as abas de cada tela (Painel de uso/Visitas; Lançar coleta/Dashboard/Histórico; Cofre/Histórico; Lançar/Histórico/Painel; Chamados/Preventiva; Dashboard/Histórico/Contratos) passaram ao cabeçalho do kit, na linha do título, com a família do módulo no subtítulo e as ações à direita ("Painel da unidade (reunião)", "Escritório — fila de envio"). Em Manutenção o título solto (h1 próprio) virou o cabeçalho do kit.
+- **Visão Executiva**: PDF como ação do cabeçalho; mês na linha de filtros do kit; indicadores em `.sgo-kpis`; tabela em painel do kit.
+- **Ticket Médio**: "Unidades participantes" como ação do cabeçalho; competência na linha de filtros.
+- **Controle de Pizzas**: Pizzas / Massas e desperdícios como sub-abas do cabeçalho (links que preservam unidade e período); unidade e período na linha de filtros (período como botões do kit); seis indicadores em `.sgo-kpis`; barras do kit; o cartão de auditoria em painel sólido.
+- **Painel da unidade / executivo da rede**: Rede geral / Unidade como sub-abas do cabeçalho (links); PDF como ação; os formulários de mês/unidade na linha de filtros com o botão "Ver" do kit; os cartões de resumo em painel sólido.
+### Preservado
+Rotas, filtros, permissões (abas que a matriz esconde continuam escondidas), formulários, cálculos, impressão e exportações. Sem migração, sem mudança de API.
+
 ## v1.148.0 — 2026-10-05 (Kit de layout — Fase 4, lote 4: Comandas, Desperdícios, Metas, Estoque e Produtos)
 ### Alterado
 - **Contagem de Comandas**: ações do módulo (Conferir com leitor, Análise de comandas em aberto) como botões do kit; a família no subtítulo; a unidade na linha de filtros do kit; os quatro indicadores em `.sgo-kpis`; aviso de conferência completa atrasada em `.sgo-aviso`; rótulos de seção do kit no bloco do Admin.

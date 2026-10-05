@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { Printer } from 'lucide-react';
-import { Button as DsButton } from '@/components/ui/ds/button';
+import { LargeTitle } from '@/components/layout/page-chrome';
+import { SgoKpis } from '@/components/sgo/sgo-kpi';
 import { Select } from '@/components/ui/ds/select';
 import { StatCard } from '@/components/ui/ds/stat-card';
 import { cn } from '@/lib/utils';
@@ -25,23 +26,34 @@ const fmtMonthLong = (ym: string) => {
 const TONE = { success: 'bg-success', medium: 'bg-warning', critical: 'bg-danger' } as const;
 const pctCls = (v: number) => (v >= 80 ? 'text-success' : v >= 50 ? 'text-warning' : 'text-danger');
 
-export function ExecutiveClient({ rows, totals, yearMonth, months }: {
+export function ExecutiveClient({ rows, totals, yearMonth, months, subtitulo }: {
   rows: ExecRowUI[]; totals: ExecTotalsUI; yearMonth: string; months: string[];
+  /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
+  subtitulo?: React.ReactNode;
 }) {
   const router = useRouter();
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-2 print:hidden">
+      {/* Cabeçalho do kit (Fase 4): o PDF como ação; o mês na linha de filtros. */}
+      <div className="print:hidden">
+        <LargeTitle
+          title="Visão Executiva"
+          subtitle={subtitulo}
+          actions={<button type="button" className="sgo-btn" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" /> Imprimir / PDF</button>}
+        />
+      </div>
+      <div className="sgo-filtros -mx-4 print:hidden">
+        <span className="sgo-label">Mês</span>
         <div className="w-52">
           <Select
             aria-label="Mês"
+            size="sm"
             options={months.map((m) => ({ value: m, label: fmtMonthLong(m) }))}
             value={yearMonth}
             onValueChange={(m) => router.push(`/modulos/executivo?mes=${m}`)}
           />
         </div>
-        <DsButton size="sm" variant="secondary" className="ml-auto" onClick={() => window.print()}><Printer className="h-4 w-4" /> Imprimir / PDF</DsButton>
       </div>
 
       <p className="hidden text-sm font-semibold capitalize print:block">Visão Executiva — {fmtMonthLong(yearMonth)}</p>
@@ -49,7 +61,7 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
       {/* Os 4 números que dizem se o mês foi bom. Os demais totais ficam no
           rodapé da tabela, junto da coluna que já os detalha por unidade —
           antes eram 8 cartões, metade repetindo coluna. */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <SgoKpis className="grid-cols-2 sm:grid-cols-4" flush>
         <StatCard label="Meta média da rede" value={`${totals.metaAvg}%`} />
         <StatCard label="Uso médio do sistema" value={`${totals.usageAvg}%`} />
         <StatCard label="Desperdício total" value={`${totals.wasteKg.toLocaleString('pt-BR')} kg`} />
@@ -58,10 +70,10 @@ export function ExecutiveClient({ rows, totals, yearMonth, months }: {
           value={totals.severeOccurrences}
           hint={totals.severeOccurrences > 0 ? 'exigem tratativa' : 'nenhuma no mês'}
         />
-      </div>
+      </SgoKpis>
 
       {/* Tabela por unidade */}
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="sgo-panel overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="bg-canvas text-left sgo-type-11 font-semibold text-ink-500">

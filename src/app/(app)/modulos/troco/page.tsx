@@ -11,8 +11,6 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getVaultOverview, getVaultAlerts, getOpenChangeRequests } from '@/lib/cash-vault';
 import { isSupervisory } from '@/lib/roles';
-import { Card, CardContent } from '@/components/ui/card';
-import { LargeTitle } from '@/components/layout/page-chrome';
 import { VaultClient } from '@/components/cash/vault-client';
 
 export const dynamic = 'force-dynamic';
@@ -44,32 +42,23 @@ export default async function TrocoPage({ searchParams }: { searchParams: { unit
 
   return (
     <div className="space-y-4">
-      <LargeTitle
-        title="Gestão de Troco"
-        subtitle="Cofre da unidade por denominação: confira diariamente, reponha os baldes dos caixas com miúdos e troque as notas grandes com o escritório."
+      {/* O cabeçalho (título, abas Cofre/Histórico, atalho do escritório) vive
+      no cliente, no padrão do kit. O atalho segue só para quem envia. */}
+      <VaultClient
+        subtitulo={<>Cofre da unidade por denominação: confira diariamente, reponha os baldes dos caixas com miúdos e troque as notas grandes com o escritório.<span className="block"><FamilyTabs active="/modulos/troco" /></span></>}
+        acoes={(user.role === 'ADMIN' || user.role === 'SUPERVISOR' || user.role === 'COORDINATOR' || user.role === 'CEO') && podeVer('/modulos/troco/escritorio') ? (
+          <Link href="/modulos/troco/escritorio" className="sgo-btn"><Landmark className="h-3.5 w-3.5" /> Escritório — fila de envio e relação de enviados</Link>
+            ) : undefined}
+        abas={await abasDoPerfil(user.role, 'CASH')}
+        units={units}
+        selectedUnitId={selected.id}
+        vault={vault}
+        alerts={alerts}
+        openRequestsNetwork={openRequestsNetwork}
+        canOperate={user.role !== 'FINANCE' && user.role !== 'CEO'}
+        canManageBuckets={user.role === 'ADMIN' || user.role === 'SUPERVISOR' || user.role === 'COORDINATOR'}
+        canResolve={sup}
       />
-      <FamilyTabs active="/modulos/troco" />
-      {/* Atalho para a fila do escritório — só para quem envia. */}
-      {(user.role === 'ADMIN' || user.role === 'SUPERVISOR' || user.role === 'COORDINATOR' || user.role === 'CEO') && podeVer('/modulos/troco/escritorio') && (
-        <Link href="/modulos/troco/escritorio" className="inline-flex items-center gap-1.5 rounded-full border-2 border-brand px-3 py-1.5 text-sm font-semibold text-brand transition-colors hover:bg-brand/10">
-          <Landmark className="h-4 w-4" /> Escritório — fila de envio e relação de enviados
-        </Link>
-      )}
-      <Card>
-        <CardContent className="pt-4">
-          <VaultClient
-            abas={await abasDoPerfil(user.role, 'CASH')}
-            units={units}
-            selectedUnitId={selected.id}
-            vault={vault}
-            alerts={alerts}
-            openRequestsNetwork={openRequestsNetwork}
-            canOperate={user.role !== 'FINANCE' && user.role !== 'CEO'}
-            canManageBuckets={user.role === 'ADMIN' || user.role === 'SUPERVISOR' || user.role === 'COORDINATOR'}
-            canResolve={sup}
-          />
-        </CardContent>
-      </Card>
     </div>
   );
 }
