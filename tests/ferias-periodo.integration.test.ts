@@ -109,6 +109,31 @@ describe('lançar período', () => {
   });
 });
 
+describe('venda de dias junto do lançamento (v1.159.1)', () => {
+  let colabC: string;
+  it('"saiu 20 e vendeu 10": o abono entra no período aquisitivo mais antigo com saldo', async () => {
+    colabC = (await prisma.collaborator.create({ data: { name: `Venda ${sfx}`, hireDate: '2024-02-01', units: { create: [{ unitId: unitA }] } } })).id;
+    const r = await lancarPeriodoDeFerias(gerente(), { collaboratorId: colabC, startDate: '2026-11-01', endDate: '2026-11-20', diasVendidos: 10 });
+    expect(r).toMatchObject({ ok: true, abono: { ok: true, dias: 10, periodoInicio: '2025-02-01' } });
+    const ab = await prisma.vacationAbono.findMany({ where: { collaboratorId: colabC } });
+    expect(ab).toHaveLength(1);
+    expect(ab[0]).toMatchObject({ periodoInicio: '2025-02-01', dias: 10, unitId: unitA });
+    expect(ab[0].observacao).toContain('01/11/2026 a 20/11/2026');
+  });
+
+  it('acima de 1/3 do direito é recusado ANTES de lançar; venda recusada não desfaz as férias', async () => {
+    expect(await lancarPeriodoDeFerias(gerente(), { collaboratorId: colabC, startDate: '2026-12-01', endDate: '2026-12-05', diasVendidos: 11 })).toMatchObject({ ok: false, reason: 'INVALID' });
+    expect(await prisma.vacation.count({ where: { collaboratorId: colabC } })).toBe(1);
+    // o período de 2025 já tem venda: as férias entram e a venda é devolvida como recusada
+    const r = await lancarPeriodoDeFerias(gerente(), { collaboratorId: colabC, startDate: '2026-12-01', endDate: '2026-12-05', diasVendidos: 5, periodoInicio: '2025-02-01' });
+    expect(r).toMatchObject({ ok: true, abono: { ok: false, reason: 'JA_EXISTE' } });
+    expect(await prisma.vacation.count({ where: { collaboratorId: colabC } })).toBe(2);
+    expect(await prisma.vacationAbono.count({ where: { collaboratorId: colabC } })).toBe(1);
+    await prisma.vacationAbono.deleteMany({ where: { collaboratorId: colabC } });
+    await prisma.collaborator.delete({ where: { id: colabC } });
+  });
+});
+
 describe('editar e excluir', () => {
   it('editar o período aberto pelo RH fixa o fim: o sync deixa de esticá-lo', async () => {
     const rh = await prisma.vacation.create({ data: { collaboratorId: colabB, unitId: unitB, startDate: d('2026-11-03'), endDate: d('2026-11-05'), status: 'CONFIRMED', source: FERIAS_ORIGEM_RH } });

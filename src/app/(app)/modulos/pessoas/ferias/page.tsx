@@ -68,12 +68,15 @@ export default async function ControleDeFeriasPage({ searchParams }: { searchPar
 
   if (aba === 'periodos') {
     const [lista, periodos] = await Promise.all([colaboradoresParaAjuste(user, unidade), listarPeriodosDeFerias(user, unidade)]);
+    // os períodos aquisitivos com saldo para vender vêm da MESMA conta da aba Abono (d.linhas)
+    const vendaveisPor = new Map(d.linhas.map((l) => [l.id, l.vendaveis]));
     return (
       <div className="space-y-4" data-testid="controle-ferias">
         {cabecalho}
         <PeriodosFerias
-          colaboradores={lista.map((c) => ({ id: c.id, nome: c.name, hint: c.jobTitle ?? '' }))}
+          colaboradores={lista.map((c) => ({ id: c.id, nome: c.name, hint: c.jobTitle ?? '', vendaveis: vendaveisPor.get(c.id) ?? [] }))}
           periodos={periodos.map((p) => ({ ...p, unidade: shortUnitName(p.unidade) }))}
+          maxDias={MAX_DIAS_ABONO}
           podeEditar={abas.fer?.canEdit !== false}
           colaboradorInicial={searchParams.colaborador ?? null}
           unitId={unidade}

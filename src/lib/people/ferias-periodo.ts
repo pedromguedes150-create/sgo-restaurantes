@@ -4,6 +4,9 @@ import { canAccessUnit, unitScopeWhere } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
 import { FERIAS_ORIGEM_RH } from '@/lib/rh/sync';
 import { hojeNaOperacao } from '@/lib/controle-gerentes-dados';
+import { registrarAbono } from '@/lib/people/abono';
+import { periodosAquisitivos, MAX_DIAS_ABONO } from '@/lib/people/periodo-aquisitivo';
+import { FERIAS_QUE_CONTAM } from '@/lib/schedule';
 
 /**
  * PERÍODO DE FÉRIAS LANÇADO À MÃO (v1.159.0) — "de 01/10 a 30/10".
@@ -35,8 +38,11 @@ import { hojeNaOperacao } from '@/lib/controle-gerentes-dados';
 export const MAX_DIAS_PERIODO = 90;
 export const ORIGEM_SGO = 'SGO';
 
+/** Venda de dias feita junto do lançamento (v1.159.1): o que aconteceu com ela. */
+export type ResultadoAbonoJunto = { ok: true; dias: number; periodoInicio: string } | { ok: false; reason: string };
+
 export type ResultadoFerias =
-  | { ok: true; id: string; substituiuRh: number; confirmouSolicitada: boolean }
+  | { ok: true; id: string; substituiuRh: number; confirmouSolicitada: boolean; abono?: ResultadoAbonoJunto }
   | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NAO_ENCONTRADO' | 'SOBREPOE'; detalhe?: string };
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
@@ -68,11 +74,13 @@ async function cruzamentos(collaboratorId: string, start: Date, end: Date, excet
 
 export async function lancarPeriodoDeFerias(
   user: SessionUser,
-  input: { collaboratorId: string; startDate: string; endDate: string; note?: string | null; unitId?: string | null },
+  input: { collaboratorId: string; startDate: string; endDate: string; note?: string | null; unitId?: string | null; diasVendidos?: number | null; periodoInicio?: string | null },
   ctx: Ctx = {},
 ): Promise<ResultadoFerias> {
   if (!podeLancar(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!datasValidas(input.startDate, input.endDate)) return { ok: false, reason: 'INVALID' };
+  const vendidos = Number(input.diasVendidos ?? 0);
+  if (!Number.isInteger(vendidos) || vendidos < 0 || vendidos > MAX_DIAS_ABONO) return { ok: false, reason: 'INVALID', detalhe: `dias vendidos de 0 a ${MAX_DIAS_ABONO}` };
   const collab = await prisma.collaborator.findUnique({
     where: { id: input.collaboratorId },
     select: { name: true, units: { select: { unitId: true } } },
@@ -113,7 +121,33 @@ export async function lancarPeriodoDeFerias(
     metadata: { name: collab.name, start: input.startDate, end: input.endDate, dias: diasDoPeriodo(input.startDate, input.endDate), note, substituiuRh: doRh.map((x) => `${isoDia(x.startDate)}..${isoDia(x.endDate)}`), confirmouSolicitada: solicitadas.length > 0 },
     ...ctx,
   });
-  return { ok: true, id, substituiuRh: doRh.length, confirmouSolicitada: solicitadas.length > 0 };
+  /* VENDA DE DIAS junto do lançamento (v1.159.1, pedido do Pedro: "para fazer sentido
+     com a operação"): "saiu de 01/10 a 20/10 e vendeu os outros 10". A venda é o
+     MESMO abono da aba Abono (: 1/3 do direito, dentro do saldo, um
+     por período aquisitivo), gravado DEPOIS do período — se recusada, as férias
+     ficam lançadas e a tela diz por que a venda não entrou. Sem período informado,
+     vai para o período aquisitivo mais antigo que ainda tem saldo para vender. */
+  let abono: ResultadoAbonoJunto | undefined;
+  if (vendidos > 0) {
+    const periodoInicio = input.periodoInicio || (await periodoParaVender(input.collaboratorId));
+    if (!periodoInicio) abono = { ok: false, reason: 'PERIODO' };
+    else {
+      const r = await registrarAbono(user, { collaboratorId: input.collaboratorId, periodoInicio, dias: vendidos, observacao: `Vendidos junto das férias de ${br(input.startDate)} a ${br(input.endDate)}` }, ctx);
+      abono = r.ok ? { ok: true, dias: vendidos, periodoInicio } : { ok: false, reason: r.reason };
+    }
+  }
+  return { ok: true, id, substituiuRh: doRh.length, confirmouSolicitada: solicitadas.length > 0, ...(abono ? { abono } : {}) };
+}
+
+/** Período aquisitivo mais antigo em que ainda dá para vender dias (mesma régua da aba Abono). */
+async function periodoParaVender(collaboratorId: string): Promise<string | null> {
+  const c = await prisma.collaborator.findUnique({
+    where: { id: collaboratorId },
+    select: { hireDate: true, hireDateManual: true, vacations: { where: { status: { in: FERIAS_QUE_CONTAM } }, select: { startDate: true, endDate: true } }, vacationAbonos: { select: { periodoInicio: true, dias: true } }, vacationAjustes: { select: { periodoInicio: true, diasGozados: true } } },
+  });
+  if (!c) return null;
+  const periodos = periodosAquisitivos(c.hireDateManual || c.hireDate, c.vacations.map((v) => ({ inicio: isoDia(v.startDate), fim: isoDia(v.endDate) })), hojeNaOperacao(), undefined, c.vacationAbonos, c.vacationAjustes);
+  return periodos.find((p) => p.situacao !== 'ANTERIOR_AO_SGO' && p.situacao !== 'QUITADO' && p.saldo > 0 && p.diasVendidos === 0)?.inicio ?? null;
 }
 
 export async function editarPeriodoDeFerias(

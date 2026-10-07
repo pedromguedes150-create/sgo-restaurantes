@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.159.1 — 2026-10-07 (Períodos de férias: venda de dias no mesmo lançamento)
+### Alterado
+- Na aba **Períodos de férias**, o lançamento ganhou **"Dias vendidos (abono)"** e **"Do período aquisitivo"** (já vem escolhido o mais antigo com saldo): "saiu de 01/10 a 20/10 e vendeu os outros 10" é um passo só. A venda é o mesmo abono da aba Abono (até 1/3 do direito, dentro do saldo, uma por período). Se a venda for recusada, as férias ficam lançadas e a tela diz o motivo.
+
 ## v1.159.0 — 2026-10-07 (Controle de Férias: lançar o período de férias à mão)
 ### Adicionado
 - **Aba "Períodos de férias"** no Controle de Férias: escolha o colaborador, o início e o fim ("01/10 a 20/10") e lance. A API do RH só diz que a pessoa ESTÁ de férias, sem as datas — agora a unidade informa o período real.
