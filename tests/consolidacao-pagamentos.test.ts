@@ -12,7 +12,7 @@ import {
 const HOJE = '2026-09-30';
 const l = (p: Partial<Lancamento> & { id: string }): Lancamento => ({
   data: '2026-09-28', unitId: 'mo', unidade: 'Moreira', tipo: 'OVERTIME', pessoaChave: 'C:joao', pessoa: 'João Silva',
-  horas: 2, vt: 0, valor: 45, status: 'APPROVED', motivo: null, solicitadoPor: 'Gerente', dataSolicitacao: '2026-09-28', semVinculoRh: false, cpf: null, pixKey: null,
+  horas: 2, vt: 0, valor: 45, status: 'APPROVED', motivo: null, solicitadoPor: 'Gerente', dataSolicitacao: '2026-09-28', semVinculoRh: false, pagarEm: null, pagoEm: null, cpf: null, pixKey: null,
   ...p,
 });
 

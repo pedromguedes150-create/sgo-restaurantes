@@ -3,7 +3,7 @@ import { escopo, noPeriodo, dataDe, getConsolidadoFreelancers } from '@/lib/paym
 import { hojeNaOperacao } from '@/lib/controle-gerentes-dados';
 import type { SessionUser } from '@/lib/auth/session';
 import {
-  chaveDaPessoa, filtrarLancamentos, ordenar, pessoasDoPeriodo, porColaborador, porUnidade, resolverPeriodo, resumir, totaisDaRecorrencia,
+  chaveDaPessoa, filtrarLancamentos, ordenar, pessoasDoPeriodo, porColaborador, porSegundaDePagamento, porUnidade, resolverPeriodo, resumir, segundaDoPagamento, totaisDaRecorrencia,
   type Consolidacao, type FiltroConsolidacao, type Lancamento, type Recorrencia,
 } from '@/lib/payments/consolidacao-calculo';
 
@@ -49,7 +49,7 @@ export async function getConsolidacaoPagamentos(user: SessionUser, filtro: Filtr
     },
     select: {
       id: true, type: true, status: true, amount: true, transportValue: true, hours: true,
-      workDate: true, entryDate: true, createdAt: true, unitId: true,
+      workDate: true, entryDate: true, createdAt: true, unitId: true, paidAt: true,
       freelancerId: true, collaboratorId: true, collaboratorName: true,
       reason: true, description: true, coverageSector: true,
       unit: { select: { name: true } },
@@ -83,6 +83,8 @@ export async function getConsolidacaoPagamentos(user: SessionUser, filtro: Filtr
       semVinculoRh: tipo === 'OVERTIME' && !r.collaboratorId,
       cpf: tipo === 'FREELANCER' ? (r.freelancer?.cpf ?? null) : (r.collaborator?.cpf ?? null),
       pixKey: tipo === 'FREELANCER' ? (r.freelancer?.pixKey ?? null) : null,
+      pagarEm: tipo === 'FREELANCER' ? segundaDoPagamento(dataDe(r)) : null,
+      pagoEm: r.paidAt ? diaEmBrasilia(r.paidAt) : null,
     };
   });
 
@@ -98,6 +100,7 @@ export async function getConsolidacaoPagamentos(user: SessionUser, filtro: Filtr
     resumo: resumir(lancamentos, filtro.status),
     porUnidade: porUnidade(lancamentos, filtro.status),
     porColaborador: porColaborador(lancamentos, filtro.status),
+    porSegunda: porSegundaDePagamento(lancamentos, filtro.status, hoje),
   };
 }
 

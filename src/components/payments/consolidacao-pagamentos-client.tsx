@@ -11,7 +11,7 @@ import { Banner } from '@/components/ui/ds/banner';
 import { Table } from '@/components/ui/ds/table';
 import { formatBRL } from '@/lib/utils';
 import {
-  PERIODOS_RAPIDOS, STATUS_CONS, STATUS_TEXTO, TIPO_TEXTO, TIPOS_CONS, emBR, entraNosTotais, ordenar, queryDoFiltro, textoHoras,
+  PERIODOS_RAPIDOS, STATUS_CONS, rotuloSegunda, STATUS_TEXTO, TIPO_TEXTO, TIPOS_CONS, emBR, entraNosTotais, ordenar, queryDoFiltro, textoHoras,
   type Aba, type Consolidacao, type FiltroConsolidacao, type Lancamento, type Ordem, type PeriodoRapido, type PeriodoResolvido,
   type Recorrencia, type Visao,
 } from '@/lib/payments/consolidacao-calculo';
@@ -204,6 +204,44 @@ function VisaoFinanceira({ dados, filtro }: { dados: Consolidacao; filtro: Filtr
         </section>
       )}
 
+      {/* ── Pagamento por segunda-feira (v1.160.0): o freelancer da semana seg→dom é pago na segunda seguinte ── */}
+      {dados.porSegunda.length > 0 && (
+        <section aria-label="Pagamento dos freelancers por segunda-feira" className="space-y-2" data-testid="por-segunda">
+          <h2 className="sgo-type-15 font-semibold text-ink-900">Freelancers: quando pagar</h2>
+          <p className="text-xs text-ink-500">Quem trabalhou de segunda a domingo é pago na <b>segunda-feira seguinte</b>. Cada linha é uma segunda: a semana que ela paga e o que já foi pago, o que está aprovado a pagar e o que ainda espera aprovação. Hora extra não entra aqui (vai pelo cartão, na competência).</p>
+          <div className="overflow-x-auto rounded-card border border-line">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead className="bg-canvas text-left text-xs text-ink-500">
+                <tr>
+                  <th className="px-2 py-2 font-semibold">Pagar na segunda</th>
+                  <th className="px-2 py-2 font-semibold">Semana do serviço</th>
+                  <th className="px-2 py-2 text-right font-semibold">Solicitações</th>
+                  <th className="px-2 py-2 text-right font-semibold">Freelancers</th>
+                  <th className="px-2 py-2 text-right font-semibold">Pago</th>
+                  <th className="px-2 py-2 text-right font-semibold">A pagar</th>
+                  <th className="px-2 py-2 text-right font-semibold">Pendente</th>
+                  <th className="px-2 py-2 text-right font-semibold">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {dados.porSegunda.map((s) => (
+                  <tr key={s.pagarEm} className={s.atrasado ? 'bg-danger-bg' : ''} data-testid={`segunda-${s.pagarEm}`}>
+                    <td className="whitespace-nowrap px-2 py-1.5 font-semibold tabular-nums text-brand">{rotuloSegunda(s.pagarEm)}{s.atrasado && <span className="ml-1 text-xs font-semibold text-danger">· atrasado</span>}</td>
+                    <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-ink-700">{emBR(s.semanaDe)} a {emBR(s.semanaAte)}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{s.qtd}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{s.freelancers}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums text-success">{formatBRL(s.pago)}</td>
+                    <td className={`px-2 py-1.5 text-right font-semibold tabular-nums ${s.aPagar > 0 ? 'text-info' : ''}`}>{formatBRL(s.aPagar)}</td>
+                    <td className={`px-2 py-1.5 text-right tabular-nums ${s.pendente > 0 ? 'text-warning' : ''}`}>{formatBRL(s.pendente)}</td>
+                    <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-ink-900">{formatBRL(s.valor)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       {/* ── Lançamentos ── */}
       <section aria-label="Lançamentos" className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -221,10 +259,11 @@ function VisaoFinanceira({ dados, filtro }: { dados: Consolidacao; filtro: Filtr
           <p className="rounded-card border border-dashed border-line p-4 text-sm text-ink-500">Nenhum Freelancer ou Hora Extra com esses filtros no período.</p>
         ) : visao === 'lancamento' ? (
           <div className="overflow-x-auto rounded-card border border-line">
-            <table className="w-full min-w-[840px] text-sm">
+            <table className="w-full min-w-[920px] text-sm">
               <thead className="bg-canvas text-left text-xs text-ink-500">
                 <tr>
                   <Th o="data" rotulo="Data" atual={ordem} dir={dir} onClick={ordenarPor} />
+                  <th className="px-2 py-2 font-semibold" title="Freelancer: segunda-feira seguinte à semana do serviço. Hora extra: cartão, pela competência.">Pagar em</th>
                   <Th o="unidade" rotulo="Unidade" atual={ordem} dir={dir} onClick={ordenarPor} />
                   <Th o="tipo" rotulo="Tipo" atual={ordem} dir={dir} onClick={ordenarPor} />
                   <Th o="colaborador" rotulo="Colaborador" atual={ordem} dir={dir} onClick={ordenarPor} />
@@ -238,7 +277,7 @@ function VisaoFinanceira({ dados, filtro }: { dados: Consolidacao; filtro: Filtr
               <tbody className="divide-y divide-line">
                 {linhas.map((l) => <LinhaDoLancamento key={l.id} l={l} somando={entraNosTotais(l, filtro.status)} />)}
               </tbody>
-              <RodapeDeTotais resumo={r} colunas={9} colVt={6} />
+              <RodapeDeTotais resumo={r} colunas={10} colVt={7} />
             </table>
           </div>
         ) : (
@@ -276,6 +315,7 @@ function VisaoFinanceira({ dados, filtro }: { dados: Consolidacao; filtro: Filtr
         <p className="text-xs text-ink-500">
           Valor = o valor da solicitação, o mesmo pago na aba Pagar. O vale-transporte lançado já está DENTRO dele — por isso o total geral é Freelancer + Hora Extra, sem somar o V.T. de novo.
           Cada lançamento é uma linha: o mesmo colaborador em dias diferentes não é fundido.
+          “Pagar em” é a segunda-feira seguinte à semana do serviço (regra da operação); “em dd/mm” ao lado do status Pago é o dia em que a aba Pagar marcou o pagamento.
         </p>
       </section>
     </div>
@@ -317,6 +357,11 @@ function LinhaDoLancamento({ l, somando, recuo = false }: { l: Lancamento; soman
   return (
     <tr className={somando ? '' : 'text-ink-400'}>
       <td className={`whitespace-nowrap px-2 py-1.5 tabular-nums ${recuo ? 'pl-8' : ''}`}>{emBR(l.data)}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-xs tabular-nums">
+        {l.pagarEm
+          ? <span className={l.status === 'PAID' ? 'text-ink-500' : 'font-semibold text-brand'}>{rotuloSegunda(l.pagarEm)}</span>
+          : <span className="text-ink-400" title="Hora extra é paga pela competência, no cartão">cartão</span>}
+      </td>
       <td className="px-2 py-1.5">{l.unidade}</td>
       <td className="px-2 py-1.5">{TIPO_TEXTO[l.tipo]}</td>
       <td className="px-2 py-1.5">
@@ -327,7 +372,10 @@ function LinhaDoLancamento({ l, somando, recuo = false }: { l: Lancamento; soman
       <td className="max-w-[12rem] truncate px-2 py-1.5 text-ink-500" title={l.motivo ?? undefined}>{l.motivo ?? '–'}</td>
       <td className="px-2 py-1.5 text-right tabular-nums">{formatBRL(l.vt)}</td>
       <td className={`px-2 py-1.5 text-right font-semibold tabular-nums ${somando ? 'text-ink-900' : 'line-through'}`}>{formatBRL(l.valor)}</td>
-      <td className="px-2 py-1.5"><StatusBadge tone={TOM_STATUS[l.status]}>{STATUS_TEXTO[l.status]}</StatusBadge></td>
+      <td className="whitespace-nowrap px-2 py-1.5">
+        <StatusBadge tone={TOM_STATUS[l.status]}>{STATUS_TEXTO[l.status]}</StatusBadge>
+        {l.pagoEm && <span className="ml-1 text-xs text-ink-500" title="Dia em que foi marcada como paga na aba Pagar">em {emBR(l.pagoEm)}</span>}
+      </td>
     </tr>
   );
 }
