@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { AlertOctagon, AlertTriangle, ArrowLeft, CalendarCheck, CalendarClock, Clock, HandCoins, Palmtree, PencilLine, UserX, Users } from 'lucide-react';
+import { AlertOctagon, AlertTriangle, ArrowLeft, CalendarCheck, CalendarClock, CalendarRange, Clock, HandCoins, Palmtree, PencilLine, UserX, Users } from 'lucide-react';
 import { listarAbonos, podeExcluirAbono } from '@/lib/people/abono';
 import { MAX_DIAS_ABONO } from '@/lib/people/periodo-aquisitivo';
 import { AbonoFerias } from '@/components/people/abono-ferias';
 import { AjustesFerias } from '@/components/people/ajustes-ferias';
+import { PeriodosFerias } from '@/components/people/periodos-ferias';
+import { listarPeriodosDeFerias } from '@/lib/people/ferias-periodo';
 import { colaboradoresParaAjuste, getFeriasDoColaborador, podeCorrigirAdmissao } from '@/lib/people/ferias-manual';
 import { getSessionUser } from '@/lib/auth/session';
 import { abasDoPerfil } from '@/lib/permissions/abas-server';
@@ -38,10 +40,10 @@ export default async function ControleDeFeriasPage({ searchParams }: { searchPar
   if (abas.fer?.canView === false) notFound();
   const unidade = searchParams.unidade && searchParams.unidade !== TODAS ? searchParams.unidade : null;
   const ver: Filtro = (Object.keys(ROTULO) as Filtro[]).includes(searchParams.ver as Filtro) ? (searchParams.ver as Filtro) : 'VENCIDA';
-  const aba = searchParams.aba === 'abono' || searchParams.aba === 'ajustes' ? searchParams.aba : 'situacao';
+  const aba = searchParams.aba === 'abono' || searchParams.aba === 'ajustes' || searchParams.aba === 'periodos' ? searchParams.aba : 'situacao';
   const d = await getControleDeFerias(user, unidade);
   const r = d.resumo;
-  const linkAba = (a: 'situacao' | 'abono' | 'ajustes') => `/modulos/pessoas/ferias?aba=${a}${unidade ? `&unidade=${unidade}` : ''}`;
+  const linkAba = (a: 'situacao' | 'periodos' | 'abono' | 'ajustes') => `/modulos/pessoas/ferias?aba=${a}${unidade ? `&unidade=${unidade}` : ''}`;
   const cabecalho = (
     <>
       <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand print:hidden"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
@@ -50,6 +52,7 @@ export default async function ControleDeFeriasPage({ searchParams }: { searchPar
         subtitle="Período aquisitivo de cada colaborador ativo, pela admissão do RH: o que venceu, o que vence logo, quem está em gozo e quem vendeu dias."
         tabs={[
           { label: 'Situação', icon: <Palmtree className="h-3.5 w-3.5" />, href: linkAba('situacao'), active: aba === 'situacao', testId: 'aba-situacao' },
+          { label: 'Períodos de férias', icon: <CalendarRange className="h-3.5 w-3.5" />, href: linkAba('periodos'), active: aba === 'periodos', testId: 'aba-periodos' },
           { label: 'Abono (venda de dias)', icon: <HandCoins className="h-3.5 w-3.5" />, href: linkAba('abono'), active: aba === 'abono', testId: 'aba-abono' },
           { label: 'Ajustes manuais', icon: <PencilLine className="h-3.5 w-3.5" />, href: linkAba('ajustes'), active: aba === 'ajustes', testId: 'aba-ajustes' },
         ]}
@@ -62,6 +65,22 @@ export default async function ControleDeFeriasPage({ searchParams }: { searchPar
       )}
     </>
   );
+
+  if (aba === 'periodos') {
+    const [lista, periodos] = await Promise.all([colaboradoresParaAjuste(user, unidade), listarPeriodosDeFerias(user, unidade)]);
+    return (
+      <div className="space-y-4" data-testid="controle-ferias">
+        {cabecalho}
+        <PeriodosFerias
+          colaboradores={lista.map((c) => ({ id: c.id, nome: c.name, hint: c.jobTitle ?? '' }))}
+          periodos={periodos.map((p) => ({ ...p, unidade: shortUnitName(p.unidade) }))}
+          podeEditar={abas.fer?.canEdit !== false}
+          colaboradorInicial={searchParams.colaborador ?? null}
+          unitId={unidade}
+        />
+      </div>
+    );
+  }
 
   if (aba === 'ajustes') {
     const [lista, ficha] = await Promise.all([
@@ -162,7 +181,7 @@ export default async function ControleDeFeriasPage({ searchParams }: { searchPar
                     <td className="text-right font-semibold tabular-nums">{l.foco ? `${l.foco.saldo}d` : '—'}{l.vencidos > 1 && <span className="block text-xs text-danger">{l.vencidos} vencidos</span>}</td>
                     <td className="text-right tabular-nums text-ink-700">{l.foco?.diasVendidos ? `${l.foco.diasVendidos}d` : '—'}</td>
                     <td>{situacao(l)}{l.foco?.parcial && <Link href={`/modulos/pessoas/ferias?aba=ajustes&colaborador=${l.id}`} className="block text-xs text-brand underline">pode haver gozo antes do SGO — informar</Link>}</td>
-                    <td className="tabular-nums text-ink-700">{l.emGozo ? <span className="sgo-tag sgo-tag--green">Em gozo</span> : l.programada ? `${br(l.programada.inicio)} a ${br(l.programada.fim)}` : '—'}</td>
+                    <td className="tabular-nums text-ink-700">{l.emGozo ? <Link href={`/modulos/pessoas/ferias?aba=periodos&colaborador=${l.id}`} className="sgo-tag sgo-tag--green" title="Ver/ajustar o período">Em gozo</Link> : l.programada ? `${br(l.programada.inicio)} a ${br(l.programada.fim)}` : '—'}</td>
                   </tr>
                 ))}
               </tbody>

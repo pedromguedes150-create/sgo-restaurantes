@@ -1362,6 +1362,18 @@ export const GUIDE: GuideSection[] = [
     title: 'Pessoas e Escala',
     guides: [
       {
+        id: 'ferias-periodo',
+        title: 'Férias: lançar o período (de… até…)',
+        roles: ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'ADMIN', 'CEO'],
+        summary: 'O RH só diz que a pessoa está de férias; o início e o fim você lança.',
+        steps: [
+          'Em Pessoas → Controle de Férias → aba "Períodos de férias", escolha o colaborador, o início e o fim (último dia) e toque em Lançar. Ex.: 01/10 a 20/10.',
+          'Na hora, a Escala mostra FE só nesses dias (o resto do mês segue o padrão da pessoa) e o Controle de Férias conta os dias como gozados. Dias vendidos continuam na aba Abono: 20 gozados + 10 vendidos fecham o período.',
+          'Se a sincronização do RH já tinha aberto um período para a pessoa (começa no dia em que o RH passou a dizer "Férias"), o que você lançar o substitui. Para corrigir um período, use Editar na lista; Excluir tira os dias da Escala.',
+          'Se o RH continuar dizendo "Férias" depois do fim que você lançou, a sincronização abre um período novo a partir daquele dia — ele aparece na lista como "Aberto pelo RH". Peça ao RH para atualizar o status e exclua o período extra.',
+        ],
+      },
+      {
         id: 'avisos-ao-vivo',
         title: 'Avisos no topo da tela',
         roles: ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'FINANCE', 'ADMIN', 'CEO'],
