@@ -9,6 +9,23 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.159.0 — 2026-10-07 (Controle de Férias: lançar o período de férias à mão)
+### Adicionado
+- **Aba "Períodos de férias"** no Controle de Férias: escolha o colaborador, o início e o fim ("01/10 a 20/10") e lance. A API do RH só diz que a pessoa ESTÁ de férias, sem as datas — agora a unidade informa o período real.
+- O período lançado **entra na Escala como FE só nesses dias** (o resto do mês segue o padrão da pessoa), conta como gozado no período aquisitivo e aparece como "Em gozo"/"Programada" na Situação. Dias vendidos continuam na aba Abono: 20 gozados + 10 vendidos = período quitado.
+- Lista dos períodos dos últimos 12 meses e futuros, com a origem (Aberto pelo RH · Lançado aqui · Solicitada ao RH), editar e excluir. Clicar em "Em gozo" na Situação abre a aba já no colaborador.
+### Como convive com o RH
+- O período que a sincronização abriu (a partir do dia em que viu "Férias") é **substituído** pelo lançado. Enquanto o lançado cobrir o dia de hoje, o sync não abre outro.
+- Editar um período aberto pelo RH **fixa o fim**: o sync deixa de esticá-lo. Se o RH continuar dizendo "Férias" depois do fim lançado, o sync abre um período novo a partir daquele dia, visível na lista — peça ao RH para atualizar o status.
+- Férias solicitada ao RH que cruza o lançado vira confirmada com as datas lançadas. Cruzar outro período lançado aqui é recusado, dizendo qual.
+## v1.158.1 — 2026-10-07 (SGO aberto "de ontem" caía em 0.0.0.0 + telas da rede mais rápidas)
+### Corrigido
+- **"Safari não pode abrir a página / porta de rede restrita", endereço 0.0.0.0** ao reabrir o SGO deixado aberto no dia anterior (celular e computador). A sessão de acesso dura 8 horas; ao renová-la pela navegação, o servidor mandava o navegador para `https://0.0.0.0:3100` em vez do endereço do site — por isso "fechar e abrir de novo" funcionava: a sessão nova já tinha sido gravada. Agora o redirecionamento é relativo e não depende do endereço interno do servidor.
+### Alterado
+- **Dashboard (Admin/CEO/Supervisor), ranking de Metas e painel da Supervisão** calculavam a nota do mês de cada unidade uma de cada vez. Com 15 unidades, eram centenas de consultas em fila a cada abertura. Passam a calcular 4 unidades por vez; a conta e a ordem são as mesmas.
+### Verificado
+- As 105 telas do sistema foram abertas com o administrador de teste: nenhuma com erro.
+
 ## v1.158.0 — 2026-10-07 (Avisos ao vivo no topo da tela, como num app de mensagens)
 ### Adicionado
 - **Aviso no topo da tela** para TODO aviso novo, com o SGO aberto, no computador e no celular: aparece sem interromper nem trocar de página, sai sozinho em alguns segundos, tem botão de fechar e, ao tocar, abre direto o conteúdo e marca como lido. O número do sino acompanha na hora.

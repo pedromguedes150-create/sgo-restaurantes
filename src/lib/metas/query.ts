@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getUnitMonthScore } from '@/lib/tasks/summary';
+import { emLotes, PARALELO_POR_UNIDADE } from '@/lib/async/em-lotes';
 import type { SessionUser } from '@/lib/auth/session';
 
 export interface MetaTaskRow {
@@ -92,10 +93,10 @@ export interface MetaRankingRow {
 /** Ranking mensal de metas por unidade (Admin/CEO/Supervisor). */
 export async function getMetaRanking(user: SessionUser, yearMonth: string): Promise<MetaRankingRow[]> {
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' } });
-  const out: MetaRankingRow[] = [];
-  for (const u of units) {
+  // unidades em paralelo limitado (v1.158.1) — mesma conta, sem fila
+  const out = await emLotes(units, PARALELO_POR_UNIDADE, async (u) => {
     const s = await getUnitMonthScore(u.id, yearMonth);
-    out.push({ unitId: u.id, name: u.name, scorePct: s.scorePct });
-  }
+    return { unitId: u.id, name: u.name, scorePct: s.scorePct };
+  });
   return out.sort((a, b) => b.scorePct - a.scorePct);
 }
