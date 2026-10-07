@@ -3,6 +3,7 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { editarPeriodoDeFerias, excluirPeriodoDeFerias, lancarPeriodoDeFerias, MAX_DIAS_PERIODO } from '@/lib/people/ferias-periodo';
+import { MAX_DIAS_ABONO } from '@/lib/people/periodo-aquisitivo';
 
 /**
  * Período de férias lançado à mão (v1.159.0).
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
   if (!b?.acao) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   const ctx = requestContext(req);
   const r = b.acao === 'lancar'
-    ? await lancarPeriodoDeFerias(user, { collaboratorId: String(b.collaboratorId ?? ''), startDate: String(b.startDate ?? ''), endDate: String(b.endDate ?? ''), note: b.note != null ? String(b.note) : null, unitId: b.unitId ? String(b.unitId) : null }, ctx)
+    ? await lancarPeriodoDeFerias(user, { collaboratorId: String(b.collaboratorId ?? ''), startDate: String(b.startDate ?? ''), endDate: String(b.endDate ?? ''), note: b.note != null ? String(b.note) : null, unitId: b.unitId ? String(b.unitId) : null, diasVendidos: b.diasVendidos != null && b.diasVendidos !== '' ? Number(b.diasVendidos) : 0, periodoInicio: b.periodoInicio ? String(b.periodoInicio) : null }, ctx)
     : b.acao === 'editar'
       ? await editarPeriodoDeFerias(user, String(b.id ?? ''), { startDate: String(b.startDate ?? ''), endDate: String(b.endDate ?? ''), note: b.note != null ? String(b.note) : undefined }, ctx)
       : b.acao === 'excluir'
@@ -40,6 +41,8 @@ export async function POST(req: Request) {
     const detalhe = 'detalhe' in r && r.detalhe ? ` (${r.detalhe})` : '';
     return NextResponse.json({ error: x.msg + detalhe }, { status: x.status });
   }
-  const ok = r as { ok: true; id?: string; substituiuRh?: number; confirmouSolicitada?: boolean };
-  return NextResponse.json({ ok: true, id: ok.id, substituiuRh: ok.substituiuRh, confirmouSolicitada: ok.confirmouSolicitada });
+  const ok = r as { ok: true; id?: string; substituiuRh?: number; confirmouSolicitada?: boolean; abono?: { ok: boolean; dias?: number; periodoInicio?: string; reason?: string } };
+  const ABONO: Record<string, string> = { DIAS: `dias vendidos de 1 a ${MAX_DIAS_ABONO}`, SALDO: 'o período aquisitivo não tem saldo para esses dias', JA_EXISTE: 'este período aquisitivo já tem venda registrada', PERIODO: 'nenhum período aquisitivo com saldo para vender', FORBIDDEN: 'sem permissão', INVALID: 'dados inválidos', NAO_ENCONTRADO: 'colaborador não encontrado' };
+  const abono = ok.abono ? (ok.abono.ok ? ok.abono : { ok: false, erro: ABONO[ok.abono.reason ?? ''] ?? ok.abono.reason }) : undefined;
+  return NextResponse.json({ ok: true, id: ok.id, substituiuRh: ok.substituiuRh, confirmouSolicitada: ok.confirmouSolicitada, abono });
 }

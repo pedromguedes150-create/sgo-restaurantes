@@ -22,7 +22,7 @@ export interface PeriodoUI {
   inicio: string; fim: string; dias: number; origem: 'RH' | 'SGO' | 'SOLICITADA'; status: string; nota: string | null;
   emGozo: boolean; futura: boolean;
 }
-export interface ColabUI { id: string; nome: string; hint: string }
+export interface ColabUI { id: string; nome: string; hint: string; vendaveis: { inicio: string; fim: string; saldo: number }[] }
 
 const ORIGEM: Record<PeriodoUI['origem'], { txt: string; cls: string; dica: string }> = {
   RH: { txt: 'Aberto pelo RH', cls: 'sgo-tag--amber', dica: 'A sincronização viu "Férias" no RH e abriu este período a partir daquele dia; o fim cresce um dia por vez. Edite para fixar o período real.' },
@@ -30,23 +30,30 @@ const ORIGEM: Record<PeriodoUI['origem'], { txt: string; cls: string; dica: stri
   SOLICITADA: { txt: 'Solicitada ao RH', cls: 'sgo-tag--blue', dica: 'Pedido feito pelo gerente em Pessoas → Férias; ainda não conta na Escala.' },
 };
 
-async function enviar(body: Record<string, unknown>): Promise<{ erro: string | null; substituiuRh?: number; confirmouSolicitada?: boolean }> {
+type AbonoResp = { ok: true; dias: number; periodoInicio: string } | { ok: false; erro: string };
+async function enviar(body: Record<string, unknown>): Promise<{ erro: string | null; substituiuRh?: number; confirmouSolicitada?: boolean; abono?: AbonoResp }> {
   const res = await fetch('/api/people/vacations/periodo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const d = await res.json().catch(() => ({}));
-  if (res.ok) return { erro: null, substituiuRh: d.substituiuRh, confirmouSolicitada: d.confirmouSolicitada };
+  if (res.ok) return { erro: null, substituiuRh: d.substituiuRh, confirmouSolicitada: d.confirmouSolicitada, abono: d.abono };
   return { erro: d.error ?? 'Não foi possível salvar.' };
 }
 
 const inputCls = 'h-10 w-full rounded-control border border-line bg-surface px-3 text-sm text-ink-900 outline-none focus:border-brand';
 
-export function PeriodosFerias({ colaboradores, periodos, podeEditar, colaboradorInicial, unitId }: {
-  colaboradores: ColabUI[]; periodos: PeriodoUI[]; podeEditar: boolean; colaboradorInicial?: string | null; unitId?: string | null;
+export function PeriodosFerias({ colaboradores, periodos, podeEditar, colaboradorInicial, unitId, maxDias }: {
+  colaboradores: ColabUI[]; periodos: PeriodoUI[]; podeEditar: boolean; colaboradorInicial?: string | null; unitId?: string | null; maxDias: number;
 }) {
   const router = useRouter();
-  const [colab, setColab] = useState(colaboradorInicial && colaboradores.some((c) => c.id === colaboradorInicial) ? colaboradorInicial : '');
+  const [colab, setColabState] = useState(colaboradorInicial && colaboradores.some((c) => c.id === colaboradorInicial) ? colaboradorInicial : '');
   const [inicio, setInicio] = useState<string | null>(null);
   const [fim, setFim] = useState<string | null>(null);
   const [nota, setNota] = useState('');
+  /* Venda de dias junto do lançamento (v1.159.1): "saiu 20 dias e vendeu 10". O
+     período aquisitivo vem pré-escolhido (o mais antigo com saldo), como na aba Abono. */
+  const [vendidos, setVendidos] = useState('');
+  const [periodoVenda, setPeriodoVenda] = useState('');
+  const vendaveis = colaboradores.find((c) => c.id === colab)?.vendaveis ?? [];
+  function setColab(id: string) { setColabState(id); setPeriodoVenda(colaboradores.find((c) => c.id === id)?.vendaveis[0]?.inicio ?? ''); }
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const [editando, setEditando] = useState<PeriodoUI | null>(null);
@@ -55,13 +62,16 @@ export function PeriodosFerias({ colaboradores, periodos, podeEditar, colaborado
 
   async function lancar() {
     if (!colab || !inicio || !fim) { setMsg({ ok: false, t: 'Escolha o colaborador, o início e o fim.' }); return; }
+    const nVend = Number(vendidos || 0);
+    if (nVend > 0 && !periodoVenda) { setMsg({ ok: false, t: 'Escolha de qual período aquisitivo os dias foram vendidos.' }); return; }
     setBusy(true); setMsg(null);
-    const r = await enviar({ acao: 'lancar', collaboratorId: colab, startDate: inicio, endDate: fim, note: nota, unitId });
+    const r = await enviar({ acao: 'lancar', collaboratorId: colab, startDate: inicio, endDate: fim, note: nota, unitId, diasVendidos: nVend, periodoInicio: nVend > 0 ? periodoVenda : null });
     setBusy(false);
     if (r.erro) { setMsg({ ok: false, t: r.erro }); return; }
     const extra = r.substituiuRh ? ` O período aberto pelo RH foi substituído.` : r.confirmouSolicitada ? ' A solicitação ao RH foi confirmada com estas datas.' : '';
-    setMsg({ ok: true, t: `Férias lançadas: ${br(inicio)} a ${br(fim)} (${total} dias). A Escala e o Controle de Férias já refletem.${extra}` });
-    setInicio(null); setFim(null); setNota('');
+    const venda = r.abono ? (r.abono.ok ? ` ${r.abono.dias} dia(s) vendido(s) do período de ${br(r.abono.periodoInicio)}.` : ` ATENÇÃO: a venda de dias NÃO entrou — ${r.abono.erro}. Registre na aba Abono.`) : '';
+    setMsg({ ok: !r.abono || r.abono.ok, t: `Férias lançadas: ${br(inicio)} a ${br(fim)} (${total} dias). A Escala e o Controle de Férias já refletem.${extra}${venda}` });
+    setInicio(null); setFim(null); setNota(''); setVendidos('');
     router.refresh();
   }
 
@@ -83,7 +93,7 @@ export function PeriodosFerias({ colaboradores, periodos, podeEditar, colaborado
           <PanelHeader title="Lançar período de férias" />
           <CardContent>
             <p className="mb-3 text-sm text-ink-700">O RH informa só que a pessoa está de férias — o início e o fim você lança aqui. Entra na Escala (FE) e no Controle de Férias na hora.</p>
-            <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1.4fr_auto] md:items-end">
+            <div className="grid gap-3 md:grid-cols-[1.6fr_1fr_1fr_auto] md:items-end">
               <div>
                 <span className="sgo-label mb-1 block">Colaborador</span>
                 <Select aria-label="Colaborador" searchable placeholder="Selecione…" value={colab} onValueChange={setColab}
@@ -91,15 +101,27 @@ export function PeriodosFerias({ colaboradores, periodos, podeEditar, colaborado
               </div>
               <DatePicker label="Início" value={inicio} onValueChange={setInicio} />
               <DatePicker label="Fim (último dia)" value={fim} onValueChange={setFim} min={inicio ?? undefined} />
-              <label className="block">
-                <span className="sgo-label mb-1 block">Observação (opcional)</span>
-                <input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={200} placeholder="Ex.: aviso de férias do RH" className={inputCls} aria-label="Observação" />
-              </label>
               <button type="button" className="sgo-btn sgo-btn--primary" disabled={busy || !colab || !inicio || !fim} onClick={() => void lancar()} data-testid="lancar-ferias">
                 <CalendarPlus className="h-4 w-4" /> Lançar{total ? ` ${total} dias` : ''}
               </button>
             </div>
-            {nomeDoColab && total > 0 && <p className="mt-2 text-xs text-ink-500">{nomeDoColab}: {br(inicio!)} a {br(fim!)} · {total} dia(s) corridos.</p>}
+            <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1.6fr_2fr] md:items-end">
+              <label className="block">
+                <span className="sgo-label mb-1 block">Dias vendidos (abono)</span>
+                <input type="number" min={0} max={maxDias} value={vendidos} onChange={(e) => setVendidos(e.target.value.replace(/\D/g, ''))} placeholder="0"
+                  disabled={!colab || vendaveis.length === 0} className={`${inputCls} text-right tabular-nums`} aria-label="Dias vendidos" data-testid="dias-vendidos" />
+              </label>
+              <div>
+                <span className="sgo-label mb-1 block">Do período aquisitivo</span>
+                <Select aria-label="Período aquisitivo da venda" placeholder={!colab ? 'Escolha o colaborador' : vendaveis.length ? 'Selecione…' : 'Sem saldo para vender'} value={periodoVenda} onValueChange={setPeriodoVenda}
+                  options={vendaveis.map((p) => ({ value: p.inicio, label: `${br(p.inicio)} a ${br(p.fim)}`, hint: `saldo ${p.saldo} dias` }))} />
+              </div>
+              <label className="block">
+                <span className="sgo-label mb-1 block">Observação (opcional)</span>
+                <input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={200} placeholder="Ex.: aviso de férias do RH" className={inputCls} aria-label="Observação" />
+              </label>
+            </div>
+            {nomeDoColab && total > 0 && <p className="mt-2 text-xs text-ink-500">{nomeDoColab}: {br(inicio!)} a {br(fim!)} · {total} dia(s) corridos{Number(vendidos || 0) > 0 ? ` + ${Number(vendidos)} dia(s) vendido(s) (até ${maxDias}, 1/3 do direito)` : ''}.</p>}
             {msg && <p className={`mt-2 text-sm font-medium ${msg.ok ? 'text-success' : 'text-danger'}`} role="status" data-testid="msg-ferias">{msg.t}</p>}
             <p className="mt-2 text-xs text-ink-500">
               Se já houver um período aberto pela sincronização do RH para a pessoa, ele é substituído pelo que você lançar. Se o RH continuar dizendo
