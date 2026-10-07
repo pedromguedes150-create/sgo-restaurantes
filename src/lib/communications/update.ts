@@ -159,7 +159,7 @@ export async function updateCommunication(user: SessionUser, id: string, input: 
   if (addedIds.length) {
     await notifyUsers(addedIds, {
       title: `📣 Comunicado: ${title}`, body: 'Toque para ler e confirmar.',
-      link: `/modulos/comunicacao/${id}`, module: 'COMMUNICATION', critical: priority === 'URGENT',
+      link: `/modulos/comunicacao/${id}`, module: 'COMMUNICATION', critical: priority === 'URGENT', ...(priority === 'IMPORTANT' ? { nivel: 'IMPORTANTE' as const } : {}),
     }).catch(() => {});
   }
   if (textChanged) {
@@ -167,7 +167,7 @@ export async function updateCommunication(user: SessionUser, id: string, input: 
     if (notifyKept.length) {
       await notifyUsers(notifyKept, {
         title: `📣 Comunicado atualizado: ${title}`, body: 'O texto mudou — confirme a leitura de novo.',
-        link: `/modulos/comunicacao/${id}`, module: 'COMMUNICATION', critical: priority === 'URGENT',
+        link: `/modulos/comunicacao/${id}`, module: 'COMMUNICATION', critical: priority === 'URGENT', ...(priority === 'IMPORTANT' ? { nivel: 'IMPORTANTE' as const } : {}),
       }).catch(() => {});
     }
   }

@@ -200,6 +200,7 @@ export const FORA_DA_MATRIZ: Record<string, string> = {
   '/api/notifications': 'avisos do próprio usuário (lista paginada do menu da barra)',
   '/api/notifications/[id]': 'apagar um aviso do próprio usuário',
   '/api/notifications/read': 'avisos do próprio usuário',
+  '/api/notifications/novas': 'avisos novos do próprio usuário (aviso ao vivo no topo da tela)',
   '/api/nav/pendencias': 'contagens de pendência da barra — cada módulo conta com o seu próprio recorte de perfil e unidade',
   '/api/profile': 'Meu Perfil — dados do próprio usuário',
   '/api/terms/accept': 'aceite do termo pelo próprio usuário',

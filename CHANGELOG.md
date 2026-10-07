@@ -9,6 +9,16 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.158.0 — 2026-10-07 (Avisos ao vivo no topo da tela, como num app de mensagens)
+### Adicionado
+- **Aviso no topo da tela** para TODO aviso novo, com o SGO aberto, no computador e no celular: aparece sem interromper nem trocar de página, sai sozinho em alguns segundos, tem botão de fechar e, ao tocar, abre direto o conteúdo e marca como lido. O número do sino acompanha na hora.
+- **Níveis**: Normal (aviso), Importante (aviso + vibração curta no celular — hoje, comunicados de prioridade Importante) e Crítico (cartão maior em destaque). Nenhuma regra de módulo mudou: crítico é o mesmo "crítico" de sempre.
+- **Higiene dos banheiros**: o aviso fica em destaque (borda e ícone bordô com um brilho que pulsa três vezes) até alguém tocar, e toca um som próprio — três notas subindo, duas vezes. Chama atenção sem parecer alarme.
+### Alterado
+- **Som só na Higiene**, por enquanto (decisão do Pedro). Os demais avisos aparecem sem som do SGO; a notificação do sistema no celular continua com o som padrão do aparelho.
+- **Sem alerta em dobro**: com o SGO aberto e visível, o push não mostra a notificação do sistema — quem avisa é a página. Minimizado, em outra aba ou com a tela bloqueada, segue a notificação do sistema como sempre. No iPhone/Safari a notificação do sistema sai sempre (exigência do aparelho) e a página mostra o aviso sem tocar de novo.
+- O aviso exclusivo da Higiene (v1.156.0) virou um caso do aviso geral.
+
 ## v1.157.0 — 2026-10-07 (Dias de funcionamento da unidade + calendário que abria atrás da janela)
 ### Adicionado
 - **Dias de funcionamento da unidade** (Configurações → Unidades → editar): marque os dias em que a unidade abre. Nos dias desmarcados o SGO **não gera checklist**, então nada vira "não realizado" nem pesa na meta. Padrão: todos os dias (nenhuma unidade muda sozinha). Unidade que não abre todo dia ganha o selo com os dias na lista (ex.: "Seg a Sex").

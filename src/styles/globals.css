@@ -54,3 +54,12 @@
 .sgo-navpanel-enter { animation: sgo-navpanel 180ms var(--sgo-nav-ease, ease-out) both; }
 @keyframes sgo-navpanel { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .sgo-navpanel-enter { animation: none; } }
+
+/* Aviso ao vivo no topo da tela (v1.158.0): desce do topo; o de destaque (higiene)
+   ganha um brilho bordô que pulsa três vezes e para — chama atenção sem piscar
+   em vermelho nem parecer alarme. */
+.sgo-aviso-enter { animation: sgo-aviso-desce 260ms cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes sgo-aviso-desce { from { opacity: 0; transform: translateY(-16px) scale(.97); } to { opacity: 1; transform: none; } }
+.sgo-aviso-destaque { animation: sgo-aviso-desce 260ms cubic-bezier(.2,.9,.3,1.2) both, sgo-aviso-brilho 1.2s ease-out 260ms 3; }
+@keyframes sgo-aviso-brilho { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sgo-brand) 45%, transparent); } 100% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--sgo-brand) 0%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .sgo-aviso-enter, .sgo-aviso-destaque { animation: none; } }
