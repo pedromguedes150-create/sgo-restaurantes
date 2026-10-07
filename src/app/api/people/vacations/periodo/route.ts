@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   const r = b.acao === 'lancar'
     ? await lancarPeriodoDeFerias(user, { collaboratorId: String(b.collaboratorId ?? ''), startDate: String(b.startDate ?? ''), endDate: String(b.endDate ?? ''), note: b.note != null ? String(b.note) : null, unitId: b.unitId ? String(b.unitId) : null, diasVendidos: b.diasVendidos != null && b.diasVendidos !== '' ? Number(b.diasVendidos) : 0, periodoInicio: b.periodoInicio ? String(b.periodoInicio) : null }, ctx)
     : b.acao === 'editar'
-      ? await editarPeriodoDeFerias(user, String(b.id ?? ''), { startDate: String(b.startDate ?? ''), endDate: String(b.endDate ?? ''), note: b.note != null ? String(b.note) : undefined }, ctx)
+      ? await editarPeriodoDeFerias(user, String(b.id ?? ''), { startDate: String(b.startDate ?? ''), endDate: String(b.endDate ?? ''), note: b.note != null ? String(b.note) : undefined, diasVendidos: b.diasVendidos != null && b.diasVendidos !== '' ? Number(b.diasVendidos) : 0, periodoInicio: b.periodoInicio ? String(b.periodoInicio) : null }, ctx)
       : b.acao === 'excluir'
         ? await excluirPeriodoDeFerias(user, String(b.id ?? ''), ctx)
         : null;

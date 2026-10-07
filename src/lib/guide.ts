@@ -1435,7 +1435,7 @@ export const GUIDE: GuideSection[] = [
           'CONTROLE DE FÉRIAS: em Pessoas → Ferramentas → Controle de Férias. O período aquisitivo é calculado pela ADMISSÃO informada pelo RH: a cada 12 meses o colaborador ganha 30 dias, que precisam ser concedidos nos 12 meses seguintes. Os cartões mostram vencidas, a vencer em 30/60/90 dias, em gozo, programadas e quem está sem admissão no RH; toque num cartão para ver a lista.',
           'Períodos que venceram antes de o SGO começar a registrar férias (12/06/2026) aparecem como "Anterior ao SGO" e não são cobrados — o SGO não tem as férias de antes dele.',
           'AJUSTES MANUAIS (v1.154.0): na aba "Ajustes manuais" do Controle de Férias, escolha o colaborador. A Supervisão (ou o Admin) pode CORRIGIR A ADMISSÃO quando o RH mandou errado — informe a data certa e o motivo; a do RH continua aparecendo ao lado e "Usar a do RH" desfaz. Em cada período aquisitivo dá para informar os DIAS JÁ GOZADOS FORA DO SGO (por exemplo, férias de antes de julho de 2026) — só o que não está lançado no SGO. Salvar 0 apaga.',
-          'VENDA DE DIAS (abono pecuniário): na aba "Abono (venda de dias)" do Controle de Férias, escolha o colaborador, o período e quantos dias foram vendidos (até 10 — por exemplo, tirou 20 e vendeu 10). Os dias vendidos abatem o saldo do período. Um registro por período; quem registrou ou a Supervisão pode excluir.',
+          'VENDA DE DIAS (abono): na aba "Períodos de férias" do Controle de Férias, informe "Dias vendidos" junto do lançamento (ou no Editar do período). Não há teto de 1/3: vale até o saldo do período aquisitivo. As vendas registradas aparecem no fim da mesma aba, com exclusão.',
         ],
       },
       {

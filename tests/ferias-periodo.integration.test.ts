@@ -121,8 +121,8 @@ describe('venda de dias junto do lançamento (v1.159.1)', () => {
     expect(ab[0].observacao).toContain('01/11/2026 a 20/11/2026');
   });
 
-  it('acima de 1/3 do direito é recusado ANTES de lançar; venda recusada não desfaz as férias', async () => {
-    expect(await lancarPeriodoDeFerias(gerente(), { collaboratorId: colabC, startDate: '2026-12-01', endDate: '2026-12-05', diasVendidos: 11 })).toMatchObject({ ok: false, reason: 'INVALID' });
+  it('acima do direito (30) é recusado ANTES de lançar; venda recusada não desfaz as férias', async () => {
+    expect(await lancarPeriodoDeFerias(gerente(), { collaboratorId: colabC, startDate: '2026-12-01', endDate: '2026-12-05', diasVendidos: 31 })).toMatchObject({ ok: false, reason: 'INVALID' });
     expect(await prisma.vacation.count({ where: { collaboratorId: colabC } })).toBe(1);
     // o período de 2025 já tem venda: as férias entram e a venda é devolvida como recusada
     const r = await lancarPeriodoDeFerias(gerente(), { collaboratorId: colabC, startDate: '2026-12-01', endDate: '2026-12-05', diasVendidos: 5, periodoInicio: '2025-02-01' });
@@ -138,7 +138,10 @@ describe('editar e excluir', () => {
   it('editar o período aberto pelo RH fixa o fim: o sync deixa de esticá-lo', async () => {
     const rh = await prisma.vacation.create({ data: { collaboratorId: colabB, unitId: unitB, startDate: d('2026-11-03'), endDate: d('2026-11-05'), status: 'CONFIRMED', source: FERIAS_ORIGEM_RH } });
     expect(await editarPeriodoDeFerias(gerente(), rh.id, { startDate: '2026-11-01', endDate: '2026-11-15' })).toEqual({ ok: false, reason: 'FORBIDDEN' });
-    expect((await editarPeriodoDeFerias(gerenteB(), rh.id, { startDate: '2026-11-01', endDate: '2026-11-15', note: 'confirmado com o RH' })).ok).toBe(true);
+    // v1.159.2: a venda de dias também entra pelo Editar (o período do RH é o que a pessoa ajusta)
+    const ed = await editarPeriodoDeFerias(gerenteB(), rh.id, { startDate: '2026-11-01', endDate: '2026-11-15', note: 'confirmado com o RH', diasVendidos: 5 });
+    expect(ed).toMatchObject({ ok: true, abono: { ok: true, dias: 5, periodoInicio: '2025-01-10' } });
+    expect(await prisma.vacationAbono.count({ where: { collaboratorId: colabB, periodoInicio: '2025-01-10', dias: 5 } })).toBe(1);
     expect(await prisma.vacation.findUniqueOrThrow({ where: { id: rh.id } })).toMatchObject({ source: ORIGEM_SGO, startDate: d('2026-11-01'), endDate: d('2026-11-15'), changeNote: 'confirmado com o RH' });
     // RH continua dizendo "Férias" em 16/11: o período fixado NÃO cresce; o sync abre outro, visível, a partir de 16/11
     expect(await estenderFeriasDoRh(colabB, unitB, d('2026-11-16'))).toBe('ABERTO');

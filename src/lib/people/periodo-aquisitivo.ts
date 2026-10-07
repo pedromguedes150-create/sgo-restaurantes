@@ -58,8 +58,9 @@ export interface AbonoDoPeriodo { periodoInicio: string; dias: number }
 /** Dias já gozados informados à mão para um período (pelo início). */
 export interface AjusteDoPeriodo { periodoInicio: string; diasGozados: number }
 
-/** Máximo vendável por período: 1/3 do direito (CLT art. 143). */
-export const MAX_DIAS_ABONO = Math.floor(30 / 3);
+/** Máximo vendável por período (v1.159.2, decisão do Pedro: sem o teto de 1/3 — "o funcionário
+ *  pode vender mais dias"). O que limita é o SALDO do período; 30 é o próprio direito. */
+export const MAX_DIAS_ABONO = 30;
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const t = (iso: string) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));

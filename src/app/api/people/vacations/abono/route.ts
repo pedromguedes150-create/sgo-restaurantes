@@ -15,7 +15,7 @@ import { MAX_DIAS_ABONO } from '@/lib/people/periodo-aquisitivo';
 const RECUSAS: Record<string, { msg: string; status: number }> = {
   FORBIDDEN: { msg: 'Sem permissão para este colaborador.', status: 403 },
   INVALID: { msg: 'Dados inválidos.', status: 400 },
-  DIAS: { msg: `Informe de 1 a ${MAX_DIAS_ABONO} dias (no máximo 1/3 das férias).`, status: 400 },
+  DIAS: { msg: `Informe de 1 a ${MAX_DIAS_ABONO} dias.`, status: 400 },
   PERIODO: { msg: 'Período aquisitivo não encontrado para este colaborador (confira a admissão no RH).', status: 400 },
   SALDO: { msg: 'O período não tem saldo suficiente para vender esses dias.', status: 400 },
   JA_EXISTE: { msg: 'Já existe um abono registrado para este período aquisitivo.', status: 409 },

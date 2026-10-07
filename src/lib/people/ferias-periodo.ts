@@ -127,16 +127,17 @@ export async function lancarPeriodoDeFerias(
      por período aquisitivo), gravado DEPOIS do período — se recusada, as férias
      ficam lançadas e a tela diz por que a venda não entrou. Sem período informado,
      vai para o período aquisitivo mais antigo que ainda tem saldo para vender. */
-  let abono: ResultadoAbonoJunto | undefined;
-  if (vendidos > 0) {
-    const periodoInicio = input.periodoInicio || (await periodoParaVender(input.collaboratorId));
-    if (!periodoInicio) abono = { ok: false, reason: 'PERIODO' };
-    else {
-      const r = await registrarAbono(user, { collaboratorId: input.collaboratorId, periodoInicio, dias: vendidos, observacao: `Vendidos junto das férias de ${br(input.startDate)} a ${br(input.endDate)}` }, ctx);
-      abono = r.ok ? { ok: true, dias: vendidos, periodoInicio } : { ok: false, reason: r.reason };
-    }
-  }
+  const abono = await venderDiasJunto(user, input.collaboratorId, vendidos, input.periodoInicio, input.startDate, input.endDate, ctx);
   return { ok: true, id, substituiuRh: doRh.length, confirmouSolicitada: solicitadas.length > 0, ...(abono ? { abono } : {}) };
+}
+
+/** A venda de dias que acompanha um lançamento ou uma edição (v1.159.2: também no Editar). */
+async function venderDiasJunto(user: SessionUser, collaboratorId: string, vendidos: number, periodoPedido: string | null | undefined, startDate: string, endDate: string, ctx: Ctx): Promise<ResultadoAbonoJunto | undefined> {
+  if (vendidos <= 0) return undefined;
+  const periodoInicio = periodoPedido || (await periodoParaVender(collaboratorId));
+  if (!periodoInicio) return { ok: false, reason: 'PERIODO' };
+  const r = await registrarAbono(user, { collaboratorId, periodoInicio, dias: vendidos, observacao: `Vendidos junto das férias de ${br(startDate)} a ${br(endDate)}` }, ctx);
+  return r.ok ? { ok: true, dias: vendidos, periodoInicio } : { ok: false, reason: r.reason };
 }
 
 /** Período aquisitivo mais antigo em que ainda dá para vender dias (mesma régua da aba Abono). */
@@ -153,11 +154,13 @@ async function periodoParaVender(collaboratorId: string): Promise<string | null>
 export async function editarPeriodoDeFerias(
   user: SessionUser,
   id: string,
-  input: { startDate: string; endDate: string; note?: string | null },
+  input: { startDate: string; endDate: string; note?: string | null; diasVendidos?: number | null; periodoInicio?: string | null },
   ctx: Ctx = {},
 ): Promise<ResultadoFerias> {
   if (!podeLancar(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!datasValidas(input.startDate, input.endDate)) return { ok: false, reason: 'INVALID' };
+  const vendidos = Number(input.diasVendidos ?? 0);
+  if (!Number.isInteger(vendidos) || vendidos < 0 || vendidos > MAX_DIAS_ABONO) return { ok: false, reason: 'INVALID', detalhe: `dias vendidos de 0 a ${MAX_DIAS_ABONO}` };
   const v = await prisma.vacation.findUnique({ where: { id }, include: { collaborator: { select: { name: true } } } });
   if (!v) return { ok: false, reason: 'NAO_ENCONTRADO' };
   if (!canAccessUnit(user, v.unitId)) return { ok: false, reason: 'FORBIDDEN' };
@@ -185,7 +188,8 @@ export async function editarPeriodoDeFerias(
     metadata: { name: v.collaborator.name, antes: { start: isoDia(v.startDate), end: isoDia(v.endDate), source: v.source }, depois: { start: input.startDate, end: input.endDate, source: ORIGEM_SGO }, substituiuRh: doRh.length },
     ...ctx,
   });
-  return { ok: true, id, substituiuRh: doRh.length, confirmouSolicitada: false };
+  const abono = await venderDiasJunto(user, v.collaboratorId, vendidos, input.periodoInicio, input.startDate, input.endDate, ctx);
+  return { ok: true, id, substituiuRh: doRh.length, confirmouSolicitada: false, ...(abono ? { abono } : {}) };
 }
 
 export async function excluirPeriodoDeFerias(user: SessionUser, id: string, ctx: Ctx = {}): Promise<{ ok: true } | { ok: false; reason: 'FORBIDDEN' | 'NAO_ENCONTRADO' }> {
