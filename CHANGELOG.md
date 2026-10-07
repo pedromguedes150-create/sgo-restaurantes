@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.159.2 — 2026-10-07 (Períodos de férias: venda de dias também ao EDITAR)
+### Corrigido
+- A janela **Editar férias** (a que ajusta o período aberto pelo RH para "01/10 a 20/10") não tinha onde informar os dias vendidos — só o lançamento novo tinha. Agora ela também tem **Dias vendidos (abono)** e **Do período aquisitivo**.
+### Alterado
+- **A aba "Abono (venda de dias)" saiu**: era duplicada. As vendas registradas aparecem no fim da aba "Períodos de férias", com exclusão; o endereço antigo cai lá.
+- **Sem o teto de 10 dias (1/3)** na venda: decisão do Pedro, o colaborador pode vender mais. O limite passa a ser o saldo do período aquisitivo.
+
 ## v1.159.1 — 2026-10-07 (Períodos de férias: venda de dias no mesmo lançamento)
 ### Alterado
 - Na aba **Períodos de férias**, o lançamento ganhou **"Dias vendidos (abono)"** e **"Do período aquisitivo"** (já vem escolhido o mais antigo com saldo): "saiu de 01/10 a 20/10 e vendeu os outros 10" é um passo só. A venda é o mesmo abono da aba Abono (até 1/3 do direito, dentro do saldo, uma por período). Se a venda for recusada, as férias ficam lançadas e a tela diz o motivo.

@@ -74,8 +74,8 @@ describe('Perfil 360', () => {
 });
 
 describe('Abono pecuniário (venda de dias)', () => {
-  it('recusa mais de 10 dias e mais que o saldo', async () => {
-    expect(await registrarAbono(gerente(), { collaboratorId: colab, periodoInicio: '2024-11-01', dias: 11 })).toEqual({ ok: false, reason: 'DIAS' });
+  it('recusa mais de 30 dias e mais que o saldo', async () => {
+    expect(await registrarAbono(gerente(), { collaboratorId: colab, periodoInicio: '2024-11-01', dias: 31 })).toEqual({ ok: false, reason: 'DIAS' });
     // saldo do período é 10 (gozou 20) — vender 10 cabe; o período inexistente não
     expect(await registrarAbono(gerente(), { collaboratorId: colab, periodoInicio: '2024-11-02', dias: 5 })).toEqual({ ok: false, reason: 'PERIODO' });
   });

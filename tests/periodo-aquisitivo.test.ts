@@ -53,11 +53,13 @@ describe('gozo e venda (abono pecuniário)', () => {
     const ps = periodosAquisitivos('2024-11-01', [{ inicio: '2026-07-01', fim: '2026-07-20' }], '2026-10-05', CONTROLE, [{ periodoInicio: '2024-11-01', dias: 10 }]);
     expect(ps[0]).toMatchObject({ diasGozados: 20, diasVendidos: 10, saldo: 0, situacao: 'QUITADO' });
   });
-  it('a venda nunca passa de 1/3 (10 dias)', () => {
-    expect(MAX_DIAS_ABONO).toBe(10);
+  it('a venda vai até o saldo do período (sem o teto de 1/3 — v1.159.2)', () => {
+    expect(MAX_DIAS_ABONO).toBe(30);
     const [p] = periodosAquisitivos('2024-11-01', [], '2026-10-05', CONTROLE, [{ periodoInicio: '2024-11-01', dias: 15 }]);
-    expect(p.diasVendidos).toBe(10);
-    expect(p.saldo).toBe(20);
+    expect(p.diasVendidos).toBe(15);
+    expect(p.saldo).toBe(15);
+    const [q] = periodosAquisitivos('2024-11-01', [], '2026-10-05', CONTROLE, [{ periodoInicio: '2024-11-01', dias: 40 }]);
+    expect(q.diasVendidos).toBe(30);
   });
   it('férias programadas no futuro não quitam ainda', () => {
     const [p] = periodosAquisitivos('2024-11-01', [{ inicio: '2026-12-01', fim: '2026-12-30' }], '2026-10-05', CONTROLE);
