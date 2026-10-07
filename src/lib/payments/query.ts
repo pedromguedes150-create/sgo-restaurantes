@@ -150,7 +150,7 @@ export async function getMiscTypes() {
 }
 
 /* ───────────────────────── Consolidação mensal de freelancers ───────────────────────── */
-export interface FreelancerPayLine { id: string; date: string; unit: string; status: string; amount: number; divergent: boolean; standardValue: number | null }
+export interface FreelancerPayLine { id: string; date: string; unit: string; status: string; amount: number; divergent: boolean; standardValue: number | null; motivo: string | null }
 export interface FreelancerConsolidationGroup { freelancerId: string; name: string; cpf: string | null; pixKey: string | null; count: number; total: number; lines: FreelancerPayLine[] }
 export interface FreelancerConsolidation { yearMonth: string; groups: FreelancerConsolidationGroup[]; grandTotal: number; grandCount: number }
 
@@ -210,6 +210,8 @@ export async function getFreelancerConsolidation(user: SessionUser, yearMonth: s
       status: PAY_STATUS_LABEL[r.status] ?? r.status,
       amount,
       divergent: r.divergent,
+      /* Motivo (v1.160.1): a cobertura de setor ou a observação — o "porquê" na folha do Financeiro. */
+      motivo: r.coverageSector ? `Cobertura: ${r.coverageSector}` : (r.description ?? null),
       standardValue: r.standardValue != null ? Number(r.standardValue) : null,
     });
     g.count++;

@@ -4,7 +4,7 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import {
   getConsolidacaoPagamentos, getRecorrenciaFreelancers, unidadesDaConsolidacao, lerFiltro, STATUS_CONS, STATUS_TEXTO, TIPO_TEXTO, TIPOS_CONS, emBR,
 } from '@/lib/payments/consolidacao';
-import { cpfFormatado } from '@/lib/payments/consolidacao-calculo';
+import { blocosDePagamento, cpfFormatado } from '@/lib/payments/consolidacao-calculo';
 
 /**
  * CONSOLIDAÇÃO DE PAGAMENTOS em Excel (v1.126.0) — os MESMOS filtros da tela,
@@ -23,53 +23,73 @@ export async function GET(req: Request) {
   const pessoa = c.pessoas.find((p) => p.value === filtro.pessoa)?.label ?? 'Todos';
   const r = c.resumo;
 
-  /* Aba 1 — Lançamentos: um por linha, rastreável. */
-  const aoa: (string | number | null)[][] = [
-    ['GRUPO BEIJA-FLOR — CONSOLIDAÇÃO DE PAGAMENTOS'],
-    [`Período: ${c.periodo.rotulo}`],
-    [`Unidade: ${unidade} · Tipo: ${TIPOS_CONS.find((t) => t.value === filtro.tipo)?.label} · Status: ${STATUS_CONS.find((s) => s.value === filtro.status)?.label} · Colaborador: ${pessoa}`],
-    ['Data = dia do serviço. Pagar em = segunda-feira seguinte à semana do serviço (freelancer); hora extra vai pelo cartão, na competência. Valor = valor da solicitação (já inclui o vale-transporte lançado).'],
+  /* Padrão do Financeiro (Pedro, 07/10/2026): toda planilha de pagamento começa por
+     Unidade · Data · Colaborador · CPF · Chave PIX · Lançamentos · Total · Motivo, e tem
+     SEMPRE o CONSOLIDADO (o que pagar em cada segunda-feira) e o ANALÍTICO (cada
+     solicitação). A regra da operação: solicitado de segunda a domingo, pago na segunda. */
+  const filtrosTxt = `Unidade: ${unidade} · Tipo: ${TIPOS_CONS.find((t) => t.value === filtro.tipo)?.label} · Status: ${STATUS_CONS.find((s) => s.value === filtro.status)?.label} · Colaborador: ${pessoa}`;
+  const CAB = ['Unidade', 'Data', 'Colaborador', 'CPF', 'Chave PIX', 'Lançamentos', 'Total', 'Motivo'];
+  const blocos = blocosDePagamento(c.lancamentos, filtro.status);
+
+  /* Aba 1 — CONSOLIDADO: um bloco por segunda-feira de pagamento; uma linha por unidade × colaborador. */
+  const cons: (string | number | null)[][] = [
+    ['GRUPO BEIJA-FLOR — PAGAMENTOS · CONSOLIDADO'],
+    [`Serviços de ${c.periodo.rotulo} · ${filtrosTxt}`],
+    ['Freelancer: solicitado de segunda a domingo, pago na SEGUNDA-FEIRA seguinte (Data = dia do pagamento). Hora extra: paga pelo cartão na competência (Data = competência). Total já inclui o vale-transporte.'],
     [],
-    /* CPF e Chave PIX ao lado do nome (pedido do Financeiro, 05/10/2026): a
-       planilha baixada é a base do pagamento, e sem eles era preciso abrir o
-       cadastro de cada freelancer. Hora extra traz o CPF do RH e PIX vazio
-       (é paga pela competência, no cartão). */
-    ['Data', 'Pagar em (segunda)', 'Unidade', 'Tipo', 'Colaborador', 'CPF', 'Chave PIX', 'Horas', 'Motivo', 'Vale-transporte', 'Valor', 'Status', 'Pago em', 'Solicitado por', 'Data da solicitação'],
   ];
-  for (const l of c.lancamentos) {
-    aoa.push([
-      emBR(l.data), l.pagarEm ? emBR(l.pagarEm) : 'cartão (competência)', l.unidade, TIPO_TEXTO[l.tipo], l.pessoa, cpfFormatado(l.cpf), l.pixKey ?? '', l.horas, l.motivo ?? '', l.vt, l.valor,
-      STATUS_TEXTO[l.status], l.pagoEm ? emBR(l.pagoEm) : '', l.solicitadoPor ?? '', emBR(l.dataSolicitacao),
+  for (const b of blocos.segundas) {
+    cons.push([`PAGAMENTO DE SEGUNDA-FEIRA ${emBR(b.pagarEm)} — serviços de ${emBR(b.semanaDe)} a ${emBR(b.semanaAte)}`]);
+    cons.push(CAB);
+    for (const l of b.linhas) cons.push([l.unidade, emBR(l.data), l.colaborador, cpfFormatado(l.cpf), l.pixKey ?? '', l.lancamentos, l.total, l.motivo]);
+    cons.push([`SUBTOTAL — segunda ${emBR(b.pagarEm)}`, '', '', '', '', b.qtd, b.total, '']);
+    cons.push([]);
+  }
+  for (const b of blocos.horaExtra) {
+    cons.push([`HORA EXTRA — CARTÃO, COMPETÊNCIA ${b.rotulo}`]);
+    cons.push(CAB);
+    for (const l of b.linhas) cons.push([l.unidade, l.data, l.colaborador, cpfFormatado(l.cpf), l.pixKey ?? '', l.lancamentos, l.total, l.motivo]);
+    cons.push([`SUBTOTAL — competência ${b.rotulo}`, '', '', '', '', b.qtd, b.total, '']);
+    cons.push([]);
+  }
+  cons.push(['TOTAL GERAL', '', '', '', '', r.solicitacoes, r.total, '']);
+  if (filtro.status === 'TODOS') {
+    cons.push(['Solicitado — pendente de aprovação', '', '', '', '', '', r.porStatus.pendente, 'ainda NÃO está a pagar']);
+    cons.push(['Aprovado — a pagar', '', '', '', '', '', r.porStatus.aprovado, '']);
+    cons.push(['Pago', '', '', '', '', '', r.porStatus.pago, '']);
+  }
+  if (r.fora.qtd > 0) cons.push([`${r.fora.qtd} rejeitada(s) fora dos totais`, '', '', '', '', r.fora.qtd, r.fora.valor, '']);
+  const wsC = XLSX.utils.aoa_to_sheet(cons);
+  wsC['!cols'] = [30, 14, 32, 16, 26, 12, 14, 48].map((wch) => ({ wch }));
+  moeda(wsC, 4, [6]);
+
+  /* Aba 2 — ANALÍTICO: cada solicitação é uma linha; Data = dia do serviço. */
+  const ana: (string | number | null)[][] = [
+    ['GRUPO BEIJA-FLOR — PAGAMENTOS · ANALÍTICO'],
+    [`Serviços de ${c.periodo.rotulo} · ${filtrosTxt}`],
+    ['Data = dia do serviço. Pagar em = segunda-feira seguinte à semana do serviço (freelancer) ou cartão na competência (hora extra). Total já inclui o vale-transporte.'],
+    [],
+    [...CAB, 'Pagar em', 'Status', 'Pago em', 'V.T. (já dentro)', 'Solicitado por', 'Data da solicitação'],
+  ];
+  const ordenados = [...c.lancamentos].sort((a, b) =>
+    (a.pagarEm ?? '9999').localeCompare(b.pagarEm ?? '9999') || a.unidade.localeCompare(b.unidade, 'pt-BR') || a.pessoa.localeCompare(b.pessoa, 'pt-BR') || a.data.localeCompare(b.data));
+  for (const l of ordenados) {
+    ana.push([
+      l.unidade, emBR(l.data), l.pessoa, cpfFormatado(l.cpf), l.pixKey ?? '', `${TIPO_TEXTO[l.tipo]}${l.horas ? ` · ${l.horas}h` : ''}`, l.valor, l.motivo ?? '',
+      l.pagarEm ? emBR(l.pagarEm) : 'cartão (competência)', STATUS_TEXTO[l.status], l.pagoEm ? emBR(l.pagoEm) : '', l.vt, l.solicitadoPor ?? '', emBR(l.dataSolicitacao),
     ]);
   }
-  const V = ['', '', '', '', '', '', '', '', '', ''] as const; // 10 colunas vazias até "Valor"
-  aoa.push([]);
-  aoa.push(['TOTAL HORA EXTRA', ...V, r.valorHoraExtra]);
-  aoa.push(['TOTAL FREELANCER', ...V, r.valorFreelancer]);
-  aoa.push(['TOTAL VALE-TRANSPORTE (já dentro dos valores)', '', '', '', '', '', '', '', '', r.vt, null]);
-  aoa.push(['TOTAL GERAL', ...V, r.total]);
-  if (filtro.status === 'TODOS') {
-    /* O total separado pelo que ele é — solicitado não é "a pagar". */
-    aoa.push([]);
-    aoa.push(['Solicitado — pendente de aprovação', ...V, r.porStatus.pendente]);
-    aoa.push(['Aprovado — a pagar', ...V, r.porStatus.aprovado]);
-    aoa.push(['Pago', ...V, r.porStatus.pago]);
-  }
-  if (r.fora.qtd > 0) aoa.push([`${r.fora.qtd} rejeitada(s) listada(s) e fora dos totais`, ...V, r.fora.valor]);
-  if (r.pendentes.qtd > 0 && filtro.status === 'TODOS') aoa.push([`Atenção: ${r.pendentes.qtd} pendente(s) de aprovação dentro do total`, ...V, r.pendentes.valor]);
+  ana.push([]);
+  ana.push(['TOTAL FREELANCER', '', '', '', '', '', r.valorFreelancer, '']);
+  ana.push(['TOTAL HORA EXTRA', '', '', '', '', '', r.valorHoraExtra, '']);
+  ana.push(['TOTAL VALE-TRANSPORTE (já dentro dos valores)', '', '', '', '', '', '', '', '', '', '', r.vt]);
+  ana.push(['TOTAL GERAL', '', '', '', '', r.solicitacoes, r.total, '']);
+  if (r.pendentes.qtd > 0 && filtro.status === 'TODOS') ana.push([`Atenção: ${r.pendentes.qtd} pendente(s) de aprovação dentro do total`, '', '', '', '', r.pendentes.qtd, r.pendentes.valor, '']);
+  const ws = XLSX.utils.aoa_to_sheet(ana);
+  ws['!cols'] = [30, 12, 32, 16, 26, 18, 14, 40, 16, 12, 12, 14, 22, 16].map((wch) => ({ wch }));
+  moeda(ws, 4, [6, 11]);
 
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [12, 18, 22, 12, 30, 16, 26, 7, 30, 14, 12, 11, 12, 22, 16].map((wch) => ({ wch }));
-  moeda(ws, 6, [9, 10]);
-
-  /* Aba — Por segunda de pagamento (v1.160.0): o freelancer da semana seg→dom é pago na segunda seguinte. */
-  const sg: (string | number)[][] = [['Pagar na segunda', 'Semana do serviço', 'Solicitações', 'Freelancers', 'Pago', 'A pagar', 'Pendente', 'Total', 'Situação']];
-  for (const s of c.porSegunda) sg.push([emBR(s.pagarEm), `${emBR(s.semanaDe)} a ${emBR(s.semanaAte)}`, s.qtd, s.freelancers, s.pago, s.aPagar, s.pendente, s.valor, s.atrasado ? 'ATRASADO (segunda já passou com valor a pagar)' : s.aPagar > 0 ? 'a pagar' : s.pendente > 0 ? 'aguardando aprovação' : 'pago']);
-  const wsS = XLSX.utils.aoa_to_sheet(sg);
-  wsS['!cols'] = [16, 24, 12, 12, 14, 14, 14, 14, 40].map((wch) => ({ wch }));
-  moeda(wsS, 1, [4, 5, 6, 7]);
-
-  /* Aba 2 — Por unidade: cada unidade na sua linha. */
+  /* Aba 3 — Por unidade: a soma de cada unidade. */
   const un: (string | number)[][] = [['Unidade', 'Solicitações', 'Freelancer', 'Hora Extra', 'Vale-transporte (já dentro)', 'Total']];
   for (const u of c.porUnidade) un.push([u.unidade, u.qtd, u.freelancer, u.horaExtra, u.vt, u.total]);
   un.push(['TOTAL', r.solicitacoes, r.valorFreelancer, r.valorHoraExtra, r.vt, r.total]);
@@ -77,22 +97,13 @@ export async function GET(req: Request) {
   wsU['!cols'] = [28, 12, 14, 14, 24, 14].map((wch) => ({ wch }));
   moeda(wsU, 1, [2, 3, 4, 5]);
 
-  /* Aba 3 — Por colaborador: a conferência antes de mandar. */
-  const pc: (string | number)[][] = [['Colaborador', 'CPF', 'Chave PIX', 'Unidade(s)', 'Hora Extra', 'Freelancer', 'Vale-transporte (já dentro)', 'Total', 'Lançamentos']];
-  for (const p of c.porColaborador) pc.push([p.pessoa, cpfFormatado(p.cpf), p.pixKey ?? '', p.unidades.join(', '), p.horaExtra, p.freelancer, p.vt, p.total, p.lancamentos.length]);
-  pc.push(['TOTAL', '', '', '', r.valorHoraExtra, r.valorFreelancer, r.vt, r.total, r.solicitacoes]);
-  const wsP = XLSX.utils.aoa_to_sheet(pc);
-  wsP['!cols'] = [30, 16, 26, 28, 14, 14, 24, 14, 12].map((wch) => ({ wch }));
-  moeda(wsP, 1, [4, 5, 6, 7]);
-
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Lançamentos');
-  XLSX.utils.book_append_sheet(wb, wsS, 'Por segunda (freelancer)');
+  XLSX.utils.book_append_sheet(wb, wsC, 'CONSOLIDADO');
+  XLSX.utils.book_append_sheet(wb, ws, 'ANALÍTICO');
   XLSX.utils.book_append_sheet(wb, wsU, 'Por unidade');
-  XLSX.utils.book_append_sheet(wb, wsP, 'Por colaborador');
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
 
-  const nome = `consolidacao-pagamentos_${c.periodo.de}_a_${c.periodo.ate}.xlsx`;
+  const nome = `pagamentos_${c.periodo.de}_a_${c.periodo.ate}.xlsx`;
   return new Response(new Uint8Array(buf), {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

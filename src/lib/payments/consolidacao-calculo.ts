@@ -1,5 +1,5 @@
 import type { PaymentStatus } from '@prisma/client';
-
+import { competenciaDaHoraExtra } from '@/lib/people/pagamento-extra-calculo';
 /**
  * CONSOLIDAÇÃO DE PAGAMENTOS — o núcleo PURO (v1.126.0).
  *
@@ -426,6 +426,74 @@ export function ordenar(xs: Lancamento[], ordem: Ordem, dir: 'asc' | 'desc'): La
 
 /** "2h", "1,5h" ou "–". */
 export const textoHoras = (h: number | null) => (h == null ? '–' : `${String(Math.round(h * 100) / 100).replace('.', ',')}h`);
+
+/* ───────────────────── planilha de pagamento (v1.160.1) ───────────────────── */
+
+/**
+ * Uma linha da planilha de PAGAMENTO, no padrão do Financeiro (Pedro, 07/10/2026):
+ * Unidade · Data · Colaborador · CPF · Chave PIX · Lançamentos · Total · Motivo.
+ * No CONSOLIDADO, "Data" é o dia do PAGAMENTO (a segunda-feira) e "Lançamentos"
+ * quantas solicitações da pessoa entram naquele pagamento; no ANALÍTICO cada
+ * solicitação é uma linha e "Data" é o dia do serviço.
+ */
+export interface LinhaDePagamento {
+  unitId: string;
+  unidade: string;
+  data: string;
+  colaborador: string;
+  cpf: string | null;
+  pixKey: string | null;
+  lancamentos: number;
+  total: number;
+  motivo: string;
+  itens: Lancamento[];
+}
+export interface BlocoDeSegunda { pagarEm: string; semanaDe: string; semanaAte: string; linhas: LinhaDePagamento[]; qtd: number; total: number }
+export interface BlocoDeCompetencia { competencia: string; rotulo: string; linhas: LinhaDePagamento[]; qtd: number; total: number }
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+const porUnidadeEColaborador = (a: LinhaDePagamento, b: LinhaDePagamento) => a.unidade.localeCompare(b.unidade, 'pt-BR') || a.colaborador.localeCompare(b.colaborador, 'pt-BR');
+
+/** O "porquê" legível de um pagamento: os dias do serviço + os motivos distintos das solicitações. */
+export function motivoDoPagamento(itens: Lancamento[]): string {
+  const dias = [...new Set(itens.map((i) => i.data))].sort().map((d) => emBR(d).slice(0, 5));
+  const motivos = [...new Set(itens.map((i) => i.motivo?.trim()).filter((m): m is string => Boolean(m)))];
+  const horas = itens.reduce((s, i) => s + (i.horas ?? 0), 0);
+  const base = itens[0]?.tipo === 'OVERTIME' ? `Hora extra${horas ? ` ${horas}h` : ''}` : 'Freelancer';
+  return [`${base} · dia${dias.length > 1 ? 's' : ''} ${dias.join(', ')}`, ...motivos].join(' · ');
+}
+
+/**
+ * Agrupa o que entra nos totais em BLOCOS DE PAGAMENTO: freelancers por
+ * segunda-feira (uma linha por unidade × pessoa) e horas extras por competência
+ * (cartão, mês seguinte ao serviço — v1.135.0). Mesma régua de totais da tela.
+ */
+export function blocosDePagamento(xs: Lancamento[], status: StatusCons): { segundas: BlocoDeSegunda[]; horaExtra: BlocoDeCompetencia[] } {
+  const seg = new Map<string, Map<string, LinhaDePagamento>>();
+  const he = new Map<string, Map<string, LinhaDePagamento>>();
+  for (const l of xs) {
+    if (!entraNosTotais(l, status)) continue;
+    const freelancer = l.tipo === 'FREELANCER';
+    const chave = freelancer ? (l.pagarEm ?? segundaDoPagamento(l.data)) : (competenciaDaHoraExtra(l.data) ?? l.data.slice(0, 7));
+    const mapa = freelancer ? seg : he;
+    const bloco = mapa.get(chave) ?? new Map<string, LinhaDePagamento>();
+    mapa.set(chave, bloco);
+    const k = `${l.unitId}|${l.pessoaChave}`;
+    const linha = bloco.get(k) ?? { unitId: l.unitId, unidade: l.unidade, data: freelancer ? chave : `comp. ${chave.slice(5, 7)}/${chave.slice(0, 4)}`, colaborador: l.pessoa, cpf: l.cpf, pixKey: l.pixKey, lancamentos: 0, total: 0, motivo: '', itens: [] };
+    linha.lancamentos += 1; linha.total += l.valor; linha.itens.push(l);
+    if (!linha.cpf) linha.cpf = l.cpf;
+    if (!linha.pixKey) linha.pixKey = l.pixKey;
+    bloco.set(k, linha);
+  }
+  const fechar = (bloco: Map<string, LinhaDePagamento>) => {
+    const linhas = [...bloco.values()].map((x) => ({ ...x, total: r2(x.total), motivo: motivoDoPagamento(x.itens) })).sort(porUnidadeEColaborador);
+    return { linhas, qtd: linhas.reduce((s, x) => s + x.lancamentos, 0), total: r2(linhas.reduce((s, x) => s + x.total, 0)) };
+  };
+  return {
+    segundas: [...seg.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([pagarEm, bloco]) => ({ pagarEm, semanaDe: somaDias(pagarEm, -7), semanaAte: somaDias(pagarEm, -1), ...fechar(bloco) })),
+    horaExtra: [...he.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([competencia, bloco]) => ({ competencia, rotulo: `${competencia.slice(5, 7)}/${competencia.slice(0, 4)}`, ...fechar(bloco) })),
+  };
+}
 
 /** O que a tela, o PDF e o Excel recebem — montado no servidor por `getConsolidacaoPagamentos`. */
 export interface Consolidacao {
