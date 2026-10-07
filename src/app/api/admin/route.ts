@@ -21,6 +21,7 @@ import { addOvertimeRate, toggleOvertimeRate, deleteOvertimeRate } from '@/lib/o
 import { addOvertimeReason, renameOvertimeReason, toggleOvertimeReason, deleteOvertimeReason } from '@/lib/overtime/reasons';
 import type { DayType } from '@prisma/client';
 import { createChecklistModel, updateChecklistModel, toggleChecklistModel, deleteChecklistModel, createTemplatesFromModels } from '@/lib/checklist-models';
+import { contarNaoRealizadosEmDiasFechados, limparNaoRealizadosEmDiasFechados } from '@/lib/units/nao-realizados-em-dias-fechados';
 import { createSupervisorChecklist, updateSupervisorChecklist, toggleSupervisorChecklist, deleteSupervisorChecklist } from '@/lib/supervisor/visits';
 
 /**
@@ -40,6 +41,17 @@ export async function POST(req: Request) {
   let r: AdminResult | undefined;
   const e = b.entity as string;
   const a = b.action as string;
+
+  /* Dias de funcionamento (v1.157.0): contar / remover os "não realizados" gerados
+     em dias em que a unidade não funciona. Resposta própria (devolve a contagem). */
+  if (e === 'unit' && (a === 'contarDiasFechados' || a === 'limparDiasFechados')) {
+    if (user.role !== 'ADMIN') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+    if (typeof b.id !== 'string') return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
+    if (a === 'contarDiasFechados') return NextResponse.json({ ok: true, total: await contarNaoRealizadosEmDiasFechados(b.id) });
+    const lr = await limparNaoRealizadosEmDiasFechados(user, b.id, ctx);
+    if (!lr.ok) return NextResponse.json({ error: lr.reason === 'NOT_FOUND' ? 'Unidade não encontrada' : 'Sem permissão' }, { status: lr.reason === 'NOT_FOUND' ? 404 : 403 });
+    return NextResponse.json({ ok: true, removidos: lr.removidos });
+  }
 
   if (e === 'unit' && a === 'create') r = await admin.createUnit(user, b, ctx);
   else if (e === 'unit' && a === 'update') r = await admin.updateUnit(user, b.id, b, ctx);

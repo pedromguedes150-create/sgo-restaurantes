@@ -51,7 +51,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <div
         aria-live="polite"
         aria-atomic="false"
-        className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2 print:hidden"
+        style={{ zIndex: 'var(--sgo-z-toast)' as unknown as number }}
+        className="pointer-events-none fixed bottom-4 right-4 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2 print:hidden"
       >
         {items.map((t) => {
           const Icon = icons[t.tone];

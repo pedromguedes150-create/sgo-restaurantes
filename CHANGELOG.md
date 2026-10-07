@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.157.0 — 2026-10-07 (Dias de funcionamento da unidade + calendário que abria atrás da janela)
+### Adicionado
+- **Dias de funcionamento da unidade** (Configurações → Unidades → editar): marque os dias em que a unidade abre. Nos dias desmarcados o SGO **não gera checklist**, então nada vira "não realizado" nem pesa na meta. Padrão: todos os dias (nenhuma unidade muda sozinha). Unidade que não abre todo dia ganha o selo com os dias na lista (ex.: "Seg a Sex").
+- **Remover os "não realizados" já gerados** em dias fechados: o painel conta quantos existem e o Admin remove com um toque. Só sai o que ninguém tocou — concluídos, itens respondidos e fotos ficam. Fica registrado na Auditoria.
+### Corrigido
+- **Campos de data dentro das janelas** (ex.: Emissão e Vencimento do boleto em "Nova nota") pareciam não abrir: o calendário abria ATRÁS da janela. Agora fica por cima de qualquer janela. Os avisos no canto da tela tinham o mesmo problema e também foram corrigidos.
+
 ## v1.156.0 — 2026-10-05 (Higiene dos banheiros: QR por banheiro e alerta com toque próprio no celular do gerente)
 ### Alterado
 - **Página do QR (cliente)**: um toque já avisa — botões grandes **Precisa de limpeza · Falta papel · Falta sabonete · Lixo cheio** (+ "Outro problema" com texto). O QR de cada banheiro já abre com ele escolhido; o QR geral da unidade pergunta o banheiro antes. A avaliação por estrelas ficou DEPOIS do envio, opcional.

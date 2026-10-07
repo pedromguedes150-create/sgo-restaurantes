@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Sheet } from '@/components/ui/ds/sheet';
 import { postAdmin } from '@/lib/admin-client';
+import { DiasDeFuncionamento } from '@/components/admin/dias-de-funcionamento';
+import { rotuloDosDias } from '@/lib/units/dias-de-funcionamento';
 
-export interface UnitRow { id: string; name: string; code: string; address: string | null; cutoffHour: number; timezone: string; active: boolean; rhUnitName: string | null; cnpj: string | null; hasPizzeria: boolean; operationType?: string }
+export interface UnitRow { id: string; name: string; code: string; address: string | null; cutoffHour: number; timezone: string; active: boolean; rhUnitName: string | null; cnpj: string | null; hasPizzeria: boolean; operationType?: string; operatingDays?: number[] }
 
 /** Formata 14 dígitos como CNPJ; devolve o valor cru se não tiver 14 dígitos. */
 function formatCnpj(d: string | null): string | null {
@@ -135,6 +137,7 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
               uma só. Quem liga/desliga usa a caixa dentro da edição. */}
           {unit.operationType && unit.operationType !== 'RESTAURANTE' && <StatusBadge tone="neutral">{({ LANCHONETE: 'Lanchonete', CD: 'CD', FABRICA: 'Fábrica' } as Record<string, string>)[unit.operationType]}</StatusBadge>}
           {unit.hasPizzeria && <StatusBadge tone="success">Com pizzaria</StatusBadge>}
+          {unit.operatingDays && unit.operatingDays.length > 0 && unit.operatingDays.length < 7 && <StatusBadge tone="neutral">{rotuloDosDias(unit.operatingDays)}</StatusBadge>}
           <button onClick={toggle}><StatusBadge tone={unit.active ? 'success' : 'critical'}>{unit.active ? 'Ativa' : 'Inativa'}</StatusBadge></button>
           <Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)} aria-label="Editar">{editing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}</Button>
           <Button size="sm" variant="ghost" disabled={busy} onClick={remove} aria-label="Excluir" className="text-danger"><Trash2 className="h-4 w-4" /></Button>
@@ -170,6 +173,7 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
               ))}
             </div>
           </div>
+          <DiasDeFuncionamento unitId={unit.id} dias={unit.operatingDays ?? []} onChange={onChange} />
           <Button size="sm" className="col-span-2" disabled={busy} onClick={saveEdit}><Save className="h-4 w-4" /> Salvar alterações</Button>
         </div>
       )}
