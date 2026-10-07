@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.160.2 — 2026-10-08 (Higiene e Coleta de óleo, cada uma na sua tela)
+### Alterado
+- **Higiene dos banheiros** e **Coleta de óleo** deixaram de dividir a faixa "Rotinas da unidade" no topo da tela. Cada uma é uma tela própria: Higiene segue em Tarefas → Checklists e Coleta de óleo em Operação → Rotinas da unidade, no menu de cima. Os endereços e os avisos antigos continuam funcionando.
+
 ## v1.160.1 — 2026-10-07 (Planilha de pagamento no padrão do Financeiro)
 ### Alterado
 - O **Excel da Visão financeira** passou a ter duas abas principais: **CONSOLIDADO** (um bloco por segunda-feira de pagamento, uma linha por unidade e colaborador: Unidade · Data do pagamento · Colaborador · CPF · Chave PIX · Lançamentos · Total · Motivo, com subtotal por segunda; hora extra em bloco próprio por competência) e **ANALÍTICO** (cada solicitação, nas mesmas colunas, mais Pagar em, Status, Pago em, V.T., quem solicitou e quando). A aba "Por unidade" continua. Saíram as abas "Por segunda (freelancer)" e "Por colaborador", que ficaram genéricas.

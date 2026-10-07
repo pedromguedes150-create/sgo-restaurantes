@@ -1,7 +1,6 @@
 import { getSessionUser } from '@/lib/auth/session';
 import { abasDoPerfil } from '@/lib/permissions/abas-server';
 
-import { FamilyTabs } from '@/components/layout/family-tabs';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getOilDashboard, listOilCollections, janelaValida } from '@/lib/oil/query';
@@ -42,7 +41,7 @@ export default async function OleoPage({ searchParams }: { searchParams: { dias?
     <div className="space-y-4">
       {/* O cabeçalho (título + abas) vive no cliente, no padrão do kit. */}
       <OilClient
-        subtitulo={<>Controle da coleta de óleo usado (recebemos por ela): litros, valor/litro, total e forma de recebimento.<span className="block"><FamilyTabs active="/modulos/oleo" /></span></>}
+        subtitulo={'Controle da coleta de óleo usado (recebemos por ela): litros, valor/litro, total e forma de recebimento.'}
         abas={await abasDoPerfil(user.role, 'OIL')}
         canLaunch={canLaunch}
         isAdmin={user.role === 'ADMIN'}
