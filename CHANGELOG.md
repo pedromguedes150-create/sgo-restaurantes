@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.159.3 — 2026-10-07 (Ajustes manuais de férias: botão Reverter)
+### Adicionado
+- Na aba **Ajustes manuais** do Controle de Férias, cada período com dias informados à mão ganhou o botão **Reverter** (com confirmação): tira o ajuste e o período volta ao que o SGO calcula sozinho. É o mesmo efeito de salvar 0, que existia mas não era visível. A admissão corrigida já tinha "Usar a do RH".
+
 ## v1.159.2 — 2026-10-07 (Períodos de férias: venda de dias também ao EDITAR)
 ### Corrigido
 - A janela **Editar férias** (a que ajusta o período aberto pelo RH para "01/10 a 20/10") não tinha onde informar os dias vendidos — só o lançamento novo tinha. Agora ela também tem **Dias vendidos (abono)** e **Do período aquisitivo**.

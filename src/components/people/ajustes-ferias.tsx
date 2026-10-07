@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { CalendarCog, PencilLine, Save } from 'lucide-react';
+import { CalendarCog, PencilLine, Save, Undo2 } from 'lucide-react';
 import { Select } from '@/components/ui/ds/select';
 
 const br = (iso: string | null | undefined) => (iso ? iso.split('-').reverse().join('/') : '—');
@@ -51,6 +51,16 @@ function LinhaDoPeriodo({ colabId, p, ajuste, podeEditar }: { colabId: string; p
     setMsg({ ok: true, t: 'Salvo.' }); router.refresh();
   }
 
+  async function reverter() {
+    if (!confirm(`Reverter o ajuste do período de ${br(p.inicio)}? Os ${ajuste?.dias ?? 0} dia(s) informados à mão saem da conta e o período volta ao que o SGO calcula sozinho.`)) return;
+    setBusy(true); setMsg(null);
+    const erro = await enviar({ acao: 'gozo', collaboratorId: colabId, periodoInicio: p.inicio, diasGozados: 0, observacao: '' });
+    setBusy(false);
+    if (erro) { setMsg({ ok: false, t: erro }); return; }
+    setDias(''); setObs('');
+    setMsg({ ok: true, t: 'Ajuste revertido.' }); router.refresh();
+  }
+
   return (
     <tr>
       <td className="tabular-nums">{br(p.inicio)} a {br(p.fim)}<span className="block text-xs text-ink-500">conceder até {br(p.limite)}</span></td>
@@ -73,8 +83,15 @@ function LinhaDoPeriodo({ colabId, p, ajuste, podeEditar }: { colabId: string; p
       </td>
       <td className="text-right font-semibold tabular-nums">{p.saldo}</td>
       <td><span className={`sgo-tag ${SITUACAO[p.situacao].cls}`}>{SITUACAO[p.situacao].txt}</span></td>
-      <td className="text-right">
+      <td className="whitespace-nowrap text-right">
         {podeEditar && <button type="button" className="sgo-btn sgo-btn--sm" disabled={!mudou || busy} onClick={() => void salvar()} data-testid={`salvar-${p.inicio}`}><Save className="h-3.5 w-3.5" /> Salvar</button>}
+        {/* Reverter (v1.159.3, pedido do Pedro: "quando errar tem que ter uma forma de reverter"):
+            é o mesmo "salvar 0" que já removia o ajuste — agora com botão próprio e confirmação. */}
+        {podeEditar && ajuste && (
+          <button type="button" className="sgo-btn sgo-btn--sm sgo-btn--ghost ml-1 text-danger" disabled={busy} onClick={() => void reverter()} aria-label={`Reverter o ajuste do período de ${br(p.inicio)}`} data-testid={`reverter-${p.inicio}`}>
+            <Undo2 className="h-3.5 w-3.5" /> Reverter
+          </button>
+        )}
       </td>
     </tr>
   );
@@ -172,7 +189,7 @@ export function AjustesFerias({ colaboradores, ficha, podeEditar, podeAdmissao }
               </div>
             )}
             <p className="px-4 pb-3 pt-2 text-xs text-ink-500">
-              Informe só os dias que <b>não</b> estão lançados no SGO (senão contam duas vezes). Período “Anterior ao SGO” que recebe dias informados passa a ser cobrado normalmente — se o total não chegar a 30 e o prazo tiver passado, ele aparece como vencido. Para zerar, salve 0.
+              Informe só os dias que <b>não</b> estão lançados no SGO (senão contam duas vezes). Período “Anterior ao SGO” que recebe dias informados passa a ser cobrado normalmente — se o total não chegar a 30 e o prazo tiver passado, ele aparece como vencido. Para desfazer um ajuste, use “Reverter” na linha.
             </p>
           </div>
         </>
