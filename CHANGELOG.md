@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.160.0 — 2026-10-07 (Pagamentos de Freelancers: a segunda-feira do pagamento)
+### Adicionado
+- Na **Visão financeira** (Pagamentos de Freelancers), cada lançamento de freelancer mostra **"Pagar em"**: a segunda-feira seguinte à semana (segunda a domingo) do serviço — a regra da operação. Hora extra mostra "cartão" (vai pela competência).
+- Quadro **"Freelancers: quando pagar"**: uma linha por segunda-feira, com a semana que ela paga, solicitações, freelancers, o que já foi pago, o que está aprovado a pagar e o que ainda espera aprovação. Segunda já passada com valor a pagar fica destacada como atrasada.
+- Ao lado do status **Pago**, o dia em que a aba Pagar marcou o pagamento ("em dd/mm") — antes parecia o mesmo dia do lançamento.
+- O **Excel** ganhou as colunas "Pagar em (segunda)" e "Pago em" nos lançamentos e a aba "Por segunda (freelancer)"; o **PDF** ganhou a coluna e o quadro.
+### Observação
+- Nada muda na regra de aprovar, pagar ou calcular valores: é só a leitura, para quem paga não se confundir.
+
 ## v1.159.3 — 2026-10-07 (Ajustes manuais de férias: botão Reverter)
 ### Adicionado
 - Na aba **Ajustes manuais** do Controle de Férias, cada período com dias informados à mão ganhou o botão **Reverter** (com confirmação): tira o ajuste e o período volta ao que o SGO calcula sozinho. É o mesmo efeito de salvar 0, que existia mas não era visível. A admissão corrigida já tinha "Usar a do RH".

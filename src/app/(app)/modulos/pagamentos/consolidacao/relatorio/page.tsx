@@ -68,6 +68,38 @@ export default async function RelatorioConsolidacaoPage({ searchParams }: { sear
         {filtro.status === 'TODOS' && r.pendentes.qtd > 0 && <p className="mt-1 text-xs font-semibold text-warning">Atenção: {r.pendentes.qtd} pendente(s) de aprovação ({formatBRL(r.pendentes.valor)}) dentro do total.</p>}
       </section>
 
+      {c.porSegunda.length > 0 && (
+        <section className="break-inside-avoid-page">
+          <h2 className="sgo-type-15 mb-2 font-bold text-brand">FREELANCERS — QUANDO PAGAR (segunda-feira seguinte à semana do serviço)</h2>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-line text-left text-ink-500">
+                <th className="py-1 pr-2 font-semibold">Pagar na segunda</th>
+                <th className="py-1 pr-2 font-semibold">Semana do serviço</th>
+                <th className="py-1 pr-2 text-right font-semibold">Solic.</th>
+                <th className="py-1 pr-2 text-right font-semibold">Pago</th>
+                <th className="py-1 pr-2 text-right font-semibold">A pagar</th>
+                <th className="py-1 pr-2 text-right font-semibold">Pendente</th>
+                <th className="py-1 text-right font-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {c.porSegunda.map((s) => (
+                <tr key={s.pagarEm}>
+                  <td className="py-1 pr-2 font-semibold tabular-nums">{emBR(s.pagarEm)}{s.atrasado ? ' · ATRASADO' : ''}</td>
+                  <td className="py-1 pr-2 tabular-nums">{emBR(s.semanaDe)} a {emBR(s.semanaAte)}</td>
+                  <td className="py-1 pr-2 text-right tabular-nums">{s.qtd}</td>
+                  <td className="py-1 pr-2 text-right tabular-nums">{formatBRL(s.pago)}</td>
+                  <td className="py-1 pr-2 text-right tabular-nums">{formatBRL(s.aPagar)}</td>
+                  <td className="py-1 pr-2 text-right tabular-nums">{formatBRL(s.pendente)}</td>
+                  <td className="py-1 text-right font-semibold tabular-nums">{formatBRL(s.valor)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       {c.porUnidade.length === 0 && <p className="text-sm text-ink-500">Nenhum lançamento com esses filtros no período.</p>}
 
       {c.porUnidade.map((u) => (
@@ -77,6 +109,7 @@ export default async function RelatorioConsolidacaoPage({ searchParams }: { sear
             <thead>
               <tr className="border-b border-line text-left text-ink-500">
                 <th className="py-1 pr-2 font-semibold">Data</th>
+                <th className="py-1 pr-2 font-semibold">Pagar em</th>
                 <th className="py-1 pr-2 font-semibold">Tipo</th>
                 <th className="py-1 pr-2 font-semibold">Colaborador</th>
                 <th className="py-1 pr-2 text-right font-semibold">Horas</th>
@@ -91,12 +124,13 @@ export default async function RelatorioConsolidacaoPage({ searchParams }: { sear
                 return (
                   <tr key={l.id} className={soma ? '' : 'text-ink-400'}>
                     <td className="py-1 pr-2 tabular-nums">{emBR(l.data)}</td>
+                    <td className="py-1 pr-2 tabular-nums">{l.pagarEm ? `seg. ${emBR(l.pagarEm)}` : 'cartão'}</td>
                     <td className="py-1 pr-2">{TIPO_TEXTO[l.tipo]}</td>
                     <td className="py-1 pr-2">{l.pessoa}</td>
                     <td className="py-1 pr-2 text-right tabular-nums">{textoHoras(l.horas)}</td>
                     <td className="py-1 pr-2 text-right tabular-nums">{formatBRL(l.vt)}</td>
                     <td className={`py-1 pr-2 text-right tabular-nums ${soma ? '' : 'line-through'}`}>{formatBRL(l.valor)}</td>
-                    <td className="py-1">{STATUS_TEXTO[l.status]}</td>
+                    <td className="py-1">{STATUS_TEXTO[l.status]}{l.pagoEm ? ` em ${emBR(l.pagoEm)}` : ''}</td>
                   </tr>
                 );
               })}

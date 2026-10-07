@@ -28,25 +28,25 @@ export async function GET(req: Request) {
     ['GRUPO BEIJA-FLOR — CONSOLIDAÇÃO DE PAGAMENTOS'],
     [`Período: ${c.periodo.rotulo}`],
     [`Unidade: ${unidade} · Tipo: ${TIPOS_CONS.find((t) => t.value === filtro.tipo)?.label} · Status: ${STATUS_CONS.find((s) => s.value === filtro.status)?.label} · Colaborador: ${pessoa}`],
-    ['Data = dia do serviço. Valor = valor da solicitação (já inclui o vale-transporte lançado).'],
+    ['Data = dia do serviço. Pagar em = segunda-feira seguinte à semana do serviço (freelancer); hora extra vai pelo cartão, na competência. Valor = valor da solicitação (já inclui o vale-transporte lançado).'],
     [],
     /* CPF e Chave PIX ao lado do nome (pedido do Financeiro, 05/10/2026): a
        planilha baixada é a base do pagamento, e sem eles era preciso abrir o
        cadastro de cada freelancer. Hora extra traz o CPF do RH e PIX vazio
        (é paga pela competência, no cartão). */
-    ['Data', 'Unidade', 'Tipo', 'Colaborador', 'CPF', 'Chave PIX', 'Horas', 'Motivo', 'Vale-transporte', 'Valor', 'Status', 'Solicitado por', 'Data da solicitação'],
+    ['Data', 'Pagar em (segunda)', 'Unidade', 'Tipo', 'Colaborador', 'CPF', 'Chave PIX', 'Horas', 'Motivo', 'Vale-transporte', 'Valor', 'Status', 'Pago em', 'Solicitado por', 'Data da solicitação'],
   ];
   for (const l of c.lancamentos) {
     aoa.push([
-      emBR(l.data), l.unidade, TIPO_TEXTO[l.tipo], l.pessoa, cpfFormatado(l.cpf), l.pixKey ?? '', l.horas, l.motivo ?? '', l.vt, l.valor,
-      STATUS_TEXTO[l.status], l.solicitadoPor ?? '', emBR(l.dataSolicitacao),
+      emBR(l.data), l.pagarEm ? emBR(l.pagarEm) : 'cartão (competência)', l.unidade, TIPO_TEXTO[l.tipo], l.pessoa, cpfFormatado(l.cpf), l.pixKey ?? '', l.horas, l.motivo ?? '', l.vt, l.valor,
+      STATUS_TEXTO[l.status], l.pagoEm ? emBR(l.pagoEm) : '', l.solicitadoPor ?? '', emBR(l.dataSolicitacao),
     ]);
   }
-  const V = ['', '', '', '', '', '', '', '', ''] as const; // 9 colunas vazias até "Valor"
+  const V = ['', '', '', '', '', '', '', '', '', ''] as const; // 10 colunas vazias até "Valor"
   aoa.push([]);
   aoa.push(['TOTAL HORA EXTRA', ...V, r.valorHoraExtra]);
   aoa.push(['TOTAL FREELANCER', ...V, r.valorFreelancer]);
-  aoa.push(['TOTAL VALE-TRANSPORTE (já dentro dos valores)', '', '', '', '', '', '', '', r.vt, null]);
+  aoa.push(['TOTAL VALE-TRANSPORTE (já dentro dos valores)', '', '', '', '', '', '', '', '', r.vt, null]);
   aoa.push(['TOTAL GERAL', ...V, r.total]);
   if (filtro.status === 'TODOS') {
     /* O total separado pelo que ele é — solicitado não é "a pagar". */
@@ -59,8 +59,15 @@ export async function GET(req: Request) {
   if (r.pendentes.qtd > 0 && filtro.status === 'TODOS') aoa.push([`Atenção: ${r.pendentes.qtd} pendente(s) de aprovação dentro do total`, ...V, r.pendentes.valor]);
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [12, 22, 12, 30, 16, 26, 7, 30, 14, 12, 11, 22, 16].map((wch) => ({ wch }));
-  moeda(ws, 6, [8, 9]);
+  ws['!cols'] = [12, 18, 22, 12, 30, 16, 26, 7, 30, 14, 12, 11, 12, 22, 16].map((wch) => ({ wch }));
+  moeda(ws, 6, [9, 10]);
+
+  /* Aba — Por segunda de pagamento (v1.160.0): o freelancer da semana seg→dom é pago na segunda seguinte. */
+  const sg: (string | number)[][] = [['Pagar na segunda', 'Semana do serviço', 'Solicitações', 'Freelancers', 'Pago', 'A pagar', 'Pendente', 'Total', 'Situação']];
+  for (const s of c.porSegunda) sg.push([emBR(s.pagarEm), `${emBR(s.semanaDe)} a ${emBR(s.semanaAte)}`, s.qtd, s.freelancers, s.pago, s.aPagar, s.pendente, s.valor, s.atrasado ? 'ATRASADO (segunda já passou com valor a pagar)' : s.aPagar > 0 ? 'a pagar' : s.pendente > 0 ? 'aguardando aprovação' : 'pago']);
+  const wsS = XLSX.utils.aoa_to_sheet(sg);
+  wsS['!cols'] = [16, 24, 12, 12, 14, 14, 14, 14, 40].map((wch) => ({ wch }));
+  moeda(wsS, 1, [4, 5, 6, 7]);
 
   /* Aba 2 — Por unidade: cada unidade na sua linha. */
   const un: (string | number)[][] = [['Unidade', 'Solicitações', 'Freelancer', 'Hora Extra', 'Vale-transporte (já dentro)', 'Total']];
@@ -80,6 +87,7 @@ export async function GET(req: Request) {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Lançamentos');
+  XLSX.utils.book_append_sheet(wb, wsS, 'Por segunda (freelancer)');
   XLSX.utils.book_append_sheet(wb, wsU, 'Por unidade');
   XLSX.utils.book_append_sheet(wb, wsP, 'Por colaborador');
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;

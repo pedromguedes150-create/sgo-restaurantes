@@ -40,14 +40,14 @@ describe('Select com busca (colaborador da Hora Extra)', () => {
 
 const l = (p: Partial<Lancamento> & { id: string }): Lancamento => ({
   data: '2026-09-28', unitId: 'mo', unidade: 'Moreira', tipo: 'OVERTIME', pessoaChave: 'C:joao', pessoa: 'João Silva',
-  horas: 2, vt: 0, valor: 45, status: 'APPROVED', motivo: 'Evento', solicitadoPor: 'Gerente', dataSolicitacao: '2026-09-28', semVinculoRh: false, cpf: null, pixKey: null, ...p,
+  horas: 2, vt: 0, valor: 45, status: 'APPROVED', motivo: 'Evento', solicitadoPor: 'Gerente', dataSolicitacao: '2026-09-28', semVinculoRh: false, pagarEm: null, pagoEm: null, cpf: null, pixKey: null, ...p,
 });
 
 describe('Tela da Consolidação de pagamentos', () => {
   const xs = [
     l({ id: '1' }),
     l({ id: '2', tipo: 'FREELANCER', unitId: 'km', unidade: 'KM13', pessoaChave: 'F:maria', pessoa: 'Maria Souza', horas: null, vt: 12, valor: 150 }),
-    l({ id: '3', pessoa: 'Antigo', pessoaChave: 'N:antigo', semVinculoRh: true, valor: 30, status: 'REJECTED' }),
+    l({ id: '3', pessoa: 'Antigo', pessoaChave: 'N:antigo', semVinculoRh: true, pagarEm: null, pagoEm: null, valor: 30, status: 'REJECTED' }),
   ];
   const dados: Consolidacao = {
     periodo: { de: '2026-09-28', ate: '2026-10-04', rotulo: '28/09/2026 a 04/10/2026' },
@@ -56,7 +56,7 @@ describe('Tela da Consolidação de pagamentos', () => {
     pessoas: [],
     resumo: resumir(xs, 'TODOS'),
     porUnidade: porUnidade(xs, 'TODOS'),
-    porColaborador: porColaborador(xs, 'TODOS'),
+    porColaborador: porColaborador(xs, 'TODOS'), porSegunda: [],
   };
   const html = renderToString(React.createElement(ConsolidacaoPagamentosClient, {
     financeiro: dados, periodo: dados.periodo, unidades: dados.unidades, filtro: { periodo: 'semana', tipo: 'TODOS', status: 'TODOS' },
@@ -93,7 +93,7 @@ describe('Visão financeira: somas na própria tela', () => {
   const dados: Consolidacao = {
     periodo: { de: '2026-09-21', ate: '2026-09-27', rotulo: '21/09/2026 a 27/09/2026' },
     unidades: [{ id: 'mo', name: 'Moreira' }], lancamentos: xs, pessoas: [], resumo: r,
-    porUnidade: porUnidade(xs, 'TODOS'), porColaborador: porColaborador(xs, 'TODOS'),
+    porUnidade: porUnidade(xs, 'TODOS'), porColaborador: porColaborador(xs, 'TODOS'), porSegunda: [],
   };
   const html = renderToString(React.createElement(ConsolidacaoPagamentosClient, { financeiro: dados, periodo: dados.periodo, unidades: dados.unidades, filtro: { periodo: 'semana-passada', tipo: 'TODOS', status: 'TODOS' } }));
 

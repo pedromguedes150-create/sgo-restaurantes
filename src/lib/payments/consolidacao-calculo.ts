@@ -191,6 +191,59 @@ export interface Lancamento {
    */
   cpf: string | null;
   pixKey: string | null;
+  /**
+   * SEGUNDA-FEIRA DO PAGAMENTO (v1.160.0): o freelancer que trabalhou de segunda
+   * a domingo é pago na segunda SEGUINTE — regra da operação (Pedro, 07/10/2026).
+   * Só informação derivada do dia do serviço; nada grava. Hora extra é null:
+   * ela é paga pela competência, no cartão (v1.135.0).
+   */
+  pagarEm: string | null;
+  /** Dia em que foi marcada como paga na aba Pagar (Brasília), quando pago. */
+  pagoEm: string | null;
+}
+
+const DIA_MS = 86_400_000;
+const somaDias = (iso: string, n: number) => new Date(Date.parse(iso + 'T00:00:00Z') + n * DIA_MS).toISOString().slice(0, 10);
+
+/** A segunda-feira SEGUINTE à semana (segunda→domingo) do dia do serviço. */
+export function segundaDoPagamento(dataISO: string): string {
+  const dia = new Date(dataISO + 'T00:00:00Z');
+  const desdeSegunda = (dia.getUTCDay() + 6) % 7; // 0 = segunda … 6 = domingo
+  return somaDias(dataISO, 7 - desdeSegunda);
+}
+export const rotuloSegunda = (iso: string) => `seg. ${emBR(iso)}`;
+
+/** Uma segunda de pagamento: a semana que ela paga e o que está pago / a pagar / pendente. */
+export interface ResumoDaSegunda {
+  pagarEm: string;
+  semanaDe: string;
+  semanaAte: string;
+  qtd: number;
+  freelancers: number;
+  valor: number;
+  pago: number;
+  aPagar: number;
+  pendente: number;
+  /** A segunda já passou e ainda há aprovado sem pagar. */
+  atrasado: boolean;
+}
+
+/** Só freelancers (hora extra vai pelo cartão); rejeitadas seguem a regra dos totais. */
+export function porSegundaDePagamento(xs: Lancamento[], status: StatusCons, hoje: string): ResumoDaSegunda[] {
+  const m = new Map<string, ResumoDaSegunda & { pessoas: Set<string> }>();
+  for (const l of xs) {
+    if (l.tipo !== 'FREELANCER' || !l.pagarEm || !entraNosTotais(l, status)) continue;
+    const g = m.get(l.pagarEm) ?? { pagarEm: l.pagarEm, semanaDe: somaDias(l.pagarEm, -7), semanaAte: somaDias(l.pagarEm, -1), qtd: 0, freelancers: 0, valor: 0, pago: 0, aPagar: 0, pendente: 0, atrasado: false, pessoas: new Set<string>() };
+    g.qtd += 1; g.pessoas.add(l.pessoaChave); g.valor += l.valor;
+    if (l.status === 'PAID') g.pago += l.valor;
+    else if (l.status === 'APPROVED') g.aPagar += l.valor;
+    else if (l.status === 'PENDING') g.pendente += l.valor;
+    m.set(l.pagarEm, g);
+  }
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  return [...m.values()]
+    .map(({ pessoas, ...g }) => ({ ...g, freelancers: pessoas.size, valor: r2(g.valor), pago: r2(g.pago), aPagar: r2(g.aPagar), pendente: r2(g.pendente), atrasado: g.pagarEm < hoje && g.aPagar > 0 }))
+    .sort((a, b) => a.pagarEm.localeCompare(b.pagarEm));
 }
 
 /**
@@ -385,6 +438,8 @@ export interface Consolidacao {
   resumo: Resumo;
   porUnidade: ResumoDaUnidade[];
   porColaborador: ResumoDaPessoa[];
+  /** Freelancers agrupados pela segunda-feira em que são pagos (v1.160.0). */
+  porSegunda: ResumoDaSegunda[];
 }
 
 /* ───────────────────────── recorrência ───────────────────────── */
