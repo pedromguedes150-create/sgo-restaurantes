@@ -15,7 +15,8 @@ describe('push do banheiro', () => {
     expect(sw).toContain("data.alerta === 'higiene'");
     expect(sw).toMatch(/VIBRA_HIGIENE = \[500, 150, 500, 150, 500, 150, 900\]/);
     expect(sw).toContain('requireInteraction: higiene ||');
-    expect(sw).toContain("postMessage({ tipo: 'sgo-alerta', alerta: 'higiene'");
+    // desde a v1.158.0 todo push avisa as abas do SGO (aviso ao vivo no topo)
+    expect(sw).toContain("tipo: 'sgo-notificacao'");
   });
   it('o envio carrega o tipo do alerta e a etiqueta própria', () => {
     expect(send).toContain('alerta: p.alerta,');

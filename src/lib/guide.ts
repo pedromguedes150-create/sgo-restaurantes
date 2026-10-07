@@ -1362,6 +1362,18 @@ export const GUIDE: GuideSection[] = [
     title: 'Pessoas e Escala',
     guides: [
       {
+        id: 'avisos-ao-vivo',
+        title: 'Avisos no topo da tela',
+        roles: ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'FINANCE', 'ADMIN', 'CEO'],
+        summary: 'Aviso novo aparece no topo, como num app de mensagens.',
+        steps: [
+          'Com o SGO aberto, todo aviso novo aparece no topo da tela, sem trocar de página. Toque nele para abrir o conteúdo, ou no X para fechar. Ele também sai sozinho em alguns segundos e continua no sino.',
+          'Os avisos da Higiene dos banheiros ficam em destaque até alguém tocar e tocam um som próprio. O ícone de alto-falante no aviso liga e desliga esse som neste aparelho. Os demais avisos aparecem sem som.',
+          'O navegador só libera o som depois do primeiro toque na página: ao abrir o SGO, toque em qualquer lugar uma vez.',
+          'Com o SGO minimizado, em outra aba ou com o celular bloqueado, o aviso chega pela notificação do celular (ative em Meu Perfil). Ele não toca duas vezes quando o SGO está aberto.',
+        ],
+      },
+      {
         id: 'dias-de-funcionamento',
         title: 'Dias de funcionamento da unidade',
         roles: ['ADMIN'],

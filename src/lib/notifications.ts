@@ -3,6 +3,7 @@ import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
 import { sendPushToUsers } from '@/lib/push/send';
 import { SUPERVISORY_ROLES } from '@/lib/roles';
+import { nivelAoGravar } from '@/lib/notifications/nivel';
 
 export interface NotifyPayload {
   title: string;
@@ -18,6 +19,11 @@ export interface NotifyPayload {
   alerta?: 'higiene';
   /** Etiqueta da notificação no aparelho (a mesma etiqueta substitui; outra empilha). */
   tag?: string;
+  /**
+   * Nível do aviso ao vivo (v1.158.0). Só 'IMPORTANTE' é pedido aqui (som + vibração
+   * curta); `critical` continua sendo o CRÍTICO e vence. Sem nada = NORMAL.
+   */
+  nivel?: 'IMPORTANTE';
 }
 
 /**
@@ -31,7 +37,7 @@ export async function notifyUsers(userIds: string[], p: NotifyPayload): Promise<
   if (ids.length === 0) return;
   try {
     await prisma.notification.createMany({
-      data: ids.map((userId) => ({ userId, title: p.title, body: p.body, link: p.link, module: p.module, critical: Boolean(p.critical) })),
+      data: ids.map((userId) => ({ userId, title: p.title, body: p.body, link: p.link, module: p.module, critical: Boolean(p.critical), level: nivelAoGravar(p) })),
     });
   } catch (err) {
     console.error('[notifications] falha ao criar:', err);
@@ -117,4 +123,19 @@ export async function markRead(user: SessionUser, id: string): Promise<void> {
 
 export async function markAllRead(user: SessionUser): Promise<void> {
   await prisma.notification.updateMany({ where: { userId: user.id, read: false }, data: { read: true } });
+}
+
+/**
+ * Avisos NÃO LIDOS do próprio usuário criados depois de `desde` (v1.158.0) — o
+ * que o aviso ao vivo no topo da tela pergunta a cada 20s e quando o push chega.
+ * Teto de 10: abrir o SGO depois de horas não pode despejar uma fila de toques.
+ */
+export async function avisosDesde(user: SessionUser, desde: Date) {
+  const rows = await prisma.notification.findMany({
+    where: { userId: user.id, read: false, createdAt: { gt: desde } },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+    select: { id: true, title: true, body: true, link: true, module: true, critical: true, level: true, createdAt: true },
+  });
+  return rows.map((n) => ({ ...n, createdAt: n.createdAt.toISOString() }));
 }

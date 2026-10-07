@@ -66,7 +66,11 @@ export function NotificationsDropdown({ inicial = 0 }: { inicial?: number }) {
       } catch { /* ignora */ }
     };
     const id = window.setInterval(tick, INTERVALO_MS);
-    return () => window.clearInterval(id);
+    /* O aviso ao vivo (v1.158.0) avisa quando chega ou é aberto um aviso: o número
+       do sino acompanha na hora, sem esperar os 2 minutos. */
+    const onNovo = () => { void tick(); };
+    window.addEventListener('sgo-avisos-novos', onNovo);
+    return () => { window.clearInterval(id); window.removeEventListener('sgo-avisos-novos', onNovo); };
   }, []);
 
   useEffect(() => {

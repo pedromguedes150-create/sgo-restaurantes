@@ -88,6 +88,7 @@ export async function createCommunication(user: SessionUser, input: CreateCommun
     link: `/modulos/comunicacao/${comm.id}`,
     module: 'COMMUNICATION',
     critical: (input.priority ?? 'NORMAL') === 'URGENT',
+    ...((input.priority ?? 'NORMAL') === 'IMPORTANT' ? { nivel: 'IMPORTANTE' as const } : {}),
   });
 
   return { ok: true, id: comm.id, recipients: recip.size };

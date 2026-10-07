@@ -3042,17 +3042,27 @@ model WorkforceDaySnapshot {
 
 /// Central de Notificações in-app (conceito transversal nº 4). Fonte garantida
 /// mesmo se o push (FCM) falhar.
+/// Nível do aviso na tela/no aparelho (v1.158.0).
+enum NotificationLevel {
+  NORMAL
+  IMPORTANTE
+  CRITICO
+}
+
 model Notification {
-  id        String   @id @default(cuid())
+  id        String            @id @default(cuid())
   userId    String
   title     String
   body      String?
   link      String?
   module    String?
   /// CRITICAL não pode ser desativada; usada p/ destaque
-  critical  Boolean  @default(false)
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  critical  Boolean           @default(false)
+  /// Nível do aviso ao vivo (v1.158.0): NORMAL (aviso + som), IMPORTANTE (+ vibração
+  /// curta), CRITICO (destaque). Gravado CRITICO sempre que critical = true.
+  level     NotificationLevel @default(NORMAL)
+  read      Boolean           @default(false)
+  createdAt DateTime          @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

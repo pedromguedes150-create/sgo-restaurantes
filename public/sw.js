@@ -7,13 +7,21 @@
  * (evita servir tela velha, lição do deploy de imagem antiga).
  */
 
-const VERSION = 'sgo-sw-v2';
+const VERSION = 'sgo-sw-v3';
 
 /* Alerta do BANHEIRO (v1.156.0): vibração longa e diferente das demais, para o
-   gerente reconhecer sem olhar. O SOM da notificação do sistema é o do
-   aparelho/navegador (a Web Push não deixa trocar); com o SGO aberto, a página
-   toca um som próprio — o SW avisa as abas abertas por mensagem. */
+   gerente reconhecer sem olhar. */
 const VIBRA_HIGIENE = [500, 150, 500, 150, 500, 150, 900];
+
+/* Níveis do aviso (v1.158.0) — o mesmo de src/lib/notifications/nivel.ts.
+   O SOM da notificação do sistema é o do aparelho (a Web Push não deixa trocar);
+   o som próprio do SGO toca na página aberta. */
+const VIBRACAO = { NORMAL: undefined, IMPORTANTE: [120], CRITICO: [200, 100, 200] };
+
+/* Safari (iPhone/Mac) revoga a inscrição de quem recebe push sem mostrar
+   notificação; lá a notificação do sistema sai SEMPRE, e a página só mostra o
+   aviso, sem tocar de novo. */
+const SAFARI = /Safari/.test(self.navigator.userAgent) && !/Chrome|Chromium|Android|Edg/.test(self.navigator.userAgent);
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -34,6 +42,8 @@ self.addEventListener('push', (event) => {
 
   const title = data.title || 'SGO Beija Flor';
   const higiene = data.alerta === 'higiene';
+  const nivel = data.nivel || (data.critical ? 'CRITICO' : 'NORMAL');
+  const link = data.link || '/notificacoes';
   const options = {
     body: data.body || '',
     icon: '/icon-192.png',
@@ -41,16 +51,31 @@ self.addEventListener('push', (event) => {
     lang: 'pt-BR',
     tag: data.tag || undefined,
     renotify: Boolean(data.tag),
-    requireInteraction: higiene || Boolean(data.critical),
-    vibrate: higiene ? VIBRA_HIGIENE : data.critical ? [200, 100, 200] : [120],
+    requireInteraction: higiene || nivel === 'CRITICO',
+    vibrate: higiene ? VIBRA_HIGIENE : VIBRACAO[nivel],
     silent: false,
     timestamp: data.at || Date.now(),
-    data: { link: data.link || '/notificacoes' },
+    data: { link },
   };
-  const avisaAbas = higiene
-    ? self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => list.forEach((c) => c.postMessage({ tipo: 'sgo-alerta', alerta: 'higiene', title, body: options.body, link: options.data.link })))
-    : Promise.resolve();
-  event.waitUntil(Promise.all([self.registration.showNotification(title, options), avisaAbas]));
+
+  /* PRIMEIRO PLANO × SEGUNDO PLANO (v1.158.0): com uma aba do SGO VISÍVEL, quem
+     avisa é a página (aviso no topo + som próprio) e a notificação do sistema
+     NÃO sai — senão o mesmo aviso tocaria duas vezes. Minimizado, outra aba ou
+     tela bloqueada: notificação do sistema, como sempre. */
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const doSgo = list.filter((c) => c.url.startsWith(self.location.origin));
+      const visiveis = doSgo.filter((c) => c.visibilityState === 'visible');
+      const msg = { tipo: 'sgo-notificacao', nivel, title, body: options.body, link, sistemaMostrou: false };
+      if (visiveis.length && !SAFARI) {
+        visiveis.forEach((c) => c.postMessage(msg));
+        return undefined;
+      }
+      msg.sistemaMostrou = true;
+      doSgo.forEach((c) => c.postMessage(msg));
+      return self.registration.showNotification(title, options);
+    }),
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {

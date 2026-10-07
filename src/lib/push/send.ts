@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import { prisma } from '@/lib/db/prisma';
+import { nivelAoGravar } from '@/lib/notifications/nivel';
 import { categoryOfModule } from '@/lib/push/categories';
 
 /**
@@ -42,6 +43,7 @@ export interface PushPayload {
   critical?: boolean;
   alerta?: 'higiene';
   tag?: string;
+  nivel?: 'IMPORTANTE';
 }
 
 /** Corta o texto para caber no limite de payload do serviço de push (~4KB). */
@@ -81,6 +83,7 @@ export async function sendPushToUsers(userIds: string[], p: PushPayload): Promis
     tag: p.tag ?? (p.module ? `sgo-${p.module.toLowerCase()}` : undefined),
     critical: Boolean(p.critical),
     alerta: p.alerta,
+    nivel: nivelAoGravar(p),
     at: Date.now(),
   });
 
