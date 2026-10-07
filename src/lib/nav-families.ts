@@ -1,4 +1,4 @@
-import { Banknote, Boxes, Sparkles, BarChart3, GraduationCap, Users } from 'lucide-react';
+import { Banknote, Boxes, BarChart3, GraduationCap, Users } from 'lucide-react';
 
 export type IconType = React.ComponentType<{ className?: string }>;
 
@@ -55,15 +55,9 @@ export const FAMILIES: Family[] = [
       { href: '/modulos/produtos', tab: 'Pedidos' },
     ],
   },
-  {
-    id: 'rotinas',
-    title: 'Rotinas da unidade',
-    icon: Sparkles,
-    children: [
-      { href: '/modulos/oleo', tab: 'Coleta de óleo' },
-      { href: '/modulos/higiene', tab: 'Higiene' },
-    ],
-  },
+  /* 'Rotinas da unidade' (Coleta de óleo + Higiene) SAIU em v1.160.2 — pedido do
+     Pedro: cada segmento na sua aba. Não eram irmãos: Higiene é atendimento ao
+     cliente (QR do banheiro), Coleta de óleo é controle financeiro da unidade. */
   {
     id: 'performance',
     title: 'Performance',
