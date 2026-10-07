@@ -25,15 +25,16 @@ export async function GET(req: Request) {
   const sep = ';';
   const brl = (n: number) => n.toFixed(2).replace('.', ',');
   const fmtCpf = (d: string | null) => d && d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : '';
-  const lines = [['Freelancer', 'CPF', 'Chave PIX', 'Data', 'Unidade', 'Status', 'Valor (R$)', 'Divergência'].join(sep)];
+  /* Padrão do Financeiro (v1.160.1): Unidade · Data · Colaborador · CPF · Chave PIX · Lançamentos · Total · Motivo. */
+  const lines = [['Unidade', 'Data', 'Colaborador', 'CPF', 'Chave PIX', 'Lançamentos', 'Total (R$)', 'Motivo', 'Status', 'Divergência'].join(sep)];
   for (const g of data.groups) {
     for (const l of g.lines) {
-      lines.push([`"${g.name}"`, `"${fmtCpf(g.cpf)}"`, `"${g.pixKey ?? ''}"`, l.date, `"${l.unit}"`, l.status, brl(l.amount), l.divergent ? `padrão ${l.standardValue != null ? brl(l.standardValue) : '—'}` : ''].join(sep));
+      lines.push([`"${l.unit}"`, l.date, `"${g.name}"`, `"${fmtCpf(g.cpf)}"`, `"${g.pixKey ?? ''}"`, '1', brl(l.amount), `"${(l.motivo ?? 'Freelancer').replace(/"/g, "'")}"`, l.status, l.divergent ? `padrão ${l.standardValue != null ? brl(l.standardValue) : '—'}` : ''].join(sep));
     }
-    lines.push([`"${g.name} — TOTAL"`, `"${fmtCpf(g.cpf)}"`, `"${g.pixKey ?? ''}"`, '', '', `${g.count} pagto(s)`, brl(g.total), ''].join(sep));
+    lines.push(['', '', `"${g.name} — TOTAL"`, `"${fmtCpf(g.cpf)}"`, `"${g.pixKey ?? ''}"`, String(g.count), brl(g.total), '', '', ''].join(sep));
     lines.push('');
   }
-  lines.push(['TOTAL GERAL', '', '', '', '', `${data.grandCount} pagto(s)`, brl(data.grandTotal), ''].join(sep));
+  lines.push(['', '', 'TOTAL GERAL', '', '', String(data.grandCount), brl(data.grandTotal), '', '', ''].join(sep));
 
   const title = `Consolidacao de Freelancers - ${ym}`;
   const csv = '﻿' + `"${title}"\n` + lines.join('\n');

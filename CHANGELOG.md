@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.160.1 — 2026-10-07 (Planilha de pagamento no padrão do Financeiro)
+### Alterado
+- O **Excel da Visão financeira** passou a ter duas abas principais: **CONSOLIDADO** (um bloco por segunda-feira de pagamento, uma linha por unidade e colaborador: Unidade · Data do pagamento · Colaborador · CPF · Chave PIX · Lançamentos · Total · Motivo, com subtotal por segunda; hora extra em bloco próprio por competência) e **ANALÍTICO** (cada solicitação, nas mesmas colunas, mais Pagar em, Status, Pago em, V.T., quem solicitou e quando). A aba "Por unidade" continua. Saíram as abas "Por segunda (freelancer)" e "Por colaborador", que ficaram genéricas.
+- O **Motivo** do consolidado traz os dias do serviço e os motivos das solicitações ("Freelancer · dias 29/09, 02/10 · Cobertura: Cozinha").
+- O **Fechamento (PIX) semanal** (CSV) ganhou a mesma ordem de colunas: Unidade · Data · Colaborador · CPF · Chave PIX · Lançamentos · Total · Motivo.
+- Nenhuma regra muda: é a mesma leitura, só organizada do jeito que o pagamento é feito.
+
 ## v1.160.0 — 2026-10-07 (Pagamentos de Freelancers: a segunda-feira do pagamento)
 ### Adicionado
 - Na **Visão financeira** (Pagamentos de Freelancers), cada lançamento de freelancer mostra **"Pagar em"**: a segunda-feira seguinte à semana (segunda a domingo) do serviço — a regra da operação. Hora extra mostra "cartão" (vai pela competência).
