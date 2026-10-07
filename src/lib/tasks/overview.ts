@@ -6,6 +6,7 @@ import { getUnitDaySummary, getUnitMonthScore, type DaySummary, type MonthScore 
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Unit } from '@prisma/client';
+import { emLotes, PARALELO_POR_UNIDADE } from '@/lib/async/em-lotes';
 
 export interface UnitOverview {
   unit: Pick<Unit, 'id' | 'name' | 'code'>;
@@ -28,18 +29,19 @@ export async function getUnitsOverview(
     orderBy: { name: 'asc' },
   });
 
-  const out: UnitOverview[] = [];
-  for (const u of units) {
+  /* Unidades em paralelo limitado (v1.158.1): era uma por vez, e cada uma faz
+     geração do dia + resumo do dia + nota do mês (~15 consultas). A ordem de
+     saída é a das unidades (alfabética), como antes. */
+  return emLotes(units, PARALELO_POR_UNIDADE, async (u) => {
     const cfg = { timezone: u.timezone, cutoffHour: u.cutoffHour };
     const operationalDate = currentOperationalDate(cfg, now);
     await generateDailyTasksForUnit(u, operationalDate); // geração preguiçosa
-
-    const summary = await getUnitDaySummary(u.id, operationalDate, now);
-    const monthScore = await getUnitMonthScore(u.id, operationalDate.slice(0, 7));
-
-    out.push({ unit: { id: u.id, name: u.name, code: u.code }, operationalDate, summary, monthScore });
-  }
-  return out;
+    const [summary, monthScore] = await Promise.all([
+      getUnitDaySummary(u.id, operationalDate, now),
+      getUnitMonthScore(u.id, operationalDate.slice(0, 7)),
+    ]);
+    return { unit: { id: u.id, name: u.name, code: u.code }, operationalDate, summary, monthScore };
+  });
 }
 
 /** Agrega o dia de várias unidades (para o anel do gerente multi-unidade). */

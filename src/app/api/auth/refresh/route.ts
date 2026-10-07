@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { rotateRefresh, requestContext } from '@/lib/auth/service';
+import { redirecionarRelativo } from '@/lib/http/redirecionar';
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
@@ -37,19 +38,20 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   let redirect = url.searchParams.get('redirect') || '/dashboard';
   if (!redirect.startsWith('/') || redirect.startsWith('//')) redirect = '/dashboard';
-  const loginUrl = new URL('/login', req.url);
-
+  /* Location RELATIVO (v1.158.1): em produção req.url chega como http://0.0.0.0:3100
+     (HOSTNAME do contêiner) — montar a URL de destino a partir dele mandava o
+     usuário para 0.0.0.0 toda manhã. Ver src/lib/http/redirecionar.ts. */
   const oldToken = cookies().get(REFRESH_COOKIE)?.value;
-  if (!oldToken) return NextResponse.redirect(loginUrl);
+  if (!oldToken) return redirecionarRelativo('/login');
 
   const session = await rotateRefresh(oldToken, requestContext(req));
   if (!session) {
-    const res = NextResponse.redirect(loginUrl);
+    const res = redirecionarRelativo('/login');
     res.cookies.delete(ACCESS_COOKIE);
     res.cookies.delete(REFRESH_COOKIE);
     return res;
   }
-  const res = NextResponse.redirect(new URL(redirect, req.url));
+  const res = redirecionarRelativo(redirect);
   res.cookies.set(ACCESS_COOKIE, session.accessToken, authCookieOptions(session.accessMaxAgeMs));
   res.cookies.set(REFRESH_COOKIE, session.refreshToken, authCookieOptions(session.refreshMaxAgeMs));
   return res;

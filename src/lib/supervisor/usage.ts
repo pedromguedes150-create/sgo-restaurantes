@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getUnitMonthScore } from '@/lib/tasks/summary';
+import { emLotes, PARALELO_POR_UNIDADE } from '@/lib/async/em-lotes';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -65,15 +66,17 @@ export async function getUsageBoard(user: SessionUser, yearMonth: string): Promi
   const notesBy = countBy(notes);
   const cashBy = countBy(cash);
 
+  // nota do mês de cada unidade em paralelo limitado (v1.158.1); o resto já era uma consulta só
+  const metas = await emLotes(units, PARALELO_POR_UNIDADE, (u) => getUnitMonthScore(u.id, yearMonth));
   const rows: UnitUsageRow[] = [];
-  for (const u of units) {
+  units.forEach((u, i) => {
     const done = tasks.find((t) => t.unitId === u.id && t.status === 'DONE')?._count ?? 0;
     const missed = tasks.find((t) => t.unitId === u.id && t.status === 'MISSED')?._count ?? 0;
     const resolved = done + missed;
     const checklistPct = resolved === 0 ? 0 : Math.round((done / resolved) * 100);
     const wastePct = Math.min(100, Math.round(((wasteBy.get(u.id) ?? 0) / elapsed) * 100));
     const commandsPct = Math.min(100, Math.round(((commandsBy.get(u.id) ?? 0) / elapsed) * 100));
-    const meta = await getUnitMonthScore(u.id, yearMonth);
+    const meta = metas[i];
     const usagePct = Math.round((checklistPct + wastePct + commandsPct) / 3);
     rows.push({
       unitId: u.id, unitName: u.name,
@@ -82,7 +85,7 @@ export async function getUsageBoard(user: SessionUser, yearMonth: string): Promi
       metaPct: meta.scorePct, usagePct,
       tone: usagePct >= 80 ? 'success' : usagePct >= 50 ? 'medium' : 'critical',
     });
-  }
+  });
   return rows.sort((a, b) => a.usagePct - b.usagePct); // piores primeiro (quem precisa de atenção)
 }
 
