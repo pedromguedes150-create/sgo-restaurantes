@@ -1362,6 +1362,17 @@ export const GUIDE: GuideSection[] = [
     title: 'Pessoas e Escala',
     guides: [
       {
+        id: 'dias-de-funcionamento',
+        title: 'Dias de funcionamento da unidade',
+        roles: ['ADMIN'],
+        summary: 'Unidade que não abre todo dia não ganha checklist "não realizado" no dia fechado.',
+        steps: [
+          'Em Configurações → Unidades, toque no lápis da unidade e, em "Dias de funcionamento", desmarque os dias em que ela não abre (ex.: Produtos = segunda a sexta). Cada toque já grava.',
+          'Nos dias desmarcados o SGO não gera os checklists — nada aparece como "não realizado" e a meta não é afetada. O padrão é todos os dias.',
+          'Se já existirem "não realizados" de dias fechados, o painel mostra quantos e o botão "Remover". Só sai o que ninguém tocou; concluídos e itens respondidos ficam. Fica registrado na Auditoria.',
+        ],
+      },
+      {
         id: 'higiene-qr',
         title: 'Higiene dos banheiros (QR)',
         roles: ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'ADMIN'],

@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { computeDueAt } from '@/lib/tasks/due';
 import { currentOperationalDate, operationalDate as opDateOf } from '@/lib/date/operational';
 import type { Unit, Role } from '@prisma/client';
+import { funcionaNoDia } from '@/lib/units/dias-de-funcionamento';
 
 /** Perfis considerados "gerentes" para checklists individuais (scope MANAGER). */
 const MANAGER_ROLES: Role[] = ['MANAGER', 'COORDINATOR'];
@@ -14,9 +15,15 @@ const MANAGER_ROLES: Role[] = ['MANAGER', 'COORDINATOR'];
  * - limitTime NULL → vale até o fim do dia operacional (23:59).
  */
 export async function generateDailyTasksForUnit(
-  unit: Pick<Unit, 'id' | 'timezone' | 'cutoffHour'>,
+  unit: Pick<Unit, 'id' | 'timezone' | 'cutoffHour'> & { operatingDays?: number[] },
   operationalDate: string,
 ): Promise<number> {
+  // Dia em que a unidade NÃO funciona (v1.157.0) não gera checklist — e por isso
+  // nada vira "não realizado". Quem chamou sem os dias (ex.: testes) é consultado.
+  const dias = unit.operatingDays
+    ?? (await prisma.unit.findUnique({ where: { id: unit.id }, select: { operatingDays: true } }))?.operatingDays;
+  if (!funcionaNoDia(dias, operationalDate)) return 0;
+
   // Trava de geração:
   //  - dentro de [startDate, endDate] (programação), quando definidos;
   //  - NUNCA antes do dia em que o checklist foi criado (evita "passado" em

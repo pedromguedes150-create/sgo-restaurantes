@@ -44,6 +44,10 @@ model Unit {
   /// Tipo de operação (v1.155.0) — decide quais itens da visita operacional se
   /// aplicam. Pizzaria continua sendo o marcador `hasPizzeria` (adicional).
   operationType    UnitOperationType @default(RESTAURANTE)
+  /// Dias em que a unidade FUNCIONA (0=dom..6=sáb), v1.157.0. Padrão: os 7 dias.
+  /// Dia fora da lista não gera checklist — e por isso não vira "não realizado"
+  /// (pedido do Pedro: a unidade Produtos abre de segunda a sexta).
+  operatingDays    Int[]             @default([0, 1, 2, 3, 4, 5, 6])
   /// Segredo do link interno de fechamento de pizzas (sem login). Trocar o
   /// valor revoga o link antigo.
   pizzaPublicToken String?           @unique

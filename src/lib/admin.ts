@@ -6,6 +6,7 @@ import { audit } from '@/lib/audit';
 import { ALL_ROLES } from '@/lib/permissions';
 import { validarCpf, limparCpf } from '@/lib/cpf';
 import type { SessionUser } from '@/lib/auth/session';
+import { normalizarDias } from '@/lib/units/dias-de-funcionamento';
 import type { Role, TaskModule } from '@prisma/client';
 
 export type AdminResult =
@@ -61,8 +62,12 @@ export async function createUnit(user: SessionUser, input: { name: string; code:
   return { ok: true, id: u.id };
 }
 
-export async function updateUnit(user: SessionUser, id: string, input: { name?: string; address?: string; cutoffHour?: number; timezone?: string; active?: boolean; rhUnitName?: string; cnpj?: string; hasPizzeria?: boolean; operationType?: string }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateUnit(user: SessionUser, id: string, input: { name?: string; address?: string; cutoffHour?: number; timezone?: string; active?: boolean; rhUnitName?: string; cnpj?: string; hasPizzeria?: boolean; operationType?: string; operatingDays?: unknown }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
+  /* Dias de funcionamento (v1.157.0): 0..6, pelo menos um dia. */
+  const dias = input.operatingDays !== undefined ? normalizarDias(input.operatingDays) : undefined;
+  if (dias === null) return { ok: false, reason: 'INVALID', message: 'Escolha pelo menos um dia de funcionamento.' };
+  const antes = dias ? (await prisma.unit.findUnique({ where: { id }, select: { operatingDays: true } }))?.operatingDays : undefined;
   if (input.operationType !== undefined && !['RESTAURANTE', 'LANCHONETE', 'CD', 'FABRICA'].includes(input.operationType)) return { ok: false, reason: 'INVALID' };
   let cnpjPatch: { cnpj?: string | null } = {};
   if (input.cnpj !== undefined) {
@@ -85,10 +90,11 @@ export async function updateUnit(user: SessionUser, id: string, input: { name?: 
       ...(input.hasPizzeria !== undefined ? { hasPizzeria: input.hasPizzeria } : {}),
       /* Tipo de operação (v1.155.0): decide quais itens da visita operacional se aplicam. */
       ...(input.operationType !== undefined ? { operationType: input.operationType as 'RESTAURANTE' | 'LANCHONETE' | 'CD' | 'FABRICA' } : {}),
+      ...(dias ? { operatingDays: dias } : {}),
       ...cnpjPatch,
     },
   });
-  await audit({ userId: user.id, unitId: id, action: 'UNIT_UPDATE', module: 'CONFIG', entity: 'unit', entityId: id, ...ctx });
+  await audit({ userId: user.id, unitId: id, action: 'UNIT_UPDATE', module: 'CONFIG', entity: 'unit', entityId: id, ...(dias ? { metadata: { diasDeFuncionamento: { antes, depois: dias } } } : {}), ...ctx });
   return { ok: true, id: u.id };
 }
 

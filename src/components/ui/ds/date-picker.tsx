@@ -157,8 +157,10 @@ export function DatePicker({
             role="dialog"
             aria-label="Escolher data"
             onKeyDown={onKeyDown}
-            style={{ position: 'fixed', top: coords.top, left: coords.left }}
-            className="z-50 w-[17.5rem] max-w-[calc(100vw-1rem)] rounded-card border border-line bg-surface p-3 shadow-lg"
+            /* Camada ACIMA de qualquer janela (SgoModal = --sgo-z-modal 70; Modal/Sheet = z-50):
+               com z-50 o calendário abria ATRÁS da janela 'Nova nota' e parecia não abrir. */
+            style={{ position: 'fixed', top: coords.top, left: coords.left, zIndex: 'var(--sgo-z-dropdown-in-modal)' as unknown as number }}
+            className="w-[17.5rem] max-w-[calc(100vw-1rem)] rounded-card border border-line bg-surface p-3 shadow-lg"
           >
             <div className="mb-2 flex items-center justify-between">
               <button type="button" aria-label="Mês anterior" onClick={() => setCursor((c) => addMonths(c, -1))}
