@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.163.0 — 2026-10-08 (Metas: gráficos de rosca)
+### Novo
+- **Metas e Performance** ganhou gráficos de rosca sem mudar a conta da meta: **Meta da unidade** (o % oficial no tom do semáforo, com a posição no ranking e os pontos de peso conquistados), **Unidades por faixa** (quantas estão na meta, em atenção ou críticas, com média e mediana da rede, melhor e menor), **Tarefas do mês** (realizadas × não realizadas) e **Composição da meta** — cada componente é uma fatia do tamanho do seu peso, pintada pelo resultado, com a tabela de pontos ganhos e perdidos e "onde mais perdeu pontos".
+- O ranking ganhou barra colorida por faixa em cada unidade e abre a unidade ao tocar; a selecionada fica destacada.
+
 ## v1.162.3 — 2026-10-08 (Avaliar pelo Perfil 360 abre a pessoa certa)
 ### Corrigido
 - O botão **Avaliar** do Perfil 360 passou a abrir a Avaliação do colaborador já no cartão daquela pessoa — expandido, destacado e com a página rolada até ele — em vez de cair na lista geral. A lista abre em "Todos" nesse caso, para a pessoa já avaliada no mês não ficar escondida.
