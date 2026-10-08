@@ -63,3 +63,23 @@
 .sgo-aviso-destaque { animation: sgo-aviso-desce 260ms cubic-bezier(.2,.9,.3,1.2) both, sgo-aviso-brilho 1.2s ease-out 260ms 3; }
 @keyframes sgo-aviso-brilho { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sgo-brand) 45%, transparent); } 100% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--sgo-brand) 0%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .sgo-aviso-enter, .sgo-aviso-destaque { animation: none; } }
+
+/* ===== Perfil 360 — grupos com cabeçalho sólido (v1.162.2) =====
+   Pedido do Pedro: a cor predominante no CABEÇALHO de cada grupo e um tom
+   leve nas linhas. Tudo por token: bordô (--sgo-brand) e verde (--sgo-success);
+   o tom claro é color-mix com a superfície, então o escuro vem de graça. */
+.sgo-grupo { overflow: hidden; }
+.sgo-grupo__hdr { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: var(--sgo-on-brand); background: var(--sgo-brand); }
+.sgo-grupo--green .sgo-grupo__hdr { background: var(--sgo-success); }
+.sgo-grupo__hdr-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--sgo-radius-control); background: color-mix(in srgb, var(--sgo-on-brand) 18%, transparent); color: var(--sgo-on-brand); }
+.sgo-grupo__title { font-size: 15px; font-weight: 700; letter-spacing: -0.012em; }
+.sgo-grupo__hdr .sgo-count { background: color-mix(in srgb, var(--sgo-on-brand) 22%, transparent); color: var(--sgo-on-brand); }
+.sgo-grupo__corpo { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.sgo-grupo__linha { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: var(--sgo-radius-control); background: color-mix(in srgb, var(--sgo-brand) 6%, var(--sgo-surface)); }
+.sgo-grupo--green .sgo-grupo__linha { background: color-mix(in srgb, var(--sgo-success) 9%, var(--sgo-surface)); }
+.sgo-grupo__linha-ic { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: var(--sgo-radius-control); background: var(--sgo-surface); color: var(--sgo-brand); box-shadow: var(--sgo-shadow-card); }
+.sgo-grupo--green .sgo-grupo__linha-ic { color: var(--sgo-success); }
+.sgo-grupo__barras { display: flex; align-items: flex-end; gap: 4px; height: 56px; }
+.sgo-grupo__barra { flex: 1 1 0; min-width: 8px; border-radius: 4px 4px 0 0; background: color-mix(in srgb, var(--sgo-brand) 28%, var(--sgo-surface)); }
+.sgo-grupo__barra--atual { background: var(--sgo-brand); }
+@media print { .sgo-grupo__hdr { background: none; color: var(--sgo-ink-900); border-bottom: 2px solid var(--sgo-brand); } }

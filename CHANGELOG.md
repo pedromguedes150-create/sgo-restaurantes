@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.162.2 — 2026-10-08 (Perfil 360: cabeçalhos em bordô e linhas em tom claro)
+### Alterado
+- No **Perfil 360**, cada grupo de indicadores e cada painel (Férias, Avaliações, Hora extra, Histórico) ganhou cabeçalho sólido em bordô com texto branco, e as linhas passaram a cartões em tom claro da mesma cor — nas cores que o SGO já usa, nos temas claro e escuro. As avaliações mensais ganharam barras por mês ao lado da nota atual.
+
 ## v1.162.1 — 2026-10-08 (Perfil 360: layout reorganizado)
 ### Alterado
 - **Perfil 360 do colaborador** ganhou organização nova, sem mudar dado, cálculo ou permissão: cabeçalho com nome, situação, função, unidade, matrícula, CPF e admissão em destaque; ações principais (Avaliar, Escala) em botões e as demais no menu "Mais ações"; indicadores agrupados em quatro painéis de altura igual — Dados profissionais, Jornada, Desempenho e RH e benefícios — em vez de cartões soltos que ficavam estreitos; férias, avaliações e hora extra reorganizadas abaixo; histórico no fim. Funciona em computador, tablet e celular, nos temas claro e escuro.
