@@ -109,7 +109,7 @@ export default async function Perfil360Page({ params }: { params: { id: string }
   /* Ações: avaliar e escala são o dia a dia (botões); o resto vai para o menu. */
   const primarias: AcaoDoPerfil[] = [];
   const secundarias: AcaoDoPerfil[] = [];
-  if (p.podeVer.avaliacao) primarias.push({ label: 'Avaliar', href: '/modulos/pessoas/avaliacao', icone: 'avaliar' });
+  if (p.podeVer.avaliacao) primarias.push({ label: 'Avaliar', href: `/modulos/pessoas/avaliacao?colaborador=${c.id}`, icone: 'avaliar', testId: 'acao-avaliar' });
   if (pode('/modulos/escala') && unidadePrincipal) primarias.push({ label: 'Escala', href: `/modulos/escala?unit=${unidadePrincipal.id}`, icone: 'escala' });
   secundarias.push({ label: 'Controle de férias', href: `/modulos/pessoas/ferias${unidadePrincipal ? `?unidade=${unidadePrincipal.id}` : ''}`, icone: 'ferias' });
   secundarias.push({ label: 'Vender dias de férias', href: `/modulos/pessoas/ferias?aba=abono${unidadePrincipal ? `&unidade=${unidadePrincipal.id}` : ''}`, icone: 'vender' });
