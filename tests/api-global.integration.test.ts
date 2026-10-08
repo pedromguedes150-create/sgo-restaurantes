@@ -63,7 +63,10 @@ describe('chaves por sistema', () => {
     const ok = await autenticarApiKey(req(r.chave));
     expect(ok).toEqual({ ok: true, client: { id: r.id, name: `RH ${sfx}` } });
     expect((await autenticarApiKey(req())).ok).toBe(false);
-    expect((await autenticarApiKey(req(r.chave.slice(0, -1) + 'Z'))).ok).toBe(false);
+    /* última letra TROCADA de verdade (se já era Z, vira Y) — com 'Z' fixo a chave
+       "errada" coincidia com a certa 1 vez em 64 e o teste falhava ao acaso. */
+    const errada = r.chave.slice(0, -1) + (r.chave.endsWith('Z') ? 'Y' : 'Z');
+    expect((await autenticarApiKey(req(errada))).ok).toBe(false);
     expect((await autenticarApiKey(req('Bearer ' + r.chave))).ok).toBe(false);
 
     await new Promise((res) => setTimeout(res, 150)); // o lastUsedAt é gravado sem esperar

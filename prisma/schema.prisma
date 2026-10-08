@@ -1932,26 +1932,100 @@ model CollaboratorObservation {
   @@map("collaborator_observations")
 }
 
-/// Avaliação mensal do colaborador (1 por colaborador/mês). Critérios 1–5.
+/// Avaliação mensal do colaborador (1 por colaborador/mês).
+/// Até a v1.160 eram 4 critérios fixos nas colunas abaixo. Desde a v1.161.0 a
+/// avaliação segue um MODELO POR FUNÇÃO (8 critérios com peso): as respostas
+/// vão em `scores` e a nota ponderada CONGELADA em `finalScore` — com a versão
+/// do modelo usada, para que mudar pesos depois não reescreva o passado.
+/// As 4 colunas antigas ficam nulas nas avaliações novas e preservam as antigas.
 model CollaboratorEvaluation {
   id               String   @id @default(cuid())
   collaboratorId   String
   collaboratorName String
   unitId           String
   yearMonth        String // 'YYYY-MM'
-  punctuality      Int // 1–5
-  performance      Int // 1–5
-  teamwork         Int // 1–5
-  presentation     Int // 1–5 (apresentação/higiene)
+  punctuality      Int? // 1–5 (formato antigo)
+  performance      Int? // 1–5 (formato antigo)
+  teamwork         Int? // 1–5 (formato antigo)
+  presentation     Int? // 1–5 (formato antigo; apresentação/higiene)
   comments         String?
   evaluatorId      String
   evaluatorName    String
+  /// Formato por função (v1.161.0)
+  modelId          String?
+  modelVersionId   String?
+  modelName        String? // nome do modelo congelado
+  jobTitle         String? // cargo do RH no momento da avaliação (snapshot)
+  /// [{ key, label, group: 'GERAL'|'ESPECIFICO', weight, score: 1..5 | null (N/A), justification }]
+  scores           Json?
+  finalScore       Float? // média ponderada, 1,00–5,00
+  classification   String? // EXCELENTE | BOM | REGULAR | MELHORAR
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  model        EvaluationModel?        @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  modelVersion EvaluationModelVersion? @relation(fields: [modelVersionId], references: [id], onDelete: SetNull)
+
   @@unique([collaboratorId, yearMonth])
   @@index([unitId, yearMonth])
+  @@index([modelId, yearMonth])
   @@map("collaborator_evaluations")
+}
+
+// ===== Avaliação por FUNÇÃO (v1.161.0) ========================================
+
+/// Modelo de avaliação de uma função (Cozinheiro, Garçom…). Os 4 critérios
+/// GERAIS (40%) são os mesmos para todos; os 4 ESPECÍFICOS (60%) vivem na
+/// versão. `managerial` marca o modelo de Gerente/Encarregado (quem o avalia é
+/// a Supervisão). `seedKey` identifica os modelos iniciais semeados pelo código.
+model EvaluationModel {
+  id         String   @id @default(cuid())
+  name       String
+  managerial Boolean  @default(false)
+  active     Boolean  @default(true)
+  seedKey    String?  @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  versions    EvaluationModelVersion[]
+  jobTitles   EvaluationModelJobTitle[]
+  evaluations CollaboratorEvaluation[]
+
+  @@map("evaluation_models")
+}
+
+/// Versão IMUTÁVEL dos critérios de um modelo. Editar critério/peso cria a
+/// versão seguinte; a avaliação guarda a versão usada.
+model EvaluationModelVersion {
+  id        String   @id @default(cuid())
+  modelId   String
+  version   Int
+  /// [{ key, label, group: 'GERAL'|'ESPECIFICO', weight }] — pesos somam 100
+  criteria  Json
+  createdById   String?
+  createdByName String?
+  createdAt DateTime @default(now())
+
+  model       EvaluationModel          @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  evaluations CollaboratorEvaluation[]
+
+  @@unique([modelId, version])
+  @@map("evaluation_model_versions")
+}
+
+/// Cargo do RH → modelo. `jobTitleKey` é o cargo NORMALIZADO (caixa, acento,
+/// espaços), único: um cargo só pode apontar para um modelo.
+model EvaluationModelJobTitle {
+  id          String   @id @default(cuid())
+  modelId     String
+  jobTitle    String
+  jobTitleKey String   @unique
+  createdAt   DateTime @default(now())
+
+  model EvaluationModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@index([modelId])
+  @@map("evaluation_model_job_titles")
 }
 
 // ===== Pessoas 9.x — Mudança de função/setor → RH (item 12, Onda 3) ==========

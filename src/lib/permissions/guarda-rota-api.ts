@@ -108,6 +108,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/payments/consolidacao': { modulo: 'PAYMENTS_CONSOLIDATION', exigir: 'ver' },
 
   '/api/people/evaluation': { modulo: 'PEOPLE_EVALUATION', exigir: 'editar' },
+  // modelos de avaliação por função (v1.161.0): configuração, só Admin/CEO na lib
+  '/api/people/evaluation/modelos': { modulo: 'CONFIG_EVALUATION', exigir: 'editar' },
   '/api/hora-extra/export': { modulo: 'HORA_EXTRA', exigir: 'ver' },
   '/api/hora-extra/vinculo': { modulo: 'HORA_EXTRA', exigir: 'editar' },
   '/api/people/payouts': { modulo: 'PEOPLE_PAYOUTS', exigir: 'editar' },
