@@ -1,7 +1,9 @@
 import Link from 'next/link';
-import { ArrowLeft, Star } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
+import { prisma } from '@/lib/db/prisma';
 import { listEvaluationBoard, getEvaluationWeight } from '@/lib/people/evaluation';
+import { ensureModelosIniciais, avisarFuncoesSemModelo } from '@/lib/people/avaliacao-modelos';
 import { Card, CardContent } from '@/components/ui/card';
 import { EvaluationClient } from '@/components/people/evaluation-client';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -22,9 +24,14 @@ export default async function AvaliacaoPage({ searchParams }: { searchParams: { 
   const user = (await getSessionUser())!;
   const months = lastMonths(12);
   const yearMonth = months.includes(searchParams.mes ?? '') ? (searchParams.mes as string) : months[0];
-  const [rows, weight] = await Promise.all([listEvaluationBoard(user, yearMonth), getEvaluationWeight()]);
-  const canEvaluate = user.role !== 'FINANCE' && user.role !== 'CEO';
-  const pendentes = rows.filter((r) => !r.evaluation).length;
+  /* Modelos iniciais semeados na 1ª abertura (idempotente); funções sem modelo avisam os Admins 1×/dia. */
+  await ensureModelosIniciais();
+  const [rows, weight, eu] = await Promise.all([listEvaluationBoard(user, yearMonth), getEvaluationWeight(), prisma.user.findUnique({ where: { id: user.id }, select: { cpf: true } })]);
+  await avisarFuncoesSemModelo().catch(() => 0);
+  const avaliadas = rows.filter((r) => r.evaluation).length;
+  const pendentes = rows.filter((r) => !r.evaluation && r.modelo).length;
+  const semModelo = rows.filter((r) => !r.modelo).length;
+  const podeAvaliarAlguem = rows.some((r) => r.permissao.pode) || user.role === 'MANAGER' || user.role === 'COORDINATOR' || user.role === 'SUPERVISOR' || user.role === 'ADMIN';
 
   return (
     <div className="space-y-4">
@@ -32,7 +39,8 @@ export default async function AvaliacaoPage({ searchParams }: { searchParams: { 
       <div>
         <LargeTitle
           title="Avaliação do colaborador"
-          subtitle={<>Observações do dia a dia + avaliação mensal (o cadastro continua vindo do RH).{' '}{pendentes > 0 ? `${pendentes} a avaliar no mês.` : 'Todos avaliados no mês.'}</>}
+          subtitle={<>Avaliação mensal pelo modelo da função (8 critérios com peso) + observações do dia a dia. O cadastro continua vindo do RH.{' '}
+            {avaliadas}/{rows.length} avaliado(s){pendentes > 0 ? ` · ${pendentes} a avaliar` : ''}{semModelo > 0 ? ` · ${semModelo} sem modelo` : ''}.</>}
         />
       </div>
       <Card>
@@ -40,13 +48,14 @@ export default async function AvaliacaoPage({ searchParams }: { searchParams: { 
           <EvaluationClient
             rows={rows.map((r) => ({
               collaboratorId: r.collaboratorId, name: r.name, jobTitle: r.jobTitle, unitId: r.unitId, unitName: r.unitName,
-              observationCount: r.observationCount, evaluation: r.evaluation,
+              observationCount: r.observationCount, evaluation: r.evaluation, permissao: r.permissao, ferias: r.ferias,
+              modelo: r.modelo ? { id: r.modelo.id, name: r.modelo.name, managerial: r.modelo.managerial, version: r.modelo.version, criterios: r.modelo.criterios } : null,
             }))}
             yearMonth={yearMonth}
             months={months}
-            canEvaluate={canEvaluate}
             isAdmin={user.role === 'ADMIN'}
             weight={weight}
+            semCpf={podeAvaliarAlguem && !eu?.cpf}
           />
         </CardContent>
       </Card>

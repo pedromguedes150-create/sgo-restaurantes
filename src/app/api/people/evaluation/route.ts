@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { saveEvaluation, addObservation, listObservations, listEvaluationHistory } from '@/lib/people/evaluation';
+import { saveEvaluation, addObservation, listObservations, listEvaluationHistory, evidenciasDoMes } from '@/lib/people/evaluation';
 
-/** GET ?collaboratorId=…&view=observations|history — listas por colaborador. */
+/** GET ?collaboratorId=…&view=observations|history|evidencias(&mes=AAAA-MM) — listas por colaborador. */
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -16,13 +16,12 @@ export async function GET(req: Request) {
   const view = url.searchParams.get('view') ?? 'observations';
 
   if (view === 'history') {
-    const rows = await listEvaluationHistory(user, collaboratorId);
-    return NextResponse.json({
-      history: rows.map((e) => ({
-        yearMonth: e.yearMonth, punctuality: e.punctuality, performance: e.performance,
-        teamwork: e.teamwork, presentation: e.presentation, comments: e.comments, evaluatorName: e.evaluatorName,
-      })),
-    });
+    const history = await listEvaluationHistory(user, collaboratorId);
+    return NextResponse.json({ history });
+  }
+  if (view === 'evidencias') {
+    const evidencias = await evidenciasDoMes(user, collaboratorId, url.searchParams.get('mes') ?? '');
+    return NextResponse.json({ evidencias });
   }
   const rows = await listObservations(user, collaboratorId);
   return NextResponse.json({
@@ -30,7 +29,17 @@ export async function GET(req: Request) {
   });
 }
 
-/** POST { action: 'evaluate' | 'observe', … } */
+const MENSAGEM: Record<string, string> = {
+  FORBIDDEN: 'Sem permissão',
+  NOT_FOUND: 'Colaborador não encontrado',
+  INVALID: 'Dados inválidos',
+  SEM_MODELO: 'Função sem modelo de avaliação. Peça ao Administrador para vincular o cargo em Configurações → Avaliação por função.',
+  GERENCIAL: 'Função gerencial: quem avalia é a Supervisão.',
+  PROPRIO: 'Você não avalia a si próprio.',
+};
+const STATUS: Record<string, number> = { FORBIDDEN: 403, NOT_FOUND: 404, INVALID: 400, SEM_MODELO: 409, GERENCIAL: 403, PROPRIO: 403 };
+
+/** POST { action: 'evaluate' | 'observe', … } — evaluate traz `respostas: [{ key, score|null, justification }]`. */
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
@@ -42,9 +51,14 @@ export async function POST(req: Request) {
 
   let r;
   if (b.action === 'evaluate') {
-    r = await saveEvaluation(user, String(b.collaboratorId), String(b.yearMonth ?? ''), {
-      punctuality: b.punctuality, performance: b.performance, teamwork: b.teamwork, presentation: b.presentation, comments: b.comments,
-    }, ctx);
+    const respostas = Array.isArray(b.respostas)
+      ? b.respostas.map((x: { key?: unknown; score?: unknown; justification?: unknown }) => ({
+          key: String(x?.key ?? ''),
+          score: x?.score === null ? null : (x?.score === undefined ? undefined : Number(x.score)),
+          justification: x?.justification == null ? null : String(x.justification),
+        }))
+      : [];
+    r = await saveEvaluation(user, String(b.collaboratorId), String(b.yearMonth ?? ''), { respostas, comments: b.comments == null ? undefined : String(b.comments) }, ctx);
   } else if (b.action === 'observe') {
     r = await addObservation(user, String(b.collaboratorId), String(b.text ?? ''), ctx);
   } else {
@@ -52,9 +66,8 @@ export async function POST(req: Request) {
   }
 
   if (!r.ok) {
-    const map: Record<string, number> = { FORBIDDEN: 403, NOT_FOUND: 404, INVALID: 400 };
-    const msg = r.reason === 'FORBIDDEN' ? 'Sem permissão' : r.reason === 'NOT_FOUND' ? 'Colaborador não encontrado' : 'Dados inválidos';
-    return NextResponse.json({ error: msg }, { status: map[r.reason] });
+    const erros = 'erros' in r ? r.erros : undefined;
+    return NextResponse.json({ error: erros?.length ? erros.join(' ') : (MENSAGEM[r.reason] ?? 'Falha'), erros, reason: r.reason }, { status: STATUS[r.reason] ?? 400 });
   }
   return NextResponse.json({ ok: true });
 }

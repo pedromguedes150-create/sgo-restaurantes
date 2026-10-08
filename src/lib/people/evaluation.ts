@@ -2,11 +2,18 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
+import { modeloParaCargo } from '@/lib/people/avaliacao-modelos';
+import {
+  calcularNota, lerCriterios, lerRespostas, normalizarCargo, notaDaAvaliacao, quemPodeAvaliar, validarRespostas,
+  type Classificacao, type Criterio, type MotivoSemAvaliar, type Resposta, type RespostaGravada,
+} from '@/lib/people/avaliacao-calculo';
 
 /**
- * Avaliação do colaborador (item 13, Onda 3):
+ * Avaliação do colaborador (item 13, Onda 3; reformulada na v1.161.0):
  *  - Observações do dia a dia (texto livre, não altera o cadastro do RH).
- *  - Avaliação mensal (1 por colaborador/mês) com 4 critérios 1–5 + comentário.
+ *  - Avaliação mensal (1 por colaborador/mês) pelo MODELO DA FUNÇÃO: 8
+ *    critérios com peso, N/A justificado, nota ponderada congelada com a
+ *    versão do modelo. As avaliações antigas (4 critérios) ficam como estão.
  * Conta na META como componente único "Avaliações da equipe" com peso
  * configurável (EVALUATION_META_WEIGHT, padrão 0 = desligado — decisão do
  * Pedro em 07/07: só entra na nota quando o Admin ligar em Config).
@@ -15,14 +22,15 @@ const WEIGHT_KEY = 'EVALUATION_META_WEIGHT';
 const DEFAULT_WEIGHT = 0;
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
-type Result = { ok: true } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND' };
-
-const CRITERIA = ['punctuality', 'performance', 'teamwork', 'presentation'] as const;
-export type EvaluationCriteria = Record<(typeof CRITERIA)[number], number>;
+type Result = { ok: true } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND' | 'SEM_MODELO' | 'GERENCIAL' | 'PROPRIO'; erros?: string[] };
 
 function currentYearMonth(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+function limitesDoMes(yearMonth: string): { inicio: Date; fim: Date } {
+  const [y, m] = yearMonth.split('-').map(Number);
+  return { inicio: new Date(Date.UTC(y, m - 1, 1)), fim: new Date(Date.UTC(y, m, 1)) };
 }
 
 // ===== Peso na meta ==========================================================
@@ -56,6 +64,20 @@ export async function getEvaluationMonthStats(unitId: string, yearMonth: string)
 
 // ===== Quadro de avaliação ===================================================
 
+export interface AvaliacaoGravada {
+  nota: number | null;
+  classificacao: Classificacao | null;
+  /** Respostas por critério (formato por função). Vazio nas avaliações antigas. */
+  respostas: RespostaGravada[];
+  /** Avaliação no formato anterior à v1.161.0 (4 critérios sem peso). */
+  legado: { punctuality: number; performance: number; teamwork: number; presentation: number } | null;
+  modelName: string | null;
+  modelVersion: number | null;
+  comments: string | null;
+  evaluatorName: string;
+  updatedAt: string;
+}
+
 export interface EvaluationRow {
   collaboratorId: string;
   name: string;
@@ -63,28 +85,71 @@ export interface EvaluationRow {
   unitId: string;
   unitName: string;
   observationCount: number;
-  evaluation: (EvaluationCriteria & { comments: string | null; evaluatorName: string; updatedAt: string }) | null;
+  /** Modelo da função (vigente). null = função sem modelo. */
+  modelo: { id: string; name: string; managerial: boolean; versionId: string; version: number; criterios: Criterio[] } | null;
+  /** Se este usuário pode avaliar esta pessoa, e por que não. */
+  permissao: { pode: boolean; motivo: MotivoSemAvaliar | null };
+  /** Férias cobrindo algum dia do mês (segue ativo; o avaliador leva em conta). */
+  ferias: boolean;
+  evaluation: AvaliacaoGravada | null;
+}
+
+function montarGravada(e: {
+  punctuality: number | null; performance: number | null; teamwork: number | null; presentation: number | null;
+  finalScore: number | null; classification: string | null; scores: unknown; modelName: string | null;
+  comments: string | null; evaluatorName: string; updatedAt: Date; modelVersion?: { version: number } | null;
+}): AvaliacaoGravada {
+  const legado = e.finalScore == null && e.punctuality != null && e.performance != null && e.teamwork != null && e.presentation != null
+    ? { punctuality: e.punctuality, performance: e.performance, teamwork: e.teamwork, presentation: e.presentation }
+    : null;
+  return {
+    nota: notaDaAvaliacao(e),
+    classificacao: (e.classification as Classificacao | null) ?? null,
+    respostas: lerRespostas(e.scores),
+    legado,
+    modelName: e.modelName,
+    modelVersion: e.modelVersion?.version ?? null,
+    comments: e.comments,
+    evaluatorName: e.evaluatorName,
+    updatedAt: e.updatedAt.toISOString(),
+  };
 }
 
 /** Colaboradores ativos do escopo do usuário com a avaliação do mês pedido. */
 export async function listEvaluationBoard(user: SessionUser, yearMonth: string): Promise<EvaluationRow[]> {
-  const collabs = await prisma.collaborator.findMany({
-    where: { active: true, units: { some: { ...unitScopeWhere(user, 'unitId') } } },
-    include: { units: { select: { unitId: true, unit: { select: { name: true } } } } },
-    orderBy: { name: 'asc' },
-    take: 500,
-  });
+  const { inicio, fim } = limitesDoMes(yearMonth);
+  const [collabs, vinculos, modelos, eu] = await Promise.all([
+    prisma.collaborator.findMany({
+      where: { active: true, units: { some: { ...unitScopeWhere(user, 'unitId') } } },
+      include: {
+        units: { select: { unitId: true, unit: { select: { name: true } } } },
+        vacations: { where: { status: { in: ['CONFIRMED', 'APPROVED', 'CHANGE_REQUESTED'] }, startDate: { lt: fim }, endDate: { gte: inicio } }, select: { id: true }, take: 1 },
+      },
+      orderBy: { name: 'asc' },
+      take: 500,
+    }),
+    prisma.evaluationModelJobTitle.findMany({ select: { jobTitleKey: true, modelId: true } }),
+    prisma.evaluationModel.findMany({ where: { active: true }, include: { versions: { orderBy: { version: 'desc' }, take: 1 } } }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { cpf: true } }),
+  ]);
   const ids = collabs.map((c) => c.id);
   const [evals, obsCounts] = await Promise.all([
-    prisma.collaboratorEvaluation.findMany({ where: { collaboratorId: { in: ids }, yearMonth } }),
+    prisma.collaboratorEvaluation.findMany({ where: { collaboratorId: { in: ids }, yearMonth }, include: { modelVersion: { select: { version: true } } } }),
     prisma.collaboratorObservation.groupBy({ by: ['collaboratorId'], where: { collaboratorId: { in: ids } }, _count: true }),
   ]);
   const evalBy = new Map(evals.map((e) => [e.collaboratorId, e]));
   const obsBy = new Map(obsCounts.map((o) => [o.collaboratorId, o._count]));
+  const modeloPorCargo = new Map(vinculos.map((v) => [v.jobTitleKey, v.modelId]));
+  const modeloPorId = new Map(modelos.map((m) => [m.id, m]));
 
   return collabs.map((c) => {
     const first = c.units.find((u) => canAccessUnit(user, u.unitId)) ?? c.units[0];
     const e = evalBy.get(c.id);
+    const mid = modeloPorCargo.get(normalizarCargo(c.jobTitle));
+    const m = mid ? modeloPorId.get(mid) : undefined;
+    const modelo = m && m.versions[0]
+      ? { id: m.id, name: m.name, managerial: m.managerial, versionId: m.versions[0].id, version: m.versions[0].version, criterios: lerCriterios(m.versions[0].criteria) }
+      : null;
     return {
       collaboratorId: c.id,
       name: c.name,
@@ -92,61 +157,132 @@ export async function listEvaluationBoard(user: SessionUser, yearMonth: string):
       unitId: first?.unitId ?? '',
       unitName: c.units.map((u) => u.unit.name).join(', ') || '—',
       observationCount: obsBy.get(c.id) ?? 0,
-      evaluation: e
-        ? {
-            punctuality: e.punctuality, performance: e.performance, teamwork: e.teamwork, presentation: e.presentation,
-            comments: e.comments, evaluatorName: e.evaluatorName, updatedAt: e.updatedAt.toISOString(),
-          }
-        : null,
+      modelo,
+      permissao: quemPodeAvaliar({ role: user.role, managerial: modelo?.managerial ?? false, semModelo: !modelo, cpfUsuario: eu?.cpf ?? null, cpfColaborador: c.cpf }),
+      ferias: c.vacations.length > 0,
+      evaluation: e ? montarGravada(e) : null,
     };
   });
 }
 
-/** Histórico de avaliações de um colaborador (últimos 12 meses com registro). */
-export async function listEvaluationHistory(user: SessionUser, collaboratorId: string) {
+/** Histórico de avaliações de um colaborador (últimos 12 meses com registro), nos dois formatos. */
+export async function listEvaluationHistory(user: SessionUser, collaboratorId: string): Promise<(AvaliacaoGravada & { yearMonth: string })[]> {
   const collab = await prisma.collaborator.findUnique({ where: { id: collaboratorId }, select: { units: { select: { unitId: true } } } });
   if (!collab || !collab.units.some((u) => canAccessUnit(user, u.unitId))) return [];
-  return prisma.collaboratorEvaluation.findMany({
+  const rows = await prisma.collaboratorEvaluation.findMany({
     where: { collaboratorId },
     orderBy: { yearMonth: 'desc' },
     take: 12,
+    include: { modelVersion: { select: { version: true } } },
   });
+  return rows.map((e) => ({ yearMonth: e.yearMonth, ...montarGravada(e) }));
 }
 
-/** Salva/atualiza a avaliação mensal (upsert por colaborador+mês). */
+/**
+ * Salva/atualiza a avaliação mensal (upsert por colaborador+mês) pelo modelo
+ * da FUNÇÃO do colaborador. A nota e a versão do modelo ficam CONGELADAS na
+ * linha; quem pode avaliar quem segue `quemPodeAvaliar` (a mesma regra da
+ * tela). Função sem modelo → SEM_MODELO; nada é adivinhado.
+ */
 export async function saveEvaluation(
   user: SessionUser,
   collaboratorId: string,
   yearMonth: string,
-  input: Partial<EvaluationCriteria> & { comments?: string },
+  input: { respostas: Resposta[]; comments?: string },
   ctx: Ctx = {},
 ): Promise<Result> {
-  if (user.role === 'FINANCE') return { ok: false, reason: 'FORBIDDEN' };
   if (!/^\d{4}-\d{2}$/.test(yearMonth) || yearMonth > currentYearMonth()) return { ok: false, reason: 'INVALID' };
-  const scores: EvaluationCriteria = { punctuality: 0, performance: 0, teamwork: 0, presentation: 0 };
-  for (const k of CRITERIA) {
-    const v = Math.trunc(Number(input[k]));
-    if (!Number.isFinite(v) || v < 1 || v > 5) return { ok: false, reason: 'INVALID' };
-    scores[k] = v;
-  }
-  const collab = await prisma.collaborator.findUnique({ where: { id: collaboratorId }, select: { name: true, units: { select: { unitId: true } } } });
+  const collab = await prisma.collaborator.findUnique({ where: { id: collaboratorId }, select: { name: true, cpf: true, jobTitle: true, units: { select: { unitId: true } } } });
   if (!collab) return { ok: false, reason: 'NOT_FOUND' };
   const unitId = collab.units.find((u) => canAccessUnit(user, u.unitId))?.unitId;
   if (!unitId) return { ok: false, reason: 'FORBIDDEN' };
 
+  const modelo = await modeloParaCargo(collab.jobTitle);
+  const eu = await prisma.user.findUnique({ where: { id: user.id }, select: { cpf: true } });
+  const perm = quemPodeAvaliar({ role: user.role, managerial: modelo?.managerial ?? false, semModelo: !modelo, cpfUsuario: eu?.cpf ?? null, cpfColaborador: collab.cpf });
+  if (!perm.pode) {
+    if (perm.motivo === 'SEM_MODELO') return { ok: false, reason: 'SEM_MODELO' };
+    if (perm.motivo === 'GERENCIAL') return { ok: false, reason: 'GERENCIAL' };
+    if (perm.motivo === 'PROPRIO') return { ok: false, reason: 'PROPRIO' };
+    return { ok: false, reason: 'FORBIDDEN' };
+  }
+  if (!modelo) return { ok: false, reason: 'SEM_MODELO' };
+
+  const validado = validarRespostas(modelo.criterios, Array.isArray(input.respostas) ? input.respostas : []);
+  if (!validado.ok) return { ok: false, reason: 'INVALID', erros: validado.erros };
+  const { nota, classificacao } = calcularNota(modelo.criterios, validado.gravar);
+  if (nota == null || !classificacao) return { ok: false, reason: 'INVALID', erros: ['Todos os critérios estão N/A — não há o que avaliar.'] };
+  const comments = (input.comments ?? '').trim().slice(0, 2000) || null;
+
+  const anterior = await prisma.collaboratorEvaluation.findUnique({ where: { collaboratorId_yearMonth: { collaboratorId, yearMonth } }, select: { finalScore: true, classification: true, punctuality: true, performance: true, teamwork: true, presentation: true, evaluatorName: true } });
+  const dados = {
+    modelId: modelo.id, modelVersionId: modelo.versionId, modelName: modelo.name, jobTitle: collab.jobTitle,
+    scores: validado.gravar as object[], finalScore: nota, classification: classificacao,
+    /* Formato antigo fica nulo na avaliação nova — a nota mora em finalScore. */
+    punctuality: null, performance: null, teamwork: null, presentation: null,
+    comments, evaluatorId: user.id, evaluatorName: user.name,
+  };
   await prisma.collaboratorEvaluation.upsert({
     where: { collaboratorId_yearMonth: { collaboratorId, yearMonth } },
-    create: {
-      collaboratorId, collaboratorName: collab.name, unitId, yearMonth, ...scores,
-      comments: input.comments?.trim() || null, evaluatorId: user.id, evaluatorName: user.name,
-    },
-    update: { ...scores, comments: input.comments?.trim() || null, evaluatorId: user.id, evaluatorName: user.name },
+    create: { collaboratorId, collaboratorName: collab.name, unitId, yearMonth, ...dados },
+    update: dados,
   });
   await audit({
     userId: user.id, unitId, action: 'EVALUATION_SAVED', module: 'PEOPLE', entity: 'collaborator_evaluation',
-    entityId: collaboratorId, metadata: { name: collab.name, yearMonth, ...scores }, ...ctx,
+    entityId: collaboratorId,
+    metadata: {
+      name: collab.name, yearMonth, modelo: modelo.name, versao: modelo.version, nota, classificacao,
+      respostas: validado.gravar.map((r) => ({ key: r.key, score: r.score, justification: r.justification })),
+      antes: anterior ? { nota: notaDaAvaliacao(anterior), classificacao: anterior.classification, avaliador: anterior.evaluatorName } : null,
+    },
+    ...ctx,
   });
   return { ok: true };
+}
+
+// ===== Evidências de apoio ao avaliador =======================================
+
+export interface EvidenciasDoMes {
+  yearMonth: string;
+  escala: { trabalhou: number; folgas: number; faltasInjustificadas: number; faltasJustificadas: number; atrasos: number; ferias: number } | null;
+  setor: string | null;
+  treinamentos: { concluidos: number; pendentes: number; atrasados: number };
+  checklists: number;
+  observacoes: { text: string; authorName: string; createdAt: string }[];
+}
+
+/**
+ * O que o SGO já sabe do colaborador no mês, para APOIAR o avaliador — nunca
+ * para descontar nota. Atestado NÃO entra (decisão da especificação: não é
+ * critério de penalização); ocorrência e desperdício não têm vínculo
+ * individual confiável, então ficam fora.
+ */
+export async function evidenciasDoMes(user: SessionUser, collaboratorId: string, yearMonth: string): Promise<EvidenciasDoMes | null> {
+  const collab = await prisma.collaborator.findUnique({ where: { id: collaboratorId }, select: { units: { select: { unitId: true } } } });
+  if (!collab || !collab.units.some((u) => canAccessUnit(user, u.unitId))) return null;
+  if (!/^\d{4}-\d{2}$/.test(yearMonth)) return null;
+  const { inicio, fim } = limitesDoMes(yearMonth);
+  const [atuais, alocacao, treinos, checklists, obs] = await Promise.all([
+    prisma.scheduleActual.groupBy({ by: ['status'], where: { collaboratorId, date: { gte: inicio, lt: fim } }, _count: { _all: true } }),
+    prisma.workforceAllocation.findFirst({ where: { collaboratorId }, orderBy: { createdAt: 'desc' }, select: { sector: { select: { name: true } } } }),
+    prisma.trainingRecord.findMany({ where: { collaboratorId, OR: [{ completedAt: { gte: inicio, lt: fim } }, { status: 'PENDING' }] }, select: { status: true, completedAt: true, dueDate: true } }),
+    prisma.checklistSubmission.count({ where: { collaboratorId, createdAt: { gte: inicio, lt: fim } } }),
+    prisma.collaboratorObservation.findMany({ where: { collaboratorId, createdAt: { gte: inicio, lt: fim } }, orderBy: { createdAt: 'desc' }, take: 10, select: { text: true, authorName: true, createdAt: true } }),
+  ]);
+  const n = (s: string) => atuais.find((a) => a.status === s)?._count._all ?? 0;
+  const agora = new Date();
+  return {
+    yearMonth,
+    escala: atuais.length ? { trabalhou: n('WORK') + n('ATRASO'), folgas: n('OFF'), faltasInjustificadas: n('FALTA_INJUST'), faltasJustificadas: n('FALTA_JUST'), atrasos: n('ATRASO'), ferias: n('FERIAS') } : null,
+    setor: alocacao?.sector?.name ?? null,
+    treinamentos: {
+      concluidos: treinos.filter((t) => t.status === 'DONE' && t.completedAt && t.completedAt >= inicio && t.completedAt < fim).length,
+      pendentes: treinos.filter((t) => t.status === 'PENDING' && t.dueDate >= agora).length,
+      atrasados: treinos.filter((t) => t.status === 'PENDING' && t.dueDate < agora).length,
+    },
+    checklists,
+    observacoes: obs.map((o) => ({ text: o.text, authorName: o.authorName, createdAt: o.createdAt.toISOString() })),
+  };
 }
 
 // ===== Observações do dia a dia =============================================

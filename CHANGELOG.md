@@ -9,6 +9,17 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.161.0 — 2026-10-08 (Avaliação do colaborador por FUNÇÃO)
+### Novo
+- **Avaliação por função**: cada cargo do RH aponta para um modelo com 8 critérios — 4 gerais (40%: pontualidade e assiduidade, disciplina, trabalho em equipe, organização/higiene/apresentação) e 4 específicos da função (60%). A nota final é a média ponderada (1,00 a 5,00), calculada na hora, com a classificação Excelente / Bom / Regular / Necessita melhorar.
+- **N/A com justificativa** para critério que não se aplica (o peso é redistribuído) e **justificativa obrigatória** nas notas 1 e 2.
+- **10 modelos iniciais** (Cozinheiro, Churrasqueiro, Auxiliar de cozinha, Salgadeiro, Pizzaiolo, Garçom/Atendente, Operador de caixa, Estoquista, Auxiliar de limpeza, Gerente/Encarregado) já vinculados aos apelidos de cargo mais comuns. Nova tela **Configurações → Avaliação por função**: criar e editar modelos, vincular cargos, lista de **funções sem modelo** (ninguém recebe modelo por adivinhação); mudar critério ou peso cria uma **versão** nova e as avaliações antigas não são recalculadas.
+- **Quem avalia quem**: gerente e coordenador avaliam a equipe da unidade; Gerente/Encarregado é avaliado pela Supervisão; ninguém avalia a si próprio (reconhecido pelo CPF do Meu Perfil).
+- Aba **Apoio do mês** no colaborador: escala realizada, setor do mapa, treinamentos, checklists preenchidos e observações — só para apoiar a leitura, nada desconta nota; atestado não entra.
+- Busca por nome ou função na lista; crachás Férias / Sem modelo / Gerencial; histórico mostra nota, classificação e modelo.
+### Alterado
+- As avaliações feitas no formato anterior (4 critérios) continuam no histórico e no Perfil 360 com a média de sempre; reavaliar o mês pelo modelo substitui a nota.
+
 ## v1.160.2 — 2026-10-08 (Higiene e Coleta de óleo, cada uma na sua tela)
 ### Alterado
 - **Higiene dos banheiros** e **Coleta de óleo** deixaram de dividir a faixa "Rotinas da unidade" no topo da tela. Cada uma é uma tela própria: Higiene segue em Tarefas → Checklists e Coleta de óleo em Operação → Rotinas da unidade, no menu de cima. Os endereços e os avisos antigos continuam funcionando.

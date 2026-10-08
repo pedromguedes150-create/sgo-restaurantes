@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma';
+import { notaDaAvaliacao } from '@/lib/people/avaliacao-calculo';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { FERIAS_QUE_CONTAM } from '@/lib/schedule';
 import {
@@ -75,7 +76,7 @@ export async function getPerfil360(user: SessionUser, id: string, pode: Pode, ag
       select: { id: true, status: true, amount: true, hours: true, workDate: true, createdAt: true, reason: true, workStartTime: true, workEndTime: true },
     }) : Promise.resolve([]),
     vePayout ? prisma.collaboratorPayout.findMany({ where: { collaboratorId: id, yearMonth: { gte: ym12 } }, orderBy: { yearMonth: 'desc' }, select: { type: true, yearMonth: true, amount: true } }) : Promise.resolve([]),
-    veAvaliacao ? prisma.collaboratorEvaluation.findMany({ where: { collaboratorId: id }, orderBy: { yearMonth: 'desc' }, take: 12, select: { yearMonth: true, punctuality: true, performance: true, teamwork: true, presentation: true, evaluatorName: true } }) : Promise.resolve([]),
+    veAvaliacao ? prisma.collaboratorEvaluation.findMany({ where: { collaboratorId: id }, orderBy: { yearMonth: 'desc' }, take: 12, select: { yearMonth: true, punctuality: true, performance: true, teamwork: true, presentation: true, finalScore: true, classification: true, evaluatorName: true } }) : Promise.resolve([]),
     veAvaliacao ? prisma.collaboratorObservation.count({ where: { collaboratorId: id, createdAt: { gte: desde12 } } }) : Promise.resolve(0),
     veAtestado ? prisma.medicalCertificate.findMany({ where: { collaboratorId: id, startDate: { gte: `${ym12}-01` } }, orderBy: { startDate: 'desc' }, select: { startDate: true, endDate: true, days: true, type: true } }) : Promise.resolve([]),
     veTreino ? prisma.trainingRecord.findMany({ where: { collaboratorId: id }, orderBy: { dueDate: 'desc' }, take: 60, select: { status: true, dueDate: true, completedAt: true, moduleName: true, pop: { select: { title: true } } } }) : Promise.resolve([]),
@@ -122,8 +123,8 @@ export async function getPerfil360(user: SessionUser, id: string, pode: Pode, ag
     return l.length ? { total: l.reduce((s, p) => s + Number(p.amount), 0), registros: l.length, ultimo: { yearMonth: l[0].yearMonth, valor: Number(l[0].amount) } } : null;
   };
 
-  /* ── avaliação: média dos 4 critérios (1–5) ── */
-  const nota = (a: { punctuality: number; performance: number; teamwork: number; presentation: number }) => (a.punctuality + a.performance + a.teamwork + a.presentation) / 4;
+  /* ── avaliação: nota ponderada do modelo da função (v1.161.0) ou, nas antigas, média dos 4 critérios ── */
+  const nota = (a: { finalScore: number | null; punctuality: number | null; performance: number | null; teamwork: number | null; presentation: number | null }) => notaDaAvaliacao(a) ?? 0;
   const avaliacao = veAvaliacao ? {
     ultima: avaliacoes[0] ? { yearMonth: avaliacoes[0].yearMonth, nota: nota(avaliacoes[0]), avaliador: avaliacoes[0].evaluatorName } : null,
     media12: avaliacoes.length ? avaliacoes.reduce((s, a) => s + nota(a), 0) / avaliacoes.length : null,
