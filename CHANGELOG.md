@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.164.0 — 2026-10-08 (Metas: aba "Uso do SGO" — relatório executivo para a bonificação)
+### Novo
+- **Uso do SGO** (aba ao lado de Metas, para Admin/CEO/Supervisão): quem usa o sistema, **rede unidade por unidade e usuário por usuário**, no mês escolhido. Cartões (uso médio da rede, usuários ativos × sem nenhuma ação, ações no sistema e acessos, tarefas no prazo), rosca de unidades por faixa de uso, **Destaques do mês** (unidade que mais usa, que menos usa, que mais deixa de fazer, que mais erra o prazo, usuário que mais usa, quem não fez nada), tabela por unidade (uso, checklists, desperdício, comandas, no prazo / fora / não feitas, % de falhas, ações, usuários ativos/vinculados, meta) e tabela por usuário (perfil, unidades, acessos, ações, módulos mais usados, tarefas concluídas, fora do prazo, último acesso).
+- **Excel** (RESUMO · UNIDADES · USUÁRIOS) e **PDF** pela impressão, com a mesma leitura da tela.
+- Só leitura: o uso por unidade é o painel do supervisor (checklists, desperdício, comandas), as tarefas vêm das instâncias do mês por quem concluiu e as ações da Auditoria (sem login). Nenhuma tabela nova, nenhuma regra de meta tocada. Gerentes, coordenadores e supervisores das unidades do alcance são os medidos.
+
 ## v1.163.0 — 2026-10-08 (Metas: gráficos de rosca)
 ### Novo
 - **Metas e Performance** ganhou gráficos de rosca sem mudar a conta da meta: **Meta da unidade** (o % oficial no tom do semáforo, com a posição no ranking e os pontos de peso conquistados), **Unidades por faixa** (quantas estão na meta, em atenção ou críticas, com média e mediana da rede, melhor e menor), **Tarefas do mês** (realizadas × não realizadas) e **Composição da meta** — cada componente é uma fatia do tamanho do seu peso, pintada pelo resultado, com a tabela de pontos ganhos e perdidos e "onde mais perdeu pontos".

@@ -15,7 +15,9 @@ import { Card, PanelHeader } from '@/components/sgo/panel';
 import { List, ListRow } from '@/components/ui/ds/list-row';
 import { ProgressBar } from '@/components/ui/ds/progress-bar';
 import { shortUnitName } from '@/lib/unit-name';
-import { Trophy, Download, Settings, PieChart, Target, ListChecks } from 'lucide-react';
+import { Trophy, Download, Settings, PieChart, Target, ListChecks, Activity } from 'lucide-react';
+import { getUsoDoSgo } from '@/lib/metas/uso';
+import { UsoDoSgoView } from '@/components/metas/uso-do-sgo';
 import { comporMeta, resumirRanking, COR_FAIXA, faixaDaMeta } from '@/lib/metas/graficos';
 import { RoscaDaMeta, RoscaDasUnidades, RoscaDasTarefas, RoscaDaComposicao } from '@/components/metas/graficos-metas';
 
@@ -32,7 +34,7 @@ function lastMonths(n: number): { value: string; label: string }[] {
   return out;
 }
 
-export default async function MetasPage({ searchParams }: { searchParams: { unit?: string; month?: string } }) {
+export default async function MetasPage({ searchParams }: { searchParams: { unit?: string; month?: string; aba?: string } }) {
   const user = (await getSessionUser())!;
   const podeVer = await permissaoDeRota(user.role);
   const months = lastMonths(12);
@@ -43,6 +45,25 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
 
   const isAdminView = user.seesAllUnits || user.role === 'SUPERVISOR';
+  /* Aba "Uso do SGO" (v1.164.0): só para quem vê a rede (Admin/CEO/Supervisor). */
+  const aba = isAdminView && searchParams.aba === 'uso' ? 'uso' : 'metas';
+  const tabs = isAdminView ? [
+    { label: 'Metas', icon: <Target className="h-3.5 w-3.5" />, href: `/modulos/metas?month=${ym}${searchParams.unit ? `&unit=${searchParams.unit}` : ''}`, active: aba === 'metas', testId: 'aba-metas' },
+    { label: 'Uso do SGO', icon: <Activity className="h-3.5 w-3.5" />, href: `/modulos/metas?aba=uso&month=${ym}`, active: aba === 'uso', testId: 'aba-uso' },
+  ] : undefined;
+  if (aba === 'uso') {
+    const dados = await getUsoDoSgo(user, ym);
+    return (
+      <div className="space-y-4">
+        <LargeTitle title="Metas e Performance" subtitle={<>Mês {monthLabel}<span className="block"><FamilyTabs active="/modulos/metas" /></span></>} tabs={tabs} />
+        <div className="sgo-filtros -mx-4 print:hidden">
+          <span className="sgo-label">Mês de referência</span>
+          <UnitSelectNav className="w-48" units={months.map((m) => ({ id: m.value, name: m.label }))} selected={ym} paramName="month" />
+        </div>
+        <UsoDoSgoView dados={dados} mesLabel={monthLabel} />
+      </div>
+    );
+  }
   const ranking = isAdminView ? await getMetaRanking(user, ym) : [];
   const breakdown = selected ? await getMetaBreakdown(selected.id, ym) : [];
   const score = selected ? await getUnitMonthScore(selected.id, ym) : null;
@@ -65,6 +86,7 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
       <LargeTitle
         title="Metas e Performance"
         subtitle={<>Mês {monthLabel}<span className="block"><FamilyTabs active="/modulos/metas" /></span></>}
+        tabs={tabs}
         actions={
           <div className="flex flex-wrap items-center gap-2 print:hidden">
             <a href={exportHref} className="sgo-btn"><Download className="h-3.5 w-3.5" /> Excel</a>
