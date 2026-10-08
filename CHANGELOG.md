@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.162.1 — 2026-10-08 (Perfil 360: layout reorganizado)
+### Alterado
+- **Perfil 360 do colaborador** ganhou organização nova, sem mudar dado, cálculo ou permissão: cabeçalho com nome, situação, função, unidade, matrícula, CPF e admissão em destaque; ações principais (Avaliar, Escala) em botões e as demais no menu "Mais ações"; indicadores agrupados em quatro painéis de altura igual — Dados profissionais, Jornada, Desempenho e RH e benefícios — em vez de cartões soltos que ficavam estreitos; férias, avaliações e hora extra reorganizadas abaixo; histórico no fim. Funciona em computador, tablet e celular, nos temas claro e escuro.
+
 ## v1.162.0 — 2026-10-08 (Avaliação: plano de desenvolvimento, revisão e painel)
 ### Novo
 - **Plano de desenvolvimento individual** no cartão do colaborador: critério a melhorar, ação ou treinamento, responsável (avisado), prazo e situação Pendente / Em andamento / Concluído; prazo passado sem concluir aparece como **Vencido**. Na avaliação seguinte o SGO mostra a **evolução** da nota do critério (evoluiu, sem mudança, piorou).
