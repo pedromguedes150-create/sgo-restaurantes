@@ -11,7 +11,7 @@ import { abasDoPerfil } from '@/lib/permissions/abas-server';
 import { getPerfil360, STATUS_HE } from '@/lib/people/perfil-360';
 import type { PeriodoAquisitivo } from '@/lib/people/periodo-aquisitivo';
 import { LargeTitle } from '@/components/layout/page-chrome';
-import { Card, CardContent, PanelHeader } from '@/components/sgo/panel';
+import { Card, CardContent } from '@/components/sgo/panel';
 import { HistoricoColaborador } from '@/components/people/historico-colaborador';
 import { PerfilAcoes, type AcaoDoPerfil } from '@/components/people/perfil-acoes';
 import { shortUnitName } from '@/lib/unit-name';
@@ -40,26 +40,36 @@ type Tom = 'brand' | 'blue' | 'green' | 'amber' | 'red' | 'sky' | 'violet' | 'gr
  * numa lista compacta dentro do grupo. Substitui os cartões KPI soltos, que
  * ficavam estreitos e com buracos quando o perfil não via um dos módulos.
  */
-function Indicador({ icon: Icon, tone, label, value, meta, testId }: { icon: LucideIcon; tone: Tom; label: string; value: ReactNode; meta?: ReactNode; testId?: string }) {
+function Indicador({ icon: Icon, label, value, meta, testId }: { icon: LucideIcon; tone?: Tom; label: string; value: ReactNode; meta?: ReactNode; testId?: string }) {
   return (
-    <div className="flex items-start gap-3 px-4 py-2.5" data-testid={testId}>
-      <span className={`sgo-kpi__ic sgo-kpi__ic--${tone} shrink-0`} aria-hidden><Icon className="h-4 w-4" /></span>
+    <div className="sgo-grupo__linha" data-testid={testId}>
+      <span className="sgo-grupo__linha-ic" aria-hidden><Icon className="h-5 w-5" /></span>
       <div className="min-w-0 flex-1">
-        <p className="sgo-type-11 text-ink-500">{label}</p>
-        <p className="sgo-type-15 break-words font-semibold text-ink-900">{value}</p>
-        {meta && <p className="sgo-type-11 text-ink-500">{meta}</p>}
+        <p className="sgo-type-13 text-ink-700">{label}</p>
+        <p className="sgo-type-17 break-words font-bold text-ink-900">{value}</p>
+        {meta && <p className="sgo-type-13 text-ink-500">{meta}</p>}
       </div>
+    </div>
+  );
+}
+
+/** Cabeçalho sólido na cor do grupo (bordô; verde para a Jornada). */
+function CabecalhoDoGrupo({ title, icon: Icon, count }: { title: string; icon: LucideIcon; count?: number }) {
+  return (
+    <div className="sgo-grupo__hdr">
+      <span className="sgo-grupo__hdr-ic" aria-hidden><Icon className="h-5 w-5" /></span>
+      <span className="sgo-grupo__title">{title}</span>
+      {typeof count === 'number' && <span className="sgo-count">{count}</span>}
     </div>
   );
 }
 
 /** Grupo de indicadores: painel com título e linhas separadas por fio. */
 function Grupo({ title, icon, tone, children, testId }: { title: string; icon: LucideIcon; tone: Tom; children: ReactNode; testId?: string }) {
-  const Icon = icon;
   return (
-    <Card className="h-full" data-testid={testId}>
-      <PanelHeader title={title} icon={<span className={`sgo-panel__ic sgo-panel__ic--${tone}`} aria-hidden><Icon className="h-4 w-4" /></span>} />
-      <div className="divide-y divide-line">{children}</div>
+    <Card className="sgo-grupo h-full" data-testid={testId}>
+      <CabecalhoDoGrupo title={title} icon={icon} />
+      <div className="sgo-grupo__corpo">{children}</div>
     </Card>
   );
 }
@@ -180,8 +190,8 @@ export default async function Perfil360Page({ params }: { params: { id: string }
 
       {/* Detalhamento */}
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-        <Card className={p.horaExtra ? 'xl:col-span-2' : 'xl:col-span-3'}>
-          <PanelHeader title="Férias — período aquisitivo" icon={<span className="sgo-panel__ic sgo-panel__ic--green" aria-hidden><Palmtree className="h-4 w-4" /></span>} />
+        <Card className={`sgo-grupo ${p.horaExtra ? 'xl:col-span-2' : 'xl:col-span-3'}`}>
+          <CabecalhoDoGrupo title="Férias — período aquisitivo" icon={Palmtree} />
           <CardContent className="space-y-3 pt-2">
             {f.periodos.length === 0 ? (
               <p className="text-sm text-ink-500">Sem admissão informada pelo RH — não há como calcular o período aquisitivo.</p>
@@ -237,16 +247,22 @@ export default async function Perfil360Page({ params }: { params: { id: string }
         </Card>
 
         {p.avaliacao && p.avaliacao.serie.length > 0 && (
-          <Card className={p.horaExtra ? 'xl:col-span-1' : 'xl:col-span-3'}>
-            <PanelHeader title="Avaliações mensais" count={p.avaliacao.serie.length} icon={<span className="sgo-panel__ic sgo-panel__ic--violet" aria-hidden><Award className="h-4 w-4" /></span>} />
-            <CardContent className="pt-2">
-              <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-3">
-                {p.avaliacao.serie.map((a) => (
-                  <li key={a.yearMonth} className="rounded-lg border border-line bg-canvas p-2 text-center">
-                    <p className="text-lg font-bold tabular-nums text-ink-900">{um(a.nota)}</p>
-                    <p className="sgo-type-11 text-ink-500">{mesAno(a.yearMonth)}</p>
-                  </li>
-                ))}
+          <Card className={`sgo-grupo ${p.horaExtra ? 'xl:col-span-1' : 'xl:col-span-3'}`}>
+            <CabecalhoDoGrupo title="Avaliações mensais" icon={Award} count={p.avaliacao.serie.length} />
+            <CardContent className="pt-3">
+              <div className="flex items-end gap-3">
+                <div className="sgo-grupo__linha w-28 shrink-0 flex-col items-center gap-0 text-center">
+                  <p className="text-2xl font-bold tabular-nums text-ink-900">{um(p.avaliacao.serie[p.avaliacao.serie.length - 1].nota)}</p>
+                  <p className="sgo-type-11 text-ink-500">{mesAno(p.avaliacao.serie[p.avaliacao.serie.length - 1].yearMonth)}</p>
+                </div>
+                <div className="sgo-grupo__barras flex-1" role="img" aria-label={`Notas mensais: ${p.avaliacao.serie.map((a) => `${mesAno(a.yearMonth)} ${um(a.nota)}`).join(', ')}`}>
+                  {p.avaliacao.serie.map((a, i) => (
+                    <div key={a.yearMonth} className={`sgo-grupo__barra ${i === p.avaliacao!.serie.length - 1 ? 'sgo-grupo__barra--atual' : ''}`} style={{ height: `${Math.max(8, Math.round((a.nota / 5) * 100))}%` }} title={`${mesAno(a.yearMonth)}: ${um(a.nota)}`} />
+                  ))}
+                </div>
+              </div>
+              <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 sgo-type-11 text-ink-500">
+                {p.avaliacao.serie.map((a) => <li key={a.yearMonth} className="tabular-nums">{mesAno(a.yearMonth)} <b className="text-ink-700">{um(a.nota)}</b></li>)}
               </ul>
               <p className="mt-2 text-xs text-ink-500">Nota final de cada mês (1 a 5). {p.avaliacao.observacoes} observação(ões) do dia a dia em 12 meses.</p>
             </CardContent>
@@ -254,8 +270,8 @@ export default async function Perfil360Page({ params }: { params: { id: string }
         )}
 
         {p.horaExtra && (
-          <Card className="xl:col-span-3">
-            <PanelHeader title="Hora extra — últimos lançamentos" count={p.horaExtra.ultimas.length} icon={<span className="sgo-panel__ic sgo-panel__ic--amber" aria-hidden><Timer className="h-4 w-4" /></span>} />
+          <Card className="sgo-grupo xl:col-span-3">
+            <CabecalhoDoGrupo title="Hora extra — últimos lançamentos" icon={Timer} count={p.horaExtra.ultimas.length} />
             <CardContent className="pt-2">
               {p.horaExtra.ultimas.length === 0 ? <p className="text-sm text-ink-500">Nenhuma hora extra vinculada a este colaborador nos últimos 12 meses.</p> : (
                 <div className="overflow-x-auto">
@@ -281,8 +297,8 @@ export default async function Perfil360Page({ params }: { params: { id: string }
         )}
       </div>
 
-      <Card>
-        <PanelHeader title="Histórico" count={p.historico.length} icon={<span className="sgo-panel__ic sgo-panel__ic--blue" aria-hidden><History className="h-4 w-4" /></span>} />
+      <Card className="sgo-grupo">
+        <CabecalhoDoGrupo title="Histórico" icon={History} count={p.historico.length} />
         <CardContent className="pt-2">
           <HistoricoColaborador itens={p.historico} nome={c.nome.split(' ')[0]} />
         </CardContent>
