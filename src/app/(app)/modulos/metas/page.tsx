@@ -15,7 +15,9 @@ import { Card, PanelHeader } from '@/components/sgo/panel';
 import { List, ListRow } from '@/components/ui/ds/list-row';
 import { ProgressBar } from '@/components/ui/ds/progress-bar';
 import { shortUnitName } from '@/lib/unit-name';
-import { Trophy, Download, Settings } from 'lucide-react';
+import { Trophy, Download, Settings, PieChart, Target, ListChecks } from 'lucide-react';
+import { comporMeta, resumirRanking, COR_FAIXA, faixaDaMeta } from '@/lib/metas/graficos';
+import { RoscaDaMeta, RoscaDasUnidades, RoscaDasTarefas, RoscaDaComposicao } from '@/components/metas/graficos-metas';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +53,10 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
     return `/modulos/metas?${sp.toString()}`;
   };
   const exportHref = `/api/metas/export?month=${ym}${selected ? `&unit=${selected.id}` : ''}`;
+  /* Gráficos (v1.163.0): composição PURA do que já foi calculado acima. */
+  const resumoRanking = resumirRanking(ranking);
+  const composicao = comporMeta(breakdown);
+  const posicao = selected ? resumoRanking.posicaoDe(selected.id) : null;
 
   return (
     <div className="space-y-4">
@@ -100,11 +106,19 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
             {ranking.map((r, i) => (
               <ListRow
                 key={r.unitId}
+                href={linkFor({ unit: r.unitId })}
                 leading={
-                  <span className="flex h-7 w-7 items-center justify-center rounded-pill bg-sunken text-xs font-bold tabular-nums text-ink-700">{i + 1}</span>
+                  <span className={`flex h-7 w-7 items-center justify-center rounded-pill text-xs font-bold tabular-nums ${r.unitId === selected?.id ? 'bg-brand text-on-brand' : 'bg-sunken text-ink-700'}`}>{i + 1}</span>
                 }
                 title={shortUnitName(r.name)}
-                trailing={<span className="text-sm font-bold tabular-nums text-ink-900">{r.scorePct}%</span>}
+                trailing={
+                  <>
+                    <span className="hidden h-2 w-40 overflow-hidden rounded-pill bg-sunken sm:block" aria-hidden>
+                      <span className="block h-full rounded-pill" style={{ width: `${Math.max(2, Math.min(100, r.scorePct))}%`, background: COR_FAIXA[faixaDaMeta(r.scorePct)] }} />
+                    </span>
+                    <span className="w-12 text-right text-sm font-bold tabular-nums" style={{ color: COR_FAIXA[faixaDaMeta(r.scorePct)] }}>{r.scorePct}%</span>
+                  </>
+                }
               />
             ))}
           </List>
@@ -112,29 +126,48 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
       )}
 
       {selected && score && (
-        <section className="sgo-panel sgo-panel--solid p-4">
-          <ProgressBar
-            label={isAdminView ? shortUnitName(selected.name) : 'Minha Meta do Mês'}
-            value={score.scorePct}
-            valueLabel={`${score.scorePct}%`}
-            tone={score.scorePct >= 80 ? 'success' : score.scorePct >= 50 ? 'warning' : 'danger'}
-          />
-
-          {/* Composição: cada componente com seu peso e o quanto rendeu. */}
-          <div className="mt-4 space-y-3">
-            {breakdown.length === 0 && (
-              <p className="text-sm text-ink-500">Sem tarefas resolvidas no mês ainda.</p>
+        <>
+          {/* Roscas (v1.163.0): a meta da unidade, a rede por faixa e as tarefas do mês. */}
+          <div className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${isAdminView && ranking.length > 0 ? 'xl:grid-cols-3' : ''}`}>
+            <Card>
+              <PanelHeader title={isAdminView ? 'Meta da unidade' : 'Minha Meta do Mês'} icon={<span className="sgo-panel__ic sgo-panel__ic--brand" aria-hidden><Target className="h-4 w-4" /></span>} />
+              <div className="p-4">
+                <RoscaDaMeta scorePct={score.scorePct} rotulo={`${shortUnitName(selected.name)}${posicao ? ` · ${posicao}º de ${resumoRanking.unidades}` : ''}`} pontos={composicao.pesoTotal > 0 ? { ganhos: composicao.pontosGanhos, total: composicao.pesoTotal } : undefined} />
+              </div>
+            </Card>
+            {isAdminView && ranking.length > 0 && (
+              <Card>
+                <PanelHeader title="Unidades por faixa" icon={<span className="sgo-panel__ic sgo-panel__ic--green" aria-hidden><PieChart className="h-4 w-4" /></span>} />
+                <div className="p-4"><RoscaDasUnidades resumo={resumoRanking} /></div>
+              </Card>
             )}
-            {breakdown.map((t) => (
-              <ProgressBar
-                key={t.name}
-                label={`${t.name} (peso ${t.weight})`}
-                value={t.scorePct}
-                valueLabel={`${t.done}/${t.resolved} · ${t.scorePct}%`}
-              />
-            ))}
+            <Card>
+              <PanelHeader title="Tarefas do mês" icon={<span className="sgo-panel__ic sgo-panel__ic--blue" aria-hidden><ListChecks className="h-4 w-4" /></span>} />
+              <div className="p-4"><RoscaDasTarefas composicao={composicao} /></div>
+            </Card>
           </div>
-        </section>
+
+          {/* Composição: cada componente com seu peso e o quanto rendeu — a mesma conta de sempre, agora em rosca + tabela. */}
+          <Card>
+            <PanelHeader title="Composição da meta" icon={<span className="sgo-panel__ic sgo-panel__ic--amber" aria-hidden><PieChart className="h-4 w-4" /></span>} count={composicao.fatias.length} />
+            <div className="p-4">
+              {breakdown.length === 0 ? (
+                <p className="text-sm text-ink-500">Sem tarefas resolvidas no mês ainda.</p>
+              ) : (
+                <>
+                  <ProgressBar
+                    className="mb-4"
+                    label={isAdminView ? shortUnitName(selected.name) : 'Minha Meta do Mês'}
+                    value={score.scorePct}
+                    valueLabel={`${score.scorePct}%`}
+                    tone={score.scorePct >= 80 ? 'success' : score.scorePct >= 50 ? 'warning' : 'danger'}
+                  />
+                  <RoscaDaComposicao composicao={composicao} />
+                </>
+              )}
+            </div>
+          </Card>
+        </>
       )}
     </div>
   );
