@@ -110,6 +110,11 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/people/evaluation': { modulo: 'PEOPLE_EVALUATION', exigir: 'editar' },
   // modelos de avaliação por função (v1.161.0): configuração, só Admin/CEO na lib
   '/api/people/evaluation/modelos': { modulo: 'CONFIG_EVALUATION', exigir: 'editar' },
+  // plano de desenvolvimento e revisão (v1.162.0): quem edita a avaliação; perfis conferidos na lib
+  '/api/people/evaluation/pdi': { modulo: 'PEOPLE_EVALUATION', exigir: 'editar' },
+  '/api/people/evaluation/revisao': { modulo: 'PEOPLE_EVALUATION', exigir: 'editar' },
+  // painel: quem vê a tela baixa o Excel dela
+  '/api/people/evaluation/painel/export': { modulo: 'PEOPLE_EVALUATION', exigir: 'ver' },
   '/api/hora-extra/export': { modulo: 'HORA_EXTRA', exigir: 'ver' },
   '/api/hora-extra/vinculo': { modulo: 'HORA_EXTRA', exigir: 'editar' },
   '/api/people/payouts': { modulo: 'PEOPLE_PAYOUTS', exigir: 'editar' },

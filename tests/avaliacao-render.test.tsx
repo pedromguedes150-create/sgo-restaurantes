@@ -24,7 +24,7 @@ const modelo = { id: 'm1', name: 'Cozinheiro', managerial: false, version: 1, cr
 
 const linha = (p: Partial<EvalRow>): EvalRow => ({
   collaboratorId: 'c1', name: 'Ana Cozinheira', jobTitle: 'COZINHEIRO(A)', unitId: 'u1', unitName: 'Centro', observationCount: 0,
-  modelo, permissao: { pode: true, motivo: null }, ferias: false, evaluation: null, ...p,
+  modelo, permissao: { pode: true, motivo: null }, ferias: false, evaluation: null, anterior: null, planos: { abertos: 0, vencidos: 0 }, ...p,
 });
 
 describe('Avaliação do colaborador — quadro', () => {
@@ -33,7 +33,7 @@ describe('Avaliação do colaborador — quadro', () => {
       linha({}),
       linha({ collaboratorId: 'c2', name: 'Bruno Sem Cargo', jobTitle: 'CARGO NOVO', modelo: null, permissao: { pode: false, motivo: 'SEM_MODELO' } }),
       linha({ collaboratorId: 'c3', name: 'Carla Encarregada', modelo: { ...modelo, managerial: true, name: 'Gerente / Encarregado' }, permissao: { pode: false, motivo: 'GERENCIAL' }, ferias: true }),
-      linha({ collaboratorId: 'c4', name: 'Davi Avaliado', evaluation: { nota: 4.37, classificacao: 'BOM', respostas: [], legado: null, modelName: 'Cozinheiro', modelVersion: 1, comments: null, evaluatorName: 'Ger', updatedAt: '2026-10-08T10:00:00Z' } }),
+      linha({ collaboratorId: 'c4', name: 'Davi Avaliado', evaluation: { id: 'e4', nota: 4.37, classificacao: 'BOM', respostas: [], legado: null, modelName: 'Cozinheiro', modelVersion: 1, comments: null, evaluatorName: 'Ger', updatedAt: '2026-10-08T10:00:00Z', revisao: null } }),
     ];
     const html = semSeparadores(renderToString(<EvaluationClient rows={rows} yearMonth="2026-10" months={['2026-10', '2026-09']} isAdmin={false} weight={0} semCpf />));
     expect(html).toContain('Sem modelo');

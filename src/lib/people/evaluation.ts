@@ -65,6 +65,7 @@ export async function getEvaluationMonthStats(unitId: string, yearMonth: string)
 // ===== Quadro de avaliação ===================================================
 
 export interface AvaliacaoGravada {
+  id: string;
   nota: number | null;
   classificacao: Classificacao | null;
   /** Respostas por critério (formato por função). Vazio nas avaliações antigas. */
@@ -76,6 +77,8 @@ export interface AvaliacaoGravada {
   comments: string | null;
   evaluatorName: string;
   updatedAt: string;
+  /** Revisão pedida pela Supervisão (v1.162.0): aberta até o avaliador salvar de novo. */
+  revisao: { porNome: string; em: string; motivo: string; resolvidaEm: string | null } | null;
 }
 
 export interface EvaluationRow {
@@ -92,17 +95,24 @@ export interface EvaluationRow {
   /** Férias cobrindo algum dia do mês (segue ativo; o avaliador leva em conta). */
   ferias: boolean;
   evaluation: AvaliacaoGravada | null;
+  /** A avaliação mais recente ANTES do mês pedido, por critério — base da evolução do plano de desenvolvimento. */
+  anterior: { yearMonth: string; nota: number | null; scores: Record<string, number | null> } | null;
+  /** Planos de desenvolvimento em aberto (não concluídos) e quantos venceram. */
+  planos: { abertos: number; vencidos: number };
 }
 
 function montarGravada(e: {
+  id: string;
   punctuality: number | null; performance: number | null; teamwork: number | null; presentation: number | null;
   finalScore: number | null; classification: string | null; scores: unknown; modelName: string | null;
   comments: string | null; evaluatorName: string; updatedAt: Date; modelVersion?: { version: number } | null;
+  reviewRequestedByName?: string | null; reviewRequestedAt?: Date | null; reviewReason?: string | null; reviewResolvedAt?: Date | null;
 }): AvaliacaoGravada {
   const legado = e.finalScore == null && e.punctuality != null && e.performance != null && e.teamwork != null && e.presentation != null
     ? { punctuality: e.punctuality, performance: e.performance, teamwork: e.teamwork, presentation: e.presentation }
     : null;
   return {
+    id: e.id,
     nota: notaDaAvaliacao(e),
     classificacao: (e.classification as Classificacao | null) ?? null,
     respostas: lerRespostas(e.scores),
@@ -112,6 +122,9 @@ function montarGravada(e: {
     comments: e.comments,
     evaluatorName: e.evaluatorName,
     updatedAt: e.updatedAt.toISOString(),
+    revisao: e.reviewRequestedAt
+      ? { porNome: e.reviewRequestedByName ?? '—', em: e.reviewRequestedAt.toISOString(), motivo: e.reviewReason ?? '', resolvidaEm: e.reviewResolvedAt?.toISOString() ?? null }
+      : null,
   };
 }
 
@@ -133,12 +146,24 @@ export async function listEvaluationBoard(user: SessionUser, yearMonth: string):
     prisma.user.findUnique({ where: { id: user.id }, select: { cpf: true } }),
   ]);
   const ids = collabs.map((c) => c.id);
-  const [evals, obsCounts] = await Promise.all([
+  const [evals, obsCounts, anteriores, planosAbertos] = await Promise.all([
     prisma.collaboratorEvaluation.findMany({ where: { collaboratorId: { in: ids }, yearMonth }, include: { modelVersion: { select: { version: true } } } }),
     prisma.collaboratorObservation.groupBy({ by: ['collaboratorId'], where: { collaboratorId: { in: ids } }, _count: true }),
+    /* a mais recente ANTES do mês: uma por colaborador */
+    prisma.collaboratorEvaluation.findMany({ where: { collaboratorId: { in: ids }, yearMonth: { lt: yearMonth } }, orderBy: [{ collaboratorId: 'asc' }, { yearMonth: 'desc' }], distinct: ['collaboratorId'], select: { collaboratorId: true, yearMonth: true, finalScore: true, punctuality: true, performance: true, teamwork: true, presentation: true, scores: true } }),
+    prisma.developmentPlan.findMany({ where: { collaboratorId: { in: ids }, status: { not: 'DONE' } }, select: { collaboratorId: true, dueDate: true } }),
   ]);
   const evalBy = new Map(evals.map((e) => [e.collaboratorId, e]));
   const obsBy = new Map(obsCounts.map((o) => [o.collaboratorId, o._count]));
+  const anteriorBy = new Map(anteriores.map((a) => [a.collaboratorId, a]));
+  const hojeIso = new Date().toISOString().slice(0, 10);
+  const planosBy = new Map<string, { abertos: number; vencidos: number }>();
+  for (const p of planosAbertos) {
+    const atual = planosBy.get(p.collaboratorId) ?? { abertos: 0, vencidos: 0 };
+    atual.abertos++;
+    if (p.dueDate.toISOString().slice(0, 10) < hojeIso) atual.vencidos++;
+    planosBy.set(p.collaboratorId, atual);
+  }
   const modeloPorCargo = new Map(vinculos.map((v) => [v.jobTitleKey, v.modelId]));
   const modeloPorId = new Map(modelos.map((m) => [m.id, m]));
 
@@ -161,6 +186,14 @@ export async function listEvaluationBoard(user: SessionUser, yearMonth: string):
       permissao: quemPodeAvaliar({ role: user.role, managerial: modelo?.managerial ?? false, semModelo: !modelo, cpfUsuario: eu?.cpf ?? null, cpfColaborador: c.cpf }),
       ferias: c.vacations.length > 0,
       evaluation: e ? montarGravada(e) : null,
+      anterior: (() => {
+        const a = anteriorBy.get(c.id);
+        if (!a) return null;
+        const scores: Record<string, number | null> = {};
+        for (const r of lerRespostas(a.scores)) scores[r.key] = r.score;
+        return { yearMonth: a.yearMonth, nota: notaDaAvaliacao(a), scores };
+      })(),
+      planos: planosBy.get(c.id) ?? { abertos: 0, vencidos: 0 },
     };
   });
 }
@@ -214,13 +247,16 @@ export async function saveEvaluation(
   if (nota == null || !classificacao) return { ok: false, reason: 'INVALID', erros: ['Todos os critérios estão N/A — não há o que avaliar.'] };
   const comments = (input.comments ?? '').trim().slice(0, 2000) || null;
 
-  const anterior = await prisma.collaboratorEvaluation.findUnique({ where: { collaboratorId_yearMonth: { collaboratorId, yearMonth } }, select: { finalScore: true, classification: true, punctuality: true, performance: true, teamwork: true, presentation: true, evaluatorName: true } });
+  const anterior = await prisma.collaboratorEvaluation.findUnique({ where: { collaboratorId_yearMonth: { collaboratorId, yearMonth } }, select: { finalScore: true, classification: true, punctuality: true, performance: true, teamwork: true, presentation: true, evaluatorName: true, reviewRequestedAt: true, reviewResolvedAt: true } });
+  /* Revisão aberta pela Supervisão: salvar de novo é o que a resolve (v1.162.0). */
+  const revisaoAberta = !!anterior?.reviewRequestedAt && !anterior.reviewResolvedAt;
   const dados = {
     modelId: modelo.id, modelVersionId: modelo.versionId, modelName: modelo.name, jobTitle: collab.jobTitle,
     scores: validado.gravar as object[], finalScore: nota, classification: classificacao,
     /* Formato antigo fica nulo na avaliação nova — a nota mora em finalScore. */
     punctuality: null, performance: null, teamwork: null, presentation: null,
     comments, evaluatorId: user.id, evaluatorName: user.name,
+    ...(revisaoAberta ? { reviewResolvedAt: new Date() } : {}),
   };
   await prisma.collaboratorEvaluation.upsert({
     where: { collaboratorId_yearMonth: { collaboratorId, yearMonth } },
@@ -234,6 +270,7 @@ export async function saveEvaluation(
       name: collab.name, yearMonth, modelo: modelo.name, versao: modelo.version, nota, classificacao,
       respostas: validado.gravar.map((r) => ({ key: r.key, score: r.score, justification: r.justification })),
       antes: anterior ? { nota: notaDaAvaliacao(anterior), classificacao: anterior.classification, avaliador: anterior.evaluatorName } : null,
+      revisaoResolvida: revisaoAberta,
     },
     ...ctx,
   });

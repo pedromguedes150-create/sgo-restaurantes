@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.162.0 — 2026-10-08 (Avaliação: plano de desenvolvimento, revisão e painel)
+### Novo
+- **Plano de desenvolvimento individual** no cartão do colaborador: critério a melhorar, ação ou treinamento, responsável (avisado), prazo e situação Pendente / Em andamento / Concluído; prazo passado sem concluir aparece como **Vencido**. Na avaliação seguinte o SGO mostra a **evolução** da nota do critério (evoluiu, sem mudança, piorou).
+- **Solicitar revisão** (Supervisão): pede ao avaliador que reveja uma avaliação, com motivo; o avaliador é avisado, vê o motivo no cartão e encerra a revisão ao salvar de novo. Rastreável na Auditoria.
+- **Aba Painel** em Pessoas → Avaliação do colaborador: avaliações e cobertura, média geral, classificação, evolução mensal, por unidade, por função, colaboradores abaixo do esperado (última nota < 2,50), critérios com maior dificuldade e planos de desenvolvimento. Filtros por período (meses), unidade, função e colaborador. **Excel** (7 abas) e **PDF** com o mesmo recorte.
+
 ## v1.161.0 — 2026-10-08 (Avaliação do colaborador por FUNÇÃO)
 ### Novo
 - **Avaliação por função**: cada cargo do RH aponta para um modelo com 8 critérios — 4 gerais (40%: pontualidade e assiduidade, disciplina, trabalho em equipe, organização/higiene/apresentação) e 4 específicos da função (60%). A nota final é a média ponderada (1,00 a 5,00), calculada na hora, com a classificação Excelente / Bom / Regular / Necessita melhorar.
