@@ -1960,16 +1960,63 @@ model CollaboratorEvaluation {
   scores           Json?
   finalScore       Float? // média ponderada, 1,00–5,00
   classification   String? // EXCELENTE | BOM | REGULAR | MELHORAR
+  /// Revisão pedida pela Supervisão (v1.162.0): fica aberta até o avaliador
+  /// salvar de novo (`reviewResolvedAt`). Rastreável: quem, quando, por quê.
+  reviewRequestedById   String?
+  reviewRequestedByName String?
+  reviewRequestedAt     DateTime?
+  reviewReason          String?
+  reviewResolvedAt      DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   model        EvaluationModel?        @relation(fields: [modelId], references: [id], onDelete: SetNull)
   modelVersion EvaluationModelVersion? @relation(fields: [modelVersionId], references: [id], onDelete: SetNull)
+  plans        DevelopmentPlan[]
 
   @@unique([collaboratorId, yearMonth])
   @@index([unitId, yearMonth])
   @@index([modelId, yearMonth])
   @@map("collaborator_evaluations")
+}
+
+// ===== Plano de desenvolvimento individual (v1.162.0) =========================
+
+enum DevelopmentPlanStatus {
+  PENDING // Pendente
+  IN_PROGRESS // Em andamento
+  DONE // Concluído
+}
+
+/// Ação combinada com o colaborador quando a avaliação aponta baixo desempenho:
+/// critério, ação/treinamento, responsável pelo acompanhamento, prazo e
+/// situação. "Vencido" é DERIVADO (prazo < hoje e não concluído), nunca gravado.
+model DevelopmentPlan {
+  id               String                @id @default(cuid())
+  evaluationId     String?
+  collaboratorId   String
+  collaboratorName String
+  unitId           String
+  yearMonth        String // mês da avaliação de origem ('YYYY-MM')
+  criterionKey     String?
+  criterionLabel   String
+  action           String
+  responsibleId    String?
+  responsibleName  String
+  dueDate          DateTime
+  status           DevelopmentPlanStatus @default(PENDING)
+  note             String?
+  createdById      String
+  createdByName    String
+  completedAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  evaluation CollaboratorEvaluation? @relation(fields: [evaluationId], references: [id], onDelete: SetNull)
+
+  @@index([collaboratorId])
+  @@index([unitId, status])
+  @@map("development_plans")
 }
 
 // ===== Avaliação por FUNÇÃO (v1.161.0) ========================================

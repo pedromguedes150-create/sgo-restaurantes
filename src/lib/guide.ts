@@ -1097,6 +1097,9 @@ export const GUIDE: GuideSection[] = [
           'A aba "Apoio do mês" mostra o que o SGO registrou (escala, setor, treinamentos, checklists, observações) só para ajudar a leitura — nada desconta nota, e atestado não entra.',
           'Quem avalia quem: gerente e coordenador avaliam a equipe da unidade; Gerente/Encarregado é avaliado pela Supervisão; ninguém avalia a si próprio (o SGO reconhece você pelo CPF do Meu Perfil). Cargo sem modelo aparece com aviso e só pode ser avaliado depois que o Admin vincular.',
           'As avaliações antigas (4 critérios) ficam no histórico como estavam; reavaliar o mês pelo modelo substitui a nota.',
+          'Nota abaixo de 2,50: cadastre um Plano de desenvolvimento no próprio cartão — critério a melhorar, ação ou treinamento, responsável e prazo. Mude a situação (Pendente → Em andamento → Concluído) ali mesmo; prazo passado sem concluir aparece como Vencido. Na avaliação do mês seguinte o SGO mostra se a nota do critério evoluiu.',
+          'A Supervisão pode pedir revisão de uma avaliação (botão "Solicitar revisão", com motivo). O avaliador recebe o aviso, vê o motivo no cartão e encerra a revisão ao salvar a avaliação de novo. Tudo fica na Auditoria.',
+          'A aba "Painel" mostra cobertura (avaliações ÷ ativos × meses), média por unidade e por função, evolução mensal, quem está abaixo do esperado, os critérios com mais dificuldade e os planos — com filtros de período, unidade, função e colaborador, e botões Excel e PDF com o mesmo recorte.',
         ],
       },
       {

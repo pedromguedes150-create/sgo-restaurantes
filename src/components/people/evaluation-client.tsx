@@ -12,6 +12,7 @@ import { postAdmin } from '@/lib/admin-client';
 import { cn } from '@/lib/utils';
 import { Select } from '@/components/ui/ds/select';
 import { shortUnitName } from '@/lib/unit-name';
+import { PlanosDeDesenvolvimento, RevisaoDaAvaliacao } from '@/components/people/pdi-revisao';
 import {
   calcularNota, fmtNota, pesosEfetivos, validarRespostas, NOTA_BAIXA, PESO_ESPECIFICOS, PESO_GERAIS, ROTULO_CLASSIFICACAO, ROTULO_MOTIVO, ROTULO_NOTA,
   type Classificacao, type Criterio, type MotivoSemAvaliar, type Resposta, type RespostaGravada,
@@ -23,10 +24,14 @@ export interface EvalRow {
   permissao: { pode: boolean; motivo: MotivoSemAvaliar | null };
   ferias: boolean;
   evaluation: {
+    id: string;
     nota: number | null; classificacao: Classificacao | null; respostas: RespostaGravada[];
     legado: { punctuality: number; performance: number; teamwork: number; presentation: number } | null;
     modelName: string | null; modelVersion: number | null; comments: string | null; evaluatorName: string; updatedAt: string;
+    revisao: { porNome: string; em: string; motivo: string; resolvidaEm: string | null } | null;
   } | null;
+  anterior: { yearMonth: string; nota: number | null; scores: Record<string, number | null> } | null;
+  planos: { abertos: number; vencidos: number };
 }
 interface Obs { id: string; text: string; authorName: string; createdAt: string }
 interface Hist { yearMonth: string; nota: number | null; classificacao: Classificacao | null; modelName: string | null; legado: unknown; comments: string | null; evaluatorName: string }
@@ -57,8 +62,13 @@ const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
  * vivo pela MESMA conta do servidor (`calcularNota`). Quem pode avaliar quem
  * vem do servidor em `permissao` — a tela só mostra o motivo.
  */
-export function EvaluationClient({ rows, yearMonth, months, isAdmin, weight, semCpf }: {
+export function EvaluationClient({ rows, yearMonth, months, isAdmin, weight, semCpf, podeRevisar = false, podePlanejar = false, meuNome = '' }: {
   rows: EvalRow[]; yearMonth: string; months: string[]; isAdmin: boolean; weight: number; semCpf: boolean;
+  /** Supervisão: pode pedir revisão de uma avaliação (v1.162.0). */
+  podeRevisar?: boolean;
+  /** Quem avalia: cadastra e acompanha planos de desenvolvimento (v1.162.0). */
+  podePlanejar?: boolean;
+  meuNome?: string;
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<'PENDING' | 'ALL'>('PENDING');
@@ -144,7 +154,7 @@ export function EvaluationClient({ rows, yearMonth, months, isAdmin, weight, sem
         <p className="text-sm text-ink-500">{busca ? 'Ninguém com esse nome ou função.' : filter === 'PENDING' ? 'Todos os colaboradores do mês já foram avaliados. 🎉' : 'Nenhum colaborador no seu escopo.'}</p>
       )}
       <div className="space-y-2">
-        {shown.map((r) => <EvalCard key={r.collaboratorId} r={r} yearMonth={yearMonth} />)}
+        {shown.map((r) => <EvalCard key={r.collaboratorId} r={r} yearMonth={yearMonth} podeRevisar={podeRevisar} podePlanejar={podePlanejar} meuNome={meuNome} />)}
       </div>
     </div>
   );
@@ -184,7 +194,7 @@ function rascunhoInicial(r: EvalRow): Rascunho {
   return out;
 }
 
-function EvalCard({ r, yearMonth }: { r: EvalRow; yearMonth: string }) {
+function EvalCard({ r, yearMonth, podeRevisar, podePlanejar, meuNome }: { r: EvalRow; yearMonth: string; podeRevisar: boolean; podePlanejar: boolean; meuNome: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'AVALIAR' | 'APOIO' | 'OBS' | 'HIST'>('AVALIAR');
@@ -266,6 +276,9 @@ function EvalCard({ r, yearMonth }: { r: EvalRow; yearMonth: string }) {
           {!r.modelo && <StatusBadge tone="critical">Sem modelo</StatusBadge>}
           {r.modelo?.managerial && <StatusBadge tone="neutral">Gerencial</StatusBadge>}
           {r.observationCount > 0 && <span className="text-xs text-ink-500">{r.observationCount} obs.</span>}
+          {r.planos.vencidos > 0 && <StatusBadge tone="critical">Plano vencido</StatusBadge>}
+          {r.planos.vencidos === 0 && r.planos.abertos > 0 && <StatusBadge tone="neutral">Plano em aberto</StatusBadge>}
+          {r.evaluation?.revisao && !r.evaluation.revisao.resolvidaEm && <StatusBadge tone="medium">Revisão pedida</StatusBadge>}
           {r.evaluation ? <NotaBadge nota={r.evaluation.nota} classificacao={r.evaluation.classificacao} /> : <StatusBadge tone="medium">A avaliar</StatusBadge>}
         </span>
       </button>
@@ -289,6 +302,9 @@ function EvalCard({ r, yearMonth }: { r: EvalRow; yearMonth: string }) {
 
           {tab === 'AVALIAR' && (
             <div className="space-y-3">
+              {r.evaluation?.revisao && !r.evaluation.revisao.resolvidaEm && (
+                <RevisaoDaAvaliacao evaluationId={r.evaluation.id} revisao={r.evaluation.revisao} podeRevisar={false} />
+              )}
               {!podeEditar && r.permissao.motivo && (
                 <p className="rounded-md bg-canvas p-2 text-xs text-ink-700" data-testid="motivo-sem-avaliar">{ROTULO_MOTIVO[r.permissao.motivo]}</p>
               )}
@@ -330,6 +346,18 @@ function EvalCard({ r, yearMonth }: { r: EvalRow; yearMonth: string }) {
               )}
               {podeEditar && r.modelo && (
                 <Button size="sm" variant="gold" disabled={busy} onClick={saveEval}>{r.evaluation ? 'Atualizar avaliação' : 'Salvar avaliação'}</Button>
+              )}
+              {r.evaluation && (podeRevisar || r.evaluation.revisao?.resolvidaEm) && (!r.evaluation.revisao || r.evaluation.revisao.resolvidaEm) && (
+                <RevisaoDaAvaliacao evaluationId={r.evaluation.id} revisao={r.evaluation.revisao} podeRevisar={podeRevisar} />
+              )}
+              {(podePlanejar || r.planos.abertos > 0) && r.modelo && (
+                <PlanosDeDesenvolvimento
+                  collaboratorId={r.collaboratorId} evaluationId={r.evaluation?.id ?? null} yearMonth={yearMonth} criterios={criterios}
+                  atual={Object.fromEntries((r.evaluation?.respostas ?? []).map((x) => [x.key, x.score]))}
+                  anterior={r.anterior ? { yearMonth: r.anterior.yearMonth, scores: r.anterior.scores } : null}
+                  podePlanejar={podePlanejar} meuNome={meuNome}
+                  sugerir={r.evaluation?.nota != null && r.evaluation.nota < NOTA_BAIXA}
+                />
               )}
             </div>
           )}
