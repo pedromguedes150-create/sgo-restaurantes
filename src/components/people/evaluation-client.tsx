@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -62,8 +62,10 @@ const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
  * vivo pela MESMA conta do servidor (`calcularNota`). Quem pode avaliar quem
  * vem do servidor em `permissao` — a tela só mostra o motivo.
  */
-export function EvaluationClient({ rows, yearMonth, months, isAdmin, weight, semCpf, podeRevisar = false, podePlanejar = false, meuNome = '' }: {
+export function EvaluationClient({ rows, yearMonth, months, isAdmin, weight, semCpf, podeRevisar = false, podePlanejar = false, meuNome = '', abrirId = null }: {
   rows: EvalRow[]; yearMonth: string; months: string[]; isAdmin: boolean; weight: number; semCpf: boolean;
+  /** Colaborador que deve abrir já expandido (vindo do Perfil 360, `?colaborador=`). */
+  abrirId?: string | null;
   /** Supervisão: pode pedir revisão de uma avaliação (v1.162.0). */
   podeRevisar?: boolean;
   /** Quem avalia: cadastra e acompanha planos de desenvolvimento (v1.162.0). */
@@ -71,7 +73,8 @@ export function EvaluationClient({ rows, yearMonth, months, isAdmin, weight, sem
   meuNome?: string;
 }) {
   const router = useRouter();
-  const [filter, setFilter] = useState<'PENDING' | 'ALL'>('PENDING');
+  /* Chegando pelo Perfil 360 a pessoa pode já estar avaliada: a lista abre em "Todos" para ela não sumir. */
+  const [filter, setFilter] = useState<'PENDING' | 'ALL'>(abrirId ? 'ALL' : 'PENDING');
   const [unitFilter, setUnitFilter] = useState('ALL');
   const [busca, setBusca] = useState('');
   const [busy, setBusy] = useState(false);
@@ -154,7 +157,7 @@ export function EvaluationClient({ rows, yearMonth, months, isAdmin, weight, sem
         <p className="text-sm text-ink-500">{busca ? 'Ninguém com esse nome ou função.' : filter === 'PENDING' ? 'Todos os colaboradores do mês já foram avaliados. 🎉' : 'Nenhum colaborador no seu escopo.'}</p>
       )}
       <div className="space-y-2">
-        {shown.map((r) => <EvalCard key={r.collaboratorId} r={r} yearMonth={yearMonth} podeRevisar={podeRevisar} podePlanejar={podePlanejar} meuNome={meuNome} />)}
+        {shown.map((r) => <EvalCard key={r.collaboratorId} r={r} yearMonth={yearMonth} podeRevisar={podeRevisar} podePlanejar={podePlanejar} meuNome={meuNome} abrir={r.collaboratorId === abrirId} />)}
       </div>
     </div>
   );
@@ -194,9 +197,24 @@ function rascunhoInicial(r: EvalRow): Rascunho {
   return out;
 }
 
-function EvalCard({ r, yearMonth, podeRevisar, podePlanejar, meuNome }: { r: EvalRow; yearMonth: string; podeRevisar: boolean; podePlanejar: boolean; meuNome: string }) {
+function EvalCard({ r, yearMonth, podeRevisar, podePlanejar, meuNome, abrir = false }: { r: EvalRow; yearMonth: string; podeRevisar: boolean; podePlanejar: boolean; meuNome: string; abrir?: boolean }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(abrir);
+  const cartao = useRef<HTMLDivElement>(null);
+  /* Vindo do Perfil 360: o cartão já nasce aberto e a página rola até ele. */
+  useEffect(() => {
+    if (!abrir) return;
+    /* Só depois que a animação de entrada da página termina: enquanto ela
+       desloca o conteúdo, a posição do cartão sai errada e a rolagem vai parar
+       no fim da página (visto no navegador). Rolagem instantânea, sem "smooth",
+       para a página não ficar deslizando enquanto os dados do cartão chegam. */
+    let vivo = true;
+    const rolar = () => { if (vivo) cartao.current?.scrollIntoView({ block: 'start' }); };
+    const animacoes = typeof document.getAnimations === 'function' ? document.getAnimations() : [];
+    void Promise.all(animacoes.map((a) => a.finished.catch(() => undefined))).then(() => setTimeout(rolar, 50));
+    const rede = setTimeout(rolar, 1200);
+    return () => { vivo = false; clearTimeout(rede); };
+  }, [abrir]);
   const [tab, setTab] = useState<'AVALIAR' | 'APOIO' | 'OBS' | 'HIST'>('AVALIAR');
   const [busy, setBusy] = useState(false);
   const [erros, setErros] = useState<string[]>([]);
@@ -262,7 +280,7 @@ function EvalCard({ r, yearMonth, podeRevisar, podePlanejar, meuNome }: { r: Eva
   const setJust = (key: string, justification: string) => setRascunho((s) => ({ ...s, [key]: { score: s[key]?.score, justification } }));
 
   return (
-    <div className="rounded-lg border bg-surface" data-testid={`colab-${r.collaboratorId}`}>
+    <div ref={cartao} className={cn('scroll-mt-24 rounded-lg border bg-surface', abrir && 'border-brand')} data-testid={`colab-${r.collaboratorId}`}>
       <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between gap-2 p-3 text-left">
         <span className="flex min-w-0 items-center gap-2">
           {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}

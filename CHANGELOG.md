@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.162.3 — 2026-10-08 (Avaliar pelo Perfil 360 abre a pessoa certa)
+### Corrigido
+- O botão **Avaliar** do Perfil 360 passou a abrir a Avaliação do colaborador já no cartão daquela pessoa — expandido, destacado e com a página rolada até ele — em vez de cair na lista geral. A lista abre em "Todos" nesse caso, para a pessoa já avaliada no mês não ficar escondida.
+
 ## v1.162.2 — 2026-10-08 (Perfil 360: cabeçalhos em bordô e linhas em tom claro)
 ### Alterado
 - No **Perfil 360**, cada grupo de indicadores e cada painel (Férias, Avaliações, Hora extra, Histórico) ganhou cabeçalho sólido em bordô com texto branco, e as linhas passaram a cartões em tom claro da mesma cor — nas cores que o SGO já usa, nos temas claro e escuro. As avaliações mensais ganharam barras por mês ao lado da nota atual.

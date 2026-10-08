@@ -81,6 +81,7 @@ export default async function AvaliacaoPage({ searchParams }: { searchParams: Re
             isAdmin={user.role === 'ADMIN'}
             weight={weight}
             semCpf={podeAvaliarAlguem && !eu?.cpf}
+            abrirId={rows.some((r) => r.collaboratorId === searchParams.colaborador) ? (searchParams.colaborador as string) : null}
             podeRevisar={podeRevisar(user.role)}
             podePlanejar={podePlanejar(user.role)}
             meuNome={user.name}
