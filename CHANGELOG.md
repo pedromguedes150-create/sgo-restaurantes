@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.165.0 — 2026-10-09 (Higiene: formulário do QR com o visual do mockup)
+### Melhorado
+- **Página do QR do banheiro** redesenhada como o mockup do Pedro: cabeçalho em bordô com o beija-flor do sistema e o selo "Sua solicitação vai direto para a nossa equipe", passos numerados — **1. Qual banheiro?** (cartões com pictograma feminino/masculino/PCD, escolhido pelo nome cadastrado), **2. O que está acontecendo?** (cartões com ícone, um ou mais), **3. Observações (opcional, 0/200)** — aviso "Um toque já avisa a equipe. Não precisa se identificar." e o botão **Enviar Solicitação**. Tela de obrigado e estrelas no mesmo visual.
+- Novo motivo **"Necessita de manutenção"** ao lado dos de sempre.
+- A lógica não mudou: cada motivo marcado vira o mesmo aviso de antes (janela de 5 min contra repetição, alerta ao gerente e coordenador); o QR de um banheiro continua pulando a escolha; "Outro problema" continua exigindo o texto; a avaliação continua depois do envio e opcional.
+
 ## v1.164.0 — 2026-10-08 (Metas: aba "Uso do SGO" — relatório executivo para a bonificação)
 ### Novo
 - **Uso do SGO** (aba ao lado de Metas, para Admin/CEO/Supervisão): quem usa o sistema, **rede unidade por unidade e usuário por usuário**, no mês escolhido. Cartões (uso médio da rede, usuários ativos × sem nenhuma ação, ações no sistema e acessos, tarefas no prazo), rosca de unidades por faixa de uso, **Destaques do mês** (unidade que mais usa, que menos usa, que mais deixa de fazer, que mais erra o prazo, usuário que mais usa, quem não fez nada), tabela por unidade (uso, checklists, desperdício, comandas, no prazo / fora / não feitas, % de falhas, ações, usuários ativos/vinculados, meta) e tabela por usuário (perfil, unidades, acessos, ações, módulos mais usados, tarefas concluídas, fora do prazo, último acesso).

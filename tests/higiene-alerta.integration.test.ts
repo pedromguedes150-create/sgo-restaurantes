@@ -38,7 +38,7 @@ afterAll(async () => {
 
 describe('QR do banheiro → alerta', () => {
   it('os motivos de um toque são os do pedido', () => {
-    expect(HYGIENE_ISSUES).toEqual(['Precisa de limpeza', 'Falta papel', 'Falta sabonete', 'Lixo cheio', 'Outro']);
+    expect(HYGIENE_ISSUES).toEqual(['Precisa de limpeza', 'Falta papel', 'Falta sabonete', 'Lixo cheio', 'Necessita de manutenção', 'Outro']);
   });
 
   it('avisa gerente E coordenador da unidade, como crítico; outra unidade não recebe', async () => {

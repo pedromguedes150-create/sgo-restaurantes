@@ -58,5 +58,5 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   // Aplica a tudo, exceto assets estáticos do Next
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons|manifest.json).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sgo-bird-only.png).*)'],
 };
