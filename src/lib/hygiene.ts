@@ -10,7 +10,7 @@ import type { SessionUser } from '@/lib/auth/session';
  * sabonete e papel". Os rótulos antigos ('Papel/insumos', 'Piso/cheiro',
  * 'Vaso/pia') continuam valendo no histórico e na análise.
  */
-export const HYGIENE_ISSUES = ['Precisa de limpeza', 'Falta papel', 'Falta sabonete', 'Lixo cheio', 'Outro'] as const;
+export const HYGIENE_ISSUES = ['Precisa de limpeza', 'Falta papel', 'Falta sabonete', 'Lixo cheio', 'Necessita de manutenção', 'Outro'] as const;
 
 /** O mesmo aviso (banheiro + motivo) repetido dentro desta janela não vira outro alerta. */
 export const JANELA_REPETICAO_MIN = 5;
