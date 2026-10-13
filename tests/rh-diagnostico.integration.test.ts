@@ -106,7 +106,7 @@ describe('O diagnóstico concorda com o que o sync FAZ', () => {
   });
 
   it('status que o SGO não conhece é sinalizado, mas a pessoa FICA', async () => {
-    respostaDoRh = { data: [pessoa(`D${sfx}-1`, 'ESTRANHA', 'Afastado INSS')] };
+    respostaDoRh = { data: [pessoa(`D${sfx}-1`, 'ESTRANHA', 'Licença Maternidade')] };
     await syncCollaboratorsForUnit(admin, unitId);
 
     const d = await diagnosticarUnidade(admin, unitId);

@@ -161,6 +161,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/products/setores': { modulo: 'CONFIG_CD_SECTORS', exigir: 'editar' },
 
   '/api/rh/sync': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
+  // v1.166.0: razões sociais adicionais por unidade + conferência (a lib ainda exige ADMIN/CEO)
+  '/api/rh/razoes': { modulo: 'CONFIG_UNITS', exigir: 'editar' },
   '/api/rh/test': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'ver' },
   // Ping da v2: só status/erro/forma, sem dado do RH — por isso pode viver em produção.
   '/api/rh/v2/ping': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'ver' },

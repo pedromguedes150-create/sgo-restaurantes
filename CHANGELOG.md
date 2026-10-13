@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.166.0 — 2026-10-13 (RH: mais de uma razão social por unidade + status Afastado e Aposentado)
+### Novo
+- **Mais de uma razão social do RH por unidade.** Caso Nova União: a churrascaria tem gente cadastrada no RH em "COMERCIAL LINS & GUEDES LTDA (NOVA UNIÃO)" e em "COMERCIAL BEIJA FLOR NOVA UNIÃO LTDA" — as 3 pessoas da segunda (Ana Lúcia, Luciana e Verônica, admitidas em agosto) nunca entravam. Em Configurações → Unidades, cada unidade ganhou "Outras razões sociais do RH desta unidade". A ligação tem **critério obrigatório**, conferido contra o RH no servidor: **CNPJ** exato (de UMA razão social) ou **nome idêntico** ao do RH. Nada de nome parecido; CNPJ que aparece em duas empresas é recusado e a tela pede o nome. Uma razão social pertence a uma unidade só. A sincronização lê todas antes de gravar e, se qualquer uma falhar, não grava nada.
+- **Conferência das unidades com o RH** (Configurações → Unidades): para cada unidade do SGO, se o "Nome no RH" existe idêntico, quantas pessoas traz, e se o **CNPJ cadastrado na unidade** tem outra razão social que ela ainda não lê — com botão "Ligar". As demais empresas do grupo (postos, transportadora, consultoria) não aparecem.
+- **Status do RH**: **Afastado** passa a ser reconhecido — a pessoa continua no SGO, mas a sincronização abre um período de afastamento e a Escala mostra **AF** (não conta como trabalhando) enquanto o RH mantiver o status. **Aposentado** conta como trabalhando normal. O Diagnóstico do RH ganhou "Afastado (RH)".
+
 ## v1.165.0 — 2026-10-09 (Higiene: formulário do QR com o visual do mockup)
 ### Melhorado
 - **Página do QR do banheiro** redesenhada como o mockup do Pedro: cabeçalho em bordô com o beija-flor do sistema e o selo "Sua solicitação vai direto para a nossa equipe", passos numerados — **1. Qual banheiro?** (cartões com pictograma feminino/masculino/PCD, escolhido pelo nome cadastrado), **2. O que está acontecendo?** (cartões com ícone, um ou mais), **3. Observações (opcional, 0/200)** — aviso "Um toque já avisa a equipe. Não precisa se identificar." e o botão **Enviar Solicitação**. Tela de obrigado e estrelas no mesmo visual.

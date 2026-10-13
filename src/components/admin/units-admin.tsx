@@ -11,8 +11,9 @@ import { Sheet } from '@/components/ui/ds/sheet';
 import { postAdmin } from '@/lib/admin-client';
 import { DiasDeFuncionamento } from '@/components/admin/dias-de-funcionamento';
 import { rotuloDosDias } from '@/lib/units/dias-de-funcionamento';
+import { RazoesAdicionais, type RazaoAdicional } from '@/components/admin/razoes-rh';
 
-export interface UnitRow { id: string; name: string; code: string; address: string | null; cutoffHour: number; timezone: string; active: boolean; rhUnitName: string | null; cnpj: string | null; hasPizzeria: boolean; operationType?: string; operatingDays?: number[] }
+export interface UnitRow { id: string; name: string; code: string; address: string | null; cutoffHour: number; timezone: string; active: boolean; rhUnitName: string | null; cnpj: string | null; hasPizzeria: boolean; operationType?: string; operatingDays?: number[]; rhAdicionais?: RazaoAdicional[] }
 
 /** Formata 14 dígitos como CNPJ; devolve o valor cru se não tiver 14 dígitos. */
 function formatCnpj(d: string | null): string | null {
@@ -187,6 +188,7 @@ function UnitItem({ unit, onChange }: { unit: UnitRow; onChange: () => void }) {
         </div>
         {msg && <p className="mt-1 text-xs font-medium text-ink-500">{msg}</p>}
       </div>
+      <RazoesAdicionais unitId={unit.id} temPrincipal={Boolean(unit.rhUnitName)} adicionais={unit.rhAdicionais ?? []} />
     </div>
   );
 }

@@ -15,6 +15,7 @@ export const dynamic = 'force-dynamic';
 const TOM: Record<Decisao, 'success' | 'warning' | 'danger' | 'info'> = {
   ATIVO_NO_SGO: 'success',
   ATIVO_DE_FERIAS: 'info',
+  ATIVO_AFASTADO: 'info',
   ATIVO_STATUS_DESCONHECIDO: 'warning',
   INATIVO_POR_STATUS: 'danger',
   PULADO_SEM_MATRICULA: 'danger',
@@ -22,7 +23,7 @@ const TOM: Record<Decisao, 'success' | 'warning' | 'danger' | 'info'> = {
 };
 
 /* Só o que explica gente faltando — "Ativo no SGO" não precisa de explicação. */
-const ORDEM_DO_RESUMO: Decisao[] = ['PULADO_SEM_MATRICULA', 'INATIVO_POR_STATUS', 'ATIVO_DE_FERIAS', 'ATIVO_STATUS_DESCONHECIDO', 'NAO_ENCONTRADO_NO_SGO', 'ATIVO_NO_SGO'];
+const ORDEM_DO_RESUMO: Decisao[] = ['PULADO_SEM_MATRICULA', 'INATIVO_POR_STATUS', 'ATIVO_DE_FERIAS', 'ATIVO_AFASTADO', 'ATIVO_STATUS_DESCONHECIDO', 'NAO_ENCONTRADO_NO_SGO', 'ATIVO_NO_SGO'];
 
 /**
  * Diagnóstico do RH — por que falta gente numa unidade.
@@ -80,6 +81,12 @@ export default async function DiagnosticoRhPage({ searchParams }: { searchParams
               <span className="text-ink-500">Nome no RH configurado:</span>{' '}
               {d.rhUnitName ? <b className="text-ink-900">{d.rhUnitName}</b> : <i className="text-danger">não definido</i>}
             </p>
+            {d.outrasRazoes.length > 0 && (
+              <p className="text-sm" data-testid="outras-razoes">
+                <span className="text-ink-500">Também lê (razões sociais adicionais):</span>{' '}
+                {d.outrasRazoes.map((r) => <b key={r} className="mr-2 text-ink-900">{r}</b>)}
+              </p>
+            )}
             {d.nomeConfere === true && (
               <p className="flex items-center gap-1.5 text-sm text-success">
                 <CheckCircle2 className="h-4 w-4" /> Esse nome existe na lista de unidades do RH.
@@ -136,6 +143,7 @@ export default async function DiagnosticoRhPage({ searchParams }: { searchParams
                     <th className="px-2 py-1.5 font-semibold text-ink-700">Nome no RH</th>
                     <th className="px-2 py-1.5 font-semibold text-ink-700">Matrícula</th>
                     <th className="px-2 py-1.5 font-semibold text-ink-700">Cargo</th>
+                    {d.outrasRazoes.length > 0 && <th className="px-2 py-1.5 font-semibold text-ink-700">Razão social</th>}
                     <th className="px-2 py-1.5 font-semibold text-ink-700">Status no RH</th>
                     <th className="px-2 py-1.5 font-semibold text-ink-700">No SGO</th>
                   </tr>
@@ -154,6 +162,7 @@ export default async function DiagnosticoRhPage({ searchParams }: { searchParams
                         {p.matricula ?? <span className="font-semibold text-danger">sem matrícula</span>}
                       </td>
                       <td className="px-2 py-1.5 text-ink-700">{p.cargo ?? '—'}</td>
+                      {d.outrasRazoes.length > 0 && <td className="px-2 py-1.5 text-xs text-ink-500">{p.razao}</td>}
                       <td className="px-2 py-1.5 text-ink-700">{p.statusNoRh}</td>
                       <td className="px-2 py-1.5">
                         <StatusBadge tone={TOM[p.decisao]} dot>{DECISAO_LABEL[p.decisao]}</StatusBadge>

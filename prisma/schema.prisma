@@ -33,6 +33,8 @@ model Unit {
   cnpj             String?
   /// Razão social correspondente na API do RH (para casar/sincronizar colaboradores)
   rhUnitName       String?
+  /// Razões sociais ADICIONAIS do RH lidas pela sincronização desta unidade (v1.166.0). A principal segue em rhUnitName.
+  rhSources        UnitRhSource[]
   /// Fuso da unidade (exibição). Banco grava em UTC. Padrão America/Sao_Paulo.
   timezone         String            @default("America/Sao_Paulo")
   /// Hora de corte da data operacional (0-23). Padrão 04:00 (regra nº 4).
@@ -1882,6 +1884,7 @@ model Collaborator {
   paymentRequests     PaymentRequest[]
   vacationAbonos      VacationAbono[]
   vacationAjustes     VacationPeriodAdjust[]
+  rhAfastamentos      RhAfastamento[]
 
   @@index([cpf])
   @@map("collaborators")
@@ -1939,27 +1942,27 @@ model CollaboratorObservation {
 /// do modelo usada, para que mudar pesos depois não reescreva o passado.
 /// As 4 colunas antigas ficam nulas nas avaliações novas e preservam as antigas.
 model CollaboratorEvaluation {
-  id               String   @id @default(cuid())
-  collaboratorId   String
-  collaboratorName String
-  unitId           String
-  yearMonth        String // 'YYYY-MM'
-  punctuality      Int? // 1–5 (formato antigo)
-  performance      Int? // 1–5 (formato antigo)
-  teamwork         Int? // 1–5 (formato antigo)
-  presentation     Int? // 1–5 (formato antigo; apresentação/higiene)
-  comments         String?
-  evaluatorId      String
-  evaluatorName    String
+  id                    String    @id @default(cuid())
+  collaboratorId        String
+  collaboratorName      String
+  unitId                String
+  yearMonth             String // 'YYYY-MM'
+  punctuality           Int? // 1–5 (formato antigo)
+  performance           Int? // 1–5 (formato antigo)
+  teamwork              Int? // 1–5 (formato antigo)
+  presentation          Int? // 1–5 (formato antigo; apresentação/higiene)
+  comments              String?
+  evaluatorId           String
+  evaluatorName         String
   /// Formato por função (v1.161.0)
-  modelId          String?
-  modelVersionId   String?
-  modelName        String? // nome do modelo congelado
-  jobTitle         String? // cargo do RH no momento da avaliação (snapshot)
+  modelId               String?
+  modelVersionId        String?
+  modelName             String? // nome do modelo congelado
+  jobTitle              String? // cargo do RH no momento da avaliação (snapshot)
   /// [{ key, label, group: 'GERAL'|'ESPECIFICO', weight, score: 1..5 | null (N/A), justification }]
-  scores           Json?
-  finalScore       Float? // média ponderada, 1,00–5,00
-  classification   String? // EXCELENTE | BOM | REGULAR | MELHORAR
+  scores                Json?
+  finalScore            Float? // média ponderada, 1,00–5,00
+  classification        String? // EXCELENTE | BOM | REGULAR | MELHORAR
   /// Revisão pedida pela Supervisão (v1.162.0): fica aberta até o avaliador
   /// salvar de novo (`reviewResolvedAt`). Rastreável: quem, quando, por quê.
   reviewRequestedById   String?
@@ -1967,8 +1970,8 @@ model CollaboratorEvaluation {
   reviewRequestedAt     DateTime?
   reviewReason          String?
   reviewResolvedAt      DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   model        EvaluationModel?        @relation(fields: [modelId], references: [id], onDelete: SetNull)
   modelVersion EvaluationModelVersion? @relation(fields: [modelVersionId], references: [id], onDelete: SetNull)
@@ -2044,14 +2047,14 @@ model EvaluationModel {
 /// Versão IMUTÁVEL dos critérios de um modelo. Editar critério/peso cria a
 /// versão seguinte; a avaliação guarda a versão usada.
 model EvaluationModelVersion {
-  id        String   @id @default(cuid())
-  modelId   String
-  version   Int
+  id            String   @id @default(cuid())
+  modelId       String
+  version       Int
   /// [{ key, label, group: 'GERAL'|'ESPECIFICO', weight }] — pesos somam 100
-  criteria  Json
+  criteria      Json
   createdById   String?
   createdByName String?
-  createdAt DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   model       EvaluationModel          @relation(fields: [modelId], references: [id], onDelete: Cascade)
   evaluations CollaboratorEvaluation[]
@@ -3283,6 +3286,7 @@ enum DayStatus {
   ATESTADO // A  - Atestado
   FERIAS // FE - Férias
   ATRASO // AT - Atraso (trabalhou, chegou atrasado — avisa o RH p/ conferência de ponto)
+  AFASTADO // AF - Afastado (v1.166.0 — derivado do status "Afastado" do RH; não trabalha)
 }
 
 /// Como a folga do colaborador se comporta ao longo das semanas.
@@ -4604,4 +4608,56 @@ model PrepStandardChange {
 
   @@index([standardId, createdAt])
   @@map("prep_standard_changes")
+}
+
+/// Critério que autorizou ligar uma razão social do RH a uma unidade do SGO (v1.166.0).
+enum RhVinculoCriterio {
+  /// O nome digitado existe IDÊNTICO na lista de unidades do RH.
+  NOME
+  /// O CNPJ informado corresponde a UMA razão social do RH.
+  CNPJ
+}
+
+/// Razão social ADICIONAL do RH sincronizada numa unidade do SGO (v1.166.0).
+/// Caso Nova União: a churrascaria tem gente cadastrada em duas empresas no RH.
+/// Uma razão social pertence a uma unidade só (rhName @unique) — duas unidades
+/// lendo a mesma lista fariam o colaborador aparecer nas duas.
+model UnitRhSource {
+  id            String            @id @default(cuid())
+  unitId        String
+  unit          Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  /// Exatamente como o RH escreve (inclusive espaços) — é a chave da consulta.
+  rhName        String            @unique
+  /// CNPJ (só dígitos) visto no RH no momento do vínculo.
+  cnpj          String?
+  criterio      RhVinculoCriterio
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime          @default(now())
+
+  @@index([unitId])
+  @@map("unit_rh_sources")
+}
+
+/// Período de AFASTAMENTO visto no RH (v1.166.0). O RH só manda o status
+/// "Afastado", sem início nem fim: a sincronização abre o período no dia em
+/// que o vê e o ESTENDE a cada leitura enquanto o status persistir (mesma
+/// regra das férias do RH, com a mesma tolerância de buraco de sync). A Escala
+/// deriva "AF" destes períodos — a pessoa continua no SGO, mas não trabalha.
+model RhAfastamento {
+  id             String       @id @default(cuid())
+  collaboratorId String
+  collaborator   Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  unitId         String
+  /// Primeiro dia em que o RH apareceu com "Afastado" (meio-dia UTC, como a Escala).
+  startDate      DateTime
+  /// Último dia confirmado pelo RH.
+  endDate        DateTime
+  /// O texto exato do RH (ex.: "Afastado") — para o vocabulário poder crescer.
+  rhStatus       String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([collaboratorId, endDate])
+  @@map("rh_afastamentos")
 }

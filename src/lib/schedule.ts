@@ -23,13 +23,13 @@ export const TYPE_LABELS: Record<ScheduleType, string> = {
   CUSTOM: 'Personalizada',
 };
 export const STATUS_CODE: Record<DayStatus, string> = {
-  WORK: 'T', OFF: 'F', FALTA_INJUST: 'FI', FALTA_JUST: 'FJ', ATESTADO: 'A', FERIAS: 'FE', ATRASO: 'AT',
+  WORK: 'T', OFF: 'F', FALTA_INJUST: 'FI', FALTA_JUST: 'FJ', ATESTADO: 'A', FERIAS: 'FE', ATRASO: 'AT', AFASTADO: 'AF',
 };
 export const STATUS_LABEL: Record<DayStatus, string> = {
   WORK: 'Trabalho', OFF: 'Folga', FALTA_INJUST: 'Falta injustificada',
-  FALTA_JUST: 'Falta justificada', ATESTADO: 'Atestado', FERIAS: 'Férias', ATRASO: 'Atraso',
+  FALTA_JUST: 'Falta justificada', ATESTADO: 'Atestado', FERIAS: 'Férias', ATRASO: 'Atraso', AFASTADO: 'Afastado',
 };
-export const ABSENCE_TYPES: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
+export const ABSENCE_TYPES: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS', 'AFASTADO'];
 
 /* ───────── Datas (UTC ao meio-dia) ───────── */
 export function dayUTC(y: number, m: number, d: number): Date {
@@ -104,7 +104,7 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
   const collabIds = collabs.map((c) => c.id);
   const primeiroISO = `${year}-${String(month).padStart(2, '0')}-01`;
   const ultimoISO = `${year}-${String(month).padStart(2, '0')}-${String(daysCount).padStart(2, '0')}`;
-  const [patterns, overrides, actuals, atestados, ferias] = await Promise.all([
+  const [patterns, overrides, actuals, atestados, ferias, afastamentos] = await Promise.all([
     prisma.employeeSchedule.findMany({ where: { unitId, active: true }, orderBy: { startDate: 'asc' }, include: { shift: true, template: true } }),
     prisma.schedulePlanOverride.findMany({ where: { unitId, date: doMes } }),
     /* O Realizado é da PESSOA (chave única colaborador+dia), não da unidade:
@@ -131,6 +131,11 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
        pedido ao RH ainda não é férias concedida. */
     prisma.vacation.findMany({
       where: { collaboratorId: { in: collabIds }, status: { in: FERIAS_QUE_CONTAM }, startDate: { lt: doMes.lt }, endDate: { gte: doMes.gte } },
+      select: { collaboratorId: true, startDate: true, endDate: true },
+    }),
+    /* Afastamento visto no RH (v1.166.0) — também derivado do período. */
+    prisma.rhAfastamento.findMany({
+      where: { collaboratorId: { in: collabIds }, startDate: { lt: doMes.lt }, endDate: { gte: doMes.gte } },
       select: { collaboratorId: true, startDate: true, endDate: true },
     }),
   ]);
@@ -167,6 +172,17 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
     }
   }
 
+  /* Afastamento: mesma regra das férias (vence o padrão nos dois níveis;
+     atestado dentro do período continua atestado). Férias vence afastamento. */
+  const afastadoMap = new Set<string>();
+  for (const f of afastamentos) {
+    const de = isoDe(f.startDate); const ate = isoDe(f.endDate);
+    for (let d = 1; d <= daysCount; d++) {
+      const iso = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (iso >= de && iso <= ate) afastadoMap.add(`${f.collaboratorId}|${d}`);
+    }
+  }
+
   const rows: ScheduleRow[] = [];
   const withoutSchedule: { id: string; name: string }[] = [];
 
@@ -200,9 +216,10 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
           }, date)
         : plannedStatus(v, date);
       const deFerias = feriasMap.has(`${c.id}|${d}`);
-      const planned = deFerias ? 'FERIAS' : (overrideMap.get(`${c.id}|${d}`) ?? planejado);
+      const afastado = !deFerias && afastadoMap.has(`${c.id}|${d}`);
+      const planned = deFerias ? 'FERIAS' : afastado ? 'AFASTADO' : (overrideMap.get(`${c.id}|${d}`) ?? planejado);
       const gravado = actualMap.get(`${c.id}|${d}`) ?? null;
-      const actual = deFerias && gravado !== 'ATESTADO' ? 'FERIAS' : gravado;
+      const actual = deFerias && gravado !== 'ATESTADO' ? 'FERIAS' : afastado && gravado !== 'ATESTADO' ? 'AFASTADO' : gravado;
       days.push({ planned, actual });
     }
 
@@ -366,6 +383,8 @@ export async function fillActualFromPlan(
       /* Férias: derivada do período (vem no próprio Planejado) ou marcada à
          mão em "Registrar ausência" — nos dois casos não é para ser pisada. */
       if (cell.actual === 'FERIAS') continue;
+      /* Afastamento do RH (v1.166.0): idem — derivado do período, não se pisa. */
+      if (cell.actual === 'AFASTADO') continue;
       const date = dayUTC(input.year, input.month, i + 1);
       await prisma.scheduleActual.upsert({
         where: { collaboratorId_date: { collaboratorId: row.collaboratorId, date } },

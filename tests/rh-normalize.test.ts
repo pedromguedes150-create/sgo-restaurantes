@@ -93,7 +93,7 @@ describe('Status do colaborador', () => {
     /* Uma pessoa a mais na tela é visível e alguém corrige. Uma pessoa a menos
        é invisível, e ninguém procura o que não sabe que falta. Foi exatamente
        assim que as 8 de Jardim Teresópolis passaram despercebidas. */
-    for (const s of ['Afastado', 'Licença Maternidade', 'Coisa que o RH inventar', '', null, undefined]) {
+    for (const s of ['Licença Maternidade', 'Em desligamento', 'Coisa que o RH inventar', '', null, undefined]) {
       expect(classificarStatus(s), String(s)).toBe('DESCONHECIDO');
       expect(isAtivo(s), String(s)).toBe(true);
     }
@@ -105,6 +105,17 @@ describe('Status do colaborador', () => {
      e usa para marcar o dia na Escala (ver `sync.ts`) — DESCONHECIDO
      continua existindo para o que o SGO ainda não entende, e nunca deve
      disparar essa marcação. */
+  /* v1.166.0 (pedido do Pedro, com os status reais do RH em 13/10/2026:
+     Afastado 10, Aposentado 4): "afastado geralmente não vai preencher a
+     grade; aposentado não altera, está trabalhando normal". */
+  it('APOSENTADO trabalha normal; AFASTADO é classe própria e continua no SGO', () => {
+    for (const s of ['Aposentado', 'APOSENTADA', ' aposentado ']) expect(classificarStatus(s), s).toBe('ATIVO');
+    for (const s of ['Afastado', 'AFASTADA', 'Afastado INSS']) {
+      expect(classificarStatus(s), s).toBe('AFASTADO');
+      expect(isAtivo(s), s).toBe(true);
+    }
+  });
+
   it('FÉRIAS é classe própria — continua visível, mas não é mais "status novo"', () => {
     for (const s of ['Férias', 'FÉRIAS', ' férias ', 'De férias', 'Ferias']) {
       expect(classificarStatus(s), s).toBe('FERIAS');
