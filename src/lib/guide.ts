@@ -132,7 +132,7 @@ export const GUIDE: GuideSection[] = [
           'Defina os PERFIS DE ACESSO (o que cada perfil vê/edita).',
           'No Mapa de Funções, cadastre TURNOS e SETORES de cada unidade.',
           'Crie os POPs (treinamentos) marcando Inicial e/ou Setores.',
-          'Em Unidades, informe o "Nome no RH" e sincronize os colaboradores.',
+          'Em Unidades, informe o "Nome no RH" e sincronize os colaboradores. Se a mesma unidade tem gente em mais de uma empresa no RH (ex.: Nova União), ligue as outras em "Outras razões sociais do RH desta unidade" — só por CNPJ exato ou nome idêntico ao do RH. "Conferência das unidades com o RH", no fim da tela, mostra unidade por unidade se o nome existe e se o CNPJ cadastrado na unidade tem outra razão social não lida.',
         ],
         tips: [
           'A sincronização do RH normalmente roda sozinha 1×/dia — mas está SUSPENSA temporariamente (v1.132.2) até a conferência dos colaboradores: só o botão Sincronizar funciona, e ele não deve ser usado antes da conferência.',
@@ -483,7 +483,7 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Configurações → APIs & Integrações → "Diagnóstico do RH". Escolha a unidade.',
           'Primeiro confira o "Nome no RH": se ele não existir na lista do RH, a tela acusa e mostra os nomes parecidos para comparar. Um acento ou espaço a mais já faz o RH devolver lista vazia.',
-          'O resumo separa em seis: Ativo no SGO · De férias (RH) (status "Férias" — ver abaixo) · Ativo, status novo (o SGO não reconhece esse status e a pessoa aparece do mesmo jeito, mas vale conferir) · Desligado no SGO (status de desligamento — some de Pessoas, da Escala e do Mapa) · Nunca entrou (o RH mandou sem matrícula) · Ainda não sincronizado.',
+          'Status do RH (v1.166.0): "Aposentado" conta como trabalhando normal; "Afastado" continua no SGO, mas a Escala mostra AF (não trabalha) enquanto o RH mantiver o status — o período começa no dia em que a sincronização vê o afastamento. O resumo separa em: Ativo no SGO · De férias (RH) (status "Férias" — ver abaixo) · Afastado (RH) · Ativo, status novo (o SGO não reconhece esse status e a pessoa aparece do mesmo jeito, mas vale conferir) · Desligado no SGO (status de desligamento — some de Pessoas, da Escala e do Mapa) · Nunca entrou (o RH mandou sem matrícula) · Ainda não sincronizado.',
           'A tabela mostra pessoa a pessoa, com o status que veio do RH, começando pelos problemas.',
           'No fim, quem está no SGO e o RH não devolve mais — transferência, desligamento ou matrícula trocada.',
           'A tela só LÊ. Para aplicar, use o botão Sincronizar da unidade em Configurações → Unidades — ou aguarde a sincronização automática (~1×/dia).',
@@ -631,7 +631,7 @@ export const GUIDE: GuideSection[] = [
           'Defina os PERFIS DE ACESSO (o que cada perfil vê/edita).',
           'No Mapa de Funções, cadastre TURNOS e SETORES de cada unidade.',
           'Crie os POPs (treinamentos) marcando Inicial e/ou Setores.',
-          'Em Unidades, informe o "Nome no RH" e sincronize os colaboradores.',
+          'Em Unidades, informe o "Nome no RH" e sincronize os colaboradores. Se a mesma unidade tem gente em mais de uma empresa no RH (ex.: Nova União), ligue as outras em "Outras razões sociais do RH desta unidade" — só por CNPJ exato ou nome idêntico ao do RH. "Conferência das unidades com o RH", no fim da tela, mostra unidade por unidade se o nome existe e se o CNPJ cadastrado na unidade tem outra razão social não lida.',
         ],
         tips: ['A sincronização do RH também roda sozinha 1×/dia.'],
       },
@@ -975,7 +975,7 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Configurações → APIs & Integrações → "Diagnóstico do RH". Escolha a unidade.',
           'Primeiro confira o "Nome no RH": se ele não existir na lista do RH, a tela acusa e mostra os nomes parecidos para comparar. Um acento ou espaço a mais já faz o RH devolver lista vazia.',
-          'O resumo separa em seis: Ativo no SGO · De férias (RH) (status "Férias" — ver abaixo) · Ativo, status novo (o SGO não reconhece esse status e a pessoa aparece do mesmo jeito, mas vale conferir) · Desligado no SGO (status de desligamento — some de Pessoas, da Escala e do Mapa) · Nunca entrou (o RH mandou sem matrícula) · Ainda não sincronizado.',
+          'Status do RH (v1.166.0): "Aposentado" conta como trabalhando normal; "Afastado" continua no SGO, mas a Escala mostra AF (não trabalha) enquanto o RH mantiver o status — o período começa no dia em que a sincronização vê o afastamento. O resumo separa em: Ativo no SGO · De férias (RH) (status "Férias" — ver abaixo) · Afastado (RH) · Ativo, status novo (o SGO não reconhece esse status e a pessoa aparece do mesmo jeito, mas vale conferir) · Desligado no SGO (status de desligamento — some de Pessoas, da Escala e do Mapa) · Nunca entrou (o RH mandou sem matrícula) · Ainda não sincronizado.',
           'A tabela mostra pessoa a pessoa, com o status que veio do RH, começando pelos problemas.',
           'No fim, quem está no SGO e o RH não devolve mais — transferência, desligamento ou matrícula trocada.',
           'A tela só LÊ. Para aplicar, use o botão Sincronizar da unidade em Configurações → Unidades — ou aguarde a sincronização automática (~1×/dia).',

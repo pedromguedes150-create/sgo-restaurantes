@@ -98,7 +98,7 @@ describe('resumoDaGrade — os quatro blocos', () => {
     const todas = resumoDaGrade([ana, bruno, carla], 'realizado');
     expect(todas.pessoas).toBe(3);
     expect(todas.ausencias).toBe(3); // FI da Ana + 2 atestados da Carla
-    expect(todas.porAusencia).toEqual({ FALTA_INJUST: 1, FALTA_JUST: 0, ATESTADO: 2, FERIAS: 0 });
+    expect(todas.porAusencia).toEqual({ FALTA_INJUST: 1, FALTA_JUST: 0, ATESTADO: 2, FERIAS: 0, AFASTADO: 0 });
     expect(detalheDasAusencias(todas)).toBe('FI 1 · A 2');
 
     const soCozinha = resumoDaGrade(filtrarLinhas([ana, bruno, carla], { setor: 'Cozinha' }, 'realizado'), 'realizado');

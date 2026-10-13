@@ -6,6 +6,7 @@ import { notifyAdmins } from '@/lib/notifications';
 import { dayUTC } from '@/lib/schedule';
 import { currentOperationalDate } from '@/lib/date/operational';
 import type { SessionUser } from '@/lib/auth/session';
+import { nomesNoRhDaUnidade } from '@/lib/rh/razoes';
 
 export const FERIAS_ORIGEM_RH = 'RH_SYNC';
 /** A marcação diária que o sync grava em `schedule_actuals` — é a evidência que o backfill lê. */
@@ -65,6 +66,27 @@ export async function estenderFeriasDoRh(collaboratorId: string, unitId: string,
   return 'ABERTO';
 }
 
+/**
+ * Abre ou estende o AFASTAMENTO visto no RH (v1.166.0). Mesma regra das férias
+ * do RH: o RH só manda o status, sem datas — o período começa no dia em que a
+ * sincronização o vê e cresce a cada leitura enquanto o status persistir; um
+ * buraco de até TOLERANCIA_DIAS_SEM_SYNC dias estende em vez de abrir outro.
+ * Nada antes da primeira leitura é adivinhado. Quando o RH volta a "Ativo",
+ * o período simplesmente para de crescer.
+ */
+export async function estenderAfastamentoDoRh(collaboratorId: string, unitId: string, hoje: Date, rhStatus: string): Promise<'ABERTO' | 'ESTENDIDO' | 'JA_COBERTO'> {
+  const cobre = await prisma.rhAfastamento.findFirst({ where: { collaboratorId, startDate: { lte: hoje }, endDate: { gte: hoje } }, select: { id: true } });
+  if (cobre) return 'JA_COBERTO';
+  const limite = new Date(hoje.getTime() - TOLERANCIA_DIAS_SEM_SYNC * DIA_MS);
+  const contiguo = await prisma.rhAfastamento.findFirst({ where: { collaboratorId, endDate: { gte: limite, lt: hoje } }, orderBy: { endDate: 'desc' }, select: { id: true } });
+  if (contiguo) {
+    await prisma.rhAfastamento.update({ where: { id: contiguo.id }, data: { endDate: hoje, rhStatus } });
+    return 'ESTENDIDO';
+  }
+  await prisma.rhAfastamento.create({ data: { collaboratorId, unitId, startDate: hoje, endDate: hoje, rhStatus } });
+  return 'ABERTO';
+}
+
 export type SyncResult =
   | { ok: true; created: number; updated: number; total: number }
   | { ok: false; reason: 'FORBIDDEN' | 'NOT_CONFIGURED' | 'NO_RH_NAME' | 'NOT_FOUND' | 'RH_ERROR'; message?: string };
@@ -102,9 +124,25 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
   if (!unit) return { ok: false, reason: 'NOT_FOUND' };
   if (!unit.rhUnitName) return { ok: false, reason: 'NO_RH_NAME' };
 
-  let lista;
+  /* VÁRIAS RAZÕES SOCIAIS (v1.166.0): a principal + as adicionais ligadas por
+     CNPJ ou nome idêntico. TODAS são lidas ANTES de qualquer escrita, e a falha
+     de qualquer uma aborta a unidade inteira — mesma regra de sempre: sync pela
+     metade não grava nada. Matrícula repetida entre as listas vale uma vez. */
+  const nomes = await nomesNoRhDaUnidade(unit);
+  const porRazao: Record<string, number> = {};
+  const vistas = new Set<string>();
+  const lista: ReturnType<typeof unwrapColaboradores> = [];
   try {
-    lista = unwrapColaboradores(await rh.colaboradoresDaUnidade(unit.rhUnitName));
+    for (const nome of nomes) {
+      const parte = unwrapColaboradores(await rh.colaboradoresDaUnidade(nome));
+      porRazao[nome] = parte.length;
+      for (const c of parte) {
+        const k = c.matricula ? String(c.matricula) : null;
+        if (k && vistas.has(k)) continue;
+        if (k) vistas.add(k);
+        lista.push(c);
+      }
+    }
   } catch (e) {
     return { ok: false, reason: 'RH_ERROR', message: e instanceof Error ? e.message : String(e) };
   }
@@ -113,6 +151,7 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
   let updated = 0;
   let inativadosPorStatus = 0;
   const feriasMarcadas: string[] = [];
+  const afastadosNovos: string[] = [];
   const hoje = currentOperationalDate({ timezone: unit.timezone, cutoffHour: unit.cutoffHour });
   const [hy, hm, hd] = hoje.split('-').map(Number);
   const hojeDate = dayUTC(hy, hm, hd);
@@ -169,6 +208,18 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
       });
       feriasMarcadas.push(data.name);
     }
+
+    if (classe === 'AFASTADO') {
+      const r = await estenderAfastamentoDoRh(collaboratorId, unitId, hojeDate, String(c.status ?? '').trim() || 'Afastado');
+      if (r === 'ABERTO') {
+        afastadosNovos.push(data.name);
+        await audit({
+          userId: actorUserId, unitId, action: 'SCHEDULE_ABSENCE', module: 'SCHEDULE',
+          entity: 'collaborator', entityId: collaboratorId,
+          metadata: { status: 'AFASTADO', start: hoje, origem: 'RH_SYNC', rhStatus: c.status },
+        });
+      }
+    }
   }
 
   /**
@@ -190,11 +241,12 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
     action: actorUserId ? 'RH_SYNC_COLLABORATORS' : 'RH_SYNC_AUTO',
     module: 'PEOPLE',
     metadata: {
-      rhUnitName: unit.rhUnitName, total: lista.length, created, updated,
+      rhUnitName: unit.rhUnitName, razoesSociais: porRazao, total: lista.length, created, updated,
       /** só por status de desligamento devolvido pelo RH — ausência não conta */
       deactivated: inativadosPorStatus,
       naoRetornados,
       feriasMarcadas: feriasMarcadas.length,
+      afastamentosAbertos: afastadosNovos.length,
       ...(listaVaziaSuspeita ? { motivo: 'RH devolveu lista vazia' } : {}),
     },
   });
@@ -202,7 +254,7 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
   if (listaVaziaSuspeita) {
     await notifyAdmins({
       title: '⚠ RH devolveu lista vazia — sincronização incompleta',
-      body: `A unidade ${unit.name} tem ${ativosDaUnidade.length} colaborador(es) ativo(s), mas o RH não devolveu nenhum para "${unit.rhUnitName}". Ninguém foi inativado. Confira o "Nome no RH" da unidade em Configurações → Unidades.`,
+      body: `A unidade ${unit.name} tem ${ativosDaUnidade.length} colaborador(es) ativo(s), mas o RH não devolveu nenhum para "${nomes.join('" nem "')}". Ninguém foi inativado. Confira o "Nome no RH" da unidade em Configurações → Unidades.`,
       link: '/configuracoes/integracoes',
       module: 'PEOPLE',
     }).catch(() => {});
@@ -215,6 +267,17 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
     await notifyAdmins({
       title: `🏖️ ${feriasMarcadas.length} colaborador(es) marcado(s) de férias hoje — ${unit.name}`,
       body: `Conforme o RH: ${feriasMarcadas.join(', ')}. O período de férias (Pessoas → Férias) foi aberto/estendido até hoje (${hoje}) e a Escala mostra FE nesses dias. O RH não manda início/fim: dias ANTES da primeira sincronização não são adivinhados — ajuste o período em Pessoas → Férias se precisar.`,
+      link: `/modulos/escala?unit=${unitId}`,
+      module: 'SCHEDULE',
+    }).catch(() => {});
+  }
+
+  /* Só avisa quem COMEÇOU a aparecer afastado nesta leitura — estender um
+     afastamento que já existia todo dia seria ruído. */
+  if (afastadosNovos.length > 0) {
+    await notifyAdmins({
+      title: `🩺 ${afastadosNovos.length} colaborador(es) afastado(s) no RH — ${unit.name}`,
+      body: `Conforme o RH: ${afastadosNovos.join(', ')}. A partir de hoje (${hoje}) a Escala mostra AF (afastado) enquanto o RH mantiver esse status. Continuam no SGO, só não contam como trabalhando.`,
       link: `/modulos/escala?unit=${unitId}`,
       module: 'SCHEDULE',
     }).catch(() => {});

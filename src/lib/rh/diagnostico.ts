@@ -3,6 +3,7 @@ import { rh, rhConfigured, RhApiError } from '@/lib/rh/client';
 import { unwrapColaboradores, unwrapUnidades, classificarStatus, RhFormatoInesperadoError } from '@/lib/rh/normalize';
 import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
+import { nomesNoRhDaUnidade } from '@/lib/rh/razoes';
 
 /**
  * Diagnóstico da integração com o RH — por que falta gente numa unidade.
@@ -25,6 +26,7 @@ import type { SessionUser } from '@/lib/auth/session';
 export type Decisao =
   | 'ATIVO_NO_SGO'
   | 'ATIVO_DE_FERIAS'
+  | 'ATIVO_AFASTADO'
   | 'ATIVO_STATUS_DESCONHECIDO'
   | 'INATIVO_POR_STATUS'
   | 'PULADO_SEM_MATRICULA'
@@ -33,6 +35,7 @@ export type Decisao =
 export const DECISAO_LABEL: Record<Decisao, string> = {
   ATIVO_NO_SGO: 'Ativo no SGO',
   ATIVO_DE_FERIAS: 'De férias (RH)',
+  ATIVO_AFASTADO: 'Afastado (RH)',
   ATIVO_STATUS_DESCONHECIDO: 'Ativo, status novo',
   INATIVO_POR_STATUS: 'Desligado no SGO',
   PULADO_SEM_MATRICULA: 'Nunca entrou',
@@ -41,6 +44,7 @@ export const DECISAO_LABEL: Record<Decisao, string> = {
 
 export const DECISAO_MOTIVO: Record<Decisao, string> = {
   ATIVO_NO_SGO: 'Aparece normalmente em Pessoas, Escala e Mapa de Funções.',
+  ATIVO_AFASTADO: 'O RH diz que esta pessoa está afastada. Continua no SGO, mas ao sincronizar o SGO abre um período de afastamento e a Escala mostra AF (não conta como trabalhando) enquanto o RH mantiver o status.',
   ATIVO_DE_FERIAS: 'O RH diz que esta pessoa está de férias. Ao sincronizar, o SGO abre um período de férias (Pessoas → Férias) começando hoje e o estende a cada sincronização enquanto o RH mantiver o status — a Escala deriva o FE desse período, no Planejado e no Realizado. O RH não manda início/fim: dias ANTES da primeira sincronização não são adivinhados; se precisar, corrija o período em Pessoas → Férias.',
   ATIVO_STATUS_DESCONHECIDO: 'O SGO não conhece este status do RH. A pessoa APARECE normalmente (some do sistema é pior do que aparecer a mais), mas confira se ela realmente trabalha — se for um status de desligamento, me avise para eu incluí-lo na regra.',
   INATIVO_POR_STATUS: 'O status no RH não começa com "Ativo", então o sync marcou a pessoa como inativa — e inativo SOME de Pessoas, da Escala e do Mapa.',
@@ -56,6 +60,8 @@ export interface PessoaDoDiagnostico {
   decisao: Decisao;
   /** Como o nome está gravado no SGO, quando encontrado (pode divergir do RH). */
   nomeNoSgo: string | null;
+  /** De qual razão social do RH a pessoa veio (v1.166.0 — a unidade pode ler mais de uma). */
+  razao: string;
 }
 
 export interface SoNoSgo {
@@ -69,6 +75,8 @@ export interface DiagnosticoDaUnidade {
   unitId: string;
   unitName: string;
   rhUnitName: string | null;
+  /** Razões sociais ADICIONAIS lidas junto com a principal (v1.166.0). */
+  outrasRazoes: string[];
   /** A razão social configurada existe na lista de unidades do RH? */
   nomeConfere: boolean | null;
   /** Razões sociais do RH parecidas com a configurada — para achar o erro de grafia. */
@@ -103,10 +111,10 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
   if (!unit) return null;
 
   const base: DiagnosticoDaUnidade = {
-    unitId: unit.id, unitName: unit.name, rhUnitName: unit.rhUnitName,
+    unitId: unit.id, unitName: unit.name, rhUnitName: unit.rhUnitName, outrasRazoes: [],
     nomeConfere: null, parecidas: [], erro: null,
     totalNoRh: 0, pessoas: [], soNoSgo: [],
-    resumo: { ATIVO_NO_SGO: 0, ATIVO_DE_FERIAS: 0, ATIVO_STATUS_DESCONHECIDO: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
+    resumo: { ATIVO_NO_SGO: 0, ATIVO_DE_FERIAS: 0, ATIVO_AFASTADO: 0, ATIVO_STATUS_DESCONHECIDO: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
     ativosNoSgo: 0,
   };
 
@@ -128,6 +136,9 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
     return base;
   }
 
+  const nomes = await nomesNoRhDaUnidade(unit);
+  base.outrasRazoes = nomes.slice(1);
+
   /* A razão social configurada existe do lado do RH? É a causa mais boba e mais
      comum de "não veio ninguém": um espaço ou um acento de diferença. */
   try {
@@ -148,9 +159,18 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
     /* A lista de unidades é um plus; se falhar, o diagnóstico principal segue. */
   }
 
-  let lista;
+  /* Todas as razões sociais da unidade, como o sync lê (matrícula repetida vale uma vez). */
+  const lista: (ReturnType<typeof unwrapColaboradores>[number] & { _razao: string })[] = [];
   try {
-    lista = unwrapColaboradores(await rh.colaboradoresDaUnidade(unit.rhUnitName));
+    const vistasNaLeitura = new Set<string>();
+    for (const nome of nomes) {
+      for (const c of unwrapColaboradores(await rh.colaboradoresDaUnidade(nome))) {
+        const k = c.matricula ? String(c.matricula) : null;
+        if (k && vistasNaLeitura.has(k)) continue;
+        if (k) vistasNaLeitura.add(k);
+        lista.push({ ...c, _razao: nome });
+      }
+    }
   } catch (e) {
     base.erro = e instanceof RhFormatoInesperadoError
       ? `O RH respondeu num formato que o SGO não sabe ler. O sync ABORTA esta unidade (não desliga ninguém). Detalhe: ${e.message}`
@@ -182,18 +202,19 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
       if (!doSgo) decisao = 'NAO_ENCONTRADO_NO_SGO';
       else if (classe === 'DESLIGADO') decisao = 'INATIVO_POR_STATUS';
       else if (classe === 'FERIAS') decisao = 'ATIVO_DE_FERIAS';
+      else if (classe === 'AFASTADO') decisao = 'ATIVO_AFASTADO';
       else if (classe === 'DESCONHECIDO') decisao = 'ATIVO_STATUS_DESCONHECIDO';
       else decisao = 'ATIVO_NO_SGO';
     }
 
     base.resumo[decisao]++;
-    base.pessoas.push({ matricula, nome, cargo: c.cargo?.trim() || null, statusNoRh, decisao, nomeNoSgo });
+    base.pessoas.push({ matricula, nome, cargo: c.cargo?.trim() || null, statusNoRh, decisao, nomeNoSgo, razao: c._razao });
   }
 
   /* Ordem: primeiro o que está errado. Quem abre esta tela está procurando
      problema, não conferindo quem está bem. */
   const peso: Record<Decisao, number> = {
-    PULADO_SEM_MATRICULA: 0, INATIVO_POR_STATUS: 1, ATIVO_DE_FERIAS: 2, ATIVO_STATUS_DESCONHECIDO: 3, NAO_ENCONTRADO_NO_SGO: 4, ATIVO_NO_SGO: 5,
+    PULADO_SEM_MATRICULA: 0, INATIVO_POR_STATUS: 1, ATIVO_DE_FERIAS: 2, ATIVO_AFASTADO: 2, ATIVO_STATUS_DESCONHECIDO: 3, NAO_ENCONTRADO_NO_SGO: 4, ATIVO_NO_SGO: 5,
   };
   base.pessoas.sort((a, b) => peso[a.decisao] - peso[b.decisao] || a.nome.localeCompare(b.nome, 'pt-BR'));
 

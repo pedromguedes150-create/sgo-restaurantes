@@ -68,7 +68,9 @@ export async function handleInclusao(payload: Record<string, unknown>): Promise<
   // vincula à unidade do SGO cujo rhUnitName = razão social enviada
   let unidadeVinculada = false;
   if (unidade) {
-    const unit = await prisma.unit.findFirst({ where: { rhUnitName: unidade } });
+    /* Principal OU adicional (v1.166.0) — nome exato, como no sync. */
+    const { unidadeDaRazaoSocial } = await import('@/lib/rh/razoes');
+    const unit = await unidadeDaRazaoSocial(unidade);
     if (unit) {
       await prisma.collaboratorUnit.upsert({
         where: { collaboratorId_unitId: { collaboratorId, unitId: unit.id } },

@@ -50,7 +50,7 @@ export function unwrapColaboradores(resp: unknown): RhColaborador[] {
 }
 
 /** Como o SGO entende o status que veio do RH. */
-export type ClasseDeStatus = 'ATIVO' | 'DESLIGADO' | 'FERIAS' | 'DESCONHECIDO';
+export type ClasseDeStatus = 'ATIVO' | 'DESLIGADO' | 'FERIAS' | 'AFASTADO' | 'DESCONHECIDO';
 
 /** Sem acento, sem caixa, sem espaço sobrando — "1ª Experiência" e "1a experiencia" viram o mesmo. */
 function normalizarStatus(status: string | null | undefined): string {
@@ -72,7 +72,9 @@ function normalizarStatus(status: string | null | undefined): string {
 const DESLIGADO = /^(demit|deslig|resci|encerr|inativ|cancelad|baixad)/;
 
 /** Status conhecidos que significam **trabalhando**. */
-const ATIVO = /^(ativ|experienc|\d+\s*a?\s*experienc|contrat|trabalh|efetiv|admitid)/;
+/* "Aposentado" (v1.166.0, pedido do Pedro): aposentado que segue no quadro
+   está TRABALHANDO normal — a aposentadoria é do INSS, não da empresa. */
+const ATIVO = /^(ativ|experienc|\d+\s*a?\s*experienc|contrat|trabalh|efetiv|admitid|aposentad)/;
 
 /**
  * Classifica o status do colaborador no RH.
@@ -105,6 +107,11 @@ export function classificarStatus(status: string | null | undefined): ClasseDeSt
   /* "Férias", "De férias", "Licença/Férias" — o que o RH inventar em volta da
      palavra. Sem acento por causa do `normalizarStatus` acima. */
   if (s.includes('ferias')) return 'FERIAS';
+  /* AFASTADO (v1.166.0, pedido do Pedro): "geralmente esse funcionário não
+     irá preencher a grade". Continua no SGO (isAtivo segue true — afastado não
+     é desligado), mas a sincronização abre um período de afastamento e a Escala
+     mostra AF nesses dias, como faz com férias. */
+  if (s.includes('afastad')) return 'AFASTADO';
   return 'DESCONHECIDO';
 }
 

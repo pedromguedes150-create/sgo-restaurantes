@@ -20,7 +20,7 @@ import {
   type FiltrosDaGrade, type ModoDaGrade,
 } from '@/lib/schedule/grade-filtros';
 
-type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'ATRASO';
+type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'ATRASO' | 'AFASTADO';
 type ScheduleType = 'TWELVE36_ODD' | 'TWELVE36_EVEN' | 'SIX_ONE' | 'FIVE_TWO' | 'CUSTOM';
 interface Cell { planned: DayStatus; actual: DayStatus | null }
 interface Row {
@@ -48,9 +48,10 @@ const STATUS: Record<DayStatus, { code: string; cls: string }> = {
   ATESTADO:     { code: 'A',  cls: 'bg-info-bg text-info border border-info/40' },
   FERIAS:       { code: 'FE', cls: 'bg-success-bg text-success border border-success/40' },
   ATRASO:       { code: 'AT', cls: 'bg-warning-bg text-warning border border-warning/40' },
+  AFASTADO:     { code: 'AF', cls: 'bg-sunken text-ink-700 border border-line-strong' },
 };
-const STATUS_ORDER: DayStatus[] = ['WORK', 'ATRASO', 'OFF', 'FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
-const ABSENCE: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS'];
+const STATUS_ORDER: DayStatus[] = ['WORK', 'ATRASO', 'OFF', 'FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS', 'AFASTADO'];
+const ABSENCE: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS', 'AFASTADO'];
 const TYPE_OPTIONS: { value: ScheduleType; label: string }[] = [
   { value: 'TWELVE36_ODD', label: '12x36 — Turno Ímpar' },
   { value: 'TWELVE36_EVEN', label: '12x36 — Turno Par' },
@@ -312,7 +313,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
         {STATUS_ORDER.map((s) => (
           <span key={s} className="inline-flex items-center gap-1 print:text-[7px]">
             <span className={cn('inline-flex h-5 w-6 items-center justify-center rounded text-[11px] font-bold print:h-3 print:w-4 print:text-[7px]', STATUS[s].cls)}>{STATUS[s].code}</span>
-            {s === 'WORK' ? 'Trabalho' : s === 'ATRASO' ? 'Atraso' : s === 'OFF' ? 'Folga' : s === 'FALTA_INJUST' ? 'Falta injustificada' : s === 'FALTA_JUST' ? 'Falta justificada' : s === 'ATESTADO' ? 'Atestado' : 'Férias'}
+            {s === 'WORK' ? 'Trabalho' : s === 'ATRASO' ? 'Atraso' : s === 'OFF' ? 'Folga' : s === 'FALTA_INJUST' ? 'Falta injustificada' : s === 'FALTA_JUST' ? 'Falta justificada' : s === 'ATESTADO' ? 'Atestado' : s === 'AFASTADO' ? 'Afastado' : 'Férias'}
           </span>
         ))}
       </div>
@@ -580,7 +581,7 @@ function AbsencePanel({ unitId, collaborators, onDone }: { unitId: string; colla
           label="Tipo" size="sm" value={status} onValueChange={(v) => setStatus(v as DayStatus)}
           options={ABSENCE.map((s) => ({
             value: s,
-            label: s === 'FALTA_INJUST' ? 'Falta injustificada' : s === 'FALTA_JUST' ? 'Falta justificada' : s === 'ATESTADO' ? 'Atestado' : 'Férias',
+            label: s === 'FALTA_INJUST' ? 'Falta injustificada' : s === 'FALTA_JUST' ? 'Falta justificada' : s === 'ATESTADO' ? 'Atestado' : s === 'AFASTADO' ? 'Afastado' : 'Férias',
             hint: STATUS[s].code,
           }))}
         />
