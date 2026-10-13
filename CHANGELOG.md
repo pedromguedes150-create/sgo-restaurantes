@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.166.1 — 2026-10-13 (RH: "Em desligamento" trabalha até ser desligado)
+### Ajustado
+- O status **"Em desligamento"** do RH passa a contar como **trabalhando** (decisão do Pedro: "conta como trabalhando até o funcionário ser desligado"). Antes caía em "Ativo, status novo" no Diagnóstico do RH; agora é "Ativo no SGO". Quando o RH trocar para "Desligado", a pessoa sai do SGO como sempre.
+
 ## v1.166.0 — 2026-10-13 (RH: mais de uma razão social por unidade + status Afastado e Aposentado)
 ### Novo
 - **Mais de uma razão social do RH por unidade.** Caso Nova União: a churrascaria tem gente cadastrada no RH em "COMERCIAL LINS & GUEDES LTDA (NOVA UNIÃO)" e em "COMERCIAL BEIJA FLOR NOVA UNIÃO LTDA" — as 3 pessoas da segunda (Ana Lúcia, Luciana e Verônica, admitidas em agosto) nunca entravam. Em Configurações → Unidades, cada unidade ganhou "Outras razões sociais do RH desta unidade". A ligação tem **critério obrigatório**, conferido contra o RH no servidor: **CNPJ** exato (de UMA razão social) ou **nome idêntico** ao do RH. Nada de nome parecido; CNPJ que aparece em duas empresas é recusado e a tela pede o nome. Uma razão social pertence a uma unidade só. A sincronização lê todas antes de gravar e, se qualquer uma falhar, não grava nada.
