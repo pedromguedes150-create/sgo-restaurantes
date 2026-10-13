@@ -73,8 +73,12 @@ const DESLIGADO = /^(demit|deslig|resci|encerr|inativ|cancelad|baixad)/;
 
 /** Status conhecidos que significam **trabalhando**. */
 /* "Aposentado" (v1.166.0, pedido do Pedro): aposentado que segue no quadro
-   está TRABALHANDO normal — a aposentadoria é do INSS, não da empresa. */
-const ATIVO = /^(ativ|experienc|\d+\s*a?\s*experienc|contrat|trabalh|efetiv|admitid|aposentad)/;
+   está TRABALHANDO normal — a aposentadoria é do INSS, não da empresa.
+   "Em desligamento" (v1.166.1, pedido do Pedro): "conta como trabalhando até
+   o funcionário ser desligado" — é o aviso; quando o RH trocar para
+   "Desligado", a lista de DESLIGADO acima o tira do SGO. Repare que
+   "em desligamento" começa com "em", então NÃO casa com /^deslig/. */
+const ATIVO = /^(ativ|experienc|\d+\s*a?\s*experienc|contrat|trabalh|efetiv|admitid|aposentad|em\s*deslig)/;
 
 /**
  * Classifica o status do colaborador no RH.
