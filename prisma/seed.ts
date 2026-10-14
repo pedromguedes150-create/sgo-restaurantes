@@ -3,6 +3,7 @@ import { PrismaClient, type Role, type TaskModule, type TaskStatus } from '@pris
 import bcrypt from 'bcryptjs';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { subDays, addDays, format } from 'date-fns';
+import { TIPOS_DE_DESPERDICIO } from '../src/lib/waste/tipos';
 
 const prisma = new PrismaClient();
 
@@ -234,18 +235,36 @@ async function main() {
   console.log(`  ✔ ${templateCount} modelos de tarefa · ${instanceCount} instâncias (30 dias)`);
 
   // --- Desperdícios: categorias + histórico ---
+  // As SEIS categorias FIXAS (SS_/REF_/PROD_ × almoço/jantar) nascem na migração
+  // 20260914180000_desperdicio_tipos_fixos e são a lista fechada da rede
+  // (`src/lib/waste/tipos.ts`). O seed NÃO pode apagá-las: sem elas a folha de
+  // lançamento fica vazia e `tests/desperdicio-consolidado` falha no beforeAll.
+  // Por isso: some só o histórico de demonstração e as categorias que NÃO são
+  // fixas; as fixas são garantidas por upsert pelo `code`, com nome/ordem de
+  // `tipos.ts` e REF_* inativas (migração 20260924150000_sobras_salgados).
   await prisma.wasteEntry.deleteMany({});
-  await prisma.wasteCategory.deleteMany({});
-  const catData = [
-    { code: 'SELF', name: 'Self-Service', order: 1, base: 12, measure: 'kg' },
-    { code: 'CLIENT', name: 'Clientes', order: 2, base: 6, measure: 'kg' },
-    { code: 'SNACK', name: 'Lanchonete', order: 3, base: 3, measure: 'un' }, // lanchonete conta em UNIDADES por tipo de salgado (16/07)
-    { code: 'KITCHEN', name: 'Cozinha', order: 4, base: 8, measure: 'kg' },
-  ];
-  const cats = [];
-  for (const c of catData) {
-    cats.push(await prisma.wasteCategory.create({ data: { code: c.code, name: c.name, order: c.order, measure: c.measure } }));
+  const FIXOS = TIPOS_DE_DESPERDICIO.map((t) => t.code);
+  const INATIVOS = new Set(['REF_ALMOCO', 'REF_JANTAR']);
+  await prisma.wasteCategory.deleteMany({ where: { code: { notIn: FIXOS } } });
+  const catsFixas: { id: string; code: string }[] = [];
+  for (const t of TIPOS_DE_DESPERDICIO) {
+    const active = !INATIVOS.has(t.code);
+    catsFixas.push(
+      await prisma.wasteCategory.upsert({
+        where: { code: t.code },
+        update: { name: t.name, order: t.order, measure: 'kg', active },
+        create: { code: t.code, name: t.name, order: t.order, measure: 'kg', active },
+      }),
+    );
   }
+  // Histórico de demonstração só nos quatro ATIVOS (os que a folha mostra hoje).
+  const catData = [
+    { code: 'SS_ALMOCO', base: 12 },
+    { code: 'SS_JANTAR', base: 8 },
+    { code: 'PROD_ALMOCO', base: 6 },
+    { code: 'PROD_JANTAR', base: 4 },
+  ];
+  const cats = catData.map((c) => catsFixas.find((f) => f.code === c.code)!);
 
   let wasteCount = 0;
   for (const unit of units) {
@@ -272,7 +291,7 @@ async function main() {
       wasteCount++;
     }
   }
-  console.log(`  ✔ ${cats.length} categorias de desperdício · ${wasteCount} lançamentos (histórico)`);
+  console.log(`  ✔ ${catsFixas.length} categorias fixas de desperdício (${cats.length} ativas c/ histórico) · ${wasteCount} lançamentos (histórico)`);
 
   // --- Ocorrências: tipos/categorias + exemplos ---
   await prisma.occurrence.deleteMany({});

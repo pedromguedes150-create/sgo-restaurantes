@@ -20,6 +20,7 @@ import { FotosDoLancamento } from '@/components/waste/fotos-do-lancamento';
 import { getWastePhotoRequired } from '@/lib/waste/foto-config';
 import { dataBR } from '@/lib/waste/painel-calculo';
 import { tipoPorCodigo } from '@/lib/waste/tipos';
+import { podeLancarDiaAnterior } from '@/lib/waste/dia-anterior';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,8 +48,16 @@ export default async function DesperdiciosPage({
 
   const selected = units.find((u) => u.id === searchParams.unit) ?? units[0];
   const today = currentOperationalDate({ timezone: selected.timezone, cutoffHour: selected.cutoffHour }, now);
-  const operationalDate = searchParams.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date) && searchParams.date <= today ? searchParams.date : today;
+  /* Dia anterior: só o Admin (decisão do Pedro, 14/10/2026). Para os demais o
+     `?date=` é ignorado e a folha é sempre a de HOJE — e o servidor recusa
+     igual (`podeLancarDiaAnterior` em saveWasteEntry/saveSnackDay). */
+  const podeEscolherDia = podeLancarDiaAnterior(user);
+  const operationalDate = podeEscolherDia && searchParams.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date) && searchParams.date <= today ? searchParams.date : today;
   const isBackdated = operationalDate !== today;
+  const seletorDeDia = (aba: Aba) =>
+    podeEscolherDia
+      ? <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} aba={aba} />
+      : <p className="text-xs text-ink-500">Dia do lançamento: <b className="text-ink-700">{dataBR(today)}</b> — o desperdício é lançado no dia; dias anteriores só o Administrador corrige.</p>;
   const podeVerConsolidado = (await permissaoDeRota(user.role))('/modulos/desperdicios/consolidado');
 
   const linkAba = (a: Aba) => `/modulos/desperdicios?aba=${a}&unit=${selected.id}${isBackdated ? `&date=${operationalDate}` : ''}`;
@@ -101,7 +110,7 @@ export default async function DesperdiciosPage({
             <CardTitle>{isBackdated ? `Salgados de ${dataBR(operationalDate)}` : 'Salgados de hoje'} — {selected.name}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} aba="salgados" />
+            {seletorDeDia('salgados')}
             {isBackdated && <p className="sgo-aviso sgo-aviso--atencao">Lançando para um dia anterior ({dataBR(operationalDate)}).</p>}
             {dia.createdBy && <p className="text-xs text-ink-500">Registrado por {dia.createdBy} · total atual {dia.total} un.</p>}
             {dia.evidencePath && <FotosDoLancamento fotos={[{ rotulo: 'Recipiente de descarte', path: dia.evidencePath }]} titulo={`Salgados · ${dataBR(operationalDate)}`} tamanho="sm" />}
@@ -137,7 +146,7 @@ export default async function DesperdiciosPage({
               </details>
             ))}
             </Group>
-            <p className="pt-1 text-xs text-ink-500">Toque num dia para ver os itens e a foto. Para lançar/corrigir um dia, escolha a data acima. A conferência de todas as unidades e os gráficos ficam no Painel consolidado.</p>
+            <p className="pt-1 text-xs text-ink-500">Toque num dia para ver os itens e a foto. {podeEscolherDia ? 'Para lançar/corrigir um dia, escolha a data acima.' : 'Dias anteriores só o Administrador corrige.'} A conferência de todas as unidades e os gráficos ficam no Painel consolidado.</p>
           </CardContent>
         </Card>
       </div>
@@ -175,7 +184,7 @@ export default async function DesperdiciosPage({
           <CardTitle>{isBackdated ? `Lançamento de ${dataBR(operationalDate)}` : 'Lançamento de hoje'} — {selected.name}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <WasteDatePicker unitId={selected.id} date={operationalDate} max={today} aba="restaurante" />
+          {seletorDeDia('restaurante')}
           {isBackdated && <p className="sgo-aviso sgo-aviso--atencao">Lançando para um dia anterior ({dataBR(operationalDate)}).</p>}
           {!fotoObrigatoria && <p className="text-xs text-ink-500">Foto dos procedimentos: <b>opcional</b> por enquanto — se tirar, ela aparece na conferência.</p>}
           {entry?.createdBy && (
@@ -232,7 +241,7 @@ export default async function DesperdiciosPage({
             );
           })}
           </Group>
-          <p className="pt-1 text-xs text-ink-500">Toque num dia para ver os itens e as fotos. Para lançar/corrigir um dia específico, escolha a data no formulário acima.</p>
+          <p className="pt-1 text-xs text-ink-500">Toque num dia para ver os itens e as fotos. {podeEscolherDia ? 'Para lançar/corrigir um dia específico, escolha a data no formulário acima.' : 'Dias anteriores só o Administrador corrige.'}</p>
         </CardContent>
       </Card>
 

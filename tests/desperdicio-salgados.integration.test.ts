@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
+import { currentOperationalDate } from '@/lib/date/operational';
 import {
   agregarSalgados, saveSnackDay, getSnackDay, getConsolidadoSalgados,
   createSnackOption, toggleSnackOption, type DescarteCru,
@@ -32,7 +33,9 @@ let sobra: string;
 const admin = (): SessionUser => ({ id: adminId, name: 'Admin', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false });
 const gerenteA = (): SessionUser => ({ id: gerenteId, name: 'Gerente A', role: 'MANAGER', unitIds: [unitA], seesAllUnits: false, needsTerms: false });
 
-const hoje = () => new Date().toISOString().slice(0, 10);
+/* O dia operacional da unidade (corte 04:00), como o servidor calcula — a data
+   UTC pura divergia dele entre 21h e 04h de Brasília. */
+const hoje = () => currentOperationalDate({ timezone: 'America/Sao_Paulo', cutoffHour: 4 });
 
 beforeAll(async () => {
   unitA = (await prisma.unit.create({ data: { code: `SA-${sfx}`, name: 'Salg A', timezone: 'America/Sao_Paulo', cutoffHour: 4 } })).id;
@@ -157,6 +160,20 @@ describe('saveSnackDay', () => {
     const amanha = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
     const futuro = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: amanha, rows: [{ typeId: coxinha, reasonId: sobra, quantity: 1 }] });
     expect(futuro.ok).toBe(false);
+  });
+
+  /* v1.167.1 — decisão do Pedro: o gerente lança o desperdício NO DIA; dia
+     anterior é só do Administrador, também nos Salgados. Regra no servidor. */
+  it('dia anterior: gerente recebe DATA_SO_ADMIN, Admin grava', async () => {
+    const ontem = new Date(new Date(`${hoje()}T12:00:00`).getTime() - 86400000).toISOString().slice(0, 10);
+    const ger = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: ontem, rows: [{ typeId: coxinha, reasonId: sobra, quantity: 2 }] });
+    expect(ger.ok).toBe(false);
+    if (!ger.ok) expect(ger.reason).toBe('DATA_SO_ADMIN');
+    expect(await prisma.wasteSnackDiscard.count({ where: { unitId: unitA, operationalDate: ontem } })).toBe(0);
+
+    const adm = await saveSnackDay(admin(), { unitId: unitA, operationalDate: ontem, rows: [{ typeId: coxinha, reasonId: sobra, quantity: 2 }] });
+    expect(adm.ok).toBe(true);
+    if (adm.ok) expect(adm.operationalDate).toBe(ontem);
   });
 });
 

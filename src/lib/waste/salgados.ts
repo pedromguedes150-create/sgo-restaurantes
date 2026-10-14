@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import { assertUnitAccess, UnitScopeError, unitScopeWhere } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
+import { podeLancarDiaAnterior } from '@/lib/waste/dia-anterior';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -145,7 +146,7 @@ export async function getSnackRecent(unitId: string, dias = 30): Promise<{ opera
 export interface SnackRowInput { typeId: string; reasonId: string; quantity: number }
 export type SaveSnackResult =
   | { ok: true; total: number; operationalDate: string }
-  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'OPCAO_INVALIDA' };
+  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'OPCAO_INVALIDA' | 'DATA_SO_ADMIN' };
 
 /**
  * Grava o dia INTEIRO: substitui as linhas do dia pelas enviadas, numa
@@ -168,6 +169,8 @@ export async function saveSnackDay(
   const hoje = currentOperationalDate({ timezone: unit.timezone, cutoffHour: unit.cutoffHour });
   const operationalDate = input.operationalDate ?? hoje;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(operationalDate) || operationalDate > hoje) return { ok: false, reason: 'INVALID' };
+  /* Dia anterior: só o Admin (a mesma regra do Restaurante, `dia-anterior.ts`). */
+  if (operationalDate !== hoje && !podeLancarDiaAnterior(user)) return { ok: false, reason: 'DATA_SO_ADMIN' };
   const limite = new Date(Date.now() - RETRO_DIAS * 86400000).toISOString().slice(0, 10);
   if (operationalDate < limite) return { ok: false, reason: 'INVALID' };
 

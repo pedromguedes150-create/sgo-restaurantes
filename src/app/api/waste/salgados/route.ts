@@ -15,6 +15,7 @@ import { canAccessUnit } from '@/lib/scope/unit-scope';
 const RECUSAS: Record<string, { msg: string; status: number }> = {
   FORBIDDEN: { msg: 'Sem permissão', status: 403 },
   INVALID: { msg: 'Dados inválidos', status: 400 },
+  DATA_SO_ADMIN: { msg: 'Só o Administrador pode lançar ou corrigir um dia anterior. O desperdício deve ser lançado no dia.', status: 403 },
   OPCAO_INVALIDA: { msg: 'Tipo ou motivo inválido/inativo. Recarregue a página.', status: 400 },
   DUPLICADO: { msg: 'Já existe uma opção com esse nome.', status: 409 },
 };
