@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { subDays, format } from 'date-fns';
 import { prisma } from '@/lib/db/prisma';
+import { currentOperationalDate } from '@/lib/date/operational';
 import { saveWasteEntry } from '@/lib/waste/save';
 import { getWastePhotoRequired, setWastePhotoRequired } from '@/lib/waste/foto-config';
 import { getConferencia, getPerformance } from '@/lib/waste/painel';
@@ -20,7 +20,8 @@ let unitA: string, unitB: string, userId: string, adminId: string;
 let catAlmoco: string, catJantar: string;
 let chaveAntes: boolean;
 
-const OP = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+/* O dia operacional de HOJE: desde a v1.167.1 o gerente só lança o dia. */
+const OP = currentOperationalDate({ timezone: 'America/Sao_Paulo', cutoffHour: 4 });
 const ym = OP.slice(0, 7);
 const [Y, M] = [Number(OP.slice(0, 4)), Number(OP.slice(5, 7))];
 const gerente = (): SessionUser => ({ id: userId, name: 'Ger', role: 'MANAGER', unitIds: [unitA], seesAllUnits: false, needsTerms: false });

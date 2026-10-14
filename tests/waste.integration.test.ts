@@ -3,6 +3,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { subDays, format } from 'date-fns';
 import { prisma } from '@/lib/db/prisma';
 import { saveWasteEntry } from '@/lib/waste/save';
+import { currentOperationalDate } from '@/lib/date/operational';
 import type { SessionUser } from '@/lib/auth/session';
 
 const sfx = process.pid.toString(36);
@@ -10,11 +11,13 @@ let unitId: string;
 let userId: string;
 let catId: string;
 const user = (): SessionUser => ({ id: userId, name: 'T', role: 'MANAGER', unitIds: [unitId], seesAllUnits: false, needsTerms: false });
+const admin = (): SessionUser => ({ id: userId, name: 'A', role: 'ADMIN', unitIds: [unitId], seesAllUnits: true, needsTerms: false });
 
-// Datas dinâmicas: OP = ontem (dentro da janela de 7 dias do servidor);
-// PRIOR = os 7 dias operacionais anteriores a OP (base da média).
-const OP = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-const PRIOR = Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), 2 + i), 'yyyy-MM-dd'));
+// Datas dinâmicas: OP = o dia operacional de HOJE da unidade (o gerente só
+// lança o dia — v1.167.1); PRIOR = os 7 dias anteriores a OP (base da média).
+const OP = currentOperationalDate({ timezone: 'America/Sao_Paulo', cutoffHour: 4 });
+const PRIOR = Array.from({ length: 7 }, (_, i) => format(subDays(new Date(`${OP}T12:00:00`), 1 + i), 'yyyy-MM-dd'));
+const ONTEM = PRIOR[0];
 
 beforeAll(async () => {
   const unit = await prisma.unit.create({
@@ -79,12 +82,44 @@ describe('Desperdícios (Módulo 2)', () => {
     if (!r.ok) expect(r.reason).toBe('FORBIDDEN');
   });
 
-  it('rejeita data futura, fora da janela de 7 dias ou malformada', async () => {
-    const futuro = format(subDays(new Date(), -2), 'yyyy-MM-dd');
-    const velho = format(subDays(new Date(), 30), 'yyyy-MM-dd');
-    for (const bad of [futuro, velho, '2026-13-99', 'lixo']) {
-      const r = await saveWasteEntry(user(), { unitId, operationalDate: bad, items: [{ categoryId: catId, kg: 1 }] });
+  it('rejeita data futura ou malformada, para qualquer perfil', async () => {
+    const futuro = format(subDays(new Date(`${OP}T12:00:00`), -2), 'yyyy-MM-dd');
+    for (const bad of [futuro, '2026-13-99', 'lixo']) {
+      for (const quem of [user(), admin()]) {
+        const r = await saveWasteEntry(quem, { unitId, operationalDate: bad, items: [{ categoryId: catId, kg: 1 }] });
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.reason).toBe('INVALID');
+      }
+    }
+  });
+
+  /* Decisão do Pedro (14/10/2026): o gerente lança o desperdício NO DIA; dia
+     anterior é só do Administrador. A regra mora no servidor — a tela esconder
+     o seletor não é porta, e um `?date=` montado à mão cai aqui. */
+  it('gerente NÃO lança dia anterior (nem ontem): DATA_SO_ADMIN', async () => {
+    const velho = format(subDays(new Date(`${OP}T12:00:00`), 30), 'yyyy-MM-dd');
+    for (const dia of [ONTEM, velho]) {
+      const r = await saveWasteEntry(user(), { unitId, operationalDate: dia, items: [{ categoryId: catId, kg: 1 }] });
       expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.reason).toBe('DATA_SO_ADMIN');
+    }
+    expect(await prisma.wasteEntry.count({ where: { unitId, operationalDate: velho } })).toBe(0);
+  });
+
+  it('gerente lança HOJE sem informar a data (cai no dia operacional) e informando-a', async () => {
+    const semData = await saveWasteEntry(user(), { unitId, items: [{ categoryId: catId, kg: 2 }] });
+    expect(semData.ok).toBe(true);
+    if (semData.ok) expect(semData.operationalDate).toBe(OP);
+    const comData = await saveWasteEntry(user(), { unitId, operationalDate: OP, items: [{ categoryId: catId, kg: 3 }] });
+    expect(comData.ok).toBe(true);
+  });
+
+  it('Administrador lança/corrige qualquer dia anterior (ontem e 30 dias atrás)', async () => {
+    const velho = format(subDays(new Date(`${OP}T12:00:00`), 30), 'yyyy-MM-dd');
+    for (const dia of [ONTEM, velho]) {
+      const r = await saveWasteEntry(admin(), { unitId, operationalDate: dia, items: [{ categoryId: catId, kg: 1 }] });
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.operationalDate).toBe(dia);
     }
   });
 });

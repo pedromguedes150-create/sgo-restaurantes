@@ -11,6 +11,7 @@ const REASONS: Record<string, { msg: string; status: number }> = {
   FORBIDDEN: { msg: 'Sem acesso a esta unidade', status: 403 },
   EVIDENCE_REQUIRED: { msg: 'Falta a foto de um procedimento com peso. Tire a foto de cada procedimento lançado.', status: 422 },
   INVALID: { msg: 'Dados inválidos', status: 400 },
+  DATA_SO_ADMIN: { msg: 'Só o Administrador pode lançar ou corrigir um dia anterior. O desperdício deve ser lançado no dia.', status: 403 },
 };
 
 export async function POST(req: Request) {

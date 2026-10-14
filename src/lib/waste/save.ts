@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { getWastePhotoRequired } from '@/lib/waste/foto-config';
 import { procedimentosSemFoto } from '@/lib/waste/foto-regra';
 import { ehTipoFixo } from '@/lib/waste/tipos';
+import { podeLancarDiaAnterior } from '@/lib/waste/dia-anterior';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { audit } from '@/lib/audit';
@@ -32,7 +33,7 @@ export interface WasteAlert {
 
 export type SaveWasteResult =
   | { ok: true; entryId: string; operationalDate: string; alerts: WasteAlert[] }
-  | { ok: false; reason: 'FORBIDDEN' | 'EVIDENCE_REQUIRED' | 'INVALID' };
+  | { ok: false; reason: 'FORBIDDEN' | 'EVIDENCE_REQUIRED' | 'INVALID' | 'DATA_SO_ADMIN' };
 
 /**
  * Salva o lançamento de desperdício do dia (Módulo 2).
@@ -75,14 +76,12 @@ export async function saveWasteEntry(
   const today = currentOperationalDate(cfg);
   let operationalDate = today;
   if (input.operationalDate) {
-    // Valida formato e nunca permite futuro. Janela de 7 dias atrás vale para
-    // operadores; o ADMIN pode corrigir/lançar qualquer dia passado.
+    // Valida formato e nunca permite futuro. Dia anterior: só o ADMIN
+    // (`podeLancarDiaAnterior`) — o gerente lança o desperdício NO DIA.
+    // Antes havia uma janela de 7 dias para os demais perfis; saiu.
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.operationalDate)) return { ok: false, reason: 'INVALID' };
     if (input.operationalDate > today) return { ok: false, reason: 'INVALID' };
-    if (user.role !== 'ADMIN') {
-      const limit = format(subDays(new Date(`${today}T12:00:00`), 7), 'yyyy-MM-dd');
-      if (input.operationalDate < limit) return { ok: false, reason: 'INVALID' };
-    }
+    if (input.operationalDate !== today && !podeLancarDiaAnterior(user)) return { ok: false, reason: 'DATA_SO_ADMIN' };
     operationalDate = input.operationalDate;
   }
 

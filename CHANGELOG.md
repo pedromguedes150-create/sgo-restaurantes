@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.167.1 — 2026-10-14 (Desperdícios: o gerente lança NO DIA; dia anterior só o Administrador)
+### Alterado
+- **Pedido do Pedro**: o seletor "Dia do lançamento" em Desperdícios (Restaurante **e** Salgados) deixou de aparecer para o gerente. Ele lança sempre o dia operacional de hoje; **só o Administrador** vê o seletor e lança/corrige dias anteriores.
+  - **A regra mora no servidor** (`src/lib/waste/dia-anterior.ts`, usada por `saveWasteEntry` e `saveSnackDay`): qualquer perfil que não seja ADMIN mandando um dia diferente de hoje recebe `DATA_SO_ADMIN` (403, "Só o Administrador pode lançar ou corrigir um dia anterior. O desperdício deve ser lançado no dia."). Esconder o seletor não é porta — um `?date=` montado à mão cai na mesma recusa, e a página também ignora o `?date=` para quem não é Admin.
+  - Saiu a janela antiga de **7 dias** para os demais perfis no Restaurante (era o que permitia o lançamento retroativo do print). Para o Admin nada mudou: qualquer dia passado no Restaurante, 30 dias nos Salgados; futuro continua recusado para todos.
+  - Guia de Treinamento da Plataforma atualizado nas duas entradas de Desperdícios. 4 testes novos (gerente ontem/30 dias → recusa; gerente hoje com e sem data → ok; Admin ontem/30 dias → ok; Salgados idem); os testes antigos que lançavam "ontem" como gerente passaram a usar o dia operacional de hoje.
+### Corrigido (desenvolvimento)
+- **Seed preserva as seis categorias fixas de desperdício** (era o PR #141, que ficou parado em conflito e nunca rodou o CI). O `prisma/seed.ts` fazia `wasteCategory.deleteMany({})` e recriava 4 categorias de demonstração, apagando as fixas da migração `20260914180000_desperdicio_tipos_fixos` — depois de `prisma migrate reset` a folha ficava sem os tipos da rede e `tests/desperdicio-consolidado` falhava no `beforeAll`. Agora apaga só o que não é fixo e garante as seis por upsert pelo `code` (REF_* inativas); o histórico de demonstração vai para os quatro tipos ativos. Só ambiente de desenvolvimento.
+
 ## v1.167.0 — 2026-10-13 (API Global: endpoints de dados para o SGO Geral)
 ### Novo
 - **A API Global passou a entregar dados.** Tudo sob `/api/v1`, só GET, com a mesma autenticação por `X-API-Key` (401 em JSON sem chave): **catálogo** `GET /api/v1` (sistema, parâmetros e a lista de tudo que a API expõe), **estrutura** `GET /api/v1/estrutura` (a árvore do menu, montada do mesmo registro que desenha a navegação) e, para **cada tela do sistema**, `GET /api/v1/<entidade>?from=&to=&page=&limit=` (lista paginada, limite padrão 100 e teto 500, com o total) e `GET /api/v1/<entidade>/resumo?from=&to=` (totais agregados no banco — COUNT/SUM/GROUP BY —, quebras por status/tipo/unidade/mês, **cobertura** com a menor e a maior data existentes e o total sem filtro, e **fonte** com a tabela, o campo do período e os status existentes). 99 entidades.
