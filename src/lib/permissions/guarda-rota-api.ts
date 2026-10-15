@@ -161,6 +161,9 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/products/setores': { modulo: 'CONFIG_CD_SECTORS', exigir: 'editar' },
 
   '/api/rh/sync': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
+  // v1.169.0 — Reembolso: comprovante (foto/PDF) de quem lança; planilha de quem vê a lista
+  '/api/payments/comprovante': { modulo: 'PAYMENTS_TAB_NEW', exigir: 'editar' },
+  '/api/payments/reembolsos/export': { modulo: 'PAYMENTS_REEMBOLSOS', exigir: 'ver' },
   // v1.168.0 — envio SGO→RH: demanda do gerente; fila de saída (reenviar/processar) — a lib ainda exige ADMIN/CEO na fila
   '/api/rh/demandas': { modulo: 'RH_DEMANDS', exigir: 'editar' },
   '/api/rh/saida': { modulo: 'CONFIG_RH_SAIDA', exigir: 'editar' },

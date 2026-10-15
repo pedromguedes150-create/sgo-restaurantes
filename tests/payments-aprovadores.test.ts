@@ -44,8 +44,9 @@ describe('quem paga', () => {
 
 describe('filtro Tipo de pagamento', () => {
   const itens = [{ id: 1, type: 'FREELANCER' as const }, { id: 2, type: 'OVERTIME' as const }, { id: 3, type: 'MISC' as const }];
-  it('Todos mostra Freelancer + Hora Extra (+ Avulso); cada opção mostra só o seu tipo', () => {
-    expect(FILTROS_DE_TIPO.map((f) => f.label)).toEqual(['Todos', 'Freelancer', 'Hora Extra', 'Avulso']);
+  it('Todos mostra Freelancer + Hora Extra (+ Reembolso); cada opção mostra só o seu tipo', () => {
+    /* v1.169.0: "Avulso" virou "Reembolso" — a chave MISC segue a mesma. */
+    expect(FILTROS_DE_TIPO.map((f) => f.label)).toEqual(['Todos', 'Freelancer', 'Hora Extra', 'Reembolso']);
     expect(filtrarPorTipo(itens, 'ALL').map((i) => i.id)).toEqual([1, 2, 3]);
     expect(filtrarPorTipo(itens, 'FREELANCER').map((i) => i.id)).toEqual([1]);
     expect(filtrarPorTipo(itens, 'OVERTIME').map((i) => i.id)).toEqual([2]);

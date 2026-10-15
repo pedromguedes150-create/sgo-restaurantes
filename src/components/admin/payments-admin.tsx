@@ -111,9 +111,10 @@ export function PaymentsAdmin({ units, users, freelancers, miscTypes, delegation
         ))}
       </section>
 
-      {/* Tipos de avulso */}
+      {/* Motivos de reembolso (v1.169.0 — era "tipos de pagamento avulso"; a chave MISC não mudou) */}
       <section className="space-y-2">
-        <h2 className="sgo-type-11 font-semibold text-ink-900">Tipos de pagamento avulso</h2>
+        <h2 className="sgo-type-11 font-semibold text-ink-900">Motivos de reembolso</h2>
+        <p className="text-xs text-ink-500">O que o gerente escolhe ao pedir um reembolso (passagem paga do bolso, diferença de pagamento, outra despesa). Cada motivo define quem aprova.</p>
         <div className="rounded-lg border border-dashed p-3 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Nome</Label><Input value={mName} onChange={(e) => setMName(e.target.value)} /></div>

@@ -79,7 +79,7 @@ type CollabsByUnit = Record<string, CollabOpt[]>;
 /** Opções do seletor de colaborador: o cargo vai de apoio, para distinguir homônimos. */
 const collabOptions = (xs: CollabOpt[]) => xs.map((c) => ({ value: c.id, label: c.name, hint: c.jobTitle ?? undefined }));
 
-const TYPE_LABEL = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra', MISC: 'Avulso' } as const;
+const TYPE_LABEL = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra', MISC: 'Reembolso' } as const;
 const STATUS: Record<PayReq['status'], { label: string; tone: StatusTone }> = {
   PENDING: { label: 'Pendente', tone: 'medium' },
   APPROVED: { label: 'Aprovada', tone: 'success' },
@@ -593,9 +593,10 @@ function DetailView({ r }: { r: PayReq }) {
     const comp = d?.workDate ? competenciaDaHoraExtra(d.workDate) : null;
     if (comp) rows.push(['Fechamento (Hora extra)', `competência ${rotuloDaCompetencia(comp)}`]);
   } else {
-    if (d?.miscTypeName) rows.push(['Tipo', d.miscTypeName]);
-    if (d?.beneficiary) rows.push(['Beneficiário', d.beneficiary]);
-    if (d?.supplierName) rows.push(['Fornecedor', d.supplierName]);
+    rows.push(['Colaborador reembolsado', d?.collaboratorName ?? d?.beneficiary ?? '—']);
+    if (d?.miscTypeName) rows.push(['Motivo', d.miscTypeName]);
+    if (d?.workDate) rows.push(['Data da despesa', fmtDay(d.workDate)]);
+    if (d?.supplierName) rows.push(['Fornecedor (registro antigo)', d.supplierName]);
   }
   if (d?.transportValue) rows.push(['Vale transporte', formatBRL(d.transportValue)]);
   if (d?.description) rows.push(['Observações', d.description]);
@@ -640,7 +641,7 @@ function Row({ r, onOpen, selected, onSelect }: { r: PayReq; onOpen: () => void;
       title={`${TYPE_LABEL[r.type]} · ${r.title}`}
       subtitle={[
         formatBRL(r.amount),
-        r.type !== 'MISC' && r.detail?.workDate ? `dia ${fmtDay(r.detail.workDate)}` : null,
+        r.detail?.workDate ? `${r.type === 'MISC' ? 'despesa' : 'dia'} ${fmtDay(r.detail.workDate)}` : null,
         r.type === 'OVERTIME' && r.detail?.hours != null
           ? `${r.detail.workStartTime && r.detail.workEndTime ? `${r.detail.workStartTime}–${r.detail.workEndTime} · ` : ''}${textoHoras(r.detail.hours)}${r.detail.hourlyRate != null ? ` × ${formatBRL(r.detail.hourlyRate)}/h` : ''}`
           : null,
@@ -786,8 +787,7 @@ function List({ items, actions, selection, editor }: {
   );
 }
 
-function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collaboratorsByUnit, overtimeRatesByUnit, motivosHoraExtra, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit; overtimeRatesByUnit: RatesByUnit; motivosHoraExtra: MotivoOpt[]; onDone: () => void }) {
-  const [supplierId, setSupplierId] = useState('');
+function NewRequest({ units, freelancers, miscTypes, sectors, collaboratorsByUnit, overtimeRatesByUnit, motivosHoraExtra, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit; overtimeRatesByUnit: RatesByUnit; motivosHoraExtra: MotivoOpt[]; onDone: () => void }) {
   const [type, setType] = useState<'FREELANCER' | 'OVERTIME' | 'MISC'>('FREELANCER');
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
   const [freelancerId, setFreelancerId] = useState('');
@@ -802,13 +802,36 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
   const [coverage, setCoverage] = useState(false); // cobertura temporária de setor (16/07)
   const [coverageSector, setCoverageSector] = useState('');
   const [calc, setCalc] = useState<{ configured: boolean; hours: number; rate: number | null; amount: number; transport: number; dayTypeLabel: string } | null>(null);
-  const [beneficiary, setBeneficiary] = useState('');
+  /* REEMBOLSO (v1.169.0): o beneficiário é o colaborador do RH (obrigatório),
+     com data da despesa e comprovante — o texto livre saiu da folha. */
+  const [miscCollaboratorId, setMiscCollaboratorId] = useState('');
+  const [attachmentPath, setAttachmentPath] = useState('');
+  const [comprovanteNome, setComprovanteNome] = useState('');
+  const [enviandoComprovante, setEnviandoComprovante] = useState(false);
   const [description, setDescription] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const unitFreelancers = useMemo(() => freelancers.filter((f) => f.unitIds.includes(unitId)), [freelancers, unitId]);
   const unitSectors = useMemo(() => sectors.filter((s) => s.unitId === unitId), [sectors, unitId]);
+  const unitCollabs = useMemo(() => collaboratorsByUnit[unitId] ?? [], [collaboratorsByUnit, unitId]);
+  // Trocou a unidade: o colaborador e o comprovante eram da outra.
+  useEffect(() => { setMiscCollaboratorId(''); setAttachmentPath(''); setComprovanteNome(''); }, [unitId]);
+
+  async function enviarComprovante(file: File | null) {
+    setAttachmentPath(''); setComprovanteNome('');
+    if (!file) return;
+    setEnviandoComprovante(true); setErr(null);
+    try {
+      const fd = new FormData();
+      fd.append('unitId', unitId);
+      fd.append('comprovante', file);
+      const res = await fetch('/api/payments/comprovante', { method: 'POST', body: fd });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setErr(d.error ?? 'Falha ao enviar o comprovante'); return; }
+      setAttachmentPath(d.attachmentPath); setComprovanteNome(file.name);
+    } finally { setEnviandoComprovante(false); }
+  }
   // Trocou a unidade: o setor era da outra.
   useEffect(() => { setWorkSectorId(''); }, [unitId]);
   // Cobertura de setor escolhida: o setor de mesmo nome já vem marcado.
@@ -844,12 +867,18 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
       if (!workDate) { setErr('Informe o dia do trabalho.'); return; }
       if (!workSectorId) { setErr('Escolha o setor/função para o qual o freelancer foi contratado.'); return; }
     }
+    if (type === 'MISC') {
+      if (!miscCollaboratorId) { setErr('Escolha o colaborador que será reembolsado.'); return; }
+      if (!miscTypeId) { setErr('Escolha o motivo do reembolso.'); return; }
+      if (!description.trim()) { setErr('Descreva o reembolso (o que foi pago e quando).'); return; }
+      if (enviandoComprovante) { setErr('Aguarde o envio do comprovante.'); return; }
+    }
     if (!unitId || (!coverage && !autoPriced && !effAmt)) { setErr('Informe unidade e valor.'); return; }
     setBusy(true);
     try {
       const body: Record<string, unknown> = { type, unitId, amount: effAmt, description };
       if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workSectorId, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, coverageSector: coverage && coverageSector ? coverageSector : undefined });
-      if (type === 'MISC') Object.assign(body, { miscTypeId, beneficiary, supplierId: supplierId || undefined });
+      if (type === 'MISC') Object.assign(body, { miscTypeId, collaboratorId: miscCollaboratorId, workDate: workDate || undefined, attachmentPath: attachmentPath || undefined });
       const res = await fetch('/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
@@ -868,7 +897,7 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
         options={[
           { value: 'FREELANCER', label: 'Freelancer' },
           { value: 'OVERTIME', label: 'Hora Extra' },
-          { value: 'MISC', label: 'Pagamento Avulso' },
+          { value: 'MISC', label: 'Reembolso (passagem, despesa, diferença de pagamento)' },
         ]}
       />
       {units.length > 1 && (
@@ -949,30 +978,43 @@ function NewRequest({ units, freelancers, miscTypes, suppliers, sectors, collabo
       )}
 
       {type === 'MISC' && (
+        /* REEMBOLSO (v1.169.0): o funcionário pagou do próprio bolso (passagem,
+           despesa) ou um pagamento saiu errado. Quem recebe é o colaborador do
+           RH; motivo do catálogo; descrição é o descritivo da planilha. */
         <>
+          <DsSelect
+            label="Colaborador reembolsado"
+            required
+            placeholder={unitCollabs.length ? 'Pesquisar ou selecionar…' : 'Unidade sem colaboradores sincronizados'}
+            searchable
+            searchPlaceholder="Pesquisar colaborador…"
+            value={miscCollaboratorId}
+            onValueChange={setMiscCollaboratorId}
+            disabled={unitCollabs.length === 0}
+            options={unitCollabs.map((c) => ({ value: c.id, label: c.name, hint: c.jobTitle ?? undefined }))}
+            hint={unitCollabs.length ? undefined : 'Os colaboradores vêm do RH (Pessoas → Sincronizar).'}
+          />
+          <DsSelect
+            label="Motivo do reembolso"
+            required
+            aria-label="Motivo do reembolso"
+            placeholder="Selecione…"
+            value={miscTypeId}
+            onValueChange={setMiscTypeId}
+            options={miscTypes.map((t) => ({ value: t.id, label: t.name }))}
+            hint="Passagem, despesa paga do bolso, diferença de pagamento… O Admin cadastra os motivos em Configurações → Pagamentos."
+          />
+          <DatePicker label="Data da despesa (opcional)" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
           <div>
-            <Label>Tipo de pagamento</Label>
-            <DsSelect
-              aria-label="Tipo de pagamento"
-              placeholder="Selecione…"
-              value={miscTypeId}
-              onValueChange={setMiscTypeId}
-              options={miscTypes.map((t) => ({ value: t.id, label: t.name }))}
-            />
+            <Label>Descrição (obrigatória)</Label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="ex.: passagem ida e volta em 12/10 · diferença da HE de setembro" />
           </div>
-          {suppliers.length > 0 && (
-            <div>
-              <Label>Fornecedor (opcional)</Label>
-              <DsSelect
-                aria-label="Fornecedor"
-                value={supplierId}
-                onValueChange={(v) => { const s = suppliers.find((x) => x.id === v); setSupplierId(v); if (s) setBeneficiary(s.name); }}
-                options={[{ value: '', label: '— nenhum / digitar abaixo —' }, ...suppliers.map((s) => ({ value: s.id, label: s.name }))]}
-              />
-            </div>
-          )}
-          <div><Label>Beneficiário</Label><Input value={beneficiary} onChange={(e) => { setBeneficiary(e.target.value); setSupplierId(''); }} /></div>
-          <div><Label>Descrição</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+          <div>
+            <Label>Comprovante (foto ou PDF, opcional)</Label>
+            <input type="file" accept="image/*,application/pdf,.pdf" onChange={(e) => enviarComprovante(e.target.files?.[0] ?? null)} className="block w-full text-sm" data-testid="comprovante-reembolso" />
+            {enviandoComprovante && <p className="mt-1 text-xs text-ink-500">Enviando…</p>}
+            {comprovanteNome && !enviandoComprovante && <p className="mt-1 text-xs text-success">Comprovante anexado: {comprovanteNome}</p>}
+          </div>
         </>
       )}
 
@@ -1067,7 +1109,12 @@ function ApproverEditForm({ r, sectors, collaborators, rates = [], onDone, onCan
           : { workStartTime: null, workEndTime: null, hours: hours ? num(hours) : null, amount: num(amount) }),
       });
     } else {
-      Object.assign(body, { beneficiary, amount: num(amount) });
+      /* Reembolso: colaborador pela lista do RH; o nome digitado só em registro antigo. */
+      Object.assign(body, {
+        amount: num(amount), workDate: workDate || '',
+        ...(collaboratorId && collaboratorId !== (d?.collaboratorId ?? '') ? { collaboratorId } : {}),
+        ...(!d?.collaboratorId && !collaboratorId ? { beneficiary } : {}),
+      });
     }
     setBusy(true);
     try {
@@ -1159,7 +1206,19 @@ function ApproverEditForm({ r, sectors, collaborators, rates = [], onDone, onCan
       )}
       {r.type === 'MISC' && (
         <>
-          <div><Label>Beneficiário</Label><Input value={beneficiary} onChange={(e) => setBeneficiary(e.target.value)} /></div>
+          <DsSelect
+            label="Colaborador reembolsado"
+            placeholder={d?.collaboratorId ? 'Selecione…' : 'Registro antigo — escolha para vincular ao RH'}
+            searchable
+            searchPlaceholder="Pesquisar colaborador…"
+            value={collaboratorId}
+            onValueChange={setCollaboratorId}
+            options={collaborators.map((c) => ({ value: c.id, label: c.name }))}
+          />
+          {!d?.collaboratorId && !collaboratorId && (
+            <div><Label>Beneficiário (nome digitado no registro antigo)</Label><Input value={beneficiary} onChange={(e) => setBeneficiary(e.target.value)} /></div>
+          )}
+          <DatePicker label="Data da despesa" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
           <div><Label>Valor (R$)</Label><Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} /></div>
         </>
       )}

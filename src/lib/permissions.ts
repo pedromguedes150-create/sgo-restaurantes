@@ -84,6 +84,9 @@ const BASE: ModuleDef[] = [
   { key: 'PAYMENTS_CONSOLIDATION', label: 'Pagamentos de freelancers (PIX)', nav: '/modulos/pagamentos/consolidacao', parent: 'PAYMENTS' },
   // Hora extra (v1.142.0): painel, solicitações e o Fechamento por competência (era "Pagamento Extra")
   { key: 'HORA_EXTRA', label: 'Hora extra (painel e fechamento)', nav: '/modulos/hora-extra', parent: 'PAYMENTS' },
+  /* Reembolsos (v1.169.0, era "Pagamento Avulso"): lista, totais e Excel do que
+     o funcionário pagou do bolso. Segue o pai (quem vê Pagamentos vê). */
+  { key: 'PAYMENTS_REEMBOLSOS', label: 'Reembolsos (lista e Excel)', nav: '/modulos/pagamentos/reembolsos', parent: 'PAYMENTS' },
 
   { key: 'PEOPLE', label: 'Pessoas / Escala / Mapa', nav: '/modulos/pessoas' },
   { key: 'PEOPLE_MAP', label: 'Mapa de funções', nav: '/modulos/pessoas/mapa', parent: 'PEOPLE' },
@@ -162,7 +165,7 @@ const BASE: ModuleDef[] = [
   { key: 'CONFIG_PRODUCT_STANDARDS', label: 'Padrão de produtos (foto)', nav: '/configuracoes/padrao-produtos', parent: 'CONFIG' },
   { key: 'CONFIG_PIZZAS', label: 'Pizzas (sabores)', nav: '/configuracoes/pizzas', parent: 'CONFIG' },
   { key: 'CONFIG_TICKET_MEDIA', label: 'Ticket Médio (unidades participantes)', nav: '/configuracoes/ticket-medio', parent: 'CONFIG' },
-  { key: 'CONFIG_PAYMENTS', label: 'Pagamentos (freelancers e avulsos)', nav: '/configuracoes/pagamentos', parent: 'CONFIG' },
+  { key: 'CONFIG_PAYMENTS', label: 'Pagamentos (freelancers e motivos de reembolso)', nav: '/configuracoes/pagamentos', parent: 'CONFIG' },
   { key: 'CONFIG_FREELANCER_RATES', label: 'Valor do freelancer por setor', nav: '/configuracoes/freelancer-valores', parent: 'CONFIG' },
   { key: 'CONFIG_OVERTIME_RATES', label: 'Valor da hora extra por unidade', nav: '/configuracoes/hora-extra-valores', parent: 'CONFIG' },
   { key: 'CONFIG_EVALUATION', label: 'Avaliação por função (modelos)', nav: '/configuracoes/avaliacao', parent: 'CONFIG' },

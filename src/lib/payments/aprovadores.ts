@@ -43,7 +43,7 @@ export const FILTROS_DE_TIPO: { value: FiltroDeTipo; label: string }[] = [
   { value: 'ALL', label: 'Todos' },
   { value: 'FREELANCER', label: 'Freelancer' },
   { value: 'OVERTIME', label: 'Hora Extra' },
-  { value: 'MISC', label: 'Avulso' },
+  { value: 'MISC', label: 'Reembolso' },
 ];
 export function filtrarPorTipo<T extends { type: PaymentType }>(itens: T[], filtro: FiltroDeTipo): T[] {
   return filtro === 'ALL' ? itens : itens.filter((i) => i.type === filtro);

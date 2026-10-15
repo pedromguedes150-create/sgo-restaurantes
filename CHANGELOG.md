@@ -9,6 +9,17 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.169.0 — 2026-10-15 (Pagamentos: "Pagamento Avulso" vira REEMBOLSO, com colaborador do RH, comprovante e planilha)
+### Alterado
+- **Pedido do Pedro**: o "Pagamento Avulso" era, na prática, **reembolso** ao funcionário — passagem paga do próprio bolso ou diferença de um pagamento calculado errado. A chave no banco (`MISC`) e a matriz de perfis **não mudaram**; mudou o nome em toda a tela (seletor, filtro de tipo, listas, notificações, consolidação, Configurações → Pagamentos "Motivos de reembolso", guia).
+- **Folha do reembolso** (Pagamentos → Nova → Reembolso): **colaborador do RH obrigatório** (lista pesquisável da unidade, a mesma da Hora Extra — decisão do Pedro), motivo do catálogo (cada motivo define quem aprova, como antes), **data da despesa**, **descrição obrigatória** (é o descritivo da planilha) e **comprovante** foto/PDF opcional (`/api/payments/comprovante`; a lib só aceita caminho do volume da própria unidade). O nome gravado é o do cadastro (snapshot); o texto livre e o fornecedor saíram da folha, mas os registros antigos continuam legíveis. O aprovador corrige colaborador e data pela mesma lista; em registro antigo sem colaborador o nome digitado segue editável.
+- **Aprovação, pagamento, status, valor e segregação: intocados.**
+### Novo
+- **Pagamentos → Reembolsos** (`/modulos/pagamentos/reembolsos`, módulo `PAYMENTS_REEMBOLSOS`, segue quem vê Pagamentos): período (hoje/semana/mês/personalizado), unidade e status na URL, totais (quantidade, total sem rejeitados, pendente, a pagar, pago, sem comprovante), lista com o descritivo e **por colaborador**. Botão **Baixar Excel** (`/api/payments/reembolsos/export`, mesmos filtros): aba "Reembolsos" com Unidade · Data da despesa · Data da solicitação · Colaborador · CPF · Motivo · Descrição · Valor · Status · Solicitado/Aprovado/Pago por e em · Comprovante · Motivo da rejeição, e aba "Por colaborador". Só consulta: exportar não aprova nem marca pago. Escopo por unidade no servidor (unidade fora do alcance na URL devolve vazio).
+- Seed de desenvolvimento cria os motivos "Passagem / transporte", "Diferença de pagamento (cálculo)" e "Outra despesa". Testes: `reembolsos.integration` (6) + os de Pagamentos adaptados ao colaborador obrigatório.
+
+---
+
 ## v1.168.0 — 2026-10-14 (Integração SGO → GBF-RH: envio automático por fila + documentação da entrada)
 ### Novo
 - **Fila de saída SGO → RH** (`rh_eventos_saida`, `src/lib/rh/saida/`): atestados (criar/cancelar), desligamentos **aprovados pelo supervisor** e demandas ao RH vão para o GBF-RH sozinhos — `POST /api/integracoes/sgo/atestados | desligamentos | demandas`, `Authorization: Bearer RH_WEBHOOK_TOKEN`, base `RH_API_URL` (fallback `RH_API_BASE_URL`), 20 s de teto. Cada evento tem `sgoEventId` fixo (UUID único): reenviar nunca duplica no RH (`{"status":"duplicado"}` conta como enviado). Despachante a cada minuto no scheduler; espera crescente 1→480 min até 10 tentativas; 400/422/409 = erro de dados sem nova tentativa; 401 = PARADO + aviso crítico aos Admins; 404/5xx/rede = adiar. Sem token: nada sai e nada se perde (pendentes saem sozinhos quando o token entrar). Reinício devolve ENVIANDO/PARADO à fila. CPF mascarado em erro/resposta; anexo lido do volume na hora e nunca gravado; token nunca logado.

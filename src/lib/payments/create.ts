@@ -9,6 +9,7 @@ import type { PaymentType, Role } from '@prisma/client';
 import { calcularHoraExtra, horarioValido } from '@/lib/overtime/calculo';
 import { overtimeRateAllowed } from '@/lib/overtime/rates';
 import { overtimeReasonAllowed } from '@/lib/overtime/reasons';
+import { comprovanteValido } from '@/lib/payments/reembolsos-calculo';
 
 export interface CreatePaymentInput {
   type: PaymentType;
@@ -61,12 +62,12 @@ export async function createPaymentRequest(
     if (e instanceof UnitScopeError) return { ok: false, reason: 'FORBIDDEN' };
     throw e;
   }
-  // Aprovador: SUPERVISOR para freela/HE; do tipo para avulso
+  // Aprovador: SUPERVISOR para freela/HE; do motivo para reembolso
   let approverRole: Role = 'SUPERVISOR';
   if (input.type === 'MISC') {
-    if (!input.miscTypeId) return { ok: false, reason: 'INVALID' };
+    if (!input.miscTypeId) return { ok: false, reason: 'INVALID', detail: 'Escolha o motivo do reembolso.' };
     const t = await prisma.miscPaymentType.findUnique({ where: { id: input.miscTypeId } });
-    if (!t) return { ok: false, reason: 'INVALID' };
+    if (!t) return { ok: false, reason: 'INVALID', detail: 'Motivo de reembolso inválido.' };
     approverRole = t.approverRole;
   }
   if (input.type === 'FREELANCER' && !input.freelancerId) return { ok: false, reason: 'INVALID', detail: 'Escolha o freelancer.' };
@@ -96,6 +97,21 @@ export async function createPaymentRequest(
      solicitação — mudar a configuração depois não reescreve o passado. */
   let hourlyRate: number | null = null;
   let heCalc: ReturnType<typeof calcularHoraExtra> | null = null;
+  /* REEMBOLSO (v1.169.0, era "Pagamento Avulso"): o beneficiário é o COLABORADOR
+     DO RH, obrigatório (decisão do Pedro) — o texto livre fica só nos registros
+     antigos. Data da despesa opcional, descrição obrigatória (é o descritivo
+     que sai na planilha), comprovante só do volume da própria unidade. */
+  let beneficiary: string | null = null;
+  if (input.type === 'MISC') {
+    const r = await colaboradorDaUnidade(input.collaboratorId, input.unitId);
+    if (!r.ok) return { ok: false, reason: 'INVALID', detail: r.detail };
+    collaboratorId = r.id;
+    collaboratorName = r.name;
+    beneficiary = r.name;
+    if (input.workDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.workDate)) return { ok: false, reason: 'INVALID', detail: 'Data da despesa inválida.' };
+    if (!input.description?.trim()) return { ok: false, reason: 'INVALID', detail: 'Descreva o reembolso (o que foi pago e quando).' };
+    if (!comprovanteValido(input.attachmentPath, input.unitId)) return { ok: false, reason: 'INVALID', detail: 'Comprovante inválido — envie o arquivo pela tela.' };
+  }
   if (input.type === 'OVERTIME') {
     const r = await colaboradorDaUnidade(input.collaboratorId, input.unitId);
     if (!r.ok) return { ok: false, reason: 'INVALID', detail: r.detail };
@@ -180,7 +196,8 @@ export async function createPaymentRequest(
       reason: input.reason?.trim() || null,
       overtimeReasonId: input.type === 'OVERTIME' ? input.overtimeReasonId! : null,
       miscTypeId: input.miscTypeId || null,
-      beneficiary: input.beneficiary?.trim() || null,
+      /* Reembolso: o nome do cadastro (snapshot, como na HE); o texto do corpo é ignorado. */
+      beneficiary: beneficiary ?? (input.type === 'MISC' ? null : input.beneficiary?.trim() || null),
       attachmentPath: input.attachmentPath || null,
       supplierId: input.supplierId || null,
     },
@@ -201,7 +218,7 @@ export async function createPaymentRequest(
 
   // Notifica os aprovadores: por unidade quando o papel é vinculado (SUPERVISOR/
   // COORDINATOR/MANAGER), globalmente para ADMIN/CEO/FINANCE.
-  const TYPE_LABEL: Record<string, string> = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra', MISC: 'Pagamento avulso' };
+  const TYPE_LABEL: Record<string, string> = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra', MISC: 'Reembolso' };
   const divNote = divergent && standardValue !== null
     ? ` ⚠ DIVERGÊNCIA: valor padrão é R$ ${standardValue.toFixed(2)}.`
     : '';

@@ -398,7 +398,22 @@ export async function approverEditRequest(user: SessionUser, id: string, input: 
       if (input.amount !== undefined) amount = Number(input.amount);
     }
   } else {
-    if (input.beneficiary !== undefined) muda('beneficiary', req.beneficiary, input.beneficiary.trim() || null);
+    /* REEMBOLSO (v1.169.0): o aprovador troca o colaborador pela MESMA lista do
+       RH; o nome digitado só segue editável em registro antigo (sem colaborador). */
+    if (input.collaboratorId !== undefined) {
+      const c = await colaboradorDaUnidade(input.collaboratorId, req.unitId);
+      if (!c.ok) return { ok: false, reason: 'INVALID', detail: c.detail };
+      muda('collaboratorId', req.collaboratorId, c.id);
+      muda('collaboratorName', req.collaboratorName, c.name);
+      muda('beneficiary', req.beneficiary, c.name);
+    } else if (input.beneficiary !== undefined && !req.collaboratorId) {
+      muda('beneficiary', req.beneficiary, input.beneficiary.trim() || null);
+    }
+    if (input.workDate !== undefined) {
+      if (input.workDate && !YMD.test(input.workDate)) return { ok: false, reason: 'INVALID', detail: 'Data da despesa inválida.' };
+      muda('workDate', req.workDate, input.workDate || null);
+      if (data.workDate !== undefined && input.workDate) data.workDate = new Date(input.workDate + 'T00:00:00.000Z');
+    }
     if (input.amount !== undefined) amount = Number(input.amount);
   }
 
@@ -414,7 +429,7 @@ export async function approverEditRequest(user: SessionUser, id: string, input: 
   await audit({ userId: user.id, unitId: req.unitId, action: 'PAYMENT_APPROVER_EDIT', module: 'PAYMENTS', entity: 'payment_request', entityId: id, metadata: { type: req.type, antes, depois }, ...ctx });
   if (req.requestedById && req.requestedById !== user.id) {
     const visiveis = camposMudados.filter((c) => c !== 'hours');
-    const oQue = req.type === 'FREELANCER' ? 'freelancer' : req.type === 'OVERTIME' ? 'pedido de hora extra' : 'pagamento avulso';
+    const oQue = req.type === 'FREELANCER' ? 'freelancer' : req.type === 'OVERTIME' ? 'pedido de hora extra' : 'reembolso';
     await notifyUsers([req.requestedById], {
       title: 'Sua solicitação foi ajustada antes da aprovação',
       body: user.name + ' corrigiu ' + visiveis.length + ' campo(s) do ' + oQue + '. Valor agora: R$ ' + amount.toFixed(2) + '.',

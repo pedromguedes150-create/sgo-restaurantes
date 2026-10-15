@@ -52,7 +52,8 @@ async function novaHE() {
   return r.id;
 }
 async function novoAvulso(miscTypeId: string) {
-  const r = await createPaymentRequest(mgr(), { type: 'MISC', unitId, amount: 80, miscTypeId, beneficiary: 'Fulano', description: 'x' });
+  /* v1.169.0: o "avulso" virou REEMBOLSO e exige o colaborador do RH da unidade. */
+  const r = await createPaymentRequest(mgr(), { type: 'MISC', unitId, amount: 80, miscTypeId, collaboratorId: colabId, description: 'reembolso de passagem' });
   if (!r.ok) throw new Error(`create MISC: ${r.reason} ${r.detail ?? ''}`);
   return r.id;
 }

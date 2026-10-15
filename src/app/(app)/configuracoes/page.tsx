@@ -46,7 +46,7 @@ const SECOES: { titulo: string; itens: { href: string; title: string; subtitle: 
       { href: '/configuracoes/padrao-produtos', title: 'Padrão de produtos', subtitle: 'Fotos de referência para a checagem por IA', icon: ListChecks },
       { href: '/configuracoes/pizzas', title: 'Pizzas (sabores)', subtitle: 'Cardápio que aparece no link de fechamento da pizzaria', icon: Pizza },
       { href: '/configuracoes/setores-cd', title: 'Setores do CD', subtitle: 'Áreas que separam os pedidos e a que cada Separador é vinculado', icon: Boxes },
-      { href: '/configuracoes/pagamentos', title: 'Pagamentos', subtitle: 'Freelancers, tipos de avulso e aprovadores', icon: Wallet },
+      { href: '/configuracoes/pagamentos', title: 'Pagamentos', subtitle: 'Freelancers, motivos de reembolso e aprovadores', icon: Wallet },
       { href: '/configuracoes/freelancer-valores', title: 'Valor do freelancer', subtitle: 'Diária por setor e vale-transporte', icon: Wallet },
     ],
   },
