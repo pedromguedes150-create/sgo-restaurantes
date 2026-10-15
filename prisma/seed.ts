@@ -425,8 +425,10 @@ async function main() {
 
   const fl1 = await prisma.freelancer.create({ data: { name: 'João Garçom (freela)', defaultValue: 150, pixKey: 'joao.garcom@email.com', units: { create: [{ unitId: centro.id }, { unitId: orla.id }] } } });
   const fl2 = await prisma.freelancer.create({ data: { name: 'Maria Cozinha (freela)', defaultValue: 180, pixKey: '11999990000', units: { create: [{ unitId: centro.id }] } } });
-  const mt1 = await prisma.miscPaymentType.create({ data: { name: 'Reembolso de despesa', approverRole: 'SUPERVISOR', order: 1 } });
-  const mt2 = await prisma.miscPaymentType.create({ data: { name: 'Adiantamento', approverRole: 'ADMIN', order: 2 } });
+  // Motivos de REEMBOLSO (v1.169.0 — o "Pagamento Avulso" é reembolso ao funcionário)
+  const mt1 = await prisma.miscPaymentType.create({ data: { name: 'Passagem / transporte', approverRole: 'SUPERVISOR', order: 1 } });
+  const mt2 = await prisma.miscPaymentType.create({ data: { name: 'Diferença de pagamento (cálculo)', approverRole: 'ADMIN', order: 2 } });
+  await prisma.miscPaymentType.create({ data: { name: 'Outra despesa', approverRole: 'SUPERVISOR', order: 3 } });
 
   // Delegação: supervisor delega aprovação à coordenadora por 15 dias
   await prisma.approvalDelegation.create({

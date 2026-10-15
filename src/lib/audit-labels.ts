@@ -114,7 +114,7 @@ const ENTITIES: [string, string][] = [
   ['PERMISSION', 'Perfil de acesso'],
   ['FREELANCER', 'Freelancer'],
   ['INVENTORY', 'Inventário'],
-  ['MISCTYPE', 'Tipo de avulso'],
+  ['MISCTYPE', 'Motivo de reembolso'],
   ['SUPPLIER', 'Fornecedor'],
   ['TEMPLATE', 'Checklist'],
   ['TRAINING', 'Treinamento'],

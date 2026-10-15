@@ -34,7 +34,7 @@ function toDTO(r: ReqRow): PayReq {
       ? r.freelancer?.name ?? 'Freelancer'
       : r.type === 'OVERTIME'
         ? r.collaboratorName ?? 'Hora extra'
-        : `${r.miscType?.name ?? 'Avulso'}${r.beneficiary ? ` — ${r.beneficiary}` : ''}`;
+        : `${r.collaboratorName ?? r.beneficiary ?? 'Reembolso'}${r.miscType?.name ? ` — ${r.miscType.name}` : ''}`;
   // Dia de referência para agrupamento: data efetiva/trabalho quando houver, senão a solicitação
   const day = (r.entryDate ?? r.workDate ?? r.createdAt).toISOString().slice(0, 10);
   return {
@@ -100,6 +100,7 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
   /* Pagamento Extra (v1.135.0): a hora extra aprovada aqui é paga lá, na
      competência do mês seguinte — quem aprova precisa achar o caminho. */
   const podeVerHoraExtra = Boolean(permissoes.HORA_EXTRA?.canView);
+  const podeVerReembolsos = Boolean(permissoes.PAYMENTS_REEMBOLSOS?.canView);
 
   /* A tela OBEDECE o seletor de unidade do cabeçalho (pedido de 04/09: "está
      tudo misturado"). Mesma regra de precedência de Tarefas e Pessoas;
@@ -154,6 +155,8 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
               ...(podeVerConsolidacao ? [{ href: '/modulos/pagamentos/relatorio-freelancers', titulo: 'Recorrência de Freelancers', descricao: 'Quem repete na mesma semana, por unidade — e o fechamento semanal com PIX.' }] : []),
               ...(podeVerConsolidacaoPagamentos ? [{ href: '/modulos/pagamentos/consolidacao', titulo: 'Pagamentos de Freelancers', descricao: 'Conferência do período para o PIX: por lançamento, por unidade e por colaborador.' }] : []),
               ...(podeVerHoraExtra ? [{ href: '/modulos/hora-extra', titulo: 'Hora extra', descricao: 'Painel por motivo e período, lista de solicitações e o fechamento da competência (mês seguinte ao trabalho).' }] : []),
+              /* Reembolsos (v1.169.0): lista do período, totais por colaborador e Excel com o descritivo. */
+              ...(podeVerReembolsos ? [{ href: '/modulos/pagamentos/reembolsos', titulo: 'Reembolsos', descricao: 'Passagens e despesas pagas pelo funcionário, diferenças de pagamento — lista, totais por colaborador e planilha Excel.' }] : []),
             ]} />}
             abas={await abasDoPerfil(user.role, 'PAYMENTS')}
             podePagar={podePagar}

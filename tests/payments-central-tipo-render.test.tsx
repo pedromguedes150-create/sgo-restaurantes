@@ -34,10 +34,11 @@ function render(props: Record<string, unknown> = {}) {
 }
 
 describe('Central de Pagamentos — filtro de tipo e aba Pagar', () => {
-  it('com pendências abre em Para Aprovar, com o filtro Todos · Freelancer · Hora Extra · Avulso e os dois tipos na lista', () => {
+  it('com pendências abre em Para Aprovar, com o filtro Todos · Freelancer · Hora Extra · Reembolso e os dois tipos na lista', () => {
     const html = render({ toApprove: [fl, he] });
     expect(html).toContain('Tipo de pagamento');
-    for (const r of ['Todos', 'Freelancer', 'Hora Extra', 'Avulso']) expect(html).toContain(r);
+    /* v1.169.0: "Avulso" virou "Reembolso" (a chave MISC não mudou). */
+    for (const r of ['Todos', 'Freelancer', 'Hora Extra', 'Reembolso']) expect(html).toContain(r);
     expect(html).toContain('VALDIRENE QUINTINO');
     expect(html).toContain('JELBERT LUCAS');
     expect(html).toContain('3h'); // horas × valor/hora na linha da HE

@@ -36,7 +36,7 @@ beforeAll(async () => {
   supId = (await prisma.user.create({ data: { name: 'Supervisora', email: `${sfx}-s@e.com`, role: 'SUPERVISOR', passwordHash: 'x' } })).id;
   adminId = (await prisma.user.create({ data: { name: 'Admin', email: `${sfx}-a@e.com`, role: 'ADMIN', passwordHash: 'x' } })).id;
   await prisma.unitMembership.createMany({ data: [{ userId: mgrId, unitId }, { userId: mgr2Id, unitId }, { userId: supId, unitId }, { userId: supId, unitId: outraUnitId }] });
-  colabId = (await prisma.collaborator.create({ data: { name: `Colab ${sfx}`, active: true, source: 'RH', units: { create: { unitId } } } })).id;
+  colabId = (await prisma.collaborator.create({ data: { name: `Colab ${sfx}`, active: true, source: 'RH', units: { create: [{ unitId }, { unitId: outraUnitId }] } } })).id;
   // valores autorizados: 20 e 25 nesta unidade; a outra fica sem nenhum
   for (const v of [20, 25]) { const r = await addOvertimeRate(admin(), unitId, v); if (!r.ok) throw new Error('setup rate'); }
 });
@@ -150,7 +150,7 @@ describe('Solicitações da unidade (gerente)', () => {
     expect(a.ok && b.ok).toBe(true);
     // uma solicitação da OUTRA unidade, feita pela supervisora (avulso simples)
     const tipo = await prisma.miscPaymentType.create({ data: { name: `Avulso ${sfx}` } });
-    const c = await createPaymentRequest(sup(), { type: 'MISC', unitId: outraUnitId, amount: 50, miscTypeId: tipo.id, beneficiary: 'X' });
+    const c = await createPaymentRequest(sup(), { type: 'MISC', unitId: outraUnitId, amount: 50, miscTypeId: tipo.id, collaboratorId: colabId, description: 'reembolso de passagem' });
     expect(c.ok).toBe(true);
 
     const daUnidade = await getUnitRequests(mgr());

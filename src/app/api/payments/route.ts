@@ -40,6 +40,8 @@ export async function POST(req: Request) {
       miscTypeId: b.miscTypeId,
       beneficiary: b.beneficiary,
       supplierId: b.supplierId,
+      // Reembolso (v1.169.0): comprovante gravado antes por /api/payments/comprovante; a lib confere o caminho.
+      attachmentPath: typeof b.attachmentPath === 'string' ? b.attachmentPath : undefined,
     },
     requestContext(req),
   );

@@ -46,7 +46,7 @@ export const STATUS_LABEL: Record<StatusFiltro, string> = {
   REJECTED: 'Rejeitado',
 };
 
-export const TIPO_TEXTO: Record<PaymentType, string> = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra', MISC: 'Avulso' };
+export const TIPO_TEXTO: Record<PaymentType, string> = { FREELANCER: 'Freelancer', OVERTIME: 'Hora Extra', MISC: 'Reembolso' };
 export const STATUS_TEXTO: Record<PaymentStatus, string> = { PENDING: 'Pendente', APPROVED: 'Aprovado', PAID: 'Pago', REJECTED: 'Rejeitado' };
 
 export const emBR = (isoStr: string) => isoStr.split('-').reverse().join('/');
