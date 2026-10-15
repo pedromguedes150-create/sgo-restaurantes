@@ -9,6 +9,19 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.170.0 — 2026-10-15 (Meta por módulo + Escala de gerentes: folga própria só no futuro, exclusão com motivo, Hoje na rede e relatório da rede)
+### Adicionado
+- **Configuração da Meta → aba "Por módulo"**: todos os módulos do sistema, agrupados pelas áreas do menu, com o indicador que a meta mede em cada um e o campo de peso/desconto onde há indicador (as MESMAS chaves da aba Componentes — nenhuma segunda conta). Módulo sem indicador aparece com "Ainda sem indicador" e campo desligado: um peso gravado num módulo que ninguém mede não mudaria a nota de ninguém (`src/lib/metas/por-modulo.ts` PURO, `components/metas/meta-por-modulo-client.tsx`).
+- **Indicador novo "Escala de gerentes — folgas do mês cadastradas"**: cada gerente/coordenador ativo da unidade SEM folga nem férias (ativa) no mês desconta X% da nota, **por gerente** (decisão do Pedro: 2 sem folga = 2 × X%). Padrão **5%** (`MANAGER_LEAVE_META_PENALTY`, ajustável, 0 desliga); entra em `getUnitMonthScore` depois do "fora do prazo" e no detalhamento como linha com os NOMES (`src/lib/metas/escala-gerentes.ts`).
+- **Minha folga** (`/modulos/escala-gerentes/minha`, módulo `MANAGER_SCHEDULE_OWN`, padrão Gerente/Coordenador): o gerente lança a PRÓPRIA folga ou férias **só a partir de amanhã** — regra no servidor (`podeLancarPropria`, `src/lib/manager-schedule-regras.ts` PURO) e calendário já bloqueado antes disso; só apaga o que ele mesmo lançou e ainda não aconteceu; a Supervisão/Coordenação da unidade (+Admins) é avisada de cada lançamento e exclusão. Rota própria `/api/manager-schedule/propria` (a lib só grava para o próprio usuário).
+- **Hoje na rede** (`/modulos/escala-gerentes/hoje`, módulo `MANAGER_SCHEDULE_TODAY`, padrão Coordenação + Admin/CEO): quem está de folga/férias HOJE por unidade, quem cobre, **unidades sem nenhum gerente** (vermelho, no topo), quem volta amanhã e as ausências dos próximos 7 dias. Escopo do usuário.
+- **Relatório da rede (PDF)** (`/modulos/escala-gerentes/relatorio-rede`, módulo `MANAGER_SCHEDULE_NETWORK_REPORT`, só Admin/CEO — conferido também na lib): resumo executivo, cada unidade gerente a gerente (período, dias no mês, quem lançou e quando), **quem está sem folga cadastrada** em destaque e o bloco **Exclusões do mês com motivo**.
+### Alterado
+- **Apagar folga/férias exige MOTIVO (≥10 caracteres) — para todos, inclusive Supervisão** (decisão do Pedro), e virou **exclusão LÓGICA**: `ManagerLeave.deletedAt/deletedById/deleteReason` (migração aditiva); a linha some da grade, do Controle de gerentes, da Minha área e do alerta de 7 dias, mas fica para o relatório e a Auditoria. Segundo clique no mesmo "Apagar" não grava segundo motivo (`updateMany` com `deletedAt: null`).
+- Escala de gerentes ganhou abas no cabeçalho (Escala · Minha folga · Hoje na rede · Relatório da rede), cada uma só para quem a matriz libera.
+### Testes
+- `manager-schedule-regras` (puro: futuro, só o dele, motivo, hoje na rede, dias dentro do mês, meta por módulo) + `manager-schedule-propria.integration` (exclusão lógica com motivo e auditoria, própria folga só a partir de amanhã, aviso à Supervisão, hoje na rede com unidade sem gerente no topo e excluída fora, relatório só Admin com exclusões, desconto de 2 × 5% na nota). Testes antigos de exclusão passaram a mandar motivo — a exigência é o pedido.
+
 ## v1.169.0 — 2026-10-15 (Pagamentos: "Pagamento Avulso" vira REEMBOLSO, com colaborador do RH, comprovante e planilha)
 ### Alterado
 - **Pedido do Pedro**: o "Pagamento Avulso" era, na prática, **reembolso** ao funcionário — passagem paga do próprio bolso ou diferença de um pagamento calculado errado. A chave no banco (`MISC`) e a matriz de perfis **não mudaram**; mudou o nome em toda a tela (seletor, filtro de tipo, listas, notificações, consolidação, Configurações → Pagamentos "Motivos de reembolso", guia).

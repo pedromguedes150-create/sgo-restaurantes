@@ -40,6 +40,8 @@ export interface LancamentoDeGerente {
   note: string | null;
   /** Nome de quem lançou. Nulo nos lançamentos antigos, feitos pelo próprio dono. */
   lancadoPor: string | null;
+  /** Id de quem lançou — a tela do gerente só oferece "Apagar" no que ELE lançou. */
+  createdById: string | null;
 }
 
 export interface LinhaDaGrade {

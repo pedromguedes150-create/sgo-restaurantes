@@ -81,6 +81,18 @@ export async function getMetaBreakdown(unitId: string, yearMonth: string): Promi
     rows.push({ name: `Fora do prazo (−${Math.round(lateCount * penaltyPct)}% na meta)`, weight: 0, done: 0, resolved: lateCount, scorePct: 0 });
   }
 
+  // Linha informativa "Escala de gerentes" (v1.170.0): gerentes sem folga
+  // cadastrada no mês, com os NOMES — desconto por gerente, direto na nota.
+  const { getManagerLeaveMetaStats } = await import('@/lib/metas/escala-gerentes');
+  const { getManagerLeaveMetaPenalty } = await import('@/lib/metas/config');
+  const [mlStats, mlPct] = await Promise.all([getManagerLeaveMetaStats(unitId, yearMonth), getManagerLeaveMetaPenalty()]);
+  if (mlStats.semFolga > 0 && mlPct > 0) {
+    rows.push({
+      name: `Escala de gerentes — sem folga cadastrada: ${mlStats.nomesSemFolga.join(', ')} (−${Math.round(mlStats.semFolga * mlPct)}% na meta)`,
+      weight: 0, done: mlStats.gerentes - mlStats.semFolga, resolved: mlStats.gerentes, scorePct: 0,
+    });
+  }
+
   return rows.sort((a, b) => b.weight - a.weight);
 }
 

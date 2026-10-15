@@ -50,7 +50,7 @@ export async function gerentesPorUnidade(unitIds: string[], de: string, ate: str
       memberships: { where: { unitId: { in: unitIds } }, select: { unitId: true } },
       managerWorkSchedule: { select: { weekdays: true, startTime: true, endTime: true } },
       managerLeaves: {
-        where: { startDate: { lte: ate }, endDate: { gte: de } },
+        where: { deletedAt: null, startDate: { lte: ate }, endDate: { gte: de } },
         orderBy: { startDate: 'asc' },
         select: { kind: true, startDate: true, endDate: true, note: true },
       },

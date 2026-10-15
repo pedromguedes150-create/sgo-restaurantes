@@ -1512,8 +1512,12 @@ export const GUIDE: GuideSection[] = [
           'FOLGA / FÉRIAS: botão "Folga / férias". Escolha o tipo, o início e o fim (fim em branco = um dia só). O gerente é AVISADO do lançamento por notificação.',
           'Quem lançou fica registrado em cada linha da lista do mês ("lançado por…") e na Auditoria. Período que encosta em outro do mesmo gerente é recusado — sobrepor calaria um dos dois na grade.',
           'QUEM LANÇA: Administração e Supervisão. O gerente vê a própria escala em Minha área → Folgas/férias, mas não altera. Para devolver o lançamento a ele, ligue o "Editar" da Escala de gerentes no perfil dele (Configurações → Perfis de acesso → Pessoas).',
+          'APAGAR EXIGE MOTIVO (v1.170.0): ao tocar em "Apagar", uma janela pede o porquê (pelo menos 10 caracteres) — para a Supervisão também. O lançamento some da grade, mas fica guardado com quem apagou, quando e o motivo: aparece no Relatório da rede e na Auditoria.',
+          'MINHA FOLGA (v1.170.0, aba ao lado): o GERENTE lança a própria folga ou férias, SÓ A PARTIR DE AMANHÃ — o calendário já nasce bloqueado antes disso; datas passadas e o dia de hoje ficam com a Supervisão, que é avisada de cada lançamento. Ele só apaga o que ele mesmo lançou e ainda não aconteceu, e também com motivo.',
+          'HOJE NA REDE (v1.170.0, Admin/CEO e Coordenação): quem está de folga ou férias HOJE, unidade por unidade, quem está cobrindo, unidades SEM NENHUM gerente (em vermelho, no topo), quem volta amanhã e as ausências dos próximos 7 dias.',
+          'RELATÓRIO DA REDE — PDF (v1.170.0, só Administrador): toda a rede, gerente a gerente, folgas e férias do mês com quem lançou e quando, quem está SEM folga cadastrada (desconto na meta da unidade) e as exclusões do mês com o motivo.',
         ],
-        tips: ['Nos dias marcados como folga/férias, os checklists não aparecem na tela do gerente (ele ainda pode entrar no sistema).'],
+        tips: ['Nos dias marcados como folga/férias, os checklists não aparecem na tela do gerente (ele ainda pode entrar no sistema).', 'META: cada gerente/coordenador da unidade sem folga nem férias cadastrada no mês desconta 5% da nota (ajustável em Metas → Configuração da Meta → Por módulo).'],
       },
       {
         id: 'controle-gerentes',
@@ -1705,6 +1709,8 @@ export const GUIDE: GuideSection[] = [
         summary: 'Sua nota do mês e o ranking.',
         steps: [
           'Supervisão/Admin: "Configuração da Meta" reúne todos os componentes e pesos — inclusive os novos "Desperdício diário" e "Comandas diárias" (cobertura mensal; nascem desligados).',
+          'CONFIGURAÇÃO DA META → POR MÓDULO (v1.170.0): a segunda aba lista TODOS os módulos do sistema, por área do menu, e diz o que a meta mede em cada um. Onde há indicador, o peso (ou o desconto em %) é editado ali mesmo — são as mesmas chaves da aba Componentes. Módulo "sem indicador" aparece na lista para a diretoria saber o que ainda não é medido; o campo fica desligado porque um peso num módulo que ninguém mede não mudaria nota nenhuma.',
+          'ESCALA DE GERENTES NA META (v1.170.0): cada gerente/coordenador da unidade SEM folga nem férias cadastrada no mês desconta X% da nota da unidade (padrão 5%; dois sem folga = 10%). O detalhamento da meta nomeia quem está sem folga.',
           'Em METAS, veja "Minha Meta do Mês" e o detalhamento por item (tarefas, treinamentos…).',
           'A nota considera o que já foi resolvido; pendências no prazo não penalizam.',
           'Use o seletor de meses para ver o histórico dos meses anteriores.',

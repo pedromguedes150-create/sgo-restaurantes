@@ -85,8 +85,12 @@ describe('Supervisão lança pela rota', () => {
 
   it('apaga o lançamento', async () => {
     const criada = await post({ action: 'addFolga', userId: anaId, kind: 'FOLGA', startDate: '2026-09-17', endDate: '2026-09-17' });
-    expect((await post({ action: 'deleteFolga', id: criada.data.id })).status).toBe(200);
-    expect(await prisma.managerLeave.count({ where: { userId: anaId } })).toBe(0);
+    /* sem motivo não apaga (v1.170.0) */
+    expect((await post({ action: 'deleteFolga', id: criada.data.id })).status).toBe(400);
+    expect((await post({ action: 'deleteFolga', id: criada.data.id, motivo: 'Folga remarcada para a semana seguinte' })).status).toBe(200);
+    /* exclusão LÓGICA: a linha fica, marcada */
+    expect(await prisma.managerLeave.count({ where: { userId: anaId, deletedAt: null } })).toBe(0);
+    expect(await prisma.managerLeave.count({ where: { userId: anaId, deletedAt: { not: null } } })).toBe(1);
   });
 
   it('período sobreposto devolve 409, não grava dois', async () => {

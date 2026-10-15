@@ -71,7 +71,7 @@ export async function notifyManagersWithoutRecentFolga(now: Date = new Date()): 
       memberships: { select: { unitId: true } },
       managerWorkSchedule: { select: { lastFolgaAlertAt: true } },
       // folgas que cobrem qualquer dia dos últimos 7 dias
-      managerLeaves: { where: { kind: 'FOLGA', endDate: { gte: sevenAgoISO }, startDate: { lte: todayISO } }, select: { id: true }, take: 1 },
+      managerLeaves: { where: { deletedAt: null, kind: 'FOLGA', endDate: { gte: sevenAgoISO }, startDate: { lte: todayISO } }, select: { id: true }, take: 1 },
     },
   });
 

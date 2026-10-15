@@ -40,16 +40,17 @@ export async function POST(req: Request) {
       note: b.note,
     });
   } else if (b.action === 'deleteFolga') {
-    r = await apagarFolgaDoGerente(user, String(b.id ?? ''));
+    r = await apagarFolgaDoGerente(user, String(b.id ?? ''), b.motivo);
   }
 
   if (!r) return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });
   if (!r.ok) {
-    const status: Record<string, number> = { FORBIDDEN: 403, INVALID: 400, OVERLAP: 409 };
+    const status: Record<string, number> = { FORBIDDEN: 403, INVALID: 400, OVERLAP: 409, SEM_MOTIVO: 400 };
     const msg: Record<string, string> = {
       FORBIDDEN: 'Sem permissão para este gerente',
       INVALID: 'Dados inválidos',
       OVERLAP: 'Já existe folga ou férias deste gerente nesse período',
+      SEM_MOTIVO: 'Explique o motivo da exclusão (pelo menos 10 caracteres)',
     };
     const reason = r.reason ?? 'INVALID';
     return NextResponse.json({ error: msg[reason] ?? 'Dados inválidos', reason }, { status: status[reason] ?? 400 });

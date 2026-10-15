@@ -127,5 +127,14 @@ export async function getUnitMonthScore(
     scorePct = Math.max(0, Math.round(scorePct - lateCount * penaltyPct));
   }
 
+  // Desconto "Escala de gerentes" (v1.170.0): cada gerente/coordenador da
+  // unidade sem folga nem férias cadastrada no mês desconta X% (por gerente).
+  const { getManagerLeaveMetaStats } = await import('@/lib/metas/escala-gerentes');
+  const { getManagerLeaveMetaPenalty } = await import('@/lib/metas/config');
+  const [mlStats, mlPct] = await Promise.all([getManagerLeaveMetaStats(unitId, yearMonth), getManagerLeaveMetaPenalty()]);
+  if (mlStats.semFolga > 0 && mlPct > 0) {
+    scorePct = Math.max(0, Math.round(scorePct - mlStats.semFolga * mlPct));
+  }
+
   return { scorePct, doneWeight, resolvedWeight };
 }

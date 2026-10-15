@@ -9,7 +9,7 @@ import { setTrainingWeight } from '@/lib/training';
 import { setCommunicationWeight } from '@/lib/communications/meta';
 import { setEvaluationWeight } from '@/lib/people/evaluation';
 import { setLateEntryPenaltyPct } from '@/lib/late-entry';
-import { setWasteMetaWeight, setCommandsMetaWeight } from '@/lib/metas/config';
+import { setWasteMetaWeight, setCommandsMetaWeight, setManagerLeaveMetaPenalty } from '@/lib/metas/config';
 import { setGasAlertPct, setGasMaxPriceKg } from '@/lib/gas/query';
 import { setFreelancerWeekLimit } from '@/lib/payments/recorrencia';
 import { mesclarFreelancers } from '@/lib/payments/mesclar-freelancers';
@@ -109,6 +109,7 @@ export async function POST(req: Request) {
   else if (e === 'lateEntry' && a === 'setPenalty') r = await setLateEntryPenaltyPct(user, Number(b.pct));
   else if (e === 'wasteMeta' && a === 'setWeight') r = await setWasteMetaWeight(user, Number(b.weight));
   else if (e === 'commandsMeta' && a === 'setWeight') r = await setCommandsMetaWeight(user, Number(b.weight));
+  else if (e === 'managerLeaveMeta' && a === 'setPenalty') r = await setManagerLeaveMetaPenalty(user, Number(b.pct));
   else if (e === 'supervisorChecklist' && a === 'create') r = await createSupervisorChecklist(user, b, ctx);
   else if (e === 'supervisorChecklist' && a === 'update') r = await updateSupervisorChecklist(user, b.id, b, ctx);
   else if (e === 'supervisorChecklist' && a === 'toggle') r = await toggleSupervisorChecklist(user, b.id, b.active, ctx);

@@ -68,7 +68,7 @@ export async function deleteManagerNote(user: SessionUser, id: string) {
 
 /* ───────────────────────── Folgas / férias ───────────────────────── */
 export async function listManagerLeaves(userId: string) {
-  return prisma.managerLeave.findMany({ where: { userId }, orderBy: { startDate: 'desc' }, take: 200 });
+  return prisma.managerLeave.findMany({ where: { userId, deletedAt: null }, orderBy: { startDate: 'desc' }, take: 200 });
 }
 export async function addManagerLeave(user: SessionUser, input: { kind: ManagerLeaveKind; startDate: string; endDate: string; note?: string }) {
   const re = /^\d{4}-\d{2}-\d{2}$/;
@@ -77,17 +77,20 @@ export async function addManagerLeave(user: SessionUser, input: { kind: ManagerL
   const l = await prisma.managerLeave.create({ data: { userId: user.id, kind, startDate: input.startDate, endDate: input.endDate, note: input.note?.trim() || null } });
   return { ok: true as const, id: l.id };
 }
-export async function deleteManagerLeave(user: SessionUser, id: string) {
-  const l = await prisma.managerLeave.findUnique({ where: { id }, select: { userId: true } });
+/** Exclusão LÓGICA com motivo (v1.170.0) — a mesma regra da Escala de gerentes. */
+export async function deleteManagerLeave(user: SessionUser, id: string, motivo?: unknown) {
+  const { motivoValido } = await import('@/lib/manager-schedule-regras');
+  if (!motivoValido(motivo)) return { ok: false as const, reason: 'SEM_MOTIVO' as const };
+  const l = await prisma.managerLeave.findFirst({ where: { id, deletedAt: null }, select: { userId: true } });
   if (!l || l.userId !== user.id) return { ok: false as const, reason: 'FORBIDDEN' as const };
-  await prisma.managerLeave.delete({ where: { id } });
+  await prisma.managerLeave.updateMany({ where: { id, deletedAt: null }, data: { deletedAt: new Date(), deletedById: user.id, deleteReason: motivo.trim() } });
   return { ok: true as const };
 }
 
 /** Folga/férias do usuário cobrindo a data (yyyy-mm-dd), se houver. */
 export async function leaveOnDate(userId: string, dateISO: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return null;
-  return prisma.managerLeave.findFirst({ where: { userId, startDate: { lte: dateISO }, endDate: { gte: dateISO } }, select: { kind: true, startDate: true, endDate: true } });
+  return prisma.managerLeave.findFirst({ where: { userId, deletedAt: null, startDate: { lte: dateISO }, endDate: { gte: dateISO } }, select: { kind: true, startDate: true, endDate: true } });
 }
 
 /* ───────────────────────── Lembretes (scheduler) ───────────────────────── */

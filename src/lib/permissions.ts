@@ -99,6 +99,14 @@ const BASE: ModuleDef[] = [
   // presença da rede escrevendo o endereço. Entra como parte de Pessoas.
   { key: 'SCHEDULE', label: 'Escala (grade de presença)', nav: '/modulos/escala', parent: 'PEOPLE' },
   { key: 'MANAGER_SCHEDULE', label: 'Escala de gerentes', nav: '/modulos/escala-gerentes', parent: 'PEOPLE' },
+  /* v1.170.0 — três portas da Escala de gerentes, cada uma com o seu público,
+     e por isso SEM parent (o pai seria o teto, e a Escala de gerentes nasce só
+     para a Supervisão): o gerente lança a PRÓPRIA folga a partir de amanhã; a
+     Coordenação e a Administração veem quem está fora HOJE na rede; e só o
+     Administrador tira o relatório da rede com as exclusões e os motivos. */
+  { key: 'MANAGER_SCHEDULE_OWN', label: 'Minha folga (o gerente lança a própria)', nav: '/modulos/escala-gerentes/minha' },
+  { key: 'MANAGER_SCHEDULE_TODAY', label: 'Gerentes hoje na rede (folga/férias)', nav: '/modulos/escala-gerentes/hoje' },
+  { key: 'MANAGER_SCHEDULE_NETWORK_REPORT', label: 'Folgas dos gerentes da rede (PDF)', nav: '/modulos/escala-gerentes/relatorio-rede' },
   { key: 'SCHEDULE_OFF', label: 'Folgas da unidade', nav: '/modulos/escala/folgas', parent: 'SCHEDULE' },
   { key: 'SCHEDULE_SWAPS', label: 'Trocas de plantão', nav: '/modulos/escala/trocas', parent: 'SCHEDULE' },
   { key: 'SCHEDULE_RH_NOTICES', label: 'Avisos ao RH', nav: '/modulos/escala/avisos-rh', parent: 'SCHEDULE' },
@@ -221,6 +229,9 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
      ADMIN/CEO, que veem tudo). Gerente nao separa pedido. */
   PRODUCT_SEPARATION: ['SEPARATOR'],
   MANAGER_SCHEDULE: ['SUPERVISOR'], // quem manda na escala de gerência é a Supervisão; ADMIN/CEO sempre
+  MANAGER_SCHEDULE_OWN: ['MANAGER', 'COORDINATOR'], // a própria folga, só para o futuro (v1.170.0)
+  MANAGER_SCHEDULE_TODAY: ['COORDINATOR'], // quem está fora hoje na rede: Coordenação + Admin/CEO (v1.170.0)
+  MANAGER_SCHEDULE_NETWORK_REPORT: [], // relatório da rede com exclusões e motivos: só Admin/CEO (v1.170.0)
   SUPERVISION: ['SUPERVISOR'],
   VISIT_ACTIONS: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'], // a unidade acompanha o próprio plano; Admin/CEO sempre
   EXECUTIVE: [], // só ADMIN/CEO por padrão (Admin pode liberar na matriz)

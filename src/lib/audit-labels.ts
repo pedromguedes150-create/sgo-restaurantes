@@ -104,6 +104,8 @@ const ENTITIES: [string, string][] = [
   ['ENTRY_DATE_EDITED', 'Data do lançamento'],
   ['LATE_ENTRY_PENALTY', 'Penalidade por atraso'],
   ['MANAGER_SCHEDULE', 'Horário do gerente'],
+  ['MANAGER_LEAVE', 'Folga/férias do gerente'],
+  ['MANAGER_LEAVE_META_PENALTY', 'Desconto da meta: folga do gerente'],
   ['TERMINATION', 'Desligamento'],
   ['CERTIFICATE', 'Atestado'],
   ['COMMUNICATION', 'Comunicado'],

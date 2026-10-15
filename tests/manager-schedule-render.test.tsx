@@ -94,7 +94,7 @@ describe('Quem lançou aparece', () => {
   const g = grade({
     lancamentos: [{
       id: 'l1', userId: 'u-ALESSANDRA', managerName: 'ALESSANDRA', kind: 'FOLGA',
-      startDate: '2026-09-02', endDate: '2026-09-02', note: null, lancadoPor: 'Alan',
+      startDate: '2026-09-02', endDate: '2026-09-02', note: null, lancadoPor: 'Alan', createdById: 'u-alan',
     }],
   });
 
@@ -117,7 +117,7 @@ describe('Somente leitura', () => {
     const g = grade({
       lancamentos: [{
         id: 'l1', userId: 'u-ALESSANDRA', managerName: 'ALESSANDRA', kind: 'FOLGA',
-        startDate: '2026-09-02', endDate: '2026-09-02', note: null, lancadoPor: 'Alan',
+        startDate: '2026-09-02', endDate: '2026-09-02', note: null, lancadoPor: 'Alan', createdById: 'u-alan',
       }],
     });
     const html = render(g, false);

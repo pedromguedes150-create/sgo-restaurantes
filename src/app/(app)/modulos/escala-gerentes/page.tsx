@@ -3,6 +3,7 @@ import { ArrowLeft, CalendarRange } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { canEditModule } from '@/lib/permissions';
 import { unidadesDaEscalaDeGerentes, getGradeDeGerentes } from '@/lib/manager-schedule-central';
+import { abasDaEscalaDeGerentes } from '@/lib/manager-schedule-abas';
 import { Card, CardContent } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { EmptyState } from '@/components/ui/ds/empty-state';
@@ -16,6 +17,10 @@ export const dynamic = 'force-dynamic';
  * A grade do mês responde a pergunta que o consolidado não respondia de relance:
  * *"quem está na unidade no dia 17?"*. E o lançamento fica aqui, com a
  * Supervisão, e não mais com cada gerente na própria Minha área.
+ *
+ * v1.170.0: a família ganhou três irmãs (Minha folga, Hoje na rede e o
+ * Relatório da rede), cada uma com o seu público na matriz; as abas do
+ * cabeçalho mostram só as que o perfil pode abrir.
  */
 export default async function EscalaDeGerentesPage({
   searchParams,
@@ -33,9 +38,10 @@ export default async function EscalaDeGerentesPage({
   const year = Number(searchParams.ano) || now.getFullYear();
   const month = Math.min(12, Math.max(1, Number(searchParams.mes) || now.getMonth() + 1));
 
-  const [grade, podeEditar] = await Promise.all([
+  const [grade, podeEditar, tabs] = await Promise.all([
     getGradeDeGerentes(user, selected.id, year, month),
     canEditModule(user.role, 'MANAGER_SCHEDULE'),
+    abasDaEscalaDeGerentes(user, 'escala'),
   ]);
 
   return (
@@ -48,6 +54,7 @@ export default async function EscalaDeGerentesPage({
         <LargeTitle
           title="Escala de gerentes"
           subtitle="Horário, folgas e férias de quem responde pela unidade — mês a mês."
+          tabs={tabs.length > 1 ? tabs : undefined}
         />
       </div>
 
