@@ -104,6 +104,9 @@ const BASE: ModuleDef[] = [
   { key: 'CERTIFICATES_REPORT', label: 'Relatório de atestados', nav: '/modulos/atestados/relatorio', parent: 'CERTIFICATES' },
 
   { key: 'TERMINATIONS', label: 'Desligamentos', nav: '/modulos/desligamentos' },
+  /* Demanda ao RH (v1.168.0): pedido/dúvida do gerente enviado ao GBF-RH pela
+     fila de saída; o gerente acompanha número, prazo e situação. */
+  { key: 'RH_DEMANDS', label: 'Demandas ao RH', nav: '/modulos/pessoas/demandas-rh', parent: 'PEOPLE' },
   { key: 'POPS', label: 'POPs', nav: '/modulos/pops' },
   /* Fichas de preparo dos produtos (v1.139.0): consulta aberta a todos os
      perfis, como os POPs; quem edita é só o Admin — conferido na lib
@@ -165,6 +168,7 @@ const BASE: ModuleDef[] = [
   { key: 'CONFIG_EVALUATION', label: 'Avaliação por função (modelos)', nav: '/configuracoes/avaliacao', parent: 'CONFIG' },
   { key: 'CONFIG_INTEGRATIONS', label: 'APIs e integrações', nav: '/configuracoes/integracoes', parent: 'CONFIG' },
   { key: 'CONFIG_RH_DIAG', label: 'Diagnóstico do RH', nav: '/configuracoes/integracoes/diagnostico', parent: 'CONFIG_INTEGRATIONS' },
+  { key: 'CONFIG_RH_SAIDA', label: 'Envios ao RH (fila)', nav: '/configuracoes/integracoes/envios-rh', parent: 'CONFIG_INTEGRATIONS' },
 ];
 
 /**
@@ -230,6 +234,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   CONFIG_CD_SECTORS: ['SUPERVISOR'], // setores do CD: idem — quem cuida do catálogo cuida do setor
   UNIT_PANEL: ['SUPERVISOR', 'COORDINATOR', 'MANAGER'], // painel operacional da unidade
   TRAINING_PANEL: ['SUPERVISOR'], // acompanhamento de treinamentos da rede: gestão (Admin/CEO sempre); o gerente segue no quadro da unidade
+  RH_DEMANDS: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'], // demanda ao RH: quem opera a unidade pede; Admin/CEO sempre
 };
 
 /**

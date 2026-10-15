@@ -72,7 +72,7 @@ export const AREAS: AreaDoMenu[] = [
       { titulo: 'Equipe', keys: ['PEOPLE', 'PEOPLE_MAP', 'PEOPLE_EVALUATION', 'PEOPLE_PROBATION', 'PEOPLE_ROLE_CHANGES'] },
       { titulo: 'Escala e folgas', keys: ['SCHEDULE', 'MANAGER_SCHEDULE', 'SCHEDULE_OFF', 'SCHEDULE_SWAPS', 'LEAVES_TEAM'] },
       { titulo: 'Pagamentos', keys: ['PAYMENTS', 'HORA_EXTRA', 'PAYMENTS_CONSOLIDATION', 'PEOPLE_PAYOUTS'] },
-      { titulo: 'Afastamentos', keys: ['CERTIFICATES', 'TERMINATIONS'] },
+      { titulo: 'Afastamentos', keys: ['CERTIFICATES', 'TERMINATIONS', 'RH_DEMANDS'] },
     ],
   },
   {
@@ -104,7 +104,7 @@ export const AREAS: AreaDoMenu[] = [
     titulo: 'Administrativo',
     icone: 'settings',
     colunas: [
-      { titulo: 'Estrutura', keys: ['CONFIG', 'CONFIG_UNITS', 'CONFIG_USERS', 'CONFIG_PROFILES', 'CONFIG_INTEGRATIONS', 'CONFIG_RH_DIAG'] },
+      { titulo: 'Estrutura', keys: ['CONFIG', 'CONFIG_UNITS', 'CONFIG_USERS', 'CONFIG_PROFILES', 'CONFIG_INTEGRATIONS', 'CONFIG_RH_DIAG', 'CONFIG_RH_SAIDA'] },
       { titulo: 'Operação', keys: ['CONFIG_CHECKLISTS', 'CONFIG_MODELS', 'CONFIG_SUP_CHECKLISTS', 'CONFIG_COMMANDS', 'CASH_CONFIG', 'CONFIG_WASTE', 'CONFIG_OCCURRENCES'] },
       { titulo: 'Cadastros', keys: ['CONFIG_SUPPLIERS', 'CONFIG_PRODUCTS', 'CONFIG_CD_SECTORS', 'CONFIG_PRODUCT_STANDARDS', 'CONFIG_PIZZAS', 'CONFIG_TICKET_MEDIA'] },
       { titulo: 'Pessoas e escala', keys: ['CONFIG_SCHEDULES', 'CONFIG_EVALUATION', 'CONFIG_PAYMENTS', 'CONFIG_FREELANCER_RATES', 'CONFIG_OVERTIME_RATES'] },

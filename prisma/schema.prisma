@@ -104,6 +104,7 @@ model Unit {
   freelancerRates           FreelancerHourlyRate[]
   overtimeRates             OvertimeHourlyRate[]
   terminations              Termination[]
+  rhDemands                 RhDemand[]
   cashDenominations         CashDenomination[]
   pizzaFlavors              PizzaFlavor[]
   pizzaClosings             PizzaClosing[]
@@ -1879,6 +1880,7 @@ model Collaborator {
   trainings           TrainingRecord[]
   medicalCertificates MedicalCertificate[]
   terminations        Termination[]
+  rhDemands           RhDemand[]
   popLinks            PopCollaborator[]
   moduleLinks         PopModuleCollaborator[]
   paymentRequests     PaymentRequest[]
@@ -2625,6 +2627,135 @@ model RhInboundEvent {
   @@map("rh_inbound_events")
 }
 
+/// ─────────────── Envio automático SGO → GBF-RH (v1.168.0) ───────────────
+/// Fila de SAÍDA com nova tentativa. Cada linha é UM evento com `sgoEventId`
+/// fixo (idempotência no RH: o mesmo id devolve "duplicado" = sucesso).
+/// Sem FK para o registro de origem de propósito: o cancelamento de um atestado
+/// precisa sobreviver à exclusão do atestado, e a linha é histórico operacional.
+enum RhOutboundType {
+  ATESTADO
+  DESLIGAMENTO
+  DEMANDA
+}
+
+enum RhOutboundStatus {
+  PENDENTE // aguardando envio (inclusive sem token configurado)
+  ENVIANDO // tomado pelo despachante nesta rodada (reinício devolve a PENDENTE)
+  ENVIADO // 2xx ou "duplicado"
+  ERRO // erro de dados (400/422/409): não tenta de novo; reenvio manual
+  ESGOTADO // 10 tentativas sem sucesso; reenvio manual
+  PARADO // 401: token recusado — parado até reinício/reenvio manual
+}
+
+model RhOutboundEvent {
+  id                 String           @id @default(cuid())
+  sgoEventId         String           @unique @default(uuid())
+  tipo               RhOutboundType
+  acao               String // atestado: criar | atualizar | cancelar | retorno · demais: solicitar
+  /// Id do registro de origem no SGO (atestado / desligamento / demanda).
+  referenceId        String
+  /// Caminho relativo no RH (ex.: /api/integracoes/sgo/atestados).
+  endpoint           String
+  /// Corpo do envio SEM o anexo (ele é lido do volume na hora de enviar).
+  payload            Json
+  anexoPath          String?
+  status             RhOutboundStatus @default(PENDENTE)
+  tentativas         Int              @default(0)
+  proximaTentativaEm DateTime         @default(now())
+  /// Última falha, já com CPF mascarado. Nunca guarda token nem anexo.
+  ultimoErro         String?
+  httpStatus         Int?
+  /// Resposta do RH (JSON ou texto), com CPF mascarado.
+  resposta           Json?
+  /// Id devolvido pelo RH (rhAtestadoId / processo / numero).
+  rhId               String?
+  /// Nota local (ex.: anexo omitido por formato) — não é erro.
+  observacao         String?
+  unitId             String?
+  createdById        String?
+  createdAt          DateTime         @default(now())
+  enviadoEm          DateTime?
+
+  @@index([status, proximaTentativaEm])
+  @@index([tipo, referenceId])
+  @@index([createdAt])
+  @@map("rh_eventos_saida")
+}
+
+/// Demanda do gerente ao RH (pedido/dúvida) — v1.168.0. Enviada pela fila de
+/// saída; a situação é consultada no RH e mostrada ao gerente.
+enum RhDemandType {
+  ADMISSAO
+  DESLIGAMENTO
+  ATESTADO
+  FERIAS
+  MUDANCA_HORARIO
+  MUDANCA_FUNCAO_SALARIO
+  BENEFICIO
+  DUVIDA
+  OUTRO
+}
+
+enum RhDemandPriority {
+  NORMAL
+  ALTA
+  URGENTE
+}
+
+model RhDemand {
+  id             String           @id @default(cuid())
+  unitId         String
+  collaboratorId String?
+  tipo           RhDemandType
+  titulo         String
+  descricao      String?
+  dataEvento     String? // AAAA-MM-DD
+  prioridade     RhDemandPriority @default(NORMAL)
+  createdById    String?
+  createdByName  String
+  createdByEmail String?
+  /// Retorno do RH.
+  rhNumero       String?
+  rhPrazoAlvo    String?
+  rhSituacao     String?
+  rhSituacaoAt   DateTime?
+  createdAt      DateTime         @default(now())
+
+  unit         Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  collaborator Collaborator? @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
+
+  @@index([unitId, createdAt])
+  @@map("rh_demandas")
+}
+
+/// Contrato do GBF-RH para o pedido de desligamento (v1.168.0).
+enum RhTerminationKind {
+  DISPENSA_SEM_JUSTA_CAUSA
+  JUSTA_CAUSA
+  PEDIDO_DEMISSAO
+  ACORDO_484A
+  TERMINO_EXPERIENCIA
+}
+
+enum RhNoticeMode {
+  TRABALHADO_2H
+  TRABALHADO_7DIAS
+  INDENIZADO
+  NAO_CUMPRIDO
+}
+
+enum RhTerminationReason {
+  DESEMPENHO
+  COMPORTAMENTO
+  FALTAS_ATRASOS
+  REDUCAO_QUADRO
+  FIM_EXPERIENCIA
+  OUTRA_OPORTUNIDADE
+  MOTIVO_PESSOAL
+  SAUDE
+  OUTRO
+}
+
 /// Aviso ao RH de variação da Escala (Realizado ≠ trabalho normal): registro
 /// local + relatório por período; `sent` marca o envio quando a API do RH
 /// aceitar este tipo de evento.
@@ -2686,24 +2817,38 @@ enum TerminationStatus {
 
 /// Solicitação de desligamento (gerente → supervisor → RH).
 model Termination {
-  id                  String            @id @default(cuid())
+  id                  String               @id @default(cuid())
   unitId              String
   collaboratorId      String
   requestedById       String?
-  noticeType          NoticeType
+  /// Legado (até a v1.167): trabalhado/indenizado. Nulo nos pedidos novos sem
+  /// aviso (justa causa, término de experiência). A modalidade do RH está em `noticeMode`.
+  noticeType          NoticeType?
   noticeJustification String? // justificativa do tipo de aviso
-  reason              String // motivo do desligamento
+  reason              String // motivo do desligamento (texto livre; vira justificativa/observação no RH)
+  /// Contrato do GBF-RH (v1.168.0). Pedido anterior à integração fica com tudo nulo
+  /// e NÃO é enviado ao RH.
+  terminationKind     RhTerminationKind?
+  noticeMode          RhNoticeMode?
+  reasonCode          RhTerminationReason?
+  terminationDate     String? // AAAA-MM-DD
+  letterPath          String? // carta de pedido de demissão (PDF) no volume de uploads
+  /// Retorno do RH: processo + prazo legal na aceitação; situação consultada depois.
+  rhProcesso          String?
+  rhPrazoLegal        String?
+  rhSituacao          String? // solicitado | em_andamento | concluido | cancelado
+  rhSituacaoAt        DateTime?
   // Snapshots no momento da solicitação
   collaboratorName    String
   ageYears            Int?
   tenureText          String?
-  certCount           Int               @default(0)
-  certDays            Int               @default(0)
-  status              TerminationStatus @default(PENDING)
+  certCount           Int                  @default(0)
+  certDays            Int                  @default(0)
+  status              TerminationStatus    @default(PENDING)
   approvedById        String?
   approvedAt          DateTime?
   rejectionReason     String?
-  createdAt           DateTime          @default(now())
+  createdAt           DateTime             @default(now())
 
   unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
   collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
@@ -3735,6 +3880,8 @@ model MedicalCertificate {
   attachmentPath String?
   /// Espelho do que a IA leu (campos + confiança), só para referência/auditoria.
   aiExtracted    Json?
+  /// Id do atestado no GBF-RH, devolvido quando o envio automático (v1.168.0) é aceito.
+  rhAtestadoId   String?
   observation    String?
   createdById    String?
   createdAt      DateTime        @default(now())

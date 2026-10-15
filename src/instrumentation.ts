@@ -25,6 +25,30 @@ export async function register() {
   const { runDueVisitPlans } = await import('@/lib/supervisor/visit-plans');
   const { runWeeklyAdherenceDigest } = await import('@/lib/supervisor/digest');
   const { notifyManagersWithoutRecentFolga } = await import('@/lib/manager-schedule');
+  const { despacharPendentes, consultarSituacoes } = await import('@/lib/rh/saida/despachante');
+  const { recuperarAposReinicio } = await import('@/lib/rh/saida/fila');
+  const { rhSaidaConfigurada } = await import('@/lib/rh/saida/config');
+
+  /* Envio SGO→RH (v1.168.0): a fila é o que sobrevive a reinício — no boot o
+     que ficou ENVIANDO/PARADO volta a PENDENTE; depois, a cada minuto, o
+     despachante tenta o que estiver na hora. Sem token ele não toca em nada. */
+  async function despacharRh(boot = false) {
+    try {
+      if (boot) {
+        const n = await recuperarAposReinicio();
+        if (n) console.log(`[rh-saida] ${n} evento(s) devolvido(s) à fila após o reinício`);
+        console.log(rhSaidaConfigurada()
+          ? '[rh-saida] envio automático ao GBF-RH ATIVO (RH_WEBHOOK_TOKEN presente): despacho a cada minuto'
+          : '[rh-saida] SEM RH_WEBHOOK_TOKEN: os eventos ficam pendentes na fila até o token ser configurado');
+      }
+      const r = await despacharPendentes();
+      if (r.processados) console.log(`[rh-saida] ${r.processados} processado(s): ${r.enviados} enviado(s), ${r.erros} erro(s) de dados, ${r.adiados} adiado(s), ${r.esgotados} esgotado(s)${r.parado ? ' — PARADO (401)' : ''}`);
+    } catch (e) { console.error('[rh-saida] falha no despacho:', e); }
+  }
+  async function situacoesRh() {
+    try { const r = await consultarSituacoes(); if (r.consultados) console.log(`[rh-saida] situação consultada em ${r.consultados} evento(s), ${r.alterados} alterado(s)`); }
+    catch (e) { console.error('[rh-saida] falha ao consultar situações:', e); }
+  }
 
   async function maintainTraining() {
     try { await reconcileAllTraining(); } catch (e) { console.error('[training] falha na reconciliação:', e); }
@@ -91,7 +115,13 @@ export async function register() {
     void checkMaintenance();
     void checkSupervision();
     void checkNoteDueDates();
+    void despacharRh(true);
+    void situacoesRh();
   }, 15_000);
+
+  // envio SGO→RH: fila a cada minuto · situação no RH de hora em hora
+  setInterval(() => { void despacharRh(); }, 60 * 1000);
+  setInterval(() => { void situacoesRh(); }, 60 * 60 * 1000);
 
   // tarefas: a cada 30 min · RH e treinamentos: de hora em hora · vencimento: a cada 10 min
   setInterval(() => { void ensureTaskMaintenance(true); }, 30 * 60 * 1000);
