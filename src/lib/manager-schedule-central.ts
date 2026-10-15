@@ -14,8 +14,10 @@
 
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
-import { notifyUsers } from '@/lib/notifications';
+import { notifyUsers, notifySupervisory } from '@/lib/notifications';
 import { parseWeekdays, daysOfMonth } from '@/lib/manager-schedule';
+import { hojeNaOperacao } from '@/lib/controle-gerentes-dados';
+import { motivoValido, podeLancarPropria, podeApagarPropria, type RecusaPropria } from '@/lib/manager-schedule-regras';
 import type { SessionUser } from '@/lib/auth/session';
 import type { CelulaDoGerente, LancamentoDeGerente, LinhaDaGrade, DiaDaGrade, GradeDeGerentes } from '@/lib/manager-schedule-tipos';
 
@@ -72,7 +74,7 @@ export async function getGradeDeGerentes(
       id: true, name: true,
       managerWorkSchedule: true,
       managerLeaves: {
-        where: { startDate: { lte: monthEnd }, endDate: { gte: monthStart } },
+        where: { deletedAt: null, startDate: { lte: monthEnd }, endDate: { gte: monthStart } },
         orderBy: { startDate: 'asc' },
         select: { id: true, kind: true, startDate: true, endDate: true, note: true, createdById: true },
       },
@@ -134,6 +136,7 @@ export async function getGradeDeGerentes(
       endDate: l.endDate,
       note: l.note,
       lancadoPor: l.createdById ? nomeDoAutor.get(l.createdById) ?? null : null,
+      createdById: l.createdById,
     })))
     .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.managerName.localeCompare(b.managerName, 'pt-BR'));
 
@@ -214,7 +217,7 @@ export async function lancarFolgaDoGerente(
   /* Período que encosta em outro do mesmo gerente é quase sempre erro de
      digitação — e a sobreposição calaria um dos dois na grade sem avisar. */
   const conflito = await prisma.managerLeave.findFirst({
-    where: { userId: alvo.id, startDate: { lte: input.endDate }, endDate: { gte: input.startDate } },
+    where: { userId: alvo.id, deletedAt: null, startDate: { lte: input.endDate }, endDate: { gte: input.startDate } },
     select: { id: true },
   });
   if (conflito) return { ok: false as const, reason: 'OVERLAP' as const };
@@ -247,22 +250,118 @@ export async function lancarFolgaDoGerente(
   return { ok: true as const, id: l.id };
 }
 
-/** Apaga um lançamento de folga/férias de gerente. */
-export async function apagarFolgaDoGerente(actor: SessionUser, id: string) {
-  const l = await prisma.managerLeave.findUnique({
-    where: { id },
+/**
+ * Apaga um lançamento de folga/férias de gerente — com MOTIVO, para todos.
+ *
+ * Exclusão LÓGICA (v1.170.0): a linha recebe `deletedAt`/`deletedById`/
+ * `deleteReason` e some da grade; o relatório da rede e a Auditoria continuam
+ * sabendo que existiu e por que saiu. Apagar de verdade deixaria o motivo só
+ * na Auditoria, que ninguém abre para conferir uma folga.
+ */
+export async function apagarFolgaDoGerente(actor: SessionUser, id: string, motivo?: unknown) {
+  if (!motivoValido(motivo)) return { ok: false as const, reason: 'SEM_MOTIVO' as const };
+  const l = await prisma.managerLeave.findFirst({
+    where: { id, deletedAt: null },
     select: { id: true, userId: true, kind: true, startDate: true, endDate: true },
   });
   if (!l) return { ok: false as const, reason: 'INVALID' as const };
   const alvo = await alvoNoEscopo(actor, l.userId);
   if (!alvo) return { ok: false as const, reason: 'FORBIDDEN' as const };
 
-  await prisma.managerLeave.delete({ where: { id } });
+  await excluirLogicamente(actor, l, alvo.name, motivo.trim(), 'SUPERVISAO');
+  return { ok: true as const };
+}
+
+async function excluirLogicamente(
+  actor: SessionUser,
+  l: { id: string; userId: string; kind: string; startDate: string; endDate: string },
+  managerName: string,
+  motivo: string,
+  origem: 'SUPERVISAO' | 'PROPRIO',
+) {
+  /* `updateMany` com `deletedAt: null` na condição: dois cliques no mesmo
+     "Apagar" não gravam dois motivos nem avisam duas vezes. */
+  const r = await prisma.managerLeave.updateMany({
+    where: { id: l.id, deletedAt: null },
+    data: { deletedAt: new Date(), deletedById: actor.id, deleteReason: motivo },
+  });
+  if (r.count === 0) return;
   const { audit } = await import('@/lib/audit');
   await audit({
     userId: actor.id, action: 'MANAGER_LEAVE_DELETE', module: 'PEOPLE',
-    entity: 'manager_leave', entityId: id,
-    metadata: { manager: alvo.name, kind: l.kind, startDate: l.startDate, endDate: l.endDate },
+    entity: 'manager_leave', entityId: l.id,
+    metadata: { manager: managerName, kind: l.kind, startDate: l.startDate, endDate: l.endDate, motivo, origem },
   });
-  return { ok: true as const };
+}
+
+/* ───────────── O GERENTE lança a PRÓPRIA folga (v1.170.0) ───────────── */
+
+/**
+ * Lança folga/férias para SI MESMO — só gerente/coordenador, só a partir de
+ * amanhã. A Supervisão é avisada: a agenda da unidade mudou sem passar por ela.
+ */
+export async function lancarMinhaFolga(
+  actor: SessionUser,
+  input: { kind: string; startDate: string; endDate: string; note?: string },
+  hoje: string = hojeNaOperacao(),
+): Promise<{ ok: true; id: string } | { ok: false; reason: RecusaPropria | 'OVERLAP' | 'FORBIDDEN' }> {
+  if (!['MANAGER', 'COORDINATOR'].includes(actor.role)) return { ok: false, reason: 'FORBIDDEN' };
+  const re = /^\d{4}-\d{2}-\d{2}$/;
+  if (!re.test(input.startDate) || !re.test(input.endDate) || input.endDate < input.startDate) return { ok: false, reason: 'INVALID' };
+  const recusa = podeLancarPropria(hoje, input.startDate);
+  if (recusa) return { ok: false, reason: recusa };
+  const kind = input.kind === 'FERIAS' ? 'FERIAS' : 'FOLGA';
+
+  const conflito = await prisma.managerLeave.findFirst({
+    where: { userId: actor.id, deletedAt: null, startDate: { lte: input.endDate }, endDate: { gte: input.startDate } },
+    select: { id: true },
+  });
+  if (conflito) return { ok: false, reason: 'OVERLAP' };
+
+  const l = await prisma.managerLeave.create({
+    data: { userId: actor.id, kind, startDate: input.startDate, endDate: input.endDate, note: input.note?.trim() || null, createdById: actor.id },
+  });
+  const { audit } = await import('@/lib/audit');
+  await audit({
+    userId: actor.id, action: 'MANAGER_LEAVE_ADD', module: 'PEOPLE',
+    entity: 'manager_leave', entityId: l.id,
+    metadata: { manager: actor.name, kind, startDate: input.startDate, endDate: input.endDate, origem: 'PROPRIO' },
+  });
+  await avisarSupervisao(actor, kind === 'FERIAS' ? '🌴 Férias lançadas pelo gerente' : '📅 Folga lançada pelo gerente',
+    `${actor.name}: ${periodoBR(input.startDate, input.endDate)}.`);
+  return { ok: true, id: l.id };
+}
+
+/** Apaga um lançamento PRÓPRIO: dele, lançado por ele, ainda no futuro, com motivo. */
+export async function apagarMinhaFolga(
+  actor: SessionUser,
+  id: string,
+  motivo: unknown,
+  hoje: string = hojeNaOperacao(),
+): Promise<{ ok: true } | { ok: false; reason: RecusaPropria | 'SEM_MOTIVO' | 'FORBIDDEN' }> {
+  if (!['MANAGER', 'COORDINATOR'].includes(actor.role)) return { ok: false, reason: 'FORBIDDEN' };
+  if (!motivoValido(motivo)) return { ok: false, reason: 'SEM_MOTIVO' };
+  const l = await prisma.managerLeave.findFirst({
+    where: { id, deletedAt: null },
+    select: { id: true, userId: true, kind: true, startDate: true, endDate: true, createdById: true },
+  });
+  if (!l) return { ok: false, reason: 'INVALID' };
+  const recusa = podeApagarPropria(hoje, actor.id, l);
+  if (recusa) return { ok: false, reason: recusa };
+
+  await excluirLogicamente(actor, l, actor.name, motivo.trim(), 'PROPRIO');
+  await avisarSupervisao(actor, l.kind === 'FERIAS' ? '🗑️ Férias apagadas pelo gerente' : '🗑️ Folga apagada pelo gerente',
+    `${actor.name} apagou ${periodoBR(l.startDate, l.endDate)}. Motivo: ${motivo.trim()}`);
+  return { ok: true };
+}
+
+const periodoBR = (a: string, b: string) => (a === b ? `dia ${fmtBR(a)}` : `de ${fmtBR(a)} a ${fmtBR(b)}`);
+
+/** Aviso à Supervisão/Coordenação das unidades do gerente (+ Admins). */
+async function avisarSupervisao(actor: SessionUser, title: string, body: string) {
+  const ms = await prisma.unitMembership.findMany({ where: { userId: actor.id }, select: { unitId: true } });
+  const unitIds: (string | undefined)[] = ms.length > 0 ? ms.map((m) => m.unitId) : [undefined];
+  for (const unitId of unitIds) {
+    await notifySupervisory({ title, body, link: '/modulos/escala-gerentes', module: 'PEOPLE' }, unitId).catch(() => {});
+  }
 }

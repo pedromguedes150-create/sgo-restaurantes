@@ -1244,6 +1244,11 @@ model ManagerLeave {
   /// Escala de gerentes quem lança é a Supervisão/Admin, e a grade precisa dizer por quem.
   createdById String?
   createdAt   DateTime         @default(now())
+  /// Exclusão LÓGICA (v1.170.0): apagar exige motivo e a linha fica para o
+  /// relatório e a Auditoria. Toda leitura da grade filtra `deletedAt: null`.
+  deletedAt    DateTime?
+  deletedById  String?
+  deleteReason String?
 
   user User @relation("MgrLeaves", fields: [userId], references: [id], onDelete: Cascade)
 

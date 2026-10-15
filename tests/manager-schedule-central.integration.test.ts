@@ -177,9 +177,9 @@ describe('Escopo: perfil certo não é unidade certa', () => {
   it('nem apaga o lançamento feito por quem podia', async () => {
     const criada = await lancarFolgaDoGerente(sup(), anaId, { kind: 'FOLGA', startDate: '2026-09-10', endDate: '2026-09-10' });
     expect(criada.ok).toBe(true);
-    const r = await apagarFolgaDoGerente(supDeOutraRegiao(), criada.id!);
+    const r = await apagarFolgaDoGerente(supDeOutraRegiao(), criada.id!, 'Tentando apagar de outra região');
     expect(r).toEqual({ ok: false, reason: 'FORBIDDEN' });
-    expect(await prisma.managerLeave.count({ where: { id: criada.id! } })).toBe(1);
+    expect(await prisma.managerLeave.count({ where: { id: criada.id!, deletedAt: null } })).toBe(1);
   });
 
   it('a grade de unidade fora do escopo devolve nulo, não a grade de outra', async () => {
@@ -220,7 +220,7 @@ describe('Regras do lançamento', () => {
 
   it('audita o lançamento e a exclusão', async () => {
     const criada = await lancarFolgaDoGerente(sup(), anaId, { kind: 'FOLGA', startDate: '2026-09-10', endDate: '2026-09-10' });
-    await apagarFolgaDoGerente(sup(), criada.id!);
+    await apagarFolgaDoGerente(sup(), criada.id!, 'Folga remarcada a pedido do gerente');
     const acoes = await prisma.auditLog.findMany({
       where: { userId: supId, entityId: { in: [criada.id!] } },
       select: { action: true },

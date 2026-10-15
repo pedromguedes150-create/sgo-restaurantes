@@ -70,7 +70,7 @@ export const AREAS: AreaDoMenu[] = [
     icone: 'users',
     colunas: [
       { titulo: 'Equipe', keys: ['PEOPLE', 'PEOPLE_MAP', 'PEOPLE_EVALUATION', 'PEOPLE_PROBATION', 'PEOPLE_ROLE_CHANGES'] },
-      { titulo: 'Escala e folgas', keys: ['SCHEDULE', 'MANAGER_SCHEDULE', 'SCHEDULE_OFF', 'SCHEDULE_SWAPS', 'LEAVES_TEAM'] },
+      { titulo: 'Escala e folgas', keys: ['SCHEDULE', 'MANAGER_SCHEDULE', 'MANAGER_SCHEDULE_OWN', 'MANAGER_SCHEDULE_TODAY', 'SCHEDULE_OFF', 'SCHEDULE_SWAPS', 'LEAVES_TEAM'] },
       { titulo: 'Pagamentos', keys: ['PAYMENTS', 'HORA_EXTRA', 'PAYMENTS_REEMBOLSOS', 'PAYMENTS_CONSOLIDATION', 'PEOPLE_PAYOUTS'] },
       { titulo: 'Afastamentos', keys: ['CERTIFICATES', 'TERMINATIONS', 'RH_DEMANDS'] },
     ],
@@ -95,7 +95,7 @@ export const AREAS: AreaDoMenu[] = [
          módulos diferentes, e é por isso que ninguém os achava: quem procura
          "o relatório de freelancers" não pensa "isso fica em Pagamentos". */
       { titulo: 'Operação', keys: ['CANCELLATIONS_ANALYSIS', 'CANCELLATIONS_REPORT', 'NOTES_GAS', 'GAS_REPORT'] },
-      { titulo: 'Pessoas', keys: ['PAYMENTS_FREELANCER_REPORT', 'CERTIFICATES_REPORT', 'SCHEDULE_RH_NOTICES'] },
+      { titulo: 'Pessoas', keys: ['PAYMENTS_FREELANCER_REPORT', 'CERTIFICATES_REPORT', 'SCHEDULE_RH_NOTICES', 'MANAGER_SCHEDULE_NETWORK_REPORT'] },
       { titulo: 'Sistema', keys: ['AUDIT', 'AUDIT_REPORT'] },
     ],
   },

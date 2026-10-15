@@ -12,6 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EmptyState } from '@/components/ui/ds/empty-state';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
+import { Textarea } from '@/components/ui/ds/field';
+import { SgoModal } from '@/components/sgo/sgo-modal';
+import { MOTIVO_MIN, motivoValido } from '@/lib/manager-schedule-regras';
 /* Do arquivo PURO, nunca do `-central`: aquele fala com o banco e com o
    web-push, e importar dele aqui quebra o build de producao. */
 import { CELULA_SIGLA, CELULA_TITULO, type GradeDeGerentes, type CelulaDoGerente, type LinhaDaGrade } from '@/lib/manager-schedule-tipos';
@@ -36,17 +39,28 @@ export function ManagerScheduleClient({
   grade,
   units,
   podeEditar,
+  propria = null,
+  basePath = '/modulos/escala-gerentes',
 }: {
   grade: GradeDeGerentes;
   units: { id: string; name: string }[];
   /** Só a Supervisão/Administração lança. Sem isto, a tela é de consulta. */
   podeEditar: boolean;
+  /**
+   * Modo "minha folga" (v1.170.0): o gerente lança SÓ para si e SÓ a partir de
+   * `amanha` (o calendário já nasce bloqueado antes disso), e só apaga o que
+   * ele mesmo lançou e ainda não aconteceu. A rota é outra (`/propria`).
+   */
+  propria?: { userId: string; amanha: string } | null;
+  basePath?: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [horarioDe, setHorarioDe] = useState<LinhaDaGrade | null>(null);
   const [folgaDe, setFolgaDe] = useState<LinhaDaGrade | null>(null);
+  const [apagando, setApagando] = useState<GradeDeGerentes['lancamentos'][number] | null>(null);
+  const [motivo, setMotivo] = useState('');
 
   function irPara(p: { unit?: string; ano?: number; mes?: number }) {
     const q = new URLSearchParams({
@@ -54,13 +68,20 @@ export function ManagerScheduleClient({
       ano: String(p.ano ?? grade.year),
       mes: String(p.mes ?? grade.month),
     });
-    router.push(`/modulos/escala-gerentes?${q.toString()}`);
+    router.push(`${basePath}?${q.toString()}`);
   }
+
+  /* Quem pode apagar ESTA linha: a Supervisão, qualquer uma; o gerente, só a
+     dele, lançada por ele e ainda no futuro. A regra de verdade é do servidor —
+     aqui só não se oferece o botão que seria recusado. */
+  const podeApagar = (l: GradeDeGerentes['lancamentos'][number]) =>
+    podeEditar || Boolean(propria && l.userId === propria.userId && l.createdById === propria.userId && l.startDate >= propria.amanha);
+  const minhaLinha = propria ? grade.linhas.find((l) => l.userId === propria.userId) ?? null : null;
 
   async function post(body: Record<string, unknown>): Promise<boolean> {
     setBusy(true); setErro(null);
     try {
-      const res = await fetch('/api/manager-schedule', {
+      const res = await fetch(podeEditar ? '/api/manager-schedule' : '/api/manager-schedule/propria', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -185,6 +206,22 @@ export function ManagerScheduleClient({
         </div>
       )}
 
+      {/* ── Minha folga (o gerente lança a própria, só para o futuro) ── */}
+      {!podeEditar && propria && minhaLinha && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-surface p-3 print:hidden" data-testid="minha-folga">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ink-900">Minha folga</p>
+            <p className="text-xs text-ink-500">
+              Você lança a sua folga ou férias <b>a partir de {fmtBR(propria.amanha)}</b>. Datas passadas e o dia de hoje
+              ficam com a Supervisão. Para apagar o que você lançou, é preciso explicar o motivo.
+            </p>
+          </div>
+          <Button size="sm" onClick={() => { setErro(null); setFolgaDe(minhaLinha); }}>
+            <CalendarPlus className="h-4 w-4" /> Lançar minha folga
+          </Button>
+        </div>
+      )}
+
       {/* ── Cadastro (só quem pode lançar) ── */}
       {podeEditar && grade.linhas.length > 0 && (
         <div className="space-y-2 print:hidden">
@@ -237,10 +274,10 @@ export function ManagerScheduleClient({
                     {l.lancadoPor ? ` · lançado por ${l.lancadoPor}` : ' · lançado pelo próprio gerente'}
                   </p>
                 </div>
-                {podeEditar && (
+                {podeApagar(l) && (
                   <Button
                     size="sm" variant="outline" disabled={busy}
-                    onClick={() => { if (confirm(`Apagar ${l.kind === 'FERIAS' ? 'as férias' : 'a folga'} de ${l.managerName}?`)) void post({ action: 'deleteFolga', id: l.id }); }}
+                    onClick={() => { setErro(null); setMotivo(''); setApagando(l); }}
                   >
                     <Trash2 className="h-4 w-4" /> Apagar
                   </Button>
@@ -263,10 +300,45 @@ export function ManagerScheduleClient({
       {folgaDe && (
         <FolhaDeFolga
           linha={folgaDe} busy={busy} erro={erro}
+          min={!podeEditar && propria ? propria.amanha : undefined}
           onFechar={() => setFolgaDe(null)}
           onSalvar={async (p) => { if (await post({ action: 'addFolga', userId: folgaDe.userId, ...p })) setFolgaDe(null); }}
         />
       )}
+
+      {/* ── Apagar com MOTIVO (para todos, v1.170.0) ── */}
+      <SgoModal
+        open={apagando !== null}
+        onClose={() => !busy && setApagando(null)}
+        title={apagando ? `Apagar ${apagando.kind === 'FERIAS' ? 'as férias' : 'a folga'} de ${apagando.managerName}?` : ''}
+        subtitle={apagando ? `${apagando.startDate === apagando.endDate ? fmtBR(apagando.startDate) : `${fmtBR(apagando.startDate)} a ${fmtBR(apagando.endDate)}`}. O lançamento sai da grade, e o motivo fica no relatório da rede e na Auditoria.` : undefined}
+        icon={<Trash2 className="h-4 w-4" />}
+        tone="red"
+        size="sm"
+        data-testid="modal-apagar-folga"
+        footer={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {erro && <p className="mr-auto text-sm font-medium text-danger">{erro}</p>}
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => setApagando(null)}>Cancelar</Button>
+            <Button
+              size="sm" disabled={busy || !motivoValido(motivo)}
+              onClick={async () => { if (apagando && await post({ action: 'deleteFolga', id: apagando.id, motivo: motivo.trim() })) setApagando(null); }}
+            >
+              {busy ? 'Apagando…' : 'Apagar com este motivo'}
+            </Button>
+          </div>
+        }
+      >
+        <Textarea
+          label="Por que este lançamento está sendo apagado?"
+          hint={`Obrigatório, pelo menos ${MOTIVO_MIN} caracteres. Ex.: "Troquei a folga para o dia 22 a pedido da Supervisão".`}
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          rows={3}
+          required
+          autoFocus
+        />
+      </SgoModal>
     </div>
   );
 }
@@ -336,9 +408,11 @@ function FolhaDeHorario({
 
 /** Lançamento de folga ou férias para um gerente. */
 function FolhaDeFolga({
-  linha, busy, erro, onFechar, onSalvar,
+  linha, busy, erro, min, onFechar, onSalvar,
 }: {
   linha: LinhaDaGrade; busy: boolean; erro: string | null;
+  /** Primeiro dia que pode ser escolhido (modo "minha folga": amanhã). */
+  min?: string;
   onFechar: () => void;
   onSalvar: (p: { kind: string; startDate: string; endDate: string; note: string | null }) => void;
 }) {
@@ -351,6 +425,7 @@ function FolhaDeFolga({
   function salvar() {
     setLocal(null);
     if (!inicio) { setLocal('Informe o dia de início.'); return; }
+    if (min && inicio < min) { setLocal(`Só é possível lançar a partir de ${fmtBR(min)}.`); return; }
     const ate = fim ?? inicio;
     if (ate < inicio) { setLocal('O fim não pode ser antes do início.'); return; }
     onSalvar({ kind: tipo, startDate: inicio, endDate: ate, note: obs || null });
@@ -360,7 +435,9 @@ function FolhaDeFolga({
     <Sheet
       open onClose={onFechar}
       title={`Folga / férias de ${linha.name}`}
-      description="O gerente é avisado do lançamento. Nesses dias os checklists somem da tela dele."
+      description={min
+        ? `Só a partir de ${fmtBR(min)} — datas passadas e o dia de hoje ficam com a Supervisão, que é avisada do lançamento.`
+        : 'O gerente é avisado do lançamento. Nesses dias os checklists somem da tela dele.'}
       footer={
         <div className="space-y-2">
           {(local ?? erro) && <p className="text-sm font-medium text-danger">{local ?? erro}</p>}
@@ -374,10 +451,10 @@ function FolhaDeFolga({
           options={[{ value: 'FOLGA', label: 'Folga' }, { value: 'FERIAS', label: 'Férias' }]}
         />
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <DatePicker label="Início" size="sm" value={inicio} onValueChange={setInicio} />
+          <DatePicker label="Início" size="sm" value={inicio} onValueChange={setInicio} min={min} />
           {/* Um dia só é o caso comum: deixar o fim em branco repete o início em
               vez de obrigar a digitar a mesma data duas vezes. */}
-          <DatePicker label="Fim (vazio = um dia só)" size="sm" value={fim} onValueChange={setFim} min={inicio ?? undefined} />
+          <DatePicker label="Fim (vazio = um dia só)" size="sm" value={fim} onValueChange={setFim} min={inicio ?? min} />
         </div>
         <div>
           <Label className="text-xs">Observação (opcional)</Label>

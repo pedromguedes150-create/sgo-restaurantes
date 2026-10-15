@@ -181,6 +181,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/schedule-changes': { modulo: 'SCHEDULE_SWAPS', exigir: 'editar' },
   '/api/schedule-templates': { modulo: 'CONFIG_SCHEDULES', exigir: 'editar' },
   '/api/manager-schedule': { modulo: 'MANAGER_SCHEDULE', exigir: 'editar' },
+  // a PRÓPRIA folga (v1.170.0): porta do gerente, a lib só grava para ele mesmo
+  '/api/manager-schedule/propria': { modulo: 'MANAGER_SCHEDULE_OWN', exigir: 'editar' },
 
   '/api/supervision': { modulo: 'SUPERVISION', exigir: 'editar' },
   '/api/supervision/export': { modulo: 'SUPERVISION', exigir: 'ver' },

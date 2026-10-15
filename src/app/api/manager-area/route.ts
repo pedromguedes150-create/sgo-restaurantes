@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   else if (e === 'note' && a === 'update') r = await ma.updateManagerNote(user, b.id, { title: b.title, content: b.content });
   else if (e === 'note' && a === 'delete') r = await ma.deleteManagerNote(user, b.id);
   else if (e === 'leave' && a === 'add') r = await ma.addManagerLeave(user, { kind: b.kind as ManagerLeaveKind, startDate: b.startDate, endDate: b.endDate, note: b.note });
-  else if (e === 'leave' && a === 'delete') r = await ma.deleteManagerLeave(user, b.id);
+  else if (e === 'leave' && a === 'delete') r = await ma.deleteManagerLeave(user, b.id, b.motivo);
   else if (e === 'workSchedule' && a === 'set') r = await setMyWorkSchedule(user, { weekdays: Array.isArray(b.weekdays) ? b.weekdays : [], startTime: b.startTime, endTime: b.endTime, note: b.note });
   else if (e === 'workSchedule' && a === 'setForUser') r = await setManagerWorkSchedule(user, String(b.userId ?? ''), { weekdays: Array.isArray(b.weekdays) ? b.weekdays : [], startTime: b.startTime, endTime: b.endTime, note: b.note });
 

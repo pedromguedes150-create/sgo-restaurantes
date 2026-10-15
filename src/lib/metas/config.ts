@@ -12,6 +12,10 @@ import type { SessionUser } from '@/lib/auth/session';
  */
 const WASTE_KEY = 'WASTE_META_WEIGHT';
 const COMMANDS_KEY = 'COMMANDS_META_WEIGHT';
+/* v1.170.0 — "Escala de gerentes": cada gerente sem folga cadastrada no mês
+   desconta X% da nota. Padrão 5 (pedido do Pedro, 15/10/2026); 0 desliga. */
+const MANAGER_LEAVE_PENALTY_KEY = 'MANAGER_LEAVE_META_PENALTY';
+export const MANAGER_LEAVE_PENALTY_DEFAULT = 5;
 
 async function readWeight(key: string, def = 0): Promise<number> {
   const s = await prisma.appSetting.findUnique({ where: { key } });
@@ -30,6 +34,21 @@ export const getWasteMetaWeight = () => readWeight(WASTE_KEY);
 export const getCommandsMetaWeight = () => readWeight(COMMANDS_KEY);
 export const setWasteMetaWeight = (u: SessionUser, w: number) => writeWeight(u, WASTE_KEY, w, 'WASTE_META_WEIGHT_SET');
 export const setCommandsMetaWeight = (u: SessionUser, w: number) => writeWeight(u, COMMANDS_KEY, w, 'COMMANDS_META_WEIGHT_SET');
+
+/** % descontado da nota por gerente/coordenador SEM folga nem férias no mês. */
+export async function getManagerLeaveMetaPenalty(): Promise<number> {
+  const s = await prisma.appSetting.findUnique({ where: { key: MANAGER_LEAVE_PENALTY_KEY } });
+  const n = s ? Number(s.value) : MANAGER_LEAVE_PENALTY_DEFAULT;
+  return Number.isFinite(n) && n >= 0 ? Math.min(100, n) : MANAGER_LEAVE_PENALTY_DEFAULT;
+}
+export async function setManagerLeaveMetaPenalty(user: SessionUser, pct: number) {
+  if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' as const };
+  const v = Math.max(0, Math.min(100, Number(pct)));
+  if (!Number.isFinite(v)) return { ok: false as const, reason: 'INVALID' as const };
+  await prisma.appSetting.upsert({ where: { key: MANAGER_LEAVE_PENALTY_KEY }, create: { key: MANAGER_LEAVE_PENALTY_KEY, value: String(v) }, update: { value: String(v) } });
+  await audit({ userId: user.id, action: 'MANAGER_LEAVE_META_PENALTY_SET', module: 'CONFIG', metadata: { pct: v } });
+  return { ok: true as const };
+}
 
 function daysElapsedInMonth(yearMonth: string): number {
   const [y, m] = yearMonth.split('-').map(Number);
