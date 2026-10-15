@@ -3,6 +3,7 @@ import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { notifyAdmins } from '@/lib/notifications';
 import { registerAbsence } from '@/lib/schedule';
+import { enfileirarAtestado } from '@/lib/rh/saida/fila';
 import type { SessionUser } from '@/lib/auth/session';
 import type { CertificateType } from '@prisma/client';
 
@@ -99,6 +100,10 @@ export async function createCertificate(user: SessionUser, input: CreateCertInpu
   }
 
   await audit({ userId: user.id, unitId: input.unitId, action: 'CERTIFICATE_CREATE', module: 'PEOPLE', entity: 'medical_certificate', entityId: rec.id, metadata: { type, days, start: input.startDate, end: input.endDate }, ...ctx });
+
+  /* Envio automático ao GBF-RH (v1.168.0): entra na FILA, não na rede — o
+     atestado fica gravado mesmo com o RH fora do ar ou sem token. */
+  await enfileirarAtestado(rec.id, 'criar', user.id).catch((e) => console.error('[rh-saida] falha ao enfileirar atestado:', e));
 
   // Avisa o RH (Admins) — eles controlam no sistema próprio e mandam à contabilidade
   const [unit, collab] = await Promise.all([

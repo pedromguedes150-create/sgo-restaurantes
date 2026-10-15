@@ -44,6 +44,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  /* v1.168.0: salvar atestado enfileira o envio ao RH; a fila não tem FK e ficaria no banco de dev */
+  await prisma.rhOutboundEvent.deleteMany({ where: { unitId: { in: [unitA, unitB] } } }).catch(() => {});
   await prisma.medicalCertificate.deleteMany({ where: { collaboratorId: { in: [ana, bia] } } }).catch(() => {});
   await prisma.rhScheduleNotice.deleteMany({ where: { unitId: { in: [unitA, unitB] } } }).catch(() => {});
   await prisma.scheduleActual.deleteMany({ where: { collaboratorId: { in: [ana, bia] } } }).catch(() => {});

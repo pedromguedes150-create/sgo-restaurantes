@@ -161,6 +161,9 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/products/setores': { modulo: 'CONFIG_CD_SECTORS', exigir: 'editar' },
 
   '/api/rh/sync': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' },
+  // v1.168.0 — envio SGO→RH: demanda do gerente; fila de saída (reenviar/processar) — a lib ainda exige ADMIN/CEO na fila
+  '/api/rh/demandas': { modulo: 'RH_DEMANDS', exigir: 'editar' },
+  '/api/rh/saida': { modulo: 'CONFIG_RH_SAIDA', exigir: 'editar' },
   // v1.166.0: razões sociais adicionais por unidade + conferência (a lib ainda exige ADMIN/CEO)
   '/api/rh/razoes': { modulo: 'CONFIG_UNITS', exigir: 'editar' },
   '/api/rh/test': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'ver' },
@@ -186,6 +189,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
 
   '/api/tasks/generate': { modulo: 'TASKS', exigir: 'editar' },
   '/api/terminations': { modulo: 'TERMINATIONS', exigir: 'editar' },
+  '/api/terminations/carta': { modulo: 'TERMINATIONS_TAB_NEW', exigir: 'editar' }, // carta de pedido de demissão (PDF) — v1.168.0
   '/api/training': { modulo: 'TRAINING', exigir: 'editar' },
 
   '/api/waste': { modulo: 'WASTE', exigir: 'editar' },

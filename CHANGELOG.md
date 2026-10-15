@@ -9,6 +9,20 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.168.0 — 2026-10-14 (Integração SGO → GBF-RH: envio automático por fila + documentação da entrada)
+### Novo
+- **Fila de saída SGO → RH** (`rh_eventos_saida`, `src/lib/rh/saida/`): atestados (criar/cancelar), desligamentos **aprovados pelo supervisor** e demandas ao RH vão para o GBF-RH sozinhos — `POST /api/integracoes/sgo/atestados | desligamentos | demandas`, `Authorization: Bearer RH_WEBHOOK_TOKEN`, base `RH_API_URL` (fallback `RH_API_BASE_URL`), 20 s de teto. Cada evento tem `sgoEventId` fixo (UUID único): reenviar nunca duplica no RH (`{"status":"duplicado"}` conta como enviado). Despachante a cada minuto no scheduler; espera crescente 1→480 min até 10 tentativas; 400/422/409 = erro de dados sem nova tentativa; 401 = PARADO + aviso crítico aos Admins; 404/5xx/rede = adiar. Sem token: nada sai e nada se perde (pendentes saem sozinhos quando o token entrar). Reinício devolve ENVIANDO/PARADO à fila. CPF mascarado em erro/resposta; anexo lido do volume na hora e nunca gravado; token nunca logado.
+- **Tela do Admin** Configurações → Integrações → **Envios ao RH** (`CONFIG_RH_SAIDA`): contadores, filtros (com problema / pendentes / enviados / todos), resposta do RH, **Reenviar** (remonta do cadastro atual) e **Processar fila agora**. Cartão-resumo na central de Integrações.
+- **Desligamento no contrato do RH**: tipo (sem justa causa / justa causa / pedido de demissão / acordo 484-A / término de experiência), modalidade do aviso (2h, 7 dias, indenizado, não cumprido — omitida em justa causa e término), motivo em lista, data, carta em PDF (obrigatória no pedido de demissão, rota `/api/terminations/carta`). Envio **só após a aprovação**; **quem pediu não aprova o próprio pedido**; andamento (processo, prazo legal, situação) consultado de hora em hora e mostrado ao gerente. Pedido anterior à integração fica marcado e não é enviado. Coluna legada `noticeType` virou opcional.
+- **Demandas ao RH** (`/modulos/pessoas/demandas-rh`, módulo `RH_DEMANDS` para gerente/coordenador/supervisor): tipo, resumo, descrição, colaborador e data opcionais, prioridade; número, prazo-alvo e situação do RH na lista.
+- **Docs**: `docs/integracao-rh-entrada.md` (endpoints `/api/integracoes/rh/*`, autenticação por `RH_INBOUND_TOKEN`, exemplos, o que já chega hoje, valores de `type` do atestado) e `docs/integracao-rh-saida.md` (variáveis, regras, teste de ponta a ponta).
+### Corrigido
+- Catálogo da API v1: a descrição de `atestados` dizia `DAYS | HOURS | COMPANION`; o valor real é `FULL_DAY`. Só o texto — nenhum dado nem endpoint da API v1 mudou.
+### Preparado (sem botão)
+- Ações `atualizar` e `retorno` do atestado já têm payload e fila; faltam só o gatilho (o SGO ainda não edita atestado).
+
+---
+
 ## v1.167.1 — 2026-10-14 (Desperdícios: o gerente lança NO DIA; dia anterior só o Administrador)
 ### Alterado
 - **Pedido do Pedro**: o seletor "Dia do lançamento" em Desperdícios (Restaurante **e** Salgados) deixou de aparecer para o gerente. Ele lança sempre o dia operacional de hoje; **só o Administrador** vê o seletor e lança/corrige dias anteriores.

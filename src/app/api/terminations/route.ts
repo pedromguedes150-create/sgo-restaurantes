@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { recusaDeAba } from '@/lib/permissions/guarda-abas';
+import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { createTermination, decideTermination, getTerminationContext } from '@/lib/terminations';
-import type { NoticeType } from '@prisma/client';
+
+const REASONS = {
+  FORBIDDEN: { msg: 'Sem permissão', status: 403 },
+  INVALID: { msg: 'Dados inválidos', status: 400 },
+  NOT_FOUND: { msg: 'Não encontrado', status: 404 },
+};
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -27,14 +33,20 @@ export async function POST(req: Request) {
 
   let r;
   if (b.action === 'create') {
-    r = await createTermination(user, { unitId: b.unitId, collaboratorId: b.collaboratorId, noticeType: b.noticeType as NoticeType, noticeJustification: b.noticeJustification, reason: b.reason, ageYears: b.ageYears != null ? Number(b.ageYears) : undefined }, ctx);
+    /* v1.168.0: os campos do contrato do GBF-RH (tipo, modalidade do aviso,
+       motivo, data, carta). `reason` segue como texto livre. */
+    r = await createTermination(user, {
+      unitId: String(b.unitId ?? ''), collaboratorId: String(b.collaboratorId ?? ''),
+      terminationKind: String(b.terminationKind ?? ''), noticeMode: b.noticeMode ? String(b.noticeMode) : null,
+      reasonCode: String(b.reasonCode ?? ''), terminationDate: String(b.terminationDate ?? ''),
+      reason: String(b.reason ?? ''), letterPath: b.letterPath ? String(b.letterPath) : null,
+      noticeJustification: b.noticeJustification ? String(b.noticeJustification) : undefined,
+      ageYears: b.ageYears != null && b.ageYears !== '' ? Number(b.ageYears) : undefined,
+    }, ctx);
   } else if (b.action === 'decide') {
     r = await decideTermination(user, b.id, Boolean(b.approve), b.rejectionReason, ctx);
   }
   if (!r) return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });
-  if (!r.ok) {
-    const map: Record<string, number> = { FORBIDDEN: 403, INVALID: 400, NOT_FOUND: 404 };
-    return NextResponse.json({ error: r.reason === 'FORBIDDEN' ? 'Sem permissão' : r.reason === 'NOT_FOUND' ? 'Não encontrado' : 'Dados inválidos', reason: r.reason }, { status: map[r.reason] });
-  }
+  if (!r.ok) return reasonResponse(REASONS, r.reason, r.message);
   return NextResponse.json({ ok: true, id: r.id });
 }

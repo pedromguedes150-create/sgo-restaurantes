@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
+import { enfileirarCancelamentoDeAtestado } from '@/lib/rh/saida/fila';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -217,6 +218,10 @@ export async function deleteMedicalCertificate(user: SessionUser, id: string, ct
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   const c = await prisma.medicalCertificate.findUnique({ where: { id }, select: { unitId: true, collaboratorId: true, startDate: true, endDate: true, type: true, days: true } });
   if (!c) return { ok: false, reason: 'NOT_FOUND' };
+  /* Envio ao GBF-RH (v1.168.0): ANTES de apagar, porque a montagem do
+     cancelamento lê o atestado. Se o `criar` já foi aceito pelo RH, entra um
+     `cancelar` na fila; se nunca chegou lá, a linha pendente é descartada. */
+  const rh = await enfileirarCancelamentoDeAtestado(id, user.id).catch((e) => { console.error('[rh-saida] falha ao enfileirar cancelamento:', e); return 'NADA' as const; });
   await prisma.medicalCertificate.delete({ where: { id } });
   // Reverte a Escala: remove os dias marcados como "Atestado" deste período (não toca em outros status)
   if (c.type !== 'HOURS') {
@@ -229,7 +234,7 @@ export async function deleteMedicalCertificate(user: SessionUser, id: string, ct
       where: { collaboratorId: c.collaboratorId, status: 'ATESTADO', date: { gte: new Date(Date.UTC(ys, ms - 1, ds)), lte: new Date(Date.UTC(ye, me - 1, de, 23, 59, 59)) } },
     });
   }
-  await audit({ userId: user.id, unitId: c.unitId, action: 'CERTIFICATE_DELETE', module: 'PEOPLE', entity: 'medical_certificate', entityId: id, metadata: { start: c.startDate, end: c.endDate, days: c.days }, ...ctx });
+  await audit({ userId: user.id, unitId: c.unitId, action: 'CERTIFICATE_DELETE', module: 'PEOPLE', entity: 'medical_certificate', entityId: id, metadata: { start: c.startDate, end: c.endDate, days: c.days, rh }, ...ctx });
   return { ok: true };
 }
 

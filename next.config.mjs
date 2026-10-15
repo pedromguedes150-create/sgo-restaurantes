@@ -16,7 +16,9 @@ const nextConfig = {
     // derrubava o servidor inteiro. Em edge o register() já sai na 1ª linha
     // (NEXT_RUNTIME !== 'nodejs'), então basta não tentar empacotar a lib ali.
     if (nextRuntime === 'edge') {
-      config.externals = [...(config.externals ?? []), 'web-push'];
+      // v1.168.0: o despachante da fila SGO→RH (src/lib/rh/saida/despachante.ts)
+      // lê o anexo do volume com fs — mesmo caso do web-push: só roda em nodejs.
+      config.externals = [...(config.externals ?? []), 'web-push', 'fs', 'fs/promises', 'path'];
     }
     return config;
   },
