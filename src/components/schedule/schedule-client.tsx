@@ -17,8 +17,9 @@ import { shortUnitName } from '@/lib/unit-name';
 import { cn } from '@/lib/utils';
 import {
   filtrarLinhas, opcoesDosFiltros, resumoDaGrade, totaisDaLinha, detalheDasAusencias, celulaDivergente,
-  type FiltrosDaGrade, type ModoDaGrade,
+  type FiltrosDaGrade, type ModoDaGrade, diaAindaConta,
 } from '@/lib/schedule/grade-filtros';
+import { MOTIVO_INATIVACAO_ROTULO } from '@/lib/rh/nao-devolvidos';
 
 type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'ATRASO' | 'AFASTADO';
 type ScheduleType = 'TWELVE36_ODD' | 'TWELVE36_EVEN' | 'SIX_ONE' | 'FIVE_TWO' | 'CUSTOM';
@@ -28,6 +29,10 @@ interface Row {
   /** Setor(es) do Mapa de Funções — é por onde o gerente filtra a grade. */
   setores?: string[];
   days: Cell[];
+  /** Dia da saída ('AAAA-MM-DD') quando a pessoa foi inativada neste mês (v1.171.0). */
+  inactiveSince?: string | null;
+  inactiveReason?: string | null;
+  inactiveDay?: number | null;
 }
 interface Grid { year: number; month: number; daysCount: number; rows: Row[]; withoutSchedule: { id: string; name: string }[] }
 interface Unit { id: string; name: string }
@@ -467,7 +472,18 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                     )}
                     <tr className="border-t">
                       <td className="sticky left-0 z-10 min-w-[184px] bg-surface px-2 py-1.5 text-left print:static print:min-w-0 print:w-[112px] print:px-1 print:py-0">
-                        <div className="font-semibold text-ink-900 print:truncate print:text-[8px]">{row.name}</div>
+                        <div className={cn('font-semibold text-ink-900 print:truncate print:text-[8px]', row.inactiveSince && 'text-ink-500')}>
+                          {row.name}
+                          {row.inactiveSince && (
+                            <span
+                              className="ml-1 rounded bg-sunken px-1 text-[10px] font-semibold text-ink-700 print:text-[7px]"
+                              title={MOTIVO_INATIVACAO_ROTULO[row.inactiveReason ?? ''] ?? 'Inativo'}
+                              data-testid="selo-saiu"
+                            >
+                              Saiu em {row.inactiveSince.slice(8, 10)}/{row.inactiveSince.slice(5, 7)}
+                            </span>
+                          )}
+                        </div>
                         {/* O cargo/turno/setor ajuda na tela; na folha do quadro o
                             que importa é o dia-a-dia — tirá-lo dá mais espaço à
                             grade sem perder nenhuma informação da letra do dia. */}
@@ -479,6 +495,15 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                       {row.days.map((cell, i) => {
                         const day = i + 1;
                         const key = `${row.collaboratorId}:${day}`;
+                        /* Depois da saída não há dia a marcar: a célula fica
+                           vazia e cinza, em qualquer modo, e não abre o editor. */
+                        if (!diaAindaConta(row, day)) {
+                          return (
+                            <td key={day} className="bg-sunken/60 px-0.5 py-0.5 print:w-[24px] print:px-0 print:py-0" title={row.inactiveSince ? `Saiu em ${row.inactiveSince.split('-').reverse().join('/')}` : 'Saiu'}>
+                              <div className="mx-auto flex h-6 w-7 items-center justify-center text-[11px] text-ink-400 print:h-3 print:w-full print:text-[8px]">·</div>
+                            </td>
+                          );
+                        }
                         if (mode === 'comparacao') {
                           const act = cell.actual;
                           const diff = celulaDivergente(cell);

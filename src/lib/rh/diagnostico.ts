@@ -4,6 +4,8 @@ import { unwrapColaboradores, unwrapUnidades, classificarStatus, RhFormatoInespe
 import { unitScopeWhere, canAccessUnit } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
 import { nomesNoRhDaUnidade } from '@/lib/rh/razoes';
+import { situacaoNaBaseGeral, RODADAS_PARA_INATIVAR, type PessoaNaBaseGeral, type SituacaoNaBaseGeral } from '@/lib/rh/nao-devolvidos';
+import { isAtivo } from '@/lib/rh/normalize';
 
 /**
  * Diagnóstico da integração com o RH — por que falta gente numa unidade.
@@ -69,6 +71,13 @@ export interface SoNoSgo {
   name: string;
   externalId: string | null;
   active: boolean;
+  /** v1.171.0 — o que a BASE INTEIRA do RH diz dessa matrícula (nulo = base indisponível/sem matrícula). */
+  naBaseGeral: SituacaoNaBaseGeral | null;
+  /** Contagem de ausência em curso: desde quando e quantos dias (de `RODADAS_PARA_INATIVAR`). */
+  ausenteDesde: string | null;
+  ausenteDias: number;
+  inactiveSince: string | null;
+  inactiveReason: string | null;
 }
 
 export interface DiagnosticoDaUnidade {
@@ -87,6 +96,9 @@ export interface DiagnosticoDaUnidade {
   pessoas: PessoaDoDiagnostico[];
   /** Está no SGO vinculado à unidade, mas o RH não devolveu. */
   soNoSgo: SoNoSgo[];
+  /** A base inteira do RH respondeu? (sem ela, a coluna "na base geral" fica vazia) */
+  baseGeralLida: boolean;
+  rodadasParaInativar: number;
   resumo: Record<Decisao, number>;
   ativosNoSgo: number;
 }
@@ -113,18 +125,23 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
   const base: DiagnosticoDaUnidade = {
     unitId: unit.id, unitName: unit.name, rhUnitName: unit.rhUnitName, outrasRazoes: [],
     nomeConfere: null, parecidas: [], erro: null,
-    totalNoRh: 0, pessoas: [], soNoSgo: [],
+    totalNoRh: 0, pessoas: [], soNoSgo: [], baseGeralLida: false, rodadasParaInativar: RODADAS_PARA_INATIVAR,
     resumo: { ATIVO_NO_SGO: 0, ATIVO_DE_FERIAS: 0, ATIVO_AFASTADO: 0, ATIVO_STATUS_DESCONHECIDO: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
     ativosNoSgo: 0,
   };
 
   /* O que o SGO tem hoje — levantado sempre, mesmo se o RH falhar: é metade da
      comparação e é a metade que explica o que o usuário está vendo na tela. */
-  const noSgo = await prisma.collaborator.findMany({
+  const noSgoCru = await prisma.collaborator.findMany({
     where: { source: 'RH', units: { some: { unitId } } },
     orderBy: { name: 'asc' },
-    select: { id: true, name: true, externalId: true, active: true },
+    select: { id: true, name: true, externalId: true, active: true, rhMissingSince: true, rhMissingDays: true, inactiveSince: true, inactiveReason: true },
   });
+  const noSgo: SoNoSgo[] = noSgoCru.map((c) => ({
+    id: c.id, name: c.name, externalId: c.externalId, active: c.active,
+    naBaseGeral: null, ausenteDesde: c.rhMissingSince, ausenteDias: c.rhMissingDays,
+    inactiveSince: c.inactiveSince, inactiveReason: c.inactiveReason,
+  }));
   base.ativosNoSgo = noSgo.filter((c) => c.active).length;
 
   if (!rhConfigured()) {
@@ -219,5 +236,26 @@ export async function diagnosticarUnidade(user: SessionUser, unitId: string): Pr
   base.pessoas.sort((a, b) => peso[a.decisao] - peso[b.decisao] || a.nome.localeCompare(b.nome, 'pt-BR'));
 
   base.soNoSgo = noSgo.filter((c) => !c.externalId || !vistas.has(c.externalId));
+
+  /* v1.171.0 — a mesma pergunta que o sync faz: o que a BASE INTEIRA do RH diz
+     de quem a unidade não devolveu? Só leitura; a decisão (inativar, transferir,
+     contar) é do sync. */
+  if (base.soNoSgo.some((c) => c.externalId)) {
+    try {
+      const geral: PessoaNaBaseGeral[] = unwrapColaboradores(await rh.colaboradores())
+        .filter((c) => c.matricula)
+        .map((c) => ({ matricula: String(c.matricula), status: c.status ?? null, unidade: c.unidade ?? null }));
+      if (geral.length > 0) {
+        const mapa = new Map(geral.map((p) => [p.matricula, p]));
+        const razoes = new Set(nomes);
+        for (const c of base.soNoSgo) {
+          if (c.externalId) c.naBaseGeral = situacaoNaBaseGeral(c.externalId, mapa, razoes, (s) => !isAtivo(s));
+        }
+        base.baseGeralLida = true;
+      }
+    } catch {
+      /* Base geral indisponível: a coluna fica vazia e a tela diz isso. */
+    }
+  }
   return base;
 }

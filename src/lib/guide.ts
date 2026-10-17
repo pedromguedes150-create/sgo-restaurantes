@@ -416,6 +416,17 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'escala-quem-saiu',
+        title: 'Escala — quem saiu no mês (v1.171.0)',
+        roles: MANAGERLINE,
+        summary: 'Colaborador desligado continua na grade do mês da saída, até o dia em que saiu.',
+        steps: [
+          'Quando o RH desliga alguém (ou a pessoa é inativada no SGO), a grade da Escala NÃO apaga o mês: a linha fica com o selo "Saiu em dd/mm", os dias a partir da saída ficam em cinza (sem status, sem edição) e fora dos totais T · F · Aus.',
+          'No mês seguinte a pessoa não aparece mais. Quem foi inativado antes desta versão (sem data de saída) some como sempre sumiu.',
+          'Quem decide a saída é o RH: status de desligamento na lista da unidade ou na base inteira, transferência de razão social, ou 3 dias seguidos sem aparecer em lugar nenhum (com trava de 30% da unidade). Ver "Diagnóstico do RH".',
+        ],
+      },
+      {
         id: 'escala-atraso',
         title: 'Escala — Atraso',
         roles: MANAGERLINE,
@@ -487,7 +498,7 @@ export const GUIDE: GuideSection[] = [
           'Primeiro confira o "Nome no RH": se ele não existir na lista do RH, a tela acusa e mostra os nomes parecidos para comparar. Um acento ou espaço a mais já faz o RH devolver lista vazia.',
           'Status do RH (v1.166.0): "Aposentado" e "Em desligamento" contam como trabalhando normal (o segundo até o RH trocar para "Desligado"); "Afastado" continua no SGO, mas a Escala mostra AF (não trabalha) enquanto o RH mantiver o status — o período começa no dia em que a sincronização vê o afastamento. O resumo separa em: Ativo no SGO · De férias (RH) (status "Férias" — ver abaixo) · Afastado (RH) · Ativo, status novo (o SGO não reconhece esse status e a pessoa aparece do mesmo jeito, mas vale conferir) · Desligado no SGO (status de desligamento — some de Pessoas, da Escala e do Mapa) · Nunca entrou (o RH mandou sem matrícula) · Ainda não sincronizado.',
           'A tabela mostra pessoa a pessoa, com o status que veio do RH, começando pelos problemas.',
-          'No fim, quem está no SGO e o RH não devolve mais — transferência, desligamento ou matrícula trocada.',
+          'No fim, quem está no SGO e o RH não devolve mais — transferência, desligamento ou matrícula trocada. CONFERÊNCIA NA BASE INTEIRA (v1.171.0): a ausência na lista da unidade sozinha NUNCA inativa (foi uma resposta incompleta do RH que inativou 49 pessoas em 29/09). A cada sincronização o SGO procura cada um desses na base inteira do RH e só age pelo que ela DIZ: "desligado" lá → inativa na hora e sai da Escala; ativo em OUTRA razão social → transferido (sai desta unidade e entra na outra, se for do SGO); ativo numa razão social desta unidade → a lista veio incompleta, nada muda; não aparece em lugar nenhum → só conta, e inativa depois de 3 DIAS seguidos ausente (a tela mostra "dia N de 3"), nunca mais de 30% da unidade numa rodada (trava: ninguém é inativado e os Admins são avisados). A coluna da direita mostra exatamente o que a base inteira disse de cada um.',
           'A tela só LÊ. Para aplicar, use o botão Sincronizar da unidade em Configurações → Unidades — ou aguarde a sincronização automática (~1×/dia).',
         ],
         tips: [
@@ -910,6 +921,17 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'escala-quem-saiu',
+        title: 'Escala — quem saiu no mês (v1.171.0)',
+        roles: MANAGERLINE,
+        summary: 'Colaborador desligado continua na grade do mês da saída, até o dia em que saiu.',
+        steps: [
+          'Quando o RH desliga alguém (ou a pessoa é inativada no SGO), a grade da Escala NÃO apaga o mês: a linha fica com o selo "Saiu em dd/mm", os dias a partir da saída ficam em cinza (sem status, sem edição) e fora dos totais T · F · Aus.',
+          'No mês seguinte a pessoa não aparece mais. Quem foi inativado antes desta versão (sem data de saída) some como sempre sumiu.',
+          'Quem decide a saída é o RH: status de desligamento na lista da unidade ou na base inteira, transferência de razão social, ou 3 dias seguidos sem aparecer em lugar nenhum (com trava de 30% da unidade). Ver "Diagnóstico do RH".',
+        ],
+      },
+      {
         id: 'escala-atraso',
         title: 'Escala — Atraso',
         roles: MANAGERLINE,
@@ -981,7 +1003,7 @@ export const GUIDE: GuideSection[] = [
           'Primeiro confira o "Nome no RH": se ele não existir na lista do RH, a tela acusa e mostra os nomes parecidos para comparar. Um acento ou espaço a mais já faz o RH devolver lista vazia.',
           'Status do RH (v1.166.0): "Aposentado" conta como trabalhando normal; "Afastado" continua no SGO, mas a Escala mostra AF (não trabalha) enquanto o RH mantiver o status — o período começa no dia em que a sincronização vê o afastamento. O resumo separa em: Ativo no SGO · De férias (RH) (status "Férias" — ver abaixo) · Afastado (RH) · Ativo, status novo (o SGO não reconhece esse status e a pessoa aparece do mesmo jeito, mas vale conferir) · Desligado no SGO (status de desligamento — some de Pessoas, da Escala e do Mapa) · Nunca entrou (o RH mandou sem matrícula) · Ainda não sincronizado.',
           'A tabela mostra pessoa a pessoa, com o status que veio do RH, começando pelos problemas.',
-          'No fim, quem está no SGO e o RH não devolve mais — transferência, desligamento ou matrícula trocada.',
+          'No fim, quem está no SGO e o RH não devolve mais — transferência, desligamento ou matrícula trocada. CONFERÊNCIA NA BASE INTEIRA (v1.171.0): a ausência na lista da unidade sozinha NUNCA inativa (foi uma resposta incompleta do RH que inativou 49 pessoas em 29/09). A cada sincronização o SGO procura cada um desses na base inteira do RH e só age pelo que ela DIZ: "desligado" lá → inativa na hora e sai da Escala; ativo em OUTRA razão social → transferido (sai desta unidade e entra na outra, se for do SGO); ativo numa razão social desta unidade → a lista veio incompleta, nada muda; não aparece em lugar nenhum → só conta, e inativa depois de 3 DIAS seguidos ausente (a tela mostra "dia N de 3"), nunca mais de 30% da unidade numa rodada (trava: ninguém é inativado e os Admins são avisados). A coluna da direita mostra exatamente o que a base inteira disse de cada um.',
           'A tela só LÊ. Para aplicar, use o botão Sincronizar da unidade em Configurações → Unidades — ou aguarde a sincronização automática (~1×/dia).',
         ],
         tips: [

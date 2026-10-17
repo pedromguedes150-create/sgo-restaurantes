@@ -181,16 +181,36 @@ export default async function DiagnosticoRhPage({ searchParams }: { searchParams
                 {d.soNoSgo.length} no SGO que o RH não devolveu
               </p>
               <p className="mb-2 text-xs text-ink-700">
-                Transferência, desligamento ou matrícula que mudou de lado. Quem está <b>ativo</b> aqui e não vem
-                mais do RH é o que o sync desligaria na próxima rodada.
+                Transferência, desligamento ou matrícula que mudou de lado. Ausência na lista da unidade <b>nunca</b> inativa
+                sozinha: a cada sincronização o SGO confere cada um na <b>base inteira do RH</b> — desligado lá sai na hora,
+                transferido muda de unidade, e quem não aparece em lugar nenhum só é inativado depois de{' '}
+                <b>{d.rodadasParaInativar} dias seguidos</b> ausente (nunca mais de 30% da unidade numa rodada).
+                {!d.baseGeralLida && d.soNoSgo.some((c) => c.externalId) && (
+                  <> <span className="text-warning">A base inteira do RH não respondeu agora — a coluna da direita fica vazia e nenhum dia é contado.</span></>
+                )}
               </p>
               <ul className="space-y-1 text-xs">
-                {d.soNoSgo.map((c) => (
-                  <li key={c.id} className="flex items-center justify-between gap-2 border-b border-line py-1">
-                    <span className="text-ink-900">{c.name} <span className="text-ink-500">· {c.externalId ?? 'sem matrícula'}</span></span>
-                    <StatusBadge tone={c.active ? 'warning' : 'neutral'} dot>{c.active ? 'Ativo no SGO' : 'Inativo'}</StatusBadge>
-                  </li>
-                ))}
+                {d.soNoSgo.map((c) => {
+                  const g = c.naBaseGeral;
+                  const naBase = !c.active
+                    ? `Inativo no SGO${c.inactiveSince ? ` desde ${c.inactiveSince.split('-').reverse().join('/')}` : ''}`
+                    : g?.tipo === 'DESLIGADO_NO_RH' ? `Base geral: desligado (${g.status || 'sem status'}) — sai na próxima sincronização`
+                    : g?.tipo === 'TRANSFERIDO' ? `Base geral: em outra razão social — ${g.razao}`
+                    : g?.tipo === 'PRESENTE' ? `Base geral: ativo nesta unidade (${g.razao}) — a lista da unidade veio incompleta`
+                    : g?.tipo === 'AUSENTE'
+                      ? `Não está na base inteira do RH${c.ausenteDesde ? ` desde ${c.ausenteDesde.split('-').reverse().join('/')}` : ''} · dia ${c.ausenteDias} de ${d.rodadasParaInativar}`
+                      : c.externalId ? 'Base geral não consultada' : 'Sem matrícula: não há como conferir';
+                  const tom = !c.active ? 'neutral' : g?.tipo === 'DESLIGADO_NO_RH' || g?.tipo === 'AUSENTE' ? 'danger' : g?.tipo === 'TRANSFERIDO' ? 'info' : 'warning';
+                  return (
+                    <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-line py-1" data-testid={`nao-devolvido-${c.externalId ?? c.id}`}>
+                      <span className="text-ink-900">{c.name} <span className="text-ink-500">· {c.externalId ?? 'sem matrícula'}</span></span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-ink-700">{naBase}</span>
+                        <StatusBadge tone={tom} dot>{c.active ? 'Ativo no SGO' : 'Inativo'}</StatusBadge>
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </CardContent></Card>
           )}

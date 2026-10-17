@@ -78,7 +78,7 @@ describe('razão social adicional', () => {
 
   it('a sincronização lê as duas listas, a matrícula repetida vale uma vez e todos ficam na unidade', async () => {
     const r = await syncCollaboratorsForUnit(admin(), unitA);
-    expect(r).toEqual({ ok: true, created: 3, updated: 0, total: 3 });
+    expect(r).toMatchObject({ ok: true, created: 3, updated: 0, total: 3 });
     const nomes = (await prisma.collaborator.findMany({ where: { units: { some: { unitId: unitA } }, externalId: { startsWith: `T${sfx}-` } }, orderBy: { name: 'asc' }, select: { name: true } })).map((c) => c.name);
     expect(nomes).toEqual(['ANA CLAUDIA', 'ANA LUCIA VIEIRA SANTOS', 'REPETIDA']);
     const log = await prisma.auditLog.findFirst({ where: { unitId: unitA, action: 'RH_SYNC_COLLABORATORS' }, orderBy: { createdAt: 'desc' } });

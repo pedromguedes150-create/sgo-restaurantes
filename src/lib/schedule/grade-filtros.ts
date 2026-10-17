@@ -25,6 +25,16 @@ export interface LinhaDaGrade {
   /** Setor(es) do Mapa de Funções em que a pessoa está alocada. */
   setores?: string[];
   days: CelulaDaGrade[];
+  /** Dia da saída ('AAAA-MM-DD') quando a pessoa foi inativada neste mês (v1.171.0). */
+  inactiveSince?: string | null;
+  inactiveReason?: string | null;
+  /** Primeiro dia do mês (1..31) já sem a pessoa: dias a partir dele ficam fora das contas. */
+  inactiveDay?: number | null;
+}
+
+/** O dia (1..31) ainda é da pessoa? Depois da saída, não conta nem se marca. */
+export function diaAindaConta(l: Pick<LinhaDaGrade, 'inactiveDay'>, dia: number): boolean {
+  return !l.inactiveDay || dia < l.inactiveDay;
 }
 
 export interface FiltrosDaGrade {
@@ -56,6 +66,7 @@ export function celulaDivergente(c: CelulaDaGrade): boolean {
 }
 
 export function linhaDivergente(l: LinhaDaGrade): boolean {
+  if (l.inactiveDay) return l.days.some((c, i) => diaAindaConta(l, i + 1) && celulaDivergente(c));
   return l.days.some(celulaDivergente);
 }
 
@@ -115,7 +126,8 @@ export interface TotaisDaLinha {
  */
 export function totaisDaLinha(l: LinhaDaGrade, modo: ModoDaGrade): TotaisDaLinha {
   const t: TotaisDaLinha = { trabalho: 0, folgas: 0, ausencias: 0, divergencias: 0, vazios: 0 };
-  for (const c of l.days) {
+  for (const [i, c] of l.days.entries()) {
+    if (!diaAindaConta(l, i + 1)) continue;
     const s = statusNoModo(c, modo);
     if (s === null) { t.vazios++; continue; }
     if (s === 'WORK' || s === 'ATRASO') t.trabalho++;

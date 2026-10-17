@@ -21,6 +21,13 @@ Qualquer outro `{evento}` responde `404 {"error":"Evento desconhecido: ..."}`.
 Não existem endpoints de entrada para **férias**, **alterações cadastrais** nem **atestados** vindos do RH.
 Hoje esses dados chegam ao SGO pelo **sync por consulta** (o SGO lê `GET {RH}/api/ext/colaboradores/unidade/<razão social>`
 uma vez por dia com a chave `RH_API_KEY`): status "Férias"/"Afastado" do RH viram períodos na Escala por esse caminho.
+
+**Desligamento sem evento (v1.171.0).** Quem está ativo no SGO e a lista da unidade **não devolve mais** é procurado na
+lista geral (`GET {RH}/api/ext/colaboradores`) pela matrícula, na mesma sincronização: status de desligamento → inativado
+na hora; ativo em outra razão social → transferido de unidade; ativo numa razão social da própria unidade → nada (a lista da
+unidade veio incompleta); ausente nas duas → só conta, e inativa depois de 3 dias distintos, nunca mais de 30% dos ativos
+da unidade numa rodada. Lista geral com erro ou vazia não conta dia nenhum. O evento `desligamento` deste documento
+continua sendo o caminho preferido: chega na hora e sem adivinhação.
 Se o RH passar a enviar esses eventos, será preciso criar os endpoints (ver seção 6).
 
 ## 2. Autenticação

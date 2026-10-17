@@ -83,6 +83,15 @@ export interface ScheduleRow {
   scheduleType: ScheduleType;
   shiftLabel: string | null;
   days: ScheduleCell[]; // índice 0 = dia 1
+  /**
+   * Dia em que a pessoa saiu ('AAAA-MM-DD'), quando foi inativada neste mês
+   * (v1.171.0). A linha fica na grade do mês da saída, com os dias a partir
+   * daí em cinza; nos meses seguintes ela não aparece.
+   */
+  inactiveSince?: string | null;
+  inactiveReason?: string | null;
+  /** Primeiro dia do mês (1..31) já SEM a pessoa — a partir dele nada conta nem se marca. */
+  inactiveDay?: number | null;
 }
 export interface ScheduleGrid {
   year: number; month: number; daysCount: number;
@@ -100,9 +109,16 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
      aplicado. Data é dia; a hora dentro dele não pode decidir nada. */
   const doMes = { gte: new Date(Date.UTC(year, month - 1, 1)), lt: new Date(Date.UTC(year, month, 1)) };
 
-  const collabs = await prisma.collaborator.findMany({ where: { active: true, units: { some: { unitId } } }, orderBy: { name: 'asc' }, select: { id: true, name: true, jobTitle: true } });
-  const collabIds = collabs.map((c) => c.id);
   const primeiroISO = `${year}-${String(month).padStart(2, '0')}-01`;
+  /* Quem saiu NESTE mês continua na grade até o dia da saída (v1.171.0):
+     inativar ao sincronizar com o RH apagava a primeira quinzena trabalhada.
+     Inativação antiga, sem data, some como sempre sumiu. */
+  const collabs = await prisma.collaborator.findMany({
+    where: { units: { some: { unitId } }, OR: [{ active: true }, { active: false, inactiveSince: { gte: primeiroISO } }] },
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true, jobTitle: true, active: true, inactiveSince: true, inactiveReason: true },
+  });
+  const collabIds = collabs.map((c) => c.id);
   const ultimoISO = `${year}-${String(month).padStart(2, '0')}-${String(daysCount).padStart(2, '0')}`;
   const [patterns, overrides, actuals, atestados, ferias, afastamentos] = await Promise.all([
     prisma.employeeSchedule.findMany({ where: { unitId, active: true }, orderBy: { startDate: 'asc' }, include: { shift: true, template: true } }),
@@ -235,7 +251,14 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
     const entrada = doFim.startTime ?? doFim.template?.startTime ?? null;
     const saida = doFim.endTime ?? doFim.template?.endTime ?? null;
     const horario = entrada && saida ? `${entrada}–${saida}` : entrada ?? saida ?? null;
-    rows.push({ collaboratorId: c.id, name: c.name, jobTitle: c.jobTitle, typeLabel, scheduleType: doFim.scheduleType, shiftLabel: horario ?? shiftLabel, days });
+    rows.push({
+      collaboratorId: c.id, name: c.name, jobTitle: c.jobTitle, typeLabel, scheduleType: doFim.scheduleType, shiftLabel: horario ?? shiftLabel, days,
+      ...(c.active ? {} : {
+        inactiveSince: c.inactiveSince,
+        inactiveReason: c.inactiveReason,
+        inactiveDay: c.inactiveSince && c.inactiveSince.startsWith(primeiroISO.slice(0, 7)) ? Number(c.inactiveSince.slice(8, 10)) : 1,
+      }),
+    });
   }
 
   // ordena por tipo de escala (agrupamento) depois por nome
