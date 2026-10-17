@@ -106,7 +106,10 @@ export async function handleDesligamento(payload: Record<string, unknown>): Prom
     return { httpStatus: 400, body: { error: 'Colaborador com CPF informado não encontrado' } };
   }
   const jaEstavaDesligado = !collab.active;
-  if (!jaEstavaDesligado) await prisma.collaborator.update({ where: { id: collab.id }, data: { active: false } });
+  if (!jaEstavaDesligado) {
+    const { hojeNaOperacao } = await import('@/lib/controle-gerentes-dados');
+    await prisma.collaborator.update({ where: { id: collab.id }, data: { active: false, inactiveSince: hojeNaOperacao(), inactiveReason: 'RH_EVENTO' } });
+  }
   await log('desligamento', payload, 'PROCESSED', `${collab.name}${jaEstavaDesligado ? ' (já estava desligado)' : ''}`);
   await notifyAdmins({
     title: 'RH: desligamento recebido',

@@ -37,7 +37,7 @@ function base(over: Partial<DiagnosticoDaUnidade> = {}): DiagnosticoDaUnidade {
   return {
     unitId: 'u-igarape', unitName: 'Igarapé', rhUnitName: 'CHURRASCARIA IGARAPE LTDA', outrasRazoes: [],
     nomeConfere: true, parecidas: [], erro: null,
-    totalNoRh: 0, pessoas: [], soNoSgo: [],
+    totalNoRh: 0, pessoas: [], soNoSgo: [], baseGeralLida: false, rodadasParaInativar: 3,
     resumo: { ATIVO_NO_SGO: 0, ATIVO_DE_FERIAS: 0, ATIVO_AFASTADO: 0, ATIVO_STATUS_DESCONHECIDO: 0, INATIVO_POR_STATUS: 0, PULADO_SEM_MATRICULA: 0, NAO_ENCONTRADO_NO_SGO: 0 },
     ativosNoSgo: 0,
     ...over,
@@ -108,12 +108,15 @@ describe('O nome que não bate é o aviso mais alto', () => {
 });
 
 describe('Quem está no SGO e o RH não devolve', () => {
-  it('é listado, com aviso de que seria desligado', async () => {
+  it('é listado, com o que a base inteira do RH diz e a contagem de dias ausente', async () => {
     diagnostico = base({
-      soNoSgo: [{ id: 'c1', name: 'FANTASMA', externalId: '77', active: true }],
+      soNoSgo: [{ id: 'c1', name: 'FANTASMA', externalId: '77', active: true, naBaseGeral: { tipo: 'AUSENTE' }, ausenteDesde: '2026-10-14', ausenteDias: 2, inactiveSince: null, inactiveReason: null }],
     });
     const html = await render();
     expect(html).toContain('FANTASMA');
+    expect(html).toContain('dia 2 de 3');
+    expect(html).toContain('desde 14/10/2026');
+    expect(html).not.toContain('desligaria na próxima rodada');
     expect(html).toContain('o RH não devolveu');
   });
 });
@@ -132,7 +135,7 @@ describe('Falha do RH não derruba a tela', () => {
     diagnostico = base({
       erro: 'Falha ao consultar o RH (504): RH não respondeu em 20s',
       ativosNoSgo: 7,
-      soNoSgo: [{ id: 'c1', name: 'ALGUEM', externalId: '1', active: true }],
+      soNoSgo: [{ id: 'c1', name: 'ALGUEM', externalId: '1', active: true, naBaseGeral: null, ausenteDesde: null, ausenteDias: 0, inactiveSince: null, inactiveReason: null }],
     });
     const html = await render();
     expect(html).toContain('não respondeu em 20s');

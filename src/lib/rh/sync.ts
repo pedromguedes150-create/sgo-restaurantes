@@ -6,7 +6,11 @@ import { notifyAdmins } from '@/lib/notifications';
 import { dayUTC } from '@/lib/schedule';
 import { currentOperationalDate } from '@/lib/date/operational';
 import type { SessionUser } from '@/lib/auth/session';
-import { nomesNoRhDaUnidade } from '@/lib/rh/razoes';
+import { nomesNoRhDaUnidade, unidadeDaRazaoSocial } from '@/lib/rh/razoes';
+import {
+  situacaoNaBaseGeral, contarAusencia, travaDeSeguranca, MOTIVO_INATIVACAO, RODADAS_PARA_INATIVAR,
+  type PessoaNaBaseGeral,
+} from '@/lib/rh/nao-devolvidos';
 
 export const FERIAS_ORIGEM_RH = 'RH_SYNC';
 /** A marcação diária que o sync grava em `schedule_actuals` — é a evidência que o backfill lê. */
@@ -87,8 +91,20 @@ export async function estenderAfastamentoDoRh(collaboratorId: string, unitId: st
   return 'ABERTO';
 }
 
+/** O que a conferência na base inteira do RH fez com quem a unidade não devolveu (v1.171.0). */
+export interface ConferenciaBaseGeral {
+  /** A lista geral veio válida (sem ela, nenhum dia é contado). */
+  baseGeralValida: boolean;
+  desligadosNoRh: string[];
+  transferidos: string[];
+  ausentesConfirmados: string[];
+  /** Quantos passaram a contar ausência (ainda sem inativar). */
+  ausentesContando: number;
+  travaDisparou: boolean;
+}
+
 export type SyncResult =
-  | { ok: true; created: number; updated: number; total: number }
+  | { ok: true; created: number; updated: number; total: number; baseGeral?: ConferenciaBaseGeral }
   | { ok: false; reason: 'FORBIDDEN' | 'NOT_CONFIGURED' | 'NO_RH_NAME' | 'NOT_FOUND' | 'RH_ERROR'; message?: string };
 
 /**
@@ -171,13 +187,29 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
     };
     const existing = await prisma.collaborator.findFirst({ where: { externalId: data.externalId } });
     let collaboratorId: string;
+    /* Veio na lista: a contagem de ausência (v1.171.0) zera. A DATA da
+       inativação só muda quando o status vira de ativo para desligado (e
+       limpa se o RH reativar) — ela é o que mantém a pessoa na grade do mês
+       em que saiu. */
+    const zeraAusencia = { rhMissingSince: null, rhMissingLastDay: null, rhMissingDays: 0 };
     if (existing) {
-      if (existing.active && !data.active) inativadosPorStatus++;
-      await prisma.collaborator.update({ where: { id: existing.id }, data });
+      const saiu = existing.active && !data.active;
+      const voltou = !existing.active && data.active;
+      if (saiu) inativadosPorStatus++;
+      await prisma.collaborator.update({
+        where: { id: existing.id },
+        data: {
+          ...data, ...zeraAusencia,
+          ...(saiu ? { inactiveSince: hoje, inactiveReason: MOTIVO_INATIVACAO.RH_STATUS } : {}),
+          ...(voltou ? { inactiveSince: null, inactiveReason: null } : {}),
+        },
+      });
       collaboratorId = existing.id;
       updated++;
     } else {
-      const c2 = await prisma.collaborator.create({ data });
+      const c2 = await prisma.collaborator.create({
+        data: { ...data, ...(data.active ? {} : { inactiveSince: hoje, inactiveReason: MOTIVO_INATIVACAO.RH_STATUS }) },
+      });
       collaboratorId = c2.id;
       created++;
     }
@@ -230,10 +262,18 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
   const matriculas = new Set(lista.filter((c) => c.matricula).map((c) => String(c.matricula)));
   const ativosDaUnidade = await prisma.collaborator.findMany({
     where: { source: 'RH', active: true, units: { some: { unitId } } },
-    select: { externalId: true },
+    select: { id: true, name: true, externalId: true, rhMissingSince: true, rhMissingLastDay: true, rhMissingDays: true },
   });
-  const naoRetornados = ativosDaUnidade.filter((c) => !c.externalId || !matriculas.has(c.externalId)).length;
+  const naoDevolvidos = ativosDaUnidade.filter((c) => !c.externalId || !matriculas.has(c.externalId));
+  const naoRetornados = naoDevolvidos.length;
   const listaVaziaSuspeita = matriculas.size === 0 && ativosDaUnidade.length > 0;
+
+  /* v1.171.0 — quem a unidade não devolveu é conferido na BASE INTEIRA do RH
+     (pela matrícula). Lista vazia suspeita = "Nome no RH" errado ou resposta
+     incompleta: nem se consulta a base, porque o problema é outro. */
+  const baseGeral = listaVaziaSuspeita
+    ? { baseGeralValida: false, desligadosNoRh: [], transferidos: [], ausentesConfirmados: [], ausentesContando: 0, travaDisparou: false }
+    : await conferirNaBaseGeral(unit, nomes, naoDevolvidos, ativosDaUnidade.length, hoje, actorUserId);
 
   await audit({
     userId: actorUserId,
@@ -245,6 +285,15 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
       /** só por status de desligamento devolvido pelo RH — ausência não conta */
       deactivated: inativadosPorStatus,
       naoRetornados,
+      /** v1.171.0 — o que a base inteira do RH disse dos não devolvidos */
+      baseGeral: {
+        valida: baseGeral.baseGeralValida,
+        desligadosNoRh: baseGeral.desligadosNoRh.length,
+        transferidos: baseGeral.transferidos.length,
+        ausentesConfirmados: baseGeral.ausentesConfirmados.length,
+        ausentesContando: baseGeral.ausentesContando,
+        travaDisparou: baseGeral.travaDisparou,
+      },
       feriasMarcadas: feriasMarcadas.length,
       afastamentosAbertos: afastadosNovos.length,
       ...(listaVaziaSuspeita ? { motivo: 'RH devolveu lista vazia' } : {}),
@@ -289,7 +338,135 @@ async function syncUnitCore(unitId: string, actorUserId: string | null): Promise
     await reconcileTrainingForUnit(unitId);
   } catch { /* não bloqueia o sync */ }
 
-  return { ok: true, created, updated, total: lista.length };
+  return { ok: true, created, updated, total: lista.length, baseGeral };
+}
+
+type NaoDevolvido = { id: string; name: string; externalId: string | null; rhMissingSince: string | null; rhMissingLastDay: string | null; rhMissingDays: number };
+
+/**
+ * CONFERÊNCIA NA BASE INTEIRA (v1.171.0) — a regra está em
+ * `src/lib/rh/nao-devolvidos.ts`; aqui só se lê e se grava.
+ *
+ * Nunca escreve `active: false` por uma resposta só: desligamento é o STATUS
+ * do RH na base geral; transferência é a RAZÃO SOCIAL do RH na base geral;
+ * ausência em todo lugar só conta o dia, e inativa depois de
+ * `RODADAS_PARA_INATIVAR` dias distintos, com a trava de 30% da unidade.
+ * Base geral que falha ou vem vazia: ninguém é tocado nem contado.
+ */
+async function conferirNaBaseGeral(
+  unit: { id: string; name: string },
+  razoesDaUnidade: string[],
+  naoDevolvidos: NaoDevolvido[],
+  ativosDaUnidade: number,
+  hoje: string,
+  actorUserId: string | null,
+): Promise<ConferenciaBaseGeral> {
+  const vazio: ConferenciaBaseGeral = { baseGeralValida: false, desligadosNoRh: [], transferidos: [], ausentesConfirmados: [], ausentesContando: 0, travaDisparou: false };
+  const comMatricula = naoDevolvidos.filter((c): c is NaoDevolvido & { externalId: string } => Boolean(c.externalId));
+  if (comMatricula.length === 0) return { ...vazio, baseGeralValida: true };
+
+  let geral: PessoaNaBaseGeral[];
+  try {
+    geral = unwrapColaboradores(await rh.colaboradores())
+      .filter((c) => c.matricula)
+      .map((c) => ({ matricula: String(c.matricula), status: c.status ?? null, unidade: c.unidade ?? null }));
+  } catch {
+    return vazio;
+  }
+  if (geral.length === 0) return vazio;
+
+  const mapa = new Map(geral.map((p) => [p.matricula, p]));
+  const razoes = new Set(razoesDaUnidade);
+  const desligado = (status: string | null) => !isAtivo(status);
+  const zeraAusencia = { rhMissingSince: null, rhMissingLastDay: null, rhMissingDays: 0 };
+  const out: ConferenciaBaseGeral = { ...vazio, baseGeralValida: true };
+  const candidatos: NaoDevolvido[] = [];
+
+  for (const c of comMatricula) {
+    const s = situacaoNaBaseGeral(c.externalId, mapa, razoes, desligado);
+    if (s.tipo === 'DESLIGADO_NO_RH') {
+      await prisma.collaborator.update({
+        where: { id: c.id },
+        data: { active: false, inactiveSince: hoje, inactiveReason: MOTIVO_INATIVACAO.RH_STATUS_BASE_GERAL, ...zeraAusencia },
+      });
+      await audit({
+        userId: actorUserId, unitId: unit.id, action: 'RH_DEACTIVATED', module: 'PEOPLE',
+        entity: 'collaborator', entityId: c.id,
+        metadata: { nome: c.name, matricula: c.externalId, origem: 'BASE_GERAL', statusNoRh: s.status },
+      });
+      out.desligadosNoRh.push(c.name);
+    } else if (s.tipo === 'TRANSFERIDO') {
+      const destino = await unidadeDaRazaoSocial(s.razao);
+      await prisma.$transaction(async (tx) => {
+        await tx.collaboratorUnit.deleteMany({ where: { collaboratorId: c.id, unitId: unit.id } });
+        if (destino && destino.id !== unit.id) {
+          await tx.collaboratorUnit.upsert({
+            where: { collaboratorId_unitId: { collaboratorId: c.id, unitId: destino.id } },
+            create: { collaboratorId: c.id, unitId: destino.id },
+            update: {},
+          });
+        }
+        await tx.collaborator.update({ where: { id: c.id }, data: zeraAusencia });
+      });
+      await audit({
+        userId: actorUserId, unitId: unit.id, action: 'RH_TRANSFER', module: 'PEOPLE',
+        entity: 'collaborator', entityId: c.id,
+        metadata: { nome: c.name, matricula: c.externalId, de: unit.name, paraRazaoSocial: s.razao, paraUnitId: destino?.id ?? null, statusNoRh: s.status },
+      });
+      out.transferidos.push(destino ? `${c.name} → ${s.razao}` : `${c.name} → ${s.razao} (fora do SGO)`);
+    } else if (s.tipo === 'PRESENTE') {
+      if (c.rhMissingDays > 0 || c.rhMissingSince) await prisma.collaborator.update({ where: { id: c.id }, data: zeraAusencia });
+    } else {
+      const cont = contarAusencia({ since: c.rhMissingSince, lastDay: c.rhMissingLastDay, days: c.rhMissingDays }, hoje);
+      await prisma.collaborator.update({
+        where: { id: c.id },
+        data: { rhMissingSince: cont.since, rhMissingLastDay: cont.lastDay, rhMissingDays: cont.days },
+      });
+      if (cont.confirmada) candidatos.push(c); else out.ausentesContando++;
+    }
+  }
+
+  out.travaDisparou = travaDeSeguranca(candidatos.length, ativosDaUnidade);
+  if (out.travaDisparou) {
+    await audit({
+      userId: actorUserId, unitId: unit.id, action: 'RH_ABSENCE_CAP', module: 'PEOPLE',
+      metadata: { candidatos: candidatos.map((c) => c.name), ativosDaUnidade },
+    });
+    await notifyAdmins({
+      title: `⛔ Trava de segurança do RH — ${unit.name}`,
+      body: `${candidatos.length} de ${ativosDaUnidade} ativo(s) sumiram da base inteira do RH por ${RODADAS_PARA_INATIVAR} dias (${candidatos.map((c) => c.name).join(', ')}). É mais de 30% da unidade: NINGUÉM foi inativado. Confira a integração do RH antes de agir.`,
+      link: `/configuracoes/integracoes/diagnostico?unit=${unit.id}`,
+      module: 'PEOPLE',
+    }).catch(() => {});
+  } else {
+    for (const c of candidatos) {
+      await prisma.collaborator.update({
+        where: { id: c.id },
+        data: { active: false, inactiveSince: hoje, inactiveReason: MOTIVO_INATIVACAO.RH_AUSENTE_CONFIRMADO, ...zeraAusencia },
+      });
+      await audit({
+        userId: actorUserId, unitId: unit.id, action: 'RH_DEACTIVATED', module: 'PEOPLE',
+        entity: 'collaborator', entityId: c.id,
+        metadata: { nome: c.name, matricula: c.externalId, origem: 'AUSENTE_CONFIRMADO', desde: c.rhMissingSince ?? hoje, dias: RODADAS_PARA_INATIVAR },
+      });
+      out.ausentesConfirmados.push(c.name);
+    }
+  }
+
+  const mudou = out.desligadosNoRh.length + out.transferidos.length + out.ausentesConfirmados.length;
+  if (mudou > 0) {
+    const partes: string[] = [];
+    if (out.desligadosNoRh.length) partes.push(`Desligado(s) no RH: ${out.desligadosNoRh.join(', ')}`);
+    if (out.transferidos.length) partes.push(`Transferido(s): ${out.transferidos.join('; ')}`);
+    if (out.ausentesConfirmados.length) partes.push(`Sumiram da base do RH por ${RODADAS_PARA_INATIVAR} dias e foram inativados: ${out.ausentesConfirmados.join(', ')}`);
+    await notifyAdmins({
+      title: `👥 RH — ${mudou} colaborador(es) saíram de ${unit.name}`,
+      body: `${partes.join('. ')}. Saem da Escala a partir de hoje (${hoje}); o mês em curso continua mostrando os dias até a saída.`,
+      link: `/configuracoes/integracoes/diagnostico?unit=${unit.id}`,
+      module: 'PEOPLE',
+    }).catch(() => {});
+  }
+  return out;
 }
 
 /** Sincroniza os colaboradores de UMA unidade (acionado por Admin). */

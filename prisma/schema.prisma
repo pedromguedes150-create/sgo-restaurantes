@@ -1874,6 +1874,17 @@ model Collaborator {
   hireDateManualBy   String?
   hireDateManualAt   DateTime?
   createdAt          DateTime           @default(now())
+  /// Desde quando está inativo (dia operacional 'AAAA-MM-DD') e por quê
+  /// (RH_STATUS · RH_STATUS_BASE_GERAL · RH_AUSENTE_CONFIRMADO · RH_EVENTO · MANUAL).
+  /// A Escala mostra a pessoa no mês em que saiu, até esse dia (v1.171.0).
+  inactiveSince      String?
+  inactiveReason     String?
+  /// Conferência na base inteira do RH (v1.171.0): a pessoa está ativa no SGO
+  /// mas o RH não a devolve em lugar nenhum. Primeiro dia visto ausente, último
+  /// dia conferido e quantos DIAS distintos — só inativa depois de 3.
+  rhMissingSince     String?
+  rhMissingLastDay   String?
+  rhMissingDays      Int                @default(0)
 
   units               CollaboratorUnit[]
   vacations           Vacation[]
