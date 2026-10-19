@@ -162,3 +162,16 @@ export function detalheDasAusencias(r: ResumoDaGrade): string {
   if (r.porAusencia.AFASTADO) partes.push(`AF ${r.porAusencia.AFASTADO}`);
   return partes.join(' · ');
 }
+
+/**
+ * O DIA DE HOJE dentro do mês da grade — ou `null` quando a grade é de outro
+ * mês (v1.173.0). "Hoje" é o dia civil em Brasília, não em UTC: às 22h o
+ * gerente ainda está no mesmo dia da operação, mas o UTC já virou. Serve só
+ * para DESTACAR a coluna; nenhuma conta depende disto.
+ */
+export function diaDeHoje(ano: number, mes: number, agora: Date = new Date()): number | null {
+  const partes = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(agora);
+  const pega = (t: string) => Number(partes.find((p) => p.type === t)?.value);
+  if (pega('year') !== ano || pega('month') !== mes) return null;
+  return pega('day');
+}

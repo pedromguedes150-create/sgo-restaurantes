@@ -139,12 +139,14 @@ describe('Impressão — a grade cabe numa folha A4 paisagem', () => {
     expect(html).toContain('@page { size: landscape; margin: 5mm; }');
   });
 
-  it('a tabela vira table-fixed e ganha largura por coluna só na impressão', () => {
+  it('a tabela vira table-fixed e ganha largura por coluna só na impressão (v1.173.0: no <style>, para caber a A4 inteira)', () => {
     const html = render();
     expect(html).toContain('print:table-fixed');
-    expect(html).toContain('print:w-[112px]'); // coluna do colaborador
-    expect(html).toContain('print:w-[24px]'); // coluna do dia
-    expect(html).toContain('print:w-[48px]'); // coluna de totais
+    expect(html).toContain('.escala-grade .col-nome { width: 144px; }'); // coluna do colaborador
+    expect(html).toContain('.escala-grade .col-dia { width: 28px; }'); // coluna do dia
+    expect(html).toContain('.escala-grade .col-tot { width: 64px; }'); // coluna de totais
+    expect(html).toContain('class="col-nome sticky left-0 top-0');
+    expect(html).toContain('class="col-dia sticky top-0');
   });
 
   it('cargo/turno/setor some da impressão — sobra espaço para os dias, sem perder a letra do dia', () => {

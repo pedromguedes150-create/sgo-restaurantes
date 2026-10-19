@@ -428,6 +428,19 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'escala-grade-visual',
+        title: 'Escala — a grade de presença mais fácil de ler (v1.173.0)',
+        roles: MANAGERLINE,
+        summary: 'Folga em destaque, coluna de hoje marcada, cabeçalho e nomes fixos, paleta de status na célula.',
+        steps: [
+          'FOLGA (F) agora sai em NEGRITO FORTE com fundo cinza-claro e borda — na tela e no PDF — para o olho separar na hora o dia de trabalho (T, bordô) do dia de folga. Férias (FE) continua verde; os significados de T, AT, F, FI, FJ, A, FE e AF não mudaram.',
+          'A grade rola por dentro de um quadro: o CABEÇALHO DOS DIAS fica fixo ao rolar para baixo e os NOMES ficam fixos ao rolar para o lado. Sábados e domingos têm fundo levemente cinza; a coluna de HOJE fica em tom bordô claro, com o número do dia em negrito.',
+          'MARCAR O DIA (aba Realizado): toque na célula e abre uma PALETA por cima da tela com os oito status em botões coloridos grandes (serve para o dedo no celular) e "Limpar o dia". Um toque escolhe e grava — é a mesma gravação de antes; antes o seletor abria cortado dentro da grade e só mostrava dois itens.',
+          'TOTAIS por pessoa viraram três pílulas: T (bordô), F (cinza, negrito) e Aus (âmbar quando há ausência). São os mesmos números de sempre.',
+          'PDF: letras maiores, folgas em negrito, e as colunas ocupam a folha A4 paisagem inteira; unidade, mês, ano e legenda continuam no topo.',
+        ],
+      },
+      {
         id: 'escala-atraso',
         title: 'Escala — Atraso',
         roles: MANAGERLINE,
@@ -1300,6 +1313,7 @@ export const GUIDE: GuideSection[] = [
         summary: 'Registrar o recebimento das notas.',
         steps: [
           'Toque em "Nova nota" (botão no topo) — abre uma janela por cima da lista. Use "Escanear" para ler o QR code OU o código de barras (DANFE) e a chave preenche sozinha; sem câmera, cole a chave de 44 dígitos.',
+          'FORNECEDOR (v1.173.0): o campo abre com uma caixa de pesquisa — digite parte do nome (sem acento, sem caixa) e a lista filtra. Só entram fornecedores CADASTRADOS: digitar um nome que não existe não cria nada; peça o cadastro em Configurações → Fornecedores.',
           'MAIS DE UM BOLETO NA MESMA NOTA: abaixo do vencimento há "Adicionar outro boleto", quantos a nota tiver — não há limite. Informe vencimento e valor de cada um; o BOLETO 1 fica automaticamente com o que sobra do valor da nota, para você não ter de calcular à mão.',
           'CORRIGIU ALGO? Em "Ver e editar" (Supervisão/Admin) os boletos aparecem do mesmo jeito: dá para mudar vencimento, mudar valor, acrescentar ou remover boleto de uma nota já lançada.',
           'Cada boleto entra SOZINHO no acompanhamento de vencimentos e avisa a supervisão e o financeiro na data dele. Antes a nota tinha um vencimento só: o 2º e o 3º boleto venciam sem ninguém ser avisado.',
