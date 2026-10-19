@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.174.1 — 2026-10-19 (Configuração da Meta: a coluna do peso dos checklists ficava fora da tela)
+### Corrigido
+- **Print do Pedro, em produção**: na tabela "Tarefas" da Configuração da Meta o campo de peso dos checklists não aparecia — a tabela do kit (`.sgo-tbl td`) tem `white-space: nowrap`, então o texto longo de "Como entra na nota" saía numa linha só e empurrava a coluna "Peso / desconto" para fora da tela (ficava atrás da barra de rolagem horizontal, mesmo a 1920px). As células de indicador e de explicação passaram a quebrar linha e o texto dos checklists ficou mais curto. ⚠️ A utilidade `whitespace-normal` sozinha NÃO bastava: a regra do kit tem mais especificidade e vencia em silêncio — o `globals.css` ganhou `.sgo-tbl td.whitespace-normal { white-space: normal }`, o que também conserta a prop `wrap` do `Table` do design system, que tinha o mesmo defeito latente. Teste de render trava as classes.
+
 ## v1.174.0 — 2026-10-19 (Meta: checklists com UM peso + coberturas na mão do gerente)
 ### Mudou
 - **Checklists do dia com peso ÚNICO** (pedido do Pedro, prints da Configuração da Meta): o campo "Peso na meta" por checklist e a linha "Soma dos pesos" SAÍRAM de Configurações → Checklists (e dos modelos de checklist); fica só "Entra na meta". A nota dos checklists passou a ser **realizados ÷ (realizados + não realizados) de todos os checklists que entram na meta, cada instância valendo igual**, e o conjunto tem UM peso, editado em Metas → Configuração da Meta (chave `TASKS_META_WEIGHT`, **nasce em 100** — é a base da nota de sempre). O detalhamento continua mostrando cada checklist, agora como **informação** (linhas recuadas, sem peso próprio) debaixo de "Checklists do dia". ⚠️ A coluna `TaskTemplate.weight` fica no banco e deixou de ser lida pela meta — nada foi apagado; as telas simplesmente não a mostram mais.
