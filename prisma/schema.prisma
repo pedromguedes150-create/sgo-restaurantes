@@ -4707,6 +4707,12 @@ enum PrepStandardStatus {
 /// como monta, o que leva, quanto, e a foto do padrão esperado.
 /// A foto é campo PRÓPRIO (`imagePath`), separado do arquivo-fonte da
 /// importação (`sourceFilePath`): trocar a foto não mexe em nenhum outro dado.
+/// Aba da Padronização de Preparo (v1.172.0).
+enum PrepSegment {
+  LANCHONETE
+  RESTAURANTE
+}
+
 model PrepStandard {
   id                String             @id @default(cuid())
   name              String
@@ -4719,6 +4725,15 @@ model PrepStandard {
   generalNotes      String?
   status            PrepStandardStatus @default(ACTIVE)
   sourceFilePath    String?
+  /// v1.172.0 — duas abas: LANCHONETE (ficha por produto: ingredientes, pesos,
+  /// código) e RESTAURANTE (guia de um GRUPO de preparos: o arquivo enviado é o
+  /// conteúdo; função do forno, temperatura, tempo e a lista de preparações
+  /// servem à busca e aos cartões; `code` fica vazio). Padrão LANCHONETE: as
+  /// fichas já existentes ficam onde estavam.
+  segment           PrepSegment        @default(LANCHONETE)
+  ovenMode          String?
+  temperature       String?
+  cookTime          String?
   createdById       String?
   createdByName     String
   updatedById       String?
@@ -4733,6 +4748,7 @@ model PrepStandard {
 
   @@index([code])
   @@index([status, category])
+  @@index([segment, status])
   @@map("prep_standards")
 }
 

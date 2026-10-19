@@ -33,6 +33,8 @@ const MSG: Record<Exclude<EscritaReason, 'INVALID'>, string> = {
 };
 
 async function fichaAtivaComCodigo(code: string, exceto?: string) {
+  /* Guia do Restaurante não tem código: nada a colidir. */
+  if (!code) return null;
   return prisma.prepStandard.findFirst({
     where: { code, status: 'ACTIVE', ...(exceto ? { id: { not: exceto } } : {}) },
     select: { id: true, name: true, code: true },
@@ -79,6 +81,7 @@ export async function createPrepStandard(user: SessionUser, input: CriarFichaInp
       data: {
         name: dados.name, code: dados.code, category: dados.category,
         preparationMethod: dados.preparationMethod, generalNotes: dados.generalNotes,
+        segment: dados.segment ?? 'LANCHONETE', ovenMode: dados.ovenMode ?? null, temperature: dados.temperature ?? null, cookTime: dados.cookTime ?? null,
         imagePath: input.imagePath || null, sourceFilePath: input.sourceFilePath || null,
         createdById: user.id, createdByName: user.name,
       },
@@ -99,19 +102,23 @@ export async function createPrepStandard(user: SessionUser, input: CriarFichaInp
 
   await audit({
     userId: user.id, action: 'PREP_STANDARD_CREATE', module: 'PREP_STANDARDS', entity: 'prep_standard', entityId: id,
-    metadata: { name: dados.name, code: dados.code, itens: dados.items.length, importada: Boolean(input.sourceFilePath), substituiu: existente?.id ?? null }, ...ctx,
+    metadata: { name: dados.name, code: dados.code, segment: dados.segment ?? 'LANCHONETE', itens: dados.items.length, importada: Boolean(input.sourceFilePath), substituiu: existente?.id ?? null }, ...ctx,
   });
   return { ok: true, id };
 }
 
 export async function updatePrepStandard(user: SessionUser, id: string, dadosBrutos: unknown, ctx: Ctx = {}): Promise<EscritaResult> {
   if (!podeGerirFichas(user)) return { ok: false, reason: 'FORBIDDEN', message: MSG.FORBIDDEN };
-  const n = normalizarDados(dadosBrutos);
-  if (!n.ok) return { ok: false, reason: 'INVALID', message: MENSAGEM_INVALIDO[n.motivo], campo: n.campo };
-  const { dados } = n;
-
   const atual = await prisma.prepStandard.findUnique({ where: { id }, include: { items: { orderBy: { sortOrder: 'asc' } } } });
   if (!atual) return { ok: false, reason: 'NOT_FOUND', message: MSG.NOT_FOUND };
+
+  /* A aba é da FICHA, não do formulário: a validação roda com o segmento
+     gravado (o guia não exige código; a lanchonete descarta os campos do
+     forno), e editar nunca muda a ficha de lado. */
+  const bruto = dadosBrutos && typeof dadosBrutos === 'object' ? { ...(dadosBrutos as Record<string, unknown>), segment: atual.segment } : dadosBrutos;
+  const n = normalizarDados(bruto);
+  if (!n.ok) return { ok: false, reason: 'INVALID', message: MENSAGEM_INVALIDO[n.motivo], campo: n.campo };
+  const { dados } = n;
 
   if (dados.code !== atual.code) {
     const outra = await fichaAtivaComCodigo(dados.code, id);
@@ -122,6 +129,7 @@ export async function updatePrepStandard(user: SessionUser, id: string, dadosBru
     name: atual.name, code: atual.code, category: atual.category,
     preparationMethod: atual.preparationMethod, generalNotes: atual.generalNotes,
     items: atual.items.map(itemDoBanco),
+    segment: atual.segment, ovenMode: atual.ovenMode, temperature: atual.temperature, cookTime: atual.cookTime,
   };
   const mudancas = diferencas(antes, dados);
   if (mudancas.length === 0) return { ok: true, id, mudancas: 0 };
@@ -132,6 +140,7 @@ export async function updatePrepStandard(user: SessionUser, id: string, dadosBru
       data: {
         name: dados.name, code: dados.code, category: dados.category,
         preparationMethod: dados.preparationMethod, generalNotes: dados.generalNotes,
+        ovenMode: dados.ovenMode ?? null, temperature: dados.temperature ?? null, cookTime: dados.cookTime ?? null,
         updatedById: user.id, updatedByName: user.name,
       },
     }),

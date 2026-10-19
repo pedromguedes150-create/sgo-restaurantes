@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import type { SessionUser } from '@/lib/auth/session';
-import type { PrepStandardStatus } from '@prisma/client';
-import type { DadosDaFicha, ItemDaFicha } from '@/lib/preparo/tipos';
+import type { PrepStandardStatus, PrepSegment } from '@prisma/client';
+import type { DadosDaFicha, ItemDaFicha, Segmento } from '@/lib/preparo/tipos';
 
 /**
  * PADRONIZAÇÃO DE PREPARO — leitura.
@@ -20,6 +20,12 @@ export interface FichaResumo {
   category: string;
   imagePath: string | null;
   status: PrepStandardStatus;
+  segment: Segmento;
+  /** Só RESTAURANTE: a leitura rápida do cartão e o arquivo do guia (capa quando não há foto). */
+  ovenMode: string | null;
+  temperature: string | null;
+  cookTime: string | null;
+  sourceFilePath: string | null;
   /** Para a busca por ingrediente na tela — a lista é pequena (dezenas), vai inteira. */
   ingredientes: string[];
   updatedAt: string;
@@ -44,28 +50,34 @@ export function itemDoBanco(i: { ingredientName: string; quantity: { toNumber():
 
 const ORDEM = [{ category: 'asc' as const }, { name: 'asc' as const }, { id: 'asc' as const }];
 
-export async function listPrepStandards(user: SessionUser, opts: { status?: 'ACTIVE' | 'INACTIVE' | 'ALL'; categoria?: string } = {}): Promise<FichaResumo[]> {
+export async function listPrepStandards(user: SessionUser, opts: { status?: 'ACTIVE' | 'INACTIVE' | 'ALL'; categoria?: string; segment?: Segmento } = {}): Promise<FichaResumo[]> {
   const admin = podeGerirFichas(user);
   const status = admin ? (opts.status ?? 'ACTIVE') : 'ACTIVE';
   const rows = await prisma.prepStandard.findMany({
     where: {
       ...(status === 'ALL' ? {} : { status }),
       ...(opts.categoria ? { category: opts.categoria } : {}),
+      ...(opts.segment ? { segment: opts.segment as PrepSegment } : {}),
     },
     orderBy: ORDEM,
     select: {
       id: true, name: true, code: true, category: true, imagePath: true, status: true, updatedAt: true,
+      segment: true, ovenMode: true, temperature: true, cookTime: true, sourceFilePath: true,
       items: { select: { ingredientName: true }, orderBy: { sortOrder: 'asc' } },
     },
   });
   return rows.map((r) => ({
     id: r.id, name: r.name, code: r.code, category: r.category, imagePath: r.imagePath, status: r.status,
+    segment: r.segment, ovenMode: r.ovenMode, temperature: r.temperature, cookTime: r.cookTime, sourceFilePath: r.sourceFilePath,
     ingredientes: r.items.map((i) => i.ingredientName), updatedAt: r.updatedAt.toISOString(),
   }));
 }
 
-export async function listPrepCategories(): Promise<string[]> {
-  const rows = await prisma.prepStandard.findMany({ where: { status: 'ACTIVE' }, select: { category: true }, distinct: ['category'], orderBy: { category: 'asc' } });
+export async function listPrepCategories(segment?: Segmento): Promise<string[]> {
+  const rows = await prisma.prepStandard.findMany({
+    where: { status: 'ACTIVE', ...(segment ? { segment: segment as PrepSegment } : {}) },
+    select: { category: true }, distinct: ['category'], orderBy: { category: 'asc' },
+  });
   return rows.map((r) => r.category);
 }
 
@@ -77,6 +89,7 @@ export async function getPrepStandard(user: SessionUser, id: string): Promise<Fi
     id: r.id, name: r.name, code: r.code, category: r.category,
     preparationMethod: r.preparationMethod, generalNotes: r.generalNotes,
     items: r.items.map(itemDoBanco),
+    segment: r.segment, ovenMode: r.ovenMode, temperature: r.temperature, cookTime: r.cookTime,
     imagePath: r.imagePath, status: r.status, sourceFilePath: r.sourceFilePath,
     createdByName: r.createdByName, updatedByName: r.updatedByName,
     createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString(),
@@ -87,8 +100,9 @@ export async function getPrepStandard(user: SessionUser, id: string): Promise<Fi
  * Anterior/Próximo na MESMA ordem do catálogo (categoria, nome). Só entre as
  * ativas — é a navegação do supervisor passando ficha a ficha.
  */
-export async function vizinhosDaFicha(id: string): Promise<{ prevId: string | null; nextId: string | null; posicao: number; total: number }> {
-  const ids = (await prisma.prepStandard.findMany({ where: { status: 'ACTIVE' }, orderBy: ORDEM, select: { id: true } })).map((r) => r.id);
+export async function vizinhosDaFicha(id: string, segment?: Segmento): Promise<{ prevId: string | null; nextId: string | null; posicao: number; total: number }> {
+  /* Dentro da MESMA aba: o supervisor passando guia a guia não cai numa ficha da lanchonete. */
+  const ids = (await prisma.prepStandard.findMany({ where: { status: 'ACTIVE', ...(segment ? { segment: segment as PrepSegment } : {}) }, orderBy: ORDEM, select: { id: true } })).map((r) => r.id);
   const i = ids.indexOf(id);
   if (i === -1) return { prevId: null, nextId: null, posicao: 0, total: ids.length };
   return { prevId: ids[i - 1] ?? null, nextId: ids[i + 1] ?? null, posicao: i + 1, total: ids.length };

@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { env } from '@/lib/env';
-import { rascunhoDaResposta, type RascunhoDaFicha } from '@/lib/preparo/tipos';
+import { rascunhoDaResposta, type RascunhoDaFicha, type Segmento } from '@/lib/preparo/tipos';
 
 /**
  * Leitura de uma FICHA DE PADRONIZAÇÃO DE PREPARO por IA (Claude, visão e PDF).
@@ -46,7 +46,25 @@ const INSTRUCOES =
   '{"name":string|null,"code":string|null,"category":string|null,"items":[{"ingredientName":string,"quantity":number|null,"unit":string|null,"weightGrams":number|null,"notes":string|null}],' +
   '"preparationMethod":string|null,"generalNotes":string|null,"photoBox":{"x":number,"y":number,"w":number,"h":number}|null,"lowConfidence":string[]}';
 
-export async function lerFichaDePreparo(input: { base64: string; mediaType: string }): Promise<LeituraDaFicha> {
+/**
+ * GUIA DO RESTAURANTE (v1.172.0): um documento cobre um GRUPO de preparos
+ * (ex.: "Cubas prontas" — Escondidinho, Lasanha, Purês…) com função do forno,
+ * temperatura, tempo, fotos de exemplo e observação. O arquivo em si é o
+ * conteúdo que o gerente vê; a IA só extrai o que vira busca e cartão.
+ */
+const INSTRUCOES_GUIA =
+  'Você lê GUIAS DE TREINAMENTO / PADRONIZAÇÃO DE PREPARAÇÕES de cozinha de restaurante (um guia cobre um GRUPO de preparos). ' +
+  'Extraia do documento, interpretando o CONTEÚDO e não a posição: ' +
+  '"name" = o título do grupo de preparações (ex.: "Cubas Prontas", "Gratinados"); "category" = o grupo maior quando escrito (ex.: "Padronização de preparações"), senão null; ' +
+  '"ovenMode" = a FUNÇÃO do forno/equipamento como está escrita (ex.: "Ar Seco", "Vapor", "Combinado"); "temperature" = a temperatura como está (ex.: "200°C"); "cookTime" = o tempo como está (ex.: "15 Min"); ' +
+  '"items" = a lista de PREPARAÇÕES do guia, na ordem, cada uma só com "ingredientName" = o nome da preparação (ex.: "Escondidinho", "Lasanha"), e quantity/unit/weightGrams/notes = null; ' +
+  '"generalNotes" = a observação/orientação em texto corrido, se existir; "preparationMethod" = null. ' +
+  'REGRA ABSOLUTA: NÃO INVENTE. Se um valor não estiver legível ou não existir, use null E inclua o campo em "lowConfidence" (ex.: "temperature", "items.2.ingredientName"). ' +
+  'Responda APENAS em JSON, sem texto fora do JSON, no formato exato: ' +
+  '{"name":string|null,"category":string|null,"ovenMode":string|null,"temperature":string|null,"cookTime":string|null,' +
+  '"items":[{"ingredientName":string,"quantity":null,"unit":null,"weightGrams":null,"notes":null}],"generalNotes":string|null,"preparationMethod":null,"lowConfidence":string[]}';
+
+export async function lerFichaDePreparo(input: { base64: string; mediaType: string; segment?: Segmento }): Promise<LeituraDaFicha> {
   if (!env.ANTHROPIC_API_KEY) return { configured: false, ok: false };
   if (!MIDIAS_ACEITAS.includes(input.mediaType)) {
     return { configured: true, ok: false, error: 'Formato não suportado pela leitura automática (use foto JPG/PNG/WEBP ou PDF).' };
@@ -56,10 +74,11 @@ export async function lerFichaDePreparo(input: { base64: string; mediaType: stri
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: input.base64 } }
     : { type: 'image', source: { type: 'base64', media_type: input.mediaType as ImagemAceita, data: input.base64 } };
 
+  const segment: Segmento = input.segment ?? 'LANCHONETE';
   const content: Block[] = [
-    { type: 'text', text: 'FICHA DE PADRONIZAÇÃO DE PREPARO (extrair os dados):' },
+    { type: 'text', text: segment === 'RESTAURANTE' ? 'GUIA DE PADRONIZAÇÃO DE PREPARAÇÕES DO RESTAURANTE (extrair os dados):' : 'FICHA DE PADRONIZAÇÃO DE PREPARO (extrair os dados):' },
     documento,
-    { type: 'text', text: INSTRUCOES },
+    { type: 'text', text: segment === 'RESTAURANTE' ? INSTRUCOES_GUIA : INSTRUCOES },
   ];
 
   try {
@@ -72,7 +91,7 @@ export async function lerFichaDePreparo(input: { base64: string; mediaType: stri
     const text = msg.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text').map((b) => b.text).join('\n');
     const parsed = extractJson(text);
     if (!parsed) return { configured: true, ok: false, error: 'Não foi possível interpretar a resposta da IA.' };
-    return { configured: true, ok: true, rascunho: rascunhoDaResposta(parsed) };
+    return { configured: true, ok: true, rascunho: rascunhoDaResposta(parsed, segment) };
   } catch (e) {
     return { configured: true, ok: false, error: e instanceof Error ? e.message : 'Falha na leitura por IA' };
   }

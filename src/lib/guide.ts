@@ -1644,11 +1644,13 @@ export const GUIDE: GuideSection[] = [
     guides: [
       {
         id: 'padronizacao-consultar',
-        title: 'Padronização de Preparo — consultar a ficha do produto',
+        title: 'Padronização de Preparo — consultar a ficha do produto ou o guia do restaurante',
         roles: ALL_ROLES,
-        summary: 'Como o produto deve ficar, o que leva, quanto leva e como preparar — com a foto do padrão.',
+        summary: 'Lanchonete: como o produto deve ficar, o que leva e quanto. Restaurante: o guia do grupo de preparações, com função do forno, temperatura e tempo.',
         steps: [
-          'Entre em Tarefas → Treinamento → PADRONIZAÇÃO DE PREPARO (v1.139.0). A tela é um catálogo: foto, nome, categoria e código de cada produto.',
+          'Entre em Tarefas → Treinamento → PADRONIZAÇÃO DE PREPARO. Desde a v1.172.0 há DUAS ABAS no topo: LANCHONETE (as fichas de produto, as de sempre) e RESTAURANTE (guias de preparação). Cada aba tem a sua busca, as suas categorias e os seus cartões.',
+          'LANCHONETE: o catálogo mostra foto, nome, categoria e código de cada produto, em cartões compactos (as fotos agora carregam leves).',
+          'RESTAURANTE: cada cartão é um GUIA que cobre um grupo de preparações (ex.: "Cubas prontas" — Escondidinho, Lasanha, Purês…). O cartão já diz a leitura rápida ("Ar Seco · 200°C · 15 min") e quantas preparações cobre; "Abrir guia" mostra os três fatos em destaque (Função · Temperatura · Tempo), o ARQUIVO do guia embutido na tela (PDF ou foto, com "Abrir arquivo" para tela cheia), as preparações cobertas e a observação. Busque pelo nome do guia ou de uma preparação ("lasanha").',
           'BUSQUE pelo nome ("pão linguiça"), pelo CÓDIGO ("910000000501") ou por um INGREDIENTE ("linguiça" acha todo produto que leva linguiça). Sem acento e sem caixa. O filtro Categoria estreita a lista.',
           'Toque em "Ver padrão": a ficha abre com a FOTO do produto pronto (é o padrão esperado) e a tabela de INGREDIENTES — Ingrediente, Quantidade, Peso em gramas e Observação ("fatia na largura da espátula").',
           'As abas Modo de Preparo e Observações mostram o passo a passo e os cuidados, quando a ficha os tem.',
@@ -1663,6 +1665,7 @@ export const GUIDE: GuideSection[] = [
         roles: ['ADMIN'],
         summary: 'A IA lê a ficha e sugere; o Administrador confere e publica. Nada entra sem revisão.',
         steps: [
+          'ABA RESTAURANTE (v1.172.0) — IMPORTAR GUIA: envie o PDF ou a foto do guia de preparações. O ARQUIVO É O CONTEÚDO que o gerente vai abrir; a IA só extrai o que vira busca e cartão — nome do guia, categoria, Função do forno, Temperatura, Tempo, a lista de PREPARAÇÕES e a Observação. O guia NÃO tem código (campo some) e a capa é opcional (sem capa, o cartão usa o próprio arquivo quando é foto, ou o ícone de PDF). Guias existentes não mudam de aba ao editar. "Novo guia" cadastra à mão; "Editar guia" e "Alterar capa" ficam dentro do guia.',
           'IMPORTAR FICHA: envie a foto (JPG/PNG/WEBP) ou o PDF da ficha. A IA interpreta o conteúdo — nome, código, categoria, ingredientes com quantidade/unidade/peso/observação, modo de preparo — sem depender da posição no papel.',
           'PRÉ-VISUALIZAÇÃO: nada é gravado ainda. O que a IA não leu com segurança fica em branco e marcado "Revisar informação" (ela NÃO inventa peso, quantidade nem código). Corrija o que precisar, adicione/remova/reordene ingredientes e só então "Salvar e publicar".',
           'FOTO DO PRODUTO: se o arquivo-fonte é uma imagem e a IA achou a foto do produto nela, a prévia já mostra o recorte sugerido para você confirmar; em PDF, envie a foto do produto no próprio formulário. A foto é um campo próprio da ficha, separado do arquivo importado.',

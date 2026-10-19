@@ -6,7 +6,7 @@ import { Button, IconButton } from '@/components/ui/ds/button';
 import { Input, Textarea } from '@/components/ui/ds/field';
 import { Select } from '@/components/ui/ds/select';
 import { cn } from '@/lib/utils';
-import { LIMITES, campoParaRevisar, type DadosDaFicha, type ItemDaFicha } from '@/lib/preparo/tipos';
+import { LIMITES, campoParaRevisar, type DadosDaFicha, type ItemDaFicha, type Segmento } from '@/lib/preparo/tipos';
 
 /**
  * EDITOR DA FICHA — o mesmo formulário para três momentos: pré-visualização
@@ -22,16 +22,21 @@ import { LIMITES, campoParaRevisar, type DadosDaFicha, type ItemDaFicha } from '
 export interface ItemEditavel { ingredientName: string; quantity: string; unit: string; weightGrams: string; notes: string }
 export interface FichaEditavel {
   name: string; code: string; category: string; preparationMethod: string; generalNotes: string; items: ItemEditavel[];
+  /** A aba. No RESTAURANTE o item é só o nome da preparação e entram função/temperatura/tempo. */
+  segment: Segmento;
+  ovenMode: string; temperature: string; cookTime: string;
 }
 
 const n2s = (v: number | null) => (v === null ? '' : String(v).replace('.', ','));
 
-export function paraEditavel(d: DadosDaFicha | null): FichaEditavel {
-  if (!d) return { name: '', code: '', category: '', preparationMethod: '', generalNotes: '', items: [itemVazio()] };
+export function paraEditavel(d: DadosDaFicha | null, segment?: Segmento): FichaEditavel {
+  const seg: Segmento = segment ?? d?.segment ?? 'LANCHONETE';
+  if (!d) return { name: '', code: '', category: '', preparationMethod: '', generalNotes: '', items: [itemVazio()], segment: seg, ovenMode: '', temperature: '', cookTime: '' };
   return {
     name: d.name, code: d.code, category: d.category,
     preparationMethod: d.preparationMethod ?? '', generalNotes: d.generalNotes ?? '',
     items: d.items.length ? d.items.map(itemEditavel) : [itemVazio()],
+    segment: seg, ovenMode: d.ovenMode ?? '', temperature: d.temperature ?? '', cookTime: d.cookTime ?? '',
   };
 }
 
@@ -47,6 +52,7 @@ export function paraEnvio(f: FichaEditavel) {
     name: f.name, code: f.code, category: f.category,
     preparationMethod: f.preparationMethod, generalNotes: f.generalNotes,
     items: f.items.map((i) => ({ ingredientName: i.ingredientName, quantity: i.quantity, unit: i.unit, weightGrams: i.weightGrams, notes: i.notes })),
+    segment: f.segment, ovenMode: f.ovenMode, temperature: f.temperature, cookTime: f.cookTime,
   };
 }
 
@@ -94,6 +100,95 @@ export function EditorFicha({ valor, onChange, revisar = [], categorias, erroCam
   const [novaCategoria, setNovaCategoria] = React.useState(false);
 
   const erroEm = (campo: string) => (erroCampo === campo ? 'Confira este campo.' : undefined);
+  const guia = valor.segment === 'RESTAURANTE';
+
+  if (guia) {
+    /* GUIA DO RESTAURANTE: nome, categoria, forno (função · temperatura · tempo),
+       preparações (só o nome) e observação. Sem código, sem pesos, sem modo de
+       preparo — o conteúdo é o arquivo enviado. */
+    return (
+      <div className="space-y-5">
+        <section className="space-y-3">
+          <h3 className="sgo-type-11 font-semibold text-ink-500">Dados principais</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Input label="Nome do guia" value={valor.name} maxLength={LIMITES.nome} required placeholder="Ex.: Cubas prontas"
+                onChange={(e) => { toca('name'); set({ name: e.target.value }); }} error={erroEm('name')} hint="O grupo de preparações que este arquivo cobre." />
+              {marca('name') && <div className="mt-1"><SeloRevisar /></div>}
+            </div>
+            <div className="sm:col-span-2">
+              {novaCategoria || opcoesCategoria.length === 0 ? (
+                <Input label="Categoria" value={valor.category} maxLength={LIMITES.categoria} placeholder="Ex.: Padronização de preparações"
+                  onChange={(e) => { toca('category'); set({ category: e.target.value }); }}
+                  hint={opcoesCategoria.length > 0 ? 'Digite uma categoria nova.' : undefined} />
+              ) : (
+                <Select label="Categoria" value={valor.category} searchable
+                  options={[...opcoesCategoria, { value: '__nova__', label: '+ Nova categoria…' }]}
+                  onValueChange={(v) => { toca('category'); if (v === '__nova__') { setNovaCategoria(true); set({ category: '' }); } else set({ category: v }); }} />
+              )}
+              {marca('category') && <div className="mt-1"><SeloRevisar /></div>}
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="sgo-type-11 font-semibold text-ink-500">Forno / equipamento</h3>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <Input label="Função" value={valor.ovenMode} maxLength={LIMITES.rapido} placeholder="Ex.: Ar Seco"
+                onChange={(e) => { toca('ovenMode'); set({ ovenMode: e.target.value }); }} error={erroEm('ovenMode')} />
+              {marca('ovenMode') && <div className="mt-1"><SeloRevisar /></div>}
+            </div>
+            <div>
+              <Input label="Temperatura" value={valor.temperature} maxLength={LIMITES.rapido} placeholder="Ex.: 200°C"
+                onChange={(e) => { toca('temperature'); set({ temperature: e.target.value }); }} error={erroEm('temperature')} />
+              {marca('temperature') && <div className="mt-1"><SeloRevisar /></div>}
+            </div>
+            <div>
+              <Input label="Tempo" value={valor.cookTime} maxLength={LIMITES.rapido} placeholder="Ex.: 15 min"
+                onChange={(e) => { toca('cookTime'); set({ cookTime: e.target.value }); }} error={erroEm('cookTime')} />
+              {marca('cookTime') && <div className="mt-1"><SeloRevisar /></div>}
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="sgo-type-11 font-semibold text-ink-500">Preparações</h3>
+            <Button type="button" size="sm" variant="secondary" onClick={adicionar} disabled={valor.items.length >= LIMITES.itens}>
+              <Plus className="h-4 w-4" /> Adicionar preparação
+            </Button>
+          </div>
+          <p className="text-xs text-ink-500">As preparações que este guia cobre (ex.: Escondidinho, Lasanha). É por elas que o gerente encontra o guia na busca.</p>
+          <ol className="space-y-2">
+            {valor.items.map((it, i) => {
+              const p = `items.${i}.ingredientName`;
+              return (
+                <li key={i} className={cn('flex items-end gap-2 rounded-card border border-line bg-surface p-2', erroCampo?.startsWith(`items.${i}`) && 'border-danger')}>
+                  <div className="min-w-0 flex-1">
+                    <Input label={i === 0 ? 'Preparação' : undefined} aria-label="Preparação" value={it.ingredientName} maxLength={LIMITES.ingrediente} inputSize="sm"
+                      onChange={(e) => { toca(p); setItem(i, { ingredientName: e.target.value }); }} error={erroEm(p)} />
+                    {marca(p) && <div className="mt-1"><SeloRevisar /></div>}
+                  </div>
+                  <IconButton type="button" size="sm" variant="ghost" aria-label="Mover para cima" onClick={() => mover(i, -1)} disabled={i === 0}><ArrowUp className="h-4 w-4" /></IconButton>
+                  <IconButton type="button" size="sm" variant="ghost" aria-label="Mover para baixo" onClick={() => mover(i, 1)} disabled={i === valor.items.length - 1}><ArrowDown className="h-4 w-4" /></IconButton>
+                  <IconButton type="button" size="sm" variant="danger" aria-label="Remover preparação" onClick={() => remover(i)}><Trash2 className="h-4 w-4" /></IconButton>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="sgo-type-11 font-semibold text-ink-500">Observação</h3>
+          <Textarea label="Observação" rows={4} value={valor.generalNotes} maxLength={LIMITES.texto}
+            placeholder="Orientação geral do guia, se houver (ex.: aquecer o forno antes; cubas cobertas)."
+            onChange={(e) => { toca('generalNotes'); set({ generalNotes: e.target.value }); }} />
+          {marca('generalNotes') && <SeloRevisar />}
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
