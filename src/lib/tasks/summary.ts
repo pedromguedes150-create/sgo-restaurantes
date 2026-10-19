@@ -44,97 +44,27 @@ export async function getUnitDaySummary(
 }
 
 export interface MonthScore {
-  scorePct: number; // Σ(realizadas×peso) / Σ(resolvidas×peso) × 100
+  scorePct: number; // Σ(peso × realizado ÷ resolvido) ÷ Σ(peso) × 100, menos os descontos
   doneWeight: number;
-  resolvedWeight: number; // done + missed (dias já encerrados)
+  resolvedWeight: number; // Σ dos pesos que entraram na conta no mês
 }
 
 /**
- * Score de meta do mês (Módulo 11, versão base).
- * Score = Σ (realizadas × peso) / Σ (previstas × peso) × 100
- * "Previstas" aqui = tarefas que entram na meta e já foram resolvidas
- * (DONE ou MISSED). Tarefas ainda pendentes do dia não penalizam.
- * Fechamentos excepcionais não geram tarefa, logo já ficam fora (regra nº 5/11).
+ * Nota da meta do mês (Módulo 11).
+ *
+ * v1.174.0: a conta vive em `metas/pontuacao.ts` (pura) sobre a lista de
+ * `metas/componentes.ts` — Checklists do dia com UM peso (cada checklist que
+ * entra na meta vale igual: realizados ÷ realizados + não realizados), mais as
+ * coberturas e os componentes de gestão, cada um com o seu peso configurado.
+ * Componente com peso 0 ou sem nada resolvido no mês fica fora. Depois, os
+ * descontos diretos (fora do prazo; gerente sem folga). O detalhamento
+ * (`getMetaBreakdown`) lê a MESMA lista: as duas telas não podem discordar.
  */
 export async function getUnitMonthScore(
   unitId: string,
   yearMonth: string, // 'YYYY-MM'
 ): Promise<MonthScore> {
-  const instances = await prisma.taskInstance.findMany({
-    where: {
-      unitId,
-      operationalDate: { startsWith: yearMonth },
-      status: { in: ['DONE', 'MISSED'] },
-      template: { entersMeta: true },
-    },
-    select: { status: true, template: { select: { weight: true } } },
-  });
-
-  let doneWeight = 0;
-  let resolvedWeight = 0;
-  for (const i of instances) {
-    const w = i.template.weight;
-    resolvedWeight += w;
-    if (i.status === 'DONE') doneWeight += w;
-  }
-
-  // Componente "Treinamentos" (POPs) — peso único configurável.
-  const { getTrainingMonthStats, getTrainingWeight } = await import('@/lib/training');
-  const [tStats, tWeight] = await Promise.all([getTrainingMonthStats(unitId, yearMonth), getTrainingWeight()]);
-  const tResolved = tStats.done + tStats.missed;
-  if (tResolved > 0 && tWeight > 0) {
-    resolvedWeight += tWeight;
-    doneWeight += tWeight * (tStats.done / tResolved);
-  }
-
-  // Componente "Comunicados" (Central de Comunicação) — peso único configurável.
-  const { getCommunicationMonthStats, getCommunicationWeight } = await import('@/lib/communications/meta');
-  const [cStats, cWeight] = await Promise.all([getCommunicationMonthStats(unitId, yearMonth), getCommunicationWeight()]);
-  const cResolved = cStats.done + cStats.missed;
-  if (cResolved > 0 && cWeight > 0) {
-    resolvedWeight += cWeight;
-    doneWeight += cWeight * (cStats.done / cResolved);
-  }
-
-  // Componentes DIÁRIOS "Desperdício" e "Comandas" (16/07): cobertura mensal
-  // (dias preenchidos ÷ dias decorridos). Pesos padrão 0 = desligados.
-  const { getWasteCoverage, getCommandsCoverage, getWasteMetaWeight, getCommandsMetaWeight } = await import('@/lib/metas/config');
-  const [wCov, wWeight, cmCov, cmWeight] = await Promise.all([
-    getWasteCoverage(unitId, yearMonth), getWasteMetaWeight(),
-    getCommandsCoverage(unitId, yearMonth), getCommandsMetaWeight(),
-  ]);
-  const wResolved = wCov.done + wCov.missed;
-  if (wResolved > 0 && wWeight > 0) { resolvedWeight += wWeight; doneWeight += wWeight * (wCov.done / wResolved); }
-  const cmResolved = cmCov.done + cmCov.missed;
-  if (cmResolved > 0 && cmWeight > 0) { resolvedWeight += cmWeight; doneWeight += cmWeight * (cmCov.done / cmResolved); }
-
-  // Componente "Avaliações da equipe" — peso configurável (padrão 0 = desligado).
-  const { getEvaluationMonthStats, getEvaluationWeight } = await import('@/lib/people/evaluation');
-  const [eStats, eWeight] = await Promise.all([getEvaluationMonthStats(unitId, yearMonth), getEvaluationWeight()]);
-  const eResolved = eStats.done + eStats.missed;
-  if (eResolved > 0 && eWeight > 0) {
-    resolvedWeight += eWeight;
-    doneWeight += eWeight * (eStats.done / eResolved);
-  }
-
-  let scorePct = resolvedWeight === 0 ? 0 : Math.round((doneWeight / resolvedWeight) * 100);
-
-  // Penalidade "lançamento fora do prazo" (item 4, 07/07): cada data editada
-  // por Admin/Supervisor (Pagamentos/Notas/Gás/Óleo) desconta X% da meta.
-  const { countLateEntries, getLateEntryPenaltyPct } = await import('@/lib/late-entry');
-  const [lateCount, penaltyPct] = await Promise.all([countLateEntries(unitId, yearMonth), getLateEntryPenaltyPct()]);
-  if (lateCount > 0 && penaltyPct > 0) {
-    scorePct = Math.max(0, Math.round(scorePct - lateCount * penaltyPct));
-  }
-
-  // Desconto "Escala de gerentes" (v1.170.0): cada gerente/coordenador da
-  // unidade sem folga nem férias cadastrada no mês desconta X% (por gerente).
-  const { getManagerLeaveMetaStats } = await import('@/lib/metas/escala-gerentes');
-  const { getManagerLeaveMetaPenalty } = await import('@/lib/metas/config');
-  const [mlStats, mlPct] = await Promise.all([getManagerLeaveMetaStats(unitId, yearMonth), getManagerLeaveMetaPenalty()]);
-  if (mlStats.semFolga > 0 && mlPct > 0) {
-    scorePct = Math.max(0, Math.round(scorePct - mlStats.semFolga * mlPct));
-  }
-
-  return { scorePct, doneWeight, resolvedWeight };
+  const [{ componentesDaMeta, descontosDaMeta }, { pontuar }] = await Promise.all([import('@/lib/metas/componentes'), import('@/lib/metas/pontuacao')]);
+  const [componentes, descontos] = await Promise.all([componentesDaMeta(unitId, yearMonth), descontosDaMeta(unitId, yearMonth)]);
+  return pontuar(componentes, descontos.lista);
 }

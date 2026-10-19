@@ -135,7 +135,7 @@ export default async function PainelUnidadePage({ searchParams }: { searchParams
 
       <Card><CardContent className="pt-4">
         <h2 className="mb-3 sgo-type-11 font-semibold text-ink-900">Checklists / componentes da meta</h2>
-        <PainelUnidadeChecklists breakdown={breakdown} done={done} late={late} missed={missed} />
+        <PainelUnidadeChecklists breakdown={breakdown.filter((r) => r.tipo === 'DETALHE')} done={done} late={late} missed={missed} />
       </CardContent></Card>
 
       <p className="text-center text-xs text-ink-500 print:mt-6">SGO Beija Flor · Painel da unidade · {selUnit.name} · {MONTHS[m - 1]}/{y}</p>

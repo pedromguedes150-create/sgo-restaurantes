@@ -112,3 +112,25 @@ export function ordemDeUrgencia(
   if (!b.expiresAt) return -1;
   return a.expiresAt.localeCompare(b.expiresAt);
 }
+
+/** Soma `n` dias a 'AAAA-MM-DD' (sem fuso). */
+export function somarDias(iso: string, n: number): string {
+  return new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+}
+
+/**
+ * O DIA em que um lote entrou na faixa `chave` — a escalada é fixa (7 → 2 →
+ * hoje → vencido) e a primeira janela é a do produto, então a entrada é
+ * calculável a partir da validade. Serve à meta (v1.174.0): uma tratativa
+ * pendente conta contra o mês em que a pergunta passou a existir, e só depois
+ * de um dia inteiro sem resposta.
+ */
+export function inicioDaFaixa(expiresAt: string, chave: FaixaChave, alertDays = 30): string {
+  switch (chave) {
+    case 'VENCIDO': return somarDias(expiresAt, 1);
+    case 'HOJE': return expiresAt;
+    case 'CRITICO': return somarDias(expiresAt, -2);
+    case 'ATENCAO': return somarDias(expiresAt, -7);
+    case 'PROXIMO': return somarDias(expiresAt, -Math.max(8, alertDays));
+  }
+}

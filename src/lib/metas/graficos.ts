@@ -47,7 +47,7 @@ export function resumirRanking(ranking: { unitId: string; name: string; scorePct
   };
 }
 
-export interface LinhaDaMeta { name: string; weight: number; done: number; resolved: number; scorePct: number }
+export interface LinhaDaMeta { name: string; weight: number; done: number; resolved: number; scorePct: number; tipo?: 'DETALHE' | 'DESCONTO' }
 export interface FatiaDaComposicao {
   name: string; weight: number; done: number; resolved: number; scorePct: number;
   /** Peso convertido em pontos conquistados e perdidos (peso × %). */
@@ -63,6 +63,8 @@ export interface Composicao {
   pontosPerdidos: number;
   /** Linhas sem peso (ex.: "Fora do prazo"): informativas, ficam fora da rosca. */
   informativas: LinhaDaMeta[];
+  /** Um checklist por linha (v1.174.0): onde, dentro de "Checklists do dia", a unidade perdeu. Não pesam. */
+  detalhes: LinhaDaMeta[];
   /** Tarefas resolvidas no mês somando todos os componentes. */
   tarefas: { done: number; missed: number; resolved: number; pct: number | null };
   /** Onde a unidade mais perdeu pontos, do maior para o menor. */
@@ -71,7 +73,8 @@ export interface Composicao {
 
 export function comporMeta(breakdown: LinhaDaMeta[]): Composicao {
   const comPeso = breakdown.filter((l) => l.weight > 0);
-  const informativas = breakdown.filter((l) => l.weight <= 0);
+  const detalhes = breakdown.filter((l) => l.tipo === 'DETALHE');
+  const informativas = breakdown.filter((l) => l.weight <= 0 && l.tipo !== 'DETALHE');
   const pesoTotal = comPeso.reduce((s, l) => s + l.weight, 0);
   const fatias = comPeso.map((l) => {
     const pontosGanhos = Math.round((l.weight * l.scorePct) / 100 * 10) / 10;
@@ -86,6 +89,7 @@ export function comporMeta(breakdown: LinhaDaMeta[]): Composicao {
     pontosGanhos,
     pontosPerdidos: Math.round((pesoTotal - pontosGanhos) * 10) / 10,
     informativas,
+    detalhes,
     tarefas: { done, missed: resolved - done, resolved, pct: resolved ? Math.round((done / resolved) * 100) : null },
     maioresPerdas: fatias.filter((f) => f.pontosPerdidos > 0).sort((a, b) => b.pontosPerdidos - a.pontosPerdidos).slice(0, 3).map((f) => ({ name: f.name, pontosPerdidos: f.pontosPerdidos, scorePct: f.scorePct })),
   };

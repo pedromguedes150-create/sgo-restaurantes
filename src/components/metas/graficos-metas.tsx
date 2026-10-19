@@ -117,9 +117,24 @@ export function RoscaDaComposicao({ composicao }: { composicao: Composicao }) {
               </tr>
             ))}
           </tbody>
+          {c.detalhes.length > 0 && (
+            <tbody data-testid="detalhe-checklists">
+              <tr><td colSpan={6} className="sgo-type-11 pt-3 font-semibold text-ink-500">Por checklist — informativo: o peso é o de &quot;Checklists do dia&quot;, cada um vale igual</td></tr>
+              {c.detalhes.map((d) => (
+                <tr key={`det-${d.name}`} className="text-xs text-ink-700">
+                  <td className="whitespace-nowrap pl-6">↳ {d.name}</td>
+                  <td className="text-right text-ink-400">—</td>
+                  <td className="text-right tabular-nums">{d.done}/{d.resolved}</td>
+                  <td className={`text-right tabular-nums font-semibold ${d.scorePct >= 80 ? 'text-success' : d.scorePct >= 50 ? 'text-warning' : 'text-danger'}`}>{d.scorePct}%</td>
+                  <td className="text-right text-ink-400">—</td>
+                  <td className="text-right text-ink-400">—</td>
+                </tr>
+              ))}
+            </tbody>
+          )}
           <tfoot><tr className="font-semibold"><td>Total</td><td className="text-right tabular-nums">{c.pesoTotal}</td><td className="text-right tabular-nums">{c.tarefas.done}/{c.tarefas.resolved}</td><td className="text-right tabular-nums">{c.tarefas.pct == null ? '—' : `${c.tarefas.pct}%`}</td><td className="text-right tabular-nums text-success">{c.pontosGanhos.toLocaleString('pt-BR')}</td><td className="text-right tabular-nums text-danger">{c.pontosPerdidos ? c.pontosPerdidos.toLocaleString('pt-BR') : '—'}</td></tr></tfoot>
         </table>
-        {c.informativas.map((l) => <p key={l.name} className="mt-2 text-xs text-danger">{l.name}: {l.resolved} lançamento(s) com data corrigida — desconto aplicado direto no % da meta.</p>)}
+        {c.informativas.map((l) => <p key={l.name} className="mt-2 text-xs text-danger">{l.name} — desconto aplicado direto no % da meta.</p>)}
         {c.maioresPerdas.length > 0 && (
           <p className="mt-2 text-xs text-ink-700" data-testid="maiores-perdas">
             <b>Onde mais perdeu pontos:</b> {c.maioresPerdas.map((m) => `${m.name} (−${m.pontosPerdidos.toLocaleString('pt-BR')}, ${m.scorePct}%)`).join(' · ')}.

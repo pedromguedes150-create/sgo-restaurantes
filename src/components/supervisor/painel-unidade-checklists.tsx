@@ -4,7 +4,8 @@ import { useState } from 'react';
 import type { MetaTaskRow } from '@/lib/metas/query';
 
 /**
- * Checklists da visão UNIDADE: resumo ANTES do detalhe.
+ * Checklists da visão UNIDADE: resumo ANTES do detalhe. Recebe só as linhas de
+ * DETALHE do breakdown (um checklist por linha, v1.174.0) — o peso é um só.
  * A lista completa (que já existia) não carrega de cara — primeiro o resumo e
  * os checklists que exigem atenção; "Ver todos" abre a listagem inteira.
  */
@@ -28,7 +29,7 @@ export function PainelUnidadeChecklists({ breakdown, done, late, missed }: {
         <span className="block font-medium text-ink-900">{b.name}</span>
         <span className="block sgo-type-11 text-ink-500">{b.done}/{b.resolved} realizadas</span>
       </span>
-      <span className={`shrink-0 font-bold tabular-nums ${tone(b.scorePct)}`}>{b.scorePct}%<span className="ml-1 sgo-type-11 font-normal text-ink-500">peso {b.weight}</span></span>
+      <span className={`shrink-0 font-bold tabular-nums ${tone(b.scorePct)}`}>{b.scorePct}%</span>
     </div>
   );
 

@@ -109,7 +109,7 @@ describe('hoje na rede', () => {
 });
 
 describe('meta por módulo', () => {
-  const grupos = linhasPorModulo(MODULES, AREAS, { wasteMeta: 2, commandsMeta: 0, communication: 1, training: 0, evaluation: 0, lateEntry: 2, managerLeaveMeta: 5 });
+  const grupos = linhasPorModulo(MODULES, AREAS, { tasksMeta: 100, wasteMeta: 2, commandsMeta: 0, communication: 1, training: 0, evaluation: 0, lateEntry: 2, managerLeaveMeta: 5, cashMeta: 0, scheduleMeta: 0, cancellationsMeta: 0, stockMeta: 0, inventoryMeta: 0 });
   const linhas = grupos.flatMap((g) => g.linhas);
 
   it('lista módulos de todas as áreas de operação, sem a área Administrativo', () => {
@@ -141,10 +141,30 @@ describe('meta por módulo', () => {
     expect(notas?.compartilhadoCom).toEqual(['Pagamentos', 'Recebimento de Gás', 'Coleta de Óleo']);
   });
 
+  it('v1.174.0: os checklists têm UM peso (entidade tasksMeta, nasce em 100) e as cinco coberturas na mão do gerente têm indicador; Ocorrências, Manutenção, Pizzas, Despesas, Pedidos e Higiene seguem sem', () => {
+    const tasks = linhas.find((l) => l.key === 'TASKS');
+    expect(tasks?.indicador?.tipo).toBe('PESO');
+    expect(tasks?.indicador?.entity).toBe('tasksMeta');
+    expect(tasks?.valor).toBe(100);
+    for (const [k, e] of [['CASH', 'cashMeta'], ['SCHEDULE', 'scheduleMeta'], ['CANCELLATIONS', 'cancellationsMeta'], ['STOCK', 'stockMeta'], ['INVENTORY', 'inventoryMeta']] as const) {
+      const l = linhas.find((x) => x.key === k);
+      expect(l?.indicador?.tipo, k).toBe('PESO');
+      expect(l?.indicador?.entity, k).toBe(e);
+      expect(l?.valor, k).toBe(0);
+    }
+    for (const k of ['OCCURRENCES', 'MAINTENANCE', 'PIZZAS', 'EXPENSES', 'PRODUCTS', 'HYGIENE']) {
+      const l = linhas.find((x) => x.key === k);
+      if (l) expect(l.indicador, k).toBeNull();
+      expect(INDICADORES[k], k).toBeUndefined();
+    }
+    /* o tipo POR_ITEM saiu com o peso por checklist */
+    expect(Object.values(INDICADORES).every((i) => i.tipo === 'PESO' || i.tipo === 'DESCONTO')).toBe(true);
+  });
+
   it('o resumo conta o que está ligado (acima de 0) e o que não tem indicador', () => {
     const r = resumirPorModulo(grupos);
     expect(r.comIndicador).toBe(Object.keys(INDICADORES).length);
-    /* ligados: checklists (por item), desperdício 2, comunicados 1, fora do prazo 2 (×4 módulos), escala 5 */
+    /* ligados: checklists 100, desperdício 2, comunicados 1, fora do prazo 2 (×4 módulos), escala 5 — as cinco coberturas novas em 0 ficam fora */
     expect(r.ligados).toBe(1 + 1 + 1 + 4 + 1);
     expect(r.semIndicador).toBe(r.modulos - r.comIndicador);
   });

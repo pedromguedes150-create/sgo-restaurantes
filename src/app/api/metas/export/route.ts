@@ -37,7 +37,7 @@ export async function GET(req: Request) {
     ]);
     lines.push(`Detalhamento - ${unit?.name ?? ''} - Meta ${pct(score.scorePct)}`);
     lines.push(['Item', 'Peso', 'Realizadas', 'Resolvidas', 'Score (%)'].join(sep));
-    for (const t of breakdown) lines.push([`"${t.name}"`, String(t.weight), String(t.done), String(t.resolved), pct(t.scorePct)].join(sep));
+    for (const t of breakdown) lines.push([`"${t.tipo === 'DETALHE' ? '  ↳ ' : ''}${t.name}"`, t.tipo === 'DETALHE' ? '' : String(t.weight), String(t.done), String(t.resolved), pct(t.scorePct)].join(sep));
   }
 
   const csv = '﻿' + `"Metas - ${ym}"\n` + lines.join('\n');
