@@ -33,6 +33,13 @@ function isIos(): boolean {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
+/* Memória POR APARELHO de que o usuário ativou o push aqui: é o que autoriza a
+   reinscrição silenciosa. Sem armazenamento (privado/bloqueado) o recurso só
+   deixa de reinscrever sozinho — nada quebra. */
+const CHAVE_ATIVADO = 'sgo-push-ativado';
+function lembraAtivado(): boolean { try { return localStorage.getItem(CHAVE_ATIVADO) === '1'; } catch { return false; } }
+function marcarAtivado(on: boolean) { try { if (on) localStorage.setItem(CHAVE_ATIVADO, '1'); else localStorage.removeItem(CHAVE_ATIVADO); } catch { /* sem armazenamento */ } }
+
 export function PushClient() {
   const [supported, setSupported] = useState<boolean | null>(null);
   const [configured, setConfigured] = useState(true);
@@ -55,7 +62,25 @@ export function PushClient() {
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
-      setThisDeviceOn(Boolean(sub && (d.devices ?? []).some((x: DeviceRow) => x.endpoint === sub.endpoint)));
+      const conhecido = Boolean(sub && (d.devices ?? []).some((x: DeviceRow) => x.endpoint === sub.endpoint));
+      /* v1.171.1 — o navegador TEM inscrição, o servidor não a conhece e o
+         usuário ativou por aqui antes: o endereço foi rotacionado (ou o
+         servidor a descartou numa falha). Reinscreve em silêncio em vez de
+         mostrar "desativado" para quem nunca desativou. */
+      if (sub && !conhecido && lembraAtivado()) {
+        const r = await fetch('/api/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'subscribe', subscription: sub.toJSON(), renewed: true }),
+        });
+        if (r.ok) {
+          const d2 = await (await fetch('/api/push', { cache: 'no-store' })).json().catch(() => d);
+          setDevices(d2.devices ?? []);
+          setThisDeviceOn(true);
+          return;
+        }
+      }
+      setThisDeviceOn(conhecido);
     } catch {
       setThisDeviceOn(false);
     }
@@ -97,6 +122,7 @@ export function PushClient() {
         setMsg((await res.json().catch(() => ({}))).error ?? 'Falha ao registrar o aparelho');
         return;
       }
+      marcarAtivado(true);
       setMsg('Notificações ativadas neste aparelho ✓');
       await load();
     } catch (err) {
@@ -120,6 +146,7 @@ export function PushClient() {
         });
         await sub.unsubscribe();
       }
+      marcarAtivado(false);
       setMsg('Notificações desativadas neste aparelho.');
       await load();
     } finally {

@@ -7,7 +7,7 @@
  * (evita servir tela velha, lição do deploy de imagem antiga).
  */
 
-const VERSION = 'sgo-sw-v3';
+const VERSION = 'sgo-sw-v4';
 
 /* Alerta do BANHEIRO (v1.156.0): vibração longa e diferente das demais, para o
    gerente reconhecer sem olhar. */
@@ -97,21 +97,28 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // O navegador pode rotacionar a inscrição; reinscreve e avisa o servidor.
+// v4 (v1.171.1): o aviso ia para "/api/push/subscribe", rota que NUNCA existiu —
+// a inscrição nova ficava só no navegador, o servidor seguia com a antiga, o
+// serviço de push respondia 410 e a inscrição era apagada: "a notificação
+// saiu sozinha". A rota certa é POST /api/push { action: 'subscribe' }, com o
+// cookie da sessão (credentials) para o servidor saber de quem é o aparelho.
 self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(
     (async () => {
       try {
-        const res = await fetch('/api/push/key');
+        const res = await fetch('/api/push/key', { credentials: 'include' });
         const { key } = await res.json();
         if (!key) return;
-        const sub = await self.registration.pushManager.subscribe({
+        const antiga = event.oldSubscription || (await self.registration.pushManager.getSubscription());
+        const sub = (event.newSubscription) || (await self.registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: key,
-        });
-        await fetch('/api/push/subscribe', {
+          applicationServerKey: (antiga && antiga.options && antiga.options.applicationServerKey) || key,
+        }));
+        await fetch('/api/push', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subscription: sub.toJSON(), renewed: true }),
+          body: JSON.stringify({ action: 'subscribe', subscription: sub.toJSON(), renewed: true, oldEndpoint: antiga ? antiga.endpoint : null }),
         });
       } catch (err) {
         console.error('[sw] falha ao renovar inscrição', VERSION, err);

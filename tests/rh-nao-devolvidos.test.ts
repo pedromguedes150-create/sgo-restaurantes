@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
-  situacaoNaBaseGeral, contarAusencia, travaDeSeguranca, apareceNaGrade, diaDepoisDaSaida,
+  situacaoNaBaseGeral, contarAusencia, travaDeSeguranca,
   RODADAS_PARA_INATIVAR, TETO_INATIVACAO_POR_AUSENCIA, SEM_AUSENCIA, type PessoaNaBaseGeral,
 } from '@/lib/rh/nao-devolvidos';
-import { diaAindaConta, totaisDaLinha, type LinhaDaGrade } from '@/lib/schedule/grade-filtros';
 
 /**
  * Quem a unidade não devolveu (v1.171.0) — a regra PURA. O ponto fixo: só o
@@ -61,24 +60,5 @@ describe('travaDeSeguranca (30% da unidade)', () => {
     expect(travaDeSeguranca(0, 0)).toBe(false);
     /* o cenário dos 49: 49 de ~60 */
     expect(travaDeSeguranca(49, 60)).toBe(true);
-  });
-});
-
-describe('a grade da Escala e quem saiu', () => {
-  it('quem saiu no mês aparece; quem saiu antes do mês ou sem data, não', () => {
-    expect(apareceNaGrade({ active: true, inactiveSince: null }, '2026-10-01')).toBe(true);
-    expect(apareceNaGrade({ active: false, inactiveSince: '2026-10-16' }, '2026-10-01')).toBe(true);
-    expect(apareceNaGrade({ active: false, inactiveSince: '2026-09-30' }, '2026-10-01')).toBe(false);
-    expect(apareceNaGrade({ active: false, inactiveSince: null }, '2026-10-01')).toBe(false);
-    expect(diaDepoisDaSaida('2026-10-16', '2026-10-15')).toBe(false);
-    expect(diaDepoisDaSaida('2026-10-16', '2026-10-16')).toBe(true);
-  });
-  it('os totais da linha param no dia da saída', () => {
-    const dias = Array.from({ length: 31 }, () => ({ planned: 'WORK' as const, actual: 'WORK' as const }));
-    const linha: LinhaDaGrade = { collaboratorId: 'c', name: 'Julia', jobTitle: null, typeLabel: '6x1', shiftLabel: null, days: dias, inactiveDay: 16 };
-    expect(diaAindaConta(linha, 15)).toBe(true);
-    expect(diaAindaConta(linha, 16)).toBe(false);
-    expect(totaisDaLinha(linha, 'planejado').trabalho).toBe(15);
-    expect(totaisDaLinha({ ...linha, inactiveDay: null }, 'planejado').trabalho).toBe(31);
   });
 });

@@ -32,7 +32,7 @@ const conferencia = (lancamentos: ReturnType<typeof lanc>[]) => ({
 describe('Conferência', () => {
   it('mostra a miniatura da foto em /uploads/… e o selo "Com foto"', () => {
     const h = renderToString(<PainelConferencia d={conferencia([lanc()])} filtro="todos" linkFiltro={(f) => `?filtro=${f}`} fotoObrigatoria={false} />);
-    expect(h).toContain('src="/uploads/u1/snack.jpg"');
+    expect(h).toContain('src="/uploads/u1/snack.jpg?w=320"');
     expect(h).not.toContain('/api/uploads');
     expect(h).toContain('Com foto');
     expect(h).toContain('30/09/2026');
@@ -42,7 +42,7 @@ describe('Conferência', () => {
     const d = conferencia([lanc(), lanc({ id: 'y', date: '2026-09-29', fotos: [], foto: 'sem-foto' })]);
     const h = renderToString(<PainelConferencia d={d} filtro="sem-foto" linkFiltro={(f) => `?filtro=${f}`} fotoObrigatoria={false} />);
     expect(h).toContain('Nenhuma foto neste lançamento.');
-    expect(h).not.toContain('src="/uploads/u1/snack.jpg"');
+    expect(h).not.toContain('src="/uploads/u1/snack.jpg?w=320"');
   });
 });
 

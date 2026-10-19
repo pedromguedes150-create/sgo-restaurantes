@@ -26,7 +26,13 @@ export async function POST(req: Request) {
   }
 
   let r;
-  if (b.action === 'subscribe') r = await subscribeDevice(user, b.subscription, req.headers.get('user-agent'));
+  if (b.action === 'subscribe') {
+    r = await subscribeDevice(user, b.subscription, req.headers.get('user-agent'));
+    /* renovação pelo service worker (v1.171.1): o endpoint antigo não existe mais */
+    if (r.ok && typeof b.oldEndpoint === 'string' && b.oldEndpoint && b.oldEndpoint !== b.subscription?.endpoint) {
+      await unsubscribeDevice(user, b.oldEndpoint);
+    }
+  }
   else if (b.action === 'unsubscribe') r = await unsubscribeDevice(user, String(b.endpoint ?? ''));
   else if (b.action === 'remove') r = await removeDeviceById(user, String(b.id ?? ''));
   else if (b.action === 'pref') r = await setPreference(user, String(b.category ?? ''), Boolean(b.enabled));

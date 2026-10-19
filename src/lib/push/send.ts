@@ -13,8 +13,16 @@ const PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY ?? '';
 const PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY ?? '';
 const SUBJECT = process.env.VAPID_SUBJECT || 'mailto:ti@grupobeijaflor.com.br';
 
-/** Nº de falhas seguidas antes de descartar a inscrição (aparelho sumiu). */
-const MAX_FAILS = 5;
+/**
+ * Nº de falhas seguidas antes de descartar a inscrição.
+ *
+ * v1.171.1: era 5 — cinco envios com 5xx/429 do serviço de push (ou uma hora
+ * de rede ruim do servidor) bastavam para APAGAR um aparelho que o usuário
+ * ativou de propósito. Só 404/410 dizem "este aparelho não existe mais"; o
+ * resto é transitório e conta, não derruba. 30 falhas seguidas = semanas de
+ * um endereço que nunca mais respondeu.
+ */
+const MAX_FAILS = 30;
 
 let configured = false;
 if (PUBLIC_KEY && PRIVATE_KEY) {

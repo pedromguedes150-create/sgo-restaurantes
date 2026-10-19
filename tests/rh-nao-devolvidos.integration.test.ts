@@ -201,20 +201,18 @@ describe('trava de 30%', () => {
   });
 });
 
-describe('a grade da Escala mostra quem saiu só até o dia da saída', () => {
-  it('saiu em 16/10: aparece em outubro com inactiveDay 16, não aparece em novembro', async () => {
+describe('a grade da Escala: quem o RH desligou sai da grade inteira (v1.171.1)', () => {
+  it('inativada no dia 16, com escala cadastrada: não aparece em outubro nem em novembro; reativada, volta', async () => {
     const ana = await colab(1);
     await prisma.employeeSchedule.create({ data: { collaboratorId: ana!.id, unitId: unitA, scheduleType: 'SIX_ONE', anchorDate: new Date(Date.UTC(2026, 9, 1, 12)), startDate: new Date(Date.UTC(2026, 9, 1, 12)), active: true } });
+    expect((await getScheduleGrid(unitA, 2026, 10)).rows.some((l) => l.collaboratorId === ana!.id)).toBe(true);
     await prisma.collaborator.update({ where: { id: ana!.id }, data: { active: false, inactiveSince: '2026-10-16', inactiveReason: 'RH_STATUS_BASE_GERAL' } });
     const out = await getScheduleGrid(unitA, 2026, 10);
-    const linha = out.rows.find((l) => l.collaboratorId === ana!.id);
-    expect(linha?.inactiveSince).toBe('2026-10-16');
-    expect(linha?.inactiveDay).toBe(16);
-    const nov = await getScheduleGrid(unitA, 2026, 11);
-    expect(nov.rows.some((l) => l.collaboratorId === ana!.id)).toBe(false);
-    /* inativação antiga, sem data: some como sempre sumiu */
-    await prisma.collaborator.update({ where: { id: ana!.id }, data: { inactiveSince: null } });
-    expect((await getScheduleGrid(unitA, 2026, 10)).rows.some((l) => l.collaboratorId === ana!.id)).toBe(false);
+    expect(out.rows.some((l) => l.collaboratorId === ana!.id)).toBe(false);
+    expect(out.withoutSchedule.some((w) => w.id === ana!.id)).toBe(false);
+    expect((await getScheduleGrid(unitA, 2026, 11)).rows.some((l) => l.collaboratorId === ana!.id)).toBe(false);
+    await prisma.collaborator.update({ where: { id: ana!.id }, data: { active: true, inactiveSince: null, inactiveReason: null } });
+    expect((await getScheduleGrid(unitA, 2026, 10)).rows.some((l) => l.collaboratorId === ana!.id)).toBe(true);
   });
 });
 

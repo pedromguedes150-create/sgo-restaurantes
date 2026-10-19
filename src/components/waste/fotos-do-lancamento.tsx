@@ -36,7 +36,7 @@ export function FotosDoLancamento({ fotos, titulo, tamanho = 'md' }: {
             data-testid="foto-miniatura"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={urlDoUpload(f.path)} alt={f.rotulo} loading="lazy" className={`${lado} rounded-lg border border-line object-cover transition group-hover:border-brand`} />
+            <img src={urlDoUpload(f.path, 320)} alt={f.rotulo} loading="lazy" decoding="async" className={`${lado} rounded-lg border border-line object-cover transition group-hover:border-brand`} />
             {tamanho === 'md' && <span className="max-w-20 truncate sgo-type-11 text-ink-500">{f.rotulo}</span>}
           </button>
         ))}
@@ -64,7 +64,7 @@ export function FotosDoLancamento({ fotos, titulo, tamanho = 'md' }: {
       >
         {atual && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={urlDoUpload(atual.path)} alt={atual.rotulo} className="mx-auto max-h-[70vh] w-auto rounded-lg object-contain" />
+          <img src={urlDoUpload(atual.path, 1600)} alt={atual.rotulo} className="mx-auto max-h-[70vh] w-auto rounded-lg object-contain" />
         )}
       </SgoModal>
     </>
