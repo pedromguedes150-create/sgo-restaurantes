@@ -10,90 +10,53 @@ export interface MetaTaskRow {
   done: number;
   resolved: number; // done + missed
   scorePct: number;
+  /** DETALHE = um checklist (informativo, o peso é o de "Checklists do dia"); DESCONTO = tira direto da nota. Sem tipo = componente que pesa. */
+  tipo?: 'DETALHE' | 'DESCONTO';
 }
 
 /**
- * Detalhamento da meta do mês por tarefa (Módulo 11).
- * Score por tarefa = realizadas / (realizadas+não realizadas) — só conta o que
- * entra na meta e já foi resolvido (fechamentos excepcionais ficam de fora).
+ * Detalhamento da meta de uma unidade no mês (v1.174.0): as linhas que PESAM
+ * (uma por componente, da mesma lista que dá a nota), as linhas de DETALHE
+ * (um checklist por linha, informativas: o peso é o de "Checklists do dia") e
+ * as linhas de DESCONTO (fora do prazo, gerente sem folga — direto na nota).
  */
 export async function getMetaBreakdown(unitId: string, yearMonth: string): Promise<MetaTaskRow[]> {
-  const instances = await prisma.taskInstance.findMany({
-    where: {
-      unitId,
-      operationalDate: { startsWith: yearMonth },
-      status: { in: ['DONE', 'MISSED'] },
-      template: { entersMeta: true },
-    },
-    select: { status: true, template: { select: { name: true, weight: true } } },
-  });
+  const [{ componentesDaMeta, descontosDaMeta }, { linhasDosComponentes }] = await Promise.all([import('./componentes'), import('./pontuacao')]);
+  const [componentes, descontos, instances] = await Promise.all([
+    componentesDaMeta(unitId, yearMonth),
+    descontosDaMeta(unitId, yearMonth),
+    prisma.taskInstance.findMany({
+      where: { unitId, operationalDate: { startsWith: yearMonth }, status: { in: ['DONE', 'MISSED'] }, template: { entersMeta: true } },
+      select: { status: true, template: { select: { name: true } } },
+    }),
+  ]);
+  const rows: MetaTaskRow[] = linhasDosComponentes(componentes);
 
-  const map = new Map<string, { name: string; weight: number; done: number; resolved: number }>();
+  /* Detalhe por checklist: informativo (peso 0, tipo DETALHE) — mostra onde,
+     dentro de "Checklists do dia", a unidade perdeu. */
+  const porChecklist = new Map<string, { done: number; resolved: number }>();
   for (const i of instances) {
-    const key = i.template.name;
-    const cur = map.get(key) ?? { name: key, weight: i.template.weight, done: 0, resolved: 0 };
+    const cur = porChecklist.get(i.template.name) ?? { done: 0, resolved: 0 };
     cur.resolved++;
     if (i.status === 'DONE') cur.done++;
-    map.set(key, cur);
+    porChecklist.set(i.template.name, cur);
   }
-  const rows = [...map.values()].map((r) => ({ ...r, scorePct: r.resolved === 0 ? 0 : Math.round((r.done / r.resolved) * 100) }));
-
-  // Linha "Treinamentos" (POPs) — peso único configurável
-  const { getTrainingMonthStats, getTrainingWeight } = await import('@/lib/training');
-  const [tStats, tWeight] = await Promise.all([getTrainingMonthStats(unitId, yearMonth), getTrainingWeight()]);
-  const tResolved = tStats.done + tStats.missed;
-  if (tWeight > 0 && tResolved > 0) {
-    rows.push({ name: 'Treinamentos (POPs)', weight: tWeight, done: tStats.done, resolved: tResolved, scorePct: Math.round((tStats.done / tResolved) * 100) });
+  for (const [name, r] of [...porChecklist.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'))) {
+    rows.push({ name, weight: 0, done: r.done, resolved: r.resolved, scorePct: r.resolved === 0 ? 0 : Math.round((r.done / r.resolved) * 100), tipo: 'DETALHE' });
   }
 
-  // Linha "Comunicados" (Central de Comunicação) — peso único configurável
-  const { getCommunicationMonthStats, getCommunicationWeight } = await import('@/lib/communications/meta');
-  const [cStats, cWeight] = await Promise.all([getCommunicationMonthStats(unitId, yearMonth), getCommunicationWeight()]);
-  const cResolved = cStats.done + cStats.missed;
-  if (cWeight > 0 && cResolved > 0) {
-    rows.push({ name: 'Comunicados', weight: cWeight, done: cStats.done, resolved: cResolved, scorePct: Math.round((cStats.done / cResolved) * 100) });
+  /* Descontos diretos na nota (não são peso). */
+  const { lateEntry: le, managerLeave: ml } = descontos;
+  if (le.count > 0 && le.pct > 0) {
+    rows.push({ name: `Fora do prazo (−${Math.round(le.count * le.pct)}% na meta)`, weight: 0, done: 0, resolved: le.count, scorePct: 0, tipo: 'DESCONTO' });
   }
-
-  // Linha "Avaliações da equipe" — peso configurável (padrão 0 = desligado)
-  const { getEvaluationMonthStats, getEvaluationWeight } = await import('@/lib/people/evaluation');
-  const [eStats, eWeight] = await Promise.all([getEvaluationMonthStats(unitId, yearMonth), getEvaluationWeight()]);
-  const eResolved = eStats.done + eStats.missed;
-  if (eWeight > 0 && eResolved > 0) {
-    rows.push({ name: 'Avaliações da equipe', weight: eWeight, done: eStats.done, resolved: eResolved, scorePct: Math.round((eStats.done / eResolved) * 100) });
-  }
-
-  // Linhas "Desperdício diário" e "Comandas diárias" (cobertura mensal, peso config.)
-  const { getWasteCoverage, getCommandsCoverage, getWasteMetaWeight, getCommandsMetaWeight } = await import('@/lib/metas/config');
-  const [wCov, wWeight2, cmCov, cmWeight2] = await Promise.all([
-    getWasteCoverage(unitId, yearMonth), getWasteMetaWeight(),
-    getCommandsCoverage(unitId, yearMonth), getCommandsMetaWeight(),
-  ]);
-  const wRes = wCov.done + wCov.missed;
-  if (wWeight2 > 0 && wRes > 0) rows.push({ name: 'Desperdício diário (cobertura)', weight: wWeight2, done: wCov.done, resolved: wRes, scorePct: Math.round((wCov.done / wRes) * 100) });
-  const cmRes = cmCov.done + cmCov.missed;
-  if (cmWeight2 > 0 && cmRes > 0) rows.push({ name: 'Comandas diárias (cobertura)', weight: cmWeight2, done: cmCov.done, resolved: cmRes, scorePct: Math.round((cmCov.done / cmRes) * 100) });
-
-  // Linha informativa "Lançamentos fora do prazo" (penalidade, item 4 07/07):
-  // cada data editada desconta X% direto do score final (não é peso).
-  const { countLateEntries, getLateEntryPenaltyPct } = await import('@/lib/late-entry');
-  const [lateCount, penaltyPct] = await Promise.all([countLateEntries(unitId, yearMonth), getLateEntryPenaltyPct()]);
-  if (lateCount > 0 && penaltyPct > 0) {
-    rows.push({ name: `Fora do prazo (−${Math.round(lateCount * penaltyPct)}% na meta)`, weight: 0, done: 0, resolved: lateCount, scorePct: 0 });
-  }
-
-  // Linha informativa "Escala de gerentes" (v1.170.0): gerentes sem folga
-  // cadastrada no mês, com os NOMES — desconto por gerente, direto na nota.
-  const { getManagerLeaveMetaStats } = await import('@/lib/metas/escala-gerentes');
-  const { getManagerLeaveMetaPenalty } = await import('@/lib/metas/config');
-  const [mlStats, mlPct] = await Promise.all([getManagerLeaveMetaStats(unitId, yearMonth), getManagerLeaveMetaPenalty()]);
-  if (mlStats.semFolga > 0 && mlPct > 0) {
+  if (ml.semFolga > 0 && ml.pct > 0) {
     rows.push({
-      name: `Escala de gerentes — sem folga cadastrada: ${mlStats.nomesSemFolga.join(', ')} (−${Math.round(mlStats.semFolga * mlPct)}% na meta)`,
-      weight: 0, done: mlStats.gerentes - mlStats.semFolga, resolved: mlStats.gerentes, scorePct: 0,
+      name: `Escala de gerentes — sem folga cadastrada: ${ml.nomesSemFolga.join(', ')} (−${Math.round(ml.semFolga * ml.pct)}% na meta)`,
+      weight: 0, done: ml.gerentes - ml.semFolga, resolved: ml.gerentes, scorePct: 0, tipo: 'DESCONTO',
     });
   }
-
-  return rows.sort((a, b) => b.weight - a.weight);
+  return rows;
 }
 
 export interface MetaRankingRow {

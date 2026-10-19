@@ -12,7 +12,8 @@ import type { GrupoPorModulo, LinhaPorModulo } from '@/lib/metas/por-modulo';
 /**
  * Meta POR MÓDULO (v1.170.0): todos os módulos do sistema, um por linha, com o
  * indicador que a meta mede e o campo de peso/desconto onde há indicador.
- * Grava pelas MESMAS entidades do `/api/admin` que a aba Componentes usa.
+ * Grava pelas entidades `*Meta` do `/api/admin`. Desde a v1.174.0 é a ÚNICA
+ * tela de pesos (a aba Componentes saiu) e os checklists têm um peso só.
  */
 export function MetaPorModuloClient({ grupos, canEdit }: { grupos: GrupoPorModulo[]; canEdit: boolean }) {
   const router = useRouter();
@@ -56,7 +57,7 @@ export function MetaPorModuloClient({ grupos, canEdit }: { grupos: GrupoPorModul
               <tbody>
                 {g.linhas.map((l) => {
                   const ind = l.indicador;
-                  const ligado = ind && (ind.tipo === 'POR_ITEM' || (l.valor ?? 0) > 0);
+                  const ligado = ind && (l.valor ?? 0) > 0;
                   return (
                     <tr key={l.key} data-testid={`meta-modulo-${l.key}`}>
                       <td className="whitespace-nowrap font-medium text-ink-900">
@@ -94,8 +95,6 @@ export function MetaPorModuloClient({ grupos, canEdit }: { grupos: GrupoPorModul
                               </Button>
                             )}
                           </span>
-                        ) : ind ? (
-                          <span className="text-xs font-semibold text-ink-500">por checklist</span>
                         ) : (
                           <span className="text-ink-400">—</span>
                         )}

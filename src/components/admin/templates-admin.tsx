@@ -33,7 +33,6 @@ export function TemplatesAdmin({ units, templates, examples = [] }: { units: Uni
     const mins = (t?: string | null) => { if (!t) return 99999; const [h, m] = t.split(':').map(Number); return (h || 0) * 60 + (m || 0); }; // sem horário = por último
     return templates.filter((t) => t.unitId === unitId).sort((a, b) => mins(a.limitTime) - mins(b.limitTime) || a.name.localeCompare(b.name, 'pt-BR'));
   }, [templates, unitId]);
-  const sumWeight = list.filter((t) => t.active && t.entersMeta).reduce((s, t) => s + t.weight, 0);
   const existingNames = useMemo(() => new Set(list.map((t) => t.name)), [list]);
 
   return (
@@ -54,7 +53,7 @@ export function TemplatesAdmin({ units, templates, examples = [] }: { units: Uni
         </div>
       )}
 
-      <p className="text-xs text-ink-500">Soma dos pesos (ativos, na meta): <span className={sumWeight === 100 ? 'font-bold text-success' : 'font-bold text-warning'}>{sumWeight}</span> {sumWeight !== 100 && '(ideal: 100)'}</p>
+      <p className="text-xs text-ink-500">Na meta, todo checklist marcado &quot;Entra na meta&quot; vale igual; o peso do conjunto é um só, em Metas → Configuração da Meta.</p>
 
       <div className="space-y-2">
         {list.map((t) => <TplItemRow key={t.id} t={t} units={units} onChange={() => router.refresh()} />)}
@@ -110,7 +109,7 @@ function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: {
                     {exists ? <Check className="mt-0.5 h-5 w-5 shrink-0 text-success" /> : checked ? <CheckSquare className="mt-0.5 h-5 w-5 shrink-0 text-brand" /> : <Square className="mt-0.5 h-5 w-5 shrink-0 text-ink-500" />}
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-ink-900">{e.moment ?? e.name}{exists && <span className="ml-1 text-xs font-normal text-success">já existe</span>}</span>
-                      <span className="block text-xs text-ink-500">{e.itemCount} item(ns) · {e.limitTime ? `limite ${e.limitTime}` : 'sem horário'} · peso {e.weight}{e.requiresEvidence ? ' · foto' : ''}</span>
+                      <span className="block text-xs text-ink-500">{e.itemCount} item(ns) · {e.limitTime ? `limite ${e.limitTime}` : 'sem horário'}{e.requiresEvidence ? ' · foto' : ''}</span>
                     </span>
                   </button>
                 );
@@ -132,7 +131,7 @@ function ExamplesPicker({ examples, unitId, existingNames, onDone, onCancel }: {
 
 /* ───────── Formulário de criação ───────── */
 function ChecklistForm({ units, defaultUnitId, onDone, onCancel }: { units: Unit[]; defaultUnitId: string; onDone: () => void; onCancel: () => void }) {
-  const f = useChecklistForm({ unitId: defaultUnitId, name: '', limitTime: '', noTime: false, weight: '10', scope: 'UNIT', requiresEvidence: false, entersMeta: true, startDate: '', endDate: '', items: [] });
+  const f = useChecklistForm({ unitId: defaultUnitId, name: '', limitTime: '', noTime: false, scope: 'UNIT', requiresEvidence: false, entersMeta: true, startDate: '', endDate: '', items: [] });
   const [targetUnits, setTargetUnits] = useState<string[]>([defaultUnitId]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -168,7 +167,7 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const f = useChecklistForm({ unitId: t.unitId, name: t.name, limitTime: t.limitTime ?? '', noTime: t.limitTime === null, weight: String(t.weight), scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, startDate: t.startDate ?? '', endDate: t.endDate ?? '', items: t.items });
+  const f = useChecklistForm({ unitId: t.unitId, name: t.name, limitTime: t.limitTime ?? '', noTime: t.limitTime === null, scope: t.scope, requiresEvidence: t.requiresEvidence, entersMeta: t.entersMeta, startDate: t.startDate ?? '', endDate: t.endDate ?? '', items: t.items });
 
   async function toggle() { await postAdmin({ entity: 'template', action: 'toggle', id: t.id, active: !t.active }); onChange(); }
   async function duplicate() {
@@ -211,7 +210,7 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
         <div>
           <p className="font-semibold text-ink-900">{t.name}</p>
           <p className="text-xs text-ink-500">
-            {t.limitTime ? `limite ${t.limitTime}` : 'sem horário'} · peso {t.weight} · {t.scope === 'MANAGER' ? 'individual' : 'da unidade'}
+            {t.limitTime ? `limite ${t.limitTime}` : 'sem horário'} · {t.scope === 'MANAGER' ? 'individual' : 'da unidade'}
             {t.items.length > 0 ? ` · ${t.items.length} item(ns)` : ''}{t.requiresEvidence ? ' · foto' : ''}{t.entersMeta ? ' · meta' : ''}
             {t.startDate || t.endDate ? ` · 📅 ${t.startDate ?? '…'} → ${t.endDate ?? 'sem fim'}` : ''}
           </p>
@@ -262,11 +261,10 @@ function UnitsEditor({ t, units, onChange }: { t: TplRow; units: Unit[]; onChang
 }
 
 /* ───────── Hook de formulário compartilhado (campos + itens) ───────── */
-function useChecklistForm(init: { unitId: string; name: string; limitTime: string; noTime: boolean; weight: string; scope: 'UNIT' | 'MANAGER'; requiresEvidence: boolean; entersMeta: boolean; startDate: string; endDate: string; items: TplItem[] }) {
+function useChecklistForm(init: { unitId: string; name: string; limitTime: string; noTime: boolean; scope: 'UNIT' | 'MANAGER'; requiresEvidence: boolean; entersMeta: boolean; startDate: string; endDate: string; items: TplItem[] }) {
   const [name, setName] = useState(init.name);
   const [noTime, setNoTime] = useState(init.noTime);
   const [limitTime, setLimitTime] = useState(init.limitTime || '23:00');
-  const [weight, setWeight] = useState(init.weight);
   const [scope, setScope] = useState<'UNIT' | 'MANAGER'>(init.scope);
   const [requiresEvidence, setRequiresEvidence] = useState(init.requiresEvidence);
   const [entersMeta, setEntersMeta] = useState(init.entersMeta);
@@ -289,7 +287,7 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
 
   function payload() {
     return {
-      name, weight: Number(weight), scope, requiresEvidence, entersMeta,
+      name, scope, requiresEvidence, entersMeta,
       limitTime: noTime ? null : limitTime,
       startDate: startDate || null, endDate: endDate || null,
       items: items.filter((it) => it.text.trim()).map((it) => ({ section: it.section, text: it.text, requiresPhoto: it.requiresPhoto, aiCheck: it.aiCheck, standardDescription: it.standardDescription })),
@@ -299,16 +297,13 @@ function useChecklistForm(init: { unitId: string; name: string; limitTime: strin
   const fields = (
       <div className="space-y-2">
         <div><Label className="text-xs">Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-10 text-sm" /></div>
-        <div className="grid grid-cols-2 gap-2">
-          <Select
-            label="Escopo" size="sm" value={scope} onValueChange={(v) => setScope(v as 'UNIT' | 'MANAGER')}
-            options={[
-              { value: 'UNIT', label: 'Da unidade', hint: 'qualquer gerente conclui' },
-              { value: 'MANAGER', label: 'Individual', hint: '1 por gerente/dia' },
-            ]}
-          />
-          <div><Label className="text-xs">Peso na meta</Label><Input inputMode="numeric" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-10 text-sm" /></div>
-        </div>
+        <Select
+          label="Escopo" size="sm" value={scope} onValueChange={(v) => setScope(v as 'UNIT' | 'MANAGER')}
+          options={[
+            { value: 'UNIT', label: 'Da unidade', hint: 'qualquer gerente conclui' },
+            { value: 'MANAGER', label: 'Individual', hint: '1 por gerente/dia' },
+          ]}
+        />
         <div className="flex flex-wrap items-center gap-4 text-sm">
           <label className="flex items-center gap-2"><input type="checkbox" checked={noTime} onChange={(e) => setNoTime(e.target.checked)} /> Sem horário (até o fim do dia)</label>
           {!noTime && <span className="flex items-center gap-1"><Label className="text-xs">Limite</Label><Input value={limitTime} onChange={(e) => setLimitTime(e.target.value)} placeholder="23:00" className="h-9 w-24 text-sm" /></span>}

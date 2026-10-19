@@ -99,7 +99,7 @@ function ModelItemRow({ m, onChange }: { m: ModelRow; onChange: () => void }) {
       <div className="flex items-start justify-between gap-2">
         <button type="button" onClick={() => { if (!editing) setViewing((v) => !v); }} className="min-w-0 flex-1 text-left">
           <p className="flex items-center gap-1 font-semibold text-ink-900">{m.moment ?? m.name}{!editing && <Eye className="h-3.5 w-3.5 text-ink-500" />}</p>
-          <p className="text-xs text-ink-500">{m.scope === 'MANAGER' ? 'individual' : 'da unidade'} · peso {m.weight} · {m.limitTime ? `limite ${m.limitTime}` : 'sem horário'} · {m.items.length} item(ns){m.requiresEvidence ? ' · foto' : ''}</p>
+          <p className="text-xs text-ink-500">{m.scope === 'MANAGER' ? 'individual' : 'da unidade'} · {m.limitTime ? `limite ${m.limitTime}` : 'sem horário'} · {m.items.length} item(ns){m.requiresEvidence ? ' · foto' : ''}</p>
         </button>
         <div className="flex items-center gap-1">
           <button onClick={toggle}><StatusBadge tone={m.active ? 'success' : 'critical'}>{m.active ? 'Ativo' : 'Inativo'}</StatusBadge></button>
@@ -135,7 +135,6 @@ function ModelForm({ edit, onDone, onCancel }: { edit?: ModelRow; onDone: () => 
   const [scope, setScope] = useState<'UNIT' | 'MANAGER'>(edit?.scope ?? 'UNIT');
   const [noTime, setNoTime] = useState(edit ? edit.limitTime === null : true);
   const [limitTime, setLimitTime] = useState(edit?.limitTime ?? '23:00');
-  const [weight, setWeight] = useState(String(edit?.weight ?? 10));
   const [requiresEvidence, setRequiresEvidence] = useState(edit?.requiresEvidence ?? false);
   const [items, setItems] = useState<MItem[]>(edit?.items ?? []);
   const [busy, setBusy] = useState(false);
@@ -150,7 +149,7 @@ function ModelForm({ edit, onDone, onCancel }: { edit?: ModelRow; onDone: () => 
     if (!name.trim()) { setMsg('Informe o nome.'); return; }
     setBusy(true); setMsg(null);
     const payload = {
-      name, category, moment, scope, weight: Number(weight), requiresEvidence,
+      name, category, moment, scope, requiresEvidence,
       limitTime: noTime ? null : limitTime,
       items: items.filter((it) => it.text.trim()).map((it) => ({ section: it.section, text: it.text, requiresPhoto: it.requiresPhoto })),
     };
@@ -173,7 +172,6 @@ function ModelForm({ edit, onDone, onCancel }: { edit?: ModelRow; onDone: () => 
           onValueChange={(v) => setScope(v as 'UNIT' | 'MANAGER')}
           options={[{ value: 'UNIT', label: 'Da unidade' }, { value: 'MANAGER', label: 'Individual' }]}
         />
-        <div><Label className="text-xs">Peso na meta</Label><Input inputMode="numeric" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-10 text-sm" /></div>
       </div>
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <label className="flex items-center gap-2"><input type="checkbox" checked={noTime} onChange={(e) => setNoTime(e.target.checked)} /> Sem horário</label>
