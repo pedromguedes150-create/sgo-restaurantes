@@ -740,7 +740,9 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
       <DsSelect
         label="Fornecedor (da lista de cadastrados)"
         placeholder="Selecione o fornecedor…"
-        hint="Fornecedor não está na lista? Peça à Supervisão/Admin para cadastrar em Configurações → Fornecedores."
+        searchable
+        searchPlaceholder="Digite para pesquisar o fornecedor…"
+        hint="Digite parte do nome para filtrar. Só entram fornecedores cadastrados — não está na lista? Peça à Supervisão/Admin para cadastrar em Configurações → Fornecedores."
         value={supplierId}
         onValueChange={(v) => {
           const s = suppliers.find((x) => x.id === v);
