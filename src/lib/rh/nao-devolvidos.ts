@@ -111,20 +111,3 @@ export const MOTIVO_INATIVACAO_ROTULO: Record<string, string> = {
   RH_EVENTO: 'Desligamento enviado pelo RH',
   MANUAL: 'Inativado à mão',
 };
-
-/* ───────────── A grade da Escala ───────────── */
-
-/**
- * A pessoa inativa aparece na grade do mês em que saiu, até o dia da saída;
- * nos meses seguintes, não. `inactiveSince` nulo (inativação antiga, sem
- * data) = some como sempre sumiu.
- */
-export function apareceNaGrade(c: { active: boolean; inactiveSince: string | null }, primeiroDiaDoMesISO: string): boolean {
-  if (c.active) return true;
-  return Boolean(c.inactiveSince && c.inactiveSince >= primeiroDiaDoMesISO);
-}
-
-/** O dia está depois da saída? (célula em cinza, sem status) */
-export function diaDepoisDaSaida(inactiveSince: string | null, diaISO: string): boolean {
-  return Boolean(inactiveSince && diaISO >= inactiveSince);
-}

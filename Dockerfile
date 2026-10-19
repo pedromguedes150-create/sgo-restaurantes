@@ -44,6 +44,11 @@ COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Prisma (client + schema) para migrações em runtime
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/prisma ./prisma
+# sharp (v1.171.1, derivadas de imagem): nativo, com os binários linux-musl em @img.
+# Copiado explicitamente para não depender do rastreio do standalone — sem ele a
+# rota /uploads cairia no original em silêncio (lento, mas nunca quebra).
+COPY --from=build /app/node_modules/sharp ./node_modules/sharp
+COPY --from=build /app/node_modules/@img ./node_modules/@img
 
 # Volume de uploads (regra: storage local em volume Docker)
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads

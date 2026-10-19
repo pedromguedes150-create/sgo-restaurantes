@@ -1,5 +1,6 @@
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { gerarDerivadas, removerDerivadas } from '@/lib/uploads-derivadas';
 
 const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
 const MAX_BYTES = 25 * 1024 * 1024; // 25MB — fotos de celular podem passar de 5MB
@@ -48,7 +49,11 @@ export async function saveEvidence(
   const filename = `${inst}-${buf.byteLength}.${ext}`;
   await writeFile(path.join(dir, filename), buf);
 
-  return path.posix.join('uploads', unit, filename);
+  const rel = path.posix.join('uploads', unit, filename);
+  /* v1.171.1 — miniatura e versão de tela prontas antes da primeira abertura;
+     em segundo plano e sem bloquear quem está gravando. */
+  void gerarDerivadas(rel).catch(() => {});
+  return rel;
 }
 
 const ATTACH_MAX_BYTES = 25 * 1024 * 1024; // 25MB (fotos/vídeos de ocorrências)
@@ -98,7 +103,9 @@ export async function saveAttachment(
   const filename = `${safe}-${buf.byteLength}.${ext}`;
   await writeFile(path.join(dir, filename), buf);
 
-  return { path: path.posix.join('uploads', unit, filename), mimeType: file.type || MIME_BY_EXT[ext] || 'application/octet-stream' };
+  const rel = path.posix.join('uploads', unit, filename);
+  void gerarDerivadas(rel).catch(() => {});
+  return { path: rel, mimeType: file.type || MIME_BY_EXT[ext] || 'application/octet-stream' };
 }
 
 /**
@@ -119,4 +126,5 @@ export async function removeUpload(relPath: string): Promise<void> {
   const full = path.join(UPLOAD_ROOT, ...segs);
   if (!full.startsWith(UPLOAD_ROOT)) return;
   await unlink(full).catch(() => {});
+  await removerDerivadas(segs);
 }
