@@ -6,6 +6,7 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { saveAttachment, UploadError } from '@/lib/uploads';
 import { podeGerirFichas } from '@/lib/preparo/query';
 import { lerFichaDePreparo, MIDIAS_ACEITAS } from '@/lib/ai/preparo';
+import { normalizarSegmento } from '@/lib/preparo/tipos';
 
 /**
  * IMPORTAR FICHA — passo 1 de 2. Recebe o arquivo, guarda-o como fonte e
@@ -40,7 +41,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, sourceFilePath: saved.path, mimeType: saved.mimeType, ai: { configured: true, ok: false, error: 'Formato sem leitura automática (use foto JPG/PNG/WEBP ou PDF). Preencha a ficha manualmente.' } });
   }
 
+  const segment = normalizarSegmento(form?.get('segment'));
   const buf = await readFile(path.join(process.cwd(), ...saved.path.split('/')));
-  const ai = await lerFichaDePreparo({ base64: buf.toString('base64'), mediaType });
+  const ai = await lerFichaDePreparo({ base64: buf.toString('base64'), mediaType, segment });
   return NextResponse.json({ ok: true, sourceFilePath: saved.path, mimeType: saved.mimeType, ai });
 }

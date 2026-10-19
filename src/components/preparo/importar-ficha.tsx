@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/ds/button';
 import { Sheet } from '@/components/ui/ds/sheet';
 import { Banner } from '@/components/ui/ds/banner';
 import { compressImage } from '@/lib/image-compress';
-import type { RascunhoDaFicha } from '@/lib/preparo/tipos';
+import type { RascunhoDaFicha, Segmento } from '@/lib/preparo/tipos';
 import { recortarFoto } from './recorte-foto';
 
 /**
@@ -21,11 +21,14 @@ export interface ResultadoDaImportacao {
   aviso: { tone: 'info' | 'warning' | 'danger'; title: string; description?: string } | null;
 }
 
-export function ImportarFicha({ open, onClose, onPronto }: {
+export function ImportarFicha({ open, onClose, onPronto, segment = 'LANCHONETE' }: {
   open: boolean;
   onClose: () => void;
   onPronto: (r: ResultadoDaImportacao) => void;
+  /** RESTAURANTE = guia de um grupo de preparações: o arquivo É o conteúdo. */
+  segment?: Segmento;
 }) {
+  const guia = segment === 'RESTAURANTE';
   const [arquivo, setArquivo] = React.useState<File | null>(null);
   const [processando, setProcessando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
@@ -41,6 +44,7 @@ export function ImportarFicha({ open, onClose, onPronto }: {
       const envio = arquivo.type.startsWith('image/') ? await compressImage(arquivo, 2400, 0.9) : arquivo;
       const fd = new FormData();
       fd.set('file', envio);
+      fd.set('segment', segment);
       const res = await fetch('/api/padronizacao/importar', { method: 'POST', body: fd });
       const body = await res.json().catch(() => ({})) as {
         error?: string; sourceFilePath?: string;
@@ -50,11 +54,11 @@ export function ImportarFicha({ open, onClose, onPronto }: {
 
       const ai = body.ai;
       if (!ai || !ai.configured) {
-        onPronto({ rascunho: null, sourceFilePath: body.sourceFilePath, foto: null, aviso: { tone: 'info', title: 'Leitura automática não configurada neste servidor.', description: 'O arquivo foi guardado. Preencha a ficha manualmente.' } });
+        onPronto({ rascunho: null, sourceFilePath: body.sourceFilePath, foto: null, aviso: { tone: 'info', title: 'Leitura automática não configurada neste servidor.', description: guia ? 'O arquivo foi guardado e será o conteúdo do guia. Preencha nome, função, temperatura, tempo e preparações manualmente.' : 'O arquivo foi guardado. Preencha a ficha manualmente.' } });
         return;
       }
       if (!ai.ok || !ai.rascunho) {
-        onPronto({ rascunho: null, sourceFilePath: body.sourceFilePath, foto: null, aviso: { tone: 'warning', title: 'Não foi possível interpretar esta ficha.', description: `${ai.error ?? 'A leitura falhou.'} O arquivo foi guardado; preencha os campos manualmente.` } });
+        onPronto({ rascunho: null, sourceFilePath: body.sourceFilePath, foto: null, aviso: { tone: 'warning', title: guia ? 'Não foi possível interpretar este guia.' : 'Não foi possível interpretar esta ficha.', description: `${ai.error ?? 'A leitura falhou.'} O arquivo foi guardado; preencha os campos manualmente.` } });
         return;
       }
 
@@ -67,8 +71,10 @@ export function ImportarFicha({ open, onClose, onPronto }: {
         sourceFilePath: body.sourceFilePath,
         foto,
         aviso: pendentes > 0
-          ? { tone: 'warning', title: 'Não foi possível interpretar completamente esta ficha.', description: `${pendentes} campo(s) marcado(s) "Revisar informação" — confira antes de publicar. Nada foi inventado.` }
-          : { tone: 'info', title: 'Ficha lida. Confira os dados antes de publicar.', description: foto ? 'A foto do produto foi recortada do arquivo — confirme se é a certa.' : (envio.type === 'application/pdf' ? 'Em PDF a foto não é extraída: envie a foto do produto abaixo, se tiver.' : undefined) },
+          ? { tone: 'warning', title: guia ? 'Não foi possível interpretar completamente este guia.' : 'Não foi possível interpretar completamente esta ficha.', description: `${pendentes} campo(s) marcado(s) "Revisar informação" — confira antes de publicar. Nada foi inventado.` }
+          : guia
+            ? { tone: 'info', title: 'Guia lido. Confira os dados antes de publicar.', description: 'O arquivo enviado é o conteúdo que o gerente vai abrir; os campos abaixo servem à busca e ao cartão.' }
+            : { tone: 'info', title: 'Ficha lida. Confira os dados antes de publicar.', description: foto ? 'A foto do produto foi recortada do arquivo — confirme se é a certa.' : (envio.type === 'application/pdf' ? 'Em PDF a foto não é extraída: envie a foto do produto abaixo, se tiver.' : undefined) },
       });
     } catch {
       setErro('Falha de rede ao enviar o arquivo. Tente de novo.');
@@ -81,12 +87,14 @@ export function ImportarFicha({ open, onClose, onPronto }: {
     <Sheet
       open={open}
       onClose={onClose}
-      title="Importar ficha"
-      description="Envie a foto ou o PDF da ficha de padronização. A leitura automática sugere os dados; você confere e publica."
+      title={guia ? 'Importar guia' : 'Importar ficha'}
+      description={guia
+        ? 'Envie o PDF ou a foto do guia de preparações. O arquivo é o conteúdo do guia; a leitura automática sugere função, temperatura, tempo e as preparações — você confere e publica.'
+        : 'Envie a foto ou o PDF da ficha de padronização. A leitura automática sugere os dados; você confere e publica.'}
       footer={
         <div className="flex items-center justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={processando}>Cancelar</Button>
-          <Button type="button" onClick={processar} disabled={!arquivo} loading={processando}>Processar ficha</Button>
+          <Button type="button" onClick={processar} disabled={!arquivo} loading={processando}>{guia ? 'Processar guia' : 'Processar ficha'}</Button>
         </div>
       }
     >
@@ -100,8 +108,8 @@ export function ImportarFicha({ open, onClose, onPronto }: {
           className="flex w-full flex-col items-center justify-center gap-2 rounded-card border border-dashed border-line-strong bg-sunken px-4 py-8 text-center transition-colors duration-sgo-1 ease-sgo-std hover:border-brand"
         >
           {processando ? <Loader2 className="h-6 w-6 animate-spin text-brand motion-reduce:animate-none" aria-hidden /> : <FileUp className="h-6 w-6 text-brand" aria-hidden />}
-          <span className="text-sm font-semibold text-ink-900">{arquivo ? arquivo.name : 'Escolher arquivo da ficha'}</span>
-          <span className="text-xs text-ink-500">{processando ? 'Lendo a ficha… isso leva alguns segundos.' : 'Foto (JPG, PNG, WEBP) ou PDF, até 25 MB.'}</span>
+          <span className="text-sm font-semibold text-ink-900">{arquivo ? arquivo.name : (guia ? 'Escolher arquivo do guia' : 'Escolher arquivo da ficha')}</span>
+          <span className="text-xs text-ink-500">{processando ? (guia ? 'Lendo o guia… isso leva alguns segundos.' : 'Lendo a ficha… isso leva alguns segundos.') : 'Foto (JPG, PNG, WEBP) ou PDF, até 25 MB.'}</span>
         </button>
         <ul className="space-y-1 text-xs text-ink-500">
           <li>A leitura interpreta o conteúdo, não a posição — fichas com layout diferente também entram.</li>

@@ -60,7 +60,10 @@ export function FormularioFicha({ open, modo, inicial, revisar = [], sourceFileP
     return () => URL.revokeObjectURL(url);
   }, [foto]);
 
-  const titulo = modo === 'editar' ? 'Editar ficha' : modo === 'importar' ? 'Conferir ficha importada' : 'Nova ficha';
+  const guia = valor.segment === 'RESTAURANTE';
+  const titulo = guia
+    ? (modo === 'editar' ? 'Editar guia' : modo === 'importar' ? 'Conferir guia importado' : 'Novo guia')
+    : (modo === 'editar' ? 'Editar ficha' : modo === 'importar' ? 'Conferir ficha importada' : 'Nova ficha');
 
   async function escolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -171,7 +174,7 @@ export function FormularioFicha({ open, modo, inicial, revisar = [], sourceFileP
         open={open}
         onClose={onClose}
         title={titulo}
-        description={modo === 'editar' ? 'Nenhuma alteração é gravada até "Salvar". A foto tem o botão próprio na ficha.' : 'Nada é publicado até você confirmar em "Salvar e publicar".'}
+        description={modo === 'editar' ? (guia ? 'Nenhuma alteração é gravada até "Salvar". A capa tem o botão próprio no guia.' : 'Nenhuma alteração é gravada até "Salvar". A foto tem o botão próprio na ficha.') : 'Nada é publicado até você confirmar em "Salvar e publicar".'}
         footer={
           <div className="flex items-center justify-end gap-2">
             <Button type="button" variant="ghost" onClick={onClose} disabled={salvando}>Cancelar</Button>
@@ -183,9 +186,14 @@ export function FormularioFicha({ open, modo, inicial, revisar = [], sourceFileP
           {aviso && <Banner tone={aviso.tone} title={aviso.title} description={aviso.description} />}
           {erro && <Banner tone="danger" title={erro.title} description={erro.description} onDismiss={() => setErro(null)} />}
 
+          {guia && modo === 'importar' && sourceFilePath && (
+            <p className="rounded-card border border-line bg-sunken px-3 py-2 text-xs text-ink-700" data-testid="guia-arquivo-fonte">
+              <strong>Arquivo do guia enviado.</strong> Ele é o conteúdo que o gerente vai abrir; o que está abaixo serve à busca e ao cartão do catálogo.
+            </p>
+          )}
           {modo !== 'editar' && (
             <section className="space-y-2">
-              <h3 className="sgo-type-11 font-semibold text-ink-500">Foto do produto</h3>
+              <h3 className="sgo-type-11 font-semibold text-ink-500">{guia ? 'Capa (opcional)' : 'Foto do produto'}</h3>
               <div className="flex flex-wrap items-center gap-3">
                 {fotoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -206,7 +214,9 @@ export function FormularioFicha({ open, modo, inicial, revisar = [], sourceFileP
                     </Button>
                   )}
                   <p className="max-w-xs text-xs text-ink-500">
-                    {modo === 'importar' && fotoInicial ? 'Recorte sugerido pela leitura do arquivo — confira se é a foto do produto pronto.' : 'Foto do produto pronto, como deve ficar. Pode ser enviada depois.'}
+                    {guia
+                      ? 'Imagem do cartão no catálogo. Sem capa, o cartão usa o próprio arquivo (se for foto) ou o ícone de PDF.'
+                      : (modo === 'importar' && fotoInicial ? 'Recorte sugerido pela leitura do arquivo — confira se é a foto do produto pronto.' : 'Foto do produto pronto, como deve ficar. Pode ser enviada depois.')}
                   </p>
                 </div>
               </div>

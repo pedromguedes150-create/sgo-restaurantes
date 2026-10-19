@@ -21,6 +21,7 @@ import { EditorFicha, paraEditavel } from '@/components/preparo/editor-ficha';
 const resumo = (over: Partial<React.ComponentProps<typeof CatalogoClient>['fichas'][number]> = {}) => ({
   id: 'f1', name: 'Pão c/ Linguiça Completo', code: '910000000501', category: 'Pão Francês',
   imagePath: 'uploads/preparo/foto-1.jpg', status: 'ACTIVE' as const, ingredientes: ['Pão Francês', 'Linguiça', 'Queijo Minas'],
+  segment: 'LANCHONETE' as const, ovenMode: null, temperature: null, cookTime: null, sourceFilePath: null,
   updatedAt: '2026-10-01T10:00:00.000Z', ...over,
 });
 
@@ -45,7 +46,7 @@ describe('Catálogo', () => {
     expect(html).toContain('Pão Francês');
     expect(html).toContain('Código 910000000501');
     expect(html).toContain('Ver padrão');
-    expect(html).toContain('/uploads/preparo/foto-1.jpg');
+    expect(html).toContain('/uploads/preparo/foto-1.jpg?w=320');
     expect(html).toContain('href="/modulos/padronizacao/f1"');
     expect(html).not.toContain('Queijo Minas');
     expect(html).toContain('Buscar produto, código ou ingrediente');

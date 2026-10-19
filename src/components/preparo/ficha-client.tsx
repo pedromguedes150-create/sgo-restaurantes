@@ -3,14 +3,14 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Camera, ChefHat, ChevronLeft, ChevronRight, History, ImageOff, Info, List, Pencil, Power, Trash2, X } from 'lucide-react';
+import { Camera, ChefHat, ChevronLeft, ChevronRight, ExternalLink, FileText, Flame, History, ImageOff, Info, List, Pencil, Power, Thermometer, Timer, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/ds/button';
 import { Modal } from '@/components/ui/ds/modal';
 import { Banner } from '@/components/ui/ds/banner';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
 import { compressImage } from '@/lib/image-compress';
 import { cn } from '@/lib/utils';
-import { textoQuantidade, CAMPO_FOTO } from '@/lib/preparo/tipos';
+import { textoQuantidade, CAMPO_FOTO, abaDoSegmento, capaDaFicha, ehPdf } from '@/lib/preparo/tipos';
 import type { FichaCompleta, LinhaDoHistorico } from '@/lib/preparo/query';
 import { paraEditavel } from './editor-ficha';
 import { FormularioFicha } from './formulario-ficha';
@@ -40,16 +40,18 @@ export function FichaClient({ ficha, vizinhos, isAdmin, historico, categorias }:
 
   const inicial = React.useMemo(() => paraEditavel(ficha), [ficha]);
   const inativa = ficha.status === 'INACTIVE';
+  const guia = ficha.segment === 'RESTAURANTE';
+  const voltar = `/modulos/padronizacao?aba=${abaDoSegmento(ficha.segment ?? 'LANCHONETE')}`;
 
   async function alternarStatus() {
     const status = inativa ? 'ACTIVE' : 'INACTIVE';
-    if (!inativa && !window.confirm('Desativar esta ficha? Ela some do catálogo dos funcionários e continua no histórico administrativo.')) return;
+    if (!inativa && !window.confirm(guia ? 'Desativar este guia? Ele some do catálogo dos funcionários e continua no histórico administrativo.' : 'Desativar esta ficha? Ela some do catálogo dos funcionários e continua no histórico administrativo.')) return;
     setMudandoStatus(true);
     try {
       const res = await fetch(`/api/padronizacao/${ficha.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status', status }) });
       const body = await res.json().catch(() => ({})) as { error?: string };
       if (!res.ok) { setAviso({ tone: 'danger', title: body.error ?? 'Não foi possível mudar a situação.' }); return; }
-      setAviso({ tone: 'success', title: status === 'ACTIVE' ? 'Ficha reativada.' : 'Ficha desativada.' });
+      setAviso({ tone: 'success', title: status === 'ACTIVE' ? (guia ? 'Guia reativado.' : 'Ficha reativada.') : (guia ? 'Guia desativado.' : 'Ficha desativada.') });
       router.refresh();
     } finally {
       setMudandoStatus(false);
@@ -69,7 +71,11 @@ export function FichaClient({ ficha, vizinhos, isAdmin, historico, categorias }:
           <div className="min-w-0">
             <p className="sgo-type-11 font-semibold text-brand">{ficha.category}</p>
             <h2 className="sgo-type-24 mt-1 font-bold text-ink-900">{ficha.name}</h2>
-            <p className="mt-1 text-sm text-ink-500">Código: <span className="font-semibold tabular-nums text-ink-900">{ficha.code}</span>{inativa && <StatusBadge tone="neutral" className="ml-2">Inativa</StatusBadge>}</p>
+            {guia ? (
+              <p className="mt-1 text-sm text-ink-500">{ficha.items.length} preparação(ões) neste guia{inativa && <StatusBadge tone="neutral" className="ml-2">Inativa</StatusBadge>}</p>
+            ) : (
+              <p className="mt-1 text-sm text-ink-500">Código: <span className="font-semibold tabular-nums text-ink-900">{ficha.code}</span>{inativa && <StatusBadge tone="neutral" className="ml-2">Inativa</StatusBadge>}</p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 rounded-control border border-line-strong bg-surface p-1">
@@ -77,7 +83,7 @@ export function FichaClient({ ficha, vizinhos, isAdmin, historico, categorias }:
               <span className="px-2 text-sm tabular-nums text-ink-700">{vizinhos.posicao > 0 ? `${vizinhos.posicao} de ${vizinhos.total}` : '—'}</span>
               <NavLink id={vizinhos.nextId} rotulo="Próximo" icone={<ChevronRight className="h-4 w-4" aria-hidden />} />
             </div>
-            <Link href="/modulos/padronizacao" aria-label="Voltar para Padronização" title="Voltar para Padronização"
+            <Link href={voltar} aria-label="Voltar para Padronização" title="Voltar para Padronização"
               className="flex h-10 w-10 items-center justify-center rounded-control bg-sunken text-ink-700 hover:bg-brand-tint hover:text-brand">
               <X className="h-5 w-5" aria-hidden />
             </Link>
@@ -85,8 +91,8 @@ export function FichaClient({ ficha, vizinhos, isAdmin, historico, categorias }:
         </div>
         {isAdmin && (
           <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
-            <Button type="button" size="sm" variant="secondary" onClick={() => { setAviso(null); setEditando(true); }}><Pencil className="h-4 w-4" /> Editar ficha</Button>
-            <Button type="button" size="sm" variant="secondary" onClick={() => { setAviso(null); setFoto(true); }}><Camera className="h-4 w-4" /> Alterar foto</Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => { setAviso(null); setEditando(true); }}><Pencil className="h-4 w-4" /> {guia ? 'Editar guia' : 'Editar ficha'}</Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => { setAviso(null); setFoto(true); }}><Camera className="h-4 w-4" /> {guia ? 'Alterar capa' : 'Alterar foto'}</Button>
             <Button type="button" size="sm" variant={inativa ? 'secondary' : 'danger'} onClick={alternarStatus} loading={mudandoStatus}><Power className="h-4 w-4" /> {inativa ? 'Reativar' : 'Desativar'}</Button>
           </div>
         )}
@@ -94,6 +100,8 @@ export function FichaClient({ ficha, vizinhos, isAdmin, historico, categorias }:
 
       {aviso && <Banner tone={aviso.tone} title={aviso.title} onDismiss={() => setAviso(null)} />}
 
+      {guia ? <CorpoDoGuia ficha={ficha} /> : (
+      <>
       <div role="tablist" aria-label="Seção da ficha" className="flex flex-wrap gap-2">
         {ABAS.map(({ value, label, Icone }) => {
           const ativa = aba === value;
@@ -175,6 +183,8 @@ export function FichaClient({ ficha, vizinhos, isAdmin, historico, categorias }:
           <figcaption className="mt-2 text-right text-xs text-ink-500">Imagem de referência</figcaption>
         </figure>
       </div>
+      </>
+      )}
 
       {isAdmin && (
         <details className="rounded-card border border-line bg-surface">
@@ -203,12 +213,83 @@ export function FichaClient({ ficha, vizinhos, isAdmin, historico, categorias }:
             inicial={inicial}
             categorias={categorias}
             onClose={() => setEditando(false)}
-            onSalvou={() => { setEditando(false); setAviso({ tone: 'success', title: 'Ficha atualizada.' }); }}
+            onSalvou={() => { setEditando(false); setAviso({ tone: 'success', title: guia ? 'Guia atualizado.' : 'Ficha atualizada.' }); }}
           />
-          <AlterarFoto open={foto} onClose={() => setFoto(false)} fichaId={ficha.id} imagePath={ficha.imagePath} nome={ficha.name}
+          <AlterarFoto open={foto} onClose={() => setFoto(false)} fichaId={ficha.id} imagePath={ficha.imagePath} nome={ficha.name} guia={guia}
             onFeito={(msg) => { setFoto(false); setAviso({ tone: 'success', title: msg }); router.refresh(); }} />
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * O GUIA DO RESTAURANTE (v1.172.0): três fatos em destaque (função ·
+ * temperatura · tempo), o ARQUIVO como conteúdo (PDF embutido ou a foto em
+ * tamanho de tela), as preparações cobertas e a observação. Nada de tabela de
+ * ingredientes: o guia cobre um grupo de preparos, e o documento é o padrão.
+ */
+function CorpoDoGuia({ ficha }: { ficha: FichaCompleta }) {
+  const pdf = ehPdf(ficha.sourceFilePath);
+  const imagem = !pdf ? capaDaFicha(ficha) : null;
+  const arquivo = ficha.sourceFilePath ?? imagem;
+  return (
+    <div className="space-y-4" data-testid="guia-restaurante">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <Fato Icone={Flame} rotulo="Função" valor={ficha.ovenMode ?? null} />
+        <Fato Icone={Thermometer} rotulo="Temperatura" valor={ficha.temperature ?? null} />
+        <Fato Icone={Timer} rotulo="Tempo" valor={ficha.cookTime ?? null} />
+      </div>
+
+      <section className="overflow-hidden rounded-card border border-line bg-surface shadow-sgo-card">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-ink-900"><FileText className="h-4 w-4 text-brand" aria-hidden /> Guia de preparações</h3>
+          {arquivo && (
+            <a href={`/${arquivo}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden /> Abrir arquivo
+            </a>
+          )}
+        </div>
+        {pdf && ficha.sourceFilePath ? (
+          <iframe title={`Guia: ${ficha.name}`} src={`/${ficha.sourceFilePath}#view=FitH`} className="w-full bg-sunken" style={{ height: '75vh' }} />
+        ) : imagem ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={`/${imagem}?w=1600`} alt={`Guia: ${ficha.name}`} className="w-full bg-sunken object-contain" style={{ maxHeight: '80vh' }} />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-ink-400">
+            <ImageOff className="h-6 w-6" aria-hidden />
+            <span className="text-xs">Este guia ainda não tem arquivo. O Administrador pode enviar a capa ou reimportar.</span>
+          </div>
+        )}
+      </section>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <section className="rounded-card border border-line bg-surface p-4">
+          <h3 className="sgo-type-11 font-semibold text-ink-500">Preparações cobertas</h3>
+          {ficha.items.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-500">O guia não lista preparações.</p>
+          ) : (
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {ficha.items.map((i, k) => (
+                <li key={k} className="rounded-pill border border-line bg-sunken px-3 py-1 text-sm font-medium text-ink-900">{i.ingredientName}</li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <Texto titulo="Observação" texto={ficha.generalNotes} vazio="Sem observação." />
+      </div>
+    </div>
+  );
+}
+
+function Fato({ Icone, rotulo, valor }: { Icone: React.ComponentType<{ className?: string }>; rotulo: string; valor: string | null }) {
+  return (
+    <div className="flex items-center gap-3 rounded-card border border-line bg-surface p-3 shadow-sgo-card">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-brand-tint text-brand"><Icone className="h-5 w-5" aria-hidden /></span>
+      <div className="min-w-0">
+        <p className="sgo-type-11 font-semibold text-ink-500">{rotulo}</p>
+        <p className={cn('truncate text-base font-bold', valor ? 'text-ink-900' : 'text-ink-400')}>{valor ?? '—'}</p>
+      </div>
     </div>
   );
 }
@@ -237,8 +318,8 @@ function descricaoDaMudanca(h: LinhaDoHistorico): string {
 }
 
 /** ALTERAR FOTO — substitui, remove ou cancela. Só a foto; o resto da ficha não é tocado. */
-function AlterarFoto({ open, onClose, fichaId, imagePath, nome, onFeito }: {
-  open: boolean; onClose: () => void; fichaId: string; imagePath: string | null; nome: string; onFeito: (msg: string) => void;
+function AlterarFoto({ open, onClose, fichaId, imagePath, nome, onFeito, guia = false }: {
+  open: boolean; onClose: () => void; fichaId: string; imagePath: string | null; nome: string; onFeito: (msg: string) => void; guia?: boolean;
 }) {
   const [nova, setNova] = React.useState<File | null>(null);
   const [url, setUrl] = React.useState<string | null>(null);
@@ -282,8 +363,8 @@ function AlterarFoto({ open, onClose, fichaId, imagePath, nome, onFeito }: {
     <Modal
       open={open}
       onClose={onClose}
-      title="Alterar foto"
-      description={`Só a foto de "${nome}" muda. Ingredientes, pesos, código e demais informações ficam como estão.`}
+      title={guia ? 'Alterar capa' : 'Alterar foto'}
+      description={guia ? `Só a capa de "${nome}" muda. O arquivo do guia, as preparações e os demais dados ficam como estão.` : `Só a foto de "${nome}" muda. Ingredientes, pesos, código e demais informações ficam como estão.`}
       footer={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={ocupado}>Cancelar</Button>

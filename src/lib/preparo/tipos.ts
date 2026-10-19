@@ -18,6 +18,27 @@ export interface ItemDaFicha {
   notes: string | null;
 }
 
+/**
+ * As duas ABAS (v1.172.0). LANCHONETE = ficha de UM produto (código, ingredientes,
+ * pesos). RESTAURANTE = guia de um GRUPO de preparos: o arquivo enviado é o
+ * conteúdo; função do forno, temperatura, tempo e a lista de preparações
+ * (gravada em `items`, só o nome) servem à busca e aos cartões; sem código.
+ */
+export type Segmento = 'LANCHONETE' | 'RESTAURANTE';
+export const SEGMENTOS: { value: Segmento; label: string; aba: string }[] = [
+  { value: 'LANCHONETE', label: 'Lanchonete', aba: 'lanchonete' },
+  { value: 'RESTAURANTE', label: 'Restaurante', aba: 'restaurante' },
+];
+export function segmentoDaAba(aba: string | null | undefined): Segmento {
+  return aba === 'restaurante' ? 'RESTAURANTE' : 'LANCHONETE';
+}
+export function abaDoSegmento(s: Segmento): string {
+  return s === 'RESTAURANTE' ? 'restaurante' : 'lanchonete';
+}
+export function normalizarSegmento(v: unknown): Segmento {
+  return v === 'RESTAURANTE' ? 'RESTAURANTE' : 'LANCHONETE';
+}
+
 export interface DadosDaFicha {
   name: string;
   code: string;
@@ -25,10 +46,36 @@ export interface DadosDaFicha {
   preparationMethod: string | null;
   generalNotes: string | null;
   items: ItemDaFicha[];
+  /** Ausente nos dados antigos = LANCHONETE. */
+  segment?: Segmento;
+  /** Só RESTAURANTE: "Ar Seco", "200°C", "15 Min" — texto como está no guia. */
+  ovenMode?: string | null;
+  temperature?: string | null;
+  cookTime?: string | null;
+}
+
+/** O arquivo-fonte do guia é PDF? (decide iframe × imagem e o ícone do cartão) */
+export function ehPdf(path: string | null | undefined): boolean {
+  return !!path && /\.pdf$/i.test(path);
+}
+
+/**
+ * A imagem do cartão/da capa: a foto própria; sem ela, o arquivo-fonte quando
+ * é imagem (o guia do restaurante costuma ser uma foto). PDF não é capa.
+ */
+export function capaDaFicha(f: { imagePath: string | null; sourceFilePath?: string | null }): string | null {
+  if (f.imagePath) return f.imagePath;
+  if (f.sourceFilePath && !ehPdf(f.sourceFilePath)) return f.sourceFilePath;
+  return null;
+}
+
+/** "Ar Seco · 200°C · 15 min" — a leitura rápida do cartão e do topo do guia. */
+export function textoRapido(d: Pick<DadosDaFicha, 'ovenMode' | 'temperature' | 'cookTime'>): string {
+  return [d.ovenMode, d.temperature, d.cookTime].map((x) => (x ?? '').trim()).filter(Boolean).join(' · ');
 }
 
 export const LIMITES = {
-  nome: 120, codigo: 40, categoria: 60, unidade: 30, ingrediente: 120, observacao: 300, texto: 5000, itens: 80,
+  nome: 120, codigo: 40, categoria: 60, unidade: 30, ingrediente: 120, observacao: 300, texto: 5000, itens: 80, rapido: 40,
 } as const;
 
 export const CATEGORIA_PADRAO = 'Geral';
@@ -93,9 +140,15 @@ export function normalizarDados(input: unknown): ResultadoNormalizacao {
 
   const name = texto(b.name);
   if (!name) return { ok: false, motivo: 'SEM_NOME' };
+  const segment = normalizarSegmento(b.segment);
   const code = normalizarCodigo(b.code);
-  if (!code) return { ok: false, motivo: 'SEM_CODIGO' };
+  /* O guia do Restaurante não tem código (decisão do Pedro, 19/10/2026). */
+  if (!code && segment === 'LANCHONETE') return { ok: false, motivo: 'SEM_CODIGO' };
   const category = normalizarCategoria(b.category);
+  const ovenMode = segment === 'RESTAURANTE' ? texto(b.ovenMode) || null : null;
+  const temperature = segment === 'RESTAURANTE' ? texto(b.temperature) || null : null;
+  const cookTime = segment === 'RESTAURANTE' ? texto(b.cookTime) || null : null;
+  if ((ovenMode?.length ?? 0) > LIMITES.rapido || (temperature?.length ?? 0) > LIMITES.rapido || (cookTime?.length ?? 0) > LIMITES.rapido) return { ok: false, motivo: 'MUITO_LONGO' };
   const preparationMethod = textoLongo(b.preparationMethod) || null;
   const generalNotes = textoLongo(b.generalNotes) || null;
 
@@ -122,7 +175,7 @@ export function normalizarDados(input: unknown): ResultadoNormalizacao {
     items.push({ ingredientName, quantity, unit, weightGrams, notes });
   }
 
-  return { ok: true, dados: { name, code, category, preparationMethod, generalNotes, items } };
+  return { ok: true, dados: { name, code, category, preparationMethod, generalNotes, items, segment, ovenMode, temperature, cookTime } };
 }
 
 /* ───────────────────────── rascunho vindo da IA ───────────────────────── */
@@ -143,7 +196,7 @@ export interface RascunhoDaFicha {
  * resto, e NUNCA converte "não sei" em valor. Um número ilegível vira null +
  * lowConfidence, não zero.
  */
-export function rascunhoDaResposta(parsed: unknown): RascunhoDaFicha {
+export function rascunhoDaResposta(parsed: unknown, segment: Segmento = 'LANCHONETE'): RascunhoDaFicha {
   const b = (parsed && typeof parsed === 'object' ? parsed : {}) as Record<string, unknown>;
   const low = new Set<string>(Array.isArray(b.lowConfidence) ? (b.lowConfidence as unknown[]).map(String) : []);
 
@@ -174,9 +227,18 @@ export function rascunhoDaResposta(parsed: unknown): RascunhoDaFicha {
   });
 
   const name = texto(b.name).slice(0, LIMITES.nome);
-  const code = normalizarCodigo(b.code).slice(0, LIMITES.codigo);
+  const code = segment === 'RESTAURANTE' ? '' : normalizarCodigo(b.code).slice(0, LIMITES.codigo);
   if (!name) low.add('name');
-  if (!code) low.add('code');
+  if (!code && segment === 'LANCHONETE') low.add('code');
+  const rapido = (k: 'ovenMode' | 'temperature' | 'cookTime') => {
+    if (segment !== 'RESTAURANTE') return null;
+    const v = texto(b[k]).slice(0, LIMITES.rapido);
+    if (!v) low.add(k);
+    return v || null;
+  };
+  const ovenMode = rapido('ovenMode');
+  const temperature = rapido('temperature');
+  const cookTime = rapido('cookTime');
 
   let photoBox: CaixaDaFoto | null = null;
   const pb = b.photoBox as Record<string, unknown> | null | undefined;
@@ -193,9 +255,10 @@ export function rascunhoDaResposta(parsed: unknown): RascunhoDaFicha {
       preparationMethod: textoLongo(b.preparationMethod).slice(0, LIMITES.texto) || null,
       generalNotes: textoLongo(b.generalNotes).slice(0, LIMITES.texto) || null,
       items,
+      segment, ovenMode, temperature, cookTime,
     },
     lowConfidence: [...low],
-    photoBox,
+    photoBox: segment === 'RESTAURANTE' ? null : photoBox,
   };
 }
 
@@ -235,6 +298,9 @@ export function diferencas(antes: DadosDaFicha, depois: DadosDaFicha): Mudanca[]
   campo('Categoria', antes.category, depois.category);
   campo('Modo de preparo', antes.preparationMethod, depois.preparationMethod);
   campo('Observações', antes.generalNotes, depois.generalNotes);
+  campo('Função', antes.ovenMode ?? null, depois.ovenMode ?? null);
+  campo('Temperatura', antes.temperature ?? null, depois.temperature ?? null);
+  campo('Tempo', antes.cookTime ?? null, depois.cookTime ?? null);
 
   const sobrando = [...antes.items];
   for (const novo of depois.items) {
