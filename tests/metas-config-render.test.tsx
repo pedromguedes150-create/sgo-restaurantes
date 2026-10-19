@@ -65,6 +65,11 @@ describe('Configuração da Meta — uma tela, por módulo', () => {
     const html = renderToString(React.createElement(MetaPorModuloClient, { grupos, canEdit: true }));
     expect(html).not.toContain('por checklist');
     expect(html).toContain('aria-label="Peso de Tarefas"');
+    /* v1.174.1: o kit põe white-space:nowrap em todo td; sem quebrar linha, o texto longo de "Como entra na nota" empurrava a coluna do peso para fora da tela (print do Pedro) */
+    expect(html).toContain('max-w-md whitespace-normal');
+    expect(html).toContain('max-w-xs whitespace-normal');
+    const css = readFileSync('src/styles/globals.css', 'utf8');
+    expect(css).toContain('.sgo-tbl td.whitespace-normal, .sgo-tbl tbody td.whitespace-normal { white-space: normal; }');
     expect(html).toMatch(/aria-label="Peso de Tarefas"[^>]*value="100"/);
     expect(html).toContain('aria-label="Peso de Gestão de Troco"');
     expect(html).toContain('aria-label="Peso de Cancelamentos"');

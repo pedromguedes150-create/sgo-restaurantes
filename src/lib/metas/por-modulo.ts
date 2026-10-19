@@ -48,7 +48,7 @@ export const INDICADORES: Record<string, IndicadorDeModulo> = {
   TASKS: {
     entity: 'tasksMeta', tipo: 'PESO',
     indicador: 'Checklists do dia realizados',
-    como: 'Realizados ÷ (realizados + não realizados) de todos os checklists que entram na meta, cada um valendo igual. Peso ÚNICO (nasce em 100); "Entra na meta" segue em Configurações → Checklists.',
+    como: 'Realizados ÷ (realizados + não realizados) de todos os checklists que entram na meta, cada um valendo igual. Peso único do conjunto (nasce em 100); "Entra na meta" fica em Configurações → Checklists.',
   },
   CASH: {
     entity: 'cashMeta', tipo: 'PESO',

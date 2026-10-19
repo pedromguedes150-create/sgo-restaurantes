@@ -112,3 +112,11 @@
   .escala-grade tr.escala-grupo td { background: var(--sgo-sunken) !important; color: var(--sgo-ink-900) !important; font-weight: 700; font-size: 8px; letter-spacing: 0.04em; text-align: left; padding: 0 4px !important; height: 14px; }
   .escala-grade tbody tr { break-inside: avoid; }
 }
+
+/* TABELA DO KIT — célula que QUEBRA LINHA (v1.174.1). O kit grava white-space:nowrap
+   em `.sgo-tbl td` (duas classes + tag), e a utilidade `whitespace-normal` do Tailwind
+   (uma classe) perde para ela em silêncio: a célula parecia marcada para quebrar e seguia
+   numa linha só, empurrando as colunas da direita para fora da tela (print do Pedro na
+   Configuração da Meta). Três classes + tag vencem; vale para o Table do design system
+   (prop `wrap`) e para qualquer td com a utilidade. */
+.sgo-tbl td.whitespace-normal, .sgo-tbl tbody td.whitespace-normal { white-space: normal; }

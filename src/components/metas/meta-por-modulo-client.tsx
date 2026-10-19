@@ -68,10 +68,10 @@ export function MetaPorModuloClient({ grupos, canEdit }: { grupos: GrupoPorModul
                             : <StatusBadge tone="neutral">Sem indicador</StatusBadge>}
                         </span>
                       </td>
-                      <td className="min-w-56 text-ink-900">
+                      <td className="min-w-56 max-w-xs whitespace-normal text-ink-900">
                         {ind ? ind.indicador : <span className="text-ink-500">Ainda sem indicador de meta — o SGO não mede este módulo para a bonificação.</span>}
                       </td>
-                      <td className="min-w-64 text-xs text-ink-700">
+                      <td className="min-w-64 max-w-md whitespace-normal text-xs text-ink-700">
                         {ind?.como ?? '—'}
                         {l.compartilhadoCom.length > 0 && (
                           <span className="block text-ink-500">Mesmo ajuste de: {l.compartilhadoCom.join(', ')}.</span>
