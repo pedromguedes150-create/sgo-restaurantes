@@ -83,3 +83,32 @@
 .sgo-grupo__barra { flex: 1 1 0; min-width: 8px; border-radius: 4px 4px 0 0; background: color-mix(in srgb, var(--sgo-brand) 28%, var(--sgo-surface)); }
 .sgo-grupo__barra--atual { background: var(--sgo-brand); }
 @media print { .sgo-grupo__hdr { background: none; color: var(--sgo-ink-900); border-bottom: 2px solid var(--sgo-brand); } }
+
+/* ESCALA — o PAPEL da grade de presença (v1.173.1). Pedido do Pedro: "grade
+   contínua e uniforme, não uma planilha quebrada". Na tela cada status desenha
+   a própria borda (F e FE têm, T não) — no papel isso virava células com e sem
+   contorno lado a lado. Aqui a BORDA É DA CÉLULA (th/td), fina e igual para as
+   31 colunas, e o miolo de status perde borda, raio e sombra e preenche a célula
+   inteira; a cor de fundo (bordô do T, cinza da Folga, verde das Férias) segue
+   vindo da tabela STATUS da tela. Cabeçalho bordô com texto branco; faixa cinza
+   por grupo de escala; nome em 8px com quebra controlada (nunca cortado).
+   Larguras: 176 + 31×26 + 76 = 1058px, dentro dos ~1085px úteis da A4 paisagem
+   com 5mm de margem (o @page vive no componente: só vale com a tela montada).
+   Estas regras moram aqui, e não num <style> do componente, porque o guarda de
+   paleta do design system lê "text-align"/"border-radius" dentro de um .tsx
+   como se fossem classes de cor — e porque o CSS de impressão é do sistema. */
+@media print {
+  .escala-grade { max-height: none !important; overflow: visible !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .escala-grade table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+  .escala-grade th, .escala-grade td { border: 0.5pt solid var(--sgo-line-strong) !important; padding: 0 !important; height: 17px; vertical-align: middle; }
+  .escala-grade thead th { background: var(--sgo-brand) !important; color: var(--sgo-on-brand) !important; border-color: color-mix(in srgb, var(--sgo-on-brand) 40%, var(--sgo-brand)) !important; font-weight: 700; text-align: center; }
+  .escala-grade thead th > div { background: transparent !important; box-shadow: none !important; padding: 0 !important; margin: 0 auto; }
+  .escala-grade .col-nome { width: 176px; text-align: left !important; padding: 0 4px !important; }
+  .escala-grade .col-dia { width: 26px; }
+  .escala-grade .col-tot { width: 76px; text-align: center; font-size: 8px; }
+  .escala-grade .escala-nome { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; font-size: 8px !important; line-height: 1.15 !important; word-break: break-word; }
+  .escala-grade td.col-dia { background: transparent !important; }
+  .escala-grade td.col-dia > * { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; width: 100% !important; height: 16px !important; margin: 0 !important; display: flex; align-items: center; justify-content: center; font-size: 9px !important; }
+  .escala-grade tr.escala-grupo td { background: var(--sgo-sunken) !important; color: var(--sgo-ink-900) !important; font-weight: 700; font-size: 8px; letter-spacing: 0.04em; text-align: left; padding: 0 4px !important; height: 14px; }
+  .escala-grade tbody tr { break-inside: avoid; }
+}

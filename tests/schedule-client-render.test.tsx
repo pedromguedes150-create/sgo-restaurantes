@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: () => {}, push: () => {}, replace: () => {} }),
@@ -136,15 +137,17 @@ describe('Impressão — a grade cabe numa folha A4 paisagem', () => {
 
   it('a orientação paisagem é fixada só para esta tela, via @page', () => {
     const html = render();
-    expect(html).toContain('@page { size: landscape; margin: 5mm; }');
+    expect(html).toContain('@page { size: A4 landscape; margin: 5mm; }');
   });
 
   it('a tabela vira table-fixed e ganha largura por coluna só na impressão (v1.173.0: no <style>, para caber a A4 inteira)', () => {
     const html = render();
     expect(html).toContain('print:table-fixed');
-    expect(html).toContain('.escala-grade .col-nome { width: 144px; }'); // coluna do colaborador
-    expect(html).toContain('.escala-grade .col-dia { width: 28px; }'); // coluna do dia
-    expect(html).toContain('.escala-grade .col-tot { width: 64px; }'); // coluna de totais
+    /* As larguras do papel vivem no globals.css (v1.173.1), sob .escala-grade */
+    const css = readFileSync('src/styles/globals.css', 'utf8');
+    expect(css).toContain('.escala-grade .col-nome { width: 176px;'); // coluna do colaborador
+    expect(css).toContain('.escala-grade .col-dia { width: 26px; }'); // coluna do dia
+    expect(css).toContain('.escala-grade .col-tot { width: 76px;'); // coluna de totais
     expect(html).toContain('class="col-nome sticky left-0 top-0');
     expect(html).toContain('class="col-dia sticky top-0');
   });

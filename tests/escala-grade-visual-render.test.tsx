@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: () => {}, push: () => {}, replace: () => {} }),
@@ -95,6 +96,37 @@ describe('Grade', () => {
     for (const r of ['Trabalho', 'Atraso', 'Folga', 'Falta injustificada', 'Falta justificada', 'Atestado', 'Férias', 'Afastado']) expect(html).toContain(r);
     expect(html).toContain('T · F · Aus');
     expect(html).toContain('Escala — Jardim Teresópolis · Agosto/2026 · Realizado');
+  });
+});
+
+describe('PDF — grade uniforme (v1.173.1)', () => {
+  const css = readFileSync('src/styles/globals.css', 'utf8');
+  const bloco = css.slice(css.indexOf('.escala-grade { max-height: none'));
+
+  it('toda célula tem a MESMA borda fina (da célula, não do status), o miolo perde borda/raio e preenche; cabeçalho bordô; faixa do grupo; nome quebra em vez de cortar', () => {
+    expect(bloco).toContain('.escala-grade th, .escala-grade td { border: 0.5pt solid var(--sgo-line-strong) !important;');
+    expect(bloco).toContain('.escala-grade td.col-dia > * { border: 0 !important; border-radius: 0 !important;');
+    expect(bloco).toContain('.escala-grade thead th { background: var(--sgo-brand) !important; color: var(--sgo-on-brand) !important;');
+    expect(bloco).toContain('.escala-grade tr.escala-grupo td { background: var(--sgo-sunken) !important;');
+    expect(bloco).toContain('print-color-adjust: exact');
+    expect(bloco).toContain('.escala-grade .escala-nome { white-space: normal !important;');
+    const html = render();
+    expect(html).toContain('class="escala-grupo bg-sunken"');
+    expect(html).toContain('class="escala-nome ');
+    expect(html).not.toContain('print:truncate');
+    /* o @page é do componente (só vale com a tela montada); A4, não "a folha que a impressora tiver" */
+    expect(html).toContain('<style>@page { size: A4 landscape; margin: 5mm; }</style>');
+  });
+
+  it('as 31 colunas e os totais cabem na A4 paisagem: 176 + 31×26 + 76 = 1058px < 1085px úteis; totais saem como três números no papel', () => {
+    expect(bloco).toContain('.escala-grade .col-nome { width: 176px;');
+    expect(bloco).toContain('.escala-grade .col-dia { width: 26px; }');
+    expect(bloco).toContain('.escala-grade .col-tot { width: 76px;');
+    expect(176 + 31 * 26 + 76).toBeLessThan(1085);
+    const html = render();
+    expect(html).toContain('data-testid="totais-impressao"');
+    expect(html).toContain('>28 · 1 · 2</span>');
+    expect(html).toContain('print:hidden" data-testid="totais-linha"');
   });
 });
 
