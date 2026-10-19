@@ -437,7 +437,7 @@ export const GUIDE: GuideSection[] = [
           'A grade rola por dentro de um quadro: o CABEÇALHO DOS DIAS fica fixo ao rolar para baixo e os NOMES ficam fixos ao rolar para o lado. Sábados e domingos têm fundo levemente cinza; a coluna de HOJE fica em tom bordô claro, com o número do dia em negrito.',
           'MARCAR O DIA (aba Realizado): toque na célula e abre uma PALETA por cima da tela com os oito status em botões coloridos grandes (serve para o dedo no celular) e "Limpar o dia". Um toque escolhe e grava — é a mesma gravação de antes; antes o seletor abria cortado dentro da grade e só mostrava dois itens.',
           'TOTAIS por pessoa viraram três pílulas: T (bordô), F (cinza, negrito) e Aus (âmbar quando há ausência). São os mesmos números de sempre.',
-          'PDF: letras maiores, folgas em negrito, e as colunas ocupam a folha A4 paisagem inteira; unidade, mês, ano e legenda continuam no topo.',
+          'PDF (v1.173.1): a folha virou uma GRADE UNIFORME — todas as 31 células do dia com o mesmo tamanho e a mesma borda fina, independentemente do status (antes só F e FE tinham contorno). T preenche a célula em bordô, Folga em cinza-claro com F em negrito, cabeçalho bordô com texto branco, faixa cinza em cada grupo de escala (5x2, 6x1, 12x36…), nomes completos (quebram em duas linhas em vez de cortar), totais inteiros, tudo em A4 paisagem com margem de 5 mm. Unidade, mês, ano e legenda continuam no topo.',
         ],
       },
       {

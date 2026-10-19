@@ -53,6 +53,15 @@ const TYPE_OPTIONS: { value: ScheduleType; label: string }[] = [
   { value: 'CUSTOM', label: 'Personalizada' },
 ];
 const WD = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+/**
+ * O PAPEL DA ESCALA (v1.173.1): A4 paisagem com 5mm de margem, só enquanto
+ * esta tela está montada — um `@page` global mudaria a impressão de TODO
+ * relatório do sistema. As regras da grade uniforme (borda por célula, miolo
+ * de status sem borda, faixa de grupo, nome que quebra, larguras 176 + 31×26
+ * + 76 = 1058px) vivem em `src/styles/globals.css` sob `.escala-grade`.
+ */
+const CSS_IMPRESSAO = '@page { size: A4 landscape; margin: 5mm; }';
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 import { EmployeeScheduleForm, type TipoDeEscala } from './employee-schedule-form';
@@ -156,12 +165,10 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
       {/* Margem enxuta: com 25+ linhas numa unidade, cada mm de margem é
           espaço que sai das linhas da grade — 5mm ainda imprime sem cortar
           nada na maioria das impressoras. */}
-      {/* Larguras de IMPRESSÃO das colunas (v1.173.0): 144 + 31×28 + 64 = 1076px,
-          a A4 paisagem inteira menos as margens (~1085px). Vivem aqui, e não em
-          classes, porque 28px está fora da grade 8pt do design system — e são
-          medidas de papel, não de tela. O quadro de rolagem da tela
-          (altura limitada, cabeçalho e nomes fixos) é desligado no papel. */}
-      <style>{'@page { size: landscape; margin: 5mm; } @media print { .escala-grade { max-height: none !important; overflow: visible !important; } .escala-grade .col-nome { width: 144px; } .escala-grade .col-dia { width: 28px; } .escala-grade .col-tot { width: 64px; } }'}</style>
+      {/* O CSS de impressão (`CSS_IMPRESSAO`, acima) também desliga o quadro
+          de rolagem da tela — altura limitada, cabeçalho e nomes fixos — que
+          no papel não faz sentido. */}
+      <style>{CSS_IMPRESSAO}</style>
 
       {/* Cabeçalho só de impressão: os seletores de unidade/mês/ano ficam
           `print:hidden` (fazem parte da barra de ações), e sem isto a folha
@@ -475,13 +482,13 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                 return (
                   <Fragment key={row.collaboratorId}>
                     {showGroup && (
-                      <tr className="bg-sunken">
+                      <tr className="escala-grupo bg-sunken">
                         <td colSpan={grid.daysCount + 2} className="px-2 py-1 text-left sgo-type-11 font-semibold tracking-wide text-ink-500 print:px-1 print:py-0">{row.typeLabel}</td>
                       </tr>
                     )}
                     <tr className="group border-t transition-colors duration-sgo-1 hover:bg-sunken/60">
                       <td className="col-nome sticky left-0 z-10 min-w-[184px] bg-surface px-2 py-1.5 text-left transition-colors duration-sgo-1 group-hover:bg-sunken print:static print:min-w-0 print:px-1 print:py-0">
-                        <div className="font-semibold text-ink-900 print:truncate print:text-[9px]">{row.name}</div>
+                        <div className="escala-nome font-semibold text-ink-900">{row.name}</div>
                         {/* O cargo/turno/setor ajuda na tela; na folha do quadro o
                             que importa é o dia-a-dia — tirá-lo dá mais espaço à
                             grade sem perder nenhuma informação da letra do dia. */}
@@ -538,11 +545,16 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                           : (
                             /* Três pílulas com a cor do status que contam — os
                                MESMOS números de `totaisDaLinha`, só a roupa mudou. */
-                            <span className="inline-flex items-center gap-1 whitespace-nowrap print:gap-0.5" data-testid="totais-linha">
-                              <span className="rounded bg-brand px-1 text-[10px] font-bold text-on-brand print:text-[8px]">T {tot.trabalho}</span>
-                              <span className="rounded border border-line-strong bg-sunken px-1 text-[10px] font-extrabold text-ink-900 print:text-[8px]">F {tot.folgas}</span>
-                              <span className={cn('rounded px-1 text-[10px] font-bold print:text-[8px]', tot.ausencias > 0 ? 'bg-warning-bg text-warning' : 'bg-sunken text-ink-500')}>Aus {tot.ausencias}</span>
-                            </span>
+                            <>
+                              <span className="inline-flex items-center gap-1 whitespace-nowrap print:hidden" data-testid="totais-linha">
+                                <span className="rounded bg-brand px-1 text-[10px] font-bold text-on-brand">T {tot.trabalho}</span>
+                                <span className="rounded border border-line-strong bg-sunken px-1 text-[10px] font-extrabold text-ink-900">F {tot.folgas}</span>
+                                <span className={cn('rounded px-1 text-[10px] font-bold', tot.ausencias > 0 ? 'bg-warning-bg text-warning' : 'bg-sunken text-ink-500')}>Aus {tot.ausencias}</span>
+                              </span>
+                              {/* No papel as pílulas não cabem em 76px: saem os três números
+                                  na ordem do cabeçalho (T · F · Aus), inteiros. */}
+                              <span className="hidden whitespace-nowrap tabular-nums text-ink-900 print:inline" data-testid="totais-impressao">{tot.trabalho} · {tot.folgas} · {tot.ausencias}</span>
+                            </>
                           )}
                       </td>
                     </tr>
