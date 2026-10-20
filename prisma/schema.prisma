@@ -4840,3 +4840,92 @@ model RhAfastamento {
   @@index([collaboratorId, endDate])
   @@map("rh_afastamentos")
 }
+
+// ───────────────────────── COMISSÃO POR VENDEDOR (v1.175.0) ─────────────────────────
+// A apuração da planilha "Produtividade por Vendedor — Analítico" do Teknisa:
+// um registro por unidade × mês de VENDA, com as linhas conferidas (vendedor,
+// cozinha, freelancer, não cadastrado) e o lançamento de Comissão que cada
+// linha gerou na competência de PAGAMENTO (venda + 2 meses). Sem FK para
+// `collaborator_payouts` de propósito: o Admin pode excluir o lançamento e a
+// apuração continua legível.
+
+enum CommissionLineKind {
+  VENDEDOR
+  COZINHA
+  GRUPO
+  FREELANCER
+  NAO_CADASTRADO
+}
+
+model CommissionImport {
+  id             String   @id @default(cuid())
+  unitId         String
+  /// 'AAAA-MM' — o mês das vendas da planilha (ela não traz data; quem importa informa).
+  salesMonth     String
+  /// 'AAAA-MM' — competência de pagamento: venda + 2 (setembro paga em novembro).
+  payMonth       String
+  fileName       String
+  unitDeclared   String?
+  totalSales     Decimal  @db.Decimal(14, 2)
+  groupSales     Decimal  @db.Decimal(14, 2)
+  sellerPct      Decimal  @db.Decimal(6, 3)
+  kitchenPct     Decimal  @db.Decimal(6, 3)
+  totalAmount    Decimal  @db.Decimal(12, 2)
+  replacedCount  Int      @default(0)
+  importedById   String?
+  importedByName String
+  importedAt     DateTime @default(now())
+
+  lines CommissionLine[]
+
+  @@unique([unitId, salesMonth])
+  @@index([payMonth])
+  @@map("commission_imports")
+}
+
+model CommissionLine {
+  id               String             @id @default(cuid())
+  importId         String
+  kind             CommissionLineKind
+  sellerCode       String?
+  sellerName       String
+  sales            Decimal            @db.Decimal(14, 2)
+  pct              Decimal            @db.Decimal(6, 3)
+  calculated       Decimal            @db.Decimal(12, 2)
+  adjustment       Decimal            @default(0) @db.Decimal(12, 2)
+  adjustmentNote   String?
+  amount           Decimal            @db.Decimal(12, 2)
+  collaboratorId   String?
+  collaboratorName String?
+  payoutId         String?
+
+  import CommissionImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@index([importId])
+  @@map("commission_lines")
+}
+
+/// Vínculo lembrado: "1065 - MARIA MERCES" desta unidade é este colaborador do RH.
+model CommissionSellerLink {
+  id             String   @id @default(cuid())
+  unitId         String
+  sellerCode     String
+  sellerName     String
+  collaboratorId String
+  createdByName  String
+  createdAt      DateTime @default(now())
+
+  @@unique([unitId, sellerCode])
+  @@map("commission_seller_links")
+}
+
+/// Funções (cargos do RH, chave normalizada) que dividem a comissão da cozinha.
+model CommissionKitchenJobTitle {
+  id            String   @id @default(cuid())
+  jobTitleKey   String   @unique
+  jobTitle      String
+  createdByName String
+  createdAt     DateTime @default(now())
+
+  @@map("commission_kitchen_job_titles")
+}

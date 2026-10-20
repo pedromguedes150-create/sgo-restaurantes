@@ -35,7 +35,7 @@ import { textoHoras } from '@/lib/overtime/calculo';
  * responde "quanto e quantos", e só quem precisa do detalhe expande.
  */
 
-export type Tipo = 'EXTRA' | 'MOBILITY';
+export type Tipo = 'EXTRA' | 'MOBILITY' | 'COMMISSION';
 
 export interface HoraExtraUI {
   id: string;
@@ -89,9 +89,9 @@ export interface ColaboradorUI {
   id: string; nome: string; cpf: string | null; unitId: string; unidade: string;
 }
 
-const ROTULO: Record<Tipo, string> = { EXTRA: 'Hora extra', MOBILITY: 'Mobilidade' };
+const ROTULO: Record<Tipo, string> = { EXTRA: 'Hora extra', MOBILITY: 'Mobilidade', COMMISSION: 'Comissão' };
 /** O que se conta em cada aba: HE não é "lançamento". */
-const UNIDADE_DE_CONTAGEM: Record<Tipo, string> = { EXTRA: 'hora(s) extra(s)', MOBILITY: 'lançamento(s)' };
+const UNIDADE_DE_CONTAGEM: Record<Tipo, string> = { EXTRA: 'hora(s) extra(s)', MOBILITY: 'lançamento(s)', COMMISSION: 'lançamento(s)' };
 
 async function acao(body: Record<string, unknown>): Promise<{ ok: boolean; error?: string } & Record<string, unknown>> {
   const r = await fetch('/api/people/payouts', {
