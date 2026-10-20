@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Calculator, CalendarCheck, Settings2 } from 'lucide-react';
+import { ArrowLeft, Calculator, CalendarCheck, Download, Settings2 } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -48,7 +48,13 @@ export default async function ComissaoPage({ searchParams }: { searchParams: { a
     return (
       <div className="space-y-4">
         <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
-        <LargeTitle title="Comissão" subtitle={`Competência de pagamento ${rotuloDoMes(competencia)} = vendas de ${rotuloDoMes(somarMeses(competencia, -2))}. Entrega por unidade, fechamento e o arquivo da administradora.`} tabs={tabs} />
+        <LargeTitle
+          title="Comissão"
+          subtitle={`Competência de pagamento ${rotuloDoMes(competencia)} = vendas de ${rotuloDoMes(somarMeses(competencia, -2))}. Entrega por unidade, fechamento e o Pedido de Carga Swile.`}
+          tabs={tabs}
+          actions={<a href={`/api/comissao/swile?mes=${competencia}`} className="sgo-btn sgo-btn--sm" data-testid="exportar-swile"><Download className="h-4 w-4" /> Pedido de Carga Swile (XLSX)</a>}
+        />
+        <p className="text-xs text-ink-500">O arquivo da Swile sai no modelo &ldquo;Pedido de Carga Swile — Customizado&rdquo;: Nome · CPF · Saldo Livre (a comissão) · Mobilidade · Refeição e Alimentação, uma linha por pessoa, CPF do cadastro do RH. Quem está sem CPF no RH vai numa aba &ldquo;Sem CPF&rdquo; para completar antes de carregar.</p>
         <Card><CardContent className="pt-4">
           <PayoutsCompetenciaClient
             tipo="COMMISSION" quadro={paraTelaDoQuadro(quadro)} competencia={competencia} meses={[...new Set([competencia, ...meses])]}

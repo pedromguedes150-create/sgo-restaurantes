@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: () => {}, push: () => {}, replace: () => {} }),
@@ -28,6 +29,15 @@ describe('Apuração', () => {
     expect(html).toContain('2 função(ões) marcada(s)');
     expect(html).toContain('Apuração em outubro/2026 · pagamento na competência novembro/2026');
     expect(html).toContain('Ler planilha e apurar');
+    expect(html).toContain('FREELANCER, gerente e encarregado ficam fora');
+  });
+
+  it('fonte: quem não está no RH e gerentes/encarregados ficam em seções RECOLHIDAS, como os freelancers (v1.176.0)', () => {
+    const src = readFileSync('src/components/comissao/apuracao-client.tsx', 'utf8');
+    expect(src).toContain('Fora da comissão — não estão no RH desta unidade');
+    expect(src).toContain('Fora da comissão — gerentes e encarregados');
+    expect(src).toContain('{verNaoCad && <div className="overflow-x-auto">');
+    expect(src).not.toContain('sem comissão até vincular');
   });
 
   it('sem função marcada, diz isso na regra', () => {

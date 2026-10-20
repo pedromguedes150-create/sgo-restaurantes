@@ -4855,6 +4855,8 @@ enum CommissionLineKind {
   GRUPO
   FREELANCER
   NAO_CADASTRADO
+  /// Funcionário da unidade com função fora da comissão (gerente/encarregado) — v1.176.0
+  FUNCAO_FORA
 }
 
 model CommissionImport {

@@ -132,6 +132,15 @@ export function lerPlanilhaDeVendedores(linhas: unknown[][]): LeituraDeVendedore
 
 export type TipoDeVendedor = 'GRUPO' | 'FREELANCER' | 'VENDEDOR';
 
+/**
+ * Gerente e Encarregado NÃO entram na comissão (decisão do Pedro, 20/10/2026),
+ * mesmo quando o nome deles vende no Teknisa. Decidido pela FUNÇÃO do RH.
+ */
+export function funcaoForaDaComissao(jobTitle: string | null | undefined): boolean {
+  const n = normalizarNome(jobTitle);
+  return /\bgerente/.test(n) || /encarregad/.test(n);
+}
+
 /** GRUPO = "grupo beija flor" no nome (a cozinha); FREELANCER = "freelanc" no nome; o resto é vendedor com nome. */
 export function tipoDoVendedor(nome: string): TipoDeVendedor {
   const n = normalizarNome(nome);
@@ -174,7 +183,7 @@ export function dividirIgual(total: number, n: number): number[] {
   return Array.from({ length: n }, () => { const v = base + (resto > 0 ? 1 : 0); if (resto > 0) resto--; return v / 100; });
 }
 
-export type KindDaLinha = 'VENDEDOR' | 'COZINHA' | 'GRUPO' | 'FREELANCER' | 'NAO_CADASTRADO';
+export type KindDaLinha = 'VENDEDOR' | 'COZINHA' | 'GRUPO' | 'FREELANCER' | 'NAO_CADASTRADO' | 'FUNCAO_FORA';
 
 export interface Vinculo { collaboratorId: string; name: string }
 
@@ -198,8 +207,8 @@ export interface LinhaDaApuracao {
 }
 
 export interface TotaisDaApuracao {
-  vendedores: number; cozinha: number; freelancers: number; naoCadastrados: number;
-  vendasVendedores: number; vendasGrupo: number; vendasFreelancers: number; vendasNaoCadastrados: number;
+  vendedores: number; cozinha: number; freelancers: number; naoCadastrados: number; foraPorFuncao: number;
+  vendasVendedores: number; vendasGrupo: number; vendasFreelancers: number; vendasNaoCadastrados: number; vendasForaPorFuncao: number;
   boloCozinha: number; comissaoVendedores: number; comissaoCozinha: number; comissao: number;
 }
 
@@ -215,12 +224,14 @@ export function apurar(input: {
   sugestoes?: Map<string, Vinculo[]>;
   /** Quem divide a cozinha: colaboradores ativos da unidade com função marcada. */
   cozinha: Vinculo[];
+  /** bruto → colaborador da unidade cuja função fica FORA (gerente/encarregado): aparece, não recebe. */
+  foraPorFuncao?: Map<string, Vinculo>;
 }): Apuracao {
   const linhas: LinhaDaApuracao[] = [];
   let vendasGrupo = 0;
   const t: TotaisDaApuracao = {
-    vendedores: 0, cozinha: 0, freelancers: 0, naoCadastrados: 0,
-    vendasVendedores: 0, vendasGrupo: 0, vendasFreelancers: 0, vendasNaoCadastrados: 0,
+    vendedores: 0, cozinha: 0, freelancers: 0, naoCadastrados: 0, foraPorFuncao: 0,
+    vendasVendedores: 0, vendasGrupo: 0, vendasFreelancers: 0, vendasNaoCadastrados: 0, vendasForaPorFuncao: 0,
     boloCozinha: 0, comissaoVendedores: 0, comissaoCozinha: 0, comissao: 0,
   };
   for (const v of input.vendedores) {
@@ -233,6 +244,12 @@ export function apurar(input: {
     if (tipo === 'FREELANCER') {
       t.freelancers++; t.vendasFreelancers = arredondar2(t.vendasFreelancers + v.vendas);
       linhas.push({ chave: `FREELANCER:${v.bruto}`, kind: 'FREELANCER', codigo: v.codigo, nome: v.nome, vendas: v.vendas, pct: 0, calculado: 0, ajuste: 0, motivoAjuste: null, valor: 0, collaboratorId: null, collaboratorName: null });
+      continue;
+    }
+    const fora = input.foraPorFuncao?.get(v.bruto);
+    if (fora) {
+      t.foraPorFuncao++; t.vendasForaPorFuncao = arredondar2(t.vendasForaPorFuncao + v.vendas);
+      linhas.push({ chave: `VENDEDOR:${v.bruto}`, kind: 'FUNCAO_FORA', codigo: v.codigo, nome: v.nome, vendas: v.vendas, pct: 0, calculado: 0, ajuste: 0, motivoAjuste: null, valor: 0, collaboratorId: null, collaboratorName: fora.name });
       continue;
     }
     const vinc = input.vinculos.get(v.bruto);
@@ -288,5 +305,5 @@ export function aplicarAjustes(ap: Apuracao, ajustes: Record<string, Ajuste>): {
 
 /** Rótulo curto do tipo de linha, para tela, Excel e Auditoria. */
 export const ROTULO_KIND: Record<KindDaLinha, string> = {
-  VENDEDOR: 'Vendedor', COZINHA: 'Cozinha', GRUPO: 'Grupo (cozinha)', FREELANCER: 'Freelancer — fora', NAO_CADASTRADO: 'Não cadastrado na unidade',
+  VENDEDOR: 'Vendedor', COZINHA: 'Cozinha', GRUPO: 'Grupo (cozinha)', FREELANCER: 'Freelancer — fora', NAO_CADASTRADO: 'Não cadastrado na unidade', FUNCAO_FORA: 'Gerente/Encarregado — fora',
 };

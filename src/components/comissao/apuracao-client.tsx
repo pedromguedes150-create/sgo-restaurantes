@@ -31,7 +31,7 @@ import type { Previa } from '@/lib/comissao/apuracao';
 type Ajustes = Record<string, { ajuste: string; motivo: string }>;
 
 const KIND_TONE: Record<LinhaDaApuracao['kind'], 'success' | 'neutral' | 'warning' | 'info'> = {
-  VENDEDOR: 'success', COZINHA: 'info', GRUPO: 'neutral', FREELANCER: 'neutral', NAO_CADASTRADO: 'warning',
+  VENDEDOR: 'success', COZINHA: 'info', GRUPO: 'neutral', FREELANCER: 'neutral', NAO_CADASTRADO: 'warning', FUNCAO_FORA: 'neutral',
 };
 
 export function ApuracaoClient({ unidades, meses, mesInicial, percentuais, funcoesDaCozinha }: {
@@ -54,6 +54,8 @@ export function ApuracaoClient({ unidades, meses, mesInicial, percentuais, funco
   const [ocupado, setOcupado] = useState(false);
   const [pronto, setPronto] = useState<{ competencia: string; lancamentos: number; total: number; substituiu: boolean } | null>(null);
   const [verFreelancers, setVerFreelancers] = useState(false);
+  const [verNaoCad, setVerNaoCad] = useState(false);
+  const [verFuncaoFora, setVerFuncaoFora] = useState(false);
   const campo = useRef<HTMLInputElement>(null);
 
   function limpar() { setPrevia(null); setErro(null); setAjustes({}); setVinculos({}); }
@@ -94,13 +96,14 @@ export function ApuracaoClient({ unidades, meses, mesInicial, percentuais, funco
   }
 
   const linhasVisiveis = useMemo(() => {
-    if (!previa) return { vendedores: [], cozinha: [], naoCad: [], freelancers: [], grupo: [] as LinhaDaApuracao[] };
+    if (!previa) return { vendedores: [], cozinha: [], naoCad: [], freelancers: [], grupo: [] as LinhaDaApuracao[], funcaoFora: [] as LinhaDaApuracao[] };
     return {
       vendedores: previa.linhas.filter((l) => l.kind === 'VENDEDOR'),
       cozinha: previa.linhas.filter((l) => l.kind === 'COZINHA'),
       naoCad: previa.linhas.filter((l) => l.kind === 'NAO_CADASTRADO'),
       freelancers: previa.linhas.filter((l) => l.kind === 'FREELANCER'),
       grupo: previa.linhas.filter((l) => l.kind === 'GRUPO'),
+      funcaoFora: previa.linhas.filter((l) => l.kind === 'FUNCAO_FORA'),
     };
   }, [previa]);
 
@@ -156,7 +159,7 @@ export function ApuracaoClient({ unidades, meses, mesInicial, percentuais, funco
           </div>
           <p className="text-xs text-ink-500">
             Regra: vendedor com nome ganha <b>{pctBR(percentuais.vendedor)}%</b> da própria venda; &ldquo;0001 - GRUPO BEIJA FLOR&rdquo; rende <b>{pctBR(percentuais.cozinha)}%</b> da venda do grupo, dividido entre a cozinha
-            ({funcoesDaCozinha > 0 ? `${funcoesDaCozinha} função(ões) marcada(s)` : 'nenhuma função marcada ainda'}); FREELANCER fica fora; só funcionário cadastrado na unidade recebe.
+            ({funcoesDaCozinha > 0 ? `${funcoesDaCozinha} função(ões) marcada(s)` : 'nenhuma função marcada ainda'}); FREELANCER, gerente e encarregado ficam fora; só funcionário cadastrado na unidade recebe.
           </p>
           <Button onClick={() => void enviar('previa')} loading={ocupado && !previa} disabled={!unitId || !arquivo}>
             <FileSpreadsheet className="h-4 w-4" /> Ler planilha e apurar
@@ -199,9 +202,12 @@ export function ApuracaoClient({ unidades, meses, mesInicial, percentuais, funco
 
           {linhasVisiveis.naoCad.length > 0 && (
             <section className="sgo-panel sgo-panel--solid overflow-hidden" data-testid="nao-cadastrados">
-              <p className="sgo-panel__title px-3 pt-3">Não cadastrados na unidade — sem comissão até vincular ({linhasVisiveis.naoCad.length})</p>
-              <p className="px-3 pb-2 text-xs text-ink-500">Só funcionário do RH com vínculo nesta unidade recebe. Se a pessoa é funcionária e o nome no Teknisa está diferente, escolha quem é — o vínculo fica lembrado para os próximos meses.</p>
-              <div className="overflow-x-auto">
+              <button type="button" className="flex w-full items-center justify-between px-3 py-3 text-left" onClick={() => setVerNaoCad((v) => !v)}>
+                <span className="sgo-panel__title">Fora da comissão — não estão no RH desta unidade ({linhasVisiveis.naoCad.length} · {formatBRL(previa.totais.vendasNaoCadastrados)} em vendas)</span>
+                <span className="text-xs text-brand">{verNaoCad ? 'Ocultar' : 'Ver lista'}</span>
+              </button>
+              {verNaoCad && <p className="px-3 pb-2 text-xs text-ink-500">Só funcionário do RH com vínculo nesta unidade recebe. Se alguém daqui É funcionário e só o nome no Teknisa está diferente, escolha quem é — o vínculo fica lembrado para os próximos meses.</p>}
+              {verNaoCad && <div className="overflow-x-auto">
                 <table className="sgo-tbl w-full text-sm">
                   <thead><tr><th className="text-left">Vendedor (Teknisa)</th><th className="text-right">Venda</th><th className="text-right">{pctBR(previa.pctVendedor)}% seria</th><th className="text-left">Vincular a</th></tr></thead>
                   <tbody>
@@ -217,7 +223,21 @@ export function ApuracaoClient({ unidades, meses, mesInicial, percentuais, funco
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </div>}
+            </section>
+          )}
+
+          {linhasVisiveis.funcaoFora.length > 0 && (
+            <section className="sgo-panel sgo-panel--solid overflow-hidden" data-testid="funcao-fora">
+              <button type="button" className="flex w-full items-center justify-between px-3 py-3 text-left" onClick={() => setVerFuncaoFora((v) => !v)}>
+                <span className="sgo-panel__title">Fora da comissão — gerentes e encarregados ({linhasVisiveis.funcaoFora.length} · {formatBRL(previa.totais.vendasForaPorFuncao)} em vendas)</span>
+                <span className="text-xs text-brand">{verFuncaoFora ? 'Ocultar' : 'Ver lista'}</span>
+              </button>
+              {verFuncaoFora && (
+                <ul className="divide-y divide-line px-3 pb-3 text-sm">
+                  {linhasVisiveis.funcaoFora.map((l) => <li key={l.chave} className="flex justify-between py-1.5"><span className="text-ink-700">{l.codigo ? `${l.codigo} - ` : ''}{l.nome}<span className="ml-2 text-xs text-ink-500">{l.collaboratorName}</span></span><span className="tabular-nums text-ink-500">{formatBRL(l.vendas)}</span></li>)}
+                </ul>
+              )}
             </section>
           )}
 
