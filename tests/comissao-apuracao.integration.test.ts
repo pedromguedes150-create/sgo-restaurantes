@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import type { SessionUser } from '@/lib/auth/session';
 import { montarPrevia, confirmarApuracao, listarApuracoes, getApuracao } from '@/lib/comissao/apuracao';
 import { definirFuncoesDaCozinha, getPercentuais, quadroDeFuncoes, setPercentuais, chavesDaCozinha } from '@/lib/comissao/config';
+import { getPedidoSwile } from '@/lib/comissao/swile';
 
 /**
  * COMISSÃO (v1.175.0) — a apuração contra o banco: só funcionário cadastrado
@@ -18,8 +19,11 @@ const MES_VENDA = '2019-07'; // bem no passado: competência 2019-09, longe de q
 const COMP = '2019-09';
 
 let unitA = ''; let unitB = ''; let adminId = ''; let supBId = '';
-let mariaId = ''; let thiagoId = ''; let anaId = ''; let biaId = ''; let marceloId = '';
+let mariaId = ''; let thiagoId = ''; let anaId = ''; let biaId = ''; let marceloId = ''; let gerenteId = '';
 const colabIds: string[] = [];
+/* A tabela de funções da cozinha é GLOBAL e `definirFuncoesDaCozinha` substitui o conjunto inteiro:
+   guardamos o que havia para devolver no fim — senão o teste apaga a configuração do banco de dev. */
+let funcoesAntes: { jobTitleKey: string; jobTitle: string; createdByName: string }[] = [];
 
 const u = (id: string, role: SessionUser['role'], units: string[], seesAll = false): SessionUser => ({ id, name: role, role, unitIds: units, seesAllUnits: seesAll, needsTerms: false });
 const admin = () => u(adminId, 'ADMIN', [], true);
@@ -34,6 +38,7 @@ const PLANILHA = [
   [UNI, `1055 - THIAGO HEITOR ${sfx}`, 100],
   [UNI, '0004 - freelancer 04', 50],
   [UNI, `0106 - MARCELO TELES ${sfx}`, 80],
+  [UNI, `0300 - RODRIGO GERENTE ${sfx}`, 1000],
 ];
 
 beforeAll(async () => {
@@ -55,8 +60,12 @@ beforeAll(async () => {
   biaId = await colab(`Bia ${sfx}`, `SALADEIRA ${sfx}`, unitA);
   /* Marcelo é funcionário, mas o nome no Teknisa está diferente: vai precisar de vínculo manual */
   marceloId = await colab(`Marcelo Teles da Silva ${sfx}`, 'Garçom', unitA);
+  /* gerente da unidade: o nome vende no Teknisa, mas a função deixa fora (v1.176.0) */
+  gerenteId = await colab(`Rodrigo Gerente ${sfx}`, 'Gerente de Loja', unitA);
+  await prisma.collaborator.update({ where: { id: mariaId }, data: { cpf: '123.456.789-01' } });
   /* função da cozinha em OUTRA unidade: não divide a cozinha da A */
   await colab(`Zé ${sfx}`, `Auxiliar de Cozinha ${sfx}`, unitB);
+  funcoesAntes = (await prisma.commissionKitchenJobTitle.findMany()).map((f) => ({ jobTitleKey: f.jobTitleKey, jobTitle: f.jobTitle, createdByName: f.createdByName }));
   await definirFuncoesDaCozinha(admin(), [`Auxiliar de Cozinha ${sfx}`, `saladeira ${sfx}`]);
 });
 
@@ -64,7 +73,8 @@ afterAll(async () => {
   await prisma.collaboratorPayout.deleteMany({ where: { unitId: { in: [unitA, unitB] } } });
   await prisma.commissionImport.deleteMany({ where: { unitId: { in: [unitA, unitB] } } });
   await prisma.commissionSellerLink.deleteMany({ where: { unitId: { in: [unitA, unitB] } } });
-  await prisma.commissionKitchenJobTitle.deleteMany({ where: { jobTitle: { contains: sfx } } });
+  await prisma.commissionKitchenJobTitle.deleteMany({});
+  if (funcoesAntes.length) await prisma.commissionKitchenJobTitle.createMany({ data: funcoesAntes, skipDuplicates: true });
   await prisma.payoutClosure.deleteMany({ where: { yearMonth: COMP, type: 'COMMISSION' } });
   await prisma.collaboratorUnit.deleteMany({ where: { collaboratorId: { in: colabIds } } });
   await prisma.collaborator.deleteMany({ where: { id: { in: colabIds } } });
@@ -94,7 +104,10 @@ describe('prévia', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const p = r.previa;
-    expect(p).toMatchObject({ mesVenda: MES_VENDA, mesApuracao: '2019-08', competencia: COMP, totalVendas: 2230, jaExiste: false, fechada: false, erros: [] });
+    expect(p).toMatchObject({ mesVenda: MES_VENDA, mesApuracao: '2019-08', competencia: COMP, totalVendas: 3230, jaExiste: false, fechada: false, erros: [] });
+    /* o gerente casou pelo nome, mas a função deixa FORA: aparece, não recebe */
+    expect(p.linhas.find((l) => l.chave === `VENDEDOR:0300 - RODRIGO GERENTE ${sfx}`)).toMatchObject({ kind: 'FUNCAO_FORA', valor: 0, collaboratorName: `Rodrigo Gerente ${sfx}` });
+    expect(p.totais.foraPorFuncao).toBe(1);
     expect(p.unidadeDeclarada).toBe(UNI);
     const por = Object.fromEntries(p.linhas.map((l) => [l.chave, l]));
     expect(por[`VENDEDOR:1065 - MARIA MERCES ${sfx}`]).toMatchObject({ kind: 'VENDEDOR', collaboratorId: mariaId, valor: 5 });
@@ -107,7 +120,8 @@ describe('prévia', () => {
     expect(cozinha.map((l) => l.collaboratorId).sort()).toEqual([anaId, biaId].sort()); // o Zé é de outra unidade
     expect(cozinha.map((l) => l.valor)).toEqual([3.75, 3.75]); // 1500 × 0,5% = 7,50 ÷ 2
     expect(p.totais.comissao).toBe(5 + 1 + 7.5);
-    expect(p.avisos.some((a) => a.includes('não casaram'))).toBe(true);
+    /* gerente não é oferecido como candidato de vínculo */
+    expect(marcelo.sugestoes?.some((s) => s.collaboratorId === gerenteId)).toBe(false);
   });
 
   it('escopo: supervisor da B não apura a A; gerente não apura; mês inválido e planilha errada recusam', async () => {
@@ -141,7 +155,16 @@ describe('confirmar', () => {
     expect(payouts.find((p) => p.collaboratorId === anaId)!.note).toContain('cozinha');
 
     const ap = await getApuracao(admin(), r.importId);
-    expect(ap).toMatchObject({ mesVenda: MES_VENDA, competencia: COMP, totalVendas: 2230, vendasGrupo: 1500, comissao: 24.3 });
+    expect(ap).toMatchObject({ mesVenda: MES_VENDA, competencia: COMP, totalVendas: 3230, vendasGrupo: 1500, comissao: 24.3 });
+    expect(ap!.linhas.find((l) => l.kind === 'FUNCAO_FORA')!.payoutId).toBeNull();
+    expect(payouts.some((p) => p.collaboratorId === gerenteId)).toBe(false);
+
+    /* Pedido de Carga Swile: uma linha por pessoa com CPF; quem não tem CPF vai à parte */
+    const swile = await getPedidoSwile(admin(), COMP, unitA);
+    expect(swile.linhas).toEqual([{ nome: `Maria Merces ${sfx}`, cpf: '12345678901', valor: 15, unidade: `Juatuba ${sfx}` }]);
+    expect(swile.semCpf.map((l) => l.nome).sort()).toEqual([`Ana ${sfx}`, `Bia ${sfx}`, `Marcelo Teles da Silva ${sfx}`, `Thiago Heitor ${sfx}`].sort());
+    expect(swile.total).toBe(15);
+    expect((await getPedidoSwile(supB(), COMP)).linhas).toEqual([]);
     const grupo = ap!.linhas.find((l) => l.kind === 'GRUPO')!;
     expect(grupo.payoutId).toBeNull();
     expect(ap!.linhas.find((l) => l.kind === 'FREELANCER')!.payoutId).toBeNull();

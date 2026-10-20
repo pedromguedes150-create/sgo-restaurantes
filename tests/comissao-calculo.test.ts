@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   lerPlanilhaDeVendedores, separarCodigo, tipoDoVendedor, somarMeses, mesDeApuracao, competenciaDePagamento, mesDeVendaPadrao,
-  dividirIgual, apurar, aplicarAjustes, rotuloDoMes, type VendedorLido,
+  dividirIgual, apurar, aplicarAjustes, rotuloDoMes, funcaoForaDaComissao, type VendedorLido,
 } from '@/lib/comissao/calculo';
+import { montarPedidoSwile, soDigitos } from '@/lib/comissao/swile';
 
 /**
  * COMISSÃO POR VENDEDOR (v1.175.0) — a conta pura, com o exemplo do Pedro:
@@ -66,6 +67,48 @@ describe('a planilha', () => {
     expect(tipoDoVendedor('freelancer 04')).toBe('FREELANCER');
     expect(tipoDoVendedor('FREELANCE DIARIO')).toBe('FREELANCER');
     expect(tipoDoVendedor('MARIA MERCES')).toBe('VENDEDOR');
+  });
+});
+
+describe('função fora da comissão (v1.176.0)', () => {
+  it('gerente e encarregado ficam fora, pela função do RH; auxiliar, garçom e saladeira entram', () => {
+    for (const f of ['Gerente', 'GERENTE DE LOJA', 'Sub-gerente', 'Encarregado', 'ENCARREGADA DE SALÃO', 'Encarregado de Cozinha']) expect(funcaoForaDaComissao(f), f).toBe(true);
+    for (const f of ['Garçom', 'Auxiliar de Cozinha', 'Saladeira', 'Operadora de Caixa', null, '']) expect(funcaoForaDaComissao(f), String(f)).toBe(false);
+  });
+
+  it('na apuração, o vendedor casado com gerente/encarregado vira FUNCAO_FORA: aparece, não recebe, não entra no total', () => {
+    const vendedores: VendedorLido[] = [
+      { bruto: '1065 - MARIA MERCES', codigo: '1065', nome: 'MARIA MERCES', vendas: 500, itens: 1 },
+      { bruto: '0106 - MARCELO TELES', codigo: '0106', nome: 'MARCELO TELES', vendas: 225.4, itens: 1 },
+    ];
+    const { linhas, totais } = apurar({
+      vendedores, pctVendedor: 1, pctCozinha: 0.5, cozinha: [],
+      vinculos: new Map([['1065 - MARIA MERCES', { collaboratorId: 'c-maria', name: 'Maria' }]]),
+      foraPorFuncao: new Map([['0106 - MARCELO TELES', { collaboratorId: 'c-marcelo', name: 'Marcelo Teles (Gerente)' }]]),
+    });
+    const marcelo = linhas.find((l) => l.chave === 'VENDEDOR:0106 - MARCELO TELES')!;
+    expect(marcelo).toMatchObject({ kind: 'FUNCAO_FORA', valor: 0, calculado: 0, collaboratorId: null, collaboratorName: 'Marcelo Teles (Gerente)' });
+    expect(totais).toMatchObject({ foraPorFuncao: 1, vendasForaPorFuncao: 225.4, vendedores: 1, comissao: 5 });
+  });
+});
+
+describe('Pedido de Carga Swile (v1.176.0)', () => {
+  it('uma linha por PESSOA somando os lançamentos, CPF só dígitos do cadastro; sem CPF vai para a lista à parte', () => {
+    const cadastro = new Map([
+      ['c1', { name: 'Maria Merces', cpf: '123.456.789-01' }],
+      ['c2', { name: 'Ana Cozinha', cpf: null }],
+      ['c3', { name: 'Bia Saladas', cpf: '98765432100' }],
+    ]);
+    const p = montarPedidoSwile('2026-11', [
+      { collaboratorId: 'c1', collaboratorName: 'MARIA (congelado)', amount: 5, unidade: 'Moreira' },
+      { collaboratorId: 'c1', collaboratorName: 'MARIA (congelado)', amount: 10, unidade: 'Moreira' },
+      { collaboratorId: 'c2', collaboratorName: 'Ana', amount: 3.75, unidade: 'Moreira' },
+      { collaboratorId: 'c3', collaboratorName: 'Bia', amount: 3.75, unidade: 'Moreira' },
+    ], cadastro);
+    expect(p.linhas).toEqual([{ nome: 'Bia Saladas', cpf: '98765432100', valor: 3.75, unidade: 'Moreira' }, { nome: 'Maria Merces', cpf: '12345678901', valor: 15, unidade: 'Moreira' }]);
+    expect(p.semCpf).toEqual([{ nome: 'Ana Cozinha', cpf: '', valor: 3.75, unidade: 'Moreira' }]);
+    expect(p.total).toBe(18.75);
+    expect(soDigitos('123.456.789-01')).toBe('12345678901');
   });
 });
 

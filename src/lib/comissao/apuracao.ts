@@ -5,7 +5,7 @@ import type { SessionUser } from '@/lib/auth/session';
 import { candidatosDeVinculo } from '@/lib/hora-extra/calculo';
 import { normalizarCargo } from '@/lib/people/avaliacao-calculo';
 import {
-  aplicarAjustes, apurar, competenciaDePagamento, lerPlanilhaDeVendedores, mesDeApuracao, mesValido, rotuloDoMes,
+  aplicarAjustes, apurar, competenciaDePagamento, funcaoForaDaComissao, lerPlanilhaDeVendedores, mesDeApuracao, mesValido, rotuloDoMes,
   type Ajuste, type Apuracao, type LinhaDaApuracao, type Vinculo,
 } from './calculo';
 import { chavesDaCozinha, getPercentuais } from './config';
@@ -91,9 +91,15 @@ export async function montarPrevia(user: SessionUser, e: Entrada): Promise<Resul
   const porId = new Map(colaboradores.map((c) => [c.id, c]));
   const linkPorCodigo = new Map(links.map((l) => [l.sellerCode, l.collaboratorId]));
   const vinculos = new Map<string, Vinculo>();
+  const foraPorFuncao = new Map<string, Vinculo>();
   const sugestoes = new Map<string, Vinculo[]>();
   const erros: string[] = [];
-  const candidatos = colaboradores.map((c) => ({ id: c.id, name: c.name }));
+  /* Gerente/Encarregado nunca recebe — e nem é oferecido como candidato de vínculo. */
+  const candidatos = colaboradores.filter((c) => !funcaoForaDaComissao(c.jobTitle)).map((c) => ({ id: c.id, name: c.name }));
+  const casar = (bruto: string, c: { id: string; name: string; jobTitle: string | null }) => {
+    if (funcaoForaDaComissao(c.jobTitle)) foraPorFuncao.set(bruto, { collaboratorId: c.id, name: c.name });
+    else vinculos.set(bruto, { collaboratorId: c.id, name: c.name });
+  };
 
   for (const v of leitura.vendedores) {
     /* 1) escolha manual na prévia — só colaborador DESTA unidade */
@@ -101,14 +107,15 @@ export async function montarPrevia(user: SessionUser, e: Entrada): Promise<Resul
     if (manual) {
       const c = porId.get(manual);
       if (!c) { erros.push(`${v.nome}: o colaborador escolhido não é funcionário ativo desta unidade.`); }
-      else { vinculos.set(v.bruto, { collaboratorId: c.id, name: c.name }); continue; }
+      else { casar(v.bruto, c); continue; }
     }
     /* 2) vínculo lembrado de uma apuração anterior (ainda precisa estar ativo na unidade) */
     const lembrado = v.codigo ? linkPorCodigo.get(v.codigo) : undefined;
-    if (lembrado && porId.has(lembrado)) { const c = porId.get(lembrado)!; vinculos.set(v.bruto, { collaboratorId: c.id, name: c.name }); continue; }
-    /* 3) nome exato com UM colaborador da unidade */
+    if (lembrado && porId.has(lembrado)) { casar(v.bruto, porId.get(lembrado)!); continue; }
+    /* 3) nome exato com UM colaborador da unidade (gerente/encarregado incluído: entra como "fora") */
+    const todos = candidatosDeVinculo(v.nome, colaboradores.map((c) => ({ id: c.id, name: c.name })));
+    if (todos.exatos.length === 1) { casar(v.bruto, porId.get(todos.exatos[0].id)!); continue; }
     const { exatos, parecidos } = candidatosDeVinculo(v.nome, candidatos);
-    if (exatos.length === 1) { vinculos.set(v.bruto, { collaboratorId: exatos[0].id, name: exatos[0].name }); continue; }
     sugestoes.set(v.bruto, [...exatos, ...parecidos].map((c) => ({ collaboratorId: c.id, name: c.name })));
   }
 
@@ -116,14 +123,13 @@ export async function montarPrevia(user: SessionUser, e: Entrada): Promise<Resul
     .filter((c) => chavesCozinha.has(normalizarCargo(c.jobTitle)))
     .map((c) => ({ collaboratorId: c.id, name: c.name }));
 
-  const bruta = apurar({ vendedores: leitura.vendedores, pctVendedor: pcts.vendedor, pctCozinha: pcts.cozinha, vinculos, sugestoes, cozinha });
+  const bruta = apurar({ vendedores: leitura.vendedores, pctVendedor: pcts.vendedor, pctCozinha: pcts.cozinha, vinculos, sugestoes, cozinha, foraPorFuncao });
   const { apuracao, erros: errosDeAjuste } = aplicarAjustes(bruta, e.ajustes ?? {});
   erros.push(...errosDeAjuste);
 
   const avisos = [...leitura.avisos];
   if (chavesCozinha.size === 0) avisos.push('Nenhuma função marcada para a cozinha em Configurações → Comissão: a parte do GRUPO BEIJA FLOR fica sem destinatário até você marcar as funções.');
   else if (cozinha.length === 0 && apuracao.totais.vendasGrupo > 0) avisos.push('Nenhum colaborador ativo desta unidade tem uma das funções marcadas para a cozinha — a parte do GRUPO BEIJA FLOR fica sem destinatário.');
-  if (apuracao.totais.naoCadastrados > 0) avisos.push(`${apuracao.totais.naoCadastrados} vendedor(es) não casaram com funcionário cadastrado na unidade e ficaram sem comissão — vincule na lista, se for funcionário.`);
 
   return {
     ok: true,

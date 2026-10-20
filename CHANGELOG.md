@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.176.0 — 2026-10-20 (Comissão: gerente/encarregado fora, não cadastrados recolhidos, Pedido de Carga Swile)
+### Mudou
+- **Quem não está no RH da unidade não ocupa mais a tela** (prints do Pedro): a lista de "não cadastrados" virou uma seção **recolhida**, no padrão dos freelancers ("Fora da comissão — não estão no RH desta unidade · N · R$ X em vendas", com "Ver lista"); dentro dela continua a opção de vincular, para quem É funcionário e só tem a grafia diferente no Teknisa. O aviso em faixa saiu.
+- **Gerente e Encarregado ficam fora da comissão** (decisão do Pedro), decidido pela FUNÇÃO do RH (`funcaoForaDaComissao`: "gerente" ou "encarregad" no cargo): o vendedor que casa com um deles vira linha `FUNCAO_FORA` — aparece numa seção recolhida própria, não recebe, não entra no total e não é oferecido como candidato de vínculo. Enum `CommissionLineKind` ganhou `FUNCAO_FORA` (migração aditiva).
+### Novo
+- **Pedido de Carga Swile (XLSX)** na aba Competência da Comissão (`/api/comissao/swile?mes=AAAA-MM`, guarda `COMMISSION`/ver): o modelo "Pedido de Carga Swile — Customizado" enviado pelo Pedro — **Nome · CPF · Saldo Livre · Mobilidade · Refeição e Alimentação**, uma linha por PESSOA (os lançamentos da mesma pessoa somam), a comissão em **Saldo Livre**, CPF do cadastro do RH só com dígitos. Quem está **sem CPF** no RH vai numa aba "Sem CPF" para completar antes de carregar — em vez de sumir do arquivo em silêncio. `src/lib/comissao/swile.ts` (`montarPedidoSwile` PURO + `getPedidoSwile` no escopo do usuário).
+
 ## v1.175.0 — 2026-10-20 (Comissão por vendedor: a planilha do Teknisa vira a apuração)
 ### Novo
 - **Comissão** (Pessoas → Pagamentos → Comissão, `/modulos/comissao`, módulo `COMMISSION` — Supervisão + Admin/CEO, como a Mobilidade): importa a planilha **"Produtividade por Vendedor — Analítico"** do Teknisa (uma linha por item vendido, com o garçom; sem data) e faz a apuração do mês. **Regra do Pedro**: vendedor com nome ganha **1%** da própria venda; **"0001 - GRUPO BEIJA FLOR"** é a cozinha e rende **0,5%** da venda do grupo, **dividido em partes iguais** entre os colaboradores ativos da unidade cujas FUNÇÕES o Admin/Coordenador marcou (Auxiliar de Cozinha, Saladeira…); nomenclatura **FREELANCER** fica fora; **só funcionário cadastrado na unidade** recebe (colaborador ativo do RH com vínculo). Base = coluna "Vr. Total" (já líquida de desconto). Percentuais configuráveis (nascem em 1 e 0,5).
