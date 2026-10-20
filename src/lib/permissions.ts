@@ -93,6 +93,7 @@ const BASE: ModuleDef[] = [
   { key: 'PEOPLE_EVALUATION', label: 'Avaliação do colaborador', nav: '/modulos/pessoas/avaliacao', parent: 'PEOPLE' },
   // chave mantida (há linhas gravadas na matriz); desde a v1.142.0 a tela é só Mobilidade — a Hora extra tem módulo próprio
   { key: 'PEOPLE_PAYOUTS', label: 'Mobilidade (competência e arquivo)', nav: '/modulos/mobilidade', parent: 'PEOPLE' },
+  { key: 'COMMISSION', label: 'Comissão (apuração da planilha e competência)', nav: '/modulos/comissao', parent: 'PEOPLE' },
   { key: 'PEOPLE_PROBATION', label: 'Período de experiência', nav: '/modulos/pessoas/experiencia', parent: 'PEOPLE' },
   { key: 'PEOPLE_ROLE_CHANGES', label: 'Mudanças de função', nav: '/modulos/pessoas/mudancas', parent: 'PEOPLE' },
   // A Escala não tinha módulo dono: qualquer usuário logado abria a grade de
@@ -177,6 +178,7 @@ const BASE: ModuleDef[] = [
   { key: 'CONFIG_FREELANCER_RATES', label: 'Valor do freelancer por setor', nav: '/configuracoes/freelancer-valores', parent: 'CONFIG' },
   { key: 'CONFIG_OVERTIME_RATES', label: 'Valor da hora extra por unidade', nav: '/configuracoes/hora-extra-valores', parent: 'CONFIG' },
   { key: 'CONFIG_EVALUATION', label: 'Avaliação por função (modelos)', nav: '/configuracoes/avaliacao', parent: 'CONFIG' },
+  { key: 'CONFIG_COMMISSION', label: 'Comissão (percentuais e funções da cozinha)', nav: '/configuracoes/comissao', parent: 'CONFIG' },
   { key: 'CONFIG_INTEGRATIONS', label: 'APIs e integrações', nav: '/configuracoes/integracoes', parent: 'CONFIG' },
   { key: 'CONFIG_RH_DIAG', label: 'Diagnóstico do RH', nav: '/configuracoes/integracoes/diagnostico', parent: 'CONFIG_INTEGRATIONS' },
   { key: 'CONFIG_RH_SAIDA', label: 'Envios ao RH (fila)', nav: '/configuracoes/integracoes/envios-rh', parent: 'CONFIG_INTEGRATIONS' },
@@ -221,6 +223,8 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   /* Hora extra (v1.142.0): quem lança (gerente), quem aprova (coordenação e
      supervisão) e quem fecha a competência (financeiro); Admin/CEO sempre. */
   HORA_EXTRA: ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'FINANCE'],
+  COMMISSION: ['SUPERVISOR'], // v1.175.0: apura e confere a Supervisão (+Admin/CEO), como a Mobilidade
+  CONFIG_COMMISSION: ['COORDINATOR'], // v1.175.0: o Coordenador marca as funções da cozinha (decisão do Pedro); percentual segue só do Admin, na lib
   /* Aba "Pagar" da central (v1.133.0): quem marca pago é o Coordenador (a
      operação), o Financeiro e Admin/CEO. Antes o perfil era comparado no
      código; agora a matriz diz a mesma coisa e o Admin pode mudar. */

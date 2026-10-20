@@ -8,7 +8,7 @@ import { LargeTitle } from '@/components/layout/page-chrome';
 import { List, ListRow } from '@/components/ui/ds/list-row';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
 import { shortUnitName } from '@/lib/unit-name';
-import { ScrollText, Building2, Users, ListChecks, Wallet, KeyRound, ClipboardList, Trash2, AlertTriangle, Truck, Coins, CalendarDays, Pizza, Boxes } from 'lucide-react';
+import { ScrollText, Building2, Users, ListChecks, Wallet, KeyRound, ClipboardList, Trash2, AlertTriangle, Truck, Coins, CalendarDays, Pizza, Boxes, Percent } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +48,7 @@ const SECOES: { titulo: string; itens: { href: string; title: string; subtitle: 
       { href: '/configuracoes/setores-cd', title: 'Setores do CD', subtitle: 'Áreas que separam os pedidos e a que cada Separador é vinculado', icon: Boxes },
       { href: '/configuracoes/pagamentos', title: 'Pagamentos', subtitle: 'Freelancers, motivos de reembolso e aprovadores', icon: Wallet },
       { href: '/configuracoes/freelancer-valores', title: 'Valor do freelancer', subtitle: 'Diária por setor e vale-transporte', icon: Wallet },
+      { href: '/configuracoes/comissao', title: 'Comissão', subtitle: 'Percentuais do vendedor e da cozinha; funções que dividem a cozinha', icon: Percent },
     ],
   },
   {
