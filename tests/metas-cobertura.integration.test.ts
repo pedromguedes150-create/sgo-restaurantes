@@ -79,7 +79,7 @@ describe('Checklists do dia com UM peso', () => {
     const tasks = componentes.find((c) => c.key === 'TASKS');
     expect(tasks).toMatchObject({ done: 3, missed: 1 });
     /* 11 componentes, sempre na lista (com peso 0 ficam fora da conta, não da lista) */
-    expect(componentes.map((c) => c.key)).toEqual(['TASKS', 'TRAINING', 'COMMUNICATION', 'PEOPLE_EVALUATION', 'WASTE', 'COMMANDS', 'CASH', 'SCHEDULE', 'CANCELLATIONS', 'STOCK', 'INVENTORY']);
+    expect(componentes.map((c) => c.key)).toEqual(['TASKS', 'TRAINING', 'COMMUNICATION', 'PEOPLE_EVALUATION', 'WASTE', 'COMMANDS', 'CASH', 'SCHEDULE', 'CANCELLATIONS', 'STOCK', 'INVENTORY', 'UTENSILS']);
   });
 });
 

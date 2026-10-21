@@ -80,6 +80,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/inventory': { modulo: 'INVENTORY', exigir: 'editar' },
   '/api/inventory/[id]/confirm': { modulo: 'INVENTORY', exigir: 'editar' },
   '/api/inventory-equip': { modulo: 'INVENTORY', exigir: 'editar' },
+  '/api/utensilios': { modulo: 'UTENSILS', exigir: 'editar' },
+  '/api/utensilios/catalogo': { modulo: 'CONFIG_UTENSILS', exigir: 'editar' },
 
   '/api/metas/export': { modulo: 'METAS', exigir: 'ver' },
   // Uso do SGO (v1.164.0): Excel da aba; a rota ainda exige ver a rede (Admin/CEO/Supervisor)

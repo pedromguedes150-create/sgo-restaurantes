@@ -1169,8 +1169,28 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'inventario-utensilios',
+        title: 'Inventário de Utensílios',
+        roles: MANAGERLINE,
+        summary: 'Contagem periódica de pratos, copos, talheres e afins: o gerente conta e envia; Supervisão e Coordenação conferem, aprovam ou devolvem.',
+        steps: [
+          'CONTAGEM (gerente): em Operação → Suprimentos → Inventário de Utensílios, toque "Iniciar contagem" (ou "Continuar"/"Corrigir" se já houver uma em aberto — só existe UMA por unidade de cada vez). Unidade e gerente responsável vêm sozinhos; data e hora são automáticas.',
+          'Um utensílio por linha (Pratos — Cliente, Refeitório, Sobremesa, Cubas, Facas, Garfos, Colheres, Copos, Xícaras, Pires, Jarras…): digite a quantidade contada. ZERO é zero; campo VAZIO é "não conferido" — o sistema nunca preenche zero sozinho e não deixa enviar com campo vazio (ele nomeia o que falta).',
+          '"+ Adicionar outro utensílio" inclui um item que não está na lista (nome, quantidade e observação) — ele fica só neste inventário e pode ser removido antes de enviar. Observações gerais no fim (reposição necessária, itens danificados…).',
+          '"Salvar rascunho" guarda para continuar depois. "Enviar inventário" pede confirmação e manda para a auditoria: depois disso a contagem fica BLOQUEADA até a Supervisão aprovar ou devolver. Dois toques no botão não geram dois envios.',
+          'AUDITORIA (Supervisor e Coordenador, iguais): a aba Auditoria mostra Pendentes · Em correção · Aprovados no período e a fila dos pendentes, mais antigos primeiro. Abra o inventário: a coluna "Conferido" é OPCIONAL (preencha só o que você contou; a diferença aparece sozinha em vermelho), escreva a observação de auditoria e escolha "Aprovar inventário" (fecha e vai para o histórico, imutável) ou "Devolver para correção" (motivo OBRIGATÓRIO — o gerente recebe o texto e a contagem reabre para ele corrigir e reenviar).',
+          'HISTÓRICO: filtros por unidade (seletor do cabeçalho), gerente, período e situação; "Abrir" mostra a folha; o botão PDF imprime o inventário (itens, quantidades, conferência, observações e o histórico de eventos).',
+          'LISTA PADRÃO (Admin): Configurações → Utensílios — adicionar, renomear, ordenar, ativar/desativar. Desativar vale para as PRÓXIMAS contagens; renomear não reescreve inventários já feitos.',
+        ],
+        tips: [
+          'Este inventário é INDEPENDENTE do Teknisa e do inventário de equipamentos (que continua em "Inventário Teknisa e Equipamentos", para a Supervisão). Nenhum dos dois altera o outro.',
+          'Conta na meta como "Inventário de utensílios (enviado no mês)", com peso 0 por enquanto — o peso e a periodicidade (mensal ou trimestral) serão definidos pela diretoria.',
+          'Situações possíveis: Rascunho, Pendente de auditoria, Em correção e Aprovado. Aprovado não muda mais; qualquer ajuste é uma nova contagem.',
+        ],
+      },
+      {
         id: 'inventario',
-        title: 'Inventário',
+        title: 'Inventário Teknisa e Equipamentos',
         roles: MANAGERLINE,
         summary: 'Tarefa do Teknisa + inventário de equipamentos do restaurante.',
         steps: [

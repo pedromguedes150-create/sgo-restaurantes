@@ -7,7 +7,7 @@ import { getEvaluationWeight } from '@/lib/people/evaluation';
 import { getLateEntryPenaltyPct } from '@/lib/late-entry';
 import {
   getWasteMetaWeight, getCommandsMetaWeight, getManagerLeaveMetaPenalty, getTasksMetaWeight,
-  getCashMetaWeight, getScheduleMetaWeight, getCancellationsMetaWeight, getStockMetaWeight, getInventoryMetaWeight,
+  getCashMetaWeight, getScheduleMetaWeight, getCancellationsMetaWeight, getStockMetaWeight, getInventoryMetaWeight, getUtensilsMetaWeight,
 } from '@/lib/metas/config';
 import { linhasPorModulo, resumirPorModulo } from '@/lib/metas/por-modulo';
 import { MODULES } from '@/lib/permissions';
@@ -33,14 +33,14 @@ export default async function MetaConfigPage() {
   if (!['ADMIN', 'SUPERVISOR', 'CEO'].includes(user.role)) {
     return <p className="text-sm text-ink-500">Restrito à Supervisão/Administração.</p>;
   }
-  const [training, communication, evaluation, penalty, waste, commands, managerLeave, tasks, cash, schedule, cancellations, stock, inventory] = await Promise.all([
+  const [training, communication, evaluation, penalty, waste, commands, managerLeave, tasks, cash, schedule, cancellations, stock, inventory, utensils] = await Promise.all([
     getTrainingWeight(), getCommunicationWeight(), getEvaluationWeight(), getLateEntryPenaltyPct(), getWasteMetaWeight(), getCommandsMetaWeight(), getManagerLeaveMetaPenalty(),
-    getTasksMetaWeight(), getCashMetaWeight(), getScheduleMetaWeight(), getCancellationsMetaWeight(), getStockMetaWeight(), getInventoryMetaWeight(),
+    getTasksMetaWeight(), getCashMetaWeight(), getScheduleMetaWeight(), getCancellationsMetaWeight(), getStockMetaWeight(), getInventoryMetaWeight(), getUtensilsMetaWeight(),
   ]);
 
   const grupos = linhasPorModulo(MODULES, AREAS, {
     tasksMeta: tasks, wasteMeta: waste, commandsMeta: commands, communication, training, evaluation, lateEntry: penalty, managerLeaveMeta: managerLeave,
-    cashMeta: cash, scheduleMeta: schedule, cancellationsMeta: cancellations, stockMeta: stock, inventoryMeta: inventory,
+    cashMeta: cash, scheduleMeta: schedule, cancellationsMeta: cancellations, stockMeta: stock, inventoryMeta: inventory, utensilsMeta: utensils,
   });
   const resumo = resumirPorModulo(grupos);
 
