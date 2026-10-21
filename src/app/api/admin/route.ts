@@ -9,7 +9,7 @@ import { setTrainingWeight } from '@/lib/training';
 import { setCommunicationWeight } from '@/lib/communications/meta';
 import { setEvaluationWeight } from '@/lib/people/evaluation';
 import { setLateEntryPenaltyPct } from '@/lib/late-entry';
-import { setWasteMetaWeight, setCommandsMetaWeight, setTasksMetaWeight, setCashMetaWeight, setScheduleMetaWeight, setCancellationsMetaWeight, setStockMetaWeight, setInventoryMetaWeight, setManagerLeaveMetaPenalty } from '@/lib/metas/config';
+import { setWasteMetaWeight, setCommandsMetaWeight, setTasksMetaWeight, setCashMetaWeight, setScheduleMetaWeight, setCancellationsMetaWeight, setStockMetaWeight, setInventoryMetaWeight, setUtensilsMetaWeight, setManagerLeaveMetaPenalty } from '@/lib/metas/config';
 import { setGasAlertPct, setGasMaxPriceKg } from '@/lib/gas/query';
 import { setFreelancerWeekLimit } from '@/lib/payments/recorrencia';
 import { mesclarFreelancers } from '@/lib/payments/mesclar-freelancers';
@@ -115,6 +115,7 @@ export async function POST(req: Request) {
   else if (e === 'cancellationsMeta' && a === 'setWeight') r = await setCancellationsMetaWeight(user, Number(b.weight));
   else if (e === 'stockMeta' && a === 'setWeight') r = await setStockMetaWeight(user, Number(b.weight));
   else if (e === 'inventoryMeta' && a === 'setWeight') r = await setInventoryMetaWeight(user, Number(b.weight));
+  else if (e === 'utensilsMeta' && a === 'setWeight') r = await setUtensilsMetaWeight(user, Number(b.weight));
   else if (e === 'managerLeaveMeta' && a === 'setPenalty') r = await setManagerLeaveMetaPenalty(user, Number(b.pct));
   else if (e === 'supervisorChecklist' && a === 'create') r = await createSupervisorChecklist(user, b, ctx);
   else if (e === 'supervisorChecklist' && a === 'update') r = await updateSupervisorChecklist(user, b.id, b, ctx);

@@ -99,11 +99,21 @@ describe('O Gerente continua com o que já usava', () => {
     '/modulos/pagamentos', '/modulos/pessoas', '/modulos/pessoas/mapa', '/modulos/escala',
     '/modulos/escala/folgas', '/modulos/troco', '/modulos/metas', '/modulos/atestados',
     '/modulos/cancelamentos', '/modulos/cancelamentos/itens', '/modulos/gas', '/modulos/oleo',
-    '/modulos/inventario', '/modulos/higiene', '/modulos/produtos', '/ajuda',
+    '/modulos/inventario-utensilios', '/modulos/higiene', '/modulos/produtos', '/ajuda',
   ];
 
   it('abre todas as telas da rotina', async () => {
     for (const r of DIA_A_DIA) expect(await canOpenPath('MANAGER', r), r).toBe(true);
+  });
+
+  /* v1.177.0 (decisão do Pedro): o Inventário de Utensílios SUBSTITUI o "Inventário" no menu do
+     gerente; o Teknisa/Equipamentos segue para Supervisão e Coordenação (+Admin/CEO). */
+  it('o Inventário Teknisa/Equipamentos saiu do padrão do gerente e ficou com a Supervisão', async () => {
+    expect(await canOpenPath('MANAGER', '/modulos/inventario')).toBe(false);
+    expect(await canOpenPath('SUPERVISOR', '/modulos/inventario')).toBe(true);
+    expect(await canOpenPath('COORDINATOR', '/modulos/inventario')).toBe(true);
+    expect(await canOpenPath('SUPERVISOR', '/modulos/inventario-utensilios')).toBe(true);
+    expect(await canOpenPath('CASHIER', '/modulos/inventario-utensilios')).toBe(false);
   });
 });
 

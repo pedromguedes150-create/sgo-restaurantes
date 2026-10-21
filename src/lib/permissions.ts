@@ -65,7 +65,11 @@ const BASE: ModuleDef[] = [
   { key: 'CANCELLATIONS_ANALYSIS', label: 'Análise', nav: '/modulos/cancelamentos/analise', parent: 'CANCELLATIONS' },
   { key: 'CANCELLATIONS_REPORT', label: 'Relatório', nav: '/modulos/cancelamentos/relatorio', parent: 'CANCELLATIONS' },
 
-  { key: 'INVENTORY', label: 'Inventário', nav: '/modulos/inventario' },
+  /* v1.177.0: o Inventário de Utensílios é a aba do GERENTE; o Inventário
+     Teknisa/Equipamentos continua na tela de sempre, mas sai do menu dele por
+     padrão (decisão do Pedro: "substitua a aba de inventário para não confundir"). */
+  { key: 'UTENSILS', label: 'Inventário de Utensílios', nav: '/modulos/inventario-utensilios' },
+  { key: 'INVENTORY', label: 'Inventário Teknisa e Equipamentos', nav: '/modulos/inventario' },
 
   { key: 'NOTES', label: 'Notas Recebidas', nav: '/modulos/notas' },
   { key: 'NOTES_GAS', label: 'Análise de gás', nav: '/modulos/notas/gas', parent: 'NOTES' },
@@ -179,6 +183,7 @@ const BASE: ModuleDef[] = [
   { key: 'CONFIG_OVERTIME_RATES', label: 'Valor da hora extra por unidade', nav: '/configuracoes/hora-extra-valores', parent: 'CONFIG' },
   { key: 'CONFIG_EVALUATION', label: 'Avaliação por função (modelos)', nav: '/configuracoes/avaliacao', parent: 'CONFIG' },
   { key: 'CONFIG_COMMISSION', label: 'Comissão (percentuais e funções da cozinha)', nav: '/configuracoes/comissao', parent: 'CONFIG' },
+  { key: 'CONFIG_UTENSILS', label: 'Utensílios (lista padrão do inventário)', nav: '/configuracoes/utensilios', parent: 'CONFIG' },
   { key: 'CONFIG_INTEGRATIONS', label: 'APIs e integrações', nav: '/configuracoes/integracoes', parent: 'CONFIG' },
   { key: 'CONFIG_RH_DIAG', label: 'Diagnóstico do RH', nav: '/configuracoes/integracoes/diagnostico', parent: 'CONFIG_INTEGRATIONS' },
   { key: 'CONFIG_RH_SAIDA', label: 'Envios ao RH (fila)', nav: '/configuracoes/integracoes/envios-rh', parent: 'CONFIG_INTEGRATIONS' },
@@ -223,6 +228,11 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   /* Hora extra (v1.142.0): quem lança (gerente), quem aprova (coordenação e
      supervisão) e quem fecha a competência (financeiro); Admin/CEO sempre. */
   HORA_EXTRA: ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'FINANCE'],
+  /* v1.177.0: o gerente conta, Supervisão e Coordenação auditam (iguais, decisão do
+     Pedro); Admin/CEO sempre. O Inventário Teknisa/Equipamentos passa a nascer só
+     para Supervisão/Coordenação — em produção, linha já gravada na matriz vence. */
+  UTENSILS: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'],
+  INVENTORY: ['SUPERVISOR', 'COORDINATOR'],
   COMMISSION: ['SUPERVISOR'], // v1.175.0: apura e confere a Supervisão (+Admin/CEO), como a Mobilidade
   CONFIG_COMMISSION: ['COORDINATOR'], // v1.175.0: o Coordenador marca as funções da cozinha (decisão do Pedro); percentual segue só do Admin, na lib
   /* Aba "Pagar" da central (v1.133.0): quem marca pago é o Coordenador (a

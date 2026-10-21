@@ -16,9 +16,10 @@ export async function componentesDaMeta(unitId: string, yearMonth: string): Prom
   const [{ getTrainingMonthStats, getTrainingWeight }, { getCommunicationMonthStats, getCommunicationWeight }, { getEvaluationMonthStats, getEvaluationWeight }, cfg] = await Promise.all([
     import('@/lib/training'), import('@/lib/communications/meta'), import('@/lib/people/evaluation'), import('./config'),
   ]);
+  const { getUtensilsCoverage } = await import('@/lib/utensilios/inventario');
   const [
     tasks, tasksW, t, tW, c, cW, e, eW, w, wW, cm, cmW,
-    cash, cashW, sch, schW, canc, cancW, st, stW, inv, invW,
+    cash, cashW, sch, schW, canc, cancW, st, stW, inv, invW, ut, utW,
   ] = await Promise.all([
     cfg.getChecklistsCoverage(unitId, yearMonth), cfg.getTasksMetaWeight(),
     getTrainingMonthStats(unitId, yearMonth), getTrainingWeight(),
@@ -31,6 +32,7 @@ export async function componentesDaMeta(unitId: string, yearMonth: string): Prom
     cfg.getCancellationsCoverage(unitId, yearMonth), cfg.getCancellationsMetaWeight(),
     cfg.getStockCoverage(unitId, yearMonth), cfg.getStockMetaWeight(),
     cfg.getInventoryCoverage(unitId, yearMonth), cfg.getInventoryMetaWeight(),
+    getUtensilsCoverage(unitId, yearMonth), cfg.getUtensilsMetaWeight(),
   ]);
   return [
     { key: 'TASKS', name: NOME_CHECKLISTS, weight: tasksW, done: tasks.done, missed: tasks.missed },
@@ -43,7 +45,8 @@ export async function componentesDaMeta(unitId: string, yearMonth: string): Prom
     { key: 'SCHEDULE', name: 'Escala (Realizado preenchido)', weight: schW, done: sch.done, missed: sch.missed },
     { key: 'CANCELLATIONS', name: 'Cancelamentos justificados', weight: cancW, done: canc.done, missed: canc.missed },
     { key: 'STOCK', name: 'Estoque (tratativas de validade)', weight: stW, done: st.done, missed: st.missed },
-    { key: 'INVENTORY', name: 'Inventário (agendamentos confirmados)', weight: invW, done: inv.done, missed: inv.missed },
+    { key: 'INVENTORY', name: 'Inventário Teknisa (agendamentos confirmados)', weight: invW, done: inv.done, missed: inv.missed },
+    { key: 'UTENSILS', name: 'Inventário de utensílios (enviado no mês)', weight: utW, done: ut.done, missed: ut.missed },
   ];
 }
 

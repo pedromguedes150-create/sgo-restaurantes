@@ -70,6 +70,11 @@ export const INDICADORES: Record<string, IndicadorDeModulo> = {
     indicador: 'Tratativas de validade respondidas',
     como: 'Respondidas no mês ÷ (respondidas + pendentes que entraram na faixa até ontem). Mês sem lote em faixa não entra.',
   },
+  UTENSILS: {
+    entity: 'utensilsMeta', tipo: 'PESO',
+    indicador: 'Inventário de utensílios enviado no mês',
+    como: 'Unidade que ENVIOU a contagem de utensílios no mês = 100%; sem envio = 0%. Nasce com peso 0: a periodicidade (mensal ou trimestral) ainda vai ser decidida — com peso ligado, mês sem contagem zera este componente.',
+  },
   INVENTORY: {
     entity: 'inventoryMeta', tipo: 'PESO',
     indicador: 'Inventários Teknisa confirmados pelo gerente',

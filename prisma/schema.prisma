@@ -4931,3 +4931,102 @@ model CommissionKitchenJobTitle {
 
   @@map("commission_kitchen_job_titles")
 }
+
+// ───────────────────────── INVENTÁRIO DE UTENSÍLIOS (v1.177.0) ─────────────────────────
+// Contagem e conferência dos utensílios da unidade — módulo PRÓPRIO, sem relação
+// com o inventário Teknisa (`inventory_schedules`) nem com o de equipamentos
+// (`inventory_items`/`inventory_movements`). Lista padrão global editável pelo
+// Admin; cada inventário congela o NOME do item no momento da contagem.
+
+enum UtensilInventoryStatus {
+  RASCUNHO
+  PENDENTE
+  EM_CORRECAO
+  APROVADO
+}
+
+enum UtensilEventKind {
+  CRIADO
+  ENVIADO
+  DEVOLVIDO
+  REENVIADO
+  AUDITADO
+  APROVADO
+}
+
+model UtensilCatalogItem {
+  id        String   @id @default(cuid())
+  name      String
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("utensil_catalog_items")
+}
+
+model UtensilInventory {
+  id           String                 @id @default(cuid())
+  unitId       String
+  status       UtensilInventoryStatus @default(RASCUNHO)
+  /// Gerente responsável (usuário vinculado à unidade), escolhido na contagem.
+  managerId    String
+  managerName  String
+  notes        String?
+  /// Último envio ao supervisor (reenvio atualiza).
+  sentAt       DateTime?
+  firstSentAt  DateTime?
+  auditorId    String?
+  auditorName  String?
+  auditNotes   String?
+  returnReason String?
+  approvedAt   DateTime?
+  createdById  String
+  createdByName String
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  items  UtensilInventoryItem[]
+  events UtensilInventoryEvent[]
+
+  @@index([unitId, status])
+  @@index([unitId, sentAt])
+  @@map("utensil_inventories")
+}
+
+model UtensilInventoryItem {
+  id              String  @id @default(cuid())
+  inventoryId     String
+  catalogItemId   String?
+  /// Nome CONGELADO na contagem: renomear a lista depois não reescreve o histórico.
+  name            String
+  order           Int     @default(0)
+  /// Nulo = ainda não conferido. Zero é zero.
+  quantity        Int?
+  /// Contagem de conferência do supervisor (opcional).
+  auditedQuantity Int?
+  custom          Boolean @default(false)
+  note            String?
+
+  inventory UtensilInventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryId])
+  @@map("utensil_inventory_items")
+}
+
+model UtensilInventoryEvent {
+  id          String           @id @default(cuid())
+  inventoryId String
+  kind        UtensilEventKind
+  byId        String?
+  byName      String
+  note        String?
+  /// Retrato dos itens no envio/reenvio (nome → quantidade): o envio original fica preservado.
+  snapshot    Json?
+  createdAt   DateTime         @default(now())
+
+  inventory UtensilInventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryId, createdAt])
+  @@map("utensil_inventory_events")
+}

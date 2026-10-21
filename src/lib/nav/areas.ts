@@ -60,7 +60,7 @@ export const AREAS: AreaDoMenu[] = [
     colunas: [
       { titulo: 'Rotinas da unidade', keys: ['OIL', 'PIZZAS', 'GAS'] },
       { titulo: 'Controles', keys: ['WASTE', 'OCCURRENCES', 'MAINTENANCE', 'COMMANDS', 'CASH', 'EXPENSES', 'CANCELLATIONS'] },
-      { titulo: 'Suprimentos', keys: ['STOCK', 'NOTES', 'INVENTORY', 'PRODUCTS', 'PRODUCT_SEPARATION'] },
+      { titulo: 'Suprimentos', keys: ['STOCK', 'NOTES', 'UTENSILS', 'INVENTORY', 'PRODUCTS', 'PRODUCT_SEPARATION'] },
       { titulo: 'Conferências', keys: ['COMMANDS_SCAN', 'COMMANDS_SESSIONS', 'COMMANDS_OPEN', 'CANCELLATIONS_ITEMS', 'CASH_OFFICE'] },
     ],
   },
@@ -106,7 +106,7 @@ export const AREAS: AreaDoMenu[] = [
     colunas: [
       { titulo: 'Estrutura', keys: ['CONFIG', 'CONFIG_UNITS', 'CONFIG_USERS', 'CONFIG_PROFILES', 'CONFIG_INTEGRATIONS', 'CONFIG_RH_DIAG', 'CONFIG_RH_SAIDA'] },
       { titulo: 'Operação', keys: ['CONFIG_CHECKLISTS', 'CONFIG_MODELS', 'CONFIG_SUP_CHECKLISTS', 'CONFIG_COMMANDS', 'CASH_CONFIG', 'CONFIG_WASTE', 'CONFIG_OCCURRENCES'] },
-      { titulo: 'Cadastros', keys: ['CONFIG_SUPPLIERS', 'CONFIG_PRODUCTS', 'CONFIG_CD_SECTORS', 'CONFIG_PRODUCT_STANDARDS', 'CONFIG_PIZZAS', 'CONFIG_TICKET_MEDIA'] },
+      { titulo: 'Cadastros', keys: ['CONFIG_SUPPLIERS', 'CONFIG_PRODUCTS', 'CONFIG_CD_SECTORS', 'CONFIG_PRODUCT_STANDARDS', 'CONFIG_PIZZAS', 'CONFIG_TICKET_MEDIA', 'CONFIG_UTENSILS'] },
       { titulo: 'Pessoas e escala', keys: ['CONFIG_SCHEDULES', 'CONFIG_EVALUATION', 'CONFIG_COMMISSION', 'CONFIG_PAYMENTS', 'CONFIG_FREELANCER_RATES', 'CONFIG_OVERTIME_RATES'] },
     ],
   },

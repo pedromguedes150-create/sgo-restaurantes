@@ -27,6 +27,7 @@ const SCHEDULE_KEY = 'SCHEDULE_META_WEIGHT';
 const CANCELLATIONS_KEY = 'CANCELLATIONS_META_WEIGHT';
 const STOCK_KEY = 'STOCK_META_WEIGHT';
 const INVENTORY_KEY = 'INVENTORY_META_WEIGHT';
+const UTENSILS_KEY = 'UTENSILS_META_WEIGHT'; // v1.177.0 — nasce em 0; o Pedro calibra depois de decidir mensal × trimestral
 /** Peso dos checklists quando nunca foi gravado: 100, a base da nota de sempre. */
 export const TASKS_META_WEIGHT_DEFAULT = 100;
 /* v1.170.0 — "Escala de gerentes": cada gerente sem folga cadastrada no mês
@@ -55,6 +56,7 @@ export const getScheduleMetaWeight = () => readWeight(SCHEDULE_KEY);
 export const getCancellationsMetaWeight = () => readWeight(CANCELLATIONS_KEY);
 export const getStockMetaWeight = () => readWeight(STOCK_KEY);
 export const getInventoryMetaWeight = () => readWeight(INVENTORY_KEY);
+export const getUtensilsMetaWeight = () => readWeight(UTENSILS_KEY);
 export const setWasteMetaWeight = (u: SessionUser, w: number) => writeWeight(u, WASTE_KEY, w, 'WASTE_META_WEIGHT_SET');
 export const setCommandsMetaWeight = (u: SessionUser, w: number) => writeWeight(u, COMMANDS_KEY, w, 'COMMANDS_META_WEIGHT_SET');
 export const setTasksMetaWeight = (u: SessionUser, w: number) => writeWeight(u, TASKS_KEY, w, 'TASKS_META_WEIGHT_SET');
@@ -63,6 +65,7 @@ export const setScheduleMetaWeight = (u: SessionUser, w: number) => writeWeight(
 export const setCancellationsMetaWeight = (u: SessionUser, w: number) => writeWeight(u, CANCELLATIONS_KEY, w, 'CANCELLATIONS_META_WEIGHT_SET');
 export const setStockMetaWeight = (u: SessionUser, w: number) => writeWeight(u, STOCK_KEY, w, 'STOCK_META_WEIGHT_SET');
 export const setInventoryMetaWeight = (u: SessionUser, w: number) => writeWeight(u, INVENTORY_KEY, w, 'INVENTORY_META_WEIGHT_SET');
+export const setUtensilsMetaWeight = (u: SessionUser, w: number) => writeWeight(u, UTENSILS_KEY, w, 'UTENSILS_META_WEIGHT_SET');
 
 /** % descontado da nota por gerente/coordenador SEM folga nem férias no mês. */
 export async function getManagerLeaveMetaPenalty(): Promise<number> {
