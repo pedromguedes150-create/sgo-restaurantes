@@ -73,7 +73,7 @@ describe('Configuração da Meta — uma tela, por módulo', () => {
     expect(html).toMatch(/aria-label="Peso de Tarefas"[^>]*value="100"/);
     expect(html).toContain('aria-label="Peso de Gestão de Troco"');
     expect(html).toContain('aria-label="Peso de Cancelamentos"');
-    expect(html).toContain('aria-label="Peso de Inventário Teknisa e Equipamentos"');
+    expect(html).toContain('aria-label="Peso de Inventário de Produtos"');
     expect(html).toContain('aria-label="Peso de Inventário de Utensílios"'); // v1.177.0: nasce em 0
     expect(html).toContain('aria-label="Peso de Estoque (validade e lotes)"');
     expect(html).toContain('aria-label="Peso de Escala (grade de presença)"');

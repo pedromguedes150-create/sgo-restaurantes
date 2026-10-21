@@ -1183,14 +1183,14 @@ export const GUIDE: GuideSection[] = [
           'LISTA PADRÃO (Admin): Configurações → Utensílios — adicionar, renomear, ordenar, ativar/desativar. Desativar vale para as PRÓXIMAS contagens; renomear não reescreve inventários já feitos.',
         ],
         tips: [
-          'Este inventário é INDEPENDENTE do Teknisa e do inventário de equipamentos (que continua em "Inventário Teknisa e Equipamentos", para a Supervisão). Nenhum dos dois altera o outro.',
+          'Este inventário é INDEPENDENTE do Teknisa e do inventário de equipamentos (o "Inventário de Produtos", hoje desativado — só o Admin o vê). Nenhum dos dois altera o outro.',
           'Conta na meta como "Inventário de utensílios (enviado no mês)", com peso 0 por enquanto — o peso e a periodicidade (mensal ou trimestral) serão definidos pela diretoria.',
           'Situações possíveis: Rascunho, Pendente de auditoria, Em correção e Aprovado. Aprovado não muda mais; qualquer ajuste é uma nova contagem.',
         ],
       },
       {
         id: 'inventario',
-        title: 'Inventário Teknisa e Equipamentos',
+        title: 'Inventário de Produtos',
         roles: MANAGERLINE,
         summary: 'Tarefa do Teknisa + inventário de equipamentos do restaurante.',
         steps: [

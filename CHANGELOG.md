@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.177.1 — 2026-10-21 (o Inventário antigo passa a se chamar "Inventário de Produtos")
+### Mudou
+- Pedido do Pedro (print): a tela `/modulos/inventario` (Teknisa + Equipamentos) chama-se agora **"Inventário de Produtos"** — no título, na aba de Suprimentos, no menu, na matriz de Perfis, na busca e na central de Treinamento. Rota, dados e históricos seguem iguais.
+- **E fica INATIVO por enquanto** (pedido do Pedro: "para não confundir os gerentes de primeiro momento"): `MODULOS_INATIVOS` em `src/lib/permissions.ts` fecha o módulo para todo perfil que não seja Admin/CEO, **por cima da matriz** — uma linha gravada em Perfis não reabre. Some do menu, da busca e da aba de Suprimentos; a rota responde como sem permissão. Para reativar: tirar `INVENTORY` do conjunto.
+
 ## v1.177.0 — 2026-10-21 (Inventário de Utensílios: o gerente conta, a Supervisão audita)
 ### Novo
 - **Inventário de Utensílios** (Operação → Suprimentos, `/modulos/inventario-utensilios`, módulo `UTENSILS` — Gerente, Coordenador e Supervisor + Admin/CEO): contagem periódica de pratos, copos, talheres e afins por unidade, **independente do Teknisa e do inventário de equipamentos** (nada ali foi tocado). Três abas: **Contagem** (o gerente abre ou retoma a contagem da unidade; unidade e gerente responsável saem da sessão; um utensílio por linha com campo numérico grande para o celular; "+ Adicionar outro utensílio" para o que não está na lista — fica só naquele inventário; observações; **Salvar rascunho** e **Enviar inventário** com confirmação), **Auditoria** (Supervisor e Coordenador, iguais — decisão do Pedro: pendentes primeiro, três indicadores Pendentes · Em correção · Aprovados no período; na folha, coluna **Conferido** OPCIONAL com a diferença destacada, observação de auditoria, **Aprovar** ou **Devolver para correção com motivo obrigatório**) e **Histórico** (filtros unidade/gerente/período/situação, **PDF por inventário** pela impressão). Situações: Rascunho → Pendente de auditoria → Aprovado, com Em correção quando devolvido.

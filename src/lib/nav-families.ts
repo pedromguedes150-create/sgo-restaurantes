@@ -51,7 +51,7 @@ export const FAMILIES: Family[] = [
     icon: Boxes,
     children: [
       { href: '/modulos/notas', tab: 'Notas' },
-      { href: '/modulos/inventario', tab: 'Inventário' },
+      { href: '/modulos/inventario', tab: 'Inventário de Produtos' },
       { href: '/modulos/produtos', tab: 'Pedidos' },
     ],
   },

@@ -83,9 +83,8 @@ describe('As seis rotas que só olhavam a unidade agora olham a matriz', () => {
     });
 
     it(`${c.rota}: sem ninguém mexer, quem tem o módulo por padrão segue (a rota responde 404, não 403)`, async () => {
-      /* v1.177.0: o Inventário Teknisa/Equipamentos saiu do padrão do GERENTE (o dele passou a ser o
-         Inventário de Utensílios) e ficou com a Supervisão — para este caso, quem segue é o Supervisor. */
-      if (c.modulo === 'INVENTORY') papel = 'SUPERVISOR';
+      /* v1.177.1: o Inventário de Produtos está INATIVO para todos menos Admin/CEO (MODULOS_INATIVOS). */
+      if (c.modulo === 'INVENTORY') papel = 'ADMIN';
       expect(await post(c.mod, c.rota, c.body)).toBe(404);
     });
 

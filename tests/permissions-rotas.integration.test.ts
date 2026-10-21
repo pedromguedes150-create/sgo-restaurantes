@@ -108,10 +108,11 @@ describe('O Gerente continua com o que já usava', () => {
 
   /* v1.177.0 (decisão do Pedro): o Inventário de Utensílios SUBSTITUI o "Inventário" no menu do
      gerente; o Teknisa/Equipamentos segue para Supervisão e Coordenação (+Admin/CEO). */
-  it('o Inventário Teknisa/Equipamentos saiu do padrão do gerente e ficou com a Supervisão', async () => {
+  it('o Inventário de Produtos está INATIVO para todos menos Admin/CEO (v1.177.1); o de Utensílios segue', async () => {
     expect(await canOpenPath('MANAGER', '/modulos/inventario')).toBe(false);
-    expect(await canOpenPath('SUPERVISOR', '/modulos/inventario')).toBe(true);
-    expect(await canOpenPath('COORDINATOR', '/modulos/inventario')).toBe(true);
+    expect(await canOpenPath('SUPERVISOR', '/modulos/inventario')).toBe(false);
+    expect(await canOpenPath('COORDINATOR', '/modulos/inventario')).toBe(false);
+    expect(await canOpenPath('ADMIN', '/modulos/inventario')).toBe(true);
     expect(await canOpenPath('SUPERVISOR', '/modulos/inventario-utensilios')).toBe(true);
     expect(await canOpenPath('CASHIER', '/modulos/inventario-utensilios')).toBe(false);
   });

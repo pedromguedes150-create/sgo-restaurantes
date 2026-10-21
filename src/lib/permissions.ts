@@ -69,7 +69,7 @@ const BASE: ModuleDef[] = [
      Teknisa/Equipamentos continua na tela de sempre, mas sai do menu dele por
      padrão (decisão do Pedro: "substitua a aba de inventário para não confundir"). */
   { key: 'UTENSILS', label: 'Inventário de Utensílios', nav: '/modulos/inventario-utensilios' },
-  { key: 'INVENTORY', label: 'Inventário Teknisa e Equipamentos', nav: '/modulos/inventario' },
+  { key: 'INVENTORY', label: 'Inventário de Produtos', nav: '/modulos/inventario' },
 
   { key: 'NOTES', label: 'Notas Recebidas', nav: '/modulos/notas' },
   { key: 'NOTES_GAS', label: 'Análise de gás', nav: '/modulos/notas/gas', parent: 'NOTES' },
@@ -289,6 +289,16 @@ const DEFAULT_ALLOW_ONLY: Partial<Record<Role, string[]>> = {
   SEPARATOR: ['PRODUCT_SEPARATION', 'HELP'],
 };
 
+/**
+ * MÓDULOS INATIVOS (v1.177.1): fechados para TODO perfil que não seja
+ * Admin/CEO, por cima da matriz — uma linha gravada em Perfis não reabre.
+ * Existe para tirar uma tela do caminho da operação sem apagar nada (rota,
+ * dados e histórico ficam). Hoje: o Inventário de Produtos (Teknisa +
+ * Equipamentos), pedido do Pedro em 21/10/2026 para não confundir os gerentes
+ * com o Inventário de Utensílios. Para reativar: tirar a chave daqui.
+ */
+export const MODULOS_INATIVOS: ReadonlySet<string> = new Set(['INVENTORY']);
+
 /** Permissões efetivas de um perfil de sistema por módulo (com defaults). */
 export async function effectivePermissions(role: Role): Promise<Record<string, Perm>> {
   const rows = await prisma.rolePermission.findMany({ where: { role } });
@@ -307,6 +317,7 @@ function calcular(role: Role, byModule: Map<string, Perm>): Record<string, Perm>
   const out: Record<string, Perm> = {};
   for (const m of MODULES) {
     if (isFullAccess(role)) { out[m.key] = { canView: true, canEdit: true }; continue; }
+    if (MODULOS_INATIVOS.has(m.key)) { out[m.key] = { canView: false, canEdit: false }; continue; }
     const r = byModule.get(m.key);
 
     if (m.parent) {
