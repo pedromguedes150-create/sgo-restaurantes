@@ -1,5 +1,5 @@
 import { numeroDaCelula, codigoDaUnidade } from '@/lib/ticket-media/planilha';
-import { normalizarNome } from '@/lib/hora-extra/calculo';
+import { candidatosDeVinculo, normalizarNome, type CandidatoRh } from '@/lib/hora-extra/calculo';
 
 /**
  * COMISSÃO POR VENDEDOR (v1.175.0) — a conta PURA sobre a planilha
@@ -147,6 +147,31 @@ export function tipoDoVendedor(nome: string): TipoDeVendedor {
   if (n.includes('grupo beija flor')) return 'GRUPO';
   if (/freelanc/.test(n)) return 'FREELANCER';
   return 'VENDEDOR';
+}
+
+/* ───────────────────────── vínculo pelo nome ───────────────────────── */
+
+export type VinculoPorNome =
+  | { tipo: 'EXATO' | 'PARCIAL'; escolhido: CandidatoRh; sugestoes: CandidatoRh[] }
+  | { tipo: 'AMBIGUO' | 'NENHUM'; escolhido: null; sugestoes: CandidatoRh[] };
+
+/**
+ * O Teknisa grava o nome CURTO ("MARIA MERCES") e o RH o nome inteiro ("MARIA
+ * MERCES SANTOS COSTA"). Vincula sozinho quando o nome do Teknisa identifica
+ * UMA pessoa da unidade: idêntico (EXATO) ou contido no nome do RH com todas
+ * as palavras e só um candidato (PARCIAL, v1.176.1 — pedido do Pedro: "muitos
+ * funcionários ativos no RH tenho que vincular à mão"). Nome de UMA palavra só
+ * não vincula sozinho ("MARIA" casaria com qualquer Maria); dois ou mais
+ * candidatos ficam para a mão, com a lista.
+ */
+export function resolverVinculoPorNome(nome: string, candidatos: CandidatoRh[]): VinculoPorNome {
+  const { exatos, parecidos } = candidatosDeVinculo(nome, candidatos);
+  if (exatos.length === 1) return { tipo: 'EXATO', escolhido: exatos[0], sugestoes: [] };
+  if (exatos.length > 1) return { tipo: 'AMBIGUO', escolhido: null, sugestoes: exatos };
+  const palavras = normalizarNome(nome).split(' ').filter((t) => t.length > 1).length;
+  if (parecidos.length === 1 && palavras >= 2) return { tipo: 'PARCIAL', escolhido: parecidos[0], sugestoes: [] };
+  if (parecidos.length > 0) return { tipo: 'AMBIGUO', escolhido: null, sugestoes: parecidos };
+  return { tipo: 'NENHUM', escolhido: null, sugestoes: [] };
 }
 
 /* ───────────────────────── meses ───────────────────────── */

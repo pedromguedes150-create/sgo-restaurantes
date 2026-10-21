@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.176.1 — 2026-10-21 (Comissão: o nome curto do Teknisa vincula sozinho)
+### Corrigido
+- **Relato do Pedro (prints de Moreira)**: dezenas de vendedores ativos no RH caíam em "Fora da comissão" e pediam vínculo à mão — o Teknisa grava o nome CURTO ("1065 - MARIA MERCES") e o RH o nome inteiro ("MARIA MERCES SANTOS COSTA"); a v1.175.0 só vinculava sozinha o nome IDÊNTICO. Agora `resolverVinculoPorNome` (PURO, em `calculo.ts`) vincula também quando todas as palavras do nome do Teknisa estão no nome de **UM só** colaborador ativo da unidade (PARCIAL); nome de uma palavra só e dois ou mais candidatos continuam para a mão, com a lista. **Todo vendedor casado** (à mão, idêntico ou parcial) fica lembrado pelo código do Teknisa em `CommissionSellerLink` — se o RH admitir outra "Maria Merces" amanhã, o mês que vem não volta para a mão. 3 testes puros + o de integração com um caso ambíguo ("ANA PAULA" × duas Ana Paula).
+
 ## v1.176.0 — 2026-10-20 (Comissão: gerente/encarregado fora, não cadastrados recolhidos, Pedido de Carga Swile)
 ### Mudou
 - **Quem não está no RH da unidade não ocupa mais a tela** (prints do Pedro): a lista de "não cadastrados" virou uma seção **recolhida**, no padrão dos freelancers ("Fora da comissão — não estão no RH desta unidade · N · R$ X em vendas", com "Ver lista"); dentro dela continua a opção de vincular, para quem É funcionário e só tem a grafia diferente no Teknisa. O aviso em faixa saiu.
