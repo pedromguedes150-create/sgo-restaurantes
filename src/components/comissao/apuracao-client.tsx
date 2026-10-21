@@ -206,7 +206,7 @@ export function ApuracaoClient({ unidades, meses, mesInicial, percentuais, funco
                 <span className="sgo-panel__title">Fora da comissão — não estão no RH desta unidade ({linhasVisiveis.naoCad.length} · {formatBRL(previa.totais.vendasNaoCadastrados)} em vendas)</span>
                 <span className="text-xs text-brand">{verNaoCad ? 'Ocultar' : 'Ver lista'}</span>
               </button>
-              {verNaoCad && <p className="px-3 pb-2 text-xs text-ink-500">Só funcionário do RH com vínculo nesta unidade recebe. Se alguém daqui É funcionário e só o nome no Teknisa está diferente, escolha quem é — o vínculo fica lembrado para os próximos meses.</p>}
+              {verNaoCad && <p className="px-3 pb-2 text-xs text-ink-500">Só funcionário do RH com vínculo nesta unidade recebe. O nome curto do Teknisa já vincula sozinho quando identifica UMA pessoa do RH da unidade; quem ficou aqui não casou com ninguém ou casou com mais de um — escolha quem é, e o vínculo fica lembrado para os próximos meses.</p>}
               {verNaoCad && <div className="overflow-x-auto">
                 <table className="sgo-tbl w-full text-sm">
                   <thead><tr><th className="text-left">Vendedor (Teknisa)</th><th className="text-right">Venda</th><th className="text-right">{pctBR(previa.pctVendedor)}% seria</th><th className="text-left">Vincular a</th></tr></thead>

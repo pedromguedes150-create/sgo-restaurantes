@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   lerPlanilhaDeVendedores, separarCodigo, tipoDoVendedor, somarMeses, mesDeApuracao, competenciaDePagamento, mesDeVendaPadrao,
-  dividirIgual, apurar, aplicarAjustes, rotuloDoMes, funcaoForaDaComissao, type VendedorLido,
+  dividirIgual, apurar, aplicarAjustes, rotuloDoMes, funcaoForaDaComissao, resolverVinculoPorNome, type VendedorLido,
 } from '@/lib/comissao/calculo';
 import { montarPedidoSwile, soDigitos } from '@/lib/comissao/swile';
 
@@ -67,6 +67,33 @@ describe('a planilha', () => {
     expect(tipoDoVendedor('freelancer 04')).toBe('FREELANCER');
     expect(tipoDoVendedor('FREELANCE DIARIO')).toBe('FREELANCER');
     expect(tipoDoVendedor('MARIA MERCES')).toBe('VENDEDOR');
+  });
+});
+
+describe('vínculo pelo nome (v1.176.1): o Teknisa grava o nome curto, o RH o nome inteiro', () => {
+  const rh = [
+    { id: 'c1', name: 'Maria Merces Santos Costa' },
+    { id: 'c2', name: 'Thiago Heitor de Souza' },
+    { id: 'c3', name: 'Ana Paula Souza' },
+    { id: 'c4', name: 'Ana Paula Lima' },
+    { id: 'c5', name: 'Marcelo Teles' },
+  ];
+  it('idêntico vincula (EXATO); nome curto contido em UM só colaborador vincula (PARCIAL)', () => {
+    expect(resolverVinculoPorNome('MARCELO TELES', rh)).toMatchObject({ tipo: 'EXATO', escolhido: { id: 'c5' } });
+    expect(resolverVinculoPorNome('MARIA MERCES', rh)).toMatchObject({ tipo: 'PARCIAL', escolhido: { id: 'c1' } });
+    expect(resolverVinculoPorNome('Thiago Heitor', rh)).toMatchObject({ tipo: 'PARCIAL', escolhido: { id: 'c2' } });
+    /* acento e caixa não atrapalham */
+    expect(resolverVinculoPorNome('maria mercês', rh)).toMatchObject({ tipo: 'PARCIAL', escolhido: { id: 'c1' } });
+  });
+  it('dois candidatos ficam para a mão (AMBIGUO, com a lista); uma palavra só nunca vincula sozinha; ninguém = NENHUM', () => {
+    const amb = resolverVinculoPorNome('ANA PAULA', rh);
+    expect(amb.tipo).toBe('AMBIGUO');
+    expect(amb.escolhido).toBeNull();
+    expect(amb.sugestoes.map((c) => c.id).sort()).toEqual(['c3', 'c4']);
+    const uma = resolverVinculoPorNome('THIAGO', rh);
+    expect(uma.tipo).toBe('AMBIGUO'); // uma palavra: só sugere, mesmo com um candidato
+    expect(uma.sugestoes.map((c) => c.id)).toEqual(['c2']);
+    expect(resolverVinculoPorNome('JOSE NINGUEM', rh)).toMatchObject({ tipo: 'NENHUM', escolhido: null, sugestoes: [] });
   });
 });
 

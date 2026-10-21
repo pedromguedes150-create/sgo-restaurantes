@@ -2,10 +2,9 @@ import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import { canAccessUnit, unitScopeWhere } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
-import { candidatosDeVinculo } from '@/lib/hora-extra/calculo';
 import { normalizarCargo } from '@/lib/people/avaliacao-calculo';
 import {
-  aplicarAjustes, apurar, competenciaDePagamento, funcaoForaDaComissao, lerPlanilhaDeVendedores, mesDeApuracao, mesValido, rotuloDoMes,
+  aplicarAjustes, apurar, competenciaDePagamento, funcaoForaDaComissao, lerPlanilhaDeVendedores, mesDeApuracao, mesValido, resolverVinculoPorNome, rotuloDoMes,
   type Ajuste, type Apuracao, type LinhaDaApuracao, type Vinculo,
 } from './calculo';
 import { chavesDaCozinha, getPercentuais } from './config';
@@ -112,11 +111,12 @@ export async function montarPrevia(user: SessionUser, e: Entrada): Promise<Resul
     /* 2) vínculo lembrado de uma apuração anterior (ainda precisa estar ativo na unidade) */
     const lembrado = v.codigo ? linkPorCodigo.get(v.codigo) : undefined;
     if (lembrado && porId.has(lembrado)) { casar(v.bruto, porId.get(lembrado)!); continue; }
-    /* 3) nome exato com UM colaborador da unidade (gerente/encarregado incluído: entra como "fora") */
-    const todos = candidatosDeVinculo(v.nome, colaboradores.map((c) => ({ id: c.id, name: c.name })));
-    if (todos.exatos.length === 1) { casar(v.bruto, porId.get(todos.exatos[0].id)!); continue; }
-    const { exatos, parecidos } = candidatosDeVinculo(v.nome, candidatos);
-    sugestoes.set(v.bruto, [...exatos, ...parecidos].map((c) => ({ collaboratorId: c.id, name: c.name })));
+    /* 3) pelo nome: idêntico OU contido em UM só colaborador da unidade (o Teknisa grava o nome curto;
+          gerente/encarregado incluído aqui — casa e entra como "fora"). Dois candidatos = para a mão. */
+    const porNome = resolverVinculoPorNome(v.nome, colaboradores.map((c) => ({ id: c.id, name: c.name })));
+    if (porNome.escolhido) { casar(v.bruto, porId.get(porNome.escolhido.id)!); continue; }
+    const r = resolverVinculoPorNome(v.nome, candidatos);
+    sugestoes.set(v.bruto, r.sugestoes.map((c) => ({ collaboratorId: c.id, name: c.name })));
   }
 
   const cozinha: Vinculo[] = colaboradores
@@ -207,14 +207,14 @@ export async function confirmarApuracao(user: SessionUser, e: Entrada, ctx: Ctx 
         },
       });
     }
-    /* vínculos escolhidos à mão ficam lembrados para a próxima apuração desta unidade */
-    for (const [bruto, collaboratorId] of Object.entries(e.vinculos ?? {})) {
-      const linha = previa.linhas.find((l) => l.chave === `VENDEDOR:${bruto}` && l.collaboratorId === collaboratorId);
-      if (!linha || !linha.codigo) continue;
+    /* TODO vendedor casado (à mão, pelo nome inteiro ou pelo nome curto) fica lembrado pelo código do
+       Teknisa: se o RH admitir amanhã outra "MARIA MERCES", a apuração do mês que vem não volta para a mão. */
+    for (const linha of previa.linhas) {
+      if (linha.kind !== 'VENDEDOR' || !linha.codigo || !linha.collaboratorId) continue;
       await tx.commissionSellerLink.upsert({
         where: { unitId_sellerCode: { unitId: previa.unitId, sellerCode: linha.codigo } },
-        create: { unitId: previa.unitId, sellerCode: linha.codigo, sellerName: linha.nome, collaboratorId, createdByName: user.name },
-        update: { sellerName: linha.nome, collaboratorId, createdByName: user.name },
+        create: { unitId: previa.unitId, sellerCode: linha.codigo, sellerName: linha.nome, collaboratorId: linha.collaboratorId, createdByName: user.name },
+        update: { sellerName: linha.nome, collaboratorId: linha.collaboratorId, createdByName: user.name },
       });
     }
     return imp.id;

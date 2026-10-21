@@ -19,7 +19,7 @@ const MES_VENDA = '2019-07'; // bem no passado: competência 2019-09, longe de q
 const COMP = '2019-09';
 
 let unitA = ''; let unitB = ''; let adminId = ''; let supBId = '';
-let mariaId = ''; let thiagoId = ''; let anaId = ''; let biaId = ''; let marceloId = ''; let gerenteId = '';
+let mariaId = ''; let thiagoId = ''; let anaId = ''; let biaId = ''; let marceloId = ''; let gerenteId = ''; let anaPaulaSouzaId = ''; let anaPaulaLimaId = '';
 const colabIds: string[] = [];
 /* A tabela de funções da cozinha é GLOBAL e `definirFuncoesDaCozinha` substitui o conjunto inteiro:
    guardamos o que havia para devolver no fim — senão o teste apaga a configuração do banco de dev. */
@@ -38,6 +38,7 @@ const PLANILHA = [
   [UNI, `1055 - THIAGO HEITOR ${sfx}`, 100],
   [UNI, '0004 - freelancer 04', 50],
   [UNI, `0106 - MARCELO TELES ${sfx}`, 80],
+  [UNI, `0107 - ANA PAULA ${sfx}`, 60],
   [UNI, `0300 - RODRIGO GERENTE ${sfx}`, 1000],
 ];
 
@@ -58,8 +59,11 @@ beforeAll(async () => {
   thiagoId = await colab(`Thiago Heitor ${sfx}`, 'Garçom', unitA);
   anaId = await colab(`Ana ${sfx}`, `Auxiliar de Cozinha ${sfx}`, unitA);
   biaId = await colab(`Bia ${sfx}`, `SALADEIRA ${sfx}`, unitA);
-  /* Marcelo é funcionário, mas o nome no Teknisa está diferente: vai precisar de vínculo manual */
+  /* Marcelo: o Teknisa grava o nome curto e o RH o inteiro — casa sozinho, porque só ele tem essas palavras (v1.176.1) */
   marceloId = await colab(`Marcelo Teles da Silva ${sfx}`, 'Garçom', unitA);
+  /* duas "Ana Paula": o nome curto do Teknisa é AMBÍGUO e vai para a mão */
+  anaPaulaSouzaId = await colab(`Ana Paula Souza ${sfx}`, 'Garçom', unitA);
+  anaPaulaLimaId = await colab(`Ana Paula Lima ${sfx}`, 'Garçom', unitA);
   /* gerente da unidade: o nome vende no Teknisa, mas a função deixa fora (v1.176.0) */
   gerenteId = await colab(`Rodrigo Gerente ${sfx}`, 'Gerente de Loja', unitA);
   await prisma.collaborator.update({ where: { id: mariaId }, data: { cpf: '123.456.789-01' } });
@@ -104,7 +108,7 @@ describe('prévia', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const p = r.previa;
-    expect(p).toMatchObject({ mesVenda: MES_VENDA, mesApuracao: '2019-08', competencia: COMP, totalVendas: 3230, jaExiste: false, fechada: false, erros: [] });
+    expect(p).toMatchObject({ mesVenda: MES_VENDA, mesApuracao: '2019-08', competencia: COMP, totalVendas: 3290, jaExiste: false, fechada: false, erros: [] });
     /* o gerente casou pelo nome, mas a função deixa FORA: aparece, não recebe */
     expect(p.linhas.find((l) => l.chave === `VENDEDOR:0300 - RODRIGO GERENTE ${sfx}`)).toMatchObject({ kind: 'FUNCAO_FORA', valor: 0, collaboratorName: `Rodrigo Gerente ${sfx}` });
     expect(p.totais.foraPorFuncao).toBe(1);
@@ -113,15 +117,18 @@ describe('prévia', () => {
     expect(por[`VENDEDOR:1065 - MARIA MERCES ${sfx}`]).toMatchObject({ kind: 'VENDEDOR', collaboratorId: mariaId, valor: 5 });
     expect(por[`VENDEDOR:1055 - THIAGO HEITOR ${sfx}`]).toMatchObject({ kind: 'VENDEDOR', collaboratorId: thiagoId, valor: 1 });
     expect(por['FREELANCER:0004 - freelancer 04']).toMatchObject({ kind: 'FREELANCER', valor: 0 });
-    const marcelo = por[`VENDEDOR:0106 - MARCELO TELES ${sfx}`];
-    expect(marcelo).toMatchObject({ kind: 'NAO_CADASTRADO', valor: 0 });
-    expect(marcelo.sugestoes?.map((s) => s.collaboratorId)).toEqual([marceloId]);
+    /* nome curto contido em UM colaborador: casa sozinho */
+    expect(por[`VENDEDOR:0106 - MARCELO TELES ${sfx}`]).toMatchObject({ kind: 'VENDEDOR', collaboratorId: marceloId, valor: 0.8 });
+    /* duas Ana Paula: fica para a mão, com as duas na lista */
+    const anaPaula = por[`VENDEDOR:0107 - ANA PAULA ${sfx}`];
+    expect(anaPaula).toMatchObject({ kind: 'NAO_CADASTRADO', valor: 0 });
+    expect(anaPaula.sugestoes?.map((s) => s.collaboratorId).sort()).toEqual([anaPaulaLimaId, anaPaulaSouzaId].sort());
     const cozinha = p.linhas.filter((l) => l.kind === 'COZINHA');
     expect(cozinha.map((l) => l.collaboratorId).sort()).toEqual([anaId, biaId].sort()); // o Zé é de outra unidade
     expect(cozinha.map((l) => l.valor)).toEqual([3.75, 3.75]); // 1500 × 0,5% = 7,50 ÷ 2
-    expect(p.totais.comissao).toBe(5 + 1 + 7.5);
+    expect(p.totais.comissao).toBe(5 + 1 + 0.8 + 7.5);
     /* gerente não é oferecido como candidato de vínculo */
-    expect(marcelo.sugestoes?.some((s) => s.collaboratorId === gerenteId)).toBe(false);
+    expect(anaPaula.sugestoes?.some((s) => s.collaboratorId === gerenteId)).toBe(false);
   });
 
   it('escopo: supervisor da B não apura a A; gerente não apura; mês inválido e planilha errada recusam', async () => {
@@ -139,45 +146,48 @@ describe('confirmar', () => {
     const r = await confirmarApuracao(admin(), {
       unitId: unitA, mesVenda: MES_VENDA, linhas: PLANILHA, fileName: 'prod.xlsx',
       ajustes: { [`VENDEDOR:1065 - MARIA MERCES ${sfx}`]: { ajuste: 10, motivo: 'combinado com a Maria' } },
-      vinculos: { [`0106 - MARCELO TELES ${sfx}`]: marceloId },
+      vinculos: { [`0107 - ANA PAULA ${sfx}`]: anaPaulaSouzaId },
     });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r).toMatchObject({ competencia: COMP, lancamentos: 5, total: 15 + 1 + 0.8 + 7.5, substituiu: false });
+    expect(r).toMatchObject({ competencia: COMP, lancamentos: 6, total: 24.9 /* 15 + 1 + 0,80 + 0,60 + 7,50 */, substituiu: false });
 
     const payouts = await prisma.collaboratorPayout.findMany({ where: { unitId: unitA, type: 'COMMISSION', yearMonth: COMP } });
-    expect(payouts).toHaveLength(5);
+    expect(payouts).toHaveLength(6);
     const maria = payouts.find((p) => p.collaboratorId === mariaId)!;
     expect(Number(maria.amount)).toBe(15);
     expect(maria.note).toContain('× 1%');
     expect(maria.note).toContain('ajuste +10.00 (combinado com a Maria)');
     expect(Number(payouts.find((p) => p.collaboratorId === marceloId)!.amount)).toBe(0.8);
+    expect(Number(payouts.find((p) => p.collaboratorId === anaPaulaSouzaId)!.amount)).toBe(0.6);
+    expect(payouts.some((p) => p.collaboratorId === anaPaulaLimaId)).toBe(false);
     expect(payouts.find((p) => p.collaboratorId === anaId)!.note).toContain('cozinha');
 
     const ap = await getApuracao(admin(), r.importId);
-    expect(ap).toMatchObject({ mesVenda: MES_VENDA, competencia: COMP, totalVendas: 3230, vendasGrupo: 1500, comissao: 24.3 });
+    expect(ap).toMatchObject({ mesVenda: MES_VENDA, competencia: COMP, totalVendas: 3290, vendasGrupo: 1500, comissao: 24.9 });
     expect(ap!.linhas.find((l) => l.kind === 'FUNCAO_FORA')!.payoutId).toBeNull();
     expect(payouts.some((p) => p.collaboratorId === gerenteId)).toBe(false);
 
     /* Pedido de Carga Swile: uma linha por pessoa com CPF; quem não tem CPF vai à parte */
     const swile = await getPedidoSwile(admin(), COMP, unitA);
     expect(swile.linhas).toEqual([{ nome: `Maria Merces ${sfx}`, cpf: '12345678901', valor: 15, unidade: `Juatuba ${sfx}` }]);
-    expect(swile.semCpf.map((l) => l.nome).sort()).toEqual([`Ana ${sfx}`, `Bia ${sfx}`, `Marcelo Teles da Silva ${sfx}`, `Thiago Heitor ${sfx}`].sort());
+    expect(swile.semCpf.map((l) => l.nome).sort()).toEqual([`Ana ${sfx}`, `Ana Paula Souza ${sfx}`, `Bia ${sfx}`, `Marcelo Teles da Silva ${sfx}`, `Thiago Heitor ${sfx}`].sort());
     expect(swile.total).toBe(15);
     expect((await getPedidoSwile(supB(), COMP)).linhas).toEqual([]);
     const grupo = ap!.linhas.find((l) => l.kind === 'GRUPO')!;
     expect(grupo.payoutId).toBeNull();
     expect(ap!.linhas.find((l) => l.kind === 'FREELANCER')!.payoutId).toBeNull();
-    expect(ap!.linhas.filter((l) => l.payoutId).length).toBe(5);
+    expect(ap!.linhas.filter((l) => l.payoutId).length).toBe(6);
 
-    /* o vínculo manual ficou lembrado: a próxima prévia casa o Marcelo sozinha */
-    const link = await prisma.commissionSellerLink.findUnique({ where: { unitId_sellerCode: { unitId: unitA, sellerCode: '0106' } } });
-    expect(link?.collaboratorId).toBe(marceloId);
+    /* TODO vendedor casado fica lembrado pelo código: o manual (Ana Paula) e o automático (Marcelo) */
+    expect((await prisma.commissionSellerLink.findUnique({ where: { unitId_sellerCode: { unitId: unitA, sellerCode: '0107' } } }))?.collaboratorId).toBe(anaPaulaSouzaId);
+    expect((await prisma.commissionSellerLink.findUnique({ where: { unitId_sellerCode: { unitId: unitA, sellerCode: '0106' } } }))?.collaboratorId).toBe(marceloId);
+    /* a próxima prévia casa a Ana Paula sozinha, sem perguntar de novo */
     const p2 = await montarPrevia(admin(), { unitId: unitA, mesVenda: '2019-08', linhas: PLANILHA, fileName: 'prod2.xlsx' });
-    expect(p2.ok && p2.previa.linhas.find((l) => l.chave === `VENDEDOR:0106 - MARCELO TELES ${sfx}`)).toMatchObject({ kind: 'VENDEDOR', collaboratorId: marceloId, valor: 0.8 });
+    expect(p2.ok && p2.previa.linhas.find((l) => l.chave === `VENDEDOR:0107 - ANA PAULA ${sfx}`)).toMatchObject({ kind: 'VENDEDOR', collaboratorId: anaPaulaSouzaId, valor: 0.6 });
 
     const lista = await listarApuracoes(admin());
-    expect(lista.find((a) => a.id === r.importId)).toMatchObject({ unidade: `Juatuba ${sfx}`, linhasPagas: 5, naoCadastrados: 0, comissao: 24.3 });
+    expect(lista.find((a) => a.id === r.importId)).toMatchObject({ unidade: `Juatuba ${sfx}`, linhasPagas: 6, naoCadastrados: 0, comissao: 24.9 });
     /* a supervisora da B não vê a apuração da A */
     expect((await listarApuracoes(supB())).some((a) => a.id === r.importId)).toBe(false);
     expect(await getApuracao(supB(), r.importId)).toBeNull();
@@ -193,7 +203,7 @@ describe('confirmar', () => {
     expect(r.substituiu).toBe(true);
     const depois = await prisma.collaboratorPayout.findMany({ where: { unitId: unitA, type: 'COMMISSION', yearMonth: COMP }, select: { id: true, collaboratorId: true, amount: true } });
     expect(depois.map((p) => p.id).some((id) => antes.map((a) => a.id).includes(id))).toBe(false); // os antigos saíram
-    expect(depois).toHaveLength(5); // Marcelo entra pelo vínculo lembrado
+    expect(depois).toHaveLength(6); // Ana Paula entra pelo vínculo lembrado
     expect(Number(depois.find((p) => p.collaboratorId === mariaId)!.amount)).toBe(5); // sem o ajuste desta vez
     expect((await prisma.commissionImport.findUnique({ where: { unitId_salesMonth: { unitId: unitA, salesMonth: MES_VENDA } } }))?.replacedCount).toBe(1);
   });
