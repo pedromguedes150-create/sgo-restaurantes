@@ -69,10 +69,10 @@ export default async function DesperdiciosPage({
     <>
       <LargeTitle
         title="Desperdícios"
-        subtitle={`Dia operacional ${dataBR(operationalDate)} · ${aba === 'restaurante' ? 'Restaurante em kg' : 'Salgados em unidades'}`}
+        subtitle={`Dia operacional ${dataBR(operationalDate)} · ${aba === 'restaurante' ? 'Sobras Restaurantes em kg' : 'Sobras Lanchonete em unidades'}`}
         tabs={[
-          { label: 'Sobras Restaurante', icon: <Utensils className="h-3.5 w-3.5" />, href: linkAba('restaurante'), active: aba === 'restaurante', testId: 'aba-restaurante' },
-          { label: 'Sobras Salgados', icon: <Cookie className="h-3.5 w-3.5" />, href: linkAba('salgados'), active: aba === 'salgados', testId: 'aba-salgados' },
+          { label: 'Sobras Restaurantes', icon: <Utensils className="h-3.5 w-3.5" />, href: linkAba('restaurante'), active: aba === 'restaurante', testId: 'aba-restaurante' },
+          { label: 'Sobras Lanchonete', icon: <Cookie className="h-3.5 w-3.5" />, href: linkAba('salgados'), active: aba === 'salgados', testId: 'aba-salgados' },
         ]}
         actions={
           <>
@@ -107,7 +107,7 @@ export default async function DesperdiciosPage({
         {cabecalho}
         <Card>
           <CardHeader>
-            <CardTitle>{isBackdated ? `Salgados de ${dataBR(operationalDate)}` : 'Salgados de hoje'} — {selected.name}</CardTitle>
+            <CardTitle>{isBackdated ? `Sobras Lanchonete de ${dataBR(operationalDate)}` : 'Sobras Lanchonete de hoje'} — {selected.name}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {seletorDeDia('salgados')}
@@ -181,7 +181,7 @@ export default async function DesperdiciosPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>{isBackdated ? `Lançamento de ${dataBR(operationalDate)}` : 'Lançamento de hoje'} — {selected.name}</CardTitle>
+          <CardTitle>{isBackdated ? `Sobras Restaurantes de ${dataBR(operationalDate)}` : 'Sobras Restaurantes de hoje'} — {selected.name}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {seletorDeDia('restaurante')}

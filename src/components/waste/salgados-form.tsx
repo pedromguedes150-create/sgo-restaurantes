@@ -97,9 +97,16 @@ export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialR
     <div className="space-y-3">
       <div className="space-y-2">
         {linhas.map((l, i) => (
-          <div key={i} className="grid grid-cols-[1fr_auto] gap-2 rounded-card border border-line p-2 sm:grid-cols-[1fr_1fr_5rem_auto] sm:items-end">
-            <Select aria-label={`Tipo do salgado ${i + 1}`} label={i === 0 ? 'Tipo do salgado' : undefined} size="sm" value={l.typeId || null} placeholder="Escolha…" onValueChange={(v) => set(i, { typeId: v })} options={tipos.map((t) => ({ value: t.id, label: t.name }))} className="col-span-2 sm:col-span-1" />
-            <Select aria-label={`Motivo ${i + 1}`} label={i === 0 ? 'Motivo' : undefined} size="sm" value={l.reasonId || null} placeholder="Escolha…" onValueChange={(v) => set(i, { reasonId: v })} options={motivos.map((m) => ({ value: m.id, label: m.name }))} />
+          /* v1.178.1: no celular, uma coisa por linha — Tipo, Motivo, Qtd. O className do Select vai no
+             BOTÃO, não no bloco; por isso cada Select ganha o seu próprio invólucro (antes o "col-span" não
+             pegava e o Motivo ficava espremido numa coluna estreita, com a lista cortando o texto). */
+          <div key={i} className="grid grid-cols-1 gap-2 rounded-card border border-line p-2 sm:grid-cols-[1fr_1fr_5rem_auto] sm:items-end" data-testid="linha-salgado">
+            <div className="min-w-0">
+              <Select aria-label={`Tipo do salgado ${i + 1}`} label={i === 0 ? 'Tipo do salgado' : undefined} size="md" value={l.typeId || null} placeholder="Escolha…" onValueChange={(v) => set(i, { typeId: v })} options={tipos.map((t) => ({ value: t.id, label: t.name }))} />
+            </div>
+            <div className="min-w-0">
+              <Select aria-label={`Motivo ${i + 1}`} label={i === 0 ? 'Motivo' : undefined} size="md" value={l.reasonId || null} placeholder="Escolha…" onValueChange={(v) => set(i, { reasonId: v })} options={motivos.map((m) => ({ value: m.id, label: m.name }))} />
+            </div>
             <div className="flex items-end gap-1.5">
               <div className="flex flex-col gap-1">
                 {i === 0 && <span className="sgo-type-11 text-ink-500">Qtd</span>}
@@ -159,7 +166,7 @@ export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialR
       {msg && <p className={`rounded-lg px-3 py-2 text-sm font-medium ${msg.tipo === 'ok' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>{msg.texto}</p>}
 
       <Button className="w-full sm:w-auto" disabled={busy} onClick={() => void salvar()}>
-        {busy ? 'Salvando…' : 'Salvar sobras de salgados'}
+        {busy ? 'Salvando…' : 'Salvar sobras da lanchonete'}
       </Button>
 
       {/* Input oculto — somente câmera, sem galeria (capture="environment"). */}
