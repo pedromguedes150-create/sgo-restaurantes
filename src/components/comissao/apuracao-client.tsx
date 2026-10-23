@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, CheckCircle2, FileSpreadsheet, Upload } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, FileSpreadsheet, Upload, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/ds/button';
 import { Select } from '@/components/ui/ds/select';
@@ -50,6 +50,7 @@ export function ApuracaoClient({ unidades, meses, mesInicial, percentuais, funco
   const [previa, setPrevia] = useState<Previa | null>(null);
   const [ajustes, setAjustes] = useState<Ajustes>({});
   const [vinculos, setVinculos] = useState<Record<string, string>>({});
+  const [ignoradas, setIgnoradas] = useState<Record<string, string[]>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [pronto, setPronto] = useState<{ competencia: string; lancamentos: number; total: number; substituiu: boolean } | null>(null);
@@ -93,6 +94,19 @@ export function ApuracaoClient({ unidades, meses, mesInicial, percentuais, funco
     const novos = { ...vinculos, [bruto]: collaboratorId };
     setVinculos(novos);
     void enviar('previa', false, novos);
+    /* v1.178.0: o vínculo confirmado grava NA HORA na tabela de vínculos (não espera a apuração ser
+       gravada) — sair da tela sem confirmar a apuração não perde a conferência feita. */
+    const linha = previa?.linhas.find((l) => l.chave === `VENDEDOR:${bruto}`);
+    const u = previa?.unitId ?? unitId;
+    if (u && linha?.codigo) void fetch('/api/comissao/vinculos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'criar', unitId: u, sellerCode: linha.codigo, sellerName: linha.nome, collaboratorId }) }).catch(() => {});
+  }
+
+  /** "Ignorar" a sugestão: some agora e não volta nos próximos meses (quando o vendedor tem código). */
+  async function ignorar(l: LinhaDaApuracao, collaboratorId: string) {
+    setIgnoradas((s) => ({ ...s, [l.chave]: [...(s[l.chave] ?? []), collaboratorId] }));
+    const u = previa?.unitId ?? unitId;
+    if (!u || !l.codigo) return;
+    await fetch('/api/comissao/vinculos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'ignorar', unitId: u, sellerCode: l.codigo, sellerName: l.nome, collaboratorId }) }).catch(() => {});
   }
 
   const linhasVisiveis = useMemo(() => {
@@ -206,16 +220,20 @@ export function ApuracaoClient({ unidades, meses, mesInicial, percentuais, funco
                 <span className="sgo-panel__title">Fora da comissão — não estão no RH desta unidade ({linhasVisiveis.naoCad.length} · {formatBRL(previa.totais.vendasNaoCadastrados)} em vendas)</span>
                 <span className="text-xs text-brand">{verNaoCad ? 'Ocultar' : 'Ver lista'}</span>
               </button>
-              {verNaoCad && <p className="px-3 pb-2 text-xs text-ink-500">Só funcionário do RH com vínculo nesta unidade recebe. O nome curto do Teknisa já vincula sozinho quando identifica UMA pessoa do RH da unidade; quem ficou aqui não casou com ninguém ou casou com mais de um — escolha quem é, e o vínculo fica lembrado para os próximos meses.</p>}
+              {verNaoCad && <p className="px-3 pb-2 text-xs text-ink-500">Só funcionário do RH com vínculo nesta unidade recebe. O nome curto do Teknisa já vincula sozinho quando identifica UMA pessoa do RH da unidade. Para grafias diferentes (Souza × Sousa, Helbert × Hubert) o SGO SUGERE quem parece ser, com o percentual de confiança: confira e toque em Confirmar — o vínculo fica lembrado para os próximos meses. Ignorar tira a sugestão do caminho.</p>}
               {verNaoCad && <div className="overflow-x-auto">
                 <table className="sgo-tbl w-full text-sm">
-                  <thead><tr><th className="text-left">Vendedor (Teknisa)</th><th className="text-right">Venda</th><th className="text-right">{pctBR(previa.pctVendedor)}% seria</th><th className="text-left">Vincular a</th></tr></thead>
+                  <thead><tr><th className="text-left">Vendedor (Teknisa)</th><th className="text-right">Venda</th><th className="text-right">{pctBR(previa.pctVendedor)}% seria</th><th className="text-left">Sugestão do SGO</th><th className="text-left">Ou escolher</th></tr></thead>
                   <tbody>
                     {linhasVisiveis.naoCad.map((l) => (
                       <tr key={l.chave}>
                         <td className="whitespace-nowrap font-medium text-ink-900">{l.codigo ? `${l.codigo} - ` : ''}{l.nome}</td>
                         <td className="text-right tabular-nums">{formatBRL(l.vendas)}</td>
                         <td className="text-right tabular-nums text-ink-500">{formatBRL(arredondar2(l.vendas * l.pct / 100))}</td>
+                        <td className="min-w-64 whitespace-normal">
+                          <SugestaoDoVinculo linha={l} ignoradas={ignoradas[l.chave] ?? []} ocupado={ocupado}
+                            onConfirmar={(id) => vincular(l.chave.replace(/^VENDEDOR:/, ''), id)} onIgnorar={(id) => void ignorar(l, id)} />
+                        </td>
                         <td className="min-w-56">
                           <SeletorDeVinculo linha={l} unitId={unitId} onEscolher={(id) => vincular(l.chave.replace(/^VENDEDOR:/, ''), id)} />
                         </td>
@@ -305,6 +323,26 @@ function Tabela({ titulo, linhas, ajustes, setAjustes, valorComAjuste, vazio }: 
   );
 }
 
+/** A melhor sugestão (maior confiança) com Confirmar / Ignorar; as outras ficam no seletor ao lado. */
+export function SugestaoDoVinculo({ linha, ignoradas, ocupado, onConfirmar, onIgnorar }: {
+  linha: LinhaDaApuracao; ignoradas: string[]; ocupado?: boolean; onConfirmar: (collaboratorId: string) => void; onIgnorar: (collaboratorId: string) => void;
+}) {
+  const s = (linha.sugestoes ?? []).find((x) => !ignoradas.includes(x.collaboratorId));
+  if (!s) return <span className="text-xs text-ink-500">Nenhum nome parecido no RH desta unidade.</span>;
+  const c = s.confianca ?? 0;
+  const tom = c >= 90 ? 'success' : c >= 80 ? 'info' : 'warning';
+  return (
+    <div className="space-y-1.5" data-testid="sugestao-vinculo">
+      <p className="text-sm font-medium text-ink-900">{s.name} <StatusBadge tone={tom} dot>{c}%</StatusBadge></p>
+      <p className="text-xs text-ink-500">{c >= 90 ? 'Alta probabilidade' : c >= 80 ? 'Provável' : 'Possível'} — com base na semelhança dos nomes.</p>
+      <div className="flex flex-wrap gap-1.5">
+        <Button size="sm" onClick={() => onConfirmar(s.collaboratorId)} disabled={ocupado}><Check className="h-4 w-4" /> Confirmar vínculo</Button>
+        <Button size="sm" variant="secondary" onClick={() => onIgnorar(s.collaboratorId)} disabled={ocupado}><X className="h-4 w-4" /> Ignorar</Button>
+      </div>
+    </div>
+  );
+}
+
 function SeletorDeVinculo({ linha, unitId, onEscolher }: { linha: LinhaDaApuracao; unitId: string | null; onEscolher: (collaboratorId: string) => void }) {
   const [opcoes, setOpcoes] = useState<{ id: string; name: string }[] | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -318,7 +356,7 @@ function SeletorDeVinculo({ linha, unitId, onEscolher }: { linha: LinhaDaApuraca
       setOpcoes(Array.isArray(b.colaboradores) ? b.colaboradores : []);
     } finally { setCarregando(false); }
   }
-  const lista = opcoes ?? sugestoes.map((s) => ({ id: s.collaboratorId, name: s.name }));
+  const lista = opcoes ?? sugestoes.map((s) => ({ id: s.collaboratorId, name: s.confianca != null ? `${s.name} · ${s.confianca}%` : s.name }));
   return (
     <div className="flex flex-col gap-1">
       <Select

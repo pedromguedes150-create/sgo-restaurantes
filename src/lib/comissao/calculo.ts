@@ -152,8 +152,8 @@ export function tipoDoVendedor(nome: string): TipoDeVendedor {
 /* ───────────────────────── vínculo pelo nome ───────────────────────── */
 
 export type VinculoPorNome =
-  | { tipo: 'EXATO' | 'PARCIAL'; escolhido: CandidatoRh; sugestoes: CandidatoRh[] }
-  | { tipo: 'AMBIGUO' | 'NENHUM'; escolhido: null; sugestoes: CandidatoRh[] };
+  | { tipo: 'EXATO' | 'PARCIAL'; escolhido: CandidatoRh; sugestoes: SugestaoDeVinculo[] }
+  | { tipo: 'AMBIGUO' | 'NENHUM'; escolhido: null; sugestoes: SugestaoDeVinculo[] };
 
 /**
  * O Teknisa grava o nome CURTO ("MARIA MERCES") e o RH o nome inteiro ("MARIA
@@ -164,14 +164,103 @@ export type VinculoPorNome =
  * não vincula sozinho ("MARIA" casaria com qualquer Maria); dois ou mais
  * candidatos ficam para a mão, com a lista.
  */
-export function resolverVinculoPorNome(nome: string, candidatos: CandidatoRh[]): VinculoPorNome {
+export function resolverVinculoPorNome(nome: string, candidatos: CandidatoRh[], ignorados: ReadonlySet<string> = new Set()): VinculoPorNome {
   const { exatos, parecidos } = candidatosDeVinculo(nome, candidatos);
   if (exatos.length === 1) return { tipo: 'EXATO', escolhido: exatos[0], sugestoes: [] };
-  if (exatos.length > 1) return { tipo: 'AMBIGUO', escolhido: null, sugestoes: exatos };
+  if (exatos.length > 1) return { tipo: 'AMBIGUO', escolhido: null, sugestoes: comConfianca(nome, exatos) };
   const palavras = normalizarNome(nome).split(' ').filter((t) => t.length > 1).length;
   if (parecidos.length === 1 && palavras >= 2) return { tipo: 'PARCIAL', escolhido: parecidos[0], sugestoes: [] };
-  if (parecidos.length > 0) return { tipo: 'AMBIGUO', escolhido: null, sugestoes: parecidos };
-  return { tipo: 'NENHUM', escolhido: null, sugestoes: [] };
+  /* v1.178.0: sem casamento automático, a comparação INTELIGENTE sugere — Souza × Sousa, Helbert × Hubert —
+     com o percentual de confiança, para alguém CONFIRMAR. Nunca vincula sozinha. */
+  const porSemelhanca = sugestoesPorSemelhanca(nome, candidatos, ignorados);
+  const junto = new Map<string, SugestaoDeVinculo>();
+  for (const c of [...comConfianca(nome, parecidos), ...porSemelhanca]) if (!ignorados.has(c.id) && !junto.has(c.id)) junto.set(c.id, c);
+  const sugestoes = [...junto.values()].sort((a, b) => b.confianca - a.confianca || a.name.localeCompare(b.name)).slice(0, MAX_SUGESTOES);
+  return { tipo: parecidos.length > 0 ? 'AMBIGUO' : 'NENHUM', escolhido: null, sugestoes };
+}
+
+/* ───────────────────────── semelhança de nomes (v1.178.0) ───────────────────────── */
+
+/**
+ * O Teknisa e o RH grafam o mesmo nome de jeitos diferentes: "Janaina Souza" ×
+ * "Janaina Sousa Coelho", "Krissley Helbert" × "Krissley Hubert Ribeiro". A
+ * comparação abaixo dá um PERCENTUAL de confiança — e só sugere: quem confirma
+ * é a pessoa, e a confirmação fica lembrada pelo código do Teknisa.
+ */
+export interface SugestaoDeVinculo extends CandidatoRh { confianca: number }
+
+/** Abaixo disso não aparece como sugestão (vira ruído). */
+export const SEMELHANCA_MINIMA = 70;
+export const MAX_SUGESTOES = 5;
+const CONECTIVOS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
+
+/** O som da palavra, não a grafia: z/s, ss/s, y/i, w/v, ph/f, th/t, ce/se, h mudo, letra dobrada. */
+export function chaveFonetica(palavra: string): string {
+  let w = normalizarNome(palavra).replace(/\s/g, '');
+  w = w.replace(/^h/, '').replace(/ph/g, 'f').replace(/th/g, 't').replace(/y/g, 'i').replace(/w/g, 'v')
+    .replace(/c([ei])/g, 's$1').replace(/qu([ei])/g, 'k$1').replace(/z/g, 's').replace(/k/g, 'c');
+  return w.replace(/(.)\1+/g, '$1');
+}
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  const m = a.length; const n = b.length;
+  if (!m) return n; if (!n) return m;
+  let ant = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const at = [i];
+    for (let j = 1; j <= n; j++) at[j] = Math.min(ant[j] + 1, at[j - 1] + 1, ant[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    ant = at;
+  }
+  return ant[n];
+}
+
+/** 0..1 entre duas palavras: igual = 1; mesmo som = 0,95; senão, a distância de edição sobre o som. */
+export function semelhancaDePalavras(a: string, b: string): number {
+  const x = normalizarNome(a); const y = normalizarNome(b);
+  if (!x || !y) return 0;
+  if (x === y) return 1;
+  const fx = chaveFonetica(x); const fy = chaveFonetica(y);
+  if (fx === fy) return 0.95;
+  return Math.max(0, 1 - levenshtein(fx, fy) / Math.max(fx.length, fy.length)) * 0.9;
+}
+
+const palavrasDoNome = (s: string) => normalizarNome(s).split(' ').filter((t) => t.length > 1 && !CONECTIVOS.has(t));
+
+/**
+ * 0..100: o quanto o nome do Teknisa (em geral o CURTO) parece o do RH. Cada
+ * palavra do Teknisa procura a melhor palavra ainda livre no RH; o PRIMEIRO
+ * nome pesa em dobro e precisa bater (nome diferente derruba a confiança —
+ * "Ana Souza" não é "Maria Souza"). Palavras a mais no RH não descontam: o
+ * Teknisa costuma guardar só nome e um sobrenome.
+ */
+export function semelhancaDeNomes(teknisa: string, rh: string): number {
+  const a = palavrasDoNome(teknisa); const b = palavrasDoNome(rh);
+  if (!a.length || !b.length) return 0;
+  const primeiro = semelhancaDePalavras(a[0], b[0]);
+  const livres = b.slice(1);
+  let soma = primeiro * 2;
+  for (const t of a.slice(1)) {
+    let melhor = 0; let idx = -1;
+    livres.forEach((u, i) => { const v = semelhancaDePalavras(t, u); if (v > melhor) { melhor = v; idx = i; } });
+    if (idx >= 0) livres.splice(idx, 1);
+    soma += melhor;
+  }
+  let nota = soma / (a.length + 1);
+  if (primeiro < 0.8) nota *= 0.6;
+  return Math.round(nota * 100);
+}
+
+function comConfianca(nome: string, cs: CandidatoRh[]): SugestaoDeVinculo[] {
+  return cs.map((c) => ({ ...c, confianca: semelhancaDeNomes(nome, c.name) }));
+}
+
+/** Candidatos do cadastro com confiança ≥ SEMELHANCA_MINIMA, do mais parecido ao menos. */
+export function sugestoesPorSemelhanca(nome: string, candidatos: CandidatoRh[], ignorados: ReadonlySet<string> = new Set()): SugestaoDeVinculo[] {
+  return comConfianca(nome, candidatos.filter((c) => !ignorados.has(c.id)))
+    .filter((c) => c.confianca >= SEMELHANCA_MINIMA)
+    .sort((x, y) => y.confianca - x.confianca || x.name.localeCompare(y.name))
+    .slice(0, MAX_SUGESTOES);
 }
 
 /* ───────────────────────── meses ───────────────────────── */
@@ -210,7 +299,7 @@ export function dividirIgual(total: number, n: number): number[] {
 
 export type KindDaLinha = 'VENDEDOR' | 'COZINHA' | 'GRUPO' | 'FREELANCER' | 'NAO_CADASTRADO' | 'FUNCAO_FORA';
 
-export interface Vinculo { collaboratorId: string; name: string }
+export interface Vinculo { collaboratorId: string; name: string; /** 0..100 — só nas sugestões. */ confianca?: number }
 
 export interface LinhaDaApuracao {
   /** Chave estável entre prévia e confirmação: `${kind}:${bruto}` (vendedor) ou `COZINHA:${collaboratorId}`. */
