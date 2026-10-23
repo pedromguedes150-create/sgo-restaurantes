@@ -127,6 +127,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/comissao/colaboradores': { modulo: 'COMMISSION', exigir: 'editar' },
   '/api/comissao/config': { modulo: 'CONFIG_COMMISSION', exigir: 'editar' },
   '/api/comissao/swile': { modulo: 'COMMISSION', exigir: 'ver' },
+  '/api/comissao/vinculos': { modulo: 'COMMISSION', exigir: 'editar' },
   '/api/people/probation': { modulo: 'PEOPLE_PROBATION', exigir: 'editar' },
   '/api/people/vacations': { modulo: 'PEOPLE_TAB_VACATION', exigir: 'editar' },
   '/api/people/vacations/[id]': { modulo: 'PEOPLE_TAB_VACATION', exigir: 'editar' },

@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.178.0 — 2026-10-23 (Comissão: nomes diferentes do Teknisa e do RH viram sugestão com percentual + tabela de vínculos)
+### Novo
+- **Comparação inteligente de nomes** (pedido do Pedro, com o desenho da solução): o Teknisa e o RH grafam o mesmo nome de jeitos diferentes ("Janaina Souza" × "Janaina Sousa Coelho", "Krissley Helbert" × "Krissley Hubert Ribeiro"). Quando o vendedor não casa sozinho, a prévia da apuração mostra, em "Fora da comissão", a **sugestão do SGO com o percentual de confiança** (sem acento, sem caixa, Souza = Sousa pelo som, letra dobrada, h mudo; o PRIMEIRO nome precisa bater — "Ana Souza" não é "Maria Souza") e os botões **Confirmar vínculo** e **Ignorar**. A semelhança **nunca vincula sozinha**: confirmar é da pessoa. Abaixo de 70% não sugere.
+- **Confirmar** grava o vínculo (código do Teknisa → colaborador do RH) e a próxima apuração já casa — nenhum cadastro original muda. **Ignorar** fica lembrado ("aquele vendedor não é aquele colaborador") e a sugestão não volta nos meses seguintes.
+- **Aba Vínculos** em Comissão (`/modulos/comissao?aba=vinculos`): a tabela Nome no RH × Nome no Teknisa × Situação (Vinculado · Colaborador inativo no RH · Não está mais nesta unidade · Gerente/encarregado), quem vinculou e quando, busca, **Novo vínculo** (unidade, código e nome do Teknisa, colaborador ativo da unidade), remover, e a lista das sugestões ignoradas com Desfazer. Aviso quando um vínculo aponta para quem saiu do RH ou da unidade. Tudo na Auditoria (`COMMISSION_LINK_CREATE/UPDATE/DELETE/DISMISS/UNDISMISS`); rota `/api/comissao/vinculos` (guarda `COMMISSION`/editar; Supervisão/Admin/CEO na regra).
+### Técnico
+- `src/lib/comissao/calculo.ts` PURO: `chaveFonetica`, `semelhancaDePalavras`, `semelhancaDeNomes`, `sugestoesPorSemelhanca` (`SEMELHANCA_MINIMA` = 70, até 5); `resolverVinculoPorNome` mantém o casamento automático de sempre (idêntico e nome curto de UMA pessoa) e passa a devolver sugestões com `confianca`. `src/lib/comissao/vinculos.ts` (listar/criar/remover/ignorar/desfazer). Model `CommissionLinkDismissal` — migração ADITIVA `20261023124117_comissao_vinculos_ignorados`. API Global: `comissao-vinculos` e `comissao-sugestoes-ignoradas`. Testes puros, de integração e de render.
+
 ## v1.177.1 — 2026-10-21 (o Inventário antigo passa a se chamar "Inventário de Produtos")
 ### Mudou
 - Pedido do Pedro (print): a tela `/modulos/inventario` (Teknisa + Equipamentos) chama-se agora **"Inventário de Produtos"** — no título, na aba de Suprimentos, no menu, na matriz de Perfis, na busca e na central de Treinamento. Rota, dados e históricos seguem iguais.

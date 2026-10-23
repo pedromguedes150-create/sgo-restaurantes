@@ -5030,3 +5030,18 @@ model UtensilInventoryEvent {
   @@index([inventoryId, createdAt])
   @@map("utensil_inventory_events")
 }
+
+/// Sugestão de vínculo da comissão que alguém marcou "Ignorar" (v1.178.0): aquele vendedor do
+/// Teknisa NÃO é aquele colaborador do RH — a sugestão não volta nos próximos meses.
+model CommissionLinkDismissal {
+  id             String   @id @default(cuid())
+  unitId         String
+  sellerCode     String
+  sellerName     String
+  collaboratorId String
+  createdByName  String
+  createdAt      DateTime @default(now())
+
+  @@unique([unitId, sellerCode, collaboratorId])
+  @@map("commission_link_dismissals")
+}

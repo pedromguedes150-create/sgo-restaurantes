@@ -122,7 +122,9 @@ describe('prévia', () => {
     /* duas Ana Paula: fica para a mão, com as duas na lista */
     const anaPaula = por[`VENDEDOR:0107 - ANA PAULA ${sfx}`];
     expect(anaPaula).toMatchObject({ kind: 'NAO_CADASTRADO', valor: 0 });
-    expect(anaPaula.sugestoes?.map((s) => s.collaboratorId).sort()).toEqual([anaPaulaLimaId, anaPaulaSouzaId].sort());
+    /* v1.178.0: as duas Ana Paula vêm PRIMEIRO; a comparação inteligente pode trazer outras parecidas depois, com percentual menor */
+    expect(anaPaula.sugestoes?.slice(0, 2).map((s) => s.collaboratorId).sort()).toEqual([anaPaulaLimaId, anaPaulaSouzaId].sort());
+    expect(anaPaula.sugestoes?.every((s) => typeof s.confianca === 'number')).toBe(true);
     const cozinha = p.linhas.filter((l) => l.kind === 'COZINHA');
     expect(cozinha.map((l) => l.collaboratorId).sort()).toEqual([anaId, biaId].sort()); // o Zé é de outra unidade
     expect(cozinha.map((l) => l.valor)).toEqual([3.75, 3.75]); // 1500 × 0,5% = 7,50 ÷ 2

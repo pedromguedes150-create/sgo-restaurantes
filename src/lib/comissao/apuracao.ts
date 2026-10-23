@@ -25,7 +25,7 @@ import { chavesDaCozinha, getPercentuais } from './config';
  */
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
-const PODE_APURAR = new Set(['ADMIN', 'SUPERVISOR', 'CEO']);
+export const PODE_APURAR = new Set(['ADMIN', 'SUPERVISOR', 'CEO']);
 
 export type MotivoDaApuracao = 'FORBIDDEN' | 'UNIDADE' | 'SEM_ACESSO' | 'MES' | 'PLANILHA' | 'AJUSTE' | 'VINCULO' | 'DUPLICADO' | 'FECHADA';
 
@@ -74,7 +74,7 @@ export async function montarPrevia(user: SessionUser, e: Entrada): Promise<Resul
   if (!leitura.ok) return { ok: false, reason: 'PLANILHA', erro: leitura.erro ?? 'Planilha inválida.' };
 
   const competencia = competenciaDePagamento(e.mesVenda);
-  const [pcts, chavesCozinha, colaboradores, links, existente, fechamento] = await Promise.all([
+  const [pcts, chavesCozinha, colaboradores, links, existente, fechamento, ignoradas] = await Promise.all([
     getPercentuais(),
     chavesDaCozinha(),
     prisma.collaborator.findMany({
@@ -85,7 +85,11 @@ export async function montarPrevia(user: SessionUser, e: Entrada): Promise<Resul
     prisma.commissionSellerLink.findMany({ where: { unitId: unidade.id } }),
     prisma.commissionImport.findUnique({ where: { unitId_salesMonth: { unitId: unidade.id, salesMonth: e.mesVenda } } }),
     prisma.payoutClosure.findUnique({ where: { yearMonth_type: { yearMonth: competencia, type: 'COMMISSION' } } }),
+    prisma.commissionLinkDismissal.findMany({ where: { unitId: unidade.id }, select: { sellerCode: true, collaboratorId: true } }),
   ]);
+  /* "Ignorar" de meses anteriores: aquele vendedor NÃO é aquele colaborador — a sugestão não volta. */
+  const ignoradasPorCodigo = new Map<string, Set<string>>();
+  for (const d of ignoradas) { const set = ignoradasPorCodigo.get(d.sellerCode) ?? new Set<string>(); set.add(d.collaboratorId); ignoradasPorCodigo.set(d.sellerCode, set); }
 
   const porId = new Map(colaboradores.map((c) => [c.id, c]));
   const linkPorCodigo = new Map(links.map((l) => [l.sellerCode, l.collaboratorId]));
@@ -115,8 +119,9 @@ export async function montarPrevia(user: SessionUser, e: Entrada): Promise<Resul
           gerente/encarregado incluído aqui — casa e entra como "fora"). Dois candidatos = para a mão. */
     const porNome = resolverVinculoPorNome(v.nome, colaboradores.map((c) => ({ id: c.id, name: c.name })));
     if (porNome.escolhido) { casar(v.bruto, porId.get(porNome.escolhido.id)!); continue; }
-    const r = resolverVinculoPorNome(v.nome, candidatos);
-    sugestoes.set(v.bruto, r.sugestoes.map((c) => ({ collaboratorId: c.id, name: c.name })));
+    /* 4) sem casamento: SUGESTÕES com o percentual de confiança (Souza × Sousa…) para alguém confirmar */
+    const r = resolverVinculoPorNome(v.nome, candidatos, v.codigo ? ignoradasPorCodigo.get(v.codigo) : undefined);
+    sugestoes.set(v.bruto, r.sugestoes.map((c) => ({ collaboratorId: c.id, name: c.name, confianca: c.confianca })));
   }
 
   const cozinha: Vinculo[] = colaboradores

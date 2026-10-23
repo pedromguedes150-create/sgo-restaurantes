@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Calculator, CalendarCheck, Download, Settings2 } from 'lucide-react';
+import { ArrowLeft, Calculator, CalendarCheck, Download, Link2, Settings2 } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -14,6 +14,8 @@ import { permissaoDeRota } from '@/lib/permissions/links';
 import { Card, CardContent } from '@/components/ui/card';
 import { PayoutsCompetenciaClient } from '@/components/people/payouts-competencia-client';
 import { ApuracaoClient } from '@/components/comissao/apuracao-client';
+import { VinculosClient } from '@/components/comissao/vinculos-client';
+import { listarVinculos, ROTULO_SITUACAO } from '@/lib/comissao/vinculos';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { formatBRL } from '@/lib/utils';
 
@@ -27,7 +29,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function ComissaoPage({ searchParams }: { searchParams: { aba?: string; mes?: string } }) {
   const user = (await getSessionUser())!;
-  const aba = searchParams.aba === 'competencia' ? 'competencia' : 'apuracao';
+  const aba = searchParams.aba === 'competencia' ? 'competencia' : searchParams.aba === 'vinculos' ? 'vinculos' : 'apuracao';
   const hoje = diaEmBrasilia(new Date());
   const mesPadrao = mesDeVendaPadrao(hoje);
   const podeApurar = ['ADMIN', 'SUPERVISOR', 'CEO'].includes(user.role);
@@ -36,7 +38,30 @@ export default async function ComissaoPage({ searchParams }: { searchParams: { a
   const tabs = [
     { label: 'Apuração', icon: <Calculator className="h-3.5 w-3.5" />, href: '/modulos/comissao', active: aba === 'apuracao', testId: 'aba-apuracao' },
     { label: 'Competência', icon: <CalendarCheck className="h-3.5 w-3.5" />, href: `/modulos/comissao?aba=competencia&mes=${competenciaDePagamento(mesPadrao)}`, active: aba === 'competencia', testId: 'aba-competencia' },
+    { label: 'Vínculos', icon: <Link2 className="h-3.5 w-3.5" />, href: '/modulos/comissao?aba=vinculos', active: aba === 'vinculos', testId: 'aba-vinculos' },
   ];
+
+  if (aba === 'vinculos') {
+    const [unidades, { vinculos, ignorados }] = await Promise.all([
+      prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+      listarVinculos(user),
+    ]);
+    return (
+      <div className="space-y-4">
+        <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
+        <LargeTitle
+          title="Comissão"
+          subtitle="Vínculos entre o nome do vendedor no Teknisa e o colaborador no RH — sem alterar nenhum cadastro. A apuração usa esta tabela antes de comparar nomes."
+          tabs={tabs}
+        />
+        <VinculosClient
+          vinculos={vinculos.map((v) => ({ ...v, rotuloSituacao: ROTULO_SITUACAO[v.situacao], createdAt: v.createdAt.toISOString() }))}
+          ignorados={ignorados.map((d) => ({ id: d.id, unidade: d.unidade, sellerCode: d.sellerCode, sellerName: d.sellerName, collaboratorName: d.collaboratorName, createdByName: d.createdByName, createdAt: d.createdAt.toISOString() }))}
+          unidades={unidades} podeEditar={podeApurar}
+        />
+      </div>
+    );
+  }
 
   if (aba === 'competencia') {
     const meses = competencias(12);
