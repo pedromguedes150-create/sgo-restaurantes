@@ -34,12 +34,12 @@ export default async function DesperdiciosConfigPage() {
       </CardContent></Card>
 
       <Card><CardContent className="pt-4">
-        <p className="mb-2 sgo-type-15 font-semibold text-ink-900">Sobras Restaurante — categorias (kg)</p>
+        <p className="mb-2 sgo-type-15 font-semibold text-ink-900">Sobras Restaurantes — categorias (kg)</p>
         <WasteCategoriesAdmin categories={categories.map((c) => ({ ...c, measure: (c.measure === 'un' ? 'un' : 'kg') as 'kg' | 'un' }))} />
       </CardContent></Card>
 
       <Card><CardContent className="pt-4">
-        <p className="mb-1 sgo-type-15 font-semibold text-ink-900">Sobras Salgados — tipos e motivos (unidades)</p>
+        <p className="mb-1 sgo-type-15 font-semibold text-ink-900">Sobras Lanchonete — tipos e motivos (unidades)</p>
         <p className="mb-3 text-xs text-ink-500">O gerente escolhe destas listas ao lançar. Opção já usada não se exclui: desative, que o histórico continua legível.</p>
         <SnackOptionsAdmin tipos={opcoes.tipos} motivos={opcoes.motivos} />
       </CardContent></Card>

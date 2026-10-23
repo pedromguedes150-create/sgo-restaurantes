@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.178.1 — 2026-10-23 (Desperdícios: "Sobras Restaurantes" e "Sobras Lanchonete" + lançamento da lanchonete no celular)
+### Mudou
+- Pedido do Pedro (prints): as abas de Desperdícios passam a se chamar **Sobras Restaurantes** e **Sobras Lanchonete** (eram "Sobras Restaurante" e "Sobras Salgados") — no título da tela, nas abas, no painel consolidado, em Configurações → Desperdícios e no guia. Só o nome: chaves (`?aba=restaurante|salgados`), dados e regras iguais.
+### Corrigido
+- **Lançamento da lanchonete no celular** (print do iPhone): o campo Motivo ficava espremido numa coluna estreita ao lado do Tipo e a lista cortava o texto ("Queimad", "Contamin"). Causa: o `className` de layout ia para o BOTÃO do Select, não para o bloco, então o "ocupar a linha toda" nunca pegou. Agora no celular é uma coisa por linha — Tipo, Motivo, Qtd — com campos de 44px para o toque; no computador continua tudo numa linha.
+
 ## v1.178.0 — 2026-10-23 (Comissão: nomes diferentes do Teknisa e do RH viram sugestão com percentual + tabela de vínculos)
 ### Novo
 - **Comparação inteligente de nomes** (pedido do Pedro, com o desenho da solução): o Teknisa e o RH grafam o mesmo nome de jeitos diferentes ("Janaina Souza" × "Janaina Sousa Coelho", "Krissley Helbert" × "Krissley Hubert Ribeiro"). Quando o vendedor não casa sozinho, a prévia da apuração mostra, em "Fora da comissão", a **sugestão do SGO com o percentual de confiança** (sem acento, sem caixa, Souza = Sousa pelo som, letra dobrada, h mudo; o PRIMEIRO nome precisa bater — "Ana Souza" não é "Maria Souza") e os botões **Confirmar vínculo** e **Ignorar**. A semelhança **nunca vincula sozinha**: confirmar é da pessoa. Abaixo de 70% não sugere.

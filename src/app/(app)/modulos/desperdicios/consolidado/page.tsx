@@ -104,7 +104,7 @@ export default async function ConsolidadoDesperdicioPage({
           ficam na linha de filtros. Restaurante (kg) e Salgados (un.) nunca se somam. */}
       <LargeTitle
         title="Painel de desperdício"
-        subtitle={`${aba === 'restaurante' ? 'Sobras Restaurante (kg)' : 'Sobras Salgados (unidades)'} · ${subtitulos[visao]}`}
+        subtitle={`${aba === 'restaurante' ? 'Sobras Restaurantes (kg)' : 'Sobras Lanchonete (unidades)'} · ${subtitulos[visao]}`}
         tabs={[
           { label: 'Resumo', icon: <LayoutGrid className="h-3.5 w-3.5" />, href: link(year, month, aba, 'resumo'), active: visao === 'resumo', testId: 'visao-resumo' },
           { label: 'Conferência', icon: <ClipboardCheck className="h-3.5 w-3.5" />, href: link(year, month, aba, 'conferencia'), active: visao === 'conferencia', testId: 'visao-conferencia' },
@@ -115,7 +115,7 @@ export default async function ConsolidadoDesperdicioPage({
       <div className="sgo-filtros -mx-4 print:hidden">
         <span className="sgo-label">Frente</span>
         <SegmentedNav aria-label="Frente do desperdício" value={aba}
-          options={[{ value: 'restaurante', label: 'Restaurante (kg)', href: link(year, month, 'restaurante') }, { value: 'salgados', label: 'Salgados (un.)', href: link(year, month, 'salgados') }]} />
+          options={[{ value: 'restaurante', label: 'Sobras Restaurantes (kg)', href: link(year, month, 'restaurante') }, { value: 'salgados', label: 'Sobras Lanchonete (un.)', href: link(year, month, 'salgados') }]} />
         <span className="sgo-label">Mês</span>
         <div className="inline-flex items-center gap-1">
           <Link href={link(ant.a, ant.m)} className="sgo-btn sgo-btn--sm" aria-label="Mês anterior"><ChevronLeft className="h-3.5 w-3.5" /></Link>
