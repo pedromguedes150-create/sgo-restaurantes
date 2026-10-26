@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { folgaNoDia, planejadoDoDia, type VersaoParaPlanejado } from '@/lib/schedule/planned';
+import { folgaNoDia, planejadoDoDia, proximosDiasTrabalhados, type VersaoParaPlanejado } from '@/lib/schedule/planned';
 
 const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -165,5 +165,37 @@ describe('Bordas', () => {
     /* O resto negativo do JavaScript daria posição errada sem o "+ciclo". */
     const v = base({ workDays: 1, offDays: 1, weeklyOffDay: null, anchorDate: d('2026-08-10') });
     expect(sequencia(v, '2026-08-06', 4)).toBe('TFTF');
+  });
+});
+
+describe('Prévia do ciclo na folha de cadastro (v1.178.2)', () => {
+  /* A pergunta do Pedro: "ela trabalha nos dias ímpares; quando o mês tem 31
+     dias, no mês seguinte os dias dela viram pares — o sistema entende isso?".
+     Entende, porque conta dias corridos; a prévia mostra a troca acontecendo. */
+  it('12x36 iniciado em 01/10: na virada de outubro os dias trabalhados passam de ímpares a pares', () => {
+    const dias = proximosDiasTrabalhados('2026-10-01', 1, 1, d('2026-10-27'), 5);
+    expect(dias).toEqual(['2026-10-27', '2026-10-29', '2026-10-31', '2026-11-02', '2026-11-04']);
+  });
+
+  it('12x36 iniciado em 02/10 (dias pares): em novembro vira ímpar', () => {
+    const dias = proximosDiasTrabalhados('2026-10-02', 1, 1, d('2026-10-28'), 4);
+    expect(dias).toEqual(['2026-10-28', '2026-10-30', '2026-11-01', '2026-11-03']);
+  });
+
+  it('a prévia é a mesma conta da grade', () => {
+    const v = base({ workDays: 1, offDays: 1, weeklyOffDay: null, anchorDate: d('2026-10-01'), offMode: 'CYCLE_ONLY' });
+    for (const iso of proximosDiasTrabalhados('2026-10-01', 1, 1, d('2026-10-20'), 10)) {
+      expect(planejadoDoDia(v, d(iso))).toBe('WORK');
+    }
+  });
+
+  it('4x2 devolve os dias trabalhados pulando as duas folgas', () => {
+    expect(proximosDiasTrabalhados('2026-05-04', 4, 2, d('2026-05-04'), 6))
+      .toEqual(['2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07', '2026-05-10', '2026-05-11']);
+  });
+
+  it('início do ciclo em branco ou inválido não inventa prévia', () => {
+    expect(proximosDiasTrabalhados('', 1, 1, d('2026-10-27'))).toEqual([]);
+    expect(proximosDiasTrabalhados('2026-13-45', 1, 1, d('2026-10-27'))).toEqual([]);
   });
 });
