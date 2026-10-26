@@ -65,6 +65,8 @@ describe('A folha abre com o que já está cadastrado', () => {
     startTime: '14:00',
     breakTime: '19:00',
     endTime: '22:17',
+    anchorDate: '2026-08-02',
+    startDate: '2026-08-03',
   };
 
   it('traz o dia de folga da pessoa, e não o padrão', () => {
@@ -79,5 +81,50 @@ describe('A folha abre com o que já está cadastrado', () => {
   it('sem nada cadastrado, segue nos padrões', () => {
     const html = render({ pessoaFixa: { id: 'c1', name: 'ALESSANDRA' }, atual: null });
     expect(html).toContain('Domingo');
+  });
+});
+
+describe('Reabrir a escala mostra o que foi gravado (v1.178.2)', () => {
+  /* Print do Pedro (26/10/2026): BRENDA é 12x36 com início do ciclo em
+     01/10, mas ao reabrir a folha o "Início do ciclo" vinha vazio e "a partir
+     de quando" vinha em hoje — como se nada tivesse sido gravado. */
+  const brenda = {
+    templateId: 't-12x36',
+    offMode: 'CYCLE_ONLY' as const,
+    weeklyOffDay: null,
+    sundayOfMonth: null,
+    shiftId: null,
+    startTime: '14:00',
+    breakTime: '19:00',
+    endTime: '22:17',
+    anchorDate: '2026-10-01',
+    startDate: '2026-09-30',
+  };
+
+  it('12x36: o início do ciclo e a vigência voltam preenchidos', () => {
+    const html = render({ pessoaFixa: { id: 'c1', name: 'BRENDA' }, atual: brenda });
+    expect(html).toContain('01/10/2026');
+    expect(html).toContain('30/09/2026');
+    expect(html).toContain('vigente desde');
+  });
+
+  it('12x36: explica que a conta é em dias corridos e mostra a virada ímpar → par', () => {
+    const html = render({ pessoaFixa: { id: 'c1', name: 'BRENDA' }, atual: brenda });
+    expect(html).toContain('data-testid="explicacao-12x36"');
+    expect(html).toContain('não pelos dias pares ou');
+    /* A prévia parte do maior entre a vigência e o início do ciclo (01/10):
+       1, 3, 5, 7, 9, 11 de outubro — os ímpares, como a Brenda trabalha. */
+    expect(html).toContain('01/10/2026 · 03/10/2026 · 05/10/2026 · 07/10/2026 · 09/10/2026 · 11/10/2026');
+  });
+
+  it('6x1: o início do ciclo NÃO é reaproveitado (a âncora ali é calculada do dia fixo)', () => {
+    const html = render({ pessoaFixa: { id: 'c1', name: 'ALESSANDRA' }, atual: { ...brenda, templateId: 't-6x1', offMode: 'FIXED_WEEKLY', weeklyOffDay: 4 } });
+    expect(html).not.toContain('data-testid="previa-do-ciclo"');
+    expect(html).toContain('30/09/2026'); // a vigência continua
+  });
+
+  it('sem escala gravada, nada de "vigente desde"', () => {
+    const html = render({ pessoaFixa: { id: 'c1', name: 'ALESSANDRA' }, atual: null });
+    expect(html).not.toContain('vigente desde');
   });
 });

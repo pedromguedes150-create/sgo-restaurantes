@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/ds/select';
 import { DatePicker } from '@/components/ui/ds/date-picker';
 import { DIAS_DA_SEMANA, MODO_LABEL, MODO_EXPLICACAO, DOMINGO_DO_MES_PADRAO, DOMINGOS_NO_MES, type ModoDeFolga } from '@/lib/schedule/vigencia';
+import { proximosDiasTrabalhados } from '@/lib/schedule/planned';
 
 export interface TipoDeEscala {
   id: string;
@@ -35,6 +36,10 @@ export interface EscalaAtual {
   startTime: string | null;
   breakTime: string | null;
   endTime: string | null;
+  /** Início do ciclo gravado (YYYY-MM-DD) — o que posiciona um 12x36 ou 4x2. */
+  anchorDate: string | null;
+  /** Desde quando a vigência atual vale (YYYY-MM-DD). */
+  startDate: string | null;
 }
 export interface UnidadeOpt { id: string; name: string }
 export interface Turno { id: string; name: string; startTime: string | null; endTime: string | null }
@@ -44,6 +49,17 @@ function hojeISO(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** YYYY-MM-DD → dd/mm/aaaa, sem passar por Date (nada de fuso no meio). */
+function dataBR(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+/** O ciclo cadastrado fecha na semana? (é o que decide folga fixa × ciclo corrido) */
+function cicloSemanal(t: Pick<TipoDeEscala, 'workDays' | 'offDays'> | null | undefined): boolean {
+  return t ? t.workDays + t.offDays === 7 : false;
 }
 
 /**
@@ -80,11 +96,21 @@ export function EmployeeScheduleForm({
   const [collaboratorId, setCollaboratorId] = useState(pessoaFixa?.id ?? '');
   const [unidade, setUnidade] = useState(unitId);
   const [templateId, setTemplateId] = useState(atual?.templateId ?? tipos[0]?.id ?? '');
-  const [startDate, setStartDate] = useState(hojeISO);
+  /* A folha abre na VIGÊNCIA gravada, não em "hoje": reabrir a escala de
+     alguém precisa mostrar o que foi feito. Salvar com a mesma data corrige a
+     vigência atual (regra do servidor); para mudar a partir de outro dia, a
+     pessoa troca a data — a dica embaixo do campo diz isso. */
+  const [startDate, setStartDate] = useState(() => atual?.startDate ?? hojeISO());
   const [modo, setModo] = useState<ModoDeFolga>(atual?.offMode ?? 'FIXED_WEEKLY');
   const [offDay, setOffDay] = useState(String(atual?.weeklyOffDay ?? 0));
   const [domingo, setDomingo] = useState(String(atual?.sundayOfMonth ?? DOMINGO_DO_MES_PADRAO));
-  const [anchor, setAnchor] = useState('');
+  /* O início do ciclo só volta preenchido quando o tipo gravado NÃO fecha na
+     semana: no 6x1 a âncora é calculada a partir do dia fixo, e mostrá-la num
+     12x36 recém-escolhido afirmaria um início que ninguém informou. */
+  const [anchor, setAnchor] = useState(() => {
+    const tipoGravado = tipos.find((t) => t.id === atual?.templateId);
+    return tipoGravado && !cicloSemanal(tipoGravado) ? atual?.anchorDate ?? '' : '';
+  });
   const [shiftId, setShiftId] = useState(atual?.shiftId ?? '');
   const [entrada, setEntrada] = useState(atual?.startTime ?? '');
   const [pausa, setPausa] = useState(atual?.breakTime ?? '');
@@ -95,7 +121,18 @@ export function EmployeeScheduleForm({
   /* Dia fixo de folga só existe em ciclo que fecha na semana. Em ciclo de outro
      tamanho a folga anda sozinha, e mostrar o campo prometeria o que o gerador
      não cumpre. */
-  const semanal = tipo ? tipo.workDays + tipo.offDays === 7 : false;
+  const semanal = cicloSemanal(tipo);
+  /* A prévia responde na própria folha à dúvida do 12x36 ("ela trabalha nos
+     dias ímpares; e quando o mês tem 31 dias?"): a conta é em dias corridos
+     desde o início do ciclo, e a lista MOSTRA a troca de ímpar para par na
+     virada, em vez de pedir que a pessoa acredite no texto. */
+  const previa = useMemo(() => {
+    if (!tipo || semanal || !anchor) return [];
+    const [y, m, d] = (startDate || hojeISO()).split('-').map(Number);
+    const [ay, am, ad] = anchor.split('-').map(Number);
+    const inicio = Math.max(Date.UTC(y, m - 1, d), Date.UTC(ay, am - 1, ad));
+    return proximosDiasTrabalhados(anchor, tipo.workDays, tipo.offDays, new Date(inicio), 6);
+  }, [tipo, semanal, anchor, startDate]);
 
   async function salvar() {
     setErro(null);
@@ -209,9 +246,21 @@ export function EmployeeScheduleForm({
           <div className="space-y-2">
             <p className="text-[11px] text-ink-500">
               Este ciclo <b>não fecha na semana</b>, então a folga anda de dia da semana sozinha — não há dia fixo a
-              escolher. Informe em que dia o ciclo começa.
+              escolher. Informe o <b>primeiro dia trabalhado</b> do ciclo.
             </p>
-            <DatePicker label="Início do ciclo" size="sm" value={anchor || null} onValueChange={(v) => setAnchor(v ?? '')} />
+            <DatePicker label="Início do ciclo (primeiro dia trabalhado)" size="sm" value={anchor || null} onValueChange={(v) => setAnchor(v ?? '')} />
+            {tipo && tipo.workDays === 1 && tipo.offDays === 1 && (
+              <p className="text-[11px] text-ink-500" data-testid="explicacao-12x36">
+                No 12x36 o SGO conta <b>dia sim, dia não a partir do início do ciclo</b> — não pelos dias pares ou
+                ímpares do mês. Por isso, num mês de 31 dias, quem trabalhava nos ímpares passa sozinho para os pares
+                no mês seguinte (31/10 trabalha, 01/11 folga, 02/11 trabalha).
+              </p>
+            )}
+            {previa.length > 0 && (
+              <p className="text-[11px] text-ink-700" data-testid="previa-do-ciclo">
+                Próximos dias de trabalho por este início: <b>{previa.map(dataBR).join(' · ')}</b>
+              </p>
+            )}
           </div>
         )}
 
@@ -220,6 +269,12 @@ export function EmployeeScheduleForm({
             label="A partir de quando essa escala começa a valer?" size="sm"
             value={startDate || null} onValueChange={(v) => setStartDate(v ?? '')}
           />
+          {atual?.startDate && (
+            <p className="mt-1 text-[11px] text-ink-500" data-testid="vigencia-atual">
+              Escala atual vigente desde <b>{dataBR(atual.startDate)}</b>. Mantendo essa data, você corrige a escala
+              atual; para uma mudança a partir de outro dia, troque a data — a anterior é fechada na véspera.
+            </p>
+          )}
         </div>
       </div>
 

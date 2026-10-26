@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.178.2 — 2026-10-26 (Escala do colaborador: o 12x36 se explica e a folha reabre com o que foi gravado)
+### Corrigido
+- **Reabrir a escala não mostrava o que foi gravado** (print do Pedro): para quem é 12x36, o campo "Início do ciclo" voltava vazio e "A partir de quando essa escala começa a valer?" voltava em hoje. Agora a folha abre com o início do ciclo gravado e com a vigência atual ("Escala atual vigente desde dd/mm/aaaa"), e explica que manter a data corrige a escala atual e trocar a data abre uma vigência nova. O 6x1/5x2 segue abrindo só com o dia fixo (ali o início do ciclo é calculado).
+### Mudou
+- **12x36 — dias ímpares × pares**: a folha passa a dizer que o SGO conta **dia sim, dia não a partir do início do ciclo**, e não pelos dias pares/ímpares do mês — então, num mês de 31 dias, quem trabalhava nos ímpares passa sozinho para os pares no mês seguinte (31/10 trabalha, 01/11 folga, 02/11 trabalha). Uma prévia "Próximos dias de trabalho" mostra a sequência pelo início informado. Nenhuma regra mudou: a grade já contava assim desde a v1.73.
+
 ## v1.178.1 — 2026-10-23 (Desperdícios: "Sobras Restaurantes" e "Sobras Lanchonete" + lançamento da lanchonete no celular)
 ### Mudou
 - Pedido do Pedro (prints): as abas de Desperdícios passam a se chamar **Sobras Restaurantes** e **Sobras Lanchonete** (eram "Sobras Restaurante" e "Sobras Salgados") — no título da tela, nas abas, no painel consolidado, em Configurações → Desperdícios e no guia. Só o nome: chaves (`?aba=restaurante|salgados`), dados e regras iguais.

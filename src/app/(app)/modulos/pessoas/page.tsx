@@ -34,6 +34,8 @@ const DESTINOS = [
 ];
 
 function d(date: Date) { return new Date(date).toLocaleDateString('pt-BR'); }
+/** YYYY-MM-DD do dia gravado (as datas de escala vivem à meia-noite UTC). */
+function iso(date: Date) { return new Date(date).toISOString().slice(0, 10); }
 
 export default async function PessoasModulePage({ searchParams }: { searchParams: { unit?: string; unidade?: string } }) {
   const user = (await getSessionUser())!;
@@ -119,6 +121,11 @@ export default async function PessoasModulePage({ searchParams }: { searchParams
                 templateId: c.templateId, offMode: c.offMode, weeklyOffDay: c.weeklyOffDay,
                 sundayOfMonth: c.sundayOfMonth, shiftId: c.shiftId,
                 startTime: c.startTime, breakTime: c.breakTime, endTime: c.endTime,
+                /* O início do ciclo e a vigência também voltam para a folha:
+                   sem eles, reabrir a escala de quem é 12x36 mostrava "Início
+                   do ciclo" vazio e "vale a partir de" em hoje — como se nada
+                   tivesse sido gravado (print do Pedro, 26/10/2026). */
+                anchorDate: iso(c.anchorDate), startDate: iso(c.startDate),
               },
             }]))}
         filtradoPor={nomesFiltrados}
