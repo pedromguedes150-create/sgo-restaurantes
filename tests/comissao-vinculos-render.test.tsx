@@ -35,6 +35,20 @@ describe('sugestão na prévia', () => {
   });
 });
 
+describe('parecido, mas gerente/encarregado (v1.178.3)', () => {
+  it('explica que a função está fora da comissão em vez de dizer "nenhum parecido"; não oferece Confirmar', () => {
+    const l: LinhaDaApuracao = { ...linha, chave: 'VENDEDOR:1048 - KRISLLEY HELBERT', nome: 'KRISLLEY HELBERT',
+      sugestoes: [{ collaboratorId: 'k', name: 'KRISLLEY HUBERT RIBEIRO CARVALHO', confianca: 87, foraDaComissao: true, jobTitle: 'ENCARREGADO DE RESTAURANTE' }] };
+    const html = renderToString(React.createElement(SugestaoDoVinculo, { linha: l, ignoradas: [], onConfirmar: () => {}, onIgnorar: () => {} })).split('<!-- -->').join('');
+    expect(html).toContain('data-testid="sugestao-fora-da-comissao"');
+    expect(html).toContain('KRISLLEY HUBERT RIBEIRO CARVALHO');
+    expect(html).toContain('ENCARREGADO DE RESTAURANTE');
+    expect(html).toContain('fora da comissão');
+    expect(html).not.toContain('Confirmar vínculo');
+    expect(html).not.toContain('Nenhum nome parecido');
+  });
+});
+
 describe('aba Vínculos', () => {
   it('tabela Nome no RH × Nome no Teknisa × Situação, Novo vínculo e aviso de vínculo quebrado', () => {
     const html = renderToString(React.createElement(VinculosClient, {

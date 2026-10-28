@@ -327,8 +327,20 @@ function Tabela({ titulo, linhas, ajustes, setAjustes, valorComAjuste, vazio }: 
 export function SugestaoDoVinculo({ linha, ignoradas, ocupado, onConfirmar, onIgnorar }: {
   linha: LinhaDaApuracao; ignoradas: string[]; ocupado?: boolean; onConfirmar: (collaboratorId: string) => void; onIgnorar: (collaboratorId: string) => void;
 }) {
-  const s = (linha.sugestoes ?? []).find((x) => !ignoradas.includes(x.collaboratorId));
-  if (!s) return <span className="text-xs text-ink-500">Nenhum nome parecido no RH desta unidade.</span>;
+  const s = (linha.sugestoes ?? []).find((x) => !x.foraDaComissao && !ignoradas.includes(x.collaboratorId));
+  if (!s) {
+    /* Parecido, mas gerente/encarregado: dizer o porquê, em vez de "nenhum parecido" (v1.178.3). */
+    const fora = (linha.sugestoes ?? []).find((x) => x.foraDaComissao);
+    if (fora) {
+      return (
+        <span className="text-xs text-ink-500" data-testid="sugestao-fora-da-comissao">
+          <b className="text-ink-700">{fora.name}</b>{fora.jobTitle ? ` (${fora.jobTitle})` : ''} é parecido ({fora.confianca ?? 0}%), mas a função está
+          fora da comissão — gerente e encarregado não recebem. Se precisar, use &quot;Ver todos os colaboradores da unidade&quot;.
+        </span>
+      );
+    }
+    return <span className="text-xs text-ink-500">Nenhum nome parecido no RH desta unidade.</span>;
+  }
   const c = s.confianca ?? 0;
   const tom = c >= 90 ? 'success' : c >= 80 ? 'info' : 'warning';
   return (
@@ -346,7 +358,7 @@ export function SugestaoDoVinculo({ linha, ignoradas, ocupado, onConfirmar, onIg
 function SeletorDeVinculo({ linha, unitId, onEscolher }: { linha: LinhaDaApuracao; unitId: string | null; onEscolher: (collaboratorId: string) => void }) {
   const [opcoes, setOpcoes] = useState<{ id: string; name: string }[] | null>(null);
   const [carregando, setCarregando] = useState(false);
-  const sugestoes = linha.sugestoes ?? [];
+  const sugestoes = (linha.sugestoes ?? []).filter((s) => !s.foraDaComissao);
   async function carregarTodos() {
     if (!unitId || opcoes) return;
     setCarregando(true);

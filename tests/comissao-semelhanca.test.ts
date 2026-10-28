@@ -11,6 +11,14 @@ describe('som da palavra', () => {
     expect(chaveFonetica('Krissley')).toBe(chaveFonetica('Krisley'));
     expect(chaveFonetica('Luiz')).toBe(chaveFonetica('Luis'));
   });
+  it('E final átono soa como I: Michele = Michelli = Micheli, Daniele = Danieli (v1.178.3)', () => {
+    expect(chaveFonetica('Michele')).toBe(chaveFonetica('Michelli'));
+    expect(chaveFonetica('Michele')).toBe(chaveFonetica('Micheli'));
+    expect(chaveFonetica('Daniele')).toBe(chaveFonetica('Danieli'));
+    /* só o E FINAL: no meio da palavra nada muda, e Marcelo ≠ Marcela continua valendo */
+    expect(chaveFonetica('Helena')).not.toBe(chaveFonetica('Hilena'));
+    expect(chaveFonetica('Marcelo')).not.toBe(chaveFonetica('Marcela'));
+  });
   it('mesmo som vale 0,95 (não 1): grafia diferente nunca passa por idêntica', () => {
     expect(semelhancaDePalavras('Souza', 'souza')).toBe(1);
     expect(semelhancaDePalavras('Souza', 'Sousa')).toBe(0.95);
@@ -24,6 +32,11 @@ describe('percentual entre nomes', () => {
     expect(semelhancaDeNomes('Krissley Helbert', 'Krissley Hubert Ribeiro Carvalho')).toBeGreaterThanOrEqual(SEMELHANCA_MINIMA);
     expect(semelhancaDeNomes('Emily Julie', 'Emily Julie Silva Mota')).toBe(100);
     expect(semelhancaDeNomes('Maria Merces', 'Maria das Mercês Santos')).toBe(100);
+  });
+  it('print do Pedro (28/10): MICHELE CRISTINA acha MICHELLI CRISTINA MEDINA', () => {
+    /* Antes: primeiro nome em 0,77 (< 0,8) derrubava a nota para 51 — abaixo da linha de sugestão. */
+    expect(semelhancaDeNomes('MICHELE CRISTINA', 'MICHELLI CRISTINA MEDINA')).toBeGreaterThanOrEqual(90);
+    expect(sugestoesPorSemelhanca('MICHELE CRISTINA', [{ id: 'm', name: 'MICHELLI CRISTINA MEDINA' }, { id: 'o', name: 'MICHELE SANTOS' }]).map((x) => x.id)).toEqual(['m', 'o']);
   });
   it('primeiro nome diferente derruba — "Ana Souza" não é "Maria Souza"', () => {
     expect(semelhancaDeNomes('Ana Souza', 'Maria Souza')).toBeLessThan(SEMELHANCA_MINIMA);

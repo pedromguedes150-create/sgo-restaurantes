@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.178.3 — 2026-10-28 (Comissão: Michele = Michelli, e o encarregado parecido é explicado)
+### Corrigido
+- **"MICHELE CRISTINA" não achava "MICHELLI CRISTINA MEDINA"** (print do Pedro): a comparação de sons agora trata o E final como I (Michele = Michelli = Micheli, Daniele = Danieli). Antes o primeiro nome ficava em 77% e a regra "primeiro nome tem de bater" derrubava a nota para 51, abaixo da linha de sugestão. Marcelo ≠ Marcela continua valendo.
+- **"KRISLLEY HELBERT" dizia "Nenhum nome parecido"** embora exista KRISLLEY HUBERT RIBEIRO CARVALHO: ele é Encarregado, e gerente/encarregado ficam fora da comissão por regra (v1.176.0), então nunca foi candidato. A tela passa a dizer isso: "KRISLLEY HUBERT RIBEIRO CARVALHO (Encarregado de Restaurante) é parecido (87%), mas a função está fora da comissão", sem botão de confirmar. A regra não mudou.
+
 ## v1.178.2 — 2026-10-26 (Escala do colaborador: o 12x36 se explica e a folha reabre com o que foi gravado)
 ### Corrigido
 - **Reabrir a escala não mostrava o que foi gravado** (print do Pedro): para quem é 12x36, o campo "Início do ciclo" voltava vazio e "A partir de quando essa escala começa a valer?" voltava em hoje. Agora a folha abre com o início do ciclo gravado e com a vigência atual ("Escala atual vigente desde dd/mm/aaaa"), e explica que manter a data corrige a escala atual e trocar a data abre uma vigência nova. O 6x1/5x2 segue abrindo só com o dia fixo (ali o início do ciclo é calculado).
