@@ -4,7 +4,7 @@ import { canAccessUnit, unitScopeWhere } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
 import { normalizarCargo } from '@/lib/people/avaliacao-calculo';
 import {
-  aplicarAjustes, apurar, competenciaDePagamento, funcaoForaDaComissao, lerPlanilhaDeVendedores, mesDeApuracao, mesValido, resolverVinculoPorNome, rotuloDoMes,
+  aplicarAjustes, apurar, competenciaDePagamento, funcaoForaDaComissao, lerPlanilhaDeVendedores, mesDeApuracao, mesValido, resolverVinculoPorNome, rotuloDoMes, sugestoesPorSemelhanca,
   type Ajuste, type Apuracao, type LinhaDaApuracao, type Vinculo,
 } from './calculo';
 import { chavesDaCozinha, getPercentuais } from './config';
@@ -121,7 +121,12 @@ export async function montarPrevia(user: SessionUser, e: Entrada): Promise<Resul
     if (porNome.escolhido) { casar(v.bruto, porId.get(porNome.escolhido.id)!); continue; }
     /* 4) sem casamento: SUGESTÕES com o percentual de confiança (Souza × Sousa…) para alguém confirmar */
     const r = resolverVinculoPorNome(v.nome, candidatos, v.codigo ? ignoradasPorCodigo.get(v.codigo) : undefined);
-    sugestoes.set(v.bruto, r.sugestoes.map((c) => ({ collaboratorId: c.id, name: c.name, confianca: c.confianca })));
+    /* Gerente/encarregado parecido NÃO é oferecido (a função fica fora da comissão), mas a tela precisa
+       DIZER isso: "nenhum nome parecido" para KRISLLEY HELBERT × KRISLLEY HUBERT (Encarregado) parecia
+       falha da comparação (print do Pedro, 28/10). Vai marcado, e a tela explica em vez de oferecer. */
+    const foraParecidos = sugestoesPorSemelhanca(v.nome, colaboradores.filter((c) => funcaoForaDaComissao(c.jobTitle)).map((c) => ({ id: c.id, name: c.name })))
+      .map((c) => ({ collaboratorId: c.id, name: c.name, confianca: c.confianca, foraDaComissao: true, jobTitle: porId.get(c.id)?.jobTitle ?? null }));
+    sugestoes.set(v.bruto, [...r.sugestoes.map((c) => ({ collaboratorId: c.id, name: c.name, confianca: c.confianca })), ...foraParecidos]);
   }
 
   const cozinha: Vinculo[] = colaboradores

@@ -40,6 +40,7 @@ const PLANILHA = [
   [UNI, `0106 - MARCELO TELES ${sfx}`, 80],
   [UNI, `0107 - ANA PAULA ${sfx}`, 60],
   [UNI, `0300 - RODRIGO GERENTE ${sfx}`, 1000],
+  [UNI, `1048 - KRISLLEY HELBERT ${sfx}`, 79.5],
 ];
 
 beforeAll(async () => {
@@ -66,6 +67,8 @@ beforeAll(async () => {
   anaPaulaLimaId = await colab(`Ana Paula Lima ${sfx}`, 'Garçom', unitA);
   /* gerente da unidade: o nome vende no Teknisa, mas a função deixa fora (v1.176.0) */
   gerenteId = await colab(`Rodrigo Gerente ${sfx}`, 'Gerente de Loja', unitA);
+  /* encarregado com nome PARECIDO (não contido): não casa, não é candidato — mas a tela precisa explicar (v1.178.3) */
+  await colab(`Krislley Hubert Ribeiro ${sfx}`, 'ENCARREGADO DE RESTAURANTE', unitA);
   await prisma.collaborator.update({ where: { id: mariaId }, data: { cpf: '123.456.789-01' } });
   /* função da cozinha em OUTRA unidade: não divide a cozinha da A */
   await colab(`Zé ${sfx}`, `Auxiliar de Cozinha ${sfx}`, unitB);
@@ -108,10 +111,16 @@ describe('prévia', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const p = r.previa;
-    expect(p).toMatchObject({ mesVenda: MES_VENDA, mesApuracao: '2019-08', competencia: COMP, totalVendas: 3290, jaExiste: false, fechada: false, erros: [] });
+    expect(p).toMatchObject({ mesVenda: MES_VENDA, mesApuracao: '2019-08', competencia: COMP, totalVendas: 3369.5, jaExiste: false, fechada: false, erros: [] });
     /* o gerente casou pelo nome, mas a função deixa FORA: aparece, não recebe */
     expect(p.linhas.find((l) => l.chave === `VENDEDOR:0300 - RODRIGO GERENTE ${sfx}`)).toMatchObject({ kind: 'FUNCAO_FORA', valor: 0, collaboratorName: `Rodrigo Gerente ${sfx}` });
     expect(p.totais.foraPorFuncao).toBe(1);
+    /* Krislley Helbert × Krislley Hubert (encarregado): fica NÃO CADASTRADO, e a sugestão vem MARCADA
+       como fora da comissão — para a tela dizer o porquê em vez de "nenhum parecido" */
+    const krislley = p.linhas.find((l) => l.chave === `VENDEDOR:1048 - KRISLLEY HELBERT ${sfx}`);
+    expect(krislley).toMatchObject({ kind: 'NAO_CADASTRADO', collaboratorId: null });
+    expect(krislley!.sugestoes).toEqual([expect.objectContaining({ name: `Krislley Hubert Ribeiro ${sfx}`, foraDaComissao: true, jobTitle: 'ENCARREGADO DE RESTAURANTE' })]);
+    expect(krislley!.sugestoes![0].confianca).toBeGreaterThanOrEqual(70);
     expect(p.unidadeDeclarada).toBe(UNI);
     const por = Object.fromEntries(p.linhas.map((l) => [l.chave, l]));
     expect(por[`VENDEDOR:1065 - MARIA MERCES ${sfx}`]).toMatchObject({ kind: 'VENDEDOR', collaboratorId: mariaId, valor: 5 });
@@ -166,7 +175,7 @@ describe('confirmar', () => {
     expect(payouts.find((p) => p.collaboratorId === anaId)!.note).toContain('cozinha');
 
     const ap = await getApuracao(admin(), r.importId);
-    expect(ap).toMatchObject({ mesVenda: MES_VENDA, competencia: COMP, totalVendas: 3290, vendasGrupo: 1500, comissao: 24.9 });
+    expect(ap).toMatchObject({ mesVenda: MES_VENDA, competencia: COMP, totalVendas: 3369.5, vendasGrupo: 1500, comissao: 24.9 });
     expect(ap!.linhas.find((l) => l.kind === 'FUNCAO_FORA')!.payoutId).toBeNull();
     expect(payouts.some((p) => p.collaboratorId === gerenteId)).toBe(false);
 
@@ -189,7 +198,7 @@ describe('confirmar', () => {
     expect(p2.ok && p2.previa.linhas.find((l) => l.chave === `VENDEDOR:0107 - ANA PAULA ${sfx}`)).toMatchObject({ kind: 'VENDEDOR', collaboratorId: anaPaulaSouzaId, valor: 0.6 });
 
     const lista = await listarApuracoes(admin());
-    expect(lista.find((a) => a.id === r.importId)).toMatchObject({ unidade: `Juatuba ${sfx}`, linhasPagas: 6, naoCadastrados: 0, comissao: 24.9 });
+    expect(lista.find((a) => a.id === r.importId)).toMatchObject({ unidade: `Juatuba ${sfx}`, linhasPagas: 6, naoCadastrados: 1, comissao: 24.9 });
     /* a supervisora da B não vê a apuração da A */
     expect((await listarApuracoes(supB())).some((a) => a.id === r.importId)).toBe(false);
     expect(await getApuracao(supB(), r.importId)).toBeNull();

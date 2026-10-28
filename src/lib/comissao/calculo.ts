@@ -194,11 +194,17 @@ export const SEMELHANCA_MINIMA = 70;
 export const MAX_SUGESTOES = 5;
 const CONECTIVOS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
 
-/** O som da palavra, não a grafia: z/s, ss/s, y/i, w/v, ph/f, th/t, ce/se, h mudo, letra dobrada. */
+/**
+ * O som da palavra, não a grafia: z/s, ss/s, y/i, w/v, ph/f, th/t, ce/se, h mudo, letra dobrada
+ * e, desde a v1.178.3, o E final átono igual ao I ("Michele" × "Michelli" × "Micheli",
+ * "Daniele" × "Danieli" — print do Pedro: MICHELE CRISTINA não achava MICHELLI CRISTINA MEDINA,
+ * porque o primeiro nome ficava em 0,77 e a nota caía pela metade).
+ */
 export function chaveFonetica(palavra: string): string {
   let w = normalizarNome(palavra).replace(/\s/g, '');
   w = w.replace(/^h/, '').replace(/ph/g, 'f').replace(/th/g, 't').replace(/y/g, 'i').replace(/w/g, 'v')
-    .replace(/c([ei])/g, 's$1').replace(/qu([ei])/g, 'k$1').replace(/z/g, 's').replace(/k/g, 'c');
+    .replace(/c([ei])/g, 's$1').replace(/qu([ei])/g, 'k$1').replace(/z/g, 's').replace(/k/g, 'c')
+    .replace(/e$/, 'i');
   return w.replace(/(.)\1+/g, '$1');
 }
 
@@ -299,7 +305,15 @@ export function dividirIgual(total: number, n: number): number[] {
 
 export type KindDaLinha = 'VENDEDOR' | 'COZINHA' | 'GRUPO' | 'FREELANCER' | 'NAO_CADASTRADO' | 'FUNCAO_FORA';
 
-export interface Vinculo { collaboratorId: string; name: string; /** 0..100 — só nas sugestões. */ confianca?: number }
+export interface Vinculo {
+  collaboratorId: string;
+  name: string;
+  /** 0..100 — só nas sugestões. */
+  confianca?: number;
+  /** Só nas sugestões: parecido, mas gerente/encarregado — a tela EXPLICA em vez de oferecer (v1.178.3). */
+  foraDaComissao?: boolean;
+  jobTitle?: string | null;
+}
 
 export interface LinhaDaApuracao {
   /** Chave estável entre prévia e confirmação: `${kind}:${bruto}` (vendedor) ou `COZINHA:${collaboratorId}`. */
