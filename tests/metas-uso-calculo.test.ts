@@ -6,7 +6,7 @@ const unidade = (p: Partial<UnidadeUso> & { unitId: string }): UnidadeUso => ({
   unitName: p.unitId, usagePct: 0, checklistPct: 0, wastePct: 0, commandsPct: 0, metaPct: 0, done: 0, late: 0, missed: 0, acoes: 0, usuariosAtivos: 0, usuariosVinculados: 0, occurrences: 0, notes: 0, ...p,
 });
 const usuario = (p: Partial<UsuarioUso> & { userId: string }): UsuarioUso => ({
-  name: p.userId, role: 'MANAGER', roleLabel: 'Gerente', unidades: [], acessos: 0, acoes: 0, modulos: [], tarefasConcluidas: 0, foraDoPrazo: 0, ultimoAcesso: null, ...p,
+  name: p.userId, role: 'MANAGER', roleLabel: 'Gerente', unidades: [], acessos: 0, acoes: 0, modulos: [], tarefasConcluidas: 0, foraDoPrazo: 0, ultimoAcesso: null, meta: null, folgaPropria: null, ...p,
 });
 
 describe('taxa de falha e faixa de uso', () => {

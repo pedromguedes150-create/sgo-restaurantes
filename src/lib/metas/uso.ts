@@ -4,6 +4,9 @@ import { ROLE_LABELS } from '@/lib/roles';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
 import { resumirUso, type ResumoDoUso, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
+import { componentesDaMeta, descontosDaMeta } from '@/lib/metas/componentes';
+import { metaDaUnidade, metaDoUsuario, type MetaDaUnidade, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
+import { emLotes, PARALELO_POR_UNIDADE } from '@/lib/async/em-lotes';
 
 /**
  * USO DO SGO — leitura no servidor (v1.164.0). Por unidade: o painel de uso
@@ -15,7 +18,24 @@ import { resumirUso, type ResumoDoUso, type UnidadeUso, type UsuarioUso } from '
  */
 export const PERFIS_MEDIDOS: Role[] = ['MANAGER', 'COORDINATOR', 'SUPERVISOR'];
 
-export interface UsoDoSgo { yearMonth: string; unidades: UnidadeUso[]; usuarios: UsuarioUso[]; resumo: ResumoDoUso }
+export interface UsoDoSgo {
+  yearMonth: string;
+  unidades: UnidadeUso[];
+  usuarios: UsuarioUso[];
+  resumo: ResumoDoUso;
+  /** v1.179.0 — os componentes com peso em vigor (as colunas do quadro "Meta por usuário"). */
+  pesosDaMeta: PesoDaMeta[];
+  /** v1.179.0 — a meta de cada unidade aberta em componentes (a mesma conta de Metas). */
+  metasPorUnidade: MetaDaUnidade[];
+}
+
+/** Primeiro e último dia do mês em 'AAAA-MM-DD' (as folgas dos gerentes são gravadas como texto). */
+function diasDoMes(ym: string) {
+  const [y, m] = ym.split('-').map(Number);
+  const ultimo = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return { de: `${ym}-01`, ate: `${ym}-${String(ultimo).padStart(2, '0')}` };
+}
+const PERFIS_COM_FOLGA_PROPRIA: Role[] = ['MANAGER', 'COORDINATOR'];
 
 function limites(ym: string) {
   const [y, m] = ym.split('-').map(Number);
@@ -33,6 +53,21 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
     prisma.user.findMany({ where: { active: true, role: { in: PERFIS_MEDIDOS }, memberships: { some: { unitId: { in: unitIds } } } }, select: { id: true, name: true, role: true, lastLoginAt: true }, orderBy: { name: 'asc' } }),
   ]);
   const userIds = usuarios.map((u) => u.id);
+
+  /* A META por unidade, aberta em componentes — os MESMOS componentesDaMeta/descontosDaMeta que dão a nota em
+     Metas e no painel do supervisor (v1.179.0). Em lotes de 4: cada unidade são ~12 consultas. */
+  const { de, ate } = diasDoMes(yearMonth);
+  const [metasPorUnidade, folgas] = await Promise.all([
+    emLotes(board, PARALELO_POR_UNIDADE, async (b) => {
+      const [comps, desc] = await Promise.all([componentesDaMeta(b.unitId, yearMonth), descontosDaMeta(b.unitId, yearMonth)]);
+      return { meta: metaDaUnidade(b.unitId, b.unitName, comps, desc.lista), pesos: comps.filter((c) => c.weight > 0).map((c) => ({ key: c.key, name: c.name, weight: c.weight })) };
+    }),
+    prisma.managerLeave.findMany({ where: { userId: { in: userIds }, deletedAt: null, startDate: { lte: ate }, endDate: { gte: de } }, select: { userId: true } }),
+  ]);
+  /* Os pesos são globais (Configuração da Meta): a lista de qualquer unidade serve. */
+  const pesosDaMeta: PesoDaMeta[] = metasPorUnidade[0]?.pesos ?? [];
+  const metas = metasPorUnidade.map((m) => m.meta);
+  const comFolga = new Set(folgas.map((f) => f.userId));
 
   const [acoesPorUnidadeUsuario, acoesPorUsuarioModulo, logins, tarefasPorUsuario] = await Promise.all([
     prisma.auditLog.groupBy({ by: ['unitId', 'userId'], where: { unitId: { in: unitIds }, createdAt: { gte: inicio, lt: fim }, NOT: { module: 'AUTH' } }, _count: { _all: true } }),
@@ -59,6 +94,7 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
     const mods = acoesPorUsuarioModulo.filter((a) => a.userId === u.id);
     const acoes = mods.reduce((s, a) => s + a._count._all, 0);
     const modulos = [...mods].sort((a, b) => b._count._all - a._count._all).map((a) => a.module ?? 'GERAL').filter((m, i, arr) => arr.indexOf(m) === i);
+    const unidadesDoUsuario = membros.filter((m) => m.userId === u.id).map((m) => m.unitId);
     return {
       userId: u.id, name: u.name, role: u.role, roleLabel: ROLE_LABELS[u.role] ?? u.role,
       unidades: membros.filter((m) => m.userId === u.id).map((m) => m.unit.name).sort((a, b) => a.localeCompare(b, 'pt-BR')),
@@ -67,8 +103,11 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
       tarefasConcluidas: tarefasPorUsuario.find((t) => t.completedById === u.id && t.status === 'DONE')?._count._all ?? 0,
       foraDoPrazo: tarefasPorUsuario.find((t) => t.completedById === u.id && t.status === 'LATE')?._count._all ?? 0,
       ultimoAcesso: u.lastLoginAt?.toISOString() ?? null,
+      /* A nota é da UNIDADE e o gerente a herda (média quando cuida de mais de uma) — decisão do Pedro, 30/10. */
+      meta: metaDoUsuario(metas.filter((m) => unidadesDoUsuario.includes(m.unitId)), pesosDaMeta),
+      folgaPropria: PERFIS_COM_FOLGA_PROPRIA.includes(u.role) ? comFolga.has(u.id) : null,
     };
   }).sort((a, b) => b.acoes - a.acoes || b.tarefasConcluidas - a.tarefasConcluidas || a.name.localeCompare(b.name, 'pt-BR'));
 
-  return { yearMonth, unidades: [...unidades].sort((a, b) => b.usagePct - a.usagePct || b.acoes - a.acoes), usuarios: usuariosUso, resumo: resumirUso(unidades, usuariosUso) };
+  return { yearMonth, unidades: [...unidades].sort((a, b) => b.usagePct - a.usagePct || b.acoes - a.acoes), usuarios: usuariosUso, resumo: resumirUso(unidades, usuariosUso), pesosDaMeta, metasPorUnidade: metas };
 }

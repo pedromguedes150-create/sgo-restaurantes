@@ -1,4 +1,5 @@
 import { faixaDaMeta, type Faixa } from '@/lib/metas/graficos';
+import type { MetaDoUsuario } from '@/lib/metas/meta-por-usuario';
 
 /**
  * USO DO SGO — regras PURAS (v1.164.0). Relatório executivo de quem usa o
@@ -22,6 +23,10 @@ export interface UsuarioUso {
   acessos: number; acoes: number; modulos: string[];
   tarefasConcluidas: number; foraDoPrazo: number;
   ultimoAcesso: string | null;
+  /** v1.179.0 — a nota da bonificação: a meta da(s) unidade(s) que a pessoa cuida (nulo = sem unidade). */
+  meta: MetaDoUsuario | null;
+  /** Gerente/coordenador lançou a própria folga no mês? Nulo para quem não é medido nisso (supervisor). */
+  folgaPropria: boolean | null;
 }
 
 export const faixaDeUso = faixaDaMeta;
@@ -47,6 +52,8 @@ export interface ResumoDoUso {
   unidadeMenosUsa: UnidadeUso | null;
   unidadeMaisDeixaDeFazer: (UnidadeUso & { taxa: number }) | null;
   unidadeMaisErra: (UnidadeUso & { taxa: number }) | null;
+  /** v1.179.0 — as notas da bonificação: média, melhor e menor entre quem tem nota. */
+  notas: { media: number | null; melhor: UsuarioUso | null; menor: UsuarioUso | null };
 }
 
 export function resumirUso(unidades: UnidadeUso[], usuarios: UsuarioUso[]): ResumoDoUso {
@@ -59,6 +66,12 @@ export function resumirUso(unidades: UnidadeUso[], usuarios: UsuarioUso[]): Resu
   const comTarefas = unidades.filter((u) => u.done + u.late + u.missed > 0);
   const maisDeixa = [...comTarefas].sort((a, b) => (b.missed / (b.done + b.late + b.missed)) - (a.missed / (a.done + a.late + a.missed)) || b.missed - a.missed)[0];
   const maisErra = [...comTarefas].sort((a, b) => (taxaDeFalha(b) ?? 0) - (taxaDeFalha(a) ?? 0) || (b.late + b.missed) - (a.late + a.missed))[0];
+  const comNota = usuarios.filter((u) => u.meta != null).sort((a, b) => b.meta!.scorePct - a.meta!.scorePct || a.name.localeCompare(b.name, 'pt-BR'));
+  const notas = {
+    media: comNota.length ? Math.round(comNota.reduce((s, u) => s + u.meta!.scorePct, 0) / comNota.length) : null,
+    melhor: comNota[0] ?? null,
+    menor: comNota.length ? comNota[comNota.length - 1] : null,
+  };
   return {
     unidades: unidades.length,
     mediaUso: unidades.length ? Math.round(unidades.reduce((s, u) => s + u.usagePct, 0) / unidades.length) : null,
@@ -77,6 +90,7 @@ export function resumirUso(unidades: UnidadeUso[], usuarios: UsuarioUso[]): Resu
     unidadeMenosUsa: porUso.length > 1 ? porUso[porUso.length - 1] : null,
     unidadeMaisDeixaDeFazer: maisDeixa && maisDeixa.missed > 0 ? { ...maisDeixa, taxa: Math.round((maisDeixa.missed / (maisDeixa.done + maisDeixa.late + maisDeixa.missed)) * 100) } : null,
     unidadeMaisErra: maisErra && (maisErra.late + maisErra.missed) > 0 ? { ...maisErra, taxa: taxaDeFalha(maisErra) ?? 0 } : null,
+    notas
   };
 }
 
