@@ -6,7 +6,8 @@ import { PrintButton } from '@/components/ui/print-button';
 import { AutoPrint } from '@/components/shared/auto-print';
 import { getUsoDoSgo } from '@/lib/metas/uso';
 import { ROTULO_FAIXA_USO } from '@/lib/metas/uso-calculo';
-import { TabelaUnidades, TabelaUsuarios } from '@/components/metas/uso-do-sgo';
+import { TabelaUnidades, TabelaUsuarios, TabelaMetaPorUsuario } from '@/components/metas/uso-do-sgo';
+import { rotuloCurto } from '@/lib/metas/meta-por-usuario';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,11 @@ export default async function UsoRelatorioPage({ searchParams }: { searchParams:
       <section>
         <h2 className="sgo-type-17 mb-2 font-bold text-brand">Rede, unidade por unidade</h2>
         <TabelaUnidades unidades={d.unidades} />
+      </section>
+      <section className="break-before-page">
+        <h2 className="sgo-type-17 mb-2 font-bold text-brand">Meta por usuário — a nota da bonificação</h2>
+        <TabelaMetaPorUsuario usuarios={d.usuarios} pesos={d.pesosDaMeta} />
+        <p className="mt-2 text-xs text-ink-500">Nota = Σ (peso × % alcançado) ÷ Σ pesos, menos os descontos — a mesma conta de Metas; a nota é da unidade e o gerente a herda (média quando cuida de mais de uma). Pesos em vigor: {d.pesosDaMeta.map((p) => `${rotuloCurto(p.key, p.name)} ${p.weight}`).join(' · ') || 'nenhum'}.</p>
       </section>
       <section className="break-before-page">
         <h2 className="sgo-type-17 mb-2 font-bold text-brand">Usuário por usuário</h2>

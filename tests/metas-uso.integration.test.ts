@@ -9,7 +9,7 @@ import type { SessionUser } from '@/lib/auth/session';
  * tarefas e do painel de uso — com escopo por unidade no servidor.
  */
 const sfx = `uso${process.pid.toString(36)}`;
-let unitA: string; let unitB: string; let gerA: string; let gerB: string; let supId: string; let caixa: string;
+let unitA: string; let unitB: string; let gerA: string; let gerB: string; let gerAB: string; let supId: string; let caixa: string;
 const supervisor = (): SessionUser => ({ id: supId, name: 'Sup', role: 'SUPERVISOR', unitIds: [unitA], seesAllUnits: false, needsTerms: false });
 const admin = (): SessionUser => ({ id: 'adm', name: 'Adm', role: 'ADMIN', unitIds: [], seesAllUnits: true, needsTerms: false });
 const ym = new Date().toISOString().slice(0, 7);
@@ -21,7 +21,10 @@ beforeAll(async () => {
   gerB = (await prisma.user.create({ data: { name: `Ger B ${sfx}`, email: `gb-${sfx}@example.com`, role: 'MANAGER', passwordHash: 'x' } })).id;
   supId = (await prisma.user.create({ data: { name: `Sup ${sfx}`, email: `s-${sfx}@example.com`, role: 'SUPERVISOR', passwordHash: 'x' } })).id;
   caixa = (await prisma.user.create({ data: { name: `Caixa ${sfx}`, email: `c-${sfx}@example.com`, role: 'CASHIER', passwordHash: 'x' } })).id;
-  await prisma.unitMembership.createMany({ data: [{ userId: gerA, unitId: unitA }, { userId: gerB, unitId: unitB }, { userId: supId, unitId: unitA }, { userId: caixa, unitId: unitA }] });
+  /* gerente das DUAS unidades: a nota dele é a média (v1.179.0) */
+  gerAB = (await prisma.user.create({ data: { name: `Ger AB ${sfx}`, email: `gab-${sfx}@example.com`, role: 'MANAGER', passwordHash: 'x' } })).id;
+  await prisma.unitMembership.createMany({ data: [{ userId: gerA, unitId: unitA }, { userId: gerB, unitId: unitB }, { userId: gerAB, unitId: unitA }, { userId: gerAB, unitId: unitB }, { userId: supId, unitId: unitA }, { userId: caixa, unitId: unitA }] });
+  await prisma.managerLeave.create({ data: { userId: gerA, startDate: `${ym}-10`, endDate: `${ym}-10`, createdById: gerA } });
   const tpl = await prisma.taskTemplate.create({ data: { unitId: unitA, name: `T ${sfx}`, limitTime: '10:00' } });
   await prisma.taskInstance.createMany({ data: [
     { templateId: tpl.id, unitId: unitA, operationalDate: `${ym}-03`, dueAt: new Date(), status: 'DONE', completedById: gerA, completedAt: new Date() },
@@ -41,8 +44,9 @@ afterAll(async () => {
   await prisma.auditLog.deleteMany({ where: { unitId: { in: [unitA, unitB] } } });
   await prisma.taskInstance.deleteMany({ where: { unitId: unitA } });
   await prisma.taskTemplate.deleteMany({ where: { unitId: unitA } });
-  await prisma.unitMembership.deleteMany({ where: { userId: { in: [gerA, gerB, supId, caixa] } } });
-  await prisma.user.deleteMany({ where: { id: { in: [gerA, gerB, supId, caixa] } } });
+  await prisma.managerLeave.deleteMany({ where: { userId: { in: [gerA, gerAB] } } });
+  await prisma.unitMembership.deleteMany({ where: { userId: { in: [gerA, gerB, gerAB, supId, caixa] } } });
+  await prisma.user.deleteMany({ where: { id: { in: [gerA, gerB, gerAB, supId, caixa] } } });
   await prisma.unit.deleteMany({ where: { id: { in: [unitA, unitB] } } });
 });
 
@@ -51,7 +55,7 @@ describe('getUsoDoSgo', () => {
     const d = await getUsoDoSgo(admin(), ym);
     const a = d.unidades.find((u) => u.unitId === unitA)!;
     expect(a).toMatchObject({ done: 1, late: 1, missed: 1, acoes: 4, usuariosAtivos: 2 });
-    expect(a.usuariosVinculados).toBe(2); // gerente + supervisor (o caixa não é medido)
+    expect(a.usuariosVinculados).toBe(3); // gerente A + gerente das duas unidades + supervisor (o caixa não é medido)
   });
   it('por usuário: acessos, ações, módulos por frequência, tarefas no prazo e fora; caixa fica de fora', async () => {
     const d = await getUsoDoSgo(admin(), ym);
@@ -62,6 +66,26 @@ describe('getUsoDoSgo', () => {
     expect(ga.unidades).toEqual([`Uso A ${sfx}`]);
     expect(d.usuarios.some((u) => u.userId === caixa)).toBe(false);
     expect(d.usuarios.find((u) => u.userId === gerB)).toMatchObject({ acoes: 0, acessos: 0 });
+  });
+  it('meta por usuário (v1.179.0): o gerente herda a nota da unidade; em duas unidades, a média; a folga própria é individual', async () => {
+    const d = await getUsoDoSgo(admin(), ym);
+    const a = d.unidades.find((u) => u.unitId === unitA)!;
+    const b = d.unidades.find((u) => u.unitId === unitB)!;
+    const ga = d.usuarios.find((u) => u.userId === gerA)!;
+    expect(ga.meta).not.toBeNull();
+    /* a MESMA nota da unidade — a da aba Metas e do painel do supervisor */
+    expect(ga.meta!.scorePct).toBe(a.metaPct);
+    expect(ga.meta!.unidades.map((x) => x.unitId)).toEqual([unitA]);
+    expect(ga.meta!.componentes.some((c) => c.key === 'TASKS' && c.weight > 0)).toBe(true);
+    expect(d.pesosDaMeta.some((p) => p.key === 'TASKS')).toBe(true);
+    const gab = d.usuarios.find((u) => u.userId === gerAB)!;
+    expect(gab.meta!.unidades).toHaveLength(2);
+    expect(gab.meta!.scorePct).toBe(Math.round((a.metaPct + b.metaPct) / 2));
+    /* folga própria: gerA lançou, gerB não; supervisor não é medido nisso */
+    expect(ga.folgaPropria).toBe(true);
+    expect(d.usuarios.find((u) => u.userId === gerB)!.folgaPropria).toBe(false);
+    expect(d.usuarios.find((u) => u.userId === supId)!.folgaPropria).toBeNull();
+    expect(d.resumo.notas.melhor).not.toBeNull();
   });
   it('escopo: o supervisor da unidade A não vê a unidade B nem o gerente dela', async () => {
     const d = await getUsoDoSgo(supervisor(), ym);

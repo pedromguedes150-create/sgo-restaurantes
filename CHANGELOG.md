@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.179.0 — 2026-10-30 (Uso do SGO: a nota da bonificação por usuário)
+### Novo
+- **Meta por usuário** na aba Uso do SGO (Metas): um quadro com a nota de cada gerente/coordenador/supervisor — uma coluna por componente com peso (Checklists, Desperdício, Comandas…) com o % alcançado, os descontos (fora do prazo, gerente sem folga), a folga própria no mês e a **nota final** ("de 100%, fez X%"), com a conta por extenso em "Como foi calculada". É a MESMA conta da meta da unidade (Σ peso × % ÷ Σ pesos, menos os descontos); nada foi recalculado por fora. Decisões do Pedro (30/10): a nota é da UNIDADE e o gerente a herda — quem cuida de mais de uma recebe a média (o SGO sabe quem lançou, mas não quem estava de plantão no dia em que ninguém lançou, e uma nota individual puniria quem trabalha menos dias); a Escala de gerentes continua como DESCONTO, não como peso. Excel ganhou a aba "META POR USUÁRIO" e o PDF a seção; os Destaques mostram melhor, menor e média das notas.
+
 ## v1.178.3 — 2026-10-28 (Comissão: Michele = Michelli, e o encarregado parecido é explicado)
 ### Corrigido
 - **"MICHELE CRISTINA" não achava "MICHELLI CRISTINA MEDINA"** (print do Pedro): a comparação de sons agora trata o E final como I (Michele = Michelli = Micheli, Daniele = Danieli). Antes o primeiro nome ficava em 77% e a regra "primeiro nome tem de bater" derrubava a nota para 51, abaixo da linha de sugestão. Marcelo ≠ Marcela continua valendo.

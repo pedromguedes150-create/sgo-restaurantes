@@ -3,8 +3,9 @@ import { getSessionUser } from '@/lib/auth/session';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getUsoDoSgo } from '@/lib/metas/uso';
 import { rotuloDoModulo, ROTULO_FAIXA_USO, taxaDeFalha } from '@/lib/metas/uso-calculo';
+import { explicarNota, rotuloCurto } from '@/lib/metas/meta-por-usuario';
 
-/** Excel do Uso do SGO (v1.164.0): RESUMO · UNIDADES · USUÁRIOS. ?month=AAAA-MM. Mesma leitura da tela. */
+/** Excel do Uso do SGO (v1.164.0): RESUMO · UNIDADES · META POR USUÁRIO (v1.179.0) · USUÁRIOS. ?month=AAAA-MM. Mesma leitura da tela. */
 export async function GET(req: Request) {
   const user = await getSessionUser();
   if (!user) return new Response('Não autenticado', { status: 401 });
@@ -33,6 +34,16 @@ export async function GET(req: Request) {
     ['#', 'Unidade', 'Uso (%)', 'Checklists (%)', 'Desperdício (%)', 'Comandas (%)', 'No prazo', 'Fora do prazo', 'Não realizadas', 'Falhas (%)', 'Ações', 'Usuários ativos', 'Usuários vinculados', 'Ocorrências', 'Notas', 'Meta (%)'],
     ...d.unidades.map((u, i) => [i + 1, u.unitName, u.usagePct, u.checklistPct, u.wastePct, u.commandsPct, u.done, u.late, u.missed, n(taxaDeFalha(u)), u.acoes, u.usuariosAtivos, u.usuariosVinculados, u.occurrences, u.notes, u.metaPct]),
   ]), 'UNIDADES');
+  const pesos = [...d.pesosDaMeta].filter((p) => p.weight > 0).sort((a, b) => b.weight - a.weight);
+  const comMeta = d.usuarios.filter((u) => u.meta).sort((a, b) => b.meta!.scorePct - a.meta!.scorePct);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['#', 'Usuário', 'Perfil', 'Unidade(s)', ...pesos.map((p) => `${rotuloCurto(p.key, p.name)} (peso ${p.weight}) %`), 'Descontos (pontos)', 'Folga própria', 'Nota (%)', 'Como foi calculada'],
+    ...comMeta.map((u, i) => [
+      i + 1, u.name, u.roleLabel, u.meta!.unidades.map((x) => `${x.unitName} ${x.scorePct}%`).join(', '),
+      ...pesos.map((p) => { const c = u.meta!.componentes.find((x) => x.key === p.key); return c?.scorePct ?? ''; }),
+      u.meta!.descontoTotal, u.folgaPropria == null ? '' : u.folgaPropria ? 'Sim' : 'Não', u.meta!.scorePct, explicarNota(u.meta!),
+    ]),
+  ]), 'META POR USUÁRIO');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
     ['#', 'Usuário', 'Perfil', 'Unidade(s)', 'Acessos', 'Ações', 'Módulos mais usados', 'Tarefas concluídas', 'Fora do prazo', 'Último acesso'],
     ...d.usuarios.map((u, i) => [i + 1, u.name, u.roleLabel, u.unidades.join(', '), u.acessos, u.acoes, u.modulos.slice(0, 5).map(rotuloDoModulo).join(', '), u.tarefasConcluidas, u.foraDoPrazo, u.ultimoAcesso ? u.ultimoAcesso.slice(0, 10).split('-').reverse().join('/') : '']),

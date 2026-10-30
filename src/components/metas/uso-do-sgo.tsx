@@ -1,10 +1,11 @@
-import { Activity, Users, ListChecks, MousePointerClick, AlertTriangle, Download, Printer } from 'lucide-react';
+import { Activity, Users, ListChecks, MousePointerClick, AlertTriangle, Download, Printer, Target } from 'lucide-react';
 import { Card, PanelHeader } from '@/components/sgo/panel';
 import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
 import { Legenda, Rosca } from '@/components/metas/graficos-metas';
 import { COR_FAIXA } from '@/lib/metas/graficos';
 import { faixaDeUso, rotuloDoModulo, ROTULO_FAIXA_USO, taxaDeFalha, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
 import type { UsoDoSgo } from '@/lib/metas/uso';
+import { explicarNota, rotuloCurto, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
 import { shortUnitName } from '@/lib/unit-name';
 
 const br = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—');
@@ -52,6 +53,7 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
             <li><b>Mais deixa de fazer:</b> {r.unidadeMaisDeixaDeFazer ? `${shortUnitName(r.unidadeMaisDeixaDeFazer.unitName)} (${r.unidadeMaisDeixaDeFazer.missed} tarefa(s) não realizada(s) · ${r.unidadeMaisDeixaDeFazer.taxa}%)` : 'nenhuma tarefa não realizada'}</li>
             <li><b>Mais erra o prazo:</b> {r.unidadeMaisErra ? `${shortUnitName(r.unidadeMaisErra.unitName)} (${r.unidadeMaisErra.taxa}% das tarefas fora do prazo ou não feitas)` : 'nenhuma'}</li>
             <li><b>Usuário que mais usa:</b> {r.maisUsam[0] ? `${r.maisUsam[0].name} (${r.maisUsam[0].acoes} ações · ${r.maisUsam[0].tarefasConcluidas} tarefas)` : '—'}</li>
+            <li><b>Melhor nota da bonificação:</b> {r.notas.melhor ? `${r.notas.melhor.name} (${r.notas.melhor.meta!.scorePct}%)` : '—'} · <b>menor:</b> {r.notas.menor ? `${r.notas.menor.name} (${r.notas.menor.meta!.scorePct}%)` : '—'}{r.notas.media != null && <> · <b>média:</b> {r.notas.media}%</>}</li>
             <li><b>Sem nenhuma ação no mês:</b> {r.usuariosSemUso.length ? r.usuariosSemUso.map((u) => u.name).join(', ') : 'ninguém'}</li>
           </ul>
         </Card>
@@ -62,6 +64,19 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
         <div className="overflow-x-auto p-2">
           <TabelaUnidades unidades={dados.unidades} />
         </div>
+      </Card>
+
+      <Card>
+        <PanelHeader title="Meta por usuário — a nota da bonificação" count={dados.usuarios.filter((u) => u.meta).length} icon={<span className="sgo-panel__ic sgo-panel__ic--brand" aria-hidden><Target className="h-4 w-4" /></span>} />
+        <div className="overflow-x-auto p-2">
+          <TabelaMetaPorUsuario usuarios={dados.usuarios} pesos={dados.pesosDaMeta} />
+        </div>
+        <p className="px-4 pb-3 text-xs text-ink-500">
+          Nota = Σ (peso × % alcançado) ÷ Σ pesos, menos os descontos (fora do prazo, gerente sem folga) — a mesma conta de Metas.
+          A nota é da UNIDADE: gerentes da mesma unidade têm a mesma nota, e quem cuida de mais de uma recebe a média.
+          Pesos em vigor: {dados.pesosDaMeta.length ? dados.pesosDaMeta.map((p) => `${rotuloCurto(p.key, p.name)} ${p.weight}`).join(' · ') : 'nenhum'} (Configuração da Meta).
+          &quot;—&quot; = nada a medir no mês naquele componente.
+        </p>
       </Card>
 
       <Card>
@@ -121,6 +136,46 @@ export function TabelaUsuarios({ usuarios }: { usuarios: UsuarioUso[] }) {
             <td className="whitespace-nowrap">{br(u.ultimoAcesso)}</td>
           </tr>
         ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** v1.179.0 — a nota da bonificação por pessoa: uma coluna por componente com peso, descontos, folga própria e a NOTA. */
+export function TabelaMetaPorUsuario({ usuarios, pesos }: { usuarios: UsuarioUso[]; pesos: PesoDaMeta[] }) {
+  const colunas = [...pesos].filter((p) => p.weight > 0).sort((a, b) => b.weight - a.weight);
+  const lista = usuarios.filter((u) => u.meta).sort((a, b) => b.meta!.scorePct - a.meta!.scorePct || a.name.localeCompare(b.name, 'pt-BR'));
+  if (lista.length === 0) return <p className="p-3 text-sm text-ink-500">Nenhum usuário com unidade no alcance.</p>;
+  return (
+    <table className="sgo-tbl w-full text-sm" data-testid="tabela-meta-por-usuario">
+      <thead>
+        <tr>
+          <th className="text-left">#</th><th className="text-left">Usuário</th><th className="text-left">Unidade(s)</th>
+          {colunas.map((c) => <th key={c.key} className="text-right" title={c.name}>{rotuloCurto(c.key, c.name)} <span className="font-normal text-ink-500">(peso {c.weight})</span></th>)}
+          <th className="text-right">Descontos</th><th className="text-center">Folga própria</th><th className="text-right">Nota</th>
+        </tr>
+      </thead>
+      <tbody>
+        {lista.map((u, i) => {
+          const m = u.meta!;
+          return (
+            <tr key={u.userId} data-testid="linha-meta-usuario">
+              <td className="tabular-nums text-ink-500">{i + 1}</td>
+              <td className="whitespace-nowrap font-medium text-ink-900">
+                {u.name}<span className="block text-xs font-normal text-ink-500">{u.roleLabel}</span>
+                <details className="text-xs font-normal text-ink-500 print:hidden"><summary className="cursor-pointer text-brand">Como foi calculada</summary><span className="block whitespace-normal">{explicarNota(m)}</span></details>
+              </td>
+              <td className="whitespace-normal text-xs">{m.unidades.map((x) => `${shortUnitName(x.unitName)} ${x.scorePct}%`).join(' · ')}</td>
+              {colunas.map((c) => {
+                const comp = m.componentes.find((x) => x.key === c.key);
+                return <td key={c.key} className="text-right tabular-nums">{comp?.scorePct == null ? <span className="text-ink-500">—</span> : `${comp.scorePct}%`}</td>;
+              })}
+              <td className="text-right tabular-nums">{m.descontoTotal > 0 ? <span className="text-danger">−{m.descontoTotal}</span> : 0}</td>
+              <td className="text-center">{u.folgaPropria == null ? <span className="text-ink-500">—</span> : u.folgaPropria ? 'Sim' : <span className="font-semibold text-danger">Não</span>}</td>
+              <td className="text-right font-bold tabular-nums" style={{ color: COR_FAIXA[faixaDeUso(m.scorePct)] }} title={explicarNota(m)}>{m.scorePct}%</td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
