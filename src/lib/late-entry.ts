@@ -11,8 +11,6 @@ import type { SessionUser } from '@/lib/auth/session';
  * `dateEdited` e desconta LATE_ENTRY_PENALTY_PCT (% por lançamento, padrão 2)
  * da meta do mês da unidade. O gerente é avisado.
  */
-const PENALTY_KEY = 'LATE_ENTRY_PENALTY_PCT';
-const DEFAULT_PENALTY = 2;
 
 export type LateEntryModule = 'payment' | 'note' | 'gas' | 'oil';
 type Ctx = { ip?: string | null; userAgent?: string | null };
@@ -20,19 +18,15 @@ type Result = { ok: true } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-export async function getLateEntryPenaltyPct(): Promise<number> {
-  const s = await prisma.appSetting.findUnique({ where: { key: PENALTY_KEY } });
-  const n = s ? Number(s.value) : DEFAULT_PENALTY;
-  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_PENALTY;
+/* v1.180.0: o % é lido POR MÊS e gravado com vigência/motivo (`metas/vigencia.ts`). */
+export async function getLateEntryPenaltyPct(yearMonth?: string): Promise<number> {
+  const { carregarConfigDaMeta } = await import('@/lib/metas/vigencia');
+  return (await carregarConfigDaMeta(yearMonth)).descontoForaDoPrazo;
 }
 
-export async function setLateEntryPenaltyPct(user: SessionUser, pct: number) {
-  if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' as const };
-  const v = Math.max(0, Math.min(100, Number(pct)));
-  if (!Number.isFinite(v)) return { ok: false as const, reason: 'INVALID' as const };
-  await prisma.appSetting.upsert({ where: { key: PENALTY_KEY }, create: { key: PENALTY_KEY, value: String(v) }, update: { value: String(v) } });
-  await audit({ userId: user.id, action: 'LATE_ENTRY_PENALTY_SET', module: 'CONFIG', metadata: { pct: v } });
-  return { ok: true as const };
+export async function setLateEntryPenaltyPct(user: SessionUser, pct: number, o: { reason: string; validFrom?: string | null } = { reason: '' }) {
+  const { gravarConfigDaMeta } = await import('@/lib/metas/vigencia');
+  return gravarConfigDaMeta(user, { key: 'LATE_ENTRY_PENALTY_PCT', value: pct, validFrom: o.validFrom, reason: o.reason, action: 'LATE_ENTRY_PENALTY_SET' });
 }
 
 /** Edita a data efetiva de um lançamento (Admin/Supervisor). Marca e avisa. */

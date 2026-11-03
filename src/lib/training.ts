@@ -23,20 +23,14 @@ import { geraTreinamento, treinamentosAplicaveis, type ModuloParaAplicar } from 
  *   pendências que não se aplicam mais (mudança de setor) e marca vencidas.
  */
 
-const WEIGHT_KEY = 'TRAINING_META_WEIGHT';
-const DEFAULT_WEIGHT = 15;
-
-export async function getTrainingWeight(): Promise<number> {
-  const s = await prisma.appSetting.findUnique({ where: { key: WEIGHT_KEY } });
-  const n = s ? Number(s.value) : DEFAULT_WEIGHT;
-  return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : DEFAULT_WEIGHT;
+/* Peso na meta (v1.180.0): lido por mês e gravado com vigência/motivo em `metas/vigencia.ts`. */
+export async function getTrainingWeight(yearMonth?: string): Promise<number> {
+  const { carregarConfigDaMeta } = await import('@/lib/metas/vigencia');
+  return (await carregarConfigDaMeta(yearMonth)).peso('TRAINING');
 }
-export async function setTrainingWeight(user: SessionUser, weight: number) {
-  if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' as const };
-  const w = Math.max(0, Math.trunc(weight));
-  await prisma.appSetting.upsert({ where: { key: WEIGHT_KEY }, create: { key: WEIGHT_KEY, value: String(w) }, update: { value: String(w) } });
-  await audit({ userId: user.id, action: 'TRAINING_WEIGHT_SET', module: 'CONFIG', metadata: { weight: w } });
-  return { ok: true as const };
+export async function setTrainingWeight(user: SessionUser, weight: number, o: { reason: string; validFrom?: string | null } = { reason: '' }) {
+  const { gravarConfigDaMeta } = await import('@/lib/metas/vigencia');
+  return gravarConfigDaMeta(user, { key: 'TRAINING_META_WEIGHT', value: weight, validFrom: o.validFrom, reason: o.reason, action: 'TRAINING_WEIGHT_SET' });
 }
 
 function endOfMonth(d = new Date()): Date {

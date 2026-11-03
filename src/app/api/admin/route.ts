@@ -9,7 +9,7 @@ import { setTrainingWeight } from '@/lib/training';
 import { setCommunicationWeight } from '@/lib/communications/meta';
 import { setEvaluationWeight } from '@/lib/people/evaluation';
 import { setLateEntryPenaltyPct } from '@/lib/late-entry';
-import { setWasteMetaWeight, setCommandsMetaWeight, setTasksMetaWeight, setCashMetaWeight, setScheduleMetaWeight, setCancellationsMetaWeight, setStockMetaWeight, setInventoryMetaWeight, setUtensilsMetaWeight, setManagerLeaveMetaPenalty } from '@/lib/metas/config';
+import { setWasteMetaWeight, setCommandsMetaWeight, setTasksMetaWeight, setCashMetaWeight, setScheduleMetaWeight, setCancellationsMetaWeight, setStockMetaWeight, setInventoryMetaWeight, setUtensilsMetaWeight, setManagerLeaveMetaPenalty, setComponentStatus } from '@/lib/metas/config';
 import { setGasAlertPct, setGasMaxPriceKg } from '@/lib/gas/query';
 import { setFreelancerWeekLimit } from '@/lib/payments/recorrencia';
 import { mesclarFreelancers } from '@/lib/payments/mesclar-freelancers';
@@ -35,6 +35,7 @@ export async function POST(req: Request) {
   if (negado) return negado;
 
   const b = await req.json().catch(() => null);
+  const vigencia = (x: { reason?: unknown; validFrom?: unknown }) => ({ reason: String(x?.reason ?? ''), validFrom: x?.validFrom ? String(x.validFrom) : null });
   if (!b?.entity || !b?.action) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
   const ctx = requestContext(req);
 
@@ -103,20 +104,22 @@ export async function POST(req: Request) {
   else if (e === 'delegation' && a === 'create') r = await admin.createDelegation(user, b, ctx);
   else if (e === 'delegation' && a === 'delete') r = await admin.deleteDelegation(user, b.id, ctx);
   else if (e === 'permission' && a === 'set') r = await setRolePermission(user, b, ctx);
-  else if (e === 'training' && a === 'setWeight') r = await setTrainingWeight(user, Number(b.weight));
-  else if (e === 'communication' && a === 'setWeight') r = await setCommunicationWeight(user, Number(b.weight));
-  else if (e === 'evaluation' && a === 'setWeight') r = await setEvaluationWeight(user, Number(b.weight));
-  else if (e === 'lateEntry' && a === 'setPenalty') r = await setLateEntryPenaltyPct(user, Number(b.pct));
-  else if (e === 'wasteMeta' && a === 'setWeight') r = await setWasteMetaWeight(user, Number(b.weight));
-  else if (e === 'commandsMeta' && a === 'setWeight') r = await setCommandsMetaWeight(user, Number(b.weight));
-  else if (e === 'tasksMeta' && a === 'setWeight') r = await setTasksMetaWeight(user, Number(b.weight));
-  else if (e === 'cashMeta' && a === 'setWeight') r = await setCashMetaWeight(user, Number(b.weight));
-  else if (e === 'scheduleMeta' && a === 'setWeight') r = await setScheduleMetaWeight(user, Number(b.weight));
-  else if (e === 'cancellationsMeta' && a === 'setWeight') r = await setCancellationsMetaWeight(user, Number(b.weight));
-  else if (e === 'stockMeta' && a === 'setWeight') r = await setStockMetaWeight(user, Number(b.weight));
-  else if (e === 'inventoryMeta' && a === 'setWeight') r = await setInventoryMetaWeight(user, Number(b.weight));
-  else if (e === 'utensilsMeta' && a === 'setWeight') r = await setUtensilsMetaWeight(user, Number(b.weight));
-  else if (e === 'managerLeaveMeta' && a === 'setPenalty') r = await setManagerLeaveMetaPenalty(user, Number(b.pct));
+  /* Configuração da Meta (v1.180.0): toda gravação leva MOTIVO e VIGÊNCIA (mês) — ver `metas/vigencia.ts`. */
+  else if (e === 'training' && a === 'setWeight') r = await setTrainingWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'communication' && a === 'setWeight') r = await setCommunicationWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'evaluation' && a === 'setWeight') r = await setEvaluationWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'lateEntry' && a === 'setPenalty') r = await setLateEntryPenaltyPct(user, Number(b.pct), vigencia(b));
+  else if (e === 'wasteMeta' && a === 'setWeight') r = await setWasteMetaWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'commandsMeta' && a === 'setWeight') r = await setCommandsMetaWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'tasksMeta' && a === 'setWeight') r = await setTasksMetaWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'cashMeta' && a === 'setWeight') r = await setCashMetaWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'scheduleMeta' && a === 'setWeight') r = await setScheduleMetaWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'cancellationsMeta' && a === 'setWeight') r = await setCancellationsMetaWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'stockMeta' && a === 'setWeight') r = await setStockMetaWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'inventoryMeta' && a === 'setWeight') r = await setInventoryMetaWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'utensilsMeta' && a === 'setWeight') r = await setUtensilsMetaWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'managerLeaveMeta' && a === 'setPenalty') r = await setManagerLeaveMetaPenalty(user, Number(b.pct), vigencia(b));
+  else if (e === 'metaStatus' && a === 'set') r = await setComponentStatus(user, String(b.key ?? ''), String(b.status ?? ''), vigencia(b));
   else if (e === 'supervisorChecklist' && a === 'create') r = await createSupervisorChecklist(user, b, ctx);
   else if (e === 'supervisorChecklist' && a === 'update') r = await updateSupervisorChecklist(user, b.id, b, ctx);
   else if (e === 'supervisorChecklist' && a === 'toggle') r = await toggleSupervisorChecklist(user, b.id, b.active, ctx);

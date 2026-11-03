@@ -109,6 +109,7 @@ const ENTITIES: [string, string][] = [
   ['MANAGER_SCHEDULE', 'Horário do gerente'],
   ['MANAGER_LEAVE', 'Folga/férias do gerente'],
   ['MANAGER_LEAVE_META_PENALTY', 'Desconto da meta: folga do gerente'],
+  ['META_STATUS', 'Status do componente da meta'],
   ['TERMINATION', 'Desligamento'],
   ['CERTIFICATE', 'Atestado'],
   ['COMMUNICATION', 'Comunicado'],

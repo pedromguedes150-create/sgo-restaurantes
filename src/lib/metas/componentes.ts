@@ -1,4 +1,5 @@
 import type { ComponenteDaMeta, DescontoDaMeta } from './pontuacao';
+import { carregarConfigDaMeta } from './vigencia';
 
 /**
  * OS COMPONENTES DA META (v1.174.0) — uma lista só, lida pela nota e pelo
@@ -13,40 +14,39 @@ import type { ComponenteDaMeta, DescontoDaMeta } from './pontuacao';
 export const NOME_CHECKLISTS = 'Checklists do dia';
 
 export async function componentesDaMeta(unitId: string, yearMonth: string): Promise<ComponenteDaMeta[]> {
-  const [{ getTrainingMonthStats, getTrainingWeight }, { getCommunicationMonthStats, getCommunicationWeight }, { getEvaluationMonthStats, getEvaluationWeight }, cfg] = await Promise.all([
-    import('@/lib/training'), import('@/lib/communications/meta'), import('@/lib/people/evaluation'), import('./config'),
+  const [{ getTrainingMonthStats }, { getCommunicationMonthStats }, { getEvaluationMonthStats }, cfg, { getUtensilsCoverage }] = await Promise.all([
+    import('@/lib/training'), import('@/lib/communications/meta'), import('@/lib/people/evaluation'), import('./config'), import('@/lib/utensilios/inventario'),
   ]);
-  const { getUtensilsCoverage } = await import('@/lib/utensilios/inventario');
-  const [
-    tasks, tasksW, t, tW, c, cW, e, eW, w, wW, cm, cmW,
-    cash, cashW, sch, schW, canc, cancW, st, stW, inv, invW, ut, utW,
-  ] = await Promise.all([
-    cfg.getChecklistsCoverage(unitId, yearMonth), cfg.getTasksMetaWeight(),
-    getTrainingMonthStats(unitId, yearMonth), getTrainingWeight(),
-    getCommunicationMonthStats(unitId, yearMonth), getCommunicationWeight(),
-    getEvaluationMonthStats(unitId, yearMonth), getEvaluationWeight(),
-    cfg.getWasteCoverage(unitId, yearMonth), cfg.getWasteMetaWeight(),
-    cfg.getCommandsCoverage(unitId, yearMonth), cfg.getCommandsMetaWeight(),
-    cfg.getCashCoverage(unitId, yearMonth), cfg.getCashMetaWeight(),
-    cfg.getScheduleCoverage(unitId, yearMonth), cfg.getScheduleMetaWeight(),
-    cfg.getCancellationsCoverage(unitId, yearMonth), cfg.getCancellationsMetaWeight(),
-    cfg.getStockCoverage(unitId, yearMonth), cfg.getStockMetaWeight(),
-    cfg.getInventoryCoverage(unitId, yearMonth), cfg.getInventoryMetaWeight(),
-    getUtensilsCoverage(unitId, yearMonth), cfg.getUtensilsMetaWeight(),
+  /* v1.180.0 — peso e status VIGENTES NO MÊS pedido, numa leitura só (mês fechado = os valores que valiam nele). */
+  const [vig, tasks, t, c, e, w, cm, cash, sch, canc, st, inv, ut] = await Promise.all([
+    carregarConfigDaMeta(yearMonth),
+    cfg.getChecklistsCoverage(unitId, yearMonth),
+    getTrainingMonthStats(unitId, yearMonth),
+    getCommunicationMonthStats(unitId, yearMonth),
+    getEvaluationMonthStats(unitId, yearMonth),
+    cfg.getWasteCoverage(unitId, yearMonth),
+    cfg.getCommandsCoverage(unitId, yearMonth),
+    cfg.getCashCoverage(unitId, yearMonth),
+    cfg.getScheduleCoverage(unitId, yearMonth),
+    cfg.getCancellationsCoverage(unitId, yearMonth),
+    cfg.getStockCoverage(unitId, yearMonth),
+    cfg.getInventoryCoverage(unitId, yearMonth),
+    getUtensilsCoverage(unitId, yearMonth),
   ]);
+  const comp = (key: string, name: string, cob: { done: number; missed: number }): ComponenteDaMeta => ({ key, name, weight: vig.peso(key), status: vig.status(key), done: cob.done, missed: cob.missed });
   return [
-    { key: 'TASKS', name: NOME_CHECKLISTS, weight: tasksW, done: tasks.done, missed: tasks.missed },
-    { key: 'TRAINING', name: 'Treinamentos (POPs)', weight: tW, done: t.done, missed: t.missed },
-    { key: 'COMMUNICATION', name: 'Comunicados', weight: cW, done: c.done, missed: c.missed },
-    { key: 'PEOPLE_EVALUATION', name: 'Avaliações da equipe', weight: eW, done: e.done, missed: e.missed },
-    { key: 'WASTE', name: 'Desperdício diário (cobertura)', weight: wW, done: w.done, missed: w.missed },
-    { key: 'COMMANDS', name: 'Comandas diárias (cobertura)', weight: cmW, done: cm.done, missed: cm.missed },
-    { key: 'CASH', name: 'Gestão de Troco (contagem do cofre)', weight: cashW, done: cash.done, missed: cash.missed },
-    { key: 'SCHEDULE', name: 'Escala (Realizado preenchido)', weight: schW, done: sch.done, missed: sch.missed },
-    { key: 'CANCELLATIONS', name: 'Cancelamentos justificados', weight: cancW, done: canc.done, missed: canc.missed },
-    { key: 'STOCK', name: 'Estoque (tratativas de validade)', weight: stW, done: st.done, missed: st.missed },
-    { key: 'INVENTORY', name: 'Inventário Teknisa (agendamentos confirmados)', weight: invW, done: inv.done, missed: inv.missed },
-    { key: 'UTENSILS', name: 'Inventário de utensílios (enviado no mês)', weight: utW, done: ut.done, missed: ut.missed },
+    comp('TASKS', NOME_CHECKLISTS, tasks),
+    comp('TRAINING', 'Treinamentos (POPs)', t),
+    comp('COMMUNICATION', 'Comunicados', c),
+    comp('PEOPLE_EVALUATION', 'Avaliações da equipe', e),
+    comp('WASTE', 'Desperdício diário (cobertura)', w),
+    comp('COMMANDS', 'Comandas diárias (cobertura)', cm),
+    comp('CASH', 'Gestão de Troco (contagem do cofre)', cash),
+    comp('SCHEDULE', 'Escala (Realizado preenchido)', sch),
+    comp('CANCELLATIONS', 'Cancelamentos justificados', canc),
+    comp('STOCK', 'Estoque (tratativas de validade)', st),
+    comp('INVENTORY', 'Inventário Teknisa (agendamentos confirmados)', inv),
+    comp('UTENSILS', 'Inventário de utensílios (enviado no mês)', ut),
   ];
 }
 
@@ -58,16 +58,15 @@ export interface DescontosDaMeta {
 
 /** Os descontos diretos na nota, com os dados que o detalhamento mostra. */
 export async function descontosDaMeta(unitId: string, yearMonth: string): Promise<DescontosDaMeta> {
-  const [{ countLateEntries, getLateEntryPenaltyPct }, { getManagerLeaveMetaStats }, { getManagerLeaveMetaPenalty }] = await Promise.all([
-    import('@/lib/late-entry'), import('./escala-gerentes'), import('./config'),
-  ]);
-  const [lateCount, penaltyPct, mlStats, mlPct] = await Promise.all([
-    countLateEntries(unitId, yearMonth), getLateEntryPenaltyPct(), getManagerLeaveMetaStats(unitId, yearMonth), getManagerLeaveMetaPenalty(),
-  ]);
+  const [{ countLateEntries }, { getManagerLeaveMetaStats }] = await Promise.all([import('@/lib/late-entry'), import('./escala-gerentes')]);
+  /* v1.180.0 — os % de desconto vigentes NO MÊS (uma leitura só). */
+  const [vig, lateCount, mlStats] = await Promise.all([carregarConfigDaMeta(yearMonth), countLateEntries(unitId, yearMonth), getManagerLeaveMetaStats(unitId, yearMonth)]);
+  const penaltyPct = vig.descontoForaDoPrazo;
+  const mlPct = vig.descontoEscalaGerentes;
   return {
     lista: [
-      { name: 'Fora do prazo', quantidade: lateCount, pct: penaltyPct },
-      { name: 'Escala de gerentes', quantidade: mlStats.semFolga, pct: mlPct },
+      { name: 'Fora do prazo', quantidade: lateCount, pct: penaltyPct, detalhe: lateCount > 0 ? `${lateCount} lançamento(s) com data corrigida ou lançado(s) pela supervisão` : undefined },
+      { name: 'Escala de gerentes', quantidade: mlStats.semFolga, pct: mlPct, detalhe: mlStats.nomesSemFolga.length ? `sem folga cadastrada: ${mlStats.nomesSemFolga.join(', ')}` : undefined },
     ],
     lateEntry: { count: lateCount, pct: penaltyPct },
     managerLeave: { gerentes: mlStats.gerentes, semFolga: mlStats.semFolga, nomesSemFolga: mlStats.nomesSemFolga, pct: mlPct },

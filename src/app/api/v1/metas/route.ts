@@ -17,6 +17,6 @@ export const GET = comApiKey(async (req, cliente) => {
   return NextResponse.json({
     mes, total: ranking.length, dados: detalhe,
     cobertura: { de: null, ate: null, registrosNoTotal: ranking.length, observacao: 'A meta é calculada a cada chamada sobre o mês pedido; não há registros históricos — consulte `tarefas` para a cobertura das instâncias que a alimentam.' },
-    fonte: 'calculado por getMetaRanking/getUnitMonthScore sobre task_instances (status DONE|LATE|MISSED|PENDING) e os pesos de app_settings; não é tabela',
+    fonte: 'calculado por getMetaRanking/getUnitMonthScore sobre task_instances (status DONE|LATE|MISSED|PENDING) e os pesos/status vigentes no mês (meta_config_changes, com app_settings de fallback); não é tabela',
   });
 });
