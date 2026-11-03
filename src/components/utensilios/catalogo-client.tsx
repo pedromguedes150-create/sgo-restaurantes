@@ -37,7 +37,7 @@ export function CatalogoUtensiliosClient({ itens, podeEditar }: { itens: Utensil
       <section className="sgo-panel sgo-panel--solid overflow-hidden">
         <ul className="divide-y divide-line">
           {itens.map((it, idx) => (
-            <li key={it.id} className="flex items-center gap-2 px-3 py-2 sm:px-4">
+            <li key={it.id} className="flex flex-wrap items-center gap-2 px-3 py-2 sm:px-4">
               <span className="w-6 text-right text-xs tabular-nums text-ink-500">{idx + 1}</span>
               {editando?.id === it.id ? (
                 <>
@@ -47,7 +47,7 @@ export function CatalogoUtensiliosClient({ itens, podeEditar }: { itens: Utensil
                 </>
               ) : (
                 <>
-                  <span className={`min-w-0 flex-1 truncate text-sm ${it.active ? 'text-ink-900' : 'text-ink-500 line-through'}`}>{it.name}</span>
+                  <span className={`min-w-0 basis-full break-words text-sm sm:basis-auto sm:flex-1 ${it.active ? 'text-ink-900' : 'text-ink-500 line-through'}`}>{it.name}</span>
                   <StatusBadge tone={it.active ? 'success' : 'neutral'} dot>{it.active ? 'Ativo' : 'Inativo'}</StatusBadge>
                   {podeEditar && (
                     <span className="flex items-center gap-1">

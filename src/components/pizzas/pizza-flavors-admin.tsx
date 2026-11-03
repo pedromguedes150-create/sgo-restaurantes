@@ -104,7 +104,7 @@ function LinhaDeSabor({ sabor, onChange }: { sabor: SaborRow; onChange: () => vo
 
   return (
     <div className="py-2">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {editando ? (
           <>
             <div className="min-w-0 flex-1">
@@ -133,7 +133,7 @@ function LinhaDeSabor({ sabor, onChange }: { sabor: SaborRow; onChange: () => vo
           </>
         ) : (
           <>
-            <span className="min-w-0 flex-1 truncate text-sm text-ink-900">{sabor.name}</span>
+            <span className="min-w-0 basis-full break-words text-sm text-ink-900 sm:basis-auto sm:flex-1">{sabor.name}</span>
             {!sabor.active && <StatusBadge tone="neutral">Fora do cardápio</StatusBadge>}
             {sabor.lancamentos > 0 && (
               <span className="shrink-0 text-xs text-ink-500">{sabor.lancamentos} lançamento(s)</span>

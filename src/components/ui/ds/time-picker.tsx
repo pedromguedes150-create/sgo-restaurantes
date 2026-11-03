@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Field, controlBase, controlSize, controlTone, useDescribedBy } from './field';
+import { usePopoverFixo } from './popover-fixo';
 import { toHM, parseHM, hourOptions, minuteOptions, snapToStep, outOfRange, nowHM } from '@/lib/ds/time';
 
 /**
@@ -44,6 +46,10 @@ export function TimePicker({
   const { descId, describedBy } = useDescribedBy(id, hint, error);
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const popRef = React.useRef<HTMLDivElement>(null);
+  const fechar = React.useCallback(() => setOpen(false), []);
+  /* v1.182.1 — o relógio num portal com posição fixa: dentro de um Sheet ou de uma tabela rolável ele era cortado. */
+  const { montado, estilo } = usePopoverFixo(open, rootRef, popRef, fechar, { minWidth: 160, maxWidth: 160 });
 
   const HOURS = React.useMemo(() => hourOptions(), []);
   const MINUTES = React.useMemo(() => minuteOptions(minuteStep), [minuteStep]);
@@ -57,7 +63,7 @@ export function TimePicker({
     if (!open) return;
     setCursor(snapToStep(value ?? nowHM(new Date(), minuteStep), minuteStep));
     setCol('h');
-    const onDown = (e: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false); };
+    const onDown = (e: MouseEvent) => { const alvo = e.target as Node; if (rootRef.current?.contains(alvo) || popRef.current?.contains(alvo)) return; setOpen(false); };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [open, value, minuteStep]);
@@ -127,6 +133,37 @@ export function TimePicker({
     </ul>
   );
 
+  const relogio = (
+    <div
+      ref={popRef}
+      role="dialog"
+      aria-label="Escolher horário"
+      onKeyDown={onKeyDown}
+      style={estilo}
+      className={cn('w-40 rounded-card border border-line bg-surface p-2 shadow-lg', !montado && 'absolute left-0 top-full z-40 mt-1')}
+    >
+      <div className="mb-1 flex gap-1 sgo-type-11 font-semibold text-ink-500">
+        <span className="flex-1 text-center">Hora</span>
+        <span className="flex-1 text-center">Min</span>
+      </div>
+      <div className="flex gap-1">
+        {coluna('h', HOURS)}
+        {coluna('m', MINUTES)}
+      </div>
+      {value && (
+        <div className="mt-2 border-t border-line pt-2">
+          <button
+            type="button"
+            onClick={() => { onValueChange(null); setOpen(false); }}
+            className="w-full rounded-control px-2 py-1 text-xs font-medium text-ink-500 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus"
+          >
+            Limpar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <Field label={label} hint={hint} error={error} required={required} htmlFor={id} descId={descId}>
       <div className="relative" ref={rootRef}>
@@ -147,34 +184,7 @@ export function TimePicker({
           <span className={cn('flex-1', !value && 'text-ink-500')}>{value ?? placeholder}</span>
         </button>
 
-        {open && (
-          <div
-            role="dialog"
-            aria-label="Escolher horário"
-            onKeyDown={onKeyDown}
-            className="absolute left-0 top-full z-40 mt-1 w-40 rounded-card border border-line bg-surface p-2 shadow-lg"
-          >
-            <div className="mb-1 flex gap-1 sgo-type-11 font-semibold text-ink-500">
-              <span className="flex-1 text-center">Hora</span>
-              <span className="flex-1 text-center">Min</span>
-            </div>
-            <div className="flex gap-1">
-              {coluna('h', HOURS)}
-              {coluna('m', MINUTES)}
-            </div>
-            {value && (
-              <div className="mt-2 border-t border-line pt-2">
-                <button
-                  type="button"
-                  onClick={() => { onValueChange(null); setOpen(false); }}
-                  className="w-full rounded-control px-2 py-1 text-xs font-medium text-ink-500 outline-none hover:bg-sunken focus-visible:shadow-sgo-focus"
-                >
-                  Limpar
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+        {open && (montado ? createPortal(relogio, document.body) : relogio)}
       </div>
     </Field>
   );

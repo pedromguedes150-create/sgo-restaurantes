@@ -114,7 +114,7 @@ function LinhaDeSetor({ setor, onChange }: { setor: SetorRow; onChange: () => vo
 
   return (
     <div className="py-2">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {editando ? (
           <>
             <div className="min-w-0 flex-1">
@@ -143,7 +143,7 @@ function LinhaDeSetor({ setor, onChange }: { setor: SetorRow; onChange: () => vo
           </>
         ) : (
           <>
-            <span className="min-w-0 flex-1 truncate text-sm text-ink-900">{setor.name}</span>
+            <span className="min-w-0 basis-full break-words text-sm text-ink-900 sm:basis-auto sm:flex-1">{setor.name}</span>
             {!setor.active && <StatusBadge tone="neutral">Desativado</StatusBadge>}
             {uso.length > 0 && <span className="shrink-0 text-xs text-ink-500">{uso.join(' · ')}</span>}
             <Button
