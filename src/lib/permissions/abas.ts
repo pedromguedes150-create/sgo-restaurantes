@@ -78,6 +78,8 @@ export const ABAS: Record<string, AbaDef[]> = {
     { id: 'lancar', key: 'CERTIFICATES_TAB_NEW', label: 'Lançar atestado' },
     { id: 'historico', key: 'CERTIFICATES_TAB_HISTORY', label: 'Histórico', soVer: true },
     { id: 'painel', key: 'CERTIFICATES_TAB_PANEL', label: 'Painel de absenteísmo', soVer: true },
+    // v1.181.0 — a auditoria dos LANÇAMENTOS: ver = acompanhar/justificar; editar = informar o esperado e validar
+    { id: 'auditoria', key: 'CERTIFICATES_TAB_AUDIT', label: 'Auditoria de lançamentos' },
   ],
 
   COMMUNICATION: [

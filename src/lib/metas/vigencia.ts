@@ -5,7 +5,7 @@ import { diaEmBrasilia } from './pontuacao';
 import {
   CHAVE_ESCALA_GERENTES, CHAVE_FORA_DO_PRAZO, CHAVES_DA_META, COMPONENTES_DA_META, DESCONTO_ESCALA_GERENTES_PADRAO, DESCONTO_FORA_DO_PRAZO_PADRAO,
   MOTIVO_MIN, VIGENCIA_BASE, chaveDoPeso, chaveDoStatus, lerNumero, motivoValido, normalizarStatus, rotuloDaChave, statusHerdadoDoPeso, tipoDaChave,
-  valorLegivel, valorVigente, vigenciaValida, type StatusDoComponente,
+  valorLegivel, valorVigente, vigenciaValida, PARAMETROS_DA_AUDITORIA, type StatusDoComponente,
 } from './vigencia-regras';
 
 /**
@@ -35,6 +35,8 @@ export interface ConfigDaMeta {
   descontoEscalaGerentes: number;
   /** O texto gravado de qualquer chave (ou nulo). */
   valor(key: string): string | null;
+  /** v1.181.0 — parâmetro numérico da auditoria de atestados vigente no mês (padrão da lista). */
+  parametro(key: string): number;
 }
 
 function padraoDoPeso(componente: string): number {
@@ -60,6 +62,7 @@ export async function carregarConfigDaMeta(yearMonth: string = mesAtual()): Prom
     descontoForaDoPrazo: lerNumero(valor(CHAVE_FORA_DO_PRAZO), DESCONTO_FORA_DO_PRAZO_PADRAO, { teto: 100 }),
     descontoEscalaGerentes: lerNumero(valor(CHAVE_ESCALA_GERENTES), DESCONTO_ESCALA_GERENTES_PADRAO, { teto: 100 }),
     valor,
+    parametro: (key) => { const p = PARAMETROS_DA_AUDITORIA.find((x) => x.key === key); return lerNumero(valor(key), p?.padrao ?? 0, { teto: p?.teto }); },
   };
 }
 
@@ -95,7 +98,8 @@ export async function gravarConfigDaMeta(user: SessionUser, g: GravacaoDaMeta): 
   } else {
     const n = Number(g.value);
     if (!Number.isFinite(n) || n < 0) return { ok: false, reason: 'INVALID', message: 'Valor inválido.' };
-    value = tipo === 'PESO' ? String(Math.trunc(n)) : String(Math.min(100, n));
+    const teto = tipo === 'PARAMETRO' ? PARAMETROS_DA_AUDITORIA.find((x) => x.key === g.key)?.teto : 100;
+    value = tipo === 'PESO' ? String(Math.trunc(n)) : String(teto != null ? Math.min(teto, n) : n);
   }
 
   /* O valor anterior é o EFETIVO no mês da vigência (padrão incluído), não só o texto gravado:
@@ -104,6 +108,7 @@ export async function gravarConfigDaMeta(user: SessionUser, g: GravacaoDaMeta): 
   const componente = CHAVES_DA_META.find((c) => c.key === g.key)?.componente ?? '';
   const de = tipo === 'STATUS' ? vigente.status(componente)
     : tipo === 'PESO' ? String(vigente.peso(componente))
+    : tipo === 'PARAMETRO' ? String(vigente.parametro(g.key))
     : String(g.key === CHAVE_FORA_DO_PRAZO ? vigente.descontoForaDoPrazo : vigente.descontoEscalaGerentes);
   if (de === value) return { ok: true, validFrom, de, para: value };
 

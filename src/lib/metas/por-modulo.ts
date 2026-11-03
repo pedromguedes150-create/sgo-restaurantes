@@ -75,6 +75,11 @@ export const INDICADORES: Record<string, IndicadorDeModulo> = {
     indicador: 'Inventário de utensílios enviado no mês',
     como: 'Unidade que ENVIOU a contagem de utensílios no mês = 100%; sem envio = 0%. Nasce com peso 0: a periodicidade (mensal ou trimestral) ainda vai ser decidida — com peso ligado, mês sem contagem zera este componente.',
   },
+  CERTIFICATES: {
+    entity: 'certificatesMeta', tipo: 'PESO',
+    indicador: 'Atestados lançados no prazo (auditoria)',
+    como: 'Conformidade = (conformes + justificados) ÷ (conformes + justificados + falhas confirmadas pela supervisão). Penalização sobre o PESO por faixa: 100% sem desconto; 90–99,9% perde 10%; 80–89,9% perde 25%; abaixo de 80% perde 50% (peso 10 → 5 pontos). Esperados em conferência não contam; mês sem atestado esperado fica fora. Prazo e faixas em "Parâmetros da auditoria de atestados".',
+  },
   INVENTORY: {
     entity: 'inventoryMeta', tipo: 'PESO',
     indicador: 'Inventários Teknisa confirmados pelo gerente',

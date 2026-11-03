@@ -59,6 +59,8 @@ export const COMPONENTES_DA_META: { key: string; name: string; pesoPadrao: numbe
   { key: 'STOCK', name: 'Estoque (tratativas de validade)', pesoPadrao: 0 },
   { key: 'INVENTORY', name: 'Inventário Teknisa (agendamentos confirmados)', pesoPadrao: 0 },
   { key: 'UTENSILS', name: 'Inventário de utensílios (enviado no mês)', pesoPadrao: 0 },
+  /* v1.181.0 — auditoria de atestados: nasce em 0 e em Monitoramento (linha-base na migração). */
+  { key: 'CERTIFICATES', name: 'Atestados (lançamento no prazo)', pesoPadrao: 0 },
 ];
 /* As chaves de peso seguem as de sempre (`<KEY>_META_WEIGHT`, exceto a da
    avaliação, que nasceu como EVALUATION_META_WEIGHT). */
@@ -70,7 +72,19 @@ export const CHAVE_ESCALA_GERENTES = 'MANAGER_LEAVE_META_PENALTY';
 export const DESCONTO_FORA_DO_PRAZO_PADRAO = 2;
 export const DESCONTO_ESCALA_GERENTES_PADRAO = 5;
 
-export type TipoDeChave = 'PESO' | 'STATUS' | 'DESCONTO';
+/* v1.181.0 — parâmetros da auditoria de atestados (prazo em horas úteis e as três faixas de penalização sobre o peso). */
+export const CHAVE_PRAZO_ATESTADOS = 'CERT_AUDIT_DEADLINE_HOURS';
+export const CHAVE_PEN_ATESTADOS_90 = 'CERT_AUDIT_PENALTY_90';
+export const CHAVE_PEN_ATESTADOS_80 = 'CERT_AUDIT_PENALTY_80';
+export const CHAVE_PEN_ATESTADOS_ABAIXO_80 = 'CERT_AUDIT_PENALTY_UNDER80';
+export const PARAMETROS_DA_AUDITORIA: { key: string; rotulo: string; padrao: number; teto?: number }[] = [
+  { key: CHAVE_PRAZO_ATESTADOS, rotulo: 'Prazo de lançamento (horas úteis após a ciência do gerente)', padrao: 24 },
+  { key: CHAVE_PEN_ATESTADOS_90, rotulo: 'Conformidade 90–99,9%: perde (% do peso)', padrao: 10, teto: 100 },
+  { key: CHAVE_PEN_ATESTADOS_80, rotulo: 'Conformidade 80–89,9%: perde (% do peso)', padrao: 25, teto: 100 },
+  { key: CHAVE_PEN_ATESTADOS_ABAIXO_80, rotulo: 'Conformidade abaixo de 80%: perde (% do peso)', padrao: 50, teto: 100 },
+];
+
+export type TipoDeChave = 'PESO' | 'STATUS' | 'DESCONTO' | 'PARAMETRO';
 export interface ChaveDaMeta { key: string; tipo: TipoDeChave; rotulo: string; componente?: string }
 /** Toda chave que o histórico conhece, com o rótulo que a tela mostra. */
 export const CHAVES_DA_META: ChaveDaMeta[] = [
@@ -78,6 +92,7 @@ export const CHAVES_DA_META: ChaveDaMeta[] = [
   ...COMPONENTES_DA_META.map((c) => ({ key: chaveDoStatus(c.key), tipo: 'STATUS' as const, rotulo: `Status — ${c.name}`, componente: c.key })),
   { key: CHAVE_FORA_DO_PRAZO, tipo: 'DESCONTO', rotulo: 'Desconto — Fora do prazo (% por lançamento corrigido)' },
   { key: CHAVE_ESCALA_GERENTES, tipo: 'DESCONTO', rotulo: 'Desconto — Escala de gerentes (% por gerente sem folga)' },
+  ...PARAMETROS_DA_AUDITORIA.map((p) => ({ key: p.key, tipo: 'PARAMETRO' as const, rotulo: `Auditoria de atestados — ${p.rotulo}`, componente: 'CERTIFICATES' })),
 ];
 export const rotuloDaChave = (key: string) => CHAVES_DA_META.find((c) => c.key === key)?.rotulo ?? key;
 export const tipoDaChave = (key: string): TipoDeChave | null => CHAVES_DA_META.find((c) => c.key === key)?.tipo ?? null;
@@ -86,7 +101,8 @@ export function valorLegivel(key: string, value: string | null | undefined): str
   if (value == null || value === '') return '—';
   if (tipoDaChave(key) === 'STATUS') return ROTULO_STATUS[normalizarStatus(value) ?? 'ATIVO'] ?? value;
   const n = Number(value);
-  return Number.isFinite(n) ? String(n).replace('.', ',') + (tipoDaChave(key) === 'DESCONTO' ? '%' : '') : value;
+  const sufixo = tipoDaChave(key) === 'DESCONTO' || key.startsWith('CERT_AUDIT_PENALTY') ? '%' : key === CHAVE_PRAZO_ATESTADOS ? ' h' : '';
+  return Number.isFinite(n) ? String(n).replace('.', ',') + sufixo : value;
 }
 
 /** Linha-base: o valor que valia antes de existir histórico, válido para qualquer mês. */

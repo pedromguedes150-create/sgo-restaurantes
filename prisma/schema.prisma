@@ -101,6 +101,7 @@ model Unit {
   inventoryItems            InventoryItem[]
   inventoryMovements        InventoryMovement[]
   medicalCertificates       MedicalCertificate[]
+  certificateExpectations   CertificateExpectation[]
   freelancerRates           FreelancerHourlyRate[]
   overtimeRates             OvertimeHourlyRate[]
   terminations              Termination[]
@@ -1895,6 +1896,7 @@ model Collaborator {
   scheduleActuals     ScheduleActual[]
   trainings           TrainingRecord[]
   medicalCertificates MedicalCertificate[]
+  certificateExpectations CertificateExpectation[]
   terminations        Termination[]
   rhDemands           RhDemand[]
   popLinks            PopCollaborator[]
@@ -3905,6 +3907,8 @@ model MedicalCertificate {
   unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
   collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
   createdBy    User?        @relation("CertBy", fields: [createdById], references: [id], onDelete: SetNull)
+  /// v1.181.0 — o atestado ESPERADO (auditoria) cruzado com este lançamento, se houver.
+  expectation  CertificateExpectation?
 
   @@index([unitId, startDate])
   @@index([collaboratorId, startDate])
@@ -5064,4 +5068,69 @@ model MetaConfigChange {
 
   @@index([key, validFrom])
   @@map("meta_config_changes")
+}
+
+/// v1.181.0 — AUDITORIA DE ATESTADOS: o atestado que DEVERIA ter sido lançado,
+/// informado pelo RH ou pela supervisão (independente da API do RH). O SGO cruza
+/// com `MedicalCertificate` por colaborador + unidade + período. A situação
+/// (conforme, em conferência, falha confirmada…) é DERIVADA; só a decisão da
+/// supervisão (reviewStatus) e a justificativa são gravadas.
+enum CertificateExpectationSource {
+  MANUAL
+  RH
+}
+enum CertificateReviewStatus {
+  AGUARDANDO
+  FALHA_CONFIRMADA
+  JUSTIFICADO
+  INVALIDO
+}
+model CertificateExpectation {
+  id             String                       @id @default(cuid())
+  unitId         String
+  collaboratorId String
+  /// Período do atestado em 'AAAA-MM-DD'
+  startDate      String
+  endDate        String
+  /// Quando o gerente tomou ciência do atestado (o prazo conta daqui)
+  noticeAt       DateTime
+  /// Quem recebeu o atestado na unidade (texto livre: quem entregou/recebeu)
+  receivedByName String?
+  source         CertificateExpectationSource @default(MANUAL)
+  informedById   String?
+  informedByName String
+  note           String?
+
+  /// O lançamento cruzado (um esperado ↔ um atestado)
+  certificateId  String?   @unique
+  linkedAt       DateTime?
+
+  /// Justificativa do gerente (texto) — só vale depois de aprovada pela supervisão
+  justification   String?
+  justifiedById   String?
+  justifiedByName String?
+  justifiedAt     DateTime?
+
+  /// Decisão da supervisão; AGUARDANDO = situação derivada dos fatos
+  reviewStatus   CertificateReviewStatus @default(AGUARDANDO)
+  reviewNote     String?
+  reviewedById   String?
+  reviewedByName String?
+  reviewedAt     DateTime?
+
+  /// Responsabilidade INDIVIDUAL (quem deveria ter lançado), só depois de validada pela supervisão
+  responsibleUserId         String?
+  responsibleName           String?
+  responsibilityValidatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unit         Unit                @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  collaborator Collaborator        @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  certificate  MedicalCertificate? @relation(fields: [certificateId], references: [id], onDelete: SetNull)
+
+  @@index([unitId, startDate])
+  @@index([collaboratorId, startDate])
+  @@map("certificate_expectations")
 }

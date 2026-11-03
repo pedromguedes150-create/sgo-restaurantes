@@ -18,6 +18,9 @@ import { CERT_TYPE_LABELS } from '@/lib/certificates/labels';
 import type { CertListItem, CertReport } from '@/lib/certificates/query';
 import type { CertificateType } from '@prisma/client';
 import { Group } from '@/components/ui/ds/group';
+import { AuditoriaAtestadosClient } from '@/components/certificates/auditoria-client';
+import type { AuditoriaDeAtestados } from '@/lib/certificates/auditoria';
+import { ClipboardCheck } from 'lucide-react';
 
 /** Últimos 12 meses a partir do selecionado — o <input type="month"> abria qualquer mês, mas o painel só tem dado recente. */
 function ultimosMeses(atual: string) {
@@ -46,16 +49,24 @@ function daysBetween(start: string, end: string): number {
 }
 function fmtDate(s: string | null): string { if (!s) return '—'; const [y, m, d] = s.split('-'); return `${d}/${m}/${y}`; }
 
-export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, collaboratorsByUnit, rows, report, abas = {}, subtitulo }: {
+type Aba = 'lancar' | 'historico' | 'painel' | 'auditoria';
+
+export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, collaboratorsByUnit, rows, report, abas = {}, subtitulo, auditoria, abaPedida, unitFiltro = '' }: {
   /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
   subtitulo?: React.ReactNode;
   canLaunch: boolean; isAdmin: boolean; showCid: boolean; ym: string;
   units: Unit[]; collaboratorsByUnit: Record<string, Collab[]>; rows: CertListItem[]; report: CertReport;
   /** Abas liberadas para o perfil (Configurações → Perfis de acesso). */
   abas?: AcessoAbas;
+  /** v1.181.0 — a auditoria dos lançamentos (nula quando a aba está fechada para o perfil). */
+  auditoria?: { dados: AuditoriaDeAtestados; podeInformar: boolean; podeJustificar: boolean } | null;
+  /** Aba pedida na URL (?aba=auditoria) — os links dos avisos caem direto nela. */
+  abaPedida?: string;
+  unitFiltro?: string;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<'lancar' | 'historico' | 'painel'>(abaInicial(abas, 'CERTIFICATES', canLaunch ? 'lancar' : 'painel') as 'lancar' | 'historico' | 'painel');
+  const preferida: Aba = abaPedida === 'auditoria' && auditoria ? 'auditoria' : canLaunch ? 'lancar' : 'painel';
+  const [tab, setTab] = useState<Aba>(abaInicial(abas, 'CERTIFICATES', preferida) as Aba);
 
   return (
     <div className="space-y-4">
@@ -67,6 +78,7 @@ export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, col
           ...(canLaunch && podeAba(abas, 'lancar') ? [{ value: 'lancar' as const, label: 'Lançar', icon: <Plus className="h-3.5 w-3.5" /> }] : []),
           ...(podeAba(abas, 'historico') ? [{ value: 'historico' as const, label: 'Histórico', icon: <FileText className="h-3.5 w-3.5" /> }] : []),
           ...(podeAba(abas, 'painel') ? [{ value: 'painel' as const, label: 'Painel', icon: <BarChart3 className="h-3.5 w-3.5" /> }] : []),
+          ...(auditoria && podeAba(abas, 'auditoria') ? [{ value: 'auditoria' as const, label: 'Auditoria', icon: <ClipboardCheck className="h-3.5 w-3.5" /> }] : []),
         ].map((o) => ({ label: o.label, icon: o.icon, active: tab === o.value, testId: `aba-${o.value}`, onClick: () => setTab(o.value) }))}
       />
 
@@ -75,6 +87,9 @@ export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, col
       )}
       {tab === 'historico' && <History rows={rows} isAdmin={isAdmin} showCid={showCid} onChanged={() => router.refresh()} />}
       {tab === 'painel' && <Panel report={report} ym={ym} />}
+      {tab === 'auditoria' && auditoria && (
+        <AuditoriaAtestadosClient auditoria={auditoria.dados} ym={ym} unitFiltro={unitFiltro} units={units} collaboratorsByUnit={collaboratorsByUnit} podeInformar={auditoria.podeInformar} podeJustificar={auditoria.podeJustificar} />
+      )}
     </div>
   );
 }

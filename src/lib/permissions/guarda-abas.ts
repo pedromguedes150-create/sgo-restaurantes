@@ -38,6 +38,11 @@ const ACAO_DA_ABA: Record<string, Record<string, string>> = {
     setorIA: 'CONFIG_PRODUCTS',
     setorAplicar: 'CONFIG_PRODUCTS',
   },
+  CERTIFICATES: {
+    // v1.181.0 — informar o esperado e validar são da supervisão; "justificar" fica fora de propósito (o gerente justifica com "ver")
+    informar: 'CERTIFICATES_TAB_AUDIT',
+    revisar: 'CERTIFICATES_TAB_AUDIT',
+  },
   TERMINATIONS: {
     create: 'TERMINATIONS_TAB_NEW',
     decide: 'TERMINATIONS_TAB_LIST',
