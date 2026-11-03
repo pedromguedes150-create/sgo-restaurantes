@@ -1,4 +1,4 @@
-import { contaNaNota, pontuar, type ComponenteDaMeta, type DescontoDaMeta } from './pontuacao';
+import { contaNaNota, pctDoComponente, pontuar, type ComponenteDaMeta, type DescontoDaMeta } from './pontuacao';
 
 /**
  * META POR USUÁRIO (v1.179.0) — a nota da bonificação, pessoa por pessoa, SEM
@@ -79,7 +79,7 @@ export function metaDaUnidade(unitId: string, unitName: string, componentes: Com
     notaAntesDosDescontos: semDescontos.scorePct,
     componentes: componentes
       .filter((c) => contaNaNota(c) && c.weight > 0 && c.done + c.missed > 0)
-      .map((c) => ({ key: c.key, name: c.name, weight: c.weight, done: c.done, resolved: c.done + c.missed, scorePct: Math.round((c.done / (c.done + c.missed)) * 100) }))
+      .map((c) => ({ key: c.key, name: c.name, weight: c.weight, done: c.done, resolved: c.done + c.missed, scorePct: pctDoComponente(c) }))
       .sort((a, b) => b.weight - a.weight),
     descontos: descontos
       .filter((d) => d.quantidade > 0 && d.pct > 0)
@@ -122,7 +122,7 @@ export function metaDoUsuario(unidades: MetaDaUnidade[], pesos: PesoDaMeta[]): M
 export const ROTULO_CURTO_DO_COMPONENTE: Record<string, string> = {
   TASKS: 'Checklists', TRAINING: 'Treinamentos', COMMUNICATION: 'Comunicados', PEOPLE_EVALUATION: 'Avaliações',
   WASTE: 'Desperdício', COMMANDS: 'Comandas', CASH: 'Cofre', SCHEDULE: 'Escala', CANCELLATIONS: 'Cancelamentos',
-  STOCK: 'Estoque', INVENTORY: 'Inventário', UTENSILS: 'Utensílios',
+  STOCK: 'Estoque', INVENTORY: 'Inventário', UTENSILS: 'Utensílios', CERTIFICATES: 'Atestados',
 };
 export const rotuloCurto = (key: string, name: string) => ROTULO_CURTO_DO_COMPONENTE[key] ?? name;
 

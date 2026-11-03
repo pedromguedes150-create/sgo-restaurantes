@@ -14,12 +14,12 @@ import { carregarConfigDaMeta } from './vigencia';
 export const NOME_CHECKLISTS = 'Checklists do dia';
 
 export async function componentesDaMeta(unitId: string, yearMonth: string): Promise<ComponenteDaMeta[]> {
-  const [{ getTrainingMonthStats }, { getCommunicationMonthStats }, { getEvaluationMonthStats }, cfg, { getUtensilsCoverage }] = await Promise.all([
-    import('@/lib/training'), import('@/lib/communications/meta'), import('@/lib/people/evaluation'), import('./config'), import('@/lib/utensilios/inventario'),
+  const [{ getTrainingMonthStats }, { getCommunicationMonthStats }, { getEvaluationMonthStats }, cfg, { getUtensilsCoverage }, { getCertificatesCoverage }] = await Promise.all([
+    import('@/lib/training'), import('@/lib/communications/meta'), import('@/lib/people/evaluation'), import('./config'), import('@/lib/utensilios/inventario'), import('@/lib/certificates/auditoria'),
   ]);
   /* v1.180.0 — peso e status VIGENTES NO MÊS pedido, numa leitura só (mês fechado = os valores que valiam nele). */
-  const [vig, tasks, t, c, e, w, cm, cash, sch, canc, st, inv, ut] = await Promise.all([
-    carregarConfigDaMeta(yearMonth),
+  const vig = await carregarConfigDaMeta(yearMonth);
+  const [tasks, t, c, e, w, cm, cash, sch, canc, st, inv, ut, cert] = await Promise.all([
     cfg.getChecklistsCoverage(unitId, yearMonth),
     getTrainingMonthStats(unitId, yearMonth),
     getCommunicationMonthStats(unitId, yearMonth),
@@ -32,8 +32,9 @@ export async function componentesDaMeta(unitId: string, yearMonth: string): Prom
     cfg.getStockCoverage(unitId, yearMonth),
     cfg.getInventoryCoverage(unitId, yearMonth),
     getUtensilsCoverage(unitId, yearMonth),
+    getCertificatesCoverage(unitId, yearMonth, vig),
   ]);
-  const comp = (key: string, name: string, cob: { done: number; missed: number }): ComponenteDaMeta => ({ key, name, weight: vig.peso(key), status: vig.status(key), done: cob.done, missed: cob.missed });
+  const comp = (key: string, name: string, cob: { done: number; missed: number; scorePct?: number }): ComponenteDaMeta => ({ key, name, weight: vig.peso(key), status: vig.status(key), done: cob.done, missed: cob.missed, ...(cob.scorePct != null ? { scorePct: cob.scorePct } : {}) });
   return [
     comp('TASKS', NOME_CHECKLISTS, tasks),
     comp('TRAINING', 'Treinamentos (POPs)', t),
@@ -47,6 +48,8 @@ export async function componentesDaMeta(unitId: string, yearMonth: string): Prom
     comp('STOCK', 'Estoque (tratativas de validade)', st),
     comp('INVENTORY', 'Inventário Teknisa (agendamentos confirmados)', inv),
     comp('UTENSILS', 'Inventário de utensílios (enviado no mês)', ut),
+    /* v1.181.0 — entra com o % da FAIXA (100 − penalização), não com feito ÷ resolvido; o nome traz a conformidade. */
+    comp('CERTIFICATES', cert.pct == null ? 'Atestados (lançamento no prazo)' : `Atestados — conformidade ${String(cert.pct).replace('.', ',')}% (faixa −${cert.penalizacao}% do peso)`, cert),
   ];
 }
 

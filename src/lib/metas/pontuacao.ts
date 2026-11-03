@@ -32,6 +32,19 @@ export interface ComponenteDaMeta {
    * status fora não conta.
    */
   status?: StatusDoComponente;
+  /**
+   * v1.181.0 — o % já resolvido, quando não é `done ÷ resolvido`: a auditoria de
+   * atestados entra com `100 − penalização da faixa` (peso 10 com < 80% de
+   * conformidade = 5 pontos). `done`/`missed` continuam valendo para "há algo
+   * resolvido" e para a leitura (3 conformes / 1 falha).
+   */
+  scorePct?: number;
+}
+/** O % de um componente: o pronto, se veio; senão feito ÷ resolvido. */
+export function pctDoComponente(c: { done: number; missed: number; scorePct?: number }): number {
+  const resolved = c.done + c.missed;
+  if (c.scorePct != null) return Math.max(0, Math.min(100, c.scorePct));
+  return resolved > 0 ? Math.round((c.done / resolved) * 100) : 0;
 }
 /** Entra na conta? Sem status = sim (compatibilidade). */
 export const contaNaNota = (c: { status?: StatusDoComponente }) => !c.status || c.status === 'ATIVO';
@@ -56,7 +69,7 @@ export function pontuar(componentes: ComponenteDaMeta[], descontos: DescontoDaMe
     const resolved = c.done + c.missed;
     if (resolved <= 0 || c.weight <= 0 || !contaNaNota(c)) continue;
     resolvedWeight += c.weight;
-    doneWeight += c.weight * (c.done / resolved);
+    doneWeight += c.weight * (c.scorePct != null ? Math.max(0, Math.min(100, c.scorePct)) / 100 : c.done / resolved);
   }
   let scorePct = resolvedWeight === 0 ? 0 : Math.round((doneWeight / resolvedWeight) * 100);
   for (const d of descontos) {
@@ -71,7 +84,7 @@ export interface LinhaDeComponente { name: string; weight: number; done: number;
 export function linhasDosComponentes(componentes: ComponenteDaMeta[]): LinhaDeComponente[] {
   return componentes
     .filter((c) => contaNaNota(c) && c.weight > 0 && c.done + c.missed > 0)
-    .map((c) => ({ name: c.name, weight: c.weight, done: c.done, resolved: c.done + c.missed, scorePct: Math.round((c.done / (c.done + c.missed)) * 100) }))
+    .map((c) => ({ name: c.name, weight: c.weight, done: c.done, resolved: c.done + c.missed, scorePct: pctDoComponente(c) }))
     .sort((a, b) => b.weight - a.weight);
 }
 
@@ -92,7 +105,7 @@ export function linhasEmObservacao(componentes: ComponenteDaMeta[], descontos: D
     .filter((c) => emObservacao(c) && c.done + c.missed > 0)
     .map((c) => ({
       key: c.key, name: c.name, weight: c.weight, done: c.done, resolved: c.done + c.missed,
-      scorePct: Math.round((c.done / (c.done + c.missed)) * 100),
+      scorePct: pctDoComponente(c),
       status: c.status as StatusDoComponente,
       notaSeContasse: c.status === 'HOMOLOGACAO' && c.weight > 0
         ? pontuar(componentes.map((x) => (x.key === c.key ? { ...x, status: 'ATIVO' as const } : x)), descontos).scorePct

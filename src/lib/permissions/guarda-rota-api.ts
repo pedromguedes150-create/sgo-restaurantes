@@ -50,6 +50,8 @@ export const REGRAS: Record<string, RegraDeRota> = {
 
   '/api/certificates': { modulo: 'CERTIFICATES_TAB_NEW', exigir: 'editar' },
   '/api/certificates/read': { modulo: 'CERTIFICATES', exigir: 'ver' },
+  '/api/certificates/auditoria': { modulo: 'CERTIFICATES_TAB_AUDIT', exigir: 'ver' },
+  '/api/certificates/auditoria/export': { modulo: 'CERTIFICATES_TAB_AUDIT', exigir: 'ver' },
   '/api/certificates/export': { modulo: 'CERTIFICATES_REPORT', exigir: 'ver' },
 
   '/api/checklist-forms': { modulo: 'CHECKLIST_FORMS', exigir: 'editar' },

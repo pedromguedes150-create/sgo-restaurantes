@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.181.0 — 2026-11-03 (Auditoria de Atestados: o lançamento do gerente conferido contra o atestado recebido)
+### Novo
+- **Aba "Auditoria" na Central de Atestados**: RH ou supervisão informam o atestado RECEBIDO (colaborador, unidade, período, quem recebeu, quando o gerente soube) sem depender da API do RH; o SGO cruza com o lançamento do gerente por colaborador + unidade + período, nos dois sentidos. Situações derivadas dos fatos: No prazo · Conforme · Em conferência · Falha confirmada · Justificado · Inválido. O gerente justifica; a supervisão decide (confirma a falha e só então atribui quem deveria ter lançado, aprova a justificativa, invalida ou reabre). Tudo auditado, com responsáveis (quem recebeu, quem informou, quem lançou, quem deveria lançar).
+- **Prazo configurável em horas úteis** (padrão 24h após a ciência; domingos e feriados cadastrados não contam) e **faixas de penalização configuráveis**, em "Parâmetros da auditoria de atestados" na Configuração da Meta — com vigência e motivo como os pesos.
+- **Componente "Atestados" na meta** (nasce com peso 0 e em Monitoramento): conformidade = (conformes + justificados) ÷ (conformes + justificados + falhas confirmadas); a penalização incide sobre o PESO por faixa — 100% nada, 90–99,9% perde 10%, 80–89,9% perde 25%, abaixo de 80% perde 50% (peso 10 → 5 pontos). Esperados em conferência não contam; mês sem atestado esperado é neutro. Indicadores por unidade (coletivo, o que vai para a meta), por gerente (responsabilidade individual, só análise), por período e da rede; Excel da aba.
+### Regras preservadas
+- Nenhum lançamento existente é alterado; a existência do atestado nunca pontua contra ninguém; nenhum desconto salarial; status e peso continuam independentes e com vigência por mês.
+
 ## v1.180.0 — 2026-11-03 (Meta: status por componente, vigência por mês e histórico das configurações)
 ### Novo
 - **Status por componente** na Configuração da Meta — Em desenvolvimento · Em homologação · Monitoramento · Ativo — **independente do peso**: só "Ativo" entra na nota. Homologação e monitoramento são medidos e aparecem na composição da unidade como "em observação" (em homologação, com a nota que a unidade teria se contasse), sem mudar a nota de ninguém. Ligar o peso de um módulo nunca o ativa sozinho (decisão do Pedro, 03/11: módulos incompletos ficam fora da bonificação mesmo com dados).

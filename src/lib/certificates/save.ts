@@ -101,6 +101,11 @@ export async function createCertificate(user: SessionUser, input: CreateCertInpu
 
   await audit({ userId: user.id, unitId: input.unitId, action: 'CERTIFICATE_CREATE', module: 'PEOPLE', entity: 'medical_certificate', entityId: rec.id, metadata: { type, days, start: input.startDate, end: input.endDate }, ...ctx });
 
+  /* v1.181.0 — se o RH/supervisão já tinha informado este atestado como ESPERADO, o
+     lançamento cruza com ele agora (colaborador + unidade + período). */
+  const { cruzarAtestado } = await import('@/lib/certificates/auditoria');
+  await cruzarAtestado(rec.id).catch((e) => console.error('[auditoria-atestados] falha ao cruzar:', e));
+
   /* Envio automático ao GBF-RH (v1.168.0): entra na FILA, não na rede — o
      atestado fica gravado mesmo com o RH fora do ar ou sem token. */
   await enfileirarAtestado(rec.id, 'criar', user.id).catch((e) => console.error('[rh-saida] falha ao enfileirar atestado:', e));

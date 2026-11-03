@@ -9,7 +9,7 @@ import { setTrainingWeight } from '@/lib/training';
 import { setCommunicationWeight } from '@/lib/communications/meta';
 import { setEvaluationWeight } from '@/lib/people/evaluation';
 import { setLateEntryPenaltyPct } from '@/lib/late-entry';
-import { setWasteMetaWeight, setCommandsMetaWeight, setTasksMetaWeight, setCashMetaWeight, setScheduleMetaWeight, setCancellationsMetaWeight, setStockMetaWeight, setInventoryMetaWeight, setUtensilsMetaWeight, setManagerLeaveMetaPenalty, setComponentStatus } from '@/lib/metas/config';
+import { setWasteMetaWeight, setCommandsMetaWeight, setTasksMetaWeight, setCashMetaWeight, setScheduleMetaWeight, setCancellationsMetaWeight, setStockMetaWeight, setInventoryMetaWeight, setUtensilsMetaWeight, setManagerLeaveMetaPenalty, setComponentStatus, setCertificatesMetaWeight, setMetaParametro } from '@/lib/metas/config';
 import { setGasAlertPct, setGasMaxPriceKg } from '@/lib/gas/query';
 import { setFreelancerWeekLimit } from '@/lib/payments/recorrencia';
 import { mesclarFreelancers } from '@/lib/payments/mesclar-freelancers';
@@ -120,6 +120,8 @@ export async function POST(req: Request) {
   else if (e === 'utensilsMeta' && a === 'setWeight') r = await setUtensilsMetaWeight(user, Number(b.weight), vigencia(b));
   else if (e === 'managerLeaveMeta' && a === 'setPenalty') r = await setManagerLeaveMetaPenalty(user, Number(b.pct), vigencia(b));
   else if (e === 'metaStatus' && a === 'set') r = await setComponentStatus(user, String(b.key ?? ''), String(b.status ?? ''), vigencia(b));
+  else if (e === 'certificatesMeta' && a === 'setWeight') r = await setCertificatesMetaWeight(user, Number(b.weight), vigencia(b));
+  else if (e === 'metaParametro' && a === 'set') r = await setMetaParametro(user, String(b.key ?? ''), Number(b.value), vigencia(b));
   else if (e === 'supervisorChecklist' && a === 'create') r = await createSupervisorChecklist(user, b, ctx);
   else if (e === 'supervisorChecklist' && a === 'update') r = await updateSupervisorChecklist(user, b.id, b, ctx);
   else if (e === 'supervisorChecklist' && a === 'toggle') r = await toggleSupervisorChecklist(user, b.id, b.active, ctx);

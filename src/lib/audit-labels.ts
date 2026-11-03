@@ -111,6 +111,8 @@ const ENTITIES: [string, string][] = [
   ['MANAGER_LEAVE_META_PENALTY', 'Desconto da meta: folga do gerente'],
   ['META_STATUS', 'Status do componente da meta'],
   ['TERMINATION', 'Desligamento'],
+  ['CERT_EXPECTATION', 'Auditoria de atestados'],
+  ['META_PARAM', 'Parâmetro da meta'],
   ['CERTIFICATE', 'Atestado'],
   ['COMMUNICATION', 'Comunicado'],
   ['CANCELLATION', 'Cancelamento'],

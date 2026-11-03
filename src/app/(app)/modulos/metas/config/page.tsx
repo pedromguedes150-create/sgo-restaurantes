@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { ArrowLeft, History, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, History, ShieldAlert, Stethoscope } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { linhasPorModulo, resumirPorModulo, type StatusDoComponente } from '@/lib/metas/por-modulo';
 import { carregarConfigDaMeta, correcoesDaSupervisao, historicoDeConfiguracoes, mesAtual } from '@/lib/metas/vigencia';
-import { COMPONENTES_DA_META } from '@/lib/metas/vigencia-regras';
+import { COMPONENTES_DA_META, PARAMETROS_DA_AUDITORIA } from '@/lib/metas/vigencia-regras';
+import { ParametrosDaAuditoria } from '@/components/metas/parametros-auditoria';
 import { MODULES } from '@/lib/permissions';
 import { AREAS } from '@/lib/nav/areas';
 import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
@@ -41,8 +42,9 @@ export default async function MetaConfigPage() {
     tasksMeta: vig.peso('TASKS'), wasteMeta: vig.peso('WASTE'), commandsMeta: vig.peso('COMMANDS'), communication: vig.peso('COMMUNICATION'),
     training: vig.peso('TRAINING'), evaluation: vig.peso('PEOPLE_EVALUATION'), lateEntry: vig.descontoForaDoPrazo, managerLeaveMeta: vig.descontoEscalaGerentes,
     cashMeta: vig.peso('CASH'), scheduleMeta: vig.peso('SCHEDULE'), cancellationsMeta: vig.peso('CANCELLATIONS'), stockMeta: vig.peso('STOCK'),
-    inventoryMeta: vig.peso('INVENTORY'), utensilsMeta: vig.peso('UTENSILS'),
+    inventoryMeta: vig.peso('INVENTORY'), utensilsMeta: vig.peso('UTENSILS'), certificatesMeta: vig.peso('CERTIFICATES'),
   };
+  const parametros = PARAMETROS_DA_AUDITORIA.map((p) => ({ key: p.key, rotulo: p.rotulo, valor: vig.parametro(p.key), teto: p.teto }));
   const status: Record<string, StatusDoComponente> = Object.fromEntries(COMPONENTES_DA_META.map((c) => [c.key, vig.status(c.key)]));
   const grupos = linhasPorModulo(MODULES, AREAS, valores, status);
   const resumo = resumirPorModulo(grupos);
@@ -70,6 +72,14 @@ export default async function MetaConfigPage() {
         {futuras.length > 0 && <> <b>{futuras.length} alteração(ões) agendada(s)</b> para meses futuros — veja o histórico abaixo.</>}
       </p>
       <MetaPorModuloClient grupos={grupos} canEdit={user.role === 'ADMIN'} mesAtual={ym} />
+
+      <Card>
+        <PanelHeader title="Parâmetros da auditoria de atestados" icon={<span className="sgo-panel__ic sgo-panel__ic--brand" aria-hidden><Stethoscope className="h-4 w-4" /></span>} />
+        <div className="p-4">
+          <ParametrosDaAuditoria parametros={parametros} canEdit={user.role === 'ADMIN'} mesAtual={ym} />
+        </div>
+        <p className="px-4 pb-3 text-xs text-ink-500">O prazo conta em horas úteis a partir da ciência do gerente (domingos e feriados cadastrados não contam). As faixas descontam uma parte do PESO do componente Atestados: 100% de conformidade não perde nada. Mesma vigência e motivo dos pesos.</p>
+      </Card>
 
       <Card>
         <PanelHeader title="Histórico de configurações" count={historico.length} icon={<span className="sgo-panel__ic sgo-panel__ic--blue" aria-hidden><History className="h-4 w-4" /></span>} />

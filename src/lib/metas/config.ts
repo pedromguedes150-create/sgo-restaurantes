@@ -50,6 +50,7 @@ export const getCancellationsMetaWeight = (ym?: string) => readWeight('CANCELLAT
 export const getStockMetaWeight = (ym?: string) => readWeight('STOCK', ym);
 export const getInventoryMetaWeight = (ym?: string) => readWeight('INVENTORY', ym);
 export const getUtensilsMetaWeight = (ym?: string) => readWeight('UTENSILS', ym);
+export const getCertificatesMetaWeight = (ym?: string) => readWeight('CERTIFICATES', ym);
 export const setWasteMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'WASTE', w, 'WASTE_META_WEIGHT_SET', o);
 export const setCommandsMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'COMMANDS', w, 'COMMANDS_META_WEIGHT_SET', o);
 export const setTasksMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'TASKS', w, 'TASKS_META_WEIGHT_SET', o);
@@ -59,6 +60,11 @@ export const setCancellationsMetaWeight = (u: SessionUser, w: number, o: OpcoesD
 export const setStockMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'STOCK', w, 'STOCK_META_WEIGHT_SET', o);
 export const setInventoryMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'INVENTORY', w, 'INVENTORY_META_WEIGHT_SET', o);
 export const setUtensilsMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'UTENSILS', w, 'UTENSILS_META_WEIGHT_SET', o);
+export const setCertificatesMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'CERTIFICATES', w, 'CERTIFICATES_META_WEIGHT_SET', o);
+/** v1.181.0 — parâmetros da auditoria de atestados (prazo em horas úteis, faixas de penalização), com vigência e motivo. */
+export function setMetaParametro(user: SessionUser, key: string, value: number, o: OpcoesDaGravacao = semMotivo) {
+  return gravarConfigDaMeta(user, { key, value, validFrom: o.validFrom, reason: o.reason, action: 'META_PARAM_SET' });
+}
 
 /** v1.180.0 — o STATUS do componente (só ATIVO entra na nota), por mês. */
 export async function getComponentStatus(componente: string, ym?: string): Promise<StatusDoComponente> {
