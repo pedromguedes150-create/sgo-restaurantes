@@ -3,10 +3,10 @@ import { resumirUso, taxaDeFalha, faixaDeUso, rotuloDoModulo, type UnidadeUso, t
 
 /** Uso do SGO (v1.164.0): composição PURA de contagens já existentes — nada recalcula meta nem uso. */
 const unidade = (p: Partial<UnidadeUso> & { unitId: string }): UnidadeUso => ({
-  unitName: p.unitId, usagePct: 0, checklistPct: 0, wastePct: 0, commandsPct: 0, metaPct: 0, done: 0, late: 0, missed: 0, acoes: 0, usuariosAtivos: 0, usuariosVinculados: 0, occurrences: 0, notes: 0, ...p,
+  unitName: p.unitId, usagePct: 0, checklistPct: 0, wastePct: 0, commandsPct: 0, metaPct: 0, done: 0, late: 0, missed: 0, acoes: 0, usuariosAtivos: 0, usuariosVinculados: 0, occurrences: 0, notes: 0, pendentes: 0, vencidas: 0, responsaveis: [], piorComponente: null, descontos: [], ...p,
 });
 const usuario = (p: Partial<UsuarioUso> & { userId: string }): UsuarioUso => ({
-  name: p.userId, role: 'MANAGER', roleLabel: 'Gerente', unidades: [], acessos: 0, acoes: 0, modulos: [], tarefasConcluidas: 0, foraDoPrazo: 0, ultimoAcesso: null, meta: null, folgaPropria: null, ...p,
+  name: p.userId, role: 'MANAGER', roleLabel: 'Gerente', unidades: [], acessos: 0, acoes: 0, modulos: [], tarefasConcluidas: 0, foraDoPrazo: 0, ultimoAcesso: null, meta: null, folgaPropria: null, pontualidade: null, pendentes: 0, vencidas: 0, naoRealizadas: 0, ...p,
 });
 
 describe('taxa de falha e faixa de uso', () => {

@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.182.0 — 2026-11-03 (Uso do SGO: uso efetivo e gestão por unidade — PR B de Metas)
+### Novo
+- **Dois blocos de análise** na aba Uso do SGO: "Resultado coletivo — unidade por unidade" (o que vai para a meta, herdado pelo gerente) e "Responsabilidade individual — usuário por usuário" (o que cada pessoa fez). Nenhuma regra de desconto nova; a fórmula da bonificação não mudou.
+- **Por unidade**: Responsáveis (gerentes e coordenadores vinculados), Abertas (ainda no prazo) e Vencidas (prazo passou sem resolver), "Onde mais perde" (o componente ativo com o pior %) com os descontos nomeados, e o nome da unidade abre a composição da meta.
+- **Por usuário**: Concluiu no prazo, Fora do prazo, Pontualidade (no prazo ÷ concluídas pela própria pessoa), Abertas, Vencidas e Não feitas das unidades que a pessoa cuida — para diferenciar quem só acessa de quem cumpre.
+- Cartão "Abertas agora" (no prazo · vencidas · unidade com mais vencidas); Excel e PDF com as colunas novas.
+
 ## v1.181.1 — 2026-11-03 (Sobras Lanchonete: o lançamento não some mais ao voltar da câmera)
 ### Corrigido
 - **"Depois da foto os lançamentos saem da tela"** (vídeo da Cristina, Nova União): no Android, abrir a câmera pelo campo de foto manda o navegador para segundo plano e, com pouca memória, o Chrome descarta a aba e recarrega a página na volta — tudo que estava só na tela (tipo, motivo, quantidade) sumia. Agora a folha guarda o rascunho fora da página a cada mudança (linhas no armazenamento local, foto no IndexedDB assim que é tirada) e, ao recarregar, recupera os dois com o aviso "Lançamento recuperado… confira e toque em Salvar". Salvar com sucesso limpa o rascunho. Sem armazenamento disponível, a folha segue como antes.

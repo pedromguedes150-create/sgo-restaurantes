@@ -55,8 +55,9 @@ export default async function UsoRelatorioPage({ searchParams }: { searchParams:
       </section>
 
       <section>
-        <h2 className="sgo-type-17 mb-2 font-bold text-brand">Rede, unidade por unidade</h2>
+        <h2 className="sgo-type-17 mb-2 font-bold text-brand">Resultado coletivo — unidade por unidade</h2>
         <TabelaUnidades unidades={d.unidades} />
+        <p className="mt-2 text-xs text-ink-500">Abertas = ainda no prazo; vencidas = prazo passou sem resolver. &quot;Onde mais perde&quot; = o componente ativo com o pior % da unidade, com os descontos nomeados.</p>
       </section>
       <section className="break-before-page">
         <h2 className="sgo-type-17 mb-2 font-bold text-brand">Meta por usuário — a nota da bonificação</h2>
@@ -64,9 +65,9 @@ export default async function UsoRelatorioPage({ searchParams }: { searchParams:
         <p className="mt-2 text-xs text-ink-500">Nota = Σ (peso × % alcançado) ÷ Σ pesos, menos os descontos — a mesma conta de Metas; a nota é da unidade e o gerente a herda (média quando cuida de mais de uma). Pesos em vigor: {d.pesosDaMeta.map((p) => `${rotuloCurto(p.key, p.name)} ${p.weight}`).join(' · ') || 'nenhum'}.</p>
       </section>
       <section className="break-before-page">
-        <h2 className="sgo-type-17 mb-2 font-bold text-brand">Usuário por usuário</h2>
+        <h2 className="sgo-type-17 mb-2 font-bold text-brand">Responsabilidade individual — usuário por usuário</h2>
         <TabelaUsuarios usuarios={d.usuarios} />
-        <p className="mt-2 text-xs text-ink-500">Uso = média de checklists, cobertura de desperdício e de comandas (painel do supervisor). Ações = registros na Auditoria no mês, sem login. Tarefas = checklists concluídos por esse usuário.</p>
+        <p className="mt-2 text-xs text-ink-500">Só para análise — nada aqui desconta da nota. Ações = registros na Auditoria no mês, sem login. Pontualidade = no prazo ÷ (no prazo + fora) do que a própria pessoa concluiu; abertas, vencidas e não feitas são das unidades que ela cuida.</p>
       </section>
     </div>
   );

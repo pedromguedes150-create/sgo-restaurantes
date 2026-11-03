@@ -30,6 +30,9 @@ beforeAll(async () => {
     { templateId: tpl.id, unitId: unitA, operationalDate: `${ym}-03`, dueAt: new Date(), status: 'DONE', completedById: gerA, completedAt: new Date() },
     { templateId: tpl.id, unitId: unitA, operationalDate: `${ym}-04`, dueAt: new Date(), status: 'LATE', completedById: gerA, completedAt: new Date() },
     { templateId: tpl.id, unitId: unitA, operationalDate: `${ym}-05`, dueAt: new Date(), status: 'MISSED' },
+    /* v1.182.0 — abertas: uma ainda no prazo (vence daqui a 1 dia), uma vencida (prazo passou ontem) */
+    { templateId: tpl.id, unitId: unitA, operationalDate: `${ym}-06`, dueAt: new Date(Date.now() + 86_400_000), status: 'PENDING' },
+    { templateId: tpl.id, unitId: unitA, operationalDate: `${ym}-07`, dueAt: new Date(Date.now() - 86_400_000), status: 'PENDING' },
   ] });
   await prisma.auditLog.createMany({ data: [
     { userId: gerA, unitId: unitA, action: 'LOGIN', module: 'AUTH' },
@@ -56,6 +59,22 @@ describe('getUsoDoSgo', () => {
     const a = d.unidades.find((u) => u.unitId === unitA)!;
     expect(a).toMatchObject({ done: 1, late: 1, missed: 1, acoes: 4, usuariosAtivos: 2 });
     expect(a.usuariosVinculados).toBe(3); // gerente A + gerente das duas unidades + supervisor (o caixa não é medido)
+    /* v1.182.0 — PR B: abertas separadas pelo prazo, responsáveis = gerentes/coordenadores vinculados, descontos nomeados */
+    expect(a).toMatchObject({ pendentes: 1, vencidas: 1 });
+    expect(a.responsaveis).toEqual(expect.arrayContaining([`Ger A ${sfx}`, `Ger AB ${sfx}`]));
+    expect(a.responsaveis).not.toContain(`Sup ${sfx}`);
+    expect(Array.isArray(a.descontos)).toBe(true);
+    expect(d.resumo.pendencias.pendentes).toBeGreaterThanOrEqual(1); // o resumo é da rede inteira do banco de dev
+    expect(d.resumo.pendencias.vencidas).toBeGreaterThanOrEqual(1);
+  });
+  it('por usuário (v1.182.0): pontualidade do que a própria pessoa concluiu; abertas/vencidas/não feitas das unidades dela', async () => {
+    const d = await getUsoDoSgo(admin(), ym);
+    const ga = d.usuarios.find((u) => u.userId === gerA)!;
+    expect(ga).toMatchObject({ pontualidade: 50, pendentes: 1, vencidas: 1, naoRealizadas: 1 }); // 1 no prazo + 1 fora = 50%
+    const gb = d.usuarios.find((u) => u.userId === gerB)!;
+    expect(gb).toMatchObject({ pontualidade: null, pendentes: 0, vencidas: 0, naoRealizadas: 0 });
+    const gab = d.usuarios.find((u) => u.userId === gerAB)!;
+    expect(gab).toMatchObject({ pendentes: 1, vencidas: 1 }); // soma das duas unidades (B não tem nada)
   });
   it('por usuário: acessos, ações, módulos por frequência, tarefas no prazo e fora; caixa fica de fora', async () => {
     const d = await getUsoDoSgo(admin(), ym);
