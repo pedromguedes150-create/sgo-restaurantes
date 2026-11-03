@@ -176,6 +176,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   // v1.168.0 — envio SGO→RH: demanda do gerente; fila de saída (reenviar/processar) — a lib ainda exige ADMIN/CEO na fila
   '/api/rh/demandas': { modulo: 'RH_DEMANDS', exigir: 'editar' },
   '/api/rh/saida': { modulo: 'CONFIG_RH_SAIDA', exigir: 'editar' },
+  '/api/rh/entrada': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'editar' }, // v1.183.0 — token de entrada do RH pela tela
   // v1.166.0: razões sociais adicionais por unidade + conferência (a lib ainda exige ADMIN/CEO)
   '/api/rh/razoes': { modulo: 'CONFIG_UNITS', exigir: 'editar' },
   '/api/rh/test': { modulo: 'CONFIG_INTEGRATIONS', exigir: 'ver' },

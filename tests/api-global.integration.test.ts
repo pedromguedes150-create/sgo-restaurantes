@@ -129,7 +129,7 @@ describe('GET /api/v1/status', () => {
     const r = await criarChave(admin(), { name: `Outro ${sfx}` });
     if (!r.ok) throw new Error('setup');
     ids.push(r.id);
-    expect(inboundAuthorized(new Request('http://localhost/api/integracoes/rh/inclusao', { headers: { 'x-api-key': r.chave } }))).toBe(false);
+    expect(await inboundAuthorized(new Request('http://localhost/api/integracoes/rh/inclusao', { headers: { 'x-api-key': r.chave } }))).toBe(false);
     await registrarChamada({ clientId: null, clientName: `nao autenticado ${sfx}`, method: 'GET', path: '/x', status: 401, durationMs: 1, ip: null });
   });
 });

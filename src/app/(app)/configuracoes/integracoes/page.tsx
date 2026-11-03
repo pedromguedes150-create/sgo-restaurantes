@@ -10,6 +10,8 @@ import { resumoDaFila } from '@/lib/rh/saida/fila';
 import { ENDPOINTS } from '@/lib/rh/saida/regras';
 import { RhV2Ping } from '@/components/admin/rh-v2-ping';
 import { ApiGlobalClient } from '@/components/admin/api-global-client';
+import { TokenEntradaRhClient } from '@/components/admin/token-entrada-rh-client';
+import { origemDoTokenDeEntrada, tokenDeEntrada } from '@/lib/rh/inbound-token';
 import { listarSistemas, ultimasChamadas } from '@/lib/api-global/chaves';
 import { API_BASE_PATH, HEADER_API_KEY } from '@/lib/api-global/formato';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +35,7 @@ export default async function IntegracoesPage() {
 
   const baseUrl = 'https://sgorestaurantesgbf.com.br';
   const rhBase = process.env.RH_API_BASE_URL ?? 'https://gbf-rh.replit.app';
-  const inboundToken = process.env.RH_INBOUND_TOKEN ?? '';
+  const [origemEntrada, tokenEntrada] = await Promise.all([origemDoTokenDeEntrada(), tokenDeEntrada()]);
   const webhookToken = process.env.SGO_WEBHOOK_TOKEN ?? '';
   const webhookUrl = process.env.RH_WEBHOOK_FERIAS_URL ?? `${rhBase}/api/integracoes/sgo/ferias`;
 
@@ -51,7 +53,7 @@ export default async function IntegracoesPage() {
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
       <div>
         <LargeTitle title="APIs &amp; Integrações" />
-        <p className="text-sm text-ink-500">Tudo que o SGO consome e expõe. Toda nova API entra aqui. Os valores completos dos tokens ficam no <code>.env</code> do servidor.</p>
+        <p className="text-sm text-ink-500">Tudo que o SGO consome e expõe. Toda nova API entra aqui. Os valores completos dos tokens ficam no <code>.env</code> do servidor — os dois do RH (entrada e saída) também podem ser colados pela tela.</p>
       </div>
 
       {/* 0. API GLOBAL DO SGO (v1.129.0) — o que o SGO expõe para os outros
@@ -143,7 +145,10 @@ export default async function IntegracoesPage() {
           <Row k="Desligamento" v={`${baseUrl}/api/integracoes/rh/desligamento`} mono />
           <Row k="Período aquisitivo" v={`${baseUrl}/api/integracoes/rh/periodo-aquisitivo`} mono />
           <Row k="Exclusão de período" v={`${baseUrl}/api/integracoes/rh/exclusao-periodo`} mono />
-          <Row k="Token (RH_INBOUND_TOKEN)" v={mask(inboundToken)} ok={Boolean(inboundToken)} />
+          {/* v1.183.0 — o token de entrada pela tela (o mesmo desenho do de saída). */}
+          <div className="rounded-lg border border-line bg-canvas p-3">
+            <TokenEntradaRhClient origem={origemEntrada} mascarado={mascararToken(tokenEntrada)} />
+          </div>
           <p className="text-xs text-ink-500">Admissão cria/reativa o colaborador e vincula à unidade (razão social = Configurações → Unidades → nome no RH). Desligamento inativa por CPF. Períodos aquisitivos ficam registrados abaixo. O sync por pull continua funcionando normalmente.</p>
         </CardContent>
       </Card>
