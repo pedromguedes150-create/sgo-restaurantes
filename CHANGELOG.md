@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.181.1 — 2026-11-03 (Sobras Lanchonete: o lançamento não some mais ao voltar da câmera)
+### Corrigido
+- **"Depois da foto os lançamentos saem da tela"** (vídeo da Cristina, Nova União): no Android, abrir a câmera pelo campo de foto manda o navegador para segundo plano e, com pouca memória, o Chrome descarta a aba e recarrega a página na volta — tudo que estava só na tela (tipo, motivo, quantidade) sumia. Agora a folha guarda o rascunho fora da página a cada mudança (linhas no armazenamento local, foto no IndexedDB assim que é tirada) e, ao recarregar, recupera os dois com o aviso "Lançamento recuperado… confira e toque em Salvar". Salvar com sucesso limpa o rascunho. Sem armazenamento disponível, a folha segue como antes.
+
 ## v1.181.0 — 2026-11-03 (Auditoria de Atestados: o lançamento do gerente conferido contra o atestado recebido)
 ### Novo
 - **Aba "Auditoria" na Central de Atestados**: RH ou supervisão informam o atestado RECEBIDO (colaborador, unidade, período, quem recebeu, quando o gerente soube) sem depender da API do RH; o SGO cruza com o lançamento do gerente por colaborador + unidade + período, nos dois sentidos. Situações derivadas dos fatos: No prazo · Conforme · Em conferência · Falha confirmada · Justificado · Inválido. O gerente justifica; a supervisão decide (confirma a falha e só então atribui quem deveria ter lançado, aprova a justificativa, invalida ou reabre). Tudo auditado, com responsáveis (quem recebeu, quem informou, quem lançou, quem deveria lançar).

@@ -1,11 +1,12 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X, Camera, RotateCcw, CheckCircle2 } from 'lucide-react';
 import { Button, IconButton } from '@/components/ui/ds/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/ds/select';
+import { apagarFotoLocal, apagarRascunho, gravarRascunho, guardarFotoLocal, lerFotoLocal, lerRascunho } from '@/lib/rascunho-local';
 
 /**
  * SOBRAS SALGADOS — a folha do gerente, em UNIDADES.
@@ -14,6 +15,13 @@ import { Select } from '@/components/ui/ds/select';
  *
  * Evidência: UMA FOTO GERAL do recipiente de resíduo orgânico é obrigatória
  * quando o total descartado > 0. Câmera obrigatória — galeria não permitida.
+ *
+ * v1.181.1 — RASCUNHO LOCAL: no Android, abrir a câmera pode fazer o Chrome
+ * descartar a aba e recarregar a página na volta; o estado do React some e
+ * "os lançamentos saem da tela" (relato do gerente, vídeo da Cristina). As
+ * linhas vão para o localStorage a cada mudança e a foto para o IndexedDB
+ * assim que é tirada; ao montar, a folha recupera os dois e avisa. Salvar
+ * com sucesso limpa o rascunho.
  */
 
 interface Opcao { id: string; name: string }
@@ -29,10 +37,26 @@ export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialR
   initialEvidencePath: string | null;
 }) {
   const router = useRouter();
-  const [linhas, setLinhas] = useState<Linha[]>(
-    initialRows.length ? initialRows.map((r) => ({ typeId: r.typeId, reasonId: r.reasonId, qty: String(r.quantity) })) : [{ typeId: '', reasonId: '', qty: '' }],
-  );
+  const linhasIniciais: Linha[] = initialRows.length ? initialRows.map((r) => ({ typeId: r.typeId, reasonId: r.reasonId, qty: String(r.quantity) })) : [{ typeId: '', reasonId: '', qty: '' }];
+  const [linhas, setLinhas] = useState<Linha[]>(linhasIniciais);
   const [foto, setFoto] = useState<File | null>(null);
+  /* Chave do rascunho: a folha é de UMA unidade num dia. */
+  const chaveDoRascunho = `salgados:${unitId}:${operationalDate}`;
+  const [recuperado, setRecuperado] = useState(false);
+
+  /* Ao montar: recupera o que ficou do recarregamento (linhas + foto), se diferente do que veio do banco. */
+  useEffect(() => {
+    const salvo = lerRascunho<Linha[]>(chaveDoRascunho);
+    const difere = !!salvo && salvo.length > 0 && JSON.stringify(salvo) !== JSON.stringify(linhasIniciais);
+    if (difere) setLinhas(salvo!);
+    void lerFotoLocal(chaveDoRascunho).then((f) => {
+      if (f) setFoto(f);
+      if (difere || f) setRecuperado(true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só na montagem
+  }, [chaveDoRascunho]);
+  /* A cada mudança, o rascunho vai para fora do React. */
+  useEffect(() => { gravarRascunho(chaveDoRascunho, linhas); }, [chaveDoRascunho, linhas]);
   const fotoRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null);
@@ -83,6 +107,9 @@ export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialR
       if (!res.ok) { setMsg({ tipo: 'erro', texto: d.error ?? 'Não foi possível salvar' }); return; }
       setMsg({ tipo: 'ok', texto: `Salvo: ${d.total} salgado(s) descartado(s) no dia.` });
       setFoto(null);
+      setRecuperado(false);
+      apagarRascunho(chaveDoRascunho);
+      void apagarFotoLocal(chaveDoRascunho);
       router.refresh();
     } catch {
       setMsg({ tipo: 'erro', texto: 'Falha de conexão' });
@@ -95,6 +122,11 @@ export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialR
 
   return (
     <div className="space-y-3">
+      {recuperado && (
+        <p className="rounded-lg bg-info/10 px-3 py-2 text-sm font-medium text-info" data-testid="rascunho-recuperado">
+          Lançamento recuperado: a página foi recarregada ao voltar da câmera e o que você já tinha preenchido foi mantido. Confira e toque em Salvar.
+        </p>
+      )}
       <div className="space-y-2">
         {linhas.map((l, i) => (
           /* v1.178.1: no celular, uma coisa por linha — Tipo, Motivo, Qtd. O className do Select vai no
@@ -176,7 +208,13 @@ export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialR
         accept="image/*"
         capture="environment"
         hidden
-        onChange={(e) => { setFoto(e.target.files?.[0] ?? null); e.target.value = ''; }}
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null;
+          setFoto(f);
+          /* a foto vai para o IndexedDB na hora: se o navegador recarregar, ela volta junto com as linhas */
+          if (f) void guardarFotoLocal(chaveDoRascunho, f);
+          e.target.value = '';
+        }}
       />
     </div>
   );
