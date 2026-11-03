@@ -1,10 +1,12 @@
 import { prisma } from '@/lib/db/prisma';
 import { notifyAdmins } from '@/lib/notifications';
+import { inboundAutorizado } from '@/lib/rh/inbound-token';
 import type { Prisma } from '@prisma/client';
 
 /**
  * Recepção de eventos do RH (envio automático RH→SGO, v1.16.0).
- * O RH chama nossos endpoints com Authorization: Bearer <RH_INBOUND_TOKEN>.
+ * O RH chama nossos endpoints com Authorization: Bearer <RH_INBOUND_TOKEN>
+ * (v1.183.0: o token pode vir do `.env` ou da tela — `inbound-token.ts`).
  * Tudo é registrado em RhInboundEvent (auditável na central de integrações):
  *  - inclusao: cria/reativa o colaborador (por CPF ou matrícula) e vincula à unidade.
  *  - desligamento: inativa o colaborador (por CPF).
@@ -14,11 +16,9 @@ import type { Prisma } from '@prisma/client';
  * estes eventos só complementam.
  */
 
-export function inboundAuthorized(req: Request): boolean {
-  const token = process.env.RH_INBOUND_TOKEN ?? '';
-  if (!token) return false;
-  const h = req.headers.get('authorization') ?? '';
-  return h === `Bearer ${token}` || req.headers.get('x-api-key') === token;
+/** A porta dos webhooks do RH — nome mantido; a regra vive em `inbound-token.ts`. */
+export function inboundAuthorized(req: Request): Promise<boolean> {
+  return inboundAutorizado(req);
 }
 
 const digits = (v: unknown) => String(v ?? '').replace(/\D/g, '');

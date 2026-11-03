@@ -9,10 +9,11 @@ export const dynamic = 'force-dynamic';
  *   POST /api/integracoes/rh/desligamento
  *   POST /api/integracoes/rh/periodo-aquisitivo
  *   POST /api/integracoes/rh/exclusao-periodo
- * Autenticação: Authorization: Bearer <RH_INBOUND_TOKEN> (ou x-api-key).
+ * Autenticação: Authorization: Bearer <RH_INBOUND_TOKEN> (ou x-api-key) — o token
+ * vem do .env ou da tela de APIs & Integrações (v1.183.0).
  */
 export async function POST(req: Request, { params }: { params: { evento: string } }) {
-  if (!inboundAuthorized(req)) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  if (!(await inboundAuthorized(req))) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const payload = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!payload || typeof payload !== 'object') return NextResponse.json({ error: 'Payload inválido' }, { status: 400 });
 

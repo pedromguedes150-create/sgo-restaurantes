@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.183.0 — 2026-11-03 (Token de ENTRADA do RH pela tela)
+### Novo
+- **Token de entrada do RH pela tela** (Configurações → APIs & Integrações → "Recepção RH→SGO"): o token com que o RH chama o SGO (admissão, desligamento, período aquisitivo) agora pode ser colado pelo Administrador, como o de saída na v1.182.2. Mesmo desenho: o `.env` do servidor, quando existe, vence; a tela diz de onde o token veio; o valor nunca aparece inteiro nem vai para a Auditoria. Não há "testar conexão" (é o RH que chama o SGO): a conferência é o próximo evento do RH aparecer em "Eventos recebidos". A porta dos webhooks passou a comparar o token em tempo constante.
+
 ## v1.182.3 — 2026-11-03 (Envios ao RH: 409 "já existe no RH" deixa de ser erro)
 ### Correção
 - **409 "período sobreposto" conta como enviado**: o RH respondia que já tinha um atestado daquela pessoa naquele período (lançado lá direto, ou aceito antes) e o SGO guardava como "Erro de dados", pedindo correção e reenvio que não existem. Agora o evento fica **Enviado**, com o id do atestado que o RH citou e uma nota ("o RH já tinha este atestado…"); o atestado do SGO recebe o vínculo. Os que já estavam em erro por esse motivo são reclassificados sozinhos no próximo reinício e no "Processar fila agora", sem reenviar nada. Só 409: um 422 com o mesmo texto segue como erro de dados.

@@ -56,6 +56,8 @@ const WHOLE: Record<string, [string, VerbGroup]> = {
   RH_ABSENCE_CAP: ['Trava de segurança do RH (ninguém inativado)', 'OUTROS'],
   RH_WEBHOOK_TOKEN_SET: ['Token do RH gravado pela tela', 'EDICAO'],
   RH_WEBHOOK_TOKEN_REMOVED: ['Token do RH removido pela tela', 'EXCLUSAO'],
+  RH_INBOUND_TOKEN_SET: ['Token de entrada do RH gravado pela tela', 'EDICAO'],
+  RH_INBOUND_TOKEN_REMOVED: ['Token de entrada do RH removido pela tela', 'EXCLUSAO'],
   ALLOCATE: ['Alocação no mapa de funções', 'CRIACAO'],
   ALLOCATE_UPDATE: ['Alocação alterada', 'EDICAO'],
   DEALLOCATE: ['Remoção do mapa de funções', 'EXCLUSAO'],
