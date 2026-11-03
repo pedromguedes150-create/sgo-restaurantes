@@ -4,7 +4,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { rhConfigured, rhV2Base, rhV2Configured } from '@/lib/rh/client';
 import { RH_AUTO_SYNC_SUSPENSO } from '@/lib/rh/sync';
-import { feriasWebhookConfigured } from '@/lib/rh/webhook';
+import { tokenDoWebhookDeFerias } from '@/lib/rh/webhook';
 import { rhSaidaBase, rhSaidaConfigurada, origemDaBase, origemDoToken, rhSaidaToken, mascararToken } from '@/lib/rh/saida/config';
 import { resumoDaFila } from '@/lib/rh/saida/fila';
 import { ENDPOINTS } from '@/lib/rh/saida/regras';
@@ -36,7 +36,7 @@ export default async function IntegracoesPage() {
   const baseUrl = 'https://sgorestaurantesgbf.com.br';
   const rhBase = process.env.RH_API_BASE_URL ?? 'https://gbf-rh.replit.app';
   const [origemEntrada, tokenEntrada] = await Promise.all([origemDoTokenDeEntrada(), tokenDeEntrada()]);
-  const webhookToken = process.env.SGO_WEBHOOK_TOKEN ?? '';
+  const tokenFerias = await tokenDoWebhookDeFerias(); // v1.183.1 — o mesmo token da fila
   const webhookUrl = process.env.RH_WEBHOOK_FERIAS_URL ?? `${rhBase}/api/integracoes/sgo/ferias`;
 
   const [events, sistemas, chamadas, fila] = await Promise.all([
@@ -158,9 +158,9 @@ export default async function IntegracoesPage() {
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ArrowUpFromLine className="h-4 w-4 text-brand" /> Webhook de férias SGO→RH (saída)</CardTitle></CardHeader>
         <CardContent className="space-y-1 text-sm">
           <Row k="Destino" v={webhookUrl} mono />
-          <Row k="Token (SGO_WEBHOOK_TOKEN)" v={mask(webhookToken)} ok={feriasWebhookConfigured()} />
+          <Row k="Token" v={`${mascararToken(tokenFerias.token)} · ${{ fila: 'o mesmo da fila de Envios ao RH', SGO_WEBHOOK_TOKEN: 'SGO_WEBHOOK_TOKEN do .env (reserva — a fila não tem token)', nenhum: 'ausente' }[tokenFerias.origem]}`} ok={Boolean(tokenFerias.token)} />
           <Row k="Dispara em" v="solicitar férias (planejamento) e excluir férias (cancelamento)" />
-          <p className="text-xs text-ink-500">⚠️ Cole o MESMO token no painel do RH (campo do token do webhook) para ativar. Sem isso os disparos ficam registrados como erro abaixo.</p>
+          <p className="text-xs text-ink-500">O aviso de férias sai com o mesmo token da fila de Envios ao RH (o RH aceita esse token também aqui). Disparo recusado fica registrado como erro abaixo.</p>
         </CardContent>
       </Card>
 

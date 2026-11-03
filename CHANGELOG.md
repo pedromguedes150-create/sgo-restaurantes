@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.183.1 — 2026-11-03 (Webhook de férias usa o token da fila de Envios ao RH)
+### Correção
+- **Aviso de férias ao RH voltou a sair**: o webhook de férias (solicitar/cancelar férias → RH) saía com um token próprio do `.env` (`SGO_WEBHOOK_TOKEN`) que o RH recusava com 401 desde 25/09 — todo aviso virava erro em "Últimos eventos". Agora ele sai com o **mesmo token da fila de Envios ao RH** (o colado em Envios ao RH, ou o `RH_WEBHOOK_TOKEN` do `.env`), que o RH aceita também no endpoint de férias; o `SGO_WEBHOOK_TOKEN` fica só como reserva quando a fila não tem token. Nenhuma tela, regra ou momento de disparo mudou; os avisos que já falharam não são reenviados.
+
 ## v1.183.0 — 2026-11-03 (Token de ENTRADA do RH pela tela)
 ### Novo
 - **Token de entrada do RH pela tela** (Configurações → APIs & Integrações → "Recepção RH→SGO"): o token com que o RH chama o SGO (admissão, desligamento, período aquisitivo) agora pode ser colado pelo Administrador, como o de saída na v1.182.2. Mesmo desenho: o `.env` do servidor, quando existe, vence; a tela diz de onde o token veio; o valor nunca aparece inteiro nem vai para a Auditoria. Não há "testar conexão" (é o RH que chama o SGO): a conferência é o próximo evento do RH aparecer em "Eventos recebidos". A porta dos webhooks passou a comparar o token em tempo constante.
