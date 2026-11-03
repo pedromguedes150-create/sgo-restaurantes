@@ -7,7 +7,7 @@ import type { UsuarioUso } from '@/lib/metas/uso-calculo';
 /** Quadro "Meta por usuário" (v1.179.0): uma coluna por componente com peso, descontos, folga própria e a nota. */
 
 const base = (p: Partial<UsuarioUso> & { userId: string }): UsuarioUso => ({
-  name: p.userId, role: 'MANAGER', roleLabel: 'Gerente', unidades: [], acessos: 0, acoes: 0, modulos: [], tarefasConcluidas: 0, foraDoPrazo: 0, ultimoAcesso: null, meta: null, folgaPropria: null, ...p,
+  name: p.userId, role: 'MANAGER', roleLabel: 'Gerente', unidades: [], acessos: 0, acoes: 0, modulos: [], tarefasConcluidas: 0, foraDoPrazo: 0, ultimoAcesso: null, meta: null, folgaPropria: null, pontualidade: null, pendentes: 0, vencidas: 0, naoRealizadas: 0, ...p,
 });
 const pesos = [{ key: 'TASKS', name: 'Checklists do dia', weight: 50 }, { key: 'WASTE', name: 'Desperdício diário (cobertura)', weight: 40 }, { key: 'COMMANDS', name: 'Comandas', weight: 30 }];
 

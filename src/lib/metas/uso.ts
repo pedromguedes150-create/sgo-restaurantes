@@ -3,7 +3,7 @@ import { getUsageBoard } from '@/lib/supervisor/usage';
 import { ROLE_LABELS } from '@/lib/roles';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
-import { resumirUso, type ResumoDoUso, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
+import { piorComponente, pontualidade, resumirUso, type ResumoDoUso, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
 import { componentesDaMeta, descontosDaMeta } from '@/lib/metas/componentes';
 import { contaNaNota } from '@/lib/metas/pontuacao';
 import { metaDaUnidade, metaDoUsuario, type MetaDaUnidade, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
@@ -50,12 +50,17 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
   const unitIds = board.map((u) => u.unitId);
   const { inicio, fim } = limites(yearMonth);
 
-  const [tarefasPorUnidade, membros, usuarios] = await Promise.all([
+  /* v1.182.0 — PR B: o que está ABERTO, separado pelo prazo (`dueAt` é um instante; "agora" é o mesmo em qualquer fuso). */
+  const agora = new Date();
+  const [tarefasPorUnidade, membros, usuarios, pendentesPorUnidade, vencidasPorUnidade] = await Promise.all([
     prisma.taskInstance.groupBy({ by: ['unitId', 'status'], where: { unitId: { in: unitIds }, operationalDate: { startsWith: yearMonth }, status: { in: ['DONE', 'LATE', 'MISSED'] } }, _count: { _all: true } }),
     prisma.unitMembership.findMany({ where: { unitId: { in: unitIds } }, select: { userId: true, unitId: true, unit: { select: { name: true } } } }),
     prisma.user.findMany({ where: { active: true, role: { in: PERFIS_MEDIDOS }, memberships: { some: { unitId: { in: unitIds } } } }, select: { id: true, name: true, role: true, lastLoginAt: true }, orderBy: { name: 'asc' } }),
+    prisma.taskInstance.groupBy({ by: ['unitId'], where: { unitId: { in: unitIds }, operationalDate: { startsWith: yearMonth }, status: 'PENDING', dueAt: { gte: agora } }, _count: { _all: true } }),
+    prisma.taskInstance.groupBy({ by: ['unitId'], where: { unitId: { in: unitIds }, operationalDate: { startsWith: yearMonth }, status: 'PENDING', dueAt: { lt: agora } }, _count: { _all: true } }),
   ]);
   const userIds = usuarios.map((u) => u.id);
+  const contagem = (rows: { unitId: string; _count: { _all: number } }[], unitId: string) => rows.find((r) => r.unitId === unitId)?._count._all ?? 0;
 
   /* A META por unidade, aberta em componentes — os MESMOS componentesDaMeta/descontosDaMeta que dão a nota em
      Metas e no painel do supervisor (v1.179.0). Em lotes de 4: cada unidade são ~12 consultas. */
@@ -82,7 +87,13 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
   const n = (rows: { unitId: string | null; status: string; _count: { _all: number } }[], unitId: string, status: string) => rows.find((r) => r.unitId === unitId && r.status === status)?._count._all ?? 0;
   const unidades: UnidadeUso[] = board.map((b) => {
     const acoesDaUnidade = acoesPorUnidadeUsuario.filter((a) => a.unitId === b.unitId);
+    const metaDaUnidadeB = metas.find((m) => m.unitId === b.unitId);
     return {
+      pendentes: contagem(pendentesPorUnidade, b.unitId),
+      vencidas: contagem(vencidasPorUnidade, b.unitId),
+      responsaveis: usuarios.filter((u) => PERFIS_DA_BONIFICACAO.includes(u.role) && membros.some((m) => m.userId === u.id && m.unitId === b.unitId)).map((u) => u.name),
+      piorComponente: piorComponente(metaDaUnidadeB),
+      descontos: metaDaUnidadeB?.descontos ?? [],
       unitId: b.unitId, unitName: b.unitName,
       usagePct: b.usagePct, checklistPct: b.checklistPct, wastePct: b.wastePct, commandsPct: b.commandsPct, metaPct: b.metaPct,
       done: n(tarefasPorUnidade, b.unitId, 'DONE'), late: n(tarefasPorUnidade, b.unitId, 'LATE'), missed: n(tarefasPorUnidade, b.unitId, 'MISSED'),
@@ -98,17 +109,23 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
     const acoes = mods.reduce((s, a) => s + a._count._all, 0);
     const modulos = [...mods].sort((a, b) => b._count._all - a._count._all).map((a) => a.module ?? 'GERAL').filter((m, i, arr) => arr.indexOf(m) === i);
     const unidadesDoUsuario = membros.filter((m) => m.userId === u.id).map((m) => m.unitId);
+    const concluidas = tarefasPorUsuario.find((t) => t.completedById === u.id && t.status === 'DONE')?._count._all ?? 0;
+    const fora = tarefasPorUsuario.find((t) => t.completedById === u.id && t.status === 'LATE')?._count._all ?? 0;
     return {
       userId: u.id, name: u.name, role: u.role, roleLabel: ROLE_LABELS[u.role] ?? u.role,
       unidades: membros.filter((m) => m.userId === u.id).map((m) => m.unit.name).sort((a, b) => a.localeCompare(b, 'pt-BR')),
       acessos: logins.find((l) => l.userId === u.id)?._count._all ?? 0,
       acoes, modulos,
-      tarefasConcluidas: tarefasPorUsuario.find((t) => t.completedById === u.id && t.status === 'DONE')?._count._all ?? 0,
-      foraDoPrazo: tarefasPorUsuario.find((t) => t.completedById === u.id && t.status === 'LATE')?._count._all ?? 0,
+      tarefasConcluidas: concluidas,
+      foraDoPrazo: fora,
       ultimoAcesso: u.lastLoginAt?.toISOString() ?? null,
       /* A nota é da UNIDADE e o gerente a herda (média quando cuida de mais de uma) — decisão do Pedro, 30/10. */
       meta: PERFIS_DA_BONIFICACAO.includes(u.role) ? metaDoUsuario(metas.filter((m) => unidadesDoUsuario.includes(m.unitId)), pesosDaMeta) : null,
       folgaPropria: PERFIS_COM_FOLGA_PROPRIA.includes(u.role) ? comFolga.has(u.id) : null,
+      pontualidade: pontualidade(concluidas, fora),
+      pendentes: unidadesDoUsuario.reduce((s, id) => s + contagem(pendentesPorUnidade, id), 0),
+      vencidas: unidadesDoUsuario.reduce((s, id) => s + contagem(vencidasPorUnidade, id), 0),
+      naoRealizadas: unidadesDoUsuario.reduce((s, id) => s + n(tarefasPorUnidade, id, 'MISSED'), 0),
     };
   }).sort((a, b) => b.acoes - a.acoes || b.tarefasConcluidas - a.tarefasConcluidas || a.name.localeCompare(b.name, 'pt-BR'));
 

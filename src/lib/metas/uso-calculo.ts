@@ -1,5 +1,5 @@
 import { faixaDaMeta, type Faixa } from '@/lib/metas/graficos';
-import type { MetaDoUsuario } from '@/lib/metas/meta-por-usuario';
+import type { MetaDaUnidade, MetaDoUsuario } from '@/lib/metas/meta-por-usuario';
 
 /**
  * USO DO SGO — regras PURAS (v1.164.0). Relatório executivo de quem usa o
@@ -17,6 +17,17 @@ export interface UnidadeUso {
   /** Ações registradas na Auditoria no mês (sem login/logout) e quantos usuários distintos as fizeram. */
   acoes: number; usuariosAtivos: number; usuariosVinculados: number;
   occurrences: number; notes: number;
+  /**
+   * v1.182.0 — PR B: o que ainda está aberto no mês, separado pelo prazo (instante `dueAt`, comparado com agora):
+   * pendentes = ainda no prazo; vencidas = prazo passou e ninguém resolveu (nem viraram "não realizadas").
+   */
+  pendentes: number; vencidas: number;
+  /** Gerentes e coordenadores vinculados — quem responde pela unidade. */
+  responsaveis: string[];
+  /** O componente ATIVO com o pior % no mês (onde a unidade mais perde), ou nulo. */
+  piorComponente: { key: string; name: string; weight: number; scorePct: number } | null;
+  /** Os descontos nomeados da meta da unidade (quem está sem folga, quantas datas corrigidas). */
+  descontos: { name: string; quantidade: number; pct: number; total: number; detalhe?: string }[];
 }
 export interface UsuarioUso {
   userId: string; name: string; role: string; roleLabel: string; unidades: string[];
@@ -27,6 +38,22 @@ export interface UsuarioUso {
   meta: MetaDoUsuario | null;
   /** Gerente/coordenador lançou a própria folga no mês? Nulo para quem não é medido nisso (supervisor). */
   folgaPropria: boolean | null;
+  /** v1.182.0 — PR B: cumprimento, não acesso. Pontualidade = no prazo ÷ (no prazo + fora) do que ESTE usuário concluiu; nula sem conclusão. */
+  pontualidade: number | null;
+  /** Pendências das unidades que o usuário cuida: ainda no prazo, vencidas e não realizadas (não é por pessoa: o SGO não sabe o plantão). */
+  pendentes: number; vencidas: number; naoRealizadas: number;
+}
+
+/** Pontualidade de quem concluiu: no prazo ÷ (no prazo + fora). Sem conclusão = nula (não é zero). */
+export function pontualidade(noPrazo: number, foraDoPrazo: number): number | null {
+  const total = noPrazo + foraDoPrazo;
+  return total ? Math.round((noPrazo / total) * 100) : null;
+}
+/** O componente que pesa com o pior % da unidade (desempate: maior peso) — "onde entrar primeiro". */
+export function piorComponente(meta: Pick<MetaDaUnidade, 'componentes'> | null | undefined): UnidadeUso['piorComponente'] {
+  if (!meta || meta.componentes.length === 0) return null;
+  const pior = [...meta.componentes].sort((a, b) => a.scorePct - b.scorePct || b.weight - a.weight)[0];
+  return { key: pior.key, name: pior.name, weight: pior.weight, scorePct: pior.scorePct };
 }
 
 export const faixaDeUso = faixaDaMeta;
@@ -54,6 +81,8 @@ export interface ResumoDoUso {
   unidadeMaisErra: (UnidadeUso & { taxa: number }) | null;
   /** v1.179.0 — as notas da bonificação: média, melhor e menor entre quem tem nota. */
   notas: { media: number | null; melhor: UsuarioUso | null; menor: UsuarioUso | null };
+  /** v1.182.0 — o que está aberto na rede agora: no prazo e vencido; e a unidade com mais vencidas. */
+  pendencias: { pendentes: number; vencidas: number; unidadeMaisVencidas: UnidadeUso | null };
 }
 
 export function resumirUso(unidades: UnidadeUso[], usuarios: UsuarioUso[]): ResumoDoUso {
@@ -90,7 +119,12 @@ export function resumirUso(unidades: UnidadeUso[], usuarios: UsuarioUso[]): Resu
     unidadeMenosUsa: porUso.length > 1 ? porUso[porUso.length - 1] : null,
     unidadeMaisDeixaDeFazer: maisDeixa && maisDeixa.missed > 0 ? { ...maisDeixa, taxa: Math.round((maisDeixa.missed / (maisDeixa.done + maisDeixa.late + maisDeixa.missed)) * 100) } : null,
     unidadeMaisErra: maisErra && (maisErra.late + maisErra.missed) > 0 ? { ...maisErra, taxa: taxaDeFalha(maisErra) ?? 0 } : null,
-    notas
+    notas,
+    pendencias: {
+      pendentes: unidades.reduce((s, u) => s + u.pendentes, 0),
+      vencidas: unidades.reduce((s, u) => s + u.vencidas, 0),
+      unidadeMaisVencidas: [...unidades].sort((a, b) => b.vencidas - a.vencidas)[0]?.vencidas ? [...unidades].sort((a, b) => b.vencidas - a.vencidas)[0] : null,
+    },
   };
 }
 

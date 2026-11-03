@@ -22,7 +22,7 @@ export async function GET(req: Request) {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
     [`USO DO SGO — ${ym.slice(5)}/${ym.slice(0, 4)}`], [],
     ['Unidades', r.unidades], ['Uso médio da rede (%)', n(r.mediaUso)], ['Usuários medidos', d.usuarios.length], ['Usuários ativos', r.usuariosAtivos], ['Usuários sem ação', r.usuariosSemUso.length],
-    ['Ações no sistema', r.totalAcoes], ['Acessos', r.totalAcessos], ['Tarefas no prazo', r.tarefas.done], ['Tarefas fora do prazo', r.tarefas.late], ['Tarefas não realizadas', r.tarefas.missed], ['% no prazo', n(r.tarefas.pctNoPrazo)], [],
+    ['Ações no sistema', r.totalAcoes], ['Acessos', r.totalAcessos], ['Abertas no prazo (agora)', r.pendencias.pendentes], ['Vencidas (agora)', r.pendencias.vencidas], ['Tarefas no prazo', r.tarefas.done], ['Tarefas fora do prazo', r.tarefas.late], ['Tarefas não realizadas', r.tarefas.missed], ['% no prazo', n(r.tarefas.pctNoPrazo)], [],
     ['Faixa de uso', 'Unidades', 'Quais'], ...r.porFaixa.map((f) => [ROTULO_FAIXA_USO[f.faixa], f.qtd, f.unidades.join(', ')]), [],
     ['Unidade que mais usa', r.unidadeMaisUsa?.unitName ?? ''], ['Unidade que menos usa', r.unidadeMenosUsa?.unitName ?? ''],
     ['Mais deixa de fazer', r.unidadeMaisDeixaDeFazer ? `${r.unidadeMaisDeixaDeFazer.unitName} (${r.unidadeMaisDeixaDeFazer.missed} não realizadas)` : ''],
@@ -31,8 +31,8 @@ export async function GET(req: Request) {
     ['Sem nenhuma ação', r.usuariosSemUso.map((u) => u.name).join(', ')],
   ]), 'RESUMO');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-    ['#', 'Unidade', 'Uso (%)', 'Checklists (%)', 'Desperdício (%)', 'Comandas (%)', 'No prazo', 'Fora do prazo', 'Não realizadas', 'Falhas (%)', 'Ações', 'Usuários ativos', 'Usuários vinculados', 'Ocorrências', 'Notas', 'Meta (%)'],
-    ...d.unidades.map((u, i) => [i + 1, u.unitName, u.usagePct, u.checklistPct, u.wastePct, u.commandsPct, u.done, u.late, u.missed, n(taxaDeFalha(u)), u.acoes, u.usuariosAtivos, u.usuariosVinculados, u.occurrences, u.notes, u.metaPct]),
+    ['#', 'Unidade', 'Responsáveis', 'Uso (%)', 'Checklists (%)', 'Desperdício (%)', 'Comandas (%)', 'No prazo', 'Fora do prazo', 'Não realizadas', 'Abertas (no prazo)', 'Vencidas', 'Falhas (%)', 'Ações', 'Usuários ativos', 'Usuários vinculados', 'Ocorrências', 'Notas', 'Meta (%)', 'Onde mais perde', 'Descontos'],
+    ...d.unidades.map((u, i) => [i + 1, u.unitName, u.responsaveis.join(', '), u.usagePct, u.checklistPct, u.wastePct, u.commandsPct, u.done, u.late, u.missed, u.pendentes, u.vencidas, n(taxaDeFalha(u)), u.acoes, u.usuariosAtivos, u.usuariosVinculados, u.occurrences, u.notes, u.metaPct, u.piorComponente ? `${rotuloCurto(u.piorComponente.key, u.piorComponente.name)} ${u.piorComponente.scorePct}% (peso ${u.piorComponente.weight})` : '', u.descontos.map((x) => `${x.name} ${x.quantidade}× (−${x.total})${x.detalhe ? ` — ${x.detalhe}` : ''}`).join('; ')]),
   ]), 'UNIDADES');
   const pesos = [...d.pesosDaMeta].filter((p) => p.weight > 0).sort((a, b) => b.weight - a.weight);
   const comMeta = d.usuarios.filter((u) => u.meta).sort((a, b) => b.meta!.scorePct - a.meta!.scorePct);
@@ -45,8 +45,8 @@ export async function GET(req: Request) {
     ]),
   ]), 'META POR USUÁRIO');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-    ['#', 'Usuário', 'Perfil', 'Unidade(s)', 'Acessos', 'Ações', 'Módulos mais usados', 'Tarefas concluídas', 'Fora do prazo', 'Último acesso'],
-    ...d.usuarios.map((u, i) => [i + 1, u.name, u.roleLabel, u.unidades.join(', '), u.acessos, u.acoes, u.modulos.slice(0, 5).map(rotuloDoModulo).join(', '), u.tarefasConcluidas, u.foraDoPrazo, u.ultimoAcesso ? u.ultimoAcesso.slice(0, 10).split('-').reverse().join('/') : '']),
+    ['#', 'Usuário', 'Perfil', 'Unidade(s)', 'Acessos', 'Ações', 'Módulos mais usados', 'Concluiu no prazo', 'Fora do prazo', 'Pontualidade (%)', 'Abertas (no prazo)', 'Vencidas', 'Não realizadas', 'Último acesso'],
+    ...d.usuarios.map((u, i) => [i + 1, u.name, u.roleLabel, u.unidades.join(', '), u.acessos, u.acoes, u.modulos.slice(0, 5).map(rotuloDoModulo).join(', '), u.tarefasConcluidas, u.foraDoPrazo, n(u.pontualidade), u.pendentes, u.vencidas, u.naoRealizadas, u.ultimoAcesso ? u.ultimoAcesso.slice(0, 10).split('-').reverse().join('/') : '']),
   ]), 'USUÁRIOS');
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
   return new Response(new Uint8Array(buf), {

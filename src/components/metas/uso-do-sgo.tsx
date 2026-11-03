@@ -1,4 +1,4 @@
-import { Activity, Users, ListChecks, MousePointerClick, AlertTriangle, Download, Printer, Target } from 'lucide-react';
+import { Activity, Users, ListChecks, MousePointerClick, AlertTriangle, Download, Printer, Target, Clock } from 'lucide-react';
 import { Card, PanelHeader } from '@/components/sgo/panel';
 import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
 import { Legenda, Rosca } from '@/components/metas/graficos-metas';
@@ -35,6 +35,7 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
         <SgoKpi label="Usuários ativos" value={`${r.usuariosAtivos} de ${dados.usuarios.length}`} meta={`${r.usuariosSemUso.length} sem nenhuma ação no mês`} metaTone={r.usuariosSemUso.length ? 'warn' : undefined} icon={Users} tone={r.usuariosSemUso.length ? 'amber' : 'green'} testId="kpi-usuarios" />
         <SgoKpi label="Ações no sistema" value={r.totalAcoes.toLocaleString('pt-BR')} meta={`${r.totalAcessos.toLocaleString('pt-BR')} acesso(s)`} icon={MousePointerClick} tone="blue" testId="kpi-acoes" />
         <SgoKpi label="Tarefas no prazo" value={pct(r.tarefas.pctNoPrazo)} meta={`${r.tarefas.done} no prazo · ${r.tarefas.late} fora · ${r.tarefas.missed} não feitas`} icon={ListChecks} tone={r.tarefas.pctNoPrazo == null ? 'gray' : r.tarefas.pctNoPrazo >= 80 ? 'green' : 'amber'} testId="kpi-tarefas" />
+        <SgoKpi label="Abertas agora" value={String(r.pendencias.pendentes + r.pendencias.vencidas)} meta={`${r.pendencias.pendentes} no prazo · ${r.pendencias.vencidas} vencida(s)${r.pendencias.unidadeMaisVencidas ? ` · mais vencidas: ${shortUnitName(r.pendencias.unidadeMaisVencidas.unitName)}` : ''}`} icon={Clock} tone={r.pendencias.vencidas ? 'red' : r.pendencias.pendentes ? 'amber' : 'gray'} testId="kpi-abertas" />
       </SgoKpis>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -59,12 +60,13 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
         </Card>
       </div>
 
-      <Card>
-        <PanelHeader title="Rede, unidade por unidade" count={dados.unidades.length} icon={<span className="sgo-panel__ic sgo-panel__ic--blue" aria-hidden><Activity className="h-4 w-4" /></span>} />
+      {/* v1.182.0 — PR B: dois blocos nomeados, só para análise. COLETIVO = o que vai para a meta (por unidade, herdado pelo gerente); INDIVIDUAL = o que cada pessoa fez, sem regra de desconto nova. */}
+      <Card data-testid="bloco-coletivo">
+        <PanelHeader title="Resultado coletivo — unidade por unidade" count={dados.unidades.length} icon={<span className="sgo-panel__ic sgo-panel__ic--blue" aria-hidden><Activity className="h-4 w-4" /></span>} />
         <div className="overflow-x-auto p-2">
-          <TabelaUnidades unidades={dados.unidades} />
+          <TabelaUnidades unidades={dados.unidades} ym={dados.yearMonth} />
         </div>
-        <p className="px-4 pb-3 text-xs text-ink-500">Uso = média de checklists, desperdício e comandas (dias lançados ÷ dias decorridos, em Brasília, até ontem). &quot;Checklists&quot; aqui conta TODOS os checklists da unidade; a nota da meta usa só os que entram na meta — por isso os dois números podem diferir.</p>
+        <p className="px-4 pb-3 text-xs text-ink-500">Uso = média de checklists, desperdício e comandas (dias lançados ÷ dias decorridos, em Brasília, até ontem). &quot;Checklists&quot; aqui conta TODOS os checklists da unidade; a nota da meta usa só os que entram na meta — por isso os dois números podem diferir. Abertas = ainda no prazo; vencidas = prazo passou sem resolver (viram &quot;não feitas&quot; na virada do dia). &quot;Onde mais perde&quot; = o componente ativo com o pior % — toque na unidade para abrir a composição da meta.</p>
       </Card>
 
       <Card>
@@ -81,26 +83,27 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
         </p>
       </Card>
 
-      <Card>
-        <PanelHeader title="Usuário por usuário" count={dados.usuarios.length} icon={<span className="sgo-panel__ic sgo-panel__ic--brand" aria-hidden><Users className="h-4 w-4" /></span>} />
+      <Card data-testid="bloco-individual">
+        <PanelHeader title="Responsabilidade individual — usuário por usuário" count={dados.usuarios.length} icon={<span className="sgo-panel__ic sgo-panel__ic--brand" aria-hidden><Users className="h-4 w-4" /></span>} />
         <div className="overflow-x-auto p-2">
           <TabelaUsuarios usuarios={dados.usuarios} />
         </div>
-        <p className="px-4 pb-3 text-xs text-ink-500">Ações = registros na Auditoria no mês (lançamentos, conclusões, aprovações…), sem login. Tarefas = checklists concluídos por esse usuário. Gerentes, coordenadores e supervisores das unidades do seu alcance.</p>
+        <p className="px-4 pb-3 text-xs text-ink-500">Só para análise gerencial — nada aqui desconta da nota. Acessos e ações dizem que a pessoa ENTROU; tarefas, pontualidade e pendências dizem se CUMPRIU. Pontualidade = no prazo ÷ (no prazo + fora) do que a própria pessoa concluiu. Pendentes, vencidas e não feitas são das unidades que a pessoa cuida (o SGO não sabe quem estava de plantão). Gerentes, coordenadores e supervisores das unidades do seu alcance.</p>
       </Card>
     </div>
   );
 }
 
-export function TabelaUnidades({ unidades }: { unidades: UnidadeUso[] }) {
+export function TabelaUnidades({ unidades, ym }: { unidades: UnidadeUso[]; ym?: string }) {
   return (
     <table className="sgo-tbl w-full text-sm" data-testid="tabela-unidades-uso">
-      <thead><tr><th className="text-left">#</th><th className="text-left">Unidade</th><th className="text-right">Uso</th><th className="text-right">Checklists</th><th className="text-right">Desperdício</th><th className="text-right">Comandas</th><th className="text-right">No prazo</th><th className="text-right">Fora</th><th className="text-right">Não feitas</th><th className="text-right">Falhas</th><th className="text-right">Ações</th><th className="text-right">Usuários</th><th className="text-right">Meta</th></tr></thead>
+      <thead><tr><th className="text-left">#</th><th className="text-left">Unidade</th><th className="text-left">Responsáveis</th><th className="text-right">Uso</th><th className="text-right">Checklists</th><th className="text-right">Desperdício</th><th className="text-right">Comandas</th><th className="text-right">No prazo</th><th className="text-right">Fora</th><th className="text-right">Não feitas</th><th className="text-right">Abertas</th><th className="text-right">Vencidas</th><th className="text-right">Falhas</th><th className="text-right">Ações</th><th className="text-right">Usuários</th><th className="text-right">Meta</th><th className="text-left">Onde mais perde</th></tr></thead>
       <tbody>
         {unidades.map((u, i) => (
-          <tr key={u.unitId}>
+          <tr key={u.unitId} data-testid="linha-unidade-uso">
             <td className="tabular-nums text-ink-500">{i + 1}</td>
-            <td className="whitespace-nowrap font-medium">{shortUnitName(u.unitName)}</td>
+            <td className="whitespace-nowrap font-medium">{ym ? <a className="text-brand hover:underline" href={`/modulos/metas?month=${ym}&unit=${u.unitId}`}>{shortUnitName(u.unitName)}</a> : shortUnitName(u.unitName)}</td>
+            <td className="whitespace-normal text-xs">{u.responsaveis.length ? u.responsaveis.join(', ') : <span className="text-danger">sem gerente vinculado</span>}</td>
             <td className="text-right font-bold tabular-nums" style={{ color: COR_FAIXA[faixaDeUso(u.usagePct)] }}>{u.usagePct}%</td>
             <td className="text-right tabular-nums">{u.checklistPct}%</td>
             <td className="text-right tabular-nums">{u.wastePct}%</td>
@@ -108,10 +111,16 @@ export function TabelaUnidades({ unidades }: { unidades: UnidadeUso[] }) {
             <td className="text-right tabular-nums">{u.done}</td>
             <td className="text-right tabular-nums">{u.late}</td>
             <td className="text-right tabular-nums">{u.missed ? <span className="font-semibold text-danger">{u.missed}</span> : 0}</td>
+            <td className="text-right tabular-nums">{u.pendentes}</td>
+            <td className="text-right tabular-nums">{u.vencidas ? <span className="font-semibold text-danger">{u.vencidas}</span> : 0}</td>
             <td className="text-right tabular-nums">{pct(taxaDeFalha(u))}</td>
             <td className="text-right tabular-nums">{u.acoes}</td>
             <td className="text-right tabular-nums">{u.usuariosAtivos}/{u.usuariosVinculados}</td>
             <td className="text-right tabular-nums">{u.metaPct}%</td>
+            <td className="whitespace-normal text-xs">
+              {u.piorComponente ? <>{rotuloCurto(u.piorComponente.key, u.piorComponente.name)} <b>{u.piorComponente.scorePct}%</b> (peso {u.piorComponente.weight})</> : <span className="text-ink-500">—</span>}
+              {u.descontos.map((d, j) => <span key={j} className="block text-danger">−{d.total}: {d.name} {d.quantidade}×{d.detalhe ? ` — ${d.detalhe}` : ''}</span>)}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -122,7 +131,7 @@ export function TabelaUnidades({ unidades }: { unidades: UnidadeUso[] }) {
 export function TabelaUsuarios({ usuarios }: { usuarios: UsuarioUso[] }) {
   return (
     <table className="sgo-tbl w-full text-sm" data-testid="tabela-usuarios-uso">
-      <thead><tr><th className="text-left">#</th><th className="text-left">Usuário</th><th className="text-left">Perfil</th><th className="text-left">Unidade(s)</th><th className="text-right">Acessos</th><th className="text-right">Ações</th><th className="text-left">Módulos mais usados</th><th className="text-right">Tarefas</th><th className="text-right">Fora do prazo</th><th className="text-left">Último acesso</th></tr></thead>
+      <thead><tr><th className="text-left">#</th><th className="text-left">Usuário</th><th className="text-left">Perfil</th><th className="text-left">Unidade(s)</th><th className="text-right">Acessos</th><th className="text-right">Ações</th><th className="text-left">Módulos mais usados</th><th className="text-right">Concluiu no prazo</th><th className="text-right">Fora do prazo</th><th className="text-right">Pontualidade</th><th className="text-right">Abertas</th><th className="text-right">Vencidas</th><th className="text-right">Não feitas</th><th className="text-left">Último acesso</th></tr></thead>
       <tbody>
         {usuarios.map((u, i) => (
           <tr key={u.userId} className={u.acoes === 0 ? 'text-ink-500' : undefined}>
@@ -135,6 +144,10 @@ export function TabelaUsuarios({ usuarios }: { usuarios: UsuarioUso[] }) {
             <td>{u.modulos.slice(0, 3).map(rotuloDoModulo).join(', ') || '—'}</td>
             <td className="text-right tabular-nums">{u.tarefasConcluidas}</td>
             <td className="text-right tabular-nums">{u.foraDoPrazo ? <span className="text-warning">{u.foraDoPrazo}</span> : 0}</td>
+            <td className="text-right font-semibold tabular-nums" style={u.pontualidade == null ? undefined : { color: COR_FAIXA[faixaDeUso(u.pontualidade)] }}>{pct(u.pontualidade)}</td>
+            <td className="text-right tabular-nums">{u.pendentes}</td>
+            <td className="text-right tabular-nums">{u.vencidas ? <span className="font-semibold text-danger">{u.vencidas}</span> : 0}</td>
+            <td className="text-right tabular-nums">{u.naoRealizadas ? <span className="text-danger">{u.naoRealizadas}</span> : 0}</td>
             <td className="whitespace-nowrap">{br(u.ultimoAcesso)}</td>
           </tr>
         ))}
