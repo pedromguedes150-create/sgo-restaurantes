@@ -55,7 +55,7 @@ export default async function EnviosRhPage({ searchParams }: { searchParams: { s
 
       <SgoKpis>
         <SgoKpi label="Pendentes" value={String(resumo.pendentes + resumo.enviando)} meta="aguardando a hora da próxima tentativa" />
-        <SgoKpi label="Enviados" value={String(resumo.enviados)} meta="aceitos pelo RH (inclui duplicados)" />
+        <SgoKpi label="Enviados" value={String(resumo.enviados)} meta="aceitos pelo RH (inclui os que o RH já tinha)" />
         <SgoKpi label="Erro de dados" value={String(resumo.erros)} meta="400/422/409 — corrigir e reenviar" />
         <SgoKpi label="Esgotados / parados" value={String(resumo.esgotados + resumo.parados)} meta={`${MAX_TENTATIVAS} tentativas sem sucesso, ou token recusado`} />
       </SgoKpis>
@@ -72,7 +72,8 @@ export default async function EnviosRhPage({ searchParams }: { searchParams: { s
         <ul className="mt-2 list-disc space-y-1 pl-4">
           <li>Cada evento tem um <code>sgoEventId</code> fixo: reenviar o mesmo evento nunca cria duplicado no RH (ele responde &ldquo;duplicado&rdquo;, que conta como enviado).</li>
           <li>Temporário (RH fora do ar, 5xx, 404 de módulo ainda não ligado): nova tentativa com espera crescente — 1, 2, 4, 8… minutos até {MAX_TENTATIVAS} tentativas; depois fica <b>Esgotado</b> e continua aqui para reenvio manual.</li>
-          <li>Erro de dados (400/422/409): não tenta de novo. Corrija o cadastro (CPF do colaborador, CNPJ da unidade, período do atestado) e use <b>Reenviar</b> — o corpo é remontado do cadastro atual.</li>
+          <li>Erro de dados (400/422): não tenta de novo. Corrija o cadastro (CPF do colaborador, CNPJ da unidade, período do atestado) e use <b>Reenviar</b> — o corpo é remontado do cadastro atual.</li>
+          <li>409 &ldquo;período sobreposto&rdquo;: o RH <b>já tem</b> um atestado dessa pessoa nesse período (lançado lá, ou aceito antes). Conta como enviado, com o id do RH e uma nota — não há o que corrigir nem reenviar.</li>
           <li>401: token recusado. O despacho para, os Admins são avisados; cole o token certo acima (ou corrija o <code>.env</code> e reinicie) e reenvie.</li>
           <li>Sem token configurado, nada sai e nada se perde: os eventos ficam pendentes. O token pode vir do <code>.env</code> do servidor (vence) ou da tela acima.</li>
           <li>Endpoints: <code>{ENDPOINTS.ATESTADO}</code>, <code>{ENDPOINTS.DESLIGAMENTO}</code>, <code>{ENDPOINTS.DEMANDA}</code>. CPF aparece mascarado; anexo e token nunca são gravados nem exibidos.</li>

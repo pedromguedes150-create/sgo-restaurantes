@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
-import { ENDPOINTS, mascararCpfNoObjeto, mascararCpfsNoTexto, type AcaoAtestado } from '@/lib/rh/saida/regras';
+import { ENDPOINTS, NOTA_JA_EXISTIA, atestadoJaExistente, mascararCpfNoObjeto, mascararCpfsNoTexto, type AcaoAtestado } from '@/lib/rh/saida/regras';
 import { montar, montarAtestado, montarDemanda, montarDesligamento, type Montagem } from '@/lib/rh/saida/montagem';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Prisma, RhOutboundStatus, RhOutboundType } from '@prisma/client';
@@ -140,7 +140,36 @@ export async function recuperarAposReinicio(): Promise<number> {
     where: { status: { in: ['ENVIANDO', 'PARADO'] } },
     data: { status: 'PENDENTE', proximaTentativaEm: new Date() },
   });
+  await reclassificarJaExistentes().catch((e) => console.error('[rh-saida] falha ao reclassificar os 409 já existentes:', e));
   return r.count;
+}
+
+/**
+ * v1.182.3 — o que ficou em ERRO por 409 "período sobreposto" ANTES desta
+ * versão vira ENVIADO, com o id do RH e a nota, sem reenviar nada (reenviar
+ * devolveria o mesmo 409). Idempotente: na segunda passada não há o que fazer.
+ * Roda no boot e no "Processar fila agora"; `unitIds` recorta (testes).
+ */
+export async function reclassificarJaExistentes(unitIds?: string[]): Promise<number> {
+  const antigos = await prisma.rhOutboundEvent.findMany({
+    where: { status: 'ERRO', httpStatus: 409, ultimoErro: { contains: 'sobrepost', mode: 'insensitive' }, ...(unitIds ? { unitId: { in: unitIds } } : {}) },
+    select: { id: true, tipo: true, acao: true, referenceId: true, ultimoErro: true, observacao: true, rhId: true },
+  });
+  let n = 0;
+  for (const ev of antigos) {
+    const existente = atestadoJaExistente(409, ev.ultimoErro ?? '');
+    if (existente === null) continue;
+    const rhId = ev.rhId ?? (existente || null);
+    await prisma.rhOutboundEvent.update({
+      where: { id: ev.id },
+      data: { status: 'ENVIADO', enviadoEm: new Date(), rhId, ultimoErro: null, observacao: [ev.observacao, NOTA_JA_EXISTIA].filter(Boolean).join(' · ') },
+    });
+    if (ev.tipo === 'ATESTADO' && ev.acao === 'criar' && rhId) {
+      await prisma.medicalCertificate.updateMany({ where: { id: ev.referenceId, rhAtestadoId: null }, data: { rhAtestadoId: rhId } });
+    }
+    n++;
+  }
+  return n;
 }
 
 export interface ResumoDaFila { pendentes: number; enviados: number; erros: number; esgotados: number; parados: number; enviando: number }

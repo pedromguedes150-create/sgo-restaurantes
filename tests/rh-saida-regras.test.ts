@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   MAX_TENTATIVAS, ENDPOINTS, caminhoDaSituacao, esperaDaTentativaMin, proximaTentativa, classificarResposta, motivoDaResposta,
   extrairRhId, extrairPrazo, mascararCpf, mascararCpfsNoTexto, mascararCpfNoObjeto, anexoAceito, nomeDoAnexo,
-  motivoDoAtestado, payloadAtestado, payloadDesligamento, payloadDemanda, validarDesligamento, tipoSemAviso, rotuloDaSituacao,
+  motivoDoAtestado, payloadAtestado, payloadDesligamento, payloadDemanda, validarDesligamento, tipoSemAviso, rotuloDaSituacao, atestadoJaExistente,
 } from '@/lib/rh/saida/regras';
 
 /**
@@ -37,6 +37,14 @@ describe('Classificação da resposta (regra 3 do contrato)', () => {
     for (const st of [400, 422, 409, 403]) expect(classificarResposta(st, { resultado: 'CPF não encontrado' }).resultado).toBe('ERRO');
     const c = classificarResposta(422, { resultado: 'período sobreposto' });
     expect(c.resultado === 'ERRO' && c.motivo).toBe('HTTP 422 — período sobreposto');
+  });
+  it('409 "período sobreposto" = o RH já tinha o atestado: enviado, com o id citado (v1.182.3)', () => {
+    const texto = 'período sobreposto ao atestado RH 7e547fd3-06db-407c-ad22-cc708ef6c580 (2026-10-29 a 2026-10-30)';
+    expect(classificarResposta(409, { status: 'erro', resultado: texto })).toEqual({ resultado: 'ENVIADO', duplicado: true, existente: '7e547fd3-06db-407c-ad22-cc708ef6c580' });
+    expect(atestadoJaExistente(409, { error: 'Período sobreposto' })).toBe(''); // sem id no texto
+    expect(atestadoJaExistente(409, `HTTP 409 — ${texto}`)).toBe('7e547fd3-06db-407c-ad22-cc708ef6c580'); // o ultimoErro gravado
+    expect(atestadoJaExistente(422, { resultado: texto })).toBeNull(); // 422 não é "já existe"
+    expect(atestadoJaExistente(409, { resultado: 'CPF não encontrado' })).toBeNull();
   });
   it('401 = token; 404/408/429/5xx = adiar', () => {
     expect(classificarResposta(401, { error: 'unauthorized' }).resultado).toBe('TOKEN');

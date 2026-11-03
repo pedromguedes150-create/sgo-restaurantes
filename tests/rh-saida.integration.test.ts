@@ -5,7 +5,7 @@ import { createCertificate } from '@/lib/certificates/save';
 import { deleteMedicalCertificate } from '@/lib/admin-ops';
 import { createTermination, decideTermination } from '@/lib/terminations';
 import { criarDemanda, listarDemandas } from '@/lib/rh/demandas';
-import { enfileirarAtestado, reenviar, recuperarAposReinicio, listarEventos, resumoDaFila } from '@/lib/rh/saida/fila';
+import { enfileirarAtestado, reenviar, recuperarAposReinicio, listarEventos, resumoDaFila, reclassificarJaExistentes } from '@/lib/rh/saida/fila';
 import { despacharPendentes, consultarSituacoes } from '@/lib/rh/saida/despachante';
 import { ENDPOINTS, MAX_TENTATIVAS } from '@/lib/rh/saida/regras';
 import type { SessionUser } from '@/lib/auth/session';
@@ -167,6 +167,40 @@ describe('Regra 3: respostas do RH', () => {
     const r2 = await despachar({ limite: 200 });
     expect((await evento(id))?.status).toBe('ERRO'); // não foi retomado sozinho
     void r2;
+  });
+
+  it('409 "período sobreposto" = ENVIADO com o id do RH e o atestado vinculado; o ERRO antigo é reclassificado sem reenviar (v1.182.3)', async () => {
+    const id = await novoPendente('2026-08-11');
+    comToken();
+    rhResponde(409, { status: 'erro', resultado: 'período sobreposto ao atestado RH 7e547fd3-06db-407c-ad22-cc708ef6c580 (2026-08-11 a 2026-08-11)' });
+    const r = await despachar({ limite: 200 });
+    expect(r.enviados).toBe(1);
+    const ev = await evento(id);
+    expect(ev?.status).toBe('ENVIADO');
+    expect(ev?.rhId).toBe('7e547fd3-06db-407c-ad22-cc708ef6c580');
+    expect(ev?.ultimoErro).toBeNull();
+    expect(ev?.observacao).toContain('já tinha este atestado');
+    expect((await prisma.medicalCertificate.findUnique({ where: { id } }))?.rhAtestadoId).toBe('7e547fd3-06db-407c-ad22-cc708ef6c580');
+
+    /* o que ficou em ERRO antes da versão (gravado à mão como estava em produção) */
+    const antigo = await novoPendente('2026-08-12');
+    const evAntigo = await evento(antigo);
+    await prisma.rhOutboundEvent.update({ where: { id: evAntigo!.id }, data: { status: 'ERRO', httpStatus: 409, tentativas: 1, ultimoErro: 'HTTP 409 — período sobreposto ao atestado RH aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee (2026-08-12 a 2026-08-12)' } });
+    let chamadas = 0;
+    vi.stubGlobal('fetch', async () => { chamadas++; return new Response('{}', { status: 500 }); });
+    expect(await reclassificarJaExistentes([unitId])).toBe(1);
+    expect(await reclassificarJaExistentes([unitId])).toBe(0); // idempotente
+    expect(chamadas).toBe(0); // nada foi reenviado
+    const depois = await evento(antigo);
+    expect(depois?.status).toBe('ENVIADO');
+    expect(depois?.rhId).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+    expect((await prisma.medicalCertificate.findUnique({ where: { id: antigo } }))?.rhAtestadoId).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+    /* um ERRO 409 que NÃO é "sobreposto" fica como está */
+    const outro = await novoPendente('2026-08-13');
+    const evOutro = await evento(outro);
+    await prisma.rhOutboundEvent.update({ where: { id: evOutro!.id }, data: { status: 'ERRO', httpStatus: 409, ultimoErro: 'HTTP 409 — conflito de matrícula' } });
+    expect(await reclassificarJaExistentes([unitId])).toBe(0);
+    expect((await evento(outro))?.status).toBe('ERRO');
   });
 
   it('reenvio manual (só Admin) remonta do cadastro e devolve à fila com o MESMO sgoEventId', async () => {
