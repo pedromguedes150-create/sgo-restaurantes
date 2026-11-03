@@ -3,6 +3,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getUnitMonthScore } from '@/lib/tasks/summary';
 import { emLotes, PARALELO_POR_UNIDADE } from '@/lib/async/em-lotes';
 import type { SessionUser } from '@/lib/auth/session';
+import { diaEmBrasilia, diasDecorridos } from '@/lib/metas/pontuacao';
 
 /**
  * Rotina do Supervisor — Fase A: painel de uso/aderência dos gerentes.
@@ -25,12 +26,14 @@ export interface UnitUsageRow {
   tone: 'success' | 'medium' | 'critical';
 }
 
+/**
+ * Dias decorridos para as coberturas diárias — a MESMA régua da meta
+ * (`diasDecorridos`, dia civil de Brasília, até ontem). v1.180.0: antes usava a
+ * hora do servidor (UTC), e entre 21h e 00h este painel cobrava um dia a mais
+ * do que a meta. No dia 1º (zero decorrido) conta 1 para a divisão existir.
+ */
 function daysElapsed(yearMonth: string): number {
-  const [y, m] = yearMonth.split('-').map(Number);
-  const now = new Date();
-  const isCurrent = now.getFullYear() === y && now.getMonth() + 1 === m;
-  if (isCurrent) return Math.max(1, now.getDate() - 1 || 1); // até ontem (dia atual pode ainda não ter lançamento)
-  return new Date(y, m, 0).getDate(); // mês fechado = todos os dias
+  return Math.max(1, diasDecorridos(yearMonth, diaEmBrasilia(new Date())));
 }
 
 export async function getUsageBoard(user: SessionUser, yearMonth: string): Promise<UnitUsageRow[]> {

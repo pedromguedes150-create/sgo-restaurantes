@@ -101,9 +101,11 @@ describe('fonte: regras que a tela não pode afrouxar', () => {
   });
   it('a meta lê a cobertura de utensílios com peso próprio (nasce em 0)', () => {
     const comp = readFileSync('src/lib/metas/componentes.ts', 'utf8');
-    expect(comp).toContain("key: 'UTENSILS'");
+    expect(comp).toContain("comp('UTENSILS', ");
+    /* v1.180.0: o peso vive no registro das chaves (vigência por mês) e o getter lê por mês */
+    const regras = readFileSync('src/lib/metas/vigencia-regras.ts', 'utf8');
+    expect(regras).toContain("{ key: 'UTENSILS', name: 'Inventário de utensílios (enviado no mês)', pesoPadrao: 0 }");
     const cfg = readFileSync('src/lib/metas/config.ts', 'utf8');
-    expect(cfg).toContain("const UTENSILS_KEY = 'UTENSILS_META_WEIGHT'");
-    expect(cfg).toContain('readWeight(UTENSILS_KEY)');
+    expect(cfg).toContain("readWeight('UTENSILS', ym)");
   });
 });

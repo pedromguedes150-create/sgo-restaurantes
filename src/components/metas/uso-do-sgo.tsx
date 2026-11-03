@@ -64,6 +64,7 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
         <div className="overflow-x-auto p-2">
           <TabelaUnidades unidades={dados.unidades} />
         </div>
+        <p className="px-4 pb-3 text-xs text-ink-500">Uso = média de checklists, desperdício e comandas (dias lançados ÷ dias decorridos, em Brasília, até ontem). &quot;Checklists&quot; aqui conta TODOS os checklists da unidade; a nota da meta usa só os que entram na meta — por isso os dois números podem diferir.</p>
       </Card>
 
       <Card>
@@ -73,7 +74,8 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
         </div>
         <p className="px-4 pb-3 text-xs text-ink-500">
           Nota = Σ (peso × % alcançado) ÷ Σ pesos, menos os descontos (fora do prazo, gerente sem folga) — a mesma conta de Metas.
-          A nota é da UNIDADE: gerentes da mesma unidade têm a mesma nota, e quem cuida de mais de uma recebe a média.
+          A nota é da UNIDADE: gerentes da mesma unidade têm a mesma nota, e quem cuida de mais de uma recebe a média. O supervisor não entra nesta conferência.
+          Só componente com status Ativo pesa; os em homologação/monitoramento aparecem na composição da unidade, em Metas.
           Pesos em vigor: {dados.pesosDaMeta.length ? dados.pesosDaMeta.map((p) => `${rotuloCurto(p.key, p.name)} ${p.weight}`).join(' · ') : 'nenhum'} (Configuração da Meta).
           &quot;—&quot; = nada a medir no mês naquele componente.
         </p>
@@ -145,7 +147,7 @@ export function TabelaUsuarios({ usuarios }: { usuarios: UsuarioUso[] }) {
 export function TabelaMetaPorUsuario({ usuarios, pesos }: { usuarios: UsuarioUso[]; pesos: PesoDaMeta[] }) {
   const colunas = [...pesos].filter((p) => p.weight > 0).sort((a, b) => b.weight - a.weight);
   const lista = usuarios.filter((u) => u.meta).sort((a, b) => b.meta!.scorePct - a.meta!.scorePct || a.name.localeCompare(b.name, 'pt-BR'));
-  if (lista.length === 0) return <p className="p-3 text-sm text-ink-500">Nenhum usuário com unidade no alcance.</p>;
+  if (lista.length === 0) return <p className="p-3 text-sm text-ink-500">Nenhum gerente ou coordenador com unidade no alcance.</p>;
   return (
     <table className="sgo-tbl w-full text-sm" data-testid="tabela-meta-por-usuario">
       <thead>
@@ -170,7 +172,14 @@ export function TabelaMetaPorUsuario({ usuarios, pesos }: { usuarios: UsuarioUso
                 const comp = m.componentes.find((x) => x.key === c.key);
                 return <td key={c.key} className="text-right tabular-nums">{comp?.scorePct == null ? <span className="text-ink-500">—</span> : `${comp.scorePct}%`}</td>;
               })}
-              <td className="text-right tabular-nums">{m.descontoTotal > 0 ? <span className="text-danger">−{m.descontoTotal}</span> : 0}</td>
+              <td className="text-right tabular-nums">
+                {m.descontoTotal > 0 ? <span className="text-danger">−{m.descontoTotal}</span> : 0}
+                {m.descontos.length > 0 && (
+                  <span className="block whitespace-normal text-left text-xs font-normal text-ink-500" data-testid="descontos-nomeados">
+                    {m.descontos.map((d, i) => <span key={i} className="block">{m.unidades.length > 1 ? `${shortUnitName(d.unitName)}: ` : ''}{d.name} {d.quantidade}× {String(d.pct).replace('.', ',')}%{d.detalhe ? ` — ${d.detalhe}` : ''}</span>)}
+                  </span>
+                )}
+              </td>
               <td className="text-center">{u.folgaPropria == null ? <span className="text-ink-500">—</span> : u.folgaPropria ? 'Sim' : <span className="font-semibold text-danger">Não</span>}</td>
               <td className="text-right font-bold tabular-nums" style={{ color: COR_FAIXA[faixaDeUso(m.scorePct)] }} title={explicarNota(m)}>{m.scorePct}%</td>
             </tr>

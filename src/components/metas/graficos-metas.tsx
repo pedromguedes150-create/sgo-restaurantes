@@ -132,6 +132,25 @@ export function RoscaDaComposicao({ composicao }: { composicao: Composicao }) {
               ))}
             </tbody>
           )}
+          {c.observacoes.length > 0 && (
+            <tbody data-testid="em-observacao">
+              <tr><td colSpan={6} className="sgo-type-11 pt-3 font-semibold text-ink-500">Em observação — medido, mas NÃO conta na nota (status do componente na Configuração da Meta)</td></tr>
+              {c.observacoes.map((o) => (
+                <tr key={`obs-${o.name}`} className="text-xs text-ink-700">
+                  <td className="whitespace-normal pl-6">
+                    ↳ {o.name}
+                    <span className="sgo-tag sgo-tag--amber ml-2">{o.status === 'HOMOLOGACAO' ? 'homologação' : 'monitoramento'}</span>
+                    {o.notaSeContasse != null && <span className="block text-ink-500">Se contasse, a nota da unidade seria {o.notaSeContasse}%.</span>}
+                  </td>
+                  <td className="text-right tabular-nums text-ink-500">{o.weight || '—'}</td>
+                  <td className="text-right tabular-nums">{o.done}/{o.resolved}</td>
+                  <td className="text-right tabular-nums font-semibold">{o.scorePct}%</td>
+                  <td className="text-right text-ink-400">—</td>
+                  <td className="text-right text-ink-400">—</td>
+                </tr>
+              ))}
+            </tbody>
+          )}
           <tfoot><tr className="font-semibold"><td>Total</td><td className="text-right tabular-nums">{c.pesoTotal}</td><td className="text-right tabular-nums">{c.tarefas.done}/{c.tarefas.resolved}</td><td className="text-right tabular-nums">{c.tarefas.pct == null ? '—' : `${c.tarefas.pct}%`}</td><td className="text-right tabular-nums text-success">{c.pontosGanhos.toLocaleString('pt-BR')}</td><td className="text-right tabular-nums text-danger">{c.pontosPerdidos ? c.pontosPerdidos.toLocaleString('pt-BR') : '—'}</td></tr></tfoot>
         </table>
         {c.informativas.map((l) => <p key={l.name} className="mt-2 text-xs text-danger">{l.name} — desconto aplicado direto no % da meta.</p>)}

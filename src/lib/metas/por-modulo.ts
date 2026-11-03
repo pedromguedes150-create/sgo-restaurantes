@@ -148,6 +148,8 @@ export const MODULOS_FORA_DA_META = new Set([
 export interface ModuloCatalogado { key: string; label: string; nav?: string; parent?: string }
 export interface AreaCatalogada { id: string; titulo: string; colunas: { titulo: string; keys: string[] }[] }
 
+export type StatusDoComponente = 'DESENVOLVIMENTO' | 'HOMOLOGACAO' | 'MONITORAMENTO' | 'ATIVO';
+
 export interface LinhaPorModulo {
   key: string;
   label: string;
@@ -155,6 +157,8 @@ export interface LinhaPorModulo {
   indicador: IndicadorDeModulo | null;
   /** Valor atual (peso ou %); nulo quando não há indicador. */
   valor: number | null;
+  /** v1.180.0 — status do componente (só nas linhas de PESO); só ATIVO conta na nota. Nulo em desconto/sem indicador. */
+  status: StatusDoComponente | null;
   /** Rótulos dos módulos que compartilham o mesmo ajuste. */
   compartilhadoCom: string[];
 }
@@ -170,6 +174,8 @@ export function linhasPorModulo(
   modules: ModuloCatalogado[],
   areas: AreaCatalogada[],
   valores: Record<string, number>,
+  /** v1.180.0 — status por chave de módulo (TASKS, WASTE…). Ausente = ATIVO (compatibilidade). */
+  status: Record<string, StatusDoComponente> = {},
 ): GrupoPorModulo[] {
   const porKey = new Map(modules.map((m) => [m.key, m]));
   const rotulo = (k: string) => porKey.get(k)?.label ?? k;
@@ -187,6 +193,7 @@ export function linhasPorModulo(
         linhas.push({
           key, label: m.label, area: area.titulo, indicador: ind,
           valor: ind && ind.entity ? valores[ind.entity] ?? 0 : null,
+          status: ind && ind.tipo === 'PESO' ? status[key] ?? 'ATIVO' : null,
           compartilhadoCom: (ind?.compartilhadoCom ?? []).map(rotulo),
         });
       }
@@ -200,6 +207,8 @@ export function linhasPorModulo(
 export function resumirPorModulo(grupos: GrupoPorModulo[]) {
   const linhas = grupos.flatMap((g) => g.linhas);
   const comIndicador = linhas.filter((l) => l.indicador);
-  const ligados = comIndicador.filter((l) => (l.valor ?? 0) > 0);
-  return { modulos: linhas.length, comIndicador: comIndicador.length, ligados: ligados.length, semIndicador: linhas.length - comIndicador.length };
+  /* Conta na meta = peso/desconto > 0 E (nas linhas de peso) status ATIVO — status e peso são independentes (v1.180.0). */
+  const ligados = comIndicador.filter((l) => (l.valor ?? 0) > 0 && (l.status == null || l.status === 'ATIVO'));
+  const emObservacao = comIndicador.filter((l) => l.status === 'HOMOLOGACAO' || l.status === 'MONITORAMENTO');
+  return { modulos: linhas.length, comIndicador: comIndicador.length, ligados: ligados.length, emObservacao: emObservacao.length, semIndicador: linhas.length - comIndicador.length };
 }

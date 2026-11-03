@@ -5,6 +5,7 @@ import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
 import { resumirUso, type ResumoDoUso, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
 import { componentesDaMeta, descontosDaMeta } from '@/lib/metas/componentes';
+import { contaNaNota } from '@/lib/metas/pontuacao';
 import { metaDaUnidade, metaDoUsuario, type MetaDaUnidade, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
 import { emLotes, PARALELO_POR_UNIDADE } from '@/lib/async/em-lotes';
 
@@ -36,6 +37,8 @@ function diasDoMes(ym: string) {
   return { de: `${ym}-01`, ate: `${ym}-${String(ultimo).padStart(2, '0')}` };
 }
 const PERFIS_COM_FOLGA_PROPRIA: Role[] = ['MANAGER', 'COORDINATOR'];
+/** v1.180.0 (regra do Pedro, 03/11): o SUPERVISOR não entra na conferência da bonificação — a nota é de quem cuida da unidade. */
+export const PERFIS_DA_BONIFICACAO: Role[] = ['MANAGER', 'COORDINATOR'];
 
 function limites(ym: string) {
   const [y, m] = ym.split('-').map(Number);
@@ -60,7 +63,7 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
   const [metasPorUnidade, folgas] = await Promise.all([
     emLotes(board, PARALELO_POR_UNIDADE, async (b) => {
       const [comps, desc] = await Promise.all([componentesDaMeta(b.unitId, yearMonth), descontosDaMeta(b.unitId, yearMonth)]);
-      return { meta: metaDaUnidade(b.unitId, b.unitName, comps, desc.lista), pesos: comps.filter((c) => c.weight > 0).map((c) => ({ key: c.key, name: c.name, weight: c.weight })) };
+      return { meta: metaDaUnidade(b.unitId, b.unitName, comps, desc.lista), pesos: comps.filter((c) => c.weight > 0 && contaNaNota(c)).map((c) => ({ key: c.key, name: c.name, weight: c.weight })) };
     }),
     prisma.managerLeave.findMany({ where: { userId: { in: userIds }, deletedAt: null, startDate: { lte: ate }, endDate: { gte: de } }, select: { userId: true } }),
   ]);
@@ -104,7 +107,7 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
       foraDoPrazo: tarefasPorUsuario.find((t) => t.completedById === u.id && t.status === 'LATE')?._count._all ?? 0,
       ultimoAcesso: u.lastLoginAt?.toISOString() ?? null,
       /* A nota é da UNIDADE e o gerente a herda (média quando cuida de mais de uma) — decisão do Pedro, 30/10. */
-      meta: metaDoUsuario(metas.filter((m) => unidadesDoUsuario.includes(m.unitId)), pesosDaMeta),
+      meta: PERFIS_DA_BONIFICACAO.includes(u.role) ? metaDoUsuario(metas.filter((m) => unidadesDoUsuario.includes(m.unitId)), pesosDaMeta) : null,
       folgaPropria: PERFIS_COM_FOLGA_PROPRIA.includes(u.role) ? comFolga.has(u.id) : null,
     };
   }).sort((a, b) => b.acoes - a.acoes || b.tarefasConcluidas - a.tarefasConcluidas || a.name.localeCompare(b.name, 'pt-BR'));

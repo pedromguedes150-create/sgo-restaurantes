@@ -18,8 +18,6 @@ import {
  * configurável (EVALUATION_META_WEIGHT, padrão 0 = desligado — decisão do
  * Pedro em 07/07: só entra na nota quando o Admin ligar em Config).
  */
-const WEIGHT_KEY = 'EVALUATION_META_WEIGHT';
-const DEFAULT_WEIGHT = 0;
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
 type Result = { ok: true } | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND' | 'SEM_MODELO' | 'GERENCIAL' | 'PROPRIO'; erros?: string[] };
@@ -35,19 +33,15 @@ function limitesDoMes(yearMonth: string): { inicio: Date; fim: Date } {
 
 // ===== Peso na meta ==========================================================
 
-export async function getEvaluationWeight(): Promise<number> {
-  const s = await prisma.appSetting.findUnique({ where: { key: WEIGHT_KEY } });
-  const n = s ? Number(s.value) : DEFAULT_WEIGHT;
-  return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : DEFAULT_WEIGHT;
+/* Peso na meta (v1.180.0): lido por mês e gravado com vigência/motivo em `metas/vigencia.ts`. */
+export async function getEvaluationWeight(yearMonth?: string): Promise<number> {
+  const { carregarConfigDaMeta } = await import('@/lib/metas/vigencia');
+  return (await carregarConfigDaMeta(yearMonth)).peso('PEOPLE_EVALUATION');
 }
 
-export async function setEvaluationWeight(user: SessionUser, weight: number) {
-  if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' as const };
-  const w = Math.max(0, Math.trunc(weight));
-  if (!Number.isFinite(w)) return { ok: false as const, reason: 'INVALID' as const };
-  await prisma.appSetting.upsert({ where: { key: WEIGHT_KEY }, create: { key: WEIGHT_KEY, value: String(w) }, update: { value: String(w) } });
-  await audit({ userId: user.id, action: 'EVALUATION_WEIGHT_SET', module: 'CONFIG', metadata: { weight: w } });
-  return { ok: true as const };
+export async function setEvaluationWeight(user: SessionUser, weight: number, o: { reason: string; validFrom?: string | null } = { reason: '' }) {
+  const { gravarConfigDaMeta } = await import('@/lib/metas/vigencia');
+  return gravarConfigDaMeta(user, { key: 'EVALUATION_META_WEIGHT', value: weight, validFrom: o.validFrom, reason: o.reason, action: 'EVALUATION_WEIGHT_SET' });
 }
 
 /**

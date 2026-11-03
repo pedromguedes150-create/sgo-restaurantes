@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/db/prisma';
-import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import { cobertura, diaEmBrasilia, diasDecorridos, diasDistintosNoMes } from './pontuacao';
 import { faixaDaValidade, inicioDaFaixa } from '@/lib/stock/validade';
+import { carregarConfigDaMeta, gravarConfigDaMeta, type ResultadoDaGravacao } from './vigencia';
+import { CHAVE_ESCALA_GERENTES, CHAVE_FORA_DO_PRAZO, DESCONTO_ESCALA_GERENTES_PADRAO, chaveDoPeso, chaveDoStatus, type StatusDoComponente } from './vigencia-regras';
 
 /**
  * Central de configuração da META (16/07, modelo aprovado pelo Pedro):
@@ -18,68 +19,68 @@ import { faixaDaValidade, inicioDaFaixa } from '@/lib/stock/validade';
  * Realizado da Escala, cancelamentos justificados, tratativas de validade e
  * inventários confirmados. Ocorrências, Manutenção, Pizzas, Despesas, Pedidos
  * e Higiene seguem SEM indicador de propósito: não dependem do gerente.
+ *
+ * v1.180.0: peso, status e desconto são lidos POR MÊS (`carregarConfigDaMeta`)
+ * e gravados com vigência, motivo e histórico (`gravarConfigDaMeta`) — ver
+ * `vigencia.ts`. Os getters abaixo continuam existindo para as telas; sem o
+ * mês, valem para o mês corrente.
  */
-const WASTE_KEY = 'WASTE_META_WEIGHT';
-const COMMANDS_KEY = 'COMMANDS_META_WEIGHT';
-const TASKS_KEY = 'TASKS_META_WEIGHT';
-const CASH_KEY = 'CASH_META_WEIGHT';
-const SCHEDULE_KEY = 'SCHEDULE_META_WEIGHT';
-const CANCELLATIONS_KEY = 'CANCELLATIONS_META_WEIGHT';
-const STOCK_KEY = 'STOCK_META_WEIGHT';
-const INVENTORY_KEY = 'INVENTORY_META_WEIGHT';
-const UTENSILS_KEY = 'UTENSILS_META_WEIGHT'; // v1.177.0 — nasce em 0; o Pedro calibra depois de decidir mensal × trimestral
 /** Peso dos checklists quando nunca foi gravado: 100, a base da nota de sempre. */
 export const TASKS_META_WEIGHT_DEFAULT = 100;
 /* v1.170.0 — "Escala de gerentes": cada gerente sem folga cadastrada no mês
    desconta X% da nota. Padrão 5 (pedido do Pedro, 15/10/2026); 0 desliga. */
-const MANAGER_LEAVE_PENALTY_KEY = 'MANAGER_LEAVE_META_PENALTY';
-export const MANAGER_LEAVE_PENALTY_DEFAULT = 5;
+export const MANAGER_LEAVE_PENALTY_DEFAULT = DESCONTO_ESCALA_GERENTES_PADRAO;
 
-async function readWeight(key: string, def = 0): Promise<number> {
-  const s = await prisma.appSetting.findUnique({ where: { key } });
-  const n = s ? Number(s.value) : def;
-  return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : def;
+export interface OpcoesDaGravacao { reason: string; validFrom?: string | null }
+const semMotivo: OpcoesDaGravacao = { reason: '' };
+
+async function readWeight(componente: string, yearMonth?: string): Promise<number> {
+  return (await carregarConfigDaMeta(yearMonth)).peso(componente);
 }
-async function writeWeight(user: SessionUser, key: string, weight: number, action: string) {
-  if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' as const };
-  const w = Math.max(0, Math.trunc(weight));
-  await prisma.appSetting.upsert({ where: { key }, create: { key, value: String(w) }, update: { value: String(w) } });
-  await audit({ userId: user.id, action, module: 'CONFIG', metadata: { weight: w } });
-  return { ok: true as const };
+function writeWeight(user: SessionUser, componente: string, weight: number, action: string, o: OpcoesDaGravacao): Promise<ResultadoDaGravacao> {
+  return gravarConfigDaMeta(user, { key: chaveDoPeso(componente), value: weight, validFrom: o.validFrom, reason: o.reason, action });
 }
 
-export const getWasteMetaWeight = () => readWeight(WASTE_KEY);
-export const getCommandsMetaWeight = () => readWeight(COMMANDS_KEY);
-export const getTasksMetaWeight = () => readWeight(TASKS_KEY, TASKS_META_WEIGHT_DEFAULT);
-export const getCashMetaWeight = () => readWeight(CASH_KEY);
-export const getScheduleMetaWeight = () => readWeight(SCHEDULE_KEY);
-export const getCancellationsMetaWeight = () => readWeight(CANCELLATIONS_KEY);
-export const getStockMetaWeight = () => readWeight(STOCK_KEY);
-export const getInventoryMetaWeight = () => readWeight(INVENTORY_KEY);
-export const getUtensilsMetaWeight = () => readWeight(UTENSILS_KEY);
-export const setWasteMetaWeight = (u: SessionUser, w: number) => writeWeight(u, WASTE_KEY, w, 'WASTE_META_WEIGHT_SET');
-export const setCommandsMetaWeight = (u: SessionUser, w: number) => writeWeight(u, COMMANDS_KEY, w, 'COMMANDS_META_WEIGHT_SET');
-export const setTasksMetaWeight = (u: SessionUser, w: number) => writeWeight(u, TASKS_KEY, w, 'TASKS_META_WEIGHT_SET');
-export const setCashMetaWeight = (u: SessionUser, w: number) => writeWeight(u, CASH_KEY, w, 'CASH_META_WEIGHT_SET');
-export const setScheduleMetaWeight = (u: SessionUser, w: number) => writeWeight(u, SCHEDULE_KEY, w, 'SCHEDULE_META_WEIGHT_SET');
-export const setCancellationsMetaWeight = (u: SessionUser, w: number) => writeWeight(u, CANCELLATIONS_KEY, w, 'CANCELLATIONS_META_WEIGHT_SET');
-export const setStockMetaWeight = (u: SessionUser, w: number) => writeWeight(u, STOCK_KEY, w, 'STOCK_META_WEIGHT_SET');
-export const setInventoryMetaWeight = (u: SessionUser, w: number) => writeWeight(u, INVENTORY_KEY, w, 'INVENTORY_META_WEIGHT_SET');
-export const setUtensilsMetaWeight = (u: SessionUser, w: number) => writeWeight(u, UTENSILS_KEY, w, 'UTENSILS_META_WEIGHT_SET');
+export const getWasteMetaWeight = (ym?: string) => readWeight('WASTE', ym);
+export const getCommandsMetaWeight = (ym?: string) => readWeight('COMMANDS', ym);
+export const getTasksMetaWeight = (ym?: string) => readWeight('TASKS', ym);
+export const getCashMetaWeight = (ym?: string) => readWeight('CASH', ym);
+export const getScheduleMetaWeight = (ym?: string) => readWeight('SCHEDULE', ym);
+export const getCancellationsMetaWeight = (ym?: string) => readWeight('CANCELLATIONS', ym);
+export const getStockMetaWeight = (ym?: string) => readWeight('STOCK', ym);
+export const getInventoryMetaWeight = (ym?: string) => readWeight('INVENTORY', ym);
+export const getUtensilsMetaWeight = (ym?: string) => readWeight('UTENSILS', ym);
+export const setWasteMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'WASTE', w, 'WASTE_META_WEIGHT_SET', o);
+export const setCommandsMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'COMMANDS', w, 'COMMANDS_META_WEIGHT_SET', o);
+export const setTasksMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'TASKS', w, 'TASKS_META_WEIGHT_SET', o);
+export const setCashMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'CASH', w, 'CASH_META_WEIGHT_SET', o);
+export const setScheduleMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'SCHEDULE', w, 'SCHEDULE_META_WEIGHT_SET', o);
+export const setCancellationsMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'CANCELLATIONS', w, 'CANCELLATIONS_META_WEIGHT_SET', o);
+export const setStockMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'STOCK', w, 'STOCK_META_WEIGHT_SET', o);
+export const setInventoryMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'INVENTORY', w, 'INVENTORY_META_WEIGHT_SET', o);
+export const setUtensilsMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'UTENSILS', w, 'UTENSILS_META_WEIGHT_SET', o);
+
+/** v1.180.0 — o STATUS do componente (só ATIVO entra na nota), por mês. */
+export async function getComponentStatus(componente: string, ym?: string): Promise<StatusDoComponente> {
+  return (await carregarConfigDaMeta(ym)).status(componente);
+}
+export function setComponentStatus(user: SessionUser, componente: string, status: string, o: OpcoesDaGravacao = semMotivo) {
+  return gravarConfigDaMeta(user, { key: chaveDoStatus(componente), value: status, validFrom: o.validFrom, reason: o.reason, action: 'META_STATUS_SET' });
+}
 
 /** % descontado da nota por gerente/coordenador SEM folga nem férias no mês. */
-export async function getManagerLeaveMetaPenalty(): Promise<number> {
-  const s = await prisma.appSetting.findUnique({ where: { key: MANAGER_LEAVE_PENALTY_KEY } });
-  const n = s ? Number(s.value) : MANAGER_LEAVE_PENALTY_DEFAULT;
-  return Number.isFinite(n) && n >= 0 ? Math.min(100, n) : MANAGER_LEAVE_PENALTY_DEFAULT;
+export async function getManagerLeaveMetaPenalty(ym?: string): Promise<number> {
+  return (await carregarConfigDaMeta(ym)).descontoEscalaGerentes;
 }
-export async function setManagerLeaveMetaPenalty(user: SessionUser, pct: number) {
-  if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' as const };
-  const v = Math.max(0, Math.min(100, Number(pct)));
-  if (!Number.isFinite(v)) return { ok: false as const, reason: 'INVALID' as const };
-  await prisma.appSetting.upsert({ where: { key: MANAGER_LEAVE_PENALTY_KEY }, create: { key: MANAGER_LEAVE_PENALTY_KEY, value: String(v) }, update: { value: String(v) } });
-  await audit({ userId: user.id, action: 'MANAGER_LEAVE_META_PENALTY_SET', module: 'CONFIG', metadata: { pct: v } });
-  return { ok: true as const };
+export function setManagerLeaveMetaPenalty(user: SessionUser, pct: number, o: OpcoesDaGravacao = semMotivo) {
+  return gravarConfigDaMeta(user, { key: CHAVE_ESCALA_GERENTES, value: pct, validFrom: o.validFrom, reason: o.reason, action: 'MANAGER_LEAVE_META_PENALTY_SET' });
+}
+/** % descontado por lançamento com data corrigida pela supervisão (v1.180.0: lido por mês). */
+export async function getLateEntryPenaltyPctDoMes(ym?: string): Promise<number> {
+  return (await carregarConfigDaMeta(ym)).descontoForaDoPrazo;
+}
+export function setLateEntryPenaltyPctComVigencia(user: SessionUser, pct: number, o: OpcoesDaGravacao = semMotivo) {
+  return gravarConfigDaMeta(user, { key: CHAVE_FORA_DO_PRAZO, value: pct, validFrom: o.validFrom, reason: o.reason, action: 'LATE_ENTRY_PENALTY_SET' });
 }
 
 export type Cobertura = { done: number; missed: number };

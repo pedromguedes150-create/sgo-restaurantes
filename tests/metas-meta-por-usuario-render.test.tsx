@@ -13,12 +13,12 @@ const pesos = [{ key: 'TASKS', name: 'Checklists do dia', weight: 50 }, { key: '
 
 const usuarios: UsuarioUso[] = [
   base({ userId: 'grazieli', name: 'Grazieli', folgaPropria: true, meta: {
-    scorePct: 45, notaAntesDosDescontos: 50, descontoTotal: 5,
+    scorePct: 45, notaAntesDosDescontos: 50, descontoTotal: 5, descontos: [{ unitName: 'Jardim Teresópolis', name: 'Escala de gerentes', quantidade: 1, pct: 5, total: 5, detalhe: 'sem folga cadastrada: Grazieli' }],
     componentes: [{ key: 'TASKS', name: 'Checklists do dia', weight: 50, scorePct: 50 }, { key: 'WASTE', name: 'Desperdício diário (cobertura)', weight: 40, scorePct: 50 }, { key: 'COMMANDS', name: 'Comandas', weight: 30, scorePct: null }],
     unidades: [{ unitId: 'u1', unitName: 'Jardim Teresópolis', scorePct: 45 }],
   } }),
   base({ userId: 'sup', name: 'Supervisora', roleLabel: 'Supervisor', role: 'SUPERVISOR', folgaPropria: null, meta: {
-    scorePct: 90, notaAntesDosDescontos: 90, descontoTotal: 0,
+    scorePct: 90, notaAntesDosDescontos: 90, descontoTotal: 0, descontos: [],
     componentes: [{ key: 'TASKS', name: 'Checklists do dia', weight: 50, scorePct: 90 }, { key: 'WASTE', name: 'Desperdício diário (cobertura)', weight: 40, scorePct: 90 }, { key: 'COMMANDS', name: 'Comandas', weight: 30, scorePct: null }],
     unidades: [{ unitId: 'u1', unitName: 'Jardim Teresópolis', scorePct: 90 }, { unitId: 'u2', unitName: 'Vespasiano', scorePct: 90 }],
   } }),
@@ -41,6 +41,8 @@ describe('TabelaMetaPorUsuario', () => {
     expect(html).toContain('−5');
     expect(html).toContain('—'); // Comandas sem nada a medir
     expect(html).toContain('Jardim Teresópolis 45%');
+    /* v1.180.0: o desconto vem NOMEADO — quem está sem folga */
+    expect(html).toContain('Escala de gerentes 1× 5% — sem folga cadastrada: Grazieli');
   });
 
   it('explica a conta por extenso e ordena pela nota (maior primeiro)', () => {

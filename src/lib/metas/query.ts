@@ -10,8 +10,11 @@ export interface MetaTaskRow {
   done: number;
   resolved: number; // done + missed
   scorePct: number;
-  /** DETALHE = um checklist (informativo, o peso é o de "Checklists do dia"); DESCONTO = tira direto da nota. Sem tipo = componente que pesa. */
-  tipo?: 'DETALHE' | 'DESCONTO';
+  /** DETALHE = um checklist (informativo, o peso é o de "Checklists do dia"); DESCONTO = tira direto da nota; OBSERVACAO = medido, não conta (v1.180.0). Sem tipo = componente que pesa. */
+  tipo?: 'DETALHE' | 'DESCONTO' | 'OBSERVACAO';
+  /** v1.180.0 — só nas linhas em observação: o status e, em homologação, a nota que a unidade teria se contasse. */
+  status?: 'HOMOLOGACAO' | 'MONITORAMENTO';
+  notaSeContasse?: number | null;
 }
 
 /**
@@ -21,7 +24,7 @@ export interface MetaTaskRow {
  * as linhas de DESCONTO (fora do prazo, gerente sem folga — direto na nota).
  */
 export async function getMetaBreakdown(unitId: string, yearMonth: string): Promise<MetaTaskRow[]> {
-  const [{ componentesDaMeta, descontosDaMeta }, { linhasDosComponentes }] = await Promise.all([import('./componentes'), import('./pontuacao')]);
+  const [{ componentesDaMeta, descontosDaMeta }, { linhasDosComponentes, linhasEmObservacao }] = await Promise.all([import('./componentes'), import('./pontuacao')]);
   const [componentes, descontos, instances] = await Promise.all([
     componentesDaMeta(unitId, yearMonth),
     descontosDaMeta(unitId, yearMonth),
@@ -31,6 +34,12 @@ export async function getMetaBreakdown(unitId: string, yearMonth: string): Promi
     }),
   ]);
   const rows: MetaTaskRow[] = linhasDosComponentes(componentes);
+
+  /* v1.180.0 — em observação: homologação/monitoramento com algo medido no mês.
+     Aparece com o % e, em homologação, a nota simulada; NÃO entra na nota. */
+  for (const o of linhasEmObservacao(componentes, descontos.lista)) {
+    rows.push({ name: o.name, weight: o.weight, done: o.done, resolved: o.resolved, scorePct: o.scorePct, tipo: 'OBSERVACAO', status: o.status as 'HOMOLOGACAO' | 'MONITORAMENTO', notaSeContasse: o.notaSeContasse });
+  }
 
   /* Detalhe por checklist: informativo (peso 0, tipo DETALHE) — mostra onde,
      dentro de "Checklists do dia", a unidade perdeu. */

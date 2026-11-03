@@ -62,7 +62,7 @@ describe('Configuração da Meta — uma tela, por módulo', () => {
   const grupos = linhasPorModulo(MODULES, AREAS, { tasksMeta: 100, wasteMeta: 0, commandsMeta: 0, communication: 0, training: 0, evaluation: 0, lateEntry: 2, managerLeaveMeta: 5, cashMeta: 0, scheduleMeta: 0, cancellationsMeta: 0, stockMeta: 0, inventoryMeta: 0 });
 
   it('Tarefas tem o campo de peso editável (100) em vez de "por checklist"; as coberturas novas têm campo; Ocorrências segue "Sem indicador"', () => {
-    const html = renderToString(React.createElement(MetaPorModuloClient, { grupos, canEdit: true }));
+    const html = renderToString(React.createElement(MetaPorModuloClient, { grupos, canEdit: true, mesAtual: '2026-11' }));
     expect(html).not.toContain('por checklist');
     expect(html).toContain('aria-label="Peso de Tarefas"');
     /* v1.174.1: o kit põe white-space:nowrap em todo td; sem quebrar linha, o texto longo de "Como entra na nota" empurrava a coluna do peso para fora da tela (print do Pedro) */
@@ -82,12 +82,25 @@ describe('Configuração da Meta — uma tela, por módulo', () => {
     expect(occ).not.toContain('aria-label="Peso de');
   });
 
+  it('v1.180.0: cada componente com peso tem um seletor de STATUS, o selo diz quando não conta, e os descontos não têm status', () => {
+    const comStatus = linhasPorModulo(MODULES, AREAS, { tasksMeta: 100, wasteMeta: 40, commandsMeta: 0, communication: 0, training: 15, evaluation: 0, lateEntry: 2, managerLeaveMeta: 5, cashMeta: 0, scheduleMeta: 0, cancellationsMeta: 0, stockMeta: 0, inventoryMeta: 0, utensilsMeta: 0 }, { TASKS: 'ATIVO', WASTE: 'HOMOLOGACAO', TRAINING: 'MONITORAMENTO' });
+    const html = renderToString(React.createElement(MetaPorModuloClient, { grupos: comStatus, canEdit: true, mesAtual: '2026-11' }));
+    expect(html).toContain('aria-label="Status de Tarefas"');
+    const waste = html.slice(html.indexOf('data-testid="meta-modulo-WASTE"'), html.indexOf('data-testid="meta-modulo-WASTE"') + 2500);
+    expect(waste).toContain('Em homologação — não conta');
+    expect(waste).toContain('aria-label="Status de Desperdícios"');
+    const notes = html.slice(html.indexOf('data-testid="meta-modulo-NOTES"'), html.indexOf('data-testid="meta-modulo-NOTES"') + 2500);
+    expect(notes).toContain('Desconto direto');
+    expect(notes).not.toContain('aria-label="Status de');
+    expect(html).toContain('Conta na meta');
+  });
+
   it('a página não tem mais a aba Componentes (fonte): só o cabeçalho e a lista por módulo', () => {
     const page = readFileSync('src/app/(app)/modulos/metas/config/page.tsx', 'utf8');
     expect(page).not.toContain('MetaConfigClient');
     expect(page).not.toContain("aba-componentes");
     expect(page).toContain('MetaPorModuloClient');
-    expect(page).toContain('getTasksMetaWeight');
+    expect(page).toContain('carregarConfigDaMeta'); // v1.180.0: os valores vigentes no mês, numa leitura só
   });
 });
 
@@ -98,6 +111,7 @@ describe('Composição da meta com o detalhe por checklist', () => {
       { name: 'Abertura', weight: 0, done: 2, resolved: 3, scorePct: 67, tipo: 'DETALHE' },
       { name: 'Fechamento', weight: 0, done: 1, resolved: 1, scorePct: 100, tipo: 'DETALHE' },
       { name: 'Fora do prazo (−2% na meta)', weight: 0, done: 0, resolved: 1, scorePct: 0, tipo: 'DESCONTO' },
+      { name: 'Treinamentos (POPs)', weight: 15, done: 1, resolved: 4, scorePct: 25, tipo: 'OBSERVACAO', status: 'HOMOLOGACAO', notaSeContasse: 68 },
     ]);
     const html = renderToString(React.createElement(RoscaDaComposicao, { composicao: c })).split('<!-- -->').join('');
     expect(html).toContain('data-testid="detalhe-checklists"');
@@ -108,5 +122,11 @@ describe('Composição da meta com o detalhe por checklist', () => {
     /* o desconto aparece como informação, sem a frase antiga de "data corrigida" presa a todo desconto */
     expect(html).toContain('Fora do prazo (−2% na meta) — desconto aplicado direto no % da meta.');
     expect(html).not.toContain('lançamento(s) com data corrigida');
+    /* v1.180.0: componente em observação aparece recuado, com o selo do status e a nota simulada, fora do total */
+    expect(html).toContain('data-testid="em-observacao"');
+    expect(html).toContain('↳ Treinamentos (POPs)');
+    expect(html).toContain('homologação');
+    expect(html).toContain('Se contasse, a nota da unidade seria 68%.');
+    expect(c.pesoTotal).toBe(100);
   });
 });

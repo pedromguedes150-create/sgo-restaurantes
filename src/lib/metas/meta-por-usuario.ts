@@ -1,4 +1,4 @@
-import { pontuar, type ComponenteDaMeta, type DescontoDaMeta } from './pontuacao';
+import { contaNaNota, pontuar, type ComponenteDaMeta, type DescontoDaMeta } from './pontuacao';
 
 /**
  * META POR USUÁRIO (v1.179.0) — a nota da bonificação, pessoa por pessoa, SEM
@@ -37,6 +37,8 @@ export interface DescontoDaNota {
   pct: number;
   /** Pontos tirados da nota: quantidade × pct. */
   total: number;
+  /** v1.180.0 — o que descontou, nomeado. */
+  detalhe?: string;
 }
 
 export interface MetaDaUnidade {
@@ -62,6 +64,8 @@ export interface MetaDoUsuario {
   /** Por componente, a média do % entre as unidades que o pontuaram; `scorePct` nulo = ninguém pontuou. */
   componentes: { key: string; name: string; weight: number; scorePct: number | null }[];
   unidades: { unitId: string; unitName: string; scorePct: number }[];
+  /** v1.180.0 — os descontos NOMEADOS, unidade por unidade (quem está sem folga, quantas datas corrigidas). */
+  descontos: { unitName: string; name: string; quantidade: number; pct: number; total: number; detalhe?: string }[];
 }
 
 /** A nota de uma unidade aberta em componentes e descontos — o mesmo `pontuar` da meta. */
@@ -74,12 +78,12 @@ export function metaDaUnidade(unitId: string, unitName: string, componentes: Com
     scorePct: comDescontos.scorePct,
     notaAntesDosDescontos: semDescontos.scorePct,
     componentes: componentes
-      .filter((c) => c.weight > 0 && c.done + c.missed > 0)
+      .filter((c) => contaNaNota(c) && c.weight > 0 && c.done + c.missed > 0)
       .map((c) => ({ key: c.key, name: c.name, weight: c.weight, done: c.done, resolved: c.done + c.missed, scorePct: Math.round((c.done / (c.done + c.missed)) * 100) }))
       .sort((a, b) => b.weight - a.weight),
     descontos: descontos
       .filter((d) => d.quantidade > 0 && d.pct > 0)
-      .map((d) => ({ name: d.name, quantidade: d.quantidade, pct: d.pct, total: Math.round(d.quantidade * d.pct) })),
+      .map((d) => ({ name: d.name, quantidade: d.quantidade, pct: d.pct, total: Math.round(d.quantidade * d.pct), detalhe: d.detalhe })),
   };
 }
 
@@ -110,6 +114,7 @@ export function metaDoUsuario(unidades: MetaDaUnidade[], pesos: PesoDaMeta[]): M
     descontoTotal: Math.max(0, notaAntes - nota),
     componentes,
     unidades: unidades.map((u) => ({ unitId: u.unitId, unitName: u.unitName, scorePct: u.scorePct })),
+    descontos: unidades.flatMap((u) => u.descontos.map((d) => ({ unitName: u.unitName, ...d }))),
   };
 }
 

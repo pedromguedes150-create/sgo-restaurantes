@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/db/prisma';
-import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -9,21 +8,15 @@ import type { SessionUser } from '@/lib/auth/session';
  *  - confirmado atrasado = neutro (não entra no denominador)
  *  - vencido sem confirmar = não lido (missed, penaliza)
  */
-const WEIGHT_KEY = 'COMMUNICATION_META_WEIGHT';
-const DEFAULT_WEIGHT = 10;
-
-export async function getCommunicationWeight(): Promise<number> {
-  const s = await prisma.appSetting.findUnique({ where: { key: WEIGHT_KEY } });
-  const n = s ? Number(s.value) : DEFAULT_WEIGHT;
-  return Number.isFinite(n) && n >= 0 ? Math.trunc(n) : DEFAULT_WEIGHT;
+/* Peso na meta (v1.180.0): lido por mês e gravado com vigência/motivo em `metas/vigencia.ts`. */
+export async function getCommunicationWeight(yearMonth?: string): Promise<number> {
+  const { carregarConfigDaMeta } = await import('@/lib/metas/vigencia');
+  return (await carregarConfigDaMeta(yearMonth)).peso('COMMUNICATION');
 }
 
-export async function setCommunicationWeight(user: SessionUser, weight: number) {
-  if (user.role !== 'ADMIN') return { ok: false as const, reason: 'FORBIDDEN' as const };
-  const w = Math.max(0, Math.trunc(weight));
-  await prisma.appSetting.upsert({ where: { key: WEIGHT_KEY }, create: { key: WEIGHT_KEY, value: String(w) }, update: { value: String(w) } });
-  await audit({ userId: user.id, action: 'COMMUNICATION_WEIGHT_SET', module: 'CONFIG', metadata: { weight: w } });
-  return { ok: true as const };
+export async function setCommunicationWeight(user: SessionUser, weight: number, o: { reason: string; validFrom?: string | null } = { reason: '' }) {
+  const { gravarConfigDaMeta } = await import('@/lib/metas/vigencia');
+  return gravarConfigDaMeta(user, { key: 'COMMUNICATION_META_WEIGHT', value: weight, validFrom: o.validFrom, reason: o.reason, action: 'COMMUNICATION_WEIGHT_SET' });
 }
 
 /** Estatística do mês por unidade: confirmados no prazo (done) e vencidos sem confirmar (missed). */

@@ -5045,3 +5045,23 @@ model CommissionLinkDismissal {
   @@unique([unitId, sellerCode, collaboratorId])
   @@map("commission_link_dismissals")
 }
+
+/// v1.180.0 — histórico da Configuração da Meta com VIGÊNCIA por mês.
+/// Toda gravação de peso, status ou desconto vira uma linha aqui; a nota de
+/// um mês é calculada com o valor vigente NAQUELE mês (maior validFrom <= mês).
+/// A linha-base '0000-01' é o valor que valia antes de existir histórico.
+model MetaConfigChange {
+  id            String   @id @default(cuid())
+  key           String
+  value         String
+  /// 'AAAA-MM' a partir do qual vale; '0000-01' = linha-base
+  validFrom     String
+  previousValue String?
+  reason        String
+  userId        String?
+  userName      String
+  createdAt     DateTime @default(now())
+
+  @@index([key, validFrom])
+  @@map("meta_config_changes")
+}

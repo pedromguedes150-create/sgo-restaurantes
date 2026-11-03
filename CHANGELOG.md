@@ -9,6 +9,17 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.180.0 — 2026-11-03 (Meta: status por componente, vigência por mês e histórico das configurações)
+### Novo
+- **Status por componente** na Configuração da Meta — Em desenvolvimento · Em homologação · Monitoramento · Ativo — **independente do peso**: só "Ativo" entra na nota. Homologação e monitoramento são medidos e aparecem na composição da unidade como "em observação" (em homologação, com a nota que a unidade teria se contasse), sem mudar a nota de ninguém. Ligar o peso de um módulo nunca o ativa sozinho (decisão do Pedro, 03/11: módulos incompletos ficam fora da bonificação mesmo com dados).
+- **Vigência e histórico**: toda gravação de peso, status ou desconto pede o motivo (mínimo 10 caracteres) e o mês a partir do qual vale — o corrente ou um futuro; um mês encerrado nunca muda. A nota de cada mês é calculada com os valores que valiam naquele mês (`meta_config_changes`, com linha-base do que valia antes). A tela ganhou **Histórico de configurações** (quem, quando, de → para, vigência, motivo) e **Correções da supervisão no mês**.
+- **Uso do SGO**: os descontos do quadro "Meta por usuário" vêm nomeados (quem está sem folga, quantas datas corrigidas).
+### Mudou
+- **Supervisor fora da conferência da bonificação** (regra do Pedro, 03/11): o quadro "Meta por usuário" lista só gerente e coordenador — o supervisor aparecia com a média de todas as unidades, um número sem dono. Ele segue medido em acessos e ações.
+- **Treinamentos e Estoque passam a Monitoramento** a partir de novembro/2026 (migração): medidos e mostrados, fora da nota. Meses anteriores ficam como foram calculados.
+### Corrigido
+- O painel de uso do supervisor (e a aba Uso do SGO) contava os "dias decorridos" pela hora do servidor (UTC) enquanto a meta usa o dia de Brasília — entre 21h e 00h o painel cobrava um dia a mais. Agora é a mesma régua. A tela também diz que "Checklists" ali conta todos os checklists, enquanto a meta usa só os que entram nela.
+
 ## v1.179.0 — 2026-10-30 (Uso do SGO: a nota da bonificação por usuário)
 ### Novo
 - **Meta por usuário** na aba Uso do SGO (Metas): um quadro com a nota de cada gerente/coordenador/supervisor — uma coluna por componente com peso (Checklists, Desperdício, Comandas…) com o % alcançado, os descontos (fora do prazo, gerente sem folga), a folga própria no mês e a **nota final** ("de 100%, fez X%"), com a conta por extenso em "Como foi calculada". É a MESMA conta da meta da unidade (Σ peso × % ÷ Σ pesos, menos os descontos); nada foi recalculado por fora. Decisões do Pedro (30/10): a nota é da UNIDADE e o gerente a herda — quem cuida de mais de uma recebe a média (o SGO sabe quem lançou, mas não quem estava de plantão no dia em que ninguém lançou, e uma nota individual puniria quem trabalha menos dias); a Escala de gerentes continua como DESCONTO, não como peso. Excel ganhou a aba "META POR USUÁRIO" e o PDF a seção; os Destaques mostram melhor, menor e média das notas.

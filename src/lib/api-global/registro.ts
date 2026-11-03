@@ -178,7 +178,7 @@ export const TELAS_SEM_ENDPOINT: Record<string, string> = {
 
 /** Endpoints COMPUTADOS: a tela não lê tabela, lê uma função — e o endpoint lê a MESMA função. */
 export const COMPUTADOS = [
-  { slug: 'metas', label: 'Metas — ranking do mês por unidade', telas: ['METAS', 'METAS_CONSOLIDADO', 'DASHBOARD'], parametros: 'mes=AAAA-MM (padrão: mês atual)', fonte: 'calculado por getMetaRanking/getUnitMonthScore (task_instances + pesos de app_settings); não é tabela' },
+  { slug: 'metas', label: 'Metas — ranking do mês por unidade', telas: ['METAS', 'METAS_CONSOLIDADO', 'DASHBOARD'], parametros: 'mes=AAAA-MM (padrão: mês atual)', fonte: 'calculado por getMetaRanking/getUnitMonthScore (task_instances + pesos/status vigentes no mês em meta_config_changes); não é tabela' },
   { slug: 'uso', label: 'Painel de uso por unidade (supervisão/executivo)', telas: ['SUPERVISION', 'UNIT_PANEL', 'EXECUTIVE', 'DASHBOARD'], parametros: 'mes=AAAA-MM (padrão: mês atual)', fonte: 'calculado por getUsageBoard (tarefas, desperdício, comandas, ocorrências, notas, cofre, meta); não é tabela' },
   { slug: 'rh-diagnostico', label: 'Diagnóstico do RH de uma unidade', telas: ['CONFIG_RH_DIAG'], parametros: 'unidade=<id da unidade> (obrigatório)', fonte: 'API externa do RH (gbf-rh) × collaborators — a mesma leitura da tela, ao vivo' },
 ] as const;

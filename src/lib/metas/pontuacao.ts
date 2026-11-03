@@ -16,6 +16,8 @@
  * nunca discordem.
  */
 
+export type StatusDoComponente = 'DESENVOLVIMENTO' | 'HOMOLOGACAO' | 'MONITORAMENTO' | 'ATIVO';
+
 export interface ComponenteDaMeta {
   /** Chave do módulo na matriz (TASKS, WASTE, CASH…). */
   key: string;
@@ -23,7 +25,17 @@ export interface ComponenteDaMeta {
   weight: number;
   done: number;
   missed: number;
+  /**
+   * v1.180.0 — só ATIVO entra na nota; HOMOLOGACAO/MONITORAMENTO são medidos e
+   * mostrados "em observação"; DESENVOLVIMENTO nem aparece. Ausente = ativo
+   * (listas antigas e testes). Status e peso são INDEPENDENTES: peso > 0 com
+   * status fora não conta.
+   */
+  status?: StatusDoComponente;
 }
+/** Entra na conta? Sem status = sim (compatibilidade). */
+export const contaNaNota = (c: { status?: StatusDoComponente }) => !c.status || c.status === 'ATIVO';
+export const emObservacao = (c: { status?: StatusDoComponente }) => c.status === 'HOMOLOGACAO' || c.status === 'MONITORAMENTO';
 
 export interface DescontoDaMeta {
   name: string;
@@ -31,6 +43,8 @@ export interface DescontoDaMeta {
   quantidade: number;
   /** % descontado por ocorrência. */
   pct: number;
+  /** v1.180.0 — o que descontou, nomeado (quem está sem folga, quantas datas corrigidas). */
+  detalhe?: string;
 }
 
 export interface Pontuacao { scorePct: number; doneWeight: number; resolvedWeight: number }
@@ -40,7 +54,7 @@ export function pontuar(componentes: ComponenteDaMeta[], descontos: DescontoDaMe
   let resolvedWeight = 0;
   for (const c of componentes) {
     const resolved = c.done + c.missed;
-    if (resolved <= 0 || c.weight <= 0) continue;
+    if (resolved <= 0 || c.weight <= 0 || !contaNaNota(c)) continue;
     resolvedWeight += c.weight;
     doneWeight += c.weight * (c.done / resolved);
   }
@@ -53,12 +67,38 @@ export function pontuar(componentes: ComponenteDaMeta[], descontos: DescontoDaMe
 
 export interface LinhaDeComponente { name: string; weight: number; done: number; resolved: number; scorePct: number }
 
-/** As linhas do detalhamento: só o que de fato pesou (peso > 0 e algo resolvido), do maior peso para o menor. */
+/** As linhas do detalhamento: só o que de fato pesou (ATIVO, peso > 0 e algo resolvido), do maior peso para o menor. */
 export function linhasDosComponentes(componentes: ComponenteDaMeta[]): LinhaDeComponente[] {
   return componentes
-    .filter((c) => c.weight > 0 && c.done + c.missed > 0)
+    .filter((c) => contaNaNota(c) && c.weight > 0 && c.done + c.missed > 0)
     .map((c) => ({ name: c.name, weight: c.weight, done: c.done, resolved: c.done + c.missed, scorePct: Math.round((c.done / (c.done + c.missed)) * 100) }))
     .sort((a, b) => b.weight - a.weight);
+}
+
+export interface LinhaEmObservacao extends LinhaDeComponente {
+  key: string;
+  status: StatusDoComponente;
+  /** Em HOMOLOGAÇÃO: a nota que a unidade teria se este componente contasse (com o peso dele). Nula sem peso. */
+  notaSeContasse: number | null;
+}
+
+/**
+ * v1.180.0 — os componentes EM OBSERVAÇÃO (homologação/monitoramento) com algo
+ * medido no mês: aparecem no detalhamento, não entram na nota. Em homologação,
+ * a nota simulada responde "o que mudaria se este componente estivesse ativo".
+ */
+export function linhasEmObservacao(componentes: ComponenteDaMeta[], descontos: DescontoDaMeta[] = []): LinhaEmObservacao[] {
+  return componentes
+    .filter((c) => emObservacao(c) && c.done + c.missed > 0)
+    .map((c) => ({
+      key: c.key, name: c.name, weight: c.weight, done: c.done, resolved: c.done + c.missed,
+      scorePct: Math.round((c.done / (c.done + c.missed)) * 100),
+      status: c.status as StatusDoComponente,
+      notaSeContasse: c.status === 'HOMOLOGACAO' && c.weight > 0
+        ? pontuar(componentes.map((x) => (x.key === c.key ? { ...x, status: 'ATIVO' as const } : x)), descontos).scorePct
+        : null,
+    }))
+    .sort((a, b) => b.weight - a.weight || a.name.localeCompare(b.name, 'pt-BR'));
 }
 
 /** Dia civil 'AAAA-MM-DD' em Brasília. O servidor roda em UTC: às 22h daqui já é amanhã lá. */

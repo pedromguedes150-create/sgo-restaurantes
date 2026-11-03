@@ -85,6 +85,10 @@ describe('getUsoDoSgo', () => {
     expect(ga.folgaPropria).toBe(true);
     expect(d.usuarios.find((u) => u.userId === gerB)!.folgaPropria).toBe(false);
     expect(d.usuarios.find((u) => u.userId === supId)!.folgaPropria).toBeNull();
+    /* v1.180.0 (regra do Pedro): o supervisor NÃO entra na conferência da bonificação — sem nota; segue medido em acessos/ações */
+    expect(d.usuarios.find((u) => u.userId === supId)!.meta).toBeNull();
+    expect(d.usuarios.some((u) => u.userId === supId)).toBe(true);
+    expect(Array.isArray(ga.meta!.descontos)).toBe(true);
     expect(d.resumo.notas.melhor).not.toBeNull();
   });
   it('escopo: o supervisor da unidade A não vê a unidade B nem o gerente dela', async () => {
