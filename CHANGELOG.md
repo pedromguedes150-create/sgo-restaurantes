@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.182.2 — 2026-11-03 (Envios ao RH: o token do RH entra pela tela)
+### Novo
+- **Token do RH pela tela** (Configurações → APIs & Integrações → Envios ao RH): o Administrador cola o token que o RH passou, grava, **testa a conexão** (um pedido vazio ao RH: "campos obrigatórios" = token certo; 401 = recusado; nada é criado lá) e, se precisar, remove. Antes o token só entrava no `.env` do servidor, com reinício — e quem opera o SGO não tem acesso ao droplet (caso do atestado da Mariene parado em 03/11). O `.env`, quando existe, continua valendo e vence o da tela; a tela diz de onde o token veio. O token nunca aparece inteiro nem vai para a Auditoria (só mascarado).
+
 ## v1.182.1 — 2026-11-03 (Texto inteiro no celular: listas suspensas, linhas e reticências)
 ### Corrigido
 - **Lista suspensa cortando o texto** (print do Pedro no seletor de status da Configuração da Meta: "Em homologaç…"): a lista do Select tinha exatamente a largura do botão e era cortada por qualquer painel ou tabela rolável. Agora abre num portal com posição fixa: largura mínima = o botão, cresce até o conteúdo (teto 28rem ou a tela), texto quebra, vira para cima sem espaço embaixo e fica sempre dentro da tela. O mesmo para o relógio (TimePicker) e o menu "···" (ActionMenu), que compartilham a regra em `popover-fixo.ts`.

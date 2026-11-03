@@ -37,9 +37,9 @@ export async function register() {
       if (boot) {
         const n = await recuperarAposReinicio();
         if (n) console.log(`[rh-saida] ${n} evento(s) devolvido(s) à fila após o reinício`);
-        console.log(rhSaidaConfigurada()
+        console.log((await rhSaidaConfigurada())
           ? '[rh-saida] envio automático ao GBF-RH ATIVO (RH_WEBHOOK_TOKEN presente): despacho a cada minuto'
-          : '[rh-saida] SEM RH_WEBHOOK_TOKEN: os eventos ficam pendentes na fila até o token ser configurado');
+          : '[rh-saida] SEM RH_WEBHOOK_TOKEN: os eventos ficam pendentes na fila até o token ser configurado (pelo .env ou pela tela Envios ao RH)');
       }
       const r = await despacharPendentes();
       if (r.processados) console.log(`[rh-saida] ${r.processados} processado(s): ${r.enviados} enviado(s), ${r.erros} erro(s) de dados, ${r.adiados} adiado(s), ${r.esgotados} esgotado(s)${r.parado ? ' — PARADO (401)' : ''}`);

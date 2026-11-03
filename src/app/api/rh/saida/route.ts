@@ -5,6 +5,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { reenviar } from '@/lib/rh/saida/fila';
 import { despacharPendentes } from '@/lib/rh/saida/despachante';
+import { definirTokenDoRh, removerTokenDoRh, testarTokenDoRh } from '@/lib/rh/saida/token';
 
 const REASONS = {
   FORBIDDEN: { msg: 'Só o Administrador opera a fila de envios ao RH', status: 403 },
@@ -33,6 +34,21 @@ export async function POST(req: Request) {
   }
   if (acao === 'despachar') {
     const r = await despacharPendentes({ limite: 50 });
+    return NextResponse.json({ ok: true, ...r });
+  }
+  /* v1.182.2 — o token pela tela */
+  if (acao === 'definirToken') {
+    const r = await definirTokenDoRh(user, String(b?.token ?? ''), requestContext(req));
+    if (!r.ok) return reasonResponse({ ...REASONS, INVALID: { msg: 'Token inválido', status: 400 } }, r.reason, r.message);
+    return NextResponse.json({ ok: true, mascarado: r.mascarado });
+  }
+  if (acao === 'removerToken') {
+    const r = await removerTokenDoRh(user, requestContext(req));
+    if (!r.ok) return reasonResponse(REASONS, r.reason);
+    return NextResponse.json({ ok: true });
+  }
+  if (acao === 'testarToken') {
+    const r = await testarTokenDoRh();
     return NextResponse.json({ ok: true, ...r });
   }
   return NextResponse.json({ error: 'Operação desconhecida' }, { status: 400 });

@@ -49,7 +49,7 @@ export function EnviosRhClient({ eventos, configurado }: { eventos: EventoDaTela
   async function despachar() {
     const d = await post({ acao: 'despachar' });
     if (!d) return;
-    if (d.semToken) { setMsg('Sem RH_WEBHOOK_TOKEN no servidor: nada foi enviado; os eventos continuam pendentes.'); return; }
+    if (d.semToken) { setMsg('Sem token do RH (nem pela tela, nem no servidor): nada foi enviado; os eventos continuam pendentes.'); return; }
     setMsg(`Processados ${d.processados}: ${d.enviados} enviado(s), ${d.erros} erro(s) de dados, ${d.adiados} adiado(s), ${d.esgotados} esgotado(s)${d.parado ? ' — PARADO por token recusado (401)' : ''}.`);
   }
 
@@ -57,7 +57,7 @@ export function EnviosRhClient({ eventos, configurado }: { eventos: EventoDaTela
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="gold" disabled={busy !== '' || !configurado} onClick={despachar} data-testid="processar-fila"><RefreshCw className="h-4 w-4" /> Processar fila agora</Button>
-        {!configurado && <span className="text-xs text-ink-500">Configure <code>RH_WEBHOOK_TOKEN</code> no servidor para o despacho rodar.</span>}
+        {!configurado && <span className="text-xs text-ink-500">Cole o token do RH no painel acima (ou configure <code>RH_WEBHOOK_TOKEN</code> no servidor) para o despacho rodar.</span>}
       </div>
       {msg && <p className="rounded-lg bg-canvas px-3 py-2 text-sm text-ink-700">{msg}</p>}
       {eventos.length === 0 && <p className="text-sm text-ink-500">Nenhum evento neste filtro.</p>}

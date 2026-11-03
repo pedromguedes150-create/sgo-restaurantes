@@ -67,7 +67,7 @@ async function montarCorpo(ev: RhOutboundEvent): Promise<{ corpo: Record<string,
 
 export async function despacharPendentes(opts: { agora?: Date; limite?: number; unitIds?: string[] } = {}): Promise<ResultadoDoDespacho> {
   const r: ResultadoDoDespacho = { semToken: false, processados: 0, enviados: 0, erros: 0, adiados: 0, esgotados: 0, parado: false };
-  if (!rhSaidaConfigurada()) { r.semToken = true; return r; }
+  if (!(await rhSaidaConfigurada())) { r.semToken = true; return r; }
   const agora = opts.agora ?? new Date();
   const candidatos = await prisma.rhOutboundEvent.findMany({
     /* `unitIds` recorta a rodada (testes que compartilham o banco); o scheduler não passa. */
@@ -189,7 +189,7 @@ const JANELA_DE_CONSULTA_DIAS = 120;
  */
 export async function consultarSituacoes(opts: { agora?: Date } = {}): Promise<{ consultados: number; alterados: number }> {
   const out = { consultados: 0, alterados: 0 };
-  if (!rhSaidaConfigurada()) return out;
+  if (!(await rhSaidaConfigurada())) return out;
   const agora = opts.agora ?? new Date();
   const desde = new Date(agora.getTime() - JANELA_DE_CONSULTA_DIAS * 86_400_000);
   const evs = await prisma.rhOutboundEvent.findMany({
