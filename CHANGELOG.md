@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.182.3 — 2026-11-03 (Envios ao RH: 409 "já existe no RH" deixa de ser erro)
+### Correção
+- **409 "período sobreposto" conta como enviado**: o RH respondia que já tinha um atestado daquela pessoa naquele período (lançado lá direto, ou aceito antes) e o SGO guardava como "Erro de dados", pedindo correção e reenvio que não existem. Agora o evento fica **Enviado**, com o id do atestado que o RH citou e uma nota ("o RH já tinha este atestado…"); o atestado do SGO recebe o vínculo. Os que já estavam em erro por esse motivo são reclassificados sozinhos no próximo reinício e no "Processar fila agora", sem reenviar nada. Só 409: um 422 com o mesmo texto segue como erro de dados.
+
 ## v1.182.2 — 2026-11-03 (Envios ao RH: o token do RH entra pela tela)
 ### Novo
 - **Token do RH pela tela** (Configurações → APIs & Integrações → Envios ao RH): o Administrador cola o token que o RH passou, grava, **testa a conexão** (um pedido vazio ao RH: "campos obrigatórios" = token certo; 401 = recusado; nada é criado lá) e, se precisar, remove. Antes o token só entrava no `.env` do servidor, com reinício — e quem opera o SGO não tem acesso ao droplet (caso do atestado da Mariene parado em 03/11). O `.env`, quando existe, continua valendo e vence o da tela; a tela diz de onde o token veio. O token nunca aparece inteiro nem vai para a Auditoria (só mascarado).

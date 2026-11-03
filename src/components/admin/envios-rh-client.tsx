@@ -50,7 +50,7 @@ export function EnviosRhClient({ eventos, configurado }: { eventos: EventoDaTela
     const d = await post({ acao: 'despachar' });
     if (!d) return;
     if (d.semToken) { setMsg('Sem token do RH (nem pela tela, nem no servidor): nada foi enviado; os eventos continuam pendentes.'); return; }
-    setMsg(`Processados ${d.processados}: ${d.enviados} enviado(s), ${d.erros} erro(s) de dados, ${d.adiados} adiado(s), ${d.esgotados} esgotado(s)${d.parado ? ' — PARADO por token recusado (401)' : ''}.`);
+    setMsg(`Processados ${d.processados}: ${d.enviados} enviado(s), ${d.erros} erro(s) de dados, ${d.adiados} adiado(s), ${d.esgotados} esgotado(s)${d.parado ? ' — PARADO por token recusado (401)' : ''}.${d.jaExistiam ? ` ${d.jaExistiam} já existia(m) no RH e saíram da lista de problemas.` : ''}`);
   }
 
   return (

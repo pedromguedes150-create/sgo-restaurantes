@@ -47,7 +47,8 @@ export function proximaTentativa(agora: Date, tentativasFeitas: number): Date {
 /* ───────────────────────────── Resposta do RH ───────────────────────────── */
 
 export type Classificacao =
-  | { resultado: 'ENVIADO'; duplicado: boolean }
+  /** `existente`: só quando o RH disse que JÁ TINHA o atestado (409 "período sobreposto"); é o id dele lá, ou '' se não veio. */
+  | { resultado: 'ENVIADO'; duplicado: boolean; existente?: string }
   | { resultado: 'ERRO'; motivo: string } // dados: não tenta de novo
   | { resultado: 'TOKEN'; motivo: string } // 401: parar e avisar
   | { resultado: 'ADIAR'; motivo: string }; // temporário: nova tentativa
@@ -55,6 +56,12 @@ export type Classificacao =
 /**
  * O que a resposta quer dizer — a regra 3 do contrato, numa função só.
  *  - 2xx, ou corpo `{status:"duplicado"}` → enviado (o RH já tinha o evento).
+ *  - 409 "período sobreposto ao atestado RH <id>" → enviado, com `existente`
+ *    (v1.182.3): o RH já tem um atestado dessa pessoa nesse período — lançado
+ *    lá direto, ou aceito antes por outro caminho. Não há o que corrigir nem
+ *    reenviar; o que o SGO quer (o RH saber do atestado) já está satisfeito,
+ *    e o id devolvido vira o vínculo. Só 409: um 422 com o mesmo texto segue
+ *    como erro de dados, porque 422 é "não aceito", não "já existe".
  *  - 400 / 422 / 409 (e demais 4xx de dados) → erro permanente; o RH explica
  *    em `resultado`/`error`, e isto vai para a tela do Admin.
  *  - 401 → token recusado: parar tudo e avisar.
@@ -66,11 +73,30 @@ export function classificarResposta(status: number, corpo: unknown): Classificac
   const statusTexto = typeof obj?.status === 'string' ? obj.status.toLowerCase() : '';
   if (statusTexto === 'duplicado') return { resultado: 'ENVIADO', duplicado: true };
   if (status >= 200 && status < 300) return { resultado: 'ENVIADO', duplicado: false };
+  const existente = atestadoJaExistente(status, corpo);
+  if (existente !== null) return { resultado: 'ENVIADO', duplicado: true, existente };
   const motivo = motivoDaResposta(corpo, status);
   if (status === 401) return { resultado: 'TOKEN', motivo };
   if (status === 404 || status === 408 || status === 429 || status >= 500) return { resultado: 'ADIAR', motivo };
   return { resultado: 'ERRO', motivo };
 }
+
+/**
+ * 409 cujo texto diz "sobreposto" = o RH já tem o atestado. Devolve o id que
+ * ele cita ("…ao atestado RH 7e547fd3-…"), '' quando o texto não traz id, e
+ * `null` quando NÃO é esse caso. Lê tanto o corpo cru quanto o `ultimoErro`
+ * já gravado ("HTTP 409 — …"), para reclassificar o que ficou em ERRO antes.
+ */
+export function atestadoJaExistente(status: number, corpo: unknown): string | null {
+  if (status !== 409) return null;
+  const texto = typeof corpo === 'string' ? corpo : motivoDaResposta(corpo, status);
+  if (!/sobrepost/i.test(texto)) return null;
+  const m = texto.match(/atestado\s+RH\s+([A-Za-z0-9-]{6,})/i) ?? texto.match(/\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i);
+  return m ? m[1] : '';
+}
+
+/** Nota gravada no evento quando o RH já tinha o atestado — não é erro. */
+export const NOTA_JA_EXISTIA = 'O RH já tinha este atestado (período sobreposto): nada foi criado lá e o vínculo usa o id que o RH devolveu.';
 
 /** Texto curto e legível do que o RH respondeu (sem CPF). */
 export function motivoDaResposta(corpo: unknown, status: number): string {

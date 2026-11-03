@@ -8,7 +8,7 @@ import { notifyAdmins, notifyUsers } from '@/lib/notifications';
 import { rhSaidaConfigurada } from '@/lib/rh/saida/config';
 import { postRh, getRh, RhSaidaTransporteError } from '@/lib/rh/saida/transporte';
 import {
-  MAX_TENTATIVAS, SITUACOES_FINAIS, anexoAceito, caminhoDaSituacao, classificarResposta, extrairPrazo, extrairRhId,
+  MAX_TENTATIVAS, NOTA_JA_EXISTIA, SITUACOES_FINAIS, anexoAceito, caminhoDaSituacao, classificarResposta, extrairPrazo, extrairRhId,
   mascararCpfNoObjeto, mascararCpfsNoTexto, nomeDoAnexo, proximaTentativa, rotuloDaSituacao, ROTULO_TIPO,
 } from '@/lib/rh/saida/regras';
 import type { Prisma, RhOutboundEvent, RhOutboundType } from '@prisma/client';
@@ -100,10 +100,12 @@ export async function despacharPendentes(opts: { agora?: Date; limite?: number; 
     const respostaGravada = mascararCpfNoObjeto(resposta.corpo) as Prisma.InputJsonValue;
 
     if (c.resultado === 'ENVIADO') {
-      const rhId = extrairRhId(ev.tipo, resposta.corpo);
+      /* v1.182.3 — 409 "já existe": o id vem do texto do RH, e a nota explica que nada foi criado lá. */
+      const rhId = extrairRhId(ev.tipo, resposta.corpo) ?? (c.existente ? c.existente : null);
+      const notaFinal = c.existente !== undefined ? [nota, NOTA_JA_EXISTIA].filter(Boolean).join(' · ') : nota;
       await prisma.rhOutboundEvent.update({
         where: { id: ev.id },
-        data: { status: 'ENVIADO', enviadoEm: agora, httpStatus: resposta.status, resposta: respostaGravada, rhId, ultimoErro: null, observacao: nota, tentativas: { increment: 1 } },
+        data: { status: 'ENVIADO', enviadoEm: agora, httpStatus: resposta.status, resposta: respostaGravada, rhId, ultimoErro: null, observacao: notaFinal, tentativas: { increment: 1 } },
       });
       await aplicarRetorno(ev, rhId, extrairPrazo(ev.tipo, resposta.corpo)).catch((e) => console.error('[rh-saida] falha ao gravar o retorno do RH:', e));
       r.enviados++;

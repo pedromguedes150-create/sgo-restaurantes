@@ -3,7 +3,7 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { reenviar } from '@/lib/rh/saida/fila';
+import { reenviar, reclassificarJaExistentes } from '@/lib/rh/saida/fila';
 import { despacharPendentes } from '@/lib/rh/saida/despachante';
 import { definirTokenDoRh, removerTokenDoRh, testarTokenDoRh } from '@/lib/rh/saida/token';
 
@@ -33,8 +33,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, status: r.status });
   }
   if (acao === 'despachar') {
+    const jaExistiam = await reclassificarJaExistentes(); // v1.182.3 — os 409 antigos saem da lista de problemas
     const r = await despacharPendentes({ limite: 50 });
-    return NextResponse.json({ ok: true, ...r });
+    return NextResponse.json({ ok: true, ...r, jaExistiam });
   }
   /* v1.182.2 — o token pela tela */
   if (acao === 'definirToken') {
