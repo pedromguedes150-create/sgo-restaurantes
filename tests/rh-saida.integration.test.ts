@@ -37,7 +37,7 @@ function rhCai() {
   vi.stubGlobal('fetch', async () => { throw new TypeError('fetch failed'); });
 }
 const comToken = () => { process.env.RH_WEBHOOK_TOKEN = 'token-de-teste'; process.env.RH_API_URL = 'https://rh-de-teste.local'; };
-const semToken = () => { delete process.env.RH_WEBHOOK_TOKEN; };
+const semToken = async () => { delete process.env.RH_WEBHOOK_TOKEN; await prisma.appSetting.deleteMany({ where: { key: 'RH_WEBHOOK_TOKEN' } }); };
 /* O banco é compartilhado com os outros arquivos (que também enfileiram ao
    criar atestado): a rodada aqui fica recortada às unidades deste arquivo. */
 const despachar = (o: { agora?: Date; limite?: number } = {}) => despacharPendentes({ limite: 200, unitIds: [unitId, unitSemCnpj], ...o });
@@ -60,7 +60,7 @@ afterAll(async () => {
   await prisma.unit.deleteMany({ where: { id: { in: [unitId, unitSemCnpj] } } });
   await prisma.collaborator.deleteMany({ where: { id: { in: [collabId, collabSemCpf] } } });
   await prisma.user.deleteMany({ where: { id: { in: [managerId, supervisorId, adminId] } } });
-  semToken();
+  await semToken();
   await prisma.$disconnect();
 });
 
@@ -97,7 +97,7 @@ describe('Atestado → fila', () => {
   });
 
   it('sem RH_WEBHOOK_TOKEN o despachante não toca em nada: pendente continua pendente, sem chamada', async () => {
-    semToken();
+    await semToken();
     rhCai();
     const r = await despachar();
     expect(r.semToken).toBe(true);
@@ -137,7 +137,7 @@ describe('Atestado → fila', () => {
   });
 
   it('excluir um atestado cujo "criar" NUNCA foi enviado descarta a linha pendente (não há o que cancelar no RH)', async () => {
-    semToken();
+    await semToken();
     const r = await createCertificate(manager(), { unitId, collaboratorId: collabId, startDate: '2026-10-10', endDate: '2026-10-10' });
     if (!r.ok) throw new Error('não criou');
     expect((await evento(r.id))?.status).toBe('PENDENTE');
@@ -148,7 +148,7 @@ describe('Atestado → fila', () => {
 
 describe('Regra 3: respostas do RH', () => {
   async function novoPendente(start: string) {
-    semToken();
+    await semToken();
     const r = await createCertificate(manager(), { unitId, collaboratorId: collabId, startDate: start, endDate: start });
     if (!r.ok) throw new Error(`não criou ${r.reason}`);
     return r.id;
@@ -264,7 +264,7 @@ describe('Desligamento → RH só na aprovação', () => {
     if (!r.ok) expect(r.reason).toBe('FORBIDDEN');
   });
   it('a aprovação do supervisor enfileira com o CNPJ da unidade do pedido e os valores do contrato; o RH devolve processo e prazo', async () => {
-    semToken();
+    await semToken();
     const r = await decideTermination(supervisor(), termId, true, undefined);
     expect(r.ok).toBe(true);
     const ev = await evento(termId, 'solicitar');
@@ -312,7 +312,7 @@ describe('Desligamento → RH só na aprovação', () => {
 
 describe('Demanda ao RH', () => {
   it('cria, enfileira, envia e mostra ao gerente número/prazo/situação sem o detalhe técnico', async () => {
-    semToken();
+    await semToken();
     const r = await criarDemanda(manager(), { unitId, tipo: 'FERIAS', titulo: 'Antecipar férias da Ana', descricao: 'pedido da própria', collaboratorId: collabId, prioridade: 'ALTA', dataEvento: '2026-12-01' });
     expect(r.ok).toBe(true);
     if (!r.ok) return;

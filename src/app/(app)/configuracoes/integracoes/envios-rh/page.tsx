@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowUpFromLine } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { listarEventos, resumoDaFila } from '@/lib/rh/saida/fila';
-import { rhSaidaBase, rhSaidaConfigurada, origemDaBase } from '@/lib/rh/saida/config';
+import { rhSaidaBase, rhSaidaConfigurada, origemDaBase, origemDoToken, rhSaidaToken, mascararToken } from '@/lib/rh/saida/config';
+import { TokenRhClient } from '@/components/admin/token-rh-client';
 import { ENDPOINTS, MAX_TENTATIVAS } from '@/lib/rh/saida/regras';
 import { EnviosRhClient } from '@/components/admin/envios-rh-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,16 +35,23 @@ export default async function EnviosRhPage({ searchParams }: { searchParams: { s
     listarEventos({ status: filtro === 'TODOS' ? undefined : filtro, limite: 200 }),
   ]);
   const problemas = resumo.erros + resumo.esgotados + resumo.parados;
-  const configurado = rhSaidaConfigurada();
+  const [configurado, origemToken, tokenEmVigor] = await Promise.all([rhSaidaConfigurada(), origemDoToken(), rhSaidaToken()]);
 
   return (
     <div className="space-y-4">
       <Link href="/configuracoes/integracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> APIs &amp; Integrações</Link>
       <LargeTitle
         title="Envios ao RH"
-        subtitle={<>Fila de saída SGO → GBF-RH: atestados, desligamentos aprovados e demandas. Base <code>{rhSaidaBase()}</code> ({origemDaBase()}) · token {configurado ? 'configurado' : <b className="text-danger">AUSENTE (RH_WEBHOOK_TOKEN)</b>}.</>}
+        subtitle={<>Fila de saída SGO → GBF-RH: atestados, desligamentos aprovados e demandas. Base <code>{rhSaidaBase()}</code> ({origemDaBase()}) · token {configurado ? `configurado (${origemToken === 'servidor' ? 'servidor' : 'tela'})` : <b className="text-danger">AUSENTE — cole o token do RH abaixo</b>}.</>}
         tabs={FILTROS.map((f) => ({ label: f.label, href: `/configuracoes/integracoes/envios-rh?status=${f.value}`, active: filtro === f.value, testId: `filtro-${f.value}` }))}
       />
+
+      {/* v1.182.2 — o token pela tela: quem não tem acesso ao servidor liga o envio daqui. */}
+      <Card>
+        <CardContent className="pt-4">
+          <TokenRhClient origem={origemToken} mascarado={mascararToken(tokenEmVigor)} />
+        </CardContent>
+      </Card>
 
       <SgoKpis>
         <SgoKpi label="Pendentes" value={String(resumo.pendentes + resumo.enviando)} meta="aguardando a hora da próxima tentativa" />
@@ -65,8 +73,8 @@ export default async function EnviosRhPage({ searchParams }: { searchParams: { s
           <li>Cada evento tem um <code>sgoEventId</code> fixo: reenviar o mesmo evento nunca cria duplicado no RH (ele responde &ldquo;duplicado&rdquo;, que conta como enviado).</li>
           <li>Temporário (RH fora do ar, 5xx, 404 de módulo ainda não ligado): nova tentativa com espera crescente — 1, 2, 4, 8… minutos até {MAX_TENTATIVAS} tentativas; depois fica <b>Esgotado</b> e continua aqui para reenvio manual.</li>
           <li>Erro de dados (400/422/409): não tenta de novo. Corrija o cadastro (CPF do colaborador, CNPJ da unidade, período do atestado) e use <b>Reenviar</b> — o corpo é remontado do cadastro atual.</li>
-          <li>401: token recusado. O despacho para, os Admins são avisados; corrija <code>RH_WEBHOOK_TOKEN</code> e reinicie (ou reenvie).</li>
-          <li>Sem token configurado, nada sai e nada se perde: os eventos ficam pendentes.</li>
+          <li>401: token recusado. O despacho para, os Admins são avisados; cole o token certo acima (ou corrija o <code>.env</code> e reinicie) e reenvie.</li>
+          <li>Sem token configurado, nada sai e nada se perde: os eventos ficam pendentes. O token pode vir do <code>.env</code> do servidor (vence) ou da tela acima.</li>
           <li>Endpoints: <code>{ENDPOINTS.ATESTADO}</code>, <code>{ENDPOINTS.DESLIGAMENTO}</code>, <code>{ENDPOINTS.DEMANDA}</code>. CPF aparece mascarado; anexo e token nunca são gravados nem exibidos.</li>
         </ul>
       </details>

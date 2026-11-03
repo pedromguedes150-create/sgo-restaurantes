@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db/prisma';
 import { rhConfigured, rhV2Base, rhV2Configured } from '@/lib/rh/client';
 import { RH_AUTO_SYNC_SUSPENSO } from '@/lib/rh/sync';
 import { feriasWebhookConfigured } from '@/lib/rh/webhook';
-import { rhSaidaBase, rhSaidaConfigurada, origemDaBase } from '@/lib/rh/saida/config';
+import { rhSaidaBase, rhSaidaConfigurada, origemDaBase, origemDoToken, rhSaidaToken, mascararToken } from '@/lib/rh/saida/config';
 import { resumoDaFila } from '@/lib/rh/saida/fila';
 import { ENDPOINTS } from '@/lib/rh/saida/regras';
 import { RhV2Ping } from '@/components/admin/rh-v2-ping';
@@ -166,10 +166,10 @@ export default async function IntegracoesPage() {
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ArrowUpFromLine className="h-4 w-4 text-brand" /> Envios ao RH — fila de saída (atestados, desligamentos, demandas)</CardTitle></CardHeader>
         <CardContent className="space-y-1 text-sm">
           <Row k="Base (RH_API_URL)" v={`${rhSaidaBase()} · lida de ${origemDaBase()}`} mono />
-          <Row k="Token (RH_WEBHOOK_TOKEN)" v={mask(process.env.RH_WEBHOOK_TOKEN)} ok={rhSaidaConfigurada()} />
+          <Row k="Token (RH_WEBHOOK_TOKEN)" v={`${mascararToken(await rhSaidaToken())} · ${{ servidor: 'definido no servidor (.env)', tela: 'definido pela tela Envios ao RH', nenhum: 'ausente' }[await origemDoToken()]}`} ok={await rhSaidaConfigurada()} />
           <Row k="Endpoints" v={`${ENDPOINTS.ATESTADO} · ${ENDPOINTS.DESLIGAMENTO} · ${ENDPOINTS.DEMANDA}`} mono />
           <Row k="Fila" v={`${fila.pendentes + fila.enviando} pendente(s) · ${fila.enviados} enviado(s) · ${filaProblemas} com problema`} ok={filaProblemas === 0} />
-          <p className="text-xs text-ink-500">{rhSaidaConfigurada() ? 'Despacho automático a cada minuto; andamento no RH consultado de hora em hora.' : 'Sem o token nada é enviado — os eventos ficam pendentes na fila e saem sozinhos quando o token entrar no .env e o app reiniciar.'}</p>
+          <p className="text-xs text-ink-500">{(await rhSaidaConfigurada()) ? 'Despacho automático a cada minuto; andamento no RH consultado de hora em hora.' : 'Sem o token nada é enviado — os eventos ficam pendentes na fila e saem sozinhos quando o token entrar (cole-o em Envios ao RH, ou no .env do servidor com reinício).'}</p>
           <Link href="/configuracoes/integracoes/envios-rh" className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-brand/40 bg-brand/5 p-2.5 text-sm hover:bg-brand/10" data-testid="link-envios-rh">
             <span className="font-semibold text-ink-900">Ver envios ao RH — realizados, pendentes e com erro (reenvio)</span>
             <span className="text-ink-900">→</span>

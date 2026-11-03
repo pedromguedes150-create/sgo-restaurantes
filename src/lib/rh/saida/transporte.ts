@@ -31,7 +31,7 @@ async function chamar(metodo: 'POST' | 'GET', caminho: string, body?: unknown): 
     res = await fetch(url, {
       method: metodo,
       headers: {
-        Authorization: `Bearer ${rhSaidaToken()}`,
+        Authorization: `Bearer ${await rhSaidaToken()}`,
         Accept: 'application/json',
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
