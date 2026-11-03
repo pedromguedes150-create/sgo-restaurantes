@@ -59,8 +59,9 @@ export function ListRow({ title, subtitle, leading, trailing, href, onClick, dis
     <>
       {leading && <span className="shrink-0">{leading}</span>}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-ink-900">{title}</span>
-        {subtitle && <span className="block truncate text-xs text-ink-500">{subtitle}</span>}
+        {/* v1.182.1: quebra em vez de cortar — "Lançamento de Perdas/Desp…" no celular escondia o que importa (levantamento a 375px) */}
+        <span className="block break-words text-sm font-medium text-ink-900">{title}</span>
+        {subtitle && <span className="block break-words text-xs text-ink-500">{subtitle}</span>}
       </span>
       {trailing && <span className="flex shrink-0 items-center gap-2">{trailing}</span>}
       {interactive && <ChevronRight className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />}

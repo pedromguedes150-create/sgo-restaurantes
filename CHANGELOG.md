@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.182.1 — 2026-11-03 (Texto inteiro no celular: listas suspensas, linhas e reticências)
+### Corrigido
+- **Lista suspensa cortando o texto** (print do Pedro no seletor de status da Configuração da Meta: "Em homologaç…"): a lista do Select tinha exatamente a largura do botão e era cortada por qualquer painel ou tabela rolável. Agora abre num portal com posição fixa: largura mínima = o botão, cresce até o conteúdo (teto 28rem ou a tela), texto quebra, vira para cima sem espaço embaixo e fica sempre dentro da tela. O mesmo para o relógio (TimePicker) e o menu "···" (ActionMenu), que compartilham a regra em `popover-fixo.ts`.
+- **Levantamento a 375px em 102 telas** (todas as rotas do menu com o Admin): nenhuma transbordava na horizontal (0); 19 cortavam texto com reticências — sempre o utilitário `truncate` ou as linhas `.sgo-row__*` do kit (nome do checklist no histórico, unidade no Troco, fornecedor nas Notas, colaborador na Avaliação, descrição em Despesas/Pagamentos, cartões de Pessoas). Correção de base: as linhas de lista (`ListRow`) quebram em vez de cortar em qualquer tamanho; abaixo de 768px, TODO `truncate` e as linhas do kit passam a quebrar (quem precisar cortar no celular usa `.truncate-sempre`).
+
 ## v1.182.0 — 2026-11-03 (Uso do SGO: uso efetivo e gestão por unidade — PR B de Metas)
 ### Novo
 - **Dois blocos de análise** na aba Uso do SGO: "Resultado coletivo — unidade por unidade" (o que vai para a meta, herdado pelo gerente) e "Responsabilidade individual — usuário por usuário" (o que cada pessoa fez). Nenhuma regra de desconto nova; a fórmula da bonificação não mudou.

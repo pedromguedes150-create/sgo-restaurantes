@@ -59,7 +59,7 @@ export function StatCard({ label, value, hint, delta, invertDelta, tone = 'defau
               {Math.abs(delta).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
             </span>
           )}
-          {hint && <span className="truncate" style={{ color: 'var(--sgo-ink-3)' }}>{hint}</span>}
+          {hint && <span className="break-words" style={{ color: 'var(--sgo-ink-3)' }}>{hint}</span>}
         </div>
       )}
     </div>

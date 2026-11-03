@@ -1,14 +1,28 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Field, controlBase, controlSize, controlTone, useDescribedBy } from './field';
+import { usePopoverFixo } from './popover-fixo';
 
 /**
  * Select do design system (Onda 2) — CUSTOM, sem <select> nativo (regra 6).
  * Teclado: ↑/↓ move, Enter/Espaço abre e escolhe, Esc fecha, Home/End.
  * A11y: combobox + listbox/option com aria-selected e aria-activedescendant.
+ *
+ * v1.182.1 — a LISTA vive num portal com `position: fixed` (como o DatePicker):
+ * 1. ela tinha exatamente a largura do botão (`w-full`), e num botão estreito
+ *    (o status da Configuração da Meta, `w-44`) o rótulo e a dica saíam
+ *    cortados — print do Pedro, pior no celular;
+ * 2. como `absolute`, era cortada por qualquer ancestral com `overflow`
+ *    (tabelas roláveis, painéis, o Sheet).
+ * Agora: largura mínima = a do botão, cresce até o conteúdo, teto = 28rem ou
+ * a tela menos as margens; texto quebra em vez de cortar; abre para cima
+ * quando não há espaço embaixo; fica dentro da tela na horizontal; fecha ao
+ * rolar (o mesmo que o DatePicker e o ActionMenu fazem). Camada
+ * `--sgo-z-dropdown-in-modal` para abrir por cima de qualquer janela.
  */
 export interface SelectOption { value: string; label: string; hint?: string; disabled?: boolean }
 
@@ -67,6 +81,9 @@ export function Select({
   const [active, setActive] = React.useState(0);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const listRef = React.useRef<HTMLUListElement>(null);
+  const popRef = React.useRef<HTMLDivElement>(null);
+  /* v1.182.1 — a lista num portal com posição fixa (a conta vive em popover-fixo.ts). */
+  const { montado, coords, estilo } = usePopoverFixo(open, rootRef, popRef, close, {}, list.length);
 
   const selected = options.find((o) => o.value === value) ?? null;
   const selectedIdx = list.findIndex((o) => o.value === value);
@@ -74,7 +91,12 @@ export function Select({
   React.useEffect(() => {
     if (!open) return;
     setActive(selectedIdx >= 0 ? selectedIdx : 0);
-    const onDown = (e: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(e.target as Node)) close(); };
+    const onDown = (e: MouseEvent) => {
+      const alvo = e.target as Node;
+      /* a lista vive fora de rootRef (portal): clique nela não fecha */
+      if (rootRef.current?.contains(alvo) || popRef.current?.contains(alvo)) return;
+      close();
+    };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [open, selectedIdx, close]);
@@ -121,6 +143,68 @@ export function Select({
     else if (e.key === 'Escape') { e.preventDefault(); close(); }
   }
 
+  const lista = (
+    <div
+      ref={popRef}
+      data-sgo-select-popover=""
+      /* No servidor (e antes de montar) a lista sai INLINE, como sempre foi — testes de render e primeiro
+         desenho; montada no navegador, vai para o portal com posição fixa. */
+      style={estilo}
+      className={cn('rounded-card border border-line bg-surface p-1 shadow-lg', !montado && 'absolute left-0 top-full z-40 mt-1 w-full')}
+    >
+    {searchable && (
+      <input
+        ref={searchRef}
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder={searchPlaceholder}
+        aria-label={searchPlaceholder}
+        aria-controls={listId}
+        aria-activedescendant={list.length ? `${id}-opt-${active}` : undefined}
+        className="mb-1 h-9 w-full rounded-control border border-line bg-surface px-2 text-sm text-ink-900 outline-none focus:border-brand"
+      />
+    )}
+    <ul
+      id={listId}
+      ref={listRef}
+      role="listbox"
+      aria-label={label ?? ariaLabel}
+      className="overflow-auto"
+      style={{ maxHeight: coords?.maxHeight ?? 256 }}
+    >
+      {searchable && list.length === 0 && (
+        <li role="presentation" className="px-2 py-2 text-sm text-ink-500">Nenhum resultado para “{query}”.</li>
+      )}
+      {list.map((o, i) => {
+        const isSel = o.value === value;
+        return (
+          <li key={o.value} data-idx={i} id={`${id}-opt-${i}`} role="option" aria-selected={isSel} aria-disabled={o.disabled || undefined}>
+            <button
+              type="button"
+              tabIndex={-1}
+              disabled={o.disabled}
+              onClick={() => choose(i)}
+              onMouseMove={() => !o.disabled && setActive(i)}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-sm outline-none',
+                o.disabled ? 'cursor-not-allowed text-ink-400' : i === active ? 'bg-brand-tint text-brand' : 'text-ink-700',
+              )}
+            >
+              <Check className={cn('h-4 w-4 shrink-0', isSel ? 'text-brand' : 'text-transparent')} aria-hidden />
+              <span className="min-w-0 flex-1 whitespace-normal break-words">
+                <span className="block">{o.label}</span>
+                {o.hint && <span className="block text-[11px] text-ink-500">{o.hint}</span>}
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+    </div>
+  );
+
   return (
     <Field label={label} hint={hint} error={error} required={required} htmlFor={id} descId={descId}>
       <div className="relative" ref={rootRef}>
@@ -145,59 +229,7 @@ export function Select({
           <ChevronDown className={cn('h-4 w-4 shrink-0 text-ink-400 transition-transform duration-sgo-1 motion-reduce:transition-none', open && 'rotate-180')} aria-hidden />
         </button>
 
-        {open && (
-          <div className="absolute left-0 top-full z-40 mt-1 w-full rounded-card border border-line bg-surface p-1 shadow-lg">
-          {searchable && (
-            <input
-              ref={searchRef}
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder={searchPlaceholder}
-              aria-label={searchPlaceholder}
-              aria-controls={listId}
-              aria-activedescendant={list.length ? `${id}-opt-${active}` : undefined}
-              className="mb-1 h-9 w-full rounded-control border border-line bg-surface px-2 text-sm text-ink-900 outline-none focus:border-brand"
-            />
-          )}
-          <ul
-            id={listId}
-            ref={listRef}
-            role="listbox"
-            aria-label={label ?? ariaLabel}
-            className="max-h-64 overflow-auto"
-          >
-            {searchable && list.length === 0 && (
-              <li role="presentation" className="px-2 py-2 text-sm text-ink-500">Nenhum resultado para “{query}”.</li>
-            )}
-            {list.map((o, i) => {
-              const isSel = o.value === value;
-              return (
-                <li key={o.value} data-idx={i} id={`${id}-opt-${i}`} role="option" aria-selected={isSel} aria-disabled={o.disabled || undefined}>
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    disabled={o.disabled}
-                    onClick={() => choose(i)}
-                    onMouseMove={() => !o.disabled && setActive(i)}
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded-control px-2 py-2 text-left text-sm outline-none',
-                      o.disabled ? 'cursor-not-allowed text-ink-400' : i === active ? 'bg-brand-tint text-brand' : 'text-ink-700',
-                    )}
-                  >
-                    <Check className={cn('h-4 w-4 shrink-0', isSel ? 'text-brand' : 'text-transparent')} aria-hidden />
-                    <span className="flex-1">
-                      <span className="block">{o.label}</span>
-                      {o.hint && <span className="block text-[11px] text-ink-500">{o.hint}</span>}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          </div>
-        )}
+        {open && (montado ? createPortal(lista, document.body) : lista)}
       </div>
     </Field>
   );
