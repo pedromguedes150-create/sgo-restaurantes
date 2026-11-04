@@ -3,7 +3,7 @@ import {
   amanha, motivoValido, podeLancarPropria, podeApagarPropria, situacaoNoDia, montarUnidadeHoje, resumirHoje,
   proximasAusencias, diasDentro, MOTIVO_MIN, type GerenteHoje,
 } from '@/lib/manager-schedule-regras';
-import { linhasPorModulo, resumirPorModulo, INDICADORES } from '@/lib/metas/por-modulo';
+import { linhasPorModulo, resumirPorModulo, INDICADORES, INDICADORES_EXTRAS } from '@/lib/metas/por-modulo';
 import { MODULES } from '@/lib/permissions';
 import { AREAS } from '@/lib/nav/areas';
 
@@ -163,7 +163,7 @@ describe('meta por módulo', () => {
 
   it('o resumo conta o que está ligado (acima de 0) e o que não tem indicador', () => {
     const r = resumirPorModulo(grupos);
-    expect(r.comIndicador).toBe(Object.keys(INDICADORES).length);
+    expect(r.comIndicador).toBe(Object.keys(INDICADORES).length + Object.values(INDICADORES_EXTRAS).flat().length); // v1.184.0: + as 4 linhas da auditoria operacional
     /* ligados: checklists 100, desperdício 2, comunicados 1, fora do prazo 2 (×4 módulos), escala 5 — as cinco coberturas novas em 0 ficam fora */
     expect(r.ligados).toBe(1 + 1 + 1 + 4 + 1);
     expect(r.semIndicador).toBe(r.modulos - r.comIndicador);

@@ -76,7 +76,7 @@ describe('status do componente', () => {
     expect(chaveDoPeso('TASKS')).toBe('TASKS_META_WEIGHT');
     expect(chaveDoPeso('PEOPLE_EVALUATION')).toBe('EVALUATION_META_WEIGHT');
     expect(chaveDoStatus('STOCK')).toBe('STOCK_META_STATUS');
-    expect(CHAVES_DA_META).toHaveLength(COMPONENTES_DA_META.length * 2 + 2 + 4); // pesos + status + 2 descontos + 4 parâmetros da auditoria (v1.181.0)
+    expect(CHAVES_DA_META).toHaveLength(COMPONENTES_DA_META.length * 2 + 2 + 4 + 8); // pesos + status + 2 descontos + 4 parâmetros da auditoria (v1.181.0) + 8 da auditoria operacional (v1.184.0)
     expect(rotuloDaChave('STOCK_META_STATUS')).toBe('Status — Estoque (tratativas de validade)');
     expect(valorLegivel('STOCK_META_STATUS', 'HOMOLOGACAO')).toBe('Em homologação');
     expect(valorLegivel('LATE_ENTRY_PENALTY_PCT', '2.5')).toBe('2,5%');

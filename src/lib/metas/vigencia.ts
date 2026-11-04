@@ -5,7 +5,7 @@ import { diaEmBrasilia } from './pontuacao';
 import {
   CHAVE_ESCALA_GERENTES, CHAVE_FORA_DO_PRAZO, CHAVES_DA_META, COMPONENTES_DA_META, DESCONTO_ESCALA_GERENTES_PADRAO, DESCONTO_FORA_DO_PRAZO_PADRAO,
   MOTIVO_MIN, VIGENCIA_BASE, chaveDoPeso, chaveDoStatus, lerNumero, motivoValido, normalizarStatus, rotuloDaChave, statusHerdadoDoPeso, tipoDaChave,
-  valorLegivel, valorVigente, vigenciaValida, PARAMETROS_DA_AUDITORIA, type StatusDoComponente,
+  valorLegivel, valorVigente, vigenciaValida, PARAMETROS_DA_AUDITORIA, PARAMETROS_DE_AUDITORIA, type StatusDoComponente,
 } from './vigencia-regras';
 
 /**
@@ -62,7 +62,7 @@ export async function carregarConfigDaMeta(yearMonth: string = mesAtual()): Prom
     descontoForaDoPrazo: lerNumero(valor(CHAVE_FORA_DO_PRAZO), DESCONTO_FORA_DO_PRAZO_PADRAO, { teto: 100 }),
     descontoEscalaGerentes: lerNumero(valor(CHAVE_ESCALA_GERENTES), DESCONTO_ESCALA_GERENTES_PADRAO, { teto: 100 }),
     valor,
-    parametro: (key) => { const p = PARAMETROS_DA_AUDITORIA.find((x) => x.key === key); return lerNumero(valor(key), p?.padrao ?? 0, { teto: p?.teto }); },
+    parametro: (key) => { const p = PARAMETROS_DE_AUDITORIA.find((x) => x.key === key); return lerNumero(valor(key), p?.padrao ?? 0, { teto: p?.teto }); },
   };
 }
 
@@ -98,7 +98,7 @@ export async function gravarConfigDaMeta(user: SessionUser, g: GravacaoDaMeta): 
   } else {
     const n = Number(g.value);
     if (!Number.isFinite(n) || n < 0) return { ok: false, reason: 'INVALID', message: 'Valor inválido.' };
-    const teto = tipo === 'PARAMETRO' ? PARAMETROS_DA_AUDITORIA.find((x) => x.key === g.key)?.teto : 100;
+    const teto = tipo === 'PARAMETRO' ? PARAMETROS_DE_AUDITORIA.find((x) => x.key === g.key)?.teto : 100;
     value = tipo === 'PESO' ? String(Math.trunc(n)) : String(teto != null ? Math.min(teto, n) : n);
   }
 

@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { ArrowLeft, History, ShieldAlert, Stethoscope } from 'lucide-react';
+import { ArrowLeft, History, ShieldAlert, Stethoscope, ClipboardCheck } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { linhasPorModulo, resumirPorModulo, type StatusDoComponente } from '@/lib/metas/por-modulo';
 import { carregarConfigDaMeta, correcoesDaSupervisao, historicoDeConfiguracoes, mesAtual } from '@/lib/metas/vigencia';
-import { COMPONENTES_DA_META, PARAMETROS_DA_AUDITORIA } from '@/lib/metas/vigencia-regras';
+import { COMPONENTES_DA_META, PARAMETROS_DA_AUDITORIA, PARAMETROS_DA_AUDITORIA_OPERACIONAL } from '@/lib/metas/vigencia-regras';
 import { ParametrosDaAuditoria } from '@/components/metas/parametros-auditoria';
 import { MODULES } from '@/lib/permissions';
 import { AREAS } from '@/lib/nav/areas';
@@ -43,7 +43,9 @@ export default async function MetaConfigPage() {
     training: vig.peso('TRAINING'), evaluation: vig.peso('PEOPLE_EVALUATION'), lateEntry: vig.descontoForaDoPrazo, managerLeaveMeta: vig.descontoEscalaGerentes,
     cashMeta: vig.peso('CASH'), scheduleMeta: vig.peso('SCHEDULE'), cancellationsMeta: vig.peso('CANCELLATIONS'), stockMeta: vig.peso('STOCK'),
     inventoryMeta: vig.peso('INVENTORY'), utensilsMeta: vig.peso('UTENSILS'), certificatesMeta: vig.peso('CERTIFICATES'),
+    notesAuditMeta: vig.peso('NOTES_AUDIT'), gasAuditMeta: vig.peso('GAS_AUDIT'), oilAuditMeta: vig.peso('OIL_AUDIT'), paymentsAuditMeta: vig.peso('PAYMENTS_AUDIT'),
   };
+  const parametrosOperacionais = PARAMETROS_DA_AUDITORIA_OPERACIONAL.map((p) => ({ key: p.key, rotulo: p.rotulo, valor: vig.parametro(p.key), teto: p.teto }));
   const parametros = PARAMETROS_DA_AUDITORIA.map((p) => ({ key: p.key, rotulo: p.rotulo, valor: vig.parametro(p.key), teto: p.teto }));
   const status: Record<string, StatusDoComponente> = Object.fromEntries(COMPONENTES_DA_META.map((c) => [c.key, vig.status(c.key)]));
   const grupos = linhasPorModulo(MODULES, AREAS, valores, status);
@@ -79,6 +81,14 @@ export default async function MetaConfigPage() {
           <ParametrosDaAuditoria parametros={parametros} canEdit={user.role === 'ADMIN'} mesAtual={ym} />
         </div>
         <p className="px-4 pb-3 text-xs text-ink-500">O prazo conta em horas úteis a partir da ciência do gerente (domingos e feriados cadastrados não contam). As faixas descontam uma parte do PESO do componente Atestados: 100% de conformidade não perde nada. Mesma vigência e motivo dos pesos.</p>
+      </Card>
+
+      <Card>
+        <PanelHeader title="Parâmetros da auditoria operacional (Notas · Gás · Óleo · Pagamentos)" icon={<span className="sgo-panel__ic sgo-panel__ic--brand" aria-hidden><ClipboardCheck className="h-4 w-4" /></span>} action={<Link href="/modulos/auditoria-operacional" className="sgo-btn sgo-btn--sm">Abrir a auditoria</Link>} />
+        <div className="p-4">
+          <ParametrosDaAuditoria parametros={parametrosOperacionais} canEdit={user.role === 'ADMIN'} mesAtual={ym} />
+        </div>
+        <p className="px-4 pb-3 text-xs text-ink-500">v1.184.0 — por módulo: o prazo (horas úteis após a ciência do gerente) e o desconto por falha confirmada, sempre sobre o PESO do componente do módulo e acumulado até 100%. Só a falha confirmada pela supervisão, com prazo vencido e sem justificativa aprovada, desconta. Lançamento auditado sai do &quot;Fora do prazo&quot;. Mesma vigência e motivo dos pesos.</p>
       </Card>
 
       <Card>

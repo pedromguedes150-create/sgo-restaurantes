@@ -129,6 +129,11 @@ export async function createNote(
       await notifyAdmins(sup);
     }
   }
+  /* v1.184.0 — auditoria operacional: o lançamento recém-feito procura a ocorrência esperada da unidade (melhor esforço). */
+  {
+    const { cruzarLancamento } = await import('@/lib/auditoria-operacional/auditoria');
+    await cruzarLancamento('NOTES', note.id).catch((e) => console.error('[auditoria-operacional] falha ao cruzar nota:', e));
+  }
   return { ok: true, id: note.id };
 }
 

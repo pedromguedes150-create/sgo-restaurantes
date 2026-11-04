@@ -235,6 +235,11 @@ export async function createPaymentRequest(
        Coordenador da unidade (v1.133.0, `papeisQueAprovam`). */
     for (const papel of papeisQueAprovam({ type: input.type, approverRole })) await notifyUnitRole(input.unitId, papel, payload);
   }
+  /* v1.184.0 — auditoria operacional: o lançamento recém-feito procura a ocorrência esperada da unidade (melhor esforço). */
+  {
+    const { cruzarLancamento } = await import('@/lib/auditoria-operacional/auditoria');
+    await cruzarLancamento('PAYMENTS', req.id).catch((e) => console.error('[auditoria-operacional] falha ao cruzar pagamento:', e));
+  }
   return { ok: true, id: req.id };
 }
 

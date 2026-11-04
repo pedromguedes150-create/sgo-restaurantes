@@ -111,7 +111,7 @@ describe('cruzamento e registro de chaves', () => {
   it('o 13º componente e os quatro parâmetros estão no registro da vigência, com rótulo legível', () => {
     expect(COMPONENTES_DA_META.find((c) => c.key === 'CERTIFICATES')).toMatchObject({ pesoPadrao: 0 });
     expect(PARAMETROS_DA_AUDITORIA.map((p) => [p.key, p.padrao])).toEqual([['CERT_AUDIT_DEADLINE_HOURS', 24], ['CERT_AUDIT_PENALTY_90', 10], ['CERT_AUDIT_PENALTY_80', 25], ['CERT_AUDIT_PENALTY_UNDER80', 50]]);
-    expect(CHAVES_DA_META.filter((c) => c.tipo === 'PARAMETRO')).toHaveLength(4);
+    expect(CHAVES_DA_META.filter((c) => c.tipo === 'PARAMETRO' && c.componente === 'CERTIFICATES')).toHaveLength(4);
     expect(valorLegivel('CERT_AUDIT_DEADLINE_HOURS', '24')).toBe('24 h');
     expect(valorLegivel('CERT_AUDIT_PENALTY_80', '25')).toBe('25%');
   });
