@@ -75,11 +75,12 @@ afterAll(async () => {
 
 describe('o Separador do CD pode ser configurado na matriz', () => {
   it('setRolePermission aceita SEPARATOR — antes devolvia "inválido"', async () => {
-    const r = await setRolePermission(admin(), { role: 'SEPARATOR', module: 'PRODUCTS', canView: true, canEdit: false });
+    /* v1.185.0: PRODUCTS virou INATIVO (MODULOS_INATIVOS) e não serve mais de exemplo — NOTES faz o mesmo papel. */
+    const r = await setRolePermission(admin(), { role: 'SEPARATOR', module: 'NOTES', canView: true, canEdit: false });
     expect(r).toEqual({ ok: true });
     const perms = await effectivePermissions('SEPARATOR');
-    expect(perms.PRODUCTS).toEqual({ canView: true, canEdit: false });
-    await prisma.rolePermission.deleteMany({ where: { role: 'SEPARATOR', module: 'PRODUCTS' } });
+    expect(perms.NOTES).toEqual({ canView: true, canEdit: false });
+    await prisma.rolePermission.deleteMany({ where: { role: 'SEPARATOR', module: 'NOTES' } });
   });
 
   it('nasce fechado: sem linha cadastrada só enxerga a separação e a ajuda', async () => {

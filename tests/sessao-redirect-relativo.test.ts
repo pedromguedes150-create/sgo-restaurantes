@@ -28,7 +28,7 @@ describe('renovação da sessão redireciona com Location RELATIVO', () => {
 
   it('nenhuma rota de API monta redirect absoluto a partir de req.url', () => {
     const { execSync } = require('node:child_process') as typeof import('node:child_process');
-    const out = execSync('git grep -l "NextResponse.redirect(new URL(" -- src/app/api || true', { encoding: 'utf8' }).trim();
+    const out = execSync('git grep -l "NextResponse.redirect(new URL(" -- src/app/api || exit 0', { encoding: 'utf8' }) /* `exit 0` vale no sh e no cmd.exe; `true` não existe no Windows */.trim();
     expect(out).toBe('');
   });
 });

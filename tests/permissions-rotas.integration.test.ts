@@ -99,7 +99,7 @@ describe('O Gerente continua com o que já usava', () => {
     '/modulos/pagamentos', '/modulos/pessoas', '/modulos/pessoas/mapa', '/modulos/escala',
     '/modulos/escala/folgas', '/modulos/troco', '/modulos/metas', '/modulos/atestados',
     '/modulos/cancelamentos', '/modulos/cancelamentos/itens', '/modulos/gas', '/modulos/oleo',
-    '/modulos/inventario-utensilios', '/modulos/higiene', '/modulos/produtos', '/ajuda',
+    '/modulos/inventario-utensilios', '/modulos/higiene', '/modulos/pedidos', '/ajuda', // v1.185.0: Pedidos Internos (/modulos/produtos) ficou INATIVO; o gerente pede por /modulos/pedidos
   ];
 
   it('abre todas as telas da rotina', async () => {
