@@ -5,6 +5,7 @@ import { requestContext } from '@/lib/auth/service';
 import {
   alternarSetorDoCd,
   criarSetorDoCd,
+  definirDestinoDoSetor,
   excluirSetorDoCd,
   renomearSetorDoCd,
   type ResultadoSetor,
@@ -37,7 +38,9 @@ export async function POST(req: Request) {
 
   switch (b.action) {
     case 'create':
-      return resposta(await criarSetorDoCd(user, String(b.name ?? ''), ctx));
+      return resposta(await criarSetorDoCd(user, String(b.name ?? ''), ctx, b.destination ? String(b.destination) : undefined));
+    case 'destino':
+      return resposta(await definirDestinoDoSetor(user, { id: String(b.id ?? ''), destination: String(b.destination ?? '') }, ctx));
     case 'rename':
       return resposta(await renomearSetorDoCd(user, { id: String(b.id ?? ''), name: String(b.name ?? '') }, ctx));
     case 'toggle':

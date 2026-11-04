@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma';
+import { destinoSugeridoPeloNome } from '@/lib/pedidos/regras';
 import { audit } from '@/lib/audit';
 import { apelidosDoConceito, conceitoCoberto } from '@/lib/stock/setor-sugerido';
 
@@ -94,7 +95,7 @@ export async function ensureSetoresDoRomaneio(): Promise<{ criados: string[] }> 
     try {
       /* `name` é `@unique`: se dois acessos simultâneos tentarem criar o mesmo
          setor, o segundo falha e é ignorado — e não derruba o resto da lista. */
-      const s = await prisma.cdSector.create({ data: { name: faltando[i].nome, order: total + i } });
+      const s = await prisma.cdSector.create({ data: { name: faltando[i].nome, order: total + i, destination: destinoSugeridoPeloNome(faltando[i].nome) } });
       criados.push(s.name);
     } catch {
       continue;

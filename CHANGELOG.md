@@ -9,6 +9,16 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.187.0 — 2026-11-04 (Pedidos: o destino é do setor, com Almoxarifado; nada obrigatório)
+
+Decisões do Pedro (04/11, planilha + prints): o gerente NÃO escolhe destino — cada setor já tem o seu (Câmaras Frias, Salgados, Confeitaria e Carnes → Fábrica; Descartáveis, Bebidas, Secos e Bombonière → CD; Almoxarifado → Almoxarifado, um destino à parte); o pedido é UM só e o sistema encaminha cada setor; e "escreva pelo menos um item" deixou de ser obrigatório.
+
+- **Setores do CD** ganharam o campo **Destino** (Fábrica · CD · Almoxarifado), editável pelo Admin/Supervisão em Configurações → Setores do CD. A migração grava a tabela do Pedro pelo nome do setor; setor novo nasce com o destino que o nome sugere (`destinoSugeridoPeloNome`) e pode ser corrigido.
+- **Novo pedido** sem seletor de destino: os setores aparecem agrupados por destino; o resumo diz para onde o pedido vai. O botão Enviar está sempre disponível — pedido sem item vai só com a observação (e avisa os Admins, porque não há setor a encaminhar).
+- O bloco do pedido leva o **destino congelado** (`SectorOrderSection.destination`): mudar o destino de um setor depois só vale para os pedidos novos. A coluna `destination` de `sector_orders` saiu; "Destinos" da lista e do cabeçalho são derivados dos blocos.
+- **Caixa de entrada** com filtro Fábrica · CD · Almoxarifado (Admin); blocos agrupados por destino; texto copiado/impresso com um título por destino.
+- ⚠️ Migração com UMA parte destrutiva, autorizada pelo Daniel (04/11): os pedidos por setor existentes (todos de teste) são apagados e a coluna `sector_orders.destination` é removida. Em duas migrações porque o Postgres não deixa usar o valor novo do enum na mesma transação.
+
 ## v1.186.0 — 2026-11-04 (Uso do SGO: todos os componentes ativos da meta no quadro das unidades)
 
 Pedido do Pedro (prints de 04/11): "todos que estão ativos e contam na comissão, conforme a Configuração da Meta, devem aparecer no quadro Resultado coletivo".

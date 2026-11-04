@@ -7,11 +7,17 @@ import { Button, IconButton } from '@/components/ui/ds/button';
 import { Input } from '@/components/ui/ds/field';
 import { Banner } from '@/components/ui/ds/banner';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { Select } from '@/components/ui/ds/select';
+import { DESTINOS, destinoSugeridoPeloNome, type Destino } from '@/lib/pedidos/regras';
+
+const OPCOES_DESTINO = DESTINOS.map((d) => ({ value: d.key, label: d.curto }));
 
 export interface SetorRow {
   id: string;
   name: string;
   active: boolean;
+  /** v1.187.0 — para onde vai o bloco deste setor num Pedido por setor. */
+  destination: Destino;
   produtos: number;
   separadores: number;
   itensEmPedidos: number;
@@ -34,6 +40,7 @@ async function chamar(body: Record<string, unknown>): Promise<{ ok: boolean; err
 export function CdSectorsAdmin({ setores }: { setores: SetorRow[] }) {
   const router = useRouter();
   const [novo, setNovo] = useState('');
+  const [destinoNovo, setDestinoNovo] = useState<Destino | ''>('');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -41,13 +48,14 @@ export function CdSectorsAdmin({ setores }: { setores: SetorRow[] }) {
     if (!novo.trim()) return;
     setBusy(true);
     setErro(null);
-    const r = await chamar({ action: 'create', name: novo });
+    const r = await chamar({ action: 'create', name: novo, destination: destinoNovo || destinoSugeridoPeloNome(novo) });
     setBusy(false);
     if (!r.ok) {
       setErro(r.error ?? 'Falha');
       return;
     }
     setNovo('');
+    setDestinoNovo('');
     router.refresh();
   }
 
@@ -65,10 +73,20 @@ export function CdSectorsAdmin({ setores }: { setores: SetorRow[] }) {
             }}
           />
         </div>
+        <div className="w-44">
+          <Select
+            label="Destino"
+            aria-label="Destino do novo setor"
+            value={destinoNovo || destinoSugeridoPeloNome(novo)}
+            onValueChange={(v) => setDestinoNovo(v as Destino)}
+            options={OPCOES_DESTINO}
+          />
+        </div>
         <Button loading={busy} onClick={criar}>
           <Plus className="h-4 w-4" /> Adicionar
         </Button>
       </div>
+      <p className="text-xs text-ink-500">Destino = para onde vai o bloco deste setor num Pedido por setor (Fábrica, CD ou Almoxarifado). O gerente não escolhe destino: o sistema encaminha cada setor pelo que está aqui. Mudar o destino vale para os pedidos novos; os já enviados guardam o destino do dia.</p>
 
       {erro && <Banner tone="danger" title={erro} />}
 
@@ -144,6 +162,16 @@ function LinhaDeSetor({ setor, onChange }: { setor: SetorRow; onChange: () => vo
         ) : (
           <>
             <span className="min-w-0 basis-full break-words text-sm text-ink-900 sm:basis-auto sm:flex-1">{setor.name}</span>
+            <span className="w-40 shrink-0">
+              <Select
+                aria-label={`Destino de ${setor.name}`}
+                size="sm"
+                value={setor.destination}
+                onValueChange={(v) => executar({ action: 'destino', id: setor.id, destination: v })}
+                options={OPCOES_DESTINO}
+                disabled={busy}
+              />
+            </span>
             {!setor.active && <StatusBadge tone="neutral">Desativado</StatusBadge>}
             {uso.length > 0 && <span className="shrink-0 text-xs text-ink-500">{uso.join(' · ')}</span>}
             <Button

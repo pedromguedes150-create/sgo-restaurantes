@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
-import { dataBR, ROTULO_STATUS, rotuloDoDestino, TOM_STATUS } from '@/lib/pedidos/regras';
+import { agruparPorDestino, dataBR, ROTULO_STATUS, rotuloDoDestino, rotuloDosDestinos, TOM_STATUS } from '@/lib/pedidos/regras';
 import type { PedidoDaTela, SecaoDoPedido } from '@/lib/pedidos/pedidos';
 
 /**
@@ -13,7 +13,7 @@ export function CabecalhoDoPedido({ pedido, mostrarUnidade = true }: { pedido: P
   return (
     <div className="flex flex-wrap items-start justify-between gap-2" data-testid="cabecalho-pedido">
       <div className="min-w-0">
-        <p className="text-base font-semibold text-ink-900">Pedido nº {pedido.number}{mostrarUnidade ? ` · ${pedido.unitName}` : ''} → {rotuloDoDestino(pedido.destino)}</p>
+        <p className="text-base font-semibold text-ink-900">Pedido nº {pedido.number}{mostrarUnidade ? ` · ${pedido.unitName}` : ''}{pedido.secoes.length ? ` → ${rotuloDosDestinos(pedido.secoes)}` : ''}</p>
         <p className="text-xs text-ink-500">Enviado {dataBR(pedido.sentAt)} por {pedido.createdByName}{pedido.attendedAt ? ` · atendido ${dataBR(pedido.attendedAt)}` : ''}</p>
         {pedido.note && <p className="mt-1 whitespace-pre-wrap text-sm text-ink-700"><b>Observação:</b> {pedido.note}</p>}
       </div>
@@ -26,7 +26,7 @@ export function BlocoDoSetor({ secao, acoes }: { secao: SecaoDoPedido; acoes?: R
   return (
     <div className="rounded-lg border border-line bg-surface" data-testid="bloco-setor">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-sunken px-3 py-2">
-        <span className="font-semibold text-ink-900">{secao.sectorName.toUpperCase()}</span>
+        <span className="flex flex-wrap items-center gap-2"><span className="font-semibold text-ink-900">{secao.sectorName.toUpperCase()}</span><span className="sgo-tag" data-testid="destino-do-bloco">{rotuloDoDestino(secao.destination)}</span></span>
         <span className="flex flex-wrap items-center gap-2">
           <StatusBadge tone={TOM_STATUS[secao.status]} dot>{ROTULO_STATUS[secao.status]}</StatusBadge>
           {acoes}
@@ -46,10 +46,18 @@ export function BlocoDoSetor({ secao, acoes }: { secao: SecaoDoPedido; acoes?: R
   );
 }
 
+/** Os blocos agrupados por destino (Fábrica · CD · Almoxarifado), cada grupo com o seu título — v1.187.0. */
 export function BlocosDoPedido({ pedido, acoesDaSecao }: { pedido: PedidoDaTela; acoesDaSecao?: (s: SecaoDoPedido) => ReactNode }) {
+  const grupos = agruparPorDestino(pedido.secoes);
+  if (grupos.length === 0) return <p className="rounded-lg border border-dashed border-line p-3 text-sm text-ink-500" data-testid="sem-blocos">Pedido sem itens por setor — só a observação.</p>;
   return (
-    <div className="space-y-2">
-      {pedido.secoes.map((s) => <BlocoDoSetor key={s.id} secao={s} acoes={acoesDaSecao?.(s)} />)}
+    <div className="space-y-3">
+      {grupos.map((g) => (
+        <section key={g.destino} className="space-y-2" data-testid={`grupo-${g.destino}`}>
+          {grupos.length > 1 && <h3 className="sgo-type-13 font-semibold text-brand">{g.rotulo.toUpperCase()}</h3>}
+          {g.setores.map((s) => <BlocoDoSetor key={s.id} secao={s} acoes={acoesDaSecao?.(s)} />)}
+        </section>
+      ))}
     </div>
   );
 }
