@@ -56,7 +56,7 @@ export default async function UsoRelatorioPage({ searchParams }: { searchParams:
 
       <section>
         <h2 className="sgo-type-17 mb-2 font-bold text-brand">Resultado coletivo — unidade por unidade</h2>
-        <TabelaUnidades unidades={d.unidades} />
+        <TabelaUnidades unidades={d.unidades} pesos={d.pesosDaMeta} />
         <p className="mt-2 text-xs text-ink-500">Abertas = ainda no prazo; vencidas = prazo passou sem resolver. &quot;Onde mais perde&quot; = o componente ativo com o pior % da unidade, com os descontos nomeados.</p>
       </section>
       <section className="break-before-page">

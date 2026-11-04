@@ -3,7 +3,7 @@ import { Card, PanelHeader } from '@/components/sgo/panel';
 import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
 import { Legenda, Rosca } from '@/components/metas/graficos-metas';
 import { COR_FAIXA } from '@/lib/metas/graficos';
-import { faixaDeUso, rotuloDoModulo, ROTULO_FAIXA_USO, taxaDeFalha, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
+import { colunasDaMeta, faixaDeUso, rotuloDoModulo, ROTULO_FAIXA_USO, taxaDeFalha, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
 import type { UsoDoSgo } from '@/lib/metas/uso';
 import { explicarNota, rotuloCurto, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
 import { shortUnitName } from '@/lib/unit-name';
@@ -64,9 +64,9 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
       <Card data-testid="bloco-coletivo">
         <PanelHeader title="Resultado coletivo — unidade por unidade" count={dados.unidades.length} icon={<span className="sgo-panel__ic sgo-panel__ic--blue" aria-hidden><Activity className="h-4 w-4" /></span>} />
         <div className="overflow-x-auto p-2">
-          <TabelaUnidades unidades={dados.unidades} ym={dados.yearMonth} />
+          <TabelaUnidades unidades={dados.unidades} ym={dados.yearMonth} pesos={dados.pesosDaMeta} />
         </div>
-        <p className="px-4 pb-3 text-xs text-ink-500">Uso = média de checklists, desperdício e comandas (dias lançados ÷ dias decorridos, em Brasília, até ontem). &quot;Checklists&quot; aqui conta TODOS os checklists da unidade; a nota da meta usa só os que entram na meta — por isso os dois números podem diferir. Abertas = ainda no prazo; vencidas = prazo passou sem resolver (viram &quot;não feitas&quot; na virada do dia). &quot;Onde mais perde&quot; = o componente ativo com o pior % — toque na unidade para abrir a composição da meta.</p>
+        <p className="px-4 pb-3 text-xs text-ink-500">Uso = média de checklists, desperdício e comandas (dias lançados ÷ dias decorridos, em Brasília, até ontem). Uma coluna por componente ATIVO da Configuração da Meta (peso entre parênteses), com o % da unidade naquele componente — a mesma conta de Metas; &quot;—&quot; = nada a medir no mês. Abertas = ainda no prazo; vencidas = prazo passou sem resolver (viram &quot;não feitas&quot; na virada do dia). &quot;Onde mais perde&quot; = o componente ativo com o pior % — toque na unidade para abrir a composição da meta.</p>
       </Card>
 
       <Card>
@@ -94,10 +94,12 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
   );
 }
 
-export function TabelaUnidades({ unidades, ym }: { unidades: UnidadeUso[]; ym?: string }) {
+/** v1.186.0: as colunas de cobertura (checklists/desperdício/comandas) deram lugar a UMA coluna por componente ATIVO da meta, com o peso no cabeçalho. */
+export function TabelaUnidades({ unidades, ym, pesos = [] }: { unidades: UnidadeUso[]; ym?: string; pesos?: PesoDaMeta[] }) {
+  const colunas = colunasDaMeta(pesos);
   return (
     <table className="sgo-tbl w-full text-sm" data-testid="tabela-unidades-uso">
-      <thead><tr><th className="text-left">#</th><th className="text-left">Unidade</th><th className="text-left">Responsáveis</th><th className="text-right">Uso</th><th className="text-right">Checklists</th><th className="text-right">Desperdício</th><th className="text-right">Comandas</th><th className="text-right">No prazo</th><th className="text-right">Fora</th><th className="text-right">Não feitas</th><th className="text-right">Abertas</th><th className="text-right">Vencidas</th><th className="text-right">Falhas</th><th className="text-right">Ações</th><th className="text-right">Usuários</th><th className="text-right">Meta</th><th className="text-left">Onde mais perde</th></tr></thead>
+      <thead><tr><th className="text-left">#</th><th className="text-left">Unidade</th><th className="text-left">Responsáveis</th><th className="text-right">Uso</th>{colunas.map((c) => <th key={c.key} className="text-right" title={c.name} data-testid="coluna-componente">{rotuloCurto(c.key, c.name)} <span className="font-normal text-ink-500">(peso {c.weight})</span></th>)}<th className="text-right">No prazo</th><th className="text-right">Fora</th><th className="text-right">Não feitas</th><th className="text-right">Abertas</th><th className="text-right">Vencidas</th><th className="text-right">Falhas</th><th className="text-right">Ações</th><th className="text-right">Usuários</th><th className="text-right">Meta</th><th className="text-left">Onde mais perde</th></tr></thead>
       <tbody>
         {unidades.map((u, i) => (
           <tr key={u.unitId} data-testid="linha-unidade-uso">
@@ -105,9 +107,10 @@ export function TabelaUnidades({ unidades, ym }: { unidades: UnidadeUso[]; ym?: 
             <td className="whitespace-nowrap font-medium">{ym ? <a className="text-brand hover:underline" href={`/modulos/metas?month=${ym}&unit=${u.unitId}`}>{shortUnitName(u.unitName)}</a> : shortUnitName(u.unitName)}</td>
             <td className="whitespace-normal text-xs">{u.responsaveis.length ? u.responsaveis.join(', ') : <span className="text-danger">sem gerente vinculado</span>}</td>
             <td className="text-right font-bold tabular-nums" style={{ color: COR_FAIXA[faixaDeUso(u.usagePct)] }}>{u.usagePct}%</td>
-            <td className="text-right tabular-nums">{u.checklistPct}%</td>
-            <td className="text-right tabular-nums">{u.wastePct}%</td>
-            <td className="text-right tabular-nums">{u.commandsPct}%</td>
+            {colunas.map((c) => {
+              const v = u.componentes.find((x) => x.key === c.key)?.scorePct ?? null;
+              return <td key={c.key} className={`text-right tabular-nums${v != null && v < 50 ? ' font-semibold text-danger' : ''}`} data-testid="celula-componente">{pct(v)}</td>;
+            })}
             <td className="text-right tabular-nums">{u.done}</td>
             <td className="text-right tabular-nums">{u.late}</td>
             <td className="text-right tabular-nums">{u.missed ? <span className="font-semibold text-danger">{u.missed}</span> : 0}</td>

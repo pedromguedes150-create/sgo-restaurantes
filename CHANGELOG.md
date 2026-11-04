@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.186.0 — 2026-11-04 (Uso do SGO: todos os componentes ativos da meta no quadro das unidades)
+
+Pedido do Pedro (prints de 04/11): "todos que estão ativos e contam na comissão, conforme a Configuração da Meta, devem aparecer no quadro Resultado coletivo".
+
+- **Uma coluna por componente ATIVO com peso** no "Resultado coletivo — unidade por unidade" (tela, PDF e Excel), com o peso no cabeçalho e o % da unidade naquele componente — a MESMA conta de Metas e a mesma ordem do quadro "Meta por usuário". Componente em vigor sem nada a medir na unidade sai "—" (não é zero); abaixo de 50% em vermelho.
+- As três colunas de cobertura (Checklists / Desperdício / Comandas, dias lançados ÷ decorridos) saíram do quadro — a coluna "Uso" (média delas) fica. Nenhuma regra de meta mudou.
+- `uso-calculo.ts`: `colunasDaMeta`, `componentesDaUnidade`, `UnidadeUso.componentes`.
+
 ## v1.185.0 — 2026-11-04 (Pedidos por setor: a lista escrita ao CD/Fábrica)
 ### Novo
 - **Pedidos** (Operação → Suprimentos): a unidade escolhe o destino (CD ou Fábrica), escreve uma linha por item em cada setor (CÂMARAS FRIAS, SALGADOS, CONFEITARIA… — os setores ativos do cadastro, a mesma lista para os dois destinos) e envia, como um e-mail. Cada bloco chega ao separador do setor, que marca **Recebido** e **Atendido**; o pedido fica Atendido quando todos os setores atenderam. Aba "Enviados" com a situação; detalhe com impressão/PDF e "Copiar texto" (WhatsApp). Avisos na Central de Notificações para os separadores envolvidos (Fábrica e setor sem separador: Admins) e para quem enviou, quando o setor atende.

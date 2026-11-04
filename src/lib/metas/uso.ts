@@ -3,7 +3,7 @@ import { getUsageBoard } from '@/lib/supervisor/usage';
 import { ROLE_LABELS } from '@/lib/roles';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
-import { piorComponente, pontualidade, resumirUso, type ResumoDoUso, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
+import { componentesDaUnidade, piorComponente, pontualidade, resumirUso, type ResumoDoUso, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
 import { componentesDaMeta, descontosDaMeta } from '@/lib/metas/componentes';
 import { contaNaNota } from '@/lib/metas/pontuacao';
 import { metaDaUnidade, metaDoUsuario, type MetaDaUnidade, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
@@ -94,6 +94,7 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
       responsaveis: usuarios.filter((u) => PERFIS_DA_BONIFICACAO.includes(u.role) && membros.some((m) => m.userId === u.id && m.unitId === b.unitId)).map((u) => u.name),
       piorComponente: piorComponente(metaDaUnidadeB),
       descontos: metaDaUnidadeB?.descontos ?? [],
+      componentes: componentesDaUnidade(metaDaUnidadeB, pesosDaMeta),
       unitId: b.unitId, unitName: b.unitName,
       usagePct: b.usagePct, checklistPct: b.checklistPct, wastePct: b.wastePct, commandsPct: b.commandsPct, metaPct: b.metaPct,
       done: n(tarefasPorUnidade, b.unitId, 'DONE'), late: n(tarefasPorUnidade, b.unitId, 'LATE'), missed: n(tarefasPorUnidade, b.unitId, 'MISSED'),

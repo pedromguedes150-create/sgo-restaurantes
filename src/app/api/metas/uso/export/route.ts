@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import { getSessionUser } from '@/lib/auth/session';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getUsoDoSgo } from '@/lib/metas/uso';
-import { rotuloDoModulo, ROTULO_FAIXA_USO, taxaDeFalha } from '@/lib/metas/uso-calculo';
+import { colunasDaMeta, rotuloDoModulo, ROTULO_FAIXA_USO, taxaDeFalha } from '@/lib/metas/uso-calculo';
 import { explicarNota, rotuloCurto } from '@/lib/metas/meta-por-usuario';
 
 /** Excel do Uso do SGO (v1.164.0): RESUMO · UNIDADES · META POR USUÁRIO (v1.179.0) · USUÁRIOS. ?month=AAAA-MM. Mesma leitura da tela. */
@@ -30,9 +30,10 @@ export async function GET(req: Request) {
     ['Usuário que mais usa', r.maisUsam[0] ? `${r.maisUsam[0].name} (${r.maisUsam[0].acoes} ações)` : ''],
     ['Sem nenhuma ação', r.usuariosSemUso.map((u) => u.name).join(', ')],
   ]), 'RESUMO');
+  const colunasDaUnidade = colunasDaMeta(d.pesosDaMeta);
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
-    ['#', 'Unidade', 'Responsáveis', 'Uso (%)', 'Checklists (%)', 'Desperdício (%)', 'Comandas (%)', 'No prazo', 'Fora do prazo', 'Não realizadas', 'Abertas (no prazo)', 'Vencidas', 'Falhas (%)', 'Ações', 'Usuários ativos', 'Usuários vinculados', 'Ocorrências', 'Notas', 'Meta (%)', 'Onde mais perde', 'Descontos'],
-    ...d.unidades.map((u, i) => [i + 1, u.unitName, u.responsaveis.join(', '), u.usagePct, u.checklistPct, u.wastePct, u.commandsPct, u.done, u.late, u.missed, u.pendentes, u.vencidas, n(taxaDeFalha(u)), u.acoes, u.usuariosAtivos, u.usuariosVinculados, u.occurrences, u.notes, u.metaPct, u.piorComponente ? `${rotuloCurto(u.piorComponente.key, u.piorComponente.name)} ${u.piorComponente.scorePct}% (peso ${u.piorComponente.weight})` : '', u.descontos.map((x) => `${x.name} ${x.quantidade}× (−${x.total})${x.detalhe ? ` — ${x.detalhe}` : ''}`).join('; ')]),
+    ['#', 'Unidade', 'Responsáveis', 'Uso (%)', ...colunasDaUnidade.map((p) => `${rotuloCurto(p.key, p.name)} (peso ${p.weight}) %`), 'No prazo', 'Fora do prazo', 'Não realizadas', 'Abertas (no prazo)', 'Vencidas', 'Falhas (%)', 'Ações', 'Usuários ativos', 'Usuários vinculados', 'Ocorrências', 'Notas', 'Meta (%)', 'Onde mais perde', 'Descontos'],
+    ...d.unidades.map((u, i) => [i + 1, u.unitName, u.responsaveis.join(', '), u.usagePct, ...colunasDaUnidade.map((p) => n(u.componentes.find((c) => c.key === p.key)?.scorePct ?? null)), u.done, u.late, u.missed, u.pendentes, u.vencidas, n(taxaDeFalha(u)), u.acoes, u.usuariosAtivos, u.usuariosVinculados, u.occurrences, u.notes, u.metaPct, u.piorComponente ? `${rotuloCurto(u.piorComponente.key, u.piorComponente.name)} ${u.piorComponente.scorePct}% (peso ${u.piorComponente.weight})` : '', u.descontos.map((x) => `${x.name} ${x.quantidade}× (−${x.total})${x.detalhe ? ` — ${x.detalhe}` : ''}`).join('; ')]),
   ]), 'UNIDADES');
   const pesos = [...d.pesosDaMeta].filter((p) => p.weight > 0).sort((a, b) => b.weight - a.weight);
   const comMeta = d.usuarios.filter((u) => u.meta).sort((a, b) => b.meta!.scorePct - a.meta!.scorePct);
