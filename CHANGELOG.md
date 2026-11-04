@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.188.0 — 2026-11-04 (Pedidos: "Em separação", o gerente edita até lá, caixa de entrada sem sumir e com impressão)
+
+Pedido do Pedro (print da caixa de entrada, 04/11): o pedido atendido não pode sumir; quem recebe precisa imprimir; "Recebido" vira "Em separação"; e o gerente pode editar o pedido enviado ATÉ o setor entrar em separação.
+
+- **Em separação** (`EM_SEPARACAO`, antes `RECEBIDO` — migração só renomeia o valor do enum): o separador marca ao pegar a lista; "Atendido" ao terminar. A situação do pedido segue derivada dos blocos.
+- **O gerente edita o pedido** (botão "Editar pedido" no pedido; `/modulos/pedidos/[id]/editar`): altera, acrescenta ou retira itens dos setores ainda "Enviado", acrescenta setor e muda a observação. Bloco em separação ou atendido fica travado (o servidor recusa qualquer diferença nele, nomeando o setor); pedido atendido por todos não se edita. Os setores tocados são avisados; auditoria `ORDER_EDITED`.
+- **Caixa de entrada**: aba padrão **Todos** (o pedido atendido fica na lista com a situação), mais "Em aberto" e "Atendidos"; botões **Abrir** e **Imprimir** por pedido (`/modulos/pedidos/recebidos/[id]`, a mesma folha do gerente, na rota que o separador alcança).
+- `regras.ts`: `blocoEditavel`, `pedidoEditavel`, ação `separar`; `pedidos.ts`: `editarPedido`, `listarRecebidos({ situacao })`; `components/pedidos/pedido-impresso.tsx` (a folha, compartilhada).
+
 ## v1.187.0 — 2026-11-04 (Pedidos: o destino é do setor, com Almoxarifado; nada obrigatório)
 
 Decisões do Pedro (04/11, planilha + prints): o gerente NÃO escolhe destino — cada setor já tem o seu (Câmaras Frias, Salgados, Confeitaria e Carnes → Fábrica; Descartáveis, Bebidas, Secos e Bombonière → CD; Almoxarifado → Almoxarifado, um destino à parte); o pedido é UM só e o sistema encaminha cada setor; e "escreva pelo menos um item" deixou de ser obrigatório.

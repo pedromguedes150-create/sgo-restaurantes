@@ -37,7 +37,7 @@ export function BlocoDoSetor({ secao, acoes }: { secao: SecaoDoPedido; acoes?: R
       </ol>
       {(secao.receivedByName || secao.attendedByName) && (
         <p className="border-t border-line px-3 py-1.5 text-xs text-ink-500">
-          {secao.receivedByName && <>Recebido por {secao.receivedByName} em {dataBR(secao.receivedAt!)}</>}
+          {secao.receivedByName && <>Em separação por {secao.receivedByName} desde {dataBR(secao.receivedAt!)}</>}
           {secao.receivedByName && secao.attendedByName && ' · '}
           {secao.attendedByName && <>Atendido por {secao.attendedByName} em {dataBR(secao.attendedAt!)}</>}
         </p>

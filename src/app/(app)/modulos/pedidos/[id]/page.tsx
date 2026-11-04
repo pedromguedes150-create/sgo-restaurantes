@@ -1,40 +1,36 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
+import { canEditModule } from '@/lib/permissions';
+import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { getPedido } from '@/lib/pedidos/pedidos';
-import { rotuloDoDestino, textoDoPedido } from '@/lib/pedidos/regras';
-import { AutoPrint } from '@/components/shared/auto-print';
-import { PrintButton } from '@/components/ui/print-button';
-import { CopiarTexto } from '@/components/pedidos/copiar-texto';
-import { BlocosDoPedido, CabecalhoDoPedido } from '@/components/pedidos/bloco-do-pedido';
+import { pedidoEditavel, podeEnviar, rotuloDoDestino } from '@/lib/pedidos/regras';
+import { PedidoImpresso } from '@/components/pedidos/pedido-impresso';
 
 export const dynamic = 'force-dynamic';
 
-/** Um pedido por setor (v1.185.0): o pedido inteiro, para conferir, imprimir (?imprimir=1) ou copiar como texto. */
-export default async function PedidoPage({ params, searchParams }: { params: { id: string }; searchParams: { imprimir?: string; enviado?: string } }) {
+/** Um pedido por setor (v1.185.0): o pedido inteiro, para conferir, imprimir (?imprimir=1), copiar como texto ou EDITAR (v1.188.0, enquanto nenhum setor entrou em separação). */
+export default async function PedidoPage({ params, searchParams }: { params: { id: string }; searchParams: { imprimir?: string; enviado?: string; editado?: string } }) {
   const user = (await getSessionUser())!;
   const p = await getPedido(user, params.id);
   if (!p) notFound();
-  const texto = textoDoPedido({ number: p.number, unitName: p.unitName, sentAt: p.sentAt, createdByName: p.createdByName, note: p.note, blocos: p.secoes.map((s) => ({ sectorName: s.sectorName, destination: s.destination, lines: s.lines })) });
+  const podeEditar = podeEnviar(user.role) && canAccessUnit(user, p.unitId) && (await canEditModule(user.role, 'ORDERS')) && pedidoEditavel(p.status);
+  const aviso = searchParams.enviado === '1'
+    ? <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success print:hidden" data-testid="aviso-enviado">Pedido nº {p.number} enviado{p.destinos.length ? ` para ${p.destinos.map(rotuloDoDestino).join(', ')}` : ''}. Os separadores dos setores envolvidos foram avisados. Você pode editar o pedido enquanto o setor não entrar em separação.</p>
+    : searchParams.editado === '1'
+      ? <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success print:hidden" data-testid="aviso-editado">Pedido nº {p.number} alterado. Os setores envolvidos foram avisados.</p>
+      : undefined;
 
   return (
-    <div className="sgo-print mx-auto max-w-4xl space-y-4 bg-surface p-4 text-ink-900 print:p-0">
-      {searchParams.imprimir === '1' && <AutoPrint />}
-      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <Link href="/modulos/pedidos?aba=enviados" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pedidos</Link>
-        <span className="flex gap-2">
-          <CopiarTexto texto={texto} />
-          <Link href={`/modulos/pedidos/${p.id}?imprimir=1`} target="_blank" className="sgo-btn sgo-btn--sm"><Printer className="h-4 w-4" /> PDF</Link>
-          <PrintButton label="Imprimir" />
-        </span>
-      </div>
-      {searchParams.enviado === '1' && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success print:hidden" data-testid="aviso-enviado">Pedido nº {p.number} enviado{p.destinos.length ? ` para ${p.destinos.map(rotuloDoDestino).join(', ')}` : ''}. Os separadores dos setores envolvidos foram avisados.</p>}
-      <header className="border-b-4 border-brand pb-3">
-        <p className="sgo-type-11 font-semibold text-brand">GRUPO BEIJA-FLOR · PEDIDO POR SETOR</p>
-        <CabecalhoDoPedido pedido={p} />
-      </header>
-      <BlocosDoPedido pedido={p} />
-    </div>
+    <PedidoImpresso
+      pedido={p}
+      imprimir={searchParams.imprimir === '1'}
+      voltarHref="/modulos/pedidos?aba=enviados"
+      voltarLabel="Pedidos"
+      pdfHref={`/modulos/pedidos/${p.id}?imprimir=1`}
+      aviso={aviso}
+      acoes={podeEditar ? <Link href={`/modulos/pedidos/${p.id}/editar`} className="sgo-btn sgo-btn--sm" data-testid="btn-editar"><Pencil className="h-4 w-4" /> Editar pedido</Link> : undefined}
+    />
   );
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DESTINOS, agruparPorDestino, destinoSugeridoPeloNome, destinosDoPedido, linhasDoTexto, montarBlocos, normalizarDestino, podeAtender, podeEnviar,
+  DESTINOS, ROTULO_STATUS, agruparPorDestino, blocoEditavel, destinoSugeridoPeloNome, destinosDoPedido, linhasDoTexto, montarBlocos, normalizarDestino, pedidoEditavel, podeAtender, podeEnviar,
   proximoStatusDaSecao, rotuloDosDestinos, statusDoPedido, textoDoPedido, MAX_LINHAS_POR_SETOR, MAX_CHARS_POR_LINHA, type SetorParaPedido,
 } from '@/lib/pedidos/regras';
 import { MODULES, MODULOS_INATIVOS } from '@/lib/permissions';
@@ -55,19 +55,28 @@ describe('destino por setor (v1.187.0)', () => {
 });
 
 describe('situação do pedido e dos blocos', () => {
-  it('todos atendidos = Atendido; algum mexido = Recebido; senão Enviado', () => {
+  it('todos atendidos = Atendido; algum mexido = Em separação; senão Enviado', () => {
     expect(statusDoPedido(['ENVIADO', 'ENVIADO'])).toBe('ENVIADO');
-    expect(statusDoPedido(['RECEBIDO', 'ENVIADO'])).toBe('RECEBIDO');
-    expect(statusDoPedido(['ATENDIDO', 'ENVIADO'])).toBe('RECEBIDO');
+    expect(statusDoPedido(['EM_SEPARACAO', 'ENVIADO'])).toBe('EM_SEPARACAO');
+    expect(statusDoPedido(['ATENDIDO', 'ENVIADO'])).toBe('EM_SEPARACAO');
     expect(statusDoPedido(['ATENDIDO', 'ATENDIDO'])).toBe('ATENDIDO');
     expect(statusDoPedido([])).toBe('ENVIADO');
   });
-  it('receber só o que está Enviado; atender o que não está Atendido', () => {
-    expect(proximoStatusDaSecao('ENVIADO', 'receber')).toBe('RECEBIDO');
-    expect(proximoStatusDaSecao('RECEBIDO', 'receber')).toBeNull();
+  it('separar só o que está Enviado; atender o que não está Atendido', () => {
+    expect(proximoStatusDaSecao('ENVIADO', 'separar')).toBe('EM_SEPARACAO');
+    expect(proximoStatusDaSecao('EM_SEPARACAO', 'separar')).toBeNull();
     expect(proximoStatusDaSecao('ENVIADO', 'atender')).toBe('ATENDIDO');
-    expect(proximoStatusDaSecao('RECEBIDO', 'atender')).toBe('ATENDIDO');
+    expect(proximoStatusDaSecao('EM_SEPARACAO', 'atender')).toBe('ATENDIDO');
     expect(proximoStatusDaSecao('ATENDIDO', 'atender')).toBeNull();
+  });
+  it('v1.188.0: o gerente edita o bloco só enquanto Enviado; o pedido só fecha quando todos atenderam', () => {
+    expect(blocoEditavel('ENVIADO')).toBe(true);
+    expect(blocoEditavel('EM_SEPARACAO')).toBe(false);
+    expect(blocoEditavel('ATENDIDO')).toBe(false);
+    expect(pedidoEditavel('ENVIADO')).toBe(true);
+    expect(pedidoEditavel('EM_SEPARACAO')).toBe(true);
+    expect(pedidoEditavel('ATENDIDO')).toBe(false);
+    expect(ROTULO_STATUS.EM_SEPARACAO).toBe('Em separação');
   });
   it('quem envia e quem atende', () => {
     expect(['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'ADMIN', 'CEO'].every(podeEnviar)).toBe(true);

@@ -3,14 +3,15 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import type { SessionUser } from '@/lib/auth/session';
 import { effectivePermissions } from '@/lib/permissions';
-import { enviarPedido, getPedido, listarPedidosDaUnidade, listarRecebidos, marcarSecao } from '@/lib/pedidos/pedidos';
+import { editarPedido, enviarPedido, getPedido, listarPedidosDaUnidade, listarRecebidos, marcarSecao } from '@/lib/pedidos/pedidos';
 import { criarSetorDoCd, definirDestinoDoSetor, listarSetoresDoCd } from '@/lib/products/setores';
 
 /**
- * PEDIDOS POR SETOR (v1.185.0 · v1.187.0) contra o banco: enviar (só setores
- * com linha, cada bloco com o DESTINO do setor congelado), quem vê o quê
- * (unidade × separador do setor × Admin, filtro por destino), receber/atender
- * por bloco com a situação do pedido derivada, os avisos e a matriz do Separador.
+ * PEDIDOS POR SETOR (v1.185.0 · v1.187.0 · v1.188.0) contra o banco: enviar
+ * (só setores com linha, cada bloco com o DESTINO do setor congelado), quem vê
+ * o quê (unidade × separador do setor × Admin, filtro por destino e situação),
+ * separar/atender por bloco com a situação do pedido derivada, a EDIÇÃO pelo
+ * gerente até o bloco entrar em separação, os avisos e a matriz do Separador.
  */
 const sfx = `ped${process.pid.toString(36)}`;
 let unitId = ''; let outraUnit = ''; let setorA = ''; let setorB = ''; let setorC = ''; let setorD = '';
@@ -70,15 +71,18 @@ describe('enviar', () => {
   it('v1.187.0: nada é obrigatório — o pedido vai só com a observação, e quem é avisado são os Admins', async () => {
     const r = await enviarPedido(gerente, { unitId, textos: { [setorC]: '\n  ' }, observacao: 'só a observação' });
     expect(r.ok).toBe(true);
-    const p = await getPedido(gerente, (r as { id: string }).id);
+    const id = (r as { id: string }).id;
+    const p = await getPedido(gerente, id);
     expect(p?.secoes).toEqual([]);
     expect(p?.destinos).toEqual([]);
     expect(await prisma.notification.count({ where: { userId: admin.id, title: { contains: `Pedido nº ${(r as { number: number }).number}` } } })).toBe(1);
     expect(await prisma.notification.count({ where: { userId: sepA.id, title: { contains: `Pedido nº ${(r as { number: number }).number}` } } })).toBe(0);
-    expect((await listarRecebidos(admin, { abertos: true })).map((x) => x.id)).toContain((r as { id: string }).id); // o Admin vê (sem filtro)
-    expect((await listarRecebidos(admin, { abertos: true, destino: 'CD' })).map((x) => x.id)).not.toContain((r as { id: string }).id);
-    expect((await listarRecebidos(sepA, { abertos: true })).map((x) => x.id)).not.toContain((r as { id: string }).id);
-    await prisma.sectorOrder.delete({ where: { id: (r as { id: string }).id } });
+    expect((await listarRecebidos(admin, { situacao: 'abertos' })).map((x) => x.id)).toContain(id); // o Admin vê (sem filtro)
+    expect((await listarRecebidos(admin, { situacao: 'todos' })).map((x) => x.id)).toContain(id);
+    expect((await listarRecebidos(admin, { situacao: 'atendidos' })).map((x) => x.id)).not.toContain(id);
+    expect((await listarRecebidos(admin, { situacao: 'abertos', destino: 'CD' })).map((x) => x.id)).not.toContain(id);
+    expect((await listarRecebidos(sepA, { situacao: 'abertos' })).map((x) => x.id)).not.toContain(id);
+    await prisma.sectorOrder.delete({ where: { id } });
   });
 
   it('quem vê o quê: a unidade vê o pedido inteiro; o separador vê só o bloco do seu setor; o Admin filtra por destino; outra unidade não vê', async () => {
@@ -86,49 +90,77 @@ describe('enviar', () => {
     expect((await listarPedidosDaUnidade(outroGerente)).map((p) => p.id)).not.toContain(ids.pedido);
     expect(await getPedido(outroGerente, ids.pedido)).toBeNull();
     expect((await getPedido(sepA, ids.pedido))?.secoes).toHaveLength(3); // abrir o pedido mostra inteiro (o separador foi avisado dele)
-    const caixaA = await listarRecebidos(sepA, { abertos: true });
+    const caixaA = await listarRecebidos(sepA); // padrão: todos
     expect(caixaA.find((p) => p.id === ids.pedido)!.secoes.map((s) => s.sectorId)).toEqual([setorA]); // na caixa de entrada, só o bloco dele
-    expect((await listarRecebidos(admin, { abertos: true })).find((p) => p.id === ids.pedido)?.secoes).toHaveLength(3);
-    const soCd = (await listarRecebidos(admin, { abertos: true, destino: 'CD' })).find((p) => p.id === ids.pedido)!;
+    expect((await listarRecebidos(admin, { situacao: 'abertos' })).find((p) => p.id === ids.pedido)?.secoes).toHaveLength(3);
+    const soCd = (await listarRecebidos(admin, { situacao: 'abertos', destino: 'CD' })).find((p) => p.id === ids.pedido)!;
     expect(soCd.secoes.map((s) => s.destination)).toEqual(['CD']);
-    const soAlmox = (await listarRecebidos(admin, { abertos: true, destino: 'ALMOXARIFADO' })).find((p) => p.id === ids.pedido)!;
+    const soAlmox = (await listarRecebidos(admin, { situacao: 'abertos', destino: 'ALMOXARIFADO' })).find((p) => p.id === ids.pedido)!;
     expect(soAlmox.secoes.map((s) => s.sectorId)).toEqual([setorD]);
     expect(await listarRecebidos(gerente)).toEqual([]); // gerente não atende
   });
 });
 
-describe('receber e atender', () => {
-  it('o separador só marca o próprio setor; receber → Recebido; atender → Atendido; o pedido fica Atendido quando TODOS os blocos atenderam', async () => {
+describe('editar (v1.188.0) e separar/atender', () => {
+  it('o gerente edita o pedido enviado: altera, retira e acrescenta setor; outra unidade e o separador não editam', async () => {
+    expect(await editarPedido(sepA, { id: ids.pedido, textos: {} })).toMatchObject({ ok: false, reason: 'FORBIDDEN' });
+    expect(await editarPedido(outroGerente, { id: ids.pedido, textos: {} })).toMatchObject({ ok: false, reason: 'FORBIDDEN' });
+    expect(await editarPedido(gerente, { id: 'nao-existe', textos: {} })).toMatchObject({ ok: false, reason: 'NOT_FOUND' });
+    const r = await editarPedido(gerente, { id: ids.pedido, textos: { [setorA]: '2 requeijão moedense balcão\n10 mussarela fatiado\n5 presunto', [setorB]: '6 cx coca', [setorD]: '', [setorC]: '3 sacos de arroz' }, observacao: 'entregar até quinta' });
+    expect(r).toMatchObject({ ok: true, id: ids.pedido });
+    const p = (await getPedido(gerente, ids.pedido))!;
+    expect(p.note).toBe('entregar até quinta');
+    expect(p.secoes.map((s) => [s.sectorName, s.lines.length])).toEqual([[`CÂMARAS ${sfx}`, 3], [`BEBIDAS ${sfx}`, 1], [`SECOS ${sfx}`, 1]]); // Almox saiu, Secos entrou no fim
+    expect(p.destinos).toEqual(['FABRICA', 'CD']);
+    /* aviso só para os setores tocados: A (alterado) e Secos (novo, sem separador → Admin); B intocado */
+    expect(await prisma.notification.count({ where: { userId: sepA.id, title: { contains: `Pedido nº ${p.number} de` }, body: { contains: 'alterou' } } })).toBe(1);
+    expect(await prisma.notification.count({ where: { userId: sepB.id, body: { contains: 'alterou' } } })).toBe(0);
+    expect(await prisma.notification.count({ where: { userId: admin.id, body: { contains: 'alterou' } } })).toBe(1);
+    expect(await prisma.auditLog.count({ where: { action: 'ORDER_EDITED', entityId: ids.pedido } })).toBe(1);
+  });
+
+  it('o separador só marca o próprio setor; separar → Em separação; atender → Atendido; o pedido fica Atendido quando TODOS os blocos atenderam', async () => {
     const p = (await getPedido(admin, ids.pedido))!;
     const blocoA = p.secoes.find((s) => s.sectorId === setorA)!;
     const blocoB = p.secoes.find((s) => s.sectorId === setorB)!;
-    const blocoD = p.secoes.find((s) => s.sectorId === setorD)!;
-    expect(await marcarSecao(gerente, blocoA.id, 'receber')).toMatchObject({ ok: false, reason: 'FORBIDDEN' });
-    expect(await marcarSecao(sepB, blocoA.id, 'receber')).toMatchObject({ ok: false, reason: 'FORBIDDEN' });
-    expect(await marcarSecao(sepA, blocoA.id, 'receber')).toMatchObject({ ok: true });
-    expect(await marcarSecao(sepA, blocoA.id, 'receber')).toMatchObject({ ok: false, reason: 'ESTADO' });
+    const blocoC = p.secoes.find((s) => s.sectorId === setorC)!;
+    expect(await marcarSecao(gerente, blocoA.id, 'separar')).toMatchObject({ ok: false, reason: 'FORBIDDEN' });
+    expect(await marcarSecao(sepB, blocoA.id, 'separar')).toMatchObject({ ok: false, reason: 'FORBIDDEN' });
+    expect(await marcarSecao(sepA, blocoA.id, 'separar')).toMatchObject({ ok: true });
+    expect(await marcarSecao(sepA, blocoA.id, 'separar')).toMatchObject({ ok: false, reason: 'ESTADO' });
     let depois = (await getPedido(admin, ids.pedido))!;
-    expect(depois.status).toBe('RECEBIDO');
-    expect(depois.secoes.find((s) => s.id === blocoA.id)).toMatchObject({ status: 'RECEBIDO', receivedByName: sepA.name });
+    expect(depois.status).toBe('EM_SEPARACAO');
+    expect(depois.secoes.find((s) => s.id === blocoA.id)).toMatchObject({ status: 'EM_SEPARACAO', receivedByName: sepA.name });
+
+    /* v1.188.0: o bloco em separação TRAVA para o gerente (nomeando o setor); os outros seguem editáveis */
+    const recusa = await editarPedido(gerente, { id: ids.pedido, textos: { [setorA]: '1 requeijão', [setorB]: '6 cx coca', [setorC]: '3 sacos de arroz' } });
+    expect(recusa).toMatchObject({ ok: false, reason: 'ESTADO' });
+    expect((recusa as { message: string }).message).toContain(`CÂMARAS ${sfx}`);
+    expect(await editarPedido(gerente, { id: ids.pedido, textos: { [setorA]: '2 requeijão moedense balcão\n10 mussarela fatiado\n5 presunto', [setorB]: '12 cx coca', [setorC]: '3 sacos de arroz' } })).toMatchObject({ ok: true });
+    expect((await getPedido(admin, ids.pedido))!.secoes.find((s) => s.sectorId === setorB)?.lines).toEqual(['12 cx coca']);
 
     expect(await marcarSecao(sepA, blocoA.id, 'atender')).toMatchObject({ ok: true });
     depois = (await getPedido(admin, ids.pedido))!;
-    expect(depois.status).toBe('RECEBIDO'); // B e D ainda abertos
+    expect(depois.status).toBe('EM_SEPARACAO'); // B e C ainda abertos
     expect(depois.attendedAt).toBeNull();
-    expect((await listarRecebidos(sepA, { abertos: true })).map((x) => x.id)).not.toContain(ids.pedido);
-    expect((await listarRecebidos(sepA, { abertos: false })).map((x) => x.id)).toContain(ids.pedido);
+    /* v1.188.0: o pedido atendido pelo setor dele NÃO some da caixa (padrão todos); sai só de "abertos" */
+    expect((await listarRecebidos(sepA)).map((x) => x.id)).toContain(ids.pedido);
+    expect((await listarRecebidos(sepA, { situacao: 'abertos' })).map((x) => x.id)).not.toContain(ids.pedido);
+    expect((await listarRecebidos(sepA, { situacao: 'atendidos' })).map((x) => x.id)).toContain(ids.pedido);
     /* quem enviou é avisado do setor atendido, com o destino */
     expect(await prisma.notification.count({ where: { userId: gerente.id, title: { contains: 'atendido' }, body: { contains: 'Fábrica' } } })).toBe(1);
 
-    /* o Admin atende B e D direto de Enviado (recebido e atendido ao mesmo tempo) → pedido inteiro Atendido */
+    /* o Admin atende B e C direto de Enviado (em separação e atendido ao mesmo tempo) → pedido inteiro Atendido */
     expect(await marcarSecao(admin, blocoB.id, 'atender')).toMatchObject({ ok: true });
-    expect(await marcarSecao(admin, blocoD.id, 'atender')).toMatchObject({ ok: true });
+    expect(await marcarSecao(admin, blocoC.id, 'atender')).toMatchObject({ ok: true });
     depois = (await getPedido(admin, ids.pedido))!;
     expect(depois.status).toBe('ATENDIDO');
     expect(depois.attendedAt).not.toBeNull();
     expect(depois.secoes.find((s) => s.id === blocoB.id)).toMatchObject({ status: 'ATENDIDO', receivedByName: admin.name, attendedByName: admin.name });
     expect(await marcarSecao(admin, blocoB.id, 'atender')).toMatchObject({ ok: false, reason: 'ESTADO' });
     expect(await prisma.notification.count({ where: { userId: gerente.id, title: `Pedido nº ${depois.number} atendido` } })).toBe(1);
+    /* pedido atendido por todos: nem a observação muda mais */
+    expect(await editarPedido(gerente, { id: ids.pedido, textos: {}, observacao: 'tarde demais' })).toMatchObject({ ok: false, reason: 'ESTADO' });
   });
 
   it('retrato: mudar o destino do setor vale para os pedidos NOVOS; o bloco já enviado guarda o destino do dia', async () => {
