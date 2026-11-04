@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
+import { destinoSugeridoPeloNome, normalizarDestino, type Destino } from '@/lib/pedidos/regras';
 
 /**
  * Setores do Centro de Distribuição (Configurações).
@@ -28,6 +29,8 @@ export interface SetorDoCd {
   name: string;
   active: boolean;
   order: number;
+  /** v1.187.0 — para onde vai o bloco deste setor num Pedido por setor. */
+  destination: Destino;
   produtos: number;
   separadores: number;
   itensEmPedidos: number;
@@ -41,6 +44,7 @@ export async function listarSetoresDoCd(): Promise<SetorDoCd[]> {
       name: true,
       active: true,
       order: true,
+      destination: true,
       _count: { select: { products: true, separators: true, requestItems: true } },
     },
   });
@@ -49,6 +53,7 @@ export async function listarSetoresDoCd(): Promise<SetorDoCd[]> {
     name: s.name,
     active: s.active,
     order: s.order,
+    destination: s.destination,
     produtos: s._count.products,
     separadores: s._count.separators,
     itensEmPedidos: s._count.requestItems,
@@ -68,6 +73,8 @@ export async function criarSetorDoCd(
   user: SessionUser,
   name: string,
   ctx: { ip?: string | null; userAgent?: string | null } = {},
+  /** v1.187.0 — o destino; sem ele, o que o nome sugere (Carnes → Fábrica, Almoxarifado → Almoxarifado, resto → CD). */
+  destination?: string,
 ): Promise<ResultadoSetor> {
   if (!podeGerenciar(user)) return { ok: false, reason: 'FORBIDDEN' };
   const nome = name?.trim();
@@ -77,8 +84,9 @@ export async function criarSetorDoCd(
   if (jaExiste) return { ok: false, reason: 'CONFLICT', message: 'Já existe um setor com esse nome.' };
 
   const total = await prisma.cdSector.count();
-  const s = await prisma.cdSector.create({ data: { name: nome, order: total } });
-  await audit({ userId: user.id, action: 'CD_SECTOR_CREATE', module: 'CONFIG', entity: 'cd_sector', entityId: s.id, metadata: { name: nome }, ...ctx });
+  const destino = normalizarDestino(destination) ?? destinoSugeridoPeloNome(nome);
+  const s = await prisma.cdSector.create({ data: { name: nome, order: total, destination: destino } });
+  await audit({ userId: user.id, action: 'CD_SECTOR_CREATE', module: 'CONFIG', entity: 'cd_sector', entityId: s.id, metadata: { name: nome, destination: destino }, ...ctx });
   return { ok: true, id: s.id };
 }
 
@@ -100,6 +108,26 @@ export async function renomearSetorDoCd(
      o retrato do nome no dia, congelado de propósito lá no módulo de Pedidos. */
   await prisma.cdSector.update({ where: { id: input.id }, data: { name: nome } });
   await audit({ userId: user.id, action: 'CD_SECTOR_UPDATE', module: 'CONFIG', entity: 'cd_sector', entityId: input.id, metadata: { name: nome }, ...ctx });
+  return { ok: true };
+}
+
+/**
+ * v1.187.0 — muda para onde vai o bloco do setor nos Pedidos por setor. Só os
+ * pedidos NOVOS mudam: o bloco já enviado guarda o destino do dia (retrato).
+ */
+export async function definirDestinoDoSetor(
+  user: SessionUser,
+  input: { id: string; destination: string },
+  ctx: { ip?: string | null; userAgent?: string | null } = {},
+): Promise<ResultadoSetor> {
+  if (!podeGerenciar(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const destino = normalizarDestino(input.destination);
+  if (!destino) return { ok: false, reason: 'INVALID', message: 'Destino inválido: use Fábrica, CD ou Almoxarifado.' };
+  const atual = await prisma.cdSector.findUnique({ where: { id: input.id }, select: { destination: true, name: true } });
+  if (!atual) return { ok: false, reason: 'INVALID' };
+  if (atual.destination === destino) return { ok: true };
+  await prisma.cdSector.update({ where: { id: input.id }, data: { destination: destino } });
+  await audit({ userId: user.id, action: 'CD_SECTOR_DESTINATION', module: 'CONFIG', entity: 'cd_sector', entityId: input.id, metadata: { name: atual.name, de: atual.destination, para: destino }, ...ctx });
   return { ok: true };
 }
 

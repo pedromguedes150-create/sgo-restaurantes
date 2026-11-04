@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { getPedido } from '@/lib/pedidos/pedidos';
-import { textoDoPedido } from '@/lib/pedidos/regras';
+import { rotuloDoDestino, textoDoPedido } from '@/lib/pedidos/regras';
 import { AutoPrint } from '@/components/shared/auto-print';
 import { PrintButton } from '@/components/ui/print-button';
 import { CopiarTexto } from '@/components/pedidos/copiar-texto';
@@ -16,7 +16,7 @@ export default async function PedidoPage({ params, searchParams }: { params: { i
   const user = (await getSessionUser())!;
   const p = await getPedido(user, params.id);
   if (!p) notFound();
-  const texto = textoDoPedido({ number: p.number, unitName: p.unitName, destino: p.destino, sentAt: p.sentAt, createdByName: p.createdByName, note: p.note, blocos: p.secoes.map((s) => ({ sectorName: s.sectorName, lines: s.lines })) });
+  const texto = textoDoPedido({ number: p.number, unitName: p.unitName, sentAt: p.sentAt, createdByName: p.createdByName, note: p.note, blocos: p.secoes.map((s) => ({ sectorName: s.sectorName, destination: s.destination, lines: s.lines })) });
 
   return (
     <div className="sgo-print mx-auto max-w-4xl space-y-4 bg-surface p-4 text-ink-900 print:p-0">
@@ -29,7 +29,7 @@ export default async function PedidoPage({ params, searchParams }: { params: { i
           <PrintButton label="Imprimir" />
         </span>
       </div>
-      {searchParams.enviado === '1' && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success print:hidden" data-testid="aviso-enviado">Pedido nº {p.number} enviado. Os separadores dos setores envolvidos foram avisados.</p>}
+      {searchParams.enviado === '1' && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success print:hidden" data-testid="aviso-enviado">Pedido nº {p.number} enviado{p.destinos.length ? ` para ${p.destinos.map(rotuloDoDestino).join(', ')}` : ''}. Os separadores dos setores envolvidos foram avisados.</p>}
       <header className="border-b-4 border-brand pb-3">
         <p className="sgo-type-11 font-semibold text-brand">GRUPO BEIJA-FLOR · PEDIDO POR SETOR</p>
         <CabecalhoDoPedido pedido={p} />

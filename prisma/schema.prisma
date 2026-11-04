@@ -1237,16 +1237,16 @@ model ManagerNote {
 
 /// Folgas/férias do gerente (ele não bate ponto). Nesses dias os checklists somem da visão dele.
 model ManagerLeave {
-  id          String           @id @default(cuid())
-  userId      String
-  kind        ManagerLeaveKind @default(FOLGA)
-  startDate   String // yyyy-mm-dd
-  endDate     String
-  note        String?
+  id           String           @id @default(cuid())
+  userId       String
+  kind         ManagerLeaveKind @default(FOLGA)
+  startDate    String // yyyy-mm-dd
+  endDate      String
+  note         String?
   /// Quem lançou. Nulo = lançamento antigo (era sempre o próprio dono). Desde a
   /// Escala de gerentes quem lança é a Supervisão/Admin, e a grade precisa dizer por quem.
-  createdById String?
-  createdAt   DateTime         @default(now())
+  createdById  String?
+  createdAt    DateTime         @default(now())
   /// Exclusão LÓGICA (v1.170.0): apagar exige motivo e a linha fica para o
   /// relatório e a Auditoria. Toda leitura da grade filtra `deletedAt: null`.
   deletedAt    DateTime?
@@ -1345,25 +1345,27 @@ model Product {
 enum SectorOrderDestination {
   CD
   FABRICA
+  ALMOXARIFADO
 }
+
 enum SectorOrderStatus {
   ENVIADO
   RECEBIDO
   ATENDIDO
 }
+
 model SectorOrder {
-  id            String                 @id @default(cuid())
-  number        Int                    @unique @default(autoincrement())
+  id            String            @id @default(cuid())
+  number        Int               @unique @default(autoincrement())
   unitId        String
-  destination   SectorOrderDestination
-  status        SectorOrderStatus      @default(ENVIADO)
+  status        SectorOrderStatus @default(ENVIADO)
   note          String?
   createdById   String?
   createdByName String
-  sentAt        DateTime               @default(now())
+  sentAt        DateTime          @default(now())
   attendedAt    DateTime?
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   unit     Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
   sections SectorOrderSection[]
@@ -1372,15 +1374,18 @@ model SectorOrder {
   @@index([status, sentAt])
   @@map("sector_orders")
 }
+
 model SectorOrderSection {
-  id             String            @id @default(cuid())
+  id             String                 @id @default(cuid())
   orderId        String
   sectorId       String?
   sectorName     String
-  position       Int               @default(0)
+  // v1.187.0 — o destino do setor no dia do envio, congelado (retrato)
+  destination    SectorOrderDestination @default(CD)
+  position       Int                    @default(0)
   /// Uma linha por item, texto livre ("2 cxs alcatra")
   lines          String[]
-  status         SectorOrderStatus @default(ENVIADO)
+  status         SectorOrderStatus      @default(ENVIADO)
   receivedById   String?
   receivedByName String?
   receivedAt     DateTime?
@@ -1392,15 +1397,18 @@ model SectorOrderSection {
 
   @@index([orderId])
   @@index([sectorId, status])
+  @@index([destination, status])
   @@map("sector_order_sections")
 }
 
 model CdSector {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  order     Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id          String                 @id @default(cuid())
+  name        String                 @unique
+  order       Int                    @default(0)
+  active      Boolean                @default(true)
+  // v1.187.0 — para onde vai o bloco deste setor num Pedido por setor (Fábrica · CD · Almoxarifado)
+  destination SectorOrderDestination @default(CD)
+  createdAt   DateTime               @default(now())
 
   products     Product[]
   separators   User[]
@@ -1945,24 +1953,24 @@ model Collaborator {
   rhMissingLastDay   String?
   rhMissingDays      Int                @default(0)
 
-  units               CollaboratorUnit[]
-  vacations           Vacation[]
-  schedule            ScheduleEntry[]
-  allocations         WorkforceAllocation[]
-  employeeSchedules   EmployeeSchedule[]
-  planOverrides       SchedulePlanOverride[]
-  scheduleActuals     ScheduleActual[]
-  trainings           TrainingRecord[]
-  medicalCertificates MedicalCertificate[]
+  units                   CollaboratorUnit[]
+  vacations               Vacation[]
+  schedule                ScheduleEntry[]
+  allocations             WorkforceAllocation[]
+  employeeSchedules       EmployeeSchedule[]
+  planOverrides           SchedulePlanOverride[]
+  scheduleActuals         ScheduleActual[]
+  trainings               TrainingRecord[]
+  medicalCertificates     MedicalCertificate[]
   certificateExpectations CertificateExpectation[]
-  terminations        Termination[]
-  rhDemands           RhDemand[]
-  popLinks            PopCollaborator[]
-  moduleLinks         PopModuleCollaborator[]
-  paymentRequests     PaymentRequest[]
-  vacationAbonos      VacationAbono[]
-  vacationAjustes     VacationPeriodAdjust[]
-  rhAfastamentos      RhAfastamento[]
+  terminations            Termination[]
+  rhDemands               RhDemand[]
+  popLinks                PopCollaborator[]
+  moduleLinks             PopModuleCollaborator[]
+  paymentRequests         PaymentRequest[]
+  vacationAbonos          VacationAbono[]
+  vacationAjustes         VacationPeriodAdjust[]
+  rhAfastamentos          RhAfastamento[]
 
   @@index([cpf])
   @@map("collaborators")
@@ -3962,9 +3970,9 @@ model MedicalCertificate {
   createdById    String?
   createdAt      DateTime        @default(now())
 
-  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
-  createdBy    User?        @relation("CertBy", fields: [createdById], references: [id], onDelete: SetNull)
+  unit         Unit                    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  collaborator Collaborator            @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  createdBy    User?                   @relation("CertBy", fields: [createdById], references: [id], onDelete: SetNull)
   /// v1.181.0 — o atestado ESPERADO (auditoria) cruzado com este lançamento, se houver.
   expectation  CertificateExpectation?
 
@@ -5028,25 +5036,25 @@ model UtensilCatalogItem {
 }
 
 model UtensilInventory {
-  id           String                 @id @default(cuid())
-  unitId       String
-  status       UtensilInventoryStatus @default(RASCUNHO)
+  id            String                 @id @default(cuid())
+  unitId        String
+  status        UtensilInventoryStatus @default(RASCUNHO)
   /// Gerente responsável (usuário vinculado à unidade), escolhido na contagem.
-  managerId    String
-  managerName  String
-  notes        String?
+  managerId     String
+  managerName   String
+  notes         String?
   /// Último envio ao supervisor (reenvio atualiza).
-  sentAt       DateTime?
-  firstSentAt  DateTime?
-  auditorId    String?
-  auditorName  String?
-  auditNotes   String?
-  returnReason String?
-  approvedAt   DateTime?
-  createdById  String
+  sentAt        DateTime?
+  firstSentAt   DateTime?
+  auditorId     String?
+  auditorName   String?
+  auditNotes    String?
+  returnReason  String?
+  approvedAt    DateTime?
+  createdById   String
   createdByName String
-  createdAt    DateTime               @default(now())
-  updatedAt    DateTime               @updatedAt
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
 
   items  UtensilInventoryItem[]
   events UtensilInventoryEvent[]
@@ -5137,12 +5145,14 @@ enum CertificateExpectationSource {
   MANUAL
   RH
 }
+
 enum CertificateReviewStatus {
   AGUARDANDO
   FALHA_CONFIRMADA
   JUSTIFICADO
   INVALIDO
 }
+
 // v1.184.0 — Auditoria operacional por ocorrência (Notas, Gás, Óleo, Pagamentos):
 // a ocorrência ESPERADA, informada pela supervisão, cruzada com o lançamento do módulo.
 // Sem FK para o lançamento de propósito (são quatro tabelas; a falha sobrevive à exclusão).
@@ -5152,32 +5162,35 @@ enum OperationalAuditModule {
   OIL
   PAYMENTS
 }
+
 enum OperationalExpectationSource {
   SUPERVISION
   SUPPLIER
   DOCUMENT
   OTHER
 }
+
 enum OperationalReviewStatus {
   AGUARDANDO
   FALHA_CONFIRMADA
   JUSTIFICADO
   INVALIDO
 }
+
 model OperationalExpectation {
-  id        String                 @id @default(cuid())
-  module    OperationalAuditModule
-  unitId    String
+  id               String                       @id @default(cuid())
+  module           OperationalAuditModule
+  unitId           String
   /// O que se esperava: fornecedor/nº da nota, coletora e litros, quem recebe o pagamento…
-  reference String
+  reference        String
   /// Data do fato em 'AAAA-MM-DD' (nota recebida, gás entregue, óleo coletado, dia do serviço)
-  eventDate String
+  eventDate        String
   /// Quando o gerente tomou ciência (o prazo conta daqui)
-  noticeAt  DateTime
-  source       OperationalExpectationSource @default(SUPERVISION)
-  sourceDetail String?
-  informedById   String?
-  informedByName String
+  noticeAt         DateTime
+  source           OperationalExpectationSource @default(SUPERVISION)
+  sourceDetail     String?
+  informedById     String?
+  informedByName   String
   /// Quem deveria lançar, PREVISTO ao informar — não é a responsabilidade validada
   expectedUserId   String?
   expectedUserName String?
@@ -5235,8 +5248,8 @@ model CertificateExpectation {
   note           String?
 
   /// O lançamento cruzado (um esperado ↔ um atestado)
-  certificateId  String?   @unique
-  linkedAt       DateTime?
+  certificateId String?   @unique
+  linkedAt      DateTime?
 
   /// Justificativa do gerente (texto) — só vale depois de aprovada pela supervisão
   justification   String?

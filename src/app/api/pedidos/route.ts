@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   if (negado) return negado;
   const b = await req.json().catch(() => null);
   if (String(b?.acao ?? 'enviar') !== 'enviar') return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
-  const r = await enviarPedido(user, { unitId: String(b?.unitId ?? ''), destino: String(b?.destino ?? ''), textos: (b?.textos && typeof b.textos === 'object' ? b.textos : {}) as Record<string, unknown>, observacao: b?.observacao ? String(b.observacao) : undefined }, requestContext(req));
+  const r = await enviarPedido(user, { unitId: String(b?.unitId ?? ''), textos: (b?.textos && typeof b.textos === 'object' ? b.textos : {}) as Record<string, unknown>, observacao: b?.observacao ? String(b.observacao) : undefined }, requestContext(req));
   if (!r.ok) return reasonResponse(REASONS, r.reason, r.message);
   return NextResponse.json({ ok: true, id: r.id, number: r.number });
 }

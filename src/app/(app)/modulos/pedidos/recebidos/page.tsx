@@ -2,7 +2,7 @@ import { Inbox, PackageCheck } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { canEditModule } from '@/lib/permissions';
 import { listarRecebidos } from '@/lib/pedidos/pedidos';
-import { normalizarDestino, podeAtender } from '@/lib/pedidos/regras';
+import { DESTINOS, normalizarDestino, podeAtender } from '@/lib/pedidos/regras';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { RecebidosClient } from '@/components/pedidos/recebidos-client';
 
@@ -23,7 +23,7 @@ export default async function PedidosRecebidosPage({ searchParams }: { searchPar
     <div className="space-y-4">
       <LargeTitle
         title="Pedidos recebidos"
-        subtitle={user.role === 'SEPARATOR' ? 'Os pedidos das unidades com itens do seu setor. Marque Recebido quando ler e Atendido quando separar.' : 'Tudo que as unidades pediram ao CD e à Fábrica, por setor.'}
+        subtitle={user.role === 'SEPARATOR' ? 'Os pedidos das unidades com itens do seu setor. Marque Recebido quando ler e Atendido quando separar.' : 'Tudo que as unidades pediram à Fábrica, ao CD e ao Almoxarifado, por setor.'}
         tabs={[
           { label: 'Abertos', icon: <Inbox className="h-3.5 w-3.5" />, href: link('abertos', destino), active: !atendidos, testId: 'aba-abertos' },
           { label: 'Atendidos', icon: <PackageCheck className="h-3.5 w-3.5" />, href: link('atendidos', destino), active: atendidos, testId: 'aba-atendidos' },
@@ -34,8 +34,7 @@ export default async function PedidosRecebidosPage({ searchParams }: { searchPar
           <span className="sgo-label">Destino</span>
           <span className="inline-flex gap-1">
             <a className={`sgo-btn sgo-btn--sm${!destino ? ' sgo-btn--primary' : ''}`} href={link(atendidos ? 'atendidos' : 'abertos')}>Todos</a>
-            <a className={`sgo-btn sgo-btn--sm${destino === 'CD' ? ' sgo-btn--primary' : ''}`} href={link(atendidos ? 'atendidos' : 'abertos', 'CD')}>CD</a>
-            <a className={`sgo-btn sgo-btn--sm${destino === 'FABRICA' ? ' sgo-btn--primary' : ''}`} href={link(atendidos ? 'atendidos' : 'abertos', 'FABRICA')}>Fábrica</a>
+            {DESTINOS.map((d) => <a key={d.key} className={`sgo-btn sgo-btn--sm${destino === d.key ? ' sgo-btn--primary' : ''}`} href={link(atendidos ? 'atendidos' : 'abertos', d.key)}>{d.curto}</a>)}
           </span>
         </div>
       )}

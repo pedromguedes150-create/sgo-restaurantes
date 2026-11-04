@@ -1,13 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DESTINOS, linhasDoTexto, montarBlocos, normalizarDestino, podeAtender, podeEnviar, proximoStatusDaSecao, statusDoPedido, textoDoPedido,
-  MAX_LINHAS_POR_SETOR, MAX_CHARS_POR_LINHA,
+  DESTINOS, agruparPorDestino, destinoSugeridoPeloNome, destinosDoPedido, linhasDoTexto, montarBlocos, normalizarDestino, podeAtender, podeEnviar,
+  proximoStatusDaSecao, rotuloDosDestinos, statusDoPedido, textoDoPedido, MAX_LINHAS_POR_SETOR, MAX_CHARS_POR_LINHA, type SetorParaPedido,
 } from '@/lib/pedidos/regras';
 import { MODULES, MODULOS_INATIVOS } from '@/lib/permissions';
 import { AREAS } from '@/lib/nav/areas';
 
-/** PEDIDOS POR SETOR (v1.185.0) — as regras, sem banco. */
-const setores = [{ id: 'a', name: 'Câmaras Frias' }, { id: 'b', name: 'Salgados' }, { id: 'c', name: 'Bebidas' }];
+/** PEDIDOS POR SETOR (v1.185.0 · v1.187.0) — as regras, sem banco. */
+const setores: SetorParaPedido[] = [
+  { id: 'a', name: 'Câmaras Frias', destination: 'FABRICA' },
+  { id: 'b', name: 'Salgados', destination: 'FABRICA' },
+  { id: 'c', name: 'Bebidas', destination: 'CD' },
+  { id: 'd', name: 'Almoxarifado', destination: 'ALMOXARIFADO' },
+];
 
 describe('o texto vira linhas e blocos', () => {
   it('uma linha por item: vazias fora, espaços aparados, teto de linhas e de caracteres', () => {
@@ -16,18 +21,36 @@ describe('o texto vira linhas e blocos', () => {
     expect(linhasDoTexto(Array.from({ length: 100 }, (_, i) => `item ${i}`).join('\n'))).toHaveLength(MAX_LINHAS_POR_SETOR);
     expect(linhasDoTexto('x'.repeat(500))[0]).toHaveLength(MAX_CHARS_POR_LINHA);
   });
-  it('só os setores com linha vão, na ordem do cadastro; setor desconhecido é ignorado', () => {
+  it('só os setores com linha vão, na ordem do cadastro, cada um com o destino do setor; setor desconhecido é ignorado', () => {
     const blocos = montarBlocos(setores, { c: '10 cxs pão de queijo', a: '2 requeijão\n5 presunto', b: '   ', zzz: 'nada' });
     expect(blocos).toEqual([
-      { sectorId: 'a', sectorName: 'Câmaras Frias', lines: ['2 requeijão', '5 presunto'] },
-      { sectorId: 'c', sectorName: 'Bebidas', lines: ['10 cxs pão de queijo'] },
+      { sectorId: 'a', sectorName: 'Câmaras Frias', destination: 'FABRICA', lines: ['2 requeijão', '5 presunto'] },
+      { sectorId: 'c', sectorName: 'Bebidas', destination: 'CD', lines: ['10 cxs pão de queijo'] },
     ]);
     expect(montarBlocos(setores, {})).toEqual([]);
   });
-  it('destinos: CD e Fábrica, e nada além', () => {
-    expect(DESTINOS.map((d) => d.key)).toEqual(['CD', 'FABRICA']);
-    expect(normalizarDestino('CD')).toBe('CD');
+});
+
+describe('destino por setor (v1.187.0)', () => {
+  it('três destinos, na ordem Fábrica · CD · Almoxarifado', () => {
+    expect(DESTINOS.map((d) => d.key)).toEqual(['FABRICA', 'CD', 'ALMOXARIFADO']);
+    expect(normalizarDestino('ALMOXARIFADO')).toBe('ALMOXARIFADO');
     expect(normalizarDestino('fabrica')).toBeNull();
+  });
+  it('o nome do setor sugere o destino — a tabela do Pedro', () => {
+    const esperado: Record<string, string> = {
+      'CÂMARAS FRIAS': 'FABRICA', SALGADOS: 'FABRICA', CONFEITARIA: 'FABRICA', CARNES: 'FABRICA', 'Carnes Churrasco': 'FABRICA',
+      DESCARTÁVEIS: 'CD', BEBIDAS: 'CD', SECOS: 'CD', BOMBONIERE: 'CD', 'Bomboniere Diversos': 'CD', Refrigerados: 'CD',
+      ALMOXERIFADO: 'ALMOXARIFADO', Almoxarifado: 'ALMOXARIFADO',
+    };
+    for (const [nome, destino] of Object.entries(esperado)) expect(destinoSugeridoPeloNome(nome), nome).toBe(destino);
+  });
+  it('agrupa por destino na ordem fixa e só com grupo cheio; os destinos de um pedido saem sem repetir', () => {
+    expect(agruparPorDestino(setores).map((g) => [g.destino, g.setores.map((s) => s.id)])).toEqual([['FABRICA', ['a', 'b']], ['CD', ['c']], ['ALMOXARIFADO', ['d']]]);
+    expect(agruparPorDestino([setores[2]]).map((g) => g.destino)).toEqual(['CD']);
+    expect(destinosDoPedido([{ destination: 'CD' }, { destination: 'FABRICA' }, { destination: 'CD' }])).toEqual(['FABRICA', 'CD']);
+    expect(rotuloDosDestinos([{ destination: 'ALMOXARIFADO' }, { destination: 'CD' }])).toBe('CD · Almoxarifado');
+    expect(rotuloDosDestinos([])).toBe('');
   });
 });
 
@@ -54,12 +77,19 @@ describe('situação do pedido e dos blocos', () => {
     expect(podeAtender('MANAGER')).toBe(false);
     expect(podeAtender('SUPERVISOR')).toBe(false); // decisão do Pedro: só separador/admin marcam
   });
-  it('o texto do pedido, como vai para o WhatsApp', () => {
-    const t = textoDoPedido({ number: 12, unitName: 'Beija Flor Centro', destino: 'CD', sentAt: '2026-11-04T13:00:00Z', createdByName: 'Ana', note: 'entregar até sexta', blocos: [{ sectorName: 'Carnes', lines: ['2 cxs alcatra', '1 cx maminha'] }, { sectorName: 'Salgados', lines: ['1 cx coxinha camarão'] }] });
-    expect(t).toContain('PEDIDO Nº 12 — Beija Flor Centro → CD');
-    expect(t).toContain('CARNES\n2 cxs alcatra\n1 cx maminha');
-    expect(t).toContain('SALGADOS\n1 cx coxinha camarão');
+  it('o texto do pedido, como vai para o WhatsApp: um título por destino', () => {
+    const t = textoDoPedido({ number: 12, unitName: 'Beija Flor Centro', sentAt: '2026-11-04T13:00:00Z', createdByName: 'Ana', note: 'entregar até sexta', blocos: [
+      { sectorName: 'Bebidas', destination: 'CD', lines: ['6 cx coca'] },
+      { sectorName: 'Carnes', destination: 'FABRICA', lines: ['2 cxs alcatra', '1 cx maminha'] },
+      { sectorName: 'Salgados', destination: 'FABRICA', lines: ['1 cx coxinha camarão'] },
+    ] });
+    expect(t).toContain('PEDIDO Nº 12 — Beija Flor Centro');
+    expect(t).not.toContain('→');
+    expect(t.indexOf('▶ FÁBRICA')).toBeLessThan(t.indexOf('▶ CD'));
+    expect(t).toContain('▶ FÁBRICA\nCARNES\n2 cxs alcatra\n1 cx maminha\n\nSALGADOS\n1 cx coxinha camarão');
+    expect(t).toContain('▶ CD\nBEBIDAS\n6 cx coca');
     expect(t).toContain('OBSERVAÇÃO\nentregar até sexta');
+    expect(textoDoPedido({ number: 1, unitName: 'X', sentAt: '2026-11-04T13:00:00Z', createdByName: 'Ana', note: 'só isto', blocos: [] })).toContain('OBSERVAÇÃO\nsó isto');
   });
 });
 

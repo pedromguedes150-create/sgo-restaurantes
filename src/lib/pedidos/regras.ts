@@ -1,22 +1,40 @@
 /**
- * PEDIDOS POR SETOR (v1.185.0) — as regras, sem banco.
+ * PEDIDOS POR SETOR (v1.185.0 · v1.187.0) — as regras, sem banco.
  *
- * O pedido é uma LISTA ESCRITA, como um e-mail: o gerente escolhe o destino
- * (CD ou Fábrica) e escreve, por setor, uma linha por item — "2 cxs alcatra".
- * Sem catálogo, sem código de barras, sem conversão de embalagem: é texto. O
- * que o SGO acrescenta é o caminho (cada bloco chega ao separador do setor),
- * a situação (Enviado · Recebido · Atendido, por setor e pelo pedido inteiro)
- * e o histórico. Os "Pedidos Internos" por produto continuam existindo, só
- * saem do caminho do gerente (MODULOS_INATIVOS).
+ * O pedido é uma LISTA ESCRITA, como um e-mail: o gerente escreve, por setor,
+ * uma linha por item — "2 cxs alcatra". Sem catálogo, sem código de barras,
+ * sem conversão de embalagem: é texto. O que o SGO acrescenta é o caminho
+ * (cada bloco chega ao separador do setor), a situação (Enviado · Recebido ·
+ * Atendido, por setor e pelo pedido inteiro) e o histórico.
+ *
+ * v1.187.0 (decisão do Pedro, 04/11): o DESTINO não se escolhe — é DO SETOR
+ * (Fábrica · CD · Almoxarifado, no cadastro de Setores do CD). O pedido é UM
+ * só, e cada bloco vai congelado com o destino do setor no dia. Também saiu a
+ * obrigação de ter ao menos um item: o pedido pode ir só com a observação.
  */
 
-export type Destino = 'CD' | 'FABRICA';
+export type Destino = 'CD' | 'FABRICA' | 'ALMOXARIFADO';
 export const DESTINOS: { key: Destino; rotulo: string; curto: string }[] = [
-  { key: 'CD', rotulo: 'Centro de Distribuição (CD)', curto: 'CD' },
   { key: 'FABRICA', rotulo: 'Fábrica', curto: 'Fábrica' },
+  { key: 'CD', rotulo: 'Centro de Distribuição (CD)', curto: 'CD' },
+  { key: 'ALMOXARIFADO', rotulo: 'Almoxarifado', curto: 'Almoxarifado' },
 ];
-export const normalizarDestino = (v: unknown): Destino | null => (v === 'CD' || v === 'FABRICA' ? v : null);
+export const normalizarDestino = (v: unknown): Destino | null => (v === 'CD' || v === 'FABRICA' || v === 'ALMOXARIFADO' ? v : null);
 export const rotuloDoDestino = (d: Destino) => DESTINOS.find((x) => x.key === d)?.curto ?? d;
+const ORDEM_DESTINO: Record<Destino, number> = { FABRICA: 0, CD: 1, ALMOXARIFADO: 2 };
+
+/**
+ * O destino que o NOME do setor sugere (a tabela do Pedro, 04/11): Câmaras
+ * Frias, Salgados, Confeitaria e Carnes → Fábrica; Almoxarifado → Almoxarifado;
+ * o resto (Descartáveis, Bebidas, Secos, Bombonière…) → CD. Vale para o setor
+ * criado sem destino informado; o Admin corrige no cadastro quando for outro.
+ */
+export function destinoSugeridoPeloNome(nome: string): Destino {
+  const n = nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+  if (/ALMOX/.test(n)) return 'ALMOXARIFADO';
+  if (/CAMARA|SALGAD|CONFEIT|CARNE|CHURRAS/.test(n)) return 'FABRICA';
+  return 'CD';
+}
 
 export type StatusDoPedido = 'ENVIADO' | 'RECEBIDO' | 'ATENDIDO';
 export const ROTULO_STATUS: Record<StatusDoPedido, string> = { ENVIADO: 'Enviado', RECEBIDO: 'Recebido', ATENDIDO: 'Atendido' };
@@ -44,18 +62,29 @@ export function linhasDoTexto(texto: unknown): string[] {
     .slice(0, MAX_LINHAS_POR_SETOR);
 }
 
-export interface SetorParaPedido { id: string; name: string }
-export interface BlocoDoPedido { sectorId: string; sectorName: string; lines: string[] }
+export interface SetorParaPedido { id: string; name: string; destination: Destino }
+export interface BlocoDoPedido { sectorId: string; sectorName: string; destination: Destino; lines: string[] }
 
 /** Os blocos que vão no pedido: só os setores com alguma linha, na ordem do cadastro; setor desconhecido é ignorado. */
 export function montarBlocos(setores: SetorParaPedido[], textos: Record<string, unknown>): BlocoDoPedido[] {
   const out: BlocoDoPedido[] = [];
   for (const s of setores) {
     const lines = linhasDoTexto(textos?.[s.id]);
-    if (lines.length > 0) out.push({ sectorId: s.id, sectorName: s.name, lines });
+    if (lines.length > 0) out.push({ sectorId: s.id, sectorName: s.name, destination: s.destination, lines });
   }
   return out;
 }
+
+/** Os setores agrupados por destino, na ordem Fábrica · CD · Almoxarifado — é como a folha de pedido se organiza. Grupo vazio não aparece. */
+export function agruparPorDestino<T extends { destination: Destino }>(setores: T[]): { destino: Destino; rotulo: string; setores: T[] }[] {
+  return DESTINOS.map((d) => ({ destino: d.key, rotulo: d.curto, setores: setores.filter((s) => s.destination === d.key) })).filter((g) => g.setores.length > 0);
+}
+
+/** Os destinos presentes num pedido (sem repetir), na ordem fixa. */
+export function destinosDoPedido(secoes: { destination: Destino }[]): Destino[] {
+  return [...new Set(secoes.map((s) => s.destination))].sort((a, b) => ORDEM_DESTINO[a] - ORDEM_DESTINO[b]);
+}
+export const rotuloDosDestinos = (secoes: { destination: Destino }[]) => destinosDoPedido(secoes).map(rotuloDoDestino).join(' · ');
 
 /** A situação do pedido deriva dos setores: todos atendidos = Atendido; algum mexido = Recebido; senão Enviado. */
 export function statusDoPedido(secoes: StatusDoPedido[]): StatusDoPedido {
@@ -72,14 +101,14 @@ export function proximoStatusDaSecao(atual: StatusDoPedido, acao: AcaoNaSecao): 
   return null;
 }
 
-export interface PedidoParaTexto { number: number; unitName: string; destino: Destino; sentAt: Date | string; createdByName: string; note?: string | null; blocos: { sectorName: string; lines: string[] }[] }
-/** O pedido como texto corrido — o que se copia para o WhatsApp ou se imprime. */
+export interface PedidoParaTexto { number: number; unitName: string; sentAt: Date | string; createdByName: string; note?: string | null; blocos: { sectorName: string; destination: Destino; lines: string[] }[] }
+/** O pedido como texto corrido — o que se copia para o WhatsApp ou se imprime: um título por destino, os setores embaixo. */
 export function textoDoPedido(p: PedidoParaTexto): string {
   const quando = new Date(p.sentAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  const cab = [`PEDIDO Nº ${p.number} — ${p.unitName} → ${rotuloDoDestino(p.destino)}`, `${quando} · ${p.createdByName}`];
-  const blocos = p.blocos.map((b) => [b.sectorName.toUpperCase(), ...b.lines].join('\n'));
+  const cab = [`PEDIDO Nº ${p.number} — ${p.unitName}`, `${quando} · ${p.createdByName}`];
+  const grupos = agruparPorDestino(p.blocos).map((g) => [`▶ ${g.rotulo.toUpperCase()}`, ...g.setores.flatMap((b) => [b.sectorName.toUpperCase(), ...b.lines, ''])].join('\n').trimEnd());
   const obs = p.note?.trim() ? [`OBSERVAÇÃO\n${p.note.trim()}`] : [];
-  return [...cab, '', ...blocos.flatMap((b) => [b, '']), ...obs].join('\n').trim();
+  return [...cab, '', ...grupos.flatMap((g) => [g, '']), ...obs].join('\n').trim();
 }
 
 export const dataBR = (d: Date | string) => new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });

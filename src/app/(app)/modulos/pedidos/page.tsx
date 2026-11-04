@@ -6,7 +6,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { canEditModule } from '@/lib/permissions';
 import { permissaoDeRota } from '@/lib/permissions/links';
 import { listarPedidosDaUnidade, setoresParaPedido } from '@/lib/pedidos/pedidos';
-import { dataBR, podeEnviar, ROTULO_STATUS, rotuloDoDestino, TOM_STATUS } from '@/lib/pedidos/regras';
+import { dataBR, podeEnviar, ROTULO_STATUS, rotuloDosDestinos, TOM_STATUS } from '@/lib/pedidos/regras';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
@@ -39,7 +39,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: { ab
     <div className="space-y-4">
       <LargeTitle
         title="Pedidos"
-        subtitle="A lista do que a unidade precisa, como um e-mail: escolha o destino (CD ou Fábrica), escreva uma linha por item em cada setor e envie. Cada bloco chega ao separador do setor, que marca Recebido e Atendido."
+        subtitle="A lista do que a unidade precisa, como um e-mail: escreva uma linha por item em cada setor e envie. O sistema encaminha cada setor ao seu destino (Fábrica, CD ou Almoxarifado), e o separador do setor marca Recebido e Atendido."
         tabs={[
           { label: 'Novo pedido', icon: <PenLine className="h-3.5 w-3.5" />, href: link('novo'), active: aba === 'novo', testId: 'aba-novo' },
           { label: 'Enviados', icon: <Send className="h-3.5 w-3.5" />, href: link('enviados'), active: aba === 'enviados', testId: 'aba-enviados' },
@@ -62,15 +62,15 @@ export default async function PedidosPage({ searchParams }: { searchParams: { ab
             <div className="overflow-x-auto p-2">
               {pedidos.length === 0 ? <p className="p-3 text-sm text-ink-500">Nenhum pedido enviado ainda.</p> : (
                 <table className="sgo-tbl w-full text-sm" data-testid="tabela-pedidos">
-                  <thead><tr><th className="text-left">Nº</th><th className="text-left">Enviado</th>{units.length > 1 && <th className="text-left">Unidade</th>}<th className="text-left">Destino</th><th className="text-left">Setores</th><th className="text-left">Por</th><th className="text-left">Situação</th></tr></thead>
+                  <thead><tr><th className="text-left">Nº</th><th className="text-left">Enviado</th>{units.length > 1 && <th className="text-left">Unidade</th>}<th className="text-left">Destinos</th><th className="text-left">Setores</th><th className="text-left">Por</th><th className="text-left">Situação</th></tr></thead>
                   <tbody>
                     {pedidos.map((p) => (
                       <tr key={p.id}>
                         <td className="whitespace-nowrap font-semibold"><Link href={`/modulos/pedidos/${p.id}`} className="text-brand underline-offset-2 hover:underline">nº {p.number}</Link></td>
                         <td className="whitespace-nowrap tabular-nums">{dataBR(p.sentAt)}</td>
                         {units.length > 1 && <td className="whitespace-nowrap">{shortUnitName(p.unitName)}</td>}
-                        <td className="whitespace-nowrap">{rotuloDoDestino(p.destino)}</td>
-                        <td className="whitespace-normal text-xs">{p.secoes.map((s) => `${s.sectorName} (${s.lines.length}${s.status === 'ATENDIDO' ? ' ✓' : ''})`).join(' · ')}</td>
+                        <td className="whitespace-nowrap">{rotuloDosDestinos(p.secoes) || '—'}</td>
+                        <td className="whitespace-normal text-xs">{p.secoes.length ? p.secoes.map((s) => `${s.sectorName} (${s.lines.length}${s.status === 'ATENDIDO' ? ' ✓' : ''})`).join(' · ') : 'só observação'}</td>
                         <td className="whitespace-nowrap">{p.createdByName}</td>
                         <td className="whitespace-nowrap"><StatusBadge tone={TOM_STATUS[p.status]} dot>{ROTULO_STATUS[p.status]}</StatusBadge></td>
                       </tr>
