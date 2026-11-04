@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.184.0 — 2026-11-04 (Auditoria operacional por ocorrência: Notas, Gás, Óleo e Pagamentos)
+### Novo
+- **Auditoria operacional** (Performance → Acompanhamento → Auditoria operacional): o modelo da Auditoria de Atestados generalizado para os quatro módulos de lançamento. A supervisão **informa a ocorrência esperada** (referência, data do fato, ciência do gerente, origem da informação, responsável previsto); o SGO **cruza com o lançamento** do módulo (automático quando há um só lançamento na janela de ±3 dias; senão a supervisão vincula à mão); a situação é derivada dos fatos (No prazo · Conforme · Em conferência · Falha confirmada · Justificado · Inválido); o gerente **justifica**; a supervisão **decide**. Só a falha confirmada, com prazo vencido e sem justificativa aprovada, pesa.
+- **Na meta**: quatro componentes novos ("Notas recebidas", "Recebimento de gás", "Coleta de óleo" e "Pagamentos — auditoria de lançamento"), que nascem com peso 0 e em Monitoramento; cada falha confirmada desconta X% do PESO do componente (padrão 10%), acumulando até 100%; mês sem ocorrência decidida é neutro. Prazo (padrão 24 horas úteis) e % por falha por módulo em Metas → Configuração da Meta ("Parâmetros da auditoria operacional"), com vigência e motivo.
+- **Sem duplicidade**: um esperado ↔ um lançamento; o lançamento auditado **sai do desconto "Fora do prazo"**. Pesos, indicadores e a fórmula geral de metas não mudaram.
+- Atestados seguem na Central de Atestados: a tela nova mostra só o resumo do mês e o link. Excel por módulo. Migração aditiva (1 tabela).
+
 ## v1.183.1 — 2026-11-03 (Webhook de férias usa o token da fila de Envios ao RH)
 ### Correção
 - **Aviso de férias ao RH voltou a sair**: o webhook de férias (solicitar/cancelar férias → RH) saía com um token próprio do `.env` (`SGO_WEBHOOK_TOKEN`) que o RH recusava com 401 desde 25/09 — todo aviso virava erro em "Últimos eventos". Agora ele sai com o **mesmo token da fila de Envios ao RH** (o colado em Envios ao RH, ou o `RH_WEBHOOK_TOKEN` do `.env`), que o RH aceita também no endpoint de férias; o `SGO_WEBHOOK_TOKEN` fica só como reserva quando a fila não tem token. Nenhuma tela, regra ou momento de disparo mudou; os avisos que já falharam não são reenviados.

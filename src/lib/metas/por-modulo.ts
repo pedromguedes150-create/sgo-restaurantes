@@ -141,6 +141,22 @@ export const INDICADORES: Record<string, IndicadorDeModulo> = {
   },
 };
 
+/**
+ * v1.184.0 — linhas EXTRAS por módulo: um módulo pode ter, além do seu
+ * indicador, componentes próprios da meta (a auditoria operacional de Notas,
+ * Gás, Óleo e Pagamentos). A chave da linha é o COMPONENTE (NOTES_AUDIT…),
+ * para o status e o peso gravarem no lugar certo; o desconto "Fora do prazo"
+ * continua na linha do módulo — lançamento auditado sai dele (sem duplicidade).
+ */
+export interface LinhaExtra { key: string; label: string; indicador: IndicadorDeModulo }
+const COMO_AUDITORIA = 'Ocorrência informada pela supervisão × lançamento no SGO. Conformidade = (conformes + justificadas) ÷ (conformes + justificadas + falhas confirmadas). Cada falha confirmada desconta X% do PESO (acumula até 100%). Lançamento auditado sai do "Fora do prazo" — nunca conta duas vezes. Prazo e % em "Parâmetros da auditoria operacional". Mês sem ocorrência decidida = neutro.';
+export const INDICADORES_EXTRAS: Record<string, LinhaExtra[]> = {
+  NOTES: [{ key: 'NOTES_AUDIT', label: 'Notas recebidas — auditoria de lançamento', indicador: { entity: 'notesAuditMeta', tipo: 'PESO', indicador: 'Nota esperada lançada no prazo (auditoria por ocorrência)', como: COMO_AUDITORIA } }],
+  GAS: [{ key: 'GAS_AUDIT', label: 'Recebimento de gás — auditoria de lançamento', indicador: { entity: 'gasAuditMeta', tipo: 'PESO', indicador: 'Entrega de gás esperada lançada no prazo (auditoria por ocorrência)', como: COMO_AUDITORIA } }],
+  OIL: [{ key: 'OIL_AUDIT', label: 'Coleta de óleo — auditoria de lançamento', indicador: { entity: 'oilAuditMeta', tipo: 'PESO', indicador: 'Coleta esperada lançada no prazo (auditoria por ocorrência)', como: COMO_AUDITORIA } }],
+  PAYMENTS: [{ key: 'PAYMENTS_AUDIT', label: 'Pagamentos — auditoria de lançamento', indicador: { entity: 'paymentsAuditMeta', tipo: 'PESO', indicador: 'Pagamento esperado lançado no prazo (auditoria por ocorrência)', como: COMO_AUDITORIA } }],
+};
+
 /** Áreas do menu que não são módulos de operação — ficam fora da lista. */
 export const AREAS_FORA_DA_META = new Set(['administrativo', 'relatorios']);
 /** Telas que não são "módulo" para a meta: painéis de entrada, ajuda, consultas
@@ -201,6 +217,10 @@ export function linhasPorModulo(
           status: ind && ind.tipo === 'PESO' ? status[key] ?? 'ATIVO' : null,
           compartilhadoCom: (ind?.compartilhadoCom ?? []).map(rotulo),
         });
+        for (const extra of INDICADORES_EXTRAS[key] ?? []) {
+          if (linhas.some((l) => l.key === extra.key)) continue;
+          linhas.push({ key: extra.key, label: extra.label, area: area.titulo, indicador: extra.indicador, valor: valores[extra.indicador.entity] ?? 0, status: status[extra.key] ?? 'ATIVO', compartilhadoCom: [] });
+        }
       }
     }
     if (linhas.length > 0) grupos.push({ area: area.titulo, linhas });

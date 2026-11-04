@@ -61,6 +61,11 @@ export const COMPONENTES_DA_META: { key: string; name: string; pesoPadrao: numbe
   { key: 'UTENSILS', name: 'Inventário de utensílios (enviado no mês)', pesoPadrao: 0 },
   /* v1.181.0 — auditoria de atestados: nasce em 0 e em Monitoramento (linha-base na migração). */
   { key: 'CERTIFICATES', name: 'Atestados (lançamento no prazo)', pesoPadrao: 0 },
+  /* v1.184.0 — auditoria operacional por ocorrência: um componente por módulo de lançamento, nascem em 0 e em Monitoramento (linha-base na migração). */
+  { key: 'NOTES_AUDIT', name: 'Notas recebidas (auditoria de lançamento)', pesoPadrao: 0 },
+  { key: 'GAS_AUDIT', name: 'Recebimento de gás (auditoria de lançamento)', pesoPadrao: 0 },
+  { key: 'OIL_AUDIT', name: 'Coleta de óleo (auditoria de lançamento)', pesoPadrao: 0 },
+  { key: 'PAYMENTS_AUDIT', name: 'Pagamentos (auditoria de lançamento)', pesoPadrao: 0 },
 ];
 /* As chaves de peso seguem as de sempre (`<KEY>_META_WEIGHT`, exceto a da
    avaliação, que nasceu como EVALUATION_META_WEIGHT). */
@@ -84,6 +89,25 @@ export const PARAMETROS_DA_AUDITORIA: { key: string; rotulo: string; padrao: num
   { key: CHAVE_PEN_ATESTADOS_ABAIXO_80, rotulo: 'Conformidade abaixo de 80%: perde (% do peso)', padrao: 50, teto: 100 },
 ];
 
+/* v1.184.0 — auditoria operacional: prazo (horas úteis) e % por falha confirmada, por módulo. */
+export type ModuloAuditado = 'NOTES' | 'GAS' | 'OIL' | 'PAYMENTS';
+export const MODULOS_DA_AUDITORIA_OPERACIONAL: { key: ModuloAuditado; componente: string; rotulo: string }[] = [
+  { key: 'NOTES', componente: 'NOTES_AUDIT', rotulo: 'Notas recebidas' },
+  { key: 'GAS', componente: 'GAS_AUDIT', rotulo: 'Recebimento de gás' },
+  { key: 'OIL', componente: 'OIL_AUDIT', rotulo: 'Coleta de óleo' },
+  { key: 'PAYMENTS', componente: 'PAYMENTS_AUDIT', rotulo: 'Pagamentos' },
+];
+export const chavePrazoOperacional = (m: ModuloAuditado) => `OPAUDIT_${m}_DEADLINE_HOURS`;
+export const chavePctOperacional = (m: ModuloAuditado) => `OPAUDIT_${m}_PENALTY_PCT`;
+export const PRAZO_OPERACIONAL_PADRAO = 24;
+export const PCT_POR_FALHA_PADRAO = 10;
+export const PARAMETROS_DA_AUDITORIA_OPERACIONAL: { key: string; rotulo: string; padrao: number; teto?: number; componente: string }[] = MODULOS_DA_AUDITORIA_OPERACIONAL.flatMap((m) => [
+  { key: chavePrazoOperacional(m.key), rotulo: `${m.rotulo} — prazo de lançamento (horas úteis após a ciência)`, padrao: PRAZO_OPERACIONAL_PADRAO, componente: m.componente },
+  { key: chavePctOperacional(m.key), rotulo: `${m.rotulo} — desconto por falha confirmada (% do peso, acumula até 100%)`, padrao: PCT_POR_FALHA_PADRAO, teto: 100, componente: m.componente },
+]);
+/** Todo parâmetro numérico com vigência (atestados + auditoria operacional) — o que `ConfigDaMeta.parametro` conhece. */
+export const PARAMETROS_DE_AUDITORIA: { key: string; rotulo: string; padrao: number; teto?: number }[] = [...PARAMETROS_DA_AUDITORIA, ...PARAMETROS_DA_AUDITORIA_OPERACIONAL];
+
 export type TipoDeChave = 'PESO' | 'STATUS' | 'DESCONTO' | 'PARAMETRO';
 export interface ChaveDaMeta { key: string; tipo: TipoDeChave; rotulo: string; componente?: string }
 /** Toda chave que o histórico conhece, com o rótulo que a tela mostra. */
@@ -93,6 +117,7 @@ export const CHAVES_DA_META: ChaveDaMeta[] = [
   { key: CHAVE_FORA_DO_PRAZO, tipo: 'DESCONTO', rotulo: 'Desconto — Fora do prazo (% por lançamento corrigido)' },
   { key: CHAVE_ESCALA_GERENTES, tipo: 'DESCONTO', rotulo: 'Desconto — Escala de gerentes (% por gerente sem folga)' },
   ...PARAMETROS_DA_AUDITORIA.map((p) => ({ key: p.key, tipo: 'PARAMETRO' as const, rotulo: `Auditoria de atestados — ${p.rotulo}`, componente: 'CERTIFICATES' })),
+  ...PARAMETROS_DA_AUDITORIA_OPERACIONAL.map((p) => ({ key: p.key, tipo: 'PARAMETRO' as const, rotulo: `Auditoria operacional — ${p.rotulo}`, componente: p.componente })),
 ];
 export const rotuloDaChave = (key: string) => CHAVES_DA_META.find((c) => c.key === key)?.rotulo ?? key;
 export const tipoDaChave = (key: string): TipoDeChave | null => CHAVES_DA_META.find((c) => c.key === key)?.tipo ?? null;
@@ -101,7 +126,7 @@ export function valorLegivel(key: string, value: string | null | undefined): str
   if (value == null || value === '') return '—';
   if (tipoDaChave(key) === 'STATUS') return ROTULO_STATUS[normalizarStatus(value) ?? 'ATIVO'] ?? value;
   const n = Number(value);
-  const sufixo = tipoDaChave(key) === 'DESCONTO' || key.startsWith('CERT_AUDIT_PENALTY') ? '%' : key === CHAVE_PRAZO_ATESTADOS ? ' h' : '';
+  const sufixo = tipoDaChave(key) === 'DESCONTO' || /PENALTY/.test(key) ? '%' : /DEADLINE_HOURS$/.test(key) ? ' h' : '';
   return Number.isFinite(n) ? String(n).replace('.', ',') + sufixo : value;
 }
 

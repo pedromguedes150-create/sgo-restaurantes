@@ -61,6 +61,12 @@ export const setStockMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravaca
 export const setInventoryMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'INVENTORY', w, 'INVENTORY_META_WEIGHT_SET', o);
 export const setUtensilsMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'UTENSILS', w, 'UTENSILS_META_WEIGHT_SET', o);
 export const setCertificatesMetaWeight = (u: SessionUser, w: number, o: OpcoesDaGravacao = semMotivo) => writeWeight(u, 'CERTIFICATES', w, 'CERTIFICATES_META_WEIGHT_SET', o);
+/** v1.184.0 — o peso de um componente da auditoria operacional (NOTES_AUDIT, GAS_AUDIT, OIL_AUDIT, PAYMENTS_AUDIT). */
+export const COMPONENTES_DA_AUDITORIA_OPERACIONAL = ['NOTES_AUDIT', 'GAS_AUDIT', 'OIL_AUDIT', 'PAYMENTS_AUDIT'] as const;
+export function setOperationalAuditMetaWeight(u: SessionUser, componente: string, w: number, o: OpcoesDaGravacao = semMotivo): Promise<ResultadoDaGravacao> {
+  if (!(COMPONENTES_DA_AUDITORIA_OPERACIONAL as readonly string[]).includes(componente)) return Promise.resolve({ ok: false, reason: 'INVALID', message: 'Componente desconhecido.' });
+  return writeWeight(u, componente, w, `${componente}_META_WEIGHT_SET`, o);
+}
 /** v1.181.0 — parâmetros da auditoria de atestados (prazo em horas úteis, faixas de penalização), com vigência e motivo. */
 export function setMetaParametro(user: SessionUser, key: string, value: number, o: OpcoesDaGravacao = semMotivo) {
   return gravarConfigDaMeta(user, { key, value, validFrom: o.validFrom, reason: o.reason, action: 'META_PARAM_SET' });

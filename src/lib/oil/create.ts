@@ -83,5 +83,10 @@ export async function createOilCollection(user: SessionUser, input: CreateOilInp
     select: { id: true },
   });
   await audit({ userId: user.id, unitId: input.unitId, action: 'OIL_COLLECTION', module: 'OIL', entity: 'oil_collection', entityId: rec.id, metadata: { liters, price, total, data: opDate, comprovante: true }, ...ctx });
+  /* v1.184.0 — auditoria operacional: o lançamento recém-feito procura a ocorrência esperada da unidade (melhor esforço). */
+  {
+    const { cruzarLancamento } = await import('@/lib/auditoria-operacional/auditoria');
+    await cruzarLancamento('OIL', rec.id).catch((e) => console.error('[auditoria-operacional] falha ao cruzar coleta de óleo:', e));
+  }
   return { ok: true, id: rec.id, totalValue: total };
 }

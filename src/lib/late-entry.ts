@@ -85,12 +85,15 @@ export async function countLateEntries(unitId: string, yearMonth: string): Promi
   const [y, m] = yearMonth.split('-').map(Number);
   const start = new Date(Date.UTC(y, m - 1, 1));
   const end = new Date(Date.UTC(y, m, 1));
+  /* v1.184.0 — lançamento preso a uma ocorrência da auditoria operacional é julgado LÁ (sem duplicidade). */
+  const { lancamentosAuditados } = await import('@/lib/auditoria-operacional/auditoria');
+  const fora = await lancamentosAuditados(unitId);
   const [pay, note, gas, oil, supLaunched] = await Promise.all([
-    prisma.paymentRequest.count({ where: { unitId, dateEdited: true, entryDate: { gte: start, lt: end } } }),
-    prisma.receivedNote.count({ where: { unitId, dateEdited: true, entryDate: { gte: start, lt: end } } }),
-    prisma.gasReceipt.count({ where: { unitId, dateEdited: true, operationalDate: { startsWith: yearMonth } } }),
-    prisma.oilCollection.count({ where: { unitId, dateEdited: true, operationalDate: { startsWith: yearMonth } } }),
-    prisma.receivedNote.count({ where: { unitId, supervisorLaunched: true, dateEdited: false, createdAt: { gte: start, lt: end } } }),
+    prisma.paymentRequest.count({ where: { unitId, dateEdited: true, entryDate: { gte: start, lt: end }, id: { notIn: fora.PAYMENTS } } }),
+    prisma.receivedNote.count({ where: { unitId, dateEdited: true, entryDate: { gte: start, lt: end }, id: { notIn: fora.NOTES } } }),
+    prisma.gasReceipt.count({ where: { unitId, dateEdited: true, operationalDate: { startsWith: yearMonth }, id: { notIn: fora.GAS } } }),
+    prisma.oilCollection.count({ where: { unitId, dateEdited: true, operationalDate: { startsWith: yearMonth }, id: { notIn: fora.OIL } } }),
+    prisma.receivedNote.count({ where: { unitId, supervisorLaunched: true, dateEdited: false, createdAt: { gte: start, lt: end }, id: { notIn: fora.NOTES } } }),
   ]);
   return pay + note + gas + oil + supLaunched;
 }

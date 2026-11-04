@@ -140,6 +140,8 @@ const BASE: ModuleDef[] = [
   /* Plano de ação das visitas operacionais (v1.155.0): a UNIDADE vê e atualiza
      as ações que o supervisor abriu; quem valida é o supervisor, na visita. */
   { key: 'VISIT_ACTIONS', label: 'Plano de ação (visitas)', nav: '/modulos/plano-de-acao' },
+  /* v1.184.0 — auditoria operacional por ocorrência (Notas, Gás, Óleo, Pagamentos): ver = acompanhar/justificar; editar = informar/vincular/decidir */
+  { key: 'OPERATIONAL_AUDIT', label: 'Auditoria operacional', nav: '/modulos/auditoria-operacional' },
   { key: 'EXECUTIVE', label: 'Visão Executiva', nav: '/modulos/executivo' },
 
   { key: 'TICKET_MEDIA', label: 'Ticket Médio', nav: '/modulos/ticket-medio' },
@@ -250,6 +252,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   MANAGER_SCHEDULE_NETWORK_REPORT: [], // relatório da rede com exclusões e motivos: só Admin/CEO (v1.170.0)
   SUPERVISION: ['SUPERVISOR'],
   VISIT_ACTIONS: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'], // a unidade acompanha o próprio plano; Admin/CEO sempre
+  OPERATIONAL_AUDIT: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'], // o gerente acompanha e justifica; a lib só deixa a supervisão informar/decidir
   EXECUTIVE: [], // só ADMIN/CEO por padrão (Admin pode liberar na matriz)
   METAS_CONSOLIDADO: ['SUPERVISOR'], // visão executiva de metas: Admin/CEO + Supervisor por padrão
   CASH_CONFIG: ['SUPERVISOR', 'COORDINATOR'], // R5: supervisão configura o cofre; Admin/CEO sempre

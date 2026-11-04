@@ -102,6 +102,7 @@ model Unit {
   inventoryMovements        InventoryMovement[]
   medicalCertificates       MedicalCertificate[]
   certificateExpectations   CertificateExpectation[]
+  operationalExpectations   OperationalExpectation[]
   freelancerRates           FreelancerHourlyRate[]
   overtimeRates             OvertimeHourlyRate[]
   terminations              Termination[]
@@ -5085,6 +5086,81 @@ enum CertificateReviewStatus {
   JUSTIFICADO
   INVALIDO
 }
+// v1.184.0 — Auditoria operacional por ocorrência (Notas, Gás, Óleo, Pagamentos):
+// a ocorrência ESPERADA, informada pela supervisão, cruzada com o lançamento do módulo.
+// Sem FK para o lançamento de propósito (são quatro tabelas; a falha sobrevive à exclusão).
+enum OperationalAuditModule {
+  NOTES
+  GAS
+  OIL
+  PAYMENTS
+}
+enum OperationalExpectationSource {
+  SUPERVISION
+  SUPPLIER
+  DOCUMENT
+  OTHER
+}
+enum OperationalReviewStatus {
+  AGUARDANDO
+  FALHA_CONFIRMADA
+  JUSTIFICADO
+  INVALIDO
+}
+model OperationalExpectation {
+  id        String                 @id @default(cuid())
+  module    OperationalAuditModule
+  unitId    String
+  /// O que se esperava: fornecedor/nº da nota, coletora e litros, quem recebe o pagamento…
+  reference String
+  /// Data do fato em 'AAAA-MM-DD' (nota recebida, gás entregue, óleo coletado, dia do serviço)
+  eventDate String
+  /// Quando o gerente tomou ciência (o prazo conta daqui)
+  noticeAt  DateTime
+  source       OperationalExpectationSource @default(SUPERVISION)
+  sourceDetail String?
+  informedById   String?
+  informedByName String
+  /// Quem deveria lançar, PREVISTO ao informar — não é a responsabilidade validada
+  expectedUserId   String?
+  expectedUserName String?
+  note             String?
+
+  /// O lançamento cruzado (um esperado ↔ um lançamento do módulo, por id)
+  entryId     String?
+  entryAt     DateTime?
+  entryByName String?
+  linkedAt    DateTime?
+
+  /// Justificativa do gerente (texto) — só vale depois de aprovada pela supervisão
+  justification   String?
+  justifiedById   String?
+  justifiedByName String?
+  justifiedAt     DateTime?
+
+  /// Decisão da supervisão; AGUARDANDO = situação derivada dos fatos
+  reviewStatus   OperationalReviewStatus @default(AGUARDANDO)
+  reviewNote     String?
+  reviewedById   String?
+  reviewedByName String?
+  reviewedAt     DateTime?
+
+  /// Responsabilidade INDIVIDUAL (quem deveria ter lançado), só depois de validada pela supervisão
+  responsibleUserId         String?
+  responsibleName           String?
+  responsibilityValidatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([module, entryId])
+  @@index([unitId, eventDate])
+  @@index([module, eventDate])
+  @@map("operational_expectations")
+}
+
 model CertificateExpectation {
   id             String                       @id @default(cuid())
   unitId         String

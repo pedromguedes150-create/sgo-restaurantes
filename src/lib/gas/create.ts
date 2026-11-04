@@ -168,6 +168,11 @@ export async function createGasReceipt(user: SessionUser, input: CreateGasInput,
     }
   }
 
+  /* v1.184.0 — auditoria operacional: o lançamento recém-feito procura a ocorrência esperada da unidade (melhor esforço). */
+  {
+    const { cruzarLancamento } = await import('@/lib/auditoria-operacional/auditoria');
+    await cruzarLancamento('GAS', rec.id).catch((e) => console.error('[auditoria-operacional] falha ao cruzar recebimento de gás:', e));
+  }
   return { ok: true, id: rec.id, pricePerKg, variationPct, alerted };
 }
 

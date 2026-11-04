@@ -9,7 +9,7 @@ import { setTrainingWeight } from '@/lib/training';
 import { setCommunicationWeight } from '@/lib/communications/meta';
 import { setEvaluationWeight } from '@/lib/people/evaluation';
 import { setLateEntryPenaltyPct } from '@/lib/late-entry';
-import { setWasteMetaWeight, setCommandsMetaWeight, setTasksMetaWeight, setCashMetaWeight, setScheduleMetaWeight, setCancellationsMetaWeight, setStockMetaWeight, setInventoryMetaWeight, setUtensilsMetaWeight, setManagerLeaveMetaPenalty, setComponentStatus, setCertificatesMetaWeight, setMetaParametro } from '@/lib/metas/config';
+import { setWasteMetaWeight, setCommandsMetaWeight, setTasksMetaWeight, setCashMetaWeight, setScheduleMetaWeight, setCancellationsMetaWeight, setStockMetaWeight, setInventoryMetaWeight, setUtensilsMetaWeight, setManagerLeaveMetaPenalty, setComponentStatus, setCertificatesMetaWeight, setMetaParametro, setOperationalAuditMetaWeight } from '@/lib/metas/config';
 import { setGasAlertPct, setGasMaxPriceKg } from '@/lib/gas/query';
 import { setFreelancerWeekLimit } from '@/lib/payments/recorrencia';
 import { mesclarFreelancers } from '@/lib/payments/mesclar-freelancers';
@@ -122,6 +122,11 @@ export async function POST(req: Request) {
   else if (e === 'metaStatus' && a === 'set') r = await setComponentStatus(user, String(b.key ?? ''), String(b.status ?? ''), vigencia(b));
   else if (e === 'certificatesMeta' && a === 'setWeight') r = await setCertificatesMetaWeight(user, Number(b.weight), vigencia(b));
   else if (e === 'metaParametro' && a === 'set') r = await setMetaParametro(user, String(b.key ?? ''), Number(b.value), vigencia(b));
+  /* v1.184.0 — auditoria operacional: um peso por módulo */
+  else if (e === 'notesAuditMeta' && a === 'setWeight') r = await setOperationalAuditMetaWeight(user, 'NOTES_AUDIT', Number(b.weight), vigencia(b));
+  else if (e === 'gasAuditMeta' && a === 'setWeight') r = await setOperationalAuditMetaWeight(user, 'GAS_AUDIT', Number(b.weight), vigencia(b));
+  else if (e === 'oilAuditMeta' && a === 'setWeight') r = await setOperationalAuditMetaWeight(user, 'OIL_AUDIT', Number(b.weight), vigencia(b));
+  else if (e === 'paymentsAuditMeta' && a === 'setWeight') r = await setOperationalAuditMetaWeight(user, 'PAYMENTS_AUDIT', Number(b.weight), vigencia(b));
   else if (e === 'supervisorChecklist' && a === 'create') r = await createSupervisorChecklist(user, b, ctx);
   else if (e === 'supervisorChecklist' && a === 'update') r = await updateSupervisorChecklist(user, b.id, b, ctx);
   else if (e === 'supervisorChecklist' && a === 'toggle') r = await toggleSupervisorChecklist(user, b.id, b.active, ctx);
