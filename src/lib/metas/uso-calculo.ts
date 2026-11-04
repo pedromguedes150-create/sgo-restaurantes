@@ -1,5 +1,5 @@
 import { faixaDaMeta, type Faixa } from '@/lib/metas/graficos';
-import type { MetaDaUnidade, MetaDoUsuario } from '@/lib/metas/meta-por-usuario';
+import type { MetaDaUnidade, MetaDoUsuario, PesoDaMeta } from '@/lib/metas/meta-por-usuario';
 
 /**
  * USO DO SGO — regras PURAS (v1.164.0). Relatório executivo de quem usa o
@@ -28,6 +28,25 @@ export interface UnidadeUso {
   piorComponente: { key: string; name: string; weight: number; scorePct: number } | null;
   /** Os descontos nomeados da meta da unidade (quem está sem folga, quantas datas corrigidas). */
   descontos: { name: string; quantidade: number; pct: number; total: number; detalhe?: string }[];
+  /**
+   * v1.186.0 — UM item por componente ATIVO com peso (as colunas da Configuração da Meta), na ordem de
+   * `colunasDaMeta`: o % da unidade naquele componente (a mesma conta de Metas) ou nulo = nada a medir no mês.
+   */
+  componentes: ComponenteDaUnidade[];
+}
+export interface ComponenteDaUnidade { key: string; name: string; weight: number; scorePct: number | null }
+
+/** As colunas da meta (peso > 0), do maior peso para o menor — a MESMA ordem do quadro "Meta por usuário". */
+export function colunasDaMeta(pesos: PesoDaMeta[]): PesoDaMeta[] {
+  return [...pesos].filter((p) => p.weight > 0).sort((a, b) => b.weight - a.weight);
+}
+/**
+ * O % da unidade em CADA componente ativo (v1.186.0, pedido do Pedro: "todos que estão ativos e contam na
+ * comissão devem aparecer no quadro das unidades"). Componente em vigor que a unidade não pontuou (nada
+ * resolvido no mês) sai nulo — é "—" na tela, nunca zero.
+ */
+export function componentesDaUnidade(meta: Pick<MetaDaUnidade, 'componentes'> | null | undefined, pesos: PesoDaMeta[]): ComponenteDaUnidade[] {
+  return colunasDaMeta(pesos).map((p) => ({ key: p.key, name: p.name, weight: p.weight, scorePct: meta?.componentes.find((c) => c.key === p.key)?.scorePct ?? null }));
 }
 export interface UsuarioUso {
   userId: string; name: string; role: string; roleLabel: string; unidades: string[];

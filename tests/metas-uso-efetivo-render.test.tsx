@@ -11,7 +11,7 @@ import { piorComponente, pontualidade, resumirUso, type UnidadeUso, type Usuario
  */
 const unidade = (p: Partial<UnidadeUso> & { unitId: string }): UnidadeUso => ({
   unitName: p.unitId, usagePct: 0, checklistPct: 0, wastePct: 0, commandsPct: 0, metaPct: 0, done: 0, late: 0, missed: 0, acoes: 0, usuariosAtivos: 0, usuariosVinculados: 0, occurrences: 0, notes: 0,
-  pendentes: 0, vencidas: 0, responsaveis: [], piorComponente: null, descontos: [], ...p,
+  pendentes: 0, vencidas: 0, responsaveis: [], piorComponente: null, descontos: [], componentes: [], ...p,
 });
 const usuario = (p: Partial<UsuarioUso> & { userId: string }): UsuarioUso => ({
   name: p.userId, role: 'MANAGER', roleLabel: 'Gerente', unidades: [], acessos: 0, acoes: 0, modulos: [], tarefasConcluidas: 0, foraDoPrazo: 0, ultimoAcesso: null, meta: null, folgaPropria: null,
@@ -56,6 +56,23 @@ describe('tabelas', () => {
     expect(html).toContain('−5: Escala de gerentes 1× — sem folga cadastrada: Gabriel');
     expect(html).toContain('href="/modulos/metas?month=2026-11&amp;unit=u1"');
     expect(html).toContain('<th class="text-right">Vencidas</th>');
+  });
+  /* v1.186.0: uma coluna por componente ATIVO (peso no cabeçalho), '—' quando a unidade não pontuou, vermelho abaixo de 50%; as três de cobertura saíram. */
+  it('unidade: todos os componentes ativos da meta viram colunas, na ordem do peso', () => {
+    const pesos = [{ key: 'TASKS', name: 'Checklists do dia', weight: 20 }, { key: 'WASTE', name: 'Desperdício diário (cobertura)', weight: 30 }, { key: 'TRAINING', name: 'Treinamentos', weight: 0 }];
+    const html = renderToString(React.createElement(TabelaUnidades, { ym: '2026-11', pesos, unidades: [
+      unidade({ unitId: 'u1', unitName: 'Beija Flor Orla', componentes: [{ key: 'WASTE', name: 'Desperdício diário (cobertura)', weight: 30, scorePct: 35 }, { key: 'TASKS', name: 'Checklists do dia', weight: 20, scorePct: 96 }] }),
+      unidade({ unitId: 'u2', unitName: 'Beija Flor Centro', componentes: [{ key: 'WASTE', name: 'Desperdício diário (cobertura)', weight: 30, scorePct: null }, { key: 'TASKS', name: 'Checklists do dia', weight: 20, scorePct: 100 }] }),
+    ] })).split('<!-- -->').join('');
+    const cabecalhos = html.match(/data-testid="coluna-componente"[^>]*>([^<]+)</g) ?? [];
+    expect(cabecalhos).toHaveLength(2);
+    expect(html.indexOf('Desperdício <span')).toBeLessThan(html.indexOf('Checklists <span'));
+    expect(html).toContain('(peso 30)');
+    expect(html).not.toContain('Treinamentos');
+    expect(html).not.toContain('<th class="text-right">Comandas</th>');
+    expect(html).toContain('font-semibold text-danger" data-testid="celula-componente">35%');
+    expect(html).toContain('data-testid="celula-componente">96%');
+    expect(html).toContain('data-testid="celula-componente">—');
   });
   it('usuário: pontualidade, abertas, vencidas e não feitas ao lado de acessos e ações', () => {
     const html = renderToString(React.createElement(TabelaUsuarios, { usuarios: [

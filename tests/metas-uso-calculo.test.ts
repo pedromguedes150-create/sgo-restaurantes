@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { resumirUso, taxaDeFalha, faixaDeUso, rotuloDoModulo, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
+import { colunasDaMeta, componentesDaUnidade, resumirUso, taxaDeFalha, faixaDeUso, rotuloDoModulo, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
 
 /** Uso do SGO (v1.164.0): composição PURA de contagens já existentes — nada recalcula meta nem uso. */
 const unidade = (p: Partial<UnidadeUso> & { unitId: string }): UnidadeUso => ({
-  unitName: p.unitId, usagePct: 0, checklistPct: 0, wastePct: 0, commandsPct: 0, metaPct: 0, done: 0, late: 0, missed: 0, acoes: 0, usuariosAtivos: 0, usuariosVinculados: 0, occurrences: 0, notes: 0, pendentes: 0, vencidas: 0, responsaveis: [], piorComponente: null, descontos: [], ...p,
+  unitName: p.unitId, usagePct: 0, checklistPct: 0, wastePct: 0, commandsPct: 0, metaPct: 0, done: 0, late: 0, missed: 0, acoes: 0, usuariosAtivos: 0, usuariosVinculados: 0, occurrences: 0, notes: 0, pendentes: 0, vencidas: 0, responsaveis: [], piorComponente: null, descontos: [], componentes: [], ...p,
 });
 const usuario = (p: Partial<UsuarioUso> & { userId: string }): UsuarioUso => ({
   name: p.userId, role: 'MANAGER', roleLabel: 'Gerente', unidades: [], acessos: 0, acoes: 0, modulos: [], tarefasConcluidas: 0, foraDoPrazo: 0, ultimoAcesso: null, meta: null, folgaPropria: null, pontualidade: null, pendentes: 0, vencidas: 0, naoRealizadas: 0, ...p,
@@ -61,5 +61,24 @@ describe('resumirUso', () => {
   it('com uma unidade só não há "menos usa"; sem tarefa não realizada não há "mais deixa de fazer"', () => {
     const v = resumirUso([unidade({ unitId: 'A', usagePct: 90, done: 10 })], []);
     expect(v.unidadeMaisUsa?.unitId).toBe('A'); expect(v.unidadeMenosUsa).toBeNull(); expect(v.unidadeMaisDeixaDeFazer).toBeNull(); expect(v.unidadeMaisErra).toBeNull();
+  });
+});
+
+/* v1.186.0 — todos os componentes ATIVOS da meta viram colunas do quadro das unidades (pedido do Pedro, 04/11). */
+describe('componentes ativos da meta como colunas', () => {
+  const pesos = [{ key: 'WASTE', name: 'Desperdício', weight: 30 }, { key: 'TASKS', name: 'Checklists do dia', weight: 20 }, { key: 'TRAINING', name: 'Treinamentos', weight: 0 }, { key: 'COMMANDS', name: 'Comandas', weight: 10 }];
+  it('colunasDaMeta: só peso > 0, do maior para o menor', () => {
+    expect(colunasDaMeta(pesos).map((c) => c.key)).toEqual(['WASTE', 'TASKS', 'COMMANDS']);
+    expect(colunasDaMeta([])).toEqual([]);
+  });
+  it('componentesDaUnidade: um item por coluna, com o % da unidade ou nulo quando ela não pontuou (nunca zero)', () => {
+    const meta = { componentes: [{ key: 'TASKS', name: 'Checklists do dia', weight: 20, done: 9, resolved: 10, scorePct: 90 }, { key: 'WASTE', name: 'Desperdício', weight: 30, done: 0, resolved: 10, scorePct: 0 }] };
+    expect(componentesDaUnidade(meta, pesos)).toEqual([
+      { key: 'WASTE', name: 'Desperdício', weight: 30, scorePct: 0 },
+      { key: 'TASKS', name: 'Checklists do dia', weight: 20, scorePct: 90 },
+      { key: 'COMMANDS', name: 'Comandas', weight: 10, scorePct: null },
+    ]);
+    expect(componentesDaUnidade(null, pesos).map((c) => c.scorePct)).toEqual([null, null, null]);
+    expect(componentesDaUnidade(meta, [])).toEqual([]);
   });
 });
