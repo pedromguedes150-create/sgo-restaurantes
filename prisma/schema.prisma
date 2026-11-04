@@ -1350,7 +1350,7 @@ enum SectorOrderDestination {
 
 enum SectorOrderStatus {
   ENVIADO
-  RECEBIDO
+  EM_SEPARACAO
   ATENDIDO
 }
 

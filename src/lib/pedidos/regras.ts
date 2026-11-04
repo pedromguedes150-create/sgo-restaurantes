@@ -36,9 +36,17 @@ export function destinoSugeridoPeloNome(nome: string): Destino {
   return 'CD';
 }
 
-export type StatusDoPedido = 'ENVIADO' | 'RECEBIDO' | 'ATENDIDO';
-export const ROTULO_STATUS: Record<StatusDoPedido, string> = { ENVIADO: 'Enviado', RECEBIDO: 'Recebido', ATENDIDO: 'Atendido' };
-export const TOM_STATUS: Record<StatusDoPedido, 'info' | 'warning' | 'success'> = { ENVIADO: 'info', RECEBIDO: 'warning', ATENDIDO: 'success' };
+/**
+ * v1.188.0 (decisão do Pedro): "Recebido" virou EM SEPARAÇÃO — é o momento em que o separador pega a
+ * lista, e a partir dele o gerente não altera mais aquele bloco (`blocoEditavel`).
+ */
+export type StatusDoPedido = 'ENVIADO' | 'EM_SEPARACAO' | 'ATENDIDO';
+export const ROTULO_STATUS: Record<StatusDoPedido, string> = { ENVIADO: 'Enviado', EM_SEPARACAO: 'Em separação', ATENDIDO: 'Atendido' };
+export const TOM_STATUS: Record<StatusDoPedido, 'info' | 'warning' | 'success'> = { ENVIADO: 'info', EM_SEPARACAO: 'warning', ATENDIDO: 'success' };
+/** O gerente só altera o bloco que ainda está Enviado: em separação ou atendido, o separador já está com a lista na mão. */
+export const blocoEditavel = (status: StatusDoPedido) => status === 'ENVIADO';
+/** O pedido inteiro só fecha para edição quando todos os setores atenderam (ainda dá para acrescentar setor e mudar a observação antes disso). */
+export const pedidoEditavel = (status: StatusDoPedido) => status !== 'ATENDIDO';
 
 /** Quem envia: a operação da unidade (o separador e o caixa não pedem). */
 export const PODE_ENVIAR = ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'ADMIN', 'CEO'] as const;
@@ -86,17 +94,17 @@ export function destinosDoPedido(secoes: { destination: Destino }[]): Destino[] 
 }
 export const rotuloDosDestinos = (secoes: { destination: Destino }[]) => destinosDoPedido(secoes).map(rotuloDoDestino).join(' · ');
 
-/** A situação do pedido deriva dos setores: todos atendidos = Atendido; algum mexido = Recebido; senão Enviado. */
+/** A situação do pedido deriva dos setores: todos atendidos = Atendido; algum mexido = Em separação; senão Enviado. */
 export function statusDoPedido(secoes: StatusDoPedido[]): StatusDoPedido {
   if (secoes.length > 0 && secoes.every((s) => s === 'ATENDIDO')) return 'ATENDIDO';
-  if (secoes.some((s) => s !== 'ENVIADO')) return 'RECEBIDO';
+  if (secoes.some((s) => s !== 'ENVIADO')) return 'EM_SEPARACAO';
   return 'ENVIADO';
 }
 
-export type AcaoNaSecao = 'receber' | 'atender';
-/** Receber só o que está Enviado; atender o que está Enviado ou Recebido. Nulo = nada a fazer. */
+export type AcaoNaSecao = 'separar' | 'atender';
+/** Separar só o que está Enviado; atender o que está Enviado ou Em separação. Nulo = nada a fazer. */
 export function proximoStatusDaSecao(atual: StatusDoPedido, acao: AcaoNaSecao): StatusDoPedido | null {
-  if (acao === 'receber') return atual === 'ENVIADO' ? 'RECEBIDO' : null;
+  if (acao === 'separar') return atual === 'ENVIADO' ? 'EM_SEPARACAO' : null;
   if (acao === 'atender') return atual === 'ATENDIDO' ? null : 'ATENDIDO';
   return null;
 }

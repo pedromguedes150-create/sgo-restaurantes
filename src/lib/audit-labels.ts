@@ -118,6 +118,7 @@ const ENTITIES: [string, string][] = [
   ['CERT_EXPECTATION', 'Auditoria de atestados'],
   ['OPAUDIT', 'Auditoria operacional'],
   ['ORDER_S', 'Pedido por setor'],
+  ['ORDER_EDITED', 'Pedido por setor — alteração'],
   ['META_PARAM', 'Parâmetro da meta'],
   ['CERTIFICATE', 'Atestado'],
   ['COMMUNICATION', 'Comunicado'],

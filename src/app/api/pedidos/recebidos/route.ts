@@ -7,7 +7,7 @@ import { marcarSecao } from '@/lib/pedidos/pedidos';
 
 /**
  * Pedidos por setor — quem RECEBE (v1.185.0): o separador do setor (ou Admin/CEO)
- * marca o bloco como Recebido ou Atendido. Guarda: módulo ORDERS_INBOX, "editar";
+ * marca o bloco como Em separação (v1.188.0; antes "Recebido") ou Atendido. Guarda: módulo ORDERS_INBOX, "editar";
  * a regra de perfil e de setor vive na lib.
  */
 const REASONS: Record<string, { msg: string; status: number }> = {
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   if (negado) return negado;
   const b = await req.json().catch(() => null);
   const acao = String(b?.acao ?? '');
-  if (acao !== 'receber' && acao !== 'atender') return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
+  if (acao !== 'separar' && acao !== 'atender') return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 });
   const r = await marcarSecao(user, String(b?.sectionId ?? ''), acao, requestContext(req));
   if (!r.ok) return reasonResponse(REASONS, r.reason, r.message);
   return NextResponse.json({ ok: true, id: r.id, number: r.number });

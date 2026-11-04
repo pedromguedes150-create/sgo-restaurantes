@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send } from 'lucide-react';
+import { Lock, Save, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/ds/select';
 import { Textarea } from '@/components/ui/ds/field';
@@ -11,19 +11,24 @@ import { Card, PanelHeader } from '@/components/sgo/panel';
 import { shortUnitName } from '@/lib/unit-name';
 import { agruparPorDestino, linhasDoTexto, MAX_OBSERVACAO, type SetorParaPedido } from '@/lib/pedidos/regras';
 
+/** v1.188.0 — a mesma folha EDITA um pedido já enviado: os blocos em separação/atendidos vêm travados. */
+export interface EdicaoDoPedido { id: string; numero: number; textos: Record<string, string>; observacao: string; travados: string[] }
+
 /**
- * Novo pedido por setor (v1.185.0 · v1.187.0): um campo de texto por setor
- * (uma linha por item), os setores agrupados pelo DESTINO que o cadastro
- * define (Fábrica · CD · Almoxarifado) — o gerente não escolhe destino — e a
- * observação. Nada é obrigatório além da unidade (decisão do Pedro, 04/11).
+ * Novo pedido por setor (v1.185.0 · v1.187.0 · v1.188.0): um campo de texto
+ * por setor (uma linha por item), os setores agrupados pelo DESTINO que o
+ * cadastro define (Fábrica · CD · Almoxarifado) — o gerente não escolhe
+ * destino — e a observação. Nada é obrigatório além da unidade (decisão do
+ * Pedro, 04/11). Com `edicao`, salva as alterações do pedido em vez de criar.
  */
-export function NovoPedidoClient({ units, setores, unitPadrao }: { units: { id: string; name: string }[]; setores: SetorParaPedido[]; unitPadrao: string }) {
+export function NovoPedidoClient({ units, setores, unitPadrao, edicao }: { units: { id: string; name: string }[]; setores: SetorParaPedido[]; unitPadrao: string; edicao?: EdicaoDoPedido }) {
   const router = useRouter();
   const [unitId, setUnitId] = useState(unitPadrao || units[0]?.id || '');
-  const [textos, setTextos] = useState<Record<string, string>>({});
-  const [observacao, setObservacao] = useState('');
+  const [textos, setTextos] = useState<Record<string, string>>(edicao?.textos ?? {});
+  const [observacao, setObservacao] = useState(edicao?.observacao ?? '');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const travados = useMemo(() => new Set(edicao?.travados ?? []), [edicao]);
   const grupos = useMemo(() => agruparPorDestino(setores), [setores]);
   const itens = useMemo(() => setores.reduce((n, s) => n + linhasDoTexto(textos[s.id]).length, 0), [setores, textos]);
   const comItem = useMemo(() => setores.filter((s) => linhasDoTexto(textos[s.id]).length > 0), [setores, textos]);
@@ -33,21 +38,22 @@ export function NovoPedidoClient({ units, setores, unitPadrao }: { units: { id: 
   async function enviar() {
     setBusy(true); setErro(null);
     try {
-      const res = await fetch('/api/pedidos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'enviar', unitId, textos, observacao }) });
+      const body = edicao ? { acao: 'editar', id: edicao.id, textos, observacao } : { acao: 'enviar', unitId, textos, observacao };
+      const res = await fetch('/api/pedidos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { setErro(d.error ?? 'Falha ao enviar'); return; }
-      router.push(`/modulos/pedidos/${d.id}?enviado=1`);
+      router.push(`/modulos/pedidos/${d.id}?${edicao ? 'editado' : 'enviado'}=1`);
       router.refresh();
     } catch { setErro('Falha de conexão'); } finally { setBusy(false); }
   }
 
   return (
-    <form className="space-y-4" data-testid="novo-pedido" onSubmit={(e) => { e.preventDefault(); if (pronto) void enviar(); }}>
+    <form className="space-y-4" data-testid={edicao ? 'editar-pedido' : 'novo-pedido'} onSubmit={(e) => { e.preventDefault(); if (pronto) void enviar(); }}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {units.length > 1 ? (
+        {units.length > 1 && !edicao ? (
           <SgoField label="Unidade" required><Select aria-label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} /></SgoField>
         ) : (
-          <SgoField label="Unidade"><p className="text-sm font-medium text-ink-900">{shortUnitName(units[0]?.name ?? '—')}</p></SgoField>
+          <SgoField label="Unidade"><p className="text-sm font-medium text-ink-900">{shortUnitName(units.find((u) => u.id === unitId)?.name ?? units[0]?.name ?? '—')}</p></SgoField>
         )}
       </div>
 
@@ -57,14 +63,16 @@ export function NovoPedidoClient({ units, setores, unitPadrao }: { units: { id: 
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {g.setores.map((s) => {
               const n = linhasDoTexto(textos[s.id]).length;
+              const travado = travados.has(s.id);
               return (
                 <Card key={s.id}>
-                  <PanelHeader title={s.name.toUpperCase()} count={n || undefined} />
+                  <PanelHeader title={s.name.toUpperCase()} count={n || undefined} action={travado ? <span className="sgo-tag inline-flex items-center gap-1" data-testid={`travado-${s.id}`}><Lock className="h-3 w-3" /> Em separação — não pode ser alterado</span> : undefined} />
                   <div className="p-3">
                     <Textarea
                       aria-label={`Itens de ${s.name}`}
                       rows={5}
                       value={textos[s.id] ?? ''}
+                      disabled={travado}
                       onChange={(e) => setTextos((t) => ({ ...t, [s.id]: e.target.value }))}
                       placeholder={'Uma linha por item, ex.:\n2 cxs alcatra\n1 cx maminha'}
                       className="font-mono text-sm"
@@ -85,7 +93,9 @@ export function NovoPedidoClient({ units, setores, unitPadrao }: { units: { id: 
 
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-sunken px-3 py-2">
         <p className="text-sm text-ink-700" data-testid="resumo-pedido">{itens === 0 ? 'Nenhum item escrito ainda — o pedido vai com a observação.' : `${itens} item(ns) em ${comItem.length} setor(es) → ${destinos.join(' · ')}. Cada setor chega ao seu destino.`}</p>
-        <Button type="submit" disabled={!pronto} data-testid="btn-enviar"><Send className="h-4 w-4" /> {busy ? 'Enviando…' : 'Enviar pedido'}</Button>
+        <Button type="submit" disabled={!pronto} data-testid="btn-enviar">
+          {edicao ? <><Save className="h-4 w-4" /> {busy ? 'Salvando…' : 'Salvar alterações'}</> : <><Send className="h-4 w-4" /> {busy ? 'Enviando…' : 'Enviar pedido'}</>}
+        </Button>
       </div>
       {erro && <p className="text-sm font-medium text-danger" data-testid="erro-pedido">{erro}</p>}
     </form>
