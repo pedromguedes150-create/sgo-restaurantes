@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.185.0 — 2026-11-04 (Pedidos por setor: a lista escrita ao CD/Fábrica)
+### Novo
+- **Pedidos** (Operação → Suprimentos): a unidade escolhe o destino (CD ou Fábrica), escreve uma linha por item em cada setor (CÂMARAS FRIAS, SALGADOS, CONFEITARIA… — os setores ativos do cadastro, a mesma lista para os dois destinos) e envia, como um e-mail. Cada bloco chega ao separador do setor, que marca **Recebido** e **Atendido**; o pedido fica Atendido quando todos os setores atenderam. Aba "Enviados" com a situação; detalhe com impressão/PDF e "Copiar texto" (WhatsApp). Avisos na Central de Notificações para os separadores envolvidos (Fábrica e setor sem separador: Admins) e para quem enviou, quando o setor atende.
+- **Caixa de entrada** (Pedidos recebidos): o separador vê só os blocos do seu setor; Admin/CEO veem tudo, com filtro por destino. Só separador do setor e Admin/CEO marcam (decisão do Pedro).
+### Mudança
+- **Pedidos Internos** (por produto, com catálogo e carrinho) ficam **inativos** para todos menos Admin/CEO (`MODULOS_INATIVOS`, como o Inventário de Produtos): somem do menu e da busca; rota, dados e a Separação do CD dos pedidos antigos seguem intactos. Reativar = tirar a chave.
+
 ## v1.184.0 — 2026-11-04 (Auditoria operacional por ocorrência: Notas, Gás, Óleo e Pagamentos)
 ### Novo
 - **Auditoria operacional** (Performance → Acompanhamento → Auditoria operacional): o modelo da Auditoria de Atestados generalizado para os quatro módulos de lançamento. A supervisão **informa a ocorrência esperada** (referência, data do fato, ciência do gerente, origem da informação, responsável previsto); o SGO **cruza com o lançamento** do módulo (automático quando há um só lançamento na janela de ±3 dias; senão a supervisão vincula à mão); a situação é derivada dos fatos (No prazo · Conforme · Em conferência · Falha confirmada · Justificado · Inválido); o gerente **justifica**; a supervisão **decide**. Só a falha confirmada, com prazo vencido e sem justificativa aprovada, pesa.

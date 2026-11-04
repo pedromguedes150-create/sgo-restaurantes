@@ -83,16 +83,13 @@ describe('Cofre — aba "Cofre"', () => {
 });
 
 describe('Produtos — a aba de atendimento é separada da de pedido', () => {
-  it('fechando "Nova solicitação", o pedido é recusado', async () => {
+  /* v1.185.0: Pedidos Internos (PRODUCTS) está em MODULOS_INATIVOS — some para todos menos Admin/CEO,
+     com a aba aberta ou fechada; a separação por aba segue coberta pelos outros módulos abaixo. */
+  it('o módulo está INATIVO para o gerente: pedir e atender são recusados, com ou sem a aba', async () => {
+    expect(await chama('/api/products', '@/app/api/products/route', { action: 'order', unitId, items: [] })).toBe(403);
+    expect(await chama('/api/products', '@/app/api/products/route', { action: 'status', id: 'x', status: 'SENT' })).toBe(403);
     await fechar('PRODUCTS_TAB_NEW');
-    const st = await chama('/api/products', '@/app/api/products/route', { action: 'order', unitId, items: [] });
-    expect(st).toBe(403);
-  });
-
-  it('e o atendimento (outra aba) segue liberado', async () => {
-    await fechar('PRODUCTS_TAB_NEW');
-    const st = await chama('/api/products', '@/app/api/products/route', { action: 'status', id: 'x', status: 'SENT' });
-    expect(st).not.toBe(403);
+    expect(await chama('/api/products', '@/app/api/products/route', { action: 'order', unitId, items: [] })).toBe(403);
   });
 });
 

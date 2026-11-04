@@ -117,6 +117,7 @@ const ENTITIES: [string, string][] = [
   ['TERMINATION', 'Desligamento'],
   ['CERT_EXPECTATION', 'Auditoria de atestados'],
   ['OPAUDIT', 'Auditoria operacional'],
+  ['ORDER_S', 'Pedido por setor'],
   ['META_PARAM', 'Parâmetro da meta'],
   ['CERTIFICATE', 'Atestado'],
   ['COMMUNICATION', 'Comunicado'],

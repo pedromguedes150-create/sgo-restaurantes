@@ -159,6 +159,9 @@ const BASE: ModuleDef[] = [
   { key: 'PIZZAS', label: 'Controle de Pizzas', nav: '/modulos/pizzas' },
   { key: 'PRODUCTS', label: 'Pedidos Internos', nav: '/modulos/produtos' },
   { key: 'PRODUCT_SEPARATION', label: 'Separação de Pedidos (CD)', nav: '/modulos/separacao' },
+  /* v1.185.0 — Pedidos por setor: a unidade escreve a lista; o separador do setor recebe e atende */
+  { key: 'ORDERS', label: 'Pedidos', nav: '/modulos/pedidos' },
+  { key: 'ORDERS_INBOX', label: 'Pedidos recebidos (CD/Fábrica)', nav: '/modulos/pedidos/recebidos' },
 
   // Cada tela de Configurações é uma parte própria: dá para liberar uma sem
   // abrir as outras. Todas nascem restritas ao Admin/CEO (ver RESTRICTED_DEFAULT).
@@ -246,6 +249,8 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   /* A separacao e do CD, nao das unidades: nasce so para o Separador (e
      ADMIN/CEO, que veem tudo). Gerente nao separa pedido. */
   PRODUCT_SEPARATION: ['SEPARATOR'],
+  ORDERS: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'], // v1.185.0 — quem pede; Admin/CEO sempre
+  ORDERS_INBOX: ['SEPARATOR'], // v1.185.0 — quem recebe e atende; Admin/CEO sempre
   MANAGER_SCHEDULE: ['SUPERVISOR'], // quem manda na escala de gerência é a Supervisão; ADMIN/CEO sempre
   MANAGER_SCHEDULE_OWN: ['MANAGER', 'COORDINATOR'], // a própria folga, só para o futuro (v1.170.0)
   MANAGER_SCHEDULE_TODAY: ['COORDINATOR'], // quem está fora hoje na rede: Coordenação + Admin/CEO (v1.170.0)
@@ -291,7 +296,7 @@ const DEFAULT_ALLOW_ONLY: Partial<Record<Role, string[]>> = {
   CASHIER: ['COMMANDS', 'HELP'],
   /* O Separador do CD so separa. Nasce fechado como o CAIXA: sem dashboard,
      sem escala, sem nada da unidade — a tela dele e uma so. */
-  SEPARATOR: ['PRODUCT_SEPARATION', 'HELP'],
+  SEPARATOR: ['PRODUCT_SEPARATION', 'ORDERS_INBOX', 'HELP'],
 };
 
 /**
@@ -302,7 +307,10 @@ const DEFAULT_ALLOW_ONLY: Partial<Record<Role, string[]>> = {
  * Equipamentos), pedido do Pedro em 21/10/2026 para não confundir os gerentes
  * com o Inventário de Utensílios. Para reativar: tirar a chave daqui.
  */
-export const MODULOS_INATIVOS: ReadonlySet<string> = new Set(['INVENTORY']);
+/* v1.185.0 — os Pedidos Internos por produto (PRODUCTS) saem do caminho do gerente
+   (pedido do Pedro, 04/11/2026): a aba nova "Pedidos" (ORDERS) é a lista por setor.
+   A Separação do CD (PRODUCT_SEPARATION) segue para os pedidos antigos. */
+export const MODULOS_INATIVOS: ReadonlySet<string> = new Set(['INVENTORY', 'PRODUCTS']);
 
 /** Permissões efetivas de um perfil de sistema por módulo (com defaults). */
 export async function effectivePermissions(role: Role): Promise<Record<string, Perm>> {

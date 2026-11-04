@@ -103,6 +103,7 @@ model Unit {
   medicalCertificates       MedicalCertificate[]
   certificateExpectations   CertificateExpectation[]
   operationalExpectations   OperationalExpectation[]
+  sectorOrders              SectorOrder[]
   freelancerRates           FreelancerHourlyRate[]
   overtimeRates             OvertimeHourlyRate[]
   terminations              Termination[]
@@ -1338,6 +1339,62 @@ model Product {
 
 /// Setor do Centro de Distribuicao. Configuravel: a rede tem quatro hoje, mas
 /// nada no codigo depende desse numero.
+// v1.185.0 — Pedidos por setor: a lista escrita (como um e-mail) que a unidade manda
+// ao CD ou à Fábrica, um bloco por setor com situação própria. O nome do setor vai
+// CONGELADO no bloco e o sectorId fica sem FK: renomear/desativar o setor não muda o pedido.
+enum SectorOrderDestination {
+  CD
+  FABRICA
+}
+enum SectorOrderStatus {
+  ENVIADO
+  RECEBIDO
+  ATENDIDO
+}
+model SectorOrder {
+  id            String                 @id @default(cuid())
+  number        Int                    @unique @default(autoincrement())
+  unitId        String
+  destination   SectorOrderDestination
+  status        SectorOrderStatus      @default(ENVIADO)
+  note          String?
+  createdById   String?
+  createdByName String
+  sentAt        DateTime               @default(now())
+  attendedAt    DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  unit     Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  sections SectorOrderSection[]
+
+  @@index([unitId, sentAt])
+  @@index([status, sentAt])
+  @@map("sector_orders")
+}
+model SectorOrderSection {
+  id             String            @id @default(cuid())
+  orderId        String
+  sectorId       String?
+  sectorName     String
+  position       Int               @default(0)
+  /// Uma linha por item, texto livre ("2 cxs alcatra")
+  lines          String[]
+  status         SectorOrderStatus @default(ENVIADO)
+  receivedById   String?
+  receivedByName String?
+  receivedAt     DateTime?
+  attendedById   String?
+  attendedByName String?
+  attendedAt     DateTime?
+
+  order SectorOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([sectorId, status])
+  @@map("sector_order_sections")
+}
+
 model CdSector {
   id        String   @id @default(cuid())
   name      String   @unique

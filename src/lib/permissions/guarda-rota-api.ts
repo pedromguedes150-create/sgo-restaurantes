@@ -55,6 +55,9 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/certificates/export': { modulo: 'CERTIFICATES_REPORT', exigir: 'ver' },
   /* v1.184.0 — a rota confere 'editar' por ação (informar/vincular/decidir); justificar é do gerente com 'ver' */
   '/api/auditoria-operacional': { modulo: 'OPERATIONAL_AUDIT', exigir: 'ver' },
+  /* v1.185.0 — pedidos por setor: enviar é da unidade (ORDERS); receber/atender é do separador (ORDERS_INBOX) */
+  '/api/pedidos': { modulo: 'ORDERS', exigir: 'editar' },
+  '/api/pedidos/recebidos': { modulo: 'ORDERS_INBOX', exigir: 'editar' },
   '/api/auditoria-operacional/export': { modulo: 'OPERATIONAL_AUDIT', exigir: 'ver' },
 
   '/api/checklist-forms': { modulo: 'CHECKLIST_FORMS', exigir: 'editar' },
