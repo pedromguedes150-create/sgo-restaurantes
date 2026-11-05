@@ -204,7 +204,7 @@ export default async function ConsolidadoDesperdicioPage({
         )}
 
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs">
+          <table className="w-full border-collapse text-xs [&_th]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-line text-left text-ink-700">
                 <th className="px-2 py-1.5 font-semibold">Unidade</th>
@@ -299,7 +299,7 @@ export default async function ConsolidadoDesperdicioPage({
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-right text-xs">
+        <table className="w-full border-collapse text-right text-xs [&_th]:whitespace-nowrap">
           <thead>
             <tr className="border-b border-line">
               <th className="sticky left-0 z-10 bg-surface px-2 py-1.5 text-left font-semibold text-ink-700">Unidade</th>

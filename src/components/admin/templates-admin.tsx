@@ -206,8 +206,9 @@ function TplItemRow({ t, units, onChange }: { t: TplRow; units: Unit[]; onChange
 
   return (
     <div className="rounded-lg border bg-surface p-3">
-      <div className="flex items-center justify-between gap-2">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* v1.189.1: largura mínima no texto — os 4 controles à direita espremiam a descrição a uma coluna no celular */}
+        <div className="min-w-[10rem] flex-1">
           <p className="font-semibold text-ink-900">{t.name}</p>
           <p className="text-xs text-ink-500">
             {t.limitTime ? `limite ${t.limitTime}` : 'sem horário'} · {t.scope === 'MANAGER' ? 'individual' : 'da unidade'}

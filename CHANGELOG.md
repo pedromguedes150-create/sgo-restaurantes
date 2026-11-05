@@ -9,6 +9,16 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.189.1 — 2026-11-05 (Varredura de responsividade: texto espremido no celular)
+
+Pedido do Pedro (print do gerente na aba Freelancer): "um sistema íntegro, responsivo para celular e computador". A varredura da v1.182.1 media só TRANSBORDO (nenhum); o defeito do print era outro — texto ESPREMIDO numa coluna estreita — e a medição nova (121 rotas × 360/768/1440px, elemento com texto < 72px de largura e mais de 3 linhas) achou 11 telas a 360px, nenhuma a 768/1440.
+
+- Linhas "texto × ações à direita" sem largura mínima (Configurações → Checklists, histórico de Desperdícios, Notas, Avaliação): o texto ganhou `min-w-[10rem] flex-1` e a linha `flex-wrap` — os botões/crachás descem quando não cabem.
+- Grade de 3 colunas em Valores de freelancer vira 1 coluna no celular.
+- Tabelas: cabeçalho do kit (`.sgo-tbl th`) e das tabelas do Consolidado de desperdícios não quebram mais (a tabela rola de lado); coluna do nome nas grades de gerentes com largura mínima e reticência; totais do relatório da rede em uma linha.
+- Roscas (Metas e Uso do SGO): a legenda não é mais espremida pelo gráfico — o par quebra para baixo.
+- `tests/responsivo-celular` trava as regras.
+
 ## v1.189.0 — 2026-11-05 (Pedidos: separador em vários setores, item movido de setor, trava do pedido inteiro)
 
 Três pedidos do Pedro (05/11): (1) o gerente edita enquanto nenhum setor entrou em separação e, a partir daí, não edita mais; (2) o mesmo separador pode separar mais de um setor (Salgados, Confeitaria e Câmara Fria); (3) quem separa pode migrar um item escrito no setor errado para o setor certo, avisando o separador de lá.

@@ -281,8 +281,8 @@ function EvalCard({ r, yearMonth, podeRevisar, podePlanejar, meuNome, abrir = fa
 
   return (
     <div ref={cartao} className={cn('scroll-mt-24 rounded-lg border bg-surface', abrir && 'border-brand')} data-testid={`colab-${r.collaboratorId}`}>
-      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between gap-2 p-3 text-left">
-        <span className="flex min-w-0 items-center gap-2">
+      <button onClick={() => setOpen(!open)} className="flex w-full flex-wrap items-center justify-between gap-2 p-3 text-left">
+        <span className="flex min-w-[10rem] flex-1 items-center gap-2">
           {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
           <span className="min-w-0">
             <span className="block truncate font-semibold text-ink-900">{r.name}</span>
