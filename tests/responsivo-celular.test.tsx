@@ -47,4 +47,15 @@ describe('ListRow: os crachás da direita não esmagam o texto', () => {
     expect(fonte).toContain('ml-auto flex max-w-full flex-wrap items-center justify-end gap-2');
     expect(fonte).not.toContain('<span className="flex shrink-0 items-center gap-2">{trailing}</span>');
   });
+  /* v1.189.1 — a varredura (121 rotas × 360px) achou o mesmo padrão em outras linhas e nas tabelas */
+  it('as outras linhas "texto × ações" têm largura mínima, as tabelas do kit não quebram o cabeçalho e as roscas quebram a legenda para baixo', () => {
+    expect(readFileSync('src/components/admin/templates-admin.tsx', 'utf8')).toContain('<div className="min-w-[10rem] flex-1">');
+    expect(readFileSync('src/app/(app)/modulos/desperdicios/page.tsx', 'utf8')).toContain('<summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2">');
+    expect(readFileSync('src/components/notes/notes-client.tsx', 'utf8')).toContain('min-w-[10rem] flex-1 truncate font-semibold');
+    expect(readFileSync('src/components/people/evaluation-client.tsx', 'utf8')).toContain('<span className="flex min-w-[10rem] flex-1 items-center gap-2">');
+    expect(readFileSync('src/components/admin/freelancer-rates-config.tsx', 'utf8')).toContain('grid grid-cols-1 gap-2 sm:grid-cols-3');
+    expect(readFileSync('src/styles/globals.css', 'utf8')).toContain('.sgo-tbl th, .sgo-tbl thead th { white-space: nowrap; }');
+    expect(readFileSync('src/components/metas/graficos-metas.tsx', 'utf8')).toContain('<div className="flex flex-wrap items-center gap-4" data-testid="rosca-meta">');
+    expect(readFileSync('src/components/people/manager-schedule-client.tsx', 'utf8')).toContain('min-w-[7rem] max-w-44 truncate truncate-sempre');
+  });
 });

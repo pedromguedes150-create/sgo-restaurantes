@@ -41,7 +41,7 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Card>
           <PanelHeader title="Unidades por faixa de uso" icon={<span className="sgo-panel__ic sgo-panel__ic--green" aria-hidden><Activity className="h-4 w-4" /></span>} />
-          <div className="flex items-center gap-4 p-4" data-testid="rosca-uso">
+          <div className="flex flex-wrap items-center gap-4 p-4" data-testid="rosca-uso">
             <Rosca fatias={r.porFaixa.map((f) => ({ rotulo: ROTULO_FAIXA_USO[f.faixa], valor: f.qtd, cor: COR_FAIXA[f.faixa], detalhe: f.unidades.map(shortUnitName).join(', ') }))} centro={r.unidades} sub="unidades" />
             <Legenda itens={r.porFaixa.map((f) => ({ cor: COR_FAIXA[f.faixa], rotulo: ROTULO_FAIXA_USO[f.faixa], valor: f.qtd }))} />
           </div>

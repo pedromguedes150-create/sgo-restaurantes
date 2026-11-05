@@ -456,8 +456,8 @@ function NoteCard({ n, canManage, canEditDate = false, busy, onStatus, full = fa
           menu. O valor saiu do meio da frase cinza — alinhado e tabular, dá
           para varrer a coluna sem ler linha por linha, que é o que se faz numa
           lista de notas. */}
-      <div className="flex items-start justify-between gap-2">
-        <p className="min-w-0 flex-1 truncate font-semibold text-ink-900">{n.supplier}</p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <p className="min-w-[10rem] flex-1 truncate font-semibold text-ink-900">{n.supplier}</p>
         <p className="shrink-0 font-semibold tabular-nums text-ink-900">{formatBRL(n.value)}</p>
         <StatusBadge tone={ST[n.status].tone}>{ST[n.status].label}</StatusBadge>
         <div className="print:hidden">

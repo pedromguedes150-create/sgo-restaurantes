@@ -178,7 +178,7 @@ export function ManagerScheduleClient({
             <tbody>
               {grade.linhas.map((l) => (
                 <tr key={l.userId} className="border-t border-line">
-                  <th scope="row" className="sticky left-0 z-10 max-w-44 truncate bg-surface px-2 py-1 text-left font-medium text-ink-900">
+                  <th scope="row" className="sticky left-0 z-10 min-w-[7rem] max-w-44 truncate truncate-sempre bg-surface px-2 py-1 text-left font-medium text-ink-900">
                     {l.name}
                     <span className="block text-[10px] font-normal text-ink-500">
                       {l.temHorario

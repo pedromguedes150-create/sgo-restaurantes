@@ -51,7 +51,7 @@ export function FreelancerRatesConfig({ units, rates, holidays }: {
           {units.map((u) => (
             <div key={u.id} className="p-3">
               <p className="mb-2 text-sm font-semibold text-ink-900">{u.name}</p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {DAY_TYPES.map((t) => (
                   <div key={t.key}>
                     <Label className="text-xs">{t.label} (R$/h)</Label>

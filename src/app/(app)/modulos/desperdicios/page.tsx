@@ -215,8 +215,8 @@ export default async function DesperdiciosPage({
             ];
             return (
               <details key={e.id} className="p-2.5">
-                <summary className="flex cursor-pointer items-center justify-between gap-2">
-                  <div className="min-w-0">
+                <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-[10rem] flex-1">
                     <p className="text-sm font-semibold text-ink-900">{dataBR(e.operationalDate)}</p>
                     <p className="text-xs text-ink-500">{total.toFixed(2)} KG · {e.items.length} item(ns){e.createdBy ? ` · ${e.createdBy.name}` : ''}</p>
                   </div>

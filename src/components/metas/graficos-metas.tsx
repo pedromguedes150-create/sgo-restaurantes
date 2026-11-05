@@ -34,7 +34,7 @@ export function Legenda({ itens }: { itens: { cor: string; rotulo: string; valor
       {itens.map((i) => (
         <li key={i.rotulo} className="flex items-center gap-2">
           <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: i.cor }} aria-hidden />
-          <span className="min-w-0 flex-1 leading-tight text-ink-700">{i.rotulo}</span>
+          <span className="min-w-[8rem] flex-1 leading-tight text-ink-700">{i.rotulo}</span>
           <span className="shrink-0 font-semibold tabular-nums text-ink-900">{i.valor}</span>
         </li>
       ))}
@@ -46,7 +46,7 @@ export function Legenda({ itens }: { itens: { cor: string; rotulo: string; valor
 export function RoscaDaMeta({ scorePct, rotulo, pontos }: { scorePct: number; rotulo: string; pontos?: { ganhos: number; total: number } }) {
   const cor = scorePct >= 80 ? COR_FAIXA.VERDE : scorePct >= 50 ? COR_FAIXA.AMBAR : COR_FAIXA.VERMELHO;
   return (
-    <div className="flex items-center gap-4" data-testid="rosca-meta">
+    <div className="flex flex-wrap items-center gap-4" data-testid="rosca-meta">
       <Rosca fatias={[{ rotulo: 'Atingido', valor: scorePct, cor }, { rotulo: 'Faltou', valor: 100 - scorePct, cor: 'transparent' }]} centro={`${scorePct}%`} sub="da meta" />
       <div className="min-w-0 space-y-1">
         <p className="sgo-type-15 font-semibold text-ink-900">{rotulo}</p>
@@ -61,7 +61,7 @@ export function RoscaDaMeta({ scorePct, rotulo, pontos }: { scorePct: number; ro
 export function RoscaDasUnidades({ resumo }: { resumo: ResumoDoRanking }) {
   const fatias = resumo.porFaixa.map((f) => ({ rotulo: ROTULO_FAIXA[f.faixa], valor: f.qtd, cor: COR_FAIXA[f.faixa], detalhe: f.unidades.map(shortUnitName).join(', ') }));
   return (
-    <div className="flex items-center gap-4" data-testid="rosca-unidades">
+    <div className="flex flex-wrap items-center gap-4" data-testid="rosca-unidades">
       <Rosca fatias={fatias} centro={resumo.unidades} sub="unidades" />
       <div className="min-w-0 flex-1 space-y-2">
         <Legenda itens={resumo.porFaixa.map((f) => ({ cor: COR_FAIXA[f.faixa], rotulo: ROTULO_FAIXA[f.faixa], valor: f.qtd }))} />
@@ -79,7 +79,7 @@ export function RoscaDasUnidades({ resumo }: { resumo: ResumoDoRanking }) {
 export function RoscaDasTarefas({ composicao }: { composicao: Composicao }) {
   const t = composicao.tarefas;
   return (
-    <div className="flex items-center gap-4" data-testid="rosca-tarefas">
+    <div className="flex flex-wrap items-center gap-4" data-testid="rosca-tarefas">
       <Rosca fatias={[{ rotulo: 'Realizadas', valor: t.done, cor: COR_FAIXA.VERDE }, { rotulo: 'Não realizadas', valor: t.missed, cor: COR_FAIXA.VERMELHO }]} centro={t.pct == null ? '—' : `${t.pct}%`} sub="realizadas" />
       <div className="min-w-0 flex-1 space-y-2">
         <Legenda itens={[{ cor: COR_FAIXA.VERDE, rotulo: 'Realizadas', valor: t.done }, { cor: COR_FAIXA.VERMELHO, rotulo: 'Não realizadas', valor: t.missed }]} />

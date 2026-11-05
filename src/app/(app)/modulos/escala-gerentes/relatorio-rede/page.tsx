@@ -94,12 +94,12 @@ export default async function RelatorioRedePage({ searchParams }: { searchParams
                 <tbody>
                   {u.gerentes.map((g) => g.semFolga ? (
                     <tr key={g.userId} className="border-b border-line bg-danger/10" data-testid={`sem-folga-${g.userId}`}>
-                      <td className="py-1 font-medium text-ink-900">{g.name}{!g.temHorario && <span className="block font-normal text-ink-500">sem horário cadastrado</span>}</td>
+                      <td className="whitespace-nowrap py-1 font-medium text-ink-900">{g.name}{!g.temHorario && <span className="block font-normal text-ink-500">sem horário cadastrado</span>}</td>
                       <td className="py-1 font-semibold text-danger" colSpan={6}>SEM FOLGA NEM FÉRIAS CADASTRADA NO MÊS</td>
                     </tr>
                   ) : g.lancamentos.map((l, i) => (
                     <tr key={`${g.userId}-${i}`} className="border-b border-line">
-                      <td className="py-1 font-medium text-ink-900">{i === 0 ? g.name : ''}{i === 0 && !g.temHorario && <span className="block font-normal text-ink-500">sem horário cadastrado</span>}</td>
+                      <td className="whitespace-nowrap py-1 font-medium text-ink-900">{i === 0 ? g.name : ''}{i === 0 && !g.temHorario && <span className="block font-normal text-ink-500">sem horário cadastrado</span>}</td>
                       <td className="py-1">{l.kind === 'FERIAS' ? 'Férias' : 'Folga'}</td>
                       <td className="py-1 whitespace-nowrap tabular-nums">{l.startDate === l.endDate ? fmt(l.startDate) : `${fmt(l.startDate)} a ${fmt(l.endDate)}`}</td>
                       <td className="py-1 text-right tabular-nums">{l.diasNoMes}</td>
@@ -112,7 +112,7 @@ export default async function RelatorioRedePage({ searchParams }: { searchParams
                 <tfoot>
                   <tr className="border-t-2 border-brand">
                     <td className="py-1 font-semibold" colSpan={3}>Total da unidade</td>
-                    <td className="py-1 text-right font-semibold tabular-nums">
+                    <td className="whitespace-nowrap py-1 text-right font-semibold tabular-nums">
                       {u.gerentes.reduce((s, g) => s + g.diasDeFolga, 0)} folga · {u.gerentes.reduce((s, g) => s + g.diasDeFerias, 0)} férias
                     </td>
                     <td colSpan={3} className="py-1 text-ink-700">{u.gerentes.filter((g) => g.semFolga).length} gerente(s) sem folga cadastrada</td>
