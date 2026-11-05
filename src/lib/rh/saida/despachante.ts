@@ -8,7 +8,7 @@ import { notifyAdmins, notifyUsers } from '@/lib/notifications';
 import { rhSaidaConfigurada } from '@/lib/rh/saida/config';
 import { postRh, getRh, RhSaidaTransporteError } from '@/lib/rh/saida/transporte';
 import {
-  MAX_TENTATIVAS, NOTA_JA_EXISTIA, SITUACOES_FINAIS, anexoAceito, caminhoDaSituacao, classificarResposta, extrairPrazo, extrairRhId,
+  MAX_TENTATIVAS, NOTA_JA_EXISTIA, SISTEMA_DE_ORIGEM, SITUACOES_FINAIS, anexoAceito, caminhoDaSituacao, classificarResposta, extrairPrazo, extrairRhId,
   mascararCpfNoObjeto, mascararCpfsNoTexto, nomeDoAnexo, proximaTentativa, rotuloDaSituacao, ROTULO_TIPO,
 } from '@/lib/rh/saida/regras';
 import type { Prisma, RhOutboundEvent, RhOutboundType } from '@prisma/client';
@@ -54,7 +54,7 @@ async function lerAnexo(relPath: string): Promise<{ nome: string; base64: string
 
 /** Corpo final: `sgoEventId` + payload guardado + anexo no campo que o contrato pede. */
 async function montarCorpo(ev: RhOutboundEvent): Promise<{ corpo: Record<string, unknown>; nota: string | null }> {
-  const corpo: Record<string, unknown> = { sgoEventId: ev.sgoEventId, ...(ev.payload as Record<string, unknown>) };
+  const corpo: Record<string, unknown> = { sgoEventId: ev.sgoEventId, sistema: SISTEMA_DE_ORIGEM, ...(ev.payload as Record<string, unknown>) };
   let nota: string | null = null;
   if (ev.anexoPath) {
     const a = await lerAnexo(ev.anexoPath);

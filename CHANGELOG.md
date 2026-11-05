@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.190.0 — 2026-11-05 (Envios ao RH: `sistema`, reenvio das imagens dos atestados e `fileUrl` na API Global)
+
+Mensagem do RH (05/11, via Daniel): as imagens dos atestados não chegavam porque os envios saíam com o token do "SGO Operacional"; pediram o token do Restaurante, o campo `sistema` em todo envio, o reenvio dos atestados com imagem como `atualizar` e um `fileUrl` na API de leitura.
+
+- **`"sistema": "SGO Restaurante"`** em todo envio (atestado, desligamento, demanda) — `SISTEMA_DE_ORIGEM` em `regras.ts`, posto por `montarCorpo` no despachante.
+- **"Reenviar imagens dos atestados"** (Configurações → Envios ao RH): cada atestado COM anexo cujo `criar` já foi ENVIADO volta à fila como `atualizar` com o arquivo em `anexo`, mesmo `sgoMovimentoId` e `sgoEventId` novo; pula os que já têm `atualizar` em envio; auditoria `RH_SAIDA_REENVIO_ANEXOS`. Depois é "Processar fila agora".
+- **`fileUrl`** em `GET /api/v1/atestados` → `GET /api/v1/atestados/{id}/anexo` entrega a imagem/PDF com a mesma X-API-Key (nulo sem anexo). `Entidade.derivados`/`ocultar` no registro da API Global.
+- ⚠️ O token do Restaurante é operacional: colar na tela de Envios ao RH (e garantir que `RH_WEBHOOK_TOKEN` não está no `.env` do servidor com valor antigo).
+
 ## v1.189.1 — 2026-11-05 (Varredura de responsividade: texto espremido no celular)
 
 Pedido do Pedro (print do gerente na aba Freelancer): "um sistema íntegro, responsivo para celular e computador". A varredura da v1.182.1 media só TRANSBORDO (nenhum); o defeito do print era outro — texto ESPREMIDO numa coluna estreita — e a medição nova (121 rotas × 360/768/1440px, elemento com texto < 72px de largura e mais de 3 linhas) achou 11 telas a 360px, nenhuma a 768/1440.

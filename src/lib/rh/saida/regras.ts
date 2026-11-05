@@ -14,6 +14,12 @@ import type { CertificateType, RhDemandPriority, RhDemandType, RhNoticeMode, RhO
  */
 
 export const MAX_TENTATIVAS = 10;
+/**
+ * v1.190.0 — pedido do RH (05/11): todo envio identifica o sistema de origem. O RH
+ * separa "SGO Restaurante" do "SGO Operacional" (outro sistema do grupo, com token
+ * próprio) e, com token trocado, responde 409 dizendo o motivo.
+ */
+export const SISTEMA_DE_ORIGEM = 'SGO Restaurante';
 
 /** Caminhos no RH, relativos à base (`RH_API_URL`). */
 export const ENDPOINTS: Record<RhOutboundType, string> = {
