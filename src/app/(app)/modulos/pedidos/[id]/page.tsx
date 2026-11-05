@@ -17,7 +17,7 @@ export default async function PedidoPage({ params, searchParams }: { params: { i
   if (!p) notFound();
   const podeEditar = podeEnviar(user.role) && canAccessUnit(user, p.unitId) && (await canEditModule(user.role, 'ORDERS')) && pedidoEditavel(p.status);
   const aviso = searchParams.enviado === '1'
-    ? <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success print:hidden" data-testid="aviso-enviado">Pedido nº {p.number} enviado{p.destinos.length ? ` para ${p.destinos.map(rotuloDoDestino).join(', ')}` : ''}. Os separadores dos setores envolvidos foram avisados. Você pode editar o pedido enquanto o setor não entrar em separação.</p>
+    ? <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success print:hidden" data-testid="aviso-enviado">Pedido nº {p.number} enviado{p.destinos.length ? ` para ${p.destinos.map(rotuloDoDestino).join(', ')}` : ''}. Os separadores dos setores envolvidos foram avisados. Você pode editar o pedido até o primeiro setor entrar em separação.</p>
     : searchParams.editado === '1'
       ? <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success print:hidden" data-testid="aviso-editado">Pedido nº {p.number} alterado. Os setores envolvidos foram avisados.</p>
       : undefined;

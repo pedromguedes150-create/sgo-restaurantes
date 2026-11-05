@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import { Inbox, PenLine, Send } from 'lucide-react';
+import { Inbox, PenLine, Pencil, Send } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { canEditModule } from '@/lib/permissions';
 import { permissaoDeRota } from '@/lib/permissions/links';
 import { listarPedidosDaUnidade, setoresParaPedido } from '@/lib/pedidos/pedidos';
-import { dataBR, podeEnviar, ROTULO_STATUS, rotuloDosDestinos, TOM_STATUS } from '@/lib/pedidos/regras';
+import { dataBR, pedidoEditavel, podeEnviar, ROTULO_STATUS, rotuloDosDestinos, TOM_STATUS } from '@/lib/pedidos/regras';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
@@ -39,7 +39,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: { ab
     <div className="space-y-4">
       <LargeTitle
         title="Pedidos"
-        subtitle="A lista do que a unidade precisa, como um e-mail: escreva uma linha por item em cada setor e envie. O sistema encaminha cada setor ao seu destino (Fábrica, CD ou Almoxarifado), e o separador do setor marca Recebido e Atendido."
+        subtitle="A lista do que a unidade precisa, como um e-mail: escreva uma linha por item em cada setor e envie. O sistema encaminha cada setor ao seu destino (Fábrica, CD ou Almoxarifado). Dá para editar o pedido até o primeiro setor entrar em separação."
         tabs={[
           { label: 'Novo pedido', icon: <PenLine className="h-3.5 w-3.5" />, href: link('novo'), active: aba === 'novo', testId: 'aba-novo' },
           { label: 'Enviados', icon: <Send className="h-3.5 w-3.5" />, href: link('enviados'), active: aba === 'enviados', testId: 'aba-enviados' },
@@ -62,7 +62,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: { ab
             <div className="overflow-x-auto p-2">
               {pedidos.length === 0 ? <p className="p-3 text-sm text-ink-500">Nenhum pedido enviado ainda.</p> : (
                 <table className="sgo-tbl w-full text-sm" data-testid="tabela-pedidos">
-                  <thead><tr><th className="text-left">Nº</th><th className="text-left">Enviado</th>{units.length > 1 && <th className="text-left">Unidade</th>}<th className="text-left">Destinos</th><th className="text-left">Setores</th><th className="text-left">Por</th><th className="text-left">Situação</th></tr></thead>
+                  <thead><tr><th className="text-left">Nº</th><th className="text-left">Enviado</th>{units.length > 1 && <th className="text-left">Unidade</th>}<th className="text-left">Destinos</th><th className="text-left">Setores</th><th className="text-left">Por</th><th className="text-left">Situação</th><th className="text-left"></th></tr></thead>
                   <tbody>
                     {pedidos.map((p) => (
                       <tr key={p.id}>
@@ -73,6 +73,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: { ab
                         <td className="whitespace-normal text-xs">{p.secoes.length ? p.secoes.map((s) => `${s.sectorName} (${s.lines.length}${s.status === 'ATENDIDO' ? ' ✓' : ''})`).join(' · ') : 'só observação'}</td>
                         <td className="whitespace-nowrap">{p.createdByName}</td>
                         <td className="whitespace-nowrap"><StatusBadge tone={TOM_STATUS[p.status]} dot>{ROTULO_STATUS[p.status]}</StatusBadge></td>
+                        <td className="whitespace-nowrap">{podeNovo && pedidoEditavel(p.status) ? <Link href={`/modulos/pedidos/${p.id}/editar`} className="sgo-btn sgo-btn--sm" data-testid={`editar-${p.id}`}><Pencil className="h-3.5 w-3.5" /> Editar</Link> : <span className="text-xs text-ink-500">{p.status === 'ENVIADO' ? '' : 'travado'}</span>}</td>
                       </tr>
                     ))}
                   </tbody>

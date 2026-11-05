@@ -13,7 +13,7 @@ import { Select } from '@/components/ui/ds/select';
 import { postAdmin, ROLE_OPTIONS } from '@/lib/admin-client';
 import { ehPerfilPersonalizado, idDoPerfil, valorDePerfil } from '@/lib/perfil-valor';
 
-export interface UserRow { id: string; name: string; email: string; role: string; active: boolean; unitIds: string[]; cdSectorId: string | null; cdSectorName: string | null; profileId: string | null; profileName: string | null }
+export interface UserRow { id: string; name: string; email: string; role: string; active: boolean; unitIds: string[]; cdSectorId: string | null; cdSectorName: string | null; cdSectorIds: string[]; cdSectorNames: string[]; profileId: string | null; profileName: string | null }
 interface Unit { id: string; name: string }
 interface CdSector { id: string; name: string }
 interface PerfilPersonalizado { id: string; name: string; baseRole: string }
@@ -57,6 +57,7 @@ export function UsersAdmin({ users, units, cdSectors, perfis, meId }: { users: U
   const [password, setPassword] = useState('');
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [cdSectorId, setCdSectorId] = useState<string | null>(null);
+  const [cdSectorIds, setCdSectorIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [novo, setNovo] = useState(false);
@@ -66,7 +67,7 @@ export function UsersAdmin({ users, units, cdSectors, perfis, meId }: { users: U
 
   async function create() {
     setBusy(true); setMsg(null);
-    const r = await postAdmin({ entity: 'user', action: 'create', name, email, ...comoEnviar(role), password, unitIds: needsUnits ? unitIds : [], cdSectorId: needsSector ? cdSectorId : null });
+    const r = await postAdmin({ entity: 'user', action: 'create', name, email, ...comoEnviar(role), password, unitIds: needsUnits ? unitIds : [], cdSectorId: needsSector ? cdSectorId : null, cdSectorIds: needsSector ? cdSectorIds : [] });
     setBusy(false);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
     setName(''); setEmail(''); setPassword(''); setUnitIds([]); setCdSectorId(null); setNovo(false); router.refresh();
@@ -97,7 +98,10 @@ export function UsersAdmin({ users, units, cdSectors, perfis, meId }: { users: U
             </div>
           )}
           {needsSector && (
-            <SetorDoCd sectors={cdSectors} value={cdSectorId} onChange={setCdSectorId} />
+            <>
+              <SetorDoCd sectors={cdSectors} value={cdSectorId} onChange={setCdSectorId} />
+              <SetoresAdicionais sectors={cdSectors} principal={cdSectorId} selected={cdSectorIds} onChange={setCdSectorIds} />
+            </>
           )}
           {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
           <Button onClick={create} disabled={busy} className="w-full"><Plus className="h-4 w-4" /> Criar usuário</Button>
@@ -114,6 +118,19 @@ export function UsersAdmin({ users, units, cdSectors, perfis, meId }: { users: U
 }
 
 /** O setor é obrigatório para o Separador — sem ele a fila dele abre vazia. */
+/** v1.189.0 — o mesmo separador em mais de um setor: o principal fica no Select; os demais aqui. */
+function SetoresAdicionais({ sectors, principal, selected, onChange }: { sectors: CdSector[]; principal: string | null; selected: string[]; onChange: (v: string[]) => void }) {
+  const opcoes = sectors.filter((s) => s.id !== principal).map((s) => ({ value: s.id, label: s.name }));
+  if (opcoes.length === 0) return null;
+  return (
+    <div data-testid="setores-adicionais">
+      <Label className="text-xs">Setores adicionais (Pedidos por setor)</Label>
+      <MultiSelect options={opcoes} selected={selected.filter((id) => id !== principal)} onChange={onChange} placeholder="Nenhum — só o setor principal" searchable={opcoes.length > 6} />
+      <p className="mt-1 text-xs text-ink-500">O separador recebe e atende os blocos de TODOS os setores marcados, além do principal.</p>
+    </div>
+  );
+}
+
 function SetorDoCd({ sectors, value, onChange, size }: { sectors: CdSector[]; value: string | null; onChange: (v: string) => void; size?: 'sm' }) {
   if (sectors.length === 0) {
     return (
@@ -143,6 +160,7 @@ function UserItem({ u, units, cdSectors, perfis, meId, onChange, onToggle }: { u
   const [password, setPassword] = useState('');
   const [unitIds, setUnitIds] = useState<string[]>(u.unitIds);
   const [cdSectorId, setCdSectorId] = useState<string | null>(u.cdSectorId);
+  const [cdSectorIds, setCdSectorIds] = useState<string[]>(u.cdSectorIds ?? []);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const needsUnits = roleNeedsUnits(papelEfetivo(role));
@@ -151,7 +169,7 @@ function UserItem({ u, units, cdSectors, perfis, meId, onChange, onToggle }: { u
 
   async function save() {
     setBusy(true); setMsg(null);
-    const r = await postAdmin({ entity: 'user', action: 'update', id: u.id, name, ...(isSelf ? {} : comoEnviar(role)), password: password || undefined, cdSectorId: needsSector ? cdSectorId : null });
+    const r = await postAdmin({ entity: 'user', action: 'update', id: u.id, name, ...(isSelf ? {} : comoEnviar(role)), password: password || undefined, cdSectorId: needsSector ? cdSectorId : null, cdSectorIds: needsSector ? cdSectorIds : [] });
     if (r.ok) await postAdmin({ entity: 'user', action: 'setUnits', id: u.id, unitIds: needsUnits ? unitIds : [] });
     setBusy(false);
     if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
@@ -176,7 +194,7 @@ function UserItem({ u, units, cdSectors, perfis, meId, onChange, onToggle }: { u
             {u.email} · {u.profileName ?? ROLE_OPTIONS.find((r) => r.value === u.role)?.label ?? u.role}
             {u.role === 'SEPARATOR' && (
               u.cdSectorName
-                ? <span> · setor {u.cdSectorName}</span>
+                ? <span> · setor {u.cdSectorName}{u.cdSectorNames?.length ? ` + ${u.cdSectorNames.join(', ')}` : ''}</span>
                 : <span className="font-medium text-danger"> · sem setor do CD — não vê pedido nenhum</span>
             )}
           </p>
@@ -203,7 +221,12 @@ function UserItem({ u, units, cdSectors, perfis, meId, onChange, onToggle }: { u
               <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
             </div>
           )}
-          {needsSector && <SetorDoCd sectors={cdSectors} value={cdSectorId} onChange={setCdSectorId} size="sm" />}
+          {needsSector && (
+            <>
+              <SetorDoCd sectors={cdSectors} value={cdSectorId} onChange={setCdSectorId} size="sm" />
+              <SetoresAdicionais sectors={cdSectors} principal={cdSectorId} selected={cdSectorIds} onChange={setCdSectorIds} />
+            </>
+          )}
           {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
           <Button size="sm" className="w-full" disabled={busy} onClick={save}><Save className="h-4 w-4" /> Salvar alterações</Button>
         </div>

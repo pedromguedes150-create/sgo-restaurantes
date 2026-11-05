@@ -16,12 +16,12 @@ export default async function UsuariosAdminPage() {
   const isViewer = user.role === 'SUPERVISOR' || user.role === 'CEO'; // 16/07: supervisão visualiza dados (CPF etc.)
   if (!isAdmin && !isViewer) return <p className="text-sm text-ink-500">Restrito ao Administrador.</p>;
   const [users, units, cdSectors, perfis] = await Promise.all([
-    prisma.user.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, cpf: true, email: true, role: true, active: true, cdSectorId: true, cdSector: { select: { name: true } }, profileId: true, profile: { select: { name: true } }, memberships: { select: { unitId: true } } } }),
+    prisma.user.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, cpf: true, email: true, role: true, active: true, cdSectorId: true, cdSector: { select: { name: true } }, cdSectors: { select: { sectorId: true, sector: { select: { name: true } } } }, profileId: true, profile: { select: { name: true } }, memberships: { select: { unitId: true } } } }),
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     setoresAtivosDoCd(),
     perfisAtivos(),
   ]);
-  const usersRows = users.map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, active: u.active, unitIds: u.memberships.map((m) => m.unitId), cdSectorId: u.cdSectorId, cdSectorName: u.cdSector?.name ?? null, profileId: u.profileId, profileName: u.profile?.name ?? null }));
+  const usersRows = users.map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, active: u.active, unitIds: u.memberships.map((m) => m.unitId), cdSectorId: u.cdSectorId, cdSectorName: u.cdSector?.name ?? null, cdSectorIds: u.cdSectors.map((s) => s.sectorId), cdSectorNames: u.cdSectors.map((s) => s.sector.name), profileId: u.profileId, profileName: u.profile?.name ?? null }));
 
   if (!isAdmin) {
     // Visualização (Supervisor/CEO): dados completos, sem edição

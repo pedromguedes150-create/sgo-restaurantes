@@ -30,11 +30,21 @@ export async function setoresParaPedido(): Promise<SetorParaPedido[]> {
   return prisma.cdSector.findMany({ where: { active: true }, orderBy: [{ order: 'asc' }, { name: 'asc' }], select: { id: true, name: true, destination: true } });
 }
 
-/** O setor do separador, lido do cadastro (a sessão não o carrega). */
-async function setorDoUsuario(user: SessionUser): Promise<string | null> {
-  if (user.role !== 'SEPARATOR') return null;
-  const u = await prisma.user.findUnique({ where: { id: user.id }, select: { cdSectorId: true } });
-  return u?.cdSectorId ?? null;
+/** Os setores do separador (principal + adicionais, v1.189.0), lidos do cadastro (a sessão não os carrega). */
+async function setoresDoUsuario(user: SessionUser): Promise<string[]> {
+  if (user.role !== 'SEPARATOR') return [];
+  const u = await prisma.user.findUnique({ where: { id: user.id }, select: { cdSectorId: true, cdSectors: { select: { sectorId: true } } } });
+  if (!u) return [];
+  return [...new Set([u.cdSectorId, ...u.cdSectors.map((s) => s.sectorId)].filter((x): x is string => Boolean(x)))];
+}
+/** Os separadores ativos que atendem QUALQUER um dos setores (principal ou adicional). */
+async function separadoresDosSetores(sectorIds: string[]): Promise<{ id: string; setores: string[] }[]> {
+  if (sectorIds.length === 0) return [];
+  const rows = await prisma.user.findMany({
+    where: { role: 'SEPARATOR', active: true, OR: [{ cdSectorId: { in: sectorIds } }, { cdSectors: { some: { sectorId: { in: sectorIds } } } }] },
+    select: { id: true, cdSectorId: true, cdSectors: { select: { sectorId: true } } },
+  });
+  return rows.map((r) => ({ id: r.id, setores: [r.cdSectorId, ...r.cdSectors.map((s) => s.sectorId)].filter((x): x is string => Boolean(x)) }));
 }
 
 /* ───────────────────────── enviar ───────────────────────── */
@@ -78,8 +88,8 @@ export async function enviarPedido(user: SessionUser, input: EnviarPedidoInput, 
     body: blocos.length ? `${user.name} enviou ${blocos.length} setor(es), ${itens} item(ns): ${blocos.map((b) => b.sectorName).join(', ')}.` : `${user.name} enviou um pedido só com observação${note ? `: ${note}` : ''}.`,
     link: LINK_RECEBIDOS, module: 'ORDERS',
   };
-  const separadores = blocos.length ? await prisma.user.findMany({ where: { role: 'SEPARATOR', active: true, cdSectorId: { in: blocos.map((b) => b.sectorId) } }, select: { id: true, cdSectorId: true } }) : [];
-  const setoresSemSeparador = blocos.filter((b) => !separadores.some((s) => s.cdSectorId === b.sectorId));
+  const separadores = await separadoresDosSetores(blocos.map((b) => b.sectorId));
+  const setoresSemSeparador = blocos.filter((b) => !separadores.some((s) => s.setores.includes(b.sectorId)));
   await Promise.all([
     separadores.length ? notifyUsers(separadores.map((s) => s.id), payload) : Promise.resolve(),
     blocos.length === 0 || setoresSemSeparador.length ? notifyAdmins(payload) : Promise.resolve(),
@@ -92,27 +102,20 @@ export async function enviarPedido(user: SessionUser, input: EnviarPedidoInput, 
 export interface EditarPedidoInput { id: string; textos: Record<string, unknown>; observacao?: string }
 
 /**
- * O gerente altera o que enviou — decisão do Pedro (04/11): pode editar até o
- * separador marcar "Em separação". A regra é POR BLOCO: bloco Enviado aceita
- * alteração, remoção (texto vazio) e o pedido aceita setor novo e observação;
- * bloco em separação ou atendido é travado (qualquer diferença recusa com o
- * nome do setor). Pedido inteiro atendido não se edita.
+ * O gerente altera o que enviou — decisão do Pedro (04/11 e 05/11): pode editar
+ * até o PRIMEIRO setor entrar em separação; daí o pedido inteiro fecha para ele
+ * (`pedidoEditavel`). Enquanto aberto: altera, remove (texto vazio) e acrescenta
+ * setor, e muda a observação.
  */
 export async function editarPedido(user: SessionUser, input: EditarPedidoInput, ctx: Ctx = {}): Promise<ResultadoDoPedido> {
   if (!podeEnviar(user.role)) return { ok: false, reason: 'FORBIDDEN' };
   const r = await prisma.sectorOrder.findUnique({ where: { id: input.id }, include: { unit: { select: { name: true } }, sections: { orderBy: { position: 'asc' } } } });
   if (!r) return { ok: false, reason: 'NOT_FOUND' };
   try { assertUnitAccess(user, r.unitId); } catch (e) { if (e instanceof UnitScopeError) return { ok: false, reason: 'FORBIDDEN' }; throw e; }
-  if (!pedidoEditavel(r.status)) return { ok: false, reason: 'ESTADO', message: 'Este pedido já foi atendido por todos os setores e não pode mais ser alterado.' };
+  if (!pedidoEditavel(r.status)) return { ok: false, reason: 'ESTADO', message: r.status === 'ATENDIDO' ? 'Este pedido já foi atendido e não pode mais ser alterado.' : 'Este pedido já entrou em separação e não pode mais ser alterado.' };
   const setores = await setoresParaPedido();
   const textos = input.textos ?? {};
   const iguais = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
-
-  /* travados: qualquer diferença no texto recusa, nomeando o setor */
-  for (const s of r.sections) {
-    if (blocoEditavel(s.status) || !s.sectorId || !(s.sectorId in textos)) continue;
-    if (!iguais(linhasDoTexto(textos[s.sectorId]), s.lines)) return { ok: false, reason: 'ESTADO', message: `O setor ${s.sectorName} já está em separação e não pode mais ser alterado.` };
-  }
 
   const adicionados: string[] = []; const alterados: string[] = []; const removidos: string[] = [];
   const setoresTocados = new Set<string>();
@@ -139,8 +142,8 @@ export async function editarPedido(user: SessionUser, input: EditarPedidoInput, 
 
   if (setoresTocados.size) {
     const payload = { title: `Pedido nº ${r.number} de ${r.unit.name} alterado`, body: `${user.name} alterou o pedido: ${[...adicionados.map((s) => `+${s}`), ...alterados, ...removidos.map((s) => `−${s}`)].join(', ')}.`, link: LINK_RECEBIDOS, module: 'ORDERS' };
-    const separadores = await prisma.user.findMany({ where: { role: 'SEPARATOR', active: true, cdSectorId: { in: [...setoresTocados] } }, select: { id: true, cdSectorId: true } });
-    const semSeparador = [...setoresTocados].filter((id) => !separadores.some((s) => s.cdSectorId === id));
+    const separadores = await separadoresDosSetores([...setoresTocados]);
+    const semSeparador = [...setoresTocados].filter((id) => !separadores.some((s) => s.setores.includes(id)));
     await Promise.all([
       separadores.length ? notifyUsers(separadores.map((s) => s.id), payload) : Promise.resolve(),
       semSeparador.length ? notifyAdmins(payload) : Promise.resolve(),
@@ -191,8 +194,8 @@ export async function getPedido(user: SessionUser, id: string): Promise<PedidoDa
   const r = await prisma.sectorOrder.findUnique({ where: { id }, include: INCLUDE });
   if (!r) return null;
   if (veTudo(user.role) || canAccessUnit(user, r.unitId)) return pedido(r);
-  const setor = await setorDoUsuario(user);
-  if (setor && r.sections.some((s) => s.sectorId === setor)) return pedido(r);
+  const setores = await setoresDoUsuario(user);
+  if (setores.length && r.sections.some((s) => s.sectorId && setores.includes(s.sectorId))) return pedido(r);
   return null;
 }
 
@@ -207,10 +210,10 @@ export type SituacaoDaCaixa = 'todos' | 'abertos' | 'atendidos';
  */
 export async function listarRecebidos(user: SessionUser, opts: { situacao?: SituacaoDaCaixa; destino?: Destino } = {}): Promise<PedidoDaTela[]> {
   if (!podeAtender(user.role)) return [];
-  const setor = await setorDoUsuario(user);
-  if (user.role === 'SEPARATOR' && !setor) return [];
+  const setores = await setoresDoUsuario(user);
+  if (user.role === 'SEPARATOR' && setores.length === 0) return [];
   const situacao = opts.situacao ?? 'todos';
-  const filtroSecao = { ...(setor ? { sectorId: setor } : {}), ...(opts.destino ? { destination: opts.destino } : {}) };
+  const filtroSecao = { ...(setores.length ? { sectorId: { in: setores } } : {}), ...(opts.destino ? { destination: opts.destino } : {}) };
   const temFiltro = Object.keys(filtroSecao).length > 0;
   const semBloco = !temFiltro && situacao !== 'atendidos' ? [{ sections: { none: {} } }] : [];
   const porSituacao = situacao === 'abertos' ? { status: { not: 'ATENDIDO' as const } } : situacao === 'atendidos' ? { status: 'ATENDIDO' as const } : {};
@@ -234,8 +237,8 @@ export async function marcarSecao(user: SessionUser, sectionId: string, acao: Ac
   const s = await prisma.sectorOrderSection.findUnique({ where: { id: sectionId }, include: { order: { select: { id: true, number: true, unitId: true, createdById: true } } } });
   if (!s) return { ok: false, reason: 'NOT_FOUND' };
   if (user.role === 'SEPARATOR') {
-    const setor = await setorDoUsuario(user);
-    if (!setor || s.sectorId !== setor) return { ok: false, reason: 'FORBIDDEN' };
+    const setores = await setoresDoUsuario(user);
+    if (!s.sectorId || !setores.includes(s.sectorId)) return { ok: false, reason: 'FORBIDDEN' };
   }
   const novo = proximoStatusDaSecao(s.status, acao);
   if (!novo) return { ok: false, reason: 'ESTADO', message: acao === 'separar' ? 'Este setor já está em separação.' : 'Este setor já foi atendido.' };
@@ -255,5 +258,61 @@ export async function marcarSecao(user: SessionUser, sectionId: string, acao: Ac
       link: LINK_ENVIADOS, module: 'ORDERS',
     }).catch(() => {});
   }
+  return { ok: true, id: s.orderId, number: s.order.number };
+}
+
+/* ───────────────────────── mover item para outro setor (v1.189.0) ───────────────────────── */
+
+export interface MoverLinhaInput { sectionId: string; linha: number; paraSectorId: string }
+
+/**
+ * Quem separa vê que o gerente escreveu o item no setor errado e o MIGRA para
+ * o setor certo (decisão do Pedro, 05/11): a linha sai do bloco de origem e
+ * entra no bloco do setor de destino do MESMO pedido (criado se não existir,
+ * com o destino do setor; se já estava atendido, volta para "Em separação",
+ * porque ganhou coisa nova). O separador do setor de destino é avisado — e os
+ * Admins, se o setor não tem separador; quem enviou também fica sabendo.
+ * Só o separador do setor de ORIGEM (ou Admin/CEO) move; bloco atendido não.
+ */
+export async function moverLinha(user: SessionUser, input: MoverLinhaInput, ctx: Ctx = {}): Promise<ResultadoDoPedido> {
+  if (!podeAtender(user.role)) return { ok: false, reason: 'FORBIDDEN' };
+  const s = await prisma.sectorOrderSection.findUnique({ where: { id: input.sectionId }, include: { order: { select: { id: true, number: true, unitId: true, createdById: true, unit: { select: { name: true } } } } } });
+  if (!s) return { ok: false, reason: 'NOT_FOUND' };
+  if (user.role === 'SEPARATOR') {
+    const setores = await setoresDoUsuario(user);
+    if (!s.sectorId || !setores.includes(s.sectorId)) return { ok: false, reason: 'FORBIDDEN' };
+  }
+  if (s.status === 'ATENDIDO') return { ok: false, reason: 'ESTADO', message: 'Este setor já foi atendido; não dá mais para mover itens dele.' };
+  const idx = Number(input.linha);
+  if (!Number.isInteger(idx) || idx < 0 || idx >= s.lines.length) return { ok: false, reason: 'INVALID', message: 'Item não encontrado no bloco.' };
+  if (!input.paraSectorId || input.paraSectorId === s.sectorId) return { ok: false, reason: 'INVALID', message: 'Escolha um setor diferente do atual.' };
+  const alvo = await prisma.cdSector.findFirst({ where: { id: input.paraSectorId, active: true }, select: { id: true, name: true, destination: true } });
+  if (!alvo) return { ok: false, reason: 'INVALID', message: 'Setor de destino inválido ou desativado.' };
+  const item = s.lines[idx];
+  const restante = s.lines.filter((_, i) => i !== idx);
+  const agora = new Date();
+
+  await prisma.$transaction(async (tx) => {
+    if (restante.length === 0) await tx.sectorOrderSection.delete({ where: { id: s.id } });
+    else await tx.sectorOrderSection.update({ where: { id: s.id }, data: { lines: restante } });
+    const existente = await tx.sectorOrderSection.findFirst({ where: { orderId: s.orderId, sectorId: alvo.id } });
+    if (existente) {
+      await tx.sectorOrderSection.update({ where: { id: existente.id }, data: { lines: [...existente.lines, item], ...(existente.status === 'ATENDIDO' ? { status: 'EM_SEPARACAO', attendedById: null, attendedByName: null, attendedAt: null } : {}) } });
+    } else {
+      const ultimo = await tx.sectorOrderSection.aggregate({ where: { orderId: s.orderId }, _max: { position: true } });
+      await tx.sectorOrderSection.create({ data: { orderId: s.orderId, sectorId: alvo.id, sectorName: alvo.name, destination: alvo.destination, position: (ultimo._max.position ?? -1) + 1, lines: [item] } });
+    }
+    const todas = await tx.sectorOrderSection.findMany({ where: { orderId: s.orderId }, select: { status: true } });
+    const statusPedido = statusDoPedido(todas.map((x) => x.status));
+    await tx.sectorOrder.update({ where: { id: s.orderId }, data: { status: statusPedido, attendedAt: statusPedido === 'ATENDIDO' ? agora : null } });
+  });
+  await audit({ userId: user.id, unitId: s.order.unitId, action: 'ORDER_LINE_MOVED', module: 'ORDERS', entity: 'sector_order', entityId: s.orderId, metadata: { number: s.order.number, item, de: s.sectorName, para: alvo.name }, ...ctx });
+
+  const payload = { title: `Pedido nº ${s.order.number} de ${s.order.unit.name}: item movido para ${alvo.name}`, body: `${user.name} moveu "${item}" de ${s.sectorName} para ${alvo.name}.`, link: LINK_RECEBIDOS, module: 'ORDERS' };
+  const separadores = (await separadoresDosSetores([alvo.id])).filter((x) => x.id !== user.id);
+  await Promise.all([
+    separadores.length ? notifyUsers(separadores.map((x) => x.id), payload) : notifyAdmins(payload),
+    s.order.createdById && s.order.createdById !== user.id ? notifyUsers([s.order.createdById], { ...payload, link: LINK_ENVIADOS }) : Promise.resolve(),
+  ]).catch(() => {});
   return { ok: true, id: s.orderId, number: s.order.number };
 }

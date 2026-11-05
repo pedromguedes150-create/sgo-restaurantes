@@ -69,12 +69,12 @@ describe('situação do pedido e dos blocos', () => {
     expect(proximoStatusDaSecao('EM_SEPARACAO', 'atender')).toBe('ATENDIDO');
     expect(proximoStatusDaSecao('ATENDIDO', 'atender')).toBeNull();
   });
-  it('v1.188.0: o gerente edita o bloco só enquanto Enviado; o pedido só fecha quando todos atenderam', () => {
+  it('v1.189.0: o gerente edita o pedido só enquanto NENHUM setor entrou em separação (decisão do Pedro, 05/11)', () => {
     expect(blocoEditavel('ENVIADO')).toBe(true);
     expect(blocoEditavel('EM_SEPARACAO')).toBe(false);
     expect(blocoEditavel('ATENDIDO')).toBe(false);
     expect(pedidoEditavel('ENVIADO')).toBe(true);
-    expect(pedidoEditavel('EM_SEPARACAO')).toBe(true);
+    expect(pedidoEditavel('EM_SEPARACAO')).toBe(false);
     expect(pedidoEditavel('ATENDIDO')).toBe(false);
     expect(ROTULO_STATUS.EM_SEPARACAO).toBe('Em separação');
   });

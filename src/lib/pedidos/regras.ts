@@ -43,10 +43,14 @@ export function destinoSugeridoPeloNome(nome: string): Destino {
 export type StatusDoPedido = 'ENVIADO' | 'EM_SEPARACAO' | 'ATENDIDO';
 export const ROTULO_STATUS: Record<StatusDoPedido, string> = { ENVIADO: 'Enviado', EM_SEPARACAO: 'Em separação', ATENDIDO: 'Atendido' };
 export const TOM_STATUS: Record<StatusDoPedido, 'info' | 'warning' | 'success'> = { ENVIADO: 'info', EM_SEPARACAO: 'warning', ATENDIDO: 'success' };
-/** O gerente só altera o bloco que ainda está Enviado: em separação ou atendido, o separador já está com a lista na mão. */
+/** Um bloco só é editável enquanto Enviado (em separação ou atendido, o separador já está com a lista na mão). */
 export const blocoEditavel = (status: StatusDoPedido) => status === 'ENVIADO';
-/** O pedido inteiro só fecha para edição quando todos os setores atenderam (ainda dá para acrescentar setor e mudar a observação antes disso). */
-export const pedidoEditavel = (status: StatusDoPedido) => status !== 'ATENDIDO';
+/**
+ * v1.189.0 (decisão do Pedro, 05/11): o gerente altera o PEDIDO INTEIRO enquanto nenhum setor
+ * entrou em separação; no primeiro "Em separação" o pedido fecha para ele — a situação do pedido
+ * é derivada dos blocos, então basta ela ainda ser Enviado.
+ */
+export const pedidoEditavel = (status: StatusDoPedido) => status === 'ENVIADO';
 
 /** Quem envia: a operação da unidade (o separador e o caixa não pedem). */
 export const PODE_ENVIAR = ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'ADMIN', 'CEO'] as const;

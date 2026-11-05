@@ -58,12 +58,15 @@ export function ListRow({ title, subtitle, leading, trailing, href, onClick, dis
   const inner = (
     <>
       {leading && <span className="shrink-0">{leading}</span>}
-      <span className="min-w-0 flex-1">
+      {/* v1.189.0: o texto nunca encolhe abaixo de 10rem — com três crachás à direita (Recorrente · Divergência · situação)
+          o flex-1 era espremido a ~0 e o break-words quebrava o nome UMA LETRA POR LINHA no celular (print do gerente,
+          aba Freelancer). A linha passou a flex-wrap: quando os crachás não cabem, descem para a linha de baixo. */}
+      <span className="min-w-[10rem] flex-1 basis-0">
         {/* v1.182.1: quebra em vez de cortar — "Lançamento de Perdas/Desp…" no celular escondia o que importa (levantamento a 375px) */}
         <span className="block break-words text-sm font-medium text-ink-900">{title}</span>
         {subtitle && <span className="block break-words text-xs text-ink-500">{subtitle}</span>}
       </span>
-      {trailing && <span className="flex shrink-0 items-center gap-2">{trailing}</span>}
+      {trailing && <span className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2">{trailing}</span>}
       {interactive && <ChevronRight className="h-4 w-4 shrink-0 text-ink-400" aria-hidden />}
     </>
   );
@@ -75,7 +78,7 @@ export function ListRow({ title, subtitle, leading, trailing, href, onClick, dis
     // 44pt e só cresce quando ganha segunda linha. Com altura travada, uma lista
     // de linhas sem subtítulo desperdiçava 20px por item — em 20 itens, uma tela
     // inteira de rolagem. O mínimo de 44px é também o alvo de toque (regra 8).
-    'relative flex min-h-11 w-full items-center gap-3 py-2 text-left outline-none',
+    'relative flex min-h-11 w-full flex-wrap items-center gap-x-3 gap-y-1 py-2 text-left outline-none',
     selectionSlot ? 'pr-4' : 'px-4',
     !selectionSlot && "after:absolute after:bottom-0 after:left-4 after:right-0 after:h-px after:bg-line after:content-[''] last:after:hidden",
     interactive && 'transition-colors duration-sgo-1 ease-sgo-std hover:bg-sunken focus-visible:shadow-sgo-focus motion-reduce:transition-none',
