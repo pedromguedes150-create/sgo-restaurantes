@@ -45,7 +45,7 @@ export async function listarSetoresDoCd(): Promise<SetorDoCd[]> {
       active: true,
       order: true,
       destination: true,
-      _count: { select: { products: true, separators: true, requestItems: true } },
+      _count: { select: { products: true, separators: true, extraSeparators: true, requestItems: true } },
     },
   });
   return setores.map((s) => ({
@@ -55,7 +55,7 @@ export async function listarSetoresDoCd(): Promise<SetorDoCd[]> {
     order: s.order,
     destination: s.destination,
     produtos: s._count.products,
-    separadores: s._count.separators,
+    separadores: s._count.separators + s._count.extraSeparators,
     itensEmPedidos: s._count.requestItems,
   }));
 }
@@ -139,18 +139,20 @@ export async function alternarSetorDoCd(
   if (!podeGerenciar(user)) return { ok: false, reason: 'FORBIDDEN' };
   const atual = await prisma.cdSector.findUnique({
     where: { id: input.id },
-    select: { _count: { select: { separators: true } } },
+    select: { _count: { select: { separators: true, extraSeparators: true } } },
   });
   if (!atual) return { ok: false, reason: 'INVALID' };
 
   /* Desativar um setor que ainda tem separador deixaria aquele funcionário sem
      fila: a tela dele abre filtrada pelo setor e ficaria vazia sem explicação.
-     Primeiro se move o pessoal, depois se fecha o setor. */
-  if (!input.active && atual._count.separators > 0) {
+     Primeiro se move o pessoal, depois se fecha o setor. (v1.189.0: conta
+     também quem o tem como setor adicional.) */
+  const vinculados = atual._count.separators + atual._count.extraSeparators;
+  if (!input.active && vinculados > 0) {
     return {
       ok: false,
       reason: 'BLOCKED',
-      message: `Há ${atual._count.separators} separador(es) vinculado(s) a este setor. Mude o setor deles em Configurações → Usuários antes de desativar.`,
+      message: `Há ${vinculados} separador(es) vinculado(s) a este setor. Mude o setor deles em Configurações → Usuários antes de desativar.`,
     };
   }
 
@@ -167,14 +169,15 @@ export async function excluirSetorDoCd(
   if (!podeGerenciar(user)) return { ok: false, reason: 'FORBIDDEN' };
   const atual = await prisma.cdSector.findUnique({
     where: { id },
-    select: { _count: { select: { products: true, separators: true, requestItems: true } } },
+    select: { _count: { select: { products: true, separators: true, extraSeparators: true, requestItems: true } } },
   });
   if (!atual) return { ok: false, reason: 'INVALID' };
 
   /* Em uso se DESATIVA, não se apaga. As FKs são `onDelete: SetNull`, então
      excluir não daria erro — soltaria os produtos sem setor e apagaria de qual
      setor cada item de pedido saiu. O estrago seria silencioso. */
-  const { products, separators, requestItems } = atual._count;
+  const { products, requestItems } = atual._count;
+  const separators = atual._count.separators + atual._count.extraSeparators;
   if (products + separators + requestItems > 0) {
     const partes = [
       products > 0 ? `${products} produto(s)` : null,

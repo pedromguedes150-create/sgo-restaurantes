@@ -22,7 +22,7 @@ export function CabecalhoDoPedido({ pedido, mostrarUnidade = true }: { pedido: P
   );
 }
 
-export function BlocoDoSetor({ secao, acoes }: { secao: SecaoDoPedido; acoes?: ReactNode }) {
+export function BlocoDoSetor({ secao, acoes, acaoDaLinha }: { secao: SecaoDoPedido; acoes?: ReactNode; acaoDaLinha?: (secao: SecaoDoPedido, indice: number) => ReactNode }) {
   return (
     <div className="rounded-lg border border-line bg-surface" data-testid="bloco-setor">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-sunken px-3 py-2">
@@ -33,7 +33,7 @@ export function BlocoDoSetor({ secao, acoes }: { secao: SecaoDoPedido; acoes?: R
         </span>
       </div>
       <ol className="list-decimal space-y-0.5 px-8 py-2 text-sm text-ink-900">
-        {secao.lines.map((l, i) => <li key={i} className="break-words">{l}</li>)}
+        {secao.lines.map((l, i) => <li key={i} className="break-words">{l}{acaoDaLinha?.(secao, i)}</li>)}
       </ol>
       {(secao.receivedByName || secao.attendedByName) && (
         <p className="border-t border-line px-3 py-1.5 text-xs text-ink-500">
@@ -47,7 +47,7 @@ export function BlocoDoSetor({ secao, acoes }: { secao: SecaoDoPedido; acoes?: R
 }
 
 /** Os blocos agrupados por destino (Fábrica · CD · Almoxarifado), cada grupo com o seu título — v1.187.0. */
-export function BlocosDoPedido({ pedido, acoesDaSecao }: { pedido: PedidoDaTela; acoesDaSecao?: (s: SecaoDoPedido) => ReactNode }) {
+export function BlocosDoPedido({ pedido, acoesDaSecao, acaoDaLinha }: { pedido: PedidoDaTela; acoesDaSecao?: (s: SecaoDoPedido) => ReactNode; acaoDaLinha?: (s: SecaoDoPedido, indice: number) => ReactNode }) {
   const grupos = agruparPorDestino(pedido.secoes);
   if (grupos.length === 0) return <p className="rounded-lg border border-dashed border-line p-3 text-sm text-ink-500" data-testid="sem-blocos">Pedido sem itens por setor — só a observação.</p>;
   return (
@@ -55,7 +55,7 @@ export function BlocosDoPedido({ pedido, acoesDaSecao }: { pedido: PedidoDaTela;
       {grupos.map((g) => (
         <section key={g.destino} className="space-y-2" data-testid={`grupo-${g.destino}`}>
           {grupos.length > 1 && <h3 className="sgo-type-13 font-semibold text-brand">{g.rotulo.toUpperCase()}</h3>}
-          {g.setores.map((s) => <BlocoDoSetor key={s.id} secao={s} acoes={acoesDaSecao?.(s)} />)}
+          {g.setores.map((s) => <BlocoDoSetor key={s.id} secao={s} acoes={acoesDaSecao?.(s)} acaoDaLinha={acaoDaLinha} />)}
         </section>
       ))}
     </div>

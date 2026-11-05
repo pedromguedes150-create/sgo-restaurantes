@@ -36,3 +36,15 @@ describe('texto inteiro no celular', () => {
     expect(hook).toContain("zIndex: 'var(--sgo-z-dropdown-in-modal)'");
   });
 });
+
+/* v1.189.0 — print do gerente (aba Freelancer no celular): com três crachás à direita o texto da linha era
+   espremido a ~0 e quebrava UMA LETRA POR LINHA. O texto tem largura mínima e os crachás descem de linha. */
+describe('ListRow: os crachás da direita não esmagam o texto', () => {
+  it('o bloco de texto tem largura mínima e a linha quebra os crachás para baixo quando não cabem', () => {
+    const fonte = readFileSync('src/components/ui/ds/list-row.tsx', 'utf8');
+    expect(fonte).toContain('min-w-[10rem] flex-1 basis-0');
+    expect(fonte).toContain("w-full flex-wrap items-center gap-x-3 gap-y-1");
+    expect(fonte).toContain('ml-auto flex max-w-full flex-wrap items-center justify-end gap-2');
+    expect(fonte).not.toContain('<span className="flex shrink-0 items-center gap-2">{trailing}</span>');
+  });
+});

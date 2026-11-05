@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.189.0 — 2026-11-05 (Pedidos: separador em vários setores, item movido de setor, trava do pedido inteiro)
+
+Três pedidos do Pedro (05/11): (1) o gerente edita enquanto nenhum setor entrou em separação e, a partir daí, não edita mais; (2) o mesmo separador pode separar mais de um setor (Salgados, Confeitaria e Câmara Fria); (3) quem separa pode migrar um item escrito no setor errado para o setor certo, avisando o separador de lá.
+
+- **Trava do pedido inteiro**: `pedidoEditavel` = situação Enviado. No primeiro "Em separação" o pedido fecha para o gerente (a lista de Enviados mostra "Editar" só enquanto dá; depois, "travado").
+- **Separador em vários setores**: tabela `user_cd_sectors` (setores ADICIONAIS; o principal segue em `users.cdSectorId`), campo "Setores adicionais" no cadastro de Usuários; a caixa de entrada, o abrir, o marcar e os avisos consideram principal + adicionais. Desativar/excluir setor conta os adicionais.
+- 🔴 **Celular — linha da lista com uma letra por linha** (print do gerente, aba Freelancer de Pagamentos): com três crachás à direita (Recorrente · Divergência · situação) o bloco de texto do `ListRow` era espremido a ~0 e o `break-words` quebrava o nome letra a letra. O texto agora tem largura mínima (10rem) e a linha quebra os crachás para baixo quando não cabem — vale para toda lista do design system.
+- **Mover item**: botão "Mover" em cada linha da caixa de entrada (separador do setor de origem ou Admin): a linha sai do bloco e entra no bloco do setor escolhido no MESMO pedido (criado se não existir, com o destino do setor; bloco atendido volta a "Em separação"). Aviso ao separador do setor de destino (Admins se não houver) e a quem enviou; auditoria `ORDER_LINE_MOVED`.
+
 ## v1.188.0 — 2026-11-04 (Pedidos: "Em separação", o gerente edita até lá, caixa de entrada sem sumir e com impressão)
 
 Pedido do Pedro (print da caixa de entrada, 04/11): o pedido atendido não pode sumir; quem recebe precisa imprimir; "Recebido" vira "Em separação"; e o gerente pode editar o pedido enviado ATÉ o setor entrar em separação.

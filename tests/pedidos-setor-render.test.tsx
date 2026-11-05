@@ -42,7 +42,7 @@ describe('Pedidos por setor', () => {
     expect(html).not.toContain('aria-label="Unidade"'); // uma unidade só: sem seletor
   });
   it('caixa de entrada: cabeçalho com os destinos, blocos agrupados por destino com o crachá, quem recebeu, e os botões certos por situação', () => {
-    const html = semSeparadores(renderToString(<RecebidosClient pedidos={[pedido]} podeMarcar />));
+    const html = semSeparadores(renderToString(<RecebidosClient pedidos={[pedido]} podeMarcar setores={[{ id: 'a', name: 'Câmaras Frias', destination: 'FABRICA' }, { id: 'b', name: 'Bebidas', destination: 'CD' }]} />));
     expect(html).toContain('Pedido nº 12 · Beija Flor Centro → Fábrica · CD');
     expect(html).toContain('entregar até sexta');
     expect(html).toContain('2 requeijão moedense balcão');
@@ -55,9 +55,11 @@ describe('Pedidos por setor', () => {
     expect(html).toContain('data-testid="atender-s2"');
     expect(html).toContain('href="/modulos/pedidos/recebidos/p1"'); // Abrir
     expect(html).toContain('href="/modulos/pedidos/recebidos/p1?imprimir=1"'); // Imprimir
-    const soLeitura = semSeparadores(renderToString(<RecebidosClient pedidos={[pedido]} podeMarcar={false} />));
+    expect((html.match(/data-testid="mover-s1-/g) ?? []).length).toBe(2); // v1.189.0: um "Mover" por linha do bloco não atendido
+    const soLeitura = semSeparadores(renderToString(<RecebidosClient pedidos={[pedido]} podeMarcar={false} setores={[]} />));
     expect(soLeitura).not.toContain('data-testid="atender-s1"');
-    expect(semSeparadores(renderToString(<RecebidosClient pedidos={[]} podeMarcar />))).toContain('Nenhum pedido nesta situação.');
+    expect(soLeitura).not.toContain('data-testid="mover-');
+    expect(semSeparadores(renderToString(<RecebidosClient pedidos={[]} podeMarcar setores={[]} />))).toContain('Nenhum pedido nesta situação.');
   });
   it('as peças do pedido impresso; pedido só com observação diz isso', () => {
     const html = semSeparadores(renderToString(<><CabecalhoDoPedido pedido={pedido} /><BlocosDoPedido pedido={pedido} /></>));

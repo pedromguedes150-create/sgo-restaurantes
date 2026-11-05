@@ -177,7 +177,21 @@ async function resolverPerfil(
   return { ok: true, role: input.role, profileId: null };
 }
 
-export async function createUser(user: SessionUser, input: { name: string; email: string; role?: Role; profileId?: string | null; password: string; unitIds?: string[]; cdSectorId?: string | null }, ctx: Ctx = {}): Promise<AdminResult> {
+/**
+ * v1.189.0 — os setores ADICIONAIS do separador (decisão do Pedro: o mesmo separador
+ * pode separar Salgados, Confeitaria e Câmara Fria). Só para SEPARATOR; só setor
+ * ativo; o principal não se repete aqui.
+ */
+async function resolverSetoresAdicionais(role: Role, ids: unknown, principal: string | null): Promise<{ ok: true; value: string[] } | { ok: false; message: string }> {
+  if (role !== 'SEPARATOR' || !Array.isArray(ids)) return { ok: true, value: [] };
+  const pedidos = [...new Set(ids.map((x) => String(x ?? '').trim()).filter((x) => x && x !== principal))];
+  if (pedidos.length === 0) return { ok: true, value: [] };
+  const ativos = await prisma.cdSector.findMany({ where: { id: { in: pedidos }, active: true }, select: { id: true } });
+  if (ativos.length !== pedidos.length) return { ok: false, message: 'Um dos setores adicionais é inválido ou está desativado.' };
+  return { ok: true, value: pedidos };
+}
+
+export async function createUser(user: SessionUser, input: { name: string; email: string; role?: Role; profileId?: string | null; password: string; unitIds?: string[]; cdSectorId?: string | null; cdSectorIds?: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (!input.name?.trim() || !input.email?.trim() || !input.password || input.password.length < 6) return { ok: false, reason: 'INVALID' };
   // O perfil vinha sem conferência: só o tipo do Prisma barrava valor estranho.
@@ -185,13 +199,15 @@ export async function createUser(user: SessionUser, input: { name: string; email
   if (!perfil.ok) return { ok: false, reason: 'INVALID', message: perfil.message };
   const setor = await resolverSetorDoCd(perfil.role, input.cdSectorId);
   if (!setor.ok) return { ok: false, reason: 'INVALID', message: setor.message };
+  const extras = await resolverSetoresAdicionais(perfil.role, input.cdSectorIds, setor.value);
+  if (!extras.ok) return { ok: false, reason: 'INVALID', message: extras.message };
   const email = input.email.trim().toLowerCase();
   if (await prisma.user.findUnique({ where: { email } })) return { ok: false, reason: 'CONFLICT' };
   const passwordHash = await hashPassword(input.password);
   const created = await prisma.user.create({
-    data: { name: input.name.trim(), email, role: perfil.role, profileId: perfil.profileId, passwordHash, cdSectorId: setor.value, memberships: input.unitIds?.length ? { create: input.unitIds.map((unitId) => ({ unitId })) } : undefined },
+    data: { name: input.name.trim(), email, role: perfil.role, profileId: perfil.profileId, passwordHash, cdSectorId: setor.value, memberships: input.unitIds?.length ? { create: input.unitIds.map((unitId) => ({ unitId })) } : undefined, cdSectors: extras.value.length ? { create: extras.value.map((sectorId) => ({ sectorId })) } : undefined },
   });
-  await audit({ userId: user.id, action: 'USER_CREATE', module: 'CONFIG', entity: 'user', entityId: created.id, metadata: { role: perfil.role, profileId: perfil.profileId }, ...ctx });
+  await audit({ userId: user.id, action: 'USER_CREATE', module: 'CONFIG', entity: 'user', entityId: created.id, metadata: { role: perfil.role, profileId: perfil.profileId, cdSectorIds: extras.value }, ...ctx });
   return { ok: true, id: created.id };
 }
 
@@ -209,7 +225,7 @@ export async function toggleUser(user: SessionUser, id: string, active: boolean,
   return { ok: true };
 }
 
-export async function updateUser(user: SessionUser, id: string, input: { name?: string; role?: Role; profileId?: string | null; password?: string; cdSectorId?: string | null }, ctx: Ctx = {}): Promise<AdminResult> {
+export async function updateUser(user: SessionUser, id: string, input: { name?: string; role?: Role; profileId?: string | null; password?: string; cdSectorId?: string | null; cdSectorIds?: string[] }, ctx: Ctx = {}): Promise<AdminResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   if (input.name !== undefined && !input.name.trim()) return { ok: false, reason: 'INVALID' };
   if (input.password !== undefined && input.password.length > 0 && input.password.length < 6) return { ok: false, reason: 'INVALID' };
@@ -246,7 +262,18 @@ export async function updateUser(user: SessionUser, id: string, input: { name?: 
   if (input.password) data.passwordHash = await hashPassword(input.password);
   // Deixar de ser Separador limpa o setor; virar Separador passa a exigi-lo.
   if (setor.value !== atual.cdSectorId) data.cdSectorId = setor.value;
-  await prisma.user.update({ where: { id }, data });
+  /* v1.189.0 — setores adicionais: substitui o conjunto quando vierem; deixar de ser Separador limpa. */
+  const mexeuNosExtras = input.cdSectorIds !== undefined || papel !== 'SEPARATOR';
+  const extras = await resolverSetoresAdicionais(papel, input.cdSectorIds, setor.value);
+  if (!extras.ok) return { ok: false, reason: 'INVALID', message: extras.message };
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id }, data });
+    if (mexeuNosExtras) {
+      await tx.userCdSector.deleteMany({ where: { userId: id } });
+      if (extras.value.length) await tx.userCdSector.createMany({ data: extras.value.map((sectorId) => ({ userId: id, sectorId })) });
+    }
+  });
+  if (mexeuNosExtras) (data as Record<string, unknown>).cdSectorIds = extras.value;
   // Trocar a senha invalida sessões antigas (refresh tokens)
   if (data.passwordHash) await prisma.refreshToken.deleteMany({ where: { userId: id } });
   await audit({ userId: user.id, action: 'USER_UPDATE', module: 'CONFIG', entity: 'user', entityId: id, metadata: { fields: Object.keys(data) }, ...ctx });

@@ -119,6 +119,7 @@ const ENTITIES: [string, string][] = [
   ['OPAUDIT', 'Auditoria operacional'],
   ['ORDER_S', 'Pedido por setor'],
   ['ORDER_EDITED', 'Pedido por setor — alteração'],
+  ['ORDER_LINE_MOVED', 'Pedido por setor — item movido de setor'],
   ['META_PARAM', 'Parâmetro da meta'],
   ['CERTIFICATE', 'Atestado'],
   ['COMMUNICATION', 'Comunicado'],

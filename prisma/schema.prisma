@@ -144,10 +144,12 @@ model User {
   /// nas permissões de TELA. `role` acima continua valendo para as regras de
   /// negócio e é mantido igual ao `baseRole` do perfil — ver `Profile`.
   profileId  String?
-  profile    Profile?  @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  profile    Profile?       @relation(fields: [profileId], references: [id], onDelete: SetNull)
   /// Separador.
   cdSectorId String?
-  cdSector   CdSector? @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
+  cdSector   CdSector?      @relation(fields: [cdSectorId], references: [id], onDelete: SetNull)
+  /// v1.189.0 — setores ADICIONAIS do separador (Pedidos por setor): ele separa o principal + estes
+  cdSectors  UserCdSector[]
 
   memberships             UnitMembership[]
   refreshTokens           RefreshToken[]
@@ -1401,6 +1403,18 @@ model SectorOrderSection {
   @@map("sector_order_sections")
 }
 
+/// v1.189.0 — o mesmo separador em mais de um setor (ex.: Salgados, Confeitaria e Câmara Fria)
+model UserCdSector {
+  userId   String
+  sectorId String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sector   CdSector @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+
+  @@id([userId, sectorId])
+  @@index([sectorId])
+  @@map("user_cd_sectors")
+}
+
 model CdSector {
   id          String                 @id @default(cuid())
   name        String                 @unique
@@ -1410,9 +1424,10 @@ model CdSector {
   destination SectorOrderDestination @default(CD)
   createdAt   DateTime               @default(now())
 
-  products     Product[]
-  separators   User[]
-  requestItems ProductRequestItem[]
+  products        Product[]
+  separators      User[]
+  extraSeparators UserCdSector[]
+  requestItems    ProductRequestItem[]
 
   @@map("cd_sectors")
 }

@@ -1,7 +1,7 @@
 import { Inbox, LayoutList, PackageCheck } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { canEditModule } from '@/lib/permissions';
-import { listarRecebidos, type SituacaoDaCaixa } from '@/lib/pedidos/pedidos';
+import { listarRecebidos, setoresParaPedido, type SituacaoDaCaixa } from '@/lib/pedidos/pedidos';
 import { DESTINOS, normalizarDestino, podeAtender } from '@/lib/pedidos/regras';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { RecebidosClient } from '@/components/pedidos/recebidos-client';
@@ -18,7 +18,7 @@ export default async function PedidosRecebidosPage({ searchParams }: { searchPar
   const user = (await getSessionUser())!;
   const situacao: SituacaoDaCaixa = searchParams.situacao === 'abertos' ? 'abertos' : searchParams.situacao === 'atendidos' ? 'atendidos' : 'todos';
   const destino = normalizarDestino(searchParams.destino) ?? undefined;
-  const [pedidos, podeEditar] = await Promise.all([listarRecebidos(user, { situacao, destino }), canEditModule(user.role, 'ORDERS_INBOX')]);
+  const [pedidos, podeEditar, setores] = await Promise.all([listarRecebidos(user, { situacao, destino }), canEditModule(user.role, 'ORDERS_INBOX'), setoresParaPedido()]);
   const link = (s: string, d?: string) => `/modulos/pedidos/recebidos?situacao=${s}${d ? `&destino=${d}` : ''}`;
 
   return (
@@ -41,7 +41,7 @@ export default async function PedidosRecebidosPage({ searchParams }: { searchPar
           </span>
         </div>
       )}
-      <RecebidosClient pedidos={pedidos} podeMarcar={podeAtender(user.role) && podeEditar} />
+      <RecebidosClient pedidos={pedidos} podeMarcar={podeAtender(user.role) && podeEditar} setores={setores} />
     </div>
   );
 }

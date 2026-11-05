@@ -29,7 +29,7 @@ export default async function EditarPedidoPage({ params }: { params: { id: strin
   return (
     <div className="space-y-4">
       <Link href={`/modulos/pedidos/${p.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pedido nº {p.number}</Link>
-      <LargeTitle title={`Editar pedido nº ${p.number}`} subtitle="Altere, acrescente ou retire itens dos setores que ainda estão como Enviado. Um setor que já entrou em separação (ou foi atendido) fica travado: o separador já está com a lista na mão." />
+      <LargeTitle title={`Editar pedido nº ${p.number}`} subtitle="Altere, acrescente ou retire itens de qualquer setor e mude a observação. Assim que o primeiro setor entrar em separação o pedido fecha para edição: o separador já está com a lista na mão." />
       {pedidoEditavel(p.status) ? (
         <NovoPedidoClient
           units={[{ id: p.unitId, name: p.unitName }]}
@@ -38,7 +38,7 @@ export default async function EditarPedidoPage({ params }: { params: { id: strin
           edicao={{ id: p.id, numero: p.number, textos, observacao: p.note ?? '', travados }}
         />
       ) : (
-        <p className="rounded-lg border border-dashed border-line p-4 text-sm text-ink-500" data-testid="pedido-fechado">Este pedido já foi atendido por todos os setores e não pode mais ser alterado.</p>
+        <p className="rounded-lg border border-dashed border-line p-4 text-sm text-ink-500" data-testid="pedido-fechado">{p.status === 'ATENDIDO' ? 'Este pedido já foi atendido e não pode mais ser alterado.' : 'Este pedido já entrou em separação e não pode mais ser alterado. Se um item estiver no setor errado, quem separa pode movê-lo para o setor certo.'}</p>
       )}
     </div>
   );
