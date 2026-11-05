@@ -251,6 +251,7 @@ export const FORA_DA_MATRIZ: Record<string, string> = {
   '/api/v1/[entidade]/resumo': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — agregados no banco (v1.167.0)',
   '/api/v1/metas': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — ranking de metas (v1.167.0)',
   '/api/v1/uso': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — painel de uso (v1.167.0)',
+  '/api/v1/atestados/[id]/anexo': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — o arquivo do atestado (fileUrl, v1.190.0)',
   '/api/v1/rh-diagnostico': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — diagnóstico do RH (v1.167.0)',
   '/api/lgpd/collaborator/[id]/export': 'LGPD — só ADMIN/CEO, checado no próprio handler (lgpd/collaborator/[id]/export/route.ts); não há módulo LGPD na matriz',
   '/api/entry-date': 'editEntryDate (src/lib/late-entry.ts): só ADMIN/SUPERVISOR + canAccessUnit do lançamento',

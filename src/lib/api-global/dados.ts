@@ -69,7 +69,14 @@ export async function listar(e: Entidade, f: Filtro) {
     d.count({ where }) as Promise<number>,
     d.findMany({ where, select: selectDe(e), orderBy: ordemDe(e), skip: (page - 1) * limit, take: limit }) as Promise<unknown[]>,
   ]);
-  return { entidade: e.slug, periodo: e.periodo ? { campo: e.periodo.campo, from: f.from ?? null, to: f.to ?? null } : null, page, limit, total, paginas: Math.max(1, Math.ceil(total / limit)), dados: plano(dados) };
+  const linhas = (plano(dados) as Record<string, unknown>[]).map((l) => {
+    if (!e.derivados && !e.ocultar) return l;
+    const derivadas = e.derivados ? e.derivados(l) : {};
+    const copia: Record<string, unknown> = { ...l, ...derivadas };
+    for (const k of e.ocultar ?? []) delete copia[k];
+    return copia;
+  });
+  return { entidade: e.slug, periodo: e.periodo ? { campo: e.periodo.campo, from: f.from ?? null, to: f.to ?? null } : null, page, limit, total, paginas: Math.max(1, Math.ceil(total / limit)), dados: linhas };
 }
 
 const ident = (s: string) => `"${s.replace(/"/g, '')}"`;

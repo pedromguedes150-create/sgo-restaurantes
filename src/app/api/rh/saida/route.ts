@@ -3,7 +3,7 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { reasonResponse } from '@/lib/api/reason';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { reenviar, reclassificarJaExistentes } from '@/lib/rh/saida/fila';
+import { reenviar, reclassificarJaExistentes, reenviarAnexosDosAtestados } from '@/lib/rh/saida/fila';
 import { despacharPendentes } from '@/lib/rh/saida/despachante';
 import { definirTokenDoRh, removerTokenDoRh, testarTokenDoRh } from '@/lib/rh/saida/token';
 
@@ -31,6 +31,11 @@ export async function POST(req: Request) {
     const r = await reenviar(user, String(b?.id ?? ''), requestContext(req));
     if (!r.ok) return reasonResponse(REASONS, r.reason);
     return NextResponse.json({ ok: true, status: r.status });
+  }
+  if (acao === 'reenviarAnexos') {
+    const r = await reenviarAnexosDosAtestados(user, requestContext(req));
+    if (!r.ok) return reasonResponse(REASONS, r.reason);
+    return NextResponse.json({ ok: true, enfileirados: r.enfileirados, pulados: r.pulados, semAnexo: r.semAnexo });
   }
   if (acao === 'despachar') {
     const jaExistiam = await reclassificarJaExistentes(); // v1.182.3 — os 409 antigos saem da lista de problemas

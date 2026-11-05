@@ -21,7 +21,12 @@ No droplet: editar `/opt/sgo/app/.env`, depois `docker compose -f docker-compose
 |---|---|---|---|
 | Atestado `criar` | Salvar atestado (Central de Atestados) | `POST /api/integracoes/sgo/atestados` | `sgoEventId`, `sgoMovimentoId` (id do atestado), `acao`, `cpf`, `tipo:"A"`, `tipoDetalhe` (FULL_DAY/HOURS/COMPANION), `dataInicio`, `dataFim`, `motivo` (DOENCA/ACOMPANHANTE/OUTROS), `cid` e `observacoes` se houver, `anexo {nome, conteudoBase64}` se houver foto/PDF |
 | Atestado `cancelar` | Admin exclui o atestado **que o RH já tinha aceitado** | idem | mesma forma, sem anexo |
-| Atestado `atualizar` / `retorno` | **Sem gatilho ainda** (o SGO não edita atestado). A fila e o payload já aceitam as duas ações — quando houver edição, basta chamar `enfileirarAtestado(id, 'atualizar')` | idem | idem |
+| Atestado `atualizar` | Botão **"Reenviar imagens dos atestados"** em Configurações → Envios ao RH (v1.190.0, pedido do RH de 05/11): todo atestado COM anexo cujo `criar` já foi ENVIADO volta como `atualizar` com o arquivo em `anexo`, MESMO `sgoMovimentoId` e `sgoEventId` NOVO — o RH anexa a imagem no atestado existente sem duplicar | idem | idem, com `anexo` |
+| Atestado `retorno` | **Sem gatilho ainda** — a fila e o payload já aceitam | idem | idem |
+
+**Todo envio (os três tipos) leva `"sistema": "SGO Restaurante"`** (v1.190.0): o RH distingue este SGO do "SGO Operacional" e, com token trocado, responde 409 dizendo o motivo. O token certo é o do RESTAURANTE (cadastrado pela tela de Envios ao RH; se `RH_WEBHOOK_TOKEN` existir no `.env` do servidor, ele vence — confira que não guarda um valor antigo).
+
+**Leitura pelo RH**: `GET /api/v1/atestados` (API Global, X-API-Key) devolve `fileUrl` = `/api/v1/atestados/{id}/anexo`, que entrega a imagem/PDF com a mesma chave (nulo sem anexo).
 | Desligamento | **Aprovação do supervisor** (nunca no pedido do gerente; quem pediu não aprova) | `POST /api/integracoes/sgo/desligamentos` | `sgoEventId`, `cpf`, `unitCode` (CNPJ da unidade do pedido, só dígitos), `dataDesligamento`, `tipo`, `modalidadeAviso` (omitida em justa causa/término de experiência), `motivo`, `justificativa` (motivo outro) ou `observacao`, `solicitanteNome`, `solicitanteEmail`, `carta {nome, base64}` (pedido de demissão) |
 | Demanda | Gerente registra em Pessoas → Demandas ao RH | `POST /api/integracoes/sgo/demandas` | `sgoEventId`, `tipo`, `titulo`, `solicitanteNome`, `prioridade` e, se informados, `descricao`, `cpf`, `unitCode`, `solicitanteEmail`, `dataEvento` |
 

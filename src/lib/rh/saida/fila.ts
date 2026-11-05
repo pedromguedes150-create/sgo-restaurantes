@@ -130,6 +130,43 @@ export async function reenviar(user: SessionUser, id: string, ctx: Ctx = {}): Pr
 }
 
 /**
+ * v1.190.0 — pedido do RH (05/11): os atestados COM IMAGEM que o RH recebeu sem o
+ * anexo (envios recusados/aceitos com o token trocado) voltam como `atualizar`,
+ * com o arquivo no campo `anexo`, MESMO `sgoMovimentoId` e `sgoEventId` NOVO —
+ * o RH anexa a imagem no atestado que já existe, sem duplicar. Entram: atestados
+ * com anexo cujo `criar` está ENVIADO (inclusive os "já existia" do 409) e que
+ * não têm um `atualizar` pendente/em envio. Idempotente por rodada; cada clique
+ * gera eventos novos de propósito (é o que o contrato pede).
+ */
+export async function reenviarAnexosDosAtestados(user: SessionUser, ctx: Ctx = {}): Promise<{ ok: true; enfileirados: number; pulados: number; semAnexo: number } | { ok: false; reason: 'FORBIDDEN' }> {
+  if (!PODE_OPERAR(user)) return { ok: false, reason: 'FORBIDDEN' };
+  const criados = await prisma.rhOutboundEvent.findMany({ where: { tipo: 'ATESTADO', acao: 'criar', status: 'ENVIADO' }, select: { referenceId: true }, distinct: ['referenceId'] });
+  const ids = criados.map((c) => c.referenceId);
+  const [certs, emAndamento] = await Promise.all([
+    prisma.medicalCertificate.findMany({ where: { id: { in: ids } }, select: { id: true, attachmentPath: true } }),
+    prisma.rhOutboundEvent.findMany({ where: { tipo: 'ATESTADO', acao: 'atualizar', referenceId: { in: ids }, status: { in: ['PENDENTE', 'ENVIANDO'] } }, select: { referenceId: true } }),
+  ]);
+  const ocupados = new Set(emAndamento.map((e) => e.referenceId));
+  let enfileirados = 0; let pulados = 0; let semAnexo = 0;
+  for (const c of certs) {
+    if (!c.attachmentPath) { semAnexo++; continue; }
+    if (ocupados.has(c.id)) { pulados++; continue; }
+    const m = await montarAtestado(c.id, 'atualizar');
+    if (!m.ok) { pulados++; continue; }
+    await prisma.rhOutboundEvent.create({
+      data: {
+        tipo: 'ATESTADO', acao: 'atualizar', referenceId: c.id, endpoint: ENDPOINTS.ATESTADO,
+        payload: m.payload as Prisma.InputJsonValue, anexoPath: m.anexoPath, unitId: m.unitId, createdById: user.id,
+        proximaTentativaEm: new Date(),
+      },
+    });
+    enfileirados++;
+  }
+  await audit({ userId: user.id, action: 'RH_SAIDA_REENVIO_ANEXOS', module: 'INTEGRATIONS', entity: 'rh_outbound_event', metadata: { enfileirados, pulados, semAnexo }, ...ctx });
+  return { ok: true, enfileirados, pulados, semAnexo };
+}
+
+/**
  * No boot: o que ficou ENVIANDO (processo caiu no meio do envio) volta à fila,
  * e o que ficou PARADO por token recusado também — o reinício é justamente
  * quando o `.env` pode ter sido corrigido. Se o token continuar errado, o

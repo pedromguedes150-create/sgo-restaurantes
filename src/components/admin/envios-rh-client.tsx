@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { RefreshCw, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { RefreshCw, RotateCcw, ChevronDown, ChevronUp, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Group } from '@/components/ui/ds/group';
@@ -46,6 +46,11 @@ export function EnviosRhClient({ eventos, configurado }: { eventos: EventoDaTela
       return d;
     } finally { setBusy(''); }
   }
+  async function reenviarAnexos() {
+    const d = await post({ acao: 'reenviarAnexos' });
+    if (!d) return;
+    setMsg(`${d.enfileirados} atestado(s) com imagem voltaram à fila como "atualizar" (anexo incluído); ${d.pulados} pulado(s) (já em envio ou sem dado); ${d.semAnexo} sem imagem. Clique em "Processar fila agora" para enviar.`);
+  }
   async function despachar() {
     const d = await post({ acao: 'despachar' });
     if (!d) return;
@@ -57,6 +62,7 @@ export function EnviosRhClient({ eventos, configurado }: { eventos: EventoDaTela
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="gold" disabled={busy !== '' || !configurado} onClick={despachar} data-testid="processar-fila"><RefreshCw className="h-4 w-4" /> Processar fila agora</Button>
+        <Button size="sm" variant="outline" disabled={busy !== '' || !configurado} onClick={reenviarAnexos} data-testid="reenviar-anexos" title="Pedido do RH (05/11): os atestados com imagem voltam como 'atualizar' com o arquivo no anexo — o RH anexa no atestado que já existe, sem duplicar"><Paperclip className="h-4 w-4" /> Reenviar imagens dos atestados</Button>
         {!configurado && <span className="text-xs text-ink-500">Cole o token do RH no painel acima (ou configure <code>RH_WEBHOOK_TOKEN</code> no servidor) para o despacho rodar.</span>}
       </div>
       {msg && <p className="rounded-lg bg-canvas px-3 py-2 text-sm text-ink-700">{msg}</p>}
