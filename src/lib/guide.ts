@@ -116,7 +116,7 @@ export const GUIDE: GuideSection[] = [
         summary: 'Sua rotina diária em poucos passos.',
         steps: [
           'Abra o DASHBOARD: veja seu anel de meta do dia e os atalhos.',
-          'Faça as TAREFAS do checklist do dia (algumas pedem foto).',
+          'Faça as TAREFAS do checklist do dia (item com "foto obrigatória" só libera o seguinte depois da foto tirada na hora pela câmera).',
           'Lance os DESPERDÍCIOS, a CONTAGEM DE COMANDAS e registre OCORRÊNCIAS se houver.',
           'Confira TREINAMENTOS pendentes da sua equipe.',
           'No fim do mês, preencha o REALIZADO da Escala e exporte para o RH.',
@@ -156,7 +156,8 @@ export const GUIDE: GuideSection[] = [
           'Quando houver um problema de verdade, use o botão "+ Abrir ocorrência" ao lado do item. Você escolhe o tipo (que define se vai para Manutenção, T.I. ou Geral), a categoria, a criticidade e pode anexar foto — a tela diz para qual aba vai ANTES de gravar.',
           'Se o item já tiver uma ocorrência aberta, o checklist mostra "Ocorrência nº N aberta — Manutenção" e leva direto para ela. O botão some: uma pendência, uma ocorrência.',
           'ABA GERAL CRÍTICO (v1.83.0): reúne as ocorrências de gravidade Alta e Crítica de TODOS os assuntos. É uma lente, não uma caixa separada — uma falta de energia aparece em Geral Crítico E continua na aba Manutenção, porque quem conserta precisa continuar vendo. Ao abrir a ocorrência, a tela avisa antes de gravar quando ela também vai cair ali.',
-          'Anexe até 5 fotos. Em itens com checagem por IA, toque em "Conferir a foto com IA" para ver se está no padrão (compatível/divergente).',
+          'FOTO OBRIGATÓRIA (v1.191.0): item marcado "(foto obrigatória)" só libera o item seguinte depois que você toca em "tirar foto" e fotografa NA HORA — o campo abre a câmera direto, sem galeria, e foto antiga do aparelho é recusada. Se tentar responder o próximo item ou concluir sem a foto, aparece o alerta apontando o item; o servidor também não aceita concluir sem ela. Quando a foto entra, o item mostra "(foto ✓)".',
+          'Fotos gerais (até 5, além das obrigatórias dos itens). Em itens com checagem por IA, toque em "Conferir a foto com IA" para ver se está no padrão (compatível/divergente).',
           'O preenchimento é salvo sozinho — se for interrompido, retoma de onde parou.',
           'Toque em "Concluir checklist". Feito após o horário = conta como "fora do prazo" (não penaliza, mas também não pontua).',
           'No topo de TAREFAS, o resumo do dia mostra logo se ainda há algo "a fazer": 🟢 no prazo (conta na meta) · 🟡 fora do prazo · 🔴 não realizada · ⚪ a fazer. Mesmo com checklists feitos atrasados, dá pra ver na hora se sobrou algum pendente.',

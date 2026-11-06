@@ -4,10 +4,13 @@ import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import { getChecklistToleranceMin, isLate } from '@/lib/tasks/tolerance';
 import type { SessionUser } from '@/lib/auth/session';
+import { MAX_FOTOS_CHECKLIST, itensSemFoto } from '@/lib/tasks/foto-obrigatoria';
 
 export type CompleteResult =
   | { ok: true }
-  | { ok: false; reason: 'NOT_FOUND' | 'EVIDENCE_REQUIRED' | 'ALREADY_DONE' | 'FORBIDDEN' };
+  | { ok: false; reason: 'NOT_FOUND' | 'EVIDENCE_REQUIRED' | 'ALREADY_DONE' | 'FORBIDDEN' }
+  /** v1.191.0: item marcado "Exige foto" sem foto ligada a ele — a regra vale no servidor, não só na tela. */
+  | { ok: false; reason: 'ITEM_PHOTO_REQUIRED'; item: string };
 
 /**
  * Conclui uma tarefa de forma TRANSACIONAL (regra nº 8).
@@ -87,7 +90,7 @@ export async function completeChecklist(
 ): Promise<CompleteResult> {
   const inst = await prisma.taskInstance.findUnique({
     where: { id: instanceId },
-    include: { template: { select: { requiresEvidence: true, name: true } }, unit: { select: { timezone: true, cutoffHour: true } } },
+    include: { template: { select: { requiresEvidence: true, name: true, items: { select: { id: true, text: true, requiresPhoto: true }, orderBy: { order: 'asc' } } } }, unit: { select: { timezone: true, cutoffHour: true } } },
   });
   if (!inst) return { ok: false, reason: 'NOT_FOUND' };
   try { assertUnitAccess(user, inst.unitId); } catch (e) {
@@ -98,10 +101,14 @@ export async function completeChecklist(
   if (inst.assignedToId && inst.assignedToId !== user.id && user.role !== 'ADMIN') {
     return { ok: false, reason: 'FORBIDDEN' };
   }
-  const allPhotos: ChecklistPhoto[] = [...(data.evidencePath ? [{ path: data.evidencePath, itemId: null }] : []), ...data.photos].slice(0, 5);
+  const allPhotos: ChecklistPhoto[] = [...(data.evidencePath ? [{ path: data.evidencePath, itemId: null }] : []), ...data.photos].slice(0, MAX_FOTOS_CHECKLIST);
   if (inst.template.requiresEvidence && allPhotos.length === 0) {
     return { ok: false, reason: 'EVIDENCE_REQUIRED' };
   }
+  /* v1.191.0: cada item "Exige foto" precisa de uma foto LIGADA A ELE (`itemId`), seja qual for o status
+     marcado — a tela trava antes, mas a regra mora aqui: por fora da tela ninguém conclui sem a foto. */
+  const semFoto = itensSemFoto(inst.template.items, allPhotos)[0];
+  if (semFoto) return { ok: false, reason: 'ITEM_PHOTO_REQUIRED', item: semFoto.text };
 
   const late = isLate(inst.dueAt, await getChecklistToleranceMin());
   const res = await prisma.taskInstance.updateMany({

@@ -5,12 +5,14 @@ import { completeChecklist, type ItemAnswer } from '@/lib/tasks/complete';
 import { prisma } from '@/lib/db/prisma';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { saveAttachment, UploadError } from '@/lib/uploads';
+import { MAX_FOTOS_CHECKLIST } from '@/lib/tasks/foto-obrigatoria';
 
 const MSG: Record<string, { msg: string; status: number }> = {
   NOT_FOUND: { msg: 'Tarefa não encontrada', status: 404 },
   FORBIDDEN: { msg: 'Sem acesso a esta tarefa', status: 403 },
   EVIDENCE_REQUIRED: { msg: 'Este checklist exige ao menos uma foto', status: 422 },
   ALREADY_DONE: { msg: 'Checklist já concluído', status: 409 },
+  ITEM_PHOTO_REQUIRED: { msg: 'Há item que exige foto sem foto', status: 422 },
 };
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -28,8 +30,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   let items: ItemAnswer[] = [];
   try { items = JSON.parse(String(form.get('items') ?? '[]')); } catch { items = []; }
 
-  // até 5 fotos, cada uma ligada (opcionalmente) ao item que a exigiu
-  const files = form.getAll('photos').filter((f): f is File => f instanceof File && f.size > 0).slice(0, 5);
+  // fotos (teto em MAX_FOTOS_CHECKLIST), cada uma ligada (opcionalmente) ao item que a exigiu
+  const files = form.getAll('photos').filter((f): f is File => f instanceof File && f.size > 0).slice(0, MAX_FOTOS_CHECKLIST);
   let photoItemIds: (string | null)[] = [];
   try { photoItemIds = JSON.parse(String(form.get('photoItemIds') ?? '[]')); } catch { photoItemIds = []; }
   const photos: { path: string; itemId: string | null }[] = [];
@@ -43,6 +45,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   const r = await completeChecklist(instanceId, user, { items, photos }, requestContext(req));
-  if (!r.ok) { const m = MSG[r.reason]; return NextResponse.json({ error: m.msg, reason: r.reason }, { status: m.status }); }
+  if (!r.ok) {
+    const m = MSG[r.reason];
+    const error = r.reason === 'ITEM_PHOTO_REQUIRED' ? `O item "${r.item}" exige foto. Tire a foto pela câmera antes de concluir.` : m.msg;
+    return NextResponse.json({ error, reason: r.reason }, { status: m.status });
+  }
   return NextResponse.json({ ok: true });
 }

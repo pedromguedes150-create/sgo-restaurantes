@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.191.0 — 2026-11-06 (Checklist: "Exige foto" vira foto OBRIGATÓRIA, tirada na hora pela câmera)
+
+Pedido do Pedro (06/11, print do editor de checklists): onde o item está marcado "Exige foto neste item", o gerente só segue para o próximo depois de tirar a foto, recebe um alerta se tentar, e a foto tem de ser feita na hora — sem abrir a galeria.
+
+- **A tela trava os itens seguintes** ao primeiro item "Exige foto" ainda sem foto (cadeado "Tire a foto do item anterior para continuar"); tocar num status de item travado, ou em "Concluir checklist", mostra o alerta nomeando o item, rola até ele e vibra no celular. O item diz "(foto obrigatória)" em vermelho e vira "(foto ✓)" quando a foto entra.
+- **Só a câmera**: todo campo de foto do checklist abre a câmera direto (`capture="environment"`), uma foto por toque (saiu o `multiple`), e foto com data antiga (escolhida da galeria num aparelho que ignora o `capture`) é recusada: "Esta foto não foi tirada agora".
+- **O servidor também recusa** (`ITEM_PHOTO_REQUIRED`, 422 nomeando o item): item "Exige foto" sem foto LIGADA a ele não conclui, seja qual for o status marcado — foto geral ou no item errado não vale. Regra pura em `src/lib/tasks/foto-obrigatoria.ts`.
+- O teto de fotos deixou de ser 5 fixas: 5 gerais + uma por item que exige (máximo 30) — antes um checklist com 6 itens de foto seria impossível de concluir.
+
 ## v1.190.0 — 2026-11-05 (Envios ao RH: `sistema`, reenvio das imagens dos atestados e `fileUrl` na API Global)
 
 Mensagem do RH (05/11, via Daniel): as imagens dos atestados não chegavam porque os envios saíam com o token do "SGO Operacional"; pediram o token do Restaurante, o campo `sistema` em todo envio, o reenvio dos atestados com imagem como `atualizar` e um `fileUrl` na API de leitura.
