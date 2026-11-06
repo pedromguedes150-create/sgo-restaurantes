@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.193.1 — 2026-11-06 (Conferência de comandas: tocar num número não pula mais para o campo do leitor)
+
+Relato do Pedro (06/11, no usuário da Taliana): "ao clicar no número continua indo para a aba de bipagem".
+
+- O campo do leitor fica no topo da página e, a cada toque num número da grade, recapturava o foco 50 ms depois — e `focus()` ROLA a página até o campo: a tela pulava para "bipe a comanda" a cada comanda marcada.
+- Agora: (1) todo foco no campo é sem rolagem (`preventScroll`), inclusive ao montar (saiu o `autoFocus` nativo); (2) o campo só recaptura o foco quando ele se perdeu de verdade (clique em área morta) — foco num botão da grade, filtro ou campo é a pessoa trabalhando; (3) o leitor continua funcionando com o foco fora do campo: dígitos teclados sobre a página (o leitor é um teclado) são redirecionados ao campo sem perder o primeiro caractere.
+
 ## v1.193.0 — 2026-11-06 (Comandas: a sequência inteira na grade — baixada e em apuração voltam ao serem marcadas)
 
 Pedido do Pedro (06/11): "preciso que seja sequencial: uma vez que a pessoa informou que a comanda não estava lá, na próxima conferência ela pode ter recuperado — se a unidade tem de 1 a 700, deixe 1, 2, 3… e não 1, 2, 4, 5, 6, 7, 9". E "não está deixando finalizar ao terminar a conferência".

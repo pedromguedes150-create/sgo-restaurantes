@@ -124,9 +124,37 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   const leitorAtivoRef = useRef(leitorAtivo);
   leitorAtivoRef.current = leitorAtivo;
 
+  /* v1.193.1 — O LEITOR NÃO ROUBA MAIS A TELA. Três regras:
+     (1) todo foco no campo é SEM ROLAGEM (`preventScroll`): o campo mora no
+         topo da página e cada toque num número da grade fazia a tela pular
+         para "bipe a comanda" ("ao clicar no número vai para a aba de bipagem");
+     (2) o `onBlur` só recaptura o foco quando ele foi para LUGAR NENHUM
+         (`relatedTarget` nulo = clique em área morta) — se foi para um botão
+         da grade, um filtro ou um campo, é a pessoa trabalhando na tela;
+     (3) o leitor continua funcionando com o foco fora do campo: um teclado
+         (o leitor é um) digitando dígitos sobre a página é redirecionado ao
+         campo, com o primeiro caractere preservado. */
+  const focarLeitor = () => inputRef.current?.focus({ preventScroll: true });
   useEffect(() => {
-    if (leitorAtivo) inputRef.current?.focus();
+    if (leitorAtivo) focarLeitor();
   }, [leitorAtivo, retorno]);
+
+  useEffect(() => {
+    if (!leitorAtivo) return;
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (!leitorAtivoRef.current) return;
+      const alvo = e.target as HTMLElement | null;
+      const tag = alvo?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || alvo?.isContentEditable) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!/^[0-9A-Za-z]$/.test(e.key)) return;
+      e.preventDefault();
+      setLeitura((v) => v + e.key);
+      focarLeitor();
+    };
+    window.addEventListener('keydown', aoTeclar);
+    return () => window.removeEventListener('keydown', aoTeclar);
+  }, [leitorAtivo]);
 
   const estadoDe = (n: number): Estado => (conferidas.has(n) ? 'CONFERIDA' : emUso.has(n) ? 'EM_USO' : 'LIMPA');
   const vistas = conferidas.size + emUso.size;
@@ -313,10 +341,14 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
             /* Recaptura o foco só enquanto a conferência está em curso — pela
                REFERÊNCIA, que vale o estado do instante em que o timeout
                dispara, e não o de quando foi agendado. */
-            onBlur={() => setTimeout(() => { if (leitorAtivoRef.current) inputRef.current?.focus(); }, 50)}
+            onBlur={(e) => {
+              /* Foi para um botão/campo? É a pessoa usando a tela: deixa. Só
+                 recaptura quando o foco se perdeu (clique em área morta). */
+              if (e.relatedTarget) return;
+              setTimeout(() => { if (leitorAtivoRef.current && document.activeElement === document.body) focarLeitor(); }, 50);
+            }}
             placeholder="bipe a comanda…"
             className="h-11 text-base tabular-nums"
-            autoFocus
           />
           {retorno && (
             <p className={`mt-2 flex items-center gap-1.5 rounded-md p-2 text-sm font-medium ${

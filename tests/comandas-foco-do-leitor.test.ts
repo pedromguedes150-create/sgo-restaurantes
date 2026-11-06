@@ -21,8 +21,12 @@ import { join } from 'node:path';
 
 const fonte = readFileSync(join(process.cwd(), 'src/components/commands/sessao-client.tsx'), 'utf8');
 
-/** A LINHA do `onBlur`. Uma regex de bloco não serve: o corpo tem chaves aninhadas. */
-const linhaDoBlur = () => fonte.split('\n').find((l) => l.includes('onBlur=')) ?? '';
+/** O BLOCO do `onBlur` (v1.193.1: virou multilinha) — do `onBlur={` até o fechamento `}}`. */
+const linhaDoBlur = () => {
+  const ini = fonte.indexOf('onBlur={');
+  const fim = fonte.indexOf('}}', ini);
+  return ini < 0 || fim < 0 ? '' : fonte.slice(ini, fim + 2);
+};
 
 describe('A recaptura de foco é condicional', () => {
   it('o `onBlur` NÃO refoca incondicionalmente', () => {
@@ -35,7 +39,7 @@ describe('A recaptura de foco é condicional', () => {
   it('a recaptura passa por uma condição antes de focar', () => {
     const blur = linhaDoBlur();
     expect(blur).toContain('if (');
-    expect(blur).toContain('focus()');
+    expect(blur).toContain('focarLeitor()');
   });
 });
 
@@ -66,7 +70,27 @@ describe('O leitor desliga enquanto o diálogo está aberto', () => {
   it('o efeito de foco também obedece a ela', () => {
     const efeito = fonte.match(/useEffect\(\(\) => \{\s*if \(leitorAtivo\)[^}]*\}[^)]*\)/)?.[0] ?? '';
     expect(efeito).toContain('leitorAtivo');
-    expect(efeito).toContain('focus()');
+    expect(efeito).toContain('focarLeitor()');
+  });
+});
+
+describe('v1.193.1 — o leitor não rouba a tela', () => {
+  it('todo foco no campo é SEM ROLAGEM: o campo mora no topo e cada toque na grade fazia a página pular para "bipe a comanda"', () => {
+    expect(fonte).toContain('focus({ preventScroll: true })');
+    expect(fonte).not.toMatch(/inputRef\.current\?\.focus\(\)/);
+    expect(fonte).not.toContain('autoFocus'); // o autoFocus nativo também rola ao montar
+  });
+
+  it('o onBlur só recaptura quando o foco se perdeu (relatedTarget nulo): foco num botão/campo é a pessoa trabalhando', () => {
+    const blur = linhaDoBlur();
+    expect(blur).toContain('if (e.relatedTarget) return;');
+    expect(blur).toContain('document.activeElement === document.body');
+  });
+
+  it('o leitor segue funcionando com o foco fora do campo: dígitos teclados sobre a página vão para o campo, sem perder o primeiro', () => {
+    expect(fonte).toMatch(/addEventListener\('keydown', aoTeclar\)/);
+    expect(fonte).toContain('setLeitura((v) => v + e.key)');
+    expect(fonte).toMatch(/if \(tag === 'INPUT' \|\| tag === 'TEXTAREA'/);
   });
 });
 
