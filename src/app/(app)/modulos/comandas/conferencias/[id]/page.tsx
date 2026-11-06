@@ -53,6 +53,7 @@ export default async function ConferenciaPage({ params }: { params: { id: string
             iniciadaEm: hora(d.startedAt), responsavel: d.responsavel,
             escopo: d.escopo, conferidas: d.conferidas, emUso: d.emUso,
             faltando: d.faltando, pct: d.pct,
+            emApuracao: d.emApuracao, baixadas: d.baixadas,
           }}
         />
       ) : (

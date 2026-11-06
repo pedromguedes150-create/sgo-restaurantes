@@ -22,6 +22,10 @@ export interface SessaoNaTela {
   conferidas: number[];
   emUso: number[];
   faltando: number[];
+  /** v1.193.0: em apuração — ficam na grade; marcar presente = recuperada. */
+  emApuracao?: number[];
+  /** v1.193.0: baixadas — ficam na grade; marcar presente desfaz a baixa. */
+  baixadas?: number[];
   pct: number;
 }
 
@@ -69,6 +73,10 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [fechando, setFechando] = useState(false);
+  /* v1.193.0: o servidor exigiu observação embora a tela não visse faltante
+     (o escopo pode ter mudado desde que a página abriu) — sem isto o campo não
+     aparecia e o finalizar ficava num beco. */
+  const [exigirObs, setExigirObs] = useState(false);
   /* v1.192.0: cancelar passa pela MESMA porta do finalizar — uma janela própria que desliga o leitor.
      Antes era um confirm() nativo: tocar em "Cancelar" tirava o foco do campo do leitor, o onBlur o
      recapturava 50 ms depois (a conferência ainda estava "em curso") e a tela pulava para "bipe a
@@ -85,6 +93,8 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   const ultimaLeitura = useRef<{ n: number; em: number } | null>(null);
 
   const escopoSet = useMemo(() => new Set(sessao.escopo), [sessao.escopo]);
+  const apuracaoSet = useMemo(() => new Set(sessao.emApuracao ?? []), [sessao.emApuracao]);
+  const baixadaSet = useMemo(() => new Set(sessao.baixadas ?? []), [sessao.baixadas]);
   const usaLeitor = sessao.metodoId === 'LEITOR' || sessao.metodoId === 'MISTO';
   const usaGrade = sessao.metodoId === 'MANUAL' || sessao.metodoId === 'MISTO';
 
@@ -213,15 +223,26 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   async function emLote(estado: Estado) {
     if (!podeEditar) return;
     setBusy(true); setErro(null);
+    /* Só o que está VISÍVEL no filtro: "marcar todas" com um filtro ligado
+       significando "todas as 651" seria uma armadilha. */
+    const alvo = visiveis.filter((n) => estadoDe(n) !== estado);
+    if (alvo.length === 0) { setBusy(false); return; }
+    const antesC = new Set(conferidas); const antesU = new Set(emUso);
+    const c = new Set(conferidas); const u = new Set(emUso);
+    for (const n of alvo) { c.delete(n); u.delete(n); if (estado === 'CONFERIDA') c.add(n); if (estado === 'EM_USO') u.add(n); }
+    setConferidas(c); setEmUso(u);
     try {
-      /* Só o que está VISÍVEL no filtro: "marcar todas" com um filtro ligado
-         significando "todas as 651" seria uma armadilha. */
-      for (const n of visiveis) {
-        if (estadoDe(n) === estado) continue;
-        aplicar(n, estado);
-        await gravar(n, estado, 'MANUAL');
-      }
+      /* v1.193.0: UMA chamada para o lote. Eram 651 em fila, com o botão de
+         finalizar desligado enquanto durava. */
+      const res = await fetch('/api/commands/session', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'marcarVarios', sessionId: sessao.id, numbers: alvo, state: estado === 'LIMPA' ? null : estado, method: 'MANUAL' }),
+      });
+      const body = await res.json().catch(() => ({} as Record<string, unknown>));
+      if (!res.ok) { setConferidas(antesC); setEmUso(antesU); setErro(String(body.error ?? 'Não foi possível marcar em lote.')); return; }
       router.refresh();
+    } catch {
+      setConferidas(antesC); setEmUso(antesU); setErro('Falha de conexão. Tente de novo.');
     } finally { setBusy(false); }
   }
 
@@ -234,6 +255,9 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
       });
       const d = await res.json().catch(() => ({}));
       if (res.ok) { router.push(`/modulos/comandas/conferencias/${sessao.id}`); router.refresh(); return; }
+      if (d.reason === 'OBSERVATION_REQUIRED') setExigirObs(true);
+      /* Já encerrada (por outra pessoa, ou um segundo toque): a tela de resultado é o destino. */
+      if (d.reason === 'JA_CONCLUIDA') { router.push(`/modulos/comandas/conferencias/${sessao.id}`); router.refresh(); return; }
       setErro(d.error ?? 'Não foi possível finalizar.');
     } finally { setBusy(false); }
   }
@@ -312,6 +336,8 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
         <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded bg-success" /> Conferida</span>
         <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded bg-info" /> Em uso (conta como presente)</span>
         <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-line-strong" /> Não conferida</span>
+        {apuracaoSet.size > 0 && <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-warning bg-warning-bg" /> Em apuração ({apuracaoSet.size}) — toque se encontrou: volta à sequência</span>}
+        {baixadaSet.size > 0 && <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-line-strong bg-sunken" /> Baixada ({baixadaSet.size}) — toque se encontrou: desfaz a baixa</span>}
       </div>
 
       {usaGrade && (
@@ -358,13 +384,18 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
           <div className="flex flex-wrap gap-1">
             {visiveis.map((n) => {
               const e = estadoDe(n);
+              /* v1.193.0: em apuração e baixada SEGUEM na grade, com a própria cor enquanto
+                 não forem tocadas — tocar marca presente, e no finalizar o servidor as recupera. */
+              const classe = e !== 'LIMPA' ? CLASSE[e] : apuracaoSet.has(n) ? 'border-warning bg-warning-bg text-warning' : baixadaSet.has(n) ? 'border-line-strong bg-sunken text-ink-500 line-through' : CLASSE.LIMPA;
               return (
                 <button
                   key={n}
                   type="button"
                   disabled={!podeEditar}
                   onClick={() => void tocar(n)}
-                  className={`h-9 w-11 rounded-md border text-xs font-semibold tabular-nums ${CLASSE[e]}`}
+                  title={e === 'LIMPA' && apuracaoSet.has(n) ? 'Em apuração — toque se encontrou: volta à sequência' : e === 'LIMPA' && baixadaSet.has(n) ? 'Baixada — toque se encontrou: desfaz a baixa' : undefined}
+                  data-situacao={e === 'LIMPA' && apuracaoSet.has(n) ? 'apuracao' : e === 'LIMPA' && baixadaSet.has(n) ? 'baixada' : undefined}
+                  className={`h-9 w-11 rounded-md border text-xs font-semibold tabular-nums ${classe}`}
                 >
                   {n}
                 </button>
@@ -429,7 +460,7 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
           }
         >
           <div className="space-y-3">
-            {faltando.length === 0 ? (
+            {faltando.length === 0 && !exigirObs ? (
               <p className="rounded-lg border border-success bg-success/10 p-2.5 text-sm text-success">
                 Todas as {sessao.escopo.length} comandas foram verificadas. Deseja finalizar?
               </p>

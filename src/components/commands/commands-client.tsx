@@ -125,9 +125,13 @@ export function CommandsClient({
     () => escopoDaConferencia(activeNumbers, nightlyNumbers, modo),
     [activeNumbers, nightlyNumbers, modo],
   );
+  /* O atalho "todas presentes" NÃO recupera baixadas: um toque que dissesse
+     "as 48 perdidas estão aqui" seria recuperação por engano. Em apuração sim —
+     "todas presentes" inclui as que estavam em apuração. Baixada se recupera
+     tocando nela na grade. */
   const escopoAtual = useMemo(
-    () => conferiveisDaGrade(universo, openDivergences.map((d) => d.number), lostNumbers),
-    [universo, openDivergences, lostNumbers],
+    () => conferiveisDaGrade(universo).filter((n) => !lostNumbers.includes(n)),
+    [universo, lostNumbers],
   );
   const faixaAtualLabel = universo.length > 0 ? `${universo[0]} a ${universo[universo.length - 1]}` : '—';
 
@@ -365,20 +369,13 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setM
   );
   const faixaLabel = universo.length > 0 ? `${universo[0]} a ${universo[universo.length - 1]}` : '—';
 
-  const gridNumbers = useMemo(() => {
-    /* Baixadas continuam na grade para o número não sumir do meio da sequência
-       — mas só as que caem dentro do universo desta conferência. */
-    const min = universo[0] ?? 0;
-    const max = universo[universo.length - 1] ?? 0;
-    const baixadasNoUniverso = lostNumbers.filter((n) => n >= min && n <= max);
-    return [...new Set([...universo, ...baixadasNoUniverso])].sort((a, b) => a - b);
-  }, [universo, lostNumbers]);
+  /* v1.193.0: `activeNumbers` é a SEQUÊNCIA INTEIRA (baixadas inclusive), então o
+     universo já traz todo número — nada é acrescentado nem tirado. */
+  const gridNumbers = universo;
 
-  /** Só estas podem ser marcadas: apuração e baixa se resolvem em outro lugar. */
-  const conferiveis = useMemo(
-    () => conferiveisDaGrade(universo, underReview, lostNumbers),
-    [universo, underReview, lostNumbers],
-  );
+  /** TUDO o que está na grade pode ser marcado (v1.193.0): em apuração e baixada
+      marcadas presentes são recuperadas pelo servidor ao confirmar. */
+  const conferiveis = useMemo(() => conferiveisDaGrade(universo), [universo]);
   /* A grade abre NO ESTADO DA ÚLTIMA CONTAGEM. Antes começava sempre vazia:
      mesmo com a contagem do dia registrada, aparecia "0 ok · 648 faltando" e
      corrigir exigia remarcar tudo. */
@@ -476,20 +473,20 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setM
     <div className="rounded-lg border-2 border-brand/30 bg-brand/5 p-3">
       <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink-900"><Grid3x3 className="h-4 w-4" /> Conferência em grade</h2>
       <p className="mb-2 text-xs text-ink-500">Toque 1× = <b className="text-success">conferida</b> · 2× = <b className="text-info">em uso</b> (com cliente — conta como presente) · 3× = limpa. As <b>não marcadas</b> viram apuração.</p>
-      {/* Legenda das cores que NÃO se marca: elas estão na grade para o número
-          não sumir do meio da sequência, mas se resolvem em outro lugar. */}
+      {/* v1.193.0: em apuração e baixadas SEGUEM na grade e podem ser marcadas —
+          marcar presente recupera (fecha a apuração / desfaz a baixa). */}
       {(underReview.length > 0 || lostNumbers.length > 0) && (
         <p className="mb-2 text-xs text-ink-500">
           {underReview.length > 0 && (
             <>
               <span className="rounded bg-warning-bg px-1.5 py-0.5 font-semibold text-warning">em apuração</span>
-              {' '}({underReview.length}) — resolva no bloco Divergências, abaixo.{' '}
+              {' '}({underReview.length}) — toque se encontrou: ela volta à sequência. Sem marcar, segue em apuração.{' '}
             </>
           )}
           {lostNumbers.length > 0 && (
             <>
               <span className="rounded bg-sunken px-1.5 py-0.5 font-semibold text-ink-500 line-through">baixada</span>
-              {' '}({lostNumbers.length}) — perdida, fora da sequência.
+              {' '}({lostNumbers.length}) — toque se encontrou: a baixa é desfeita. Sem marcar, não vira faltante.
             </>
           )}
         </p>
@@ -559,13 +556,12 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setM
             <button
               key={n}
               onClick={() => toggle(n)}
-              disabled={reviewSet.has(n) || lostSet.has(n)}
-              title={reviewSet.has(n) ? 'Em apuração — resolva no bloco Divergências' : lostSet.has(n) ? 'Baixada (perdida) — fora da sequência' : undefined}
+              title={reviewSet.has(n) ? 'Em apuração — toque se encontrou: volta à sequência' : lostSet.has(n) ? 'Baixada — toque se encontrou: desfaz a baixa' : undefined}
               className={`rounded px-1 py-1 text-xs font-semibold ${
-                lostSet.has(n) ? 'bg-sunken text-ink-500 line-through'
-                : reviewSet.has(n) ? 'bg-warning-bg text-warning'
-                : selected.has(n) ? 'bg-success text-on-brand'
+                selected.has(n) ? 'bg-success text-on-brand'
                 : inUse.has(n) ? 'bg-info text-on-brand'
+                : lostSet.has(n) ? 'bg-sunken text-ink-500 line-through'
+                : reviewSet.has(n) ? 'bg-warning-bg text-warning'
                 : 'border text-ink-500'
               }`}
             >

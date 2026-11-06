@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.193.0 — 2026-11-06 (Comandas: a sequência inteira na grade — baixada e em apuração voltam ao serem marcadas)
+
+Pedido do Pedro (06/11): "preciso que seja sequencial: uma vez que a pessoa informou que a comanda não estava lá, na próxima conferência ela pode ter recuperado — se a unidade tem de 1 a 700, deixe 1, 2, 3… e não 1, 2, 4, 5, 6, 7, 9". E "não está deixando finalizar ao terminar a conferência".
+
+- **A grade mostra a sequência inteira**, inclusive as baixadas (antes elas sumiam da conferência Leitor + Manual) — `getActiveSequence` ganhou `all` (faixas + reposições) ao lado de `active` (o que é julgado = `all` − baixadas).
+- **Em apuração e baixada são clicáveis** nas duas grades, com a própria cor (âmbar / cinza riscada) enquanto não tocadas. Marcar presente ou em uso e confirmar/finalizar **recupera**: a divergência aberta fecha como RECUPERADA por quem conferiu; a baixada ganha uma divergência nova já encerrada como RECUPERADA (a da baixa fica como história) e o número volta à sequência julgada. O supervisor é avisado. **Sem marcar, nada muda**: em apuração não abre divergência nova, baixada não vira faltante.
+- **"Baixada" passou a ser o ÚLTIMO desfecho do número**: uma RECUPERADA depois da baixa desfaz a baixa. O leitor também aceita (e recupera) uma baixada bipada. O atalho "Todas presentes" NÃO recupera baixadas (seria recuperação por engano); em apuração sim.
+- **Finalizar**: "Marcar todas" virou UMA chamada (`marcarVarios`) — eram 651 em fila com o botão de finalizar desligado enquanto durava; se o servidor exigir observação sem a tela ver faltante, o campo "O que houve?" aparece em vez de um erro sem saída; "já encerrada" leva ao resultado.
+
 ## v1.192.0 — 2026-11-06 (Conferência de comandas: cancelar funciona e o método é um só — Leitor + Manual)
 
 Pedido do Pedro (06/11, prints): "quando eu aperto em cancelar vai para a aba de ler" e "quero somente a opção Leitor + Manual, aí a pessoa faz de uma forma só".

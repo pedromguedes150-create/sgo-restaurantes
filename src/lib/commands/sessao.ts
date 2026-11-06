@@ -89,7 +89,7 @@ export async function iniciarConferencia(
   /* O escopo só existe na conferência de faixa. Na completa, "todas as ativas"
      é o escopo, e gravá-lo congelaria uma lista que pode mudar. */
   const escopo = input.type === 'FAIXA_DO_DIA'
-    ? Array.from(new Set((input.scopeNumbers ?? []).filter((n) => Number.isInteger(n) && seq.active.has(n)))).sort((a, b) => a - b)
+    ? Array.from(new Set((input.scopeNumbers ?? []).filter((n) => Number.isInteger(n) && seq.all.has(n)))).sort((a, b) => a - b)
     : null;
   if (input.type === 'FAIXA_DO_DIA' && (!escopo || escopo.length === 0)) {
     return { ok: false, reason: 'INVALID', detalhe: 'Informe a faixa a conferir.' };
@@ -105,7 +105,7 @@ export async function iniciarConferencia(
       scopeNumbers: escopo ? (escopo as unknown as Prisma.InputJsonValue) : undefined,
       /* Congelado: a faixa ativa da unidade pode mudar depois, e o histórico
          não pode mudar junto. */
-      expectedCount: escopo ? escopo.length : seq.active.size,
+      expectedCount: escopo ? escopo.length : seq.all.size,
       createdById: user.id,
     },
     select: { id: true },
@@ -114,7 +114,7 @@ export async function iniciarConferencia(
   await audit({
     userId: user.id, unitId: unit.id, action: 'COMMAND_SESSION_START', module: 'COMMANDS',
     entity: 'command_count_session', entityId: s.id,
-    metadata: { type: input.type, method: METODO_UNICO, expected: escopo?.length ?? seq.active.size }, ...ctx,
+    metadata: { type: input.type, method: METODO_UNICO, expected: escopo?.length ?? seq.all.size }, ...ctx,
   });
   return { ok: true, sessionId: s.id };
 }
@@ -151,7 +151,7 @@ export async function marcarComanda(
   if (!Number.isInteger(input.number)) return { ok: false, reason: 'INVALID' };
 
   const seq = await getActiveSequence(s.unitId);
-  const escopo = Array.isArray(s.scopeNumbers) ? new Set((s.scopeNumbers as number[])) : seq.active;
+  const escopo = Array.isArray(s.scopeNumbers) ? new Set((s.scopeNumbers as number[])) : seq.all;
   if (!escopo.has(input.number)) {
     return { ok: false, reason: 'INVALID', detalhe: `A comanda nº ${input.number} não faz parte desta conferência.` };
   }
@@ -178,6 +178,54 @@ export async function marcarComanda(
   return { ok: true, jaEstava: Boolean(existente), em: existente?.at ?? null, total };
 }
 
+/**
+ * Marca VÁRIAS comandas de uma vez (v1.193.0) — o "Marcar todas" da tela.
+ *
+ * Antes era uma chamada por número: 651 idas ao servidor em fila, com o botão
+ * de finalizar desligado enquanto durava. Aqui é uma transação: o que estiver
+ * fora do escopo é contado em `ignoradas`, não derruba o lote.
+ */
+export async function marcarComandas(
+  user: SessionUser,
+  input: { sessionId: string; numbers: number[]; state: CommandItemState | null; method: CommandItemMethod },
+): Promise<ResultadoDeSessao<{ marcadas: number; ignoradas: number[]; total: number }>> {
+  const s = await prisma.commandCountSession.findUnique({
+    where: { id: input.sessionId },
+    select: { id: true, unitId: true, status: true, scopeNumbers: true },
+  });
+  if (!s) return { ok: false, reason: 'NAO_ENCONTRADA' };
+  try {
+    assertUnitAccess(user, s.unitId);
+  } catch (e) {
+    if (e instanceof UnitScopeError) return { ok: false, reason: 'FORBIDDEN' };
+    throw e;
+  }
+  if (s.status !== 'EM_ANDAMENTO') return { ok: false, reason: 'JA_CONCLUIDA' };
+
+  const seq = await getActiveSequence(s.unitId);
+  const escopo = Array.isArray(s.scopeNumbers) ? new Set((s.scopeNumbers as number[])) : seq.all;
+  const pedidos = Array.from(new Set((input.numbers ?? []).filter((n) => Number.isInteger(n))));
+  const dentro = pedidos.filter((n) => escopo.has(n));
+  const ignoradas = pedidos.filter((n) => !escopo.has(n));
+
+  await prisma.$transaction(async (tx) => {
+    if (dentro.length === 0) return;
+    if (input.state === null) {
+      await tx.commandCountItem.deleteMany({ where: { sessionId: s.id, number: { in: dentro } } });
+      return;
+    }
+    await tx.commandCountItem.updateMany({ where: { sessionId: s.id, number: { in: dentro } }, data: { state: input.state, method: input.method } });
+    const jaTem = new Set((await tx.commandCountItem.findMany({ where: { sessionId: s.id, number: { in: dentro } }, select: { number: true } })).map((i) => i.number));
+    const novos = dentro.filter((n) => !jaTem.has(n));
+    if (novos.length > 0) {
+      await tx.commandCountItem.createMany({ data: novos.map((number) => ({ sessionId: s.id, number, state: input.state!, method: input.method })) });
+    }
+  });
+
+  const total = await prisma.commandCountItem.count({ where: { sessionId: s.id } });
+  return { ok: true, marcadas: dentro.length, ignoradas, total };
+}
+
 /* ───────────────────────────── Ler ───────────────────────────── */
 
 export interface ProgressoDaSessao {
@@ -198,6 +246,10 @@ export interface ProgressoDaSessao {
   emUso: number[];
   /** Quem ainda não foi visto — a base do aviso de finalização. */
   faltando: number[];
+  /** v1.193.0: no escopo, as que estão EM APURAÇÃO (marcar presente = recuperada). */
+  emApuracao: number[];
+  /** v1.193.0: no escopo, as BAIXADAS — seguem na grade; marcar presente desfaz a baixa. */
+  baixadas: number[];
   pct: number;
   observation: string | null;
   absentCount: number;
@@ -217,13 +269,20 @@ export async function getSessao(user: SessionUser, sessionId: string): Promise<P
   }
 
   const seq = await getActiveSequence(s.unitId);
-  const escopo = Array.isArray(s.scopeNumbers) ? [...(s.scopeNumbers as number[])] : [...seq.active];
+  const escopo = Array.isArray(s.scopeNumbers) ? [...(s.scopeNumbers as number[])] : [...seq.all];
   escopo.sort((a, b) => a - b);
+  const noEscopo = new Set(escopo);
 
   const conferidas = s.items.filter((i) => i.state === 'CONFERIDA').map((i) => i.number).sort((a, b) => a - b);
   const emUso = s.items.filter((i) => i.state === 'EM_USO').map((i) => i.number).sort((a, b) => a - b);
   const vistas = new Set([...conferidas, ...emUso]);
   const faltando = escopo.filter((n) => !vistas.has(n));
+  const abertas = await prisma.commandDivergence.findMany({
+    where: { unitId: s.unitId, status: { in: ['OPEN', 'INVESTIGATING'] } },
+    select: { number: true },
+  });
+  const emApuracao = [...new Set(abertas.map((d) => d.number))].filter((n) => noEscopo.has(n)).sort((a, b) => a - b);
+  const baixadas = [...seq.lost].filter((n) => noEscopo.has(n)).sort((a, b) => a - b);
 
   return {
     id: s.id, unitId: s.unitId, unitName: s.unit.name, operationalDate: s.operationalDate,
@@ -231,7 +290,7 @@ export async function getSessao(user: SessionUser, sessionId: string): Promise<P
     startedAt: s.startedAt, finishedAt: s.finishedAt,
     responsavel: s.createdBy?.name ?? null,
     expected: s.expectedCount || escopo.length,
-    escopo, conferidas, emUso, faltando,
+    escopo, conferidas, emUso, faltando, emApuracao, baixadas,
     pct: escopo.length === 0 ? 0 : Math.round((vistas.size / escopo.length) * 100),
     observation: s.observation,
     absentCount: s.absentCount,

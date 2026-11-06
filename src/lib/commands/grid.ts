@@ -50,19 +50,20 @@ export function escopoDaConferencia(
 }
 
 /**
- * O que pode ser marcado nesta conferência.
+ * O que pode ser marcado nesta conferência: TUDO o que está na grade.
  *
- * Em apuração e baixadas ficam na grade para o número não sumir do meio da
- * sequência, mas são desabilitadas e se resolvem no bloco de Divergências —
- * então não são nem presentes nem faltantes.
+ * Até a v1.192.0 as em apuração e as baixadas ficavam desabilitadas e se
+ * resolviam só no bloco de Divergências. Decisão do Pedro (06/11): a comanda
+ * dada como ausente numa conferência pode ter sido recuperada na seguinte —
+ * então ela continua na grade, clicável, e marcá-la presente a recupera (o
+ * servidor fecha a apuração / desfaz a baixa). O que NÃO for marcado segue como
+ * estava: em apuração não abre divergência nova, baixada não vira faltante.
  *
  * Existe como função para a GRADE e o ATALHO "todas presentes" partirem da
- * mesma lista: enquanto cada um calculava a sua, o atalho registrava como
- * presentes comandas que a grade nem deixava tocar.
+ * mesma lista.
  */
-export function conferiveisDaGrade(universo: number[], underReview: number[], lostNumbers: number[]): number[] {
-  const fora = new Set([...underReview, ...lostNumbers]);
-  return universo.filter((n) => !fora.has(n));
+export function conferiveisDaGrade(universo: number[]): number[] {
+  return [...universo];
 }
 
 /**
