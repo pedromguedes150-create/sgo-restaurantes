@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.192.0 — 2026-11-06 (Conferência de comandas: cancelar funciona e o método é um só — Leitor + Manual)
+
+Pedido do Pedro (06/11, prints): "quando eu aperto em cancelar vai para a aba de ler" e "quero somente a opção Leitor + Manual, aí a pessoa faz de uma forma só".
+
+- **Cancelar não trava mais.** O botão abre uma janela própria ("Cancelar esta conferência?") com "Sim, cancelar" e "Continuar conferindo", e enquanto ela está aberta o campo do leitor fica DESLIGADO — era o `onBlur` do leitor recapturando o foco 50 ms depois do toque (a conferência ainda contava como "em curso", porque só o Finalizar desligava o leitor) que fazia a tela pular para "bipe a comanda" e deixava a confirmação nativa para trás. A resposta do servidor agora é lida: recusa vira mensagem; "já encerrada por outra pessoa" também sai da tela.
+- **Um método só.** "+ Iniciar nova conferência" pergunta só o tipo (Faixa do dia ou Completa) e começa direto em **Leitor + Manual**: bipa o que der e marca na grade o que o leitor não pegou, na mesma conferência. O servidor grava MISTO seja o que for que o cliente mande; MANUAL e LEITOR ficam no enum só para o histórico das conferências antigas.
+
 ## v1.191.0 — 2026-11-06 (Checklist: "Exige foto" vira foto OBRIGATÓRIA, tirada na hora pela câmera)
 
 Pedido do Pedro (06/11, print do editor de checklists): onde o item está marcado "Exige foto neste item", o gerente só segue para o próximo depois de tirar a foto, recebe um alerta se tentar, e a foto tem de ser feita na hora — sem abrir a galeria.

@@ -34,8 +34,14 @@ export const TIPO_LABEL: Record<CommandSessionType, string> = {
 export const METODO_LABEL: Record<CommandSessionMethod, string> = {
   MANUAL: 'Manual',
   LEITOR: 'Leitor',
-  MISTO: 'Manual + Leitor',
+  MISTO: 'Leitor + Manual',
 };
+/**
+ * v1.192.0 (decisão do Pedro, 06/11): a conferência tem UM método — Leitor + Manual.
+ * Quem confere bipa o que dá e marca na grade o que o leitor não pegou, na mesma
+ * conferência. MANUAL e LEITOR ficam no enum só para o histórico (sessões antigas).
+ */
+export const METODO_UNICO: CommandSessionMethod = 'MISTO';
 
 export const STATUS_LABEL: Record<string, string> = {
   EM_ANDAMENTO: 'Em andamento',
@@ -58,7 +64,7 @@ export type ResultadoDeSessao<T> =
  */
 export async function iniciarConferencia(
   user: SessionUser,
-  input: { unitId: string; type: CommandSessionType; method: CommandSessionMethod; scopeNumbers?: number[] },
+  input: { unitId: string; type: CommandSessionType; method?: CommandSessionMethod; scopeNumbers?: number[] },
   ctx: { ip?: string | null; userAgent?: string | null } = {},
 ): Promise<ResultadoDeSessao<{ sessionId: string }>> {
   try {
@@ -94,7 +100,8 @@ export async function iniciarConferencia(
       unitId: unit.id,
       operationalDate: currentOperationalDate({ timezone: unit.timezone, cutoffHour: unit.cutoffHour }),
       type: input.type,
-      method: input.method,
+      /* v1.192.0: seja o que for que o cliente mande, a conferência nasce Leitor + Manual. */
+      method: METODO_UNICO,
       scopeNumbers: escopo ? (escopo as unknown as Prisma.InputJsonValue) : undefined,
       /* Congelado: a faixa ativa da unidade pode mudar depois, e o histórico
          não pode mudar junto. */
@@ -107,7 +114,7 @@ export async function iniciarConferencia(
   await audit({
     userId: user.id, unitId: unit.id, action: 'COMMAND_SESSION_START', module: 'COMMANDS',
     entity: 'command_count_session', entityId: s.id,
-    metadata: { type: input.type, method: input.method, expected: escopo?.length ?? seq.active.size }, ...ctx,
+    metadata: { type: input.type, method: METODO_UNICO, expected: escopo?.length ?? seq.active.size }, ...ctx,
   });
   return { ok: true, sessionId: s.id };
 }

@@ -69,6 +69,11 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [fechando, setFechando] = useState(false);
+  /* v1.192.0: cancelar passa pela MESMA porta do finalizar — uma janela própria que desliga o leitor.
+     Antes era um confirm() nativo: tocar em "Cancelar" tirava o foco do campo do leitor, o onBlur o
+     recapturava 50 ms depois (a conferência ainda estava "em curso") e a tela pulava para "bipe a
+     comanda"; a confirmação ficava para trás e a pessoa não conseguia cancelar. */
+  const [cancelando, setCancelando] = useState(false);
   const [observacao, setObservacao] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('TODAS');
   const [busca, setBusca] = useState('');
@@ -98,7 +103,7 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
    * duas condições escritas em lugares diferentes é como uma delas envelhece
    * sozinha.
    */
-  const leitorAtivo = usaLeitor && podeEditar && !fechando;
+  const leitorAtivo = usaLeitor && podeEditar && !fechando && !cancelando;
 
   /* Uma REFERÊNCIA, e não a variável: o `onBlur` agenda um timeout, e o valor
      capturado no closure é o do instante em que ele foi AGENDADO. Ao tocar em
@@ -234,15 +239,18 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   }
 
   async function cancelar() {
-    if (!confirm('Cancelar esta conferência? O que foi marcado até aqui fica no histórico, mas nada será apurado.')) return;
-    setBusy(true);
+    setBusy(true); setErro(null);
     try {
-      await fetch('/api/commands/session', {
+      const res = await fetch('/api/commands/session', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'cancelar', sessionId: sessao.id }),
       });
-      router.push('/modulos/comandas');
-      router.refresh();
+      const d = await res.json().catch(() => ({}));
+      /* Já encerrada por outra pessoa = também não está mais em andamento: sair é o certo. */
+      if (res.ok || d.reason === 'JA_CONCLUIDA') { router.push('/modulos/comandas'); router.refresh(); return; }
+      setErro(d.error ?? 'Não foi possível cancelar.');
+    } catch {
+      setErro('Falha de conexão. Tente de novo.');
     } finally { setBusy(false); }
   }
 
@@ -375,11 +383,32 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
             <Button size="sm" disabled={busy} onClick={() => { setObservacao(''); setFechando(true); }}>
               <Flag className="h-4 w-4" /> Finalizar conferência
             </Button>
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => void cancelar()}>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => { setErro(null); setCancelando(true); }} data-testid="abrir-cancelar">
               <X className="h-4 w-4" /> Cancelar
             </Button>
           </div>
         </div>
+      )}
+
+      {cancelando && (
+        <Sheet
+          open onClose={() => setCancelando(false)}
+          title="Cancelar esta conferência?"
+          description={`${vistas} de ${sessao.escopo.length} comandas verificadas até aqui.`}
+          footer={
+            <div className="space-y-2">
+              {erro && <p className="text-sm font-medium text-danger">{erro}</p>}
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="destructive" disabled={busy} onClick={() => void cancelar()} data-testid="confirmar-cancelar">
+                  {busy ? 'Cancelando…' : 'Sim, cancelar conferência'}
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => setCancelando(false)}>Continuar conferindo</Button>
+              </div>
+            </div>
+          }
+        >
+          <p className="text-sm text-ink-700">O que foi marcado até aqui fica no histórico como conferência cancelada, mas nada será apurado: nenhuma comanda vira ausente e nenhuma divergência é aberta. Depois você pode iniciar uma nova.</p>
+        </Sheet>
       )}
 
       {fechando && (

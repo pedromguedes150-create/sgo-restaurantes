@@ -25,13 +25,15 @@ export interface EmAndamento {
   total: number;
 }
 
-type Etapa = 'FECHADO' | 'TIPO' | 'METODO';
+type Etapa = 'FECHADO' | 'TIPO';
 
 /**
  * "+ Iniciar nova conferência" — e o que aparece antes dela.
  *
- * Duas perguntas, uma de cada vez (tipo, depois método), porque é a decisão que
- * o caixa toma no início do turno e ela precisa caber numa tela de celular.
+ * UMA pergunta: o tipo. O método deixou de ser escolha na v1.192.0 (decisão do
+ * Pedro): toda conferência é Leitor + Manual — bipa o que dá e marca na grade o
+ * resto, na mesma conferência. Três opções obrigavam a decidir antes de saber
+ * se o leitor ia pegar tudo.
  *
  * Se existe conferência em andamento, o botão de começar **sai de cena**: o que
  * aparece é retomar. Começar outra por cima era exatamente o que produzia o
@@ -51,17 +53,16 @@ export function IniciarConferencia({
 }) {
   const router = useRouter();
   const [etapa, setEtapa] = useState<Etapa>('FECHADO');
-  const [tipo, setTipo] = useState<'FAIXA_DO_DIA' | 'COMPLETA'>('COMPLETA');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  async function comecar(metodo: 'MANUAL' | 'LEITOR' | 'MISTO') {
+  async function comecar(tipo: 'FAIXA_DO_DIA' | 'COMPLETA') {
     setBusy(true); setErro(null);
     try {
       const res = await fetch('/api/commands/session', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'iniciar', unitId, type: tipo, method: metodo,
+          action: 'iniciar', unitId, type: tipo, method: 'MISTO',
           ...(tipo === 'FAIXA_DO_DIA' ? { scopeNumbers: faixaDoDia } : {}),
         }),
       });
@@ -122,13 +123,14 @@ export function IniciarConferencia({
       {erro && <p className="text-sm font-medium text-danger">{erro}</p>}
 
       {etapa === 'TIPO' && (
-        <Sheet open onClose={() => setEtapa('FECHADO')} title="Qual conferência deseja realizar?">
+        <Sheet open onClose={() => setEtapa('FECHADO')} title="Qual conferência deseja realizar?" description="Leitor + Manual: bipe o que der e marque na grade o que o leitor não pegou, na mesma conferência.">
           <div className="space-y-2">
             <button
               type="button"
-              disabled={faixaDoDia.length === 0}
-              onClick={() => { setTipo('FAIXA_DO_DIA'); setEtapa('METODO'); }}
+              disabled={faixaDoDia.length === 0 || busy}
+              onClick={() => void comecar('FAIXA_DO_DIA')}
               className="w-full rounded-lg border p-3 text-left disabled:opacity-50"
+              data-testid="tipo-faixa"
             >
               <p className="text-sm font-semibold text-ink-900">Faixa do dia</p>
               <p className="text-xs text-ink-700">
@@ -139,35 +141,15 @@ export function IniciarConferencia({
             </button>
             <button
               type="button"
-              onClick={() => { setTipo('COMPLETA'); setEtapa('METODO'); }}
-              className="w-full rounded-lg border p-3 text-left"
+              disabled={busy}
+              onClick={() => void comecar('COMPLETA')}
+              className="w-full rounded-lg border p-3 text-left disabled:opacity-60"
+              data-testid="tipo-completa"
             >
               <p className="text-sm font-semibold text-ink-900">Completa</p>
               <p className="text-xs text-ink-700">Conferir todas as comandas ativas da unidade.</p>
             </button>
-          </div>
-        </Sheet>
-      )}
-
-      {etapa === 'METODO' && (
-        <Sheet open onClose={() => setEtapa('FECHADO')} title="Como deseja realizar a conferência?" description={tipo === 'FAIXA_DO_DIA' ? 'Faixa do dia' : 'Completa'}>
-          <div className="space-y-2">
-            {([
-              { v: 'MANUAL' as const, t: 'Manual', d: 'Você marca as comandas direto na grade.' },
-              { v: 'LEITOR' as const, t: 'Leitor', d: 'As comandas entram pelo leitor de código de barras.' },
-              { v: 'MISTO' as const, t: 'Manual + Leitor', d: 'Ler com o leitor e ajustar na mão, na mesma conferência.' },
-            ]).map((o) => (
-              <button
-                key={o.v}
-                type="button"
-                disabled={busy}
-                onClick={() => void comecar(o.v)}
-                className="w-full rounded-lg border p-3 text-left disabled:opacity-60"
-              >
-                <p className="text-sm font-semibold text-ink-900">{o.t}</p>
-                <p className="text-xs text-ink-700">{o.d}</p>
-              </button>
-            ))}
+            {busy && <p className="text-xs text-ink-500">Iniciando…</p>}
             {erro && <p className="text-sm font-medium text-danger">{erro}</p>}
           </div>
         </Sheet>
