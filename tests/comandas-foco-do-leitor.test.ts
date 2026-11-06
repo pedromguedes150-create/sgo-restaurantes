@@ -78,7 +78,10 @@ describe('v1.193.1 — o leitor não rouba a tela', () => {
   it('todo foco no campo é SEM ROLAGEM: o campo mora no topo e cada toque na grade fazia a página pular para "bipe a comanda"', () => {
     expect(fonte).toContain('focus({ preventScroll: true })');
     expect(fonte).not.toMatch(/inputRef\.current\?\.focus\(\)/);
-    expect(fonte).not.toContain('autoFocus'); // o autoFocus nativo também rola ao montar
+    /* o autoFocus nativo também rola ao montar: o CAMPO DO LEITOR não pode tê-lo
+       (o da observação, dentro da Sheet, é de propósito — tira o foco do X) */
+    const campoDoLeitor = fonte.slice(fonte.indexOf('ref={inputRef}'), fonte.indexOf('/>', fonte.indexOf('ref={inputRef}')));
+    expect(campoDoLeitor).not.toContain('autoFocus');
   });
 
   it('o onBlur só recaptura quando o foco se perdeu (relatedTarget nulo): foco num botão/campo é a pessoa trabalhando', () => {

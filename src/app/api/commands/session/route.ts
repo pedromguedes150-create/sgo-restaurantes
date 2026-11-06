@@ -46,9 +46,16 @@ export async function POST(req: Request) {
   if (!b?.action) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
 
   const ctx = requestContext(req);
+  /* v1.193.1: valores fora do enum iam direto ao Prisma e viravam 500. */
+  const estadoValido = (v: unknown) => v === null || v === undefined || v === 'CONFERIDA' || v === 'EM_USO';
+  const metodoValido = (v: unknown) => v === undefined || v === 'MANUAL' || v === 'LEITOR';
+  if ((b.action === 'marcar' || b.action === 'marcarVarios') && (!estadoValido(b.state) || !metodoValido(b.method))) {
+    return NextResponse.json({ error: 'Estado ou método inválido', reason: 'INVALID' }, { status: 400 });
+  }
   let r: Awaited<ReturnType<typeof iniciarConferencia>> | Awaited<ReturnType<typeof marcarComanda>> | Awaited<ReturnType<typeof marcarComandas>>
     | Awaited<ReturnType<typeof finalizarConferencia>> | Awaited<ReturnType<typeof cancelarConferencia>> | undefined;
 
+  try {
   if (b.action === 'iniciar') {
     r = await iniciarConferencia(user, {
       unitId: String(b.unitId ?? ''),
@@ -87,4 +94,8 @@ export async function POST(req: Request) {
     );
   }
   return NextResponse.json({ ...r });
+  } catch (e) {
+    console.error('[comandas/session]', b.action, e);
+    return NextResponse.json({ error: 'Falha ao gravar. Tente de novo.', reason: 'ERRO' }, { status: 500 });
+  }
 }

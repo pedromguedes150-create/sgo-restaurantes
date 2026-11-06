@@ -105,7 +105,8 @@ export async function iniciarConferencia(
       scopeNumbers: escopo ? (escopo as unknown as Prisma.InputJsonValue) : undefined,
       /* Congelado: a faixa ativa da unidade pode mudar depois, e o histórico
          não pode mudar junto. */
-      expectedCount: escopo ? escopo.length : seq.all.size,
+      /* v1.193.1: "esperadas" são as JULGADAS — baixadas ficam na grade mas não contam (eram 699 em vez de 651). */
+      expectedCount: escopo ? escopo.filter((n) => seq.active.has(n)).length : seq.active.size,
       createdById: user.id,
     },
     select: { id: true },
@@ -114,7 +115,7 @@ export async function iniciarConferencia(
   await audit({
     userId: user.id, unitId: unit.id, action: 'COMMAND_SESSION_START', module: 'COMMANDS',
     entity: 'command_count_session', entityId: s.id,
-    metadata: { type: input.type, method: METODO_UNICO, expected: escopo?.length ?? seq.all.size }, ...ctx,
+    metadata: { type: input.type, method: METODO_UNICO, expected: escopo ? escopo.filter((n) => seq.active.has(n)).length : seq.active.size }, ...ctx,
   });
   return { ok: true, sessionId: s.id };
 }
@@ -161,16 +162,15 @@ export async function marcarComanda(
     select: { id: true, at: true },
   });
 
+  /* v1.193.1: upsert/deleteMany em vez de ler-e-decidir — dois toques no mesmo
+     número antes de o servidor responder davam P2002/P2025 (500) e a tela desfazia. */
   if (input.state === null) {
-    if (existente) await prisma.commandCountItem.delete({ where: { id: existente.id } });
-  } else if (existente) {
-    await prisma.commandCountItem.update({
-      where: { id: existente.id },
-      data: { state: input.state, method: input.method },
-    });
+    await prisma.commandCountItem.deleteMany({ where: { sessionId: s.id, number: input.number } });
   } else {
-    await prisma.commandCountItem.create({
-      data: { sessionId: s.id, number: input.number, state: input.state, method: input.method },
+    await prisma.commandCountItem.upsert({
+      where: { sessionId_number: { sessionId: s.id, number: input.number } },
+      create: { sessionId: s.id, number: input.number, state: input.state, method: input.method },
+      update: { state: input.state, method: input.method },
     });
   }
 
@@ -218,7 +218,7 @@ export async function marcarComandas(
     const jaTem = new Set((await tx.commandCountItem.findMany({ where: { sessionId: s.id, number: { in: dentro } }, select: { number: true } })).map((i) => i.number));
     const novos = dentro.filter((n) => !jaTem.has(n));
     if (novos.length > 0) {
-      await tx.commandCountItem.createMany({ data: novos.map((number) => ({ sessionId: s.id, number, state: input.state!, method: input.method })) });
+      await tx.commandCountItem.createMany({ data: novos.map((number) => ({ sessionId: s.id, number, state: input.state!, method: input.method })), skipDuplicates: true });
     }
   });
 
@@ -276,7 +276,10 @@ export async function getSessao(user: SessionUser, sessionId: string): Promise<P
   const conferidas = s.items.filter((i) => i.state === 'CONFERIDA').map((i) => i.number).sort((a, b) => a - b);
   const emUso = s.items.filter((i) => i.state === 'EM_USO').map((i) => i.number).sort((a, b) => a - b);
   const vistas = new Set([...conferidas, ...emUso]);
-  const faltando = escopo.filter((n) => !vistas.has(n));
+  /* v1.193.1: baixada NÃO conta como faltante nem como esperada — ela fica na
+     grade para poder ser recuperada; só entra na conta se for marcada. */
+  const julgadas = escopo.filter((n) => !seq.lost.has(n) || vistas.has(n));
+  const faltando = julgadas.filter((n) => !vistas.has(n));
   const abertas = await prisma.commandDivergence.findMany({
     where: { unitId: s.unitId, status: { in: ['OPEN', 'INVESTIGATING'] } },
     select: { number: true },
@@ -289,9 +292,9 @@ export async function getSessao(user: SessionUser, sessionId: string): Promise<P
     type: s.type, method: s.method, status: s.status,
     startedAt: s.startedAt, finishedAt: s.finishedAt,
     responsavel: s.createdBy?.name ?? null,
-    expected: s.expectedCount || escopo.length,
+    expected: julgadas.length,
     escopo, conferidas, emUso, faltando, emApuracao, baixadas,
-    pct: escopo.length === 0 ? 0 : Math.round((vistas.size / escopo.length) * 100),
+    pct: julgadas.length === 0 ? 0 : Math.round((vistas.size / julgadas.length) * 100),
     observation: s.observation,
     absentCount: s.absentCount,
     divergenceCount: s.divergenceCount,
@@ -331,7 +334,8 @@ export async function listarConferencias(
 ): Promise<LinhaDoHistorico[]> {
   const sessoes = await prisma.commandCountSession.findMany({
     where: {
-      ...(f.unitId ? { unitId: f.unitId } : unitScopeWhere(user, 'unitId')),
+      /* v1.193.1: a unidade pedida é cruzada com o ALCANCE — antes substituía o escopo. */
+      AND: [unitScopeWhere(user, 'unitId'), ...(f.unitId ? [{ unitId: f.unitId }] : [])],
       ...(f.de || f.ate ? { operationalDate: { ...(f.de ? { gte: f.de } : {}), ...(f.ate ? { lte: f.ate } : {}) } } : {}),
       ...(f.responsavelId ? { createdById: f.responsavelId } : {}),
       ...(f.type ? { type: f.type } : {}),
@@ -409,7 +413,7 @@ export async function finalizarConferencia(
     ctx,
   );
   if (!r.ok) {
-    return { ok: false, reason: r.reason === 'OBSERVATION_REQUIRED' ? 'OBSERVATION_REQUIRED' : r.reason === 'FORBIDDEN' ? 'FORBIDDEN' : 'INVALID' };
+    return { ok: false, reason: r.reason === 'OBSERVATION_REQUIRED' ? 'OBSERVATION_REQUIRED' : r.reason === 'FORBIDDEN' ? 'FORBIDDEN' : r.reason === 'NO_CONFIG' ? 'NO_CONFIG' : 'INVALID' };
   }
 
   await prisma.commandCountSession.update({

@@ -77,6 +77,14 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
      (o escopo pode ter mudado desde que a página abriu) — sem isto o campo não
      aparecia e o finalizar ficava num beco. */
   const [exigirObs, setExigirObs] = useState(false);
+  /* O foco da janela de finalizar nasce no campo "O que houve?" (o diálogo focava o X,
+     e um Enter do leitor fechava a janela). Depois do portal montar, por isso o timeout. */
+  const obsRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!fechando) return;
+    const t = setTimeout(() => obsRef.current?.focus({ preventScroll: true }), 30);
+    return () => clearTimeout(t);
+  }, [fechando]);
   /* v1.192.0: cancelar passa pela MESMA porta do finalizar — uma janela própria que desliga o leitor.
      Antes era um confirm() nativo: tocar em "Cancelar" tirava o foco do campo do leitor, o onBlur o
      recapturava 50 ms depois (a conferência ainda estava "em curso") e a tela pulava para "bipe a
@@ -157,9 +165,16 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   }, [leitorAtivo]);
 
   const estadoDe = (n: number): Estado => (conferidas.has(n) ? 'CONFERIDA' : emUso.has(n) ? 'EM_USO' : 'LIMPA');
+  /* v1.193.1: a conta é sobre as JULGADAS — baixada fica na grade, mas só entra
+     se for marcada (era "475 de 699, faltam 224" com 48 baixadas; o certo é
+     "475 de 651, faltam 176"). */
+  const julgadas = sessao.escopo.filter((n) => !baixadaSet.has(n) || conferidas.has(n) || emUso.has(n));
   const vistas = conferidas.size + emUso.size;
-  const faltando = sessao.escopo.filter((n) => !conferidas.has(n) && !emUso.has(n));
-  const pct = sessao.escopo.length === 0 ? 0 : Math.round((vistas / sessao.escopo.length) * 100);
+  const faltando = julgadas.filter((n) => !conferidas.has(n) && !emUso.has(n));
+  /* Entre as faltantes, as que JÁ estavam em apuração não pedem observação de novo. */
+  const faltandoNovas = faltando.filter((n) => !apuracaoSet.has(n));
+  const faltandoJaEmApuracao = faltando.filter((n) => apuracaoSet.has(n));
+  const pct = julgadas.length === 0 ? 0 : Math.round((vistas / julgadas.length) * 100);
 
   const visiveis = useMemo(() => {
     const porFiltro = sessao.escopo.filter((n) => {
@@ -179,12 +194,23 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
      não pode reaprender o toque. */
   const proximo = (atual: Estado): Estado => (atual === 'LIMPA' ? 'CONFERIDA' : atual === 'CONFERIDA' ? 'EM_USO' : 'LIMPA');
 
+  /* Gravações ainda no ar: o finalizar espera por elas, senão os últimos toques
+     viravam ausentes (o servidor lia os itens antes de eles chegarem). */
+  const pendentes = useRef(0);
   async function gravar(n: number, estado: Estado, method: 'MANUAL' | 'LEITOR') {
-    const res = await fetch('/api/commands/session', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'marcar', sessionId: sessao.id, number: n, state: estado === 'LIMPA' ? null : estado, method }),
-    });
-    return { ok: res.ok, body: await res.json().catch(() => ({} as Record<string, unknown>)) };
+    pendentes.current += 1;
+    try {
+      const res = await fetch('/api/commands/session', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'marcar', sessionId: sessao.id, number: n, state: estado === 'LIMPA' ? null : estado, method }),
+      });
+      return { ok: res.ok, body: await res.json().catch(() => ({} as Record<string, unknown>)) };
+    } catch {
+      return { ok: false, body: { error: 'Falha de conexão. Tente de novo.' } as Record<string, unknown> };
+    } finally { pendentes.current -= 1; }
+  }
+  async function esperarGravacoes() {
+    for (let i = 0; i < 100 && pendentes.current > 0; i++) await new Promise((r) => setTimeout(r, 100));
   }
 
   function aplicar(n: number, estado: Estado) {
@@ -217,6 +243,8 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
     const r = parseCommandBarcode(raw, escopoSet);
 
     if (r.number === null) {
+      if (r.reason === 'NOT_A_COMMAND' || r.reason === 'EMPTY') return; // QR de outra coisa: silêncio, como o leitor antigo
+      if (r.guess !== null) { setRetorno({ tipo: 'FORA', texto: `A comanda nº ${r.guess} não faz parte desta conferência.` }); return; }
       setRetorno({ tipo: 'ERRO', texto: `Leitura não reconhecida: "${r.raw.slice(0, 24)}"` });
       return;
     }
@@ -231,10 +259,13 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
     ultimaLeitura.current = { n: r.number, em: agora };
 
     const jaVista = conferidas.has(r.number) || emUso.has(r.number);
+    const antesC = new Set(conferidas); const antesU = new Set(emUso);
     aplicar(r.number, 'CONFERIDA');
     const { ok, body } = await gravar(r.number, 'CONFERIDA', 'LEITOR');
 
     if (!ok) {
+      /* Desfaz: comanda verde na tela e ausente no servidor era o "Faltam: 0" que o finalizar recusava. */
+      setConferidas(antesC); setEmUso(antesU);
       setRetorno({ tipo: 'ERRO', texto: String(body.error ?? 'Não foi possível registrar a leitura.') });
       return;
     }
@@ -253,7 +284,8 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
     setBusy(true); setErro(null);
     /* Só o que está VISÍVEL no filtro: "marcar todas" com um filtro ligado
        significando "todas as 651" seria uma armadilha. */
-    const alvo = visiveis.filter((n) => estadoDe(n) !== estado);
+    /* Marcar em lote NÃO toca em apuração nem baixada: recuperar é toque a toque, nunca em massa. */
+    const alvo = visiveis.filter((n) => estadoDe(n) !== estado && (estado === 'LIMPA' || (!apuracaoSet.has(n) && !baixadaSet.has(n))));
     if (alvo.length === 0) { setBusy(false); return; }
     const antesC = new Set(conferidas); const antesU = new Set(emUso);
     const c = new Set(conferidas); const u = new Set(emUso);
@@ -277,6 +309,7 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   async function finalizar() {
     setBusy(true); setErro(null);
     try {
+      await esperarGravacoes();
       const res = await fetch('/api/commands/session', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'finalizar', sessionId: sessao.id, observation: observacao }),
@@ -287,6 +320,8 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
       /* Já encerrada (por outra pessoa, ou um segundo toque): a tela de resultado é o destino. */
       if (d.reason === 'JA_CONCLUIDA') { router.push(`/modulos/comandas/conferencias/${sessao.id}`); router.refresh(); return; }
       setErro(d.error ?? 'Não foi possível finalizar.');
+    } catch {
+      setErro('Falha de conexão. Tente de novo.');
     } finally { setBusy(false); }
   }
 
@@ -316,9 +351,9 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
           {sessao.responsavel ? ` por ${sessao.responsavel}` : ''}
         </p>
         <p className="mt-2 text-2xl font-bold tabular-nums text-ink-900">
-          {vistas} de {sessao.escopo.length} conferidas — {pct}%
+          {vistas} de {julgadas.length} conferidas — {pct}%
         </p>
-        <p className="text-sm font-semibold text-danger">Faltam: {faltando.length}</p>
+        <p className="text-sm font-semibold text-danger">Faltam: {faltando.length}{faltandoJaEmApuracao.length > 0 ? <span className="font-normal text-ink-500"> ({faltandoJaEmApuracao.length} já em apuração)</span> : null}</p>
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-sunken">
           <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} />
         </div>
@@ -443,7 +478,7 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
       {podeEditar && (
         <div className="sticky bottom-0 -mx-4 border-t border-line bg-surface px-4 py-3 print:hidden">
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" disabled={busy} onClick={() => { setObservacao(''); setFechando(true); }}>
+            <Button size="sm" disabled={busy} onClick={() => { setErro(null); setFechando(true); }}>
               <Flag className="h-4 w-4" /> Finalizar conferência
             </Button>
             <Button size="sm" variant="outline" disabled={busy} onClick={() => { setErro(null); setCancelando(true); }} data-testid="abrir-cancelar">
@@ -502,25 +537,39 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
                     o motivo é simples — quase sempre a comanda está ali e a
                     pessoa só não marcou. */}
                 <p className="rounded-lg border border-warning bg-warning-bg p-2.5 text-sm text-warning">
-                  <b>{vistas} de {sessao.escopo.length}</b> comandas foram verificadas. Existem{' '}
-                  <b>{faltando.length}</b> não localizadas.
+                  <b>{vistas} de {julgadas.length}</b> comandas foram verificadas. Existem{' '}
+                  <b>{faltandoNovas.length}</b> não localizadas{faltandoJaEmApuracao.length > 0 ? <> e <b>{faltandoJaEmApuracao.length}</b> que já estavam em apuração</> : null}.
                 </p>
-                <div>
-                  <Label className="text-xs">Não localizadas</Label>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {faltando.map((n) => (
-                      <span key={n} className="rounded-md border border-warning px-2 py-1 text-xs font-semibold tabular-nums text-warning">{n}</span>
-                    ))}
+                {faltandoNovas.length > 0 && (
+                  <div>
+                    <Label className="text-xs">Não localizadas (novas)</Label>
+                    <div className="mt-1 flex flex-wrap gap-1" data-testid="faltantes-novas">
+                      {faltandoNovas.map((n) => (
+                        <span key={n} className="rounded-md border border-warning px-2 py-1 text-xs font-semibold tabular-nums text-warning">{n}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+                {faltandoJaEmApuracao.length > 0 && (
+                  <details className="text-xs text-ink-700">
+                    <summary className="cursor-pointer font-semibold">Já em apuração ({faltandoJaEmApuracao.length}) — continuam como estão</summary>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {faltandoJaEmApuracao.map((n) => (
+                        <span key={n} className="rounded-md border border-line-strong px-2 py-1 text-xs tabular-nums text-ink-500">{n}</span>
+                      ))}
+                    </div>
+                  </details>
+                )}
                 <p className="text-xs text-ink-700">
-                  Elas <b>não viram &quot;perdidas&quot;</b> agora: entram <b>em apuração</b>. Perdida ou recuperada é
+                  As novas <b>não viram &quot;perdidas&quot;</b> agora: entram <b>em apuração</b>. Perdida ou recuperada é
                   decisão de quem apura, depois.
                 </p>
-                <div>
-                  <Label className="text-xs">O que houve? (obrigatório)</Label>
-                  <Input value={observacao} onChange={(e) => setObservacao(e.target.value)} className="h-9 text-sm" placeholder="ex.: faltaram duas no caixa 2" />
-                </div>
+                {(faltandoNovas.length > 0 || exigirObs) && (
+                  <div>
+                    <Label className="text-xs">O que houve? (obrigatório)</Label>
+                    <Input ref={obsRef} value={observacao} onChange={(e) => setObservacao(e.target.value)} className="h-9 text-sm" placeholder="ex.: faltaram duas no caixa 2" />
+                  </div>
+                )}
               </>
             )}
           </div>

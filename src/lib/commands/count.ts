@@ -8,7 +8,7 @@ import { notifyUnitRole } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 
 export type SubmitCountResult =
-  | { ok: true; absent: number[]; newDivergences: number; rejected: number[]; /** v1.193.0: em apuração/baixadas marcadas presentes — voltaram à sequência. */ recovered: number[] }
+  | { ok: true; absent: number[]; newDivergences: number; rejected: number[]; /** v1.193.0: em apuração/baixadas marcadas presentes — voltaram à sequência. */ recovered: number[]; /** v1.193.1: das ausentes, as que JÁ estavam em apuração antes desta contagem. */ jaEmApuracao: number[] }
   | { ok: false; reason: 'FORBIDDEN' | 'NO_CONFIG' | 'OBSERVATION_REQUIRED' | 'INVALID' };
 
 /**
@@ -95,7 +95,16 @@ export async function submitCount(
   const absent = requested.filter((n) => seq.active.has(n));
   const rejected = requested.filter((n) => !seq.active.has(n));
 
-  if (!input.allPresent && absent.length > 0 && !input.observation?.trim()) {
+  /* v1.193.1: a observação é exigida só para ausência NOVA. Com 125 comandas já
+     em apuração, toda conferência pedia "o que houve?" para algo que já foi
+     explicado na vez em que sumiu — e a mesma lista ia ao supervisor de novo. */
+  const abertasAntes = absent.length === 0 ? [] : await prisma.commandDivergence.findMany({
+    where: { unitId: unit.id, number: { in: absent }, status: { in: ['OPEN', 'INVESTIGATING'] } },
+    select: { number: true },
+  });
+  const jaEmApuracao = [...new Set(abertasAntes.map((d) => d.number))].sort((a, b) => a - b);
+  const novasAusentes = absent.filter((n) => !jaEmApuracao.includes(n));
+  if (!input.allPresent && novasAusentes.length > 0 && !input.observation?.trim()) {
     return { ok: false, reason: 'OBSERVATION_REQUIRED' };
   }
 
@@ -148,18 +157,13 @@ export async function submitCount(
   }
   const recovered = [...new Set([...abertasVistas.map((d) => d.number), ...baixadasVistas])].sort((a, b) => a - b);
 
-  // cria divergências para ausentes sem divergência aberta
+  // cria divergências para as ausentes NOVAS, de uma vez (eram centenas de idas ao banco em fila)
   let newDivergences = 0;
-  for (const number of absent) {
-    const existing = await prisma.commandDivergence.findFirst({
-      where: { unitId: unit.id, number, status: { in: ['OPEN', 'INVESTIGATING'] } },
-      select: { id: true },
+  if (novasAusentes.length > 0) {
+    const r = await prisma.commandDivergence.createMany({
+      data: novasAusentes.map((number) => ({ unitId: unit.id, number, observation: input.observation?.trim() || null, createdById: user.id })),
     });
-    if (existing) continue;
-    await prisma.commandDivergence.create({
-      data: { unitId: unit.id, number, observation: input.observation?.trim() || null, createdById: user.id },
-    });
-    newDivergences++;
+    newDivergences = r.count;
   }
 
   // conclui a tarefa "Contagem de Comandas" do dia (idempotente)
@@ -194,17 +198,17 @@ export async function submitCount(
       unitId: unit.id,
       action: 'COMMAND_DIVERGENCE_ALERT',
       module: 'COMMANDS',
-      metadata: { numbers: absent, notify: ['SUPERVISOR'] },
+      metadata: { numbers: novasAusentes, jaEmApuracao: jaEmApuracao.length, notify: ['SUPERVISOR'] },
       ...ctx,
     });
-    // Alerta imediato ao Supervisor da unidade (spec Módulo 3)
+    // Alerta imediato ao Supervisor da unidade (spec Módulo 3) — só as NOVAS; as já em apuração ele já sabe
     await notifyUnitRole(unit.id, 'SUPERVISOR', {
       title: 'Divergência de comandas',
-      body: `${unit.name}: comanda(s) ausente(s) ${absent.join(', ')} — registrado por ${user.name} (${operationalDate}).`,
+      body: `${unit.name}: comanda(s) ausente(s) ${novasAusentes.join(', ')} — registrado por ${user.name} (${operationalDate}).${jaEmApuracao.length ? ` Outras ${jaEmApuracao.length} seguem em apuração.` : ''}`,
       link: '/modulos/comandas',
       module: 'COMMANDS',
     });
   }
 
-  return { ok: true, absent, newDivergences, rejected, recovered };
+  return { ok: true, absent, newDivergences, rejected, recovered, jaEmApuracao };
 }

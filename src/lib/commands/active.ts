@@ -37,7 +37,8 @@ export async function getActiveSequence(unitId: string): Promise<ActiveSequence>
 
   const closedRows = await prisma.commandDivergence.findMany({
     where: { unitId, status: 'CLOSED', outcome: { in: ['LOST', 'RECOVERED'] } },
-    orderBy: [{ resolvedAt: 'asc' }, { createdAt: 'asc' }],
+    /* NULL primeiro: uma LOST antiga sem resolvedAt não pode vencer uma RECOVERED posterior. */
+    orderBy: [{ resolvedAt: { sort: 'asc', nulls: 'first' } }, { createdAt: 'asc' }],
     select: { number: true, outcome: true },
   });
   const replRows = await prisma.commandReplacement.findMany({ where: { unitId }, select: { number: true } });
