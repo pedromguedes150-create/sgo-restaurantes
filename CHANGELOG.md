@@ -9,6 +9,23 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.193.1 — 2026-11-06 (Conferência de comandas: tocar num número não pula mais para o campo do leitor)
+
+Relato do Pedro (06/11, no usuário da Taliana): "ao clicar no número continua indo para a aba de bipagem".
+
+- O campo do leitor fica no topo da página e, a cada toque num número da grade, recapturava o foco 50 ms depois — e `focus()` ROLA a página até o campo: a tela pulava para "bipe a comanda" a cada comanda marcada.
+- Agora: (1) todo foco no campo é sem rolagem (`preventScroll`), inclusive ao montar (saiu o `autoFocus` nativo); (2) o campo só recaptura o foco quando ele se perdeu de verdade (clique em área morta) — foco num botão da grade, filtro ou campo é a pessoa trabalhando; (3) o leitor continua funcionando com o foco fora do campo: dígitos teclados sobre a página (o leitor é um teclado) são redirecionados ao campo sem perder o primeiro caractere.
+
+Auditoria do módulo (vídeo e prints do Pedro: "a contagem dela faltou 176 e o sistema mostra 224"; "só de bipar sempre trava"):
+
+- **A conta é sobre as JULGADAS**: baixada fica na grade (para poder ser recuperada) mas não conta como esperada nem como faltante — era "475 de 699, faltam 224" com 48 baixadas; agora "475 de 651, faltam 176". Vale na sessão (`getSessao` e a tela), na grade antiga e no leitor antigo (que mostrava baixadas como faltantes).
+- **Observação só para ausência NOVA**: com 125 comandas já em apuração, toda conferência pedia "o que houve?" de novo e mandava a mesma lista ao supervisor; agora as já em apuração aparecem recolhidas ("continuam como estão"), a observação é exigida só se houver ausente nova e o aviso ao supervisor lista só as novas. As divergências novas são criadas de uma vez (eram centenas de idas ao banco em fila).
+- **"Marcar todas" nunca recupera em massa**: nem na sessão nem na grade antiga ele toca em apuração/baixada — recuperar é toque a toque.
+- **Leitor**: se o servidor recusar a bipada, a marca verde é desfeita (ficava verde na tela e ausente no servidor, e o finalizar recusava com "0 não localizadas"); leitura fora da faixa diz o número ("a comanda nº 350 não faz parte desta conferência") em vez de "não reconhecida"; QR de outra coisa é ignorado em silêncio.
+- **Finalizar**: espera as gravações ainda no ar (os últimos toques viravam ausentes), tem tratamento de falha de conexão, não apaga a observação ao reabrir a janela, e o foco da janela nasce no campo "O que houve?" (um Enter do leitor fechava a janela pelo X).
+- **Toques rápidos**: marcar virou `upsert`/`deleteMany` (dois toques no mesmo número davam 500), o lote tolera duplicata, valores fora do enum viram 400 e a rota nunca estoura 500 cru.
+- **Segurança**: o histórico de conferências cruza a unidade pedida com o alcance do usuário (antes `?unit=` de outra unidade listava as conferências dela). Baixada antiga sem `resolvedAt` já pode ser desfeita.
+
 ## v1.193.0 — 2026-11-06 (Comandas: a sequência inteira na grade — baixada e em apuração voltam ao serem marcadas)
 
 Pedido do Pedro (06/11): "preciso que seja sequencial: uma vez que a pessoa informou que a comanda não estava lá, na próxima conferência ela pode ter recuperado — se a unidade tem de 1 a 700, deixe 1, 2, 3… e não 1, 2, 4, 5, 6, 7, 9". E "não está deixando finalizar ao terminar a conferência".

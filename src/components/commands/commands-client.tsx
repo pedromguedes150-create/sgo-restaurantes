@@ -390,12 +390,14 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setM
   const obsRef = useRef<HTMLInputElement>(null);
   const [rangeFrom, setRangeFrom] = useState('');
   const [rangeTo, setRangeTo] = useState('');
-  const total = conferiveis.length;
+  /* v1.193.1: baixada só entra na conta se for marcada; em apuração conta (é julgada). */
+  const julgaveis = useMemo(() => conferiveis.filter((n) => !lostSet.has(n) || selected.has(n) || inUse.has(n)), [conferiveis, lostSet, selected, inUse]);
+  const total = julgaveis.length;
   /* Contados DENTRO do universo: em "faixa do dia" a marcação da última
      contagem completa continua guardada em `selected`, e contar tudo diria
      "648 ok / 300". */
-  const conferidas = conferiveis.filter((n) => selected.has(n)).length;
-  const emUso = conferiveis.filter((n) => inUse.has(n)).length;
+  const conferidas = julgaveis.filter((n) => selected.has(n)).length;
+  const emUso = julgaveis.filter((n) => inUse.has(n)).length;
   const faltando = total - conferidas - emUso;
   const shown = useMemo(() => (filter.trim() ? gridNumbers.filter((n) => String(n).includes(filter.trim())) : gridNumbers), [filter, gridNumbers]);
 
@@ -435,7 +437,7 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setM
        tudo o que dá para marcar marcado, o contador some, o campo de
        observação some junto — e o botão continuava recusando por falta de uma
        observação que já não tinha onde ser escrita. */
-    const absent = ausentesDaGrade(conferiveis, selected, inUse);
+    const absent = ausentesDaGrade(julgaveis, selected, inUse);
     if (absent.length > 0 && !obs.trim()) {
       setObsFaltando(true);
       obsRef.current?.focus();
@@ -536,7 +538,8 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setM
         </div>
       )}
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <button onClick={() => { setSelected(new Set(conferiveis)); setInUse(new Set()); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Marcar todas</button>
+        {/* "Marcar todas" NÃO toca em apuração nem baixada: recuperar é toque a toque, nunca em massa. */}
+        <button onClick={() => { setSelected((s) => new Set([...[...s].filter((n) => reviewSet.has(n) || lostSet.has(n)), ...conferiveis.filter((n) => !reviewSet.has(n) && !lostSet.has(n))])); setInUse((s) => new Set([...s].filter((n) => reviewSet.has(n) || lostSet.has(n)))); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Marcar todas</button>
         <button onClick={() => { setSelected((s) => new Set([...s].filter((n) => !conferiveis.includes(n)))); setInUse((s) => new Set([...s].filter((n) => !conferiveis.includes(n)))); }} className="rounded-full border px-3 py-1 text-xs font-semibold">Limpar</button>
         <Input inputMode="numeric" value={filter} onChange={(e) => setFilter(e.target.value.replace(/\D/g, ''))} aria-label="Filtrar comandas pelo número" placeholder="filtrar nº" className="h-8 w-24 text-sm" />
         <span className="ml-auto text-xs font-semibold"><span className="text-success">{conferidas} ok</span>{emUso > 0 && <> · <span className="text-info">{emUso} em uso</span></>} · <span className={faltando > 0 ? 'text-danger' : 'text-ink-500'}>{faltando} faltando</span> / {total}</span>

@@ -142,8 +142,9 @@ export async function submitScanCount(
   );
   if (!r.ok) return { ok: false, reason: r.reason };
 
-  const crossed = await crossWithOpenCommands(input.unitId, absent);
-  return { ok: true, absent, scanned: scanned.size, newDivergences: r.newDivergences, crossed: crossed.hits, cutDate: crossed.cutDate, completa, foraDaFaixa };
+  /* v1.193.1: as faltantes são as que o SERVIDOR julgou (baixadas não entram). */
+  const crossed = await crossWithOpenCommands(input.unitId, r.absent);
+  return { ok: true, absent: r.absent, scanned: scanned.size, newDivergences: r.newDivergences, crossed: crossed.hits, cutDate: crossed.cutDate, completa, foraDaFaixa };
 }
 
 /** Cruza uma lista de faltantes com as suspeitas da última análise de comandas em aberto. */

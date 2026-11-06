@@ -5,7 +5,7 @@ import { getActiveSequence } from '@/lib/commands/active';
 import { submitCount } from '@/lib/commands/count';
 import { closeDivergence } from '@/lib/commands/lifecycle';
 import { getScanContext, submitScanCount } from '@/lib/commands/scan';
-import { iniciarConferencia, marcarComandas, getSessao, finalizarConferencia, cancelarConferencia } from '@/lib/commands/sessao';
+import { iniciarConferencia, marcarComanda, marcarComandas, getSessao, finalizarConferencia, cancelarConferencia, listarConferencias } from '@/lib/commands/sessao';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -60,16 +60,35 @@ describe('a sequência nunca perde número', () => {
     expect(p?.escopo).toEqual(todas(1, 10));
     expect(p?.baixadas).toEqual([3]);
     expect(p?.emApuracao).toEqual([7]);
+    /* v1.193.1: a baixada fica na grade mas NÃO conta — esperadas 9, e ela não é faltante */
+    expect(p?.expected).toBe(9);
+    expect(p?.faltando).toEqual(todas(1, 10).filter((n) => n !== 3));
+    /* marcada, passa a contar: 1 vista de 10 */
+    await marcarComanda(mgr(), { sessionId: s.sessionId, number: 3, state: 'CONFERIDA', method: 'MANUAL' });
+    const p2 = await getSessao(mgr(), s.sessionId);
+    expect(p2?.expected).toBe(10);
+    expect(p2?.pct).toBe(10);
     await cancelarConferencia(mgr(), s.sessionId);
   });
 
-  it('sem marcar, nada muda: baixada não vira faltante, em apuração não abre divergência nova', async () => {
-    const r = await submitCount(mgr(), { unitId, operationalDate: '2026-11-02', allPresent: false, presentNumbers: todas(1, 10).filter((n) => n !== 3 && n !== 7), inUseNumbers: [], observation: 'ainda' });
+  it('sem marcar, nada muda: baixada não vira faltante, em apuração não abre divergência nova — e NÃO pede observação de novo', async () => {
+    /* v1.193.1: a única ausente (7) já está em apuração → sem observação passa */
+    const r = await submitCount(mgr(), { unitId, operationalDate: '2026-11-02', allPresent: false, presentNumbers: todas(1, 10).filter((n) => n !== 3 && n !== 7), inUseNumbers: [] });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.absent).toEqual([7]); // a 3 (baixada) não é julgada
+    expect(r.jaEmApuracao).toEqual([7]);
     expect(r.newDivergences).toBe(0); // a 7 já tem divergência aberta
     expect(r.recovered).toEqual([]);
+    /* ausente NOVA continua exigindo observação */
+    const semObs = await submitCount(mgr(), { unitId, operationalDate: '2026-11-02', allPresent: false, presentNumbers: todas(1, 10).filter((n) => n !== 3 && n !== 7 && n !== 9), inUseNumbers: [] });
+    expect(semObs).toMatchObject({ ok: false, reason: 'OBSERVATION_REQUIRED' });
+  });
+
+  it('o histórico nunca escapa do alcance: pedir a unidade de outro pelo filtro devolve vazio', async () => {
+    const outro: SessionUser = { id: supId, name: 'Fora', role: 'SUPERVISOR', unitIds: ['unidade-inexistente'], seesAllUnits: false, needsTerms: false };
+    expect(await listarConferencias(outro, { unitId })).toEqual([]);
+    expect((await listarConferencias(mgr(), { unitId })).length).toBeGreaterThanOrEqual(1);
   });
 
   it('marcar presente a que estava EM APURAÇÃO fecha a divergência como RECUPERADA (por quem conferiu)', async () => {
