@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Check, X, Sparkles } from 'lucide-react';
+import { Camera, Check, X, Sparkles, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { ChecklistOccurrenceSheet, type TipoDeOcorrencia, type OcorrenciaAberta } from '@/components/tasks/checklist-occurrence-sheet';
 import { compressImage } from '@/lib/image-compress';
+import { MENSAGEM_FOTO_ANTIGA, fotoTiradaAgora, itensSemFoto, itensTravados, limiteDeFotos, mensagemFotoObrigatoria } from '@/lib/tasks/foto-obrigatoria';
 
 type ItemStatus = 'OK' | 'NAO_REALIZADO' | 'EM_CORRECAO' | 'A_CORRIGIR' | 'NAO_SE_APLICA';
 interface Item { id: string; section: string | null; text: string; requiresPhoto: boolean; aiCheck?: boolean }
@@ -60,7 +61,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
 
   async function analyzeProductStd(itemId: string, rawFile: File) {
     const file = await compressImage(rawFile);
-    setPhotoEntries((f) => [...f, { itemId, file }].slice(0, 5));
+    setPhotoEntries((f) => [...f, { itemId, file }].slice(0, limite));
     setPs((s) => ({ ...s, [itemId]: { loading: true } }));
     try {
       const fd = new FormData(); fd.set('photo', file);
@@ -71,10 +72,13 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
   }
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  /* v1.191.0 — FOTO OBRIGATÓRIA NO ITEM: alerta de quem tentou seguir (ou concluir) sem a foto. */
+  const [alerta, setAlerta] = useState<{ itemId: string; texto: string } | null>(null);
+  const limite = limiteDeFotos(items);
 
   async function analyzeAi(itemId: string, rawFile: File) {
     const file = await compressImage(rawFile);
-    setPhotoEntries((f) => [...f, { itemId, file }].slice(0, 5)); // a foto também é salva, ligada ao item
+    setPhotoEntries((f) => [...f, { itemId, file }].slice(0, limite)); // a foto também é salva, ligada ao item
     setAi((s) => ({ ...s, [itemId]: { loading: true } }));
     try {
       const fd = new FormData();
@@ -114,15 +118,36 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
   const ocorrenciaDoItem = (id: string): OcorrenciaAberta | null => recemAbertas[id] ?? openIssues[id] ?? null;
   async function addFiles(itemId: string | null, list: FileList | null) {
     if (!list) return;
+    const brutos = Array.from(list);
+    /* v1.191.0: a foto tem de ser tirada AGORA — arquivo com data antiga veio da galeria, não da câmera. */
+    if (brutos.some((f) => !fotoTiradaAgora(f.lastModified))) {
+      setAlerta({ itemId: itemId ?? '', texto: MENSAGEM_FOTO_ANTIGA });
+      return;
+    }
     setProcessing(true);
     try {
-      const compressed = await Promise.all(Array.from(list).map((f) => compressImage(f)));
-      setPhotoEntries((f) => [...f, ...compressed.map((file) => ({ itemId, file }))].slice(0, 5));
+      const compressed = await Promise.all(brutos.map((f) => compressImage(f)));
+      setPhotoEntries((f) => [...f, ...compressed.map((file) => ({ itemId, file }))].slice(0, limite));
+      setAlerta(null);
     } finally { setProcessing(false); }
+  }
+  /* Os itens depois do primeiro "Exige foto" ainda sem foto ficam travados: responder um deles é "ir para
+     o próximo" sem a foto — o alerta aparece, a tela rola até o item que falta e nada muda. */
+  const travados = itensTravados(items, photoEntries);
+  const pendenteDeFoto = itensSemFoto(items, photoEntries)[0] ?? null;
+  function alertarFoto(deItem: { id: string; text: string }) {
+    setAlerta({ itemId: deItem.id, texto: mensagemFotoObrigatoria(deItem) });
+    try { navigator.vibrate?.(200); } catch { /* sem vibração */ }
+    document.getElementById(`item-${deItem.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function tentarResponder(it: Item, status: ItemStatus) {
+    if (travados.has(it.id) && pendenteDeFoto) { alertarFoto(pendenteDeFoto); return; }
+    setItem(it.id, { status });
   }
   const removePhoto = (idx: number) => setPhotoEntries((arr) => arr.filter((_, i) => i !== idx));
 
   async function submit() {
+    if (pendenteDeFoto) { alertarFoto(pendenteDeFoto); return; }
     if (requiresEvidence && photoEntries.length === 0) { setMsg('Este checklist exige ao menos uma foto.'); return; }
     const unanswered = items.filter((i) => !answers[i.id]);
     if (unanswered.length > 0) { setMsg(`Responda todos os itens (${unanswered.length} pendente(s)).`); return; }
@@ -215,9 +240,17 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
           <div className="space-y-2">
             {g.items.map((it) => {
               const a = answers[it.id];
+              const travado = travados.has(it.id);
+              const faltaFoto = it.requiresPhoto && !photoEntries.some((e) => e.itemId === it.id);
               return (
-                <div key={it.id} className={cn('rounded-lg border bg-surface p-2.5', openIssues[it.id] && 'border-danger/50')}>
-                  <p className="text-sm font-medium">{it.text}{it.requiresPhoto && <span className="ml-1 text-xs text-ink-900">(foto)</span>}</p>
+                <div key={it.id} id={`item-${it.id}`} data-testid={`item-${it.id}`} data-travado={travado ? '1' : undefined} className={cn('rounded-lg border bg-surface p-2.5', openIssues[it.id] && 'border-danger/50', travado && 'opacity-60', alerta?.itemId === it.id && 'border-danger ring-2 ring-danger/40')}>
+                  <p className="text-sm font-medium">{it.text}{it.requiresPhoto && <span className={cn('ml-1 text-xs font-semibold', faltaFoto ? 'text-danger' : 'text-success')}>{faltaFoto ? '(foto obrigatória)' : '(foto ✓)'}</span>}</p>
+                  {travado && (
+                    <p className="mt-1 flex items-center gap-1 text-xs font-medium text-ink-500" data-testid={`travado-${it.id}`}><Lock className="h-3 w-3" /> Tire a foto do item anterior para continuar.</p>
+                  )}
+                  {alerta?.itemId === it.id && (
+                    <p role="alert" className="mt-2 rounded-md bg-danger/10 px-3 py-2 text-sm font-semibold text-danger" data-testid="alerta-foto">{alerta.texto}</p>
+                  )}
                   {ocorrenciaDoItem(it.id) && (
                     /* Clicável de propósito: o pedido era "acompanhar o andamento
                        sem duplicar informações" — o número sozinho obrigava a
@@ -232,7 +265,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                   )}
                   <div className="mt-2 grid grid-cols-2 gap-1">
                     {STATUSES.map((s) => (
-                      <button key={s} onClick={() => setItem(it.id, { status: s })} className={cn('rounded-md border px-2 py-1.5 text-xs font-semibold', a?.status === s ? ST[s].cls : 'border-line-strong text-ink-500')}>
+                      <button key={s} type="button" aria-disabled={travado || undefined} onClick={() => tentarResponder(it, s)} className={cn('rounded-md border px-2 py-1.5 text-xs font-semibold', a?.status === s ? ST[s].cls : 'border-line-strong text-ink-500')}>
                         {ST[s].short} {ST[s].label}
                       </button>
                     ))}
@@ -289,7 +322,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                   )}
                   {it.requiresPhoto && (
                     <div className="mt-2">
-                      <p className="mb-1 text-xs font-semibold text-ink-900">Foto deste item</p>
+                      <p className="mb-1 text-xs font-semibold text-ink-900">Foto deste item <span className="font-normal text-ink-500">— obrigatória, tirada agora pela câmera</span></p>
                       <div className="flex flex-wrap gap-2">
                         {photoEntries.map((e, idx) => ({ e, idx })).filter((x) => x.e.itemId === it.id).map(({ e, idx }) => (
                           <div key={idx} className="relative">
@@ -297,10 +330,11 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
                             <button onClick={() => removePhoto(idx)} className="absolute -right-1 -top-1 rounded-full bg-danger p-0.5 text-on-brand"><X className="h-3 w-3" /></button>
                           </div>
                         ))}
-                        {photoEntries.length < 5 && (
-                          <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed text-[10px] text-ink-500">
-                            <Camera className="h-4 w-4" /> foto
-                            <input type="file" accept="image/*" capture="environment" hidden multiple onChange={(ev) => { addFiles(it.id, ev.target.files); ev.target.value = ''; }} />
+                        {photoEntries.length < limite && (
+                          <label className={cn('flex h-16 w-16 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed text-[10px]', faltaFoto ? 'border-danger text-danger' : 'text-ink-500')} data-testid={`tirar-foto-${it.id}`}>
+                            <Camera className="h-4 w-4" /> tirar foto
+                            {/* capture="environment" abre a CÂMERA direto no celular (sem galeria); uma foto por toque */}
+                            <input type="file" accept="image/*" capture="environment" hidden onChange={(ev) => { addFiles(it.id, ev.target.files); ev.target.value = ''; }} />
                           </label>
                         )}
                       </div>
@@ -315,7 +349,7 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
 
       {/* Fotos gerais (não ligadas a um item específico) — até 5 no total */}
       <div>
-        <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Outras fotos {requiresEvidence && <span className="text-ink-900">(exige ao menos 1)</span>} — {photoEntries.length}/5</p>
+        <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Outras fotos {requiresEvidence && <span className="text-ink-900">(exige ao menos 1)</span>} — {photoEntries.length}/{limite}</p>
         <div className="flex flex-wrap gap-2">
           {photoEntries.map((e, i) => ({ e, i })).filter((x) => x.e.itemId === null).map(({ e, i }) => (
             <div key={i} className="relative">
@@ -323,13 +357,14 @@ export function ChecklistRunner({ instanceId, requiresEvidence, done, lateStatus
               <button onClick={() => removePhoto(i)} className="absolute -right-1 -top-1 rounded-full bg-danger p-0.5 text-on-brand"><X className="h-3 w-3" /></button>
             </div>
           ))}
-          {photoEntries.length < 5 && (
-            <button onClick={() => fileRef.current?.click()} disabled={processing} className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 border-dashed text-xs text-ink-500 disabled:opacity-60">
+          {photoEntries.length < limite && (
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={processing} className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 border-dashed text-xs text-ink-500 disabled:opacity-60">
               <Camera className="h-5 w-5" /> {processing ? 'aguarde…' : 'foto'}
             </button>
           )}
         </div>
-        <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden multiple onChange={(e) => { addFiles(null, e.target.files); e.target.value = ''; }} />
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { addFiles(null, e.target.files); e.target.value = ''; }} />
+        {alerta && alerta.itemId === '' && <p role="alert" className="mt-2 rounded-md bg-danger/10 px-3 py-2 text-sm font-semibold text-danger" data-testid="alerta-foto">{alerta.texto}</p>}
       </div>
 
       {msg && <p className="text-sm font-medium text-danger">{msg}</p>}
