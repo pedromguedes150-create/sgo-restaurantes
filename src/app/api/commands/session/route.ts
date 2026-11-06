@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { requestContext } from '@/lib/auth/service';
 import {
-  iniciarConferencia, marcarComanda, finalizarConferencia, cancelarConferencia,
+  iniciarConferencia, marcarComanda, marcarComandas, finalizarConferencia, cancelarConferencia,
 } from '@/lib/commands/sessao';
 import type { CommandSessionType, CommandSessionMethod, CommandItemState, CommandItemMethod } from '@prisma/client';
 
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   if (!b?.action) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
 
   const ctx = requestContext(req);
-  let r: Awaited<ReturnType<typeof iniciarConferencia>> | Awaited<ReturnType<typeof marcarComanda>>
+  let r: Awaited<ReturnType<typeof iniciarConferencia>> | Awaited<ReturnType<typeof marcarComanda>> | Awaited<ReturnType<typeof marcarComandas>>
     | Awaited<ReturnType<typeof finalizarConferencia>> | Awaited<ReturnType<typeof cancelarConferencia>> | undefined;
 
   if (b.action === 'iniciar') {
@@ -60,6 +60,13 @@ export async function POST(req: Request) {
     r = await marcarComanda(user, {
       sessionId: String(b.sessionId ?? ''),
       number: Number(b.number),
+      state: b.state === null ? null : (String(b.state) as CommandItemState),
+      method: (String(b.method ?? 'MANUAL') as CommandItemMethod),
+    });
+  } else if (b.action === 'marcarVarios') {
+    r = await marcarComandas(user, {
+      sessionId: String(b.sessionId ?? ''),
+      numbers: Array.isArray(b.numbers) ? b.numbers.map(Number) : [],
       state: b.state === null ? null : (String(b.state) as CommandItemState),
       method: (String(b.method ?? 'MANUAL') as CommandItemMethod),
     });

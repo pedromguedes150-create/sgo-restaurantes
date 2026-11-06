@@ -71,21 +71,24 @@ describe('escopoDaConferencia', () => {
 });
 
 describe('conferiveisDaGrade', () => {
-  it('tira em apuração e baixadas do que pode ser marcado', () => {
-    expect(conferiveisDaGrade([1, 2, 3, 4, 5], [3], [5])).toEqual([1, 2, 4]);
+  it('v1.193.0: TUDO o que está na grade pode ser marcado — em apuração e baixada inclusive', () => {
+    /* Decisão do Pedro (06/11): a comanda dada como ausente numa conferência
+       pode ter sido recuperada na seguinte; ela continua na grade, clicável, e
+       marcá-la presente a recupera no servidor. */
+    expect(conferiveisDaGrade([1, 2, 3, 4, 5])).toEqual([1, 2, 3, 4, 5]);
   });
 
   it('a grade e o atalho partem da MESMA lista', () => {
-    /* Enquanto cada um calculava a sua, o atalho "todas presentes" registrava
-       como presentes comandas que a grade nem deixava tocar. */
     const universo = [1, 2, 3, 4, 5];
-    const daGrade = conferiveisDaGrade(universo, [3], [5]);
+    const daGrade = conferiveisDaGrade(universo);
     expect(ausentesDaGrade(daGrade, daGrade, [])).toEqual([]);
-    expect(daGrade).not.toContain(3);
   });
 
-  it('sem apuração nem baixada, é o universo inteiro', () => {
-    expect(conferiveisDaGrade([1, 2, 3], [], [])).toEqual([1, 2, 3]);
+  it('devolve uma cópia: mexer no resultado não mexe no universo', () => {
+    const universo = [1, 2, 3];
+    const r = conferiveisDaGrade(universo);
+    r.pop();
+    expect(universo).toEqual([1, 2, 3]);
   });
 });
 

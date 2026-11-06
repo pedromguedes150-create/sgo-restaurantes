@@ -56,7 +56,9 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
   ]);
   const ultimaSessao = historico[0] ?? null;
   const fmtQuando = (d: Date) => d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
-  const activeNumbers = [...seq.active].sort((a, b) => a - b);
+  /* v1.193.0: a grade mostra a SEQUÊNCIA INTEIRA (baixadas inclusive). */
+  const activeNumbers = [...seq.all].sort((a, b) => a - b);
+  const julgadas = [...seq.active].sort((a, b) => a - b);
 
   /* Última contagem da unidade, com o estado em que a grade foi deixada.
      Sem isso a grade reabria em branco e corrigir uma contagem de 648 comandas
@@ -204,7 +206,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
                 ultimaContagem.allPresent,
                 numeros(ultimaContagem.scopeNumbers),
                 numeros(ultimaContagem.presentNumbers),
-                activeNumbers,
+                julgadas,
               ),
               emUso: numeros(ultimaContagem.inUseNumbers),
               registradaEm: ultimaContagem.updatedAt.toISOString(),

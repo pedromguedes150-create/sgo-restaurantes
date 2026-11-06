@@ -59,10 +59,11 @@ export async function getScanContext(user: SessionUser, unitId: string): Promise
       unitId: unit.id,
       unitName: unit.name,
       operationalDate,
-      activeNumbers: [...seq.active].sort((a, b) => a - b),
+      /* v1.193.0: a sequência INTEIRA, baixadas inclusive — bipar uma baixada a recupera. */
+      activeNumbers: [...seq.all].sort((a, b) => a - b),
       nightlyNumbers: seq.hasNightly ? [...seq.nightly].sort((a, b) => a - b) : [],
       partial: seq.hasNightly,
-      totalAtivas: seq.active.size,
+      totalAtivas: seq.all.size,
       alreadyCounted: Boolean(count),
     },
   };
@@ -102,12 +103,12 @@ export async function submitScanCount(
   const seq = await getActiveSequence(input.unitId);
   if (!seq.config) return { ok: false, reason: 'NO_CONFIG' };
 
-  const scanned = new Set((input.scannedNumbers ?? []).filter((n) => Number.isInteger(n) && seq.active.has(n)));
+  const scanned = new Set((input.scannedNumbers ?? []).filter((n) => Number.isInteger(n) && seq.all.has(n)));
 
   /* QUEM DECIDE O ESCOPO É O QUE FOI BIPADO. Só a faixa do dia? Contagem
      parcial. Apareceu uma comanda de fora? É a contagem da semana, e o escopo
      passa a ser a sequência inteira — porque o caixa está conferindo tudo. */
-  const { escopo, completa, foraDaFaixa } = escopoDoLeitor(seq.active, seq.nightly, seq.hasNightly, scanned);
+  const { escopo, completa, foraDaFaixa } = escopoDoLeitor(seq.all, seq.nightly, seq.hasNightly, scanned);
   const absent = absentFromScans(escopo, scanned);
 
   const note = (input.note ?? '').trim();
