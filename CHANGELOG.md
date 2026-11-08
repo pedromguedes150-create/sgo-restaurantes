@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.194.0 — 2026-11-08 (Pedidos: o pedido em andamento vira rascunho e não se perde ao sair da aba)
+
+Pedido do Pedro (08/11): "o gerente está fazendo os pedidos, dá 10h, ele tem que fazer o checklist, sai da aba e tudo o que foi feito fica perdido".
+
+- O texto de cada setor e a observação ficam guardados **neste aparelho** (`localStorage`, o mesmo mecanismo das Sobras Lanchonete) a cada mudança, enquanto o pedido não é enviado. Ao voltar à aba, a folha reabre com tudo e avisa "Rascunho recuperado de dd/mm, hh:mm", com um "Descartar rascunho".
+- Uma chave por **unidade** no pedido novo e por **pedido** na edição: o rascunho de uma unidade não vaza para outra, nem para a edição de um pedido já enviado.
+- O rascunho é apagado só quando o servidor aceita o envio (ou a edição), ou no "Descartar". Rascunho vazio não é guardado.
+- A leitura do rascunho acontece depois de montar a tela (o servidor não tem armazenamento local), e a gravação só começa depois dessa leitura — senão o estado vazio inicial apagaria o guardado.
+
 ## v1.193.1 — 2026-11-06 (Conferência de comandas: tocar num número não pula mais para o campo do leitor)
 
 Relato do Pedro (06/11, no usuário da Taliana): "ao clicar no número continua indo para a aba de bipagem".

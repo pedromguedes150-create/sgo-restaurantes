@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Save, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,8 @@ import { SgoField } from '@/components/sgo/sgo-modal';
 import { Card, PanelHeader } from '@/components/sgo/panel';
 import { shortUnitName } from '@/lib/unit-name';
 import { agruparPorDestino, linhasDoTexto, MAX_OBSERVACAO, type SetorParaPedido } from '@/lib/pedidos/regras';
+import { chaveDoRascunhoDoPedido, horaDoRascunho, rascunhoVazio, type RascunhoDoPedido } from '@/lib/pedidos/rascunho';
+import { apagarRascunho, gravarRascunho, lerRascunho } from '@/lib/rascunho-local';
 
 /** v1.188.0 — a mesma folha EDITA um pedido já enviado: os blocos em separação/atendidos vêm travados. */
 export interface EdicaoDoPedido { id: string; numero: number; textos: Record<string, string>; observacao: string; travados: string[] }
@@ -20,6 +22,11 @@ export interface EdicaoDoPedido { id: string; numero: number; textos: Record<str
  * cadastro define (Fábrica · CD · Almoxarifado) — o gerente não escolhe
  * destino — e a observação. Nada é obrigatório além da unidade (decisão do
  * Pedro, 04/11). Com `edicao`, salva as alterações do pedido em vez de criar.
+ *
+ * v1.194.0 — RASCUNHO LOCAL: o que foi digitado fica guardado no aparelho
+ * (por unidade, ou por pedido na edição) e volta quando o gerente retorna à
+ * aba — "deu 10h, ele sai para o checklist e perde tudo" (Pedro, 08/11). O
+ * rascunho é apagado ao enviar, ao salvar a edição ou em "Descartar".
  */
 export function NovoPedidoClient({ units, setores, unitPadrao, edicao }: { units: { id: string; name: string }[]; setores: SetorParaPedido[]; unitPadrao: string; edicao?: EdicaoDoPedido }) {
   const router = useRouter();
@@ -28,6 +35,35 @@ export function NovoPedidoClient({ units, setores, unitPadrao, edicao }: { units
   const [observacao, setObservacao] = useState(edicao?.observacao ?? '');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  /* O rascunho entra DEPOIS de montar (não no estado inicial): o servidor não tem
+     localStorage e um estado inicial diferente do dele quebraria a hidratação. */
+  const [recuperadoEm, setRecuperadoEm] = useState<number | null>(null);
+  const [rascunhoPronto, setRascunhoPronto] = useState(false);
+  const chaveRascunho = chaveDoRascunhoDoPedido(unitId, edicao?.id);
+  useEffect(() => {
+    setRascunhoPronto(false);
+    const salvo = lerRascunho<RascunhoDoPedido>(chaveRascunho);
+    if (salvo && !rascunhoVazio(salvo)) {
+      setTextos(salvo.textos ?? {});
+      setObservacao(salvo.observacao ?? '');
+      setRecuperadoEm(salvo.em ?? Date.now());
+    } else {
+      setRecuperadoEm(null);
+    }
+    setRascunhoPronto(true);
+  }, [chaveRascunho]);
+  useEffect(() => {
+    if (!rascunhoPronto) return; // antes de ler o rascunho, gravar sobrescreveria o guardado com o estado vazio
+    const atual = { textos, observacao };
+    if (rascunhoVazio(atual)) apagarRascunho(chaveRascunho);
+    else gravarRascunho<RascunhoDoPedido>(chaveRascunho, { ...atual, em: Date.now() });
+  }, [chaveRascunho, textos, observacao, rascunhoPronto]);
+  function descartarRascunho() {
+    apagarRascunho(chaveRascunho);
+    setTextos(edicao?.textos ?? {});
+    setObservacao(edicao?.observacao ?? '');
+    setRecuperadoEm(null);
+  }
   const travados = useMemo(() => new Set(edicao?.travados ?? []), [edicao]);
   const grupos = useMemo(() => agruparPorDestino(setores), [setores]);
   const itens = useMemo(() => setores.reduce((n, s) => n + linhasDoTexto(textos[s.id]).length, 0), [setores, textos]);
@@ -42,6 +78,7 @@ export function NovoPedidoClient({ units, setores, unitPadrao, edicao }: { units
       const res = await fetch('/api/pedidos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { setErro(d.error ?? 'Falha ao enviar'); return; }
+      apagarRascunho(chaveRascunho);
       router.push(`/modulos/pedidos/${d.id}?${edicao ? 'editado' : 'enviado'}=1`);
       router.refresh();
     } catch { setErro('Falha de conexão'); } finally { setBusy(false); }
@@ -49,6 +86,12 @@ export function NovoPedidoClient({ units, setores, unitPadrao, edicao }: { units
 
   return (
     <form className="space-y-4" data-testid={edicao ? 'editar-pedido' : 'novo-pedido'} onSubmit={(e) => { e.preventDefault(); if (pronto) void enviar(); }}>
+      {recuperadoEm !== null && (
+        <p className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-info/10 px-3 py-2 text-sm font-medium text-info" data-testid="rascunho-recuperado">
+          <span>Rascunho recuperado de {horaDoRascunho(recuperadoEm)} — o que você tinha escrito voltou. Confira e envie quando terminar.</span>
+          <button type="button" onClick={descartarRascunho} className="text-xs font-semibold underline" data-testid="descartar-rascunho">Descartar rascunho</button>
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {units.length > 1 && !edicao ? (
           <SgoField label="Unidade" required><Select aria-label="Unidade" value={unitId} onValueChange={setUnitId} options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} /></SgoField>
@@ -98,6 +141,7 @@ export function NovoPedidoClient({ units, setores, unitPadrao, edicao }: { units
         </Button>
       </div>
       {erro && <p className="text-sm font-medium text-danger" data-testid="erro-pedido">{erro}</p>}
+      <p className="text-[11px] text-ink-500">O que você escreve fica guardado neste aparelho até enviar — pode sair para o checklist e voltar.</p>
     </form>
   );
 }
