@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.195.0 — 2026-11-08 (Comunicados: quem recebe nas unidades é escolhido por perfil)
+
+Pedido do Pedro (08/11): "deixe disponível marcar os usuários que irão receber — uma mensagem que mando para o gerente, o separador ver também não é viável para a operação".
+
+- Até aqui as unidades escolhidas alcançavam **só o perfil Gerente**, e a tela não dizia isso. Agora, ao criar ou editar, o autor marca **"Quem recebe nas unidades escolhidas"** (Gerente, Coordenador, Supervisor, Financeiro, Caixa, Separador CD) — padrão Gerente, o comportamento de sempre; Admin e CEO não são alvo por unidade.
+- A lista de **pessoas específicas** mostra o perfil ao lado do nome ("João · Separador CD"): um separador só recebe se for marcado ali ou se o perfil dele estiver marcado nos perfis das unidades.
+- Os perfis ficam gravados no comunicado (`targetRoles`, migração aditiva com padrão Gerente para os já existentes), a edição reabre com eles e recalcula os destinatários ao mudá-los.
 ## v1.194.0 — 2026-11-08 (Pedidos: o pedido em andamento vira rascunho e não se perde ao sair da aba)
 
 Pedido do Pedro (08/11): "o gerente está fazendo os pedidos, dá 10h, ele tem que fazer o checklist, sai da aba e tudo o que foi feito fica perdido".

@@ -2,8 +2,9 @@ import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import { notifyUsers } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
-import type { CommunicationPriority } from '@prisma/client';
+import type { CommunicationPriority, Role } from '@prisma/client';
 import type { CommLink } from '@/lib/communications/create';
+import { normalizarPerfis } from '@/lib/communications/publico';
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
 
@@ -16,6 +17,8 @@ export interface UpdateCommunicationInput {
   dueAt?: string;
   links?: CommLink[];
   unitIds?: string[];
+  /** v1.195.0: perfis que recebem nas unidades. */
+  roles?: string[];
   extraUserIds?: string[];
   /** false/omitido = calcula prévia; true = aplica de fato (após o autor confirmar). */
   confirm?: boolean;
@@ -37,12 +40,12 @@ export type UpdateResult =
   | { ok: true; applied: false; needsConfirm: true; summary: UpdateSummary }
   | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NOT_FOUND' | 'NO_RECIPIENTS' };
 
-/** Resolve o público-alvo (mesma regra do create): gerentes das unidades + avulsos. */
-async function resolveTargets(user: SessionUser, unitIds: string[], extraUserIds: string[]): Promise<Map<string, string | null>> {
+/** Resolve o público-alvo (mesma regra do create): os perfis escolhidos nas unidades + avulsos. */
+async function resolveTargets(user: SessionUser, unitIds: string[], extraUserIds: string[], roles: Role[]): Promise<Map<string, string | null>> {
   const recip = new Map<string, string | null>();
   if (unitIds.length) {
     const managers = await prisma.user.findMany({
-      where: { role: 'MANAGER', active: true, memberships: { some: { unitId: { in: unitIds } } } },
+      where: { role: { in: roles }, active: true, memberships: { some: { unitId: { in: unitIds } } } },
       select: { id: true, memberships: { where: { unitId: { in: unitIds } }, select: { unitId: true } } },
     });
     for (const m of managers) recip.set(m.id, m.memberships[0]?.unitId ?? null);
@@ -84,8 +87,9 @@ export async function updateCommunication(user: SessionUser, id: string, input: 
 
   const textChanged = title !== comm.title || body !== comm.body;
 
-  // Destinatários: recalcula alvo só se o autor mandou unitIds/extraUserIds; senão mantém o atual.
-  const recipientsProvided = input.unitIds !== undefined || input.extraUserIds !== undefined;
+  // Destinatários: recalcula alvo só se o autor mandou unitIds/roles/extraUserIds; senão mantém o atual.
+  const recipientsProvided = input.unitIds !== undefined || input.extraUserIds !== undefined || input.roles !== undefined;
+  const targetRoles = input.roles !== undefined ? normalizarPerfis(input.roles) : comm.targetRoles;
   const currentUserIds = new Set(comm.recipients.map((r) => r.userId));
   const confirmedUserIds = new Set(comm.recipients.filter((r) => r.status === 'CONFIRMED').map((r) => r.userId));
 
@@ -97,7 +101,7 @@ export async function updateCommunication(user: SessionUser, id: string, input: 
   if (recipientsProvided) {
     let unitIds = [...new Set((input.unitIds ?? comm.units.map((u) => u.unitId)).filter(Boolean))];
     if (!user.seesAllUnits) unitIds = unitIds.filter((u) => user.unitIds.includes(u)); // escopo no servidor
-    targetMap = await resolveTargets(user, unitIds, input.extraUserIds ?? []);
+    targetMap = await resolveTargets(user, unitIds, input.extraUserIds ?? [], targetRoles);
     if (targetMap.size === 0) return { ok: false, reason: 'NO_RECIPIENTS' };
     const targetIds = new Set(targetMap.keys());
     addedIds = [...targetIds].filter((uid) => !currentUserIds.has(uid));
@@ -135,6 +139,7 @@ export async function updateCommunication(user: SessionUser, id: string, input: 
     await tx.communication.update({
       where: { id },
       data: {
+        ...(input.roles !== undefined ? { targetRoles } : {}),
         title, body, priority, requiresResponse, pinned, dueAt: due,
         ...(input.links !== undefined ? { links: normalizedLinks } : {}),
       },

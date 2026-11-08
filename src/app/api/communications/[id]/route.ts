@@ -36,6 +36,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       dueAt: typeof b.dueAt === 'string' ? b.dueAt : undefined,
       links: Array.isArray(b.links) ? (b.links as CommLink[]) : undefined,
       unitIds: Array.isArray(b.unitIds) ? b.unitIds.map(String) : undefined,
+      roles: Array.isArray(b.roles) ? b.roles.map(String) : undefined,
       extraUserIds: Array.isArray(b.extraUserIds) ? b.extraUserIds.map(String) : undefined,
       confirm: b.confirm === true,
     }, ctx);

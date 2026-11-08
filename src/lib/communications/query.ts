@@ -99,6 +99,8 @@ export interface CommunicationEditData {
   title: string; body: string; priority: string; requiresResponse: boolean; pinned: boolean;
   dueAt: string; links: { label: string; url: string }[];
   unitIds: string[]; extraUserIds: string[];
+  /** v1.195.0: perfis que recebem nas unidades. */
+  roles: string[];
   confirmedCount: number; total: number;
 }
 
@@ -118,7 +120,7 @@ export async function getCommunicationForEdit(user: SessionUser, id: string): Pr
   let managerIds = new Set<string>();
   if (unitIds.length) {
     const managers = await prisma.user.findMany({
-      where: { role: 'MANAGER', active: true, memberships: { some: { unitId: { in: unitIds } } } },
+      where: { role: { in: comm.targetRoles }, active: true, memberships: { some: { unitId: { in: unitIds } } } },
       select: { id: true },
     });
     managerIds = new Set(managers.map((m) => m.id));
@@ -129,7 +131,7 @@ export async function getCommunicationForEdit(user: SessionUser, id: string): Pr
     title: comm.title, body: comm.body, priority: comm.priority, requiresResponse: comm.requiresResponse, pinned: comm.pinned,
     dueAt: comm.dueAt.toISOString(),
     links: Array.isArray(comm.links) ? (comm.links as { label: string; url: string }[]) : [],
-    unitIds, extraUserIds,
+    unitIds, extraUserIds, roles: comm.targetRoles,
     confirmedCount: comm.recipients.filter((r) => r.status === 'CONFIRMED').length,
     total: comm.recipients.length,
   };

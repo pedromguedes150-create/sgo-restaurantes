@@ -14,6 +14,7 @@ import { MultiSelect } from '@/components/ui/multi-select';
 import { postAdmin } from '@/lib/admin-client';
 import { Select } from '@/components/ui/ds/select';
 import { DateTimePicker } from '@/components/ui/ds/date-time-picker';
+import { OPCOES_DE_PERFIL, PERFIS_PADRAO, rotuloDaPessoa } from '@/lib/communications/publico';
 
 const PRIORIDADES = [
   { value: 'NORMAL', label: 'Normal' },
@@ -164,6 +165,8 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
   const [requiresResponse, setRequiresResponse] = useState(false);
   const [dueAt, setDueAt] = useState('');
   const [unitIds, setUnitIds] = useState<string[]>([]);
+  /* v1.195.0: QUEM recebe nas unidades. Padrão Gerente (o de sempre); o autor marca os outros perfis se quiser. */
+  const [roles, setRoles] = useState<string[]>([...PERFIS_PADRAO]);
   const [extraIds, setExtraIds] = useState<string[]>([]);
   const [links, setLinks] = useState<{ label: string; url: string }[]>([]);
   const [files, setFiles] = useState<File[]>([]);
@@ -177,6 +180,7 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
     setErr(null); setOkMsg(null);
     if (!title.trim() || !body.trim() || !dueAt) { setErr('Preencha título, mensagem e prazo.'); return; }
     if (unitIds.length === 0 && extraIds.length === 0) { setErr('Escolha ao menos uma unidade ou pessoa.'); return; }
+    if (unitIds.length > 0 && roles.length === 0) { setErr('Marque ao menos um perfil para receber nas unidades (ou escolha só pessoas específicas).'); return; }
     setBusy(true);
     try {
       const fd = new FormData();
@@ -184,6 +188,7 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
       fd.set('pinned', String(pinned)); fd.set('requiresResponse', String(requiresResponse));
       fd.set('dueAt', new Date(dueAt).toISOString());
       fd.set('unitIds', JSON.stringify(unitIds));
+      fd.set('roles', JSON.stringify(roles));
       fd.set('extraUserIds', JSON.stringify(extraIds));
       fd.set('links', JSON.stringify(links.filter((l) => l.url.trim())));
       for (const f of files) fd.append('attachments', f);
@@ -191,7 +196,7 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(data.error ?? 'Falha'); return; }
       setOkMsg(`Comunicado publicado para ${data.recipients} destinatário(s).`);
-      setTitle(''); setBody(''); setPriority('NORMAL'); setPinned(false); setRequiresResponse(false); setDueAt(''); setUnitIds([]); setExtraIds([]); setLinks([]); setFiles([]);
+      setTitle(''); setBody(''); setPriority('NORMAL'); setPinned(false); setRequiresResponse(false); setDueAt(''); setUnitIds([]); setRoles([...PERFIS_PADRAO]); setExtraIds([]); setLinks([]); setFiles([]);
       router.refresh();
     } finally { setBusy(false); }
   }
@@ -212,13 +217,20 @@ function Compose({ units, people }: { units: Unit[]; people: Person[] }) {
       </div>
 
       <div>
-        <Label>Unidades (todos os gerentes confirmam)</Label>
+        <Label>Unidades</Label>
         <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
       </div>
 
+      <div data-testid="perfis-destinatarios">
+        <Label>Quem recebe nas unidades escolhidas</Label>
+        <MultiSelect options={OPCOES_DE_PERFIL} selected={roles} onChange={setRoles} placeholder="Perfis que recebem…" allLabel="todos os perfis" />
+        <p className="mt-1 text-xs text-ink-500">Só quem tem um destes perfis nas unidades marcadas recebe e confirma. Padrão: Gerente.</p>
+      </div>
+
       <div>
-        <Label>Destinatários avulsos (opcional)</Label>
-        <MultiSelect options={people.map((p) => ({ value: p.id, label: p.name }))} selected={extraIds} onChange={setExtraIds} placeholder="Pessoas específicas…" searchable emptyLabel="Sem pessoas no seu escopo" allLabel="todos" />
+        <Label>Pessoas específicas (opcional)</Label>
+        <MultiSelect options={people.map((p) => ({ value: p.id, label: rotuloDaPessoa(p) }))} selected={extraIds} onChange={setExtraIds} placeholder="Pessoas específicas…" searchable emptyLabel="Sem pessoas no seu escopo" allLabel="todos" />
+        <p className="mt-1 text-xs text-ink-500">Cada nome vem com o perfil ao lado — um Separador só recebe se for marcado aqui ou se o perfil dele estiver marcado acima.</p>
       </div>
 
       {/* Links */}

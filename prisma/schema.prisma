@@ -3723,6 +3723,8 @@ model Communication {
   links            Json?
   /// Prazo de confirmação (define pontual/atrasado/não lido na meta)
   dueAt            DateTime
+  /// v1.195.0: os PERFIS que recebem nas unidades-alvo (padrão Gerente = o comportamento de sempre).
+  targetRoles      Role[]                @default([MANAGER])
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
 
