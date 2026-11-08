@@ -50,6 +50,7 @@ export async function POST(req: Request) {
         links: parseLinks(form.get('links')),
         dueAt: String(form.get('dueAt') ?? ''),
         unitIds: parseArr(form.get('unitIds')),
+        roles: parseArr(form.get('roles')),
         extraUserIds: parseArr(form.get('extraUserIds')),
         attachments,
       };
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
       const b = await req.json();
       input = {
         title: b.title, body: b.body, priority: b.priority, pinned: b.pinned, requiresResponse: b.requiresResponse,
-        links: Array.isArray(b.links) ? b.links : [], dueAt: b.dueAt, unitIds: b.unitIds ?? [], extraUserIds: b.extraUserIds ?? [],
+        links: Array.isArray(b.links) ? b.links : [], dueAt: b.dueAt, unitIds: b.unitIds ?? [], roles: Array.isArray(b.roles) ? b.roles : undefined, extraUserIds: b.extraUserIds ?? [],
       };
     }
   } catch (e) {

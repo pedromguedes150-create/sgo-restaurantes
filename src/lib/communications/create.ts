@@ -3,6 +3,7 @@ import { audit } from '@/lib/audit';
 import { notifyUsers } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import type { CommunicationPriority } from '@prisma/client';
+import { normalizarPerfis } from '@/lib/communications/publico';
 
 export const COMM_AUTHOR_ROLES = ['ADMIN', 'CEO', 'SUPERVISOR'] as const;
 export function canAuthorCommunications(user: SessionUser): boolean {
@@ -19,6 +20,8 @@ export interface CreateCommunicationInput {
   links?: CommLink[];
   dueAt: string;
   unitIds?: string[];
+  /** v1.195.0: perfis que recebem nas unidades (padrão Gerente). */
+  roles?: string[];
   extraUserIds?: string[];
   attachments?: { path: string; mimeType: string; name?: string }[];
 }
@@ -47,11 +50,12 @@ export async function createCommunication(user: SessionUser, input: CreateCommun
 
   const links = (input.links ?? []).filter((l) => l?.url?.trim()).map((l) => ({ label: l.label?.trim() || l.url.trim(), url: l.url.trim() }));
 
-  // Resolve destinatários: gerentes das unidades + avulsos. Mapa userId -> unitId (p/ meta).
+  // Resolve destinatários: os PERFIS escolhidos nas unidades + avulsos. Mapa userId -> unitId (p/ meta).
+  const targetRoles = normalizarPerfis(input.roles);
   const recip = new Map<string, string | null>();
   if (unitIds.length) {
     const managers = await prisma.user.findMany({
-      where: { role: 'MANAGER', active: true, memberships: { some: { unitId: { in: unitIds } } } },
+      where: { role: { in: targetRoles }, active: true, memberships: { some: { unitId: { in: unitIds } } } },
       select: { id: true, memberships: { where: { unitId: { in: unitIds } }, select: { unitId: true } } },
     });
     for (const m of managers) recip.set(m.id, m.memberships[0]?.unitId ?? null);
@@ -73,6 +77,7 @@ export async function createCommunication(user: SessionUser, input: CreateCommun
       requiresResponse: Boolean(input.requiresResponse),
       links: links.length ? links : undefined,
       dueAt: due,
+      targetRoles,
       units: unitIds.length ? { create: unitIds.map((unitId) => ({ unitId })) } : undefined,
       attachments: input.attachments?.length ? { create: input.attachments.map((a) => ({ path: a.path, mimeType: a.mimeType, name: a.name ?? null })) } : undefined,
       recipients: { create: [...recip.entries()].map(([userId, unitId]) => ({ userId, unitId })) },
@@ -80,7 +85,7 @@ export async function createCommunication(user: SessionUser, input: CreateCommun
     select: { id: true },
   });
 
-  await audit({ userId: user.id, action: 'COMMUNICATION_CREATE', module: 'COMMUNICATION', entity: 'communication', entityId: comm.id, metadata: { recipients: recip.size, units: unitIds.length, priority: input.priority ?? 'NORMAL' }, ...ctx });
+  await audit({ userId: user.id, action: 'COMMUNICATION_CREATE', module: 'COMMUNICATION', entity: 'communication', entityId: comm.id, metadata: { recipients: recip.size, units: unitIds.length, roles: targetRoles, priority: input.priority ?? 'NORMAL' }, ...ctx });
 
   await notifyUsers([...recip.keys()], {
     title: `📣 Comunicado: ${title}`,

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { Select } from '@/components/ui/ds/select';
 import { DateTimePicker } from '@/components/ui/ds/date-time-picker';
+import { OPCOES_DE_PERFIL, PERFIS_PADRAO, rotuloDaPessoa } from '@/lib/communications/publico';
 
 const PRIORIDADES = [
   { value: 'NORMAL', label: 'Normal' },
@@ -22,6 +23,8 @@ interface Person { id: string; name: string; role: string }
 interface Initial {
   title: string; body: string; priority: string; requiresResponse: boolean; pinned: boolean;
   dueAt: string; links: { label: string; url: string }[]; unitIds: string[]; extraUserIds: string[];
+  /** v1.195.0: perfis que recebem nas unidades (comunicado antigo sem o campo = Gerente). */
+  roles?: string[];
   confirmedCount: number; total: number;
 }
 
@@ -45,6 +48,7 @@ export function CommunicationEdit({ id, initial, units, people }: { id: string; 
   const [requiresResponse, setRequiresResponse] = useState(initial.requiresResponse);
   const [dueAt, setDueAt] = useState(toLocalInput(initial.dueAt));
   const [unitIds, setUnitIds] = useState<string[]>(initial.unitIds);
+  const [roles, setRoles] = useState<string[]>(initial.roles?.length ? initial.roles : [...PERFIS_PADRAO]);
   const [extraIds, setExtraIds] = useState<string[]>(initial.extraUserIds);
   const [links, setLinks] = useState<{ label: string; url: string }[]>(initial.links);
   const [busy, setBusy] = useState(false);
@@ -65,7 +69,7 @@ export function CommunicationEdit({ id, initial, units, people }: { id: string; 
       title, body, priority, requiresResponse,
       dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
       links: links.filter((l) => l.url.trim()),
-      unitIds, extraUserIds: extraIds,
+      unitIds, roles, extraUserIds: extraIds,
     };
     const res = await fetch(`/api/communications/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const data = await res.json().catch(() => ({}));
@@ -126,12 +130,16 @@ export function CommunicationEdit({ id, initial, units, people }: { id: string; 
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={requiresResponse} onChange={(e) => setRequiresResponse(e.target.checked)} /> Exigir resposta (foto/comentário)</label>
 
           <div>
-            <Label>Unidades (todos os gerentes confirmam)</Label>
+            <Label>Unidades</Label>
             <MultiSelect options={units.map((u) => ({ value: u.id, label: u.name }))} selected={unitIds} onChange={setUnitIds} placeholder="Escolha as unidades…" searchable={units.length > 6} />
           </div>
+          <div data-testid="perfis-destinatarios">
+            <Label>Quem recebe nas unidades escolhidas</Label>
+            <MultiSelect options={OPCOES_DE_PERFIL} selected={roles} onChange={setRoles} placeholder="Perfis que recebem…" allLabel="todos os perfis" />
+          </div>
           <div>
-            <Label>Destinatários avulsos (opcional)</Label>
-            <MultiSelect options={people.map((p) => ({ value: p.id, label: p.name }))} selected={extraIds} onChange={setExtraIds} placeholder="Pessoas específicas…" searchable emptyLabel="Sem pessoas no seu escopo" allLabel="todos" />
+            <Label>Pessoas específicas (opcional)</Label>
+            <MultiSelect options={people.map((p) => ({ value: p.id, label: rotuloDaPessoa(p) }))} selected={extraIds} onChange={setExtraIds} placeholder="Pessoas específicas…" searchable emptyLabel="Sem pessoas no seu escopo" allLabel="todos" />
           </div>
 
           <div>

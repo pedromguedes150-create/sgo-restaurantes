@@ -192,7 +192,7 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Gerente: em COMUNICAÇÃO, a aba "Recebidos" mostra o que falta confirmar. Abra, leia e toque em "Confirmar leitura".',
           'Se o comunicado exigir resposta, anexe foto e/ou escreva um comentário ao confirmar (prova de execução).',
-          'Supervisão/Admin: aba "Novo comunicado" — escreva título e mensagem, escolha prioridade, prazo, unidades (e pessoas avulsas), anexe fotos/PDF e links; marque "Fixar no topo" e "Exigir resposta" se quiser.',
+          'Supervisão/Admin: aba "Novo comunicado" — escreva título e mensagem, escolha prioridade, prazo, unidades e QUEM RECEBE NAS UNIDADES (v1.195.0: os perfis — padrão Gerente; marque Coordenador, Supervisor, Caixa, Separador… se a mensagem for para eles), pessoas específicas (cada nome vem com o perfil ao lado), anexe fotos/PDF e links; marque "Fixar no topo" e "Exigir resposta" se quiser. Só quem está nos perfis marcados (ou na lista de pessoas) recebe e confirma.',
           'Aba "Painel & Histórico": acompanhe quem já confirmou e quem está pendente, com barra de progresso, por comunicado.',
           'A confirmação conta na META do gerente: no prazo pontua; atrasado é neutro; vencido sem confirmar penaliza.',
         ],
@@ -722,7 +722,7 @@ export const GUIDE: GuideSection[] = [
         steps: [
           'Gerente: em COMUNICAÇÃO, a aba "Recebidos" mostra o que falta confirmar. Abra, leia e toque em "Confirmar leitura".',
           'Se o comunicado exigir resposta, anexe foto e/ou escreva um comentário ao confirmar (prova de execução).',
-          'Supervisão/Admin: aba "Novo comunicado" — escreva título e mensagem, escolha prioridade, prazo, unidades (e pessoas avulsas), anexe fotos/PDF e links; marque "Fixar no topo" e "Exigir resposta" se quiser.',
+          'Supervisão/Admin: aba "Novo comunicado" — escreva título e mensagem, escolha prioridade, prazo, unidades e QUEM RECEBE NAS UNIDADES (v1.195.0: os perfis — padrão Gerente; marque Coordenador, Supervisor, Caixa, Separador… se a mensagem for para eles), pessoas específicas (cada nome vem com o perfil ao lado), anexe fotos/PDF e links; marque "Fixar no topo" e "Exigir resposta" se quiser. Só quem está nos perfis marcados (ou na lista de pessoas) recebe e confirma.',
           'Aba "Painel & Histórico": acompanhe quem já confirmou e quem está pendente, com barra de progresso, por comunicado.',
           'A confirmação conta na META do gerente: no prazo pontua; atrasado é neutro; vencido sem confirmar penaliza.',
         ],
