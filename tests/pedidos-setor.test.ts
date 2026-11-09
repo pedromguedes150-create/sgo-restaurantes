@@ -113,6 +113,6 @@ describe('os módulos na matriz e no menu', () => {
     expect(chavesDoMenu).toContain('ORDERS_INBOX');
     expect(MODULOS_INATIVOS.has('PRODUCTS')).toBe(true);
     expect(MODULOS_INATIVOS.has('INVENTORY')).toBe(true);
-    expect(MODULOS_INATIVOS.has('PRODUCT_SEPARATION')).toBe(false); // a separação dos pedidos antigos segue
+    expect(MODULOS_INATIVOS.has('PRODUCT_SEPARATION')).toBe(true); // v1.195.1 — a fila antiga por produto sai do caminho do separador
   });
 });

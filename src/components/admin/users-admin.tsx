@@ -35,7 +35,12 @@ function roleNeedsCdSector(role: string) { return role === 'SEPARATOR'; }
 function ferramentasDePerfil(perfis: PerfilPersonalizado[]) {
   const opcoes = [
     ...ROLE_OPTIONS,
-    ...perfis.map((p) => ({ value: valorDePerfil(p.id), label: p.name, hint: 'Perfil criado em Perfis de acesso' })),
+    /* v1.195.1 — um personalizado já gravado com o nome de um perfil de sistema (antes de o nome ser recusado) sai marcado, para não virar cara ou coroa no seletor */
+    ...perfis.map((p) => ({
+      value: valorDePerfil(p.id),
+      label: ROLE_OPTIONS.some((o) => o.label.trim().toLowerCase() === p.name.trim().toLowerCase()) ? `${p.name} (personalizado)` : p.name,
+      hint: 'Perfil criado em Perfis de acesso',
+    })),
   ];
   const papelEfetivo = (valor: string) =>
     ehPerfilPersonalizado(valor) ? (perfis.find((p) => p.id === idDoPerfil(valor))?.baseRole ?? '') : valor;

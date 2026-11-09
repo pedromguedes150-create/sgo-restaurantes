@@ -249,7 +249,7 @@ describe('editar, mover, separar e atender', () => {
     const sep = await effectivePermissions('SEPARATOR');
     expect(sep.ORDERS_INBOX).toEqual({ canView: true, canEdit: true });
     expect(sep.ORDERS.canView).toBe(false);
-    expect(sep.PRODUCT_SEPARATION.canView).toBe(true);
+    expect(sep.PRODUCT_SEPARATION.canView).toBe(false); // v1.195.1 — a fila antiga por produto está inativa
     const ger = await effectivePermissions('MANAGER');
     expect(ger.ORDERS).toEqual({ canView: true, canEdit: true });
     expect(ger.ORDERS_INBOX.canView).toBe(false);

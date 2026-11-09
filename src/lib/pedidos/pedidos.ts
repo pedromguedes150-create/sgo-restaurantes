@@ -37,6 +37,13 @@ async function setoresDoUsuario(user: SessionUser): Promise<string[]> {
   if (!u) return [];
   return [...new Set([u.cdSectorId, ...u.cdSectors.map((s) => s.sectorId)].filter((x): x is string => Boolean(x)))];
 }
+/** Os NOMES dos setores do separador (principal + adicionais), para a tela dizer o que ele vê (v1.195.1). */
+export async function nomesDosSetoresDoUsuario(user: SessionUser): Promise<string[]> {
+  const ids = await setoresDoUsuario(user);
+  if (ids.length === 0) return [];
+  const rows = await prisma.cdSector.findMany({ where: { id: { in: ids } }, select: { name: true }, orderBy: { name: 'asc' } });
+  return rows.map((r) => r.name);
+}
 /** Os separadores ativos que atendem QUALQUER um dos setores (principal ou adicional). */
 async function separadoresDosSetores(sectorIds: string[]): Promise<{ id: string; setores: string[] }[]> {
   if (sectorIds.length === 0) return [];

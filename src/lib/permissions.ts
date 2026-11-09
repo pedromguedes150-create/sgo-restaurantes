@@ -309,8 +309,12 @@ const DEFAULT_ALLOW_ONLY: Partial<Record<Role, string[]>> = {
  */
 /* v1.185.0 — os Pedidos Internos por produto (PRODUCTS) saem do caminho do gerente
    (pedido do Pedro, 04/11/2026): a aba nova "Pedidos" (ORDERS) é a lista por setor.
-   A Separação do CD (PRODUCT_SEPARATION) segue para os pedidos antigos. */
-export const MODULOS_INATIVOS: ReadonlySet<string> = new Set(['INVENTORY', 'PRODUCTS']);
+   v1.195.1 — a Separação do CD (PRODUCT_SEPARATION, a fila por produto do módulo
+   antigo) sai junto: o separador caía nela ao entrar e não via a lista escrita que
+   a unidade mandou pela aba nova (que vive em Pedidos recebidos, ORDERS_INBOX); e
+   ela lia só o setor PRINCIPAL, então quem está em vários setores via um só.
+   Rota e dados ficam para Admin/CEO (pedidos antigos). */
+export const MODULOS_INATIVOS: ReadonlySet<string> = new Set(['INVENTORY', 'PRODUCTS', 'PRODUCT_SEPARATION']);
 
 /** Permissões efetivas de um perfil de sistema por módulo (com defaults). */
 export async function effectivePermissions(role: Role): Promise<Record<string, Perm>> {

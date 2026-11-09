@@ -1277,10 +1277,11 @@ export const GUIDE: GuideSection[] = [
       },
       {
         id: 'separacao-cd',
-        title: 'Separação de pedidos (CD)',
-        roles: ['SEPARATOR', 'ADMIN', 'CEO'],
-        summary: 'A fila do seu setor, item a item, gravando na hora.',
+        title: 'Separação de pedidos por produto (CD) — módulo antigo, inativo',
+        roles: ['ADMIN', 'CEO'],
+        summary: 'A fila por produto dos Pedidos Internos antigos. Desde a v1.195.1 só Admin/CEO a abrem; o separador trabalha em Pedidos recebidos.',
         steps: [
+          'INATIVA (v1.195.1): esta tela lia só o setor PRINCIPAL do separador e nunca recebeu a lista escrita da aba nova de Pedidos — por isso um separador novo "não via a lista de ontem" e "só via um setor". O separador agora entra direto em Pedidos recebidos, que mostra todos os setores dele (principal + adicionais). O que segue abaixo vale para os pedidos antigos, visíveis só a Admin/CEO.',
           'Ao entrar, você cai direto na fila do SEU setor — Novos, Em andamento e Separados. Pedido que não tem item do seu setor não aparece na sua lista.',
           'Abra o pedido e veja SÓ os itens do seu setor, com a quantidade pedida ao lado de cada um.',
           'Use [-] e [+] para ajustar e toque em "Confirmar separado". Cada item vai para o servidor NA HORA: se o celular travar ou a página fechar, o que você já conferiu está gravado.',
@@ -1921,6 +1922,7 @@ export const GUIDE: GuideSection[] = [
           'A importação por Excel ainda NÃO traz setor: depois de importar uma lista do CD, volte ao catálogo e use "Corrigir agora" para atribuir os setores.',
           'Para criar o funcionário: CONFIGURAÇÕES → Usuários → Novo usuário → perfil "Separador CD". O campo Setor do CD aparece e é obrigatório; sem ele a fila dele abriria vazia.',
           'O Separador NÃO escolhe unidades: o CD atende a rede inteira, e a fila dele é montada só pelo setor.',
+          'VÁRIOS SETORES (v1.189.0/v1.195.1): além do setor principal, marque os "Setores adicionais" no cadastro do usuário. A caixa de entrada (Pedidos recebidos) mostra os blocos de TODOS eles e diz no topo "Seus setores: A · B · C". A tela antiga de Separação por produto lia só o principal e ficou inativa.',
           'Setor em uso não se exclui, se desativa — apagar soltaria os produtos sem setor e apagaria de qual área cada item saiu. Desativar também é barrado enquanto houver separador vinculado: mude o setor dele primeiro.',
           'Renomear um setor não reescreve pedido antigo: o nome fica congelado em cada item na data em que foi pedido.',
         ],

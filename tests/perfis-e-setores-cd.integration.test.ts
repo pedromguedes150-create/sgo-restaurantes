@@ -83,9 +83,10 @@ describe('o Separador do CD pode ser configurado na matriz', () => {
     await prisma.rolePermission.deleteMany({ where: { role: 'SEPARATOR', module: 'NOTES' } });
   });
 
-  it('nasce fechado: sem linha cadastrada só enxerga a separação e a ajuda', async () => {
+  it('nasce fechado: sem linha cadastrada só enxerga a caixa de entrada e a ajuda', async () => {
     const perms = await effectivePermissions('SEPARATOR');
-    expect(perms.PRODUCT_SEPARATION.canView).toBe(true);
+    expect(perms.ORDERS_INBOX.canView).toBe(true);
+    expect(perms.PRODUCT_SEPARATION.canView).toBe(false); // v1.195.1 — inativa (MODULOS_INATIVOS)
     expect(perms.HELP.canView).toBe(true);
     expect(perms.WASTE.canView).toBe(false);
     expect(perms.DASHBOARD.canView).toBe(false);

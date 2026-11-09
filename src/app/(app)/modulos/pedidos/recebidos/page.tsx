@@ -1,7 +1,7 @@
 import { Inbox, LayoutList, PackageCheck } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { canEditModule } from '@/lib/permissions';
-import { listarRecebidos, setoresParaPedido, type SituacaoDaCaixa } from '@/lib/pedidos/pedidos';
+import { listarRecebidos, nomesDosSetoresDoUsuario, setoresParaPedido, type SituacaoDaCaixa } from '@/lib/pedidos/pedidos';
 import { DESTINOS, normalizarDestino, podeAtender } from '@/lib/pedidos/regras';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { RecebidosClient } from '@/components/pedidos/recebidos-client';
@@ -18,14 +18,18 @@ export default async function PedidosRecebidosPage({ searchParams }: { searchPar
   const user = (await getSessionUser())!;
   const situacao: SituacaoDaCaixa = searchParams.situacao === 'abertos' ? 'abertos' : searchParams.situacao === 'atendidos' ? 'atendidos' : 'todos';
   const destino = normalizarDestino(searchParams.destino) ?? undefined;
-  const [pedidos, podeEditar, setores] = await Promise.all([listarRecebidos(user, { situacao, destino }), canEditModule(user.role, 'ORDERS_INBOX'), setoresParaPedido()]);
+  const [pedidos, podeEditar, setores, meusSetores] = await Promise.all([listarRecebidos(user, { situacao, destino }), canEditModule(user.role, 'ORDERS_INBOX'), setoresParaPedido(), nomesDosSetoresDoUsuario(user)]);
+  /* v1.195.1 — a tela DIZ quais setores o separador atende (principal + adicionais): "só aparece câmara fria" virou pergunta que a tela responde. */
+  const subtituloDoSeparador = meusSetores.length
+    ? `Seus setores: ${meusSetores.join(' · ')}. Os pedidos das unidades com itens desses setores. Marque "Em separação" ao começar (o gerente deixa de poder alterar) e "Atendido" ao terminar. Abrir mostra o pedido inteiro; Imprimir gera a folha.`
+    : 'Sua conta ainda não tem setor do CD vinculado — peça ao Administrador (Configurações → Usuários) para definir o setor; sem ele nenhum pedido aparece aqui.';
   const link = (s: string, d?: string) => `/modulos/pedidos/recebidos?situacao=${s}${d ? `&destino=${d}` : ''}`;
 
   return (
     <div className="space-y-4">
       <LargeTitle
         title="Pedidos recebidos"
-        subtitle={user.role === 'SEPARATOR' ? 'Os pedidos das unidades com itens do seu setor. Marque "Em separação" ao começar (o gerente deixa de poder alterar) e "Atendido" ao terminar. Abrir mostra o pedido inteiro; Imprimir gera a folha.' : 'Tudo que as unidades pediram à Fábrica, ao CD e ao Almoxarifado, por setor.'}
+        subtitle={user.role === 'SEPARATOR' ? subtituloDoSeparador : 'Tudo que as unidades pediram à Fábrica, ao CD e ao Almoxarifado, por setor.'}
         tabs={[
           { label: 'Todos', icon: <LayoutList className="h-3.5 w-3.5" />, href: link('todos', destino), active: situacao === 'todos', testId: 'aba-todos' },
           { label: 'Em aberto', icon: <Inbox className="h-3.5 w-3.5" />, href: link('abertos', destino), active: situacao === 'abertos', testId: 'aba-abertos' },
