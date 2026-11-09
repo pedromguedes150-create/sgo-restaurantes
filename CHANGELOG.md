@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.199.0 — 2026-11-09 (Central de Atestados e Afins — etapa D: painel do RH, filtros do Histórico, relatórios)
+
+- **Painel do RH** (aba `CERTIFICATES_TAB_RH`, Admin/CEO por padrão; `src/lib/certificates/painel-rh-calculo.ts` puro + `painel-rh.ts`): pendências por prioridade — correção pedida sem reenvio (> 3 dias), envio ao RH com erro/esgotado/parado, sem classificação, enviado sem resposta do RH (> 7 dias), alertas que pedem ação, retornos nos próximos 7 dias — com link para o documento; situação dos lançamentos; por nomenclatura; estado das nomenclaturas. Composição do Histórico + fila de saída + configuração, nada gravado.
+- **Excel do RH** `GET /api/certificates/rh/export` (DOCUMENTOS com situação/motivo/alertas/envio · PENDÊNCIAS · NOMENCLATURAS com regra, versão e vigência).
+- **Histórico do gerente**: cinco cartões (Enviados · Em análise · Correções solicitadas · Concluídos · Não aceitos) que filtram ao toque; busca por colaborador/tipo/unidade, filtro por grupo e "Só com alerta" (`filtrarHistorico`, puro, no cliente).
+- **Relatório PDF e Excel/CSV** do mês ganharam Situação, Motivo do RH e Alertas.
+- Sem migração.
+
 ## v1.198.0 — 2026-11-09 (Central de Atestados e Afins — etapa C: alertas de afastamento, regras com vigência e correspondência SGO ↔ RH)
 
 - **Regras legais com vigência** (`src/lib/certificates/regras-legais.ts`, puro): a duração da regra geral é uma lista de versões por data do evento — licença-paternidade 5 → 10 (2027) → 15 (2028) → 20 (2029), maternidade 120, casamento 3, luto 2, aborto 14, prorrogação 60, amamentação 15, filho até 6 anos 1, doação de sangue 1, preventivo 3, alistamento 2, mesário 2, vestibular 1. A IA sugere o fim pela regra vigente na data; o Admin pode sobrepor por tipo.

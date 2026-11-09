@@ -80,6 +80,8 @@ export const ABAS: Record<string, AbaDef[]> = {
     { id: 'painel', key: 'CERTIFICATES_TAB_PANEL', label: 'Painel de absenteísmo', soVer: true },
     // v1.181.0 — a auditoria dos LANÇAMENTOS: ver = acompanhar/justificar; editar = informar o esperado e validar
     { id: 'auditoria', key: 'CERTIFICATES_TAB_AUDIT', label: 'Auditoria de lançamentos' },
+    // v1.199.0 — o painel do RH: pendências, retornos, envios com erro, nomenclaturas (consulta; nasce só para Admin/CEO)
+    { id: 'rh', key: 'CERTIFICATES_TAB_RH', label: 'Painel do RH', soVer: true },
   ],
 
   COMMUNICATION: [

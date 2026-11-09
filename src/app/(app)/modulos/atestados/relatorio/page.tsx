@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { getCertificatesReport, listCertificates } from '@/lib/certificates/query';
-import { canSeeCid } from '@/lib/certificates/labels';
+import { canSeeCid, situacaoLabel } from '@/lib/certificates/labels';
+import { ROTULO_DO_ALERTA } from '@/lib/certificates/alertas';
 import { PrintButton } from '@/components/ui/print-button';
 import { ArrowLeft, Download } from 'lucide-react';
 
@@ -54,16 +55,18 @@ export default async function AtestadosRelatorioPage({ searchParams }: { searchP
       <div>
         <p className="sgo-type-11 font-semibold text-ink-500">Detalhamento</p>
         <table className="w-full text-xs">
-          <thead><tr className="border-b text-left text-ink-500"><th className="py-1">Colaborador</th><th className="py-1">Unidade</th><th className="py-1">Tipo</th><th className="py-1">Período</th><th className="py-1 text-right">Dias</th>{showCid && <th className="py-1">CID</th>}</tr></thead>
+          <thead><tr className="border-b text-left text-ink-500"><th className="py-1">Colaborador</th><th className="py-1">Unidade</th><th className="py-1">Tipo</th><th className="py-1">Situação</th><th className="py-1">Período</th><th className="py-1 text-right">Dias</th><th className="py-1">Alertas</th>{showCid && <th className="py-1">CID</th>}</tr></thead>
           <tbody>
-            {rows.length === 0 && <tr><td colSpan={showCid ? 6 : 5} className="py-2 text-ink-500">—</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={showCid ? 8 : 7} className="py-2 text-ink-500">—</td></tr>}
             {rows.map((r) => (
               <tr key={r.id} className="border-b border-line">
                 <td className="py-1">{r.collaboratorName}</td>
                 <td className="py-1">{r.unitName}</td>
                 <td className="py-1">{r.rotulo}</td>
+                <td className="py-1">{situacaoLabel(r.status)}</td>
                 <td className="py-1">{fmt(r.startDate)}{r.type !== 'HOURS' ? ` → ${fmt(r.endDate)}` : ''}</td>
                 <td className="py-1 text-right">{r.type === 'HOURS' ? `${r.hours ?? '—'}h` : r.days}</td>
+                <td className="py-1">{r.alertas.filter((a) => a.gravidade !== 'info').map((a) => ROTULO_DO_ALERTA[a.tipo]).join(' · ')}</td>
                 {showCid && <td className="py-1">{r.cid ? `${r.cid}${r.cidDescription ? ` — ${r.cidDescription}` : ''}` : '—'}</td>}
               </tr>
             ))}

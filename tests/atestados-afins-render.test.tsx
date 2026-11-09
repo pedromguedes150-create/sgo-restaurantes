@@ -70,6 +70,32 @@ describe('Central de Atestados e Afins — tela do gerente', () => {
     expect(h).toContain('Acompanhamento de familiar'); // registro antigo entra pelo tipo de sempre
     expect(h).toContain('Concluído');
     expect(h).not.toContain('CID •••');
+    // v1.199.0 — KPIs do gerente e filtros no Histórico
+    expect(h).toContain('data-testid="kpis-gerente"');
+    expect(h).toContain('Correções solicitadas');
+    expect(h).toContain('data-testid="filtros-historico"');
+    expect(h).toContain('3 de 3');
+    // sem painel do RH, a aba não existe
+    expect(h).not.toContain('data-testid="aba-rh"');
+  });
+
+  it('v1.199.0: com o painel do RH liberado, a aba "Painel do RH" aparece com o resumo das pendências e a lista por tipo', () => {
+    const painel = {
+      hoje: '2026-11-09', total: 2,
+      pendencias: [{ tipo: 'CORRECAO_SEM_RESPOSTA' as const, doc: { id: 'd1', unitId: 'u1', unitName: 'Churrascaria Centro', collaboratorName: 'MARIA JOSÉ', rotulo: 'Atestado médico', grupo: 'ATESTADO' as const, status: 'CORRECAO_SOLICITADA' as const, statusAt: null, statusMotivoLabel: 'Foto cortada', statusNote: null, startDate: '2026-11-01', endDate: '2026-11-02', days: 2, createdAt: null, by: 'Ger', alertas: [], envioRh: null }, detalhe: 'Foto cortada há 5 dias' }],
+      resumo: { CORRECAO_SEM_RESPOSTA: 1, ENVIO_COM_ERRO: 0, CLASSIFICACAO_PENDENTE: 0, SEM_RETORNO_DO_RH: 0, ALERTA_ALTO: 0, RETORNO_PROXIMO: 0 },
+      porSituacao: [{ status: 'CORRECAO_SOLICITADA' as const, count: 1 }], porNomenclatura: [{ rotulo: 'Atestado médico', grupo: 'ATESTADO' as const, count: 1, days: 2 }],
+      nomenclaturas: { total: 25, inativas: 0, comNomeNoRh: 1 }, linhas: [],
+    };
+    const h = semSeparadores(renderToString(<CertificatesClient {...base} canLaunch={false} abas={{ historico: ver, painel: ver, rh: ver } as never} painelRh={painel} abaPedida="rh" />));
+    expect(h).toContain('data-testid="aba-rh"');
+    expect(h).toContain('data-testid="painel-rh"');
+    expect(h).toContain('data-testid="resumo-pendencias"');
+    expect(h).toContain('data-testid="pendencia-CORRECAO_SEM_RESPOSTA"');
+    expect(h).toContain('Foto cortada há 5 dias');
+    expect(h).toContain('/api/certificates/rh/export');
+    expect(h).toContain('/configuracoes/atestados');
+    expect(h).toContain('25 tipos no catálogo');
   });
 
   it('v1.197.0: com Correção solicitada o gerente vê o motivo do RH em destaque, o botão "Corrigir e reenviar" e a linha do tempo; validado não tem botão', () => {

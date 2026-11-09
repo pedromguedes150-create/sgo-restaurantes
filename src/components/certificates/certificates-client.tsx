@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 
-import { Plus, Sparkles, Trash2, FileText, Stethoscope, CalendarDays, TrendingUp, BarChart3, Printer, Camera, Images, AlertTriangle, CheckCircle2, ClipboardCheck, RotateCcw, History as HistoryIcon } from 'lucide-react';
+import { Plus, Sparkles, Trash2, FileText, Stethoscope, CalendarDays, TrendingUp, BarChart3, Printer, Camera, Images, AlertTriangle, CheckCircle2, ClipboardCheck, RotateCcw, History as HistoryIcon, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,9 @@ import { compressImage } from '@/lib/image-compress';
 import { GRUPOS, SITUACOES, conferirNome, type GrupoDoDocumento } from '@/lib/certificates/catalogo';
 import { podeCorrigir } from '@/lib/certificates/retorno-rh-regras';
 import { ROTULO_DO_ALERTA } from '@/lib/certificates/alertas';
+import { FAIXAS_DO_GERENTE, ORDEM_DAS_FAIXAS, kpisDoGerente, filtrarHistorico, type FaixaDoGerente } from '@/lib/certificates/painel-rh-calculo';
+import { PainelRhClient } from '@/components/certificates/painel-rh-client';
+import type { PainelDoRh } from '@/lib/certificates/painel-rh';
 import type { CertListItem, CertReport } from '@/lib/certificates/query';
 import type { CertReadResult } from '@/lib/ai/atestado';
 import type { CertificateType, DocumentStatus } from '@prisma/client';
@@ -56,9 +59,9 @@ function horasDaJanela(ini: string | null | undefined, fim: string | null | unde
 const TOM: Record<(typeof SITUACOES)[DocumentStatus]['tom'], StatusTone> = { neutral: 'neutral', info: 'neutral', warning: 'medium', success: 'success', danger: 'critical' };
 const TOM_DO_GRUPO: Record<GrupoDoDocumento, StatusTone> = { ATESTADO: 'success', AFASTAMENTO: 'black', COMPARECIMENTO: 'neutral', LICENCA: 'medium' };
 
-type Aba = 'lancar' | 'historico' | 'painel' | 'auditoria';
+type Aba = 'lancar' | 'historico' | 'painel' | 'auditoria' | 'rh';
 
-export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, collaboratorsByUnit, rows, report, abas = {}, subtitulo, auditoria, abaPedida, docPedido, unitFiltro = '' }: {
+export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, collaboratorsByUnit, rows, report, abas = {}, subtitulo, auditoria, abaPedida, docPedido, painelRh, unitFiltro = '' }: {
   /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
   subtitulo?: React.ReactNode;
   canLaunch: boolean; isAdmin: boolean; showCid: boolean; ym: string;
@@ -71,10 +74,12 @@ export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, col
   abaPedida?: string;
   /** v1.197.0 — id do documento apontado pelo aviso (?doc=): o Histórico o destaca e rola até ele. */
   docPedido?: string;
+  /** v1.199.0 — o painel do RH (nulo quando a aba está fechada para o perfil). */
+  painelRh?: PainelDoRh | null;
   unitFiltro?: string;
 }) {
   const router = useRouter();
-  const preferida: Aba = abaPedida === 'auditoria' && auditoria ? 'auditoria' : abaPedida === 'historico' ? 'historico' : canLaunch ? 'lancar' : 'painel';
+  const preferida: Aba = abaPedida === 'auditoria' && auditoria ? 'auditoria' : abaPedida === 'rh' && painelRh ? 'rh' : abaPedida === 'historico' ? 'historico' : canLaunch ? 'lancar' : 'painel';
   const [tab, setTab] = useState<Aba>(abaInicial(abas, 'CERTIFICATES', preferida) as Aba);
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -89,6 +94,7 @@ export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, col
           ...(podeAba(abas, 'historico') ? [{ value: 'historico' as const, label: 'Histórico', icon: <FileText className="h-3.5 w-3.5" /> }] : []),
           ...(podeAba(abas, 'painel') ? [{ value: 'painel' as const, label: 'Painel', icon: <BarChart3 className="h-3.5 w-3.5" /> }] : []),
           ...(auditoria && podeAba(abas, 'auditoria') ? [{ value: 'auditoria' as const, label: 'Auditoria', icon: <ClipboardCheck className="h-3.5 w-3.5" /> }] : []),
+          ...(painelRh && podeAba(abas, 'rh') ? [{ value: 'rh' as const, label: 'Painel do RH', icon: <Building2 className="h-3.5 w-3.5" /> }] : []),
         ].map((o) => ({ label: o.label, icon: o.icon, active: tab === o.value, testId: `aba-${o.value}`, onClick: () => { setTab(o.value); if (o.value !== 'historico') setAviso(null); } }))}
       />
 
@@ -106,6 +112,7 @@ export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, col
         </>
       )}
       {tab === 'painel' && <Panel report={report} ym={ym} />}
+      {tab === 'rh' && painelRh && <PainelRhClient painel={painelRh} unitFiltro={unitFiltro} />}
       {tab === 'auditoria' && auditoria && (
         <AuditoriaAtestadosClient auditoria={auditoria.dados} ym={ym} unitFiltro={unitFiltro} units={units} collaboratorsByUnit={collaboratorsByUnit} podeInformar={auditoria.podeInformar} podeJustificar={auditoria.podeJustificar} />
       )}
@@ -359,10 +366,35 @@ function History({ rows, isAdmin, showCid, canLaunch, collaboratorsByUnit, docPe
     } finally { setBusy(''); }
   }
 
+  const [faixa, setFaixa] = useState<FaixaDoGerente | 'TODAS'>('TODAS');
+  const [grupo, setGrupo] = useState<GrupoDoDocumento | 'TODOS'>('TODOS');
+  const [texto, setTexto] = useState('');
+  const [soComAlerta, setSoComAlerta] = useState(false);
+  const kpis = useMemo(() => kpisDoGerente(rows), [rows]);
+  const visiveis = useMemo(() => filtrarHistorico(rows, { faixa, grupo, texto, soComAlerta }), [rows, faixa, grupo, texto, soComAlerta]);
+
   if (rows.length === 0) return <p className="text-sm text-ink-500">Nenhum documento registrado ainda.</p>;
   return (
+    <div className="space-y-3">
+      {/* v1.199.0 — o que o gerente precisa ver primeiro: enviados · em análise · correções · concluídos (clicar filtra) */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5" data-testid="kpis-gerente">
+        {ORDEM_DAS_FAIXAS.map((f) => (
+          <button key={f} type="button" onClick={() => setFaixa(faixa === f ? 'TODAS' : f)} aria-pressed={faixa === f}
+            className={`rounded-lg border bg-surface p-3 text-left ${faixa === f ? 'ring-2 ring-brand ring-inset' : ''} ${f === 'CORRECOES' && kpis[f] > 0 ? 'border-danger/40' : ''}`}>
+            <p className="sgo-type-11 font-semibold text-ink-500">{FAIXAS_DO_GERENTE[f].rotulo}</p>
+            <p className={`sgo-type-24 mt-1 font-semibold ${f === 'CORRECOES' && kpis[f] > 0 ? 'text-danger' : 'text-ink-900'}`}>{kpis[f]}</p>
+          </button>
+        ))}
+      </div>
+      <div className="sgo-filtros -mx-4 flex flex-wrap items-end gap-2 px-4" data-testid="filtros-historico">
+        <div className="min-w-[10rem] flex-1"><Label className="text-xs">Buscar</Label><Input className="h-10 text-sm" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="colaborador, tipo ou unidade" aria-label="Buscar no histórico" /></div>
+        <div className="w-44"><Select label="Grupo" size="sm" value={grupo} onValueChange={(v) => setGrupo(v as GrupoDoDocumento | 'TODOS')} options={[{ value: 'TODOS', label: 'Todos os grupos' }, ...(['ATESTADO', 'AFASTAMENTO', 'COMPARECIMENTO', 'LICENCA'] as GrupoDoDocumento[]).map((g) => ({ value: g, label: GRUPOS[g].plural }))]} /></div>
+        <label className="flex h-10 items-center gap-2 text-sm text-ink-900"><input type="checkbox" checked={soComAlerta} onChange={(e) => setSoComAlerta(e.target.checked)} /> Só com alerta</label>
+        <p className="text-xs text-ink-500">{visiveis.length} de {rows.length}</p>
+      </div>
+      {visiveis.length === 0 && <p className="text-sm text-ink-500">Nenhum documento com esses filtros.</p>}
     <Group>
-      {rows.map((r) => {
+      {visiveis.map((r) => {
         const sit = SITUACOES[r.status];
         const destaque = r.id === docPedido;
         return (
@@ -433,6 +465,7 @@ function History({ rows, isAdmin, showCid, canLaunch, collaboratorsByUnit, docPe
         );
       })}
     </Group>
+    </div>
   );
 }
 
