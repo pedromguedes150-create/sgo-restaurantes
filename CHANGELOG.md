@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.195.1 — 2026-11-09 (Separador cai na caixa de entrada dos pedidos por setor)
+
+Relato do Pedro (print de 09/11): criou um usuário Separador, pôs em vários setores, e a tela "não mostrou a lista feita ontem" e "só aparece Câmaras Frias".
+
+- **Causa**: ao entrar, o separador caía em `/modulos/separacao` — a fila POR PRODUTO do módulo antigo de Pedidos Internos (que está inativo desde a v1.185.0). Ela só lê o setor PRINCIPAL do usuário e nunca recebeu a lista escrita da aba nova de Pedidos, que vive em **Pedidos recebidos** (`/modulos/pedidos/recebidos`).
+- **Correção**: a Separação antiga (`PRODUCT_SEPARATION`) entrou em `MODULOS_INATIVOS` (some do menu e da rota para todos menos Admin/CEO; dados e pedidos antigos intactos); o separador passa a cair direto em Pedidos recebidos (login, Início e porta fechada); e a caixa de entrada agora DIZ "Seus setores: A · B · C" (principal + adicionais) — ou avisa quando a conta está sem setor.
+- Nada mudou nas regras de quem vê o quê: a caixa de entrada já lia os setores adicionais desde a v1.189.0.
+- **Perfis**: o print mostrou DOIS "Separador CD" no seletor de Usuários — o de sistema e um personalizado criado em Perfis de acesso com o mesmo nome. Criar ou renomear um perfil personalizado com o nome de um perfil de sistema passou a ser recusado (`nomeDePerfilDeSistema`), e um homônimo já gravado aparece como "Nome (personalizado)" no seletor. Para ficar só um: mova os usuários para o "Separador CD" de sistema (Usuários → editar) e exclua o personalizado em Perfis de acesso.
+
 ## v1.195.0 — 2026-11-08 (Comunicados: quem recebe nas unidades é escolhido por perfil)
 
 Pedido do Pedro (08/11): "deixe disponível marcar os usuários que irão receber — uma mensagem que mando para o gerente, o separador ver também não é viável para a operação".

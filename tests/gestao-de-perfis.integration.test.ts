@@ -65,6 +65,20 @@ describe('criação de perfil', () => {
   });
 });
 
+describe('nome de perfil de sistema (v1.195.1)', () => {
+  it('recusa criar ou renomear um personalizado com o nome de um perfil de sistema — o seletor de Usuários mostraria dois iguais', async () => {
+    const r = await criarPerfil(admin(), { name: 'Separador CD', baseRole: 'SEPARATOR' });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('INVALID');
+    expect((await criarPerfil(admin(), { name: '  gerente ', baseRole: 'MANAGER' })).ok).toBe(false); // caixa e espaços não escapam
+    const ok = await criarPerfil(admin(), { name: `Separador CD — Fábrica ${sfx}`, baseRole: 'SEPARATOR' });
+    expect(ok.ok).toBe(true);
+    if (!ok.ok || !ok.id) return;
+    expect((await renomearPerfil(admin(), { id: ok.id, name: 'Caixa' })).ok).toBe(false);
+    await prisma.profile.delete({ where: { id: ok.id } });
+  });
+});
+
 describe('o perfil herda do base e sobrepõe só o que muda', () => {
   it('sem ajuste nenhum, enxerga exatamente o que o perfil base enxerga', async () => {
     const base = await effectivePermissions('SUPERVISOR');

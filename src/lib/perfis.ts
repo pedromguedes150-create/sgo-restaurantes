@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import { ALL_ROLES, isFullAccess, MODULES } from '@/lib/permissions';
-import { roleLabel } from '@/lib/roles';
+import { ROLE_LABELS, roleLabel } from '@/lib/roles';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Role } from '@prisma/client';
 
@@ -20,6 +20,19 @@ export type ResultadoPerfil =
 function isAdmin(user: SessionUser) {
   return user.role === 'ADMIN';
 }
+
+const normalizar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+/**
+ * v1.195.1 — o nome de um perfil de sistema não pode virar perfil personalizado
+ * (print do Pedro: DOIS "Separador CD" no seletor de Usuários, um de sistema e
+ * um criado em Perfis de acesso — e cada um levando a um lugar). O nome é a
+ * única coisa que o Administrador lê ao escolher; igual, vira cara ou coroa.
+ */
+export function nomeDePerfilDeSistema(name: string): boolean {
+  const n = normalizar(name);
+  return Object.values(ROLE_LABELS).some((l) => normalizar(l) === n);
+}
+const MSG_NOME_DE_SISTEMA = 'Esse é o nome de um perfil de sistema. Dê outro nome ao perfil personalizado (ex.: "Separador CD — Fábrica") para os dois não se confundirem no cadastro de usuários.';
 
 export interface PerfilRow {
   id: string;
@@ -80,6 +93,7 @@ export async function criarPerfil(
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   const name = input.name?.trim();
   if (!name || name.length > 60) return { ok: false, reason: 'INVALID' };
+  if (nomeDePerfilDeSistema(name)) return { ok: false, reason: 'INVALID', message: MSG_NOME_DE_SISTEMA };
   if (!baseValida(input.baseRole)) {
     return { ok: false, reason: 'INVALID', message: 'Escolha um perfil base. Administrador e CEO não servem de base: eles têm acesso total, e a matriz não se aplica a eles.' };
   }
@@ -99,6 +113,7 @@ export async function renomearPerfil(
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   const name = input.name?.trim();
   if (!name || name.length > 60) return { ok: false, reason: 'INVALID' };
+  if (nomeDePerfilDeSistema(name)) return { ok: false, reason: 'INVALID', message: MSG_NOME_DE_SISTEMA };
   const atual = await prisma.profile.findUnique({ where: { id: input.id }, select: { id: true } });
   if (!atual) return { ok: false, reason: 'INVALID' };
   const colide = await prisma.profile.findUnique({ where: { name } });

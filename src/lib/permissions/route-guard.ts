@@ -35,7 +35,7 @@ export function moduleOfPath(pathname: string): string | null {
  */
 export async function homeForRole(role: Role): Promise<string> {
   if (role === 'CASHIER') return '/modulos/comandas/conferencia';
-  if (role === 'SEPARATOR') return '/modulos/separacao';
+  if (role === 'SEPARATOR') return '/modulos/pedidos/recebidos'; // v1.195.1 — a caixa de entrada por setor, não a fila antiga
   const perms = await permissoesEfetivasDoRequest(role);
   const primeiro = MODULES.find((m) => m.nav && perms[m.key]?.canView);
   return primeiro?.nav ?? '/ajuda';
