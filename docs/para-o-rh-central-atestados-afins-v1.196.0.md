@@ -69,7 +69,7 @@ Todo envio novo traz `anexo` (foto JPG/PNG/WEBP ou PDF, até 10 MB). Envios anti
 
 ## PARTE 2 — O QUE CADASTRAR NO SISTEMA DO RH (sem programar)
 
-A correspondência entre os dois sistemas é PELO NOME, sem código. Cadastre no RH os 25 tipos abaixo com a grafia idêntica (acentos e hífens incluídos), agrupados nos 4 grupos:
+A correspondência entre os dois sistemas é PELO NOME, sem código. **v1.198.0**: a tabela completa — grupo, nome no SGO, nome no RH (se o Administrador do SGO configurar um diferente), regra aplicável com versão e vigência, o que marca na Escala, `tipoDetalhe` e `motivo` do envio — pode ser lida em `GET /api/v1/atestados/nomenclaturas` (API Global, `X-API-Key`). Se o RH preferir usar os nomes DELE, basta o Admin do SGO cadastrá-los em Configurações → Atestados e afins: o envio passa a trazer `[Nome do RH]` e o retorno aceita essa grafia em `nomenclaturaRh`. Cadastre no RH os 25 tipos abaixo com a grafia idêntica (acentos e hífens incluídos), agrupados nos 4 grupos:
 
 **Atestados**
 - Atestado médico

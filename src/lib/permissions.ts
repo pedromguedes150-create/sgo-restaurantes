@@ -189,6 +189,8 @@ const BASE: ModuleDef[] = [
   { key: 'CONFIG_EVALUATION', label: 'Avaliação por função (modelos)', nav: '/configuracoes/avaliacao', parent: 'CONFIG' },
   { key: 'CONFIG_COMMISSION', label: 'Comissão (percentuais e funções da cozinha)', nav: '/configuracoes/comissao', parent: 'CONFIG' },
   { key: 'CONFIG_UTENSILS', label: 'Utensílios (lista padrão do inventário)', nav: '/configuracoes/utensilios', parent: 'CONFIG' },
+  // v1.198.0 — Central de Atestados e Afins: nomenclaturas, nome no RH, regras com vigência
+  { key: 'CONFIG_CERTIFICATES', label: 'Atestados e afins (nomenclaturas e regras)', nav: '/configuracoes/atestados', parent: 'CONFIG' },
   { key: 'CONFIG_INTEGRATIONS', label: 'APIs e integrações', nav: '/configuracoes/integracoes', parent: 'CONFIG' },
   { key: 'CONFIG_RH_DIAG', label: 'Diagnóstico do RH', nav: '/configuracoes/integracoes/diagnostico', parent: 'CONFIG_INTEGRATIONS' },
   { key: 'CONFIG_RH_SAIDA', label: 'Envios ao RH (fila)', nav: '/configuracoes/integracoes/envios-rh', parent: 'CONFIG_INTEGRATIONS' },

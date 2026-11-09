@@ -190,9 +190,14 @@ export function nomeDoAnexo(caminho: string): string {
 export type AcaoAtestado = 'criar' | 'atualizar' | 'cancelar' | 'retorno';
 export const ACOES_ATESTADO: readonly AcaoAtestado[] = ['criar', 'atualizar', 'cancelar', 'retorno'];
 
-/** `motivo` do atestado no RH, pelo tipo do SGO. */
-export function motivoDoAtestado(tipo: CertificateType): 'DOENCA' | 'ACOMPANHANTE' | 'OUTROS' {
+/**
+ * `motivo` do atestado no RH. Pelo tipo de sempre e, desde a v1.198.0, pelo GRUPO:
+ * licença e comparecimento de dia inteiro não são doença — vão como OUTROS
+ * (os valores do contrato são os mesmos três de sempre).
+ */
+export function motivoDoAtestado(tipo: CertificateType, grupo?: string | null): 'DOENCA' | 'ACOMPANHANTE' | 'OUTROS' {
   if (tipo === 'COMPANION') return 'ACOMPANHANTE';
+  if (grupo === 'LICENCA' || grupo === 'COMPARECIMENTO') return 'OUTROS';
   if (tipo === 'FULL_DAY') return 'DOENCA';
   return 'OUTROS';
 }
@@ -205,8 +210,10 @@ export interface AtestadoParaEnvio {
   endDate: string | null;
   cid?: string | null;
   observation?: string | null;
-  /** v1.196.0 — nomenclatura do catálogo; o contrato não tem campo próprio, então vai no texto livre. */
+  /** v1.196.0 — nomenclatura do catálogo; o contrato não tem campo próprio, então vai no texto livre. v1.198.0: já é o NOME NO RH quando o Admin configurou. */
   nomenclature?: string | null;
+  /** v1.198.0 — grupo do documento (decide o `motivo`). */
+  grupo?: string | null;
 }
 
 /**
@@ -223,7 +230,7 @@ export function payloadAtestado(a: AtestadoParaEnvio, acao: AcaoAtestado): Recor
     tipoDetalhe: a.type,
     dataInicio: a.startDate,
     dataFim: a.endDate ?? null,
-    motivo: motivoDoAtestado(a.type),
+    motivo: motivoDoAtestado(a.type, a.grupo),
   };
   if (a.cid?.trim()) p.cid = a.cid.trim();
   /* A nomenclatura padronizada segue em `observacoes` com o prefixo "[Nome]" —

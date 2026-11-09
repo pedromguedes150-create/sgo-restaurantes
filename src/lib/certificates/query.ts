@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { canSeeCid } from '@/lib/certificates/labels';
 import { grupoDoDocumento, rotuloDoDocumento, alertaDeDuracao, type GrupoDoDocumento } from '@/lib/certificates/catalogo';
+import { alertasPorDocumento, type Alerta } from '@/lib/certificates/alertas';
+import { carregarConfigDasNomenclaturas, diasDaRegraCom, hojeISO } from '@/lib/certificates/config-nomenclaturas';
 import type { SessionUser } from '@/lib/auth/session';
 import type { CertificateType, CertificateEventKind, DocumentGroup, DocumentStatus } from '@prisma/client';
 import { rotuloDoMotivo } from '@/lib/certificates/retorno-rh-regras';
@@ -23,11 +25,15 @@ export interface CertListItem {
   statusMotivo: string | null;
   statusMotivoLabel: string | null;
   statusAt: string | null;
+  /** v1.198.0 — quando foi lançado (ISO). */
+  createdAt: string | null;
   /** v1.197.0 — linha do tempo (decisões do RH, correções, versões do anexo), mais recente primeiro. */
   eventos: { kind: CertificateEventKind; fromStatus: DocumentStatus | null; toStatus: DocumentStatus | null; motivo: string | null; note: string | null; attachmentPath: string | null; origem: string; actorName: string | null; at: string }[];
   collaboratorId: string;
   /** "INSS" quando o afastamento passa de 15 dias (alerta, não decisão). */
   alerta: 'INSS' | null;
+  /** v1.198.0 — todos os alertas do documento contra o histórico do colaborador (intercalados, CAT, prazo, retorno…). */
+  alertas: Alerta[];
   /** O nome lido pela IA destoou do colaborador escolhido (vai para o RH conferir). */
   nomeDivergente: boolean;
   issueDate: string | null;
@@ -68,6 +74,13 @@ export async function listCertificates(
       events: { orderBy: { createdAt: 'desc' }, take: 12 },
     },
   });
+  /* Alertas: o histórico INTEIRO de cada colaborador da lista (intercalados olham 60 dias para trás e para a frente). */
+  const colabIds = [...new Set(rows.map((r) => r.collaboratorId))];
+  const [historico, cfg] = await Promise.all([
+    colabIds.length ? prisma.medicalCertificate.findMany({ where: { collaboratorId: { in: colabIds } }, select: { id: true, collaboratorId: true, documentGroup: true, nomenclature: true, type: true, startDate: true, endDate: true, days: true, status: true } }) : Promise.resolve([]),
+    carregarConfigDasNomenclaturas().catch(() => new Map()),
+  ]);
+  const mapaAlertas = alertasPorDocumento(historico, hojeISO(), diasDaRegraCom(cfg));
   return rows.map((r) => {
     const ai = (r.aiExtracted && typeof r.aiExtracted === 'object' ? r.aiExtracted : {}) as { conferenciaDoNome?: { divergente?: boolean } };
     return {
@@ -85,9 +98,11 @@ export async function listCertificates(
     statusMotivo: r.statusMotivo,
     statusMotivoLabel: rotuloDoMotivo(r.statusMotivo),
     statusAt: r.statusAt ? r.statusAt.toISOString() : null,
+    createdAt: r.createdAt.toISOString(),
     eventos: r.events.map((e) => ({ kind: e.kind, fromStatus: e.fromStatus, toStatus: e.toStatus, motivo: e.motivo, note: e.note, attachmentPath: e.attachmentPath, origem: e.origem, actorName: e.actorName, at: e.createdAt.toISOString() })),
     collaboratorId: r.collaboratorId,
     alerta: alertaDeDuracao(r),
+    alertas: mapaAlertas.get(r.id) ?? [],
     nomeDivergente: ai.conferenciaDoNome?.divergente === true,
     issueDate: r.issueDate,
     startDate: r.startDate,

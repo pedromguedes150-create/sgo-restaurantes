@@ -5,6 +5,8 @@ import { notifyAdmins } from '@/lib/notifications';
 import { registerAbsence } from '@/lib/schedule';
 import { enfileirarAtestado } from '@/lib/rh/saida/fila';
 import { nomenclaturaPorNome, efeitoNaEscala, situacaoInicial, alertaDeDuracao, conferirNome, type Nomenclatura } from '@/lib/certificates/catalogo';
+import { alertasDoDocumento, ROTULO_DO_ALERTA, type Alerta } from '@/lib/certificates/alertas';
+import { carregarConfigDasNomenclaturas, diasDaRegraCom, hojeISO } from '@/lib/certificates/config-nomenclaturas';
 import type { SessionUser } from '@/lib/auth/session';
 import type { CertificateType } from '@prisma/client';
 
@@ -33,7 +35,7 @@ export interface CreateCertInput {
   aiExtracted?: unknown;
 }
 export type CreateCertResult =
-  | { ok: true; id: string; days: number; status: string; alerta: 'INSS' | null }
+  | { ok: true; id: string; days: number; status: string; alerta: 'INSS' | null; alertas: Alerta[] }
   | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'DUPLICATE' | 'NO_LINK' | 'SEM_ANEXO' | 'NOMENCLATURA' };
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
@@ -143,6 +145,18 @@ export async function createCertificate(user: SessionUser, input: CreateCertInpu
 
   const alerta = alertaDeDuracao({ documentGroup: nomenclatura?.grupo ?? null, nomenclature: nomenclatura?.nome ?? null, type, days });
 
+  /* v1.198.0 — inteligência de afastamentos: o documento contra o histórico do
+     colaborador (intercalados em 60 dias, CAT, INSS, prazo ≠ regra, retorno).
+     Só sinaliza; quem decide é o RH. */
+  const [historico, cfg] = await Promise.all([
+    prisma.medicalCertificate.findMany({ where: { collaboratorId: input.collaboratorId, id: { not: rec.id } }, select: { id: true, documentGroup: true, nomenclature: true, type: true, startDate: true, endDate: true, days: true, status: true } }),
+    carregarConfigDasNomenclaturas().catch(() => new Map()),
+  ]);
+  const alertas = alertasDoDocumento(
+    { id: rec.id, documentGroup: nomenclatura?.grupo ?? null, nomenclature: nomenclatura?.nome ?? null, type, startDate: input.startDate, endDate: input.endDate, days, status },
+    historico, hojeISO(), diasDaRegraCom(cfg),
+  );
+
   await audit({ userId: user.id, unitId: input.unitId, action: 'CERTIFICATE_CREATE', module: 'PEOPLE', entity: 'medical_certificate', entityId: rec.id, metadata: { type, grupo: nomenclatura?.grupo ?? null, nomenclatura: nomenclatura?.nome ?? null, status, days, start: input.startDate, end: input.endDate, alerta }, ...ctx });
 
   /* v1.181.0 — se o RH/supervisão já tinha informado este atestado como ESPERADO, o
@@ -164,5 +178,16 @@ export async function createCertificate(user: SessionUser, input: CreateCertInpu
     module: 'PEOPLE',
   });
 
-  return { ok: true, id: rec.id, days, status, alerta };
+  /* Alertas que pedem ação do RH (além do INSS, que já vai no aviso principal). */
+  const paraORh = alertas.filter((a) => a.tipo !== 'INSS_15' && a.tipo !== 'RETORNO' && a.gravidade !== 'info');
+  if (paraORh.length) {
+    await notifyAdmins({
+      title: `Documento com alerta: ${paraORh.map((a) => ROTULO_DO_ALERTA[a.tipo]).join(' · ')}`,
+      body: `${link.collaborator.name} — ${rotulo}. ${paraORh.map((a) => a.texto).join(' ')}`,
+      link: `/modulos/atestados?aba=historico&doc=${rec.id}`,
+      module: 'PEOPLE', nivel: 'IMPORTANTE',
+    }).catch(() => {});
+  }
+
+  return { ok: true, id: rec.id, days, status, alerta, alertas };
 }
