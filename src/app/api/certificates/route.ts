@@ -11,7 +11,9 @@ const REASONS: Record<string, { msg: string; status: number }> = {
   FORBIDDEN: { msg: 'Sem acesso a esta unidade', status: 403 },
   INVALID: { msg: 'Dados inválidos — confira colaborador e datas', status: 400 },
   NO_LINK: { msg: 'Este colaborador não está vinculado a esta unidade', status: 400 },
-  DUPLICATE: { msg: 'Já existe um atestado deste colaborador para este mesmo período', status: 409 },
+  DUPLICATE: { msg: 'Já existe um documento deste colaborador para este mesmo período', status: 409 },
+  SEM_ANEXO: { msg: 'Anexe a foto ou o PDF do documento — é obrigatório', status: 400 },
+  NOMENCLATURA: { msg: 'Tipo de documento fora do catálogo — deixe a classificação para o RH', status: 400 },
 };
 
 export async function POST(req: Request) {
@@ -29,6 +31,7 @@ export async function POST(req: Request) {
     unitId: b.unitId,
     collaboratorId: b.collaboratorId,
     type: (b.type as CertificateType) || undefined,
+    nomenclatura: typeof b.nomenclatura === 'string' ? b.nomenclatura : undefined,
     issueDate: b.issueDate || undefined,
     startDate: b.startDate,
     endDate: b.endDate,
@@ -43,5 +46,5 @@ export async function POST(req: Request) {
   }, requestContext(req));
 
   if (!r.ok) return reasonResponse(REASONS, r.reason);
-  return NextResponse.json({ ok: true, id: r.id, days: r.days });
+  return NextResponse.json({ ok: true, id: r.id, days: r.days, status: r.status, alerta: r.alerta });
 }

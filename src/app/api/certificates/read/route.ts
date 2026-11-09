@@ -3,12 +3,13 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { saveAttachment, UploadError } from '@/lib/uploads';
-import { readMedicalCertificate } from '@/lib/ai/atestado';
+import { lerDocumentoRh, MIDIAS_ACEITAS } from '@/lib/ai/atestado';
 
 /**
- * Recebe a foto do atestado: salva o anexo e tenta ler os campos por IA.
- * Retorna { attachmentPath, ai } — a tela pré-preenche o formulário e destaca
- * os campos de baixa confiança. PDF é aceito como anexo, mas não passa pela IA.
+ * Recebe a foto ou o PDF do documento: salva o anexo e lê por IA (campos +
+ * nomenclatura do catálogo + confiança/evidência por campo). Retorna
+ * { attachmentPath, ai } — a tela monta a conferência e destaca o que ficou
+ * com baixa confiança. v1.196.0: PDF também passa pela IA.
  */
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
   if (negado) return negado;
 
   const contentType = req.headers.get('content-type') ?? '';
-  if (!contentType.includes('multipart/form-data')) return NextResponse.json({ error: 'Envie a imagem do atestado' }, { status: 400 });
+  if (!contentType.includes('multipart/form-data')) return NextResponse.json({ error: 'Envie a foto ou o PDF do documento' }, { status: 400 });
 
   try {
     const form = await req.formData();
@@ -28,10 +29,10 @@ export async function POST(req: Request) {
 
     const saved = await saveAttachment(file, unitId, `cert-${user.id}`);
 
-    let ai = null as Awaited<ReturnType<typeof readMedicalCertificate>> | null;
-    if (saved.mimeType.startsWith('image/')) {
+    let ai = null as Awaited<ReturnType<typeof lerDocumentoRh>> | null;
+    if (MIDIAS_ACEITAS.includes(saved.mimeType)) {
       const buf = Buffer.from(await file.arrayBuffer());
-      ai = await readMedicalCertificate({ photoBase64: buf.toString('base64'), mediaType: saved.mimeType });
+      ai = await lerDocumentoRh({ base64: buf.toString('base64'), mediaType: saved.mimeType });
     }
     return NextResponse.json({ ok: true, attachmentPath: saved.path, mimeType: saved.mimeType, ai });
   } catch (e) {

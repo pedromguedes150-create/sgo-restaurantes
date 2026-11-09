@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { getCertificatesReport, listCertificates } from '@/lib/certificates/query';
-import { canSeeCid, certTypeLabel } from '@/lib/certificates/labels';
+import { canSeeCid } from '@/lib/certificates/labels';
 import { PrintButton } from '@/components/ui/print-button';
 import { ArrowLeft, Download } from 'lucide-react';
 
@@ -31,18 +31,18 @@ export default async function AtestadosRelatorioPage({ searchParams }: { searchP
       </div>
 
       <div className="border-b-2 border-brand pb-3">
-        <p className="sgo-type-11 font-semibold text-ink-900">Relatório de Atestados — SGO Beija Flor</p>
+        <p className="sgo-type-11 font-semibold text-ink-900">Relatório de Atestados e Afins — SGO Beija Flor</p>
         <h1 className="text-2xl font-bold text-ink-900">{ym}</h1>
-        <p className="text-sm text-ink-500">{report.totals.count} atestado(s) · {report.totals.days} dia(s) perdido(s)</p>
+        <p className="text-sm text-ink-500">{report.totals.count} documento(s) · {report.totals.days} dia(s) perdido(s)</p>
       </div>
 
       {/* Por unidade */}
       <div>
         <p className="sgo-type-11 font-semibold text-ink-500">Por unidade</p>
         <table className="w-full text-sm">
-          <thead><tr className="border-b text-left text-ink-500"><th className="py-1">Unidade</th><th className="py-1 text-right">Atestados</th><th className="py-1 text-right">Dias</th><th className="py-1 text-right">Absenteísmo</th></tr></thead>
+          <thead><tr className="border-b text-left text-ink-500"><th className="py-1">Unidade</th><th className="py-1 text-right">Documentos</th><th className="py-1 text-right">Dias</th><th className="py-1 text-right">Absenteísmo</th></tr></thead>
           <tbody>
-            {report.byUnit.length === 0 && <tr><td colSpan={4} className="py-2 text-ink-500">Sem atestados no mês.</td></tr>}
+            {report.byUnit.length === 0 && <tr><td colSpan={4} className="py-2 text-ink-500">Sem documentos no mês.</td></tr>}
             {report.byUnit.map((u) => (
               <tr key={u.unitId} className="border-b border-line"><td className="py-1">{u.unitName}</td><td className="py-1 text-right">{u.count}</td><td className="py-1 text-right">{u.days}</td><td className="py-1 text-right">{u.absenteeismPct}%</td></tr>
             ))}
@@ -61,7 +61,7 @@ export default async function AtestadosRelatorioPage({ searchParams }: { searchP
               <tr key={r.id} className="border-b border-line">
                 <td className="py-1">{r.collaboratorName}</td>
                 <td className="py-1">{r.unitName}</td>
-                <td className="py-1">{certTypeLabel(r.type)}</td>
+                <td className="py-1">{r.rotulo}</td>
                 <td className="py-1">{fmt(r.startDate)}{r.type !== 'HOURS' ? ` → ${fmt(r.endDate)}` : ''}</td>
                 <td className="py-1 text-right">{r.type === 'HOURS' ? `${r.hours ?? '—'}h` : r.days}</td>
                 {showCid && <td className="py-1">{r.cid ? `${r.cid}${r.cidDescription ? ` — ${r.cidDescription}` : ''}` : '—'}</td>}

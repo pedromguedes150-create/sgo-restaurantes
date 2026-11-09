@@ -52,7 +52,7 @@ export default async function AtestadosPage({ searchParams }: { searchParams: { 
     <div className="space-y-4">
       {/* O cabeçalho (título + abas) vive no cliente, no padrão do kit. */}
       <CertificatesClient
-        subtitulo="Lance o atestado por foto (a IA lê e pré-preenche), acompanhe quantidade e dias por unidade."
+        subtitulo="Atestados, afastamentos, comparecimentos e licenças: escolha o colaborador, fotografe o documento e envie — a IA lê e classifica, o RH valida."
         abas={abas}
         auditoria={auditoria && unidadeNoAlcance ? { dados: auditoria, podeInformar: podeAuditar(user.role) && abas.auditoria?.canEdit !== false, podeJustificar: podeJustificar(user.role) } : null}
         abaPedida={searchParams.aba}

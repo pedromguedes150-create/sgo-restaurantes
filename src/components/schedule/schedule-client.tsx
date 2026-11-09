@@ -22,7 +22,7 @@ import {
 import { PaletaDeStatus } from './paleta-de-status';
 import { STATUS, STATUS_ORDER } from './status-visual';
 
-type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'ATRASO' | 'AFASTADO';
+type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'ATRASO' | 'AFASTADO' | 'LICENCA';
 type ScheduleType = 'TWELVE36_ODD' | 'TWELVE36_EVEN' | 'SIX_ONE' | 'FIVE_TWO' | 'CUSTOM';
 interface Cell { planned: DayStatus; actual: DayStatus | null }
 interface Row {
@@ -44,7 +44,7 @@ interface Pattern { collaboratorId: string; scheduleType: ScheduleType; anchorDa
  */
 /* `STATUS` e `STATUS_ORDER` vivem em ./status-visual (v1.173.0): a grade, a
    legenda, os totais e a paleta de edição leem a MESMA tabela de cores. */
-const ABSENCE: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS', 'AFASTADO'];
+const ABSENCE: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS', 'AFASTADO', 'LICENCA'];
 const TYPE_OPTIONS: { value: ScheduleType; label: string }[] = [
   { value: 'TWELVE36_ODD', label: '12x36 — Turno Ímpar' },
   { value: 'TWELVE36_EVEN', label: '12x36 — Turno Par' },
@@ -272,7 +272,7 @@ export function ScheduleClient({ units, selectedUnitId, year, month, grid, colla
                 planejar — e planejar é o que o PLANEJADO faz sozinho. Aqui o
                 que se faz é registrar presença, e o nome tem de dizer isso. */}
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Completar os dias VAZIOS do Realizado com o Planejado?\n\nO que você já marcou não é tocado.')) postJson({ action: 'fill', unitId: selectedUnitId, year, month, mode: 'empty' }); }}><Wand2 className="h-4 w-4" /> Completar dias vazios</Button>
-            <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Copiar TODO o Planejado para o Realizado do mês?\n\nISTO SOBRESCREVE o que já foi marcado — faltas e atrasos do mês serão substituídos pelo previsto. Dias com ATESTADO (Central de Atestados) e com FÉRIAS ficam como estão.')) postJson({ action: 'fill', unitId: selectedUnitId, year, month, mode: 'all' }); }}><CopyCheck className="h-4 w-4" /> Puxar Realizado = Planejado</Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('Copiar TODO o Planejado para o Realizado do mês?\n\nISTO SOBRESCREVE o que já foi marcado — faltas e atrasos do mês serão substituídos pelo previsto. Dias com ATESTADO/LICENÇA (Central de Atestados e Afins) e com FÉRIAS ficam como estão.')) postJson({ action: 'fill', unitId: selectedUnitId, year, month, mode: 'all' }); }}><CopyCheck className="h-4 w-4" /> Puxar Realizado = Planejado</Button>
             <Button size="sm" variant="outline" onClick={() => setShowAbsence((v) => !v)}><CalendarPlus className="h-4 w-4" /> Registrar ausência</Button>
           </>
         )}
@@ -625,7 +625,7 @@ function AbsencePanel({ unitId, collaborators, onDone }: { unitId: string; colla
           label="Tipo" size="sm" value={status} onValueChange={(v) => setStatus(v as DayStatus)}
           options={ABSENCE.map((s) => ({
             value: s,
-            label: s === 'FALTA_INJUST' ? 'Falta injustificada' : s === 'FALTA_JUST' ? 'Falta justificada' : s === 'ATESTADO' ? 'Atestado' : s === 'AFASTADO' ? 'Afastado' : 'Férias',
+            label: STATUS[s].label,
             hint: STATUS[s].code,
           }))}
         />

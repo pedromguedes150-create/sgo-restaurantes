@@ -24,7 +24,9 @@ export const STATUS: Record<DayStatus, { code: string; label: string; cls: strin
   FERIAS:       { code: 'FE', label: 'Férias',              cls: 'bg-success-bg text-success border border-success/40' },
   ATRASO:       { code: 'AT', label: 'Atraso',              cls: 'bg-warning-bg text-warning border border-warning/40' },
   AFASTADO:     { code: 'AF', label: 'Afastado',            cls: 'bg-sunken text-ink-700 border border-line-strong' },
+  /* v1.196.0 — licença (paternidade, casamento, luto…), derivada da Central de Atestados e Afins. */
+  LICENCA:      { code: 'LI', label: 'Licença',             cls: 'bg-brand-tint text-brand border border-brand/30' },
 };
 
 /** A ordem em que os status aparecem na legenda e na paleta. */
-export const STATUS_ORDER: DayStatus[] = ['WORK', 'ATRASO', 'OFF', 'FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS', 'AFASTADO'];
+export const STATUS_ORDER: DayStatus[] = ['WORK', 'ATRASO', 'OFF', 'FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS', 'AFASTADO', 'LICENCA'];

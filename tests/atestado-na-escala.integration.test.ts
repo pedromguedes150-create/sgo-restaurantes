@@ -60,7 +60,7 @@ afterAll(async () => {
 
 describe('Atestado na Escala — derivado da Central', () => {
   it('lançar o atestado marca "A" nos dias do período (e só neles)', async () => {
-    const r = await createCertificate(admin(), { unitId: unitA, collaboratorId: bia, startDate: '2026-10-06', endDate: '2026-10-08' });
+    const r = await createCertificate(admin(), { attachmentPath: 'uploads/teste/doc.jpg', unitId: unitA, collaboratorId: bia, startDate: '2026-10-06', endDate: '2026-10-08' });
     expect(r.ok).toBe(true);
     const g = await grade();
     expect(dias(g.rows, bia, 6, 8)).toEqual(['ATESTADO', 'ATESTADO', 'ATESTADO']);
@@ -86,7 +86,7 @@ describe('Atestado na Escala — derivado da Central', () => {
   });
 
   it('atestado lançado pelo vínculo da OUTRA unidade da mesma pessoa aparece na Escala desta', async () => {
-    const r = await createCertificate(admin(), { unitId: unitB, collaboratorId: ana, startDate: '2026-10-13', endDate: '2026-10-14' });
+    const r = await createCertificate(admin(), { attachmentPath: 'uploads/teste/doc.jpg', unitId: unitB, collaboratorId: ana, startDate: '2026-10-13', endDate: '2026-10-14' });
     expect(r.ok).toBe(true);
     const g = await grade(unitA);
     expect(dias(g.rows, ana, 13, 14)).toEqual(['ATESTADO', 'ATESTADO']);
@@ -99,13 +99,13 @@ describe('Atestado na Escala — derivado da Central', () => {
   });
 
   it('atestado de HORAS (consulta) não afasta o dia', async () => {
-    const r = await createCertificate(admin(), { unitId: unitA, collaboratorId: ana, type: 'HOURS', startDate: '2026-10-20', endDate: '2026-10-20', hours: 2 });
+    const r = await createCertificate(admin(), { attachmentPath: 'uploads/teste/doc.jpg', unitId: unitA, collaboratorId: ana, type: 'HOURS', startDate: '2026-10-20', endDate: '2026-10-20', hours: 2 });
     expect(r.ok).toBe(true);
     expect(dias((await grade()).rows, ana, 20, 20)).not.toEqual(['ATESTADO']);
   });
 
   it('atestado que cruza a virada do mês entra só nos dias deste mês', async () => {
-    const r = await createCertificate(admin(), { unitId: unitA, collaboratorId: ana, startDate: '2026-10-30', endDate: '2026-11-02' });
+    const r = await createCertificate(admin(), { attachmentPath: 'uploads/teste/doc.jpg', unitId: unitA, collaboratorId: ana, startDate: '2026-10-30', endDate: '2026-11-02' });
     expect(r.ok).toBe(true);
     expect(dias((await grade()).rows, ana, 30, 31)).toEqual(['ATESTADO', 'ATESTADO']);
     const nov = await getScheduleGrid(unitA, 2026, 11);

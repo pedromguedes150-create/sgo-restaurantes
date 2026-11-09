@@ -9,6 +9,19 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.196.0 — 2026-11-09 (Central de Atestados e Afins — leitura por IA, nomenclaturas e lançamento em três passos)
+
+Primeira etapa da spec do Pedro (09/11/2026, planilha "Tipos de Atestados, Afastamentos, Comparecimentos e Licenças").
+
+- **Catálogo por NOMENCLATURA, sem código** (`src/lib/certificates/catalogo.ts`, puro): 25 tipos em 4 grupos — Atestados (médico, odontológico, declaração de internação), Afastamentos (INSS, CAT), Comparecimentos (13: consulta, exame, acompanhante, pré-natal, doação de sangue, eleitoral, Justiça, vestibular…) e Licenças (7: maternidade, paternidade, casamento, luto, aborto, prorrogação, amamentação). Linhas da planilha que são regra (até/acima de 15 dias, intercalados, sem CID) ou situação do RH (aposentadoria) NÃO viraram tipo. Cada nomenclatura declara o `tipoDetalhe` do contrato do RH, o que marca na Escala e, nas licenças, a duração da regra geral como SUGESTÃO.
+- **IA lê foto E PDF** (`src/lib/ai/atestado.ts`): legibilidade, natureza do documento, nomenclatura escolhida numa LISTA FECHADA (fora dela → null = "Classificação pendente de análise do RH"), campos só do que está escrito, confiança e trecho de evidência por campo (gravados em `aiExtracted`), conferência do nome com o colaborador (fonética da Comissão). Proibições no prompt: não inventar, não presumir CID, comparecimento não vira afastamento, certidão sem vínculo claro não vira paternidade/maternidade.
+- **Lançamento em três passos**: colaborador → "Tirar foto" / "Galeria ou PDF" (obrigatório) → conferir e "Enviar documento". O gerente NÃO escolhe tipo/grupo/nomenclatura. Campos editáveis ficam registrados (de/para) junto com a leitura. Sucesso: "Documento enviado com sucesso. Aguardando análise do RH."
+- **Situação do lançamento** (`DocumentStatus`, 10 estados da spec): nasce Leitura concluída ou Classificação pendente; o aceite do RH na fila vira Enviado ao RH. Os demais (Em análise, Correção solicitada, Validado, Não aceito, Concluído) ficam prontos para a 2ª etapa, quando o RH devolver a decisão pela API.
+- **Escala**: status novo **Licença (LI)**; o documento diz o que marca (A / AF / LI / FJ / nada para declarações de horas), derivado como antes; "Puxar Realizado = Planejado" não pisa; excluir o documento tira exatamente o que ele marcou.
+- **Histórico/Painel/Excel/PDF** com grupo, nomenclatura e situação; registros anteriores entram pelo tipo de sempre. API Global `atestados` expõe `documentGroup`, `nomenclature`, `status`.
+- **Contrato do RH intocado**: a nomenclatura segue em `observacoes` como "[Nome]"; nada foi inventado no endpoint. Alerta "análise INSS necessária" acima de 15 dias (aviso, não concessão).
+- Migração ADITIVA `20261109120000_central_atestados_e_afins` (enums, 5 colunas, backfill da situação dos registros antigos: ENVIADO_RH se o RH já os tinha, senão CONCLUIDO).
+
 ## v1.195.1 — 2026-11-09 (Separador cai na caixa de entrada dos pedidos por setor)
 
 Relato do Pedro (print de 09/11): criou um usuário Separador, pôs em vários setores, e a tela "não mostrou a lista feita ontem" e "só aparece Câmaras Frias".

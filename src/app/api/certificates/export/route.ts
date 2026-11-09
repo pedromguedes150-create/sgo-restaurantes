@@ -1,7 +1,8 @@
 import { getSessionUser } from '@/lib/auth/session';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { listCertificates } from '@/lib/certificates/query';
-import { canSeeCid, certTypeLabel } from '@/lib/certificates/labels';
+import { canSeeCid, situacaoLabel } from '@/lib/certificates/labels';
+import { GRUPOS } from '@/lib/certificates/catalogo';
 
 function daysInMonth(ym: string): number { const [y, m] = ym.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
 
@@ -20,13 +21,13 @@ export async function GET(req: Request) {
   const rows = await listCertificates(user, { from, to });
 
   const sep = ';';
-  const header = ['Unidade', 'Colaborador', 'Tipo', 'Início', 'Fim', 'Dias', 'Horas', 'Médico', 'CRM'];
+  const header = ['Unidade', 'Colaborador', 'Grupo', 'Documento', 'Situação', 'Início', 'Fim', 'Dias', 'Horas', 'Médico', 'CRM'];
   if (showCid) header.push('CID', 'CID (descrição)');
   header.push('Lançado por');
   const lines = [header.join(sep)];
   for (const r of rows) {
     const cols = [
-      `"${r.unitName}"`, `"${r.collaboratorName}"`, `"${certTypeLabel(r.type)}"`,
+      `"${r.unitName}"`, `"${r.collaboratorName}"`, `"${GRUPOS[r.grupo].rotulo}"`, `"${r.rotulo}"`, `"${situacaoLabel(r.status)}"`,
       r.startDate, r.type === 'HOURS' ? '' : r.endDate, r.type === 'HOURS' ? '' : String(r.days),
       r.hours != null ? String(r.hours).replace('.', ',') : '', `"${r.doctorName ?? ''}"`, `"${r.doctorCrm ?? ''}"`,
     ];
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
     cols.push(`"${r.by ?? ''}"`);
     lines.push(cols.join(sep));
   }
-  const csv = '﻿' + `"Atestados - ${ym}"\n` + lines.join('\n');
+  const csv = '﻿' + `"Atestados e afins - ${ym}"\n` + lines.join('\n');
   return new Response(csv, {
     headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="atestados-${ym}.csv"` },
   });
