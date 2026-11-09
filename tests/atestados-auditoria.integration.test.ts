@@ -59,7 +59,7 @@ describe('informar e cruzar', () => {
   });
 
   it('atestado LANÇADO depois cruza sozinho com o esperado (período sobreposto) e, lançado fora do prazo, fica EM CONFERÊNCIA — sem prejudicar a nota', async () => {
-    const c = await createCertificate(gerente, { unitId, collaboratorId: colabA, startDate: dia(4), endDate: dia(5) });
+    const c = await createCertificate(gerente, { attachmentPath: 'uploads/teste/doc.jpg', unitId, collaboratorId: colabA, startDate: dia(4), endDate: dia(5) });
     expect(c.ok).toBe(true);
     const a = await getAuditoriaDeAtestados(supervisor, ym, unitId);
     const e = a.esperados.find((x) => x.collaboratorId === colabA)!;
@@ -74,7 +74,7 @@ describe('informar e cruzar', () => {
 
   it('esperado informado DEPOIS do lançamento cruza na hora: lançamento dentro do prazo = CONFORME', async () => {
     /* o atestado existe antes do esperado; a ciência é informada como AGORA, então o lançamento (feito antes) está dentro do prazo */
-    const c = await createCertificate(gerente, { unitId, collaboratorId: colabB, startDate: dia(10), endDate: dia(12) });
+    const c = await createCertificate(gerente, { attachmentPath: 'uploads/teste/doc.jpg', unitId, collaboratorId: colabB, startDate: dia(10), endDate: dia(12) });
     expect(c.ok).toBe(true);
     const r = await informarAtestadoEsperado(supervisor, { unitId, collaboratorId: colabB, startDate: dia(11), endDate: dia(11), noticeAt: new Date().toISOString() });
     expect(r.ok).toBe(true);

@@ -116,8 +116,8 @@ const BASE: ModuleDef[] = [
   { key: 'SCHEDULE_SWAPS', label: 'Trocas de plantão', nav: '/modulos/escala/trocas', parent: 'SCHEDULE' },
   { key: 'SCHEDULE_RH_NOTICES', label: 'Avisos ao RH', nav: '/modulos/escala/avisos-rh', parent: 'SCHEDULE' },
 
-  { key: 'CERTIFICATES', label: 'Atestados', nav: '/modulos/atestados' },
-  { key: 'CERTIFICATES_REPORT', label: 'Relatório de atestados', nav: '/modulos/atestados/relatorio', parent: 'CERTIFICATES' },
+  { key: 'CERTIFICATES', label: 'Atestados e afins', nav: '/modulos/atestados' },
+  { key: 'CERTIFICATES_REPORT', label: 'Relatório de atestados e afins', nav: '/modulos/atestados/relatorio', parent: 'CERTIFICATES' },
 
   { key: 'TERMINATIONS', label: 'Desligamentos', nav: '/modulos/desligamentos' },
   /* Demanda ao RH (v1.168.0): pedido/dúvida do gerente enviado ao GBF-RH pela

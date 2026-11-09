@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma';
+import { efeitoNaEscala } from '@/lib/certificates/catalogo';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
@@ -23,13 +24,13 @@ export const TYPE_LABELS: Record<ScheduleType, string> = {
   CUSTOM: 'Personalizada',
 };
 export const STATUS_CODE: Record<DayStatus, string> = {
-  WORK: 'T', OFF: 'F', FALTA_INJUST: 'FI', FALTA_JUST: 'FJ', ATESTADO: 'A', FERIAS: 'FE', ATRASO: 'AT', AFASTADO: 'AF',
+  WORK: 'T', OFF: 'F', FALTA_INJUST: 'FI', FALTA_JUST: 'FJ', ATESTADO: 'A', FERIAS: 'FE', ATRASO: 'AT', AFASTADO: 'AF', LICENCA: 'LI',
 };
 export const STATUS_LABEL: Record<DayStatus, string> = {
   WORK: 'Trabalho', OFF: 'Folga', FALTA_INJUST: 'Falta injustificada',
-  FALTA_JUST: 'Falta justificada', ATESTADO: 'Atestado', FERIAS: 'Férias', ATRASO: 'Atraso', AFASTADO: 'Afastado',
+  FALTA_JUST: 'Falta justificada', ATESTADO: 'Atestado', FERIAS: 'Férias', ATRASO: 'Atraso', AFASTADO: 'Afastado', LICENCA: 'Licença',
 };
-export const ABSENCE_TYPES: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS', 'AFASTADO'];
+export const ABSENCE_TYPES: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS', 'AFASTADO', 'LICENCA'];
 
 /* ───────── Datas (UTC ao meio-dia) ───────── */
 export function dayUTC(y: number, m: number, d: number): Date {
@@ -123,8 +124,8 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
        um afastamento que está registrado — o mesmo desenho da variação do gás
        e da faixa de validade do estoque: quem pergunta calcula. */
     prisma.medicalCertificate.findMany({
-      where: { collaboratorId: { in: collabIds }, type: { not: 'HOURS' }, startDate: { lte: ultimoISO }, endDate: { gte: primeiroISO } },
-      select: { collaboratorId: true, startDate: true, endDate: true },
+      where: { collaboratorId: { in: collabIds }, startDate: { lte: ultimoISO }, endDate: { gte: primeiroISO } },
+      select: { collaboratorId: true, startDate: true, endDate: true, type: true, nomenclature: true },
     }),
     /* Férias também é DERIVADA do período (v1.142.1), em Planejado E Realizado.
        Até aqui o FE só existia como marcação solta em `schedule_actuals` —
@@ -157,10 +158,17 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
   for (const o of overrides) overrideMap.set(`${o.collaboratorId}|${o.date.getUTCDate()}`, o.status);
   const actualMap = new Map<string, DayStatus>();
   for (const a of actuals) actualMap.set(`${a.collaboratorId}|${a.date.getUTCDate()}`, a.status);
+  /* v1.196.0 — o documento diz o que marca: Atestado, Afastado (INSS), Licença
+     (LI) ou Falta justificada (comparecimento de dia inteiro); declaração de
+     horas não marca nada. Registro antigo sem nomenclatura segue a regra de
+     sempre (HOURS não afasta, o resto é Atestado). */
+  const derivados = new Set<string>();
   for (const at of atestados) {
+    const efeito = efeitoNaEscala(at);
+    if (!efeito) continue;
     for (let d = 1; d <= daysCount; d++) {
       const iso = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      if (iso >= at.startDate && iso <= at.endDate) actualMap.set(`${at.collaboratorId}|${d}`, 'ATESTADO');
+      if (iso >= at.startDate && iso <= at.endDate) { actualMap.set(`${at.collaboratorId}|${d}`, efeito); derivados.add(`${at.collaboratorId}|${d}`); }
     }
   }
   /* Férias vence o padrão e o que estiver gravado nos dois níveis: no
@@ -223,7 +231,10 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
       const afastado = !deFerias && afastadoMap.has(`${c.id}|${d}`);
       const planned = deFerias ? 'FERIAS' : afastado ? 'AFASTADO' : (overrideMap.get(`${c.id}|${d}`) ?? planejado);
       const gravado = actualMap.get(`${c.id}|${d}`) ?? null;
-      const actual = deFerias && gravado !== 'ATESTADO' ? 'FERIAS' : afastado && gravado !== 'ATESTADO' ? 'AFASTADO' : gravado;
+      /* Documento da Central (atestado, licença…) vence férias e afastamento do RH —
+         e um "Atestado" marcado à mão em Registrar ausência também, como sempre venceu. */
+      const documentado = derivados.has(`${c.id}|${d}`) || gravado === 'ATESTADO';
+      const actual = deFerias && !documentado ? 'FERIAS' : afastado && !documentado ? 'AFASTADO' : gravado;
       days.push({ planned, actual });
     }
 
@@ -389,6 +400,8 @@ export async function fillActualFromPlan(
       if (cell.actual === 'FERIAS') continue;
       /* Afastamento do RH (v1.166.0): idem — derivado do período, não se pisa. */
       if (cell.actual === 'AFASTADO') continue;
+      /* Licença (v1.196.0): derivada do documento da Central de Atestados e Afins. */
+      if (cell.actual === 'LICENCA') continue;
       const date = dayUTC(input.year, input.month, i + 1);
       await prisma.scheduleActual.upsert({
         where: { collaboratorId_date: { collaboratorId: row.collaboratorId, date } },

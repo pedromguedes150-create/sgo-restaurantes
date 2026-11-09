@@ -22,14 +22,14 @@ const digits = (v: string | null | undefined) => String(v ?? '').replace(/\D/g, 
 export async function montarAtestado(certId: string, acao: AcaoAtestado): Promise<Montagem> {
   const c = await prisma.medicalCertificate.findUnique({
     where: { id: certId },
-    select: { id: true, unitId: true, type: true, startDate: true, endDate: true, cid: true, observation: true, attachmentPath: true, collaborator: { select: { name: true, cpf: true } } },
+    select: { id: true, unitId: true, type: true, startDate: true, endDate: true, cid: true, observation: true, nomenclature: true, attachmentPath: true, collaborator: { select: { name: true, cpf: true } } },
   });
   if (!c) return { ok: false, erro: 'Atestado não encontrado no SGO', unitId: null };
   const cpf = digits(c.collaborator.cpf);
   if (cpf.length !== 11) return { ok: false, erro: `${c.collaborator.name} está sem CPF no cadastro (o RH exige CPF)`, unitId: c.unitId };
   return {
     ok: true,
-    payload: payloadAtestado({ id: c.id, cpf, type: c.type, startDate: c.startDate, endDate: c.endDate, cid: c.cid, observation: c.observation }, acao),
+    payload: payloadAtestado({ id: c.id, cpf, type: c.type, startDate: c.startDate, endDate: c.endDate, cid: c.cid, observation: c.observation, nomenclature: c.nomenclature }, acao),
     anexoPath: acao === 'cancelar' ? null : c.attachmentPath,
     unitId: c.unitId,
   };

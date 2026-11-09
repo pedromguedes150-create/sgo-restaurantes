@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma';
+import { efeitoNaEscala } from '@/lib/certificates/catalogo';
 import { audit } from '@/lib/audit';
 import { enfileirarCancelamentoDeAtestado } from '@/lib/rh/saida/fila';
 import type { SessionUser } from '@/lib/auth/session';
@@ -216,22 +217,23 @@ export async function deleteOilCollection(user: SessionUser, id: string, ctx: Ct
 /* ───────────────────────── Atestados (Módulo 19) ───────────────────────── */
 export async function deleteMedicalCertificate(user: SessionUser, id: string, ctx: Ctx = {}): Promise<OpResult> {
   if (!isAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
-  const c = await prisma.medicalCertificate.findUnique({ where: { id }, select: { unitId: true, collaboratorId: true, startDate: true, endDate: true, type: true, days: true } });
+  const c = await prisma.medicalCertificate.findUnique({ where: { id }, select: { unitId: true, collaboratorId: true, startDate: true, endDate: true, type: true, days: true, nomenclature: true } });
   if (!c) return { ok: false, reason: 'NOT_FOUND' };
   /* Envio ao GBF-RH (v1.168.0): ANTES de apagar, porque a montagem do
      cancelamento lê o atestado. Se o `criar` já foi aceito pelo RH, entra um
      `cancelar` na fila; se nunca chegou lá, a linha pendente é descartada. */
   const rh = await enfileirarCancelamentoDeAtestado(id, user.id).catch((e) => { console.error('[rh-saida] falha ao enfileirar cancelamento:', e); return 'NADA' as const; });
   await prisma.medicalCertificate.delete({ where: { id } });
-  // Reverte a Escala: remove os dias marcados como "Atestado" deste período (não toca em outros status)
-  if (c.type !== 'HOURS') {
+  // Reverte a Escala: remove os dias que ESTE documento marcou (Atestado, Afastado, Licença, Falta justificada), sem tocar em outros status
+  const efeito = efeitoNaEscala(c);
+  if (efeito) {
     const [ys, ms, ds] = c.startDate.split('-').map(Number);
     const [ye, me, de] = c.endDate.split('-').map(Number);
     /* Os dias são gravados ao MEIO-DIA UTC (`dayUTC` da Escala): o limite de
        cima precisa ir até o fim do último dia, senão o último dia do atestado
        ficava marcado para sempre. E sem `unitId`: o Realizado é da pessoa. */
     await prisma.scheduleActual.deleteMany({
-      where: { collaboratorId: c.collaboratorId, status: 'ATESTADO', date: { gte: new Date(Date.UTC(ys, ms - 1, ds)), lte: new Date(Date.UTC(ye, me - 1, de, 23, 59, 59)) } },
+      where: { collaboratorId: c.collaboratorId, status: efeito, date: { gte: new Date(Date.UTC(ys, ms - 1, ds)), lte: new Date(Date.UTC(ye, me - 1, de, 23, 59, 59)) } },
     });
   }
   await audit({ userId: user.id, unitId: c.unitId, action: 'CERTIFICATE_DELETE', module: 'PEOPLE', entity: 'medical_certificate', entityId: id, metadata: { start: c.startDate, end: c.endDate, days: c.days, rh }, ...ctx });

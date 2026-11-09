@@ -3531,6 +3531,7 @@ enum DayStatus {
   FERIAS // FE - Férias
   ATRASO // AT - Atraso (trabalhou, chegou atrasado — avisa o RH p/ conferência de ponto)
   AFASTADO // AF - Afastado (v1.166.0 — derivado do status "Afastado" do RH; não trabalha)
+  LICENCA // LI - Licença (v1.196.0 — derivado do documento do grupo Licenças na Central de Atestados e Afins)
 }
 
 /// Como a folga do colaborador se comporta ao longo das semanas.
@@ -3958,13 +3959,50 @@ enum CertificateType {
   COMPANION // acompanhamento de familiar (declaração de comparecimento)
 }
 
+/// Grupo do documento na Central de Atestados e Afins (v1.196.0). A classificação
+/// é por NOMENCLATURA (texto do catálogo, `src/lib/certificates/catalogo.ts`);
+/// o grupo é o agrupamento dela. Nulo = registro anterior ao catálogo.
+enum DocumentGroup {
+  ATESTADO
+  AFASTAMENTO
+  COMPARECIMENTO
+  LICENCA
+}
+
+/// Situação do lançamento (v1.196.0). O RH valida no sistema DELE e devolve
+/// pela API; o SGO só registra o andamento. Registros antigos: ENVIADO_RH se o
+/// RH já os tinha, senão CONCLUIDO.
+enum DocumentStatus {
+  AGUARDANDO_LEITURA
+  LEITURA_CONCLUIDA
+  CLASSIFICACAO_PENDENTE
+  ENVIADO_RH
+  EM_ANALISE_RH
+  CORRECAO_SOLICITADA
+  CORRIGIDO_REENVIADO
+  VALIDADO_RH
+  NAO_ACEITO
+  CONCLUIDO
+}
+
 /// Atestado médico de colaborador (Módulo 19). Captura por foto + leitura por IA,
 /// análise por unidade. CID é dado sensível (LGPD): exibir só p/ ADMIN/CEO/RH.
+/// v1.196.0 — "Central de Atestados e Afins": também afastamentos, comparecimentos e
+/// licenças, classificados por NOMENCLATURA (`nomenclature`) em quatro grupos.
 model MedicalCertificate {
   id             String          @id @default(cuid())
   unitId         String
   collaboratorId String
   type           CertificateType @default(FULL_DAY)
+  /// v1.196.0 — grupo e nomenclatura padronizada do catálogo (ex.: "Licença-paternidade").
+  /// Nulos nos registros anteriores (o tipo de sempre dá o rótulo).
+  documentGroup  DocumentGroup?
+  nomenclature   String?
+  /// v1.196.0 — andamento do lançamento (leitura → envio → análise do RH → decisão).
+  status         DocumentStatus  @default(LEITURA_CONCLUIDA)
+  /// Motivo da correção pedida / justificativa do não aceite (texto do RH, sem dado médico).
+  statusNote     String?
+  statusAt       DateTime?
   /// Datas em yyyy-mm-dd (dia civil; afastamento usa o calendário, regra nº 5)
   issueDate      String?
   startDate      String
@@ -3995,6 +4033,7 @@ model MedicalCertificate {
 
   @@index([unitId, startDate])
   @@index([collaboratorId, startDate])
+  @@index([status])
   @@map("medical_certificates")
 }
 

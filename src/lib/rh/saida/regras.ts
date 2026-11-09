@@ -205,6 +205,8 @@ export interface AtestadoParaEnvio {
   endDate: string | null;
   cid?: string | null;
   observation?: string | null;
+  /** v1.196.0 — nomenclatura do catálogo; o contrato não tem campo próprio, então vai no texto livre. */
+  nomenclature?: string | null;
 }
 
 /**
@@ -224,7 +226,11 @@ export function payloadAtestado(a: AtestadoParaEnvio, acao: AcaoAtestado): Recor
     motivo: motivoDoAtestado(a.type),
   };
   if (a.cid?.trim()) p.cid = a.cid.trim();
-  if (a.observation?.trim()) p.observacoes = a.observation.trim();
+  /* A nomenclatura padronizada segue em `observacoes` com o prefixo "[Nome]" —
+     o contrato de 14/10 não tem campo para ela e nada é inventado; o RH casa
+     pelo nome (a correspondência de nomenclaturas é a 3ª etapa). */
+  const obs = [a.nomenclature?.trim() ? `[${a.nomenclature.trim()}]` : '', a.observation?.trim() ?? ''].filter(Boolean).join(' ');
+  if (obs) p.observacoes = obs;
   return p;
 }
 

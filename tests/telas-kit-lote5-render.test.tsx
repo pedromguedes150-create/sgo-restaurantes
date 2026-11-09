@@ -22,7 +22,7 @@ import { SupervisionClient } from '@/components/supervisor/supervision-client';
 const semSeparadores = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '');
 const ver = { canView: true, canEdit: true };
 const nao = { canView: false, canEdit: false };
-const reportVazio = { totals: { count: 0, days: 0, collaborators: 0, absenteeismPct: 0, headcount: 0 }, byUnit: [], ranking: [], monthlyTrend: [], byWeekday: [], byType: [] } as never;
+const reportVazio = { totals: { count: 0, days: 0, collaborators: 0, absenteeismPct: 0, headcount: 0 }, byUnit: [], ranking: [], monthlyTrend: [], byWeekday: [], byType: [], byGroup: [], byNomenclature: [], byStatus: [] } as never;
 
 describe('Manutenção no kit', () => {
   it('título do kit (o h1 solto saiu) com Chamados / Preventiva; Preventiva some sem permissão', () => {
@@ -40,7 +40,7 @@ describe('Atestados no kit', () => {
   it('Lançar / Histórico / Painel como abas do cabeçalho; sem canLaunch a aba Lançar não existe', () => {
     const base = { isAdmin: true, showCid: true, ym: '2026-10', units: [{ id: 'u1', name: 'Centro' }], collaboratorsByUnit: {}, rows: [], report: reportVazio, subtitulo: 'x' };
     const h = semSeparadores(renderToString(<CertificatesClient {...base} canLaunch abas={{ lancar: ver, historico: ver, painel: ver } as never} />));
-    expect(h).toContain('<h1 class="sgo-phdr__title">Central de Atestados</h1>');
+    expect(h).toContain('<h1 class="sgo-phdr__title">Central de Atestados e Afins</h1>');
     expect(h).toMatch(/class="sgo-phdr__tab on" aria-current="page"[^>]*data-testid="aba-lancar"/);
     const sem = semSeparadores(renderToString(<CertificatesClient {...base} canLaunch={false} abas={{ lancar: ver, historico: ver, painel: ver } as never} />));
     expect(sem).not.toContain('data-testid="aba-lancar"');

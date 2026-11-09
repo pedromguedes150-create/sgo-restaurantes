@@ -4,6 +4,7 @@
 import { readFile, stat } from 'fs/promises';
 import path from 'path';
 import { prisma } from '@/lib/db/prisma';
+import { SITUACOES_ANTES_DO_RH } from '@/lib/certificates/catalogo';
 import { notifyAdmins, notifyUsers } from '@/lib/notifications';
 import { rhSaidaConfigurada } from '@/lib/rh/saida/config';
 import { postRh, getRh, RhSaidaTransporteError } from '@/lib/rh/saida/transporte';
@@ -170,7 +171,11 @@ async function adiar(ev: RhOutboundEvent, agora: Date, motivo: string, httpStatu
 /** O que o RH devolveu na aceitação vai para o registro de origem (se ele ainda existir). */
 async function aplicarRetorno(ev: RhOutboundEvent, rhId: string | null, prazo: string | null) {
   if (ev.tipo === 'ATESTADO') {
-    if (ev.acao === 'criar' && rhId) await prisma.medicalCertificate.updateMany({ where: { id: ev.referenceId }, data: { rhAtestadoId: rhId } });
+    if (ev.acao === 'criar') {
+      if (rhId) await prisma.medicalCertificate.updateMany({ where: { id: ev.referenceId }, data: { rhAtestadoId: rhId } });
+      /* v1.196.0 — o aceite do RH move a situação para "Enviado ao RH" (só se o RH ainda não se manifestou). */
+      await prisma.medicalCertificate.updateMany({ where: { id: ev.referenceId, status: { in: [...SITUACOES_ANTES_DO_RH] } }, data: { status: 'ENVIADO_RH', statusAt: new Date() } });
+    }
     return;
   }
   if (ev.tipo === 'DESLIGAMENTO') {

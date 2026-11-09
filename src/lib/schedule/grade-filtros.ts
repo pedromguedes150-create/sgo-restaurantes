@@ -12,7 +12,7 @@
  * Puro: sem Prisma, sem React.
  */
 
-export type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'ATRASO' | 'AFASTADO';
+export type DayStatus = 'WORK' | 'OFF' | 'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'ATRASO' | 'AFASTADO' | 'LICENCA';
 export type ModoDaGrade = 'planejado' | 'realizado' | 'comparacao';
 
 export interface CelulaDaGrade { planned: DayStatus; actual: DayStatus | null }
@@ -39,7 +39,7 @@ export interface FiltrosDaGrade {
 export const SEM_SETOR = 'Sem setor';
 
 /** Ausência = o que não é presença nem folga: falta, atestado, férias. */
-export const AUSENCIAS: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS', 'AFASTADO'];
+export const AUSENCIAS: DayStatus[] = ['FALTA_INJUST', 'FALTA_JUST', 'ATESTADO', 'FERIAS', 'AFASTADO', 'LICENCA'];
 
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR').trim();
 
@@ -128,7 +128,7 @@ export function totaisDaLinha(l: LinhaDaGrade, modo: ModoDaGrade): TotaisDaLinha
 
 export interface ResumoDaGrade extends TotaisDaLinha {
   pessoas: number;
-  porAusencia: Record<'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'AFASTADO', number>;
+  porAusencia: Record<'FALTA_INJUST' | 'FALTA_JUST' | 'ATESTADO' | 'FERIAS' | 'AFASTADO' | 'LICENCA', number>;
   /** Quantas PESSOAS têm ao menos um dia divergente. */
   pessoasDivergentes: number;
 }
@@ -137,7 +137,7 @@ export interface ResumoDaGrade extends TotaisDaLinha {
 export function resumoDaGrade(linhas: LinhaDaGrade[], modo: ModoDaGrade): ResumoDaGrade {
   const r: ResumoDaGrade = {
     pessoas: linhas.length, trabalho: 0, folgas: 0, ausencias: 0, divergencias: 0, vazios: 0,
-    porAusencia: { FALTA_INJUST: 0, FALTA_JUST: 0, ATESTADO: 0, FERIAS: 0, AFASTADO: 0 },
+    porAusencia: { FALTA_INJUST: 0, FALTA_JUST: 0, ATESTADO: 0, FERIAS: 0, AFASTADO: 0, LICENCA: 0 },
     pessoasDivergentes: 0,
   };
   for (const l of linhas) {
@@ -160,6 +160,7 @@ export function detalheDasAusencias(r: ResumoDaGrade): string {
   if (r.porAusencia.ATESTADO) partes.push(`A ${r.porAusencia.ATESTADO}`);
   if (r.porAusencia.FERIAS) partes.push(`FE ${r.porAusencia.FERIAS}`);
   if (r.porAusencia.AFASTADO) partes.push(`AF ${r.porAusencia.AFASTADO}`);
+  if (r.porAusencia.LICENCA) partes.push(`LI ${r.porAusencia.LICENCA}`);
   return partes.join(' · ');
 }
 

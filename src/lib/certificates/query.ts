@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { canSeeCid } from '@/lib/certificates/labels';
+import { grupoDoDocumento, rotuloDoDocumento, alertaDeDuracao, type GrupoDoDocumento } from '@/lib/certificates/catalogo';
 import type { SessionUser } from '@/lib/auth/session';
-import type { CertificateType } from '@prisma/client';
+import type { CertificateType, DocumentGroup, DocumentStatus } from '@prisma/client';
 
 export interface CertListItem {
   id: string;
@@ -10,6 +11,18 @@ export interface CertListItem {
   unitName: string;
   collaboratorName: string;
   type: CertificateType;
+  /** v1.196.0 — grupo e nomenclatura do catálogo (nulos nos registros antigos) + o rótulo pronto. */
+  documentGroup: DocumentGroup | null;
+  nomenclature: string | null;
+  rotulo: string;
+  grupo: GrupoDoDocumento;
+  status: DocumentStatus;
+  statusNote: string | null;
+  statusAt: string | null;
+  /** "INSS" quando o afastamento passa de 15 dias (alerta, não decisão). */
+  alerta: 'INSS' | null;
+  /** O nome lido pela IA destoou do colaborador escolhido (vai para o RH conferir). */
+  nomeDivergente: boolean;
   issueDate: string | null;
   startDate: string;
   endDate: string;
@@ -47,12 +60,23 @@ export async function listCertificates(
       createdBy: { select: { name: true } },
     },
   });
-  return rows.map((r) => ({
+  return rows.map((r) => {
+    const ai = (r.aiExtracted && typeof r.aiExtracted === 'object' ? r.aiExtracted : {}) as { conferenciaDoNome?: { divergente?: boolean } };
+    return {
     id: r.id,
     unitId: r.unitId,
     unitName: r.unit.name,
     collaboratorName: r.collaborator.name,
     type: r.type,
+    documentGroup: r.documentGroup,
+    nomenclature: r.nomenclature,
+    rotulo: rotuloDoDocumento(r),
+    grupo: grupoDoDocumento(r),
+    status: r.status,
+    statusNote: r.statusNote,
+    statusAt: r.statusAt ? r.statusAt.toISOString() : null,
+    alerta: alertaDeDuracao(r),
+    nomeDivergente: ai.conferenciaDoNome?.divergente === true,
     issueDate: r.issueDate,
     startDate: r.startDate,
     endDate: r.endDate,
@@ -65,7 +89,8 @@ export async function listCertificates(
     attachmentPath: r.attachmentPath,
     observation: r.observation,
     by: r.createdBy?.name ?? null,
-  }));
+    };
+  });
 }
 
 export interface CertReport {
@@ -75,6 +100,11 @@ export interface CertReport {
   monthlyTrend: { ym: string; count: number; days: number }[];
   byWeekday: { weekday: number; label: string; count: number }[];
   byType: { type: CertificateType; count: number; days: number }[];
+  /** v1.196.0 — por grupo e por nomenclatura (registros antigos entram pelo tipo de sempre). */
+  byGroup: { grupo: GrupoDoDocumento; count: number; days: number }[];
+  byNomenclature: { rotulo: string; grupo: GrupoDoDocumento; count: number; days: number }[];
+  /** v1.196.0 — quantos lançamentos do mês estão em cada situação. */
+  byStatus: { status: DocumentStatus; count: number }[];
 }
 
 const WD = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -88,7 +118,7 @@ export async function getCertificatesReport(user: SessionUser, ym: string): Prom
 
   const rows = await prisma.medicalCertificate.findMany({
     where: { ...unitScopeWhere(user, 'unitId'), unit: { active: true }, startDate: { gte: from, lte: to } },
-    select: { unitId: true, unit: { select: { name: true } }, startDate: true, days: true, type: true },
+    select: { unitId: true, unit: { select: { name: true } }, startDate: true, days: true, type: true, documentGroup: true, nomenclature: true, status: true },
   });
 
   // Totais e por unidade
@@ -124,6 +154,24 @@ export async function getCertificatesReport(user: SessionUser, ym: string): Prom
   }
   const byType = [...typeMap.values()];
 
+  // Por grupo, por nomenclatura e por situação (v1.196.0)
+  const groupMap = new Map<GrupoDoDocumento, { grupo: GrupoDoDocumento; count: number; days: number }>();
+  const nomMap = new Map<string, { rotulo: string; grupo: GrupoDoDocumento; count: number; days: number }>();
+  const stMap = new Map<DocumentStatus, { status: DocumentStatus; count: number }>();
+  for (const r of rows) {
+    const grupo = grupoDoDocumento(r);
+    const g = groupMap.get(grupo) ?? { grupo, count: 0, days: 0 };
+    g.count += 1; g.days += r.days; groupMap.set(grupo, g);
+    const rotulo = rotuloDoDocumento(r);
+    const n = nomMap.get(rotulo) ?? { rotulo, grupo, count: 0, days: 0 };
+    n.count += 1; n.days += r.days; nomMap.set(rotulo, n);
+    const s = stMap.get(r.status) ?? { status: r.status, count: 0 };
+    s.count += 1; stMap.set(r.status, s);
+  }
+  const byGroup = [...groupMap.values()].sort((a, b) => b.count - a.count);
+  const byNomenclature = [...nomMap.values()].sort((a, b) => b.count - a.count);
+  const byStatus = [...stMap.values()].sort((a, b) => b.count - a.count);
+
   // Tendência dos últimos 12 meses (do ym para trás)
   const [yy, mm] = ym.split('-').map(Number);
   const trendFrom = new Date(Date.UTC(yy, mm - 12, 1));
@@ -145,5 +193,5 @@ export async function getCertificatesReport(user: SessionUser, ym: string): Prom
   }
   const monthlyTrend = [...trendMap.values()];
 
-  return { period: { from, to }, totals, byUnit, monthlyTrend, byWeekday, byType };
+  return { period: { from, to }, totals, byUnit, monthlyTrend, byWeekday, byType, byGroup, byNomenclature, byStatus };
 }

@@ -69,7 +69,7 @@ const evento = (referenceId: string, acao = 'criar') => prisma.rhOutboundEvent.f
 describe('Atestado → fila', () => {
   it('salvar o atestado grava o evento PENDENTE com o corpo do contrato — sem rede', async () => {
     rhCai(); // se alguém tentasse a rede aqui, explodiria
-    const r = await createCertificate(manager(), { unitId, collaboratorId: collabId, type: 'COMPANION', startDate: '2026-10-01', endDate: '2026-10-02', observation: 'consulta do filho' });
+    const r = await createCertificate(manager(), { attachmentPath: 'uploads/teste/doc.jpg', unitId, collaboratorId: collabId, type: 'COMPANION', startDate: '2026-10-01', endDate: '2026-10-02', observation: 'consulta do filho' });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const ev = await evento(r.id);
@@ -88,7 +88,7 @@ describe('Atestado → fila', () => {
   });
 
   it('colaborador sem CPF: o evento nasce ERRO permanente com o que falta — o pedido do gerente não é barrado', async () => {
-    const r = await createCertificate(manager(), { unitId, collaboratorId: collabSemCpf, startDate: '2026-10-05', endDate: '2026-10-05' });
+    const r = await createCertificate(manager(), { attachmentPath: 'uploads/teste/doc.jpg', unitId, collaboratorId: collabSemCpf, startDate: '2026-10-05', endDate: '2026-10-05' });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const ev = await evento(r.id);
@@ -138,7 +138,7 @@ describe('Atestado → fila', () => {
 
   it('excluir um atestado cujo "criar" NUNCA foi enviado descarta a linha pendente (não há o que cancelar no RH)', async () => {
     await semToken();
-    const r = await createCertificate(manager(), { unitId, collaboratorId: collabId, startDate: '2026-10-10', endDate: '2026-10-10' });
+    const r = await createCertificate(manager(), { attachmentPath: 'uploads/teste/doc.jpg', unitId, collaboratorId: collabId, startDate: '2026-10-10', endDate: '2026-10-10' });
     if (!r.ok) throw new Error('não criou');
     expect((await evento(r.id))?.status).toBe('PENDENTE');
     await deleteMedicalCertificate(admin(), r.id);
@@ -149,7 +149,7 @@ describe('Atestado → fila', () => {
 describe('Regra 3: respostas do RH', () => {
   async function novoPendente(start: string) {
     await semToken();
-    const r = await createCertificate(manager(), { unitId, collaboratorId: collabId, startDate: start, endDate: start });
+    const r = await createCertificate(manager(), { attachmentPath: 'uploads/teste/doc.jpg', unitId, collaboratorId: collabId, startDate: start, endDate: start });
     if (!r.ok) throw new Error(`não criou ${r.reason}`);
     return r.id;
   }
