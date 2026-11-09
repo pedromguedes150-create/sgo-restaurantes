@@ -3,6 +3,7 @@ import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { listCertificates } from '@/lib/certificates/query';
 import { canSeeCid, situacaoLabel } from '@/lib/certificates/labels';
 import { GRUPOS } from '@/lib/certificates/catalogo';
+import { ROTULO_DO_ALERTA } from '@/lib/certificates/alertas';
 
 function daysInMonth(ym: string): number { const [y, m] = ym.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
 
@@ -21,13 +22,13 @@ export async function GET(req: Request) {
   const rows = await listCertificates(user, { from, to });
 
   const sep = ';';
-  const header = ['Unidade', 'Colaborador', 'Grupo', 'Documento', 'Situação', 'Início', 'Fim', 'Dias', 'Horas', 'Médico', 'CRM'];
+  const header = ['Unidade', 'Colaborador', 'Grupo', 'Documento', 'Situação', 'Motivo do RH', 'Alertas', 'Início', 'Fim', 'Dias', 'Horas', 'Médico', 'CRM'];
   if (showCid) header.push('CID', 'CID (descrição)');
   header.push('Lançado por');
   const lines = [header.join(sep)];
   for (const r of rows) {
     const cols = [
-      `"${r.unitName}"`, `"${r.collaboratorName}"`, `"${GRUPOS[r.grupo].rotulo}"`, `"${r.rotulo}"`, `"${situacaoLabel(r.status)}"`,
+      `"${r.unitName}"`, `"${r.collaboratorName}"`, `"${GRUPOS[r.grupo].rotulo}"`, `"${r.rotulo}"`, `"${situacaoLabel(r.status)}"`, `"${r.statusMotivoLabel ?? ''}"`, `"${r.alertas.map((a) => ROTULO_DO_ALERTA[a.tipo]).join(' · ')}"`,
       r.startDate, r.type === 'HOURS' ? '' : r.endDate, r.type === 'HOURS' ? '' : String(r.days),
       r.hours != null ? String(r.hours).replace('.', ',') : '', `"${r.doctorName ?? ''}"`, `"${r.doctorCrm ?? ''}"`,
     ];

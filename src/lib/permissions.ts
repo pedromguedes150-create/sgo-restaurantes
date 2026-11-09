@@ -242,6 +242,8 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   INVENTORY: ['SUPERVISOR', 'COORDINATOR'],
   /* v1.181.0 — auditoria de atestados: o gerente acompanha e justifica; supervisão/coordenação informam e validam (editar); Admin/CEO sempre. */
   CERTIFICATES_TAB_AUDIT: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'],
+  /* v1.199.0 — painel do RH: nasce só para Admin/CEO (quem faz o papel de RH no SGO); o Admin libera a quem precisar. */
+  CERTIFICATES_TAB_RH: [],
   COMMISSION: ['SUPERVISOR'], // v1.175.0: apura e confere a Supervisão (+Admin/CEO), como a Mobilidade
   CONFIG_COMMISSION: ['COORDINATOR'], // v1.175.0: o Coordenador marca as funções da cozinha (decisão do Pedro); percentual segue só do Admin, na lib
   /* Aba "Pagar" da central (v1.133.0): quem marca pago é o Coordenador (a

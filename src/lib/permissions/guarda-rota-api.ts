@@ -53,6 +53,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/certificates/config': { modulo: 'CONFIG_CERTIFICATES', exigir: 'editar' },
   '/api/certificates/auditoria': { modulo: 'CERTIFICATES_TAB_AUDIT', exigir: 'ver' },
   '/api/certificates/auditoria/export': { modulo: 'CERTIFICATES_TAB_AUDIT', exigir: 'ver' },
+  '/api/certificates/rh/export': { modulo: 'CERTIFICATES_TAB_RH', exigir: 'ver' },
   '/api/certificates/export': { modulo: 'CERTIFICATES_REPORT', exigir: 'ver' },
   /* v1.184.0 — a rota confere 'editar' por ação (informar/vincular/decidir); justificar é do gerente com 'ver' */
   '/api/auditoria-operacional': { modulo: 'OPERATIONAL_AUDIT', exigir: 'ver' },

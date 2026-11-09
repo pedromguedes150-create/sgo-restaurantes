@@ -9,6 +9,7 @@ import { CertificatesClient } from '@/components/certificates/certificates-clien
 import { getAuditoriaDeAtestados } from '@/lib/certificates/auditoria';
 import { podeAuditar, podeJustificar } from '@/lib/certificates/auditoria-regras';
 import { podeAba } from '@/lib/permissions/abas';
+import { getPainelDoRh } from '@/lib/certificates/painel-rh';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,8 @@ export default async function AtestadosPage({ searchParams }: { searchParams: { 
   /* v1.181.0 — a auditoria dos lançamentos: só quando a aba está aberta para o perfil; o filtro de unidade da URL entra em AND com o escopo. */
   const unitFiltro = searchParams.unit ?? '';
   const auditoriaAberta = podeAba(abas, 'auditoria');
-  const [units, collaborators, rows, report, auditoria] = await Promise.all([
+  const rhAberto = podeAba(abas, 'rh');
+  const [units, collaborators, rows, report, auditoria, painelRh] = await Promise.all([
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     prisma.collaborator.findMany({
       where: { active: true, units: { some: { unit: { active: true, ...unitScopeWhere(user, 'id') } } } },
@@ -37,6 +39,7 @@ export default async function AtestadosPage({ searchParams }: { searchParams: { 
     listCertificates(user, {}),
     getCertificatesReport(user, ym),
     auditoriaAberta ? getAuditoriaDeAtestados(user, ym, unitFiltro || undefined) : Promise.resolve(null),
+    rhAberto ? getPainelDoRh(user, { unitId: unitFiltro || undefined }) : Promise.resolve(null),
   ]);
   const unidadeNoAlcance = !unitFiltro || units.some((u) => u.id === unitFiltro);
 
@@ -56,6 +59,7 @@ export default async function AtestadosPage({ searchParams }: { searchParams: { 
         abas={abas}
         auditoria={auditoria && unidadeNoAlcance ? { dados: auditoria, podeInformar: podeAuditar(user.role) && abas.auditoria?.canEdit !== false, podeJustificar: podeJustificar(user.role) } : null}
         abaPedida={searchParams.aba}
+        painelRh={painelRh && unidadeNoAlcance ? painelRh : null}
         docPedido={searchParams.doc && /^[a-z0-9]+$/i.test(searchParams.doc) ? searchParams.doc : undefined}
         unitFiltro={unidadeNoAlcance ? unitFiltro : ''}
         canLaunch={canLaunch}
