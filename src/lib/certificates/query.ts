@@ -3,7 +3,8 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { canSeeCid } from '@/lib/certificates/labels';
 import { grupoDoDocumento, rotuloDoDocumento, alertaDeDuracao, type GrupoDoDocumento } from '@/lib/certificates/catalogo';
 import type { SessionUser } from '@/lib/auth/session';
-import type { CertificateType, DocumentGroup, DocumentStatus } from '@prisma/client';
+import type { CertificateType, CertificateEventKind, DocumentGroup, DocumentStatus } from '@prisma/client';
+import { rotuloDoMotivo } from '@/lib/certificates/retorno-rh-regras';
 
 export interface CertListItem {
   id: string;
@@ -18,7 +19,13 @@ export interface CertListItem {
   grupo: GrupoDoDocumento;
   status: DocumentStatus;
   statusNote: string | null;
+  /** v1.197.0 — motivo informado pelo RH (código e rótulo). */
+  statusMotivo: string | null;
+  statusMotivoLabel: string | null;
   statusAt: string | null;
+  /** v1.197.0 — linha do tempo (decisões do RH, correções, versões do anexo), mais recente primeiro. */
+  eventos: { kind: CertificateEventKind; fromStatus: DocumentStatus | null; toStatus: DocumentStatus | null; motivo: string | null; note: string | null; attachmentPath: string | null; origem: string; actorName: string | null; at: string }[];
+  collaboratorId: string;
   /** "INSS" quando o afastamento passa de 15 dias (alerta, não decisão). */
   alerta: 'INSS' | null;
   /** O nome lido pela IA destoou do colaborador escolhido (vai para o RH conferir). */
@@ -58,6 +65,7 @@ export async function listCertificates(
       unit: { select: { name: true } },
       collaborator: { select: { name: true } },
       createdBy: { select: { name: true } },
+      events: { orderBy: { createdAt: 'desc' }, take: 12 },
     },
   });
   return rows.map((r) => {
@@ -74,7 +82,11 @@ export async function listCertificates(
     grupo: grupoDoDocumento(r),
     status: r.status,
     statusNote: r.statusNote,
+    statusMotivo: r.statusMotivo,
+    statusMotivoLabel: rotuloDoMotivo(r.statusMotivo),
     statusAt: r.statusAt ? r.statusAt.toISOString() : null,
+    eventos: r.events.map((e) => ({ kind: e.kind, fromStatus: e.fromStatus, toStatus: e.toStatus, motivo: e.motivo, note: e.note, attachmentPath: e.attachmentPath, origem: e.origem, actorName: e.actorName, at: e.createdAt.toISOString() })),
+    collaboratorId: r.collaboratorId,
     alerta: alertaDeDuracao(r),
     nomeDivergente: ai.conferenciaDoNome?.divergente === true,
     issueDate: r.issueDate,

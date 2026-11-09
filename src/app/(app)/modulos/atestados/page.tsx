@@ -17,7 +17,7 @@ function currentYm(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-export default async function AtestadosPage({ searchParams }: { searchParams: { mes?: string; aba?: string; unit?: string } }) {
+export default async function AtestadosPage({ searchParams }: { searchParams: { mes?: string; aba?: string; unit?: string; doc?: string } }) {
   const user = (await getSessionUser())!;
   const ym = searchParams.mes && /^\d{4}-\d{2}$/.test(searchParams.mes) ? searchParams.mes : currentYm();
   const abas = await abasDoPerfil(user.role, 'CERTIFICATES');
@@ -56,6 +56,7 @@ export default async function AtestadosPage({ searchParams }: { searchParams: { 
         abas={abas}
         auditoria={auditoria && unidadeNoAlcance ? { dados: auditoria, podeInformar: podeAuditar(user.role) && abas.auditoria?.canEdit !== false, podeJustificar: podeJustificar(user.role) } : null}
         abaPedida={searchParams.aba}
+        docPedido={searchParams.doc && /^[a-z0-9]+$/i.test(searchParams.doc) ? searchParams.doc : undefined}
         unitFiltro={unidadeNoAlcance ? unitFiltro : ''}
         canLaunch={canLaunch}
         isAdmin={user.role === 'ADMIN'}

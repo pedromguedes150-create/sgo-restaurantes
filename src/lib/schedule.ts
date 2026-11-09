@@ -124,7 +124,8 @@ export async function getScheduleGrid(unitId: string, year: number, month: numbe
        um afastamento que está registrado — o mesmo desenho da variação do gás
        e da faixa de validade do estoque: quem pergunta calcula. */
     prisma.medicalCertificate.findMany({
-      where: { collaboratorId: { in: collabIds }, startDate: { lte: ultimoISO }, endDate: { gte: primeiroISO } },
+      /* v1.197.0 — "Não aceito" pelo RH deixa de valer para a Escala. */
+      where: { collaboratorId: { in: collabIds }, status: { not: 'NAO_ACEITO' }, startDate: { lte: ultimoISO }, endDate: { gte: primeiroISO } },
       select: { collaboratorId: true, startDate: true, endDate: true, type: true, nomenclature: true },
     }),
     /* Férias também é DERIVADA do período (v1.142.1), em Planejado E Realizado.

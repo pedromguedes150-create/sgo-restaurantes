@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { inboundAuthorized, handleInclusao, handleDesligamento, handlePeriodoAquisitivo } from '@/lib/rh/inbound';
+import { handleAtestadoSituacao } from '@/lib/certificates/retorno-rh';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,7 @@ export const dynamic = 'force-dynamic';
  *   POST /api/integracoes/rh/desligamento
  *   POST /api/integracoes/rh/periodo-aquisitivo
  *   POST /api/integracoes/rh/exclusao-periodo
+ *   POST /api/integracoes/rh/atestado-situacao   (v1.197.0 — a decisão do RH sobre um documento da Central de Atestados e Afins)
  * Autenticação: Authorization: Bearer <RH_INBOUND_TOKEN> (ou x-api-key) — o token
  * vem do .env ou da tela de APIs & Integrações (v1.183.0).
  */
@@ -23,6 +25,7 @@ export async function POST(req: Request, { params }: { params: { evento: string 
   else if (evento === 'desligamento') r = await handleDesligamento(payload);
   else if (evento === 'periodo-aquisitivo' || evento === 'periodo_aquisitivo') r = await handlePeriodoAquisitivo('periodo_aquisitivo', payload);
   else if (evento === 'exclusao-periodo' || evento === 'exclusao_periodo') r = await handlePeriodoAquisitivo('exclusao_periodo', payload);
+  else if (evento === 'atestado-situacao' || evento === 'atestado_situacao') r = await handleAtestadoSituacao(payload);
   else return NextResponse.json({ error: `Evento desconhecido: ${evento}` }, { status: 404 });
 
   return NextResponse.json(r.body, { status: r.httpStatus });

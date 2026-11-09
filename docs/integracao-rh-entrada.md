@@ -15,6 +15,7 @@ Todos são `POST`, corpo JSON, resposta JSON. A base de produção é `https://s
 | POST | `/api/integracoes/rh/desligamento` | Desligamento: inativa o colaborador pelo CPF |
 | POST | `/api/integracoes/rh/periodo-aquisitivo` (ou `periodo_aquisitivo`) | Só registra o evento (períodos aquisitivos são derivados da admissão no SGO; o corpo fica guardado para conferência) |
 | POST | `/api/integracoes/rh/exclusao-periodo` (ou `exclusao_periodo`) | Só registra o evento |
+| POST | `/api/integracoes/rh/atestado-situacao` (ou `atestado_situacao`) | **v1.197.0** — a DECISÃO do RH sobre um documento da Central de Atestados e Afins (em análise, validado, correção solicitada, não aceito, concluído). Muda a situação no SGO, avisa o gerente e, no "não aceito", tira a marcação da Escala. Ver 3.5 |
 
 Qualquer outro `{evento}` responde `404 {"error":"Evento desconhecido: ..."}`.
 
@@ -77,6 +78,39 @@ Respostas:
 
 Corpo livre (JSON). O SGO guarda tudo e responde `200 {"status":"recebido"}`. Não altera nada.
 
+### 3.5 `atestado-situacao` (v1.197.0) — a decisão do RH volta ao SGO
+
+Todo documento que o SGO envia a `POST /api/integracoes/sgo/atestados` leva um `sgoMovimentoId` (o id do
+documento no SGO). Quando o RH analisar, chama:
+
+```json
+{
+  "sgoMovimentoId": "id do documento no SGO (o mesmo recebido no envio)",
+  "sgoEventId": "sgoEventId do envio original (opcional)",
+  "rhAtestadoId": "id do documento no RH (opcional; o SGO grava)",
+  "situacao": "em_analise | validado | correcao_solicitada | nao_aceito | concluido",
+  "motivo": "ilegivel | foto_cortada | incompleto | colaborador_incorreto | datas_divergentes | documento_complementar | classificacao_revisar | outro",
+  "observacao": "texto curto para o GERENTE, sem CID nem diagnóstico (até 500 caracteres)",
+  "nomenclaturaRh": "nome do tipo como o RH classificou (opcional, grafia do catálogo do SGO)",
+  "data": "2026-11-09T14:30:00-03:00"
+}
+```
+
+Regras:
+- `motivo` e `observacao` são **obrigatórios** em `correcao_solicitada` e `nao_aceito`; nos demais, opcionais.
+- `observacao` aparece na tela do gerente. O SGO **recusa com 400** texto que contenha CID (padrão da CID-10, ex.: "J11", "M54.5") ou a palavra "CID".
+- `nomenclaturaRh` com um nome do catálogo (25 nomes, em `docs/para-o-rh-central-atestados-afins-v1.196.0.md`) **reclassifica** o documento no SGO (grupo e tipo acompanham). Nome fora do catálogo fica só registrado na linha do tempo, sem aplicar.
+- Repetição (mesmo documento, mesma situação, mesmo motivo e observação) responde `200 {"repetido":true}` e não gera aviso novo.
+- `nao_aceito` tira o documento da Escala (os dias voltam ao planejado). Um `validado` depois faz a Escala voltar a marcar.
+- Quando o gerente **corrige e reenvia** (botão na tela), o SGO manda ao RH um `acao: "atualizar"` com o MESMO `sgoMovimentoId`, `sgoEventId` NOVO e o anexo novo; o RH atualiza o documento existente e, após a nova análise, manda a situação de novo.
+
+Respostas:
+- `200 {"status":"processado","sgoMovimentoId":"...","situacao":"CORRECAO_SOLICITADA"}` (+ `"repetido":true` na repetição; + `"diasDesmarcadosNaEscala":N` no não aceito)
+- `400 {"error":"motivo é obrigatório em correcao_solicitada — use ..."}` · `400 {"error":"observacao não pode conter CID ou dado médico — ela aparece para o gerente"}`
+- `404 {"error":"Documento não encontrado no SGO","sgoMovimentoId":"..."}`
+
+Efeitos no SGO: situação do documento (Histórico da Central e `GET /api/v1/atestados` → `status`, `statusMotivo`, `statusNote`), linha do tempo em `medical_certificate_events`, aviso ao gerente que lançou (ou aos gerentes da unidade), registro em `rh_inbound_events` e na Auditoria (`CERTIFICATE_RH_RETURN`).
+
 ### 3.4 Erros gerais
 
 - Corpo não-JSON ou vazio: `400 {"error":"Payload inválido"}`.
@@ -111,6 +145,6 @@ Nenhum dado nem endpoint da API v1 mudou.
 
 Para admissões/alterações/desligamentos/férias/atestados das pessoas de restaurante, lanchonete e
 fábrica/CD, o caminho natural é **o mesmo**: `POST /api/integracoes/rh/<evento>` com o token
-`RH_INBOUND_TOKEN`. Hoje só `inclusao` e `desligamento` alteram dados. Quando o RH definir o formato
-de `alteracao`, `ferias` e `atestado`, eles entram em `src/lib/rh/inbound.ts` com o mesmo registro e a
+`RH_INBOUND_TOKEN`. Hoje `inclusao`, `desligamento` e `atestado-situacao` (v1.197.0) alteram dados. Quando o RH definir o
+formato de `alteracao` e `ferias`, eles entram em `src/lib/rh/inbound.ts` com o mesmo registro e a
 mesma autenticação — sem mudar o que já funciona.

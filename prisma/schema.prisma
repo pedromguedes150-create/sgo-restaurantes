@@ -4002,6 +4002,8 @@ model MedicalCertificate {
   status         DocumentStatus  @default(LEITURA_CONCLUIDA)
   /// Motivo da correção pedida / justificativa do não aceite (texto do RH, sem dado médico).
   statusNote     String?
+  /// v1.197.0 — código do motivo informado pelo RH (ilegivel, foto_cortada, …).
+  statusMotivo   String?
   statusAt       DateTime?
   /// Datas em yyyy-mm-dd (dia civil; afastamento usa o calendário, regra nº 5)
   issueDate      String?
@@ -4025,16 +4027,51 @@ model MedicalCertificate {
   createdById    String?
   createdAt      DateTime        @default(now())
 
-  unit         Unit                    @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  collaborator Collaborator            @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
-  createdBy    User?                   @relation("CertBy", fields: [createdById], references: [id], onDelete: SetNull)
+  unit         Unit                      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  collaborator Collaborator              @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  createdBy    User?                     @relation("CertBy", fields: [createdById], references: [id], onDelete: SetNull)
   /// v1.181.0 — o atestado ESPERADO (auditoria) cruzado com este lançamento, se houver.
   expectation  CertificateExpectation?
+  /// v1.197.0 — linha do tempo do documento (decisões do RH, correções do gerente, versões do anexo).
+  events       MedicalCertificateEvent[]
 
   @@index([unitId, startDate])
   @@index([collaboratorId, startDate])
   @@index([status])
   @@map("medical_certificates")
+}
+
+/// v1.197.0 — o que aconteceu com o documento depois de lançado: SITUACAO (decisão
+/// devolvida pelo RH), CORRECAO (o gerente corrigiu e reenviou), ANEXO (versão
+/// anterior do arquivo, guardada para auditoria). Imutável: só se acrescenta.
+enum CertificateEventKind {
+  SITUACAO
+  CORRECAO
+  ANEXO
+}
+
+model MedicalCertificateEvent {
+  id             String               @id @default(cuid())
+  certificateId  String
+  kind           CertificateEventKind
+  fromStatus     DocumentStatus?
+  toStatus       DocumentStatus?
+  /// Código do motivo (correção/não aceite) — ver MOTIVOS_DE_CORRECAO.
+  motivo         String?
+  /// Texto para o gerente / observação da correção (nunca dado médico).
+  note           String?
+  /// ANEXO: o caminho da versão ANTERIOR do arquivo; CORRECAO: o caminho novo.
+  attachmentPath String?
+  /// "RH" (evento recebido), "GERENTE" (correção) ou "SGO" (automático).
+  origem         String
+  actorId        String?
+  actorName      String?
+  createdAt      DateTime             @default(now())
+
+  certificate MedicalCertificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@index([certificateId, createdAt])
+  @@map("medical_certificate_events")
 }
 
 // ───────────────────────── Inventário de Equipamentos (Módulo 18) ─────────────────────────

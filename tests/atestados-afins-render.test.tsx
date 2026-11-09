@@ -24,7 +24,7 @@ const report: CertReport = { period: { from: '2026-11-01', to: '2026-11-30' }, t
   byStatus: [{ status: 'ENVIADO_RH', count: 1 }, { status: 'CORRECAO_SOLICITADA', count: 1 }] };
 const linha = (over: Partial<CertListItem>): CertListItem => ({
   id: 'd1', unitId: 'u1', unitName: 'Churrascaria Centro', collaboratorName: 'MARIA JOSÉ', type: 'FULL_DAY', documentGroup: 'LICENCA', nomenclature: 'Licença-paternidade',
-  rotulo: 'Licença-paternidade', grupo: 'LICENCA', status: 'ENVIADO_RH', statusNote: null, statusAt: null, alerta: null, nomeDivergente: false,
+  rotulo: 'Licença-paternidade', grupo: 'LICENCA', status: 'ENVIADO_RH', statusNote: null, statusMotivo: null, statusMotivoLabel: null, statusAt: null, eventos: [], collaboratorId: 'c1', alerta: null, nomeDivergente: false,
   issueDate: null, startDate: '2026-11-03', endDate: '2026-11-07', days: 5, hours: null, doctorName: null, doctorCrm: null, cid: null, cidDescription: null,
   attachmentPath: 'uploads/u1/doc.jpg', observation: null, by: 'Ger', ...over,
 });
@@ -69,6 +69,26 @@ describe('Central de Atestados e Afins — tela do gerente', () => {
     expect(h).toContain('Acompanhamento de familiar'); // registro antigo entra pelo tipo de sempre
     expect(h).toContain('Concluído');
     expect(h).not.toContain('CID •••');
+  });
+
+  it('v1.197.0: com Correção solicitada o gerente vê o motivo do RH em destaque, o botão "Corrigir e reenviar" e a linha do tempo; validado não tem botão', () => {
+    const rows = [
+      linha({ id: 'd9', status: 'CORRECAO_SOLICITADA', statusMotivo: 'foto_cortada', statusMotivoLabel: 'Foto cortada', statusNote: 'Envie o documento inteiro.', eventos: [{ kind: 'SITUACAO', fromStatus: 'ENVIADO_RH', toStatus: 'CORRECAO_SOLICITADA', motivo: 'foto_cortada', note: 'Envie o documento inteiro.', attachmentPath: null, origem: 'RH', actorName: 'GBF-RH', at: '2026-11-09T17:00:00.000Z' }] }),
+      linha({ id: 'd8', status: 'VALIDADO_RH' }),
+    ];
+    const h = semSeparadores(renderToString(<CertificatesClient {...base} rows={rows} abaPedida="historico" docPedido="d9" />));
+    expect(h).toContain('data-testid="retorno-rh"');
+    expect(h).toContain('Foto cortada — Envie o documento inteiro.');
+    // com o painel aberto (docPedido), o botão some no d9; sem docPedido ele aparece UMA vez (só no d9, nunca no validado)
+    const semDoc = semSeparadores(renderToString(<CertificatesClient {...base} rows={rows} abaPedida="historico" />));
+    expect((semDoc.match(/data-testid="corrigir-reenviar"/g) ?? []).length).toBe(1);
+    expect(semDoc).not.toContain('data-testid="painel-correcao"');
+    expect(h).toContain('Histórico do documento (1)');
+    expect(h).toContain('ring-2 ring-brand'); // o documento apontado pelo aviso vem destacado
+    // com docPedido em correção, o painel já nasce aberto
+    expect(h).toContain('data-testid="painel-correcao"');
+    expect(h).toContain('Reenviar ao RH');
+    expect(h).not.toContain('CID');
   });
 
   it('o painel traz a situação dos lançamentos e a abertura por grupo e tipo de documento', () => {
