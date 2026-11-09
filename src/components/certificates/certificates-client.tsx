@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { abaInicial, podeAba, type AcessoAbas } from '@/lib/permissions/abas';
 
-import { Plus, Sparkles, Trash2, FileText, Stethoscope, CalendarDays, TrendingUp, BarChart3, Printer, Camera, Images, AlertTriangle, CheckCircle2, ClipboardCheck } from 'lucide-react';
+import { Plus, Sparkles, Trash2, FileText, Stethoscope, CalendarDays, TrendingUp, BarChart3, Printer, Camera, Images, AlertTriangle, CheckCircle2, ClipboardCheck, RotateCcw, History as HistoryIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ import { DatePicker } from '@/components/ui/ds/date-picker';
 import { shortUnitName } from '@/lib/unit-name';
 import { compressImage } from '@/lib/image-compress';
 import { GRUPOS, SITUACOES, conferirNome, type GrupoDoDocumento } from '@/lib/certificates/catalogo';
+import { podeCorrigir } from '@/lib/certificates/retorno-rh-regras';
 import type { CertListItem, CertReport } from '@/lib/certificates/query';
 import type { CertReadResult } from '@/lib/ai/atestado';
 import type { CertificateType, DocumentStatus } from '@prisma/client';
@@ -56,7 +57,7 @@ const TOM_DO_GRUPO: Record<GrupoDoDocumento, StatusTone> = { ATESTADO: 'success'
 
 type Aba = 'lancar' | 'historico' | 'painel' | 'auditoria';
 
-export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, collaboratorsByUnit, rows, report, abas = {}, subtitulo, auditoria, abaPedida, unitFiltro = '' }: {
+export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, collaboratorsByUnit, rows, report, abas = {}, subtitulo, auditoria, abaPedida, docPedido, unitFiltro = '' }: {
   /** Subtítulo do cabeçalho do kit (vem da página de servidor). */
   subtitulo?: React.ReactNode;
   canLaunch: boolean; isAdmin: boolean; showCid: boolean; ym: string;
@@ -67,6 +68,8 @@ export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, col
   auditoria?: { dados: AuditoriaDeAtestados; podeInformar: boolean; podeJustificar: boolean } | null;
   /** Aba pedida na URL (?aba=auditoria|historico) — os links dos avisos caem direto nela. */
   abaPedida?: string;
+  /** v1.197.0 — id do documento apontado pelo aviso (?doc=): o Histórico o destaca e rola até ele. */
+  docPedido?: string;
   unitFiltro?: string;
 }) {
   const router = useRouter();
@@ -98,7 +101,7 @@ export function CertificatesClient({ canLaunch, isAdmin, showCid, ym, units, col
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> <span>{aviso}</span>
             </div>
           )}
-          <History rows={rows} isAdmin={isAdmin} showCid={showCid} onChanged={() => router.refresh()} />
+          <History rows={rows} isAdmin={isAdmin} showCid={showCid} canLaunch={canLaunch} collaboratorsByUnit={collaboratorsByUnit} docPedido={docPedido} onChanged={(texto) => { if (texto) setAviso(texto); router.refresh(); }} />
         </>
       )}
       {tab === 'painel' && <Panel report={report} ym={ym} />}
@@ -335,8 +338,14 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
 }
 
 /* ───────────────────────── Histórico ───────────────────────── */
-function History({ rows, isAdmin, showCid, onChanged }: { rows: CertListItem[]; isAdmin: boolean; showCid: boolean; onChanged: () => void }) {
+function History({ rows, isAdmin, showCid, canLaunch, collaboratorsByUnit, docPedido, onChanged }: { rows: CertListItem[]; isAdmin: boolean; showCid: boolean; canLaunch: boolean; collaboratorsByUnit: Record<string, Collab[]>; docPedido?: string; onChanged: (texto?: string) => void }) {
   const [busy, setBusy] = useState('');
+  const [corrigindo, setCorrigindo] = useState<string | null>(docPedido && rows.some((r) => r.id === docPedido && podeCorrigir(r.status)) ? docPedido : null);
+  useEffect(() => {
+    if (!docPedido) return;
+    const el = document.getElementById(`doc-${docPedido}`);
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+  }, [docPedido]);
   async function remove(id: string) {
     if (!confirm('Excluir este documento? Reverte a marcação na Escala, avisa o RH (cancelamento) e fica na Auditoria. Não pode ser desfeito.')) return;
     setBusy(id);
@@ -353,8 +362,9 @@ function History({ rows, isAdmin, showCid, onChanged }: { rows: CertListItem[]; 
     <Group>
       {rows.map((r) => {
         const sit = SITUACOES[r.status];
+        const destaque = r.id === docPedido;
         return (
-          <div key={r.id} className="p-3" data-testid="documento">
+          <div key={r.id} id={`doc-${r.id}`} className={`scroll-mt-24 p-3 ${destaque ? 'ring-2 ring-brand ring-inset' : ''}`} data-testid="documento">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-[10rem] flex-1">
                 <p className="break-words text-sm font-semibold text-ink-900">{r.collaboratorName}</p>
@@ -373,12 +383,40 @@ function History({ rows, isAdmin, showCid, onChanged }: { rows: CertListItem[]; 
               {showCid && r.cid && <span className="text-ink-500">CID {r.cid}{r.cidDescription ? ` — ${r.cidDescription}` : ''}</span>}
               {r.attachmentPath && <a href={`/${r.attachmentPath}`} target="_blank" rel="noreferrer" className="font-semibold text-brand underline">Ver documento</a>}
             </div>
-            {(r.alerta === 'INSS' || r.nomeDivergente || r.statusNote) && (
+            {(r.alerta === 'INSS' || r.nomeDivergente || r.statusNote || r.statusMotivoLabel) && (
               <div className="mt-2 space-y-1 text-xs">
                 {r.alerta === 'INSS' && <p className="flex items-center gap-1 font-medium text-warning"><AlertTriangle className="h-3.5 w-3.5" /> Mais de 15 dias — análise do INSS a cargo do RH.</p>}
                 {r.nomeDivergente && <p className="flex items-center gap-1 font-medium text-warning"><AlertTriangle className="h-3.5 w-3.5" /> O nome lido no documento não bate com o colaborador — conferir.</p>}
-                {r.statusNote && <p className="text-ink-900"><b>RH:</b> {r.statusNote}</p>}
+                {(r.statusNote || r.statusMotivoLabel) && (
+                  <p className={`rounded-md border p-2 ${r.status === 'CORRECAO_SOLICITADA' || r.status === 'NAO_ACEITO' ? 'border-danger/40 bg-danger/5 text-ink-900' : 'text-ink-900'}`} data-testid="retorno-rh">
+                    <b>RH:</b> {r.statusMotivoLabel ? <>{r.statusMotivoLabel}{r.statusNote ? ' — ' : ''}</> : null}{r.statusNote}
+                  </p>
+                )}
               </div>
+            )}
+            {canLaunch && podeCorrigir(r.status) && corrigindo !== r.id && (
+              <div className="mt-2">
+                <Button size="sm" onClick={() => setCorrigindo(r.id)} data-testid="corrigir-reenviar"><RotateCcw className="h-4 w-4" /> Corrigir e reenviar</Button>
+              </div>
+            )}
+            {corrigindo === r.id && (
+              <CorrecaoPanel row={r} collabs={collaboratorsByUnit[r.unitId] ?? []} onCancel={() => setCorrigindo(null)} onDone={(texto) => { setCorrigindo(null); onChanged(texto); }} />
+            )}
+            {r.eventos.length > 0 && (
+              <details className="mt-2 text-xs">
+                <summary className="flex cursor-pointer items-center gap-1 font-semibold text-ink-500"><HistoryIcon className="h-3.5 w-3.5" /> Histórico do documento ({r.eventos.length})</summary>
+                <ul className="mt-1 space-y-1 border-l-2 border-line pl-3">
+                  {r.eventos.map((e, i) => (
+                    <li key={i} className="text-ink-900">
+                      <span className="text-ink-500">{new Date(e.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                      {' · '}
+                      {e.kind === 'SITUACAO' && <>RH: <b>{e.toStatus ? SITUACOES[e.toStatus].rotulo : '—'}</b>{e.motivo ? ` (${e.motivo.replace(/_/g, ' ')})` : ''}{e.note ? ` — ${e.note}` : ''}</>}
+                      {e.kind === 'CORRECAO' && <>Corrigido por {e.actorName ?? 'gerente'}{e.note ? `: ${e.note}` : ''}</>}
+                      {e.kind === 'ANEXO' && <>Versão anterior do arquivo{e.attachmentPath ? <> — <a href={`/${e.attachmentPath}`} target="_blank" rel="noreferrer" className="font-semibold text-brand underline">ver</a></> : null}</>}
+                    </li>
+                  ))}
+                </ul>
+              </details>
             )}
             {isAdmin && (
               <div className="mt-2 flex justify-end">
@@ -389,6 +427,87 @@ function History({ rows, isAdmin, showCid, onChanged }: { rows: CertListItem[]; 
         );
       })}
     </Group>
+  );
+}
+
+/* ───────────────────────── Correção (RH pediu) ─────────────────────────
+ * O gerente corrige NO MESMO registro: troca o arquivo (sobe por /api/certificates/read,
+ * que também o relê por IA), ajusta datas ou colaborador e reenvia. A versão anterior
+ * do arquivo fica guardada; o RH recebe um "atualizar" com o mesmo sgoMovimentoId. */
+function CorrecaoPanel({ row, collabs, onCancel, onDone }: { row: CertListItem; collabs: Collab[]; onCancel: () => void; onDone: (texto: string) => void }) {
+  const [attachmentPath, setAttachmentPath] = useState('');
+  const [ai, setAi] = useState<CertReadResult | null>(null);
+  const [startDate, setStartDate] = useState(row.startDate);
+  const [endDate, setEndDate] = useState(row.endDate);
+  const [collaboratorId, setCollaboratorId] = useState(row.collaboratorId);
+  const [observation, setObservation] = useState(row.observation ?? '');
+  const [reading, setReading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galeriaRef = useRef<HTMLInputElement>(null);
+  const porHoras = row.type === 'HOURS';
+
+  async function trocarArquivo(file: File) {
+    setReading(true); setMsg(null);
+    try {
+      const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
+      const toSend = isImage ? await compressImage(file).catch(() => file) : file;
+      const fd = new FormData(); fd.append('unitId', row.unitId); fd.append('file', toSend);
+      const res = await fetch('/api/certificates/read', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setMsg(data.error ?? 'Falha ao enviar o arquivo.'); return; }
+      setAttachmentPath(data.attachmentPath ?? '');
+      const r = data.ai as CertReadResult | null;
+      setAi(r && r.configured && r.ok ? r : null);
+      if (r && r.configured && r.ok && r.fields?.startDate) { setStartDate(r.fields.startDate); if (r.fields.endDate) setEndDate(r.fields.endDate); }
+      if (r?.legivel === false) setMsg('A nova imagem também ficou ilegível — tente outra foto.');
+    } finally { setReading(false); }
+  }
+
+  async function reenviar() {
+    setBusy(true); setMsg(null);
+    try {
+      const res = await fetch(`/api/certificates/${row.id}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acao: 'corrigir', attachmentPath: attachmentPath || undefined, startDate, endDate: porHoras ? startDate : endDate, collaboratorId, observation, aiExtracted: ai ?? undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setMsg(data.error ?? 'Falha ao reenviar.'); return; }
+      onDone(data.reenvio === 'ENFILEIRADO' ? 'Documento corrigido e reenviado ao RH.'
+        : data.reenvio === 'ERRO_DE_DADOS' ? 'Documento corrigido, mas o reenvio ao RH ficou com erro de dados (ex.: colaborador sem CPF) — o Administrador revisa em Envios ao RH.'
+        : 'Documento corrigido. O envio ao RH ainda não tinha saído e levará a versão corrigida.');
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="mt-2 space-y-2 rounded-lg border border-brand/30 bg-brand-tint/40 p-3" data-testid="painel-correcao">
+      <p className="text-xs font-semibold text-ink-900">Corrigir e reenviar ao RH</p>
+      {(row.statusMotivoLabel || row.statusNote) && <p className="text-xs text-ink-900"><b>O RH pediu:</b> {row.statusMotivoLabel}{row.statusNote ? ` — ${row.statusNote}` : ''}</p>}
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) trocarArquivo(f); e.target.value = ''; }} />
+      <input ref={galeriaRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) trocarArquivo(f); e.target.value = ''; }} />
+      <div className="grid grid-cols-2 gap-2">
+        <Button type="button" size="sm" variant="outline" disabled={reading} onClick={() => cameraRef.current?.click()}><Camera className="h-4 w-4" /> Nova foto</Button>
+        <Button type="button" size="sm" variant="outline" disabled={reading} onClick={() => galeriaRef.current?.click()}><Images className="h-4 w-4" /> Galeria ou PDF</Button>
+      </div>
+      {reading && <p className="text-xs text-ink-900" role="status">Lendo o documento…</p>}
+      {attachmentPath && !reading && <p className="text-xs"><a href={`/${attachmentPath}`} target="_blank" rel="noreferrer" className="font-semibold text-brand underline">Ver novo arquivo</a> <span className="text-ink-500">(o anterior fica guardado como versão)</span></p>}
+      <Select label="Colaborador" size="sm" searchable value={collaboratorId} onValueChange={setCollaboratorId} options={collabs.map((c) => ({ value: c.id, label: c.name }))} />
+      {porHoras ? (
+        <DatePicker label="Data do atendimento" size="sm" value={startDate || null} onValueChange={(v) => setStartDate(v ?? '')} />
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          <DatePicker label="Início" size="sm" value={startDate || null} onValueChange={(v) => setStartDate(v ?? '')} />
+          <DatePicker label="Fim" size="sm" min={startDate || undefined} value={endDate || null} onValueChange={(v) => setEndDate(v ?? '')} />
+        </div>
+      )}
+      <div><Label className="text-xs">Observação ao RH</Label><Input className="h-10 text-sm" value={observation} onChange={(e) => setObservation(e.target.value)} placeholder="opcional" /></div>
+      {msg && <p className="text-xs font-medium text-danger" role="alert">{msg}</p>}
+      <div className="flex gap-2">
+        <Button size="sm" disabled={busy || reading} onClick={reenviar} data-testid="reenviar-rh"><RotateCcw className="h-4 w-4" /> Reenviar ao RH</Button>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={onCancel}>Cancelar</Button>
+      </div>
+    </div>
   );
 }
 

@@ -9,6 +9,18 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.197.0 — 2026-11-09 (Central de Atestados e Afins — etapa B: a decisão do RH volta pela API, correção e reenvio)
+
+Segunda etapa da spec do Pedro (09/11/2026). Decisão do Daniel: o RH valida no sistema DELE e devolve pela API.
+
+- **Evento de entrada `POST /api/integracoes/rh/atestado-situacao`** (mesma porta e token de `inclusao`/`desligamento`): `sgoMovimentoId` + `situacao` (em_analise · validado · correcao_solicitada · nao_aceito · concluido) + `motivo` (8 códigos) + `observacao` + `nomenclaturaRh` opcional. Regras puras em `src/lib/certificates/retorno-rh-regras.ts`: motivo e observação obrigatórios em correção/não aceito; observação com CID (padrão CID-10 ou a palavra) é recusada com 400 — ela aparece para o gerente; repetição responde 200 sem aviso novo; `nomenclaturaRh` do catálogo RECLASSIFICA (grupo e tipo acompanham), fora dele fica só na linha do tempo.
+- **Aviso ao gerente** que lançou (ou aos gerentes da unidade), IMPORTANTE em correção/não aceito, com link que abre o Histórico no documento (`?doc=`). Não aceito também avisa os Admins.
+- **"Não aceito" tira o documento da Escala**: a grade passa a ignorar `NAO_ACEITO` e os dias gravados são apagados; um `validado` depois faz a grade voltar a derivar.
+- **Correção pelo gerente no MESMO registro** (botão "Corrigir e reenviar", só em Correção solicitada): nova foto/PDF (sobe por `/api/certificates/read`, relido por IA), datas ou colaborador; a versão anterior do arquivo fica guardada; Escala desfeita e refeita; situação "Corrigido e reenviado"; o RH recebe `acao: atualizar` com o mesmo `sgoMovimentoId` e `sgoEventId` novo (só se o `criar` já foi aceito). Rota `POST /api/certificates/[id]`.
+- **Linha do tempo** `medical_certificate_events` (SITUACAO · CORRECAO · ANEXO) visível no Histórico ("Histórico do documento"); `statusMotivo` no documento e na API Global.
+- Docs: `docs/integracao-rh-entrada.md` §3.5 e o documento para o RH (`docs/para-o-rh-central-atestados-afins-v1.196.0.md`) revisado com a URL certa e "já implementado".
+- Migração ADITIVA `20261109150000_central_atestados_etapa_b`.
+
 ## v1.196.0 — 2026-11-09 (Central de Atestados e Afins — leitura por IA, nomenclaturas e lançamento em três passos)
 
 Primeira etapa da spec do Pedro (09/11/2026, planilha "Tipos de Atestados, Afastamentos, Comparecimentos e Licenças").
