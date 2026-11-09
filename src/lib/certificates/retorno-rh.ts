@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/prisma';
 import { audit } from '@/lib/audit';
 import { notifyUsers, notifyUnitRole, notifyAdmins } from '@/lib/notifications';
 import { efeitoNaEscala, rotuloDoDocumento } from '@/lib/certificates/catalogo';
+import { carregarConfigDasNomenclaturas, nomenclaturaPeloNomeDoRh } from '@/lib/certificates/config-nomenclaturas';
 import { validarRetornoDoRh, ehRepeticao, mensagemParaOGerente, SITUACOES_SEM_EFEITO_NA_ESCALA } from '@/lib/certificates/retorno-rh-regras';
 import type { Prisma } from '@prisma/client';
 
@@ -32,7 +33,9 @@ export async function desfazerMarcacaoNaEscala(c: { collaboratorId: string; star
 }
 
 export async function handleAtestadoSituacao(payload: Record<string, unknown>): Promise<ResultadoDoRetorno> {
-  const v = validarRetornoDoRh(payload);
+  /* O RH pode responder com a grafia DELE (Configurações → Atestados e afins → "Nome no RH"). */
+  const cfg = await carregarConfigDasNomenclaturas().catch(() => new Map());
+  const v = validarRetornoDoRh(payload, (t) => nomenclaturaPeloNomeDoRh(t, cfg));
   if (!v.ok) {
     await log(payload, 'ERROR', v.erro);
     return { httpStatus: 400, body: { error: v.erro } };

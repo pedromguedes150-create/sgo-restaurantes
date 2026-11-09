@@ -170,6 +170,7 @@ export const ENTIDADES: Entidade[] = [
 /** Telas (chaves de `MODULES` com endereço) que de propósito NÃO têm endpoint de tabela. */
 export const TELAS_SEM_ENDPOINT: Record<string, string> = {
   HELP: 'Treinamento da Plataforma — texto estático do sistema, não é dado operacional.',
+  CONFIG_CERTIFICATES: 'Correspondência SGO ↔ RH por nomenclatura — endpoint próprio `GET /api/v1/atestados/nomenclaturas` (v1.198.0), que junta catálogo, configuração e regra vigente.',
   TICKET_MEDIA_IMPORT: 'Tela de upload; os dados importados saem em `ticket-medio`.',
   OCCURRENCES_NEW: 'Formulário de registro; os dados saem em `ocorrencias`.',
   METAS: 'Cálculo (ranking e nota por unidade) — endpoint computado `metas`, pela mesma função da tela.',

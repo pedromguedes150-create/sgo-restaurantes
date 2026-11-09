@@ -1,7 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { env } from '@/lib/env';
 import { conciliarPeriodo } from '@/lib/certificates/periodo';
-import { NOMENCLATURAS, nomenclaturaPorNome, fimSugerido, type GrupoDoDocumento, type Nomenclatura } from '@/lib/certificates/catalogo';
+import { NOMENCLATURAS, nomenclaturaPorNome, type GrupoDoDocumento, type Nomenclatura } from '@/lib/certificates/catalogo';
+import { duracaoDaRegra } from '@/lib/certificates/regras-legais';
+import { nomenclaturasAtivas, carregarConfigDasNomenclaturas, diasDaRegraCom } from '@/lib/certificates/config-nomenclaturas';
 
 /**
  * Leitura de DOCUMENTO DE RH por IA (Claude visão + PDF) — v1.196.0, Central de
@@ -84,7 +86,13 @@ export function listaDeNomenclaturasParaOPrompt(ns: readonly Nomenclatura[] = NO
 
 const CAMPOS = ['collaboratorName', 'issueDate', 'startDate', 'endDate', 'returnDate', 'days', 'hours', 'hoursStart', 'hoursEnd', 'eventDate', 'doctorName', 'doctorCrm', 'institution', 'cid', 'cidDescription'] as const;
 
-export function instrucoesDeLeitura(): string {
+/** Opções da interpretação: a lista de nomenclaturas ATIVAS e a regra de duração (com a sobreposição do Admin). */
+export interface OpcoesDeLeitura {
+  ativas?: readonly Nomenclatura[];
+  diasDaRegra?: (nomenclatura: string, inicio: string | null | undefined) => number | null;
+}
+
+export function instrucoesDeLeitura(ativas: readonly Nomenclatura[] = NOMENCLATURAS): string {
   return (
     'Você lê documentos de RH brasileiros entregues por funcionários de restaurantes: atestados, declarações de comparecimento, ' +
     'documentos do INSS/CAT, certidões (nascimento, casamento, óbito), comprovantes eleitorais e afins. ' +
@@ -93,7 +101,7 @@ export function instrucoesDeLeitura(): string {
     'Se o documento não corresponder com segurança a nenhuma, use null (NUNCA chute: uma classificação errada é pior que nenhuma). ' +
     'Uma declaração de comparecimento/consulta NUNCA vira atestado de afastamento, a não ser que o documento traga expressamente um período de afastamento. ' +
     'Uma certidão de nascimento pode ser "Licença-paternidade" (pai) ou "Licença-maternidade" (mãe): se o documento não deixar claro o vínculo da pessoa, use null.\n' +
-    'LISTA FECHADA DE NOMENCLATURAS:\n' + listaDeNomenclaturasParaOPrompt() + '\n' +
+    'LISTA FECHADA DE NOMENCLATURAS:\n' + listaDeNomenclaturasParaOPrompt(ativas) + '\n' +
     'Extraia SOMENTE o que está escrito no documento. Datas SEMPRE em yyyy-mm-dd; horários em HH:MM. Campo ausente ou ilegível = null (não presuma, não complete por suposição). ' +
     'DATAS DE AFASTAMENTO: "startDate" = primeiro dia afastado ("Início"); "endDate" = ÚLTIMO dia afastado. Muitos atestados trazem "Retorno" — é o dia em que a pessoa VOLTA ao trabalho, NÃO o fim: ' +
     'devolva-o em "returnDate" e NUNCA o copie em "endDate". Com "N dia(s)" e início, o fim é início + N − 1. ' +
@@ -117,7 +125,9 @@ export function instrucoesDeLeitura(): string {
  * Transforma a resposta crua da IA no resultado conferido — PURO, exportado
  * para os testes (a chamada à rede fica em `lerDocumentoRh`).
  */
-export function interpretarResposta(parsed: Record<string, unknown>): CertReadResult {
+export function interpretarResposta(parsed: Record<string, unknown>, opcoes: OpcoesDeLeitura = {}): CertReadResult {
+  const ativas = opcoes.ativas ?? NOMENCLATURAS;
+  const diasDaRegra = opcoes.diasDaRegra ?? ((n: string, i: string | null | undefined) => duracaoDaRegra(n, i));
   const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
   const num = (v: unknown) => (typeof v === 'number' && isFinite(v) ? v : (typeof v === 'string' && v.trim() && isFinite(Number(v)) ? Number(v) : null));
   const date = (v: unknown) => { const s = str(v); return s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null; };
@@ -126,7 +136,9 @@ export function interpretarResposta(parsed: Record<string, unknown>): CertReadRe
   const low = Array.isArray(parsed.lowConfidence) ? (parsed.lowConfidence as unknown[]).map(String) : [];
 
   const legivel = parsed.legivel !== false;
-  const nomenclatura = nomenclaturaPorNome(str(parsed.nomenclatura));
+  const candidata = nomenclaturaPorNome(str(parsed.nomenclatura));
+  /* Nomenclatura desativada pelo Admin não classifica (a IA não deveria tê-la visto; se viu, fica pendente). */
+  const nomenclatura = candidata && ativas.some((a) => a.nome === candidata.nome) ? candidata : null;
 
   const periodo = conciliarPeriodo({ startDate: date(parsed.startDate), endDate: date(parsed.endDate), returnDate: date(parsed.returnDate), days: num(parsed.days) });
   if (periodo.fimAjustado && !low.includes('endDate')) low.push('endDate');
@@ -142,8 +154,12 @@ export function interpretarResposta(parsed: Record<string, unknown>): CertReadRe
   if (nomenclatura?.grupo === 'LICENCA') {
     if (!startDate && eventDate) startDate = eventDate;
     if (startDate && !endDate) {
-      const fim = fimSugerido(nomenclatura, startDate);
-      if (fim) { endDate = fim; days = nomenclatura.diasSugeridos ?? null; fimSugeridoPelaRegra = true; if (!low.includes('endDate')) low.push('endDate'); }
+      /* A regra tem VIGÊNCIA (paternidade 5 → 10 dias em 2027) e o Admin pode sobrepor: nunca um número fixo. */
+      const dias = diasDaRegra(nomenclatura.nome, startDate);
+      if (dias) {
+        const d = new Date(startDate + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + dias - 1);
+        endDate = d.toISOString().slice(0, 10); days = dias; fimSugeridoPelaRegra = true; if (!low.includes('endDate')) low.push('endDate');
+      }
     }
   }
 
@@ -203,10 +219,12 @@ export async function lerDocumentoRh(input: { base64: string; mediaType: string 
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: input.base64 } }
     : { type: 'image', source: { type: 'base64', media_type: input.mediaType as ImagemAceita, data: input.base64 } };
 
+  /* A lista fechada é a das nomenclaturas ATIVAS (Configurações → Atestados e afins). */
+  const [ativas, cfg] = await Promise.all([nomenclaturasAtivas().catch(() => [...NOMENCLATURAS]), carregarConfigDasNomenclaturas().catch(() => new Map())]);
   const content: Block[] = [
     { type: 'text', text: 'DOCUMENTO DE RH ENTREGUE PELO FUNCIONÁRIO (ler, transcrever e classificar):' },
     documento,
-    { type: 'text', text: instrucoesDeLeitura() },
+    { type: 'text', text: instrucoesDeLeitura(ativas) },
   ];
 
   try {
@@ -219,7 +237,7 @@ export async function lerDocumentoRh(input: { base64: string; mediaType: string 
     const text = msg.content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text').map((b) => b.text).join('\n');
     const parsed = extractJson(text);
     if (!parsed) return { configured: true, ok: false, error: 'Não foi possível interpretar a resposta da IA.' };
-    return interpretarResposta(parsed);
+    return interpretarResposta(parsed, { ativas, diasDaRegra: diasDaRegraCom(cfg) });
   } catch (e) {
     return { configured: true, ok: false, error: e instanceof Error ? e.message : 'Falha na leitura por IA' };
   }

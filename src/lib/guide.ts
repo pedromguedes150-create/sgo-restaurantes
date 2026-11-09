@@ -1654,6 +1654,8 @@ export const GUIDE: GuideSection[] = [
           'CORREÇÃO SOLICITADA (v1.197.0): o documento mostra em vermelho o motivo (foto cortada, ilegível, colaborador incorreto, datas divergentes…) e o texto do RH, e ganha o botão "Corrigir e reenviar". Ali você tira uma nova foto (ou anexa outro arquivo), ajusta as datas ou o colaborador e toca em "Reenviar ao RH" — tudo NO MESMO registro, sem lançar de novo. O arquivo anterior fica guardado como versão ("Histórico do documento") e o RH recebe a atualização.',
           'NÃO ACEITO (v1.197.0): o documento deixa de marcar a Escala (os dias voltam ao planejado) e fica no Histórico com a justificativa do RH. Se for o caso, lance o documento correto como novo.',
           'HISTÓRICO DO DOCUMENTO: cada documento tem uma linha do tempo recolhida com as decisões do RH, as correções feitas e as versões anteriores do arquivo.',
+          'ALERTAS AUTOMÁTICOS (v1.198.0): cada documento é olhado contra o histórico do colaborador e sinaliza, no Histórico e por aviso aos Admins, o que merece análise do RH: "Análise INSS necessária" (acima de 15 dias), "Atestados intercalados (60 dias)" (dois ou mais atestados em 60 dias somando mais de 15 dias — o SGO não soma por conta própria, só aponta), "Acidente de trabalho (CAT)" (prazo do 1º dia útil), "Benefício controlado pelo RH" (INSS), "Prazo diferente da regra geral" (licença lançada com mais ou menos dias que a regra) e "Retorno a acompanhar" (quando volta). Nenhum alerta decide nada: quem concede, abona ou recusa é o RH.',
+          'REGRAS COM VIGÊNCIA (v1.198.0): a duração sugerida das licenças segue a lei na DATA DO EVENTO — licença-paternidade 5 dias em 2026, 10 em 2027, 15 em 2028, 20 em 2029 (Lei 15.371/2026); casamento 3, luto 2, maternidade 120… O Administrador pode definir outra duração por tipo (convenção coletiva) em Configurações → Atestados e afins.',
           'NA ESCALA: atestado marca "A", afastamento pelo INSS marca "AF", LICENÇA marca o status novo "LI" (v1.196.0), comparecimento de dia inteiro (doação de sangue, eleitoral, vestibular…) marca "FJ", e declaração de horas (consulta, exame) não afasta o dia. Tudo derivado do documento: "Puxar Realizado = Planejado" não apaga; para tirar, o Admin exclui o documento.',
           'MAIS DE 15 DIAS: atestado acima de 15 dias continua "Atestado médico" (a duração não muda o tipo) e gera o alerta "Análise INSS necessária" ao RH — alerta, não concessão de benefício.',
           'Dois atestados sucessivos, um de 3 e outro de 16 dias, são lançados separadamente e os dois são "Atestado médico" — cada um com a sua duração.',
@@ -1669,6 +1671,19 @@ export const GUIDE: GuideSection[] = [
           'Evita duplicidade: o mesmo colaborador + mesmo período não é aceito duas vezes.',
           'CID e diagnóstico nunca aparecem para o gerente: só o RH/Admin vê (LGPD).',
         ],
+      },
+      {
+        id: 'atestados-config',
+        title: 'Atestados e afins — nomenclaturas, nome no RH e regras (Configurações)',
+        roles: ['ADMIN', 'CEO'],
+        summary: 'A tabela de correspondência SGO ↔ RH: 25 tipos em 4 grupos, sem código.',
+        steps: [
+          'Em Configurações → Atestados e afins (v1.198.0) estão os 25 tipos do catálogo, por grupo. Para cada um: o NOME NO SISTEMA DO RH (como o RH chama o mesmo documento — é por esse nome que o envio e o retorno se entendem), se está ATIVO (inativo não é oferecido à IA nem entra em lançamento novo; os já gravados não mudam) e os DIAS DA REGRA (em branco = a tabela legal com vigência; preenchido = vence a tabela, para convenção coletiva).',
+          'Dois tipos do SGO não podem ter o mesmo nome no RH, e o nome no RH não pode ser o de outro tipo do SGO — a correspondência precisa ser uma para uma.',
+          'O RH lê essa tabela em GET /api/v1/atestados/nomenclaturas (API Global) e pode responder ao SGO com a grafia dele: o SGO reconhece pelo nome configurado.',
+          'Nenhum código de tipo documental existe nem deve ser criado: a identificação é sempre pelo nome.',
+        ],
+        tips: ['Mudar o nome no RH não reescreve documentos já enviados; vale para os próximos envios e para os retornos.'],
       },
       {
         id: 'atestados-painel',

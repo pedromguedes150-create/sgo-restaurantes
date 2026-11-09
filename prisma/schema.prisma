@@ -4050,6 +4050,28 @@ enum CertificateEventKind {
   ANEXO
 }
 
+/// v1.198.0 — configuração POR NOMENCLATURA do catálogo (etapa C): o nome
+/// correspondente no sistema do RH (a correspondência é pelo NOME, sem código),
+/// se a nomenclatura está ativa para a IA/lançamento, e a duração da regra
+/// quando o Admin quer sobrepor a tabela legal (convenção coletiva). O catálogo
+/// em si (os 25 nomes) vive no código; aqui só o que é configurável.
+model CertificateNomenclatureConfig {
+  id           String   @id @default(cuid())
+  /// O nome EXATO do catálogo (src/lib/certificates/catalogo.ts).
+  nomenclature String   @unique
+  /// Como o sistema do RH chama este documento (nulo = o mesmo nome).
+  rhName       String?
+  active       Boolean  @default(true)
+  /// Dias da regra que vencem a tabela legal (nulo = tabela).
+  ruleDays     Int?
+  notes        String?
+  updatedById  String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  @@map("certificate_nomenclature_configs")
+}
+
 model MedicalCertificateEvent {
   id             String               @id @default(cuid())
   certificateId  String

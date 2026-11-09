@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.198.0 — 2026-11-09 (Central de Atestados e Afins — etapa C: alertas de afastamento, regras com vigência e correspondência SGO ↔ RH)
+
+- **Regras legais com vigência** (`src/lib/certificates/regras-legais.ts`, puro): a duração da regra geral é uma lista de versões por data do evento — licença-paternidade 5 → 10 (2027) → 15 (2028) → 20 (2029), maternidade 120, casamento 3, luto 2, aborto 14, prorrogação 60, amamentação 15, filho até 6 anos 1, doação de sangue 1, preventivo 3, alistamento 2, mesário 2, vestibular 1. A IA sugere o fim pela regra vigente na data; o Admin pode sobrepor por tipo.
+- **Inteligência de afastamentos** (`alertas.ts`, puro): "Análise INSS necessária" (> 15 dias), "Atestados intercalados (60 dias)" (soma > 15 com outros atestados do colaborador na janela — só sinaliza, com os ids), "Acidente de trabalho (CAT)", "Benefício controlado pelo RH", "Prazo diferente da regra geral", "Retorno a acompanhar". Calculados na leitura (Histórico) e no lançamento, com aviso IMPORTANTE aos Admins; documento não aceito não alerta.
+- **Correspondência SGO ↔ RH configurável**: model `CertificateNomenclatureConfig` (nome no RH, ativa, dias da regra, observação) + tela Configurações → Atestados e afins (`CONFIG_CERTIFICATES`, Admin/CEO) + `GET/POST /api/certificates/config`. Nome no RH único (um para um). A lista fechada da IA passa a ser só as ATIVAS; o envio ao RH leva "[Nome no RH]"; o retorno do RH reconhece a grafia dele.
+- **API Global** `GET /api/v1/atestados/nomenclaturas`: grupos, nome SGO/RH, regra (dias, versão, vigência, base), escala, tipoDetalhe e as situações/motivos do retorno.
+- **`motivo` do contrato pelo grupo**: licença e comparecimento de dia inteiro vão como OUTROS (eram DOENCA); atestado/afastamento DOENCA; acompanhante ACOMPANHANTE.
+- Migração ADITIVA `20261109180000_central_atestados_etapa_c`.
+
 ## v1.197.0 — 2026-11-09 (Central de Atestados e Afins — etapa B: a decisão do RH volta pela API, correção e reenvio)
 
 Segunda etapa da spec do Pedro (09/11/2026). Decisão do Daniel: o RH valida no sistema DELE e devolve pela API.

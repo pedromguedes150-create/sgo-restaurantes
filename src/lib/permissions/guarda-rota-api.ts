@@ -50,6 +50,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
 
   '/api/certificates': { modulo: 'CERTIFICATES_TAB_NEW', exigir: 'editar' },
   '/api/certificates/read': { modulo: 'CERTIFICATES', exigir: 'ver' },
+  '/api/certificates/config': { modulo: 'CONFIG_CERTIFICATES', exigir: 'editar' },
   '/api/certificates/auditoria': { modulo: 'CERTIFICATES_TAB_AUDIT', exigir: 'ver' },
   '/api/certificates/auditoria/export': { modulo: 'CERTIFICATES_TAB_AUDIT', exigir: 'ver' },
   '/api/certificates/export': { modulo: 'CERTIFICATES_REPORT', exigir: 'ver' },
@@ -249,6 +250,7 @@ export const FORA_DA_MATRIZ: Record<string, string> = {
   '/api/v1/estrutura': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — árvore do menu (v1.167.0)',
   '/api/v1/[entidade]': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — lista paginada por entidade do registro (v1.167.0)',
   '/api/v1/[entidade]/resumo': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — agregados no banco (v1.167.0)',
+  '/api/v1/atestados/nomenclaturas': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — a correspondência SGO ↔ RH por nomenclatura (v1.198.0)',
   '/api/v1/metas': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — ranking de metas (v1.167.0)',
   '/api/v1/uso': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — painel de uso (v1.167.0)',
   '/api/v1/atestados/[id]/anexo': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — o arquivo do atestado (fileUrl, v1.190.0)',

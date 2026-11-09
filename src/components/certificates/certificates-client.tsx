@@ -16,6 +16,7 @@ import { shortUnitName } from '@/lib/unit-name';
 import { compressImage } from '@/lib/image-compress';
 import { GRUPOS, SITUACOES, conferirNome, type GrupoDoDocumento } from '@/lib/certificates/catalogo';
 import { podeCorrigir } from '@/lib/certificates/retorno-rh-regras';
+import { ROTULO_DO_ALERTA } from '@/lib/certificates/alertas';
 import type { CertListItem, CertReport } from '@/lib/certificates/query';
 import type { CertReadResult } from '@/lib/ai/atestado';
 import type { CertificateType, DocumentStatus } from '@prisma/client';
@@ -219,7 +220,8 @@ function LaunchForm({ units, collaboratorsByUnit, showCid, onSaved }: {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setMsg({ kind: 'err', text: data.error ?? 'Falha ao enviar.' }); return; }
-      onSaved(MENSAGEM_ENVIADO + (data.alerta === 'INSS' ? ' Mais de 15 dias: o RH recebeu o alerta de análise do INSS.' : ''));
+      const avisos = Array.isArray(data.alertas) ? (data.alertas as { tipo: keyof typeof ROTULO_DO_ALERTA; gravidade: string }[]).filter((a) => a.gravidade !== 'info') : [];
+      onSaved(MENSAGEM_ENVIADO + (avisos.length ? ` Alertas ao RH: ${avisos.map((a) => ROTULO_DO_ALERTA[a.tipo]).join(' · ')}.` : ''));
     } finally { setBusy(false); }
   }
 
@@ -383,9 +385,13 @@ function History({ rows, isAdmin, showCid, canLaunch, collaboratorsByUnit, docPe
               {showCid && r.cid && <span className="text-ink-500">CID {r.cid}{r.cidDescription ? ` — ${r.cidDescription}` : ''}</span>}
               {r.attachmentPath && <a href={`/${r.attachmentPath}`} target="_blank" rel="noreferrer" className="font-semibold text-brand underline">Ver documento</a>}
             </div>
-            {(r.alerta === 'INSS' || r.nomeDivergente || r.statusNote || r.statusMotivoLabel) && (
+            {(r.alertas.length > 0 || r.nomeDivergente || r.statusNote || r.statusMotivoLabel) && (
               <div className="mt-2 space-y-1 text-xs">
-                {r.alerta === 'INSS' && <p className="flex items-center gap-1 font-medium text-warning"><AlertTriangle className="h-3.5 w-3.5" /> Mais de 15 dias — análise do INSS a cargo do RH.</p>}
+                {r.alertas.map((a) => (
+                  <p key={a.tipo} className={`flex items-start gap-1 ${a.gravidade === 'alta' ? 'font-medium text-danger' : a.gravidade === 'media' ? 'font-medium text-warning' : 'text-ink-500'}`} data-testid={`alerta-${a.tipo}`}>
+                    {a.gravidade !== 'info' && <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />} <span><b>{ROTULO_DO_ALERTA[a.tipo]}:</b> {a.texto}</span>
+                  </p>
+                ))}
                 {r.nomeDivergente && <p className="flex items-center gap-1 font-medium text-warning"><AlertTriangle className="h-3.5 w-3.5" /> O nome lido no documento não bate com o colaborador — conferir.</p>}
                 {(r.statusNote || r.statusMotivoLabel) && (
                   <p className={`rounded-md border p-2 ${r.status === 'CORRECAO_SOLICITADA' || r.status === 'NAO_ACEITO' ? 'border-danger/40 bg-danger/5 text-ink-900' : 'text-ink-900'}`} data-testid="retorno-rh">

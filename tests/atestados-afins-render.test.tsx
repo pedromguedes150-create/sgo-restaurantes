@@ -24,7 +24,7 @@ const report: CertReport = { period: { from: '2026-11-01', to: '2026-11-30' }, t
   byStatus: [{ status: 'ENVIADO_RH', count: 1 }, { status: 'CORRECAO_SOLICITADA', count: 1 }] };
 const linha = (over: Partial<CertListItem>): CertListItem => ({
   id: 'd1', unitId: 'u1', unitName: 'Churrascaria Centro', collaboratorName: 'MARIA JOSÉ', type: 'FULL_DAY', documentGroup: 'LICENCA', nomenclature: 'Licença-paternidade',
-  rotulo: 'Licença-paternidade', grupo: 'LICENCA', status: 'ENVIADO_RH', statusNote: null, statusMotivo: null, statusMotivoLabel: null, statusAt: null, eventos: [], collaboratorId: 'c1', alerta: null, nomeDivergente: false,
+  rotulo: 'Licença-paternidade', grupo: 'LICENCA', status: 'ENVIADO_RH', statusNote: null, statusMotivo: null, statusMotivoLabel: null, statusAt: null, createdAt: null, eventos: [], collaboratorId: 'c1', alerta: null, alertas: [], nomeDivergente: false,
   issueDate: null, startDate: '2026-11-03', endDate: '2026-11-07', days: 5, hours: null, doctorName: null, doctorCrm: null, cid: null, cidDescription: null,
   attachmentPath: 'uploads/u1/doc.jpg', observation: null, by: 'Ger', ...over,
 });
@@ -56,7 +56,7 @@ describe('Central de Atestados e Afins — tela do gerente', () => {
   it('o histórico mostra nomenclatura + grupo + situação, o aviso do RH e o alerta de INSS — sem CID para o gerente', () => {
     const rows = [
       linha({}),
-      linha({ id: 'd2', nomenclature: 'Atestado médico', rotulo: 'Atestado médico', grupo: 'ATESTADO', documentGroup: 'ATESTADO', status: 'CORRECAO_SOLICITADA', statusNote: 'Foto cortada — envie o documento inteiro.', days: 16, startDate: '2026-11-10', endDate: '2026-11-25', alerta: 'INSS', cid: '•••' }),
+      linha({ id: 'd2', nomenclature: 'Atestado médico', rotulo: 'Atestado médico', grupo: 'ATESTADO', documentGroup: 'ATESTADO', status: 'CORRECAO_SOLICITADA', statusNote: 'Foto cortada — envie o documento inteiro.', days: 16, startDate: '2026-11-10', endDate: '2026-11-25', alerta: 'INSS', alertas: [{ tipo: 'INSS_15', gravidade: 'alta', texto: '16 dias de afastamento: a partir do 16º dia o RH avalia o encaminhamento ao INSS.' }], cid: '•••' }),
       linha({ id: 'd3', nomenclature: null, documentGroup: null, rotulo: 'Acompanhamento de familiar', grupo: 'COMPARECIMENTO', type: 'COMPANION', status: 'CONCLUIDO' }),
     ];
     const h = semSeparadores(renderToString(<CertificatesClient {...base} canLaunch={false} rows={rows} abaPedida="historico" />));
@@ -65,7 +65,8 @@ describe('Central de Atestados e Afins — tela do gerente', () => {
     expect(h).toContain('Enviado ao RH');
     expect(h).toContain('Correção solicitada');
     expect(h).toContain('Foto cortada — envie o documento inteiro.');
-    expect(h).toContain('análise do INSS');
+    expect(h).toContain('Análise INSS necessária');
+    expect(h).toContain('data-testid="alerta-INSS_15"');
     expect(h).toContain('Acompanhamento de familiar'); // registro antigo entra pelo tipo de sempre
     expect(h).toContain('Concluído');
     expect(h).not.toContain('CID •••');

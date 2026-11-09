@@ -72,7 +72,7 @@ export interface RetornoDoRh {
 export type ValidacaoDoRetorno = { ok: true; dados: RetornoDoRh } | { ok: false; erro: string };
 
 /** Valida o corpo do evento `atestado-situacao`. Só forma e regras; nada de banco. */
-export function validarRetornoDoRh(payload: Record<string, unknown>): ValidacaoDoRetorno {
+export function validarRetornoDoRh(payload: Record<string, unknown>, resolverNomenclatura: (texto: string) => Nomenclatura | null = (t) => nomenclaturaPorNome(t)): ValidacaoDoRetorno {
   const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
   const sgoMovimentoId = str(payload.sgoMovimentoId);
   if (!sgoMovimentoId) return { ok: false, erro: 'sgoMovimentoId é obrigatório (o id do documento no SGO)' };
@@ -93,7 +93,7 @@ export function validarRetornoDoRh(payload: Record<string, unknown>): ValidacaoD
   if (contemDadoMedico(observacao)) return { ok: false, erro: 'observacao não pode conter CID ou dado médico — ela aparece para o gerente' };
 
   const nomeRh = str(payload.nomenclaturaRh);
-  const nomenclatura = nomeRh ? nomenclaturaPorNome(nomeRh) : null;
+  const nomenclatura = nomeRh ? resolverNomenclatura(nomeRh) : null;
   return {
     ok: true,
     dados: {
