@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { Card, CardContent } from '@/components/ui/card';
 import { CommandsConfigAdmin } from '@/components/admin/commands-config-admin';
+import { ProgramacaoConferenciaAdmin } from '@/components/admin/programacao-conferencia-admin';
 import { ArrowLeft } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
 
@@ -23,6 +24,9 @@ export default async function ComandasConfigPage() {
       <LargeTitle title="Comandas — sequências por unidade" />
       <Card><CardContent className="pt-4">
         <CommandsConfigAdmin units={units} sequences={sequences} />
+      </CardContent></Card>
+      <Card><CardContent className="pt-4">
+        <ProgramacaoConferenciaAdmin units={units} />
       </CardContent></Card>
     </div>
   );

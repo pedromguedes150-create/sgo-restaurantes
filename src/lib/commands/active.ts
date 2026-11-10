@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
+import { programacaoDeHoje } from '@/lib/commands/programacao-dados';
+import { numerosDaProgramacao, type ProgramacaoDoDia } from '@/lib/commands/programacao';
 
 export interface ActiveSequence {
   config: { rangeStart: number; rangeEnd: number } | null;
@@ -21,6 +23,13 @@ export interface ActiveSequence {
   nightly: Set<number>;
   /** Existe pelo menos uma faixa marcada para a madrugada? */
   hasNightly: boolean;
+  /**
+   * v1.201.0 — o que a PROGRAMAÇÃO da unidade manda para hoje. Quando há uma
+   * (exceção do dia ou programação por dia/turno), `nightly`/`hasNightly` já vêm
+   * dela: faixa do dia = os números da faixa; completa = nenhum (confere tudo).
+   * Sem programação, `origem: 'PADRAO'` e vale a rotina de sempre.
+   */
+  programacao: ProgramacaoDoDia;
 }
 
 /**
@@ -32,7 +41,7 @@ export interface ActiveSequence {
  * isso "baixada" é o ÚLTIMO desfecho registrado para o número: uma divergência
  * encerrada como RECUPERADA depois da baixa desfaz a baixa.
  */
-export async function getActiveSequence(unitId: string): Promise<ActiveSequence> {
+export async function getActiveSequence(unitId: string, opts: { agora?: Date; ignorarProgramacao?: boolean } = {}): Promise<ActiveSequence> {
   const sequences = await prisma.commandSequence.findMany({ where: { unitId, active: true }, select: { rangeStart: true, rangeEnd: true, nightly: true } });
 
   const closedRows = await prisma.commandDivergence.findMany({
@@ -65,12 +74,22 @@ export async function getActiveSequence(unitId: string): Promise<ActiveSequence>
     if (sequences.some((s) => s.nightly && n >= s.rangeStart && n <= s.rangeEnd)) nightly.add(n);
   }
   const active = new Set([...all].filter((n) => !lost.has(n)));
-  const hasNightly = sequences.some((s) => s.nightly);
+  let hasNightly = sequences.some((s) => s.nightly);
+
+  /* v1.201.0: a programação do dia sobrepõe a marcação "madrugada" das faixas. */
+  const semProgramacao: ProgramacaoDoDia = { origem: 'PADRAO', nome: null, tipo: null, faixa: null, semConferencia: false, concorrentes: [] };
+  const programacao = opts.ignorarProgramacao || all.size === 0 ? semProgramacao : await programacaoDeHoje(unitId, opts.agora);
+  if (programacao.origem !== 'PADRAO' && programacao.tipo) {
+    const numeros = numerosDaProgramacao(programacao, all);
+    nightly.clear();
+    if (numeros) for (const n of numeros) nightly.add(n);
+    hasNightly = nightly.size > 0; // completa (numeros nulo) = confere tudo
+  }
 
   // config = resumo (mín..máx) — usado como "configurado?" e exibição
   const config = sequences.length
     ? { rangeStart: Math.min(...sequences.map((s) => s.rangeStart)), rangeEnd: Math.max(...sequences.map((s) => s.rangeEnd)) }
     : null;
 
-  return { config, all, active, lost, replacements, nightly, hasNightly };
+  return { config, all, active, lost, replacements, nightly, hasNightly, programacao };
 }

@@ -68,6 +68,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
 
   '/api/commands/count': { modulo: 'COMMANDS', exigir: 'editar' },
   '/api/commands/session': { modulo: 'COMMANDS', exigir: 'editar' },
+  '/api/commands/programacao': { modulo: 'CONFIG_COMMANDS', exigir: 'editar' },
   '/api/commands/divergences': { modulo: 'COMMANDS', exigir: 'editar' },
   '/api/commands/replacements': { modulo: 'COMMANDS', exigir: 'editar' },
   '/api/commands/scan': { modulo: 'COMMANDS_SCAN', exigir: 'editar' },

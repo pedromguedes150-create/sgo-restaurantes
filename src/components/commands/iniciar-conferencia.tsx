@@ -44,12 +44,15 @@ export function IniciarConferencia({
   ultima,
   emAndamento,
   faixaDoDia,
+  programacao,
 }: {
   unitId: string;
   ultima: UltimaConferencia | null;
   emAndamento: EmAndamento | null;
   /** Números da faixa combinada para a conferência diária. Vazio = sem faixa cadastrada. */
   faixaDoDia: number[];
+  /** v1.201.0: o que a programação da unidade manda para hoje (a tela só mostra e destaca; o servidor não depende disto). */
+  programacao?: { texto: string; tipo: 'FAIXA_DO_DIA' | 'COMPLETA' | null; semConferencia: boolean; origem: 'EXCECAO' | 'PROGRAMACAO' | 'PADRAO'; concorrentes: string[] };
 }) {
   const router = useRouter();
   const [etapa, setEtapa] = useState<Etapa>('FECHADO');
@@ -111,6 +114,14 @@ export function IniciarConferencia({
         </div>
       )}
 
+      {programacao && programacao.origem !== 'PADRAO' && (
+        <div className={`rounded-lg border p-3 ${programacao.semConferencia ? 'bg-sunken' : 'border-brand/40 bg-brand-tint'}`} data-testid="programacao-do-dia">
+          <p className="text-xs font-semibold text-ink-500">Programação de hoje</p>
+          <p className="text-sm font-semibold text-ink-900">{programacao.texto}</p>
+          {programacao.concorrentes.length > 0 && <p className="text-xs text-ink-500">Também valiam: {programacao.concorrentes.join(', ')} — esta venceu pela prioridade.</p>}
+        </div>
+      )}
+
       {!emAndamento && (
         <Button size="sm" onClick={() => { setErro(null); setEtapa('TIPO'); }}>
           <Plus className="h-4 w-4" /> Iniciar nova conferência
@@ -132,7 +143,7 @@ export function IniciarConferencia({
               className="w-full rounded-lg border p-3 text-left disabled:opacity-50"
               data-testid="tipo-faixa"
             >
-              <p className="text-sm font-semibold text-ink-900">Faixa do dia</p>
+              <p className="text-sm font-semibold text-ink-900">Faixa do dia{programacao?.tipo === 'FAIXA_DO_DIA' ? ' · programada para hoje' : ''}</p>
               <p className="text-xs text-ink-700">
                 {faixaDoDia.length > 0
                   ? `Conferir somente as ${faixaDoDia.length} comandas definidas para a conferência diária.`
@@ -146,7 +157,7 @@ export function IniciarConferencia({
               className="w-full rounded-lg border p-3 text-left disabled:opacity-60"
               data-testid="tipo-completa"
             >
-              <p className="text-sm font-semibold text-ink-900">Completa</p>
+              <p className="text-sm font-semibold text-ink-900">Completa{programacao?.tipo === 'COMPLETA' ? ' · programada para hoje' : ''}</p>
               <p className="text-xs text-ink-700">Conferir todas as comandas ativas da unidade.</p>
             </button>
             {busy && <p className="text-xs text-ink-500">Iniciando…</p>}
