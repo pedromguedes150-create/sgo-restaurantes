@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { canEditModule } from '@/lib/permissions';
-import { detalheDaConferencia, TIPO_LABEL, METODO_LABEL, STATUS_LABEL } from '@/lib/commands/sessao';
+import { detalheDaConferencia, TIPO_LABEL, METODO_LABEL, STATUS_LABEL, PERFIS_QUE_AUTORIZAM_ESCOPO } from '@/lib/commands/sessao';
 import { Card, CardContent } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
@@ -54,6 +54,7 @@ export default async function ConferenciaPage({ params }: { params: { id: string
             escopo: d.escopo, conferidas: d.conferidas, emUso: d.emUso,
             faltando: d.faltando, pct: d.pct,
             emApuracao: d.emApuracao, baixadas: d.baixadas,
+            tipoId: d.type, podeAutorizar: PERFIS_QUE_AUTORIZAM_ESCOPO.includes(user.role),
           }}
         />
       ) : (
@@ -73,6 +74,12 @@ export default async function ConferenciaPage({ params }: { params: { id: string
               <div><p className="text-xl font-bold tabular-nums text-danger">{d.absentCount}</p><p className="text-[11px] text-ink-700">Em apuração</p></div>
             </div>
             {d.observation && <p className="text-sm text-ink-700"><b>Observação:</b> {d.observation}</p>}
+            {d.recuperadas.length > 0 && <p className="text-sm text-success" data-testid="recuperadas"><b>Recuperadas ({d.recuperadas.length}):</b> {d.recuperadas.join(', ')} — voltaram à sequência.</p>}
+            {d.aguardandoValidacao.length > 0 && (
+              <p className="text-sm text-warning" data-testid="aguardando-validacao">
+                <b>Baixadas encontradas ({d.aguardandoValidacao.length}):</b> {d.aguardandoValidacao.join(', ')} — não voltam sozinhas; o Supervisor valida em Comandas → Divergências.
+              </p>
+            )}
           </CardContent></Card>
 
           {/* ── Comanda a comanda: o que permite auditar ── */}

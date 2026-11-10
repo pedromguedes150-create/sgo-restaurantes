@@ -1,21 +1,23 @@
 /**
  * O escopo de uma conferência por leitor — decidido pelo que foi bipado.
  *
- * A regra, pedida pela operação: **bipar uma comanda fora da faixa do dia
- * significa que a conferência é completa.** No meio da semana o caixa confere
- * só 1–300; quando ele começa a bipar a 350, é porque está fazendo a contagem
- * da semana — e o sistema tem de acompanhar, em vez de recusar o número.
- *
- * Sem isso, o leitor respondia "não pertence à sequência" para tudo acima da
- * faixa, e a contagem completa simplesmente não podia ser feita por leitor.
+ * REGRA (v1.200.0, muda a da v1.1xx): **bipar uma comanda fora da faixa do dia
+ * NÃO transforma a conferência em completa.** Antes, uma única leitura de fora
+ * (um erro de leitura, uma comanda guardada no lugar errado) bastava para
+ * mudar o escopo e passar a julgar 700 comandas — decisão grande demais para um
+ * efeito colateral de uma bipada. Agora a comanda fora da programação é
+ * IDENTIFICADA e fica de fora da conta (nunca vira faltante nem presente); para
+ * conferir tudo, inicia-se uma conferência COMPLETA, ou — numa sessão em
+ * andamento — um Supervisor/Coordenador/Admin autoriza a mudança de escopo com
+ * motivo (`ampliarEscopo` em sessao.ts).
  */
 
 export interface EscopoDoLeitor {
   /** Números que ESTA conferência julga. */
   escopo: Set<number>;
-  /** É a contagem completa da semana? */
+  /** É a contagem completa? Só quando a unidade não tem faixa do dia (confere tudo sempre). */
   completa: boolean;
-  /** As bipadas que estavam fora da faixa do dia — o que disparou a mudança. */
+  /** As bipadas fora da faixa do dia: identificadas, avisadas, e NUNCA julgadas. */
   foraDaFaixa: number[];
 }
 
@@ -30,6 +32,5 @@ export function escopoDoLeitor(
   if (!temFaixa) return { escopo: ativas, completa: true, foraDaFaixa: [] };
 
   const foraDaFaixa = [...bipadas].filter((n) => ativas.has(n) && !faixaDoDia.has(n)).sort((a, b) => a - b);
-  if (foraDaFaixa.length === 0) return { escopo: faixaDoDia, completa: false, foraDaFaixa: [] };
-  return { escopo: ativas, completa: true, foraDaFaixa };
+  return { escopo: faixaDoDia, completa: false, foraDaFaixa };
 }

@@ -2,11 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { escopoDoLeitor } from '@/lib/commands/scan-scope';
 
 /**
- * A regra pedida pela operação: bipar uma comanda FORA da faixa do dia
- * significa que a conferência é completa.
- *
- * Antes, o leitor respondia "não pertence à sequência" para tudo acima de 300 —
- * e a contagem da semana simplesmente não podia ser feita por leitor.
+ * v1.200.0: bipar uma comanda FORA da faixa do dia NÃO muda o escopo. A comanda
+ * é identificada (`foraDaFaixa`) e fica de fora da conta; conferir tudo é uma
+ * conferência COMPLETA, iniciada de propósito (ou ampliada com autorização).
  */
 
 const faixa = (de: number, ate: number) => new Set(Array.from({ length: ate - de + 1 }, (_, i) => de + i));
@@ -22,12 +20,10 @@ describe('Com faixa do dia configurada', () => {
     expect(r.foraDaFaixa).toEqual([]);
   });
 
-  it('UMA comanda acima da faixa já torna a conferência completa', () => {
-    /* É o pedido literal: "passou qualquer comanda no leitor acima da 300,
-       entende-se que quer conferir todas". */
+  it('UMA comanda acima da faixa é identificada, mas NÃO torna a conferência completa', () => {
     const r = escopoDoLeitor(ATIVAS, DO_DIA, true, [1, 50, 301]);
-    expect(r.completa).toBe(true);
-    expect(r.escopo.size).toBe(648);
+    expect(r.completa).toBe(false);
+    expect(r.escopo.size).toBe(300);
     expect(r.foraDaFaixa).toEqual([301]);
   });
 
@@ -52,11 +48,11 @@ describe('Com faixa do dia configurada', () => {
     expect(r.escopo.size).toBe(300);
   });
 
-  it('a borda da faixa pertence à faixa', () => {
-    /* 300 é o último da faixa e não pode disparar a completa; 301 é o primeiro
-       de fora e tem de disparar. */
-    expect(escopoDoLeitor(ATIVAS, DO_DIA, true, [300]).completa).toBe(false);
-    expect(escopoDoLeitor(ATIVAS, DO_DIA, true, [301]).completa).toBe(true);
+  it('a borda da faixa pertence à faixa; a de fora é só avisada', () => {
+    expect(escopoDoLeitor(ATIVAS, DO_DIA, true, [300]).foraDaFaixa).toEqual([]);
+    const r = escopoDoLeitor(ATIVAS, DO_DIA, true, [301]);
+    expect(r.completa).toBe(false);
+    expect(r.foraDaFaixa).toEqual([301]);
   });
 });
 

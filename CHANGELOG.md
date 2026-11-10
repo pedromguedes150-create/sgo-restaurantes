@@ -9,6 +9,18 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.200.0 — 2026-11-10 (Comandas — segurança da conferência, PR 1 de 3)
+
+- **Sessão imutável (B2)**: ao finalizar ou cancelar, o resultado (escopo julgado, faltantes, baixadas, recuperadas, esperadas) é CONGELADO na sessão; a leitura de uma conferência encerrada nunca mais olha para a sequência atual.
+- **Sem duplicidade (C5/C6)**: iniciar usa trava transacional por unidade+tipo; finalizar reivindica a sessão antes de ler os itens (segundo toque ou outro aparelho recebe "está sendo finalizada"); a reivindicação caduca em 2 min.
+- **Data operacional do início (B3)**: documentada e mantida — finalizar depois do corte não a muda.
+- **Grade antiga não sobrescreve (B6)**: contagem sem sessão é recusada (409) quando a contagem do dia veio de uma sessão ou há sessão em andamento; a contagem agora guarda o `sessionId`.
+- **Sincronização entre aparelhos (B5)**: a tela da conferência consulta o servidor a cada 8 s (sem gravação no ar) e adota o estado dele; sessão encerrada em outro lugar leva ao resultado.
+- **Escopo vazio (C10)**: escopo pedido sem nenhuma comanda válida é erro, não a sequência inteira.
+- **Comanda fora da programação**: o leitor identifica e IGNORA — nunca promove a conferência a completa, nunca conta como faltante. Ampliar o escopo (faixa → completa) só com autorização de Supervisor/Coordenador/Admin/CEO e motivo, registrado na sessão e na Auditoria.
+- **Baixa definitiva encontrada**: não volta sozinha; nasce como divergência em apuração marcada para validação (`needsValidation`), avisa o Supervisor e não fecha nas conferências seguintes. A recuperação de comanda em apuração segue automática. (Muda a regra da v1.193.0 só para baixadas.)
+- Migrações ADITIVAS `20261110120000_comandas_seguranca_sessao` e `20261110120100_comandas_validacao_baixada`.
+
 ## v1.199.0 — 2026-11-09 (Central de Atestados e Afins — etapa D: painel do RH, filtros do Histórico, relatórios)
 
 - **Painel do RH** (aba `CERTIFICATES_TAB_RH`, Admin/CEO por padrão; `src/lib/certificates/painel-rh-calculo.ts` puro + `painel-rh.ts`): pendências por prioridade — correção pedida sem reenvio (> 3 dias), envio ao RH com erro/esgotado/parado, sem classificação, enviado sem resposta do RH (> 7 dias), alertas que pedem ação, retornos nos próximos 7 dias — com link para o documento; situação dos lançamentos; por nomenclatura; estado das nomenclaturas. Composição do Histórico + fila de saída + configuração, nada gravado.

@@ -88,6 +88,7 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
   );
   const noEscopo = useMemo(() => [...escopo].sort((a, b) => a - b), [escopo]);
   const missing = noEscopo.filter((n) => !scanned.has(n));
+  const lidasNoEscopo = noEscopo.length - missing.length;
 
   function register(raw: string) {
     const r = parseCommandBarcode(raw, active);
@@ -213,16 +214,14 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
           <strong>Conferência da madrugada (parcial).</strong> Você confere {noEscopo.length} comanda(s) desta faixa.
           As outras {Math.max(0, totalAtivas - noEscopo.length)} da unidade <strong>não entram nesta contagem</strong> e não
           serão tratadas como extraviadas — elas são conferidas na contagem completa da semana.
-          {' '}Se você bipar uma comanda <strong>fora desta faixa</strong>, a conferência passa a ser a <strong>completa</strong>.
+          {' '}Uma comanda <strong>fora desta faixa</strong> é identificada e ignorada — ela não muda esta conferência para completa.
+          Para conferir tudo, inicie uma conferência <strong>completa</strong> em Histórico de conferências (ou peça a autorização de um supervisor numa conferência em andamento).
         </p>
       )}
-      {partial && completa && (
-        /* A mudança de modo tem de ser DITA. Sem isso o contador salta de 300
-           para 648 e o caixa acha que o sistema enlouqueceu. */
-        <p className="rounded-md bg-warning-bg p-2 text-sm text-warning">
-          <strong>Conferência COMPLETA.</strong> Você bipou a comanda {foraDaFaixa[0]}, que está fora da faixa do dia — então
-          esta conferência passou a valer para <strong>todas as {noEscopo.length}</strong> comandas da unidade.
-          {foraDaFaixa.length > 1 ? ` (${foraDaFaixa.length} fora da faixa até agora.)` : ''}
+      {partial && foraDaFaixa.length > 0 && (
+        <p className="rounded-md bg-warning-bg p-2 text-sm text-warning" role="status" data-testid="fora-da-programacao">
+          <strong>Fora da programação de hoje:</strong> comanda {foraDaFaixa.slice(0, 8).join(', ')}{foraDaFaixa.length > 8 ? '…' : ''} não entra{foraDaFaixa.length > 1 ? 'm' : ''} nesta conferência
+          (não conta como presente nem como faltante).
         </p>
       )}
       {alreadyCounted && (
@@ -234,7 +233,7 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
       <Card>
         <CardContent className="grid grid-cols-3 gap-2 py-3 text-center">
           <div>
-            <p className="sgo-type-24 font-semibold text-success">{scanned.size}</p>
+            <p className="sgo-type-24 font-semibold text-success">{lidasNoEscopo}</p>
             <p className="text-xs text-ink-500">conferidas</p>
           </div>
           <div>
@@ -300,7 +299,7 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
           <CardContent className="space-y-3 py-4">
             <p className="font-bold text-ink-900">Concluir a conferência de {unitName}?</p>
             <p className="text-sm">
-              {scanned.size} conferida(s) · <strong className={missing.length ? 'text-danger' : 'text-success'}>{missing.length} faltante(s)</strong>
+              {lidasNoEscopo} conferida(s) · <strong className={missing.length ? 'text-danger' : 'text-success'}>{missing.length} faltante(s)</strong>
               {missing.length > 0 && missing.length <= 40 && <span className="block break-words text-xs text-ink-500">Faltantes: {missing.join(', ')}</span>}
             </p>
             {missing.length > 0 && (

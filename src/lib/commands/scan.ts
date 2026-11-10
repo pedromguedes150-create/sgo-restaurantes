@@ -85,7 +85,7 @@ export type SubmitScanResult =
       /** As bipadas fora da faixa do dia que tornaram a conferência completa. */
       foraDaFaixa: number[];
     }
-  | { ok: false; reason: 'FORBIDDEN' | 'NO_CONFIG' | 'INVALID' | 'OBSERVATION_REQUIRED' };
+  | { ok: false; reason: 'FORBIDDEN' | 'NO_CONFIG' | 'INVALID' | 'OBSERVATION_REQUIRED' | 'CONFLITO_COM_SESSAO'; detalhe?: string };
 
 /**
  * Fecha a conferência: faltantes = ativas − bipadas.
@@ -112,10 +112,9 @@ export async function submitScanCount(
   const absent = absentFromScans(escopo, scanned);
 
   const note = (input.note ?? '').trim();
-  const virouCompleta = seq.hasNightly && completa;
   const observation = [
-    `Conferência por leitor${virouCompleta ? ' (COMPLETA — bipou fora da faixa do dia)' : completa ? '' : ' (madrugada, faixa parcial)'}: ${scanned.size} bipada(s) de ${escopo.size} no escopo; ${absent.length} faltante(s).`,
-    virouCompleta ? `Fora da faixa: ${foraDaFaixa.slice(0, 10).join(', ')}${foraDaFaixa.length > 10 ? '…' : ''}.` : '',
+    `Conferência por leitor${completa ? '' : ' (madrugada, faixa parcial)'}: ${scanned.size - foraDaFaixa.length} bipada(s) de ${escopo.size} no escopo; ${absent.length} faltante(s).`,
+    foraDaFaixa.length > 0 ? `Fora da programação do dia (ignoradas, não julgadas): ${foraDaFaixa.slice(0, 10).join(', ')}${foraDaFaixa.length > 10 ? '…' : ''}.` : '',
     note,
   ]
     .filter(Boolean)
@@ -140,11 +139,11 @@ export async function submitScanCount(
     },
     ctx,
   );
-  if (!r.ok) return { ok: false, reason: r.reason };
+  if (!r.ok) return { ok: false, reason: r.reason, detalhe: r.detalhe };
 
   /* v1.193.1: as faltantes são as que o SERVIDOR julgou (baixadas não entram). */
   const crossed = await crossWithOpenCommands(input.unitId, r.absent);
-  return { ok: true, absent: r.absent, scanned: scanned.size, newDivergences: r.newDivergences, crossed: crossed.hits, cutDate: crossed.cutDate, completa, foraDaFaixa };
+  return { ok: true, absent: r.absent, scanned: scanned.size - foraDaFaixa.length, newDivergences: r.newDivergences, crossed: crossed.hits, cutDate: crossed.cutDate, completa, foraDaFaixa };
 }
 
 /** Cruza uma lista de faltantes com as suspeitas da última análise de comandas em aberto. */

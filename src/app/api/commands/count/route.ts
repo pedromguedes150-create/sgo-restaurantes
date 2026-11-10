@@ -10,6 +10,7 @@ const REASONS: Record<string, { msg: string; status: number }> = {
   NO_CONFIG: { msg: 'Sequência de comandas não configurada para esta unidade', status: 400 },
   OBSERVATION_REQUIRED: { msg: 'Observação obrigatória quando há comandas ausentes', status: 422 },
   INVALID: { msg: 'Dados inválidos', status: 400 },
+  CONFLITO_COM_SESSAO: { msg: 'Já existe uma conferência neste dia — a contagem não pode ser sobrescrita por aqui', status: 409 },
 };
 
 export async function POST(req: Request) {
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
   );
 
   if (!result.ok) {
+    if (result.detalhe) return NextResponse.json({ error: result.detalhe, reason: result.reason }, { status: REASONS[result.reason]?.status ?? 400 });
     return reasonResponse(REASONS, result.reason);
   }
   return NextResponse.json({ ok: true, absent: result.absent, newDivergences: result.newDivergences });

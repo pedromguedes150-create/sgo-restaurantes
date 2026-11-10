@@ -8,8 +8,8 @@ import { notifyUnitRole } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 
 export type SubmitCountResult =
-  | { ok: true; absent: number[]; newDivergences: number; rejected: number[]; /** v1.193.0: em apuração/baixadas marcadas presentes — voltaram à sequência. */ recovered: number[]; /** v1.193.1: das ausentes, as que JÁ estavam em apuração antes desta contagem. */ jaEmApuracao: number[] }
-  | { ok: false; reason: 'FORBIDDEN' | 'NO_CONFIG' | 'OBSERVATION_REQUIRED' | 'INVALID' };
+  | { ok: true; absent: number[]; newDivergences: number; rejected: number[]; /** v1.193.0: em apuração marcadas presentes — voltaram à sequência. (v1.200.0: baixa DEFINITIVA não volta aqui, vai para validação.) */ recovered: number[]; /** v1.200.0: baixadas encontradas — ficam em validação do Supervisor, não voltam sozinhas. */ aguardandoValidacao: number[]; /** v1.193.1: das ausentes, as que JÁ estavam em apuração antes desta contagem. */ jaEmApuracao: number[] }
+  | { ok: false; reason: 'FORBIDDEN' | 'NO_CONFIG' | 'OBSERVATION_REQUIRED' | 'INVALID' | 'CONFLITO_COM_SESSAO'; detalhe?: string };
 
 /**
  * Registra a contagem diária de comandas (Módulo 3).
@@ -40,6 +40,13 @@ export async function submitCount(
      */
     scopeNumbers?: number[];
     observation?: string;
+    /**
+     * v1.200.0 — a sessão de conferência que está gravando esta contagem. SÓ a
+     * sessão a informa. Sem ela (grade antiga, atalho "Todas presentes", leitor
+     * antigo) a contagem NÃO pode sobrescrever o resultado de uma sessão
+     * concluída nem atropelar uma sessão em andamento do mesmo dia (B6).
+     */
+    sessionId?: string;
   },
   ctx: { ip?: string | null; userAgent?: string | null } = {},
 ): Promise<SubmitCountResult> {
@@ -66,6 +73,18 @@ export async function submitCount(
     operationalDate = input.operationalDate;
   }
 
+  /* B6 (v1.200.0): quem NÃO é a sessão não sobrescreve o que a sessão gravou. */
+  if (!input.sessionId) {
+    const doDia = await prisma.commandCount.findUnique({ where: { unitId_operationalDate: { unitId: unit.id, operationalDate } }, select: { sessionId: true } });
+    if (doDia?.sessionId) {
+      return { ok: false, reason: 'CONFLITO_COM_SESSAO', detalhe: 'A contagem deste dia veio de uma conferência concluída e não pode ser sobrescrita por aqui. Para conferir de novo, inicie uma nova conferência.' };
+    }
+    const emAndamento = await prisma.commandCountSession.findFirst({ where: { unitId: unit.id, operationalDate, status: 'EM_ANDAMENTO' }, select: { id: true } });
+    if (emAndamento) {
+      return { ok: false, reason: 'CONFLITO_COM_SESSAO', detalhe: 'Há uma conferência em andamento nesta unidade. Termine ou cancele essa conferência antes de registrar a contagem por outro caminho.' };
+    }
+  }
+
   const inteiros = (v: number[] | undefined) => Array.from(new Set((v ?? []).filter((n) => Number.isInteger(n))));
   /* v1.193.0: presente/em uso aceitam a SEQUÊNCIA INTEIRA (`all`), inclusive
      baixadas — é assim que uma comanda dada como perdida volta. Só o JULGAMENTO
@@ -76,6 +95,11 @@ export async function submitCount(
   /* ESCOPO: o que esta contagem se propôs a conferir. Fora dele, nada é julgado
      — nem vira faltante, nem vira divergência. */
   const escopoPedido = input.scopeNumbers === undefined ? null : inteiros(input.scopeNumbers).filter((n) => seq.all.has(n));
+  /* C10 (v1.200.0): escopo PEDIDO e vazio é erro — antes caía em silêncio na
+     sequência inteira, e quem achava que conferia a faixa conferia (e julgava) tudo. */
+  if (escopoPedido !== null && escopoPedido.length === 0) {
+    return { ok: false, reason: 'INVALID', detalhe: 'O escopo da conferência está vazio: informe a faixa a conferir ou confira a sequência completa.' };
+  }
   const escopo = escopoPedido && escopoPedido.length > 0 ? new Set(escopoPedido) : seq.active;
   const parcial = escopo !== seq.active && escopo.size < seq.active.size;
 
@@ -120,8 +144,10 @@ export async function submitCount(
       presentNumbers: presentSalvo as unknown as Prisma.InputJsonValue,
       inUseNumbers: inUse as unknown as Prisma.InputJsonValue,
       scopeNumbers: parcial ? ([...escopo] as unknown as Prisma.InputJsonValue) : undefined,
+      sessionId: input.sessionId ?? null,
     },
     update: {
+      sessionId: input.sessionId ?? null,
       allPresent: input.allPresent, absentCount: absent.length, createdById: user.id,
       presentNumbers: presentSalvo as unknown as Prisma.InputJsonValue,
       inUseNumbers: inUse as unknown as Prisma.InputJsonValue,
@@ -136,7 +162,8 @@ export async function submitCount(
   const vistas = new Set<number>([...present, ...inUse, ...(input.allPresent ? [...escopo] : [])]);
   const agora = new Date();
   const abertasVistas = await prisma.commandDivergence.findMany({
-    where: { unitId: unit.id, number: { in: [...vistas] }, status: { in: ['OPEN', 'INVESTIGATING'] } },
+    /* v1.200.0: a que já espera validação do Supervisor NÃO fecha sozinha na conferência seguinte. */
+    where: { unitId: unit.id, number: { in: [...vistas] }, status: { in: ['OPEN', 'INVESTIGATING'] }, needsValidation: false },
     select: { id: true, number: true },
   });
   if (abertasVistas.length > 0) {
@@ -145,17 +172,28 @@ export async function submitCount(
       data: { status: 'CLOSED', outcome: 'RECOVERED', resolvedById: user.id, resolvedAt: agora },
     });
   }
+  /* v1.200.0 — BAIXA DEFINITIVA encontrada: NÃO volta sozinha. Uma comanda dada
+     como perdida que aparece na contagem é, no mínimo, um fato a explicar; a
+     divergência nasce EM APURAÇÃO e marcada para validação, e só o Supervisor/
+     Admin a encerra como recuperada (ou mantém a baixa). Enquanto isso o
+     número segue baixado — não entra no julgamento. */
   const baixadasVistas = [...vistas].filter((n) => seq.lost.has(n));
-  if (baixadasVistas.length > 0) {
+  const jaAguardando = baixadasVistas.length === 0 ? new Set<number>() : new Set((await prisma.commandDivergence.findMany({
+    where: { unitId: unit.id, number: { in: baixadasVistas }, status: { in: ['OPEN', 'INVESTIGATING'] }, needsValidation: true },
+    select: { number: true },
+  })).map((d) => d.number));
+  const novasParaValidar = baixadasVistas.filter((n) => !jaAguardando.has(n));
+  if (novasParaValidar.length > 0) {
     await prisma.commandDivergence.createMany({
-      data: baixadasVistas.map((number) => ({
-        unitId: unit.id, number, status: 'CLOSED' as const, outcome: 'RECOVERED' as const,
-        observation: `Recuperada na conferência de ${operationalDate} (estava baixada).`,
-        createdById: user.id, resolvedById: user.id, resolvedAt: agora,
+      data: novasParaValidar.map((number) => ({
+        unitId: unit.id, number, status: 'INVESTIGATING' as const, needsValidation: true,
+        observation: `Baixa definitiva encontrada na conferência de ${operationalDate} — aguardando validação do Supervisor.`,
+        createdById: user.id,
       })),
     });
   }
-  const recovered = [...new Set([...abertasVistas.map((d) => d.number), ...baixadasVistas])].sort((a, b) => a - b);
+  const aguardandoValidacao = baixadasVistas.sort((a, b) => a - b);
+  const recovered = [...new Set(abertasVistas.map((d) => d.number))].sort((a, b) => a - b);
 
   // cria divergências para as ausentes NOVAS, de uma vez (eram centenas de idas ao banco em fila)
   let newDivergences = 0;
@@ -177,9 +215,19 @@ export async function submitCount(
     unitId: unit.id,
     action: 'COMMAND_COUNT',
     module: 'COMMANDS',
-    metadata: { operationalDate, allPresent: input.allPresent, absent: absent.length, newDivergences, recovered },
+    metadata: { operationalDate, allPresent: input.allPresent, absent: absent.length, newDivergences, recovered, aguardandoValidacao, sessionId: input.sessionId ?? null },
     ...ctx,
   });
+  if (novasParaValidar.length > 0) {
+    await audit({ userId: user.id, unitId: unit.id, action: 'COMMAND_DIV_BAIXA_ENCONTRADA', module: 'COMMANDS', metadata: { numbers: novasParaValidar, operationalDate }, ...ctx });
+    await notifyUnitRole(unit.id, 'SUPERVISOR', {
+      title: 'Comanda baixada foi encontrada — validar',
+      body: `${unit.name}: comanda(s) ${novasParaValidar.join(', ')} estavam baixadas definitivamente e apareceram na conferência de ${operationalDate} (${user.name}). Não voltam sozinhas: valide em Comandas → Divergências.`,
+      link: '/modulos/comandas',
+      module: 'COMMANDS',
+      nivel: 'IMPORTANTE',
+    });
+  }
   if (recovered.length > 0) {
     await audit({
       userId: user.id, unitId: unit.id, action: 'COMMAND_DIV_RECOVERED', module: 'COMMANDS',
@@ -210,5 +258,5 @@ export async function submitCount(
     });
   }
 
-  return { ok: true, absent, newDivergences, rejected, recovered, jaEmApuracao };
+  return { ok: true, absent, newDivergences, rejected, recovered, aguardandoValidacao, jaEmApuracao };
 }
