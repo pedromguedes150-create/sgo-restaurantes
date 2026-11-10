@@ -8,6 +8,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { getUnitCommandState } from '@/lib/commands/query';
 import { getActiveSequence } from '@/lib/commands/active';
+import { descreverProgramacaoDoDia } from '@/lib/commands/programacao';
 import { getLastFullCount } from '@/lib/commands/full-count';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -132,6 +133,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
         <IniciarConferencia
           unitId={selected.id}
           faixaDoDia={[...seq.nightly].sort((a, b) => a - b)}
+          programacao={{ texto: descreverProgramacaoDoDia(seq.programacao), tipo: seq.programacao.tipo, semConferencia: seq.programacao.semConferencia, origem: seq.programacao.origem, concorrentes: seq.programacao.concorrentes }}
           ultima={ultimaSessao ? {
             id: ultimaSessao.id,
             quando: fmtQuando(ultimaSessao.startedAt),

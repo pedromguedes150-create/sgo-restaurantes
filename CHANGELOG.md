@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.201.0 — 2026-11-11 (Comandas — programação automática das conferências, PR 2 de 3)
+
+- **Regra separada do cadastro**: `CommandSchedule` (programação: faixa do dia ou completa, por dias da semana, turno em hora local, faixa, prioridade) e `CommandScheduleException` (exceção por data: feriado/evento — faixa própria, completa ou sem conferência). O cadastro físico das sequências segue sem duplicidade e intocado.
+- **Sobreposição permitida entre programações** (a faixa do dia dentro da completa). Vence: exceção da data > maior prioridade > turno definido > completa > mais antiga — determinístico; a tela mostra quais também valiam.
+- **Aplicação automática**: `getActiveSequence` já devolve a faixa/completa de hoje (dia operacional + hora local da unidade) — a tela de Comandas, o leitor e a contagem usam a mesma resposta. Sem programação, vale a rotina de antes (faixas marcadas "madrugada", senão tudo).
+- **Tela de início** mostra "Programação de hoje" e marca o tipo programado; comanda fora da programação segue ignorada (v1.200.0).
+- **Configuração**: Configurações → Comandas ganhou "Programação das conferências" (programações e exceções por unidade; só Admin/CEO; auditoria `COMMAND_SCHEDULE_*`). Faixa que não contém comanda cadastrada é recusada.
+- Migração ADITIVA `20261111120000_comandas_programacao`.
+
 ## v1.200.0 — 2026-11-10 (Comandas — segurança da conferência, PR 1 de 3)
 
 - **Sessão imutável (B2)**: ao finalizar ou cancelar, o resultado (escopo julgado, faltantes, baixadas, recuperadas, esperadas) é CONGELADO na sessão; a leitura de uma conferência encerrada nunca mais olha para a sequência atual.

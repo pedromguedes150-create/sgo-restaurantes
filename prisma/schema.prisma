@@ -67,6 +67,8 @@ model Unit {
   occurrences               Occurrence[]
   commandConfig             UnitCommandConfig?
   commandSequences          CommandSequence[]
+  commandSchedules          CommandSchedule[]
+  commandScheduleExceptions CommandScheduleException[]
   commandCounts             CommandCount[]
   commandSessions           CommandCountSession[]
   commandDivergences        CommandDivergence[]
@@ -5418,4 +5420,55 @@ model CertificateExpectation {
   @@index([unitId, startDate])
   @@index([collaboratorId, startDate])
   @@map("certificate_expectations")
+}
+
+/// v1.201.0 — PROGRAMAÇÃO das conferências: REGRA de quando e o que conferir,
+/// separada do CADASTRO físico (`CommandSequence`). Várias programações por
+/// unidade podem se sobrepor (a faixa do dia está dentro da completa); o cadastro
+/// físico continua sem duplicidade. Sem nenhuma programação o comportamento é o
+/// de sempre (faixas marcadas "madrugada", senão tudo).
+model CommandSchedule {
+  id          String             @id @default(cuid())
+  unitId      String
+  name        String
+  type        CommandSessionType
+  /// Dias da semana em que vale (0 = domingo … 6 = sábado), pelo dia OPERACIONAL.
+  weekdays    Int[]
+  /// Turno (hora local da unidade). Nulos = o dia todo. fim < início cruza a meia-noite.
+  startHour   Int?
+  endHour     Int?
+  /// Faixa (só em FAIXA_DO_DIA); precisa conter comandas do cadastro.
+  rangeStart  Int?
+  rangeEnd    Int?
+  /// Maior vence quando mais de uma programação vale no mesmo instante.
+  priority    Int                @default(0)
+  active      Boolean            @default(true)
+  createdById String?
+  createdAt   DateTime           @default(now())
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId])
+  @@map("command_schedules")
+}
+
+/// v1.201.0 — exceção por DATA (feriado, evento): vence a programação do dia.
+/// `skip` = sem conferência programada nesse dia; senão `type`/faixa próprios.
+model CommandScheduleException {
+  id          String              @id @default(cuid())
+  unitId      String
+  /// 'AAAA-MM-DD' (dia operacional)
+  date        String
+  name        String
+  skip        Boolean             @default(false)
+  type        CommandSessionType?
+  rangeStart  Int?
+  rangeEnd    Int?
+  createdById String?
+  createdAt   DateTime            @default(now())
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([unitId, date])
+  @@map("command_schedule_exceptions")
 }
