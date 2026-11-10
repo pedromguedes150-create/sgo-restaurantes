@@ -6,12 +6,9 @@ import { getLastFullCount } from '@/lib/commands/full-count';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
- * A regra pedida: bipar uma comanda FORA da faixa do dia significa que o caixa
- * está fazendo a contagem da semana — e o escopo passa a ser a sequência
- * inteira.
- *
- * Antes, o leitor só aceitava os números da faixa: bipar a 350 respondia "não
- * pertence à sequência", e a contagem completa não podia ser feita por leitor.
+ * v1.200.0: bipar uma comanda FORA da faixa do dia NÃO transforma a conferência
+ * em completa (antes transformava, e uma leitura errada passava a julgar a
+ * sequência inteira). A de fora é identificada e ignorada; nunca vira faltante.
  */
 
 const sfx = `sc${process.pid.toString(36)}`;
@@ -78,55 +75,51 @@ describe('Bipando só dentro da faixa', () => {
 });
 
 describe('Bipando UMA fora da faixa', () => {
-  it('a conferência vira COMPLETA e julga a sequência inteira', async () => {
-    /* O pedido literal: "passou qualquer comanda no leitor acima da 300,
-       entende-se que quer conferir todas". */
+  it('continua PARCIAL: a de fora é identificada e não vira faltante nem presente', async () => {
     await prisma.commandCount.deleteMany({ where: { unitId } });
     await prisma.commandDivergence.deleteMany({ where: { unitId } });
 
     const r = await submitScanCount(caixa(), {
       unitId,
-      scannedNumbers: [...numeros(1, 20), 25],
-      note: 'contagem da semana',
+      scannedNumbers: [...numeros(1, 19), 25],
+      note: 'conferência do dia',
     });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
 
-    expect(r.completa).toBe(true);
+    expect(r.completa).toBe(false);
     expect(r.foraDaFaixa).toEqual([25]);
-    /* 21–40 menos a 25 que foi bipada = 19 faltantes de verdade. */
-    expect(r.absent).toHaveLength(19);
-    expect(r.absent).not.toContain(25);
+    /* Só a 20 da faixa falta; 21–40 (guardadas) nunca entram na conta. */
+    expect(r.absent).toEqual([20]);
+    expect(r.scanned).toBe(19);
   });
 
-  it('é gravada SEM escopo — e por isso conta como contagem completa', async () => {
+  it('é gravada COM escopo — não conta como contagem completa', async () => {
     const c = await prisma.commandCount.findFirst({ where: { unitId } });
-    expect(c!.scopeNumbers).toBeNull();
-
+    expect(c!.scopeNumbers).toEqual(numeros(1, 20));
     const completa = await getLastFullCount(unitId, c!.operationalDate);
-    expect(completa.never).toBe(false);
+    expect(completa.never).toBe(true);
   });
 
-  it('a observação diz por que virou completa', async () => {
-    /* Sem isso, o supervisor vê 19 divergências novas e não entende de onde
-       vieram. */
+  it('a observação da divergência diz o que foi ignorado', async () => {
     const d = await prisma.commandDivergence.findFirst({ where: { unitId, status: 'OPEN' } });
-    expect(d!.observation).toContain('COMPLETA');
+    expect(d!.observation).toContain('Fora da programação');
     expect(d!.observation).toContain('25');
   });
 });
 
-describe('Bipando todas as 40', () => {
-  it('completa, sem faltante nenhum', async () => {
+describe('Bipando todas as 40 pelo leitor da madrugada', () => {
+  it('só a faixa conta; as demais são identificadas e ignoradas', async () => {
     await prisma.commandCount.deleteMany({ where: { unitId } });
     await prisma.commandDivergence.deleteMany({ where: { unitId } });
 
     const r = await submitScanCount(caixa(), { unitId, scannedNumbers: numeros(1, 40) });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.completa).toBe(true);
+    expect(r.completa).toBe(false);
     expect(r.absent).toEqual([]);
-    expect(r.scanned).toBe(40);
+    expect(r.scanned).toBe(20);
+    expect(r.foraDaFaixa).toHaveLength(20);
   });
 });
 

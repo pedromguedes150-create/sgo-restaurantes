@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { requestContext } from '@/lib/auth/service';
 import {
-  iniciarConferencia, marcarComanda, marcarComandas, finalizarConferencia, cancelarConferencia,
+  iniciarConferencia, marcarComanda, marcarComandas, finalizarConferencia, cancelarConferencia, ampliarEscopo, getSessao,
 } from '@/lib/commands/sessao';
 import type { CommandSessionType, CommandSessionMethod, CommandItemState, CommandItemMethod } from '@prisma/client';
 
@@ -23,6 +23,8 @@ const STATUS: Record<string, number> = {
   NAO_ENCONTRADA: 404,
   JA_CONCLUIDA: 409,
   OBSERVATION_REQUIRED: 400,
+  EM_FINALIZACAO: 409,
+  SEM_AUTORIZACAO: 403,
 };
 
 const MSG: Record<string, string> = {
@@ -33,7 +35,22 @@ const MSG: Record<string, string> = {
   NAO_ENCONTRADA: 'Conferência não encontrada',
   JA_CONCLUIDA: 'Esta conferência já foi encerrada — o registro é imutável',
   OBSERVATION_REQUIRED: 'Descreva o que houve com as comandas não localizadas',
+  EM_FINALIZACAO: 'Esta conferência está sendo finalizada',
+  SEM_AUTORIZACAO: 'Sem autorização para esta ação',
 };
+
+/** v1.200.0 (B5): o aparelho consulta o andamento da sessão para acompanhar marcas feitas em outro aparelho. */
+export async function GET(req: Request) {
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+  const negado = await guardaDaRota(user.role, req);
+  if (negado) return negado;
+  const id = new URL(req.url).searchParams.get('id') ?? '';
+  if (!id) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
+  const s = await getSessao(user, id);
+  if (!s) return NextResponse.json({ error: MSG.NAO_ENCONTRADA, reason: 'NAO_ENCONTRADA' }, { status: 404 });
+  return NextResponse.json({ sessao: s });
+}
 
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -53,7 +70,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Estado ou método inválido', reason: 'INVALID' }, { status: 400 });
   }
   let r: Awaited<ReturnType<typeof iniciarConferencia>> | Awaited<ReturnType<typeof marcarComanda>> | Awaited<ReturnType<typeof marcarComandas>>
-    | Awaited<ReturnType<typeof finalizarConferencia>> | Awaited<ReturnType<typeof cancelarConferencia>> | undefined;
+    | Awaited<ReturnType<typeof finalizarConferencia>> | Awaited<ReturnType<typeof cancelarConferencia>> | Awaited<ReturnType<typeof ampliarEscopo>> | undefined;
 
   try {
   if (b.action === 'iniciar') {
@@ -79,6 +96,8 @@ export async function POST(req: Request) {
     });
   } else if (b.action === 'finalizar') {
     r = await finalizarConferencia(user, { sessionId: String(b.sessionId ?? ''), observation: b.observation }, ctx);
+  } else if (b.action === 'ampliarEscopo') {
+    r = await ampliarEscopo(user, { sessionId: String(b.sessionId ?? ''), motivo: String(b.motivo ?? '') }, ctx);
   } else if (b.action === 'cancelar') {
     r = await cancelarConferencia(user, String(b.sessionId ?? ''), ctx);
   }

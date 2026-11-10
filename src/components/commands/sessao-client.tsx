@@ -27,6 +27,10 @@ export interface SessaoNaTela {
   /** v1.193.0: baixadas — ficam na grade; marcar presente desfaz a baixa. */
   baixadas?: number[];
   pct: number;
+  /** v1.200.0: FAIXA_DO_DIA | COMPLETA — decide se a tela oferece pedir a ampliação do escopo. */
+  tipoId?: 'FAIXA_DO_DIA' | 'COMPLETA';
+  /** v1.200.0: quem pode autorizar a mudança de escopo (Supervisor/Coordenador/Admin/CEO). */
+  podeAutorizar?: boolean;
 }
 
 type Estado = 'CONFERIDA' | 'EM_USO' | 'LIMPA';
@@ -97,6 +101,9 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   /* Leitor */
   const [leitura, setLeitura] = useState('');
   const [retorno, setRetorno] = useState<Retorno | null>(null);
+  /* v1.200.0: ampliar o escopo (faixa → completa) exige autorização e motivo. */
+  const [ampliando, setAmpliando] = useState(false);
+  const [motivoEscopo, setMotivoEscopo] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const ultimaLeitura = useRef<{ n: number; em: number } | null>(null);
 
@@ -197,6 +204,27 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
   /* Gravações ainda no ar: o finalizar espera por elas, senão os últimos toques
      viravam ausentes (o servidor lia os itens antes de eles chegarem). */
   const pendentes = useRef(0);
+
+  /* B5 (v1.200.0): sincroniza com o servidor. Dois aparelhos na mesma conferência
+     (o caixa no leitor, o gerente na grade) viam cada um só o que ele mesmo marcou
+     até recarregar. A cada 8 s, sem gravação no ar e sem janela aberta, a tela
+     adota o estado do servidor; sessão encerrada em outro lugar leva ao resultado. */
+  useEffect(() => {
+    if (fechando || cancelando || ampliando) return;
+    let vivo = true;
+    const t = setInterval(async () => {
+      if (pendentes.current > 0 || document.hidden) return;
+      try {
+        const res = await fetch('/api/commands/session?id=' + encodeURIComponent(sessao.id), { cache: 'no-store' });
+        if (!res.ok || !vivo || pendentes.current > 0) return;
+        const { sessao: s } = await res.json();
+        if (s.status !== 'EM_ANDAMENTO') { router.push('/modulos/comandas/conferencias/' + sessao.id); router.refresh(); return; }
+        setConferidas(new Set<number>(s.conferidas));
+        setEmUso(new Set<number>(s.emUso));
+      } catch { /* sem rede: segue com o que tem */ }
+    }, 8000);
+    return () => { vivo = false; clearInterval(t); };
+  }, [sessao.id, fechando, cancelando, ampliando, router]);
   async function gravar(n: number, estado: Estado, method: 'MANUAL' | 'LEITOR') {
     pendentes.current += 1;
     try {
@@ -208,6 +236,18 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
     } catch {
       return { ok: false, body: { error: 'Falha de conexão. Tente de novo.' } as Record<string, unknown> };
     } finally { pendentes.current -= 1; }
+  }
+  async function ampliarEscopo() {
+    setBusy(true); setErro(null);
+    try {
+      const res = await fetch('/api/commands/session', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'ampliarEscopo', sessionId: sessao.id, motivo: motivoEscopo }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) { setAmpliando(false); setMotivoEscopo(''); router.refresh(); return; }
+      setErro(String(d.error ?? 'Não foi possível ampliar o escopo.'));
+    } catch { setErro('Falha de conexão. Tente de novo.'); } finally { setBusy(false); }
   }
   async function esperarGravacoes() {
     for (let i = 0; i < 100 && pendentes.current > 0; i++) await new Promise((r) => setTimeout(r, 100));
@@ -249,7 +289,7 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
       return;
     }
     if (!escopoSet.has(r.number)) {
-      setRetorno({ tipo: 'FORA', texto: `A comanda nº ${r.number} não faz parte desta conferência.` });
+      setRetorno({ tipo: 'FORA', texto: `A comanda nº ${r.number} está fora da programação desta conferência — não foi contada.` });
       return;
     }
 
@@ -395,6 +435,11 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
               {retorno.texto}
             </p>
           )}
+          {retorno?.tipo === 'FORA' && sessao.tipoId === 'FAIXA_DO_DIA' && sessao.podeAutorizar && (
+            <button type="button" className="mt-1 text-sm font-semibold text-brand underline" data-testid="ampliar-escopo" onClick={() => setAmpliando(true)}>
+              Esta é a conferência completa? Ampliar o escopo (autorização)
+            </button>
+          )}
         </div>
       )}
 
@@ -404,7 +449,7 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
         <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded bg-info" /> Em uso (conta como presente)</span>
         <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-line-strong" /> Não conferida</span>
         {apuracaoSet.size > 0 && <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-warning bg-warning-bg" /> Em apuração ({apuracaoSet.size}) — toque se encontrou: volta à sequência</span>}
-        {baixadaSet.size > 0 && <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-line-strong bg-sunken" /> Baixada ({baixadaSet.size}) — toque se encontrou: desfaz a baixa</span>}
+        {baixadaSet.size > 0 && <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-line-strong bg-sunken" /> Baixada ({baixadaSet.size}) — se encontrou, o toque abre validação do supervisor</span>}
       </div>
 
       {usaGrade && (
@@ -460,7 +505,7 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
                   type="button"
                   disabled={!podeEditar}
                   onClick={() => void tocar(n)}
-                  title={e === 'LIMPA' && apuracaoSet.has(n) ? 'Em apuração — toque se encontrou: volta à sequência' : e === 'LIMPA' && baixadaSet.has(n) ? 'Baixada — toque se encontrou: desfaz a baixa' : undefined}
+                  title={e === 'LIMPA' && apuracaoSet.has(n) ? 'Em apuração — toque se encontrou: volta à sequência' : e === 'LIMPA' && baixadaSet.has(n) ? 'Baixada — toque se encontrou: o supervisor valida antes de voltar' : undefined}
                   data-situacao={e === 'LIMPA' && apuracaoSet.has(n) ? 'apuracao' : e === 'LIMPA' && baixadaSet.has(n) ? 'baixada' : undefined}
                   className={`h-9 w-11 rounded-md border text-xs font-semibold tabular-nums ${classe}`}
                 >
@@ -488,6 +533,27 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
         </div>
       )}
 
+      {ampliando && (
+        <Sheet
+          open onClose={() => setAmpliando(false)}
+          title="Ampliar para conferência completa"
+          description="Passa a valer para todas as comandas da unidade. As marcas já feitas ficam, e o pedido fica registrado com o seu nome e o motivo."
+          footer={
+            <div className="space-y-2">
+              {erro && <p className="text-sm font-medium text-danger">{erro}</p>}
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" disabled={busy || motivoEscopo.trim().length < 5} onClick={() => void ampliarEscopo()} data-testid="confirmar-ampliar">Autorizar e ampliar</Button>
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => setAmpliando(false)}>Voltar</Button>
+              </div>
+            </div>
+          }
+        >
+          <div className="space-y-2" data-testid="dialogo-ampliar">
+            <Label htmlFor="motivo-escopo">Motivo (obrigatório)</Label>
+            <Input id="motivo-escopo" value={motivoEscopo} onChange={(e) => setMotivoEscopo(e.target.value)} autoFocus />
+          </div>
+        </Sheet>
+      )}
       {cancelando && (
         <Sheet
           open onClose={() => setCancelando(false)}

@@ -7,7 +7,7 @@ import { submitCount } from '@/lib/commands/count';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
 import type {
-  CommandSessionType, CommandSessionMethod, CommandItemState, CommandItemMethod,
+  CommandSessionType, CommandSessionMethod, CommandItemState, CommandItemMethod, Role,
 } from '@prisma/client';
 
 /**
@@ -51,7 +51,14 @@ export const STATUS_LABEL: Record<string, string> = {
 
 export type ResultadoDeSessao<T> =
   | ({ ok: true } & T)
-  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NO_CONFIG' | 'JA_EXISTE' | 'NAO_ENCONTRADA' | 'JA_CONCLUIDA' | 'OBSERVATION_REQUIRED'; detalhe?: string; sessionId?: string };
+  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NO_CONFIG' | 'JA_EXISTE' | 'NAO_ENCONTRADA' | 'JA_CONCLUIDA' | 'OBSERVATION_REQUIRED' | 'EM_FINALIZACAO' | 'SEM_AUTORIZACAO'; detalhe?: string; sessionId?: string };
+
+/** Quanto tempo uma reivindicação de finalização vale antes de caducar (o processo pode ter caído no meio). */
+export const VALIDADE_DA_FINALIZACAO_MS = 2 * 60_000;
+const finalizando = (closingAt: Date | null | undefined) => Boolean(closingAt && Date.now() - closingAt.getTime() < VALIDADE_DA_FINALIZACAO_MS);
+
+/** Quem pode AUTORIZAR a mudança de escopo de uma conferência (faixa → completa). O caixa e o gerente pedem; não decidem. */
+export const PERFIS_QUE_AUTORIZAM_ESCOPO: readonly Role[] = ['SUPERVISOR', 'COORDINATOR', 'ADMIN', 'CEO'];
 
 /* ───────────────────────────── Abrir ───────────────────────────── */
 
@@ -80,12 +87,6 @@ export async function iniciarConferencia(
   const seq = await getActiveSequence(unit.id);
   if (!seq.config) return { ok: false, reason: 'NO_CONFIG' };
 
-  const emAndamento = await prisma.commandCountSession.findFirst({
-    where: { unitId: unit.id, status: 'EM_ANDAMENTO', type: input.type },
-    select: { id: true },
-  });
-  if (emAndamento) return { ok: false, reason: 'JA_EXISTE', sessionId: emAndamento.id };
-
   /* O escopo só existe na conferência de faixa. Na completa, "todas as ativas"
      é o escopo, e gravá-lo congelaria uma lista que pode mudar. */
   const escopo = input.type === 'FAIXA_DO_DIA'
@@ -95,9 +96,21 @@ export async function iniciarConferencia(
     return { ok: false, reason: 'INVALID', detalhe: 'Informe a faixa a conferir.' };
   }
 
-  const s = await prisma.commandCountSession.create({
+  /* C5 (v1.200.0): "já existe uma em andamento?" e "criar" numa transação só,
+     sob uma trava por unidade+tipo. Antes eram duas idas ao banco: dois toques
+     simultâneos (ou dois aparelhos) passavam os dois pela checagem e criavam
+     duas sessões — e o último a finalizar apagava o trabalho do outro. */
+  const criada = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'cmd-sessao:' + unit.id + ':' + input.type}))`;
+    const emAndamento = await tx.commandCountSession.findFirst({
+      where: { unitId: unit.id, status: 'EM_ANDAMENTO', type: input.type },
+      select: { id: true },
+    });
+    if (emAndamento) return { existente: emAndamento.id } as const;
+    const nova = await tx.commandCountSession.create({
     data: {
       unitId: unit.id,
+      /* B3: a data operacional da conferência é a do INÍCIO — finalizar depois do corte (04:00) não a muda. */
       operationalDate: currentOperationalDate({ timezone: unit.timezone, cutoffHour: unit.cutoffHour }),
       type: input.type,
       /* v1.192.0: seja o que for que o cliente mande, a conferência nasce Leitor + Manual. */
@@ -110,7 +123,11 @@ export async function iniciarConferencia(
       createdById: user.id,
     },
     select: { id: true },
+    });
+    return { id: nova.id } as const;
   });
+  if ('existente' in criada) return { ok: false, reason: 'JA_EXISTE', sessionId: criada.existente };
+  const s = { id: criada.id };
 
   await audit({
     userId: user.id, unitId: unit.id, action: 'COMMAND_SESSION_START', module: 'COMMANDS',
@@ -136,7 +153,7 @@ export async function marcarComanda(
 ): Promise<ResultadoDeSessao<{ jaEstava: boolean; em: Date | null; total: number }>> {
   const s = await prisma.commandCountSession.findUnique({
     where: { id: input.sessionId },
-    select: { id: true, unitId: true, status: true, scopeNumbers: true },
+    select: { id: true, unitId: true, status: true, scopeNumbers: true, closingAt: true },
   });
   if (!s) return { ok: false, reason: 'NAO_ENCONTRADA' };
   try {
@@ -148,6 +165,8 @@ export async function marcarComanda(
   /* Sessão concluída é registro imutável. Sem esta linha, "corrigir" uma
      conferência antiga reescreveria a história que a auditoria promete. */
   if (s.status !== 'EM_ANDAMENTO') return { ok: false, reason: 'JA_CONCLUIDA' };
+  /* v1.200.0: com a finalização reivindicada, marca nova não entra (ela cairia depois da leitura dos itens e se perderia). */
+  if (finalizando(s.closingAt)) return { ok: false, reason: 'EM_FINALIZACAO', detalhe: 'Esta conferência está sendo finalizada.' };
 
   if (!Number.isInteger(input.number)) return { ok: false, reason: 'INVALID' };
 
@@ -191,7 +210,7 @@ export async function marcarComandas(
 ): Promise<ResultadoDeSessao<{ marcadas: number; ignoradas: number[]; total: number }>> {
   const s = await prisma.commandCountSession.findUnique({
     where: { id: input.sessionId },
-    select: { id: true, unitId: true, status: true, scopeNumbers: true },
+    select: { id: true, unitId: true, status: true, scopeNumbers: true, closingAt: true },
   });
   if (!s) return { ok: false, reason: 'NAO_ENCONTRADA' };
   try {
@@ -201,6 +220,7 @@ export async function marcarComandas(
     throw e;
   }
   if (s.status !== 'EM_ANDAMENTO') return { ok: false, reason: 'JA_CONCLUIDA' };
+  if (finalizando(s.closingAt)) return { ok: false, reason: 'EM_FINALIZACAO', detalhe: 'Esta conferência está sendo finalizada.' };
 
   const seq = await getActiveSequence(s.unitId);
   const escopo = Array.isArray(s.scopeNumbers) ? new Set((s.scopeNumbers as number[])) : seq.all;
@@ -250,10 +270,18 @@ export interface ProgressoDaSessao {
   emApuracao: number[];
   /** v1.193.0: no escopo, as BAIXADAS — seguem na grade; marcar presente desfaz a baixa. */
   baixadas: number[];
+  /** v1.200.0: baixas definitivas encontradas — aguardam validação do Supervisor (só em sessão encerrada). */
+  aguardandoValidacao: number[];
+  /** v1.200.0: em apuração que voltaram à sequência nesta conferência (só em sessão encerrada). */
+  recuperadas: number[];
   pct: number;
   observation: string | null;
   absentCount: number;
   divergenceCount: number;
+  /** O resultado está congelado (sessão encerrada depois da v1.200.0). */
+  congelada: boolean;
+  /** Se um Supervisor ampliou o escopo (faixa → completa) no meio da conferência. */
+  escopoAmpliadoPor: { em: Date; motivo: string | null } | null;
 }
 
 export async function getSessao(user: SessionUser, sessionId: string): Promise<ProgressoDaSessao | null> {
@@ -268,14 +296,41 @@ export async function getSessao(user: SessionUser, sessionId: string): Promise<P
     return null;
   }
 
+  const conferidas = s.items.filter((i) => i.state === 'CONFERIDA').map((i) => i.number).sort((a, b) => a - b);
+  const emUso = s.items.filter((i) => i.state === 'EM_USO').map((i) => i.number).sort((a, b) => a - b);
+  const vistas = new Set([...conferidas, ...emUso]);
+
+  /* B2 (v1.200.0): sessão ENCERRADA com resultado congelado nunca mais olha para
+     a sequência atual — se a faixa mudar depois, o histórico não muda de número.
+     (Sessões anteriores ao congelamento, `closedScope` nulo, seguem no cálculo de antes.) */
+  if (s.status !== 'EM_ANDAMENTO' && Array.isArray(s.closedScope)) {
+    const escopoC = [...(s.closedScope as number[])].sort((a, b) => a - b);
+    const expectedC = s.closedExpected ?? escopoC.length;
+    return {
+      id: s.id, unitId: s.unitId, unitName: s.unit.name, operationalDate: s.operationalDate,
+      type: s.type, method: s.method, status: s.status,
+      startedAt: s.startedAt, finishedAt: s.finishedAt,
+      responsavel: s.createdBy?.name ?? null,
+      expected: expectedC,
+      escopo: escopoC, conferidas, emUso,
+      faltando: Array.isArray(s.closedAbsent) ? [...(s.closedAbsent as number[])].sort((a, b) => a - b) : [],
+      emApuracao: [],
+      baixadas: Array.isArray(s.closedLost) ? [...(s.closedLost as number[])].sort((a, b) => a - b) : [],
+      aguardandoValidacao: Array.isArray(s.closedValidation) ? [...(s.closedValidation as number[])].sort((a, b) => a - b) : [],
+      recuperadas: Array.isArray(s.closedRecovered) ? [...(s.closedRecovered as number[])].sort((a, b) => a - b) : [],
+      pct: expectedC === 0 ? 0 : Math.round((vistas.size / expectedC) * 100),
+      observation: s.observation,
+      absentCount: s.absentCount,
+      divergenceCount: s.divergenceCount,
+      congelada: true,
+      escopoAmpliadoPor: null,
+    };
+  }
+
   const seq = await getActiveSequence(s.unitId);
   const escopo = Array.isArray(s.scopeNumbers) ? [...(s.scopeNumbers as number[])] : [...seq.all];
   escopo.sort((a, b) => a - b);
   const noEscopo = new Set(escopo);
-
-  const conferidas = s.items.filter((i) => i.state === 'CONFERIDA').map((i) => i.number).sort((a, b) => a - b);
-  const emUso = s.items.filter((i) => i.state === 'EM_USO').map((i) => i.number).sort((a, b) => a - b);
-  const vistas = new Set([...conferidas, ...emUso]);
   /* v1.193.1: baixada NÃO conta como faltante nem como esperada — ela fica na
      grade para poder ser recuperada; só entra na conta se for marcada. */
   const julgadas = escopo.filter((n) => !seq.lost.has(n) || vistas.has(n));
@@ -294,10 +349,13 @@ export async function getSessao(user: SessionUser, sessionId: string): Promise<P
     responsavel: s.createdBy?.name ?? null,
     expected: julgadas.length,
     escopo, conferidas, emUso, faltando, emApuracao, baixadas,
+    aguardandoValidacao: [], recuperadas: [],
     pct: julgadas.length === 0 ? 0 : Math.round((vistas.size / julgadas.length) * 100),
     observation: s.observation,
     absentCount: s.absentCount,
     divergenceCount: s.divergenceCount,
+    congelada: false,
+    escopoAmpliadoPor: s.scopeChangedAt ? { em: s.scopeChangedAt, motivo: s.scopeChangeReason } : null,
   };
 }
 
@@ -392,9 +450,29 @@ export async function finalizarConferencia(
   input: { sessionId: string; observation?: string },
   ctx: { ip?: string | null; userAgent?: string | null } = {},
 ): Promise<ResultadoDeSessao<{ faltando: number[]; divergencias: number }>> {
+  const previa = await getSessao(user, input.sessionId);
+  if (!previa) return { ok: false, reason: 'NAO_ENCONTRADA' };
+  if (previa.status !== 'EM_ANDAMENTO') return { ok: false, reason: 'JA_CONCLUIDA' };
+
+  /* C6 (v1.200.0): REIVINDICA a finalização antes de ler os itens. Quem a pegar
+     primeiro finaliza; a outra chamada (segundo toque, outro aparelho) recebe
+     EM_FINALIZACAO e nada se grava duas vezes — antes as duas liam a sessão
+     "em andamento", as duas chamavam o submitCount e as divergências dobravam.
+     A reivindicação também fecha a porta das marcas (marcar recusa), então os
+     itens lidos logo abaixo são os definitivos. */
+  const caducada = new Date(Date.now() - VALIDADE_DA_FINALIZACAO_MS);
+  const reivindicou = await prisma.commandCountSession.updateMany({
+    where: { id: input.sessionId, status: 'EM_ANDAMENTO', OR: [{ closingAt: null }, { closingAt: { lt: caducada } }] },
+    data: { closingAt: new Date() },
+  });
+  if (reivindicou.count === 0) {
+    const atual = await prisma.commandCountSession.findUnique({ where: { id: input.sessionId }, select: { status: true } });
+    return { ok: false, reason: atual?.status === 'EM_ANDAMENTO' ? 'EM_FINALIZACAO' : 'JA_CONCLUIDA' };
+  }
+  const liberar = () => prisma.commandCountSession.updateMany({ where: { id: input.sessionId, status: 'EM_ANDAMENTO' }, data: { closingAt: null } }).catch(() => {});
+
   const p = await getSessao(user, input.sessionId);
-  if (!p) return { ok: false, reason: 'NAO_ENCONTRADA' };
-  if (p.status !== 'EM_ANDAMENTO') return { ok: false, reason: 'JA_CONCLUIDA' };
+  if (!p) { await liberar(); return { ok: false, reason: 'NAO_ENCONTRADA' }; }
 
   /* A contagem do dia é quem julga: ela calcula os ausentes dentro do escopo,
      abre divergência, conclui a tarefa e avisa o supervisor. A sessão entrega o
@@ -409,15 +487,20 @@ export async function finalizarConferencia(
       inUseNumbers: p.emUso,
       scopeNumbers: p.type === 'FAIXA_DO_DIA' ? p.escopo : undefined,
       observation: input.observation,
+      sessionId: p.id,
     },
     ctx,
   );
   if (!r.ok) {
-    return { ok: false, reason: r.reason === 'OBSERVATION_REQUIRED' ? 'OBSERVATION_REQUIRED' : r.reason === 'FORBIDDEN' ? 'FORBIDDEN' : r.reason === 'NO_CONFIG' ? 'NO_CONFIG' : 'INVALID' };
+    await liberar();
+    return { ok: false, reason: r.reason === 'OBSERVATION_REQUIRED' ? 'OBSERVATION_REQUIRED' : r.reason === 'FORBIDDEN' ? 'FORBIDDEN' : r.reason === 'NO_CONFIG' ? 'NO_CONFIG' : 'INVALID', detalhe: r.reason === 'INVALID' || r.reason === 'CONFLITO_COM_SESSAO' ? r.detalhe : undefined };
   }
 
-  await prisma.commandCountSession.update({
-    where: { id: p.id },
+  /* B2: o RESULTADO é congelado aqui — escopo julgado, faltantes, baixadas no
+     escopo, recuperadas e as que esperam validação. A leitura de uma sessão
+     encerrada vem destes campos, não da sequência de hoje. */
+  const fechou = await prisma.commandCountSession.updateMany({
+    where: { id: p.id, status: 'EM_ANDAMENTO' },
     data: {
       status: 'CONCLUIDA',
       finishedAt: new Date(),
@@ -426,8 +509,15 @@ export async function finalizarConferencia(
       inUseCount: p.emUso.length,
       absentCount: r.absent.length,
       divergenceCount: r.newDivergences,
+      closedScope: p.escopo as unknown as Prisma.InputJsonValue,
+      closedAbsent: r.absent as unknown as Prisma.InputJsonValue,
+      closedLost: p.baixadas as unknown as Prisma.InputJsonValue,
+      closedRecovered: r.recovered as unknown as Prisma.InputJsonValue,
+      closedValidation: r.aguardandoValidacao as unknown as Prisma.InputJsonValue,
+      closedExpected: p.expected,
     },
   });
+  if (fechou.count === 0) return { ok: false, reason: 'JA_CONCLUIDA' };
 
   await audit({
     userId: user.id, unitId: p.unitId, action: 'COMMAND_SESSION_FINISH', module: 'COMMANDS',
@@ -449,14 +539,74 @@ export async function cancelarConferencia(
   if (!p) return { ok: false, reason: 'NAO_ENCONTRADA' };
   if (p.status !== 'EM_ANDAMENTO') return { ok: false, reason: 'JA_CONCLUIDA' };
 
-  await prisma.commandCountSession.update({
-    where: { id: sessionId },
-    data: { status: 'CANCELADA', finishedAt: new Date() },
+  const cancelou = await prisma.commandCountSession.updateMany({
+    /* não cancela o que está sendo finalizado neste instante */
+    where: { id: sessionId, status: 'EM_ANDAMENTO', OR: [{ closingAt: null }, { closingAt: { lt: new Date(Date.now() - VALIDADE_DA_FINALIZACAO_MS) } }] },
+    data: {
+      status: 'CANCELADA', finishedAt: new Date(),
+      closedScope: p.escopo as unknown as Prisma.InputJsonValue, closedAbsent: p.faltando as unknown as Prisma.InputJsonValue,
+      closedLost: p.baixadas as unknown as Prisma.InputJsonValue, closedExpected: p.expected,
+    },
   });
+  if (cancelou.count === 0) return { ok: false, reason: 'EM_FINALIZACAO' };
   await audit({
     userId: user.id, unitId: p.unitId, action: 'COMMAND_SESSION_CANCEL', module: 'COMMANDS',
     entity: 'command_count_session', entityId: sessionId,
     metadata: { conferidasAteAqui: p.conferidas.length + p.emUso.length }, ...ctx,
   });
   return { ok: true, cancelada: true };
+}
+
+
+/* ───────────────────────────── Ampliar o escopo ───────────────────────────── */
+
+/**
+ * Muda uma conferência de FAIXA DO DIA para COMPLETA — com AUTORIZAÇÃO e MOTIVO
+ * (v1.200.0). Antes, bipar uma comanda de fora da faixa fazia isso sozinho; agora
+ * é uma decisão explícita de Supervisor/Coordenador/Admin, registrada na sessão
+ * (quem, quando, por quê) e na Auditoria.
+ *
+ * O que muda: o escopo passa a ser a sequência inteira e as esperadas são
+ * recalculadas; as marcas já feitas ficam. O que NÃO muda: o tipo nunca volta
+ * (completa → faixa não existe) e sessão encerrada não é tocada.
+ */
+export async function ampliarEscopo(
+  user: SessionUser,
+  input: { sessionId: string; motivo: string },
+  ctx: { ip?: string | null; userAgent?: string | null } = {},
+): Promise<ResultadoDeSessao<{ expected: number }>> {
+  const s = await prisma.commandCountSession.findUnique({
+    where: { id: input.sessionId },
+    select: { id: true, unitId: true, status: true, type: true, closingAt: true },
+  });
+  if (!s) return { ok: false, reason: 'NAO_ENCONTRADA' };
+  try { assertUnitAccess(user, s.unitId); } catch (e) {
+    if (e instanceof UnitScopeError) return { ok: false, reason: 'FORBIDDEN' };
+    throw e;
+  }
+  if (!PERFIS_QUE_AUTORIZAM_ESCOPO.includes(user.role)) {
+    return { ok: false, reason: 'SEM_AUTORIZACAO', detalhe: 'Só Supervisor, Coordenador ou Administrador autoriza a mudança para conferência completa.' };
+  }
+  const motivo = (input.motivo ?? '').trim();
+  if (motivo.length < 5) return { ok: false, reason: 'INVALID', detalhe: 'Informe o motivo (mínimo de 5 caracteres).' };
+  if (s.status !== 'EM_ANDAMENTO') return { ok: false, reason: 'JA_CONCLUIDA' };
+  if (finalizando(s.closingAt)) return { ok: false, reason: 'EM_FINALIZACAO' };
+  if (s.type !== 'FAIXA_DO_DIA') return { ok: false, reason: 'INVALID', detalhe: 'Esta conferência já é completa.' };
+
+  const seq = await getActiveSequence(s.unitId);
+  const r = await prisma.commandCountSession.updateMany({
+    where: { id: s.id, status: 'EM_ANDAMENTO', type: 'FAIXA_DO_DIA' },
+    data: {
+      type: 'COMPLETA', scopeNumbers: Prisma.DbNull, expectedCount: seq.active.size,
+      scopeChangedAt: new Date(), scopeChangedById: user.id, scopeChangeReason: motivo,
+    },
+  });
+  if (r.count === 0) return { ok: false, reason: 'JA_CONCLUIDA' };
+
+  await audit({
+    userId: user.id, unitId: s.unitId, action: 'COMMAND_SESSION_SCOPE_CHANGE', module: 'COMMANDS',
+    entity: 'command_count_session', entityId: s.id,
+    metadata: { de: 'FAIXA_DO_DIA', para: 'COMPLETA', motivo, esperadas: seq.active.size }, ...ctx,
+  });
+  return { ok: true, expected: seq.active.size };
 }

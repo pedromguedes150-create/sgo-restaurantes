@@ -817,6 +817,10 @@ model CommandCount {
   /// (todas as ativas). Numa contagem parcial, o que está fora daqui não foi
   /// contado — e não pode ser tratado como extraviado.
   scopeNumbers    Json?
+  /// v1.200.0 — a sessão de conferência que gerou ESTA contagem (nulo = contagem
+  /// feita pela grade antiga / atalho). Contagem de sessão concluída não é
+  /// sobrescrita pela grade (B6).
+  sessionId       String?
   createdById     String?
   createdAt       DateTime @default(now())
   /// Quando a contagem foi registrada PELA ULTIMA VEZ. Reenviar para corrigir e
@@ -900,26 +904,44 @@ enum CommandItemMethod {
 /// continua sendo ela que gera divergências: a sessão a alimenta ao finalizar,
 /// em vez de reescrever essa regra.
 model CommandCountSession {
-  id              String               @id @default(cuid())
-  unitId          String
-  operationalDate String
-  type            CommandSessionType
-  method          CommandSessionMethod
-  status          CommandSessionStatus @default(EM_ANDAMENTO)
-  startedAt       DateTime             @default(now())
-  finishedAt      DateTime?
-  createdById     String?
+  id                String               @id @default(cuid())
+  unitId            String
+  operationalDate   String
+  type              CommandSessionType
+  method            CommandSessionMethod
+  status            CommandSessionStatus @default(EM_ANDAMENTO)
+  startedAt         DateTime             @default(now())
+  finishedAt        DateTime?
+  createdById       String?
   /// Números que ESTA sessão se propôs a conferir. Nulo = todas as ativas.
-  scopeNumbers    Json?
+  scopeNumbers      Json?
   /// Quantas se esperava conferir — congelado no início, porque a faixa ativa
   /// da unidade pode mudar depois e o histórico não pode mudar junto.
-  expectedCount   Int                  @default(0)
-  observation     String?
+  expectedCount     Int                  @default(0)
+  observation       String?
   /// Resultado congelado na finalização.
-  presentCount    Int                  @default(0)
-  inUseCount      Int                  @default(0)
-  absentCount     Int                  @default(0)
-  divergenceCount Int                  @default(0)
+  presentCount      Int                  @default(0)
+  inUseCount        Int                  @default(0)
+  absentCount       Int                  @default(0)
+  divergenceCount   Int                  @default(0)
+  /// v1.200.0 — RESULTADO CONGELADO na finalização (B2): o escopo julgado, os
+  /// faltantes e as recuperadas ficam gravados, e a leitura de uma sessão
+  /// concluída nunca mais olha para a sequência atual. Nulos = sessão anterior
+  /// ao congelamento (lida pelo cálculo de antes).
+  closedScope       Json?
+  closedAbsent      Json?
+  closedLost        Json?
+  closedRecovered   Json?
+  /// Baixadas definitivas ENCONTRADAS na conferência: não voltam sozinhas, vão para validação.
+  closedValidation  Json?
+  closedExpected    Int?
+  /// Reivindicação da finalização (C6): quem a pegar primeiro finaliza; a outra
+  /// chamada recebe JA_CONCLUIDA/EM_FINALIZACAO. Caduca em 2 min (processo caiu).
+  closingAt         DateTime?
+  /// v1.200.0 — mudança de escopo (faixa → completa) só com autorização e motivo.
+  scopeChangedAt    DateTime?
+  scopeChangedById  String?
+  scopeChangeReason String?
 
   unit      Unit               @relation(fields: [unitId], references: [id], onDelete: Cascade)
   createdBy User?              @relation("CmdSessionBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -952,17 +974,19 @@ model CommandCountItem {
 
 /// Divergência (comanda ausente) e seu ciclo de vida.
 model CommandDivergence {
-  id           String             @id @default(cuid())
-  unitId       String
-  number       Int
-  status       DivergenceStatus   @default(OPEN)
-  outcome      DivergenceOutcome?
-  observation  String?
-  createdById  String?
-  resolvedById String?
-  resolvedAt   DateTime?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  id              String             @id @default(cuid())
+  unitId          String
+  number          Int
+  /// v1.200.0 — baixa definitiva ENCONTRADA numa conferência: fica aberta até o Supervisor/Admin validar.
+  needsValidation Boolean            @default(false)
+  status          DivergenceStatus   @default(OPEN)
+  outcome         DivergenceOutcome?
+  observation     String?
+  createdById     String?
+  resolvedById    String?
+  resolvedAt      DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   unit     Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
   reporter User? @relation("CmdDivReportedBy", fields: [createdById], references: [id], onDelete: SetNull)

@@ -100,18 +100,22 @@ describe('a sequência nunca perde número', () => {
     expect(await prisma.auditLog.count({ where: { unitId, action: 'COMMAND_DIV_RECOVERED' } })).toBeGreaterThanOrEqual(1);
   });
 
-  it('marcar presente a BAIXADA desfaz a baixa: volta à julgada, sem reescrever a divergência da baixa', async () => {
+  it('v1.200.0: marcar presente a BAIXADA NÃO a recupera sozinha — vai para validação do Supervisor', async () => {
     const antes = await prisma.commandDivergence.findFirst({ where: { unitId, number: 3, outcome: 'LOST' } });
     const r = await submitCount(mgr(), { unitId, operationalDate: '2026-11-04', allPresent: false, presentNumbers: [], inUseNumbers: [3], observation: 'achamos a 3; o resto não contamos' });
-    expect(r.ok && r.recovered).toEqual([3]);
+    expect(r.ok && r.recovered).toEqual([]);
+    expect(r.ok && r.aguardandoValidacao).toEqual([3]);
     const seq = await getActiveSequence(unitId);
-    expect(seq.active.has(3)).toBe(true);
-    expect(seq.lost.has(3)).toBe(false);
+    expect(seq.lost.has(3)).toBe(true); // segue baixada
     expect((await prisma.commandDivergence.findUnique({ where: { id: antes!.id } }))?.outcome).toBe('LOST'); // história intacta
-    expect(await prisma.commandDivergence.count({ where: { unitId, number: 3, outcome: 'RECOVERED' } })).toBe(1);
+    const v = await prisma.commandDivergence.findFirst({ where: { unitId, number: 3, needsValidation: true } });
+    expect(v?.status).toBe('INVESTIGATING');
+    /* o Supervisor valida: só então volta à sequência */
+    expect((await closeDivergence(sup(), v!.id, 'RECOVERED')).ok).toBe(true);
+    expect((await getActiveSequence(unitId)).lost.has(3)).toBe(false);
   });
 
-  it('o leitor: bipar a baixada a recupera; a sessão: lote em uma chamada e finalizar recupera também', async () => {
+  it('o leitor e a sessão também só levam a baixada para validação; o Supervisor a recupera', async () => {
     const d5 = (await submitCount(mgr(), { unitId, operationalDate: '2026-11-05', allPresent: false, presentNumbers: todas(1, 10).filter((n) => n !== 5), inUseNumbers: [], observation: 'sumiu a 5' })).ok
       ? await prisma.commandDivergence.findFirst({ where: { unitId, number: 5, status: 'OPEN' } }) : null;
     expect((await closeDivergence(sup(), d5!.id, 'LOST')).ok).toBe(true);
@@ -119,18 +123,21 @@ describe('a sequência nunca perde número', () => {
 
     const scan = await submitScanCount(mgr(), { unitId, scannedNumbers: todas(1, 10) });
     expect(scan.ok && scan.absent).toEqual([]);
-    expect((await getActiveSequence(unitId)).lost.has(5)).toBe(false);
+    expect((await getActiveSequence(unitId)).lost.has(5)).toBe(true);
+    const v = await prisma.commandDivergence.findFirst({ where: { unitId, number: 5, needsValidation: true, status: 'INVESTIGATING' } });
+    expect(v).not.toBeNull();
 
-    /* de novo baixada, agora recuperada pela SESSÃO (Leitor + Manual) */
-    await submitCount(mgr(), { unitId, operationalDate: '2026-11-06', allPresent: false, presentNumbers: todas(1, 10).filter((n) => n !== 5), inUseNumbers: [], observation: 'sumiu de novo' });
-    const d5b = await prisma.commandDivergence.findFirst({ where: { unitId, number: 5, status: 'OPEN' } });
-    await closeDivergence(sup(), d5b!.id, 'LOST');
+    /* a sessão (Leitor + Manual): lote em uma chamada e finalizar não duplicam a validação */
     const s = await iniciarConferencia(mgr(), { unitId, type: 'COMPLETA' });
     if (!s.ok) throw new Error(s.reason);
     const lote = await marcarComandas(mgr(), { sessionId: s.sessionId, numbers: [...todas(1, 10), 99], state: 'CONFERIDA', method: 'MANUAL' });
     expect(lote).toMatchObject({ ok: true, marcadas: 10, ignoradas: [99], total: 10 });
     const fim = await finalizarConferencia(mgr(), { sessionId: s.sessionId });
     expect(fim.ok && fim.faltando).toEqual([]);
+    expect(await prisma.commandDivergence.count({ where: { unitId, number: 5, needsValidation: true } })).toBe(1);
+    expect((await getActiveSequence(unitId)).lost.has(5)).toBe(true);
+
+    expect((await closeDivergence(sup(), v!.id, 'RECOVERED')).ok).toBe(true);
     expect((await getActiveSequence(unitId)).lost.has(5)).toBe(false);
   });
 });
