@@ -194,11 +194,15 @@ export async function getConferencia(user: SessionUser, frente: Frente, year: nu
   }
 
   if (frente === 'salgados' && ids.length) {
-    const [rows, evid] = await Promise.all([
+    const [rows, launches, evid] = await Promise.all([
       prisma.wasteSnackDiscard.findMany({
         where: { unitId: { in: ids }, operationalDate: { gte: de, lt: ate } },
         orderBy: [{ operationalDate: 'desc' }, { typeName: 'asc' }],
-        select: { id: true, unitId: true, operationalDate: true, typeName: true, reasonName: true, quantity: true, createdAt: true, createdBy: { select: { name: true } } },
+        select: { id: true, unitId: true, operationalDate: true, typeName: true, reasonName: true, quantity: true, createdAt: true, launchId: true, createdBy: { select: { name: true } } },
+      }),
+      prisma.wasteSnackLaunch.findMany({
+        where: { unitId: { in: ids }, operationalDate: { gte: de, lt: ate } },
+        select: { id: true, evidencePath: true, createdAt: true },
       }),
       prisma.wasteSnackDayEvidence.findMany({
         where: { unitId: { in: ids }, operationalDate: { gte: de, lt: ate } },
@@ -206,15 +210,18 @@ export async function getConferencia(user: SessionUser, frente: Frente, year: nu
       }),
     ]);
     const fotoDoDia = new Map(evid.map((e) => [`${e.unitId}|${e.operationalDate}`, e.path]));
+    const lanc = new Map(launches.map((l) => [l.id, l]));
+    /* v1.203.0: um LANÇAMENTO por (unidade, dia, launchId) — manhã e noite aparecem separados, cada um com a sua foto.
+       Linha sem lançamento (anterior à migração) forma um lançamento "antigo" com a foto do dia. */
     const grupos = new Map<string, typeof rows>();
     for (const r of rows) {
-      const k = `${r.unitId}|${r.operationalDate}`;
+      const k = `${r.unitId}|${r.operationalDate}|${r.launchId && lanc.has(r.launchId) ? r.launchId : 'antigo'}`;
       grupos.set(k, [...(grupos.get(k) ?? []), r]);
     }
     for (const [k, rs] of grupos) {
-      const [uId, date] = k.split('|');
-      const path = fotoDoDia.get(k) ?? null;
-      const criado = rs.reduce((m, r) => (r.createdAt < m ? r.createdAt : m), rs[0].createdAt);
+      const [uId, date, lid] = k.split('|');
+      const path = lid === 'antigo' ? (fotoDoDia.get(`${uId}|${date}`) ?? null) : (lanc.get(lid)?.evidencePath ?? null);
+      const criado = lid === 'antigo' ? rs.reduce((m, r) => (r.createdAt < m ? r.createdAt : m), rs[0].createdAt) : (lanc.get(lid)?.createdAt ?? rs[0].createdAt);
       const total = rs.reduce((s, r) => s + r.quantity, 0);
       lancamentos.push({
         id: k, unitId: uId, unitName: nome.get(uId) ?? '', date, total,
@@ -229,7 +236,7 @@ export async function getConferencia(user: SessionUser, frente: Frente, year: nu
         observacao: null,
       });
     }
-    lancamentos.sort((a, b) => b.date.localeCompare(a.date) || a.unitName.localeCompare(b.unitName, 'pt-BR'));
+    lancamentos.sort((a, b) => b.date.localeCompare(a.date) || a.unitName.localeCompare(b.unitName, 'pt-BR') || a.registradoEm.localeCompare(b.registradoEm));
   }
 
   const mapa = mapaDeLancamentos(alvo, dias, lancamentos.map((l) => ({ unitId: l.unitId, date: l.date, foto: l.foto })));

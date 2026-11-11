@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { getActiveCategories, getEntryForDay, getWasteSeries, getCrossUnitWaste } from '@/lib/waste/query';
+import { SalgadosDia } from '@/components/waste/salgados-dia';
 import { ensureDefaultSnackOptions, getSnackOptions, getSnackDay, getSnackRecent } from '@/lib/waste/salgados';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { WasteForm } from '@/components/waste/waste-form';
@@ -112,9 +113,16 @@ export default async function DesperdiciosPage({
           <CardContent className="space-y-3">
             {seletorDeDia('salgados')}
             {isBackdated && <p className="sgo-aviso sgo-aviso--atencao">Lançando para um dia anterior ({dataBR(operationalDate)}).</p>}
-            {dia.createdBy && <p className="text-xs text-ink-500">Registrado por {dia.createdBy} · total atual {dia.total} un.</p>}
-            {dia.evidencePath && <FotosDoLancamento fotos={[{ rotulo: 'Recipiente de descarte', path: dia.evidencePath }]} titulo={`Salgados · ${dataBR(operationalDate)}`} tamanho="sm" />}
-            <SalgadosForm unitId={selected.id} operationalDate={operationalDate} tipos={opcoes.tipos} motivos={opcoes.motivos} initialRows={dia.rows} initialEvidencePath={dia.evidencePath} />
+            <p className="text-xs text-ink-500">A lanchonete pode lançar mais de uma vez no dia (manhã e noite): cada lançamento tem as suas linhas e a sua foto, e um não apaga o outro.</p>
+            <SalgadosDia
+              unitId={selected.id}
+              operationalDate={operationalDate}
+              titulo={isBackdated ? `Lançamento de ${dataBR(operationalDate)}` : 'Lançamento de hoje'}
+              tipos={opcoes.tipos}
+              motivos={opcoes.motivos}
+              totalDoDia={dia.total}
+              lancamentos={dia.lancamentos.map((l) => ({ id: l.id, hora: new Date(l.em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }), porQuem: l.porQuem, total: l.total, evidencePath: l.evidencePath, rows: l.rows }))}
+            />
           </CardContent>
         </Card>
 
@@ -127,7 +135,8 @@ export default async function DesperdiciosPage({
               <details key={d.operationalDate} className="p-2.5">
                 <summary className="flex cursor-pointer items-center justify-between gap-2 text-sm">
                   <span className="font-semibold text-ink-900">{dataBR(d.operationalDate)}</span>
-                  <span className="ml-auto">{d.evidencePath ? <span className="sgo-tag sgo-tag--green">Com foto</span> : <span className="sgo-tag sgo-tag--amber">Sem foto</span>}</span>
+                  {d.lancamentos > 1 && <span className="sgo-tag sgo-tag--blue">{d.lancamentos} lançamentos</span>}
+                  <span className="ml-auto">{d.evidencePaths.length > 0 ? <span className="sgo-tag sgo-tag--green">{d.evidencePaths.length > 1 ? `${d.evidencePaths.length} fotos` : 'Com foto'}</span> : <span className="sgo-tag sgo-tag--amber">Sem foto</span>}</span>
                   <span className="font-bold tabular-nums text-brand">{d.total} un.</span>
                 </summary>
                 <ul className="mt-1.5 space-y-0.5">
@@ -139,8 +148,8 @@ export default async function DesperdiciosPage({
                   ))}
                 </ul>
                 <div className="mt-2">
-                  {d.evidencePath
-                    ? <FotosDoLancamento fotos={[{ rotulo: 'Recipiente de descarte', path: d.evidencePath }]} titulo={`Salgados · ${dataBR(d.operationalDate)}`} tamanho="sm" />
+                  {d.evidencePaths.length > 0
+                    ? <FotosDoLancamento fotos={d.evidencePaths.map((p, n) => ({ rotulo: d.evidencePaths.length > 1 ? `Lançamento ${n + 1}` : 'Recipiente de descarte', path: p }))} titulo={`Salgados · ${dataBR(d.operationalDate)}`} tamanho="sm" />
                     : <p className="flex items-center gap-1.5 text-xs text-ink-500"><CameraOff className="h-3.5 w-3.5" /> Sem foto neste dia.</p>}
                 </div>
               </details>

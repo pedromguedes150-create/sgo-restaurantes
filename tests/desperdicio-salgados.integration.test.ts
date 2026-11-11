@@ -52,10 +52,12 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await prisma.wasteSnackDiscard.deleteMany({ where: { unitId: { in: [unitA, unitB] } } });
+  await prisma.wasteSnackLaunch.deleteMany({ where: { unitId: { in: [unitA, unitB] } } });
 });
 
 afterAll(async () => {
   await prisma.wasteSnackDiscard.deleteMany({ where: { unitId: { in: [unitA, unitB] } } });
+  await prisma.wasteSnackLaunch.deleteMany({ where: { unitId: { in: [unitA, unitB] } } });
   await prisma.wasteSnackOption.deleteMany({ where: { name: { endsWith: sfx } } });
   await prisma.unit.deleteMany({ where: { id: { in: [unitA, unitB] } } });
   await prisma.user.deleteMany({ where: { id: { in: [adminId, gerenteId] } } });
@@ -112,13 +114,47 @@ describe('saveSnackDay', () => {
     expect(dia.rows.map((x) => x.typeName).sort()).toEqual([`Coxinha ${sfx}`, `Kibe ${sfx}`].sort());
   });
 
-  it('regravar o dia SUBSTITUI — não acumula', async () => {
-    await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: coxinha, reasonId: sobra, quantity: 5 }] });
-    await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: kibe, reasonId: vencido, quantity: 3 }] });
+  it('v1.203.0: dois lançamentos no mesmo dia SOMAM, cada um com a sua foto — o da noite não apaga o da manhã', async () => {
+    const m = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: coxinha, reasonId: sobra, quantity: 5 }], evidencePath: 'uploads/x/manha.jpg' });
+    const n = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: kibe, reasonId: vencido, quantity: 3 }], evidencePath: 'uploads/x/noite.jpg' });
+    expect(m.ok && n.ok).toBe(true);
+    if (!m.ok || !n.ok) return;
+    expect(m.launchId).not.toBe(n.launchId);
+    expect(n.totalDoDia).toBe(8);
     const dia = await getSnackDay(unitA, hoje());
-    expect(dia.total).toBe(3);
-    expect(dia.rows).toHaveLength(1);
-    expect(dia.rows[0].typeName).toBe(`Kibe ${sfx}`);
+    expect(dia.total).toBe(8);
+    expect(dia.rows).toHaveLength(2);
+    expect(dia.lancamentos).toHaveLength(2);
+    expect(dia.lancamentos.map((l) => l.evidencePath).sort()).toEqual(['uploads/x/manha.jpg', 'uploads/x/noite.jpg']);
+    expect(dia.lancamentos.find((l) => l.id === m.launchId)?.total).toBe(5);
+  });
+
+  it('corrigir um lançamento (launchId) troca só as linhas e a foto DELE', async () => {
+    const m = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: coxinha, reasonId: sobra, quantity: 5 }], evidencePath: 'uploads/x/manha.jpg' });
+    const n = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: kibe, reasonId: vencido, quantity: 3 }], evidencePath: 'uploads/x/noite.jpg' });
+    if (!m.ok || !n.ok || !n.launchId) throw new Error('setup');
+    const c = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), launchId: n.launchId, rows: [{ typeId: kibe, reasonId: vencido, quantity: 9 }], evidencePath: 'uploads/x/noite2.jpg' });
+    expect(c.ok).toBe(true);
+    const dia = await getSnackDay(unitA, hoje());
+    expect(dia.total).toBe(14); // 5 da manhã intactos + 9 corrigidos
+    expect(dia.lancamentos.find((l) => l.id === m.launchId)?.evidencePath).toBe('uploads/x/manha.jpg');
+    expect(dia.lancamentos.find((l) => l.id === n.launchId)?.evidencePath).toBe('uploads/x/noite2.jpg');
+  });
+
+  it('corrigir sem foto nova mantém a foto do lançamento', async () => {
+    const n = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: kibe, reasonId: vencido, quantity: 3 }], evidencePath: 'uploads/x/n.jpg' });
+    if (!n.ok || !n.launchId) throw new Error('setup');
+    await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), launchId: n.launchId, rows: [{ typeId: kibe, reasonId: vencido, quantity: 4 }] });
+    expect((await getSnackDay(unitA, hoje())).lancamentos[0].evidencePath).toBe('uploads/x/n.jpg');
+  });
+
+  it('lançamento de outra unidade ou de outro dia não pode ser corrigido por este', async () => {
+    const b = await saveSnackDay(admin(), { unitId: unitB, operationalDate: hoje(), rows: [{ typeId: kibe, reasonId: vencido, quantity: 2 }] });
+    if (!b.ok || !b.launchId) throw new Error('setup');
+    const r = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), launchId: b.launchId, rows: [{ typeId: kibe, reasonId: vencido, quantity: 1 }] });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('NAO_ENCONTRADO');
+    expect((await getSnackDay(unitB, hoje())).total).toBe(2); // intacto
   });
 
   it('linhas repetidas do mesmo (tipo, motivo) são SOMADAS numa só', async () => {
@@ -132,11 +168,18 @@ describe('saveSnackDay', () => {
     expect(dia.rows[0].quantity).toBe(10);
   });
 
-  it('lista vazia apaga o dia (dia sem descarte = sem linhas)', async () => {
-    await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: coxinha, reasonId: sobra, quantity: 5 }] });
-    const r = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [] });
+  it('lançamento novo vazio é recusado; corrigir com lista vazia exclui só aquele lançamento', async () => {
+    const vazio = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [] });
+    expect(vazio.ok).toBe(false);
+    if (!vazio.ok) expect(vazio.reason).toBe('VAZIO');
+    const a = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: coxinha, reasonId: sobra, quantity: 5 }] });
+    const b = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: kibe, reasonId: vencido, quantity: 2 }] });
+    if (!a.ok || !b.ok || !b.launchId) throw new Error('setup');
+    const r = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), launchId: b.launchId, rows: [] });
     expect(r.ok).toBe(true);
-    expect((await getSnackDay(unitA, hoje())).total).toBe(0);
+    const dia = await getSnackDay(unitA, hoje());
+    expect(dia.total).toBe(5);
+    expect(dia.lancamentos).toHaveLength(1);
   });
 
   it('recusa opção inativa, motivo no lugar de tipo e quantidade inválida', async () => {
@@ -147,10 +190,10 @@ describe('saveSnackDay', () => {
     // motivo passado como tipo
     const r2 = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: sobra, reasonId: vencido, quantity: 1 }] });
     expect(r2.ok).toBe(false);
-    // quantidade 0 é descartada silenciosamente → dia fica vazio, mas ok
+    // quantidade 0 é descartada: sobra um lançamento sem linhas → VAZIO
     const r3 = await saveSnackDay(gerenteA(), { unitId: unitA, operationalDate: hoje(), rows: [{ typeId: coxinha, reasonId: sobra, quantity: 0 }] });
-    expect(r3.ok).toBe(true);
-    if (r3.ok) expect(r3.total).toBe(0);
+    expect(r3.ok).toBe(false);
+    if (!r3.ok) expect(r3.reason).toBe('VAZIO');
   });
 
   it('gerente não lança em unidade fora do seu escopo; data futura é recusada', async () => {

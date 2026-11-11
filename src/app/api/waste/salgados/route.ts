@@ -17,6 +17,8 @@ const RECUSAS: Record<string, { msg: string; status: number }> = {
   INVALID: { msg: 'Dados inválidos', status: 400 },
   DATA_SO_ADMIN: { msg: 'Só o Administrador pode lançar ou corrigir um dia anterior. O desperdício deve ser lançado no dia.', status: 403 },
   OPCAO_INVALIDA: { msg: 'Tipo ou motivo inválido/inativo. Recarregue a página.', status: 400 },
+  VAZIO: { msg: 'Informe ao menos um salgado com quantidade para lançar.', status: 400 },
+  NAO_ENCONTRADO: { msg: 'Lançamento não encontrado. Recarregue a página.', status: 404 },
   DUPLICADO: { msg: 'Já existe uma opção com esse nome.', status: 409 },
 };
 
@@ -35,6 +37,7 @@ export async function POST(req: Request) {
   let operationalDate: string | undefined;
   let rows: SnackRowInput[] = [];
   let evidencePath: string | undefined;
+  let launchId: string | undefined;
   let opData: Record<string, unknown> = {};
 
   try {
@@ -44,12 +47,14 @@ export async function POST(req: Request) {
       unitId = String(form.get('unitId') ?? '');
       operationalDate = (form.get('operationalDate') as string) || undefined;
       rows = JSON.parse(String(form.get('rows') ?? '[]'));
+      launchId = (form.get('launchId') as string) || undefined;
       const file = form.get('evidence');
       if (file instanceof File && file.size > 0) {
         if (!canAccessUnit(user, unitId)) {
           return NextResponse.json({ error: 'Sem acesso a esta unidade' }, { status: 403 });
         }
-        evidencePath = await saveEvidence(file, unitId, `snack-${operationalDate ?? 'hoje'}`);
+        /* nome ÚNICO por lançamento: duas fotos no mesmo dia nunca se sobrescrevem */
+        evidencePath = await saveEvidence(file, unitId, `snack-${operationalDate ?? 'hoje'}-${Date.now().toString(36)}`);
       }
     } else {
       const b = await req.json().catch(() => null);
@@ -58,6 +63,7 @@ export async function POST(req: Request) {
       unitId = String(b.unitId ?? '');
       operationalDate = b.operationalDate ? String(b.operationalDate) : undefined;
       rows = Array.isArray(b.rows) ? b.rows : [];
+      launchId = b.launchId ? String(b.launchId) : undefined;
       opData = b;
     }
   } catch (e) {
@@ -70,9 +76,9 @@ export async function POST(req: Request) {
       const o = r as { typeId?: unknown; reasonId?: unknown; quantity?: unknown };
       return { typeId: String(o.typeId ?? ''), reasonId: String(o.reasonId ?? ''), quantity: Number(o.quantity) };
     });
-    const r = await saveSnackDay(user, { unitId, operationalDate, rows: parsedRows, evidencePath }, ctx);
+    const r = await saveSnackDay(user, { unitId, operationalDate, rows: parsedRows, evidencePath, launchId }, ctx);
     if (!r.ok) { const rc = RECUSAS[r.reason]; return NextResponse.json({ error: rc.msg }, { status: rc.status }); }
-    return NextResponse.json({ ok: true, total: r.total, operationalDate: r.operationalDate });
+    return NextResponse.json({ ok: true, total: r.total, totalDoDia: r.totalDoDia, launchId: r.launchId, operationalDate: r.operationalDate });
   }
 
   if (action === 'opcao') {

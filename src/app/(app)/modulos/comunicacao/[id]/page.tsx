@@ -33,7 +33,7 @@ export default async function ComunicacaoDetailPage({ params }: { params: { id: 
     ? await Promise.all([
         prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
         prisma.user.findMany({
-          where: { active: true, id: { not: user.id }, ...(user.seesAllUnits ? {} : { memberships: { some: { unitId: { in: user.unitIds } } } }) },
+          where: { active: true, role: { not: 'CASHIER' }, id: { not: user.id }, ...(user.seesAllUnits ? {} : { memberships: { some: { unitId: { in: user.unitIds } } } }) },
           orderBy: { name: 'asc' }, select: { id: true, name: true, role: true },
         }),
       ])

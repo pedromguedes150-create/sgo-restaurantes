@@ -13,7 +13,8 @@ import { ROLE_LABELS } from '@/lib/roles';
  */
 
 /** Perfis que podem ser alvo por unidade. Admin e CEO ficam fora: são quem escreve, não quem confirma. */
-export const PERFIS_DESTINATARIOS: Role[] = ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'FINANCE', 'CASHIER', 'SEPARATOR'];
+/* v1.203.0: o Caixa (login só para conferir comandas) não recebe nem acessa comunicados. */
+export const PERFIS_DESTINATARIOS: Role[] = ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'FINANCE', 'SEPARATOR'];
 export const PERFIS_PADRAO: Role[] = ['MANAGER'];
 
 /** Lista válida, sem repetição, na ordem fixa; vazio ou inválido → o padrão (Gerente). */

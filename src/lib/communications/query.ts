@@ -120,7 +120,7 @@ export async function getCommunicationForEdit(user: SessionUser, id: string): Pr
   let managerIds = new Set<string>();
   if (unitIds.length) {
     const managers = await prisma.user.findMany({
-      where: { role: { in: comm.targetRoles }, active: true, memberships: { some: { unitId: { in: unitIds } } } },
+      where: { role: { in: comm.targetRoles.filter((r) => r !== 'CASHIER') }, active: true, memberships: { some: { unitId: { in: unitIds } } } },
       select: { id: true },
     });
     managerIds = new Set(managers.map((m) => m.id));

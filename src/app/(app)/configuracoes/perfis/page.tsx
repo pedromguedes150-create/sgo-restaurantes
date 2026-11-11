@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { Card, CardContent } from '@/components/ui/card';
 import { PermissionsAdmin } from '@/components/admin/permissions-admin';
 import { ProfilesAdmin } from '@/components/admin/profiles-admin';
-import { ALL_ROLES, isFullAccess, MODULES, permissionMatrix, permissoesDoPerfil, type Perm } from '@/lib/permissions';
+import { ALL_ROLES, isFullAccess, temAcessoFixo, MODULES, permissionMatrix, permissoesDoPerfil, type Perm } from '@/lib/permissions';
 import { basesPossiveis, listarPerfis } from '@/lib/perfis';
 import { valorDePerfil } from '@/lib/perfil-valor';
 import { ROLE_HINTS, roleLabel } from '@/lib/roles';
@@ -31,7 +31,7 @@ export default async function PerfisAdminPage() {
      os personalizados ATIVOS. A lista era escrita à mão no cliente e tinha
      quatro perfis — Caixa e Separador do CD ficavam invisíveis. */
   const perfis = [
-    ...ALL_ROLES.filter((r) => !isFullAccess(r)).map((r) => ({ value: r as string, label: roleLabel(r), hint: ROLE_HINTS[r] })),
+    ...ALL_ROLES.filter((r) => !isFullAccess(r) && !temAcessoFixo(r)).map((r) => ({ value: r as string, label: roleLabel(r), hint: ROLE_HINTS[r] })),
     ...personalizados
       .filter((p) => p.active)
       .map((p) => ({ value: valorDePerfil(p.id), label: p.name, hint: `Perfil criado aqui — herda as regras de ${p.baseRoleLabel}` })),

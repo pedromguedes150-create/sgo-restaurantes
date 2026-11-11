@@ -62,7 +62,7 @@ export async function createCommunication(user: SessionUser, input: CreateCommun
   }
   const extraIds = [...new Set((input.extraUserIds ?? []).filter(Boolean))];
   if (extraIds.length) {
-    const extras = await prisma.user.findMany({ where: { id: { in: extraIds }, active: true }, select: { id: true, memberships: { select: { unitId: true } } } });
+    const extras = await prisma.user.findMany({ where: { id: { in: extraIds }, active: true, role: { not: 'CASHIER' } }, select: { id: true, memberships: { select: { unitId: true } } } });
     for (const e of extras) if (!recip.has(e.id)) recip.set(e.id, e.memberships[0]?.unitId ?? null);
   }
   if (recip.size === 0) return { ok: false, reason: 'NO_RECIPIENTS' };

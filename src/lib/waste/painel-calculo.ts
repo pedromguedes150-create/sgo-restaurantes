@@ -201,7 +201,14 @@ export function mapaDeLancamentos(
   dias: string[],
   registros: { unitId: string; date: string; foto: SituacaoDaFoto }[],
 ): { unitId: string; unitName: string; dias: CelulaDoMapa[]; lancados: number }[] {
-  const por = new Map(registros.map((r) => [`${r.unitId}|${r.date}`, r.foto]));
+  /* v1.203.0: mais de um lançamento no mesmo dia (Salgados: manhã e noite) — vale a PIOR situação de foto. */
+  const gravidade: Record<SituacaoDaFoto, number> = { completa: 0, 'sem-peso': 1, parcial: 2, 'sem-foto': 3 };
+  const por = new Map<string, SituacaoDaFoto>();
+  for (const r of registros) {
+    const k = `${r.unitId}|${r.date}`;
+    const atual = por.get(k);
+    if (atual === undefined || gravidade[r.foto] > gravidade[atual]) por.set(k, r.foto);
+  }
   return unidades.map((u) => {
     const cel = dias.map((d) => por.get(`${u.id}|${d}`) ?? null);
     return { unitId: u.id, unitName: u.name, dias: cel, lancados: cel.filter((c) => c !== null).length };

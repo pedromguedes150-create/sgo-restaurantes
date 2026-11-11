@@ -299,11 +299,26 @@ for (const m of MODULES) {
  * mais coisas na matriz (a linha cadastrada sempre vence o padrão).
  */
 const DEFAULT_ALLOW_ONLY: Partial<Record<Role, string[]>> = {
-  CASHIER: ['COMMANDS', 'HELP'],
+  CASHIER: ['COMMANDS'],
   /* O Separador do CD so separa. Nasce fechado como o CAIXA: sem dashboard,
      sem escala, sem nada da unidade — a tela dele e uma so. */
   SEPARATOR: ['PRODUCT_SEPARATION', 'ORDERS_INBOX', 'HELP'],
 };
+
+/**
+ * ACESSO FIXO (v1.203.0): o perfil CAIXA só confere comandas. Vale POR CIMA da
+ * matriz — nem uma linha gravada em Perfis, nem o "segue o pai" dos submenus
+ * abre outra aba para ele (antes o Caixa herdava as partes de Comandas, como a
+ * Análise de comandas em aberto, e a matriz podia liberar o resto). Sem Treinamento
+ * da Plataforma, sem Comunicados, sem Notas, sem Pessoas: só a conferência.
+ * Perfil personalizado criado com base no Caixa herda a mesma trava.
+ */
+export const ACESSO_FIXO: Partial<Record<Role, ReadonlySet<string>>> = {
+  CASHIER: new Set(['COMMANDS', 'COMMANDS_SCAN', 'COMMANDS_SESSIONS']),
+};
+
+/** O perfil tem acesso fixo (não configurável na matriz)? */
+export const temAcessoFixo = (role: Role): boolean => role in ACESSO_FIXO;
 
 /**
  * MÓDULOS INATIVOS (v1.177.1): fechados para TODO perfil que não seja
@@ -340,6 +355,8 @@ function calcular(role: Role, byModule: Map<string, Perm>): Record<string, Perm>
   const out: Record<string, Perm> = {};
   for (const m of MODULES) {
     if (isFullAccess(role)) { out[m.key] = { canView: true, canEdit: true }; continue; }
+    const fixo = ACESSO_FIXO[role];
+    if (fixo) { const ok = fixo.has(m.key); out[m.key] = { canView: ok, canEdit: ok }; continue; }
     if (MODULOS_INATIVOS.has(m.key)) { out[m.key] = { canView: false, canEdit: false }; continue; }
     const r = byModule.get(m.key);
 
@@ -454,6 +471,7 @@ export async function setRolePermission(
   if (user.role !== 'ADMIN') return { ok: false, reason: 'FORBIDDEN' };
   if (!ALL_ROLES.includes(input.role) || !MODULES.some((m) => m.key === input.module)) return { ok: false, reason: 'INVALID' };
   if (isFullAccess(input.role)) return { ok: false, reason: 'INVALID' }; // não restringe ADMIN/CEO
+  if (temAcessoFixo(input.role)) return { ok: false, reason: 'INVALID' }; // o Caixa só confere comandas (v1.203.0)
   const canView = Boolean(input.canView);
   const canEdit = canView && Boolean(input.canEdit); // sem ver, não edita
   await prisma.rolePermission.upsert({
