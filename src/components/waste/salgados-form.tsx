@@ -10,8 +10,11 @@ import { apagarFotoLocal, apagarRascunho, gravarRascunho, guardarFotoLocal, lerF
 
 /**
  * SOBRAS SALGADOS — a folha do gerente, em UNIDADES.
- * Uma linha por (tipo, motivo); "Adicionar salgado" abre outra; o total do dia
- * soma ao vivo. Gravar substitui o dia inteiro.
+ * Uma linha por (tipo, motivo); "Adicionar salgado" abre outra; o total do
+ * lançamento soma ao vivo. v1.203.0: a folha é UM LANÇAMENTO — a lanchonete pode
+ * lançar de manhã e de novo à noite, cada um com as suas linhas e a sua foto;
+ * gravar um novo lançamento nunca mexe nos anteriores do dia (antes substituía o
+ * dia inteiro e trocava a foto). Com `launchId`, corrige só aquele lançamento.
  *
  * Evidência: UMA FOTO GERAL do recipiente de resíduo orgânico é obrigatória
  * quando o total descartado > 0. Câmera obrigatória — galeria não permitida.
@@ -27,7 +30,7 @@ import { apagarFotoLocal, apagarRascunho, gravarRascunho, guardarFotoLocal, lerF
 interface Opcao { id: string; name: string }
 interface Linha { typeId: string; reasonId: string; qty: string }
 
-export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialRows, initialEvidencePath }: {
+export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialRows, initialEvidencePath, launchId = null, onDone }: {
   unitId: string;
   operationalDate: string;
   tipos: Opcao[];
@@ -35,13 +38,17 @@ export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialR
   initialRows: { typeId: string; reasonId: string; quantity: number }[];
   /** Path da foto geral já salva no banco (null = não tem). */
   initialEvidencePath: string | null;
+  /** Corrigindo um lançamento já gravado (nulo = lançamento novo). */
+  launchId?: string | null;
+  /** Chamado depois de salvar uma correção (a tela volta para "novo lançamento"). */
+  onDone?: () => void;
 }) {
   const router = useRouter();
   const linhasIniciais: Linha[] = initialRows.length ? initialRows.map((r) => ({ typeId: r.typeId, reasonId: r.reasonId, qty: String(r.quantity) })) : [{ typeId: '', reasonId: '', qty: '' }];
   const [linhas, setLinhas] = useState<Linha[]>(linhasIniciais);
   const [foto, setFoto] = useState<File | null>(null);
-  /* Chave do rascunho: a folha é de UMA unidade num dia. */
-  const chaveDoRascunho = `salgados:${unitId}:${operationalDate}`;
+  /* Chave do rascunho: um lançamento de UMA unidade num dia (o novo e cada correção têm o seu). */
+  const chaveDoRascunho = `salgados:${unitId}:${operationalDate}:${launchId ?? 'novo'}`;
   const [recuperado, setRecuperado] = useState(false);
 
   /* Ao montar: recupera o que ficou do recarregamento (linhas + foto), se diferente do que veio do banco. */
@@ -95,19 +102,22 @@ export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialR
         fd.append('unitId', unitId);
         fd.append('operationalDate', operationalDate);
         fd.append('rows', JSON.stringify(rows));
+        if (launchId) fd.append('launchId', launchId);
         fd.append('evidence', foto);
         res = await fetch('/api/waste/salgados', { method: 'POST', body: fd });
       } else {
         res = await fetch('/api/waste/salgados', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'salvar', unitId, operationalDate, rows }),
+          body: JSON.stringify({ action: 'salvar', unitId, operationalDate, rows, launchId: launchId ?? undefined }),
         });
       }
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { setMsg({ tipo: 'erro', texto: d.error ?? 'Não foi possível salvar' }); return; }
-      setMsg({ tipo: 'ok', texto: `Salvo: ${d.total} salgado(s) descartado(s) no dia.` });
+      setMsg({ tipo: 'ok', texto: launchId ? `Lançamento corrigido: ${d.total} un. · total do dia ${d.totalDoDia} un.` : `Novo lançamento salvo: ${d.total} un. · total do dia ${d.totalDoDia} un.` });
       setFoto(null);
       setRecuperado(false);
+      if (!launchId) setLinhas([{ typeId: '', reasonId: '', qty: '' }]); // pronto para o próximo lançamento do dia
+      onDone?.();
       apagarRascunho(chaveDoRascunho);
       void apagarFotoLocal(chaveDoRascunho);
       router.refresh();
@@ -157,7 +167,7 @@ export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialR
       </Button>
 
       <div className="flex items-baseline justify-between rounded-card border-2 border-brand/30 bg-brand/5 p-3">
-        <span className="sgo-type-13 font-semibold text-brand">TOTAL DE SALGADOS DESCARTADOS NO DIA</span>
+        <span className="sgo-type-13 font-semibold text-brand">{launchId ? 'TOTAL DESTE LANÇAMENTO' : 'TOTAL DESTE NOVO LANÇAMENTO'}</span>
         <span className="sgo-type-24 font-bold tabular-nums text-brand">{total} un.</span>
       </div>
 
@@ -198,7 +208,7 @@ export function SalgadosForm({ unitId, operationalDate, tipos, motivos, initialR
       {msg && <p className={`rounded-lg px-3 py-2 text-sm font-medium ${msg.tipo === 'ok' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>{msg.texto}</p>}
 
       <Button className="w-full sm:w-auto" disabled={busy} onClick={() => void salvar()}>
-        {busy ? 'Salvando…' : 'Salvar sobras da lanchonete'}
+        {busy ? 'Salvando…' : launchId ? 'Salvar correção do lançamento' : 'Salvar sobras da lanchonete'}
       </Button>
 
       {/* Input oculto — somente câmera, sem galeria (capture="environment"). */}

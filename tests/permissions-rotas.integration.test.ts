@@ -139,9 +139,9 @@ describe('As telas de Configurações nascem restritas', () => {
 });
 
 describe('O Caixa continua trancado — e agora também fora da Escala', () => {
-  it('abre só a conferência e a ajuda', async () => {
+  it('abre só a conferência (v1.203.0: a ajuda e os comunicados saíram)', async () => {
     expect(await canOpenPath('CASHIER', '/modulos/comandas/conferencia')).toBe(true);
-    expect(await canOpenPath('CASHIER', '/ajuda')).toBe(true);
+    expect(await canOpenPath('CASHIER', '/ajuda')).toBe(false);
   });
 
   it('a grade de presença da rede deixou de ser alcançável por endereço', async () => {

@@ -101,61 +101,106 @@ export async function toggleSnackOption(user: SessionUser, id: string, active: b
 
 export interface SnackRowDTO { id: string; typeId: string; typeName: string; reasonId: string; reasonName: string; quantity: number }
 
-export async function getSnackDay(unitId: string, operationalDate: string): Promise<{ rows: SnackRowDTO[]; total: number; createdBy: string | null; evidencePath: string | null }> {
-  const [rows, evidence] = await Promise.all([
+/** Um lançamento do dia (v1.203.0): a lanchonete pode lançar mais de uma vez, cada uma com as suas linhas e a sua foto. */
+export interface SnackLaunchDTO {
+  id: string;
+  /** Hora do lançamento (ISO). */
+  em: string;
+  porQuem: string | null;
+  rows: SnackRowDTO[];
+  total: number;
+  evidencePath: string | null;
+}
+
+const LANCAMENTO_ANTIGO = 'antigo';
+
+export async function getSnackDay(unitId: string, operationalDate: string): Promise<{
+  rows: SnackRowDTO[]; total: number; createdBy: string | null; evidencePath: string | null; lancamentos: SnackLaunchDTO[];
+}> {
+  const [rows, launches, evidence] = await Promise.all([
     prisma.wasteSnackDiscard.findMany({
       where: { unitId, operationalDate },
       orderBy: [{ typeName: 'asc' }, { reasonName: 'asc' }],
       include: { createdBy: { select: { name: true } } },
     }),
+    prisma.wasteSnackLaunch.findMany({ where: { unitId, operationalDate }, orderBy: { createdAt: 'asc' } }),
     prisma.wasteSnackDayEvidence.findUnique({ where: { unitId_operationalDate: { unitId, operationalDate } }, select: { path: true } }),
   ]);
+  const dto = (r: (typeof rows)[number]): SnackRowDTO => ({ id: r.id, typeId: r.typeId, typeName: r.typeName, reasonId: r.reasonId, reasonName: r.reasonName, quantity: r.quantity });
+  const nomes = new Map<string | null, string | null>();
+  const lancamentos: SnackLaunchDTO[] = launches.map((l) => {
+    const rs = rows.filter((r) => r.launchId === l.id);
+    return { id: l.id, em: l.createdAt.toISOString(), porQuem: rs[0]?.createdBy?.name ?? nomes.get(l.createdById) ?? null, rows: rs.map(dto), total: rs.reduce((x, r) => x + r.quantity, 0), evidencePath: l.evidencePath };
+  });
+  /* Linhas sem lançamento (anteriores à v1.203.0 e fora da migração): um lançamento "antigo" só para não sumirem da tela. */
+  const soltas = rows.filter((r) => !r.launchId || !launches.some((l) => l.id === r.launchId));
+  if (soltas.length) {
+    lancamentos.unshift({ id: LANCAMENTO_ANTIGO, em: soltas[0].createdAt.toISOString(), porQuem: soltas[0].createdBy?.name ?? null, rows: soltas.map(dto), total: soltas.reduce((x, r) => x + r.quantity, 0), evidencePath: evidence?.path ?? null });
+  }
   return {
-    rows: rows.map((r) => ({ id: r.id, typeId: r.typeId, typeName: r.typeName, reasonId: r.reasonId, reasonName: r.reasonName, quantity: r.quantity })),
-    total: rows.reduce((s, r) => s + r.quantity, 0),
+    rows: rows.map(dto),
+    total: rows.reduce((x, r) => x + r.quantity, 0),
     createdBy: rows[0]?.createdBy?.name ?? null,
-    evidencePath: evidence?.path ?? null,
+    evidencePath: lancamentos.find((l) => l.evidencePath)?.evidencePath ?? evidence?.path ?? null,
+    lancamentos: lancamentos.filter((l) => l.rows.length > 0 || l.evidencePath),
   };
 }
 
 /** Os últimos dias lançados da unidade — o histórico curto da própria tela. */
-export async function getSnackRecent(unitId: string, dias = 30): Promise<{ operationalDate: string; total: number; evidencePath: string | null; itens: { typeName: string; reasonName: string; quantity: number }[] }[]> {
+export async function getSnackRecent(unitId: string, dias = 30): Promise<{ operationalDate: string; total: number; evidencePath: string | null; evidencePaths: string[]; lancamentos: number; itens: { typeName: string; reasonName: string; quantity: number }[] }[]> {
   const desde = new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10);
-  const [rows, evidences] = await Promise.all([
+  const [rows, launches, evidences] = await Promise.all([
     prisma.wasteSnackDiscard.findMany({
       where: { unitId, operationalDate: { gte: desde } },
       orderBy: [{ operationalDate: 'desc' }, { typeName: 'asc' }],
-      select: { operationalDate: true, typeName: true, reasonName: true, quantity: true },
+      select: { operationalDate: true, typeName: true, reasonName: true, quantity: true, launchId: true },
     }),
-    prisma.wasteSnackDayEvidence.findMany({
-      where: { unitId, operationalDate: { gte: desde } },
-      select: { operationalDate: true, path: true },
-    }),
+    prisma.wasteSnackLaunch.findMany({ where: { unitId, operationalDate: { gte: desde } }, select: { id: true, operationalDate: true, evidencePath: true }, orderBy: { createdAt: 'asc' } }),
+    prisma.wasteSnackDayEvidence.findMany({ where: { unitId, operationalDate: { gte: desde } }, select: { operationalDate: true, path: true } }),
   ]);
   const evidenceMap = new Map(evidences.map((e) => [e.operationalDate, e.path]));
-  const porDia = new Map<string, { operationalDate: string; total: number; evidencePath: string | null; itens: { typeName: string; reasonName: string; quantity: number }[] }>();
+  const porDia = new Map<string, { operationalDate: string; total: number; evidencePath: string | null; evidencePaths: string[]; lancamentos: number; itens: { typeName: string; reasonName: string; quantity: number }[] }>();
+  const dia = (d: string) => {
+    const x = porDia.get(d) ?? { operationalDate: d, total: 0, evidencePath: null, evidencePaths: [], lancamentos: 0, itens: [] };
+    porDia.set(d, x);
+    return x;
+  };
   for (const r of rows) {
-    const d = porDia.get(r.operationalDate) ?? { operationalDate: r.operationalDate, total: 0, evidencePath: evidenceMap.get(r.operationalDate) ?? null, itens: [] };
+    const d = dia(r.operationalDate);
     d.total += r.quantity;
     d.itens.push({ typeName: r.typeName, reasonName: r.reasonName, quantity: r.quantity });
-    porDia.set(r.operationalDate, d);
+  }
+  for (const l of launches) {
+    const d = porDia.get(l.operationalDate);
+    if (!d) continue;
+    d.lancamentos += 1;
+    if (l.evidencePath) d.evidencePaths.push(l.evidencePath);
+  }
+  for (const d of porDia.values()) {
+    /* dia sem lançamento gravado (linha antiga): a foto do dia, se existir */
+    if (d.evidencePaths.length === 0 && evidenceMap.get(d.operationalDate)) d.evidencePaths.push(evidenceMap.get(d.operationalDate)!);
+    if (d.lancamentos === 0) d.lancamentos = 1;
+    d.evidencePath = d.evidencePaths[0] ?? null;
   }
   return [...porDia.values()];
 }
 
 export interface SnackRowInput { typeId: string; reasonId: string; quantity: number }
 export type SaveSnackResult =
-  | { ok: true; total: number; operationalDate: string }
-  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'OPCAO_INVALIDA' | 'DATA_SO_ADMIN' };
+  | { ok: true; total: number; operationalDate: string; launchId: string | null; totalDoDia: number }
+  | { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'OPCAO_INVALIDA' | 'DATA_SO_ADMIN' | 'VAZIO' | 'NAO_ENCONTRADO' };
 
 /**
- * Grava o dia INTEIRO: substitui as linhas do dia pelas enviadas, numa
- * transação. Enviar lista vazia apaga o dia (dia sem descarte = sem linhas).
- * Linhas com o mesmo (tipo, motivo) são somadas antes de gravar.
+ * Grava UM LANÇAMENTO do dia (v1.203.0). A lanchonete pode lançar mais de uma vez
+ * por dia (manhã e noite): cada gravação sem `launchId` cria um lançamento NOVO,
+ * com as suas linhas e a sua foto, e nunca mexe nos outros do dia. Com `launchId`,
+ * corrige SÓ aquele lançamento (linhas e, se vier, a foto); lista vazia o exclui.
+ * Antes, gravar substituía o dia inteiro — o lançamento da noite apagava o da
+ * manhã e trocava a foto. Linhas com o mesmo (tipo, motivo) são somadas.
  */
 export async function saveSnackDay(
   user: SessionUser,
-  input: { unitId: string; operationalDate?: string; rows: SnackRowInput[]; evidencePath?: string },
+  input: { unitId: string; operationalDate?: string; rows: SnackRowInput[]; evidencePath?: string; launchId?: string },
   ctx: Ctx = {},
 ): Promise<SaveSnackResult> {
   try {
@@ -185,6 +230,9 @@ export async function saveSnackDay(
   }
   const linhas = [...somadas.values()];
 
+  /* Lançamento NOVO precisa ter o que lançar: dia sem descarte é dia sem lançamento. */
+  if (!input.launchId && linhas.length === 0) return { ok: false, reason: 'VAZIO' };
+
   /* Tipo e motivo têm de ser opções ATIVAS do tipo certo — o nome congelado sai daqui. */
   const ids = [...new Set(linhas.flatMap((l) => [l.typeId, l.reasonId]))];
   const opcoes = ids.length ? await prisma.wasteSnackOption.findMany({ where: { id: { in: ids }, active: true } }) : [];
@@ -194,34 +242,54 @@ export async function saveSnackDay(
     if (!t || t.kind !== 'TIPO' || !m || m.kind !== 'MOTIVO') return { ok: false, reason: 'OPCAO_INVALIDA' };
   }
 
+  /* Corrigir um lançamento existente: ele tem de ser DESTA unidade e DESTE dia. */
+  const existente = input.launchId && input.launchId !== LANCAMENTO_ANTIGO
+    ? await prisma.wasteSnackLaunch.findUnique({ where: { id: input.launchId } })
+    : null;
+  if (input.launchId && input.launchId !== LANCAMENTO_ANTIGO && (!existente || existente.unitId !== input.unitId || existente.operationalDate !== operationalDate)) {
+    return { ok: false, reason: 'NAO_ENCONTRADO' };
+  }
+
+  const dados = (launchId: string) => linhas.map((l) => ({
+    unitId: input.unitId, operationalDate, launchId,
+    typeId: l.typeId, typeName: porId.get(l.typeId)!.name,
+    reasonId: l.reasonId, reasonName: porId.get(l.reasonId)!.name,
+    quantity: l.quantity, createdById: user.id,
+  }));
+
+  let launchId: string | null = null;
   await prisma.$transaction(async (tx) => {
-    await tx.wasteSnackDiscard.deleteMany({ where: { unitId: input.unitId, operationalDate } });
-    if (linhas.length) {
-      await tx.wasteSnackDiscard.createMany({
-        data: linhas.map((l) => ({
-          unitId: input.unitId, operationalDate,
-          typeId: l.typeId, typeName: porId.get(l.typeId)!.name,
-          reasonId: l.reasonId, reasonName: porId.get(l.reasonId)!.name,
-          quantity: l.quantity, createdById: user.id,
-        })),
-      });
+    if (input.launchId === LANCAMENTO_ANTIGO) {
+      /* linhas de antes da v1.203.0 sem lançamento: corrige o conjunto delas */
+      await tx.wasteSnackDiscard.deleteMany({ where: { unitId: input.unitId, operationalDate, launchId: null } });
+      if (linhas.length) {
+        const l = await tx.wasteSnackLaunch.create({ data: { unitId: input.unitId, operationalDate, createdById: user.id, evidencePath: input.evidencePath ?? null } });
+        launchId = l.id;
+        await tx.wasteSnackDiscard.createMany({ data: dados(l.id) });
+      }
+    } else if (existente) {
+      await tx.wasteSnackDiscard.deleteMany({ where: { launchId: existente.id } });
+      if (linhas.length === 0) {
+        await tx.wasteSnackLaunch.delete({ where: { id: existente.id } });
+      } else {
+        await tx.wasteSnackDiscard.createMany({ data: dados(existente.id) });
+        await tx.wasteSnackLaunch.update({ where: { id: existente.id }, data: input.evidencePath ? { evidencePath: input.evidencePath } : {} });
+        launchId = existente.id;
+      }
+    } else {
+      const l = await tx.wasteSnackLaunch.create({ data: { unitId: input.unitId, operationalDate, createdById: user.id, evidencePath: input.evidencePath ?? null } });
+      launchId = l.id;
+      await tx.wasteSnackDiscard.createMany({ data: dados(l.id) });
     }
   });
-  // Foto geral do dia: upsert separado — não entra na transação dos descartes
-  // para não reverter uma foto já tirada se a regra de negócio recusar depois.
-  if (input.evidencePath) {
-    await prisma.wasteSnackDayEvidence.upsert({
-      where: { unitId_operationalDate: { unitId: input.unitId, operationalDate } },
-      create: { unitId: input.unitId, operationalDate, path: input.evidencePath, createdById: user.id },
-      update: { path: input.evidencePath },
-    });
-  }
+
   const total = linhas.reduce((s, l) => s + l.quantity, 0);
+  const totalDoDia = (await prisma.wasteSnackDiscard.aggregate({ where: { unitId: input.unitId, operationalDate }, _sum: { quantity: true } }))._sum.quantity ?? 0;
   await audit({
     userId: user.id, unitId: input.unitId, action: 'WASTE_SNACK_SAVE', module: 'WASTE', entity: 'waste_snack_discard',
-    metadata: { operationalDate, linhas: linhas.length, total, comFoto: Boolean(input.evidencePath) }, ...ctx,
+    metadata: { operationalDate, launchId, novo: !input.launchId, linhas: linhas.length, total, totalDoDia, comFoto: Boolean(input.evidencePath) }, ...ctx,
   });
-  return { ok: true, total, operationalDate };
+  return { ok: true, total, operationalDate, launchId, totalDoDia };
 }
 
 /* ─────────────────────────── consolidado ─────────────────────────── */

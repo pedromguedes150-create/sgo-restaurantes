@@ -67,6 +67,7 @@ model Unit {
   occurrences               Occurrence[]
   commandConfig             UnitCommandConfig?
   commandSequences          CommandSequence[]
+  wasteSnackLaunches        WasteSnackLaunch[]
   commandSchedules          CommandSchedule[]
   commandScheduleExceptions CommandScheduleException[]
   commandCounts             CommandCount[]
@@ -613,6 +614,9 @@ model WasteSnackDiscard {
   reasonId        String
   reasonName      String
   quantity        Int
+  /// v1.203.0 — o LANÇAMENTO (manhã, noite…) a que a linha pertence. Nulo só em linha
+  /// criada antes (a migração agrupou cada dia num lançamento).
+  launchId        String?
   createdById     String?
   createdAt       DateTime @default(now())
 
@@ -623,7 +627,27 @@ model WasteSnackDiscard {
 
   @@index([unitId, operationalDate])
   @@index([typeId])
+  @@index([launchId])
   @@map("waste_snack_discards")
+}
+
+/// v1.203.0 — UM lançamento de descarte de salgados: a lanchonete pode lançar mais de
+/// uma vez por dia (manhã e noite), cada lançamento com as suas linhas e a sua foto.
+/// Gravar um lançamento nunca mexe nos outros do dia.
+model WasteSnackLaunch {
+  id              String   @id @default(cuid())
+  unitId          String
+  operationalDate String
+  /// Foto do recipiente DESTE lançamento.
+  evidencePath    String?
+  createdById     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([unitId, operationalDate])
+  @@map("waste_snack_launches")
 }
 
 /// Gravidade da ocorrência (🟢🟡🔴⚫) — Módulo 6.

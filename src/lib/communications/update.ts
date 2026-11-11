@@ -45,14 +45,14 @@ async function resolveTargets(user: SessionUser, unitIds: string[], extraUserIds
   const recip = new Map<string, string | null>();
   if (unitIds.length) {
     const managers = await prisma.user.findMany({
-      where: { role: { in: roles }, active: true, memberships: { some: { unitId: { in: unitIds } } } },
+      where: { role: { in: roles.filter((r) => r !== 'CASHIER') }, active: true, memberships: { some: { unitId: { in: unitIds } } } },
       select: { id: true, memberships: { where: { unitId: { in: unitIds } }, select: { unitId: true } } },
     });
     for (const m of managers) recip.set(m.id, m.memberships[0]?.unitId ?? null);
   }
   const extras = [...new Set(extraUserIds.filter(Boolean))];
   if (extras.length) {
-    const rows = await prisma.user.findMany({ where: { id: { in: extras }, active: true }, select: { id: true, memberships: { select: { unitId: true } } } });
+    const rows = await prisma.user.findMany({ where: { id: { in: extras }, active: true, role: { not: 'CASHIER' } }, select: { id: true, memberships: { select: { unitId: true } } } });
     for (const e of rows) if (!recip.has(e.id)) recip.set(e.id, e.memberships[0]?.unitId ?? null);
   }
   return recip;

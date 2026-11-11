@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.203.0 — 2026-11-13 (Salgados com vários lançamentos por dia · perfil Caixa só confere comandas)
+
+- **Sobras Lanchonete — vários lançamentos por dia**: antes, gravar substituía o dia inteiro — o lançamento da noite apagava o da manhã e trocava a foto. Agora cada gravação cria um LANÇAMENTO novo (`WasteSnackLaunch`), com as suas linhas e a sua foto (arquivo com nome único); os anteriores não são tocados. A tela lista os lançamentos do dia (hora, quem, itens, foto), mostra o total do dia e a folha vira "Novo lançamento"; "Corrigir" abre só aquele lançamento (linhas e foto); corrigir com lista vazia exclui só ele. Lançamento novo vazio é recusado. O histórico mostra quantos lançamentos e todas as fotos do dia; a Conferência do painel consolidado lista cada lançamento com a sua foto (e o mapa usa a pior situação de foto do dia). Totais, consolidado e alertas somam os lançamentos sem mudar.
+- **Migração aditiva** `20261113120000_salgados_varios_lancamentos`: cada dia já lançado vira UM lançamento, com a foto do dia — nada se perde.
+- **Perfil Caixa só confere comandas**: acesso FIXO por cima da matriz — Comandas, conferência por leitor e histórico de conferências, e mais nada (sem Análise de comandas em aberto, Treinamento da Plataforma, Comunicados, Notas, Pessoas…). Uma linha gravada na matriz não reabre; o Admin não edita o Caixa em Perfis (some da lista) e perfil personalizado com base no Caixa herda a trava.
+- **Comunicados**: o Caixa deixou de ser opção de destinatário e nunca recebe, nem por unidade, nem como pessoa avulsa (inclusive em comunicados antigos).
+
 ## v1.202.0 — 2026-11-12 (Comandas — recebimento físico, painel e Metas, PR 3 de 3)
 
 - **Recebimento físico da reposição**: a comanda de reposição nasce aguardando e só entra na sequência julgada depois que alguém da unidade (gerente, caixa, coordenação, supervisão) confirma que ela chegou — quem, quando e observação ficam gravados e na Auditoria (`COMMAND_REPLACEMENT_RECEIVED`). Até lá nunca vira faltante. As reposições anteriores foram marcadas como recebidas (nada muda para elas). Cartão "aguardando recebimento" na tela de Comandas.

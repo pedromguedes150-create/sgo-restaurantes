@@ -13,10 +13,11 @@ import { afterAll } from 'vitest';
 afterAll(async () => { await prisma.$disconnect(); });
 
 describe('Guarda de rota — o Caixa só alcança a conferência', () => {
-  it('deixa o Caixa abrir Comandas e a Ajuda', async () => {
+  it('deixa o Caixa abrir só Comandas (v1.203.0: sem Ajuda nem Comunicados)', async () => {
     expect(await canOpenPath('CASHIER', '/modulos/comandas/conferencia')).toBe(true);
     expect(await canOpenPath('CASHIER', '/modulos/comandas')).toBe(true);
-    expect(await canOpenPath('CASHIER', '/ajuda')).toBe(true);
+    expect(await canOpenPath('CASHIER', '/ajuda')).toBe(false);
+    expect(await canOpenPath('CASHIER', '/modulos/comunicacao')).toBe(false);
   });
 
   it('BLOQUEIA o Caixa nas telas com dado sensível', async () => {
