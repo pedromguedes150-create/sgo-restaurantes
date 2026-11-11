@@ -1001,12 +1001,19 @@ model CommandDivergence {
 
 /// Reposição de comandas registrada pelo Admin (entra na sequência ativa).
 model CommandReplacement {
-  id          String   @id @default(cuid())
-  unitId      String
-  number      Int
-  note        String?
-  createdById String?
-  createdAt   DateTime @default(now())
+  id             String    @id @default(cuid())
+  unitId         String
+  number         Int
+  note           String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  /// v1.202.0 — RECEBIMENTO FÍSICO: a reposição só entra na sequência julgada
+  /// depois que alguém confirma que a comanda chegou na unidade. Nula = aguardando.
+  /// (As anteriores à v1.202.0 foram marcadas como recebidas na criação.)
+  receivedAt     DateTime?
+  receivedById   String?
+  receivedByName String?
+  receivedNote   String?
 
   unit      Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
   createdBy User? @relation("CmdReplBy", fields: [createdById], references: [id], onDelete: SetNull)

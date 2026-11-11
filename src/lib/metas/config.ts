@@ -128,9 +128,30 @@ export async function getWasteCoverage(unitId: string, yearMonth: string): Promi
   const done = await prisma.wasteEntry.count({ where: { unitId, operationalDate: { startsWith: yearMonth } } });
   return cobertura(done, decorridos(yearMonth));
 }
+/**
+ * Comandas — CUMPRIMENTO DA ROTINA (v1.202.0): conferências feitas ÷ dias em que
+ * era para conferir. Sem programação nem exceção cadastrada, todo dia é previsto
+ * e a conta é a de sempre (dias com contagem ÷ dias decorridos). Com programação,
+ * dia fora dela e feriado "sem conferência" não cobram — e conferir num dia não
+ * previsto não rende nada a mais. O RESULTADO operacional (divergências, perdas)
+ * é outra pergunta: aparece no nome do componente e no painel de Comandas, e não
+ * mexe no percentual.
+ */
 export async function getCommandsCoverage(unitId: string, yearMonth: string): Promise<Cobertura> {
-  const done = await prisma.commandCount.count({ where: { unitId, operationalDate: { startsWith: yearMonth } } });
-  return cobertura(done, decorridos(yearMonth));
+  const dec = decorridos(yearMonth);
+  const [temProg, temExc] = await Promise.all([
+    prisma.commandSchedule.count({ where: { unitId, active: true } }),
+    prisma.commandScheduleException.count({ where: { unitId, date: { startsWith: yearMonth } } }),
+  ]);
+  if (temProg === 0 && temExc === 0) {
+    const done = await prisma.commandCount.count({ where: { unitId, operationalDate: { startsWith: yearMonth } } });
+    return cobertura(done, dec);
+  }
+  if (dec === 0) return { done: 0, missed: 0 };
+  const { diasDaRotina } = await import('@/lib/commands/painel');
+  const ontem = `${yearMonth}-${String(dec).padStart(2, '0')}`;
+  const dias = (await diasDaRotina(unitId, yearMonth, ontem)).filter((d) => d.prevista);
+  return cobertura(dias.filter((d) => d.realizada).length, dias.length);
 }
 
 /**

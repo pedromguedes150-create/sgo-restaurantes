@@ -55,6 +55,7 @@ const BASE: ModuleDef[] = [
   { key: 'COMMANDS', label: 'Comandas', nav: '/modulos/comandas' },
   { key: 'COMMANDS_SCAN', label: 'Conferência por leitor', nav: '/modulos/comandas/conferencia', parent: 'COMMANDS' },
   { key: 'COMMANDS_SESSIONS', label: 'Histórico de conferências', nav: '/modulos/comandas/conferencias', parent: 'COMMANDS' },
+  { key: 'COMMANDS_PANEL', label: 'Painel de comandas (rotina e resultado)', nav: '/modulos/comandas/painel', parent: 'COMMANDS' },
   { key: 'COMMANDS_OPEN', label: 'Análise de comandas em aberto', nav: '/modulos/comandas/analise-aberto', parent: 'COMMANDS' },
 
   { key: 'CASH', label: 'Gestão de Troco', nav: '/modulos/troco' },
@@ -232,6 +233,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
      o Financeiro. Nasce para Supervisão e Financeiro (+Admin/CEO); o gerente
      segue com as abas de sempre. O Admin libera outros perfis na matriz. */
   PAYMENTS_CONSOLIDATION: ['SUPERVISOR', 'FINANCE', 'COORDINATOR'],
+  COMMANDS_PANEL: ['SUPERVISOR', 'COORDINATOR'],
   /* Hora extra (v1.142.0): quem lança (gerente), quem aprova (coordenação e
      supervisão) e quem fecha a competência (financeiro); Admin/CEO sempre. */
   HORA_EXTRA: ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'FINANCE'],

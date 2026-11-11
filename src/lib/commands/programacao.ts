@@ -217,3 +217,17 @@ export function descreverProgramacaoDoDia(p: ProgramacaoDoDia): string {
   const o = p.origem === 'EXCECAO' ? `${p.nome} (exceção)` : p.nome;
   return p.tipo === 'COMPLETA' ? `${o}: conferência completa` : `${o}: faixa do dia ${p.faixa?.de}–${p.faixa?.ate}`;
 }
+
+/**
+ * O dia é PREVISTO para conferência? (v1.202.0) Exceção da data decide (sem
+ * conferência = não previsto); sem nenhuma programação ativa a unidade confere
+ * todo dia (a rotina de sempre); com programação, vale o dia da semana dela.
+ * O turno não entra: a pergunta é "era dia de conferir?", não "a que horas".
+ */
+export function diaPrevisto(programacoes: Programacao[], excecao: Excecao | null, data: string): boolean {
+  if (excecao) return !excecao.semConferencia;
+  const ativas = programacoes.filter((p) => p.ativa);
+  if (ativas.length === 0) return true;
+  const dia = diaDaSemana(data);
+  return ativas.some((p) => p.dias.includes(dia));
+}

@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.202.0 — 2026-11-12 (Comandas — recebimento físico, painel e Metas, PR 3 de 3)
+
+- **Recebimento físico da reposição**: a comanda de reposição nasce aguardando e só entra na sequência julgada depois que alguém da unidade (gerente, caixa, coordenação, supervisão) confirma que ela chegou — quem, quando e observação ficam gravados e na Auditoria (`COMMAND_REPLACEMENT_RECEIVED`). Até lá nunca vira faltante. As reposições anteriores foram marcadas como recebidas (nada muda para elas). Cartão "aguardando recebimento" na tela de Comandas.
+- **Painel de comandas** (`/modulos/comandas/painel`, Supervisão/Coordenação): ROTINA — conferências previstas, realizadas, atrasadas e pendentes de hoje, com % de cumprimento — e RESULTADO — divergências abertas, aguardando validação, recuperadas e perdas definitivas do mês —, mais as unidades sem conferência completa na semana e as reposições a receber. O cruzamento com as comandas em aberto do Teknisa segue na Análise de comandas em aberto.
+- **Metas**: a cobertura de Comandas passa a ser sobre os dias PREVISTOS (programação e exceções); sem programação cadastrada a conta é exatamente a de antes. O resultado operacional aparece no nome do componente, só informativo — não altera o percentual.
+- Migração ADITIVA `20261112120000_comandas_recebimento_reposicao`.
+
 ## v1.201.0 — 2026-11-11 (Comandas — programação automática das conferências, PR 2 de 3)
 
 - **Regra separada do cadastro**: `CommandSchedule` (programação: faixa do dia ou completa, por dias da semana, turno em hora local, faixa, prioridade) e `CommandScheduleException` (exceção por data: feriado/evento — faixa própria, completa ou sem conferência). O cadastro físico das sequências segue sem duplicidade e intocado.
