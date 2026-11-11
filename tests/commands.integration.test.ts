@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { submitCount } from '@/lib/commands/count';
-import { closeDivergence, addReplacement } from '@/lib/commands/lifecycle';
+import { closeDivergence, addReplacement, confirmarRecebimentoReposicao } from '@/lib/commands/lifecycle';
 import { getActiveSequence } from '@/lib/commands/active';
 import type { SessionUser } from '@/lib/auth/session';
 
@@ -68,13 +68,20 @@ describe('Comandas (Módulo 3)', () => {
     expect(seq.active.has(7)).toBe(true);
   });
 
-  it('reposição (Admin) entra na ativa; gerente não pode repor', async () => {
+  it('reposição (Admin) só entra na ativa depois do recebimento físico; gerente não pode repor', async () => {
     const denied = await addReplacement(mgr(), unitId, 200, 'nao pode');
     expect(denied.ok).toBe(false);
     const ok = await addReplacement(adm(), unitId, 200, 'reposta');
     expect(ok.ok).toBe(true);
+    /* v1.202.0: aguardando recebimento — não entra, não vira faltante */
+    const antes = await getActiveSequence(unitId);
+    expect(antes.active.has(200)).toBe(false);
+    expect(antes.replacementsPending).toContain(200);
+    /* o gerente confirma que a comanda chegou */
+    expect((await confirmarRecebimentoReposicao(mgr(), unitId, 200, 'chegou')).ok).toBe(true);
     const seq = await getActiveSequence(unitId);
     expect(seq.active.has(200)).toBe(true);
+    expect(seq.replacementsPending).not.toContain(200);
   });
 
   it('nega contagem fora do escopo', async () => {

@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { getUnitCommandState } from '@/lib/commands/query';
+import { canEditModule } from '@/lib/permissions';
 import { getActiveSequence } from '@/lib/commands/active';
 import { descreverProgramacaoDoDia } from '@/lib/commands/programacao';
 import { getLastFullCount } from '@/lib/commands/full-count';
@@ -21,6 +22,7 @@ import { shortUnitName } from '@/lib/unit-name';
 import { ScanLine, ShieldAlert, ClipboardList } from 'lucide-react';
 import { CommandsClient } from '@/components/commands/commands-client';
 import { IniciarConferencia } from '@/components/commands/iniciar-conferencia';
+import { ReposicoesPendentes } from '@/components/commands/reposicoes-pendentes';
 import { listarConferencias, sessaoEmAndamento, TIPO_LABEL, METODO_LABEL } from '@/lib/commands/sessao';
 import { conferidasDaUltimaContagem } from '@/lib/commands/grid';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
@@ -31,6 +33,7 @@ export const dynamic = 'force-dynamic';
 export default async function ComandasPage({ searchParams }: { searchParams: { unit?: string } }) {
   const user = (await getSessionUser())!;
   const podeVer = await permissaoDeRota(user.role);
+  const podeEditarComandas = await canEditModule(user.role, 'COMMANDS');
   const now = new Date();
 
   const units = await prisma.unit.findMany({
@@ -115,6 +118,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
         actions={
           <>
             {podeVer('/modulos/comandas/conferencia') && <Link href={`/modulos/comandas/conferencia?unit=${selected.id}`} className="sgo-btn"><ScanLine className="h-3.5 w-3.5" /> Conferir com leitor</Link>}
+            {podeVer('/modulos/comandas/painel') && <Link href="/modulos/comandas/painel" className="sgo-btn"><ClipboardList className="h-3.5 w-3.5" /> Painel de comandas</Link>}
             {canResolve && podeVer('/modulos/comandas/analise-aberto') && (
               <Link href="/modulos/comandas/analise-aberto" className="sgo-btn"><ShieldAlert className="h-3.5 w-3.5" /> Análise de comandas em aberto</Link>
             )}
@@ -128,6 +132,8 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
           <UnitSelectNav units={units.map((u) => ({ id: u.id, name: u.name }))} selected={selected.id} />
         </div>
       )}
+
+      {podeEditarComandas && <ReposicoesPendentes unitId={selected.id} numeros={seq.replacementsPending} />}
 
       <Card><CardContent className="pt-4">
         <IniciarConferencia

@@ -15,7 +15,10 @@ export interface ActiveSequence {
   /** O que é JULGADO numa contagem: `all` menos as baixadas. */
   active: Set<number>;
   lost: Set<number>;
+  /** Reposições JÁ RECEBIDAS fisicamente — só estas entram na sequência (v1.202.0). */
   replacements: Set<number>;
+  /** v1.202.0: reposições cadastradas e ainda aguardando confirmação de recebimento (não entram na conta). */
+  replacementsPending: number[];
   /**
    * Faixas marcadas como conferidas na MADRUGADA. Vazio quando nenhuma faixa foi
    * marcada — e aí a rotina da madrugada confere tudo, como sempre foi.
@@ -50,7 +53,7 @@ export async function getActiveSequence(unitId: string, opts: { agora?: Date; ig
     orderBy: [{ resolvedAt: { sort: 'asc', nulls: 'first' } }, { createdAt: 'asc' }],
     select: { number: true, outcome: true },
   });
-  const replRows = await prisma.commandReplacement.findMany({ where: { unitId }, select: { number: true } });
+  const replRows = await prisma.commandReplacement.findMany({ where: { unitId }, select: { number: true, receivedAt: true } });
 
   /* O último desfecho de cada número decide: LOST = baixada; RECOVERED depois
      da baixa = voltou à sequência (a recuperação pela conferência grava uma
@@ -58,7 +61,8 @@ export async function getActiveSequence(unitId: string, opts: { agora?: Date; ig
   const ultimoDesfecho = new Map<number, string>();
   for (const r of closedRows) ultimoDesfecho.set(r.number, r.outcome ?? '');
   const lost = new Set([...ultimoDesfecho].filter(([, o]) => o === 'LOST').map(([n]) => n));
-  const replacements = new Set(replRows.map((r) => r.number));
+  const replacements = new Set(replRows.filter((r) => r.receivedAt).map((r) => r.number));
+  const replacementsPending = replRows.filter((r) => !r.receivedAt).map((r) => r.number).sort((a, b) => a - b);
 
   const all = new Set<number>();
   const nightly = new Set<number>();
@@ -91,5 +95,5 @@ export async function getActiveSequence(unitId: string, opts: { agora?: Date; ig
     ? { rangeStart: Math.min(...sequences.map((s) => s.rangeStart)), rangeEnd: Math.max(...sequences.map((s) => s.rangeEnd)) }
     : null;
 
-  return { config, all, active, lost, replacements, nightly, hasNightly, programacao };
+  return { config, all, active, lost, replacements, replacementsPending, nightly, hasNightly, programacao };
 }

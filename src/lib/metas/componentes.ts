@@ -39,6 +39,13 @@ export async function componentesDaMeta(unitId: string, yearMonth: string): Prom
     getOperationalAuditCoverage('PAYMENTS', unitId, yearMonth, vig),
   ]);
   /* v1.184.0 — auditoria operacional: o % é 100 − (falhas × % por falha), limitado a 100%; o nome traz a conformidade. */
+  const resComandas = await import('@/lib/commands/painel').then((m) => m.resultadoOperacional(unitId, yearMonth)).catch(() => null);
+  /* v1.202.0: rotina (o %) e resultado operacional (só informativo) ficam distintos no nome. */
+  const nomeDeComandas = (cob: { done: number; missed: number }, r: { abertas: number; aguardandoValidacao: number; perdasDefinitivas: number } | null) => {
+    const base = cob.done + cob.missed > 0 ? `Comandas — rotina: ${cob.done} de ${cob.done + cob.missed} conferências` : 'Comandas diárias (cobertura)';
+    if (!r || r.abertas + r.aguardandoValidacao + r.perdasDefinitivas === 0) return base;
+    return `${base} · resultado: ${r.abertas} em apuração, ${r.aguardandoValidacao} p/ validar, ${r.perdasDefinitivas} perda(s) no mês`;
+  };
   const op = (nome: string, cob: { pct: number | null; penalizacao: number }) => (cob.pct == null ? `${nome} (auditoria de lançamento)` : `${nome} — conformidade ${String(cob.pct).replace('.', ',')}% (desconto −${String(cob.penalizacao).replace('.', ',')}% do peso)`);
   const comp = (key: string, name: string, cob: { done: number; missed: number; scorePct?: number }): ComponenteDaMeta => ({ key, name, weight: vig.peso(key), status: vig.status(key), done: cob.done, missed: cob.missed, ...(cob.scorePct != null ? { scorePct: cob.scorePct } : {}) });
   return [
@@ -47,7 +54,7 @@ export async function componentesDaMeta(unitId: string, yearMonth: string): Prom
     comp('COMMUNICATION', 'Comunicados', c),
     comp('PEOPLE_EVALUATION', 'Avaliações da equipe', e),
     comp('WASTE', 'Desperdício diário (cobertura)', w),
-    comp('COMMANDS', 'Comandas diárias (cobertura)', cm),
+    comp('COMMANDS', nomeDeComandas(cm, resComandas), cm),
     comp('CASH', 'Gestão de Troco (contagem do cofre)', cash),
     comp('SCHEDULE', 'Escala (Realizado preenchido)', sch),
     comp('CANCELLATIONS', 'Cancelamentos justificados', canc),
