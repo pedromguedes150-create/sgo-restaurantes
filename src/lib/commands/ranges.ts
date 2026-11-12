@@ -38,3 +38,30 @@ export function mensagemDeSobreposicao(nova: { rangeStart: number; rangeEnd: num
   const trecho = de === ate ? `a comanda ${de}` : `as comandas ${de} a ${ate}`;
   return `A faixa ${nova.rangeStart}–${nova.rangeEnd} invade "${colide.name}" (${colide.rangeStart}–${colide.rangeEnd}): ${trecho} ficariam em duas faixas. Cada comanda pertence a uma faixa só. Para a semana conferir uma parte e o fim de semana outra (ex.: 1–300 e 1–400), cadastre aqui UMA sequência que cubra tudo e programe cada dia em "Programação das conferências", logo abaixo.`;
 }
+
+/**
+ * Saídas de um clique quando a nova faixa [de, ate] invade UMA faixa existente
+ * (v1.205.0). Em vez de só recusar, a tela oferece: ampliar a existente até cobrir
+ * a nova, ou cadastrar só o trecho que falta. Só quando a invasão é com uma única
+ * faixa e a nova a ESTENDE (não cabe inteira dentro dela — aí não há o que fazer).
+ */
+export interface SaidaDeSobreposicao {
+  /** Ampliar a faixa existente para cobrir a união das duas. */
+  ampliar: { id: string; name: string; rangeStart: number; rangeEnd: number } | null;
+  /** Cadastrar apenas o trecho novo, fora da existente (um dos lados, o que sobrar). */
+  soOQueFalta: { rangeStart: number; rangeEnd: number }[];
+}
+
+export function saidasDeSobreposicao(nova: { rangeStart: number; rangeEnd: number }, outras: Faixa[]): SaidaDeSobreposicao | null {
+  const colidem = outras.filter((f) => seCruzam(nova, f));
+  if (colidem.length !== 1) return null;
+  const c = colidem[0];
+  const trechos: { rangeStart: number; rangeEnd: number }[] = [];
+  if (nova.rangeStart < c.rangeStart) trechos.push({ rangeStart: nova.rangeStart, rangeEnd: c.rangeStart - 1 });
+  if (nova.rangeEnd > c.rangeEnd) trechos.push({ rangeStart: c.rangeEnd + 1, rangeEnd: nova.rangeEnd });
+  if (trechos.length === 0) return null; // a nova cabe dentro da existente: nada a acrescentar
+  return {
+    ampliar: c.id ? { id: c.id, name: c.name, rangeStart: Math.min(nova.rangeStart, c.rangeStart), rangeEnd: Math.max(nova.rangeEnd, c.rangeEnd) } : null,
+    soOQueFalta: trechos,
+  };
+}
