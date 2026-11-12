@@ -231,3 +231,19 @@ export function diaPrevisto(programacoes: Programacao[], excecao: Excecao | null
   const dia = diaDaSemana(data);
   return ativas.some((p) => p.dias.includes(dia));
 }
+
+/**
+ * Trechos da faixa [de, ate] que NÃO existem no cadastro físico (v1.204.0). Programar
+ * 1–400 com o cadastro só até 300 é permitido — mas as comandas 301–400 não seriam
+ * conferidas; a tela avisa e oferece cadastrá-las com um toque.
+ */
+export function trechosForaDoCadastro(de: number, ate: number, cadastrados: Set<number>): { de: number; ate: number }[] {
+  const out: { de: number; ate: number }[] = [];
+  let ini: number | null = null;
+  for (let n = de; n <= ate; n++) {
+    if (!cadastrados.has(n)) { if (ini === null) ini = n; }
+    else if (ini !== null) { out.push({ de: ini, ate: n - 1 }); ini = null; }
+  }
+  if (ini !== null) out.push({ de: ini, ate });
+  return out;
+}

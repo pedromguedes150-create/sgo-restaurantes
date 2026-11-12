@@ -36,5 +36,5 @@ export function mensagemDeSobreposicao(nova: { rangeStart: number; rangeEnd: num
   const de = Math.max(nova.rangeStart, colide.rangeStart);
   const ate = Math.min(nova.rangeEnd, colide.rangeEnd);
   const trecho = de === ate ? `a comanda ${de}` : `as comandas ${de} a ${ate}`;
-  return `A faixa ${nova.rangeStart}–${nova.rangeEnd} invade "${colide.name}" (${colide.rangeStart}–${colide.rangeEnd}): ${trecho} ficariam em duas faixas. Cada comanda pertence a uma faixa só.`;
+  return `A faixa ${nova.rangeStart}–${nova.rangeEnd} invade "${colide.name}" (${colide.rangeStart}–${colide.rangeEnd}): ${trecho} ficariam em duas faixas. Cada comanda pertence a uma faixa só. Para a semana conferir uma parte e o fim de semana outra (ex.: 1–300 e 1–400), cadastre aqui UMA sequência que cubra tudo e programe cada dia em "Programação das conferências", logo abaixo.`;
 }

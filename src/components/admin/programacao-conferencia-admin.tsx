@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus, Trash2, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,9 @@ import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Select } from '@/components/ui/ds/select';
 import { rotuloDosDias, rotuloDoTurno, type Programacao, type Excecao } from '@/lib/commands/programacao';
+import { postAdmin } from '@/lib/admin-client';
+
+type ProgramacaoComAviso = Programacao & { foraDoCadastro?: { de: number; ate: number }[] };
 
 interface Unit { id: string; name: string }
 
@@ -22,7 +26,8 @@ const DIAS = [
  */
 export function ProgramacaoConferenciaAdmin({ units }: { units: Unit[] }) {
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
-  const [dados, setDados] = useState<{ programacoes: Programacao[]; excecoes: Excecao[] } | null>(null);
+  const router = useRouter();
+  const [dados, setDados] = useState<{ programacoes: ProgramacaoComAviso[]; excecoes: Excecao[] } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -41,6 +46,17 @@ export function ProgramacaoConferenciaAdmin({ units }: { units: Unit[] }) {
       if (!r.ok) { setMsg(String(d.error ?? 'Não foi possível salvar.')); return false; }
       await carregar();
       return true;
+    } finally { setBusy(false); }
+  }
+
+  /* v1.204.0: a faixa programada vai além do cadastro? Um toque cadastra o trecho que falta (sem retrabalho). */
+  async function cadastrarTrecho(de: number, ate: number) {
+    setBusy(true); setMsg(null);
+    try {
+      const r = await postAdmin({ entity: 'commandSequence', action: 'create', unitId, name: `Complemento ${de}–${ate}`, rangeStart: de, rangeEnd: ate });
+      if (!r.ok) { setMsg(r.error ?? 'Não foi possível cadastrar o trecho.'); return; }
+      await carregar();
+      router.refresh();
     } finally { setBusy(false); }
   }
 
@@ -98,7 +114,7 @@ export function ProgramacaoConferenciaAdmin({ units }: { units: Unit[] }) {
         {!dados && <p className="text-sm text-ink-500">Carregando…</p>}
         {dados?.programacoes.length === 0 && <p className="text-sm text-ink-500">Nenhuma programação — vale a rotina padrão da unidade.</p>}
         {dados?.programacoes.map((p) => (
-          <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border bg-surface p-2.5" data-testid="linha-programacao">
+          <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-surface p-2.5" data-testid="linha-programacao">
             <div className="min-w-[10rem] flex-1">
               <p className="text-sm font-semibold text-ink-900">{p.nome}</p>
               <p className="text-xs text-ink-700">
@@ -106,6 +122,16 @@ export function ProgramacaoConferenciaAdmin({ units }: { units: Unit[] }) {
                 {p.prioridade > 0 ? ` · prioridade ${p.prioridade}` : ''}
               </p>
             </div>
+            {(p.foraDoCadastro ?? []).length > 0 && (
+              <div className="basis-full rounded-md bg-warning-bg p-2 text-xs text-warning" data-testid="fora-do-cadastro">
+                As comandas {(p.foraDoCadastro ?? []).map((t) => (t.de === t.ate ? t.de : `${t.de}–${t.ate}`)).join(', ')} ainda não estão no cadastro, então não entram na conferência.
+                {(p.foraDoCadastro ?? []).map((t) => (
+                  <Button key={t.de} size="sm" variant="outline" className="ml-2" disabled={busy} onClick={() => void cadastrarTrecho(t.de, t.ate)} data-testid={`cadastrar-trecho-${t.de}`}>
+                    Cadastrar {t.de}–{t.ate} agora
+                  </Button>
+                ))}
+              </div>
+            )}
             <StatusBadge tone={p.ativa ? 'success' : 'neutral'}>{p.ativa ? 'Ativa' : 'Pausada'}</StatusBadge>
             <Button size="sm" variant="ghost" disabled={busy} aria-label={p.ativa ? 'Pausar' : 'Ativar'} onClick={() => void enviar({ action: 'alternar', id: p.id, ativa: !p.ativa })}><Power className="h-4 w-4" /></Button>
             <Button size="sm" variant="ghost" className="text-danger" disabled={busy} aria-label="Excluir" onClick={() => { if (confirm(`Excluir a programação "${p.nome}"?`)) void enviar({ action: 'excluir', id: p.id }); }}><Trash2 className="h-4 w-4" /></Button>
