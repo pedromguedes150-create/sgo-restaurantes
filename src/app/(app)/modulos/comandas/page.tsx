@@ -10,6 +10,7 @@ import { getUnitCommandState } from '@/lib/commands/query';
 import { canEditModule } from '@/lib/permissions';
 import { getActiveSequence } from '@/lib/commands/active';
 import { descreverProgramacaoDoDia } from '@/lib/commands/programacao';
+import { faixaAlternativa } from '@/lib/commands/programacao-dados';
 import { getLastFullCount } from '@/lib/commands/full-count';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -46,6 +47,8 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
   const operationalDate = currentOperationalDate({ timezone: selected.timezone, cutoffHour: selected.cutoffHour }, now);
   const state = await getUnitCommandState(selected.id, operationalDate);
   const seq = await getActiveSequence(selected.id);
+  /* v1.204.0: em dia de completa a "faixa do dia" continua escolhível (a da programação de faixa) — o gerente decide. */
+  const faixaAlternativaDoDia = seq.nightly.size > 0 ? [] : await faixaAlternativa(selected.id, seq.all);
   /* A parcial roda toda madrugada e diria "contagem de hoje registrada" todo
      dia — verdade que esconde a completa não acontecer há semanas. */
   const ultimaCompleta = await getLastFullCount(selected.id, operationalDate);
@@ -138,7 +141,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
       <Card><CardContent className="pt-4">
         <IniciarConferencia
           unitId={selected.id}
-          faixaDoDia={[...seq.nightly].sort((a, b) => a - b)}
+          faixaDoDia={seq.nightly.size > 0 ? [...seq.nightly].sort((a, b) => a - b) : faixaAlternativaDoDia}
           programacao={{ texto: descreverProgramacaoDoDia(seq.programacao), tipo: seq.programacao.tipo, semConferencia: seq.programacao.semConferencia, origem: seq.programacao.origem, concorrentes: seq.programacao.concorrentes }}
           ultima={ultimaSessao ? {
             id: ultimaSessao.id,

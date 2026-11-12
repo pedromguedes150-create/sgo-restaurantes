@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  escolherProgramacao, normalizarProgramacao, normalizarExcecao, noTurno, diaDaSemana, rotuloDosDias, numerosDaProgramacao,
+  escolherProgramacao, normalizarProgramacao, normalizarExcecao, noTurno, diaDaSemana, rotuloDosDias, numerosDaProgramacao, trechosForaDoCadastro,
   type Programacao, type Excecao,
 } from '@/lib/commands/programacao';
 
@@ -128,5 +128,14 @@ describe('validação', () => {
     expect(normalizarExcecao({ data: SEG, nome: '' }, cad)).toMatchObject({ ok: false, motivo: 'NOME' });
     expect(normalizarExcecao({ data: SEG, nome: 'Feriado', semConferencia: true }, cad)).toMatchObject({ ok: true });
     expect(normalizarExcecao({ data: SEG, nome: 'Evento', tipo: 'COMPLETA' }, cad)).toMatchObject({ ok: true });
+  });
+});
+
+describe('trechos fora do cadastro (v1.204.0)', () => {
+  it('lista o que a faixa programada tem além do cadastro', () => {
+    const cad = new Set(Array.from({ length: 300 }, (_, i) => i + 1));
+    expect(trechosForaDoCadastro(1, 400, cad)).toEqual([{ de: 301, ate: 400 }]);
+    expect(trechosForaDoCadastro(1, 300, cad)).toEqual([]);
+    expect(trechosForaDoCadastro(290, 320, new Set([290, 291, 300, 301, 310]))).toEqual([{ de: 292, ate: 299 }, { de: 302, ate: 309 }, { de: 311, ate: 320 }]);
   });
 });

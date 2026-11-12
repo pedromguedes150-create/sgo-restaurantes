@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { getActiveSequence } from '@/lib/commands/active';
-import { salvarProgramacao, salvarExcecao, excluirExcecao, alternarProgramacao, listarProgramacao } from '@/lib/commands/programacao-dados';
+import { salvarProgramacao, salvarExcecao, excluirExcecao, alternarProgramacao, listarProgramacao, faixaAlternativa } from '@/lib/commands/programacao-dados';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -116,5 +116,26 @@ describe('com programação', () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('FORBIDDEN');
     expect((await salvarExcecao(gerente(), { unitId, data: dataDe(SEGUNDA), nome: 'X', semConferencia: true })).ok).toBe(false);
+  });
+});
+
+describe('semana 1–300 e fim de semana 1–400 sem retrabalho (v1.204.0)', () => {
+  it('programar além do cadastro é permitido, avisa o trecho que falta e a faixa parcial segue escolhível em dia de completa', async () => {
+    /* cadastro do teste: 1–20 */
+    const s = await salvarProgramacao(admin(), { unitId, nome: 'Semana', tipo: 'FAIXA_DO_DIA', dias: [1, 2, 3, 4, 5], faixaDe: 1, faixaAte: 10 });
+    const f = await salvarProgramacao(admin(), { unitId, nome: 'Fim de semana', tipo: 'FAIXA_DO_DIA', dias: [6, 0], faixaDe: 1, faixaAte: 30 });
+    expect(s.ok && f.ok).toBe(true);
+    if (!f.ok) return;
+    expect(f.foraDoCadastro).toEqual([{ de: 21, ate: 30 }]);
+    const lista = await listarProgramacao(unitId);
+    const fds = lista.programacoes.find((p) => p.nome === 'Fim de semana');
+    expect(fds?.foraDoCadastro).toEqual([{ de: 21, ate: 30 }]);
+
+    /* domingo programado como COMPLETA: a faixa parcial continua disponível (a da programação de maior prioridade/mais antiga) */
+    await salvarProgramacao(admin(), { unitId, nome: 'Completa', tipo: 'COMPLETA', dias: [0], prioridade: 9 });
+    const dom = await getActiveSequence(unitId, { agora: DOMINGO });
+    expect(dom.nightly.size).toBe(0);
+    const alt = await faixaAlternativa(unitId, dom.all);
+    expect(alt).toHaveLength(10); // a "Semana" 1–10, a mais antiga entre as de faixa
   });
 });

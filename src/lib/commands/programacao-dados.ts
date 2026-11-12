@@ -3,7 +3,7 @@ import { audit } from '@/lib/audit';
 import { currentOperationalDate } from '@/lib/date/operational';
 import type { SessionUser } from '@/lib/auth/session';
 import {
-  escolherProgramacao, normalizarProgramacao, normalizarExcecao,
+  escolherProgramacao, normalizarProgramacao, normalizarExcecao, trechosForaDoCadastro,
   type Programacao, type Excecao, type ProgramacaoDoDia, type TipoProgramado, type EntradaDeProgramacao,
 } from '@/lib/commands/programacao';
 
@@ -42,11 +42,32 @@ export async function programacaoDeHoje(unitId: string, agora: Date = new Date()
 }
 
 export async function listarProgramacao(unitId: string) {
+  const cad = await cadastrados(unitId);
   const [progs, exc] = await Promise.all([
     prisma.commandSchedule.findMany({ where: { unitId }, orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }] }),
     prisma.commandScheduleException.findMany({ where: { unitId }, orderBy: { date: 'desc' }, take: 60 }),
   ]);
-  return { programacoes: progs.map(dePrisma), excecoes: exc.map(excecaoDe) };
+  return {
+    programacoes: progs.map((p) => ({ ...dePrisma(p), foraDoCadastro: p.type === 'FAIXA_DO_DIA' && p.rangeStart !== null && p.rangeEnd !== null ? trechosForaDoCadastro(p.rangeStart, p.rangeEnd, cad) : [] })),
+    excecoes: exc.map(excecaoDe),
+  };
+}
+
+/**
+ * A faixa para oferecer "conferência parcial" quando a programação de HOJE é completa
+ * (v1.204.0): o gerente escolhe — completa ou parcial — sem depender do dia. É a
+ * faixa da programação ativa de maior prioridade (a mais antiga no empate), limitada
+ * ao cadastro; sem programação de faixa, vazio.
+ */
+export async function faixaAlternativa(unitId: string, cadastro: Set<number>): Promise<number[]> {
+  const progs = await prisma.commandSchedule.findMany({
+    where: { unitId, active: true, type: 'FAIXA_DO_DIA', rangeStart: { not: null }, rangeEnd: { not: null } },
+    orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+    take: 1,
+  });
+  const p = progs[0];
+  if (!p || p.rangeStart === null || p.rangeEnd === null) return [];
+  return [...cadastro].filter((n) => n >= p.rangeStart! && n <= p.rangeEnd!).sort((a, b) => a - b);
 }
 
 type Falha = { ok: false; reason: 'FORBIDDEN' | 'INVALID' | 'NAO_ENCONTRADA' | 'JA_EXISTE'; detalhe?: string };
@@ -64,7 +85,7 @@ export async function salvarProgramacao(
   user: SessionUser,
   input: { id?: string; unitId: string; ativa?: boolean } & Record<string, unknown>,
   ctx: { ip?: string | null; userAgent?: string | null } = {},
-): Promise<{ ok: true; id: string } | Falha> {
+): Promise<{ ok: true; id: string; foraDoCadastro: { de: number; ate: number }[] } | Falha> {
   if (!soAdmin(user)) return { ok: false, reason: 'FORBIDDEN' };
   const unit = await prisma.unit.findUnique({ where: { id: input.unitId }, select: { id: true } });
   if (!unit) return { ok: false, reason: 'INVALID', detalhe: 'Unidade inválida.' };
@@ -86,7 +107,7 @@ export async function salvarProgramacao(
     id = (await prisma.commandSchedule.create({ data: { ...data, unitId: unit.id, createdById: user.id } })).id;
   }
   await audit({ userId: user.id, unitId: unit.id, action: input.id ? 'COMMAND_SCHEDULE_UPDATE' : 'COMMAND_SCHEDULE_CREATE', module: 'COMMANDS', entity: 'command_schedule', entityId: id, metadata: { ...v }, ...ctx });
-  return { ok: true, id };
+  return { ok: true, id, foraDoCadastro: v.tipo === 'FAIXA_DO_DIA' && v.faixaDe !== null && v.faixaAte !== null ? trechosForaDoCadastro(v.faixaDe, v.faixaAte, await cadastrados(unit.id)) : [] };
 }
 
 export async function alternarProgramacao(user: SessionUser, id: string, ativa: boolean, ctx: { ip?: string | null; userAgent?: string | null } = {}): Promise<{ ok: true } | Falha> {

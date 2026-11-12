@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.204.0 — 2026-11-11 (Comandas — programar semana e fim de semana sem retrabalho)
+
+- **Programação além do cadastro**: programar o fim de semana em 1–400 com o cadastro só até 300 é permitido e a tela AVISA quais comandas faltam no cadastro ("301–400 ainda não estão no cadastro") com o botão "Cadastrar 301–400 agora" — um toque cria a sequência complementar, sem cair na recusa de faixas sobrepostas.
+- **Mensagem do cadastro** (faixa que invade outra) agora diz o caminho certo: uma sequência que cubra tudo (1–400) e a programação por dia em "Programação das conferências".
+- **Gerente escolhe completa ou parcial**: em dia programado como COMPLETA a "faixa do dia" continua disponível (a da programação de faixa de maior prioridade); antes o botão ficava desligado. Em dia atípico, quem usou todas as comandas inicia a conferência Completa sem precisar cadastrar nada.
+
 ## v1.203.0 — 2026-11-13 (Salgados com vários lançamentos por dia · perfil Caixa só confere comandas)
 
 - **Sobras Lanchonete — vários lançamentos por dia**: antes, gravar substituía o dia inteiro — o lançamento da noite apagava o da manhã e trocava a foto. Agora cada gravação cria um LANÇAMENTO novo (`WasteSnackLaunch`), com as suas linhas e a sua foto (arquivo com nome único); os anteriores não são tocados. A tela lista os lançamentos do dia (hora, quem, itens, foto), mostra o total do dia e a folha vira "Novo lançamento"; "Corrigir" abre só aquele lançamento (linhas e foto); corrigir com lista vazia exclui só ele. Lançamento novo vazio é recusado. O histórico mostra quantos lançamentos e todas as fotos do dia; a Conferência do painel consolidado lista cada lançamento com a sua foto (e o mapa usa a pior situação de foto do dia). Totais, consolidado e alertas somam os lançamentos sem mudar.
