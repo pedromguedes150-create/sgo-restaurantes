@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.205.0 — 2026-11-12 (Comandas — faixa nova que invade outra vira conserto de um toque)
+
+- No cadastro de sequências, quando a faixa nova invade UMA faixa existente (ex.: cadastrar 1–400 com SEMANA 1–300), a tela deixa de só recusar e oferece dois botões: **Ampliar "SEMANA" para 1–400** ou **Cadastrar só 301–400**. Se a faixa estende dos dois lados, cadastra os dois trechos. Invadir duas faixas, ou caber inteira dentro de uma, segue sendo recusado com a mensagem de sempre.
+- Núcleo puro `saidasDeSobreposicao` em `ranges.ts`; o servidor continua validando (cadastro físico sem duplicidade).
+
 ## v1.204.0 — 2026-11-11 (Comandas — programar semana e fim de semana sem retrabalho)
 
 - **Programação além do cadastro**: programar o fim de semana em 1–400 com o cadastro só até 300 é permitido e a tela AVISA quais comandas faltam no cadastro ("301–400 ainda não estão no cadastro") com o botão "Cadastrar 301–400 agora" — um toque cria a sequência complementar, sem cair na recusa de faixas sobrepostas.

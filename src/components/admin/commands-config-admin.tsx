@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Select } from '@/components/ui/ds/select';
 import { shortUnitName } from '@/lib/unit-name';
 import { postAdmin } from '@/lib/admin-client';
+import { saidasDeSobreposicao } from '@/lib/commands/ranges';
 
 export interface CmdSeqRow { id: string; unitId: string; name: string; rangeStart: number; rangeEnd: number; active: boolean; nightly: boolean }
 interface Unit { id: string; name: string }
@@ -60,7 +61,7 @@ export function CommandsConfigAdmin({ units, sequences }: { units: Unit[]; seque
         {list.length === 0 && <p className="text-sm text-danger">Nenhuma sequência — o módulo de comandas fica bloqueado até cadastrar pelo menos uma.</p>}
       </div>
 
-      <NewSeq unitId={unitId} onDone={() => router.refresh()} />
+      <NewSeq unitId={unitId} existentes={list.filter((s) => s.active)} onDone={() => router.refresh()} />
       {resumo.cruzadas.length > 0 && (
         /* Sobreposição não quebra a contagem (a sequência ativa é um conjunto),
            mas confunde quem configura: a mesma comanda aparece em duas faixas e
@@ -136,12 +137,37 @@ function SeqRow({ s, onChange }: { s: CmdSeqRow; onChange: () => void }) {
   );
 }
 
-function NewSeq({ unitId, onDone }: { unitId: string; onDone: () => void }) {
+function NewSeq({ unitId, existentes, onDone }: { unitId: string; existentes: CmdSeqRow[]; onDone: () => void }) {
   const [name, setName] = useState('');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  /* v1.205.0: quando a faixa nova invade UMA existente, ofereço o conserto num toque. */
+  const saidas = useMemo(() => {
+    const de = Number(start), ate = Number(end);
+    if (!start || !end || !Number.isInteger(de) || !Number.isInteger(ate) || ate < de) return null;
+    return saidasDeSobreposicao({ rangeStart: de, rangeEnd: ate }, existentes.map((s) => ({ id: s.id, name: s.name, rangeStart: s.rangeStart, rangeEnd: s.rangeEnd })));
+  }, [start, end, existentes]);
+
+  async function ampliar() {
+    if (!saidas?.ampliar) return;
+    setBusy(true); setMsg(null);
+    const r = await postAdmin({ entity: 'commandSequence', action: 'update', id: saidas.ampliar.id, rangeStart: saidas.ampliar.rangeStart, rangeEnd: saidas.ampliar.rangeEnd });
+    setBusy(false);
+    if (!r.ok) { setMsg(r.error ?? 'Falha'); return; }
+    setName(''); setStart(''); setEnd(''); onDone();
+  }
+  async function soOQueFalta() {
+    if (!saidas) return;
+    setBusy(true); setMsg(null);
+    for (const t of saidas.soOQueFalta) {
+      const r = await postAdmin({ entity: 'commandSequence', action: 'create', unitId, name: name.trim() || `Complemento ${t.rangeStart}–${t.rangeEnd}`, rangeStart: t.rangeStart, rangeEnd: t.rangeEnd });
+      if (!r.ok) { setBusy(false); setMsg(r.error ?? 'Falha'); return; }
+    }
+    setBusy(false);
+    setName(''); setStart(''); setEnd(''); onDone();
+  }
 
   async function add() {
     if (!start || !end) { setMsg('Informe início e fim.'); return; }
@@ -162,6 +188,19 @@ function NewSeq({ unitId, onDone }: { unitId: string; onDone: () => void }) {
         <div className="col-span-1 flex justify-end"><Button size="sm" disabled={busy} onClick={add} aria-label="Adicionar"><Plus className="h-4 w-4" /></Button></div>
       </div>
       {msg && <p className="mt-1 text-xs font-medium text-danger">{msg}</p>}
+      {saidas && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-warning-bg p-2 text-xs text-warning" data-testid="saidas-de-sobreposicao">
+          <span className="font-semibold">Esta faixa invade uma que já existe. Escolha:</span>
+          {saidas.ampliar && (
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void ampliar()} data-testid="ampliar-faixa">
+              Ampliar &ldquo;{saidas.ampliar.name}&rdquo; para {saidas.ampliar.rangeStart}–{saidas.ampliar.rangeEnd}
+            </Button>
+          )}
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => void soOQueFalta()} data-testid="cadastrar-so-o-que-falta">
+            Cadastrar só {saidas.soOQueFalta.map((t) => `${t.rangeStart}–${t.rangeEnd}`).join(' e ')}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
