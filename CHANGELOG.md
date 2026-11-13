@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.206.0 — 2026-11-13 (Notas — chave lida errada não entra · saúde do servidor com aviso antecipado · desempenho)
+
+- **Chave da nota lida errada**: a câmera leu o código de barras da DANFE trocando dígitos (nota 1.536.433 entrou como 2.536.433, com CNPJ e emissão errados) e o sistema aceitava. Agora a chave de 44 dígitos é CONFERIDA (dígito verificador, UF e mês): leitura que não confere é descartada e o leitor continua procurando; chave digitada/colada que não confere mostra aviso em vermelho e NÃO preenche nada. Vale para Notas e para Gás.
+- **Saúde do servidor**: o SGO mede a cada 2 minutos banco (tempo de resposta), carga do servidor, disco, memória e conexões do banco, e avisa os Administradores (sino e celular) em dois degraus — Atenção e Crítico — ANTES de falhar. O mesmo alerta não se repete antes de 6h (atenção) / 1h (crítico). Cartão "Saúde do servidor" no topo de Configurações → APIs & Integrações. Se o servidor cair de vez ele não consegue avisar: para isso é preciso um monitor externo em `/api/health`.
+- **Desempenho com muitas unidades**: pool de conexões do banco de 5 para 20 em produção; a matriz de permissões fica 20 s em memória (era consultada no banco várias vezes por tela; gravar em Perfis limpa na hora); telas que se atualizam sozinhas deixam de recarregar com a aba em segundo plano.
+
 ## v1.205.0 — 2026-11-12 (Comandas — faixa nova que invade outra vira conserto de um toque)
 
 - No cadastro de sequências, quando a faixa nova invade UMA faixa existente (ex.: cadastrar 1–400 com SEMANA 1–300), a tela deixa de só recusar e oferece dois botões: **Ampliar "SEMANA" para 1–400** ou **Cadastrar só 301–400**. Se a faixa estende dos dois lados, cadastra os dois trechos. Invadir duas faixas, ou caber inteira dentro de uma, segue sendo recusado com a mensagem de sempre.

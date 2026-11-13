@@ -4,12 +4,44 @@
  * Extraímos CNPJ e data de emissão (AAMM) para pré-preencher a confirmação.
  */
 export interface ChaveData {
+  /** Tem 44 dígitos. */
   valid: boolean;
+  /** v1.206.0 — a chave CONFERE: dígito verificador, UF e mês batem. Só então os campos são confiáveis. */
+  confere?: boolean;
   cnpj?: string;
   cnpjFormatted?: string;
   issueDate?: Date; // 1º dia do mês de emissão
   model?: string;
   number?: string;
+}
+
+/** Códigos de UF do IBGE — os dois primeiros dígitos da chave. */
+const UFS = new Set(['11', '12', '13', '14', '15', '16', '17', '21', '22', '23', '24', '25', '26', '27', '28', '29', '31', '32', '33', '35', '41', '42', '43', '50', '51', '52', '53']);
+
+/** Dígito verificador da chave (módulo 11, pesos 2..9 da direita para a esquerda) sobre os 43 primeiros dígitos. */
+export function digitoVerificadorDaChave(digitos43: string): number {
+  let peso = 2, soma = 0;
+  for (let i = digitos43.length - 1; i >= 0; i--) {
+    soma += Number(digitos43[i]) * peso;
+    peso = peso === 9 ? 2 : peso + 1;
+  }
+  const resto = soma % 11;
+  return resto < 2 ? 0 : 11 - resto;
+}
+
+/**
+ * A chave CONFERE? (v1.206.0) 44 dígitos, UF que existe, mês 01–12 e o dígito
+ * verificador batendo. Um código de barras mal lido (a câmera troca um par de
+ * dígitos) quase sempre falha aqui — antes a leitura errada entrava e preenchia
+ * CNPJ, número e emissão errados sem aviso (nota 1.536.433 lida como 2.536.433).
+ */
+export function chaveConfere(raw: string): boolean {
+  const d = (raw ?? '').replace(/\D/g, '');
+  if (d.length !== 44) return false;
+  if (!UFS.has(d.slice(0, 2))) return false;
+  const mm = Number(d.slice(4, 6));
+  if (mm < 1 || mm > 12) return false;
+  return digitoVerificadorDaChave(d.slice(0, 43)) === Number(d[43]);
 }
 
 export function parseChaveAcesso(raw: string): ChaveData {
@@ -27,6 +59,7 @@ export function parseChaveAcesso(raw: string): ChaveData {
 
   return {
     valid: true,
+    confere: chaveConfere(digits),
     cnpj,
     cnpjFormatted: formatCnpj(cnpj),
     issueDate,

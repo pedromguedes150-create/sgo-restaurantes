@@ -535,7 +535,7 @@ function Launch({ units, suppliers, }: { units: Unit[]; suppliers: Supplier[] })
   function onKey(v: string) {
     setAccessKey(v);
     const p = parseChaveAcesso(v);
-    if (p.valid) {
+    if (p.valid && p.confere) {
       if (p.number) setNoteNumber(p.number);
       if (p.cnpj) { const m = suppliers.find((s) => (s.cnpj ?? '').replace(/\D/g, '') === p.cnpj); if (m) setSupplierId(m.id); }
     }
