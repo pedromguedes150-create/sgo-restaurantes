@@ -5,9 +5,20 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import { DecodeHintType, BarcodeFormat } from '@zxing/library';
 import { Camera, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { chaveConfere } from '@/lib/notes/chave';
 
-/** Extrai a chave de 44 dígitos do conteúdo do QR/código de barras da NFC-e/NFe. */
+/**
+ * Extrai a chave de 44 dígitos do conteúdo do QR/código de barras da NFC-e/NFe.
+ * v1.206.0: só devolve chave que CONFERE (dígito verificador). Leitura torta do
+ * código de barras devolve null — e o leitor segue procurando no próximo quadro,
+ * em vez de preencher a nota com número e CNPJ errados.
+ */
 export function extractChave(text: string): string | null {
+  const c = candidataDaChave(text);
+  return c && chaveConfere(c) ? c : null;
+}
+
+function candidataDaChave(text: string): string | null {
   // NFC-e (QR): ...?p=CHAVE|versao|... (a chave é o 1º segmento)
   const p = text.match(/[?&]p=([^|&\s]+)/i);
   if (p) { const d = p[1].replace(/\D/g, ''); if (d.length >= 44) return d.slice(0, 44); }

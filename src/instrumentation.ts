@@ -119,6 +119,12 @@ export async function register() {
     void situacoesRh();
   }, 15_000);
 
+  /* v1.206.0 — saúde do servidor: mede de 2 em 2 min e avisa os Admins ANTES de falhar (disco, memória, banco). */
+  const { verificarSaude } = await import('@/lib/monitor/saude');
+  const checarSaude = async () => { try { await verificarSaude(); } catch (e) { console.error('[saude] falha na verificação:', e); } };
+  setTimeout(() => { void checarSaude(); }, 60_000);
+  setInterval(() => { void checarSaude(); }, 2 * 60 * 1000);
+
   // envio SGO→RH: fila a cada minuto · situação no RH de hora em hora
   setInterval(() => { void despacharRh(); }, 60 * 1000);
   setInterval(() => { void situacoesRh(); }, 60 * 60 * 1000);

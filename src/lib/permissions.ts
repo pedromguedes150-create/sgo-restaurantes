@@ -339,9 +339,21 @@ export const MODULOS_INATIVOS: ReadonlySet<string> = new Set(['INVENTORY', 'PROD
 
 /** Permissões efetivas de um perfil de sistema por módulo (com defaults). */
 export async function effectivePermissions(role: Role): Promise<Record<string, Perm>> {
+  /* v1.206.0 — cada tela e cada chamada de API perguntava a matriz ao banco
+     (várias vezes por request). Ela muda raramente: fica 20 s em memória e é
+     descartada na hora quando o Admin grava uma célula. Fora de produção não há
+     cache (os testes gravam a matriz direto no banco e leem em seguida). */
+  const agora = Date.now();
+  const guardado = CACHE_DA_MATRIZ.get(role);
+  if (guardado && agora - guardado.em < VALIDADE_DA_MATRIZ_MS) return guardado.perms;
   const rows = await prisma.rolePermission.findMany({ where: { role } });
-  return calcular(role, new Map(rows.map((r) => [r.module, { canView: r.canView, canEdit: r.canEdit }])));
+  const perms = calcular(role, new Map(rows.map((r) => [r.module, { canView: r.canView, canEdit: r.canEdit }])));
+  if (process.env.NODE_ENV === 'production') CACHE_DA_MATRIZ.set(role, { em: agora, perms });
+  return perms;
 }
+
+const VALIDADE_DA_MATRIZ_MS = 20_000;
+const CACHE_DA_MATRIZ = new Map<Role, { em: number; perms: Record<string, Perm> }>();
 
 /**
  * O cálculo da matriz, uma vez só.
@@ -479,6 +491,7 @@ export async function setRolePermission(
     create: { role: input.role, module: input.module, canView, canEdit },
     update: { canView, canEdit },
   });
+  CACHE_DA_MATRIZ.delete(input.role);
   await audit({ userId: user.id, action: 'PERMISSION_SET', module: 'CONFIG', entity: 'role_permission', metadata: { role: input.role, module: input.module, canView, canEdit }, ...ctx });
   return { ok: true };
 }

@@ -601,6 +601,7 @@ function DueTracking({ units }: { units: Unit[] }) {
 function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Supplier[]; onDone: () => void }) {
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
   const [accessKey, setAccessKey] = useState('');
+  const [chaveErrada, setChaveErrada] = useState(false);
   const [supplierId, setSupplierId] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [supplierCnpj, setSupplierCnpj] = useState('');
@@ -631,7 +632,9 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
   function onKey(v: string) {
     setAccessKey(v);
     const parsed = parseChaveAcesso(v);
-    if (parsed.valid) {
+    /* v1.206.0: 44 dígitos que não conferem (dígito verificador) = leitura/digitação errada. Não preenche e avisa. */
+    setChaveErrada(parsed.valid && !parsed.confere);
+    if (parsed.valid && parsed.confere) {
       if (parsed.cnpjFormatted) setSupplierCnpj(parsed.cnpjFormatted);
       if (parsed.number) setNumber(parsed.number);
       if (parsed.issueDate) setIssueDate(parsed.issueDate.toISOString().slice(0, 10));
@@ -736,6 +739,11 @@ function NewNote({ units, suppliers, onDone }: { units: Unit[]; suppliers: Suppl
           <QrScanner onResult={(chave) => onKey(chave)} />
         </div>
         {prefilled && <p className="mt-1 text-xs text-warning">Campos preenchidos pela chave — confira em amarelo.</p>}
+        {chaveErrada && (
+          <p className="mt-1 text-xs font-medium text-danger" role="alert" data-testid="chave-nao-confere">
+            Esta chave não confere (o dígito verificador não bate): algum número foi lido ou digitado errado. Escaneie de novo ou confira os 44 dígitos com a nota — nada foi preenchido.
+          </p>
+        )}
       </div>
       <DsSelect
         label="Fornecedor (da lista de cadastrados)"

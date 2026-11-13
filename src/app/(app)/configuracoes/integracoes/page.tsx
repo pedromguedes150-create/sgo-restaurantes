@@ -17,6 +17,8 @@ import { API_BASE_PATH, HEADER_API_KEY } from '@/lib/api-global/formato';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { LargeTitle } from '@/components/layout/page-chrome';
+import { saudeAtual } from '@/lib/monitor/saude';
+import { LIMITES } from '@/lib/monitor/saude-regras';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +48,7 @@ export default async function IntegracoesPage() {
     resumoDaFila(),
   ]);
   const filaProblemas = fila.erros + fila.esgotados + fila.parados;
+  const saude = await saudeAtual().catch(() => null);
   const ST = { PROCESSED: { label: 'Processado', tone: 'success' as const }, RECEIVED: { label: 'Recebido', tone: 'medium' as const }, ERROR: { label: 'Erro', tone: 'critical' as const } };
 
   return (
@@ -55,6 +58,36 @@ export default async function IntegracoesPage() {
         <LargeTitle title="APIs &amp; Integrações" />
         <p className="text-sm text-ink-500">Tudo que o SGO consome e expõe. Toda nova API entra aqui. Os valores completos dos tokens ficam no <code>.env</code> do servidor — os dois do RH (entrada e saída) também podem ser colados pela tela.</p>
       </div>
+
+      {saude && (
+        <Card data-testid="saude-do-servidor">
+          <CardHeader>
+            <CardTitle className="flex flex-wrap items-center gap-2">
+              Saúde do servidor
+              <StatusBadge tone={saude.situacao === 'OK' ? 'success' : saude.situacao === 'CRITICO' ? 'critical' : 'medium'}>
+                {saude.situacao === 'OK' ? 'Tudo normal' : saude.situacao === 'CRITICO' ? 'Crítico' : 'Atenção'}
+              </StatusBadge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
+              <div><p className="text-xs text-ink-500">Banco de dados</p><p className="font-semibold tabular-nums text-ink-900">{saude.amostra.dbMs === null ? 'não respondeu' : `${saude.amostra.dbMs} ms`}</p></div>
+              <div><p className="text-xs text-ink-500">Resposta do servidor</p><p className="font-semibold tabular-nums text-ink-900">{saude.amostra.loopMs} ms</p></div>
+              <div><p className="text-xs text-ink-500">Disco usado</p><p className="font-semibold tabular-nums text-ink-900">{saude.amostra.discoPct === null ? '—' : `${saude.amostra.discoPct}%`}{saude.amostra.discoLivreGb !== null ? ` · ${saude.amostra.discoLivreGb} GB livres` : ''}</p></div>
+              <div><p className="text-xs text-ink-500">Memória</p><p className="font-semibold tabular-nums text-ink-900">{saude.amostra.memoriaPct === null ? '—' : `${saude.amostra.memoriaPct}%`} · SGO {saude.amostra.processoMb} MB</p></div>
+              <div><p className="text-xs text-ink-500">Conexões do banco</p><p className="font-semibold tabular-nums text-ink-900">{saude.amostra.conexoesPct === null ? '—' : `${saude.amostra.conexoesPct}%`}</p></div>
+            </div>
+            {saude.alertas.map((a) => (
+              <p key={a.chave} className={`rounded-md p-2 text-sm ${a.nivel === 'CRITICO' ? 'bg-danger/10 text-danger' : 'bg-warning-bg text-warning'}`}><b>{a.titulo}.</b> {a.texto}</p>
+            ))}
+            <p className="text-xs text-ink-500">
+              Medido de 2 em 2 minutos. Os Administradores são avisados (sino e celular) quando o disco passa de {LIMITES.discoAtencao}%, a memória de {LIMITES.memoriaAtencao}%,
+              as conexões de {LIMITES.conexoesAtencao}% ou o banco fica lento {LIMITES.repeticoes} medições seguidas. Se o servidor cair de vez ele não consegue avisar:
+              para isso use um monitor externo apontado para <code>{baseUrl}/api/health</code>.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 0. API GLOBAL DO SGO (v1.129.0) — o que o SGO expõe para os outros
           sistemas da empresa, com uma chave por sistema. Em paralelo às
