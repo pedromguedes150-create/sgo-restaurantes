@@ -1,6 +1,6 @@
-import os from 'node:os';
-import path from 'node:path';
-import { statfs, readFile } from 'node:fs/promises';
+import os from 'os';
+import path from 'path';
+import { statfs, readFile } from 'fs/promises';
 import { prisma } from '@/lib/db/prisma';
 import { notifyAdmins } from '@/lib/notifications';
 import {
