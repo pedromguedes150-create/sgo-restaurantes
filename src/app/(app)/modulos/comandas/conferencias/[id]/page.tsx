@@ -77,7 +77,7 @@ export default async function ConferenciaPage({ params }: { params: { id: string
             {d.recuperadas.length > 0 && <p className="text-sm text-success" data-testid="recuperadas"><b>Recuperadas ({d.recuperadas.length}):</b> {d.recuperadas.join(', ')} — voltaram à sequência.</p>}
             {d.aguardandoValidacao.length > 0 && (
               <p className="text-sm text-warning" data-testid="aguardando-validacao">
-                <b>Baixadas encontradas ({d.aguardandoValidacao.length}):</b> {d.aguardandoValidacao.join(', ')} — não voltam sozinhas; o Supervisor valida em Comandas → Divergências.
+                <b>Baixadas encontradas ({d.aguardandoValidacao.length}):</b> {d.aguardandoValidacao.join(', ')} — nesta conferência (regra anterior à v1.208.0) ficaram aguardando o Supervisor; hoje a baixada encontrada volta à sequência na hora.
               </p>
             )}
           </CardContent></Card>
