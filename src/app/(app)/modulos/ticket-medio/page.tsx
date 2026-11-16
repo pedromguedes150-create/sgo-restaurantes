@@ -78,6 +78,7 @@ export default async function TicketMedioPage({
         unitId={unitId}
         podeImportar={podeImportar}
         competencia={competencia}
+        ultimaComDados={comDados[0] ?? null}
       />
     </div>
   );

@@ -13,6 +13,7 @@ import {
   emNumero, emPercentual, emReal, rotuloDaCompetencia, type Competencia,
 } from '@/lib/ticket-media/calculo';
 import type { LinhaDaUnidade, PainelDoTicket } from '@/lib/ticket-media/query';
+import { GraficosDoTicket } from '@/components/ticket-media/graficos-do-ticket';
 
 /**
  * A tela do Ticket Médio.
@@ -29,6 +30,7 @@ export function PainelDoTicketClient({
   unitId,
   podeImportar,
   competencia,
+  ultimaComDados = null,
 }: {
   painel: PainelDoTicket;
   /** Só as participantes na competência — CD e lanchonete não aparecem aqui. */
@@ -36,6 +38,8 @@ export function PainelDoTicketClient({
   unitId: string | null;
   podeImportar: boolean;
   competencia: Competencia;
+  /** v1.209.0 — o mês mais recente com alguma importação: atalho quando o mês aberto ainda está vazio. */
+  ultimaComDados?: Competencia | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -123,6 +127,8 @@ export function PainelDoTicketClient({
           tone={painel.completo ? 'success' : 'warning'}
         />
       </div>
+
+      <GraficosDoTicket painel={painel} competencia={competencia} ultimaComDados={ultimaComDados} />
 
       {painel.linhas.length === 0 ? (
         <EmptyState
