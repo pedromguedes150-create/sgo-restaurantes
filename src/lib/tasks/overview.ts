@@ -2,7 +2,10 @@ import { prisma } from '@/lib/db/prisma';
 import { currentOperationalDate } from '@/lib/date/operational';
 import { generateDailyTasksForUnit } from '@/lib/tasks/generate';
 import { ensureTaskMaintenance } from '@/lib/tasks/maintenance';
-import { getUnitDaySummary, getUnitMonthScore, type DaySummary, type MonthScore } from '@/lib/tasks/summary';
+import { getUnitDaySummary, type DaySummary, type MonthScore } from '@/lib/tasks/summary';
+import { componentesDaMeta, descontosDaMeta } from '@/lib/metas/componentes';
+import { pontuar } from '@/lib/metas/pontuacao';
+import { metaDaUnidade, type MetaDaUnidade } from '@/lib/metas/meta-por-usuario';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Unit } from '@prisma/client';
@@ -13,6 +16,8 @@ export interface UnitOverview {
   operationalDate: string;
   summary: DaySummary;
   monthScore: MonthScore;
+  /** v1.207.0 — a nota aberta em componentes e descontos (a mesma conta de `monthScore`, lida uma vez só). */
+  meta: MetaDaUnidade;
 }
 
 /**
@@ -36,11 +41,17 @@ export async function getUnitsOverview(
     const cfg = { timezone: u.timezone, cutoffHour: u.cutoffHour };
     const operationalDate = currentOperationalDate(cfg, now);
     await generateDailyTasksForUnit(u, operationalDate); // geração preguiçosa
-    const [summary, monthScore] = await Promise.all([
+    const ym = operationalDate.slice(0, 7);
+    /* Componentes e descontos lidos UMA vez: a nota (`pontuar`, o mesmo de
+       getUnitMonthScore) e o detalhamento saem da mesma leitura. */
+    const [summary, componentes, descontos] = await Promise.all([
       getUnitDaySummary(u.id, operationalDate, now),
-      getUnitMonthScore(u.id, operationalDate.slice(0, 7)),
+      componentesDaMeta(u.id, ym),
+      descontosDaMeta(u.id, ym),
     ]);
-    return { unit: { id: u.id, name: u.name, code: u.code }, operationalDate, summary, monthScore };
+    const monthScore = pontuar(componentes, descontos.lista);
+    const meta = metaDaUnidade(u.id, u.name, componentes, descontos.lista);
+    return { unit: { id: u.id, name: u.name, code: u.code }, operationalDate, summary, monthScore, meta };
   });
 }
 

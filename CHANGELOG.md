@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.207.0 — 2026-11-16 (Início do gerente — a meta com a nota oficial e o que a derruba · Reembolsos — descrição não cobre as colunas)
+
+- **Minha Meta do Mês (Início do gerente)**: o cartão mostrava uma conta própria que IGNORAVA os descontos (lançamento fora do prazo, gerente sem folga) e podia divergir da tela de Metas. Agora mostra a nota OFICIAL do mês — a mesma de Metas — e, logo abaixo, cada item que conta na meta, na mesma ordem da tela de Metas: o % alcançado, a situação (Na meta · Atenção · Crítico), quantos foram feitos e quantos pontos aquele item está tirando da nota. Os descontos diretos aparecem nomeados. Quem cuida de mais de uma unidade vê cada uma separada. O cartão continua no mesmo lugar.
+- **Reembolsos**: uma descrição longa passava por cima do valor, do status e do comprovante. Agora o texto quebra linha dentro da própria coluna.
+
 ## v1.206.0 — 2026-11-13 (Notas — chave lida errada não entra · saúde do servidor com aviso antecipado · desempenho)
 
 - **Chave da nota lida errada**: a câmera leu o código de barras da DANFE trocando dígitos (nota 1.536.433 entrou como 2.536.433, com CNPJ e emissão errados) e o sistema aceitava. Agora a chave de 44 dígitos é CONFERIDA (dígito verificador, UF e mês): leitura que não confere é descartada e o leitor continua procurando; chave digitada/colada que não confere mostra aviso em vermelho e NÃO preenche nada. Vale para Notas e para Gás.
