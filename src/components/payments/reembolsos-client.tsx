@@ -66,8 +66,8 @@ export function ReembolsosClient({ filtro, periodos, status, unidades, linhas, p
                       <td className="whitespace-nowrap">{l.dataDespesa ? emBR(l.dataDespesa) : '—'}</td>
                       <td className="whitespace-nowrap">{emBR(l.dataSolicitacao)}</td>
                       <td><span className="font-semibold text-ink-900">{l.colaborador}</span>{unidades.length > 1 ? <span className="block text-xs text-ink-500">{shortUnitName(l.unidade)}</span> : null}</td>
-                      <td>{l.motivo}</td>
-                      <td className="max-w-md">{l.descricao || '—'}{l.rejeicao ? <span className="block text-xs text-danger">Rejeitado: {l.rejeicao}</span> : null}</td>
+                      <td className="min-w-[8rem] whitespace-normal">{l.motivo}</td>
+                      <td className="min-w-[16rem] max-w-md whitespace-normal break-words" data-testid="descricao-reembolso">{l.descricao || '—'}{l.rejeicao ? <span className="block text-xs text-danger">Rejeitado: {l.rejeicao}</span> : null}</td>
                       <td className="whitespace-nowrap text-right font-semibold tabular-nums">{fmt(l.valor)}</td>
                       <td><StatusBadge tone={TONE[l.status]}>{statusTexto(l.status)}</StatusBadge></td>
                       <td>{l.comprovante ? 'Sim' : <span className="text-warning">Não</span>}</td>

@@ -15,6 +15,8 @@ import { SgoBar } from '@/components/sgo/sgo-bar';
 import { ProgressRing } from '@/components/dashboard/progress-ring';
 import { CentralOperacional, AlertasDaRede } from '@/components/dashboard/central-da-rede';
 import { AcessosRapidos } from '@/components/dashboard/acessos-rapidos';
+import { metaNoInicio, pontosBR } from '@/lib/metas/meta-do-gerente';
+import { shortUnitName } from '@/lib/unit-name';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
 import { ChevronRight, ListChecks, ScrollText, Target } from 'lucide-react';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -118,9 +120,10 @@ function HomeDoGerente({
   areas: Awaited<ReturnType<typeof montarMenu>>;
 }) {
   const agg = aggregateDay(overviews);
-  const doneW = overviews.reduce((s, o) => s + o.monthScore.doneWeight, 0);
-  const resW = overviews.reduce((s, o) => s + o.monthScore.resolvedWeight, 0);
-  const metaPct = resW === 0 ? 0 : Math.round((doneW / resW) * 100);
+  const meta = metaNoInicio(overviews.map((o) => o.meta));
+  const TOM = { VERDE: 'green', AMBAR: 'amber', VERMELHO: 'red' } as const;
+  const COR = { VERDE: 'var(--sgo-ok)', AMBAR: 'var(--sgo-warn)', VERMELHO: 'var(--sgo-bad)' } as const;
+  const ROTULO = { VERDE: 'Na meta', AMBAR: 'Atenção', VERMELHO: 'Crítico' } as const;
   const unidade = overviews.length === 1 ? overviews[0].unit.name : null;
 
   return (
@@ -165,12 +168,63 @@ function HomeDoGerente({
             icon={<span className="sgo-panel__ic sgo-panel__ic--brand" aria-hidden><Target className="h-4 w-4" /></span>}
             action={<Link href="/modulos/metas" className="sgo-link">Ver metas</Link>}
           />
-          <div className="px-4 py-4">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="sgo-kpi__value" style={{ marginTop: 0 }}>{metaPct}%</span>
-              <span className="tabular-nums" style={{ color: 'var(--sgo-ink-2)' }}>{doneW}/{resW} pts</span>
+          <div className="space-y-4 px-4 py-4">
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                <span className="sgo-kpi__value" style={{ marginTop: 0, color: COR[meta.faixa] }} data-testid="meta-nota">{meta.scorePct}%</span>
+                <span className="text-right text-xs" style={{ color: 'var(--sgo-ink-2)' }}>
+                  {meta.temMedicao ? `${ROTULO[meta.faixa]} · nota oficial do mês` : 'Ainda sem nada medido neste mês'}
+                </span>
+              </div>
+              <SgoBar value={meta.scorePct} tone={TOM[meta.faixa]} height={10} data-testid="meta-barra" />
             </div>
-            <SgoBar value={metaPct} tone="blue" height={10} data-testid="meta-barra" />
+
+            {meta.unidades.map((u) => (
+              <div key={u.unitId} data-testid="meta-unidade" className="space-y-2">
+                {meta.unidades.length > 1 && (
+                  <p className="flex items-center justify-between gap-2 text-sm font-semibold" style={{ color: 'var(--sgo-ink)' }}>
+                    <span className="min-w-0 break-words">{shortUnitName(u.unitName)}</span>
+                    <span className="shrink-0 tabular-nums">{u.scorePct}%</span>
+                  </p>
+                )}
+                {u.itens.length > 0 && (
+                  <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>
+                    {u.abaixoDaMeta === 0
+                      ? 'Tudo o que conta na meta está em 80% ou mais.'
+                      : `${u.abaixoDaMeta} de ${u.itens.length} item(ns) da meta abaixo de 80% — veja onde a nota está caindo:`}
+                  </p>
+                )}
+                <ul className="space-y-2">
+                  {u.itens.map((i) => (
+                    <li key={i.key} data-testid="meta-item" data-faixa={i.faixa} className="rounded-lg border border-line px-3 py-2">
+                      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                        <span className="min-w-[10rem] flex-1 break-words text-sm font-medium" style={{ color: 'var(--sgo-ink)' }}>{i.name}</span>
+                        <span className="shrink-0 text-sm font-semibold tabular-nums" style={{ color: COR[i.faixa] }}>{i.scorePct}% · {ROTULO[i.faixa]}</span>
+                      </div>
+                      <SgoBar value={i.scorePct} tone={TOM[i.faixa]} height={6} className="my-2" />
+                      <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>
+                        Peso {i.weight} · {i.done} de {i.resolved} feito(s)
+                        {i.pontosPerdidos > 0 ? ` · tira ${pontosBR(i.pontosPerdidos)} ponto(s) da nota` : ' · não tira ponto'}
+                      </p>
+                    </li>
+                  ))}
+                  {u.descontos.map((d) => (
+                    <li key={d.name} data-testid="meta-desconto" className="rounded-lg border border-line px-3 py-2">
+                      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                        <span className="min-w-[10rem] flex-1 break-words text-sm font-medium" style={{ color: 'var(--sgo-ink)' }}>{d.name}</span>
+                        <span className="shrink-0 text-sm font-semibold tabular-nums" style={{ color: 'var(--sgo-bad)' }}>−{d.total}% na nota</span>
+                      </div>
+                      <p className="mt-1 break-words text-xs" style={{ color: 'var(--sgo-ink-2)' }}>
+                        Desconto direto: {d.quantidade} × {pontosBR(d.pct)}%{d.detalhe ? ` — ${d.detalhe}` : ''}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+                {u.descontos.length > 0 && (
+                  <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>Antes dos descontos a nota era {u.notaAntesDosDescontos}%.</p>
+                )}
+              </div>
+            ))}
           </div>
         </Card>
       </section>
