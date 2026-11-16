@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.209.0 — 2026-11-16 (Ticket Médio — gráficos de gestão)
+
+- **Gráficos de pizza (rosca)** no Ticket Médio: *Fechamento do mês* (unidades importadas × pendentes, com quem falta), *Participação na receita* e *Participação nos cupons* (quanto cada unidade representa do total, em % e em valor).
+- **Ticket médio por unidade**: barras do maior para o menor, com a linha do consolidado, a distância de cada unidade para ele e a variação contra o mês anterior.
+- Mês aberto ainda sem importação (o normal no começo do mês): o cartão do fechamento traz um atalho para o último mês com dados.
+- Nenhuma conta mudou: os gráficos leem os mesmos números da tabela.
+
 ## v1.208.0 — 2026-11-16 (Comandas — baixada encontrada volta à sequência na hora)
 
 - **Comanda baixada que foi encontrada**: uma gerente leu comandas que estavam baixadas (achadas no escritório) e elas continuavam "bloqueadas" — cinza e riscadas — dia após dia, porque só voltavam depois de o Supervisor validar. Agora, ao ser lida no leitor ou tocada na grade e a conferência finalizada, a comanda volta à sequência sozinha. O Supervisor recebe um aviso com os números e fica registrado na Auditoria; se alguma não deveria ter voltado, ele baixa de novo. As que já estavam aguardando validação fecham como recuperadas na próxima conferência em que forem vistas.
