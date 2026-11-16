@@ -5,6 +5,7 @@ import { CheckCircle2, AlertTriangle, ScanLine, Undo2, ShieldAlert } from 'lucid
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { Sheet } from '@/components/ui/ds/sheet';
 import { escopoDoLeitor } from '@/lib/commands/scan-scope';
 import { parseCommandBarcode, type ScanReason } from '@/lib/commands/barcode';
 
@@ -71,11 +72,48 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
   const [releituras, setReleituras] = useState(0);
   const ultimaLeitura = useRef<Map<number, number>>(new Map());
 
-  // o leitor "digita" no campo focado — manter o foco é o que faz a bipagem funcionar
-  const keepFocus = () => inputRef.current?.focus();
+  /* v1.210.0 — O LEITOR NÃO ROUBA MAIS A TELA (as mesmas regras da conferência por sessão, v1.193.1).
+     O defeito (vídeo da Nova União, 16/11): ao tocar em "Concluir conferência" a confirmação abria
+     EMBAIXO, mas o campo do leitor recapturava o foco 50 ms depois, sem condição nenhuma, e o
+     navegador rolava a página de volta até "passe o leitor na comanda" — o "Confirmar e registrar"
+     saía de baixo do dedo e a conferência não era gravada.
+     (1) `leitorAtivo` é a condição ÚNICA: com a confirmação aberta, gravando ou concluída, o campo
+         não puxa o foco; lida por REFERÊNCIA, porque o timeout do onBlur dispara depois;
+     (2) todo foco no campo é SEM ROLAGEM (`preventScroll`);
+     (3) o onBlur só recaptura quando o foco foi para LUGAR NENHUM (`relatedTarget` nulo);
+     (4) o leitor segue funcionando com o foco fora do campo: tecla digitada sobre a página vai para ele. */
+  const leitorAtivo = !confirming && !busy && !done;
+  const leitorAtivoRef = useRef(leitorAtivo);
+  leitorAtivoRef.current = leitorAtivo;
+  const focarLeitor = () => inputRef.current?.focus({ preventScroll: true });
   useEffect(() => {
-    keepFocus();
-  }, []);
+    if (leitorAtivo) focarLeitor();
+  }, [leitorAtivo]);
+
+  useEffect(() => {
+    if (!leitorAtivo) return;
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (!leitorAtivoRef.current) return;
+      const alvo = e.target as HTMLElement | null;
+      const tag = alvo?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || alvo?.isContentEditable) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!/^[0-9A-Za-z]$/.test(e.key)) return;
+      e.preventDefault();
+      setValue((v) => v + e.key);
+      focarLeitor();
+    };
+    window.addEventListener('keydown', aoTeclar);
+    return () => window.removeEventListener('keydown', aoTeclar);
+  }, [leitorAtivo]);
+
+  /* A confirmação nasce com o foco na observação (depois de o portal montar). */
+  const obsRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!confirming) return;
+    const t = setTimeout(() => obsRef.current?.focus({ preventScroll: true }), 30);
+    return () => clearTimeout(t);
+  }, [confirming]);
 
   /* O ESCOPO SEGUE O QUE FOI BIPADO, com a mesma regra do servidor: só a
      faixa do dia = parcial; apareceu uma de fora = contagem completa. Derivar
@@ -151,6 +189,10 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
       }
       setDone({ absent: d.absent ?? [], scanned: d.scanned ?? 0, crossed: d.crossed ?? [], cutDate: d.cutDate ?? null });
       setConfirming(false);
+      /* O resultado aparece no topo: a tela sobe até ele, em vez de ficar parada no meio da página. */
+      if (typeof window !== 'undefined') window.scrollTo({ top: 0 });
+    } catch {
+      setError('Falha de conexão. A conferência NÃO foi registrada — tente de novo.');
     } finally {
       setBusy(false);
     }
@@ -158,7 +200,7 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
 
   if (done) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" data-testid="conferencia-registrada">
         <Card>
           <CardContent className="space-y-2 py-5 text-center">
             <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
@@ -205,7 +247,7 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
   }
 
   return (
-    <div className="space-y-4" onClick={keepFocus}>
+    <div className="space-y-4">
       {partial && !completa && (
         /* O caixa precisa saber que NÃO está conferindo tudo — senão pensa que
            faltou comanda quando o número "ativas" não bate com o total da casa.
@@ -255,14 +297,18 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
           <Input
             id="bipe"
             ref={inputRef}
-            autoFocus
             autoComplete="off"
             inputMode="numeric"
             className="h-14 text-center text-lg font-bold"
             placeholder="passe o leitor na comanda…"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            onBlur={() => setTimeout(keepFocus, 50)}
+            onBlur={(e) => {
+              /* Foi para um botão/campo? É a pessoa usando a tela: deixa. Só
+                 recaptura quando o foco se perdeu (clique em área morta). */
+              if (e.relatedTarget) return;
+              setTimeout(() => { if (leitorAtivoRef.current && document.activeElement === document.body) focarLeitor(); }, 50);
+            }}
             onKeyDown={(e) => {
               if (e.key !== 'Enter') return;
               e.preventDefault();
@@ -287,7 +333,7 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
             <Button size="sm" variant="outline" onClick={undoLast} disabled={!log.some((l) => l.reason === 'OK')}>
               <Undo2 className="h-4 w-4" /> Desfazer última
             </Button>
-            <Button size="sm" onClick={() => setConfirming(true)} disabled={busy || scanned.size === 0}>
+            <Button size="sm" onClick={() => { setError(null); setConfirming(true); }} disabled={busy || scanned.size === 0} data-testid="abrir-concluir">
               <ScanLine className="h-4 w-4" /> Concluir conferência
             </Button>
           </div>
@@ -295,9 +341,28 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
       </Card>
 
       {confirming && (
-        <Card className="border-brand">
-          <CardContent className="space-y-3 py-4">
-            <p className="font-bold text-ink-900">Concluir a conferência de {unitName}?</p>
+        /* Uma JANELA, e não um cartão no fim da página: ela desliga o leitor (`leitorAtivo`),
+           fica por cima de tudo e o erro do servidor aparece ao lado do botão. */
+        <Sheet
+          open onClose={() => { if (!busy) setConfirming(false); }}
+          title={`Concluir a conferência de ${unitName}?`}
+          description={`${lidasNoEscopo} conferida(s) · ${missing.length} faltante(s)`}
+          footer={
+            <div className="space-y-2">
+              {error && <p className="text-sm font-semibold text-danger" role="alert">{error}</p>}
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" disabled={busy} onClick={() => void finish()} data-testid="confirmar-concluir">
+                  {busy ? 'Registrando…' : 'Confirmar e registrar'}
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirming(false)}>
+                  Voltar e continuar bipando
+                </Button>
+              </div>
+              <p className="text-xs text-ink-500">Registrando como {userName}.</p>
+            </div>
+          }
+        >
+          <div className="space-y-3" data-testid="dialogo-concluir">
             <p className="text-sm">
               {lidasNoEscopo} conferida(s) · <strong className={missing.length ? 'text-danger' : 'text-success'}>{missing.length} faltante(s)</strong>
               {missing.length > 0 && missing.length <= 40 && <span className="block break-words text-xs text-ink-500">Faltantes: {missing.join(', ')}</span>}
@@ -308,21 +373,12 @@ export function ScanClient({ unitId, unitName, operationalDate, activeNumbers, n
                 Cada faltante vira uma divergência e o supervisor da unidade é avisado na hora. Confira se não sobrou comanda fora da bandeja antes de concluir.
               </p>
             )}
-            <Input placeholder="Observação (opcional) — ex.: 3 comandas em uso na mesa 12" value={note} onChange={(e) => setNote(e.target.value)} className="h-10 text-sm" />
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" disabled={busy} onClick={() => void finish()}>
-                Confirmar e registrar
-              </Button>
-              <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirming(false)}>
-                Voltar e continuar bipando
-              </Button>
-            </div>
-            <p className="text-xs text-ink-500">Registrando como {userName}.</p>
-          </CardContent>
-        </Card>
+            <Input ref={obsRef} placeholder="Observação (opcional) — ex.: 3 comandas em uso na mesa 12" value={note} onChange={(e) => setNote(e.target.value)} className="h-10 text-sm" />
+          </div>
+        </Sheet>
       )}
 
-      {error && <p className="text-sm font-semibold text-danger">{error}</p>}
+      {!confirming && error && <p className="text-sm font-semibold text-danger">{error}</p>}
 
       {log.length > 0 && (
         <Card>

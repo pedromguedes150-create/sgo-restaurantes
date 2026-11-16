@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.210.0 — 2026-11-16 (Comandas — concluir a conferência por leitor)
+
+- **Corrigido**: na *Conferência por leitor*, ao tocar em **Concluir conferência** a tela voltava para o campo "passe o leitor na comanda" e a conferência não era gravada. O campo do leitor puxava o foco de volta e a página rolava para cima, tirando o botão de confirmar de baixo do dedo.
+- A confirmação agora é uma **janela** por cima da tela: enquanto ela está aberta o leitor fica desligado, a observação aceita texto e o erro do servidor (se houver) aparece ao lado do botão.
+- O campo do leitor não rola mais a página e só recupera o foco quando ele se perde; bipar com o foco fora do campo continua funcionando.
+- Trava nova nos testes: nenhuma tela do sistema pode ter campo que recaptura o foco sem condição.
+
 ## v1.209.0 — 2026-11-16 (Ticket Médio — gráficos de gestão)
 
 - **Gráficos de pizza (rosca)** no Ticket Médio: *Fechamento do mês* (unidades importadas × pendentes, com quem falta), *Participação na receita* e *Participação nos cupons* (quanto cada unidade representa do total, em % e em valor).
