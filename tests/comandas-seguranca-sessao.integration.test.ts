@@ -146,17 +146,18 @@ describe('Mudança de escopo com autorização', () => {
 });
 
 describe('Baixa definitiva encontrada', () => {
-  it('não volta sozinha: vira divergência em validação', async () => {
+  it('v1.208.0: volta à sequência na hora, com registro', async () => {
     /* Baixa a 3 (perda definitiva). */
     await prisma.commandDivergence.create({
-      data: { unitId, number: 3, status: 'CLOSED', outcome: 'LOST', createdById: gerenteId, resolvedById: supId, resolvedAt: new Date() },
+      data: { unitId, number: 3, status: 'CLOSED', outcome: 'LOST', createdById: gerenteId, resolvedById: supId, resolvedAt: new Date(Date.now() - 60_000) },
     });
     const r = await submitCount(gerente(), { unitId, allPresent: false, scopeNumbers: [1, 2, 3, 4, 5], presentNumbers: [1, 2, 3, 4, 5] });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.aguardandoValidacao).toEqual([3]);
-    const d = await prisma.commandDivergence.findFirst({ where: { unitId, number: 3, needsValidation: true } });
-    expect(d?.status).toBe('INVESTIGATING');
-    expect(r.recovered).not.toContain(3);
+    expect(r.baixasRecuperadas).toEqual([3]);
+    expect(r.recovered).toContain(3);
+    expect(await prisma.commandDivergence.count({ where: { unitId, number: 3, status: { in: ['OPEN', 'INVESTIGATING'] } } })).toBe(0);
+    const d = await prisma.commandDivergence.findFirst({ where: { unitId, number: 3, outcome: 'RECOVERED' } });
+    expect(d?.status).toBe('CLOSED');
   });
 });

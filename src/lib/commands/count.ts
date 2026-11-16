@@ -8,7 +8,7 @@ import { notifyUnitRole } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 
 export type SubmitCountResult =
-  | { ok: true; absent: number[]; newDivergences: number; rejected: number[]; /** v1.193.0: em apuração marcadas presentes — voltaram à sequência. (v1.200.0: baixa DEFINITIVA não volta aqui, vai para validação.) */ recovered: number[]; /** v1.200.0: baixadas encontradas — ficam em validação do Supervisor, não voltam sozinhas. */ aguardandoValidacao: number[]; /** v1.193.1: das ausentes, as que JÁ estavam em apuração antes desta contagem. */ jaEmApuracao: number[] }
+  | { ok: true; absent: number[]; newDivergences: number; rejected: number[]; /** Marcadas presentes que voltaram à sequência: em apuração e (v1.208.0) também as baixadas. */ recovered: number[]; /** Sempre vazio desde a v1.208.0 (sessões antigas congelaram este campo). */ aguardandoValidacao: number[]; /** v1.208.0: das recuperadas, as que estavam BAIXADAS. */ baixasRecuperadas: number[]; /** v1.193.1: das ausentes, as que JÁ estavam em apuração antes desta contagem. */ jaEmApuracao: number[] }
   | { ok: false; reason: 'FORBIDDEN' | 'NO_CONFIG' | 'OBSERVATION_REQUIRED' | 'INVALID' | 'CONFLITO_COM_SESSAO'; detalhe?: string };
 
 /**
@@ -161,9 +161,10 @@ export async function submitCount(
      — e `getActiveSequence` passa a devolver o número na ativa. */
   const vistas = new Set<number>([...present, ...inUse, ...(input.allPresent ? [...escopo] : [])]);
   const agora = new Date();
+  /* v1.208.0: TODA divergência aberta do número visto fecha como RECUPERADA —
+     inclusive a que esperava validação do Supervisor (regra da v1.200.0, desfeita). */
   const abertasVistas = await prisma.commandDivergence.findMany({
-    /* v1.200.0: a que já espera validação do Supervisor NÃO fecha sozinha na conferência seguinte. */
-    where: { unitId: unit.id, number: { in: [...vistas] }, status: { in: ['OPEN', 'INVESTIGATING'] }, needsValidation: false },
+    where: { unitId: unit.id, number: { in: [...vistas] }, status: { in: ['OPEN', 'INVESTIGATING'] } },
     select: { id: true, number: true },
   });
   if (abertasVistas.length > 0) {
@@ -172,28 +173,29 @@ export async function submitCount(
       data: { status: 'CLOSED', outcome: 'RECOVERED', resolvedById: user.id, resolvedAt: agora },
     });
   }
-  /* v1.200.0 — BAIXA DEFINITIVA encontrada: NÃO volta sozinha. Uma comanda dada
-     como perdida que aparece na contagem é, no mínimo, um fato a explicar; a
-     divergência nasce EM APURAÇÃO e marcada para validação, e só o Supervisor/
-     Admin a encerra como recuperada (ou mantém a baixa). Enquanto isso o
-     número segue baixado — não entra no julgamento. */
-  const baixadasVistas = [...vistas].filter((n) => seq.lost.has(n));
-  const jaAguardando = baixadasVistas.length === 0 ? new Set<number>() : new Set((await prisma.commandDivergence.findMany({
-    where: { unitId: unit.id, number: { in: baixadasVistas }, status: { in: ['OPEN', 'INVESTIGATING'] }, needsValidation: true },
-    select: { number: true },
-  })).map((d) => d.number));
-  const novasParaValidar = baixadasVistas.filter((n) => !jaAguardando.has(n));
-  if (novasParaValidar.length > 0) {
+  /* v1.208.0 — BAIXADA ENCONTRADA VOLTA NA HORA (decisão do Daniel, 16/11/2026).
+     Relato: a gerente leu comandas baixadas que estavam no escritório e elas
+     seguiam "bloqueadas" (cinza) dia após dia, à espera de uma validação que
+     ninguém fazia. Agora, vista na conferência, a comanda volta à sequência:
+     quem já tinha divergência aberta fechou acima; quem não tinha ganha uma
+     divergência já encerrada como RECUPERADA (a da baixa fica como história, e
+     `getActiveSequence` lê o ÚLTIMO desfecho). O Supervisor é avisado com os
+     números e, se discordar, baixa de novo. */
+  const comAberta = new Set(abertasVistas.map((d) => d.number));
+  const baixasRecuperadas = [...vistas].filter((n) => seq.lost.has(n)).sort((a, b) => a - b);
+  const semAberta = baixasRecuperadas.filter((n) => !comAberta.has(n));
+  if (semAberta.length > 0) {
     await prisma.commandDivergence.createMany({
-      data: novasParaValidar.map((number) => ({
-        unitId: unit.id, number, status: 'INVESTIGATING' as const, needsValidation: true,
-        observation: `Baixa definitiva encontrada na conferência de ${operationalDate} — aguardando validação do Supervisor.`,
-        createdById: user.id,
+      data: semAberta.map((number) => ({
+        unitId: unit.id, number, status: 'CLOSED' as const, outcome: 'RECOVERED' as const,
+        observation: `Estava baixada e foi encontrada na conferência de ${operationalDate} — voltou à sequência.`,
+        createdById: user.id, resolvedById: user.id, resolvedAt: agora,
       })),
     });
   }
-  const aguardandoValidacao = baixadasVistas.sort((a, b) => a - b);
-  const recovered = [...new Set(abertasVistas.map((d) => d.number))].sort((a, b) => a - b);
+  /** Mantido no retorno por compatibilidade (sessões antigas congelaram este campo); desde a v1.208.0 é sempre vazio. */
+  const aguardandoValidacao: number[] = [];
+  const recovered = [...new Set([...abertasVistas.map((d) => d.number), ...baixasRecuperadas])].sort((a, b) => a - b);
 
   // cria divergências para as ausentes NOVAS, de uma vez (eram centenas de idas ao banco em fila)
   let newDivergences = 0;
@@ -215,27 +217,28 @@ export async function submitCount(
     unitId: unit.id,
     action: 'COMMAND_COUNT',
     module: 'COMMANDS',
-    metadata: { operationalDate, allPresent: input.allPresent, absent: absent.length, newDivergences, recovered, aguardandoValidacao, sessionId: input.sessionId ?? null },
+    metadata: { operationalDate, allPresent: input.allPresent, absent: absent.length, newDivergences, recovered, baixasRecuperadas, sessionId: input.sessionId ?? null },
     ...ctx,
   });
-  if (novasParaValidar.length > 0) {
-    await audit({ userId: user.id, unitId: unit.id, action: 'COMMAND_DIV_BAIXA_ENCONTRADA', module: 'COMMANDS', metadata: { numbers: novasParaValidar, operationalDate }, ...ctx });
+  if (baixasRecuperadas.length > 0) {
+    await audit({ userId: user.id, unitId: unit.id, action: 'COMMAND_DIV_BAIXA_ENCONTRADA', module: 'COMMANDS', metadata: { numbers: baixasRecuperadas, operationalDate, voltouSozinha: true }, ...ctx });
     await notifyUnitRole(unit.id, 'SUPERVISOR', {
-      title: 'Comanda baixada foi encontrada — validar',
-      body: `${unit.name}: comanda(s) ${novasParaValidar.join(', ')} estavam baixadas definitivamente e apareceram na conferência de ${operationalDate} (${user.name}). Não voltam sozinhas: valide em Comandas → Divergências.`,
+      title: 'Comanda baixada foi encontrada e voltou à sequência',
+      body: `${unit.name}: comanda(s) ${baixasRecuperadas.join(', ')} estavam baixadas definitivamente e apareceram na conferência de ${operationalDate} (${user.name}). Já voltaram à sequência; se alguma não deveria, baixe de novo em Comandas.`,
       link: '/modulos/comandas',
       module: 'COMMANDS',
       nivel: 'IMPORTANTE',
     });
   }
-  if (recovered.length > 0) {
+  const recuperadasComuns = recovered.filter((n) => !baixasRecuperadas.includes(n));
+  if (recuperadasComuns.length > 0) {
     await audit({
       userId: user.id, unitId: unit.id, action: 'COMMAND_DIV_RECOVERED', module: 'COMMANDS',
-      metadata: { numbers: recovered, origem: 'CONTAGEM', operationalDate }, ...ctx,
+      metadata: { numbers: recuperadasComuns, origem: 'CONTAGEM', operationalDate }, ...ctx,
     });
     await notifyUnitRole(unit.id, 'SUPERVISOR', {
       title: 'Comandas recuperadas',
-      body: `${unit.name}: comanda(s) ${recovered.join(', ')} voltaram a aparecer na conferência de ${operationalDate} (${user.name}) e saíram da apuração.`,
+      body: `${unit.name}: comanda(s) ${recuperadasComuns.join(', ')} voltaram a aparecer na conferência de ${operationalDate} (${user.name}) e saíram da apuração.`,
       link: '/modulos/comandas',
       module: 'COMMANDS',
     });
@@ -258,5 +261,5 @@ export async function submitCount(
     });
   }
 
-  return { ok: true, absent, newDivergences, rejected, recovered, aguardandoValidacao, jaEmApuracao };
+  return { ok: true, absent, newDivergences, rejected, recovered, aguardandoValidacao, baixasRecuperadas, jaEmApuracao };
 }

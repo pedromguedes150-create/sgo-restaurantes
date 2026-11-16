@@ -449,7 +449,7 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
         <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded bg-info" /> Em uso (conta como presente)</span>
         <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-line-strong" /> Não conferida</span>
         {apuracaoSet.size > 0 && <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-warning bg-warning-bg" /> Em apuração ({apuracaoSet.size}) — toque se encontrou: volta à sequência</span>}
-        {baixadaSet.size > 0 && <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-line-strong bg-sunken" /> Baixada ({baixadaSet.size}) — se encontrou, o toque abre validação do supervisor</span>}
+        {baixadaSet.size > 0 && <span className="flex items-center gap-1.5"><i className="inline-block h-3 w-3 rounded border border-line-strong bg-sunken" /> Baixada ({baixadaSet.size}) — se encontrou, leia ou toque: ela volta à sequência ao finalizar</span>}
       </div>
 
       {usaGrade && (
@@ -505,7 +505,7 @@ export function SessaoClient({ sessao, podeEditar }: { sessao: SessaoNaTela; pod
                   type="button"
                   disabled={!podeEditar}
                   onClick={() => void tocar(n)}
-                  title={e === 'LIMPA' && apuracaoSet.has(n) ? 'Em apuração — toque se encontrou: volta à sequência' : e === 'LIMPA' && baixadaSet.has(n) ? 'Baixada — toque se encontrou: o supervisor valida antes de voltar' : undefined}
+                  title={e === 'LIMPA' && apuracaoSet.has(n) ? 'Em apuração — toque se encontrou: volta à sequência' : e === 'LIMPA' && baixadaSet.has(n) ? 'Baixada — toque se encontrou: volta à sequência ao finalizar (o supervisor é avisado)' : undefined}
                   data-situacao={e === 'LIMPA' && apuracaoSet.has(n) ? 'apuracao' : e === 'LIMPA' && baixadaSet.has(n) ? 'baixada' : undefined}
                   className={`h-9 w-11 rounded-md border text-xs font-semibold tabular-nums ${classe}`}
                 >

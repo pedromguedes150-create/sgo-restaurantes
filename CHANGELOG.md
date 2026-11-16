@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.208.0 — 2026-11-16 (Comandas — baixada encontrada volta à sequência na hora)
+
+- **Comanda baixada que foi encontrada**: uma gerente leu comandas que estavam baixadas (achadas no escritório) e elas continuavam "bloqueadas" — cinza e riscadas — dia após dia, porque só voltavam depois de o Supervisor validar. Agora, ao ser lida no leitor ou tocada na grade e a conferência finalizada, a comanda volta à sequência sozinha. O Supervisor recebe um aviso com os números e fica registrado na Auditoria; se alguma não deveria ter voltado, ele baixa de novo. As que já estavam aguardando validação fecham como recuperadas na próxima conferência em que forem vistas.
+
 ## v1.207.0 — 2026-11-16 (Início do gerente — a meta com a nota oficial e o que a derruba · Reembolsos — descrição não cobre as colunas)
 
 - **Minha Meta do Mês (Início do gerente)**: o cartão mostrava uma conta própria que IGNORAVA os descontos (lançamento fora do prazo, gerente sem folga) e podia divergir da tela de Metas. Agora mostra a nota OFICIAL do mês — a mesma de Metas — e, logo abaixo, cada item que conta na meta, na mesma ordem da tela de Metas: o % alcançado, a situação (Na meta · Atenção · Crítico), quantos foram feitos e quantos pontos aquele item está tirando da nota. Os descontos diretos aparecem nomeados. Quem cuida de mais de uma unidade vê cada uma separada. O cartão continua no mesmo lugar.
