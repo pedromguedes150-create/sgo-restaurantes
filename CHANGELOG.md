@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.210.1 — 2026-11-17 (Comissão — Rodney = Rodinei)
+
+- **Corrigido**: na apuração da comissão, "RODNEY JOSE" (Teknisa) não era sugerido para "RODINEI JOSE ALVES" (RH). A comparação de nomes passou a entender a vogal de apoio (Rodney/Rodinei, Edson/Edison) como o mesmo nome e mostra a sugestão para confirmar. Continua sendo sugestão: nada vincula sozinho.
+
 ## v1.210.0 — 2026-11-16 (Comandas — concluir a conferência por leitor)
 
 - **Corrigido**: na *Conferência por leitor*, ao tocar em **Concluir conferência** a tela voltava para o campo "passe o leitor na comanda" e a conferência não era gravada. O campo do leitor puxava o foco de volta e a página rolava para cima, tirando o botão de confirmar de baixo do dedo.
