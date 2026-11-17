@@ -45,6 +45,17 @@ describe('percentual entre nomes', () => {
   });
 });
 
+describe('vogal de apoio (v1.210.1)', () => {
+  it('Rodney José = Rodinei José Alves; Edson = Edison', () => {
+    expect(semelhancaDeNomes('Rodney Jose', 'Rodinei Jose Alves')).toBeGreaterThanOrEqual(90);
+    expect(semelhancaDeNomes('Edson Lima', 'Edison Lima Costa')).toBeGreaterThanOrEqual(90);
+  });
+  it('não aproxima nomes diferentes: Mariana × Marina, Marcelo × Marcela', () => {
+    expect(semelhancaDeNomes('Marina Souza', 'Mariana Souza')).toBeLessThan(SEMELHANCA_MINIMA);
+    expect(semelhancaDeNomes('Marcelo Souza', 'Marcela Souza')).toBeLessThan(SEMELHANCA_MINIMA);
+  });
+});
+
 describe('sugestões', () => {
   const rh = [{ id: 'j', name: 'Janaina Sousa Coelho' }, { id: 'o', name: 'Joana Lima' }, { id: 'k', name: 'Krissley Hubert Ribeiro' }];
   it('ordenadas da mais parecida, só acima do mínimo', () => {

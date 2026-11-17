@@ -221,13 +221,31 @@ function levenshtein(a: string, b: string): number {
   return ant[n];
 }
 
-/** 0..1 entre duas palavras: igual = 1; mesmo som = 0,95; senão, a distância de edição sobre o som. */
+/**
+ * A única diferença é a VOGAL DE APOIO que o português põe depois de consoante
+ * muda: Rodney/Rodinei, Edson/Edison — só "i"/"e" entre
+ * uma oclusiva (ou f) e outra consoante. "Mariana" × "Marina" NÃO entra (a
+ * letra a mais é "a", entre consoante e vogal).
+ */
+function soVogalDeApoio(a: string, b: string): boolean {
+  const [longa, curta] = a.length > b.length ? [a, b] : [b, a];
+  if (longa.length !== curta.length + 1 || curta.length < 4) return false;
+  for (let p = 1; p < longa.length - 1; p++) {
+    if (longa[p] !== 'i' && longa[p] !== 'e') continue;
+    if (!'bdptgcf'.includes(longa[p - 1]) || 'aeiou'.includes(longa[p + 1])) continue;
+    if (longa.slice(0, p) + longa.slice(p + 1) === curta) return true;
+  }
+  return false;
+}
+
+/** 0..1 entre duas palavras: igual = 1; vogal de apoio = 0,9; mesmo som = 0,95; senão, a distância de edição sobre o som. */
 export function semelhancaDePalavras(a: string, b: string): number {
   const x = normalizarNome(a); const y = normalizarNome(b);
   if (!x || !y) return 0;
   if (x === y) return 1;
   const fx = chaveFonetica(x); const fy = chaveFonetica(y);
   if (fx === fy) return 0.95;
+  if (soVogalDeApoio(fx, fy)) return 0.9;
   return Math.max(0, 1 - levenshtein(fx, fy) / Math.max(fx.length, fy.length)) * 0.9;
 }
 
