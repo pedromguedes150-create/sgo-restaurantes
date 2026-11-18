@@ -142,7 +142,7 @@ export function CommandsClient({
       : { unitId, allPresent: true };
     if (await post('/api/commands/count', body)) {
       setRegistradoAgora(agora());
-      setMsg({ t: 'ok', m: naFaixaDoDia ? `Registrado: faixa do dia (${faixaAtualLabel}), todas presentes ✓` : 'Registrado: todas presentes ✓' });
+      setMsg({ t: 'ok', m: naFaixaDoDia ? `Registrado: parcial (${faixaAtualLabel}), todas presentes ✓` : 'Registrado: todas presentes ✓' });
     }
   }
 
@@ -205,7 +205,7 @@ export function CommandsClient({
                 tela ficava idêntica antes e depois do envio. */}
             Contagem de hoje registrada{registroDeHoje ? ` às ${registroDeHoje.hora}` : ''}
             {registroDeHoje?.porQuem ? ` por ${registroDeHoje.porQuem}` : ''}
-            {registroDeHoje?.parcial ? ' (faixa do dia)' : ''} — pode reenviar para corrigir.
+            {registroDeHoje?.parcial ? ' (parcial)' : ''} — pode reenviar para corrigir.
           </p>
         )}
 
@@ -462,7 +462,7 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setM
       if (!res.ok) { onResult({ t: 'err', m: data.error ?? 'Falha' }); return; }
       onRegistrado?.();
       onResult({ t: 'ok', m: absent.length === 0
-        ? (naFaixaDoDia ? `Conferência registrada: faixa do dia (${faixaLabel}), todas presentes ✓` : 'Conferência registrada: todas presentes ✓')
+        ? (naFaixaDoDia ? `Conferência registrada: parcial (${faixaLabel}), todas presentes ✓` : 'Conferência registrada: todas presentes ✓')
         : `Conferência registrada. ${absent.length} faltando — supervisor alertado.` });
       /* NÃO limpa a grade: o estado que acabou de ser registrado é o estado
          correto para continuar vendo (e corrigir, se for o caso). */
@@ -514,7 +514,7 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setM
               aria-pressed={modo === 'dia'}
               className={`rounded-full px-3 py-1 text-xs font-semibold ${modo === 'dia' ? 'bg-brand text-on-brand' : 'border text-ink-700'}`}
             >
-              Faixa do dia ({nightlyNumbers.length})
+              Parcial ({nightlyNumbers.length})
             </button>
             <button
               type="button"
@@ -599,7 +599,7 @@ function GridConference({ unitId, activeNumbers, nightlyNumbers = [], modo, setM
         <p className="mt-2 rounded-lg bg-success/10 px-3 py-2 text-sm font-semibold text-success">
           ✓ Conferência de hoje registrada às {registro.hora}
           {registro.porQuem ? ` por ${registro.porQuem}` : ''}
-          {registro.parcial ? ' (faixa do dia)' : ''}.
+          {registro.parcial ? ' (parcial)' : ''}.
         </p>
       )}
       <Button onClick={confirmConf} disabled={busy} className="mt-2 w-full" variant={registro ? 'outline' : 'gold'}>

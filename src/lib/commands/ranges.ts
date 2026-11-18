@@ -65,3 +65,22 @@ export function saidasDeSobreposicao(nova: { rangeStart: number; rangeEnd: numbe
     soOQueFalta: trechos,
   };
 }
+
+/**
+ * v1.213.0 — "1 a 300" / "1 a 300 e 501 a 600": os números de uma conferência
+ * escritos como gente fala. É o que a tela mostra ao lado de Parcial e Completa.
+ */
+export function rotuloDosNumeros(numeros: Iterable<number>): string {
+  const xs = [...new Set(numeros)].filter((n) => Number.isInteger(n)).sort((a, b) => a - b);
+  if (xs.length === 0) return '';
+  const trechos: string[] = [];
+  let ini = xs[0]; let ant = xs[0];
+  for (let i = 1; i <= xs.length; i++) {
+    const n = xs[i];
+    if (n === ant + 1) { ant = n; continue; }
+    trechos.push(ini === ant ? String(ini) : `${ini} a ${ant}`);
+    ini = n; ant = n;
+  }
+  if (trechos.length <= 1) return trechos[0] ?? '';
+  return `${trechos.slice(0, -1).join(', ')} e ${trechos[trechos.length - 1]}`;
+}

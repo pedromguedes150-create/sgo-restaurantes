@@ -163,7 +163,7 @@ export function normalizarProgramacao(
 ): { ok: true; valor: Omit<Programacao, 'id' | 'ativa'> } | { ok: false; motivo: MotivoInvalido; detalhe: string } {
   const nome = typeof e.nome === 'string' ? e.nome.trim() : '';
   if (nome.length < 2) return { ok: false, motivo: 'NOME', detalhe: 'Dê um nome à programação.' };
-  if (e.tipo !== 'FAIXA_DO_DIA' && e.tipo !== 'COMPLETA') return { ok: false, motivo: 'TIPO', detalhe: 'Escolha faixa do dia ou completa.' };
+  if (e.tipo !== 'FAIXA_DO_DIA' && e.tipo !== 'COMPLETA') return { ok: false, motivo: 'TIPO', detalhe: 'Escolha parcial ou completa.' };
   const dias = Array.isArray(e.dias) ? [...new Set(e.dias.filter((d): d is number => ehInt(d) && d >= 0 && d <= 6))].sort((a, b) => a - b) : [];
   if (dias.length === 0) return { ok: false, motivo: 'DIAS', detalhe: 'Marque ao menos um dia da semana.' };
   const temIni = e.inicioHora !== null && e.inicioHora !== undefined && e.inicioHora !== '';
@@ -215,7 +215,7 @@ export function descreverProgramacaoDoDia(p: ProgramacaoDoDia): string {
   if (p.semConferencia) return `${p.nome ?? 'Exceção'}: sem conferência programada hoje`;
   if (p.origem === 'PADRAO') return 'Sem programação para hoje — vale a rotina padrão da unidade';
   const o = p.origem === 'EXCECAO' ? `${p.nome} (exceção)` : p.nome;
-  return p.tipo === 'COMPLETA' ? `${o}: conferência completa` : `${o}: faixa do dia ${p.faixa?.de}–${p.faixa?.ate}`;
+  return p.tipo === 'COMPLETA' ? `${o}: conferência completa` : `${o}: parcial ${p.faixa?.de}–${p.faixa?.ate}`;
 }
 
 /**

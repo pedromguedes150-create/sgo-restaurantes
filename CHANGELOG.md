@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.213.0 — 2026-11-18 (Comandas — Parcial × Completa)
+
+- Em **Configurações → Comandas**, os selos "Madrugada" e "Só na semanal" passaram a se chamar **"Parcial e completa"** e **"Só na completa"**. No topo, um resumo mostra o resultado: ex. "Parcial: 1 a 300 · Completa: 1 a 500".
+- Ao iniciar a conferência, o gerente escolhe **Parcial (1 a 300)** ou **Completa (1 a 500)** — os números aparecem no botão.
+- "Faixa do dia" virou **Parcial** no histórico e na grade.
+- A **Programação das conferências** ficou recolhida como "Avançado (opcional)": sem ela, o gerente escolhe na hora.
+- Só nomes e tela: nenhuma regra de conferência mudou.
+
 ## v1.212.0 — 2026-11-18 (Central de Currículos)
 
 - **Nova tela** em Pessoas → **Central de Currículos**: o gerente cadastra o candidato (nome, telefone, cargo pretendido), anexa o currículo pela câmera ou por arquivo (PDF, JPG ou PNG) e encaminha ao RH.

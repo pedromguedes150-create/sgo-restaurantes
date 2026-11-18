@@ -26,6 +26,7 @@ import { IniciarConferencia } from '@/components/commands/iniciar-conferencia';
 import { ReposicoesPendentes } from '@/components/commands/reposicoes-pendentes';
 import { listarConferencias, sessaoEmAndamento, TIPO_LABEL, METODO_LABEL } from '@/lib/commands/sessao';
 import { conferidasDaUltimaContagem } from '@/lib/commands/grid';
+import { rotuloDosNumeros } from '@/lib/commands/ranges';
 import { DeleteOpButton } from '@/components/admin/delete-op-button';
 import { UnitSelectNav } from '@/components/ui/unit-select-nav';
 
@@ -142,6 +143,9 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
         <IniciarConferencia
           unitId={selected.id}
           faixaDoDia={seq.nightly.size > 0 ? [...seq.nightly].sort((a, b) => a - b) : faixaAlternativaDoDia}
+          rotuloParcial={rotuloDosNumeros(seq.nightly.size > 0 ? seq.nightly : faixaAlternativaDoDia)}
+          rotuloCompleta={rotuloDosNumeros(seq.all)}
+          totalCompleta={seq.all.size}
           programacao={{ texto: descreverProgramacaoDoDia(seq.programacao), tipo: seq.programacao.tipo, semConferencia: seq.programacao.semConferencia, origem: seq.programacao.origem, concorrentes: seq.programacao.concorrentes }}
           ultima={ultimaSessao ? {
             id: ultimaSessao.id,

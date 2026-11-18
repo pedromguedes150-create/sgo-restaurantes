@@ -10,7 +10,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Select } from '@/components/ui/ds/select';
 import { shortUnitName } from '@/lib/unit-name';
 import { postAdmin } from '@/lib/admin-client';
-import { saidasDeSobreposicao } from '@/lib/commands/ranges';
+import { rotuloDosNumeros, saidasDeSobreposicao } from '@/lib/commands/ranges';
 
 export interface CmdSeqRow { id: string; unitId: string; name: string; rangeStart: number; rangeEnd: number; active: boolean; nightly: boolean }
 interface Unit { id: string; name: string }
@@ -44,17 +44,33 @@ export function CommandsConfigAdmin({ units, sequences }: { units: Unit[]; seque
         if (ini <= fim) cruzadas.push(`"${a.name}" e "${b.name}" (${ini}–${fim})`);
       }
     }
-    return { total: todas.size, madrugada: madrugada.size, cruzadas };
+    return { total: todas.size, madrugada: madrugada.size, cruzadas, rotuloParcial: rotuloDosNumeros(madrugada), rotuloCompleta: rotuloDosNumeros(todas) };
   }, [list]);
   const total = resumo.total;
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-ink-500">Cada unidade pode ter várias faixas de comandas (ex.: 1–200 e 500–650). São a base da contagem diária e das divergências. <strong>As faixas não devem se sobrepor</strong> — cada comanda pertence a uma só.</p>
+      <p className="text-sm text-ink-500">Cadastre as faixas de comandas da unidade e diga, em cada uma, se ela entra na conferência <strong>parcial</strong>. A conferência <strong>completa</strong> sempre confere todas as faixas. Ao iniciar, o gerente escolhe parcial ou completa. <strong>As faixas não devem se sobrepor</strong> — cada comanda pertence a uma só.</p>
       <Select
         label="Unidade" value={unitId} onValueChange={setUnitId}
         options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))}
       />
+
+      {/* v1.213.0 — o resultado da configuração, dito do jeito que o gerente vai ver ao iniciar. */}
+      {total > 0 && (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" data-testid="resumo-parcial-completa">
+          <div className="rounded-lg border bg-surface p-3">
+            <p className="sgo-type-11 font-semibold text-ink-500">Conferência parcial</p>
+            {resumo.madrugada > 0 && resumo.madrugada < total
+              ? <p className="text-sm font-semibold text-ink-900">{resumo.rotuloParcial} <span className="font-normal text-ink-500">· {resumo.madrugada} comandas</span></p>
+              : <p className="text-sm text-ink-700">{resumo.madrugada === 0 ? 'Não configurada: marque ao menos uma faixa como "Parcial e completa".' : 'Igual à completa: marque como "Só na completa" as faixas que ficam de fora da parcial.'}</p>}
+          </div>
+          <div className="rounded-lg border bg-surface p-3">
+            <p className="sgo-type-11 font-semibold text-ink-500">Conferência completa</p>
+            <p className="text-sm font-semibold text-ink-900">{resumo.rotuloCompleta} <span className="font-normal text-ink-500">· {total} comandas</span></p>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         {list.map((s) => <SeqRow key={s.id} s={s} onChange={() => router.refresh()} />)}
@@ -74,8 +90,8 @@ export function CommandsConfigAdmin({ units, sequences }: { units: Unit[]; seque
       <p className="text-xs text-ink-500">
         Total de comandas ativas nesta unidade: <span className="font-bold text-ink-900">{total}</span>
         {resumo.madrugada > 0 && (
-          <> · <span className="font-bold text-info">{resumo.madrugada}</span> conferidas na madrugada,{' '}
-          <span className="font-bold text-ink-900">{total - resumo.madrugada}</span> só na contagem semanal</>
+          <> · <span className="font-bold text-info">{resumo.madrugada}</span> na parcial,{' '}
+          <span className="font-bold text-ink-900">{total - resumo.madrugada}</span> só na completa</>
         )}
       </p>
     </div>
@@ -112,16 +128,17 @@ function SeqRow({ s, onChange }: { s: CmdSeqRow; onChange: () => void }) {
             <p className="text-sm font-semibold text-ink-900">{s.name}</p>
             <p className="text-xs text-ink-500">
               {s.rangeStart}–{s.rangeEnd} · {Math.max(0, s.rangeEnd - s.rangeStart + 1)} comandas
-              {s.nightly && <> · <span className="font-semibold text-info">conferida na madrugada</span></>}
+              {' · '}<span className={s.nightly ? 'font-semibold text-info' : ''}>{s.nightly ? 'entra na parcial e na completa' : 'só na completa'}</span>
             </p>
           </div>
         )}
         <div className="flex items-center gap-1">
           <button
             onClick={() => call({ entity: 'commandSequence', action: 'update', id: s.id, nightly: !s.nightly })}
-            title={s.nightly ? 'Sai da conferência da madrugada' : 'Passa a ser conferida na madrugada pelo caixa'}
+            title={s.nightly ? 'Clique para tirar esta faixa da conferência parcial' : 'Clique para incluir esta faixa na conferência parcial'}
+            data-testid="selo-parcial"
           >
-            <StatusBadge tone={s.nightly ? 'medium' : 'neutral'}>{s.nightly ? 'Madrugada' : 'Só na semanal'}</StatusBadge>
+            <StatusBadge tone={s.nightly ? 'medium' : 'neutral'}>{s.nightly ? 'Parcial e completa' : 'Só na completa'}</StatusBadge>
           </button>
           <button onClick={() => call({ entity: 'commandSequence', action: 'update', id: s.id, active: !s.active })}><StatusBadge tone={s.active ? 'success' : 'critical'}>{s.active ? 'Ativa' : 'Inativa'}</StatusBadge></button>
           {editing

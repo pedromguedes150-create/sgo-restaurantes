@@ -27,7 +27,7 @@ import type {
  */
 
 export const TIPO_LABEL: Record<CommandSessionType, string> = {
-  FAIXA_DO_DIA: 'Faixa do dia',
+  FAIXA_DO_DIA: 'Parcial',
   COMPLETA: 'Completa',
 };
 

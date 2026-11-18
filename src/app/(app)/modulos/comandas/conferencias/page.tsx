@@ -76,7 +76,7 @@ export default async function HistoricoDeConferenciasPage({
 
       <div className="space-y-2">
         {units.length > 1 && pilulas('unit', units.map((u) => ({ valor: u.id, label: shortUnitName(u.name) })))}
-        {pilulas('tipo', [{ valor: 'FAIXA_DO_DIA', label: 'Faixa do dia' }, { valor: 'COMPLETA', label: 'Completa' }])}
+        {pilulas('tipo', [{ valor: 'FAIXA_DO_DIA', label: 'Parcial' }, { valor: 'COMPLETA', label: 'Completa' }])}
         {pilulas('metodo', [{ valor: 'MANUAL', label: 'Manual' }, { valor: 'LEITOR', label: 'Leitor' }, { valor: 'MISTO', label: 'Manual + Leitor' }])}
         {pilulas('status', [{ valor: 'EM_ANDAMENTO', label: 'Em andamento' }, { valor: 'CONCLUIDA', label: 'Concluída' }, { valor: 'CANCELADA', label: 'Cancelada' }])}
       </div>
