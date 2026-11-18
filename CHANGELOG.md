@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.214.0 — 2026-11-18 (Metas — desconto da Escala de gerentes individual)
+
+- Na nota **por gerente** (Uso do SGO → Meta por usuário, e no cartão "Minha Meta do Mês"), o desconto de "sem folga cadastrada" passa a atingir **só o gerente que está sem folga**. Antes todos os gerentes da unidade perdiam os pontos quando um deles não tinha lançado.
+- A nota **da unidade** não muda: continua descontando por gerente sem folga.
+- Os demais descontos e os pesos seguem iguais.
+
 ## v1.213.0 — 2026-11-18 (Comandas — Parcial × Completa)
 
 - Em **Configurações → Comandas**, os selos "Madrugada" e "Só na semanal" passaram a se chamar **"Parcial e completa"** e **"Só na completa"**. No topo, um resumo mostra o resultado: ex. "Parcial: 1 a 300 · Completa: 1 a 500".

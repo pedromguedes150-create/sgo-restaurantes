@@ -75,7 +75,7 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
           <TabelaMetaPorUsuario usuarios={dados.usuarios} pesos={dados.pesosDaMeta} />
         </div>
         <p className="px-4 pb-3 text-xs text-ink-500">
-          Nota = Σ (peso × % alcançado) ÷ Σ pesos, menos os descontos (fora do prazo, gerente sem folga) — a mesma conta de Metas.
+          Nota = Σ (peso × % alcançado) ÷ Σ pesos, menos os descontos — a mesma conta de Metas. O desconto de “gerente sem folga” é individual: aqui só atinge quem está sem folga cadastrada no mês (na nota da unidade ele segue valendo).
           A nota é da UNIDADE: gerentes da mesma unidade têm a mesma nota, e quem cuida de mais de uma recebe a média. O supervisor não entra nesta conferência.
           Só componente com status Ativo pesa; os em homologação/monitoramento aparecem na composição da unidade, em Metas.
           Pesos em vigor: {dados.pesosDaMeta.length ? dados.pesosDaMeta.map((p) => `${rotuloCurto(p.key, p.name)} ${p.weight}`).join(' · ') : 'nenhum'} (Configuração da Meta).
