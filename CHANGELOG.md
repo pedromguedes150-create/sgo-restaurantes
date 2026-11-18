@@ -9,6 +9,17 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.215.0 — 2026-11-18 (Metas — nota individual do gerente, oficial em dezembro)
+
+- **A partir de dezembro/2026 a nota da bonificação de cada gerente e coordenador é individual.** Os pesos da Configuração da Meta são os mesmos; muda de onde vem o percentual em cinco componentes.
+- **Checklists, desperdício, comandas e cofre** contam só nos **dias de plantão** de cada gerente (Escala de gerentes: horário semanal, folgas e férias). Dia de folga não conta contra ele.
+- **Comunicados** contam as confirmações de leitura da própria pessoa.
+- **Participação:** o que os gerentes fizeram em cada dia é dividido entre quem estava de plantão. Quem fez menos de 25% da sua parte tem o componente reduzido na proporção. O que o caixa ou o supervisor fez conta para o dia e fica fora dessa divisão.
+- Treinamentos, avaliações, escala dos funcionários, cancelamentos, estoque e inventários seguem os da unidade.
+- **Em novembro nada muda na nota oficial:** a individual aparece como simulação, numa coluna ao lado em Metas → Uso do SGO e numa linha no cartão "Minha Meta do Mês".
+- Gerente sem horário na Escala de gerentes é tratado como de plantão todos os dias, e a tela avisa.
+- A nota **da unidade** (Metas, ranking, painel do supervisor) não mudou.
+
 ## v1.214.0 — 2026-11-18 (Metas — desconto da Escala de gerentes individual)
 
 - Na nota **por gerente** (Uso do SGO → Meta por usuário, e no cartão "Minha Meta do Mês"), o desconto de "sem folga cadastrada" passa a atingir **só o gerente que está sem folga**. Antes todos os gerentes da unidade perdiam os pontos quando um deles não tinha lançado.

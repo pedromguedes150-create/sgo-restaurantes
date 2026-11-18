@@ -57,3 +57,30 @@ describe('TabelaMetaPorUsuario', () => {
     expect((html.match(/data-testid="linha-meta-usuario"/g) ?? []).length).toBe(2);
   });
 });
+
+describe('TabelaMetaPorUsuario — nota individual (v1.215.0)', () => {
+  const r = { done: 8, missed: 2, scorePct: 80, diasDePlantao: 10, pctNosDias: 80, participacaoPct: 60, fatorPct: 100 };
+  const individual = { ...usuarios[0].meta!, scorePct: 62, individuais: [{ unitName: 'Jardim Teresópolis', key: 'TASKS', name: 'Checklists do dia', r }], semHorario: true };
+  const comSimulacao = [{ ...usuarios[0], metaComparada: individual }];
+  const comOficial = [{ ...usuarios[0], meta: individual, metaComparada: usuarios[0].meta }];
+  const render = (us: UsuarioUso[], modo: 'DESLIGADA' | 'SIMULACAO' | 'OFICIAL') => renderToString(React.createElement(TabelaMetaPorUsuario, { usuarios: us, pesos, modo })).split('<!-- -->').join('');
+
+  it('sem o modo, a tabela é a de sempre', () => {
+    expect(render(usuarios, 'DESLIGADA')).not.toContain('coluna-comparada');
+  });
+  it('em novembro a nota oficial é a herdada e a individual aparece como simulação', () => {
+    const html = render(comSimulacao, 'SIMULACAO');
+    expect(html).toContain('Individual (simulação)');
+    expect(html).toMatch(/data-testid="nota-comparada"[^>]*>62%/);
+    expect(html).toContain('Na simulação individual');
+    expect(html).toContain('80% nos seus 10 dia(s) de plantão');
+    expect(html).toContain('Sem horário na Escala de gerentes');
+  });
+  it('em dezembro a nota é a individual e a da unidade fica ao lado', () => {
+    const html = render(comOficial, 'OFICIAL');
+    expect(html).toContain('Nota da unidade');
+    expect(html).toMatch(/data-testid="nota-comparada"[^>]*>45%/);
+    expect(html).not.toContain('Na simulação individual');
+    expect(html).toContain('você fez 60% da sua parte');
+  });
+});

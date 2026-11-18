@@ -6,7 +6,9 @@ import type { Role } from '@prisma/client';
 import { componentesDaUnidade, piorComponente, pontualidade, resumirUso, type ResumoDoUso, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
 import { componentesDaMeta, descontosDaMeta } from '@/lib/metas/componentes';
 import { contaNaNota } from '@/lib/metas/pontuacao';
-import { metaDaUnidade, metaDaUnidadeDoUsuario, metaDoUsuario, type MetaDaUnidade, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
+import { metaDaUnidade, metaDaUnidadeDoUsuario, metaIndividualDaUnidade, metaDoUsuario, type MetaDaUnidade, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
+import { modoDaNotaIndividual, type FatosDaUnidade, type ModoIndividual } from '@/lib/metas/nota-individual';
+import { fatosDaUnidade } from '@/lib/metas/nota-individual-dados';
 import { emLotes, PARALELO_POR_UNIDADE } from '@/lib/async/em-lotes';
 
 /**
@@ -28,6 +30,8 @@ export interface UsoDoSgo {
   pesosDaMeta: PesoDaMeta[];
   /** v1.179.0 — a meta de cada unidade aberta em componentes (a mesma conta de Metas). */
   metasPorUnidade: MetaDaUnidade[];
+  /** v1.215.0 — como a nota individual vale neste mês: desligada, simulação (novembro/2026) ou oficial (dezembro em diante). */
+  modoIndividual: ModoIndividual;
 }
 
 /** Primeiro e último dia do mês em 'AAAA-MM-DD' (as folgas dos gerentes são gravadas como texto). */
@@ -65,16 +69,18 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
   /* A META por unidade, aberta em componentes — os MESMOS componentesDaMeta/descontosDaMeta que dão a nota em
      Metas e no painel do supervisor (v1.179.0). Em lotes de 4: cada unidade são ~12 consultas. */
   const { de, ate } = diasDoMes(yearMonth);
+  const modoIndividual = modoDaNotaIndividual(yearMonth);
   const [metasPorUnidade, folgas] = await Promise.all([
     emLotes(board, PARALELO_POR_UNIDADE, async (b) => {
-      const [comps, desc] = await Promise.all([componentesDaMeta(b.unitId, yearMonth), descontosDaMeta(b.unitId, yearMonth)]);
-      return { meta: metaDaUnidade(b.unitId, b.unitName, comps, desc.lista), pesos: comps.filter((c) => c.weight > 0 && contaNaNota(c)).map((c) => ({ key: c.key, name: c.name, weight: c.weight })) };
+      const [comps, desc, fatos] = await Promise.all([componentesDaMeta(b.unitId, yearMonth), descontosDaMeta(b.unitId, yearMonth), modoIndividual === 'DESLIGADA' ? undefined : fatosDaUnidade(b.unitId, yearMonth)]);
+      return { fatos, meta: metaDaUnidade(b.unitId, b.unitName, comps, desc.lista), pesos: comps.filter((c) => c.weight > 0 && contaNaNota(c)).map((c) => ({ key: c.key, name: c.name, weight: c.weight })) };
     }),
     prisma.managerLeave.findMany({ where: { userId: { in: userIds }, deletedAt: null, startDate: { lte: ate }, endDate: { gte: de } }, select: { userId: true } }),
   ]);
   /* Os pesos são globais (Configuração da Meta): a lista de qualquer unidade serve. */
   const pesosDaMeta: PesoDaMeta[] = metasPorUnidade[0]?.pesos ?? [];
   const metas = metasPorUnidade.map((m) => m.meta);
+  const fatosPorUnidade = new Map<string, FatosDaUnidade | undefined>(metasPorUnidade.map((m) => [m.meta.unitId, m.fatos]));
   const comFolga = new Set(folgas.map((f) => f.userId));
 
   const [acoesPorUnidadeUsuario, acoesPorUsuarioModulo, logins, tarefasPorUsuario] = await Promise.all([
@@ -112,6 +118,12 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
     const unidadesDoUsuario = membros.filter((m) => m.userId === u.id).map((m) => m.unitId);
     const concluidas = tarefasPorUsuario.find((t) => t.completedById === u.id && t.status === 'DONE')?._count._all ?? 0;
     const fora = tarefasPorUsuario.find((t) => t.completedById === u.id && t.status === 'LATE')?._count._all ?? 0;
+    /* v1.215.0 — duas leituras da mesma pessoa: HERDADA (a unidade, com o desconto da escala individual) e INDIVIDUAL
+       (plantão + participação). Dezembro/2026 em diante a individual é a oficial; em novembro ela é simulação. */
+    const minhas = metas.filter((m) => unidadesDoUsuario.includes(m.unitId));
+    const bonifica = PERFIS_DA_BONIFICACAO.includes(u.role);
+    const herdada = bonifica ? metaDoUsuario(minhas.map((m) => metaDaUnidadeDoUsuario(m, u.id)), pesosDaMeta) : null;
+    const individual = bonifica && modoIndividual !== 'DESLIGADA' ? metaDoUsuario(minhas.map((m) => metaIndividualDaUnidade(m, u.id, fatosPorUnidade.get(m.unitId))), pesosDaMeta) : null;
     return {
       userId: u.id, name: u.name, role: u.role, roleLabel: ROLE_LABELS[u.role] ?? u.role,
       unidades: membros.filter((m) => m.userId === u.id).map((m) => m.unit.name).sort((a, b) => a.localeCompare(b, 'pt-BR')),
@@ -120,9 +132,8 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
       tarefasConcluidas: concluidas,
       foraDoPrazo: fora,
       ultimoAcesso: u.lastLoginAt?.toISOString() ?? null,
-      /* A nota é da UNIDADE e o gerente a herda (média quando cuida de mais de uma) — decisão do Pedro, 30/10.
-         v1.214.0: o desconto da Escala de gerentes é INDIVIDUAL — só atinge quem está sem folga. */
-      meta: PERFIS_DA_BONIFICACAO.includes(u.role) ? metaDoUsuario(metas.filter((m) => unidadesDoUsuario.includes(m.unitId)).map((m) => metaDaUnidadeDoUsuario(m, u.id)), pesosDaMeta) : null,
+      meta: modoIndividual === 'OFICIAL' ? individual : herdada,
+      metaComparada: modoIndividual === 'OFICIAL' ? herdada : individual,
       folgaPropria: PERFIS_COM_FOLGA_PROPRIA.includes(u.role) ? comFolga.has(u.id) : null,
       pontualidade: pontualidade(concluidas, fora),
       pendentes: unidadesDoUsuario.reduce((s, id) => s + contagem(pendentesPorUnidade, id), 0),
@@ -131,5 +142,5 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
     };
   }).sort((a, b) => b.acoes - a.acoes || b.tarefasConcluidas - a.tarefasConcluidas || a.name.localeCompare(b.name, 'pt-BR'));
 
-  return { yearMonth, unidades: [...unidades].sort((a, b) => b.usagePct - a.usagePct || b.acoes - a.acoes), usuarios: usuariosUso, resumo: resumirUso(unidades, usuariosUso), pesosDaMeta, metasPorUnidade: metas };
+  return { yearMonth, unidades: [...unidades].sort((a, b) => b.usagePct - a.usagePct || b.acoes - a.acoes), usuarios: usuariosUso, resumo: resumirUso(unidades, usuariosUso), pesosDaMeta, metasPorUnidade: metas, modoIndividual };
 }

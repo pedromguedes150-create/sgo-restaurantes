@@ -1,4 +1,5 @@
 import { contaNaNota, pctDoComponente, pontuar, type ComponenteDaMeta, type DescontoDaMeta } from './pontuacao';
+import { aplicarIndividuais, individuaisDoGerente, semHorario, type FatosDaUnidade, type ResultadoIndividual } from './nota-individual';
 
 /**
  * META POR USUÁRIO (v1.179.0) — a nota da bonificação, pessoa por pessoa, SEM
@@ -25,6 +26,12 @@ import { contaNaNota, pctDoComponente, pontuar, type ComponenteDaMeta, type Desc
  * com peso seguem herdados da unidade (o passo seguinte, individual por
  * plantão/autoria, é proposta em aberto).
  *
+ * v1.215.0 (Daniel, 18/11) — NOTA INDIVIDUAL: com os fatos do mês
+ * (`nota-individual.ts`), checklists, desperdício, comandas e cofre entram
+ * pelos DIAS DE PLANTÃO do gerente (com participação mínima) e comunicados
+ * pelas confirmações dele. Os pesos são os mesmos; os demais componentes
+ * seguem os da unidade. Oficial em dezembro/2026; novembro é simulação.
+ *
  * Arquivo puro: nada de banco. `uso.ts` monta as `MetaDaUnidade` com os
  * mesmos `componentesDaMeta`/`descontosDaMeta` que dão a nota da unidade.
  */
@@ -37,6 +44,8 @@ export interface ComponenteDaNota {
   resolved: number;
   /** % alcançado no componente (feito ÷ devido). */
   scorePct: number;
+  /** v1.215.0 — só na nota individual: como o % desta pessoa foi medido. */
+  individual?: ResultadoIndividual;
 }
 
 export interface DescontoDaNota {
@@ -63,6 +72,10 @@ export interface MetaDaUnidade {
   notaSemIndividuais?: number;
   /** v1.214.0 — os descontos que têm dono: nome, % e quem. */
   descontosIndividuais?: { name: string; pct: number; userIds: string[] }[];
+  /** v1.215.0 — as listas de origem, para refazer a MESMA conta com os componentes da pessoa. */
+  base?: { componentes: ComponenteDaMeta[]; descontos: DescontoDaMeta[] };
+  /** v1.215.0 — a pessoa não tem horário cadastrado na Escala de gerentes (foi tratada como de plantão todo dia). */
+  semHorario?: boolean;
 }
 
 export interface PesoDaMeta { key: string; name: string; weight: number }
@@ -78,6 +91,9 @@ export interface MetaDoUsuario {
   unidades: { unitId: string; unitName: string; scorePct: number }[];
   /** v1.180.0 — os descontos NOMEADOS, unidade por unidade (quem está sem folga, quantas datas corrigidas). */
   descontos: { unitName: string; name: string; quantidade: number; pct: number; total: number; detalhe?: string }[];
+  /** v1.215.0 — os componentes medidos pela pessoa, unidade por unidade (vazio na nota herdada). */
+  individuais?: { unitName: string; key: string; name: string; r: ResultadoIndividual }[];
+  semHorario?: boolean;
 }
 
 /** A nota de uma unidade aberta em componentes e descontos — o mesmo `pontuar` da meta. */
@@ -86,6 +102,7 @@ export function metaDaUnidade(unitId: string, unitName: string, componentes: Com
   const comDescontos = pontuar(componentes, descontos);
   const comDono = descontos.filter((d) => d.individual && d.pct > 0);
   return {
+    base: { componentes, descontos },
     notaSemIndividuais: pontuar(componentes, descontos.filter((d) => !d.individual)).scorePct,
     descontosIndividuais: comDono.map((d) => ({ name: d.name, pct: d.pct, userIds: d.individual!.userIds })),
     unitId,
@@ -122,6 +139,28 @@ export function metaDaUnidadeDoUsuario(u: MetaDaUnidade, userId: string): MetaDa
   };
 }
 
+/**
+ * v1.215.0 — a unidade vista por UM gerente com a NOTA INDIVIDUAL: os
+ * componentes individuais saem dos fatos dele, os demais e os pesos ficam
+ * como estão, e a conta é o mesmo `pontuar`. Sem as listas de origem, ou se
+ * a pessoa não é gerente da unidade, cai na nota herdada (v1.214.0).
+ */
+export function metaIndividualDaUnidade(u: MetaDaUnidade, userId: string, fatos: FatosDaUnidade | undefined): MetaDaUnidade {
+  const ind = fatos ? individuaisDoGerente(fatos, userId) : null;
+  if (!u.base || !fatos || !ind) return metaDaUnidadeDoUsuario(u, userId);
+  const descontos = u.base.descontos.map((d) => {
+    if (!d.individual) return d;
+    const meu = d.individual.userIds.includes(userId);
+    return { name: d.name, pct: d.pct, quantidade: meu ? 1 : 0, detalhe: meu ? 'você está sem folga cadastrada no mês' : undefined };
+  });
+  const m = metaDaUnidade(u.unitId, u.unitName, aplicarIndividuais(u.base.componentes, ind), descontos);
+  return {
+    ...m,
+    semHorario: semHorario(fatos, userId),
+    componentes: m.componentes.map((c) => (ind[c.key] ? { ...c, individual: ind[c.key]! } : c)),
+  };
+}
+
 const media = (xs: number[]) => (xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : 0);
 
 /**
@@ -150,6 +189,8 @@ export function metaDoUsuario(unidades: MetaDaUnidade[], pesos: PesoDaMeta[]): M
     componentes,
     unidades: unidades.map((u) => ({ unitId: u.unitId, unitName: u.unitName, scorePct: u.scorePct })),
     descontos: unidades.flatMap((u) => u.descontos.map((d) => ({ unitName: u.unitName, ...d }))),
+    individuais: unidades.flatMap((u) => u.componentes.filter((c) => c.individual).map((c) => ({ unitName: u.unitName, key: c.key, name: c.name, r: c.individual! }))),
+    semHorario: unidades.some((u) => u.semHorario),
   };
 }
 
@@ -173,4 +214,21 @@ export function explicarNota(m: MetaDoUsuario): string {
   const desconto = m.descontoTotal > 0 ? ` · descontos −${m.descontoTotal} = ${m.scorePct}%` : '';
   const varias = m.unidades.length > 1 ? ` (média de ${m.unidades.length} unidades)` : '';
   return `${termos} ÷ ${soma} = ${m.notaAntesDosDescontos}%${desconto}${varias}`;
+}
+
+/**
+ * v1.215.0 — como cada componente individual foi medido, em frases:
+ * "Checklists: 92% nos seus 18 dias de plantão · sua participação 40% da sua parte".
+ */
+export function explicarIndividual(m: MetaDoUsuario): string[] {
+  const varias = m.unidades.length > 1;
+  return (m.individuais ?? []).map(({ unitName, key, name, r }) => {
+    const onde = varias ? ` (${unitName})` : '';
+    const rotulo = rotuloCurto(key, name);
+    if (r.diasDePlantao == null) return `${rotulo}${onde}: ${r.done} de ${r.done + r.missed} confirmado(s) por você no prazo = ${r.scorePct}%`;
+    const base = `${rotulo}${onde}: ${r.pctNosDias}% nos seus ${r.diasDePlantao} dia(s) de plantão`;
+    if (r.participacaoPct == null) return `${base} · nada feito por gerente para dividir`;
+    if (r.fatorPct >= 100) return `${base} · você fez ${r.participacaoPct}% da sua parte`;
+    return `${base} · você fez ${r.participacaoPct}% da sua parte (mínimo 25%) → fica ${r.scorePct}%`;
+  });
 }

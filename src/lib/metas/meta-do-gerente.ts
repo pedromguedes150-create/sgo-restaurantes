@@ -1,5 +1,6 @@
 import { faixaDaMeta, type Faixa } from './graficos';
 import type { MetaDaUnidade } from './meta-por-usuario';
+import type { ResultadoIndividual } from './nota-individual';
 
 /**
  * A META NO INÍCIO DO GERENTE (v1.207.0) — o cartão "Minha Meta do Mês" passa a
@@ -28,6 +29,8 @@ export interface ItemDaMeta {
   /** Pontos da nota (0–100) que este componente deixou de entregar. */
   pontosPerdidos: number;
   faixa: Faixa;
+  /** v1.215.0 — na nota individual: plantão e participação deste componente. */
+  individual?: ResultadoIndividual;
 }
 
 export interface MetaDaUnidadeNoInicio {
@@ -39,6 +42,8 @@ export interface MetaDaUnidadeNoInicio {
   descontos: MetaDaUnidade['descontos'];
   /** Quantos componentes estão abaixo de 80% (âmbar ou vermelho). */
   abaixoDaMeta: number;
+  /** v1.215.0 — sem horário na Escala de gerentes: contado como de plantão todos os dias. */
+  semHorario?: boolean;
 }
 
 export interface MetaNoInicio {
@@ -59,10 +64,11 @@ export function metaNoInicio(unidades: MetaDaUnidade[]): MetaNoInicio {
       key: c.key, name: c.name, weight: c.weight, scorePct: c.scorePct, done: c.done, resolved: c.resolved,
       pontosPerdidos: pesoTotal ? umaCasa((c.weight * (100 - c.scorePct)) / pesoTotal) : 0,
       faixa: faixaDaMeta(c.scorePct),
+      ...(c.individual ? { individual: c.individual } : {}),
     }));
     return {
       unitId: u.unitId, unitName: u.unitName, scorePct: u.scorePct, notaAntesDosDescontos: u.notaAntesDosDescontos,
-      itens, descontos: u.descontos, abaixoDaMeta: itens.filter((i) => i.faixa !== 'VERDE').length,
+      itens, descontos: u.descontos, semHorario: u.semHorario, abaixoDaMeta: itens.filter((i) => i.faixa !== 'VERDE').length,
     };
   });
   const scorePct = us.length ? Math.round(us.reduce((s, u) => s + u.scorePct, 0) / us.length) : 0;
@@ -70,3 +76,13 @@ export function metaNoInicio(unidades: MetaDaUnidade[]): MetaNoInicio {
 }
 
 export const pontosBR = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+
+/** v1.215.0 — a linha de apoio do item individual no cartão do gerente. */
+export function textoDoPlantao(r: ResultadoIndividual): string {
+  if (r.diasDePlantao == null) return 'Conta o que VOCÊ confirmou';
+  const base = `Conta só os seus ${r.diasDePlantao} dia(s) de plantão`;
+  if (r.participacaoPct == null) return base;
+  return r.fatorPct >= 100
+    ? `${base} · você fez ${r.participacaoPct}% da sua parte`
+    : `${base} · você fez só ${r.participacaoPct}% da sua parte (mínimo 25%): o item foi reduzido`;
+}
