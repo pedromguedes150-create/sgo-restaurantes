@@ -101,6 +101,7 @@ model Unit {
   gasReceipts               GasReceipt[]
   oilCollections            OilCollection[]
   cashExpenses              CashExpense[]
+  candidateResumes          CandidateResume[]
   inventoryItems            InventoryItem[]
   inventoryMovements        InventoryMovement[]
   medicalCertificates       MedicalCertificate[]
@@ -197,6 +198,7 @@ model User {
   suppliersCreated        Supplier[]               @relation("SupplierBy")
   oilCollections          OilCollection[]          @relation("OilBy")
   cashExpensesCreated     CashExpense[]            @relation("ExpenseBy")
+  candidateResumes        CandidateResume[]        @relation("ResumeBy")
   cashExpensesRefunded    CashExpense[]            @relation("ExpenseRefundBy")
   prepStandardsCreated    PrepStandard[]           @relation("PrepStandardBy")
   prepStandardsUpdated    PrepStandard[]           @relation("PrepStandardUpdatedBy")
@@ -2737,6 +2739,8 @@ model ApiClient {
   active      Boolean   @default(true)
   revokedAt   DateTime?
   lastUsedAt  DateTime?
+  /// v1.212.0 — este sistema pode ler a Central de Currículos (dados de candidato). Nasce desligado.
+  canReadResumes Boolean @default(false)
   createdById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -5502,4 +5506,99 @@ model CommandScheduleException {
 
   @@unique([unitId, date])
   @@map("command_schedule_exceptions")
+}
+
+/// ───────── Central de Currículos (v1.212.0) ─────────
+/// Situação do candidato. Só o RH muda (evento de entrada); o SGO grava RECEBIDO ao encaminhar.
+enum ResumeStatus {
+  RECEBIDO
+  EM_ANALISE
+  PRIMEIRA_ETAPA
+  ENTREVISTA_AGENDADA
+  AVALIACAO_FINAL
+  APROVADO
+  REPROVADO
+  BANCO_DE_TALENTOS
+  DESISTENCIA
+  CONTRATADO
+}
+
+enum ResumeEventKind {
+  /// O gerente encaminhou.
+  ENCAMINHADO
+  /// O RH mudou a situação (evento de entrada).
+  SITUACAO
+  /// O sistema do RH baixou o arquivo pela API (primeira leitura).
+  LEITURA_RH
+}
+
+/// Cargos oferecidos no encaminhamento — lista global, editada pelo Admin.
+model ResumeJobTitle {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@map("resume_job_titles")
+}
+
+/// Um currículo encaminhado ao RH por uma unidade. Independente dos atestados.
+model CandidateResume {
+  id             String       @id @default(cuid())
+  unitId         String
+  candidateName  String
+  /// Só dígitos (DDD + número).
+  phone          String
+  jobTitleId     String?
+  /// Nome do cargo CONGELADO no encaminhamento.
+  jobTitleName   String
+  /// Caminho privado do arquivo (PDF/JPG/PNG) — servido só por rota com escopo.
+  attachmentPath String
+  attachmentMime String
+  note           String?
+  status         ResumeStatus @default(RECEBIDO)
+  /// Observação do RH que acompanha a situação atual.
+  statusNote     String?
+  statusAt       DateTime     @default(now())
+  /// Data/hora da entrevista, quando o RH informar.
+  interviewAt    DateTime?
+  /// Id do candidato no sistema do RH, quando ele informar.
+  rhCandidateId  String?
+  /// Primeira vez que o RH baixou o arquivo pela API.
+  rhReadAt       DateTime?
+  /// Último evento recebido do RH para este currículo.
+  rhSyncedAt     DateTime?
+  createdById    String?
+  createdByName  String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  unit      Unit                   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  createdBy User?                  @relation("ResumeBy", fields: [createdById], references: [id], onDelete: SetNull)
+  events    CandidateResumeEvent[]
+
+  @@index([unitId, createdAt])
+  @@index([status])
+  @@index([rhCandidateId])
+  @@map("candidate_resumes")
+}
+
+/// Linha do tempo do currículo — imutável.
+model CandidateResumeEvent {
+  id         String          @id @default(cuid())
+  resumeId   String
+  kind       ResumeEventKind
+  fromStatus ResumeStatus?
+  toStatus   ResumeStatus?
+  note       String?
+  /// "GERENTE" (encaminhou) ou "RH" (evento recebido / leitura).
+  origem     String
+  actorName  String?
+  createdAt  DateTime        @default(now())
+
+  resume CandidateResume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId, createdAt])
+  @@map("candidate_resume_events")
 }

@@ -26,7 +26,8 @@ export async function GET(req: Request, { params }: { params: { path: string[] }
 
   // sanitiza cada segmento (sem "..", sem barras) e ignora um prefixo "uploads"
   const segs = (params.path ?? []).filter((s) => s && s !== 'uploads' && !s.includes('..') && !s.includes('/') && !s.includes('\\'));
-  if (segs.length === 0 || segs[0] === '_derivadas') return new Response('Inválido', { status: 400 });
+  /* `_privado` (currículos, v1.212.0) só sai pelas rotas próprias, que conferem a unidade. */
+  if (segs.length === 0 || segs[0] === '_derivadas' || segs[0] === '_privado') return new Response('Inválido', { status: 400 });
   const full = path.join(UPLOAD_ROOT, ...segs);
   if (!full.startsWith(UPLOAD_ROOT)) return new Response('Inválido', { status: 400 });
 

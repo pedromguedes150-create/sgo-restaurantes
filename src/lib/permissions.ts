@@ -120,6 +120,10 @@ const BASE: ModuleDef[] = [
   { key: 'CERTIFICATES', label: 'Atestados e afins', nav: '/modulos/atestados' },
   { key: 'CERTIFICATES_REPORT', label: 'Relatório de atestados e afins', nav: '/modulos/atestados/relatorio', parent: 'CERTIFICATES' },
 
+  /* Central de Currículos (v1.212.0): o gerente encaminha candidato + arquivo e acompanha;
+     a situação só muda pelo evento de entrada do RH. */
+  { key: 'RESUMES', label: 'Central de Currículos', nav: '/modulos/curriculos' },
+
   { key: 'TERMINATIONS', label: 'Desligamentos', nav: '/modulos/desligamentos' },
   /* Demanda ao RH (v1.168.0): pedido/dúvida do gerente enviado ao GBF-RH pela
      fila de saída; o gerente acompanha número, prazo e situação. */
@@ -192,6 +196,7 @@ const BASE: ModuleDef[] = [
   { key: 'CONFIG_UTENSILS', label: 'Utensílios (lista padrão do inventário)', nav: '/configuracoes/utensilios', parent: 'CONFIG' },
   // v1.198.0 — Central de Atestados e Afins: nomenclaturas, nome no RH, regras com vigência
   { key: 'CONFIG_CERTIFICATES', label: 'Atestados e afins (nomenclaturas e regras)', nav: '/configuracoes/atestados', parent: 'CONFIG' },
+  { key: 'CONFIG_RESUMES', label: 'Currículos (cargos do encaminhamento)', nav: '/configuracoes/curriculos', parent: 'CONFIG' },
   { key: 'CONFIG_INTEGRATIONS', label: 'APIs e integrações', nav: '/configuracoes/integracoes', parent: 'CONFIG' },
   { key: 'CONFIG_RH_DIAG', label: 'Diagnóstico do RH', nav: '/configuracoes/integracoes/diagnostico', parent: 'CONFIG_INTEGRATIONS' },
   { key: 'CONFIG_RH_SAIDA', label: 'Envios ao RH (fila)', nav: '/configuracoes/integracoes/envios-rh', parent: 'CONFIG_INTEGRATIONS' },
@@ -278,6 +283,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   CONFIG_CD_SECTORS: ['SUPERVISOR'], // setores do CD: idem — quem cuida do catálogo cuida do setor
   UNIT_PANEL: ['SUPERVISOR', 'COORDINATOR', 'MANAGER'], // painel operacional da unidade
   TRAINING_PANEL: ['SUPERVISOR'], // acompanhamento de treinamentos da rede: gestão (Admin/CEO sempre); o gerente segue no quadro da unidade
+  RESUMES: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'], // currículos: quem opera a unidade encaminha; Admin/CEO sempre
   RH_DEMANDS: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'], // demanda ao RH: quem opera a unidade pede; Admin/CEO sempre
 };
 

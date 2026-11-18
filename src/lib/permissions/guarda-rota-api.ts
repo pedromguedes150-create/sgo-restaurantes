@@ -62,6 +62,12 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/pedidos/recebidos': { modulo: 'ORDERS_INBOX', exigir: 'editar' },
   '/api/auditoria-operacional/export': { modulo: 'OPERATIONAL_AUDIT', exigir: 'ver' },
 
+  /* v1.212.0 — Central de Currículos: encaminhar é 'editar'; ver a linha do tempo e o arquivo é 'ver' (+ escopo por unidade na lib) */
+  '/api/curriculos': { modulo: 'RESUMES', exigir: 'editar' },
+  '/api/curriculos/[id]': { modulo: 'RESUMES', exigir: 'ver' },
+  '/api/curriculos/[id]/anexo': { modulo: 'RESUMES', exigir: 'ver' },
+  '/api/curriculos/cargos': { modulo: 'CONFIG_RESUMES', exigir: 'editar' },
+
   '/api/checklist-forms': { modulo: 'CHECKLIST_FORMS', exigir: 'editar' },
   '/api/checklist-models/import': { modulo: 'CONFIG_MODELS', exigir: 'editar' },
   '/api/checklist-models/export': { modulo: 'CONFIG_MODELS', exigir: 'ver' },
@@ -256,6 +262,8 @@ export const FORA_DA_MATRIZ: Record<string, string> = {
   '/api/v1/metas': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — ranking de metas (v1.167.0)',
   '/api/v1/uso': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — painel de uso (v1.167.0)',
   '/api/v1/atestados/[id]/anexo': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — o arquivo do atestado (fileUrl, v1.190.0)',
+  '/api/v1/curriculos': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey + chave com `canReadResumes` (v1.212.0) — currículos para o sistema do RH',
+  '/api/v1/curriculos/[id]/anexo': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey + chave com `canReadResumes` (v1.212.0) — o arquivo do currículo',
   '/api/v1/rh-diagnostico': 'API Global do SGO — máquina-a-máquina, só GET, autenticada por X-API-Key em comApiKey (src/lib/api-global/guarda.ts) — diagnóstico do RH (v1.167.0)',
   '/api/lgpd/collaborator/[id]/export': 'LGPD — só ADMIN/CEO, checado no próprio handler (lgpd/collaborator/[id]/export/route.ts); não há módulo LGPD na matriz',
   '/api/entry-date': 'editEntryDate (src/lib/late-entry.ts): só ADMIN/SUPERVISOR + canAccessUnit do lançamento',

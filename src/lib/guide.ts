@@ -1656,6 +1656,22 @@ export const GUIDE: GuideSection[] = [
         ],
       },
       {
+        id: 'curriculos',
+        title: 'Central de Currículos — encaminhar candidatos ao RH',
+        roles: MANAGERLINE,
+        summary: 'Cadastre o candidato, anexe o currículo e acompanhe a situação que o RH informa.',
+        steps: [
+          'CENTRAL DE CURRÍCULOS (v1.212.0): em Pessoas → Central de Currículos, toque em "Novo encaminhamento". Informe o nome completo e o telefone do candidato, escolha o cargo pretendido e anexe o currículo — "Tirar foto" abre a câmera do celular; "Escolher arquivo" aceita PDF, JPG ou PNG (até 15 MB). A unidade é a sua; só quem cuida de mais de uma escolhe.',
+          'Toque em "Encaminhar ao RH". O currículo entra na lista com a situação "Recebido".',
+          'VOCÊ NÃO MUDA A SITUAÇÃO: quem analisa é o RH, no sistema dele. Quando o RH atualiza (em análise, entrevista agendada, aprovado, contratado…), a situação muda aqui sozinha e você recebe um aviso. Entrevista agendada mostra a data e a hora.',
+          'Os cartões do topo (Recebidos, Em análise, Entrevistas, Aprovados, Contratados) filtram a lista ao toque. Use a busca por nome ou telefone.',
+          'Toque num candidato para abrir a ficha: situação atual, observação do RH, o currículo e o histórico de cada etapa.',
+          'O mesmo telefone para o mesmo cargo não é aceito duas vezes na mesma semana (evita envio repetido).',
+          'Enquanto o RH não ligar a integração, a tela avisa "O RH ainda não está conectado" e os currículos ficam guardados como "Recebido".',
+          'ADMINISTRADOR: os cargos da lista são editados em Configurações → Currículos. A leitura dos currículos pelo sistema do RH é liberada na chave dele em Configurações → APIs & Integrações ("Liberar currículos").',
+        ],
+      },
+      {
         id: 'atestados',
         title: 'Central de Atestados e Afins — lançar um documento',
         roles: MANAGERLINE,

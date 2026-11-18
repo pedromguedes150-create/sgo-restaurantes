@@ -148,3 +148,10 @@ fábrica/CD, o caminho natural é **o mesmo**: `POST /api/integracoes/rh/<evento
 `RH_INBOUND_TOKEN`. Hoje `inclusao`, `desligamento` e `atestado-situacao` (v1.197.0) alteram dados. Quando o RH definir o
 formato de `alteracao` e `ferias`, eles entram em `src/lib/rh/inbound.ts` com o mesmo registro e a
 mesma autenticação — sem mudar o que já funciona.
+
+
+## Situação de currículo — `POST /api/integracoes/rh/curriculo-situacao` (v1.212.0)
+
+Mesma porta e mesmo token dos eventos acima. É como o RH devolve ao SGO a situação de um
+candidato da Central de Currículos. Contrato completo (leitura dos currículos + este evento) em
+[`integracao-rh-curriculos.md`](integracao-rh-curriculos.md).
