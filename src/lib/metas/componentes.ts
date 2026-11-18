@@ -86,7 +86,7 @@ export async function descontosDaMeta(unitId: string, yearMonth: string): Promis
   return {
     lista: [
       { name: 'Fora do prazo', quantidade: lateCount, pct: penaltyPct, detalhe: lateCount > 0 ? `${lateCount} lançamento(s) com data corrigida ou lançado(s) pela supervisão` : undefined },
-      { name: 'Escala de gerentes', quantidade: mlStats.semFolga, pct: mlPct, detalhe: mlStats.nomesSemFolga.length ? `sem folga cadastrada: ${mlStats.nomesSemFolga.join(', ')}` : undefined },
+      { name: 'Escala de gerentes', quantidade: mlStats.semFolga, pct: mlPct, detalhe: mlStats.nomesSemFolga.length ? `sem folga cadastrada: ${mlStats.nomesSemFolga.join(', ')}` : undefined, individual: { userIds: mlStats.idsSemFolga } },
     ],
     lateEntry: { count: lateCount, pct: penaltyPct },
     managerLeave: { gerentes: mlStats.gerentes, semFolga: mlStats.semFolga, nomesSemFolga: mlStats.nomesSemFolga, pct: mlPct },

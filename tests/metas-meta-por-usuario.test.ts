@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { explicarNota, metaDaUnidade, metaDoUsuario, rotuloCurto, type MetaDaUnidade, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
+import { explicarNota, metaDaUnidade, metaDaUnidadeDoUsuario, metaDoUsuario, rotuloCurto, type MetaDaUnidade, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
 import { pontuar, type ComponenteDaMeta } from '@/lib/metas/pontuacao';
 
 /**
@@ -71,5 +71,44 @@ describe('explicarNota', () => {
   it('rótulo curto conhecido ou o nome que veio', () => {
     expect(rotuloCurto('WASTE', 'Desperdício diário (cobertura)')).toBe('Desperdício');
     expect(rotuloCurto('XPTO', 'Outro')).toBe('Outro');
+  });
+});
+
+describe('desconto com dono (v1.214.0): a Escala de gerentes só atinge quem está sem folga', () => {
+  /* Vivendas: quatro gerentes, só a Cristina sem folga. */
+  const comps = [c('TASKS', 50, 12, 8), c('WASTE', 40, 12, 8)];
+  const descontos = [
+    { name: 'Fora do prazo', quantidade: 1, pct: 2 },
+    { name: 'Escala de gerentes', quantidade: 1, pct: 5, detalhe: 'sem folga cadastrada: Cristina', individual: { userIds: ['cristina'] } },
+  ];
+  const vivendas = metaDaUnidade('v', 'Vivendas', comps, descontos);
+
+  it('a nota da UNIDADE não muda: segue com os dois descontos', () => {
+    expect(vivendas.scorePct).toBe(pontuar(comps, descontos).scorePct); // 60 − 2 − 5 = 53
+    expect(vivendas.scorePct).toBe(53);
+  });
+  it('quem tem folga cadastrada não perde os 5 pontos; o desconto da unidade (fora do prazo) continua para todos', () => {
+    const amos = metaDaUnidadeDoUsuario(vivendas, 'amos');
+    expect(amos.scorePct).toBe(58);
+    expect(amos.descontos.map((d) => d.name)).toEqual(['Fora do prazo']);
+    expect(metaDoUsuario([amos], pesos)).toMatchObject({ scorePct: 58, notaAntesDosDescontos: 60, descontoTotal: 2 });
+  });
+  it('quem está sem folga perde os 5 pontos, uma vez, com o motivo dito a ela', () => {
+    const cris = metaDaUnidadeDoUsuario(vivendas, 'cristina');
+    expect(cris.scorePct).toBe(53);
+    expect(cris.descontos.find((d) => d.name === 'Escala de gerentes')).toMatchObject({ quantidade: 1, total: 5, detalhe: 'você está sem folga cadastrada no mês' });
+  });
+  it('dois sem folga: a unidade perde 10, cada um deles perde 5 e os outros nada', () => {
+    const d2 = [{ name: 'Escala de gerentes', quantidade: 2, pct: 5, individual: { userIds: ['a', 'b'] } }];
+    const u = metaDaUnidade('v', 'Vivendas', comps, d2);
+    expect(u.scorePct).toBe(50);
+    expect(metaDaUnidadeDoUsuario(u, 'a').scorePct).toBe(55);
+    expect(metaDaUnidadeDoUsuario(u, 'c').scorePct).toBe(60);
+  });
+  it('nunca fica negativa; unidade montada sem a informação volta como está', () => {
+    const baixa = metaDaUnidade('v', 'V', [c('TASKS', 50, 0, 10)], [{ name: 'Escala de gerentes', quantidade: 1, pct: 5, individual: { userIds: ['x'] } }]);
+    expect(metaDaUnidadeDoUsuario(baixa, 'x').scorePct).toBe(0);
+    const antiga: MetaDaUnidade = { unitId: 'u', unitName: 'U', scorePct: 40, notaAntesDosDescontos: 45, componentes: [], descontos: [] };
+    expect(metaDaUnidadeDoUsuario(antiga, 'x')).toBe(antiga);
   });
 });

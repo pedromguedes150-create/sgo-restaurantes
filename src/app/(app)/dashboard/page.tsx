@@ -15,6 +15,7 @@ import { SgoBar } from '@/components/sgo/sgo-bar';
 import { ProgressRing } from '@/components/dashboard/progress-ring';
 import { CentralOperacional, AlertasDaRede } from '@/components/dashboard/central-da-rede';
 import { AcessosRapidos } from '@/components/dashboard/acessos-rapidos';
+import { metaDaUnidadeDoUsuario } from '@/lib/metas/meta-por-usuario';
 import { metaNoInicio, pontosBR } from '@/lib/metas/meta-do-gerente';
 import { shortUnitName } from '@/lib/unit-name';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
@@ -84,7 +85,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       getCentralDaRede(user, daUnidade, now),
     ]);
     const areas = await montarMenu(user.role, (href) => permitido.has(href));
-    return <HomeDoGerente nome={user.name} overviews={overviews} alertas={central.alertas} areas={areas} />;
+    return <HomeDoGerente nome={user.name} userId={user.id} overviews={overviews} alertas={central.alertas} areas={areas} />;
   }
 
   const central = await getCentralDaRede(user, daUnidade, now);
@@ -112,15 +113,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
  * rede não entra aqui — ele não responde por ela.
  */
 function HomeDoGerente({
-  nome, overviews, alertas, areas,
+  nome, userId, overviews, alertas, areas,
 }: {
   nome: string;
+  /** v1.214.0 — o desconto da Escala de gerentes só aparece para quem está sem folga. */
+  userId: string;
   overviews: Awaited<ReturnType<typeof getUnitsOverview>>;
   alertas: Awaited<ReturnType<typeof getCentralDaRede>>['alertas'];
   areas: Awaited<ReturnType<typeof montarMenu>>;
 }) {
   const agg = aggregateDay(overviews);
-  const meta = metaNoInicio(overviews.map((o) => o.meta));
+  const meta = metaNoInicio(overviews.map((o) => metaDaUnidadeDoUsuario(o.meta, userId)));
   const TOM = { VERDE: 'green', AMBAR: 'amber', VERMELHO: 'red' } as const;
   const COR = { VERDE: 'var(--sgo-ok)', AMBAR: 'var(--sgo-warn)', VERMELHO: 'var(--sgo-bad)' } as const;
   const ROTULO = { VERDE: 'Na meta', AMBAR: 'Atenção', VERMELHO: 'Crítico' } as const;

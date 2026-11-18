@@ -6,7 +6,7 @@ import type { Role } from '@prisma/client';
 import { componentesDaUnidade, piorComponente, pontualidade, resumirUso, type ResumoDoUso, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
 import { componentesDaMeta, descontosDaMeta } from '@/lib/metas/componentes';
 import { contaNaNota } from '@/lib/metas/pontuacao';
-import { metaDaUnidade, metaDoUsuario, type MetaDaUnidade, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
+import { metaDaUnidade, metaDaUnidadeDoUsuario, metaDoUsuario, type MetaDaUnidade, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
 import { emLotes, PARALELO_POR_UNIDADE } from '@/lib/async/em-lotes';
 
 /**
@@ -120,8 +120,9 @@ export async function getUsoDoSgo(user: SessionUser, yearMonth: string): Promise
       tarefasConcluidas: concluidas,
       foraDoPrazo: fora,
       ultimoAcesso: u.lastLoginAt?.toISOString() ?? null,
-      /* A nota é da UNIDADE e o gerente a herda (média quando cuida de mais de uma) — decisão do Pedro, 30/10. */
-      meta: PERFIS_DA_BONIFICACAO.includes(u.role) ? metaDoUsuario(metas.filter((m) => unidadesDoUsuario.includes(m.unitId)), pesosDaMeta) : null,
+      /* A nota é da UNIDADE e o gerente a herda (média quando cuida de mais de uma) — decisão do Pedro, 30/10.
+         v1.214.0: o desconto da Escala de gerentes é INDIVIDUAL — só atinge quem está sem folga. */
+      meta: PERFIS_DA_BONIFICACAO.includes(u.role) ? metaDoUsuario(metas.filter((m) => unidadesDoUsuario.includes(m.unitId)).map((m) => metaDaUnidadeDoUsuario(m, u.id)), pesosDaMeta) : null,
       folgaPropria: PERFIS_COM_FOLGA_PROPRIA.includes(u.role) ? comFolga.has(u.id) : null,
       pontualidade: pontualidade(concluidas, fora),
       pendentes: unidadesDoUsuario.reduce((s, id) => s + contagem(pendentesPorUnidade, id), 0),

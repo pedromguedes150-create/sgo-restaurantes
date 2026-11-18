@@ -58,6 +58,11 @@ export interface DescontoDaMeta {
   pct: number;
   /** v1.180.0 — o que descontou, nomeado (quem está sem folga, quantas datas corrigidas). */
   detalhe?: string;
+  /**
+   * v1.214.0 — desconto que tem DONO: na nota da UNIDADE ele segue valendo
+   * `quantidade` vezes; na nota de cada PESSOA só atinge quem está na lista.
+   */
+  individual?: { userIds: string[] };
 }
 
 export interface Pontuacao { scorePct: number; doneWeight: number; resolvedWeight: number }

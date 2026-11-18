@@ -17,6 +17,14 @@ import { contaNaNota, pctDoComponente, pontuar, type ComponenteDaMeta, type Desc
  * trabalhou menos dias. O que é individual de verdade (tarefas concluídas
  * pelo próprio usuário, a própria folga) aparece AO LADO, não dentro da nota.
  *
+ * v1.214.0 (Daniel, 18/11) — DESCONTO COM DONO: o desconto da Escala de
+ * gerentes ("sem folga cadastrada") é de quem não cadastrou. Na nota da
+ * UNIDADE nada muda (segue descontando por gerente sem folga); na nota de cada
+ * PESSOA ele só atinge quem está sem folga — antes os quatro gerentes do
+ * Vivendas perdiam 5 pontos porque um deles não tinha lançado. Os componentes
+ * com peso seguem herdados da unidade (o passo seguinte, individual por
+ * plantão/autoria, é proposta em aberto).
+ *
  * Arquivo puro: nada de banco. `uso.ts` monta as `MetaDaUnidade` com os
  * mesmos `componentesDaMeta`/`descontosDaMeta` que dão a nota da unidade.
  */
@@ -51,6 +59,10 @@ export interface MetaDaUnidade {
   /** Só o que pesou: peso > 0 e algo resolvido no mês. */
   componentes: ComponenteDaNota[];
   descontos: DescontoDaNota[];
+  /** v1.214.0 — a nota só com os descontos da unidade (sem os que têm dono). */
+  notaSemIndividuais?: number;
+  /** v1.214.0 — os descontos que têm dono: nome, % e quem. */
+  descontosIndividuais?: { name: string; pct: number; userIds: string[] }[];
 }
 
 export interface PesoDaMeta { key: string; name: string; weight: number }
@@ -72,7 +84,10 @@ export interface MetaDoUsuario {
 export function metaDaUnidade(unitId: string, unitName: string, componentes: ComponenteDaMeta[], descontos: DescontoDaMeta[]): MetaDaUnidade {
   const semDescontos = pontuar(componentes, []);
   const comDescontos = pontuar(componentes, descontos);
+  const comDono = descontos.filter((d) => d.individual && d.pct > 0);
   return {
+    notaSemIndividuais: pontuar(componentes, descontos.filter((d) => !d.individual)).scorePct,
+    descontosIndividuais: comDono.map((d) => ({ name: d.name, pct: d.pct, userIds: d.individual!.userIds })),
     unitId,
     unitName,
     scorePct: comDescontos.scorePct,
@@ -84,6 +99,26 @@ export function metaDaUnidade(unitId: string, unitName: string, componentes: Com
     descontos: descontos
       .filter((d) => d.quantidade > 0 && d.pct > 0)
       .map((d) => ({ name: d.name, quantidade: d.quantidade, pct: d.pct, total: Math.round(d.quantidade * d.pct), detalhe: d.detalhe })),
+  };
+}
+
+/**
+ * v1.214.0 — a mesma unidade vista por UMA pessoa: os descontos com dono só
+ * entram se ela for a dona. Unidade montada sem essa informação (versão
+ * anterior, teste) volta como está.
+ */
+export function metaDaUnidadeDoUsuario(u: MetaDaUnidade, userId: string): MetaDaUnidade {
+  if (u.notaSemIndividuais == null || !u.descontosIndividuais) return u;
+  const nomes = new Set(u.descontosIndividuais.map((d) => d.name));
+  const meus = u.descontosIndividuais.filter((d) => d.userIds.includes(userId));
+  const scorePct = Math.max(0, Math.round(meus.reduce((nota, d) => nota - d.pct, u.notaSemIndividuais)));
+  return {
+    ...u,
+    scorePct,
+    descontos: [
+      ...u.descontos.filter((d) => !nomes.has(d.name)),
+      ...meus.map((d) => ({ name: d.name, quantidade: 1, pct: d.pct, total: Math.round(d.pct), detalhe: 'você está sem folga cadastrada no mês' })),
+    ],
   };
 }
 
