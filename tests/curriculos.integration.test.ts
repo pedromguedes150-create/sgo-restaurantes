@@ -102,7 +102,7 @@ describe('encaminhar', () => {
       expect(c?.rhSyncedAt).toBeTruthy();
       expect(c?.events.map((e) => `${e.kind}:${e.toStatus}`)).toEqual(['ENCAMINHADO:RECEBIDO', 'SITUACAO:ENTREVISTA_AGENDADA']);
       const aviso = await prisma.notification.findFirst({ where: { userId: gerA.id, link: { contains: id } } });
-      expect(aviso?.title).toBe('Currículo — Entrevista agendada');
+      expect(aviso?.title).toBe('Currículo — Entrevista técnica');
       expect((await indicadoresDosCurriculos(gerA)).entrevista).toBe(1);
     });
     it('o mesmo evento de novo não duplica histórico nem aviso', async () => {

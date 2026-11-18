@@ -5521,6 +5521,8 @@ enum ResumeStatus {
   BANCO_DE_TALENTOS
   DESISTENCIA
   CONTRATADO
+  /// v1.216.0 — exame/documentação de admissão em andamento.
+  ADMISSIONAL
 }
 
 enum ResumeEventKind {
