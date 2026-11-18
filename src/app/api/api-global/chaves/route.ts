@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
-import { alterarChave, criarChave, type AcaoNaChave } from '@/lib/api-global/chaves';
+import { alterarChave, criarChave, definirLeituraDeCurriculos, type AcaoNaChave } from '@/lib/api-global/chaves';
 
 /**
  * Administração das chaves da API Global (v1.129.0) — sessão do Admin/CEO.
  * POST  { name, description? }        → cria o sistema e devolve a chave UMA vez
- * PATCH { id, acao: ativar|desativar|revogar }
+ * PATCH { id, acao: ativar|desativar|revogar|liberarCurriculos|bloquearCurriculos }
  */
 export async function POST(req: Request) {
   const user = await getSessionUser();
@@ -28,8 +28,11 @@ export async function PATCH(req: Request) {
   const negado = await guardaDaRota(user.role, req);
   if (negado) return negado;
   const b = await req.json().catch(() => null);
-  if (!b?.id || !ACOES.includes(b.acao)) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
-  const r = await alterarChave(user, String(b.id), b.acao as AcaoNaChave, requestContext(req));
+  const curriculos = b?.acao === 'liberarCurriculos' || b?.acao === 'bloquearCurriculos';
+  if (!b?.id || (!curriculos && !ACOES.includes(b.acao))) return NextResponse.json({ error: 'Requisição inválida' }, { status: 400 });
+  const r = curriculos
+    ? await definirLeituraDeCurriculos(user, String(b.id), b.acao === 'liberarCurriculos', requestContext(req))
+    : await alterarChave(user, String(b.id), b.acao as AcaoNaChave, requestContext(req));
   if (!r.ok) {
     const map = { FORBIDDEN: 403, NOT_FOUND: 404, STATE: 409 } as const;
     return NextResponse.json({ error: r.detail ?? 'Operação não permitida' }, { status: map[r.reason] });

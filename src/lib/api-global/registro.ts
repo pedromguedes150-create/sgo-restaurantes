@@ -170,6 +170,8 @@ export const ENTIDADES: Entidade[] = [
 /** Telas (chaves de `MODULES` com endereço) que de propósito NÃO têm endpoint de tabela. */
 export const TELAS_SEM_ENDPOINT: Record<string, string> = {
   HELP: 'Treinamento da Plataforma — texto estático do sistema, não é dado operacional.',
+  RESUMES: 'Central de Currículos (v1.212.0): dado pessoal de candidato — fora do motor genérico de propósito. Endpoint próprio `GET /api/v1/curriculos` (+ `/{id}/anexo`), que só responde a chave com a leitura de currículos liberada.',
+  CONFIG_RESUMES: 'Cargos do encaminhamento de currículo — o cargo sai congelado em cada linha de `GET /api/v1/curriculos`.',
   CONFIG_CERTIFICATES: 'Correspondência SGO ↔ RH por nomenclatura — endpoint próprio `GET /api/v1/atestados/nomenclaturas` (v1.198.0), que junta catálogo, configuração e regra vigente.',
   COMMANDS_PANEL: 'Painel de rotina e resultado das comandas — composição de conferências (`comandas-conferencias`) e divergências, sem tabela própria.',
   TICKET_MEDIA_IMPORT: 'Tela de upload; os dados importados saem em `ticket-medio`.',

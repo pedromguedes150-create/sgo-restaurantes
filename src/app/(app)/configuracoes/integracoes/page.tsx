@@ -114,7 +114,7 @@ export default async function IntegracoesPage() {
           <ApiGlobalClient sistemas={sistemas.map((s) => ({
             id: s.id, name: s.name, description: s.description, keyPrefix: s.keyPrefix, keyLast4: s.keyLast4,
             active: s.active, revokedAt: s.revokedAt?.toISOString() ?? null, lastUsedAt: s.lastUsedAt?.toISOString() ?? null,
-            createdAt: s.createdAt.toISOString(), createdBy: s.createdBy?.name ?? null, chamadas: s._count.requests,
+            createdAt: s.createdAt.toISOString(), createdBy: s.createdBy?.name ?? null, chamadas: s._count.requests, curriculos: s.canReadResumes,
           }))} />
           <div>
             <p className="mb-1 sgo-type-11 font-semibold text-ink-500">Últimas chamadas ({chamadas.length})</p>
@@ -178,6 +178,8 @@ export default async function IntegracoesPage() {
           <Row k="Desligamento" v={`${baseUrl}/api/integracoes/rh/desligamento`} mono />
           <Row k="Período aquisitivo" v={`${baseUrl}/api/integracoes/rh/periodo-aquisitivo`} mono />
           <Row k="Exclusão de período" v={`${baseUrl}/api/integracoes/rh/exclusao-periodo`} mono />
+          <Row k="Situação de atestado" v={`${baseUrl}/api/integracoes/rh/atestado-situacao`} mono />
+          <Row k="Situação de currículo" v={`${baseUrl}/api/integracoes/rh/curriculo-situacao`} mono />
           {/* v1.183.0 — o token de entrada pela tela (o mesmo desenho do de saída). */}
           <div className="rounded-lg border border-line bg-canvas p-3">
             <TokenEntradaRhClient origem={origemEntrada} mascarado={mascararToken(tokenEntrada)} temNoServidor={haTokenDeEntradaNoServidor()} />

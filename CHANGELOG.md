@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.212.0 — 2026-11-18 (Central de Currículos)
+
+- **Nova tela** em Pessoas → **Central de Currículos**: o gerente cadastra o candidato (nome, telefone, cargo pretendido), anexa o currículo pela câmera ou por arquivo (PDF, JPG ou PNG) e encaminha ao RH.
+- Indicadores no topo (recebidos, em análise, entrevistas, aprovados, contratados), lista com busca e ficha do candidato com o currículo e o histórico de cada etapa.
+- A situação do candidato **só muda pelo RH**: o SGO recebe a atualização pela mesma integração dos atestados e avisa o gerente. Enquanto o RH não ligar a parte dele, a tela diz isso e os currículos ficam como "Recebido".
+- O RH lê os cadastros e os arquivos pela API do SGO, com a leitura de currículos liberada chave a chave em APIs & Integrações.
+- Lista de cargos editável em Configurações → Currículos.
+- O arquivo do currículo fica em área privada: só abre para quem tem acesso à unidade.
+
 ## v1.211.0 — 2026-11-18 (RH — trocar o token de entrada pela tela)
 
 - Em **APIs & Integrações → Recepção RH→SGO**, o token de entrada agora pode ser trocado pela tela mesmo quando o valor em vigor está no servidor. O token gravado pela tela passa a valer no lugar do do servidor, na hora.

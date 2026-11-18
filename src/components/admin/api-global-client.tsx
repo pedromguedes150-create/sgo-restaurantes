@@ -21,6 +21,8 @@ export interface SistemaDaApi {
   createdAt: string;
   createdBy: string | null;
   chamadas: number;
+  /** v1.212.0 — esta chave pode ler a Central de Currículos. */
+  curriculos?: boolean;
 }
 
 const TOM: Record<SituacaoDaChave, 'success' | 'medium' | 'critical'> = { ATIVA: 'success', DESATIVADA: 'medium', REVOGADA: 'critical' };
@@ -54,7 +56,7 @@ export function ApiGlobalClient({ sistemas }: { sistemas: SistemaDaApi[] }) {
     } finally { setBusy(false); }
   }
 
-  async function agir(id: string, acao: 'ativar' | 'desativar' | 'revogar') {
+  async function agir(id: string, acao: 'ativar' | 'desativar' | 'revogar' | 'liberarCurriculos' | 'bloquearCurriculos') {
     setBusy(true);
     try {
       const res = await fetch('/api/api-global/chaves', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, acao }) });
@@ -100,6 +102,7 @@ export function ApiGlobalClient({ sistemas }: { sistemas: SistemaDaApi[] }) {
                     <td className="px-2 py-2">
                       <p className="font-semibold text-ink-900">{s.name}</p>
                       {s.description && <p className="text-xs text-ink-500">{s.description}</p>}
+                      {s.curriculos && <p className="text-xs font-semibold text-brand" data-testid="chave-le-curriculos">Lê a Central de Currículos</p>}
                       <p className="text-xs text-ink-500">criada em {fmt(s.createdAt)}{s.createdBy ? ` por ${s.createdBy}` : ''}</p>
                     </td>
                     <td className="px-2 py-2 font-mono text-xs">{mascarar(s.keyPrefix, s.keyLast4)}</td>
@@ -112,6 +115,8 @@ export function ApiGlobalClient({ sistemas }: { sistemas: SistemaDaApi[] }) {
                           {sit === 'ATIVA'
                             ? <Button size="sm" variant="secondary" disabled={busy} onClick={() => agir(s.id, 'desativar')}><Pause className="h-3.5 w-3.5" /> Desativar</Button>
                             : <Button size="sm" variant="secondary" disabled={busy} onClick={() => agir(s.id, 'ativar')}><Play className="h-3.5 w-3.5" /> Ativar</Button>}
+                          {/* Currículo é dado pessoal de candidato: a leitura é liberada chave a chave (só a do RH). */}
+                          <Button size="sm" variant="secondary" disabled={busy} onClick={() => agir(s.id, s.curriculos ? 'bloquearCurriculos' : 'liberarCurriculos')}>{s.curriculos ? 'Bloquear currículos' : 'Liberar currículos'}</Button>
                           <Button size="sm" variant="danger" disabled={busy} onClick={() => setConfirmar({ id: s.id, nome: s.name })}><Ban className="h-3.5 w-3.5" /> Revogar</Button>
                         </span>
                       )}

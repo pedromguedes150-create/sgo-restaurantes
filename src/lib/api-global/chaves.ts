@@ -70,10 +70,24 @@ export async function alterarChave(user: SessionUser, id: string, acao: AcaoNaCh
   return { ok: true };
 }
 
+/**
+ * v1.212.0 — a leitura da Central de Currículos é liberada POR CHAVE: currículo é
+ * dado pessoal de candidato, e só o sistema do RH deve lê-lo. Nasce desligada.
+ */
+export async function definirLeituraDeCurriculos(user: SessionUser, id: string, liberar: boolean, ctx: Ctx = {}): Promise<AcaoResultado> {
+  if (!GERE_CHAVES.includes(user.role)) return { ok: false, reason: 'FORBIDDEN' };
+  const c = await prisma.apiClient.findUnique({ where: { id }, select: { id: true, name: true, revokedAt: true, keyPrefix: true } });
+  if (!c) return { ok: false, reason: 'NOT_FOUND' };
+  if (c.revokedAt) return { ok: false, reason: 'STATE', detail: 'Chave revogada: crie uma nova para este sistema.' };
+  await prisma.apiClient.update({ where: { id }, data: { canReadResumes: liberar } });
+  await audit({ userId: user.id, action: liberar ? 'API_KEY_RESUMES_ON' : 'API_KEY_RESUMES_OFF', module: 'INTEGRATIONS', entity: 'api_client', entityId: id, metadata: { name: c.name, keyPrefix: c.keyPrefix }, ...ctx });
+  return { ok: true };
+}
+
 export async function listarSistemas() {
   return prisma.apiClient.findMany({
     orderBy: [{ revokedAt: 'asc' }, { createdAt: 'desc' }],
-    select: { id: true, name: true, description: true, keyPrefix: true, keyLast4: true, active: true, revokedAt: true, lastUsedAt: true, createdAt: true, createdBy: { select: { name: true } }, _count: { select: { requests: true } } },
+    select: { id: true, name: true, description: true, keyPrefix: true, keyLast4: true, active: true, revokedAt: true, lastUsedAt: true, createdAt: true, canReadResumes: true, createdBy: { select: { name: true } }, _count: { select: { requests: true } } },
   });
 }
 
