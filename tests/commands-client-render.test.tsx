@@ -90,7 +90,7 @@ describe('Faixa do dia na grade', () => {
 
   it('abre na faixa do dia e não mostra as guardadas', () => {
     const html = render({ nightlyNumbers: doDia, temFaixaMadrugada: true });
-    expect(html).toContain('Faixa do dia');
+    expect(html).toContain('Parcial (');
     // 301 está guardada — não pode aparecer como botão da grade
     expect(html).not.toContain('>301<');
     // 300 é o fim da faixa e tem de estar lá
@@ -106,7 +106,7 @@ describe('Faixa do dia na grade', () => {
 
   it('sem faixa configurada, a grade segue mostrando tudo', () => {
     const html = render({ nightlyNumbers: [], temFaixaMadrugada: false });
-    expect(html).not.toContain('Faixa do dia');
+    expect(html).not.toContain('Parcial (');
     expect(html).toContain('>301<');
   });
 });
@@ -128,12 +128,12 @@ describe('Prova de que a conferência foi registrada', () => {
     const html = semMarcadores(render({ todayDone: true, ultimaContagem: contagem }));
     expect(html).toMatch(/Contagem de hoje registrada às \d{2}:\d{2}/);
     expect(html).toContain('por Alan');
-    expect(html).toContain('(faixa do dia)');
+    expect(html).toContain('(parcial)');
   });
 
   it('contagem completa não se anuncia como faixa do dia', () => {
     const html = semMarcadores(render({ todayDone: true, ultimaContagem: { ...contagem, parcial: false } }));
-    expect(html).not.toContain('(faixa do dia)');
+    expect(html).not.toContain('(parcial)');
   });
 
   it('sem contagem hoje, nada de hora', () => {

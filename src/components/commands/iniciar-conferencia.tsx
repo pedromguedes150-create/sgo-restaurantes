@@ -45,12 +45,19 @@ export function IniciarConferencia({
   emAndamento,
   faixaDoDia,
   programacao,
+  rotuloParcial,
+  rotuloCompleta,
+  totalCompleta,
 }: {
   unitId: string;
   ultima: UltimaConferencia | null;
   emAndamento: EmAndamento | null;
   /** Números da faixa combinada para a conferência diária. Vazio = sem faixa cadastrada. */
   faixaDoDia: number[];
+  /** v1.213.0 — "1 a 300" e "1 a 500": o que cada escolha confere, escrito no botão. */
+  rotuloParcial?: string;
+  rotuloCompleta?: string;
+  totalCompleta?: number;
   /** v1.201.0: o que a programação da unidade manda para hoje (a tela só mostra e destaca; o servidor não depende disto). */
   programacao?: { texto: string; tipo: 'FAIXA_DO_DIA' | 'COMPLETA' | null; semConferencia: boolean; origem: 'EXCECAO' | 'PROGRAMACAO' | 'PADRAO'; concorrentes: string[] };
 }) {
@@ -134,7 +141,7 @@ export function IniciarConferencia({
       {erro && <p className="text-sm font-medium text-danger">{erro}</p>}
 
       {etapa === 'TIPO' && (
-        <Sheet open onClose={() => setEtapa('FECHADO')} title="Qual conferência deseja realizar?" description="Leitor + Manual: bipe o que der e marque na grade o que o leitor não pegou, na mesma conferência.">
+        <Sheet open onClose={() => setEtapa('FECHADO')} title="Qual conferência deseja realizar?" description="Escolha parcial em dia normal ou completa em dia de muito movimento. Leitor + Manual: bipe o que der e marque na grade o que o leitor não pegou.">
           <div className="space-y-2">
             <button
               type="button"
@@ -143,11 +150,11 @@ export function IniciarConferencia({
               className="w-full rounded-lg border p-3 text-left disabled:opacity-50"
               data-testid="tipo-faixa"
             >
-              <p className="text-sm font-semibold text-ink-900">Faixa do dia{programacao?.tipo === 'FAIXA_DO_DIA' ? ' · programada para hoje' : ''}</p>
+              <p className="text-sm font-semibold text-ink-900">Parcial{faixaDoDia.length > 0 && rotuloParcial ? ` (${rotuloParcial})` : ''}{programacao?.tipo === 'FAIXA_DO_DIA' ? ' · programada para hoje' : ''}</p>
               <p className="text-xs text-ink-700">
                 {faixaDoDia.length > 0
-                  ? `Conferir somente as ${faixaDoDia.length} comandas definidas para a conferência diária.`
-                  : 'Nenhuma faixa marcada para a conferência diária em Configurações → Comandas.'}
+                  ? `Conferir somente ${faixaDoDia.length} comandas. As demais ficam fora desta conferência.`
+                  : 'Esta unidade não tem conferência parcial configurada (Configurações → Comandas).'}
               </p>
             </button>
             <button
@@ -157,8 +164,8 @@ export function IniciarConferencia({
               className="w-full rounded-lg border p-3 text-left disabled:opacity-60"
               data-testid="tipo-completa"
             >
-              <p className="text-sm font-semibold text-ink-900">Completa{programacao?.tipo === 'COMPLETA' ? ' · programada para hoje' : ''}</p>
-              <p className="text-xs text-ink-700">Conferir todas as comandas ativas da unidade.</p>
+              <p className="text-sm font-semibold text-ink-900">Completa{rotuloCompleta ? ` (${rotuloCompleta})` : ''}{programacao?.tipo === 'COMPLETA' ? ' · programada para hoje' : ''}</p>
+              <p className="text-xs text-ink-700">{totalCompleta ? `Conferir todas as ${totalCompleta} comandas da unidade.` : 'Conferir todas as comandas ativas da unidade.'}</p>
             </button>
             {busy && <p className="text-xs text-ink-500">Iniciando…</p>}
             {erro && <p className="text-sm font-medium text-danger">{erro}</p>}

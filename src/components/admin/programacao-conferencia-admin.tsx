@@ -98,9 +98,9 @@ export function ProgramacaoConferenciaAdmin({ units }: { units: Unit[] }) {
       <div>
         <p className="text-sm font-bold text-ink-900">Programação das conferências</p>
         <p className="text-xs text-ink-500">
-          Define quando e o que conferir (faixa do dia ou completa) por dia da semana e turno. O cadastro das sequências acima diz quais comandas existem;
+          Opcional. Define quando e o que conferir (parcial ou completa) por dia da semana e turno. O cadastro das sequências acima diz quais comandas existem;
           aqui só se programa a conferência — programações podem se sobrepor, e vence a de maior prioridade (depois a de turno definido, depois a completa).
-          Sem nenhuma programação, vale a rotina de sempre.
+          Sem nenhuma programação, o gerente escolhe parcial ou completa ao iniciar.
         </p>
       </div>
 
@@ -118,7 +118,7 @@ export function ProgramacaoConferenciaAdmin({ units }: { units: Unit[] }) {
             <div className="min-w-[10rem] flex-1">
               <p className="text-sm font-semibold text-ink-900">{p.nome}</p>
               <p className="text-xs text-ink-700">
-                {p.tipo === 'COMPLETA' ? 'Completa (todas as comandas)' : `Faixa do dia ${p.faixaDe}–${p.faixaAte}`} · {rotuloDosDias(p.dias)} · {rotuloDoTurno(p.inicioHora, p.fimHora)}
+                {p.tipo === 'COMPLETA' ? 'Completa (todas as comandas)' : `Parcial ${p.faixaDe}–${p.faixaAte}`} · {rotuloDosDias(p.dias)} · {rotuloDoTurno(p.inicioHora, p.fimHora)}
                 {p.prioridade > 0 ? ` · prioridade ${p.prioridade}` : ''}
               </p>
             </div>
@@ -145,7 +145,7 @@ export function ProgramacaoConferenciaAdmin({ units }: { units: Unit[] }) {
           <div className="col-span-2"><Label htmlFor="pg-nome">Nome</Label><Input id="pg-nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Semana 1–300" className="h-9 text-sm" /></div>
           <div className="col-span-2">
             
-            <Select label="Tipo" value={tipo} onValueChange={(v) => setTipo(v as 'FAIXA_DO_DIA' | 'COMPLETA')} options={[{ value: 'FAIXA_DO_DIA', label: 'Faixa do dia' }, { value: 'COMPLETA', label: 'Completa' }]} />
+            <Select label="Tipo" value={tipo} onValueChange={(v) => setTipo(v as 'FAIXA_DO_DIA' | 'COMPLETA')} options={[{ value: 'FAIXA_DO_DIA', label: 'Parcial' }, { value: 'COMPLETA', label: 'Completa' }]} />
           </div>
           {tipo === 'FAIXA_DO_DIA' && (<>
             <div><Label htmlFor="pg-de">Comanda de</Label><Input id="pg-de" inputMode="numeric" value={de} onChange={(e) => setDe(e.target.value)} className="h-9 text-sm" /></div>
