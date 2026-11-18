@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.216.0 — 2026-11-18 (Currículos — leitura por IA e etapas renomeadas)
+
+- **O sistema lê o currículo:** ao anexar a foto ou o arquivo, o nome e o telefone do candidato são preenchidos sozinhos. O gerente confere, completa o que faltar, escolhe o cargo e escreve a observação se houver.
+- Se a leitura não conseguir (arquivo ilegível ou leitura indisponível), os campos ficam para preencher à mão.
+- **Etapas:** "1ª etapa concluída" passou a se chamar **Recrutamento/Seleção** e "Entrevista agendada" passou a **Entrevista técnica**. Nova etapa **Admissional**.
+- Para o RH nada quebra: as situações de sempre continuam aceitas; `admissional` é a nova.
+
 ## v1.215.0 — 2026-11-18 (Metas — nota individual do gerente, oficial em dezembro)
 
 - **A partir de dezembro/2026 a nota da bonificação de cada gerente e coordenador é individual.** Os pesos da Configuração da Meta são os mesmos; muda de onde vem o percentual em cinco componentes.

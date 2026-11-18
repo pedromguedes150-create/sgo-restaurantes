@@ -8,12 +8,12 @@ import {
 
 describe('situações', () => {
   it('são as dez do pedido, cada uma com rótulo e com a grafia do RH (ida e volta)', () => {
-    expect(STATUS_DO_CURRICULO).toHaveLength(10);
+    expect(STATUS_DO_CURRICULO).toHaveLength(11);
     for (const s of STATUS_DO_CURRICULO) {
       expect(STATUS_LABEL[s]).toBeTruthy();
       expect(SITUACOES_DO_RH[SITUACAO_NO_RH[s]]).toBe(s);
     }
-    expect(STATUS_LABEL.PRIMEIRA_ETAPA).toBe('1ª etapa concluída');
+    expect(STATUS_LABEL.PRIMEIRA_ETAPA).toBe('Recrutamento/Seleção');
   });
 });
 
@@ -85,7 +85,7 @@ describe('o evento do RH', () => {
     const v = validarRetornoDoRh({ sgoCurriculoId: 'abc', situacao: 'entrevista_agendada', entrevistaEm: '2026-11-25T14:00:00-03:00' });
     if (!v.ok) throw new Error('inválido');
     const m = mensagemParaOGerente('Maria da Silva', v.dados);
-    expect(m.title).toBe('Currículo — Entrevista agendada');
+    expect(m.title).toBe('Currículo — Entrevista técnica');
     expect(m.body).toContain('Maria da Silva');
     expect(m.body).toContain('25/11');
     expect(m.importante).toBe(true);

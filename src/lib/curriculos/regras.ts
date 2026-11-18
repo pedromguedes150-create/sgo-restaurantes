@@ -9,7 +9,7 @@
 
 export const STATUS_DO_CURRICULO = [
   'RECEBIDO', 'EM_ANALISE', 'PRIMEIRA_ETAPA', 'ENTREVISTA_AGENDADA', 'AVALIACAO_FINAL',
-  'APROVADO', 'REPROVADO', 'BANCO_DE_TALENTOS', 'DESISTENCIA', 'CONTRATADO',
+  'APROVADO', 'REPROVADO', 'BANCO_DE_TALENTOS', 'DESISTENCIA', 'CONTRATADO', 'ADMISSIONAL',
 ] as const;
 export type StatusDoCurriculo = (typeof STATUS_DO_CURRICULO)[number];
 
@@ -18,14 +18,16 @@ export type TomDoStatus = 'neutral' | 'success' | 'warning' | 'danger' | 'info' 
 export const STATUS_LABEL: Record<StatusDoCurriculo, string> = {
   RECEBIDO: 'Recebido',
   EM_ANALISE: 'Em análise',
-  PRIMEIRA_ETAPA: '1ª etapa concluída',
-  ENTREVISTA_AGENDADA: 'Entrevista agendada',
+  /* v1.216.0 (Daniel, 18/11): só os NOMES mudaram — as chaves e a grafia do RH seguem as mesmas. */
+  PRIMEIRA_ETAPA: 'Recrutamento/Seleção',
+  ENTREVISTA_AGENDADA: 'Entrevista técnica',
   AVALIACAO_FINAL: 'Em avaliação final',
   APROVADO: 'Aprovado',
   REPROVADO: 'Reprovado',
   BANCO_DE_TALENTOS: 'Banco de talentos',
   DESISTENCIA: 'Desistência',
   CONTRATADO: 'Contratado',
+  ADMISSIONAL: 'Admissional',
 };
 
 export const STATUS_TOM: Record<StatusDoCurriculo, TomDoStatus> = {
@@ -39,6 +41,7 @@ export const STATUS_TOM: Record<StatusDoCurriculo, TomDoStatus> = {
   BANCO_DE_TALENTOS: 'neutral',
   DESISTENCIA: 'neutral',
   CONTRATADO: 'brand',
+  ADMISSIONAL: 'success',
 };
 
 /** A grafia que o RH manda no evento → a situação do SGO. Lista FECHADA. */
@@ -53,6 +56,12 @@ export const SITUACOES_DO_RH: Record<string, StatusDoCurriculo> = {
   banco_de_talentos: 'BANCO_DE_TALENTOS',
   desistencia: 'DESISTENCIA',
   contratado: 'CONTRATADO',
+  admissional: 'ADMISSIONAL',
+};
+/** v1.216.0 — a grafia dos nomes novos também é aceita na ENTRADA; a leitura segue devolvendo a de sempre. */
+export const APELIDOS_DO_RH: Record<string, StatusDoCurriculo> = {
+  recrutamento_selecao: 'PRIMEIRA_ETAPA',
+  entrevista_tecnica: 'ENTREVISTA_AGENDADA',
 };
 export const SITUACAO_NO_RH = Object.fromEntries(Object.entries(SITUACOES_DO_RH).map(([k, v]) => [v, k])) as Record<StatusDoCurriculo, string>;
 
@@ -64,7 +73,7 @@ export type Faixa = (typeof FAIXAS)[number];
 const DA_FAIXA: Record<Exclude<Faixa, 'todos'>, readonly StatusDoCurriculo[]> = {
   analise: ['RECEBIDO', 'EM_ANALISE', 'PRIMEIRA_ETAPA', 'AVALIACAO_FINAL'],
   entrevista: ['ENTREVISTA_AGENDADA'],
-  aprovado: ['APROVADO'],
+  aprovado: ['APROVADO', 'ADMISSIONAL'],
   contratado: ['CONTRATADO'],
   encerrado: ['REPROVADO', 'BANCO_DE_TALENTOS', 'DESISTENCIA'],
 };
@@ -160,7 +169,7 @@ export function validarRetornoDoRh(p: Record<string, unknown>): ValidacaoDoRetor
   const rhCandidatoId = texto(p.rhCandidatoId ?? p.rh_candidato_id, 64);
   if (!sgoCurriculoId && !rhCandidatoId) return { ok: false, erro: 'Informe sgoCurriculoId (o id do currículo no SGO) ou rhCandidatoId.' };
   const situacao = String(p.situacao ?? '').trim().toLowerCase();
-  const status = SITUACOES_DO_RH[situacao];
+  const status = SITUACOES_DO_RH[situacao] ?? APELIDOS_DO_RH[situacao];
   if (!status) return { ok: false, erro: `Situação desconhecida: "${situacao}". Use uma de: ${Object.keys(SITUACOES_DO_RH).join(', ')}.` };
   let entrevistaEm: Date | null = null;
   const bruto = p.entrevistaEm ?? p.entrevista_em;
@@ -187,6 +196,6 @@ export function mensagemParaOGerente(candidato: string, r: RetornoDoRh): { title
   return {
     title: `Currículo — ${STATUS_LABEL[r.status]}`,
     body: partes.join(' · '),
-    importante: r.status === 'ENTREVISTA_AGENDADA' || r.status === 'APROVADO' || r.status === 'CONTRATADO',
+    importante: r.status === 'ENTREVISTA_AGENDADA' || r.status === 'APROVADO' || r.status === 'ADMISSIONAL' || r.status === 'CONTRATADO',
   };
 }

@@ -42,7 +42,7 @@ Resposta `200`:
   "total": 1,
   "page": 1,
   "limit": 50,
-  "situacoes": ["recebido", "em_analise", "primeira_etapa_concluida", "entrevista_agendada", "em_avaliacao_final", "aprovado", "reprovado", "banco_de_talentos", "desistencia", "contratado"],
+  "situacoes": ["recebido", "em_analise", "primeira_etapa_concluida", "entrevista_agendada", "em_avaliacao_final", "aprovado", "reprovado", "banco_de_talentos", "desistencia", "contratado", "admissional"],
   "dados": [
     {
       "sgoCurriculoId": "cmxxxxxxxxxxxxxxxxxxxxxxx",
@@ -97,7 +97,7 @@ Header: `Authorization: Bearer <token de entrada do RH>` (o mesmo usado em `ates
 | Campo | Obrigatório | Regra |
 |---|---|---|
 | `sgoCurriculoId` | sim* | o id recebido na leitura. *Pode ser omitido se `rhCandidatoId` já tiver sido informado num evento anterior. |
-| `situacao` | sim | uma das dez da lista abaixo, exatamente como escrita |
+| `situacao` | sim | uma das onze da lista abaixo, exatamente como escrita |
 | `entrevistaEm` | não | data e hora em ISO 8601; use junto com `entrevista_agendada` |
 | `observacao` | não | texto curto (até 500 caracteres) que o gerente vai ler |
 | `rhCandidatoId` | não | o id do candidato no sistema do RH; o SGO guarda e devolve na leitura |
@@ -108,14 +108,15 @@ Situações aceitas:
 |---|---|
 | `recebido` | Recebido |
 | `em_analise` | Em análise |
-| `primeira_etapa_concluida` | 1ª etapa concluída |
-| `entrevista_agendada` | Entrevista agendada |
+| `primeira_etapa_concluida` (ou `recrutamento_selecao`) | Recrutamento/Seleção |
+| `entrevista_agendada` (ou `entrevista_tecnica`) | Entrevista técnica |
 | `em_avaliacao_final` | Em avaliação final |
 | `aprovado` | Aprovado |
 | `reprovado` | Reprovado |
 | `banco_de_talentos` | Banco de talentos |
 | `desistencia` | Desistência |
 | `contratado` | Contratado |
+| `admissional` | Admissional (nova na v1.216.0) |
 
 Respostas:
 

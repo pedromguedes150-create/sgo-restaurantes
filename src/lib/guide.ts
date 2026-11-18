@@ -1667,6 +1667,7 @@ export const GUIDE: GuideSection[] = [
         roles: MANAGERLINE,
         summary: 'Cadastre o candidato, anexe o currículo e acompanhe a situação que o RH informa.',
         steps: [
+          'LEITURA AUTOMÁTICA (v1.216.0): você não precisa mais digitar o nome. Anexe o currículo primeiro (foto ou arquivo): o sistema lê e preenche o nome e o telefone do candidato. Confira, complete o que ficar em branco, escolha o cargo pretendido e escreva a observação se houver. Se a leitura não conseguir, preencha os dois campos à mão. As etapas mudaram de nome: "Recrutamento/Seleção" (antes 1ª etapa concluída) e "Entrevista técnica" (antes Entrevista agendada), e há a etapa nova "Admissional".',
           'CENTRAL DE CURRÍCULOS (v1.212.0): em Pessoas → Central de Currículos, toque em "Novo encaminhamento". Informe o nome completo e o telefone do candidato, escolha o cargo pretendido e anexe o currículo — "Tirar foto" abre a câmera do celular; "Escolher arquivo" aceita PDF, JPG ou PNG (até 15 MB). A unidade é a sua; só quem cuida de mais de uma escolhe.',
           'Toque em "Encaminhar ao RH". O currículo entra na lista com a situação "Recebido".',
           'VOCÊ NÃO MUDA A SITUAÇÃO: quem analisa é o RH, no sistema dele. Quando o RH atualiza (em análise, entrevista agendada, aprovado, contratado…), a situação muda aqui sozinha e você recebe um aviso. Entrevista agendada mostra a data e a hora.',

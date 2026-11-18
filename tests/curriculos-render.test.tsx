@@ -35,7 +35,7 @@ describe('Central de Currículos', () => {
     for (const t of ['kpi-recebidos', 'kpi-analise', 'kpi-entrevista', 'kpi-aprovado', 'kpi-contratado']) expect(h).toContain(`data-testid="${t}"`);
     expect(h).toContain('Maria da Silva');
     expect(h).toContain('Recebido');
-    expect(h).toContain('Entrevista agendada');
+    expect(h).toContain('Entrevista técnica');
     expect(h).toContain('data-testid="novo-encaminhamento"');
     expect(h).toContain('/modulos/curriculos?faixa=entrevista');
   });
@@ -51,7 +51,7 @@ describe('Central de Currículos', () => {
   it('a tela NÃO tem controle para o gerente mudar a situação, nem chama rota que mude', () => {
     const fonte = readFileSync(join(process.cwd(), 'src/components/curriculos/curriculos-client.tsx'), 'utf8');
     expect(fonte).not.toMatch(/method:\s*'(PATCH|PUT|DELETE)'/);
-    expect(fonte.match(/fetch\(/g)?.length).toBe(2); // encaminhar (POST) e ler a linha do tempo (GET)
+    expect(fonte.match(/fetch\(/g)?.length).toBe(3); // + a leitura do currículo por IA (v1.216.0), que não muda situação; // encaminhar (POST) e ler a linha do tempo (GET)
     expect(fonte).toContain("fetch('/api/curriculos', { method: 'POST'");
   });
   it('a câmera e o seletor de arquivo são dois caminhos; só PDF, JPG e PNG', () => {

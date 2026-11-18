@@ -233,6 +233,9 @@ function NovoEncaminhamento({ open, onClose, units, unidadeInicial, cargos, onEn
   const [busy, setBusy] = useState(false);
   const [pronto, setPronto] = useState(false);
   const [recuperado, setRecuperado] = useState(false);
+  /* v1.216.0 — a IA lê o currículo e preenche nome e telefone; o gerente confere e completa. */
+  const [leitura, setLeitura] = useState<'parada' | 'lendo' | 'lido' | 'parcial' | 'nada' | 'sem-ia'>('parada');
+  const lendoRef = useRef(0);
   const camera = useRef<HTMLInputElement>(null);
   const seletor = useRef<HTMLInputElement>(null);
 
@@ -266,9 +269,31 @@ function NovoEncaminhamento({ open, onClose, units, unidadeInicial, cargos, onEn
     if (f.size > ARQUIVO_MAX_BYTES) { setErro('Arquivo muito grande (máximo 15 MB).'); return; }
     setArquivo(f);
     void guardarFotoLocal(CHAVE_DO_RASCUNHO, f);
+    void lerComIA(f);
+  }
+  /** Só PREENCHE o que está vazio: o que o gerente já digitou não é trocado. Falha = campos à mão, sem erro. */
+  async function lerComIA(f: File) {
+    const vez = ++lendoRef.current;
+    setLeitura('lendo');
+    try {
+      const fd = new FormData();
+      fd.set('arquivo', f);
+      const r = await fetch('/api/curriculos/ler', { method: 'POST', body: fd });
+      const d = await r.json().catch(() => ({}));
+      if (vez !== lendoRef.current) return;
+      if (!r.ok || d.configured === false) { setLeitura('sem-ia'); return; }
+      if (!d.ok) { setLeitura('nada'); return; }
+      if (d.nome) setNome((v) => v || String(d.nome));
+      if (d.telefone) setFone((v) => v || mascaraDeTelefone(String(d.telefone)));
+      setLeitura(d.nome && d.telefone ? 'lido' : d.nome || d.telefone ? 'parcial' : 'nada');
+    } catch {
+      if (vez === lendoRef.current) setLeitura('sem-ia');
+    }
   }
   function tirarArquivo() {
     setArquivo(null);
+    lendoRef.current++;
+    setLeitura('parada');
     void apagarFotoLocal(CHAVE_DO_RASCUNHO);
     if (camera.current) camera.current.value = '';
     if (seletor.current) seletor.current.value = '';
@@ -281,12 +306,13 @@ function NovoEncaminhamento({ open, onClose, units, unidadeInicial, cargos, onEn
 
   async function enviar() {
     setErro('');
+    if (!arquivo) { setErro('Anexe o currículo: tire uma foto ou escolha o arquivo.'); return; }
+    if (leitura === 'lendo') { setErro('Aguarde: o currículo ainda está sendo lido.'); return; }
     if (!unitId) { setErro('Escolha a unidade.'); return; }
     const nomeOk = normalizarNome(nome);
-    if (!nomeOk) { setErro('Informe o nome completo do candidato (nome e sobrenome).'); return; }
-    if (!normalizarTelefone(fone)) { setErro('Informe o telefone com DDD.'); return; }
+    if (!nomeOk) { setErro('Complete o nome do candidato (nome e sobrenome).'); return; }
+    if (!normalizarTelefone(fone)) { setErro('Complete o telefone com DDD.'); return; }
     if (!cargoId) { setErro('Escolha o cargo pretendido.'); return; }
-    if (!arquivo) { setErro('Anexe o currículo: tire uma foto ou escolha o arquivo.'); return; }
     setBusy(true);
     try {
       const fd = new FormData();
@@ -309,7 +335,7 @@ function NovoEncaminhamento({ open, onClose, units, unidadeInicial, cargos, onEn
       open={open}
       onClose={() => { if (!busy) onClose(); }}
       title="Novo encaminhamento de currículo"
-      subtitle="O RH recebe o cadastro e o arquivo. Você acompanha a situação por aqui."
+      subtitle="Anexe o currículo: o sistema lê o nome e o telefone. Você escolhe o cargo e acompanha a situação por aqui."
       icon={<FileUp className="h-4 w-4" />}
       tone="brand"
       size="sm"
@@ -325,14 +351,6 @@ function NovoEncaminhamento({ open, onClose, units, unidadeInicial, cargos, onEn
     >
       <div className="space-y-3">
         {recuperado && <p className="rounded-lg bg-info/10 px-3 py-2 text-xs text-ink-700" data-testid="rascunho-recuperado">Recuperamos o que você já tinha preenchido.</p>}
-        <Input label="Nome do candidato" required value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome completo" maxLength={NOME_MAX} autoComplete="off" />
-        <Input label="Telefone ou WhatsApp" required value={fone} onChange={(e) => setFone(mascaraDeTelefone(e.target.value))} placeholder="(31) 99999-9999" inputMode="tel" autoComplete="off" />
-        {units.length > 1 && (
-          <Select label="Unidade" required value={unitId} onValueChange={setUnitId} placeholder="Escolha a unidade" searchable={units.length > 8}
-            options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
-        )}
-        <Select label="Cargo pretendido" required value={cargoId} onValueChange={setCargoId} placeholder="Escolha o cargo" options={cargos.map((c) => ({ value: c.id, label: c.name }))} />
-
         <div>
           <p className="mb-1 text-xs font-medium text-ink-700">Currículo <span className="text-danger">*</span></p>
           {/* Dois caminhos, cada um com o seu input: `capture` abre a câmera; o outro abre os arquivos (PDF incluso). */}
@@ -362,6 +380,23 @@ function NovoEncaminhamento({ open, onClose, units, unidadeInicial, cargos, onEn
           )}
         </div>
 
+        {leitura !== 'parada' && (
+          <p className="rounded-lg bg-info/10 px-3 py-2 text-xs text-ink-700" role="status" data-testid="leitura-do-curriculo" data-leitura={leitura}>
+            {leitura === 'lendo' && 'Lendo o currículo…'}
+            {leitura === 'lido' && 'Nome e telefone lidos do currículo. Confira antes de encaminhar.'}
+            {leitura === 'parcial' && 'Só parte foi lida do currículo. Complete o que ficou em branco.'}
+            {leitura === 'nada' && 'Não foi possível ler nome e telefone neste arquivo. Preencha abaixo.'}
+            {leitura === 'sem-ia' && 'Leitura automática indisponível agora. Preencha nome e telefone abaixo.'}
+          </p>
+        )}
+        <Input label="Nome do candidato" required value={nome} onChange={(e) => setNome(e.target.value)} placeholder={leitura === 'lendo' ? 'Lendo o currículo…' : 'Preenchido pela leitura do currículo'} maxLength={NOME_MAX} autoComplete="off" disabled={leitura === 'lendo'} />
+        <Input label="Telefone ou WhatsApp" required value={fone} onChange={(e) => setFone(mascaraDeTelefone(e.target.value))} placeholder="(31) 99999-9999" inputMode="tel" autoComplete="off" disabled={leitura === 'lendo'} />
+        {units.length > 1 && (
+          <Select label="Unidade" required value={unitId} onValueChange={setUnitId} placeholder="Escolha a unidade" searchable={units.length > 8}
+            options={units.map((u) => ({ value: u.id, label: shortUnitName(u.name) }))} />
+        )}
+        <Select label="Cargo pretendido" required value={cargoId} onValueChange={setCargoId} placeholder="Escolha o cargo" options={cargos.map((c) => ({ value: c.id, label: c.name }))} />
+
         <Textarea label="Observações do gerente (opcional)" value={obs} onChange={(e) => setObs(e.target.value)} maxLength={OBS_MAX} rows={2} placeholder="Ex.: candidato entregou o currículo presencialmente." />
         {erro && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger" role="alert" data-testid="erro-curriculo">{erro}</p>}
       </div>
@@ -375,7 +410,7 @@ interface EventoUI { id: string; kind: 'ENCAMINHADO' | 'SITUACAO' | 'LEITURA_RH'
 
 const TOM_DA_LINHA: Record<StatusDoCurriculo, SgoTimelineTom> = {
   RECEBIDO: 'gray', EM_ANALISE: 'sky', PRIMEIRA_ETAPA: 'sky', ENTREVISTA_AGENDADA: 'amber', AVALIACAO_FINAL: 'sky',
-  APROVADO: 'green', REPROVADO: 'red', BANCO_DE_TALENTOS: 'gray', DESISTENCIA: 'gray', CONTRATADO: 'blue',
+  APROVADO: 'green', REPROVADO: 'red', BANCO_DE_TALENTOS: 'gray', DESISTENCIA: 'gray', CONTRATADO: 'blue', ADMISSIONAL: 'green',
 };
 
 function Ficha({ curriculo, onClose, visaoRede }: { curriculo: CurriculoUI | null; onClose: () => void; visaoRede: boolean }) {

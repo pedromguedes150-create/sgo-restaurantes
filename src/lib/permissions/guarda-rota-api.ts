@@ -67,6 +67,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/curriculos/[id]': { modulo: 'RESUMES', exigir: 'ver' },
   '/api/curriculos/[id]/anexo': { modulo: 'RESUMES', exigir: 'ver' },
   '/api/curriculos/cargos': { modulo: 'CONFIG_RESUMES', exigir: 'editar' },
+  '/api/curriculos/ler': { modulo: 'RESUMES', exigir: 'editar' },
 
   '/api/checklist-forms': { modulo: 'CHECKLIST_FORMS', exigir: 'editar' },
   '/api/checklist-models/import': { modulo: 'CONFIG_MODELS', exigir: 'editar' },
