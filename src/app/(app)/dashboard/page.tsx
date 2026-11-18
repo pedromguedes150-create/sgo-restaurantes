@@ -15,8 +15,10 @@ import { SgoBar } from '@/components/sgo/sgo-bar';
 import { ProgressRing } from '@/components/dashboard/progress-ring';
 import { CentralOperacional, AlertasDaRede } from '@/components/dashboard/central-da-rede';
 import { AcessosRapidos } from '@/components/dashboard/acessos-rapidos';
-import { metaDaUnidadeDoUsuario } from '@/lib/metas/meta-por-usuario';
-import { metaNoInicio, pontosBR } from '@/lib/metas/meta-do-gerente';
+import { metaDaUnidadeDoUsuario, metaIndividualDaUnidade } from '@/lib/metas/meta-por-usuario';
+import { modoDaNotaIndividual, type FatosDaUnidade } from '@/lib/metas/nota-individual';
+import { fatosDaUnidade } from '@/lib/metas/nota-individual-dados';
+import { metaNoInicio, pontosBR, textoDoPlantao } from '@/lib/metas/meta-do-gerente';
 import { shortUnitName } from '@/lib/unit-name';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
 import { ChevronRight, ListChecks, ScrollText, Target } from 'lucide-react';
@@ -85,7 +87,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       getCentralDaRede(user, daUnidade, now),
     ]);
     const areas = await montarMenu(user.role, (href) => permitido.has(href));
-    return <HomeDoGerente nome={user.name} userId={user.id} overviews={overviews} alertas={central.alertas} areas={areas} />;
+    /* v1.215.0 — os fatos do mês (dia a dia, por autor) das unidades do gerente, para a nota individual. Falha aqui não derruba o Início: cai na nota herdada. */
+    const fatos = new Map<string, FatosDaUnidade>();
+    await Promise.all(overviews.map(async (o) => {
+      const ym = o.operationalDate.slice(0, 7);
+      if (modoDaNotaIndividual(ym) === 'DESLIGADA') return;
+      const f = await fatosDaUnidade(o.unit.id, ym).catch(() => null);
+      if (f) fatos.set(o.unit.id, f);
+    }));
+    return <HomeDoGerente nome={user.name} userId={user.id} overviews={overviews} fatos={fatos} alertas={central.alertas} areas={areas} />;
   }
 
   const central = await getCentralDaRede(user, daUnidade, now);
@@ -113,8 +123,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
  * rede não entra aqui — ele não responde por ela.
  */
 function HomeDoGerente({
-  nome, userId, overviews, alertas, areas,
+  nome, userId, overviews, fatos, alertas, areas,
 }: {
+  /** v1.215.0 — fatos do mês por unidade (vazio = nota herdada da unidade). */
+  fatos: Map<string, FatosDaUnidade>;
   nome: string;
   /** v1.214.0 — o desconto da Escala de gerentes só aparece para quem está sem folga. */
   userId: string;
@@ -123,7 +135,11 @@ function HomeDoGerente({
   areas: Awaited<ReturnType<typeof montarMenu>>;
 }) {
   const agg = aggregateDay(overviews);
-  const meta = metaNoInicio(overviews.map((o) => metaDaUnidadeDoUsuario(o.meta, userId)));
+  /* v1.215.0 — dezembro/2026 em diante a nota do gerente é a INDIVIDUAL; em novembro ela aparece como simulação. */
+  const modo = overviews.length ? modoDaNotaIndividual(overviews[0].operationalDate.slice(0, 7)) : 'DESLIGADA';
+  const herdada = metaNoInicio(overviews.map((o) => metaDaUnidadeDoUsuario(o.meta, userId)));
+  const individual = modo === 'DESLIGADA' ? null : metaNoInicio(overviews.map((o) => metaIndividualDaUnidade(o.meta, userId, fatos.get(o.unit.id))));
+  const meta = modo === 'OFICIAL' && individual ? individual : herdada;
   const TOM = { VERDE: 'green', AMBAR: 'amber', VERMELHO: 'red' } as const;
   const COR = { VERDE: 'var(--sgo-ok)', AMBAR: 'var(--sgo-warn)', VERMELHO: 'var(--sgo-bad)' } as const;
   const ROTULO = { VERDE: 'Na meta', AMBAR: 'Atenção', VERMELHO: 'Crítico' } as const;
@@ -176,12 +192,23 @@ function HomeDoGerente({
               <div className="mb-2 flex items-center justify-between gap-3 text-sm">
                 <span className="sgo-kpi__value" style={{ marginTop: 0, color: COR[meta.faixa] }} data-testid="meta-nota">{meta.scorePct}%</span>
                 <span className="text-right text-xs" style={{ color: 'var(--sgo-ink-2)' }}>
-                  {meta.temMedicao ? `${ROTULO[meta.faixa]} · nota oficial do mês` : 'Ainda sem nada medido neste mês'}
+                  {meta.temMedicao ? `${ROTULO[meta.faixa]} · ${modo === 'OFICIAL' ? 'sua nota individual do mês' : 'nota oficial do mês'}` : 'Ainda sem nada medido neste mês'}
                 </span>
               </div>
               <SgoBar value={meta.scorePct} tone={TOM[meta.faixa]} height={10} data-testid="meta-barra" />
             </div>
 
+            {modo === 'SIMULACAO' && individual && (
+              <p className="rounded-lg border border-line px-3 py-2 text-xs" style={{ color: 'var(--sgo-ink-2)' }} data-testid="meta-simulacao">
+                A partir de dezembro a nota passa a ser <b>individual</b>: checklists, desperdício, comandas e cofre contam só nos seus dias de plantão, e comunicados contam o que você confirmou.
+                Se já valesse hoje, a sua nota seria <b style={{ color: COR[individual.faixa] }}>{individual.scorePct}%</b>.
+              </p>
+            )}
+            {modo === 'OFICIAL' && (
+              <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }} data-testid="meta-individual">
+                Checklists, desperdício, comandas e cofre contam só nos seus dias de plantão (Escala de gerentes); comunicados contam o que você confirmou. Os demais itens são da unidade.
+              </p>
+            )}
             {meta.unidades.map((u) => (
               <div key={u.unitId} data-testid="meta-unidade" className="space-y-2">
                 {meta.unidades.length > 1 && (
@@ -209,6 +236,7 @@ function HomeDoGerente({
                         Peso {i.weight} · {i.done} de {i.resolved} feito(s)
                         {i.pontosPerdidos > 0 ? ` · tira ${pontosBR(i.pontosPerdidos)} ponto(s) da nota` : ' · não tira ponto'}
                       </p>
+                      {i.individual && <p className="mt-1 text-xs" style={{ color: 'var(--sgo-ink-2)' }} data-testid="meta-plantao">{textoDoPlantao(i.individual)}</p>}
                     </li>
                   ))}
                   {u.descontos.map((d) => (
@@ -223,6 +251,7 @@ function HomeDoGerente({
                     </li>
                   ))}
                 </ul>
+                {u.semHorario && <p className="text-xs" style={{ color: 'var(--sgo-warn)' }} data-testid="meta-sem-horario">Você está sem horário na Escala de gerentes: todos os dias contam como plantão. Peça à Supervisão para cadastrar.</p>}
                 {u.descontos.length > 0 && (
                   <p className="text-xs" style={{ color: 'var(--sgo-ink-2)' }}>Antes dos descontos a nota era {u.notaAntesDosDescontos}%.</p>
                 )}

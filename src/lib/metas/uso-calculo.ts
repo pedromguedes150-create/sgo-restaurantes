@@ -55,6 +55,8 @@ export interface UsuarioUso {
   ultimoAcesso: string | null;
   /** v1.179.0 — a nota da bonificação: a meta da(s) unidade(s) que a pessoa cuida (nulo = sem unidade). */
   meta: MetaDoUsuario | null;
+  /** v1.215.0 — a outra leitura, para comparar: em SIMULAÇÃO é a nota individual (a oficial ainda é a herdada); em OFICIAL é a herdada da unidade. Nulo fora desses modos. */
+  metaComparada?: MetaDoUsuario | null;
   /** Gerente/coordenador lançou a própria folga no mês? Nulo para quem não é medido nisso (supervisor). */
   folgaPropria: boolean | null;
   /** v1.182.0 — PR B: cumprimento, não acesso. Pontualidade = no prazo ÷ (no prazo + fora) do que ESTE usuário concluiu; nula sem conclusão. */

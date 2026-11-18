@@ -5,7 +5,8 @@ import { Legenda, Rosca } from '@/components/metas/graficos-metas';
 import { COR_FAIXA } from '@/lib/metas/graficos';
 import { colunasDaMeta, faixaDeUso, rotuloDoModulo, ROTULO_FAIXA_USO, taxaDeFalha, type UnidadeUso, type UsuarioUso } from '@/lib/metas/uso-calculo';
 import type { UsoDoSgo } from '@/lib/metas/uso';
-import { explicarNota, rotuloCurto, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
+import { explicarIndividual, explicarNota, rotuloCurto, type PesoDaMeta } from '@/lib/metas/meta-por-usuario';
+import type { ModoIndividual } from '@/lib/metas/nota-individual';
 import { shortUnitName } from '@/lib/unit-name';
 
 const br = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—');
@@ -72,11 +73,19 @@ export function UsoDoSgoView({ dados, mesLabel }: { dados: UsoDoSgo; mesLabel: s
       <Card>
         <PanelHeader title="Meta por usuário — a nota da bonificação" count={dados.usuarios.filter((u) => u.meta).length} icon={<span className="sgo-panel__ic sgo-panel__ic--brand" aria-hidden><Target className="h-4 w-4" /></span>} />
         <div className="overflow-x-auto p-2">
-          <TabelaMetaPorUsuario usuarios={dados.usuarios} pesos={dados.pesosDaMeta} />
+          <TabelaMetaPorUsuario usuarios={dados.usuarios} pesos={dados.pesosDaMeta} modo={dados.modoIndividual} />
         </div>
         <p className="px-4 pb-3 text-xs text-ink-500">
-          Nota = Σ (peso × % alcançado) ÷ Σ pesos, menos os descontos — a mesma conta de Metas. O desconto de “gerente sem folga” é individual: aqui só atinge quem está sem folga cadastrada no mês (na nota da unidade ele segue valendo).
-          A nota é da UNIDADE: gerentes da mesma unidade têm a mesma nota, e quem cuida de mais de uma recebe a média. O supervisor não entra nesta conferência.
+          Nota = Σ (peso × % alcançado) ÷ Σ pesos, menos os descontos — a mesma conta de Metas, com os mesmos pesos. O desconto de “gerente sem folga” só atinge quem está sem folga cadastrada no mês (na nota da unidade ele segue valendo).
+          {dados.modoIndividual === 'DESLIGADA' && <> A nota é da UNIDADE: gerentes da mesma unidade têm a mesma nota, e quem cuida de mais de uma recebe a média.</>}
+          {dados.modoIndividual !== 'DESLIGADA' && (
+            <span data-testid="regra-individual">
+              {' '}<b>{dados.modoIndividual === 'OFICIAL' ? 'A nota é INDIVIDUAL.' : 'Neste mês a nota oficial ainda é a da unidade; a coluna “Individual (simulação)” mostra como fica a partir de dezembro.'}</b>{' '}
+              Na nota individual, checklists, desperdício, comandas e cofre contam só nos dias de plantão de cada gerente (Escala de gerentes: horário semanal, folgas e férias), e comunicados contam as confirmações da própria pessoa; os demais componentes seguem os da unidade.
+              O que os gerentes fizeram em cada dia é dividido entre quem estava de plantão: quem fez menos de 25% da sua parte tem o componente reduzido na proporção. Gerente sem horário cadastrado é tratado como de plantão todos os dias. Quem cuida de mais de uma unidade recebe a média.
+            </span>
+          )}
+          {' '}O supervisor não entra nesta conferência.
           Só componente com status Ativo pesa; os em homologação/monitoramento aparecem na composição da unidade, em Metas.
           Pesos em vigor: {dados.pesosDaMeta.length ? dados.pesosDaMeta.map((p) => `${rotuloCurto(p.key, p.name)} ${p.weight}`).join(' · ') : 'nenhum'} (Configuração da Meta).
           &quot;—&quot; = nada a medir no mês naquele componente.
@@ -160,7 +169,8 @@ export function TabelaUsuarios({ usuarios }: { usuarios: UsuarioUso[] }) {
 }
 
 /** v1.179.0 — a nota da bonificação por pessoa: uma coluna por componente com peso, descontos, folga própria e a NOTA. */
-export function TabelaMetaPorUsuario({ usuarios, pesos }: { usuarios: UsuarioUso[]; pesos: PesoDaMeta[] }) {
+export function TabelaMetaPorUsuario({ usuarios, pesos, modo = 'DESLIGADA' }: { usuarios: UsuarioUso[]; pesos: PesoDaMeta[]; modo?: ModoIndividual }) {
+  const rotuloComparada = modo === 'OFICIAL' ? 'Nota da unidade' : modo === 'SIMULACAO' ? 'Individual (simulação)' : null;
   const colunas = [...pesos].filter((p) => p.weight > 0).sort((a, b) => b.weight - a.weight);
   const lista = usuarios.filter((u) => u.meta).sort((a, b) => b.meta!.scorePct - a.meta!.scorePct || a.name.localeCompare(b.name, 'pt-BR'));
   if (lista.length === 0) return <p className="p-3 text-sm text-ink-500">Nenhum gerente ou coordenador com unidade no alcance.</p>;
@@ -170,18 +180,23 @@ export function TabelaMetaPorUsuario({ usuarios, pesos }: { usuarios: UsuarioUso
         <tr>
           <th className="text-left">#</th><th className="text-left">Usuário</th><th className="text-left">Unidade(s)</th>
           {colunas.map((c) => <th key={c.key} className="text-right" title={c.name}>{rotuloCurto(c.key, c.name)} <span className="font-normal text-ink-500">(peso {c.weight})</span></th>)}
-          <th className="text-right">Descontos</th><th className="text-center">Folga própria</th><th className="text-right">Nota</th>
+          <th className="text-right">Descontos</th><th className="text-center">Folga própria</th><th className="text-right">Nota</th>{rotuloComparada && <th className="text-right" data-testid="coluna-comparada">{rotuloComparada}</th>}
         </tr>
       </thead>
       <tbody>
         {lista.map((u, i) => {
           const m = u.meta!;
+          const cmp = u.metaComparada ?? null;
+          /* A explicação do plantão acompanha a leitura INDIVIDUAL: a oficial em dezembro, a simulada em novembro. */
+          const ind = modo === 'OFICIAL' ? m : modo === 'SIMULACAO' ? cmp : null;
+          const frases = ind ? explicarIndividual(ind) : [];
           return (
             <tr key={u.userId} data-testid="linha-meta-usuario">
               <td className="tabular-nums text-ink-500">{i + 1}</td>
               <td className="whitespace-nowrap font-medium text-ink-900">
                 {u.name}<span className="block text-xs font-normal text-ink-500">{u.roleLabel}</span>
-                <details className="text-xs font-normal text-ink-500 print:hidden"><summary className="cursor-pointer text-brand">Como foi calculada</summary><span className="block whitespace-normal">{explicarNota(m)}</span></details>
+                <details className="text-xs font-normal text-ink-500 print:hidden"><summary className="cursor-pointer text-brand">Como foi calculada</summary><span className="block whitespace-normal">{explicarNota(m)}</span>{frases.length > 0 && <span className="mt-1 block whitespace-normal" data-testid="explicacao-individual">{modo === 'SIMULACAO' ? 'Na simulação individual — ' : ''}{frases.map((f, k) => <span key={k} className="block">{f}</span>)}</span>}</details>
+                {ind?.semHorario && <span className="block whitespace-normal text-xs font-normal text-warning" data-testid="sem-horario">Sem horário na Escala de gerentes: contado como de plantão todos os dias.</span>}
               </td>
               <td className="whitespace-normal text-xs">{m.unidades.map((x) => `${shortUnitName(x.unitName)} ${x.scorePct}%`).join(' · ')}</td>
               {colunas.map((c) => {
@@ -198,6 +213,7 @@ export function TabelaMetaPorUsuario({ usuarios, pesos }: { usuarios: UsuarioUso
               </td>
               <td className="text-center">{u.folgaPropria == null ? <span className="text-ink-500">—</span> : u.folgaPropria ? 'Sim' : <span className="font-semibold text-danger">Não</span>}</td>
               <td className="text-right font-bold tabular-nums" style={{ color: COR_FAIXA[faixaDeUso(m.scorePct)] }} title={explicarNota(m)}>{m.scorePct}%</td>
+              {rotuloComparada && <td className="text-right tabular-nums" data-testid="nota-comparada" title={cmp ? explicarNota(cmp) : undefined}>{cmp ? `${cmp.scorePct}%` : <span className="text-ink-500">—</span>}</td>}
             </tr>
           );
         })}

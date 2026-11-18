@@ -61,7 +61,7 @@ export default async function UsoRelatorioPage({ searchParams }: { searchParams:
       </section>
       <section className="break-before-page">
         <h2 className="sgo-type-17 mb-2 font-bold text-brand">Meta por usuário — a nota da bonificação</h2>
-        <TabelaMetaPorUsuario usuarios={d.usuarios} pesos={d.pesosDaMeta} />
+        <TabelaMetaPorUsuario usuarios={d.usuarios} pesos={d.pesosDaMeta} modo={d.modoIndividual} />
         <p className="mt-2 text-xs text-ink-500">Nota = Σ (peso × % alcançado) ÷ Σ pesos, menos os descontos — a mesma conta de Metas; a nota é da unidade e o gerente a herda (média quando cuida de mais de uma). Pesos em vigor: {d.pesosDaMeta.map((p) => `${rotuloCurto(p.key, p.name)} ${p.weight}`).join(' · ') || 'nenhum'}.</p>
       </section>
       <section className="break-before-page">
