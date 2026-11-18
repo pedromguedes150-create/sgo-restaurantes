@@ -2,13 +2,13 @@ import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import type { SessionUser } from '@/lib/auth/session';
-import { CHAVE_DO_TOKEN_DE_ENTRADA, definirTokenDeEntrada, inboundAutorizado, origemDoTokenDeEntrada, removerTokenDeEntrada, tokenDeEntrada } from '@/lib/rh/inbound-token';
+import { CHAVE_DO_TOKEN_DE_ENTRADA, definirTokenDeEntrada, haTokenDeEntradaNoServidor, inboundAutorizado, origemDoTokenDeEntrada, removerTokenDeEntrada, tokenDeEntrada } from '@/lib/rh/inbound-token';
 import { inboundAuthorized } from '@/lib/rh/inbound';
 
 /**
  * v1.183.0 — o token de ENTRADA do RH pela tela: o Admin cola o mesmo token que
  * está no painel do RH; a porta dos webhooks passa a aceitar o Bearer dele.
- * O `.env`, quando existe, vence.
+ * v1.211.0: o token da TELA vence o do `.env`; sem o da tela, vale o do `.env`.
  */
 const sfx = `tin${process.pid.toString(36)}`;
 const TOKEN = 'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
@@ -58,12 +58,23 @@ describe('token de entrada pela tela', () => {
     expect(await inboundAutorizado(req({ authorization: `Bearer ${TOKEN.slice(0, -1)}` }))).toBe(false); // tamanho diferente
     expect(await inboundAutorizado(req({ authorization: TOKEN }))).toBe(false); // sem "Bearer "
   });
-  it('o .env, quando existe, VENCE o banco', async () => {
+  it('o token da TELA vence o do .env: o do servidor deixa de abrir a porta (v1.211.0)', async () => {
     process.env.RH_INBOUND_TOKEN = 'token-do-servidor-xxxxxxxx';
-    expect(await tokenDeEntrada()).toBe('token-do-servidor-xxxxxxxx');
+    expect(haTokenDeEntradaNoServidor()).toBe(true);
+    expect(await tokenDeEntrada()).toBe(TOKEN);
+    expect(await origemDoTokenDeEntrada()).toBe('tela');
+    expect(await inboundAutorizado(req({ authorization: `Bearer ${TOKEN}` }))).toBe(true);
+    expect(await inboundAutorizado(req({ authorization: 'Bearer token-do-servidor-xxxxxxxx' }))).toBe(false);
+  });
+  it('removido o da tela, volta a valer o do .env; sem nenhum dos dois, ninguém entra', async () => {
+    process.env.RH_INBOUND_TOKEN = 'token-do-servidor-xxxxxxxx';
+    expect(await removerTokenDeEntrada(admin)).toMatchObject({ ok: true });
     expect(await origemDoTokenDeEntrada()).toBe('servidor');
-    expect(await inboundAutorizado(req({ authorization: `Bearer ${TOKEN}` }))).toBe(false);
     expect(await inboundAutorizado(req({ authorization: 'Bearer token-do-servidor-xxxxxxxx' }))).toBe(true);
+    expect(await inboundAutorizado(req({ authorization: `Bearer ${TOKEN}` }))).toBe(false);
+    delete process.env.RH_INBOUND_TOKEN;
+    expect(haTokenDeEntradaNoServidor()).toBe(false);
+    expect(await definirTokenDeEntrada(admin, TOKEN)).toMatchObject({ ok: true });
   });
   it('remover apaga e volta a "nenhum"', async () => {
     expect(await removerTokenDeEntrada(gerente)).toMatchObject({ ok: false });

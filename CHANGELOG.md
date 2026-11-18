@@ -9,6 +9,12 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.211.0 — 2026-11-18 (RH — trocar o token de entrada pela tela)
+
+- Em **APIs & Integrações → Recepção RH→SGO**, o token de entrada agora pode ser trocado pela tela mesmo quando o valor em vigor está no servidor. O token gravado pela tela passa a valer no lugar do do servidor, na hora.
+- Botão **Gerar token novo**: cria o valor e mostra uma única vez, para copiar e entregar ao RH por canal seguro.
+- Remover o token da tela devolve o do servidor.
+
 ## v1.210.1 — 2026-11-17 (Comissão — Rodney = Rodinei)
 
 - **Corrigido**: na apuração da comissão, "RODNEY JOSE" (Teknisa) não era sugerido para "RODINEI JOSE ALVES" (RH). A comparação de nomes passou a entender a vogal de apoio (Rodney/Rodinei, Edson/Edison) como o mesmo nome e mostra a sugestão para confirmar. Continua sendo sugestão: nada vincula sozinho.

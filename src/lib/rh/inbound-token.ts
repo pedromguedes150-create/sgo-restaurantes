@@ -12,9 +12,12 @@ import { mascararToken, type OrigemDoToken } from '@/lib/rh/saida/config';
  * quem opera o SGO não tem SSH — o mesmo beco da v1.182.2, agora no sentido
  * RH → SGO.
  *
- * Mesmo desenho do token de saída: `.env` ?? `app_settings[RH_INBOUND_TOKEN]`,
- * o `.env` vence, a tela diz de onde veio, o valor nunca vai inteiro para a
- * Auditoria nem para a tela (só mascarado). Não há "testar conexão": é o RH
+ * v1.211.0 — A TELA VENCE O `.env` (só neste token, o de ENTRADA). O token do
+ * servidor não pode ser lido por ninguém sem SSH; quando o RH perdeu o valor
+ * (18/11/2026), não havia como recuperar nem trocar. Agora o Admin grava um
+ * token novo pela tela e ele passa a valer no lugar do do servidor; remover o
+ * da tela devolve o do servidor. O valor nunca vai inteiro para a Auditoria
+ * nem volta para a tela (só mascarado). Não há "testar conexão": é o RH
  * que chama o SGO, e o teste é o próximo evento dele aparecer na lista de
  * recebidos (a tela diz isso).
  */
@@ -36,16 +39,21 @@ async function tokenDoBanco(): Promise<string> {
   } catch { return ''; }
 }
 
-/** O token em vigor: `.env` primeiro; senão o gravado pela tela; senão vazio. */
+/** O token em vigor: o gravado pela TELA primeiro; senão o do `.env`; senão vazio. */
 export async function tokenDeEntrada(): Promise<string> {
-  return tokenDoAmbiente() || (await tokenDoBanco());
+  return (await tokenDoBanco()) || tokenDoAmbiente();
 }
 
 /** Para a tela: de onde o token em vigor veio (nunca o token). */
 export async function origemDoTokenDeEntrada(): Promise<OrigemDoToken> {
-  if (tokenDoAmbiente()) return 'servidor';
   if (await tokenDoBanco()) return 'tela';
+  if (tokenDoAmbiente()) return 'servidor';
   return 'nenhum';
+}
+
+/** Existe um token no `.env`? É para onde a porta volta se o da tela for removido. */
+export function haTokenDeEntradaNoServidor(): boolean {
+  return tokenDoAmbiente() !== '';
 }
 
 /** Comparação em tempo constante: tokens de tamanhos diferentes nunca batem. */

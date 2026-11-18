@@ -11,7 +11,7 @@ import { ENDPOINTS } from '@/lib/rh/saida/regras';
 import { RhV2Ping } from '@/components/admin/rh-v2-ping';
 import { ApiGlobalClient } from '@/components/admin/api-global-client';
 import { TokenEntradaRhClient } from '@/components/admin/token-entrada-rh-client';
-import { origemDoTokenDeEntrada, tokenDeEntrada } from '@/lib/rh/inbound-token';
+import { haTokenDeEntradaNoServidor, origemDoTokenDeEntrada, tokenDeEntrada } from '@/lib/rh/inbound-token';
 import { listarSistemas, ultimasChamadas } from '@/lib/api-global/chaves';
 import { API_BASE_PATH, HEADER_API_KEY } from '@/lib/api-global/formato';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -180,7 +180,7 @@ export default async function IntegracoesPage() {
           <Row k="Exclusão de período" v={`${baseUrl}/api/integracoes/rh/exclusao-periodo`} mono />
           {/* v1.183.0 — o token de entrada pela tela (o mesmo desenho do de saída). */}
           <div className="rounded-lg border border-line bg-canvas p-3">
-            <TokenEntradaRhClient origem={origemEntrada} mascarado={mascararToken(tokenEntrada)} />
+            <TokenEntradaRhClient origem={origemEntrada} mascarado={mascararToken(tokenEntrada)} temNoServidor={haTokenDeEntradaNoServidor()} />
           </div>
           <p className="text-xs text-ink-500">Admissão cria/reativa o colaborador e vincula à unidade (razão social = Configurações → Unidades → nome no RH). Desligamento inativa por CPF. Períodos aquisitivos ficam registrados abaixo. O sync por pull continua funcionando normalmente.</p>
         </CardContent>
