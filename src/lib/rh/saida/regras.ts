@@ -181,6 +181,49 @@ export function anexoAceito(caminho: string, bytes: number): { ok: true } | { ok
   return { ok: true };
 }
 
+/**
+ * v1.218.0 — anexos da SOLICITAÇÃO (demanda), no campo `anexos` do POST.
+ * Limites combinados com o RH (19/11/2026): até 5 arquivos, PDF/JPG/PNG, 10 MB
+ * cada e 18 MB somados por envio. O que não cabe fica FORA do envio, com o
+ * motivo na nota do evento — a solicitação vai assim mesmo.
+ */
+export const ANEXOS_DA_DEMANDA_MAX = 5;
+export const ANEXOS_DA_DEMANDA_TOTAL_BYTES = 18 * 1024 * 1024;
+
+export interface AnexoCandidato { path: string; nome: string; bytes: number | null }
+
+export function escolherAnexosDaDemanda<T extends AnexoCandidato>(candidatos: T[]): { enviar: T[]; omitidos: string[] } {
+  const enviar: T[] = [];
+  const omitidos: string[] = [];
+  let soma = 0;
+  for (const c of candidatos) {
+    if (c.bytes == null) { omitidos.push(`${c.nome}: arquivo não encontrado no volume`); continue; }
+    const ok = anexoAceito(c.path, c.bytes);
+    if (!ok.ok) { omitidos.push(`${c.nome}: ${ok.motivo}`); continue; }
+    if (enviar.length >= ANEXOS_DA_DEMANDA_MAX) { omitidos.push(`${c.nome}: passa de ${ANEXOS_DA_DEMANDA_MAX} arquivos`); continue; }
+    if (soma + c.bytes > ANEXOS_DA_DEMANDA_TOTAL_BYTES) { omitidos.push(`${c.nome}: o envio passaria de 18 MB somados`); continue; }
+    soma += c.bytes;
+    enviar.push(c);
+  }
+  return { enviar, omitidos };
+}
+
+/** O nome que vai ao RH: o que o gerente anexou, com a extensão do arquivo gravado (decidida pelo conteúdo). */
+export function nomeDoAnexoDaDemanda(nomeOriginal: string, caminho: string): string {
+  const ext = (caminho.split('.').pop() ?? 'pdf').toLowerCase();
+  const base = (nomeOriginal || 'anexo').replace(/\.[a-zA-Z0-9]{2,5}$/, '').replace(/[\\/\r\n"]/g, ' ').trim().slice(0, 80) || 'anexo';
+  return `${base}.${ext}`;
+}
+
+/** A resposta do RH diz quantos anexos aceitou: `"anexos": { "recebidos": N, "recusados": N }`. */
+export function anexosRecusadosPeloRh(corpo: unknown): number {
+  if (!corpo || typeof corpo !== 'object') return 0;
+  const a = (corpo as Record<string, unknown>).anexos;
+  if (!a || typeof a !== 'object') return 0;
+  const n = Number((a as Record<string, unknown>).recusados);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
 export function nomeDoAnexo(caminho: string): string {
   return caminho.split('/').pop() || 'anexo';
 }
@@ -374,11 +417,10 @@ export const ROTULO_SITUACAO: Record<string, string> = {
   em_andamento: 'Em andamento',
   concluido: 'Concluído',
   cancelado: 'Cancelado',
-  /* v1.217.0 — prontas para quando o RH devolver que espera algo de quem pediu. */
+  /* v1.218.0 — as situações que o GBF-RH devolve para a solicitação (confirmadas em 19/11/2026). */
+  aberto: 'Aberto',
+  aguardando_terceiro: 'Aguardando terceiros',
   aguardando_solicitante: 'Aguardando resposta da unidade',
-  aguardando_resposta: 'Aguardando resposta da unidade',
-  pendente_solicitante: 'Aguardando resposta da unidade',
-  devolvido: 'Devolvida à unidade',
 };
 
 export function rotuloDaSituacao(s: string | null | undefined): string {

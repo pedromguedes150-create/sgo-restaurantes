@@ -11,6 +11,7 @@ import { postRh, getRh, RhSaidaTransporteError } from '@/lib/rh/saida/transporte
 import {
   MAX_TENTATIVAS, NOTA_JA_EXISTIA, SISTEMA_DE_ORIGEM, SITUACOES_FINAIS, anexoAceito, caminhoDaSituacao, classificarResposta, extrairPrazo, extrairRhId,
   mascararCpfNoObjeto, mascararCpfsNoTexto, nomeDoAnexo, proximaTentativa, rotuloDaSituacao, ROTULO_TIPO,
+  anexosRecusadosPeloRh, escolherAnexosDaDemanda, nomeDoAnexoDaDemanda,
 } from '@/lib/rh/saida/regras';
 import type { Prisma, RhOutboundEvent, RhOutboundType } from '@prisma/client';
 
@@ -40,6 +41,13 @@ export interface ResultadoDoDespacho {
   parado: boolean;
 }
 
+function caminhoNoVolume(relPath: string): string | null {
+  const segs = relPath.split('/').filter((s) => s && s !== 'uploads');
+  if (segs.length === 0 || segs.some((s) => s.includes('..') || s.includes('\\'))) return null;
+  const full = path.join(UPLOAD_ROOT, ...segs);
+  return full.startsWith(UPLOAD_ROOT) ? full : null;
+}
+
 async function lerAnexo(relPath: string): Promise<{ nome: string; base64: string } | { omitido: string }> {
   const segs = relPath.split('/').filter((s) => s && s !== 'uploads');
   if (segs.length === 0 || segs.some((s) => s.includes('..') || s.includes('\\'))) return { omitido: 'caminho do anexo inválido' };
@@ -62,6 +70,27 @@ async function montarCorpo(ev: RhOutboundEvent): Promise<{ corpo: Record<string,
     if ('omitido' in a) nota = `Anexo não enviado: ${a.omitido}`;
     else if (ev.tipo === 'ATESTADO') corpo.anexo = { nome: a.nome, conteudoBase64: a.base64 };
     else if (ev.tipo === 'DESLIGAMENTO') corpo.carta = { nome: a.nome, base64: a.base64 };
+  }
+  /* v1.218.0 — solicitação: os anexos guardados na linha vão no campo `anexos`, lidos do volume na hora (nunca gravados no evento). */
+  if (ev.tipo === 'DEMANDA') {
+    const linha = await prisma.rhDemand.findUnique({ where: { id: ev.referenceId }, select: { anexos: true } });
+    const guardados = (Array.isArray(linha?.anexos) ? linha!.anexos : [])
+      .filter((a): a is { path: string; nome?: string } => Boolean(a) && typeof a === 'object' && typeof (a as { path?: unknown }).path === 'string');
+    if (guardados.length > 0) {
+      const candidatos = await Promise.all(guardados.map(async (a) => {
+        const full = caminhoNoVolume(a.path);
+        const bytes = full ? await stat(full).then((s) => s.size).catch(() => null) : null;
+        return { path: a.path, nome: typeof a.nome === 'string' ? a.nome : 'anexo', bytes, full };
+      }));
+      const { enviar, omitidos } = escolherAnexosDaDemanda(candidatos);
+      const anexos: { nome: string; conteudoBase64: string }[] = [];
+      for (const a of enviar) {
+        try { anexos.push({ nome: nomeDoAnexoDaDemanda(a.nome, a.path), conteudoBase64: (await readFile(a.full!)).toString('base64') }); }
+        catch { omitidos.push(`${a.nome}: não foi possível ler o arquivo`); }
+      }
+      if (anexos.length > 0) corpo.anexos = anexos;
+      if (omitidos.length > 0) nota = `Anexo(s) não enviado(s): ${omitidos.join('; ')}`;
+    }
   }
   return { corpo, nota };
 }
@@ -103,7 +132,9 @@ export async function despacharPendentes(opts: { agora?: Date; limite?: number; 
     if (c.resultado === 'ENVIADO') {
       /* v1.182.3 — 409 "já existe": o id vem do texto do RH, e a nota explica que nada foi criado lá. */
       const rhId = extrairRhId(ev.tipo, resposta.corpo) ?? (c.existente ? c.existente : null);
-      const notaFinal = c.existente !== undefined ? [nota, NOTA_JA_EXISTIA].filter(Boolean).join(' · ') : nota;
+      /* v1.218.0 — o RH aceita a solicitação mesmo recusando um anexo, e diz quantos recusou. */
+      const recusados = ev.tipo === 'DEMANDA' ? anexosRecusadosPeloRh(resposta.corpo) : 0;
+      const notaFinal = [nota, c.existente !== undefined ? NOTA_JA_EXISTIA : null, recusados > 0 ? `O RH recusou ${recusados} anexo(s)` : null].filter(Boolean).join(' · ') || null;
       await prisma.rhOutboundEvent.update({
         where: { id: ev.id },
         data: { status: 'ENVIADO', enviadoEm: agora, httpStatus: resposta.status, resposta: respostaGravada, rhId, ultimoErro: null, observacao: notaFinal, tentativas: { increment: 1 } },

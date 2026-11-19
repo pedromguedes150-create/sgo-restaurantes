@@ -37,8 +37,8 @@ e grava `situacao` no pedido; o gerente vê na própria tela. Para em `concluido
 
 - Os campos de cada tipo (cargo, vagas, período, horário…) e o motivo da urgência vão dentro de `descricao`, depois do texto do gerente, num bloco "Dados da solicitação" com uma linha por campo.
 - `dataEvento` sai do campo de data do tipo (data desejada, início das férias, "a partir de").
-- Anexos (PDF/JPG/PNG) ficam guardados no SGO; a `descricao` leva a linha "Anexos: N arquivo(s) guardado(s) no SGO". O contrato não tem campo de anexo para demanda.
-- Se o RH passar a devolver, em `situacao`, `aguardando_solicitante` (ou `aguardando_resposta`, `pendente_solicitante`, `devolvido`), o SGO mostra "Aguardando minha resposta" ao gerente e conta a pendência no painel. Hoje nenhuma dessas é devolvida.
+- **Anexos (v1.218.0, combinado com o RH em 19/11/2026):** vão no próprio POST, em `anexos: [{ "nome": "...", "conteudoBase64": "..." }]` — até 5 arquivos, PDF/JPG/PNG, 10 MB cada e 18 MB somados. O SGO só envia o que cabe; o que fica fora vira observação do evento. Arquivo que o RH recusar não recusa a solicitação: a resposta traz `"anexos": { "recebidos": N, "recusados": N }` e o SGO anota os recusados. A `descricao` leva a linha "Anexos: N arquivo(s)".
+- **Situações que o RH devolve** em `GET .../demandas/{sgoEventId}`: `aberto`, `em_andamento`, `aguardando_terceiro`, `aguardando_solicitante`, `concluido`, `cancelado`. `aguardando_solicitante` aparece ao gerente como "Aguardando minha resposta" e conta como pendência no painel; `aguardando_terceiro` (o RH esperando alguém de fora) segue "em andamento".
 
 ## Como a fila decide (regra 3 do contrato)
 

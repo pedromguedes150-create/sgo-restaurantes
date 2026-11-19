@@ -6,7 +6,7 @@ import { requestContext } from '@/lib/auth/service';
 import { canAccessUnit } from '@/lib/scope/unit-scope';
 import { criarDemanda } from '@/lib/rh/demandas';
 import { AnexoInvalido, guardarAnexo, removerAnexo, type AnexoGuardado } from '@/lib/rh/demanda-arquivo';
-import { ANEXOS_MAX } from '@/lib/rh/solicitacoes-regras';
+import { ANEXOS_MAX, ANEXOS_TOTAL_BYTES } from '@/lib/rh/solicitacoes-regras';
 
 const REASONS = {
   FORBIDDEN: { msg: 'Sem acesso a esta unidade', status: 403 },
@@ -42,6 +42,7 @@ export async function POST(req: Request) {
   const unitId = String(b.unitId ?? '');
   if (!unitId || !canAccessUnit(user, unitId)) return NextResponse.json({ error: REASONS.FORBIDDEN.msg, reason: 'FORBIDDEN' }, { status: 403 });
   if (arquivos.length > ANEXOS_MAX) return NextResponse.json({ error: `No máximo ${ANEXOS_MAX} anexos.` }, { status: 400 });
+  if (arquivos.reduce((t, f) => t + f.size, 0) > ANEXOS_TOTAL_BYTES) return NextResponse.json({ error: 'Os anexos somados passam de 18 MB.' }, { status: 400 });
 
   const anexos: AnexoGuardado[] = [];
   const limpar = () => Promise.all(anexos.map((a) => removerAnexo(a.path)));

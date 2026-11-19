@@ -78,7 +78,7 @@ export default async function SolicitacaoRhPage({ params, searchParams }: { para
                   </li>
                 ))}
               </ul>
-              <p className="mt-1 text-xs text-ink-500">Os anexos ficam guardados no SGO.</p>
+              <p className="mt-1 text-xs text-ink-500">Enviados ao RH junto com a solicitação.</p>
             </div>
           )}
         </Card>

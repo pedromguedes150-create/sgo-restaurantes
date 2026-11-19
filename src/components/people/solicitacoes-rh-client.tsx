@@ -17,7 +17,7 @@ import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
 import { shortUnitName } from '@/lib/unit-name';
 import { situacaoParaTela } from '@/components/people/solicitacao-situacao';
 import {
-  ANEXOS_MAX, ANEXO_MAX_BYTES, DEFINICAO_DO_TIPO, DESCRICAO_MAX, ROTULO_DA_FAIXA, ROTULO_DA_PENDENCIA, ROTULO_DA_PRIORIDADE, ROTULO_DO_TIPO, TIPOS_OFERECIDOS, TITULO_MAX,
+  ANEXOS_MAX, ANEXOS_TOTAL_BYTES, ANEXO_MAX_BYTES, DEFINICAO_DO_TIPO, DESCRICAO_MAX, ROTULO_DA_FAIXA, ROTULO_DA_PENDENCIA, ROTULO_DA_PRIORIDADE, ROTULO_DO_TIPO, TIPOS_OFERECIDOS, TITULO_MAX,
   faixaDaSituacao, filtrar, indicadores, oQueFalta, ordenar, pendenciaDoSolicitante, prazoVencido, resumoSugerido, ultimaMovimentacao,
   type Detalhes, type Faixa, type LinhaDaSolicitacao, type PainelDeGestao, type Prioridade, type TipoDeSolicitacao,
 } from '@/lib/rh/solicitacoes-regras';
@@ -207,6 +207,7 @@ export function Nova({ units, unidadeInicial, collaboratorsByUnit }: { units: { 
     if (ruim) { setErr('Anexe apenas PDF, JPG ou PNG.'); return; }
     if (novos.some((f) => f.size > ANEXO_MAX_BYTES)) { setErr('Cada anexo pode ter até 10 MB.'); return; }
     if (anexos.length + novos.length > ANEXOS_MAX) { setErr(`No máximo ${ANEXOS_MAX} anexos.`); return; }
+    if ([...anexos, ...novos].reduce((t, f) => t + f.size, 0) > ANEXOS_TOTAL_BYTES) { setErr('Os anexos somados passam de 18 MB.'); return; }
     setErr(null); setAnexos((a) => [...a, ...novos]);
     if (arquivoRef.current) arquivoRef.current.value = '';
   }
@@ -311,7 +312,7 @@ export function Nova({ units, unidadeInicial, collaboratorsByUnit }: { units: { 
               <Label>Anexos (opcional)</Label>
               <div className="flex flex-wrap items-center gap-2">
                 <button type="button" className="sgo-btn sgo-btn--sm" onClick={() => arquivoRef.current?.click()} disabled={anexos.length >= ANEXOS_MAX}><Paperclip className="h-3.5 w-3.5" /> Anexar arquivo</button>
-                <span className="text-xs text-ink-500">PDF, JPG ou PNG · até 10 MB cada · no máximo {ANEXOS_MAX}</span>
+                <span className="text-xs text-ink-500">PDF, JPG ou PNG · até 10 MB cada · no máximo {ANEXOS_MAX} · 18 MB somados</span>
                 <input ref={arquivoRef} type="file" multiple accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={(e) => escolherArquivos(e.target.files)} />
               </div>
               {anexos.length > 0 && (
@@ -324,7 +325,7 @@ export function Nova({ units, unidadeInicial, collaboratorsByUnit }: { units: { 
                   ))}
                 </ul>
               )}
-              {anexos.length > 0 && <p className="mt-1 text-xs text-ink-500">Os anexos ficam guardados no SGO, junto da solicitação. O RH recebe o aviso de que eles existem.</p>}
+              {anexos.length > 0 && <p className="mt-1 text-xs text-ink-500">Os anexos seguem para o RH junto com a solicitação.</p>}
             </div>
           </>
         )}
