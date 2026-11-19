@@ -149,6 +149,8 @@ export const DESCRICAO_MAX = 5000;
 export const URGENCIA_MIN = 10;
 export const ANEXOS_MAX = 5;
 export const ANEXO_MAX_BYTES = 10 * 1024 * 1024;
+/** v1.218.0 — o RH aceita no máximo 18 MB somados por envio. */
+export const ANEXOS_TOTAL_BYTES = 18 * 1024 * 1024;
 
 export type Detalhes = Record<string, string>;
 
@@ -250,7 +252,7 @@ export function linhasDosDetalhes(tipo: TipoDeSolicitacao, detalhes: Detalhes | 
 export function descricaoParaORh(p: { tipo: TipoDeSolicitacao; descricao: string | null; detalhes: Detalhes | null; urgenciaMotivo: string | null; anexos: number }): string | null {
   const linhas = linhasDosDetalhes(p.tipo, p.detalhes).map((l) => `${l.label}: ${l.valor}`);
   if (p.urgenciaMotivo?.trim()) linhas.push(`Motivo da urgência: ${p.urgenciaMotivo.trim()}`);
-  if (p.anexos > 0) linhas.push(`Anexos: ${p.anexos} arquivo(s) guardado(s) no SGO`);
+  if (p.anexos > 0) linhas.push(`Anexos: ${p.anexos} arquivo(s)`);
   const texto = p.descricao?.trim() ?? '';
   if (linhas.length === 0) return texto || null;
   const bloco = `Dados da solicitação\n${linhas.join('\n')}`;
@@ -268,11 +270,13 @@ export const ROTULO_DA_FAIXA: Record<Faixa, string> = {
 };
 
 /**
- * As situações em que o RH espera algo de quem pediu. Hoje o GBF-RH devolve
- * solicitado · em_andamento · concluido · cancelado; estas ficam prontas para
- * quando ele passar a devolver uma delas — até lá a faixa fica vazia.
+ * A situação em que o RH espera algo de quem pediu. O GBF-RH devolve (confirmado
+ * em 19/11/2026): aberto · em_andamento · aguardando_terceiro ·
+ * aguardando_solicitante · concluido · cancelado. `aguardando_terceiro` é o RH
+ * esperando alguém de FORA (contabilidade, operadora) — não é pendência da
+ * unidade e segue "em andamento".
  */
-export const SITUACOES_QUE_PEDEM_RESPOSTA = ['aguardando_solicitante', 'aguardando_resposta', 'pendente_solicitante', 'devolvido'];
+export const SITUACOES_QUE_PEDEM_RESPOSTA = ['aguardando_solicitante'];
 
 export function faixaDaSituacao(rhSituacao: string | null | undefined): Faixa {
   const s = (rhSituacao ?? '').trim().toLowerCase();

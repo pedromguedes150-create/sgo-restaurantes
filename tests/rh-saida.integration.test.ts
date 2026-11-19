@@ -1,3 +1,5 @@
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
@@ -392,10 +394,31 @@ describe('Solicitação ao RH', () => {
     /* O corpo é o de sempre: nenhum campo novo no contrato. */
     expect(Object.keys(p).sort()).toEqual(['dataEvento', 'descricao', 'prioridade', 'solicitanteEmail', 'solicitanteNome', 'tipo', 'titulo', 'unitCode'].filter((k) => k in p).sort());
     expect(p).toMatchObject({ tipo: 'admissao', prioridade: 'urgente', dataEvento: '2026-12-05' });
-    expect(p.descricao).toBe('Dados da solicitação\nCargo: Cozinheiro\nQuantidade de vagas: 2\nData desejada: 05/12/2026\nMotivo da urgência: Saíram dois na mesma semana\nAnexos: 1 arquivo(s) guardado(s) no SGO');
+    expect(p.descricao).toBe('Dados da solicitação\nCargo: Cozinheiro\nQuantidade de vagas: 2\nData desejada: 05/12/2026\nMotivo da urgência: Saíram dois na mesma semana\nAnexos: 1 arquivo(s)');
+
+    /* v1.218.0 — no envio, o arquivo vai no campo `anexos`; o que não está no volume fica fora, com nota, e a solicitação segue. */
+    const dir = path.join(process.cwd(), 'uploads', '_privado', 'solicitacoes-rh', `t-${unitId}`);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, 'sol-ok.pdf'), Buffer.from('%PDF-1.4 teste'));
+    await prisma.rhDemand.update({ where: { id: r.id }, data: { anexos: [
+      { path: `uploads/_privado/solicitacoes-rh/t-${unitId}/sol-ok.pdf`, mime: 'application/pdf', nome: 'descricao-da-vaga.pdf', tamanho: 14 },
+      { path: `uploads/_privado/solicitacoes-rh/t-${unitId}/sumiu.pdf`, mime: 'application/pdf', nome: 'sumiu.pdf', tamanho: 10 },
+    ] } });
+    comToken();
+    rhResponde(201, { status: 'processado', numero: 'DM-77', prazoAlvo: '2026-12-10', anexos: { recebidos: 0, recusados: 1 } });
+    await despachar({ limite: 200 });
+    expect(ultima?.corpo.anexos).toEqual([{ nome: 'descricao-da-vaga.pdf', conteudoBase64: Buffer.from('%PDF-1.4 teste').toString('base64') }]);
+    const enviado = await evento(r.id, 'solicitar');
+    expect(enviado?.status).toBe('ENVIADO');
+    expect(enviado?.observacao).toContain('sumiu.pdf');
+    expect(enviado?.observacao).toContain('O RH recusou 1 anexo(s)');
+    /* O arquivo nunca é gravado no evento. */
+    expect(JSON.stringify(enviado?.payload)).not.toContain('conteudoBase64');
+    await rm(dir, { recursive: true, force: true });
+    await semToken();
 
     const d = await getDemanda(manager(), r.id);
-    expect(d).toMatchObject({ detalhes: { cargo: 'Cozinheiro', vagas: '2', dataDesejada: '2026-12-05' }, urgenciaMotivo: 'Saíram dois na mesma semana', anexos: 1 });
+    expect(d).toMatchObject({ rhNumero: 'DM-77', detalhes: { cargo: 'Cozinheiro', vagas: '2', dataDesejada: '2026-12-05' }, urgenciaMotivo: 'Saíram dois na mesma semana', anexos: 2 });
     expect(d?.arquivos[0].nome).toBe('descricao-da-vaga.pdf');
     /* Fora do alcance: a solicitação não existe para quem é de outra unidade. */
     expect(await getDemanda({ ...manager(), id: 'outro', unitIds: [unitSemCnpj], seesAllUnits: false }, r.id)).toBeNull();

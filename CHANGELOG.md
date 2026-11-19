@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.218.0 — 2026-11-19 (Solicitações ao RH — anexos chegam ao RH e as situações que ele devolve)
+
+- **Os anexos da solicitação agora seguem para o RH** junto com o pedido (até 5 arquivos, PDF/JPG/PNG, 10 MB cada e 18 MB somados). Antes ficavam só no SGO.
+- Arquivo que o RH recusar não derruba a solicitação: ela é aceita e o Administrador vê a observação em Envios ao RH.
+- **"Aguardando minha resposta" passa a funcionar:** o RH devolve a situação "aguardando resposta da unidade" quando precisa de algo de quem pediu.
+- Novas situações exibidas: **Aberto** e **Aguardando terceiros** (o RH esperando alguém de fora, como a contabilidade — não é pendência da unidade).
+
 ## v1.217.0 — 2026-11-19 (Solicitações ao RH)
 
 - **"Demandas ao RH" passa a se chamar "Solicitações ao RH"**, no mesmo endereço e com a mesma permissão, agora em três abas.

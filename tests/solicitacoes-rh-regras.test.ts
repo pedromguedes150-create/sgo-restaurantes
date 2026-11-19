@@ -86,7 +86,7 @@ describe('solicitações ao RH — o que o RH recebe na descrição', () => {
     expect(t).toContain('Quantidade de vagas: 2');
     expect(t).toContain('Data desejada: 01/12/2026');
     expect(t).toContain('Motivo da urgência: Saíram dois na semana');
-    expect(t).toContain('Anexos: 2 arquivo(s) guardado(s) no SGO');
+    expect(t).toContain('Anexos: 2 arquivo(s)');
   });
 
   it('nunca passa do limite do contrato', () => {
@@ -100,7 +100,10 @@ describe('solicitações ao RH — situação, lista e indicadores', () => {
     expect(faixaDaSituacao(null)).toBe('ANDAMENTO');
     expect(faixaDaSituacao('solicitado')).toBe('ANDAMENTO');
     expect(faixaDaSituacao('em_andamento')).toBe('ANDAMENTO');
+    expect(faixaDaSituacao('aberto')).toBe('ANDAMENTO');
     expect(faixaDaSituacao('aguardando_solicitante')).toBe('AGUARDANDO_RESPOSTA');
+    /* O RH esperando alguém de FORA não é pendência da unidade. */
+    expect(faixaDaSituacao('aguardando_terceiro')).toBe('ANDAMENTO');
     expect(faixaDaSituacao('concluido')).toBe('CONCLUIDA');
     expect(faixaDaSituacao('cancelado')).toBe('CANCELADA');
     expect(faixaDaSituacao('situacao_nova_do_rh')).toBe('ANDAMENTO');
@@ -115,7 +118,7 @@ describe('solicitações ao RH — situação, lista e indicadores', () => {
     const antiga = linha({ titulo: 'antiga', createdAt: '2026-11-01T12:00:00.000Z' });
     const nova = linha({ titulo: 'nova', createdAt: '2026-11-18T12:00:00.000Z' });
     const mexida = linha({ titulo: 'mexida', createdAt: '2026-11-02T12:00:00.000Z', rhSituacaoAt: '2026-11-19T09:00:00.000Z', rhSituacao: 'em_andamento' });
-    const espera = linha({ titulo: 'espera', createdAt: '2026-10-01T12:00:00.000Z', rhSituacao: 'aguardando_resposta' });
+    const espera = linha({ titulo: 'espera', createdAt: '2026-10-01T12:00:00.000Z', rhSituacao: 'aguardando_solicitante' });
     expect(ordenar([antiga, nova, mexida, espera]).map((l) => l.titulo)).toEqual(['espera', 'mexida', 'nova', 'antiga']);
     expect(ultimaMovimentacao(mexida)).toBe('2026-11-19T09:00:00.000Z');
   });
@@ -137,6 +140,42 @@ describe('solicitações ao RH — situação, lista e indicadores', () => {
     expect(prazoVencido(linha({ rhPrazoAlvo: '2026-11-18' }), hoje)).toBe(true);
     expect(prazoVencido(linha({ rhPrazoAlvo: '2026-11-19' }), hoje)).toBe(false);
     expect(prazoVencido(linha({ rhPrazoAlvo: '2026-11-01', rhSituacao: 'concluido' }), hoje)).toBe(false);
+  });
+});
+
+describe('solicitações ao RH — anexos no envio (v1.218.0)', () => {
+  const mb = (n: number) => n * 1024 * 1024;
+  const c = (nome: string, bytes: number | null, ext = 'pdf') => ({ path: `uploads/_privado/solicitacoes-rh/u/${nome}.${ext}`, nome, bytes });
+
+  it('respeita 10 MB por arquivo, 18 MB somados e 5 arquivos; o resto fica fora com o motivo', () => {
+    const r = saida.escolherAnexosDaDemanda([c('a', mb(9)), c('grande', mb(11)), c('b', mb(8)), c('c', mb(2)), c('sumiu', null), c('d', mb(1))]);
+    expect(r.enviar.map((x) => x.nome)).toEqual(['a', 'b', 'd']);
+    expect(r.omitidos).toHaveLength(3);
+    expect(r.omitidos[0]).toContain('grande');
+    expect(r.omitidos.some((m) => m.includes('18 MB'))).toBe(true);
+    expect(r.omitidos.some((m) => m.includes('não encontrado'))).toBe(true);
+    const seis = saida.escolherAnexosDaDemanda([1, 2, 3, 4, 5, 6].map((i) => c(`f${i}`, 1000)));
+    expect(seis.enviar).toHaveLength(5);
+    expect(saida.escolherAnexosDaDemanda([c('x', 1000, 'docx')]).enviar).toHaveLength(0);
+  });
+
+  it('o nome que vai ao RH leva a extensão do arquivo gravado', () => {
+    expect(saida.nomeDoAnexoDaDemanda('Descrição da vaga.PDF', 'uploads/_privado/solicitacoes-rh/u/sol-1.pdf')).toBe('Descrição da vaga.pdf');
+    expect(saida.nomeDoAnexoDaDemanda('foto', 'uploads/_privado/solicitacoes-rh/u/sol-2.jpg')).toBe('foto.jpg');
+    expect(saida.nomeDoAnexoDaDemanda('', 'x/sol-3.png')).toBe('anexo.png');
+  });
+
+  it('lê da resposta do RH quantos anexos ele recusou', () => {
+    expect(saida.anexosRecusadosPeloRh({ numero: 'DM-1', anexos: { recebidos: 2, recusados: 1 } })).toBe(1);
+    expect(saida.anexosRecusadosPeloRh({ numero: 'DM-1', anexos: { recebidos: 2, recusados: 0 } })).toBe(0);
+    expect(saida.anexosRecusadosPeloRh({ numero: 'DM-1' })).toBe(0);
+    expect(saida.anexosRecusadosPeloRh('texto')).toBe(0);
+  });
+
+  it('os rótulos das situações que o RH devolve', () => {
+    expect(saida.rotuloDaSituacao('aberto')).toBe('Aberto');
+    expect(saida.rotuloDaSituacao('aguardando_terceiro')).toBe('Aguardando terceiros');
+    expect(saida.rotuloDaSituacao('aguardando_solicitante')).toBe('Aguardando resposta da unidade');
   });
 });
 
