@@ -74,6 +74,13 @@ export const ABAS: Record<string, AbaDef[]> = {
     { id: 'ops', key: 'PRODUCTS_TAB_OPS', label: 'Atendimento dos pedidos' },
   ],
 
+  // v1.217.0 — Solicitações ao RH: o painel de gestão é uma aba à parte (Supervisão/Coordenação por padrão)
+  RH_DEMANDS: [
+    { id: 'minhas', key: 'RH_DEMANDS_TAB_MINE', label: 'Minhas solicitações', soVer: true },
+    { id: 'nova', key: 'RH_DEMANDS_TAB_NEW', label: 'Nova solicitação' },
+    { id: 'painel', key: 'RH_DEMANDS_TAB_PANEL', label: 'Painel de gestão', soVer: true },
+  ],
+
   CERTIFICATES: [
     { id: 'lancar', key: 'CERTIFICATES_TAB_NEW', label: 'Lançar documento (atestado, comparecimento, licença…)' },
     { id: 'historico', key: 'CERTIFICATES_TAB_HISTORY', label: 'Histórico', soVer: true },

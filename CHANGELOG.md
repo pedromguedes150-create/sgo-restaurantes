@@ -9,6 +9,16 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.217.0 — 2026-11-19 (Solicitações ao RH)
+
+- **"Demandas ao RH" passa a se chamar "Solicitações ao RH"**, no mesmo endereço e com a mesma permissão, agora em três abas.
+- **Minhas Solicitações:** três indicadores (em andamento, aguardando minha resposta, concluídas), busca e filtros por situação, período e tipo. A lista mostra protocolo, tipo, colaborador, abertura, situação, última movimentação e prazo do RH; o que pede resposta vem primeiro. Tocar na linha abre a página da solicitação, com os dados, os anexos e o andamento.
+- **Nova Solicitação:** a unidade vem do cabeçalho; os campos mudam conforme o tipo (admissão pede cargo e vagas; férias pede o período; mudança de horário pede o horário solicitado, e assim por diante). O resumo é sugerido sozinho e pode ser trocado. Prioridade urgente exige o motivo. Aceita até 5 anexos em PDF, JPG ou PNG.
+- **Painel de Gestão** (Supervisão, Coordenação e Administração): solicitações em aberto, pendências (envio com problema, prazo do RH vencido, urgente em aberto, sem retorno há 3 dias), tempo médio até concluir e os números por unidade, por tipo e por solicitante.
+- **Atestado saiu da lista de tipos:** atestado é lançado na Central de Atestados. As solicitações antigas desse tipo continuam na lista.
+- **A integração com o GBF-RH é a mesma.** Os campos de cada tipo e o motivo da urgência chegam ao RH dentro da descrição. Os anexos ficam guardados no SGO e o RH recebe o aviso de que existem.
+- "Aguardando minha resposta" só mostra número quando o RH passar a devolver essa situação; hoje ele devolve solicitado, em andamento, concluído e cancelado.
+
 ## v1.216.0 — 2026-11-18 (Currículos — leitura por IA e etapas renomeadas)
 
 - **O sistema lê o currículo:** ao anexar a foto ou o arquivo, o nome e o telefone do candidato são preenchidos sozinhos. O gerente confere, completa o que faltar, escolhe o cargo e escreve a observação se houver.

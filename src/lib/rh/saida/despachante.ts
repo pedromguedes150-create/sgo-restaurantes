@@ -222,7 +222,7 @@ export async function consultarSituacoes(opts: { agora?: Date } = {}): Promise<{
       await notifyUsers([ev.createdById], {
         title: `${ROTULO_TIPO[ev.tipo]}: ${rotuloDaSituacao(nova)}`,
         body: `O RH atualizou o andamento para "${rotuloDaSituacao(nova)}".`,
-        link: ev.tipo === 'DESLIGAMENTO' ? '/modulos/desligamentos' : '/modulos/pessoas/demandas-rh', module: 'PEOPLE',
+        link: ev.tipo === 'DESLIGAMENTO' ? '/modulos/desligamentos' : `/modulos/pessoas/demandas-rh/${ev.referenceId}`, module: 'PEOPLE',
       }).catch(() => {});
     }
   }
