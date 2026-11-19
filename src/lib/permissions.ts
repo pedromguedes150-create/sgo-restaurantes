@@ -127,7 +127,7 @@ const BASE: ModuleDef[] = [
   { key: 'TERMINATIONS', label: 'Desligamentos', nav: '/modulos/desligamentos' },
   /* Demanda ao RH (v1.168.0): pedido/dúvida do gerente enviado ao GBF-RH pela
      fila de saída; o gerente acompanha número, prazo e situação. */
-  { key: 'RH_DEMANDS', label: 'Demandas ao RH', nav: '/modulos/pessoas/demandas-rh', parent: 'PEOPLE' },
+  { key: 'RH_DEMANDS', label: 'Solicitações ao RH', nav: '/modulos/pessoas/demandas-rh', parent: 'PEOPLE' },
   { key: 'POPS', label: 'POPs', nav: '/modulos/pops' },
   /* Fichas de preparo dos produtos (v1.139.0): consulta aberta a todos os
      perfis, como os POPs; quem edita é só o Admin — conferido na lib
@@ -251,6 +251,7 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   CERTIFICATES_TAB_AUDIT: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'],
   /* v1.199.0 — painel do RH: nasce só para Admin/CEO (quem faz o papel de RH no SGO); o Admin libera a quem precisar. */
   CERTIFICATES_TAB_RH: [],
+  RH_DEMANDS_TAB_PANEL: ['SUPERVISOR', 'COORDINATOR'], // painel de gestão das solicitações ao RH (Admin/CEO sempre)
   COMMISSION: ['SUPERVISOR'], // v1.175.0: apura e confere a Supervisão (+Admin/CEO), como a Mobilidade
   CONFIG_COMMISSION: ['COORDINATOR'], // v1.175.0: o Coordenador marca as funções da cozinha (decisão do Pedro); percentual segue só do Admin, na lib
   /* Aba "Pagar" da central (v1.133.0): quem marca pago é o Coordenador (a

@@ -1,34 +1,68 @@
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { canEditModule } from '@/lib/permissions';
+import { abasDoPerfil } from '@/lib/permissions/abas-server';
+import { podeAba, podeEditarAba } from '@/lib/permissions/abas';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
-import { listarDemandas, TIPOS_DEMANDA, PRIORIDADES_DEMANDA } from '@/lib/rh/demandas';
-import { DemandasRhClient } from '@/components/people/demandas-rh-client';
+import { resolveUnitFilter } from '@/lib/scope/unit-filter';
+import { getSelectedUnitId } from '@/lib/scope/selected-unit';
+import { hojeNaOperacao } from '@/lib/controle-gerentes-dados';
+import { LIMITE_DA_LISTA, listarDemandas } from '@/lib/rh/demandas';
+import { montarPainel } from '@/lib/rh/solicitacoes-regras';
+import { SolicitacoesRhClient, type AbaDaTela } from '@/components/people/solicitacoes-rh-client';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Demandas ao RH (v1.168.0). O gerente registra; a fila de saída envia; a
- * situação devolvida pelo RH aparece aqui. Sem detalhe técnico do envio —
- * isso fica em Configurações → Integrações → Envios ao RH (Admin).
+ * SOLICITAÇÕES AO RH (v1.217.0; "Demandas ao RH" desde a v1.168.0). Uma tela,
+ * três abas: Minhas Solicitações (acompanhar), Nova Solicitação (abrir) e
+ * Painel de Gestão (Supervisão/Coordenação). O envio ao GBF-RH é o de sempre:
+ * a fila de saída manda e a situação devolvida aparece aqui. O detalhe técnico
+ * do envio fica em Configurações → Integrações → Envios ao RH (Admin).
  */
-export default async function DemandasRhPage() {
+export default async function SolicitacoesRhPage({ searchParams }: { searchParams: { aba?: string; unit?: string; unidade?: string } }) {
   const user = (await getSessionUser())!;
-  const [units, collaborators, rows, canCreate] = await Promise.all([
+  const [units, acesso, podeEditar] = await Promise.all([
     prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
-    prisma.collaborator.findMany({ where: { active: true, units: { some: { unit: { active: true, ...unitScopeWhere(user, 'id') } } } }, orderBy: { name: 'asc' }, select: { id: true, name: true, units: { select: { unitId: true } } } }),
-    listarDemandas(user),
+    abasDoPerfil(user.role, 'RH_DEMANDS'),
     canEditModule(user.role, 'RH_DEMANDS'),
+  ]);
+  const ids = units.map((u) => u.id);
+  const filtroUnidade = resolveUnitFilter(searchParams, ids, getSelectedUnitId(ids));
+  const unitIds = filtroUnidade.all ? undefined : filtroUnidade.ids;
+
+  const podeCriar = podeEditar && podeAba(acesso, 'nova') && podeEditarAba(acesso, 'nova') && units.length > 0;
+  const abas: AbaDaTela[] = [
+    ...(podeAba(acesso, 'minhas') ? ['minhas' as const] : []),
+    ...(podeCriar ? ['nova' as const] : []),
+    ...(podeAba(acesso, 'painel') ? ['painel' as const] : []),
+  ];
+  const pedida = searchParams.aba as AbaDaTela | undefined;
+  const aba: AbaDaTela = pedida && abas.includes(pedida) ? pedida : abas[0] ?? 'minhas';
+
+  const [linhas, collaborators] = await Promise.all([
+    aba === 'nova' ? Promise.resolve([]) : listarDemandas(user, { unitIds }),
+    aba === 'nova'
+      ? prisma.collaborator.findMany({ where: { active: true, units: { some: { unit: { active: true, ...unitScopeWhere(user, 'id') } } } }, orderBy: { name: 'asc' }, select: { id: true, name: true, units: { select: { unitId: true } } } })
+      : Promise.resolve([]),
   ]);
   const collaboratorsByUnit: Record<string, { id: string; name: string }[]> = {};
   for (const c of collaborators) for (const u of c.units) (collaboratorsByUnit[u.unitId] ??= []).push({ id: c.id, name: c.name });
 
+  const hoje = hojeNaOperacao();
   return (
-    <div className="space-y-4">
-      <Link href="/modulos/pessoas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Pessoas</Link>
-      <DemandasRhClient canCreate={canCreate && units.length > 0} units={units} collaboratorsByUnit={collaboratorsByUnit} rows={rows} tipos={TIPOS_DEMANDA} prioridades={PRIORIDADES_DEMANDA} />
-    </div>
+    <SolicitacoesRhClient
+      aba={aba}
+      abas={abas}
+      linhas={linhas}
+      limiteAtingido={linhas.length >= LIMITE_DA_LISTA}
+      painel={aba === 'painel' ? montarPainel(linhas, new Date(), hoje) : null}
+      hoje={hoje}
+      podeCriar={podeCriar}
+      units={units}
+      unidadeInicial={filtroUnidade.all ? '' : filtroUnidade.ids[0] ?? ''}
+      collaboratorsByUnit={collaboratorsByUnit}
+      visaoRede={filtroUnidade.all && units.length > 1}
+    />
   );
 }

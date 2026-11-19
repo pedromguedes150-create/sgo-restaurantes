@@ -2879,6 +2879,12 @@ model RhDemand {
   rhPrazoAlvo    String?
   rhSituacao     String?
   rhSituacaoAt   DateTime?
+  /// v1.217.0 — campos próprios do tipo (cargo, vagas, horário…), como o gerente preencheu. Vão ao RH dentro da descrição.
+  detalhes       Json?
+  /// v1.217.0 — por que é urgente (obrigatório na prioridade Urgente).
+  urgenciaMotivo String?
+  /// v1.217.0 — anexos guardados no SGO: [{ path, mime, nome, tamanho }]. O contrato do RH não tem campo de anexo na solicitação.
+  anexos         Json?
   createdAt      DateTime         @default(now())
 
   unit         Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)

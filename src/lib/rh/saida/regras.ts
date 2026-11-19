@@ -367,13 +367,18 @@ export function payloadDemanda(d: DemandaParaEnvio): Record<string, unknown> {
 
 /* ───────────────────────────── Rótulos ───────────────────────────── */
 
-export const ROTULO_TIPO: Record<RhOutboundType, string> = { ATESTADO: 'Atestado', DESLIGAMENTO: 'Desligamento', DEMANDA: 'Demanda ao RH' };
+export const ROTULO_TIPO: Record<RhOutboundType, string> = { ATESTADO: 'Atestado', DESLIGAMENTO: 'Desligamento', DEMANDA: 'Solicitação ao RH' };
 
 export const ROTULO_SITUACAO: Record<string, string> = {
   solicitado: 'Solicitado',
   em_andamento: 'Em andamento',
   concluido: 'Concluído',
   cancelado: 'Cancelado',
+  /* v1.217.0 — prontas para quando o RH devolver que espera algo de quem pediu. */
+  aguardando_solicitante: 'Aguardando resposta da unidade',
+  aguardando_resposta: 'Aguardando resposta da unidade',
+  pendente_solicitante: 'Aguardando resposta da unidade',
+  devolvido: 'Devolvida à unidade',
 };
 
 export function rotuloDaSituacao(s: string | null | undefined): string {

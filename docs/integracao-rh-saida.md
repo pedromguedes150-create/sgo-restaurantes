@@ -28,10 +28,17 @@ No droplet: editar `/opt/sgo/app/.env`, depois `docker compose -f docker-compose
 
 **Leitura pelo RH**: `GET /api/v1/atestados` (API Global, X-API-Key) devolve `fileUrl` = `/api/v1/atestados/{id}/anexo`, que entrega a imagem/PDF com a mesma chave (nulo sem anexo).
 | Desligamento | **Aprovação do supervisor** (nunca no pedido do gerente; quem pediu não aprova) | `POST /api/integracoes/sgo/desligamentos` | `sgoEventId`, `cpf`, `unitCode` (CNPJ da unidade do pedido, só dígitos), `dataDesligamento`, `tipo`, `modalidadeAviso` (omitida em justa causa/término de experiência), `motivo`, `justificativa` (motivo outro) ou `observacao`, `solicitanteNome`, `solicitanteEmail`, `carta {nome, base64}` (pedido de demissão) |
-| Demanda | Gerente registra em Pessoas → Demandas ao RH | `POST /api/integracoes/sgo/demandas` | `sgoEventId`, `tipo`, `titulo`, `solicitanteNome`, `prioridade` e, se informados, `descricao`, `cpf`, `unitCode`, `solicitanteEmail`, `dataEvento` |
+| Demanda ("Solicitação ao RH" na tela, v1.217.0) | Gerente registra em Pessoas → Solicitações ao RH | `POST /api/integracoes/sgo/demandas` | `sgoEventId`, `tipo`, `titulo`, `solicitanteNome`, `prioridade` e, se informados, `descricao`, `cpf`, `unitCode`, `solicitanteEmail`, `dataEvento` |
 
 Andamento: de hora em hora o SGO consulta `GET .../desligamentos/{sgoEventId}` e `GET .../demandas/{sgoEventId}`
 e grava `situacao` no pedido; o gerente vê na própria tela. Para em `concluido`/`cancelado`.
+
+**Solicitações ao RH (v1.217.0)** — o corpo enviado NÃO mudou. O que a tela acrescentou vai assim:
+
+- Os campos de cada tipo (cargo, vagas, período, horário…) e o motivo da urgência vão dentro de `descricao`, depois do texto do gerente, num bloco "Dados da solicitação" com uma linha por campo.
+- `dataEvento` sai do campo de data do tipo (data desejada, início das férias, "a partir de").
+- Anexos (PDF/JPG/PNG) ficam guardados no SGO; a `descricao` leva a linha "Anexos: N arquivo(s) guardado(s) no SGO". O contrato não tem campo de anexo para demanda.
+- Se o RH passar a devolver, em `situacao`, `aguardando_solicitante` (ou `aguardando_resposta`, `pendente_solicitante`, `devolvido`), o SGO mostra "Aguardando minha resposta" ao gerente e conta a pendência no painel. Hoje nenhuma dessas é devolvida.
 
 ## Como a fila decide (regra 3 do contrato)
 

@@ -1,3 +1,4 @@
+import { descricaoParaORh, normalizarDetalhes, type TipoDeSolicitacao } from '@/lib/rh/solicitacoes-regras';
 import { prisma } from '@/lib/db/prisma';
 import { carregarConfigDasNomenclaturas, nomeNoRh } from '@/lib/certificates/config-nomenclaturas';
 import {
@@ -64,14 +65,21 @@ export async function montarDesligamento(termId: string): Promise<Montagem> {
 export async function montarDemanda(demandaId: string): Promise<Montagem> {
   const d = await prisma.rhDemand.findUnique({
     where: { id: demandaId },
-    select: { id: true, unitId: true, tipo: true, titulo: true, descricao: true, dataEvento: true, prioridade: true, createdByName: true, createdByEmail: true, collaborator: { select: { cpf: true } }, unit: { select: { cnpj: true } } },
+    select: { id: true, unitId: true, tipo: true, titulo: true, descricao: true, dataEvento: true, prioridade: true, detalhes: true, urgenciaMotivo: true, anexos: true, createdByName: true, createdByEmail: true, collaborator: { select: { cpf: true } }, unit: { select: { cnpj: true } } },
   });
   if (!d) return { ok: false, erro: 'Demanda não encontrada no SGO', unitId: null };
   const cpf = digits(d.collaborator?.cpf);
+  /* v1.217.0 — os campos do tipo, o motivo da urgência e a contagem de anexos vão DENTRO da descrição: o contrato não tem campo para eles. */
+  const tipoSol = d.tipo as TipoDeSolicitacao;
+  const descricao = descricaoParaORh({
+    tipo: tipoSol, descricao: d.descricao,
+    detalhes: d.detalhes && typeof d.detalhes === 'object' && !Array.isArray(d.detalhes) ? normalizarDetalhes(tipoSol, d.detalhes) : null,
+    urgenciaMotivo: d.urgenciaMotivo, anexos: Array.isArray(d.anexos) ? d.anexos.length : 0,
+  });
   return {
     ok: true,
     payload: payloadDemanda({
-      tipo: d.tipo, titulo: d.titulo, descricao: d.descricao, cpf: cpf.length === 11 ? cpf : null, unitCnpj: d.unit.cnpj,
+      tipo: d.tipo, titulo: d.titulo, descricao, cpf: cpf.length === 11 ? cpf : null, unitCnpj: d.unit.cnpj,
       solicitanteNome: d.createdByName, solicitanteEmail: d.createdByEmail, dataEvento: d.dataEvento, prioridade: d.prioridade,
     }),
     anexoPath: null,

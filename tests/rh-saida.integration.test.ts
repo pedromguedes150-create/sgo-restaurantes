@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db/prisma';
 import { createCertificate } from '@/lib/certificates/save';
 import { deleteMedicalCertificate } from '@/lib/admin-ops';
 import { createTermination, decideTermination } from '@/lib/terminations';
-import { criarDemanda, listarDemandas } from '@/lib/rh/demandas';
+import { criarDemanda, getDemanda, listarDemandas } from '@/lib/rh/demandas';
 import { enfileirarAtestado, reenviar, recuperarAposReinicio, listarEventos, resumoDaFila, reclassificarJaExistentes } from '@/lib/rh/saida/fila';
 import { despacharPendentes, consultarSituacoes } from '@/lib/rh/saida/despachante';
 import { ENDPOINTS, MAX_TENTATIVAS } from '@/lib/rh/saida/regras';
@@ -344,15 +344,15 @@ describe('Desligamento → RH só na aprovação', () => {
   });
 });
 
-describe('Demanda ao RH', () => {
+describe('Solicitação ao RH', () => {
   it('cria, enfileira, envia e mostra ao gerente número/prazo/situação sem o detalhe técnico', async () => {
     await semToken();
-    const r = await criarDemanda(manager(), { unitId, tipo: 'FERIAS', titulo: 'Antecipar férias da Ana', descricao: 'pedido da própria', collaboratorId: collabId, prioridade: 'ALTA', dataEvento: '2026-12-01' });
+    const r = await criarDemanda(manager(), { unitId, tipo: 'FERIAS', titulo: 'Antecipar férias da Ana', descricao: 'pedido da própria', collaboratorId: collabId, prioridade: 'ALTA', detalhes: { inicio: '2026-12-01', fim: '2026-12-20', cargo: 'não é campo de férias' } });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const ev = await evento(r.id, 'solicitar');
     expect(ev?.endpoint).toBe(ENDPOINTS.DEMANDA);
-    expect(ev?.payload).toMatchObject({ tipo: 'ferias', titulo: 'Antecipar férias da Ana', descricao: 'pedido da própria', cpf: '12345678945', unitCode: '42790781000105', solicitanteNome: 'Gabriel', dataEvento: '2026-12-01', prioridade: 'alta' });
+    expect(ev?.payload).toMatchObject({ tipo: 'ferias', titulo: 'Antecipar férias da Ana', descricao: 'pedido da própria\n\nDados da solicitação\nInício: 01/12/2026\nFim: 20/12/2026', cpf: '12345678945', unitCode: '42790781000105', solicitanteNome: 'Gabriel', dataEvento: '2026-12-01', prioridade: 'alta' });
     let lista = await listarDemandas(manager());
     expect(lista.find((d) => d.id === r.id)?.envio).toBe('AGUARDANDO');
     comToken();
@@ -368,9 +368,40 @@ describe('Demanda ao RH', () => {
   });
   it('recusa tipo inválido, título vazio/longo e colaborador de outra unidade', async () => {
     expect((await criarDemanda(manager(), { unitId, tipo: 'X', titulo: 't' })).ok).toBe(false);
-    expect((await criarDemanda(manager(), { unitId, tipo: 'DUVIDA', titulo: '' })).ok).toBe(false);
-    expect((await criarDemanda(manager(), { unitId, tipo: 'DUVIDA', titulo: 'x'.repeat(201) })).ok).toBe(false);
-    expect((await criarDemanda(manager(), { unitId: unitSemCnpj, tipo: 'DUVIDA', titulo: 't', collaboratorId: collabSemCpf })).ok).toBe(false);
+    expect((await criarDemanda(manager(), { unitId, tipo: 'DUVIDA', titulo: '', descricao: 'd' })).ok).toBe(false);
+    expect((await criarDemanda(manager(), { unitId, tipo: 'DUVIDA', titulo: 'x'.repeat(201), descricao: 'd' })).ok).toBe(false);
+    expect(await criarDemanda(manager(), { unitId: unitSemCnpj, tipo: 'DUVIDA', titulo: 't', descricao: 'd', collaboratorId: collabSemCpf })).toMatchObject({ ok: false, reason: 'NOT_FOUND' });
+  });
+  it('v1.217.0 — campos por tipo, urgência com motivo, Atestado fora e a leitura no escopo', async () => {
+    await semToken();
+    /* O que o tipo exige é cobrado no servidor, pelo nome do campo. */
+    expect(await criarDemanda(manager(), { unitId, tipo: 'ADMISSAO', titulo: 'Admissão' })).toMatchObject({ ok: false, message: 'Preencha: Cargo.' });
+    expect(await criarDemanda(manager(), { unitId, tipo: 'FERIAS', titulo: 'Férias', detalhes: { inicio: '2026-12-01' } })).toMatchObject({ ok: false, message: 'Escolha o colaborador.' });
+    expect(await criarDemanda(manager(), { unitId, tipo: 'ATESTADO', titulo: 'Atestado', collaboratorId: collabId })).toMatchObject({ ok: false, reason: 'INVALID' });
+    expect(await criarDemanda(manager(), { unitId, tipo: 'DUVIDA', titulo: 'Dúvida', descricao: 'd', prioridade: 'URGENTE' })).toMatchObject({ ok: false, reason: 'INVALID' });
+
+    const r = await criarDemanda(manager(), {
+      unitId, tipo: 'ADMISSAO', titulo: 'Admissão: 2 vagas de Cozinheiro', prioridade: 'URGENTE', urgenciaMotivo: 'Saíram dois na mesma semana',
+      detalhes: { cargo: 'Cozinheiro', vagas: '2', dataDesejada: '2026-12-05' },
+      anexos: [{ path: 'uploads/_privado/solicitacoes-rh/x/sol-1.pdf', mime: 'application/pdf', nome: 'descricao-da-vaga.pdf', tamanho: 1200 }],
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const ev = await evento(r.id, 'solicitar');
+    const p = ev?.payload as Record<string, unknown>;
+    /* O corpo é o de sempre: nenhum campo novo no contrato. */
+    expect(Object.keys(p).sort()).toEqual(['dataEvento', 'descricao', 'prioridade', 'solicitanteEmail', 'solicitanteNome', 'tipo', 'titulo', 'unitCode'].filter((k) => k in p).sort());
+    expect(p).toMatchObject({ tipo: 'admissao', prioridade: 'urgente', dataEvento: '2026-12-05' });
+    expect(p.descricao).toBe('Dados da solicitação\nCargo: Cozinheiro\nQuantidade de vagas: 2\nData desejada: 05/12/2026\nMotivo da urgência: Saíram dois na mesma semana\nAnexos: 1 arquivo(s) guardado(s) no SGO');
+
+    const d = await getDemanda(manager(), r.id);
+    expect(d).toMatchObject({ detalhes: { cargo: 'Cozinheiro', vagas: '2', dataDesejada: '2026-12-05' }, urgenciaMotivo: 'Saíram dois na mesma semana', anexos: 1 });
+    expect(d?.arquivos[0].nome).toBe('descricao-da-vaga.pdf');
+    /* Fora do alcance: a solicitação não existe para quem é de outra unidade. */
+    expect(await getDemanda({ ...manager(), id: 'outro', unitIds: [unitSemCnpj], seesAllUnits: false }, r.id)).toBeNull();
+    /* O filtro de unidade só estreita o escopo. */
+    expect((await listarDemandas(manager(), { unitIds: [unitSemCnpj] })).some((x) => x.id === r.id)).toBe(false);
+    expect((await listarDemandas(manager(), { unitIds: [unitId] })).some((x) => x.id === r.id)).toBe(true);
   });
 });
 
