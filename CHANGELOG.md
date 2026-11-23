@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.221.2 — 2026-11-23 (Comunicados — o Painel mostra o mais recente primeiro)
+
+- **Painel & Histórico** da Central de Comunicação passa a listar do comunicado mais recente para o mais antigo. Antes os fixados vinham todos na frente, e um comunicado recém-publicado sem "Fixar no topo" ficava escondido abaixo deles. "Fixar no topo" continua valendo na caixa de quem recebe.
+
 ## v1.221.1 — 2026-11-23 (Pagamentos — a trava do dia é só do gerente)
 
 - **Só o Gerente fica travado no dia de hoje** ao lançar freelancer. Administrador, Supervisão e Coordenação voltam a escolher o dia, passado ou futuro, e continuam aprovando e corrigindo como antes.

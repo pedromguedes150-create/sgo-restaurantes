@@ -61,7 +61,9 @@ export async function getAuthoredCommunications(user: SessionUser) {
   const rows = await prisma.communication.findMany({
     where,
     include: { ...COMM_INCLUDE, recipients: { select: { status: true } } },
-    orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
+    /* v1.221.2 — o painel de quem ENVIA é por data: o mais recente primeiro. 'Fixar no topo' vale para a caixa de
+       quem RECEBE; ordenar o painel por fixado escondia o comunicado recém-publicado abaixo de todos os fixados. */
+    orderBy: [{ createdAt: 'desc' }],
     take: 100,
   });
   return rows.map((c) => {
