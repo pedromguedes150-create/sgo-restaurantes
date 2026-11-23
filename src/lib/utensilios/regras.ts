@@ -41,6 +41,52 @@ export const EDITAVEL: ReadonlySet<StatusInventario> = new Set(['RASCUNHO', 'EM_
 /** Situações "em aberto": só uma por unidade de cada vez. */
 export const EM_ABERTO: ReadonlySet<StatusInventario> = new Set(['RASCUNHO', 'PENDENTE', 'EM_CORRECAO']);
 
+/**
+ * LOCAL da contagem (v1.219.0): a mesma unidade pode ter mais de um inventário
+ * — a lanchonete avulsa do restaurante conta os utensílios dela à parte. Vale
+ * "um em aberto por unidade E local". Os inventários antigos são "Restaurante".
+ */
+export const LOCAL_PADRAO = 'Restaurante';
+export const LOCAIS_SUGERIDOS = ['Restaurante', 'Lanchonete'] as const;
+export const LOCAL_MAX = 40;
+
+/** Chave de comparação do local: sem acento, sem caixa, espaços aparados. */
+export function chaveDoLocal(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+/**
+ * Normaliza o local pedido: vazio = o padrão; igual (sem acento/caixa) a um
+ * sugerido ou a um já usado na unidade = a grafia que já existe; senão o
+ * texto aparado (2 a 40 caracteres). Devolve nulo quando não serve.
+ */
+export function normalizarLocal(v: unknown, jaUsados: string[] = []): string | null {
+  const t = String(v ?? '').trim().replace(/\s+/g, ' ');
+  if (!t) return LOCAL_PADRAO;
+  const chave = chaveDoLocal(t);
+  const igual = [...LOCAIS_SUGERIDOS, ...jaUsados].find((l) => chaveDoLocal(l) === chave);
+  if (igual) return igual;
+  if (t.length < 2 || t.length > LOCAL_MAX) return null;
+  return t;
+}
+
+/** Os locais que a tela oferece: sugeridos + os já usados na unidade, sem repetir. */
+export function locaisDaUnidade(jaUsados: string[]): string[] {
+  const out: string[] = [];
+  for (const l of [...LOCAIS_SUGERIDOS, ...jaUsados]) if (!out.some((o) => chaveDoLocal(o) === chaveDoLocal(l))) out.push(l);
+  return out;
+}
+
+/**
+ * Rótulo da situação para a tela: APROVADO sem auditor é o inventário que
+ * concluiu no envio (auditoria desligada) — chamar de "Aprovado" diria que
+ * alguém conferiu.
+ */
+export function rotuloDaSituacao(i: { status: StatusInventario; auditorName?: string | null }): string {
+  if (i.status === 'APROVADO' && !i.auditorName) return 'Concluído';
+  return ROTULO_STATUS[i.status];
+}
+
 export const MOTIVO_MIN = 5;
 export const QUANTIDADE_MAX = 999_999;
 
@@ -85,8 +131,9 @@ export function contarDivergencias(itens: { quantity: number | null; auditedQuan
 }
 
 /** Transições permitidas — a única tabela que decide status. */
-export function proximoStatus(atual: StatusInventario, acao: 'enviar' | 'devolver' | 'aprovar'): StatusInventario | null {
-  if (acao === 'enviar') return EDITAVEL.has(atual) ? 'PENDENTE' : null;
+export function proximoStatus(atual: StatusInventario, acao: 'enviar' | 'devolver' | 'aprovar', exigeAuditoria = true): StatusInventario | null {
+  // Sem auditoria (v1.219.0), o envio já conclui o inventário.
+  if (acao === 'enviar') return EDITAVEL.has(atual) ? (exigeAuditoria ? 'PENDENTE' : 'APROVADO') : null;
   if (acao === 'devolver') return atual === 'PENDENTE' ? 'EM_CORRECAO' : null;
   if (acao === 'aprovar') return atual === 'PENDENTE' ? 'APROVADO' : null;
   return null;

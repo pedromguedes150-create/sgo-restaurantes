@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ClipboardCheck, ClipboardList, History, Settings2 } from 'lucide-react';
+import { BarChart3, ClipboardCheck, ClipboardList, History, Printer, Settings2 } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
@@ -7,12 +7,15 @@ import { resolveUnitFilter } from '@/lib/scope/unit-filter';
 import { getSelectedUnitId } from '@/lib/scope/selected-unit';
 import { hojeNaOperacao } from '@/lib/controle-gerentes-dados';
 import { permissaoDeRota } from '@/lib/permissions/links';
-import { emAbertoDaUnidade, indicadoresDeAuditoria, listarInventarios } from '@/lib/utensilios/inventario';
-import { PODE_AUDITAR, PODE_CONTAR, ROTULO_STATUS, TOM_STATUS, type StatusInventario } from '@/lib/utensilios/regras';
+import { contagensEnviadas, emAbertosDaUnidade, indicadoresDeAuditoria, listarInventarios, locaisUsadosNaUnidade } from '@/lib/utensilios/inventario';
+import { PODE_AUDITAR, PODE_CONTAR, ROTULO_STATUS, TOM_STATUS, chaveDoLocal, locaisDaUnidade, rotuloDaSituacao, type StatusInventario } from '@/lib/utensilios/regras';
+import { seriesPorLocal } from '@/lib/utensilios/evolucao';
+import { exigeAuditoria } from '@/lib/utensilios/config';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
-import { AbrirContagem } from '@/components/utensilios/abrir-contagem';
+import { AbrirContagem, NovaContagem } from '@/components/utensilios/abrir-contagem';
+import { EvolucaoDosUtensilios } from '@/components/utensilios/evolucao';
 import { FiltrosHistorico } from '@/components/utensilios/filtros-historico';
 
 export const dynamic = 'force-dynamic';
@@ -21,9 +24,10 @@ const DIA = /^\d{4}-\d{2}-\d{2}$/;
 const STATUS_VALIDOS = new Set<string>(['RASCUNHO', 'PENDENTE', 'EM_CORRECAO', 'APROVADO']);
 
 /**
- * INVENTÁRIO DE UTENSÍLIOS (v1.177.0) — três abas: CONTAGEM (o gerente abre ou
- * retoma a contagem da unidade), AUDITORIA (pendentes primeiro, para a
- * Supervisão/Coordenação) e HISTÓRICO (tudo, com filtros e PDF por inventário).
+ * INVENTÁRIO DE UTENSÍLIOS (v1.177.0) — CONTAGEM (o gerente abre ou retoma a
+ * contagem de cada LOCAL da unidade — v1.219.0: Restaurante, Lanchonete…),
+ * AUDITORIA (pendentes primeiro, para a Supervisão/Coordenação), HISTÓRICO
+ * (tudo, com filtros e PDF) e EVOLUÇÃO (quantidades contagem a contagem).
  * A unidade vem do seletor do cabeçalho; o escopo de verdade é o do servidor.
  */
 export default async function InventarioUtensiliosPage({ searchParams }: {
@@ -33,7 +37,10 @@ export default async function InventarioUtensiliosPage({ searchParams }: {
   const audita = PODE_AUDITAR.has(user.role);
   const conta = PODE_CONTAR.has(user.role);
   const abaPedida = searchParams.aba;
-  const aba = abaPedida === 'auditoria' && audita ? 'auditoria' : abaPedida === 'historico' ? 'historico' : abaPedida === 'contagem' || !audita ? 'contagem' : 'auditoria';
+  const comAuditoria = await exigeAuditoria();
+  // Sem auditoria exigida (o padrão), a porta de entrada é a Contagem para todos.
+  const aba = abaPedida === 'auditoria' && audita ? 'auditoria' : abaPedida === 'historico' ? 'historico' : abaPedida === 'evolucao' ? 'evolucao'
+    : abaPedida === 'contagem' || !audita || !comAuditoria ? 'contagem' : 'auditoria';
 
   const units = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
   const ids = units.map((u) => u.id);
@@ -57,20 +64,33 @@ export default async function InventarioUtensiliosPage({ searchParams }: {
     ...(conta ? [{ label: 'Contagem', icon: <ClipboardList className="h-3.5 w-3.5" />, href: q({ aba: 'contagem' }), active: aba === 'contagem', testId: 'aba-contagem' }] : []),
     ...(audita ? [{ label: 'Auditoria', icon: <ClipboardCheck className="h-3.5 w-3.5" />, href: q({ aba: 'auditoria' }), active: aba === 'auditoria', testId: 'aba-auditoria' }] : []),
     { label: 'Histórico', icon: <History className="h-3.5 w-3.5" />, href: q({ aba: 'historico' }), active: aba === 'historico', testId: 'aba-historico' },
+    { label: 'Evolução', icon: <BarChart3 className="h-3.5 w-3.5" />, href: q({ aba: 'evolucao' }), active: aba === 'evolucao', testId: 'aba-evolucao' },
   ];
+
+  const pdf = new URLSearchParams();
+  for (const [k, v] of Object.entries({ unit: searchParams.unit, unidade: searchParams.unidade, de: aba === 'historico' ? de : undefined, ate: aba === 'historico' ? ate : undefined, imprimir: '1' })) if (v) pdf.set(k, v);
 
   const cabecalho = (
     <LargeTitle
       title="Inventário de Utensílios"
-      subtitle="Contagem periódica de pratos, copos, talheres e afins por unidade: o gerente conta e envia, a Supervisão confere, aprova ou devolve para correção."
+      subtitle={comAuditoria
+        ? 'Contagem periódica de pratos, copos, talheres e afins por unidade: o gerente conta e envia, a Supervisão confere, aprova ou devolve para correção.'
+        : 'Contagem periódica de pratos, copos, talheres e afins por unidade e local: o gerente conta e envia, e o inventário já fica concluído.'}
       tabs={tabs}
-      actions={podeConfigurar ? <Link href="/configuracoes/utensilios" className="sgo-btn sgo-btn--sm"><Settings2 className="h-4 w-4" /> Lista padrão</Link> : undefined}
+      actions={<>
+        <a href={`/modulos/inventario-utensilios/relatorio?${pdf.toString()}`} target="_blank" rel="noreferrer" className="sgo-btn sgo-btn--sm" data-testid="relatorio-pdf"><Printer className="h-4 w-4" /> Relatório PDF</a>
+        {podeConfigurar && <Link href="/configuracoes/utensilios" className="sgo-btn sgo-btn--sm"><Settings2 className="h-4 w-4" /> Lista padrão</Link>}
+      </>}
     />
   );
 
   if (aba === 'contagem') {
     const alvo = filtroUnidade.all ? units : units.filter((u) => filtroUnidade.ids.includes(u.id));
-    const abertos = await Promise.all(alvo.map(async (u) => ({ unidade: u, aberto: await emAbertoDaUnidade(u.id) })));
+    const abertos = await Promise.all(alvo.map(async (u) => {
+      const [emAberto, usados] = await Promise.all([emAbertosDaUnidade(u.id), locaisUsadosNaUnidade(u.id)]);
+      const ocupados = new Set(emAberto.map((a) => chaveDoLocal(a.local)));
+      return { unidade: u, emAberto, livres: locaisDaUnidade(usados).filter((l) => !ocupados.has(chaveDoLocal(l))) };
+    }));
     const recentes = await listarInventarios(user, { unitIds }, 10);
     return (
       <div className="space-y-4">
@@ -78,17 +98,21 @@ export default async function InventarioUtensiliosPage({ searchParams }: {
         <section className="sgo-panel sgo-panel--solid overflow-hidden" data-testid="contagem-unidades">
           <p className="sgo-panel__title px-3 pt-3 sm:px-4">{alvo.length === 1 ? 'Sua contagem' : 'Contagem por unidade'}</p>
           <ul className="divide-y divide-line">
-            {abertos.map(({ unidade, aberto }) => (
-              <li key={unidade.id} className="flex items-center justify-between gap-3 px-3 py-3 sm:px-4">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-ink-900">{unidade.name}</p>
-                  <p className="text-xs text-ink-500">
-                    {aberto ? <>Em andamento: <StatusBadge tone={TOM_STATUS[aberto.status as StatusInventario]} dot>{ROTULO_STATUS[aberto.status as StatusInventario]}</StatusBadge></> : 'Nenhuma contagem em aberto.'}
-                  </p>
-                </div>
-                {aberto && aberto.status === 'PENDENTE'
-                  ? <Link href={`/modulos/inventario-utensilios/${aberto.id}`} className="sgo-btn sgo-btn--sm">Ver enviado</Link>
-                  : <AbrirContagem unitId={unidade.id} rotulo={aberto ? (aberto.status === 'EM_CORRECAO' ? 'Corrigir' : 'Continuar') : 'Iniciar contagem'} />}
+            {abertos.map(({ unidade, emAberto, livres }) => (
+              <li key={unidade.id} className="space-y-3 px-3 py-3 sm:px-4" data-testid="contagem-da-unidade">
+                <p className="text-sm font-semibold text-ink-900">{unidade.name}</p>
+                {emAberto.length === 0 && <p className="text-xs text-ink-500">Nenhuma contagem em aberto.</p>}
+                {emAberto.map((a) => (
+                  <div key={a.id} className="flex flex-wrap items-center justify-between gap-3" data-testid="contagem-em-aberto" data-local={a.local}>
+                    <p className="min-w-[10rem] flex-1 text-sm text-ink-700">
+                      <b className="text-ink-900">{a.local}</b> · em andamento: <StatusBadge tone={TOM_STATUS[a.status as StatusInventario]} dot>{ROTULO_STATUS[a.status as StatusInventario]}</StatusBadge>
+                    </p>
+                    {a.status === 'PENDENTE'
+                      ? <Link href={`/modulos/inventario-utensilios/${a.id}`} className="sgo-btn sgo-btn--sm">Ver enviado</Link>
+                      : <AbrirContagem unitId={unidade.id} local={a.local} rotulo={a.status === 'EM_CORRECAO' ? 'Corrigir' : 'Continuar'} />}
+                  </div>
+                ))}
+                <NovaContagem unitId={unidade.id} locais={livres} />
               </li>
             ))}
             {abertos.length === 0 && <li className="px-3 py-3 text-sm text-ink-500">Nenhuma unidade no seu alcance.</li>}
@@ -119,6 +143,16 @@ export default async function InventarioUtensiliosPage({ searchParams }: {
     );
   }
 
+  if (aba === 'evolucao') {
+    const series = seriesPorLocal(await contagensEnviadas(user, { unitIds }));
+    return (
+      <div className="space-y-4">
+        {cabecalho}
+        <EvolucaoDosUtensilios series={series} mostrarUnidade={units.length > 1} />
+      </div>
+    );
+  }
+
   const gerentes = await prisma.user.findMany({ where: { active: true, role: { in: ['MANAGER', 'COORDINATOR'] }, memberships: { some: { unitId: { in: ids } } } }, select: { id: true, name: true }, orderBy: { name: 'asc' } });
   const gerente = gerentes.some((g) => g.id === searchParams.gerente) ? searchParams.gerente : undefined;
   const linhas = await listarInventarios(user, { unitIds, de, ate, status, managerId: gerente });
@@ -141,17 +175,18 @@ function Lista({ titulo, linhas, mostrarUnidade, vazio, acao }: { titulo: string
           <table className="sgo-tbl w-full text-sm">
             <thead><tr>
               {mostrarUnidade && <th className="text-left">Unidade</th>}
-              <th className="text-left">Gerente</th><th className="text-left">Criado</th><th className="text-left">Enviado</th><th className="text-right">Total</th><th className="text-left">Situação</th><th className="text-left">Auditor</th><th />
+              <th className="text-left">Local</th><th className="text-left">Gerente</th><th className="text-left">Criado</th><th className="text-left">Enviado</th><th className="text-right">Total</th><th className="text-left">Situação</th><th className="text-left">Auditor</th><th />
             </tr></thead>
             <tbody>
               {linhas.map((l) => (
                 <tr key={l.id} data-testid="linha-inventario">
                   {mostrarUnidade && <td className="font-medium text-ink-900">{l.unidade}</td>}
+                  <td>{l.local}</td>
                   <td>{l.managerName}</td>
                   <td className="text-xs text-ink-500">{fmt(l.criadoEm)}</td>
                   <td className="text-xs text-ink-500">{fmt(l.enviadoEm)}</td>
                   <td className="text-right tabular-nums font-semibold">{l.total.toLocaleString('pt-BR')}</td>
-                  <td><StatusBadge tone={TOM_STATUS[l.status]} dot>{ROTULO_STATUS[l.status]}</StatusBadge>{l.divergentes > 0 && <span className="ml-2 text-xs text-danger">{l.divergentes} divergência(s)</span>}</td>
+                  <td><StatusBadge tone={TOM_STATUS[l.status]} dot>{rotuloDaSituacao(l)}</StatusBadge>{l.divergentes > 0 && <span className="ml-2 text-xs text-danger">{l.divergentes} divergência(s)</span>}</td>
                   <td className="text-xs text-ink-500">{l.auditorName ?? '—'}</td>
                   <td className="text-right"><Link href={`/modulos/inventario-utensilios/${l.id}`} className="sgo-btn sgo-btn--sm">{acao ?? 'Abrir'}</Link></td>
                 </tr>

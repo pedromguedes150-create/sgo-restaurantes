@@ -4,8 +4,9 @@ import { prisma } from '@/lib/db/prisma';
 import type { SessionUser } from '@/lib/auth/session';
 import {
   abrirContagem, salvarRascunho, enviarInventario, registrarConferencia, aprovarInventario, devolverInventario,
-  listarInventarios, indicadoresDeAuditoria, getInventario, getUtensilsCoverage, emAbertoDaUnidade,
+  listarInventarios, indicadoresDeAuditoria, getInventario, getUtensilsCoverage, emAbertoDaUnidade, emAbertosDaUnidade, contagensEnviadas,
 } from '@/lib/utensilios/inventario';
+import { seriesPorLocal } from '@/lib/utensilios/evolucao';
 import { ensureUtensiliosPadrao, listarCatalogo, adicionarUtensilio, renomearUtensilio, ativarUtensilio } from '@/lib/utensilios/catalogo';
 
 /**
@@ -41,9 +42,12 @@ beforeAll(async () => {
   gerenteBId = await user('GerenteB', 'MANAGER', unitB);
   adminId = await user('Admin', 'ADMIN');
   await ensureUtensiliosPadrao();
+  // O fluxo completo abaixo é o COM auditoria; o padrão (sem) tem o seu bloco no fim.
+  await prisma.appSetting.upsert({ where: { key: 'UTENSILS_AUDIT_REQUIRED' }, create: { key: 'UTENSILS_AUDIT_REQUIRED', value: 'true' }, update: { value: 'true' } });
 });
 
 afterAll(async () => {
+  await prisma.appSetting.deleteMany({ where: { key: 'UTENSILS_AUDIT_REQUIRED' } });
   await prisma.utensilInventory.deleteMany({ where: { unitId: { in: [unitA, unitB] } } });
   if (catalogoNovoId) await prisma.utensilCatalogItem.delete({ where: { id: catalogoNovoId } }).catch(() => {});
   const ids = [gerenteAId, supAId, coordAId, gerenteBId, adminId];
@@ -218,5 +222,54 @@ describe('fluxo completo', () => {
     expect((await getInventario(gerenteA(), r.id))!.items.some((i) => i.name === `Bandejas ${sfx}`)).toBe(true);
     const outro = await abrirContagem(gerenteA(), unitB);
     expect(outro.ok === false && outro.reason).toBe('FORBIDDEN');
+  });
+});
+
+describe('v1.219.0 — um inventário por LOCAL e envio sem auditoria', () => {
+  let lanchoneteId = '';
+
+  it('a mesma unidade abre a Lanchonete com o Restaurante ainda em aberto; reabrir (em qualquer grafia) retoma o MESMO', async () => {
+    const antes = await emAbertosDaUnidade(unitA);
+    expect(antes.map((a) => a.local)).toEqual(['Restaurante']);
+    const r = await abrirContagem(gerenteA(), unitA, { local: 'Lanchonete' });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    lanchoneteId = r.id;
+    expect(antes.some((a) => a.id === r.id)).toBe(false);
+    const deNovo = await abrirContagem(gerenteA(), unitA, { local: '  lanchonete ' });
+    expect(deNovo.ok && deNovo.id).toBe(lanchoneteId);
+    expect((await emAbertosDaUnidade(unitA)).map((a) => a.local).sort()).toEqual(['Lanchonete', 'Restaurante']);
+    expect((await getInventario(gerenteA(), lanchoneteId))!.local).toBe('Lanchonete');
+    const ruim = await abrirContagem(gerenteA(), unitA, { local: 'x' });
+    expect(ruim.ok === false && ruim.reason).toBe('INVALID');
+  });
+
+  it('com a auditoria desligada (o padrão), enviar já CONCLUI: APROVADO sem auditor, fora dos em aberto, e a Supervisão é avisada', async () => {
+    await prisma.appSetting.deleteMany({ where: { key: 'UTENSILS_AUDIT_REQUIRED' } });
+    const inv = (await getInventario(gerenteA(), lanchoneteId))!;
+    const r = await enviarInventario(gerenteA(), lanchoneteId, { itens: inv.items.map((i) => ({ id: i.id, quantity: 3 })) });
+    expect(r.ok && r.status).toBe('APROVADO');
+    const depois = (await getInventario(gerenteA(), lanchoneteId))!;
+    expect(depois.status).toBe('APROVADO');
+    expect(depois.auditorName).toBeNull();
+    expect(depois.approvedAt).not.toBeNull();
+    expect(depois.events.at(-1)?.note).toContain('auditoria desligada');
+    expect((await emAbertosDaUnidade(unitA)).map((a) => a.local)).toEqual(['Restaurante']);
+    const aviso = await prisma.notification.findFirst({ where: { userId: supAId, link: { endsWith: lanchoneteId } } });
+    expect(aviso?.body).toContain('Lanchonete');
+    /* concluído é imutável e o gerente abre a próxima do mesmo local */
+    expect((await salvarRascunho(gerenteA(), lanchoneteId, {})).ok).toBe(false);
+    const proxima = await abrirContagem(gerenteA(), unitA, { local: 'Lanchonete' });
+    expect(proxima.ok && proxima.id !== lanchoneteId).toBe(true);
+  });
+
+  it('as contagens enviadas vêm com o local, no escopo, e viram uma série por local', async () => {
+    const enviadas = await contagensEnviadas(gerenteA(), { unitIds: [unitA] });
+    expect(enviadas.some((c) => c.id === lanchoneteId && c.local === 'Lanchonete')).toBe(true);
+    expect((await contagensEnviadas(gerenteB(), { unitIds: [unitA] })).length).toBe(0);
+    const series = seriesPorLocal(enviadas);
+    expect(series.map((s) => s.local).sort()).toEqual(['Lanchonete', 'Restaurante']);
+    const lan = series.find((s) => s.local === 'Lanchonete')!;
+    expect(lan.comparacao.totalAtual).toBe(lan.ultima.itens.length * 3);
   });
 });

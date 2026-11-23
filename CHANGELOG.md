@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.219.0 — 2026-11-20 (Inventário de Utensílios — mais de um por unidade, relatório em PDF, sem auditoria e Evolução)
+
+- **Mais de um inventário por unidade:** ao iniciar a contagem, escolha o **local** (Restaurante, Lanchonete ou outro nome). Vale um inventário em aberto por unidade e local — a lanchonete avulsa conta os utensílios dela sem esperar o restaurante. Os inventários anteriores ficaram como "Restaurante".
+- **Relatório PDF:** botão "Relatório PDF" no topo da tela. Sai a relação de utensílios de cada unidade, um por linha, com uma coluna por local (a contagem enviada mais recente de cada um) e o total.
+- **Sem auditoria por enquanto:** enviar já conclui o inventário e a Supervisão só é avisada. A regra é uma chave em Configurações → Utensílios ("Auditoria da Supervisão"), que nasce desligada. O que já estava pendente de auditoria continua pendente e é aprovado à mão.
+- **Aba Evolução:** para cada local, o total por contagem, as quebras (o que diminuiu) e as sobras (o que aumentou) em relação à contagem anterior, dizendo se foram maiores ou menores que na comparação passada, e a relação das quantidades utensílio por utensílio. "Sobra" inclui reposição comprada: o SGO não separa compra de sobra.
+- A bonificação não mudou: a meta continua contando "a unidade enviou inventário no mês" — um inventário basta.
+
 ## v1.218.0 — 2026-11-19 (Solicitações ao RH — anexos chegam ao RH e as situações que ele devolve)
 
 - **Os anexos da solicitação agora seguem para o RH** junto com o pedido (até 5 arquivos, PDF/JPG/PNG, 10 MB cada e 18 MB somados). Antes ficavam só no SGO.

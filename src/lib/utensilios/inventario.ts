@@ -5,9 +5,11 @@ import { notifySupervisory, notifyUsers } from '@/lib/notifications';
 import type { SessionUser } from '@/lib/auth/session';
 import type { Prisma, UtensilInventoryStatus } from '@prisma/client';
 import { listarCatalogo } from './catalogo';
+import { exigeAuditoria } from './config';
+import type { Contagem } from './evolucao';
 import {
   EDITAVEL, EM_ABERTO, PERFIS_RESPONSAVEL, PODE_AUDITAR, PODE_CONTAR, ROTULO_STATUS,
-  faltamParaEnviar, motivoValido, nomeValido, normalizarQuantidade, proximoStatus, retrato, totalDeUtensilios,
+  faltamParaEnviar, motivoValido, nomeValido, normalizarLocal, normalizarQuantidade, proximoStatus, retrato, totalDeUtensilios,
   type StatusInventario,
 } from './regras';
 
@@ -15,8 +17,10 @@ import {
  * INVENTÁRIO DE UTENSÍLIOS — o fluxo: abrir (ou retomar) a contagem da
  * unidade → salvar rascunho → enviar → o supervisor/coordenador confere,
  * aprova ou devolve com motivo → o gerente corrige e reenvia. Um inventário
- * em aberto por unidade de cada vez; aprovado é imutável; a unidade é
- * validada na SESSÃO, nunca no corpo; toda transição vira evento + Auditoria.
+ * em aberto por unidade E LOCAL de cada vez (v1.219.0: a lanchonete avulsa
+ * conta à parte); aprovado é imutável; a unidade é validada na SESSÃO, nunca
+ * no corpo; toda transição vira evento + Auditoria. Com a auditoria desligada
+ * (o padrão), o envio já conclui o inventário e a Supervisão só é avisada.
  */
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
@@ -49,9 +53,20 @@ export async function responsaveisDaUnidade(unitId: string) {
   });
 }
 
-/** O inventário em aberto da unidade (rascunho, pendente ou em correção), se houver. */
-export async function emAbertoDaUnidade(unitId: string) {
-  return prisma.utensilInventory.findFirst({ where: { unitId, status: { in: [...EM_ABERTO] as UtensilInventoryStatus[] } }, orderBy: { createdAt: 'desc' }, select: { id: true, status: true } });
+/** O inventário em aberto da unidade (rascunho, pendente ou em correção), se houver — de um local, ou o mais recente de qualquer um. */
+export async function emAbertoDaUnidade(unitId: string, local?: string) {
+  return prisma.utensilInventory.findFirst({ where: { unitId, ...(local ? { local } : {}), status: { in: [...EM_ABERTO] as UtensilInventoryStatus[] } }, orderBy: { createdAt: 'desc' }, select: { id: true, status: true, local: true } });
+}
+
+/** Todos os em aberto da unidade — no máximo um por local. */
+export async function emAbertosDaUnidade(unitId: string) {
+  return prisma.utensilInventory.findMany({ where: { unitId, status: { in: [...EM_ABERTO] as UtensilInventoryStatus[] } }, orderBy: [{ local: 'asc' }, { createdAt: 'desc' }], select: { id: true, status: true, local: true } });
+}
+
+/** Os locais em que a unidade já contou alguma vez. */
+export async function locaisUsadosNaUnidade(unitId: string): Promise<string[]> {
+  const rows = await prisma.utensilInventory.findMany({ where: { unitId }, distinct: ['local'], select: { local: true }, orderBy: { local: 'asc' } });
+  return rows.map((r) => r.local);
 }
 
 /**
@@ -60,22 +75,24 @@ export async function emAbertoDaUnidade(unitId: string) {
  * conferido). O responsável nasce como quem abriu, quando ele é gerente ou
  * coordenador da unidade; senão o primeiro da lista.
  */
-export async function abrirContagem(user: SessionUser, unitId: string, ctx: Ctx = {}): Promise<Resultado> {
+export async function abrirContagem(user: SessionUser, unitId: string, opts: { local?: unknown } = {}, ctx: Ctx = {}): Promise<Resultado> {
   if (!PODE_CONTAR.has(user.role)) return { ok: false, reason: 'FORBIDDEN' };
   if (!unitId || !canAccessUnit(user, unitId)) return { ok: false, reason: 'FORBIDDEN', message: 'Unidade fora do seu acesso.' };
-  const aberto = await emAbertoDaUnidade(unitId);
+  const local = normalizarLocal(opts.local, await locaisUsadosNaUnidade(unitId));
+  if (!local) return { ok: false, reason: 'INVALID', message: 'Informe o local da contagem (2 a 40 caracteres).' };
+  const aberto = await emAbertoDaUnidade(unitId, local);
   if (aberto) return { ok: true, id: aberto.id, status: aberto.status };
   const [catalogo, responsaveis] = await Promise.all([listarCatalogo(true), responsaveisDaUnidade(unitId)]);
   const eu = responsaveis.find((r) => r.id === user.id);
   const resp = eu ?? responsaveis[0] ?? { id: user.id, name: user.name };
   const inv = await prisma.utensilInventory.create({
     data: {
-      unitId, status: 'RASCUNHO', managerId: resp.id, managerName: resp.name, createdById: user.id, createdByName: user.name,
+      unitId, local, status: 'RASCUNHO', managerId: resp.id, managerName: resp.name, createdById: user.id, createdByName: user.name,
       items: { create: catalogo.map((c) => ({ catalogItemId: c.id, name: c.name, order: c.order, quantity: null, custom: false })) },
       events: { create: { kind: 'CRIADO', byId: user.id, byName: user.name } },
     },
   });
-  await audit({ userId: user.id, unitId, action: 'UTENSIL_INV_CREATE', module: 'INVENTORY', entity: 'utensil_inventory', entityId: inv.id, ...ctx });
+  await audit({ userId: user.id, unitId, action: 'UTENSIL_INV_CREATE', module: 'INVENTORY', entity: 'utensil_inventory', entityId: inv.id, metadata: { local }, ...ctx });
   return { ok: true, id: inv.id, status: 'RASCUNHO' };
 }
 
@@ -149,20 +166,21 @@ export async function enviarInventario(user: SessionUser, id: string, p: Preench
   const inv = (await prisma.utensilInventory.findUnique({ where: { id }, include: { items: { orderBy: { order: 'asc' } } } }))!;
   const faltam = faltamParaEnviar(inv.items);
   if (faltam.length) return { ok: false, reason: 'INCOMPLETO', message: `Preencha a quantidade de: ${faltam.join(', ')}.`, faltam };
-  const novo = proximoStatus(inv.status as StatusInventario, 'enviar')!;
+  const comAuditoria = await exigeAuditoria();
+  const novo = proximoStatus(inv.status as StatusInventario, 'enviar', comAuditoria)!;
   const reenvio = inv.status === 'EM_CORRECAO';
   const agora = new Date();
   const feito = await prisma.utensilInventory.updateMany({
     where: { id, status: { in: ['RASCUNHO', 'EM_CORRECAO'] } },
-    data: { status: novo, sentAt: agora, firstSentAt: inv.firstSentAt ?? agora, returnReason: null },
+    data: { status: novo, sentAt: agora, firstSentAt: inv.firstSentAt ?? agora, returnReason: null, ...(novo === 'APROVADO' ? { approvedAt: agora } : {}) },
   });
   if (feito.count === 0) return { ok: false, reason: 'STATE', message: 'Este inventário já foi enviado.' };
-  await prisma.utensilInventoryEvent.create({ data: { inventoryId: id, kind: reenvio ? 'REENVIADO' : 'ENVIADO', byId: user.id, byName: user.name, snapshot: retrato(inv.items) } });
+  await prisma.utensilInventoryEvent.create({ data: { inventoryId: id, kind: reenvio ? 'REENVIADO' : 'ENVIADO', byId: user.id, byName: user.name, snapshot: retrato(inv.items), ...(comAuditoria ? {} : { note: 'Concluído no envio — auditoria desligada.' }) } });
   const unidade = await prisma.unit.findUnique({ where: { id: inv.unitId }, select: { name: true } });
-  await audit({ userId: user.id, unitId: inv.unitId, action: reenvio ? 'UTENSIL_INV_RESEND' : 'UTENSIL_INV_SEND', module: 'INVENTORY', entity: 'utensil_inventory', entityId: id, metadata: { itens: inv.items.length, total: totalDeUtensilios(inv.items) }, ...ctx });
+  await audit({ userId: user.id, unitId: inv.unitId, action: reenvio ? 'UTENSIL_INV_RESEND' : 'UTENSIL_INV_SEND', module: 'INVENTORY', entity: 'utensil_inventory', entityId: id, metadata: { itens: inv.items.length, total: totalDeUtensilios(inv.items), local: inv.local, comAuditoria }, ...ctx });
   await notifySupervisory({
     title: reenvio ? 'Inventário de utensílios reenviado' : 'Inventário de utensílios enviado',
-    body: `${unidade?.name ?? 'Unidade'} · ${inv.managerName} · ${totalDeUtensilios(inv.items)} utensílios — aguardando auditoria.`,
+    body: `${unidade?.name ?? 'Unidade'} · ${inv.local} · ${inv.managerName} · ${totalDeUtensilios(inv.items)} utensílios — ${comAuditoria ? 'aguardando auditoria' : 'concluído'}.`,
     link: `${LINK}/${id}`, module: 'INVENTORY',
   }, inv.unitId);
   return { ok: true, id, status: novo };
@@ -227,7 +245,7 @@ export async function devolverInventario(user: SessionUser, id: string, motivo: 
 export interface FiltroHistorico { unitIds?: string[]; managerId?: string; de?: string; ate?: string; status?: StatusInventario | null }
 
 export interface ResumoInventario {
-  id: string; unitId: string; unidade: string; status: StatusInventario; managerId: string; managerName: string;
+  id: string; unitId: string; unidade: string; local: string; status: StatusInventario; managerId: string; managerName: string;
   criadoEm: Date; enviadoEm: Date | null; aprovadoEm: Date | null; auditorName: string | null; total: number; itens: number; divergentes: number;
 }
 
@@ -246,7 +264,7 @@ export async function listarInventarios(user: SessionUser, f: FiltroHistorico = 
   const unidades = await prisma.unit.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.unitId))] } }, select: { id: true, name: true } });
   const nome = new Map(unidades.map((u) => [u.id, u.name]));
   return rows.map((r) => ({
-    id: r.id, unitId: r.unitId, unidade: nome.get(r.unitId) ?? '—', status: r.status as StatusInventario, managerId: r.managerId, managerName: r.managerName,
+    id: r.id, unitId: r.unitId, unidade: nome.get(r.unitId) ?? '—', local: r.local, status: r.status as StatusInventario, managerId: r.managerId, managerName: r.managerName,
     criadoEm: r.createdAt, enviadoEm: r.sentAt, aprovadoEm: r.approvedAt, auditorName: r.auditorName,
     total: totalDeUtensilios(r.items), itens: r.items.length,
     divergentes: r.items.filter((i) => i.quantity !== null && i.auditedQuantity !== null && i.quantity !== i.auditedQuantity).length,
@@ -278,4 +296,27 @@ export async function getUtensilsCoverage(unitId: string, yearMonth: string): Pr
   const de = new Date(Date.UTC(y, m - 1, 1, 3)); const ate = new Date(Date.UTC(y, m, 1, 3));
   const n = await prisma.utensilInventory.count({ where: { unitId, status: { in: ['PENDENTE', 'EM_CORRECAO', 'APROVADO'] }, firstSentAt: { gte: de, lt: ate } } });
   return n > 0 ? { done: 1, missed: 0 } : { done: 0, missed: 1 };
+}
+
+/**
+ * As contagens ENVIADAS (não rascunho) do alcance do usuário, com os itens —
+ * a base da aba Evolução e da relação em PDF (v1.219.0). Data = primeiro envio.
+ */
+export async function contagensEnviadas(user: SessionUser, f: { unitIds?: string[]; de?: string; ate?: string } = {}, limite = 400): Promise<Contagem[]> {
+  const rows = await prisma.utensilInventory.findMany({
+    where: {
+      AND: [
+        unitScopeWhere(user, 'unitId'),
+        f.unitIds?.length ? { unitId: { in: f.unitIds } } : {},
+        { status: { in: ['PENDENTE', 'EM_CORRECAO', 'APROVADO'] }, firstSentAt: { not: null } },
+        f.de ? { firstSentAt: { gte: new Date(`${f.de}T00:00:00-03:00`) } } : {},
+        f.ate ? { firstSentAt: { lte: new Date(`${f.ate}T23:59:59-03:00`) } } : {},
+      ],
+    },
+    orderBy: { firstSentAt: 'desc' }, take: limite,
+    include: { items: { orderBy: [{ custom: 'asc' }, { order: 'asc' }], select: { name: true, quantity: true } } },
+  });
+  const unidades = await prisma.unit.findMany({ where: { id: { in: [...new Set(rows.map((r) => r.unitId))] } }, select: { id: true, name: true } });
+  const nome = new Map(unidades.map((u) => [u.id, u.name]));
+  return rows.map((r) => ({ id: r.id, unitId: r.unitId, unidade: nome.get(r.unitId) ?? '—', local: r.local, quando: r.firstSentAt!, managerName: r.managerName, itens: r.items }));
 }

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   const preenchimento = { managerId: b?.managerId ? String(b.managerId) : undefined, notes: b?.notes, itens: Array.isArray(b?.itens) ? b.itens : [], novos: Array.isArray(b?.novos) ? b.novos : [], remover: Array.isArray(b?.remover) ? b.remover.map(String) : [] };
 
   let r;
-  if (acao === 'abrir') r = await abrirContagem(user, String(b?.unitId ?? ''), ctx);
+  if (acao === 'abrir') r = await abrirContagem(user, String(b?.unitId ?? ''), { local: b?.local }, ctx);
   else if (acao === 'salvar') r = await salvarRascunho(user, id, preenchimento, ctx);
   else if (acao === 'enviar') r = await enviarInventario(user, id, preenchimento, ctx);
   else if (acao === 'conferir') r = await registrarConferencia(user, id, { auditadas: b?.auditadas && typeof b.auditadas === 'object' ? b.auditadas : {}, observacao: b?.observacao }, ctx);
