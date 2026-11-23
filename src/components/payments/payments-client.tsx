@@ -120,6 +120,7 @@ export function PaymentsClient({
   abas = {},
   podePagar = false,
   isAdmin = false,
+  diasDeHoje = [],
   canEditDate = false,
   units,
   freelancers,
@@ -143,6 +144,8 @@ export function PaymentsClient({
   /** Quem marca pago (Coordenador, Financeiro, Admin/CEO — v1.133.0) E tem a aba Pagar na matriz. */
   podePagar?: boolean;
   isAdmin?: boolean;
+  /** v1.221.0 — os dias que valem como "hoje" para lançar freelancer (dia civil e, de madrugada, o operacional). */
+  diasDeHoje?: string[];
   canEditDate?: boolean;
   units: Unit[];
   freelancers: Freelancer[];
@@ -380,7 +383,7 @@ export function PaymentsClient({
         </div>
       )}
 
-      {tab === 'nova' && <Card><CardContent className="pt-4"><NewRequest units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} overtimeRatesByUnit={overtimeRatesByUnit} motivosHoraExtra={motivosHoraExtra} onDone={() => { setTab('minhas'); router.refresh(); }} /></CardContent></Card>}
+      {tab === 'nova' && <Card><CardContent className="pt-4"><NewRequest diaLivre={isAdmin} diasDeHoje={diasDeHoje} units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} overtimeRatesByUnit={overtimeRatesByUnit} motivosHoraExtra={motivosHoraExtra} onDone={() => { setTab('minhas'); router.refresh(); }} /></CardContent></Card>}
 
       <ListaCortada mostrando={
         tab === 'minhas' ? mineV.length : tab === 'aprovar' ? toApproveV.length : tab === 'pagar' ? toPayV.length : tab === 'historico' ? historyV.length : tab === 'unidade' ? unitRequestsV.length : 0
@@ -787,13 +790,20 @@ function List({ items, actions, selection, editor }: {
   );
 }
 
-function NewRequest({ units, freelancers, miscTypes, sectors, collaboratorsByUnit, overtimeRatesByUnit, motivosHoraExtra, onDone }: { units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit; overtimeRatesByUnit: RatesByUnit; motivosHoraExtra: MotivoOpt[]; onDone: () => void }) {
+function NewRequest({ diaLivre = false, diasDeHoje = [], units, freelancers, miscTypes, sectors, collaboratorsByUnit, overtimeRatesByUnit, motivosHoraExtra, onDone }: { /** Só o Administrador escolhe o dia do freelancer (v1.221.0). */ diaLivre?: boolean; diasDeHoje?: string[]; units: Unit[]; freelancers: Freelancer[]; miscTypes: MiscType[]; suppliers: Supplier[]; sectors: SectorOpt[]; collaboratorsByUnit: CollabsByUnit; overtimeRatesByUnit: RatesByUnit; motivosHoraExtra: MotivoOpt[]; onDone: () => void }) {
   const [type, setType] = useState<'FREELANCER' | 'OVERTIME' | 'MISC'>('FREELANCER');
   const [unitId, setUnitId] = useState(units[0]?.id ?? '');
   const [freelancerId, setFreelancerId] = useState('');
   const [miscTypeId, setMiscTypeId] = useState('');
   const [amount, setAmount] = useState('');
   const [workDate, setWorkDate] = useState('');
+  /* v1.221.0 — freelancer só no DIA: sem ser Administrador, o dia é hoje e não se escolhe.
+     Ao trocar de tipo o campo volta a ficar livre (data da despesa do reembolso). */
+  const diaTravado = !diaLivre && diasDeHoje.length > 0;
+  useEffect(() => {
+    if (!diaTravado) return;
+    setWorkDate(type === 'FREELANCER' ? diasDeHoje[0] : '');
+  }, [type, diaTravado]); // eslint-disable-line react-hooks/exhaustive-deps
   const [shift, setShift] = useState('');
   const [workStartTime, setWorkStartTime] = useState('');
   const [workEndTime, setWorkEndTime] = useState('');
@@ -941,7 +951,26 @@ function NewRequest({ units, freelancers, miscTypes, sectors, collaboratorsByUni
               )}
             </div>
           )}
-          <DatePicker label="Dia do trabalho" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
+          {diaTravado ? (
+            <div data-testid="dia-do-trabalho-fixo">
+              {diasDeHoje.length > 1 ? (
+                <DsSelect
+                  label="Dia do trabalho"
+                  value={workDate}
+                  onValueChange={setWorkDate}
+                  options={diasDeHoje.map((d, i) => ({ value: d, label: `${fmtDay(d)}${i === 0 ? ' (hoje)' : ' (turno que virou a noite)'}` }))}
+                />
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-ink-900">Dia do trabalho</p>
+                  <p className="mt-1.5 rounded-lg border bg-sunken px-3 py-2 text-sm font-semibold text-ink-900">{fmtDay(diasDeHoje[0])} (hoje)</p>
+                </>
+              )}
+              <p className="mt-1 text-xs text-ink-500">O freelancer é lançado no próprio dia do trabalho. Para lançar outro dia, peça ao Administrador.</p>
+            </div>
+          ) : (
+            <DatePicker label="Dia do trabalho" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />
+          )}
           <DsSelect
             label="Setor / função contratada"
             required

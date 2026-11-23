@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/prisma';
 import { createPaymentRequest } from '@/lib/payments/create';
+import { currentOperationalDate } from '@/lib/date/operational';
 import { approverEditRequest, approveRequest } from '@/lib/payments/approve';
 import type { SessionUser } from '@/lib/auth/session';
 
@@ -42,7 +43,9 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-const base = () => ({ type: 'FREELANCER' as const, unitId, amount: 100, freelancerId: freelaId, workDate: '2026-09-04' });
+/* v1.221.0: o gerente só lança o freelancer de HOJE (dia operacional da unidade). */
+const HOJE = currentOperationalDate({ timezone: 'America/Sao_Paulo', cutoffHour: 4 });
+const base = () => ({ type: 'FREELANCER' as const, unitId, amount: 100, freelancerId: freelaId, workDate: HOJE });
 
 describe('Freelancer nasce alocado', () => {
   it('sem setor não lança', async () => {
@@ -69,7 +72,7 @@ describe('Freelancer nasce alocado', () => {
     if (!r.ok) return;
     const saved = await prisma.paymentRequest.findUnique({ where: { id: r.id }, select: { workSectorId: true, workDate: true } });
     expect(saved?.workSectorId).toBe(setorId);
-    expect(saved?.workDate?.toISOString().slice(0, 10)).toBe('2026-09-04');
+    expect(saved?.workDate?.toISOString().slice(0, 10)).toBe(HOJE);
   });
 });
 
@@ -125,5 +128,32 @@ describe('Aprovador corrige antes de aprovar', () => {
     const r = await approverEditRequest(sup(), id, { workSectorId: setorId, transportValue: 40 });
     expect(r).toEqual({ ok: true });
     expect(await prisma.auditLog.count({ where: { action: 'PAYMENT_APPROVER_EDIT', entityId: id } })).toBe(antes);
+  });
+});
+
+describe('v1.221.0 — freelancer só no dia', () => {
+  const ontem = (() => { const d = new Date(`${HOJE}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 3); return d.toISOString().slice(0, 10); })();
+  const amanha = (() => { const d = new Date(`${HOJE}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + 2); return d.toISOString().slice(0, 10); })();
+
+  it('o gerente não lança dia passado nem futuro; a recusa diz o que fazer', async () => {
+    for (const dia of [ontem, amanha]) {
+      const r = await createPaymentRequest(mgr(), { ...base(), workDate: dia, workSectorId: setorId });
+      expect(r.ok).toBe(false);
+      if (!r.ok) { expect(r.reason).toBe('INVALID'); expect(r.detail).toMatch(/próprio dia/); }
+    }
+    expect(await prisma.paymentRequest.count({ where: { freelancerId: freelaId, workDate: { in: [new Date(ontem), new Date(amanha)] } } })).toBe(0);
+  });
+
+  it('a Supervisão também não; o Administrador lança o dia passado', async () => {
+    expect((await createPaymentRequest(sup(), { ...base(), workDate: ontem, workSectorId: setorId })).ok).toBe(false);
+    const admin: SessionUser = { ...sup(), role: 'ADMIN', unitIds: [], seesAllUnits: true };
+    const r = await createPaymentRequest(admin, { ...base(), workDate: ontem, workSectorId: setorId });
+    expect(r.ok).toBe(true);
+  });
+
+  it('o aprovador segue podendo corrigir o dia de um pedido já lançado', async () => {
+    const r = await createPaymentRequest(mgr(), { ...base(), workSectorId: setorId });
+    if (!r.ok) throw new Error('setup');
+    expect(await approverEditRequest(sup(), r.id, { workDate: ontem })).toEqual({ ok: true });
   });
 });

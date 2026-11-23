@@ -9,6 +9,13 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.221.0 — 2026-11-23 (Pagamentos — freelancer só no dia)
+
+- **O freelancer passa a ser lançado só no próprio dia do trabalho.** Na "Nova" solicitação, o gerente (e também Coordenação e Supervisão) não escolhe mais a data: o "Dia do trabalho" aparece fixo em hoje. Data passada e data futura são recusadas pelo sistema, mesmo fora da tela.
+- **De madrugada**, antes das 4h, a tela oferece também o dia anterior, para o freelancer do turno que virou a noite.
+- **O Administrador continua escolhendo qualquer dia**, para lançar um esquecimento.
+- Quem aprova segue podendo corrigir o dia de um pedido já lançado, como antes. Hora extra e reembolso não mudaram.
+
 ## v1.220.0 — 2026-11-23 (Comandas — um caminho só para conferir)
 
 - **Conferir comandas agora é por um lugar só:** "Iniciar nova conferência", na tela de Comandas (Parcial ou Completa; leitor e toque na grade na mesma conferência).
