@@ -1,3 +1,6 @@
+import { currentOperationalDate } from '@/lib/date/operational';
+import { hojeNaOperacao } from '@/lib/controle-gerentes-dados';
+import { diaDoFreelancerAceito, MENSAGEM_SO_NO_DIA } from './dia-do-freelancer';
 import { prisma } from '@/lib/db/prisma';
 import { assertUnitAccess, UnitScopeError } from '@/lib/scope/unit-scope';
 import { audit } from '@/lib/audit';
@@ -77,6 +80,11 @@ export async function createPaymentRequest(
   let recorrencia: Recorrencia | null = null;
   if (input.type === 'FREELANCER') {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.workDate ?? '')) return { ok: false, reason: 'INVALID', detail: 'Informe o dia do trabalho.' };
+    /* v1.221.0 — só no DIA: quem não é Administrador lança o freelancer de hoje (dia civil
+       ou dia operacional da unidade). A regra é daqui; a tela só deixa de oferecer a data. */
+    const unidade = await prisma.unit.findUnique({ where: { id: input.unitId }, select: { timezone: true, cutoffHour: true } });
+    const operacional = unidade ? currentOperationalDate({ timezone: unidade.timezone, cutoffHour: unidade.cutoffHour }) : hojeNaOperacao();
+    if (!diaDoFreelancerAceito(user.role, input.workDate!, hojeNaOperacao(), operacional)) return { ok: false, reason: 'INVALID', detail: MENSAGEM_SO_NO_DIA };
     if (!input.workSectorId) return { ok: false, reason: 'INVALID', detail: 'Escolha o setor/função do freelancer.' };
     const sector = await prisma.sector.findUnique({ where: { id: input.workSectorId }, select: { unitId: true, active: true } });
     if (!sector || sector.unitId !== input.unitId || !sector.active) return { ok: false, reason: 'INVALID', detail: 'Setor não pertence a esta unidade.' };

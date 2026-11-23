@@ -50,7 +50,8 @@ afterAll(async () => {
 });
 
 const lancar = (workDate: string, u = unitId, s = setorId) =>
-  createPaymentRequest(mgr(), { type: 'FREELANCER', unitId: u, amount: 100, freelancerId: freelaId, workDate, workSectorId: s });
+  /* v1.221.0: quem lança freelancer em dia que não é hoje é o Administrador — a recorrência conta igual. */
+  createPaymentRequest(adm(), { type: 'FREELANCER', unitId: u, amount: 100, freelancerId: freelaId, workDate, workSectorId: s });
 
 async function flags(id: string) {
   const r = await prisma.paymentRequest.findUnique({ where: { id }, select: { weekCount: true, recurrent: true } });
