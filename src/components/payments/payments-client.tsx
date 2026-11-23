@@ -121,6 +121,7 @@ export function PaymentsClient({
   podePagar = false,
   isAdmin = false,
   diasDeHoje = [],
+  diaDoFreelancerLivre = false,
   canEditDate = false,
   units,
   freelancers,
@@ -146,6 +147,8 @@ export function PaymentsClient({
   isAdmin?: boolean;
   /** v1.221.0 — os dias que valem como "hoje" para lançar freelancer (dia civil e, de madrugada, o operacional). */
   diasDeHoje?: string[];
+  /** v1.221.1 — quem escolhe o dia do freelancer: todos, menos o Gerente. */
+  diaDoFreelancerLivre?: boolean;
   canEditDate?: boolean;
   units: Unit[];
   freelancers: Freelancer[];
@@ -383,7 +386,7 @@ export function PaymentsClient({
         </div>
       )}
 
-      {tab === 'nova' && <Card><CardContent className="pt-4"><NewRequest diaLivre={isAdmin} diasDeHoje={diasDeHoje} units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} overtimeRatesByUnit={overtimeRatesByUnit} motivosHoraExtra={motivosHoraExtra} onDone={() => { setTab('minhas'); router.refresh(); }} /></CardContent></Card>}
+      {tab === 'nova' && <Card><CardContent className="pt-4"><NewRequest diaLivre={diaDoFreelancerLivre} diasDeHoje={diasDeHoje} units={units} freelancers={freelancers} miscTypes={miscTypes} suppliers={suppliers} sectors={sectors} collaboratorsByUnit={collaboratorsByUnit} overtimeRatesByUnit={overtimeRatesByUnit} motivosHoraExtra={motivosHoraExtra} onDone={() => { setTab('minhas'); router.refresh(); }} /></CardContent></Card>}
 
       <ListaCortada mostrando={
         tab === 'minhas' ? mineV.length : tab === 'aprovar' ? toApproveV.length : tab === 'pagar' ? toPayV.length : tab === 'historico' ? historyV.length : tab === 'unidade' ? unitRequestsV.length : 0
@@ -966,7 +969,7 @@ function NewRequest({ diaLivre = false, diasDeHoje = [], units, freelancers, mis
                   <p className="mt-1.5 rounded-lg border bg-sunken px-3 py-2 text-sm font-semibold text-ink-900">{fmtDay(diasDeHoje[0])} (hoje)</p>
                 </>
               )}
-              <p className="mt-1 text-xs text-ink-500">O freelancer é lançado no próprio dia do trabalho. Para lançar outro dia, peça ao Administrador.</p>
+              <p className="mt-1 text-xs text-ink-500">O freelancer é lançado no próprio dia do trabalho. Para lançar outro dia, peça à Supervisão ou ao Administrador.</p>
             </div>
           ) : (
             <DatePicker label="Dia do trabalho" value={workDate || null} onValueChange={(v) => setWorkDate(v ?? '')} />

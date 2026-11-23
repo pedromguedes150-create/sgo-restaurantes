@@ -141,14 +141,14 @@ describe('v1.221.0 — freelancer só no dia', () => {
       expect(r.ok).toBe(false);
       if (!r.ok) { expect(r.reason).toBe('INVALID'); expect(r.detail).toMatch(/próprio dia/); }
     }
-    expect(await prisma.paymentRequest.count({ where: { freelancerId: freelaId, workDate: { in: [new Date(ontem), new Date(amanha)] } } })).toBe(0);
+    expect(await prisma.paymentRequest.count({ where: { requestedById: mgrId, workDate: { in: [new Date(ontem), new Date(amanha)] } } })).toBe(0);
   });
 
-  it('a Supervisão também não; o Administrador lança o dia passado', async () => {
-    expect((await createPaymentRequest(sup(), { ...base(), workDate: ontem, workSectorId: setorId })).ok).toBe(false);
+  it('só o gerente é travado: a Supervisão lança dia passado e o Administrador lança passado e futuro (v1.221.1)', async () => {
+    expect((await createPaymentRequest(sup(), { ...base(), workDate: ontem, workSectorId: setorId })).ok).toBe(true);
     const admin: SessionUser = { ...sup(), role: 'ADMIN', unitIds: [], seesAllUnits: true };
-    const r = await createPaymentRequest(admin, { ...base(), workDate: ontem, workSectorId: setorId });
-    expect(r.ok).toBe(true);
+    expect((await createPaymentRequest(admin, { ...base(), workDate: ontem, workSectorId: setorId })).ok).toBe(true);
+    expect((await createPaymentRequest(admin, { ...base(), workDate: amanha, workSectorId: setorId })).ok).toBe(true);
   });
 
   it('o aprovador segue podendo corrigir o dia de um pedido já lançado', async () => {

@@ -9,6 +9,10 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.221.1 — 2026-11-23 (Pagamentos — a trava do dia é só do gerente)
+
+- **Só o Gerente fica travado no dia de hoje** ao lançar freelancer. Administrador, Supervisão e Coordenação voltam a escolher o dia, passado ou futuro, e continuam aprovando e corrigindo como antes.
+
 ## v1.221.0 — 2026-11-23 (Pagamentos — freelancer só no dia)
 
 - **O freelancer passa a ser lançado só no próprio dia do trabalho.** Na "Nova" solicitação, o gerente (e também Coordenação e Supervisão) não escolhe mais a data: o "Dia do trabalho" aparece fixo em hoje. Data passada e data futura são recusadas pelo sistema, mesmo fora da tela.

@@ -1,6 +1,6 @@
 import { currentOperationalDate } from '@/lib/date/operational';
 import { hojeNaOperacao } from '@/lib/controle-gerentes-dados';
-import { diasDeHoje as diasDeHojeDoFreelancer } from '@/lib/payments/dia-do-freelancer';
+import { diasDeHoje as diasDeHojeDoFreelancer, podeLancarFreelancerEmOutroDia } from '@/lib/payments/dia-do-freelancer';
 import { getSessionUser } from '@/lib/auth/session';
 import { abasDoPerfil } from '@/lib/permissions/abas-server';
 import { permissoesEfetivasDoRequest } from '@/lib/permissions';
@@ -164,6 +164,7 @@ export default async function PagamentosPage({ searchParams }: { searchParams: {
             abas={await abasDoPerfil(user.role, 'PAYMENTS')}
             podePagar={podePagar}
             isAdmin={user.role === 'ADMIN'}
+            diaDoFreelancerLivre={podeLancarFreelancerEmOutroDia(user.role)}
             diasDeHoje={diasDeHojeDoFreelancer(hojeNaOperacao(), currentOperationalDate({ timezone: 'America/Sao_Paulo', cutoffHour: 4 }))}
             canEditDate={user.role === 'ADMIN' || user.role === 'SUPERVISOR'}
             units={units}
