@@ -17,9 +17,15 @@
  * estava (Supervisão/Coordenação ajustam o dia de um pedido já lançado).
  */
 
-/** Quem lança freelancer em dia que não é o de hoje. */
+/**
+ * Quem lança freelancer em dia que não é o de hoje.
+ *
+ * v1.221.1 (Daniel, 23/11): "somente gerente é travado". A trava é do GERENTE;
+ * Administrador, Supervisão, Coordenação e os demais escolhem o dia — passado
+ * ou futuro — como antes.
+ */
 export function podeLancarFreelancerEmOutroDia(role: string): boolean {
-  return role === 'ADMIN';
+  return role !== 'MANAGER';
 }
 
 /** Os dias que valem como "hoje": o civil e o operacional, sem repetir, o civil primeiro. */
@@ -32,4 +38,4 @@ export function diaDoFreelancerAceito(role: string, workDate: string, hojeCivil:
   return diasDeHoje(hojeCivil, diaOperacional).includes(workDate);
 }
 
-export const MENSAGEM_SO_NO_DIA = 'O freelancer é lançado no próprio dia do trabalho. Para lançar outro dia, peça ao Administrador.';
+export const MENSAGEM_SO_NO_DIA = 'O freelancer é lançado no próprio dia do trabalho. Para lançar outro dia, peça à Supervisão ou ao Administrador.';
