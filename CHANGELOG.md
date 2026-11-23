@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.222.0 — 2026-11-23 (Histórico de conferências mais claro · Metas com os checklists recolhidos)
+
+- **Histórico de conferências (Comandas):** os filtros viraram uma linha de caixas (Unidade, Tipo, Situação, Como foi feita, De, Até) com "Limpar filtros", no lugar das quatro fileiras de botões. Acima da lista aparecem os números do recorte (conferências, concluídas, em andamento, com comanda faltando). A lista ficou em tabela do padrão do sistema, com o dia em destaque, "Conferidas X de Y", "Faltando" e botão Abrir/Continuar. Há um botão "Nova conferência" no topo.
+- **Metas:** a lista "Por checklist" (todos os checklists da unidade) passa a vir recolhida, abaixo da tabela dos componentes — um toque abre. A nota e os componentes não mudaram.
+
 ## v1.221.2 — 2026-11-23 (Comunicados — o Painel mostra o mais recente primeiro)
 
 - **Painel & Histórico** da Central de Comunicação passa a listar do comunicado mais recente para o mais antigo. Antes os fixados vinham todos na frente, e um comunicado recém-publicado sem "Fixar no topo" ficava escondido abaixo deles. "Fixar no topo" continua valendo na caixa de quem recebe.

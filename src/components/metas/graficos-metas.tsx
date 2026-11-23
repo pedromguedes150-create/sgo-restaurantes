@@ -117,21 +117,6 @@ export function RoscaDaComposicao({ composicao }: { composicao: Composicao }) {
               </tr>
             ))}
           </tbody>
-          {c.detalhes.length > 0 && (
-            <tbody data-testid="detalhe-checklists">
-              <tr><td colSpan={6} className="sgo-type-11 pt-3 font-semibold text-ink-500">Por checklist — informativo: o peso é o de &quot;Checklists do dia&quot;, cada um vale igual</td></tr>
-              {c.detalhes.map((d) => (
-                <tr key={`det-${d.name}`} className="text-xs text-ink-700">
-                  <td className="whitespace-nowrap pl-6">↳ {d.name}</td>
-                  <td className="text-right text-ink-400">—</td>
-                  <td className="text-right tabular-nums">{d.done}/{d.resolved}</td>
-                  <td className={`text-right tabular-nums font-semibold ${d.scorePct >= 80 ? 'text-success' : d.scorePct >= 50 ? 'text-warning' : 'text-danger'}`}>{d.scorePct}%</td>
-                  <td className="text-right text-ink-400">—</td>
-                  <td className="text-right text-ink-400">—</td>
-                </tr>
-              ))}
-            </tbody>
-          )}
           {c.observacoes.length > 0 && (
             <tbody data-testid="em-observacao">
               <tr><td colSpan={6} className="sgo-type-11 pt-3 font-semibold text-ink-500">Em observação — medido, mas NÃO conta na nota (status do componente na Configuração da Meta)</td></tr>
@@ -153,6 +138,28 @@ export function RoscaDaComposicao({ composicao }: { composicao: Composicao }) {
           )}
           <tfoot><tr className="font-semibold"><td>Total</td><td className="text-right tabular-nums">{c.pesoTotal}</td><td className="text-right tabular-nums">{c.tarefas.done}/{c.tarefas.resolved}</td><td className="text-right tabular-nums">{c.tarefas.pct == null ? '—' : `${c.tarefas.pct}%`}</td><td className="text-right tabular-nums text-success">{c.pontosGanhos.toLocaleString('pt-BR')}</td><td className="text-right tabular-nums text-danger">{c.pontosPerdidos ? c.pontosPerdidos.toLocaleString('pt-BR') : '—'}</td></tr></tfoot>
         </table>
+        {c.detalhes.length > 0 && (
+          /* v1.222.0 — recolhido: a lista de todos os checklists empurrava o total para longe. */
+          <details className="mt-2 rounded-lg border border-line" data-testid="detalhe-checklists">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-ink-700">
+              Por checklist ({c.detalhes.length}) — informativo: o peso é o de &quot;Checklists do dia&quot;, cada um vale igual
+            </summary>
+            <div className="overflow-x-auto">
+              <table className="sgo-tbl w-full text-xs">
+                <thead><tr><th className="text-left">Checklist</th><th className="text-right">Realizado</th><th className="text-right">%</th></tr></thead>
+                <tbody>
+                  {c.detalhes.map((d) => (
+                    <tr key={`det-${d.name}`} className="text-ink-700">
+                      <td className="whitespace-normal">↳ {d.name}</td>
+                      <td className="text-right tabular-nums">{d.done}/{d.resolved}</td>
+                      <td className={`text-right tabular-nums font-semibold ${d.scorePct >= 80 ? 'text-success' : d.scorePct >= 50 ? 'text-warning' : 'text-danger'}`}>{d.scorePct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        )}
         {c.informativas.map((l) => <p key={l.name} className="mt-2 text-xs text-danger">{l.name} — desconto aplicado direto no % da meta.</p>)}
         {c.maioresPerdas.length > 0 && (
           <p className="mt-2 text-xs text-ink-700" data-testid="maiores-perdas">
