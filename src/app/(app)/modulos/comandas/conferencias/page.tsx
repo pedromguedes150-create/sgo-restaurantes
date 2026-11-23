@@ -3,7 +3,7 @@ import { ArrowLeft, ClipboardList } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
-import { listarConferencias, TIPO_LABEL, METODO_LABEL, STATUS_LABEL } from '@/lib/commands/sessao';
+import { listarConferencias, listarContagensDiretas, TIPO_LABEL, METODO_LABEL, STATUS_LABEL } from '@/lib/commands/sessao';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
 import { EmptyState } from '@/components/ui/ds/empty-state';
@@ -47,6 +47,23 @@ export default async function HistoricoDeConferenciasPage({
     status: searchParams.status || undefined,
   });
 
+  /* v1.220.0: as contagens feitas pela tela antiga (sem conferência) entram no histórico — só quando o
+     filtro não pede algo que elas não têm (método, ou uma situação que não seja "Concluída"). */
+  const mostraDiretas = !searchParams.metodo && (!searchParams.status || searchParams.status === 'CONCLUIDA');
+  const diretas = mostraDiretas
+    ? (await listarContagensDiretas(user, {
+        unitId: searchParams.unit || undefined,
+        de: /^\d{4}-\d{2}-\d{2}$/.test(searchParams.de ?? '') ? searchParams.de : undefined,
+        ate: /^\d{4}-\d{2}-\d{2}$/.test(searchParams.ate ?? '') ? searchParams.ate : undefined,
+      })).filter((c) => !searchParams.tipo || (searchParams.tipo === 'FAIXA_DO_DIA') === c.parcial)
+    : [];
+  const dia = (iso: string) => iso.split('-').reverse().join('/');
+  type Linha = { chave: string; ordem: string; sessao?: (typeof linhas)[number]; direta?: (typeof diretas)[number] };
+  const tudo: Linha[] = [
+    ...linhas.map((l) => ({ chave: l.id, ordem: `${l.operationalDate} ${l.startedAt.toISOString()}`, sessao: l })),
+    ...diretas.map((c) => ({ chave: `c-${c.id}`, ordem: `${c.operationalDate} ${c.registradaEm.toISOString()}`, direta: c })),
+  ].sort((a, b) => (a.ordem < b.ordem ? 1 : -1));
+
   const filtro = (chave: string, valor: string | null) => {
     const q = new URLSearchParams(Object.entries(searchParams).filter(([, v]) => v) as [string, string][]);
     if (valor === null) q.delete(chave); else q.set(chave, valor);
@@ -72,7 +89,7 @@ export default async function HistoricoDeConferenciasPage({
         <ArrowLeft className="h-4 w-4" /> Comandas
       </Link>
 
-      <LargeTitle title="Histórico de conferências" subtitle="Cada conferência é um registro próprio — concluída, nunca é sobrescrita." />
+      <LargeTitle title="Histórico de conferências" subtitle="Todas as conferências, por dia. As linhas marcadas como tela antiga são contagens feitas antes da unificação, pelo leitor ou pela grade antigos." />
 
       <div className="space-y-2">
         {units.length > 1 && pilulas('unit', units.map((u) => ({ valor: u.id, label: shortUnitName(u.name) })))}
@@ -81,7 +98,7 @@ export default async function HistoricoDeConferenciasPage({
         {pilulas('status', [{ valor: 'EM_ANDAMENTO', label: 'Em andamento' }, { valor: 'CONCLUIDA', label: 'Concluída' }, { valor: 'CANCELADA', label: 'Cancelada' }])}
       </div>
 
-      {linhas.length === 0 ? (
+      {tudo.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
           title="Nenhuma conferência no filtro"
@@ -92,7 +109,8 @@ export default async function HistoricoDeConferenciasPage({
           <table className="w-full border-collapse text-left text-xs">
             <thead>
               <tr className="border-b border-line">
-                <th className="px-2 py-1.5 font-semibold text-ink-700">Data / hora</th>
+                <th className="px-2 py-1.5 font-semibold text-ink-700">Dia</th>
+                <th className="px-2 py-1.5 font-semibold text-ink-700">Iniciada em</th>
                 <th className="px-2 py-1.5 font-semibold text-ink-700">Unidade</th>
                 <th className="px-2 py-1.5 font-semibold text-ink-700">Tipo</th>
                 <th className="px-2 py-1.5 font-semibold text-ink-700">Método</th>
@@ -104,9 +122,10 @@ export default async function HistoricoDeConferenciasPage({
               </tr>
             </thead>
             <tbody>
-              {linhas.map((l) => (
-                <tr key={l.id} className="border-b border-line">
-                  <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-ink-900">{hora(l.startedAt)}</td>
+              {tudo.map(({ chave, sessao: l, direta: c }) => l ? (
+                <tr key={chave} className="border-b border-line" data-testid="linha-conferencia">
+                  <td className="whitespace-nowrap px-2 py-1.5 font-semibold tabular-nums text-ink-900">{dia(l.operationalDate)}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-ink-700">{hora(l.startedAt)}</td>
                   <td className="px-2 py-1.5 text-ink-700">{shortUnitName(l.unitName)}</td>
                   <td className="px-2 py-1.5 text-ink-700">{TIPO_LABEL[l.type]}</td>
                   <td className="px-2 py-1.5 text-ink-700">{METODO_LABEL[l.method]}</td>
@@ -118,7 +137,20 @@ export default async function HistoricoDeConferenciasPage({
                     <Link href={`/modulos/comandas/conferencias/${l.id}`} className="font-semibold text-brand">Ver detalhes</Link>
                   </td>
                 </tr>
-              ))}
+              ) : c ? (
+                <tr key={chave} className="border-b border-line" data-testid="linha-contagem-direta">
+                  <td className="whitespace-nowrap px-2 py-1.5 font-semibold tabular-nums text-ink-900">{dia(c.operationalDate)}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-ink-700">{hora(c.registradaEm)}</td>
+                  <td className="px-2 py-1.5 text-ink-700">{shortUnitName(c.unitName)}</td>
+                  <td className="px-2 py-1.5 text-ink-700">{c.parcial ? 'Parcial' : 'Completa'}</td>
+                  <td className="px-2 py-1.5 text-ink-500">Tela antiga (sem conferência)</td>
+                  <td className="px-2 py-1.5 text-ink-700">{c.responsavel ?? '—'}</td>
+                  <td className="px-2 py-1.5 tabular-nums text-ink-700">{c.ausentes === 0 ? 'todas presentes' : `${c.ausentes} ausente(s)`}</td>
+                  <td className="px-2 py-1.5 text-ink-500">—</td>
+                  <td className="px-2 py-1.5"><StatusBadge tone="success" dot>Concluída</StatusBadge></td>
+                  <td className="px-2 py-1.5" />
+                </tr>
+              ) : null)}
             </tbody>
           </table>
         </div>

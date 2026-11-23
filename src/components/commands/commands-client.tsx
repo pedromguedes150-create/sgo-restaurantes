@@ -45,7 +45,14 @@ export function CommandsClient({
   ultimaContagem = null,
   abertasPorDia = [],
   openDivergences,
+  contagemDireta = false,
 }: {
+  /**
+   * v1.220.0 — a grade antiga, o atalho "Todas presentes" e o "informar
+   * ausentes" gravavam a contagem SEM criar a conferência (não apareciam no
+   * Histórico). Ficam desligados: conferir é só por "Iniciar conferência".
+   */
+  contagemDireta?: boolean;
   unitId: string;
   canResolve: boolean;
   isAdmin: boolean;
@@ -205,7 +212,7 @@ export function CommandsClient({
                 tela ficava idêntica antes e depois do envio. */}
             Contagem de hoje registrada{registroDeHoje ? ` às ${registroDeHoje.hora}` : ''}
             {registroDeHoje?.porQuem ? ` por ${registroDeHoje.porQuem}` : ''}
-            {registroDeHoje?.parcial ? ' (parcial)' : ''} — pode reenviar para corrigir.
+            {registroDeHoje?.parcial ? ' (parcial)' : ''}{contagemDireta ? ' — pode reenviar para corrigir.' : '. Para conferir de novo, use "Iniciar nova conferência" acima.'}
           </p>
         )}
 
@@ -225,6 +232,7 @@ export function CommandsClient({
           </p>
         )}
 
+        {contagemDireta && (<>
         {/* Conferência em grade: seleciona as presentes; as não marcadas = faltando */}
         <GridConference unitId={unitId} activeNumbers={activeNumbers} nightlyNumbers={nightlyNumbers} modo={modo} setModo={setModo} registro={registradoAgora ? { hora: registradoAgora, porQuem: null, parcial: naFaixaDoDia } : registroDeHoje} onRegistrado={() => setRegistradoAgora(agora())} lostNumbers={lostNumbers} underReview={openDivergences.map((d) => d.number)} ultimaContagem={ultimaContagem} busy={busy} setBusy={setBusy} onResult={(m) => setMsg(m)} />
 
@@ -244,6 +252,7 @@ export function CommandsClient({
             <Button onClick={submitAbsent} disabled={busy} className="mt-3 w-full" variant="gold">Registrar ausentes</Button>
           </div>
         </details>
+        </>)}
 
         {msg && (
           <p className={msg.t === 'ok' ? 'text-sm font-medium text-success' : 'text-sm font-medium text-danger'}>{msg.m}</p>

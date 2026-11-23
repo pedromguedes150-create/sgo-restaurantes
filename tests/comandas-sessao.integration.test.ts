@@ -292,3 +292,37 @@ describe('Escopo por unidade', () => {
     expect(r.ok === false && r.reason).toBe('FORBIDDEN');
   });
 });
+
+describe('v1.220.0 — o histórico mostra todos os dias', () => {
+  it('a contagem feita SEM conferência (tela antiga) é listada à parte; a da conferência não se repete ali', async () => {
+    /* A tela antiga gravava só a contagem do dia: por isso os dias 21 e 22 não apareciam no histórico. */
+    await prisma.commandCount.create({ data: { unitId, operationalDate: '2026-11-21', allPresent: true, absentCount: 0, createdById: userId } });
+    await prisma.commandCount.create({ data: { unitId, operationalDate: '2026-11-22', allPresent: false, absentCount: 2, scopeNumbers: [1, 2, 3], createdById: userId } });
+    const s = await abrirCompleta();
+    await conferir(s, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    await finalizarConferencia(user(), { sessionId: s });
+
+    const { listarContagensDiretas } = await import('@/lib/commands/sessao');
+    const diretas = await listarContagensDiretas(user(), { unitId });
+    expect(diretas.map((d) => d.operationalDate)).toEqual(['2026-11-22', '2026-11-21']);
+    expect(diretas[0]).toMatchObject({ parcial: true, ausentes: 2, responsavel: 'Caixa Teste' });
+    expect(diretas[1]).toMatchObject({ parcial: false, ausentes: 0 });
+    expect(await listarConferencias(user(), { unitId })).toHaveLength(1);
+
+    /* escopo: quem não tem a unidade não vê nada, mesmo pedindo por ela */
+    const deFora: SessionUser = { ...user(), unitIds: [] };
+    expect(await listarContagensDiretas(deFora, { unitId })).toEqual([]);
+  });
+
+  it('a conferência que ficou aberta guarda o dia em que começou — é o que a tela usa para avisar', async () => {
+    const s = await abrirCompleta();
+    await prisma.commandCountSession.update({ where: { id: s }, data: { operationalDate: '2026-11-20' } });
+    const aberta = (await sessaoEmAndamento(user(), unitId))!;
+    expect(aberta.id).toBe(s);
+    expect(aberta.operationalDate).toBe('2026-11-20');
+    /* cancelar libera a de hoje */
+    expect((await cancelarConferencia(user(), s)).ok).toBe(true);
+    expect(await sessaoEmAndamento(user(), unitId)).toBeNull();
+    expect((await iniciarConferencia(user(), { unitId, type: 'COMPLETA' })).ok).toBe(true);
+  });
+});

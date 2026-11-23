@@ -34,7 +34,7 @@ export function moduleOfPath(pathname: string): string | null {
  * bipagem, que é a única coisa que ele faz.
  */
 export async function homeForRole(role: Role): Promise<string> {
-  if (role === 'CASHIER') return '/modulos/comandas/conferencia';
+  if (role === 'CASHIER') return '/modulos/comandas'; // v1.220.0 — a conferência é uma só, na tela de Comandas
   if (role === 'SEPARATOR') return '/modulos/pedidos/recebidos'; // v1.195.1 — a caixa de entrada por setor, não a fila antiga
   const perms = await permissoesEfetivasDoRequest(role);
   const primeiro = MODULES.find((m) => m.nav && perms[m.key]?.canView);
