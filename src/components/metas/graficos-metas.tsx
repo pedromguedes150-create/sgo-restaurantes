@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { arcoDaRosca, intervalosDaRosca, COR_FAIXA, ROTULO_FAIXA, type Composicao, type ResumoDoRanking } from '@/lib/metas/graficos';
+import Link from 'next/link';
+import { arcoDaRosca, intervalosDaRosca, COR_FAIXA, ROTULO_FAIXA, faixaDaMeta, type Composicao, type ResumoDoRanking } from '@/lib/metas/graficos';
 import { shortUnitName } from '@/lib/unit-name';
 
 /**
@@ -166,6 +167,94 @@ export function RoscaDaComposicao({ composicao }: { composicao: Composicao }) {
             <b>Onde mais perdeu pontos:</b> {c.maioresPerdas.map((m) => `${m.name} (−${m.pontosPerdidos.toLocaleString('pt-BR')}, ${m.scorePct}%)`).join(' · ')}.
           </p>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** A linha da meta da rede: abaixo disso a unidade está fora da meta. */
+const META_DA_REDE = 80;
+
+export interface LinhaDoRanking { unitId: string; name: string; scorePct: number; href: string }
+
+/**
+ * RANKING DE METAS em gráfico (v1.223.0).
+ *
+ * À esquerda, a rosca da rede: quantas unidades estão em cada faixa, com a
+ * média no centro. À direita, uma barra por unidade, da melhor para a pior, na
+ * cor da faixa, com a linha da meta (80%) e a da média da rede — dá para ver
+ * de relance quem passou, quem está perto e quanto falta. Cada linha abre a
+ * unidade. Nada é recalculado: são as notas do ranking de sempre.
+ *
+ * Não é uma pizza das notas de propósito: as notas não são partes de um todo
+ * (77% + 73% + … não somam nada), então fatias por unidade enganariam. O que é
+ * parte de um todo — as unidades por faixa — é o que vai na rosca.
+ */
+export function RankingDeMetas({ ranking, resumo, selecionada }: { ranking: LinhaDoRanking[]; resumo: ResumoDoRanking; selecionada?: string | null }) {
+  const fatias = resumo.porFaixa.map((f) => ({ rotulo: ROTULO_FAIXA[f.faixa], valor: f.qtd, cor: COR_FAIXA[f.faixa], detalhe: f.unidades.map(shortUnitName).join(', ') }));
+  const media = resumo.media;
+  const naMeta = resumo.porFaixa.find((f) => f.faixa === 'VERDE')?.qtd ?? 0;
+  const podio = ranking.slice(0, 3);
+  return (
+    <div className="grid gap-4 p-4 lg:grid-cols-[18rem_1fr] lg:items-start" data-testid="ranking-de-metas">
+      <div className="space-y-4">
+        <div className="flex flex-col items-center gap-2" data-testid="rosca-unidades">
+          <Rosca fatias={fatias} centro={media == null ? '—' : `${media}%`} sub="média da rede" size={184} espessura={26} />
+          <p className="sgo-type-11 text-center text-ink-500"><b className="text-ink-900">{naMeta}</b> de {resumo.unidades} unidade(s) na meta · mediana {resumo.mediana ?? '—'}%</p>
+        </div>
+        <Legenda itens={resumo.porFaixa.map((f) => ({ cor: COR_FAIXA[f.faixa], rotulo: ROTULO_FAIXA[f.faixa], valor: f.qtd }))} />
+        {podio.length > 0 && (
+          <ol className="grid grid-cols-3 gap-2" data-testid="podio">
+            {podio.map((r, i) => (
+              <li key={r.unitId}>
+                <Link href={r.href} className="block rounded-lg border border-line bg-surface px-2 py-2 text-center hover:border-brand">
+                  <span className="block text-xs font-bold text-ink-500">{i + 1}º</span>
+                  <span className="block break-words text-xs font-semibold text-ink-900">{shortUnitName(r.name)}</span>
+                  <span className="block text-sm font-bold tabular-nums" style={{ color: COR_FAIXA[faixaDaMeta(r.scorePct)] }}>{r.scorePct}%</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+
+      <div className="min-w-0">
+        <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-500">
+          <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-0.5" style={{ background: 'var(--sgo-success)' }} aria-hidden /> meta {META_DA_REDE}%</span>
+          {media != null && <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-0.5" style={{ background: 'var(--sgo-ink-500)' }} aria-hidden /> média da rede {media}%</span>}
+          <span>toque na unidade para abrir</span>
+        </div>
+        <ol className="space-y-1" data-testid="barras-do-ranking">
+          {ranking.map((r, i) => {
+            const cor = COR_FAIXA[faixaDaMeta(r.scorePct)];
+            const falta = META_DA_REDE - r.scorePct;
+            const atual = r.unitId === selecionada;
+            return (
+              <li key={r.unitId}>
+                <Link
+                  href={r.href}
+                  data-testid="barra-da-unidade"
+                  aria-current={atual ? 'true' : undefined}
+                  className={`grid grid-cols-[2rem_1fr_auto] items-center gap-x-2 gap-y-1 rounded-lg px-2 py-2 hover:bg-sunken sm:grid-cols-[2rem_11rem_1fr_auto] ${atual ? 'bg-brand-tint' : ''}`}
+                >
+                  <span className={`flex h-7 w-7 items-center justify-center rounded-pill text-xs font-bold tabular-nums ${atual ? 'bg-brand text-on-brand' : 'bg-sunken text-ink-700'}`}>{i + 1}</span>
+                  <span className="min-w-0 break-words text-sm font-semibold text-ink-900">{shortUnitName(r.name)}</span>
+                  <span className="order-last col-span-3 sm:order-none sm:col-span-1">
+                    <span className="relative block h-4 overflow-hidden rounded-pill bg-sunken" aria-hidden>
+                      <span className="block h-full rounded-pill" style={{ width: `${Math.max(1, Math.min(100, r.scorePct))}%`, background: cor }} />
+                      <span className="absolute inset-y-0 w-0.5" style={{ left: `${META_DA_REDE}%`, background: 'var(--sgo-success)' }} />
+                      {media != null && <span className="absolute inset-y-0 w-0.5" style={{ left: `${Math.max(0, Math.min(100, media))}%`, background: 'var(--sgo-ink-500)' }} />}
+                    </span>
+                  </span>
+                  <span className="text-right">
+                    <span className="block text-sm font-bold tabular-nums" style={{ color: cor }}>{r.scorePct}%</span>
+                    <span className="block text-xs tabular-nums text-ink-500">{falta > 0 ? `faltam ${falta} p.p.` : 'na meta'}</span>
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
       </div>
     </div>
   );

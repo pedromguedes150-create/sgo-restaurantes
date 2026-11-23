@@ -18,8 +18,8 @@ import { shortUnitName } from '@/lib/unit-name';
 import { Trophy, Download, Settings, PieChart, Target, ListChecks, Activity } from 'lucide-react';
 import { getUsoDoSgo } from '@/lib/metas/uso';
 import { UsoDoSgoView } from '@/components/metas/uso-do-sgo';
-import { comporMeta, resumirRanking, COR_FAIXA, faixaDaMeta } from '@/lib/metas/graficos';
-import { RoscaDaMeta, RoscaDasUnidades, RoscaDasTarefas, RoscaDaComposicao } from '@/components/metas/graficos-metas';
+import { comporMeta, resumirRanking } from '@/lib/metas/graficos';
+import { RoscaDaMeta, RoscaDasTarefas, RoscaDaComposicao, RankingDeMetas } from '@/components/metas/graficos-metas';
 
 export const dynamic = 'force-dynamic';
 
@@ -124,45 +124,21 @@ export default async function MetasPage({ searchParams }: { searchParams: { unit
       {isAdminView && ranking.length > 0 && (
         <Card>
           <PanelHeader title="Ranking de metas" icon={<span className="sgo-panel__ic sgo-panel__ic--amber" aria-hidden><Trophy className="h-4 w-4" /></span>} count={ranking.length} />
-          <List className="rounded-none border-0 bg-transparent shadow-none" stagger={false}>
-            {ranking.map((r, i) => (
-              <ListRow
-                key={r.unitId}
-                href={linkFor({ unit: r.unitId })}
-                leading={
-                  <span className={`flex h-7 w-7 items-center justify-center rounded-pill text-xs font-bold tabular-nums ${r.unitId === selected?.id ? 'bg-brand text-on-brand' : 'bg-sunken text-ink-700'}`}>{i + 1}</span>
-                }
-                title={shortUnitName(r.name)}
-                trailing={
-                  <>
-                    <span className="hidden h-2 w-40 overflow-hidden rounded-pill bg-sunken sm:block" aria-hidden>
-                      <span className="block h-full rounded-pill" style={{ width: `${Math.max(2, Math.min(100, r.scorePct))}%`, background: COR_FAIXA[faixaDaMeta(r.scorePct)] }} />
-                    </span>
-                    <span className="w-12 text-right text-sm font-bold tabular-nums" style={{ color: COR_FAIXA[faixaDaMeta(r.scorePct)] }}>{r.scorePct}%</span>
-                  </>
-                }
-              />
-            ))}
-          </List>
+          {/* v1.223.0 — o ranking em gráfico: rosca da rede por faixa + uma barra por unidade com a linha da meta. */}
+          <RankingDeMetas ranking={ranking.map((r) => ({ unitId: r.unitId, name: r.name, scorePct: r.scorePct, href: linkFor({ unit: r.unitId }) }))} resumo={resumoRanking} selecionada={selected?.id} />
         </Card>
       )}
 
       {selected && score && (
         <>
           {/* Roscas (v1.163.0): a meta da unidade, a rede por faixa e as tarefas do mês. */}
-          <div className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${isAdminView && ranking.length > 0 ? 'xl:grid-cols-3' : ''}`}>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Card>
               <PanelHeader title={isAdminView ? 'Meta da unidade' : 'Minha Meta do Mês'} icon={<span className="sgo-panel__ic sgo-panel__ic--brand" aria-hidden><Target className="h-4 w-4" /></span>} />
               <div className="p-4">
                 <RoscaDaMeta scorePct={score.scorePct} rotulo={`${shortUnitName(selected.name)}${posicao ? ` · ${posicao}º de ${resumoRanking.unidades}` : ''}`} pontos={composicao.pesoTotal > 0 ? { ganhos: composicao.pontosGanhos, total: composicao.pesoTotal } : undefined} />
               </div>
             </Card>
-            {isAdminView && ranking.length > 0 && (
-              <Card>
-                <PanelHeader title="Unidades por faixa" icon={<span className="sgo-panel__ic sgo-panel__ic--green" aria-hidden><PieChart className="h-4 w-4" /></span>} />
-                <div className="p-4"><RoscaDasUnidades resumo={resumoRanking} /></div>
-              </Card>
-            )}
             <Card>
               <PanelHeader title="Tarefas do mês" icon={<span className="sgo-panel__ic sgo-panel__ic--blue" aria-hidden><ListChecks className="h-4 w-4" /></span>} />
               <div className="p-4"><RoscaDasTarefas composicao={composicao} /></div>
