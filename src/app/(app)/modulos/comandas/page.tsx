@@ -20,7 +20,7 @@ import { StatusBadge } from '@/components/ui/ds/status-badge';
 import { List, ListRow } from '@/components/ui/ds/list-row';
 import { EmptyState } from '@/components/ui/ds/empty-state';
 import { shortUnitName } from '@/lib/unit-name';
-import { ScanLine, ShieldAlert, ClipboardList } from 'lucide-react';
+import { History, ShieldAlert, ClipboardList } from 'lucide-react';
 import { CommandsClient } from '@/components/commands/commands-client';
 import { IniciarConferencia } from '@/components/commands/iniciar-conferencia';
 import { ReposicoesPendentes } from '@/components/commands/reposicoes-pendentes';
@@ -121,7 +121,7 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
         subtitle={<>Dia operacional {operationalDate}<span className="block"><FamilyTabs active="/modulos/comandas" /></span></>}
         actions={
           <>
-            {podeVer('/modulos/comandas/conferencia') && <Link href={`/modulos/comandas/conferencia?unit=${selected.id}`} className="sgo-btn"><ScanLine className="h-3.5 w-3.5" /> Conferir com leitor</Link>}
+            {podeVer('/modulos/comandas/conferencias') && <Link href={`/modulos/comandas/conferencias?unit=${selected.id}`} className="sgo-btn"><History className="h-3.5 w-3.5" /> Histórico de conferências</Link>}
             {podeVer('/modulos/comandas/painel') && <Link href="/modulos/comandas/painel" className="sgo-btn"><ClipboardList className="h-3.5 w-3.5" /> Painel de comandas</Link>}
             {canResolve && podeVer('/modulos/comandas/analise-aberto') && (
               <Link href="/modulos/comandas/analise-aberto" className="sgo-btn"><ShieldAlert className="h-3.5 w-3.5" /> Análise de comandas em aberto</Link>
@@ -159,6 +159,8 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
           } : null}
           emAndamento={aberta ? {
             id: aberta.id,
+            /* v1.220.0: conferência iniciada em OUTRO dia operacional — o resultado cai naquele dia, e a tela avisa. */
+            deOutroDia: aberta.operationalDate !== operationalDate ? aberta.operationalDate.split('-').reverse().join('/') : null,
             quando: fmtQuando(aberta.startedAt),
             vistas: aberta.conferidas.length + aberta.emUso.length,
             total: aberta.escopo.length,
@@ -175,7 +177,11 @@ export default async function ComandasPage({ searchParams }: { searchParams: { u
           <StatCard label="Ativas" value={state.activeCount} />
           <StatCard
             label="Última conferência"
-            value={ultimaSessao ? ultimaSessao.operationalDate.split('-').reverse().join('/') : '—'}
+            /* v1.220.0: a data da ÚLTIMA contagem gravada, venha de onde vier (a sessão e a tela antiga gravam a mesma contagem do dia). */
+            value={(() => {
+              const dias = [ultimaSessao?.operationalDate, ultimaContagem?.operationalDate].filter((d): d is string => Boolean(d)).sort();
+              return dias.length ? dias[dias.length - 1].split('-').reverse().join('/') : '—';
+            })()}
           />
           <StatCard label="Em apuração" value={state.openDivergences.length} />
           <StatCard label="Baixadas" value={state.lostCount} />

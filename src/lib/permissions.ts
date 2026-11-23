@@ -53,7 +53,10 @@ const BASE: ModuleDef[] = [
   { key: 'MAINTENANCE', label: 'Manutenção', nav: '/modulos/manutencao' },
 
   { key: 'COMMANDS', label: 'Comandas', nav: '/modulos/comandas' },
-  { key: 'COMMANDS_SCAN', label: 'Conferência por leitor', nav: '/modulos/comandas/conferencia', parent: 'COMMANDS' },
+  /* v1.220.0 — a tela antiga do leitor foi desativada: toda conferência é a de sessão ("Iniciar conferência",
+     Leitor + Manual). A chave fica (linhas gravadas na matriz e a rota /api/commands/scan), sem endereço próprio:
+     /modulos/comandas/conferencia passa a ser do módulo Comandas e só redireciona. */
+  { key: 'COMMANDS_SCAN', label: 'Conferência por leitor (tela antiga — desativada)', parent: 'COMMANDS' },
   { key: 'COMMANDS_SESSIONS', label: 'Histórico de conferências', nav: '/modulos/comandas/conferencias', parent: 'COMMANDS' },
   { key: 'COMMANDS_PANEL', label: 'Painel de comandas (rotina e resultado)', nav: '/modulos/comandas/painel', parent: 'COMMANDS' },
   { key: 'COMMANDS_OPEN', label: 'Análise de comandas em aberto', nav: '/modulos/comandas/analise-aberto', parent: 'COMMANDS' },

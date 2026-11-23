@@ -9,6 +9,15 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.220.0 — 2026-11-23 (Comandas — um caminho só para conferir)
+
+- **Conferir comandas agora é por um lugar só:** "Iniciar nova conferência", na tela de Comandas (Parcial ou Completa; leitor e toque na grade na mesma conferência).
+- **Saíram da tela** o botão "Conferir com leitor" (a tela antiga do leitor), a grade antiga, o atalho "Todas presentes" e o "Informar ausentes manualmente". Eles gravavam a contagem do dia, mas não criavam o registro de conferência — por isso o que era feito por ali não aparecia em "Última conferência" nem no Histórico. Quem tem o endereço antigo salvo é levado para a tela de Comandas.
+- **O Histórico de conferências passa a mostrar todos os dias**, inclusive as contagens antigas feitas por esses caminhos (linhas "Tela antiga (sem conferência)"), e ganhou a coluna **Dia**. O botão do Histórico foi para o topo da tela de Comandas.
+- **O cartão "Última conferência"** mostra a data da última contagem gravada, venha de onde vier.
+- **Conferência que ficou aberta de outro dia:** a tela avisa de que dia ela é, que o resultado fica registrado naquele dia e não no de hoje, e oferece "Cancelar e começar a de hoje".
+- O Caixa entra direto na tela de Comandas. Divergências, reposições, painel e análise de comandas em aberto não mudaram.
+
 ## v1.219.0 — 2026-11-20 (Inventário de Utensílios — mais de um por unidade, relatório em PDF, sem auditoria e Evolução)
 
 - **Mais de um inventário por unidade:** ao iniciar a contagem, escolha o **local** (Restaurante, Lanchonete ou outro nome). Vale um inventário em aberto por unidade e local — a lanchonete avulsa conta os utensílios dela sem esperar o restaurante. Os inventários anteriores ficaram como "Restaurante".

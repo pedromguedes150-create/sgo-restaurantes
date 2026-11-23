@@ -31,7 +31,7 @@ const AREAS: AreaMontada[] = [
       { titulo: 'Rotinas da unidade', itens: [{ key: 'OIL', label: 'Coleta de Óleo', href: '/modulos/oleo' }, { key: 'PIZZAS', label: 'Controle de Pizzas', href: '/modulos/pizzas' }] },
       { titulo: 'Controles', itens: [{ key: 'WASTE', label: 'Desperdícios', href: '/modulos/desperdicios' }, { key: 'OCCURRENCES', label: 'Ocorrências', href: '/modulos/ocorrencias' }, { key: 'COMMANDS', label: 'Comandas', href: '/modulos/comandas' }] },
       { titulo: 'Suprimentos', itens: [{ key: 'NOTES', label: 'Notas Recebidas', href: '/modulos/notas' }, { key: 'PRODUCTS', label: 'Pedidos Internos', href: '/modulos/produtos' }] },
-      { titulo: 'Conferências', itens: [{ key: 'COMMANDS_SCAN', label: 'Conferência por leitor', href: '/modulos/comandas/conferencia' }] },
+      { titulo: 'Conferências', itens: [{ key: 'COMMANDS_SESSIONS', label: 'Histórico de conferências', href: '/modulos/comandas/conferencias' }] },
     ],
   },
   {

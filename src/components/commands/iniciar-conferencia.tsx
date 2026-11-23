@@ -20,6 +20,8 @@ export interface UltimaConferencia {
 
 export interface EmAndamento {
   id: string;
+  /** "dd/mm/aaaa" quando a conferência foi iniciada em OUTRO dia operacional; nulo = é a de hoje. */
+  deOutroDia?: string | null;
   quando: string;
   vistas: number;
   total: number;
@@ -65,6 +67,7 @@ export function IniciarConferencia({
   const [etapa, setEtapa] = useState<Etapa>('FECHADO');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [confirmandoCancelar, setConfirmandoCancelar] = useState(false);
 
   async function comecar(tipo: 'FAIXA_DO_DIA' | 'COMPLETA') {
     setBusy(true); setErro(null);
@@ -84,6 +87,21 @@ export function IniciarConferencia({
     } finally { setBusy(false); }
   }
 
+  /** Cancela a conferência que ficou aberta de outro dia, para a de hoje poder começar. */
+  async function cancelarAntiga() {
+    if (!emAndamento) return;
+    setBusy(true); setErro(null);
+    try {
+      const res = await fetch('/api/commands/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancelar', sessionId: emAndamento.id }) });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok && d.reason !== 'JA_CONCLUIDA') { setErro(d.error ?? 'Não foi possível cancelar a conferência anterior.'); return; }
+      setConfirmandoCancelar(false);
+      router.refresh();
+    } catch {
+      setErro('Falha de conexão. Tente de novo.');
+    } finally { setBusy(false); }
+  }
+
   return (
     <div className="space-y-3">
       {/* ── Retomar o que ficou pela metade ── */}
@@ -96,7 +114,17 @@ export function IniciarConferencia({
             <Link href={`/modulos/comandas/conferencias/${emAndamento.id}`} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-on-brand">
               <Play className="h-4 w-4" /> Continuar conferência
             </Link>
+            {emAndamento.deOutroDia && (
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => setConfirmandoCancelar(true)} data-testid="cancelar-antiga">
+                Cancelar e começar a de hoje
+              </Button>
+            )}
           </div>
+          {emAndamento.deOutroDia && (
+            <p className="mt-2 text-sm text-ink-900" data-testid="aviso-outro-dia">
+              Atenção: ela é do dia <b>{emAndamento.deOutroDia}</b>. Se você continuar, o resultado fica registrado nesse dia, e <b>não no de hoje</b>. Para conferir hoje, cancele essa e inicie uma nova.
+            </p>
+          )}
         </div>
       )}
 
@@ -139,6 +167,16 @@ export function IniciarConferencia({
       </Link>
 
       {erro && <p className="text-sm font-medium text-danger">{erro}</p>}
+
+      {confirmandoCancelar && emAndamento && (
+        <Sheet open onClose={() => setConfirmandoCancelar(false)} title="Cancelar a conferência anterior?" description={`A conferência do dia ${emAndamento.deOutroDia ?? ''} fica no histórico como cancelada, com as ${emAndamento.vistas} comandas já verificadas. Depois disso você inicia a de hoje.`}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setConfirmandoCancelar(false)} disabled={busy}>Voltar</Button>
+            <Button onClick={() => void cancelarAntiga()} disabled={busy} data-testid="confirmar-cancelar-antiga">{busy ? 'Cancelando…' : 'Cancelar a anterior'}</Button>
+          </div>
+          {erro && <p className="mt-2 text-sm font-medium text-danger">{erro}</p>}
+        </Sheet>
+      )}
 
       {etapa === 'TIPO' && (
         <Sheet open onClose={() => setEtapa('FECHADO')} title="Qual conferência deseja realizar?" description="Escolha parcial em dia normal ou completa em dia de muito movimento. Leitor + Manual: bipe o que der e marque na grade o que o leitor não pegou.">

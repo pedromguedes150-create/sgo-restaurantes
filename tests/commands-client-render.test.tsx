@@ -36,6 +36,8 @@ function render(props: Partial<React.ComponentProps<typeof CommandsClient>>) {
       activeNumbers: ativas,
       lostNumbers: baixadas,
       openDivergences: divergencias,
+      /* v1.220.0: a grade antiga está DESLIGADA na tela; estes testes seguem cobrindo o código dela. */
+      contagemDireta: true,
       ...props,
     } as React.ComponentProps<typeof CommandsClient>),
   );

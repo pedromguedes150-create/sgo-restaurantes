@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
+import { prisma } from '@/lib/db/prisma';
+import { currentOperationalDate } from '@/lib/date/operational';
 import { canEditModule } from '@/lib/permissions';
 import { detalheDaConferencia, TIPO_LABEL, METODO_LABEL, STATUS_LABEL, PERFIS_QUE_AUTORIZAM_ESCOPO } from '@/lib/commands/sessao';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,6 +30,9 @@ export default async function ConferenciaPage({ params }: { params: { id: string
 
   const podeEditar = await canEditModule(user.role, 'COMMANDS');
   const emAndamento = d.status === 'EM_ANDAMENTO';
+  /* v1.220.0: conferência aberta em OUTRO dia operacional grava o resultado naquele dia — a tela diz isso antes. */
+  const unidade = emAndamento ? await prisma.unit.findUnique({ where: { id: d.unitId }, select: { timezone: true, cutoffHour: true } }) : null;
+  const deOutroDia = unidade && currentOperationalDate({ timezone: unidade.timezone, cutoffHour: unidade.cutoffHour }) !== d.operationalDate;
 
   return (
     <div className="space-y-4">
@@ -42,6 +47,12 @@ export default async function ConferenciaPage({ params }: { params: { id: string
           {d.responsavel ? ` · ${d.responsavel}` : ''}
         </p>
       </div>
+
+      {deOutroDia && (
+        <p role="alert" className="rounded-lg border-2 border-warning bg-warning-bg px-3 py-2 text-sm text-ink-900 print:hidden" data-testid="aviso-outro-dia">
+          Esta conferência foi iniciada no dia <b>{d.operationalDate.split('-').reverse().join('/')}</b>: ao finalizar, o resultado fica registrado nesse dia, e <b>não no de hoje</b>. Para conferir hoje, cancele esta conferência e inicie uma nova na tela de Comandas.
+        </p>
+      )}
 
       {emAndamento ? (
         <SessaoClient

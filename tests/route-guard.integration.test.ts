@@ -41,7 +41,7 @@ describe('Guarda de rota — o Caixa só alcança a conferência', () => {
 
   it('manda o Caixa para a bipagem, nunca para uma porta fechada', async () => {
     const destino = await homeForRole('CASHIER');
-    expect(destino).toBe('/modulos/comandas/conferencia');
+    expect(destino).toBe('/modulos/comandas'); // v1.220.0: a conferência é uma só
     // e o destino tem de ser abrível pelo próprio perfil, senão vira laço
     expect(await canOpenPath('CASHIER', destino)).toBe(true);
   });

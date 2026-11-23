@@ -25,7 +25,7 @@ describe('moduleOfPath — de quem é esta tela', () => {
     /* O contrato mudou de propósito na v1.65.0: cada tela interna virou uma
        parte própria na matriz, para poder ser liberada ou fechada sozinha.
        Quem não tem chave própria continua caindo no dono mais próximo. */
-    expect(moduleOfPath('/modulos/comandas/conferencia')).toBe('COMMANDS_SCAN');
+    expect(moduleOfPath('/modulos/comandas/conferencia')).toBe('COMMANDS'); // v1.220.0: a tela antiga do leitor só redireciona
     expect(moduleOfPath('/modulos/comandas/analise-aberto/consolidado')).toBe('COMMANDS_OPEN');
     expect(moduleOfPath('/modulos/atestados/relatorio')).toBe('CERTIFICATES_REPORT');
     expect(moduleOfPath('/configuracoes/usuarios')).toBe('CONFIG_USERS');

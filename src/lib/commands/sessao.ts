@@ -422,6 +422,38 @@ export async function listarConferencias(
 
 type CommandSessionStatusLiteral = 'EM_ANDAMENTO' | 'CONCLUIDA' | 'CANCELADA';
 
+export interface ContagemDireta {
+  id: string; unitId: string; unitName: string; operationalDate: string; registradaEm: Date;
+  parcial: boolean; responsavel: string | null; ausentes: number;
+}
+
+/**
+ * Contagens do dia gravadas SEM conferência (v1.220.0): a grade antiga, o
+ * atalho "Todas presentes" e a tela antiga do leitor. Elas valem para a meta e
+ * abriram divergência, mas nunca apareceram no Histórico — esta leitura as
+ * mostra ao lado das conferências, para o histórico ter todos os dias.
+ */
+export async function listarContagensDiretas(
+  user: SessionUser,
+  f: { unitId?: string; de?: string; ate?: string; take?: number } = {},
+): Promise<ContagemDireta[]> {
+  const rows = await prisma.commandCount.findMany({
+    where: {
+      AND: [unitScopeWhere(user, 'unitId'), ...(f.unitId ? [{ unitId: f.unitId }] : [])],
+      sessionId: null,
+      ...(f.de || f.ate ? { operationalDate: { ...(f.de ? { gte: f.de } : {}), ...(f.ate ? { lte: f.ate } : {}) } } : {}),
+    },
+    orderBy: { operationalDate: 'desc' },
+    take: f.take ?? 100,
+    include: { unit: { select: { name: true } }, createdBy: { select: { name: true } } },
+  });
+  return rows.map((c) => ({
+    id: c.id, unitId: c.unitId, unitName: c.unit.name, operationalDate: c.operationalDate, registradaEm: c.updatedAt,
+    parcial: Array.isArray(c.scopeNumbers) && c.scopeNumbers.length > 0,
+    responsavel: c.createdBy?.name ?? null, ausentes: c.absentCount,
+  }));
+}
+
 /** O detalhe de uma conferência: comanda a comanda, com método e horário. */
 export async function detalheDaConferencia(user: SessionUser, sessionId: string) {
   const p = await getSessao(user, sessionId);
