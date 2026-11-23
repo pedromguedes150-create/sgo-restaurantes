@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { requestContext } from '@/lib/auth/service';
 import { guardaDaRota } from '@/lib/permissions/guarda-rota-api';
 import { adicionarUtensilio, ativarUtensilio, moverUtensilio, renomearUtensilio } from '@/lib/utensilios/catalogo';
+import { definirAuditoria } from '@/lib/utensilios/config';
 
 /** Lista padrão de utensílios (Configurações → Utensílios): adicionar, renomear, ativar/desativar, mover. */
 export async function POST(req: Request) {
@@ -14,6 +15,11 @@ export async function POST(req: Request) {
   const ctx = requestContext(req);
   const acao = String(b?.acao ?? '');
   const id = String(b?.id ?? '');
+  if (acao === 'auditoria') {
+    const a = await definirAuditoria(user, b?.exigir === true, ctx);
+    if (!a.ok) return NextResponse.json({ error: 'Só o Administrador muda esta regra.', reason: a.reason }, { status: 403 });
+    return NextResponse.json(a);
+  }
   const r = acao === 'adicionar' ? await adicionarUtensilio(user, String(b?.nome ?? ''), ctx)
     : acao === 'renomear' ? await renomearUtensilio(user, id, String(b?.nome ?? ''), ctx)
     : acao === 'ativar' ? await ativarUtensilio(user, id, b?.active === true, ctx)

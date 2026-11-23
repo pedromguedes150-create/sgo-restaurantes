@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   ITENS_PADRAO, PODE_AUDITAR, PODE_CONTAR, MOTIVO_MIN,
   normalizarQuantidade, nomeValido, faltamParaEnviar, totalDeUtensilios, diferenca, contarDivergencias, proximoStatus, motivoValido, retrato,
+  LOCAL_PADRAO, normalizarLocal, locaisDaUnidade, rotuloDaSituacao,
 } from '@/lib/utensilios/regras';
+import { compararContagens, relacaoPorUnidade, seriesPorLocal, tendencia, type Contagem } from '@/lib/utensilios/evolucao';
 
 /** INVENTÁRIO DE UTENSÍLIOS (v1.177.0) — as regras puras. */
 
@@ -95,5 +97,75 @@ describe('proximoStatus — a única tabela de transições', () => {
     expect(motivoValido('  ok ')).toBe(false);
     expect(motivoValido('Faltou contar as cubas')).toBe(true);
     expect(motivoValido(null)).toBe(false);
+  });
+});
+
+describe('v1.219.0 — local da contagem e envio sem auditoria', () => {
+  it('local vazio é o padrão; grafia diferente cai no que já existe; nome curto demais não serve', () => {
+    expect(normalizarLocal('')).toBe(LOCAL_PADRAO);
+    expect(normalizarLocal(undefined)).toBe('Restaurante');
+    expect(normalizarLocal('  LANCHONETE ')).toBe('Lanchonete');
+    expect(normalizarLocal('pizzaria', ['Pizzaria'])).toBe('Pizzaria');
+    expect(normalizarLocal('Bar  da  piscina')).toBe('Bar da piscina');
+    expect(normalizarLocal('x')).toBeNull();
+    expect(normalizarLocal('a'.repeat(41))).toBeNull();
+  });
+  it('a tela oferece os sugeridos mais os já usados, sem repetir', () => {
+    expect(locaisDaUnidade(['lanchonete', 'Pizzaria'])).toEqual(['Restaurante', 'Lanchonete', 'Pizzaria']);
+  });
+  it('sem auditoria o envio conclui; com auditoria fica pendente; aprovado sem auditor é "Concluído"', () => {
+    expect(proximoStatus('RASCUNHO', 'enviar', false)).toBe('APROVADO');
+    expect(proximoStatus('RASCUNHO', 'enviar', true)).toBe('PENDENTE');
+    expect(proximoStatus('APROVADO', 'enviar', false)).toBeNull();
+    expect(rotuloDaSituacao({ status: 'APROVADO', auditorName: null })).toBe('Concluído');
+    expect(rotuloDaSituacao({ status: 'APROVADO', auditorName: 'Daniel' })).toBe('Aprovado');
+    expect(rotuloDaSituacao({ status: 'PENDENTE' })).toBe('Pendente de auditoria');
+  });
+});
+
+describe('v1.219.0 — evolução: quebras, sobras e a relação por local', () => {
+  const c = (id: string, local: string, dia: string, itens: [string, number | null][], unitId = 'u1'): Contagem => ({
+    id, unitId, unidade: 'Jardim', local, quando: new Date(`${dia}T12:00:00Z`), managerName: 'Geovana', itens: itens.map(([name, quantity]) => ({ name, quantity })),
+  });
+  const out = c('a', 'Restaurante', '2026-10-23', [['Pratos', 100], ['Garfos', 80], ['Cubas', 10]]);
+  const nov = c('b', 'Restaurante', '2026-11-20', [['Pratos', 90], ['garfos', 85], ['Jarras', 4]]);
+
+  it('quebra = o que diminuiu, sobra = o que aumentou; item só de um lado não entra na diferença', () => {
+    const r = compararContagens(nov, out);
+    expect(r.quebras).toBe(10);
+    expect(r.sobras).toBe(5);
+    expect(r.saldo).toBe(-5);
+    expect(r.totalAtual).toBe(179);
+    expect(r.totalAnterior).toBe(190);
+    expect(r.linhas.find((l) => l.name === 'Jarras')).toMatchObject({ atual: 4, anterior: null, diff: null });
+    expect(r.linhas.find((l) => l.name === 'Cubas')).toMatchObject({ atual: null, anterior: 10, diff: null });
+  });
+  it('primeira contagem não tem quebras nem sobras', () => {
+    const r = compararContagens(out, null);
+    expect(r).toMatchObject({ quebras: 0, sobras: 0, totalAnterior: null });
+    expect(r.linhas.every((l) => l.diff === null)).toBe(true);
+  });
+  it('uma série por unidade+local, em ordem; a lanchonete não se mistura com o restaurante', () => {
+    const dez = c('d', 'Restaurante', '2026-12-20', [['Pratos', 70], ['Garfos', 85]]);
+    const lan = c('l', 'lanchonete', '2026-11-20', [['Pratos', 12]]);
+    const s = seriesPorLocal([dez, lan, nov, out]);
+    expect(s.map((x) => x.local)).toEqual(['lanchonete', 'Restaurante']);
+    const rest = s[1];
+    expect(rest.pontos.map((p) => p.id)).toEqual(['a', 'b', 'd']);
+    expect(rest.pontos.map((p) => p.quebras)).toEqual([null, 10, 20]);
+    expect(rest.comparacao.quebras).toBe(20);
+    expect(rest.quebrasAntes).toBe(10);
+    expect(tendencia(rest.comparacao.quebras, rest.quebrasAntes)).toBe('maior');
+    expect(tendencia(5, 5)).toBe('igual');
+    expect(tendencia(5, null)).toBeNull();
+    expect(s[0].anterior).toBeNull();
+  });
+  it('a relação do PDF tem uma coluna por local com a contagem mais recente; quem não tem o item fica vazio', () => {
+    const lan = c('l', 'Lanchonete', '2026-11-20', [['Pratos', 12], ['Copos', 30]]);
+    const [u] = relacaoPorUnidade([out, nov, lan]);
+    expect(u.colunas.map((x) => x.local)).toEqual(['Lanchonete', 'Restaurante']);
+    expect(u.linhas.find((l) => l.name === 'Pratos')).toMatchObject({ porLocal: [12, 90], total: 102 });
+    expect(u.linhas.find((l) => l.name === 'Copos')).toMatchObject({ porLocal: [30, null], total: 30 });
+    expect(u.total).toBe(42 + 179);
   });
 });

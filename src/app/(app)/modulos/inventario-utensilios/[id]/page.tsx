@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
 import { getInventario, responsaveisDaUnidade } from '@/lib/utensilios/inventario';
-import { EDITAVEL, PODE_AUDITAR, PODE_CONTAR, ROTULO_STATUS, TOM_STATUS, contarDivergencias, diferenca } from '@/lib/utensilios/regras';
+import { EDITAVEL, PODE_AUDITAR, PODE_CONTAR, TOM_STATUS, contarDivergencias, diferenca, rotuloDaSituacao } from '@/lib/utensilios/regras';
+import { exigeAuditoria } from '@/lib/utensilios/config';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
 import { AutoPrint } from '@/components/shared/auto-print';
@@ -13,7 +14,7 @@ import { AuditoriaClient } from '@/components/utensilios/auditoria-client';
 export const dynamic = 'force-dynamic';
 
 const ROTULO_EVENTO: Record<string, string> = {
-  CRIADO: 'Contagem aberta', ENVIADO: 'Enviado para auditoria', REENVIADO: 'Reenviado após correção',
+  CRIADO: 'Contagem aberta', ENVIADO: 'Enviado', REENVIADO: 'Reenviado após correção',
   DEVOLVIDO: 'Devolvido para correção', AUDITADO: 'Conferência registrada', APROVADO: 'Aprovado',
 };
 
@@ -34,6 +35,7 @@ export default async function InventarioUtensilioPage({ params, searchParams }: 
   const edita = !imprimir && PODE_CONTAR.has(user.role) && EDITAVEL.has(inv.status);
   const audita = !imprimir && PODE_AUDITAR.has(user.role) && inv.status === 'PENDENTE';
   const responsaveis = edita ? await responsaveisDaUnidade(inv.unitId) : [];
+  const comAuditoria = edita ? await exigeAuditoria() : true;
   const div = contarDivergencias(inv.items);
 
   return (
@@ -41,20 +43,22 @@ export default async function InventarioUtensilioPage({ params, searchParams }: 
       {imprimir && <AutoPrint />}
       <Link href="/modulos/inventario-utensilios" className="inline-flex items-center gap-1 text-sm font-semibold text-brand print:hidden"><ArrowLeft className="h-4 w-4" /> Inventário de Utensílios</Link>
       <LargeTitle
-        title={`Inventário de Utensílios — ${inv.unidade}`}
+        title={`Inventário de Utensílios — ${inv.unidade} · ${inv.local}`}
         subtitle={<span className="inline-flex flex-wrap items-center gap-2">
-          <StatusBadge tone={TOM_STATUS[inv.status]} dot>{ROTULO_STATUS[inv.status]}</StatusBadge>
+          <StatusBadge tone={TOM_STATUS[inv.status]} dot>{rotuloDaSituacao(inv)}</StatusBadge>
+          <span>Local: <b className="text-ink-900">{inv.local}</b></span>
           <span>Gerente: <b className="text-ink-900">{inv.managerName}</b></span>
           <span>· Aberto em {fmt(inv.createdAt)}</span>
           {inv.sentAt && <span>· Enviado em {fmt(inv.sentAt)}</span>}
-          {inv.approvedAt && <span>· Aprovado em {fmt(inv.approvedAt)} por {inv.auditorName}</span>}
+          {inv.approvedAt && inv.auditorName && <span>· Aprovado em {fmt(inv.approvedAt)} por {inv.auditorName}</span>}
         </span>}
         actions={!imprimir && inv.status !== 'RASCUNHO' ? <a href={`/modulos/inventario-utensilios/${inv.id}?imprimir=1`} target="_blank" rel="noreferrer" className="sgo-btn sgo-btn--sm"><Printer className="h-4 w-4" /> PDF</a> : undefined}
       />
 
       {edita ? (
         <ContagemClient
-          inventario={{ id: inv.id, unidade: inv.unidade, status: inv.status as 'RASCUNHO' | 'EM_CORRECAO', managerId: inv.managerId, notes: inv.notes, returnReason: inv.returnReason, items: inv.items.map((i) => ({ id: i.id, name: i.name, quantity: i.quantity, custom: i.custom, note: i.note })) }}
+          comAuditoria={comAuditoria}
+          inventario={{ id: inv.id, unidade: `${inv.unidade} · ${inv.local}`, status: inv.status as 'RASCUNHO' | 'EM_CORRECAO', managerId: inv.managerId, notes: inv.notes, returnReason: inv.returnReason, items: inv.items.map((i) => ({ id: i.id, name: i.name, quantity: i.quantity, custom: i.custom, note: i.note })) }}
           responsaveis={responsaveis.map((r) => ({ id: r.id, name: r.name }))}
         />
       ) : audita ? (

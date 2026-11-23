@@ -5220,6 +5220,8 @@ model UtensilCatalogItem {
 model UtensilInventory {
   id            String                 @id @default(cuid())
   unitId        String
+  /// v1.219.0 — o LOCAL da contagem dentro da unidade (Restaurante, Lanchonete…): um em aberto por unidade+local.
+  local         String                 @default("Restaurante")
   status        UtensilInventoryStatus @default(RASCUNHO)
   /// Gerente responsável (usuário vinculado à unidade), escolhido na contagem.
   managerId     String
@@ -5243,6 +5245,7 @@ model UtensilInventory {
 
   @@index([unitId, status])
   @@index([unitId, sentAt])
+  @@index([unitId, local, status])
   @@map("utensil_inventories")
 }
 

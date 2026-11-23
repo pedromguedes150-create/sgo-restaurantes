@@ -91,6 +91,31 @@ describe('Configurações → Utensílios', () => {
   });
 });
 
+describe('v1.219.0 — Evolução e nova contagem por local', () => {
+  it('a Evolução mostra quebras, sobras, "maior/menor" e a relação por utensílio; local com uma contagem só avisa', async () => {
+    const { EvolucaoDosUtensilios } = await import('@/components/utensilios/evolucao');
+    const { seriesPorLocal } = await import('@/lib/utensilios/evolucao');
+    const c = (id: string, local: string, dia: string, itens: [string, number][]) => ({ id, unitId: 'u1', unidade: 'Jardim', local, quando: new Date(`${dia}T12:00:00Z`), managerName: 'Geovana', itens: itens.map(([name, quantity]) => ({ name, quantity })) });
+    const series = seriesPorLocal([
+      c('a', 'Restaurante', '2026-09-20', [['Pratos', 100]]), c('b', 'Restaurante', '2026-10-20', [['Pratos', 95]]), c('d', 'Restaurante', '2026-11-20', [['Pratos', 80]]),
+      c('l', 'Lanchonete', '2026-11-20', [['Copos', 30]]),
+    ]);
+    const html = renderToString(React.createElement(EvolucaoDosUtensilios, { series, mostrarUnidade: false })).split('<!-- -->').join('');
+    expect(html).toContain('data-local="Restaurante"');
+    expect(html).toContain('data-local="Lanchonete"');
+    expect(html).toContain('maior que na comparação anterior (5 quebras)');
+    expect(html).toContain('primeira contagem deste local');
+    expect(html).toContain('Aparece a partir da segunda contagem deste local.');
+    expect(html).toContain('-15');
+  });
+  it('a nova contagem oferece o local e "Outro local…"', async () => {
+    const { NovaContagem } = await import('@/components/utensilios/abrir-contagem');
+    const html = renderToString(React.createElement(NovaContagem, { unitId: 'u1', locais: ['Lanchonete'] }));
+    expect(html).toContain('Local da nova contagem');
+    expect(html).toContain('Iniciar contagem');
+  });
+});
+
 describe('fonte: regras que a tela não pode afrouxar', () => {
   it('o menu mostra o Inventário de Utensílios ao lado do Teknisa, e o antigo saiu do padrão do gerente', () => {
     const areas = readFileSync('src/lib/nav/areas.ts', 'utf8');

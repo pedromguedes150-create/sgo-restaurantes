@@ -30,7 +30,7 @@ async function acao(body: Record<string, unknown>) {
   return { ok: r.ok, body: await r.json().catch(() => ({})) as { error?: string; faltam?: string[]; status?: string } };
 }
 
-export function ContagemClient({ inventario, responsaveis }: { inventario: ContagemUI; responsaveis: { id: string; name: string }[] }) {
+export function ContagemClient({ inventario, responsaveis, comAuditoria = true }: { comAuditoria?: boolean; inventario: ContagemUI; responsaveis: { id: string; name: string }[] }) {
   const router = useRouter();
   const [qtd, setQtd] = useState<Record<string, string>>(() => Object.fromEntries(inventario.items.map((i) => [i.id, i.quantity === null ? '' : String(i.quantity)])));
   const [notas, setNotas] = useState(inventario.notes ?? '');
@@ -170,9 +170,9 @@ export function ContagemClient({ inventario, responsaveis }: { inventario: Conta
         {semPreencher.length > 0 && <span className="text-xs text-ink-500">{semPreencher.length} item(ns) sem quantidade.</span>}
       </div>
 
-      <SgoModal open={confirmando} onClose={() => setConfirmando(false)} title="Enviar inventário para auditoria?"
+      <SgoModal open={confirmando} onClose={() => setConfirmando(false)} title={comAuditoria ? 'Enviar inventário para auditoria?' : 'Enviar inventário?'}
         footer={<><Button variant="secondary" onClick={() => setConfirmando(false)}>Voltar</Button><Button onClick={() => void enviar()} loading={ocupado === 'enviar'}><Send className="h-4 w-4" /> Confirmar envio</Button></>}>
-        <p className="text-sm text-ink-700">{inventario.unidade} · {padrao.length + personalizados.length + novos.length} utensílios · total <b className="tabular-nums">{total.toLocaleString('pt-BR')}</b>. Depois de enviado, a contagem fica bloqueada até o supervisor aprovar ou devolver.</p>
+        <p className="text-sm text-ink-700">{inventario.unidade} · {padrao.length + personalizados.length + novos.length} utensílios · total <b className="tabular-nums">{total.toLocaleString('pt-BR')}</b>. {comAuditoria ? 'Depois de enviado, a contagem fica bloqueada até o supervisor aprovar ou devolver.' : 'Depois de enviado, o inventário fica concluído e não pode mais ser alterado — qualquer ajuste é uma nova contagem.'}</p>
       </SgoModal>
     </div>
   );
