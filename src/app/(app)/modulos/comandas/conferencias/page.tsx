@@ -5,6 +5,8 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { listarConferencias, listarContagensDiretas, TIPO_LABEL, METODO_LABEL, STATUS_LABEL } from '@/lib/commands/sessao';
 import { LargeTitle } from '@/components/layout/page-chrome';
+import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
+import { FiltrosDeConferencias } from '@/components/commands/filtros-conferencias';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
 import { EmptyState } from '@/components/ui/ds/empty-state';
 import { shortUnitName } from '@/lib/unit-name';
@@ -64,97 +66,107 @@ export default async function HistoricoDeConferenciasPage({
     ...diretas.map((c) => ({ chave: `c-${c.id}`, ordem: `${c.operationalDate} ${c.registradaEm.toISOString()}`, direta: c })),
   ].sort((a, b) => (a.ordem < b.ordem ? 1 : -1));
 
-  const filtro = (chave: string, valor: string | null) => {
-    const q = new URLSearchParams(Object.entries(searchParams).filter(([, v]) => v) as [string, string][]);
-    if (valor === null) q.delete(chave); else q.set(chave, valor);
-    return `/modulos/comandas/conferencias?${q.toString()}`;
-  };
-
-  const pilulas = (chave: string, opcoes: { valor: string; label: string }[]) => (
-    <div className="flex flex-wrap gap-1.5">
-      <Link href={filtro(chave, null)} className={`rounded-full border px-3 py-1 text-xs font-semibold ${!searchParams[chave as keyof typeof searchParams] ? 'border-brand bg-brand text-on-brand' : 'text-ink-700'}`}>
-        Todos
-      </Link>
-      {opcoes.map((o) => (
-        <Link key={o.valor} href={filtro(chave, o.valor)} className={`rounded-full border px-3 py-1 text-xs font-semibold ${searchParams[chave as keyof typeof searchParams] === o.valor ? 'border-brand bg-brand text-on-brand' : 'text-ink-700'}`}>
-          {o.label}
-        </Link>
-      ))}
-    </div>
-  );
+  /* v1.222.0 — os números do recorte, antes da lista. */
+  const sessoes = tudo.filter((t) => t.sessao).map((t) => t.sessao!);
+  const concluidas = sessoes.filter((s) => s.status === 'CONCLUIDA').length + diretas.length;
+  const emAndamento = sessoes.filter((s) => s.status === 'EM_ANDAMENTO').length;
+  const comDivergencia = sessoes.filter((s) => s.divergencias > 0).length + diretas.filter((c) => c.ausentes > 0).length;
+  const temFiltro = Object.values(searchParams).some(Boolean);
+  const mostrarUnidade = units.length > 1 && !searchParams.unit;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="historico-de-conferencias">
       <Link href="/modulos/comandas" className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
         <ArrowLeft className="h-4 w-4" /> Comandas
       </Link>
 
-      <LargeTitle title="Histórico de conferências" subtitle="Todas as conferências, por dia. As linhas marcadas como tela antiga são contagens feitas antes da unificação, pelo leitor ou pela grade antigos." />
+      <LargeTitle
+        title="Histórico de conferências"
+        subtitle="Todas as conferências de comandas, da mais recente para a mais antiga."
+        actions={<Link href={searchParams.unit ? `/modulos/comandas?unit=${searchParams.unit}` : '/modulos/comandas'} className="sgo-btn sgo-btn--sm"><ClipboardList className="h-4 w-4" /> Nova conferência</Link>}
+      />
 
-      <div className="space-y-2">
-        {units.length > 1 && pilulas('unit', units.map((u) => ({ valor: u.id, label: shortUnitName(u.name) })))}
-        {pilulas('tipo', [{ valor: 'FAIXA_DO_DIA', label: 'Parcial' }, { valor: 'COMPLETA', label: 'Completa' }])}
-        {pilulas('metodo', [{ valor: 'MANUAL', label: 'Manual' }, { valor: 'LEITOR', label: 'Leitor' }, { valor: 'MISTO', label: 'Manual + Leitor' }])}
-        {pilulas('status', [{ valor: 'EM_ANDAMENTO', label: 'Em andamento' }, { valor: 'CONCLUIDA', label: 'Concluída' }, { valor: 'CANCELADA', label: 'Cancelada' }])}
-      </div>
+      <FiltrosDeConferencias
+        unidades={units.map((u) => ({ id: u.id, nome: shortUnitName(u.name) }))}
+        valores={{ unit: searchParams.unit ?? '', tipo: searchParams.tipo ?? '', metodo: searchParams.metodo ?? '', status: searchParams.status ?? '', de: searchParams.de ?? '', ate: searchParams.ate ?? '' }}
+      />
 
-      {tudo.length === 0 ? (
-        <EmptyState
-          icon={ClipboardList}
-          title="Nenhuma conferência no filtro"
-          description="Troque os filtros acima, ou inicie uma nova conferência na tela de Comandas."
-        />
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-xs">
-            <thead>
-              <tr className="border-b border-line">
-                <th className="px-2 py-1.5 font-semibold text-ink-700">Dia</th>
-                <th className="px-2 py-1.5 font-semibold text-ink-700">Iniciada em</th>
-                <th className="px-2 py-1.5 font-semibold text-ink-700">Unidade</th>
-                <th className="px-2 py-1.5 font-semibold text-ink-700">Tipo</th>
-                <th className="px-2 py-1.5 font-semibold text-ink-700">Método</th>
-                <th className="px-2 py-1.5 font-semibold text-ink-700">Responsável</th>
-                <th className="px-2 py-1.5 font-semibold text-ink-700">Resultado</th>
-                <th className="px-2 py-1.5 font-semibold text-ink-700">Divergências</th>
-                <th className="px-2 py-1.5 font-semibold text-ink-700">Status</th>
-                <th className="px-2 py-1.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {tudo.map(({ chave, sessao: l, direta: c }) => l ? (
-                <tr key={chave} className="border-b border-line" data-testid="linha-conferencia">
-                  <td className="whitespace-nowrap px-2 py-1.5 font-semibold tabular-nums text-ink-900">{dia(l.operationalDate)}</td>
-                  <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-ink-700">{hora(l.startedAt)}</td>
-                  <td className="px-2 py-1.5 text-ink-700">{shortUnitName(l.unitName)}</td>
-                  <td className="px-2 py-1.5 text-ink-700">{TIPO_LABEL[l.type]}</td>
-                  <td className="px-2 py-1.5 text-ink-700">{METODO_LABEL[l.method]}</td>
-                  <td className="px-2 py-1.5 text-ink-700">{l.responsavel ?? '—'}</td>
-                  <td className="px-2 py-1.5 tabular-nums text-ink-700">{l.conferidas}/{l.expected}</td>
-                  <td className={`px-2 py-1.5 tabular-nums ${l.divergencias > 0 ? 'font-semibold text-danger' : 'text-ink-700'}`}>{l.divergencias}</td>
-                  <td className="px-2 py-1.5"><StatusBadge tone={TOM[l.status] ?? 'neutral'} dot>{STATUS_LABEL[l.status]}</StatusBadge></td>
-                  <td className="px-2 py-1.5">
-                    <Link href={`/modulos/comandas/conferencias/${l.id}`} className="font-semibold text-brand">Ver detalhes</Link>
-                  </td>
+      <SgoKpis>
+        <SgoKpi label="Conferências" value={tudo.length} meta={temFiltro ? 'no filtro' : 'as mais recentes'} testId="kpi-total" />
+        <SgoKpi label="Concluídas" value={concluidas} testId="kpi-concluidas" />
+        <SgoKpi label="Em andamento" value={emAndamento} valueColor={emAndamento > 0 ? 'var(--sgo-warn)' : undefined} meta={emAndamento > 0 ? 'falta finalizar' : undefined} testId="kpi-andamento" />
+        <SgoKpi label="Com comanda faltando" value={comDivergencia} valueColor={comDivergencia > 0 ? 'var(--sgo-bad)' : undefined} testId="kpi-divergencia" />
+      </SgoKpis>
+
+      <section className="sgo-panel sgo-panel--solid overflow-hidden">
+        <p className="sgo-panel__title px-3 pt-3 sm:px-4">Conferências · {tudo.length}</p>
+        {tudo.length === 0 ? (
+          <div className="px-3 pb-4 sm:px-4">
+            <EmptyState
+              icon={ClipboardList}
+              title={temFiltro ? 'Nenhuma conferência com esses filtros' : 'Nenhuma conferência registrada ainda'}
+              description={temFiltro ? 'Mude ou limpe os filtros acima.' : 'Inicie a primeira na tela de Comandas, em "Iniciar nova conferência".'}
+            />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="sgo-tbl w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="text-left">Dia</th>
+                  {mostrarUnidade && <th className="text-left">Unidade</th>}
+                  <th className="text-left">Tipo</th>
+                  <th className="text-left">Responsável</th>
+                  <th className="text-right">Conferidas</th>
+                  <th className="text-right">Faltando</th>
+                  <th className="text-left">Situação</th>
+                  <th />
                 </tr>
-              ) : c ? (
-                <tr key={chave} className="border-b border-line" data-testid="linha-contagem-direta">
-                  <td className="whitespace-nowrap px-2 py-1.5 font-semibold tabular-nums text-ink-900">{dia(c.operationalDate)}</td>
-                  <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-ink-700">{hora(c.registradaEm)}</td>
-                  <td className="px-2 py-1.5 text-ink-700">{shortUnitName(c.unitName)}</td>
-                  <td className="px-2 py-1.5 text-ink-700">{c.parcial ? 'Parcial' : 'Completa'}</td>
-                  <td className="px-2 py-1.5 text-ink-500">Tela antiga (sem conferência)</td>
-                  <td className="px-2 py-1.5 text-ink-700">{c.responsavel ?? '—'}</td>
-                  <td className="px-2 py-1.5 tabular-nums text-ink-700">{c.ausentes === 0 ? 'todas presentes' : `${c.ausentes} ausente(s)`}</td>
-                  <td className="px-2 py-1.5 text-ink-500">—</td>
-                  <td className="px-2 py-1.5"><StatusBadge tone="success" dot>Concluída</StatusBadge></td>
-                  <td className="px-2 py-1.5" />
-                </tr>
-              ) : null)}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {tudo.map(({ chave, sessao: l, direta: c }) => l ? (
+                  <tr key={chave} data-testid="linha-conferencia">
+                    <td>
+                      <span className="font-semibold tabular-nums text-ink-900">{dia(l.operationalDate)}</span>
+                      <span className="block text-xs tabular-nums text-ink-500">iniciada {hora(l.startedAt)}</span>
+                    </td>
+                    {mostrarUnidade && <td>{shortUnitName(l.unitName)}</td>}
+                    <td>
+                      {TIPO_LABEL[l.type]}
+                      <span className="block text-xs text-ink-500">{METODO_LABEL[l.method]}</span>
+                    </td>
+                    <td>{l.responsavel ?? '—'}</td>
+                    <td className="text-right tabular-nums">{l.conferidas} de {l.expected}</td>
+                    <td className={`text-right tabular-nums ${l.divergencias > 0 ? 'font-semibold text-danger' : 'text-ink-500'}`}>{l.divergencias > 0 ? l.divergencias : '—'}</td>
+                    <td><StatusBadge tone={TOM[l.status] ?? 'neutral'} dot>{STATUS_LABEL[l.status]}</StatusBadge></td>
+                    <td className="text-right">
+                      <Link href={`/modulos/comandas/conferencias/${l.id}`} className="sgo-btn sgo-btn--sm">{l.status === 'EM_ANDAMENTO' ? 'Continuar' : 'Abrir'}</Link>
+                    </td>
+                  </tr>
+                ) : c ? (
+                  <tr key={chave} data-testid="linha-contagem-direta">
+                    <td>
+                      <span className="font-semibold tabular-nums text-ink-900">{dia(c.operationalDate)}</span>
+                      <span className="block text-xs tabular-nums text-ink-500">registrada {hora(c.registradaEm)}</span>
+                    </td>
+                    {mostrarUnidade && <td>{shortUnitName(c.unitName)}</td>}
+                    <td>
+                      {c.parcial ? 'Parcial' : 'Completa'}
+                      <span className="block text-xs text-ink-500">Tela antiga (sem conferência)</span>
+                    </td>
+                    <td>{c.responsavel ?? '—'}</td>
+                    <td className="text-right text-ink-500">—</td>
+                    <td className={`text-right tabular-nums ${c.ausentes > 0 ? 'font-semibold text-danger' : 'text-ink-500'}`}>{c.ausentes > 0 ? c.ausentes : '—'}</td>
+                    <td><StatusBadge tone="success" dot>Concluída</StatusBadge></td>
+                    <td />
+                  </tr>
+                ) : null)}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {diretas.length > 0 && <p className="px-3 pb-3 pt-2 text-xs text-ink-500 sm:px-4">&quot;Tela antiga&quot; são contagens feitas pelo leitor ou pela grade antigos, antes de a conferência virar um caminho só.</p>}
+      </section>
     </div>
   );
 }
