@@ -9,6 +9,11 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.223.0 — 2026-11-23 (Metas — o ranking em gráfico)
+
+- **Ranking de metas em gráfico:** à esquerda, a rosca da rede (quantas unidades na meta, em atenção e críticas, com a média no centro) e o pódio das três primeiras; à direita, uma barra por unidade, da melhor para a pior, na cor da faixa, com a linha da meta (80%) e a da média da rede, e "faltam N p.p." para quem está abaixo. Tocar numa unidade abre o detalhe dela.
+- O cartão "Unidades por faixa" saiu de baixo: a rosca dele agora faz parte do ranking. As notas são as mesmas de sempre — nada foi recalculado.
+
 ## v1.222.0 — 2026-11-23 (Histórico de conferências mais claro · Metas com os checklists recolhidos)
 
 - **Histórico de conferências (Comandas):** os filtros viraram uma linha de caixas (Unidade, Tipo, Situação, Como foi feita, De, Até) com "Limpar filtros", no lugar das quatro fileiras de botões. Acima da lista aparecem os números do recorte (conferências, concluídas, em andamento, com comanda faltando). A lista ficou em tabela do padrão do sistema, com o dia em destaque, "Conferidas X de Y", "Faltando" e botão Abrir/Continuar. Há um botão "Nova conferência" no topo.
