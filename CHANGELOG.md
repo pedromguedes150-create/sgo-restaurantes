@@ -9,6 +9,21 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.223.1 — 2026-11-24 (Notas — o leitor da câmera volta a ler o código de barras da DANFE)
+
+**Relato (print de uma gerente, iPhone):** a câmera apontada para a chave de acesso não lia; ela lançava à mão.
+
+Duas causas, medidas com um código de barras sintético:
+
+- **Resolução.** A câmera era aberta sem pedir tamanho e entregava 640×480. A chave é um Code-128 de 277 barras-módulo: sobrava 1,4 pixel por módulo, ilegível em qualquer posição. Agora o leitor pede 1920×1080 (e abre como antes se o aparelho recusar).
+- **Só o meio da imagem.** No iPhone a leitura é da biblioteca (não há leitor nativo), e sem a varredura completa ela olhava só as linhas do meio do quadro — o código no alto da tela nunca era visto. Agora varre o quadro inteiro, com um respiro de 80 ms entre tentativas.
+
+A ajuda da tela pede para aproximar até o código ocupar a largura da moldura. A conferência do dígito verificador (v1.206.0) segue igual: leitura errada continua sem entrar.
+
+⚠️ Não foi testado num iPhone de verdade — só com imagens sintéticas nos testes. Vale para os outros usos do leitor (gás, pedidos, estoque).
+
+---
+
 ## v1.223.0 — 2026-11-23 (Metas — o ranking em gráfico)
 
 - **Ranking de metas em gráfico:** à esquerda, a rosca da rede (quantas unidades na meta, em atenção e críticas, com a média no centro) e o pódio das três primeiras; à direita, uma barra por unidade, da melhor para a pior, na cor da faixa, com a linha da meta (80%) e a da média da rede, e "faltam N p.p." para quem está abaixo. Tocar numa unidade abre o detalhe dela.

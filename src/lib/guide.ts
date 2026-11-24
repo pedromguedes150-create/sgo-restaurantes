@@ -1395,7 +1395,7 @@ export const GUIDE: GuideSection[] = [
         ],
         tips: [
           'CHAVE QUE NÃO CONFERE (v1.206.0): o SGO confere o dígito verificador da chave de 44 dígitos. Se a câmera ler o código de barras torto, a leitura é descartada e o leitor continua tentando — aproxime e firme o celular. Se você colar/digitar uma chave errada, aparece um aviso em vermelho e nada é preenchido: confira os números com a nota.',
-          'A leitura usa a câmera do próprio celular no navegador (precisa permitir o acesso à câmera). Lê tanto o QR (NFC-e) quanto o código de barras (Code-128 da DANFE).',
+          'A leitura usa a câmera do próprio celular no navegador (precisa permitir o acesso à câmera). Lê tanto o QR (NFC-e) quanto o código de barras (Code-128 da DANFE). No código de barras, aproxime o celular até ele ocupar a largura da moldura e segure firme um instante; se a folha estiver amassada ou com reflexo, alise e afaste da luz direta.',
           'A aba "Análise" deixou de existir: era a MESMA lista de "Notas", só com mais detalhe. Tudo o que ela tinha está na própria lista — os totais e o Excel acima dela, e o detalhe por linha no interruptor.',
           '"Registrar nota" também deixou de ser aba e virou o botão "Nova nota", para quem entra só para consultar não abrir um formulário sem querer.',
         ],

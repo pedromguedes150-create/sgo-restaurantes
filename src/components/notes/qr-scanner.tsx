@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
-import { DecodeHintType, BarcodeFormat } from '@zxing/library';
 import { Camera, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { chaveConfere } from '@/lib/notes/chave';
+import { RESTRICOES_DA_CAMERA, dicasDoLeitor, tamanhoDoQuadro, INTERVALO_DA_LEITURA_MS } from '@/lib/notes/leitura-codigo';
 
 /**
  * Extrai a chave de 44 dígitos do conteúdo do QR/código de barras da NFC-e/NFe.
@@ -34,8 +34,7 @@ function candidataDaChave(text: string): string | null {
   return null;
 }
 
-// Formatos aceitos: QR (NFC-e) + 1D comuns em DANFE (Code-128 é o da chave).
-const ZXING_FORMATS = [BarcodeFormat.QR_CODE, BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.ITF, BarcodeFormat.EAN_13, BarcodeFormat.CODABAR];
+// Formatos aceitos pelo leitor nativo; os da biblioteca moram em leitura-codigo.ts.
 const NATIVE_FORMATS = ['qr_code', 'code_128', 'code_39', 'itf', 'ean_13', 'codabar'];
 
 /**
@@ -52,7 +51,7 @@ export function QrScanner({
   onResult,
   parse = extractChave,
   label = 'Escanear',
-  ajuda = <>Aponte para o <strong>QR code</strong> ou o <strong>código de barras</strong> da nota.</>,
+  ajuda = <>Aponte para o <strong>QR code</strong> ou o <strong>código de barras</strong> da nota. Aproxime até o código ocupar a largura da moldura.</>,
 }: {
   onResult: (valor: string) => void;
   /** Devolve o que interessa da leitura, ou null para continuar procurando. */
@@ -65,6 +64,7 @@ export function QrScanner({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
+  const esperaRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   /* O efeito de câmera depende só de `open`. Sem o ref, um chamador que
      define `parse` inline recriaria a função a cada render e reabriria a
@@ -81,7 +81,12 @@ export function QrScanner({
 
     async function start() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        /* v1.223.1 — pede resolução alta: em 640×480 (o padrão) o código de
+           barras da DANFE não tem pixel suficiente por barra. Se o aparelho
+           recusar o pedido, abre como antes. */
+        let stream: MediaStream;
+        try { stream = await navigator.mediaDevices.getUserMedia({ video: RESTRICOES_DA_CAMERA, audio: false }); }
+        catch { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); }
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
         const video = videoRef.current!;
@@ -95,9 +100,7 @@ export function QrScanner({
           catch { try { detector = new BD(); } catch { detector = null; } }
         }
         if (!detector) {
-          const hints = new Map();
-          hints.set(DecodeHintType.POSSIBLE_FORMATS, ZXING_FORMATS);
-          zxing = new BrowserMultiFormatReader(hints);
+          zxing = new BrowserMultiFormatReader(dicasDoLeitor());
         }
 
         const canvas = canvasRef.current ?? document.createElement('canvas');
@@ -112,7 +115,8 @@ export function QrScanner({
                 const codes = await detector.detect(v);
                 if (codes && codes.length) text = codes[0].rawValue;
               } else if (zxing) {
-                canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+                const q = tamanhoDoQuadro(v.videoWidth, v.videoHeight);
+                canvas.width = q.largura; canvas.height = q.altura;
                 const ctx = canvas.getContext('2d', { willReadFrequently: true });
                 if (ctx) {
                   ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
@@ -125,7 +129,14 @@ export function QrScanner({
               if (valor) { finish(); onResult(valor); return; }
             }
           }
-          rafRef.current = requestAnimationFrame(tick);
+          proximo();
+        };
+        /* A varredura do quadro inteiro pela biblioteca é pesada: um respiro
+           entre as tentativas mantém a imagem da câmera fluida. */
+        const proximo = () => {
+          if (cancelled) return;
+          if (zxing) esperaRef.current = setTimeout(() => { rafRef.current = requestAnimationFrame(tick); }, INTERVALO_DA_LEITURA_MS);
+          else rafRef.current = requestAnimationFrame(tick);
         };
         rafRef.current = requestAnimationFrame(tick);
       } catch {
@@ -141,6 +152,7 @@ export function QrScanner({
 
   function cleanup() {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    if (esperaRef.current) { clearTimeout(esperaRef.current); esperaRef.current = null; }
     if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; }
   }
 
