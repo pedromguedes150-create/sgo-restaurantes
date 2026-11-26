@@ -9,6 +9,27 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.228.0 — 2026-11-26 (Gerentes: relatório semanal de folgas em PDF e "Hoje na rede" redesenhada)
+
+**Pedido do Daniel (print):** "irei precisar mandar um relatório toda segunda referente às folgas — preciso de um relatório mais executivo em PDF e quero uma aba melhorada, mais profissional".
+
+**Relatório semanal de folgas** (Pessoas → Escala de gerentes → Hoje na rede → "PDF semanal")
+- A semana de **segunda a domingo**, com botões para a semana anterior e a próxima.
+- Quatro números: gerentes com folga, **sem folga lançada**, de férias e **unidades com dia sem gerente**.
+- "Leitura da semana" em frases, o quadro de gerentes fora dia a dia e os pontos de atenção nomeados (qual unidade, quais dias, quais gerentes).
+- Grade de cada unidade (gerente × dia: T, F, FE) e a lista das folgas com quem lançou.
+- Abre para quem abre "Hoje na rede" (Admin, CEO e Coordenação), no escopo de unidade de cada um.
+
+**Aba "Hoje na rede"**
+- Faixa "Esta semana" com os sete dias, hoje em destaque e os dias com unidade descoberta em vermelho.
+- Cartões de cobertura com "2 de 4 na unidade hoje" e uma barra por gerente.
+- "Sem horário cadastrado" deixou de aparecer em vermelho por pessoa: virou um aviso único com a contagem, porque é pendência de cadastro e não falta de gerente.
+
+⚠️ Nenhuma regra mudou: a situação de cada dia é a mesma da tela de hoje (lançamento vence o padrão semanal; quem não tem horário não conta como cobertura). O relatório mensal da rede, do Administrador, continua igual.
+⚠️ Não verificado no navegador (banco de desenvolvimento fora do ar).
+
+---
+
 ## v1.227.0 — 2026-11-27 (Solicitação de Vagas — o padrão do grupo, igual ao do SGO dos postos)
 
 **Pedido do Daniel (prompt do SGO Operacional):** o Restaurante ter o MESMO processo de vagas dos postos — mesmo fluxo, mesmas regras, mesmas telas e o mesmo contrato com o RH. Decisões dele: **a Solicitação de Vagas substitui a Central de Currículos**, **Supervisor e Coordenador aprovam** e **entrega de uma vez**.

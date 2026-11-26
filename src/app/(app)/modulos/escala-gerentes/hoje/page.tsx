@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { ArrowLeft, Building2, CalendarClock, Palmtree, Sun, UserRoundX, Users } from 'lucide-react';
+import { ArrowLeft, Building2, CalendarClock, CalendarDays, FileDown, Palmtree, Sun, UserRoundX, Users } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth/session';
-import { getHojeNaRede } from '@/lib/manager-schedule-rede';
+import { getHojeNaRede, getSemanaDaRede } from '@/lib/manager-schedule-rede';
+import { segundaDe } from '@/lib/manager-schedule-semana';
 import { abasDaEscalaDeGerentes } from '@/lib/manager-schedule-abas';
 import { SITUACAO_ROTULO, type SituacaoHoje } from '@/lib/manager-schedule-regras';
-import { DIA_LONGO, ddmmaaaa } from '@/lib/controle-gerentes';
+import { DIA_ABREV, DIA_LONGO, ddmm, ddmmaaaa } from '@/lib/controle-gerentes';
 import { LargeTitle } from '@/components/layout/page-chrome';
 import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
 import { StatusBadge } from '@/components/ui/ds/status-badge';
@@ -20,7 +21,7 @@ const TONE: Record<SituacaoHoje, 'success' | 'warning' | 'info' | 'neutral' | 'd
   FOLGA: 'warning',
   FERIAS: 'info',
   FORA_DO_PADRAO: 'neutral',
-  SEM_HORARIO: 'danger',
+  SEM_HORARIO: 'neutral',
 };
 
 /**
@@ -33,6 +34,8 @@ const TONE: Record<SituacaoHoje, 'success' | 'warning' | 'info' | 'neutral' | 'd
 export default async function HojeNaRedePage() {
   const user = (await getSessionUser())!;
   const [dados, tabs] = await Promise.all([getHojeNaRede(user), abasDaEscalaDeGerentes(user, 'hoje')]);
+  const semana = await getSemanaDaRede(user, segundaDe(dados.hoje));
+  const semHorario = semana.resumo.semHorario;
   const { resumo, unidades, proximos } = dados;
   const foraHoje = unidades.flatMap((u) => u.linhas.filter((l) => l.situacao === 'FOLGA' || l.situacao === 'FERIAS').map((l) => ({ ...l, unitName: u.unitName })));
 
@@ -45,6 +48,12 @@ export default async function HojeNaRedePage() {
         title="Gerentes hoje na rede"
         subtitle={`${diaDaSemana(dados.hoje)}, ${ddmmaaaa(dados.hoje)} — quem está de folga ou férias, quem cobre e onde não há ninguém.`}
         tabs={tabs.length > 1 ? tabs : undefined}
+        actions={(
+          <>
+            <Link href="/modulos/escala-gerentes/hoje/semana" className="sgo-btn sgo-btn--sm" data-testid="ver-semana"><CalendarDays className="h-4 w-4" /> Relatório da semana</Link>
+            <a href="/modulos/escala-gerentes/hoje/semana?imprimir=1" target="_blank" rel="noopener" className="sgo-btn sgo-btn--sm sgo-btn--primary" data-testid="pdf-semana"><FileDown className="h-4 w-4" /> PDF semanal</a>
+          </>
+        )}
       />
 
       <SgoKpis>
@@ -60,6 +69,41 @@ export default async function HojeNaRedePage() {
         />
         <SgoKpi label="Voltam amanhã" value={String(resumo.voltamAmanha)} meta={`em ${fmt(dados.amanha)}`} icon={CalendarClock} tone="green" />
       </SgoKpis>
+
+      {/* ── A semana em curso ── */}
+      <section className="sgo-panel sgo-panel--solid p-3" data-testid="semana-em-curso">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <p className="sgo-panel__title">Esta semana — {ddmm(semana.de)} a {ddmm(semana.ate)}</p>
+          <p className="text-xs text-ink-500">
+            {semana.resumo.comFolga} de {semana.resumo.gerentes} com folga lançada
+            {semana.resumo.semFolga > 0 && <> · <b className="text-danger">{semana.resumo.semFolga} sem folga</b></>}
+          </p>
+        </div>
+        <div className="mt-2 grid grid-cols-7 gap-1">
+          {semana.dias.map((iso, i) => {
+            const eHoje = iso === dados.hoje;
+            const descobertas = semana.descobertasPorDia[i];
+            return (
+              <div
+                key={iso}
+                data-hoje={eHoje || undefined}
+                className={`rounded-card border p-2 text-center ${eHoje ? 'border-brand bg-brand-tint' : descobertas > 0 ? 'border-danger/50' : 'border-line'}`}
+              >
+                <p className={`sgo-type-11 font-semibold uppercase ${eHoje ? 'text-brand' : 'text-ink-500'}`}>{DIA_ABREV[new Date(`${iso}T00:00:00Z`).getUTCDay()]}</p>
+                <p className="text-xs tabular-nums text-ink-500">{ddmm(iso)}</p>
+                <p className="sgo-type-17 font-bold tabular-nums text-ink-900">{semana.foraPorDia[i]}</p>
+                <p className={`text-xs ${descobertas > 0 ? 'font-semibold text-danger' : 'text-ink-500'}`}>{descobertas > 0 ? `${descobertas} sem gerente` : 'fora'}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {semHorario > 0 && (
+        <p className="rounded-card border border-line bg-sunken px-3 py-2 text-sm text-ink-700" data-testid="aviso-sem-horario">
+          <b className="text-ink-900">{semHorario} gerente(s) sem horário cadastrado.</b> Eles não contam como cobertura até a Supervisão cadastrar o horário na Escala de gerentes.
+        </p>
+      )}
 
       {/* ── Quem está fora hoje ── */}
       <section className="sgo-panel sgo-panel--solid overflow-hidden" data-testid="fora-hoje">
@@ -110,7 +154,7 @@ export default async function HojeNaRedePage() {
               <div
                 key={u.unitId}
                 data-testid={`unidade-${u.unitId}`}
-                className={`rounded-lg border p-3 ${u.semGerente ? 'border-danger/50 bg-danger/10' : 'bg-surface'}`}
+                className={`sgo-panel sgo-panel--solid p-3 ${u.semGerente ? 'border-danger/50' : ''}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <Link href={`/modulos/escala-gerentes?unit=${u.unitId}`} className="text-sm font-semibold text-ink-900 hover:text-brand">{u.unitName}</Link>
@@ -125,8 +169,15 @@ export default async function HojeNaRedePage() {
                   )}
                 </div>
                 <p className="mt-1 text-xs text-ink-500">
-                  {u.cobertura.length > 0 ? <>Na unidade: <b className="text-ink-900">{u.cobertura.join(', ')}</b></> : u.linhas.length === 0 ? 'Nenhum gerente vinculado.' : 'Ninguém com horário trabalha hoje.'}
+                  {u.linhas.length === 0 ? 'Nenhum gerente vinculado.' : <><b className="text-ink-900">{u.cobertura.length} de {u.linhas.length}</b> na unidade hoje</>}
                 </p>
+                {u.linhas.length > 0 && (
+                  <div className="mt-1 flex gap-1" aria-hidden>
+                    {u.linhas.map((l) => (
+                      <span key={l.userId} className={`h-1 flex-1 rounded-full ${l.situacao === 'TRABALHA' ? 'bg-success' : l.situacao === 'FOLGA' ? 'bg-warning' : l.situacao === 'FERIAS' ? 'bg-info' : 'bg-line-strong'}`} />
+                    ))}
+                  </div>
+                )}
                 <ul className="mt-2 space-y-1">
                   {u.linhas.map((l) => (
                     <li key={l.userId} className="flex items-center justify-between gap-2 text-xs">
