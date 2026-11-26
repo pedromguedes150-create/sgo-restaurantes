@@ -3,6 +3,7 @@ import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getToApproveCount } from '@/lib/payments/query';
 import { getInboxPendingCount } from '@/lib/communications/query';
 import { getOccurrenceSummary } from '@/lib/occurrences/query';
+import { pendenciasDeVagas } from '@/lib/vagas/rotina';
 import type { SessionUser } from '@/lib/auth/session';
 
 /**
@@ -24,17 +25,19 @@ export { badgesPorArea, type Pendencias } from '@/lib/nav/pendencias-puro';
 import type { Pendencias } from '@/lib/nav/pendencias-puro';
 
 export async function contarPendencias(user: SessionUser, now = new Date()): Promise<Pendencias> {
-  const [tarefas, pagamentos, comunicados, ocorrencias] = await Promise.all([
+  const [tarefas, pagamentos, comunicados, ocorrencias, vagas] = await Promise.all([
     prisma.taskInstance.count({ where: { status: 'PENDING', dueAt: { lt: now }, ...unitScopeWhere(user, 'unitId') } }),
     getToApproveCount(user),
     getInboxPendingCount(user),
     getOccurrenceSummary(user).then((s) => s.criticalOpen).catch(() => 0),
+    pendenciasDeVagas(user).catch(() => 0),
   ]);
   const out: Pendencias = {};
   if (tarefas > 0) out.TASKS = tarefas;
   if (pagamentos > 0) out.PAYMENTS = pagamentos;
   if (comunicados > 0) out.COMMUNICATION = comunicados;
   if (ocorrencias > 0) out.OCCURRENCES = ocorrencias;
+  if (vagas > 0) out.VAGAS = vagas;
   return out;
 }
 

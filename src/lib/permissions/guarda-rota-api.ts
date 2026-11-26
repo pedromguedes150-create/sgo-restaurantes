@@ -69,6 +69,12 @@ export const REGRAS: Record<string, RegraDeRota> = {
   '/api/curriculos/cargos': { modulo: 'CONFIG_RESUMES', exigir: 'editar' },
   '/api/curriculos/ler': { modulo: 'RESUMES', exigir: 'editar' },
 
+  /* v1.227.0 — Solicitação de Vagas: pedir é 'editar'; nas ações da vaga a porta é 'ver' e a lib
+     confere QUEM pode o quê (dono × aprovador, por situação) — quem só aprova também passa. */
+  '/api/vagas': { modulo: 'VAGAS', exigir: 'editar' },
+  '/api/vagas/[id]': { modulo: 'VAGAS', exigir: 'ver' },
+  '/api/vagas/[id]/curriculo/[cid]': { modulo: 'VAGAS', exigir: 'ver' },
+
   '/api/checklist-forms': { modulo: 'CHECKLIST_FORMS', exigir: 'editar' },
   '/api/checklist-models/import': { modulo: 'CONFIG_MODELS', exigir: 'editar' },
   '/api/checklist-models/export': { modulo: 'CONFIG_MODELS', exigir: 'ver' },

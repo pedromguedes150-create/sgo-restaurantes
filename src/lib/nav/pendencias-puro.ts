@@ -27,6 +27,7 @@ export const DESCRICAO_PENDENCIA: Record<string, [singular: string, plural: stri
   PAYMENTS: ['pagamento esperando a sua aprovação', 'pagamentos esperando a sua aprovação'],
   COMMUNICATION: ['comunicado para confirmar a leitura', 'comunicados para confirmar a leitura'],
   OCCURRENCES: ['ocorrência crítica em aberto', 'ocorrências críticas em aberto'],
+  VAGAS: ['vaga esperando a sua ação', 'vagas esperando a sua ação'],
 };
 
 export function textoDaPendencia(key: string, n: number): string {

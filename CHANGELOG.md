@@ -9,6 +9,35 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.227.0 — 2026-11-27 (Solicitação de Vagas — o padrão do grupo, igual ao do SGO dos postos)
+
+**Pedido do Daniel (prompt do SGO Operacional):** o Restaurante ter o MESMO processo de vagas dos postos — mesmo fluxo, mesmas regras, mesmas telas e o mesmo contrato com o RH. Decisões dele: **a Solicitação de Vagas substitui a Central de Currículos**, **Supervisor e Coordenador aprovam** e **entrega de uma vez**.
+
+**O caminho da vaga**
+1. O gerente pede em **Pessoas → Solicitação de Vagas → Nova vaga**: uma linha por pessoa (cargo, motivo, quem substitui, escala, horário, início), prioridade e currículos opcionais. Não há campo de salário.
+2. Supervisor ou Coordenador **aprova ou devolve em até 1 dia útil** (sábado e domingo não contam; depois do prazo, lembrete de hora em hora em horário comercial).
+3. Aprovada, o SGO **envia sozinho ao RH** (fila com nova tentativa automática).
+4. O RH devolve cada passo (recebida, numerada, seleção, consulta, entrevista, aprovado/reprovado, admissão, concluída) e o gerente acompanha tudo.
+
+**O que a tela tem**
+- **Lista** com cartões que filtram, busca, e o **andamento em 11 etapas** de cada vaga, com "Aguardando — quem: o quê" e alertas (RH parado, início próximo, devolvida parada, fora do prazo, não chegou ao RH).
+- **Detalhe**: situação, cada pessoa, currículos com o selo de cada um, o caminho da vaga e o histórico explicado.
+- **Painel**: tempos (aprovação, RH, do pedido à contratação), origem dos candidatos, barras e tabela por unidade.
+- **Currículo novo em vaga já no RH**: o do gerente passa pelo supervisor (envia ou recusa com motivo); o de quem aprova vai direto.
+- **Editar** (quem aprova), **cancelar** e **excluir** com motivo — nada é apagado, tudo vira evento.
+- Número no menu: vagas aguardando aprovação, currículos para avaliar e devolvidas.
+
+**Contrato com o RH** — o mesmo dos postos, com identificadores próprios para não colidir: `sistema: "SGO Restaurante"`, `rest-vaga-<n>`, `rest-cv-<n>`, código `VAGR-0012`. Envio em `POST /api/integracoes/sgo/vagas` (ações criar · atualizar · cancelar · curriculo); retorno em `/api/integracoes/rh/vaga-situacao` e `/api/integracoes/rh/curriculo-situacao`, com a chave de entrada que o RH já usa. CPF de candidato no retorno é recusado.
+
+**Permissões** (Configurações → Perfis): "Solicitação de Vagas" — Ver e Editar (pedir) para Gerente, Coordenador e Supervisor; a linha "aprovar" nasce só para Supervisor e Coordenador.
+
+**Central de Currículos**: saiu do menu (fica para Admin/CEO). Os currículos já encaminhados não foram apagados.
+
+⚠️ **Depende do RH** para funcionar de ponta a ponta: (a) aceitar `sistema: "SGO Restaurante"` e os prefixos `rest-vaga-`/`rest-cv-`; (b) mandar os retornos para o endereço do SGO Restaurante quando a vaga veio de lá; (c) aceitar `acao: "atualizar"` e `"curriculo"`; (d) aceitar `salario: null`. Enquanto isso, a vaga aprovada fica "Indo para o RH" e é reenviada sozinha.
+⚠️ Não verificado no navegador nem com banco local (fora do ar) — os testes de fluxo ficam por conta do CI. Migração só de criação (4 tabelas).
+
+---
+
 ## v1.226.0 — 2026-11-26 (Sobras Restaurantes executivo · valor/hora do freelancer com lista autorizada)
 
 ### Freelancer: outros valores por hora, autorizados pelo Admin

@@ -127,6 +127,12 @@ export async function register() {
 
   // envio SGO→RH: fila a cada minuto · situação no RH de hora em hora
   setInterval(() => { void despacharRh(); }, 60 * 1000);
+  /* v1.227.0 — Solicitação de Vagas: a fila de envio ao RH a cada 2 min e o lembrete do prazo de 1 dia útil de hora em hora. */
+  const filaDeVagas = async () => { try { const { despacharVagas } = await import('@/lib/vagas/fila'); await despacharVagas(); } catch (e) { console.error('[vagas] falha na fila do RH:', e); } };
+  const lembreteDeVagas = async () => { try { const { lembrarPrazoDoSupervisor } = await import('@/lib/vagas/rotina'); await lembrarPrazoDoSupervisor(); } catch (e) { console.error('[vagas] falha no lembrete:', e); } };
+  setTimeout(() => { void filaDeVagas(); void lembreteDeVagas(); }, 45_000);
+  setInterval(() => { void filaDeVagas(); }, 2 * 60 * 1000);
+  setInterval(() => { void lembreteDeVagas(); }, 60 * 60 * 1000);
   setInterval(() => { void situacoesRh(); }, 60 * 60 * 1000);
 
   // tarefas: a cada 30 min · RH e treinamentos: de hora em hora · vencimento: a cada 10 min
