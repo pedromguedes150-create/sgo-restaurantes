@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getFreelancerConsolidation } from '@/lib/payments/query';
-import { getConsolidadoFreelancers, type FiltroConsolidado, type PeriodoKey, type RecorrenciaFiltro, type StatusFiltro, type TipoFiltro } from '@/lib/payments/consolidado';
+import { getConsolidadoFreelancers, lerFiltroConsolidado, type FiltroConsolidado } from '@/lib/payments/consolidado';
 import { ConsolidadoClient } from '@/components/payments/consolidado-client';
 import { Card, CardContent } from '@/components/ui/card';
 import { PrintButton } from '@/components/ui/print-button';
@@ -41,9 +41,6 @@ function addDaysISO(iso: string, n: number): string {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
-
-const umDe = <T extends string>(v: string | undefined, validos: readonly T[], padrao: T): T =>
-  (validos as readonly string[]).includes(v ?? '') ? (v as T) : padrao;
 
 interface Params {
   aba?: string;
@@ -107,17 +104,8 @@ function AbaLink({ ativa, href, rotulo }: { ativa: boolean; href: string; rotulo
 type Sessao = Awaited<ReturnType<typeof getSessionUser>>;
 
 async function Consolidado({ user, searchParams, units }: { user: NonNullable<Sessao>; searchParams: Params; units: { id: string; name: string }[] }) {
-  const filtro: FiltroConsolidado = {
-    periodo: umDe<PeriodoKey>(searchParams.periodo, ['semana', 'semana-anterior', 'mes', 'mes-anterior', 'personalizado'], 'mes'),
-    de: ISO_DIA.test(searchParams.de ?? '') ? searchParams.de : undefined,
-    ate: ISO_DIA.test(searchParams.ate ?? '') ? searchParams.ate : undefined,
-    /* Unidade fora do escopo é ignorada, não recusada: o recorte de verdade já
-       está no `where` do servidor, aqui é só o seletor da tela. */
-    unitId: searchParams.unidade && units.some((u) => u.id === searchParams.unidade) ? searchParams.unidade : undefined,
-    tipo: umDe<TipoFiltro>(searchParams.tipo, ['TODOS', 'FREELANCER', 'OVERTIME'], 'FREELANCER'),
-    status: umDe<StatusFiltro>(searchParams.status, ['TODOS', 'PENDING', 'APPROVED', 'PAID', 'REJECTED'], 'TODOS'),
-    recorrencia: umDe<RecorrenciaFiltro>(searchParams.rec, ['todos', 'recorrentes'], 'todos'),
-  };
+  /* Uma leitura só do filtro, a mesma do Excel (v1.224.0). */
+  const filtro: FiltroConsolidado = lerFiltroConsolidado({ get: (k) => (searchParams as Record<string, string | undefined>)[k] }, units.map((u) => u.id));
 
   const dados = await getConsolidadoFreelancers(user, filtro);
 
