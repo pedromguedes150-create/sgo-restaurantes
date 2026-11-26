@@ -9,6 +9,14 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.228.1 — 2026-11-26 (Central de Currículos sai do menu)
+
+**Pedido do Daniel (print):** remover "Central de Currículos (antiga — substituída por Solicitação de Vagas)". Ela já estava escondida dos gerentes; agora sai do menu, da busca e do hub do celular para **todos**, inclusive Admin/CEO — junto com "Currículos (cargos do encaminhamento)" em Configurações.
+
+Nada foi apagado: os currículos já encaminhados continuam no banco e a tela antiga ainda abre pelo endereço `/modulos/curriculos` (Admin/CEO).
+
+---
+
 ## v1.228.0 — 2026-11-26 (Gerentes: relatório semanal de folgas em PDF e "Hoje na rede" redesenhada)
 
 **Pedido do Daniel (print):** "irei precisar mandar um relatório toda segunda referente às folgas — preciso de um relatório mais executivo em PDF e quero uma aba melhorada, mais profissional".
