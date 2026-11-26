@@ -72,7 +72,7 @@ export const AREAS: AreaDoMenu[] = [
       { titulo: 'Equipe', keys: ['PEOPLE', 'PEOPLE_MAP', 'PEOPLE_EVALUATION', 'PEOPLE_PROBATION', 'PEOPLE_ROLE_CHANGES'] },
       { titulo: 'Escala e folgas', keys: ['SCHEDULE', 'MANAGER_SCHEDULE', 'MANAGER_SCHEDULE_OWN', 'MANAGER_SCHEDULE_TODAY', 'SCHEDULE_OFF', 'SCHEDULE_SWAPS', 'LEAVES_TEAM'] },
       { titulo: 'Pagamentos', keys: ['PAYMENTS', 'HORA_EXTRA', 'PAYMENTS_REEMBOLSOS', 'PAYMENTS_CONSOLIDATION', 'PEOPLE_PAYOUTS', 'COMMISSION'] },
-      { titulo: 'Afastamentos e RH', keys: ['CERTIFICATES', 'VAGAS', 'RESUMES', 'TERMINATIONS', 'RH_DEMANDS'] },
+      { titulo: 'Afastamentos e RH', keys: ['CERTIFICATES', 'VAGAS', 'TERMINATIONS', 'RH_DEMANDS'] },
     ],
   },
   {
@@ -107,7 +107,7 @@ export const AREAS: AreaDoMenu[] = [
       { titulo: 'Estrutura', keys: ['CONFIG', 'CONFIG_UNITS', 'CONFIG_USERS', 'CONFIG_PROFILES', 'CONFIG_INTEGRATIONS', 'CONFIG_RH_DIAG', 'CONFIG_RH_SAIDA'] },
       { titulo: 'Operação', keys: ['CONFIG_CHECKLISTS', 'CONFIG_MODELS', 'CONFIG_SUP_CHECKLISTS', 'CONFIG_COMMANDS', 'CASH_CONFIG', 'CONFIG_WASTE', 'CONFIG_OCCURRENCES'] },
       { titulo: 'Cadastros', keys: ['CONFIG_SUPPLIERS', 'CONFIG_PRODUCTS', 'CONFIG_CD_SECTORS', 'CONFIG_PRODUCT_STANDARDS', 'CONFIG_PIZZAS', 'CONFIG_TICKET_MEDIA', 'CONFIG_UTENSILS'] },
-      { titulo: 'Pessoas e escala', keys: ['CONFIG_SCHEDULES', 'CONFIG_EVALUATION', 'CONFIG_CERTIFICATES', 'CONFIG_RESUMES', 'CONFIG_COMMISSION', 'CONFIG_PAYMENTS', 'CONFIG_FREELANCER_RATES', 'CONFIG_OVERTIME_RATES'] },
+      { titulo: 'Pessoas e escala', keys: ['CONFIG_SCHEDULES', 'CONFIG_EVALUATION', 'CONFIG_CERTIFICATES', 'CONFIG_COMMISSION', 'CONFIG_PAYMENTS', 'CONFIG_FREELANCER_RATES', 'CONFIG_OVERTIME_RATES'] },
     ],
   },
 ];
@@ -122,6 +122,11 @@ export const FORA_DO_MENU: Record<string, string> = {
   /* Tela de uma ocorrência específica — chega-se a ela pela lista, nunca pelo
      menu. */
   OCCURRENCES_NEW: 'ação dentro de Ocorrências (botão da própria tela)',
+  /* v1.228.1 — a Central de Currículos foi substituída pela Solicitação de Vagas
+     e saiu do menu de TODOS (pedido do Daniel). As telas e os dados ficam: quem
+     precisar consultar um currículo antigo abre pelo endereço. */
+  RESUMES: 'substituída pela Solicitação de Vagas; a tela antiga fica só pelo endereço /modulos/curriculos',
+  CONFIG_RESUMES: 'cargos da Central de Currículos antiga; fica só pelo endereço /configuracoes/curriculos',
 };
 
 /** Toda chave que o menu conhece — usada pelo teste e pela busca. */
