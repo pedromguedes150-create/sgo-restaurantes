@@ -20,6 +20,7 @@ import {
   amanha, diasDentro, montarUnidadeHoje, proximasAusencias, resumirHoje,
   type AusenciaProxima, type GerenteHoje, type ResumoHoje, type UnidadeHoje,
 } from '@/lib/manager-schedule-regras';
+import { diasDaSemana, montarSemana, type SemanaDaRede } from '@/lib/manager-schedule-semana';
 import type { SessionUser } from '@/lib/auth/session';
 
 /** Gerentes de cada unidade com as ausências ATIVAS que tocam [de, ate]. */
@@ -87,6 +88,34 @@ export async function getHojeNaRede(user: SessionUser, hoje: string = hojeNaOper
   const proximos = proximasAusencias(units.map((u) => ({ unitName: u.name, gerentes: porUnidade.get(u.id) ?? [] })), hoje, 7);
 
   return { hoje, amanha: amanha(hoje), resumo: resumirHoje(unidades), unidades, proximos };
+}
+
+/* ───────────── Semana da rede (relatório de segunda-feira) ───────────── */
+
+function gerenteDaRede(u: Awaited<ReturnType<typeof gerentesDaRede>>['usuarios'][number], nomeDoAutor: Map<string, string>): GerenteHoje {
+  return {
+    userId: u.id,
+    name: u.name,
+    weekdays: u.managerWorkSchedule ? parseWeekdays(u.managerWorkSchedule.weekdays) : [],
+    startTime: u.managerWorkSchedule?.startTime ?? null,
+    endTime: u.managerWorkSchedule?.endTime ?? null,
+    ausencias: u.managerLeaves.map((l) => ({
+      kind: l.kind === 'FERIAS' ? 'FERIAS' as const : 'FOLGA' as const, startDate: l.startDate, endDate: l.endDate, note: l.note,
+      lancadoPor: l.createdById ? (l.createdById === u.id ? 'o próprio gerente' : nomeDoAutor.get(l.createdById) ?? null) : null,
+    })),
+  };
+}
+
+/** A semana seg→dom que começa em `segunda`, no escopo do usuário. Só leitura. */
+export async function getSemanaDaRede(user: SessionUser, segunda: string): Promise<SemanaDaRede> {
+  const dias = diasDaSemana(segunda);
+  const { units, usuarios, nomeDoAutor } = await gerentesDaRede(user, dias[0], dias[6]);
+  const porUnidade = new Map<string, GerenteHoje[]>(units.map((u) => [u.id, []]));
+  for (const u of usuarios) {
+    const g = gerenteDaRede(u, nomeDoAutor);
+    for (const m of u.memberships) porUnidade.get(m.unitId)?.push(g);
+  }
+  return montarSemana(units.map((u) => ({ unitId: u.id, unitName: u.name, gerentes: porUnidade.get(u.id) ?? [] })), segunda);
 }
 
 /* ───────────── Relatório da rede (Admin) ───────────── */
