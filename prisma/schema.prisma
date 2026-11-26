@@ -110,6 +110,7 @@ model Unit {
   sectorOrders              SectorOrder[]
   freelancerRates           FreelancerHourlyRate[]
   freelancerAltRates        FreelancerAltRate[]
+  vagas                     VagaSolicitacao[]
   overtimeRates             OvertimeHourlyRate[]
   terminations              Termination[]
   rhDemands                 RhDemand[]
@@ -2747,22 +2748,22 @@ enum RhEventStatus {
 /// refresh token) e o pedaço para reconhecer na tela (`keyPrefix` + `keyLast4`).
 /// Ela é mostrada UMA vez, na criação. Perdeu = revoga e cria outra.
 model ApiClient {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
   /// Primeiros caracteres da chave (ex.: "sgo_live_ab12cd34") — só para reconhecer
-  keyPrefix   String
-  keyLast4    String
+  keyPrefix      String
+  keyLast4       String
   /// SHA-256 hex da chave completa — é o que autentica
-  keyHash     String    @unique
-  active      Boolean   @default(true)
-  revokedAt   DateTime?
-  lastUsedAt  DateTime?
+  keyHash        String    @unique
+  active         Boolean   @default(true)
+  revokedAt      DateTime?
+  lastUsedAt     DateTime?
   /// v1.212.0 — este sistema pode ler a Central de Currículos (dados de candidato). Nasce desligado.
-  canReadResumes Boolean @default(false)
-  createdById String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  canReadResumes Boolean   @default(false)
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   createdBy User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
   requests  ApiRequestLog[]
@@ -5631,4 +5632,161 @@ model CandidateResumeEvent {
 
   @@index([resumeId, createdAt])
   @@map("candidate_resume_events")
+}
+
+/// SOLICITAÇÃO DE VAGAS (v1.227.0) — o padrão do Grupo Beija-Flor, igual ao do SGO
+/// dos postos: o gerente pede (uma linha por pessoa), Supervisor/Coordenador aprova,
+/// o SGO envia ao RH e o RH devolve cada passo. Nada é apagado: cancelar e excluir
+/// são lógicos, e tudo vira evento na linha do tempo.
+model VagaSolicitacao {
+  id     String @id @default(cuid())
+  /// Número sequencial: vira o código "VAGR-0012" e o `sgoVagaId` "rest-vaga-12".
+  number Int    @unique @default(autoincrement())
+  unitId String
+
+  /// Resumo das pessoas: "2× Garçom · 1× Cozinheiro".
+  cargoResumo    String
+  quantidade     Int
+  requisitos     String?
+  observacao     String?
+  /// O início MAIS CEDO entre as pessoas (AAAA-MM-DD).
+  inicioDesejado String
+  prioridade     String  @default("NORMAL")
+  /// PENDENTE_APROVACAO · DEVOLVIDA · APROVADA · CONCLUIDA · CANCELADA
+  status         String  @default("PENDENTE_APROVACAO")
+
+  createdById            String?
+  createdByName          String
+  createdAt              DateTime  @default(now())
+  enviadoParaAprovacaoEm DateTime  @default(now())
+  decididoPorId          String?
+  decididoPorNome        String?
+  decididoEm             DateTime?
+  motivoDevolucao        String?
+  canceladoPorNome       String?
+  canceladoEm            DateTime?
+  motivoCancelamento     String?
+  excluidaEm             DateTime?
+  excluidaPorNome        String?
+  motivoExclusao         String?
+
+  /// A fila de envio ao RH mora na própria linha: criar · cancelar · atualizar.
+  rhEnvioAcao       String?
+  /// NA_FILA · ENVIADO · ERRO · FALHA
+  rhEnvioSituacao   String?
+  rhEnvioTentativas Int       @default(0)
+  rhEnvioHttp       Int?
+  rhEnvioMotivo     String?
+  rhEnvioProximaEm  DateTime?
+  rhEnviadoEm       DateTime?
+  /// Quando a vaga CHEGOU ao RH pela primeira vez (o "criar" foi aceito).
+  rhChegouEm        DateTime?
+  rhVagaId          String?
+  codigoRh          String?
+  rhSituacao        String?
+  rhSituacaoEm      DateTime?
+  rhCandidato       String?
+  rhObservacao      String?
+  /// Dia (AAAA-MM-DD) do último lembrete do prazo de 1 dia útil.
+  lembreteEm        String?
+  updatedAt         DateTime  @updatedAt
+
+  unit       Unit            @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  posicoes   VagaPosicao[]
+  curriculos VagaCurriculo[]
+  eventos    VagaEvento[]
+
+  @@index([unitId, status])
+  @@index([status])
+  @@index([rhEnvioSituacao])
+  @@map("vaga_solicitacoes")
+}
+
+/// Uma linha por PESSOA pedida.
+model VagaPosicao {
+  id                     String  @id @default(cuid())
+  vagaId                 String
+  ordem                  Int
+  cargo                  String
+  /// SUBSTITUICAO · AUMENTO_QUADRO · NOVA_FUNCAO
+  motivo                 String
+  substituiNome          String?
+  /// O colaborador do cadastro, quando escolhido da lista (nunca por semelhança de nome).
+  substituiColaboradorId String?
+  escala                 String
+  horario                String
+  inicioDesejado         String
+  requisitos             String?
+  observacao             String?
+
+  vaga VagaSolicitacao @relation(fields: [vagaId], references: [id], onDelete: Cascade)
+
+  @@index([vagaId])
+  @@map("vaga_posicoes")
+}
+
+/// Currículo anexado à vaga. `fluxo` nulo = foi junto com a vaga; preenchido = enviado depois.
+model VagaCurriculo {
+  id     String @id @default(cuid())
+  /// Vira o `sgoCurriculoId` "rest-cv-31".
+  number Int    @unique @default(autoincrement())
+  vagaId String
+
+  path            String
+  nomeArquivo     String
+  mime            String
+  tamanho         Int
+  indicadoPor     String?
+  enviadoPorId    String?
+  enviadoPorNome  String
+  enviadoEm       DateTime  @default(now())
+  removidoEm      DateTime?
+  removidoPorNome String?
+
+  /// AGUARDANDO_SUPERVISOR · RECUSADO · ENVIADO_RH · APROVADO_RH · REPROVADO_RH
+  fluxo            String?
+  decididoPorNome  String?
+  decididoPorEmail String?
+  decididoEm       DateTime?
+  motivoRecusa     String?
+  observacaoEnvio  String?
+
+  rhEnvioSituacao   String?
+  rhEnvioTentativas Int       @default(0)
+  rhEnvioHttp       Int?
+  rhEnvioMotivo     String?
+  rhEnvioProximaEm  DateTime?
+  rhEnviadoEm       DateTime?
+  rhResultadoEm     DateTime?
+  rhObservacao      String?
+  rhSituacao        String?
+  rhSituacaoEm      DateTime?
+
+  vaga VagaSolicitacao @relation(fields: [vagaId], references: [id], onDelete: Cascade)
+
+  @@index([vagaId])
+  @@index([rhEnvioSituacao])
+  @@map("vaga_curriculos")
+}
+
+/// A linha do tempo da vaga. `rhEventoId` repetido não duplica (índice único).
+model VagaEvento {
+  id          String   @id @default(cuid())
+  vagaId      String
+  /// Cabe em 30 caracteres (teste garante): no SGO dos postos um tipo de 31 derrubou o retorno.
+  tipo        String   @db.VarChar(30)
+  /// SGO · RH
+  origem      String   @default("SGO")
+  descricao   String
+  usuarioId   String?
+  usuarioNome String?
+  rhEventoId  String?
+  dados       Json?
+  createdAt   DateTime @default(now())
+
+  vaga VagaSolicitacao @relation(fields: [vagaId], references: [id], onDelete: Cascade)
+
+  @@unique([vagaId, rhEventoId])
+  @@index([vagaId, createdAt])
+  @@map("vaga_eventos")
 }

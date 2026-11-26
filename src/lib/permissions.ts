@@ -125,7 +125,11 @@ const BASE: ModuleDef[] = [
 
   /* Central de Currículos (v1.212.0): o gerente encaminha candidato + arquivo e acompanha;
      a situação só muda pelo evento de entrada do RH. */
-  { key: 'RESUMES', label: 'Central de Currículos', nav: '/modulos/curriculos' },
+  { key: 'RESUMES', label: 'Central de Currículos (antiga — substituída por Solicitação de Vagas)', nav: '/modulos/curriculos' },
+  /* Solicitação de Vagas (v1.227.0) — o padrão do grupo, igual ao do SGO dos postos.
+     Ver = ver · Editar = pedir, corrigir e anexar · a linha de baixo = aprovar (sem herança). */
+  { key: 'VAGAS', label: 'Solicitação de Vagas', nav: '/modulos/vagas' },
+  { key: 'VAGAS_APPROVE', label: 'Solicitação de Vagas — aprovar, devolver, editar e avaliar currículo', parent: 'VAGAS' },
 
   { key: 'TERMINATIONS', label: 'Desligamentos', nav: '/modulos/desligamentos' },
   /* Demanda ao RH (v1.168.0): pedido/dúvida do gerente enviado ao GBF-RH pela
@@ -233,7 +237,7 @@ export interface Perm { canView: boolean; canEdit: boolean }
 
 // Módulos restritos por padrão: só os perfis listados veem se não houver config
 // explícita (ADMIN/CEO sempre veem). Admin pode liberar/restringir na matriz.
-const RESTRICTED_DEFAULT: Record<string, Role[]> = {
+export const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   LEAVES_TEAM: ['SUPERVISOR'],
   // Despesas do cofre: quem opera a unidade lança; o escritório vê a rede e devolve.
   EXPENSES: ['MANAGER', 'COORDINATOR', 'SUPERVISOR', 'FINANCE'],
@@ -288,6 +292,8 @@ const RESTRICTED_DEFAULT: Record<string, Role[]> = {
   UNIT_PANEL: ['SUPERVISOR', 'COORDINATOR', 'MANAGER'], // painel operacional da unidade
   TRAINING_PANEL: ['SUPERVISOR'], // acompanhamento de treinamentos da rede: gestão (Admin/CEO sempre); o gerente segue no quadro da unidade
   RESUMES: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'], // currículos: quem opera a unidade encaminha; Admin/CEO sempre
+  VAGAS: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'], // vagas: quem opera a unidade pede e acompanha
+  VAGAS_APPROVE: ['SUPERVISOR', 'COORDINATOR'], // aprovar é linha própria: o gerente não herda (decisão do Daniel, 26/11/2026: Supervisor e Coordenador)
   RH_DEMANDS: ['MANAGER', 'COORDINATOR', 'SUPERVISOR'], // demanda ao RH: quem opera a unidade pede; Admin/CEO sempre
 };
 
@@ -345,7 +351,10 @@ export const temAcessoFixo = (role: Role): boolean => role in ACESSO_FIXO;
    a unidade mandou pela aba nova (que vive em Pedidos recebidos, ORDERS_INBOX); e
    ela lia só o setor PRINCIPAL, então quem está em vários setores via um só.
    Rota e dados ficam para Admin/CEO (pedidos antigos). */
-export const MODULOS_INATIVOS: ReadonlySet<string> = new Set(['INVENTORY', 'PRODUCTS', 'PRODUCT_SEPARATION']);
+/* v1.227.0 — a Central de Currículos (RESUMES) sai do caminho: o currículo passa a ir
+   DENTRO da vaga, como no SGO dos postos (decisão do Daniel, 26/11/2026). Rota, dados
+   e os currículos já encaminhados ficam para Admin/CEO. */
+export const MODULOS_INATIVOS: ReadonlySet<string> = new Set(['INVENTORY', 'PRODUCTS', 'PRODUCT_SEPARATION', 'RESUMES', 'CONFIG_RESUMES']);
 
 /** Permissões efetivas de um perfil de sistema por módulo (com defaults). */
 export async function effectivePermissions(role: Role): Promise<Record<string, Perm>> {

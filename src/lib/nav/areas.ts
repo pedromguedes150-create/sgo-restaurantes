@@ -72,7 +72,7 @@ export const AREAS: AreaDoMenu[] = [
       { titulo: 'Equipe', keys: ['PEOPLE', 'PEOPLE_MAP', 'PEOPLE_EVALUATION', 'PEOPLE_PROBATION', 'PEOPLE_ROLE_CHANGES'] },
       { titulo: 'Escala e folgas', keys: ['SCHEDULE', 'MANAGER_SCHEDULE', 'MANAGER_SCHEDULE_OWN', 'MANAGER_SCHEDULE_TODAY', 'SCHEDULE_OFF', 'SCHEDULE_SWAPS', 'LEAVES_TEAM'] },
       { titulo: 'Pagamentos', keys: ['PAYMENTS', 'HORA_EXTRA', 'PAYMENTS_REEMBOLSOS', 'PAYMENTS_CONSOLIDATION', 'PEOPLE_PAYOUTS', 'COMMISSION'] },
-      { titulo: 'Afastamentos e RH', keys: ['CERTIFICATES', 'RESUMES', 'TERMINATIONS', 'RH_DEMANDS'] },
+      { titulo: 'Afastamentos e RH', keys: ['CERTIFICATES', 'VAGAS', 'RESUMES', 'TERMINATIONS', 'RH_DEMANDS'] },
     ],
   },
   {
