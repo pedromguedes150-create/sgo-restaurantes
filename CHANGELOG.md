@@ -9,6 +9,20 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.224.1 — 2026-11-26 (RH — razão social com o código na frente é reconhecida sozinha)
+
+**Relato do Daniel (prints):** o colaborador 20603 está no sistema do RH, na Nova União, e não aparece no SGO.
+
+**Causa (conferida na API do RH):** o RH passou a cadastrar gente nova em **"675 - COMERCIAL LINS & GUEDES LTDA (NOVA UNIÃO)"** — a mesma empresa que o SGO lê como "COMERCIAL LINS & GUEDES LTDA (NOVA UNIÃO)", com o código do RH antes. Para o RH são dois nomes de unidade, e a consulta do SGO só trazia o primeiro. Eram 8 pessoas na Nova União nessa situação, e o mesmo padrão aparece em outras empresas do grupo.
+
+**O que mudou:** ao sincronizar, o SGO pergunta ao RH a lista de unidades e lê também toda razão social que, tirado o prefixo "número - ", é **idêntica** a uma que a unidade já lê (a principal ou as adicionais). Não é aproximação: acento, caixa ou "E" no lugar de "&" continuam não casando. O que foi ligado à mão a outra unidade nunca é puxado. Se o RH não responder a lista, a unidade segue lendo o que já lia.
+
+O Diagnóstico do RH mostra a razão social reconhecida em "Também lê". O webhook de admissão e a conferência na base geral resolvem "675 - NOME" para a mesma unidade.
+
+⚠️ As pessoas entram na **próxima sincronização** (botão Sincronizar ou a automática do dia). Nomes que diferem além do código (ex.: "152 - COMERCIAL LINS E GUEDES LTDA ME") seguem precisando de cadastro manual em Configurações → Unidades.
+
+---
+
 ## v1.224.0 — 2026-11-26 (Relatórios executivos — Sobras Lanchonete e Recorrência de Freelancers)
 
 **Pedido do Daniel (prints de 25–26/11):** "uma análise mais executiva desses relatórios, com riqueza nas informações, formas de baixar e o discriminativo".

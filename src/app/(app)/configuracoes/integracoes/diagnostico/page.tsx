@@ -83,7 +83,7 @@ export default async function DiagnosticoRhPage({ searchParams }: { searchParams
             </p>
             {d.outrasRazoes.length > 0 && (
               <p className="text-sm" data-testid="outras-razoes">
-                <span className="text-ink-500">Também lê (razões sociais adicionais):</span>{' '}
+                <span className="text-ink-500">Também lê (adicionais e a mesma razão social com o código do RH na frente):</span>{' '}
                 {d.outrasRazoes.map((r) => <b key={r} className="mr-2 text-ink-900">{r}</b>)}
               </p>
             )}
