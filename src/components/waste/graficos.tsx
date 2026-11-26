@@ -21,10 +21,17 @@ export function Variacao({ v, d }: { v: number | null; d: Direcao }) {
   );
 }
 
+const SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+const diaDaSemana = (iso: string) => new Date(iso + 'T12:00:00Z').getUTCDay();
+
 /**
- * Barras por dia do mês + linha tracejada da média do mês anterior.
- * Dia sem lançamento fica vazio (não é zero de desperdício, é falta de dado) e
- * ganha um traço no pé para não sumir.
+ * Colunas por dia do mês (v1.225.0) — altura FIXA, cantos arredondados, fim de
+ * semana sombreado, o pico com o valor em cima e a média do mês anterior como
+ * linha tracejada. Dia sem lançamento fica vazio com um ponto no pé (falta de
+ * dado, não zero de desperdício).
+ *
+ * Era um SVG esticado à largura do painel: num monitor largo a figura passava
+ * de meia tela de altura e as colunas viravam borrões no rodapé.
  */
 export function BarrasDiarias({ pontos, referencia, unidade, rotuloReferencia }: {
   pontos: { date: string; total: number; lancamentos: number }[];
@@ -33,39 +40,49 @@ export function BarrasDiarias({ pontos, referencia, unidade, rotuloReferencia }:
   rotuloReferencia?: string;
 }) {
   if (pontos.length === 0) return <p className="text-sm text-ink-500">O mês ainda não começou.</p>;
-  const W = 640, H = 180, PAD_B = 22, PAD_T = 14;
-  const max = Math.max(1, referencia ?? 0, ...pontos.map((p) => p.total)) * 1.1;
-  const passo = W / Math.max(pontos.length, 1);
-  const larg = Math.max(2, passo * 0.68);
-  const y = (v: number) => PAD_T + (H - PAD_T - PAD_B) * (1 - v / max);
+  const max = Math.max(1, referencia ?? 0, ...pontos.map((p) => p.total)) * 1.12;
+  const pico = pontos.reduce((m, p) => (p.total > m.total ? p : m), pontos[0]);
+  const pct = (v: number) => (v / max) * 100;
   return (
-    <figure className="w-full">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={`Desperdício por dia (${unidade})`}>
-        <line x1={0} x2={W} y1={H - PAD_B} y2={H - PAD_B} className="text-line-strong" stroke="currentColor" strokeWidth={1} />
-        {pontos.map((p, i) => {
-          const x = i * passo + (passo - larg) / 2;
+    <figure className="w-full" role="img" aria-label={'Desperdício por dia (' + unidade + ')'} data-testid="barras-diarias">
+      <div className="relative h-48">
+        {[25, 50, 75].map((g) => <span key={g} className="absolute inset-x-0 border-t border-line" style={{ bottom: g + '%' }} aria-hidden />)}
+        {referencia !== null && referencia > 0 && (
+          <span className="absolute inset-x-0 z-10 border-t-2 border-dashed border-ink-500" style={{ bottom: pct(referencia) + '%' }}>
+            <span className="absolute -top-5 right-0 rounded-pill bg-surface px-2 text-xs font-semibold text-ink-700">{rotuloReferencia ?? 'média do mês anterior'} · {fmt(referencia)} {unidade}</span>
+          </span>
+        )}
+        <div className="absolute inset-0 flex items-end gap-0.5 sm:gap-1">
+          {pontos.map((p) => {
+            const fds = [0, 6].includes(diaDaSemana(p.date));
+            const ehPico = p === pico && p.total > 0;
+            return (
+              <div key={p.date} className={'relative flex h-full min-w-0 flex-1 items-end rounded-md ' + (fds ? 'bg-sunken' : '')}
+                title={p.date.slice(8, 10) + '/' + p.date.slice(5, 7) + ' — ' + (p.lancamentos ? fmt(p.total, 3) + ' ' + unidade + ' (' + p.lancamentos + ' lançamento' + (p.lancamentos > 1 ? 's' : '') + ')' : 'sem lançamento')}>
+                {p.lancamentos > 0 ? (
+                  <div className={'relative w-full rounded-t-md ' + (ehPico ? 'bg-brand' : 'bg-brand/70')} style={{ height: Math.max(2, pct(p.total)) + '%' }}>
+                    {ehPico && <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-bold tabular-nums text-ink-900">{fmt(p.total)}</span>}
+                  </div>
+                ) : (
+                  <div className="mx-auto mb-0.5 h-1 w-1 rounded-pill bg-line-strong" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="mt-1 flex gap-0.5 sm:gap-1" aria-hidden>
+        {pontos.map((p) => {
           const dia = Number(p.date.slice(8, 10));
+          const sempre = dia === 1 || dia % 5 === 0;
           return (
-            <g key={p.date}>
-              <title>{`${p.date.slice(8, 10)}/${p.date.slice(5, 7)} — ${p.lancamentos ? `${fmt(p.total, 3)} ${unidade} (${p.lancamentos} lançamento${p.lancamentos > 1 ? 's' : ''})` : 'sem lançamento'}`}</title>
-              {p.lancamentos > 0 ? (
-                <rect x={x} y={y(p.total)} width={larg} height={Math.max(1, H - PAD_B - y(p.total))} rx={2} className="text-brand" fill="currentColor" />
-              ) : (
-                <rect x={x} y={H - PAD_B - 2} width={larg} height={2} className="text-line-strong" fill="currentColor" />
-              )}
-              {(dia === 1 || dia % 5 === 0) && (
-                <text x={i * passo + passo / 2} y={H - 6} textAnchor="middle" className="text-ink-500" fill="currentColor" fontSize={11}>{dia}</text>
-              )}
-            </g>
+            <span key={p.date} className="min-w-0 flex-1 text-center">
+              <span className={'block sgo-type-11 tabular-nums text-ink-700 ' + (sempre ? '' : 'hidden lg:block')}>{dia}</span>
+              <span className="hidden sgo-type-11 text-ink-400 lg:block">{SEMANA[diaDaSemana(p.date)]}</span>
+            </span>
           );
         })}
-        {referencia !== null && referencia > 0 && (
-          <g className="text-ink-700">
-            <line x1={0} x2={W} y1={y(referencia)} y2={y(referencia)} stroke="currentColor" strokeWidth={1.5} strokeDasharray="5 4" />
-            <text x={W - 4} y={y(referencia) - 4} textAnchor="end" fill="currentColor" fontSize={11}>{rotuloReferencia ?? 'média do mês anterior'}</text>
-          </g>
-        )}
-      </svg>
+      </div>
     </figure>
   );
 }

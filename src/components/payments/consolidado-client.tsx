@@ -21,10 +21,13 @@ import {
 } from '@/lib/payments/consolidado-tipos';
 import { totaisDaRecorrencia } from '@/lib/payments/consolidacao-calculo';
 import { queryDoFiltroConsolidado } from '@/lib/payments/consolidado-tipos';
-import { analisarConsolidado } from '@/lib/payments/consolidado-executivo';
+import { analisarConsolidado, agruparRecorrentes } from '@/lib/payments/consolidado-executivo';
 import { LeituraExecutiva, BarrasDeParticipacao, BaixarRelatorio } from '@/components/shared/leitura-executiva';
 
 interface Unit { id: string; name: string }
+
+/** O domingo da semana que começa nesta segunda (AAAA-MM-DD). */
+const domingoDe = (segunda: string) => new Date(new Date(`${segunda}T12:00:00Z`).getTime() + 6 * 86400000).toISOString().slice(0, 10);
 
 const opt = <T extends string>(rec: Record<T, string>, ordem: T[]) => ordem.map((v) => ({ value: v, label: rec[v] }));
 
@@ -59,6 +62,8 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
   const analise = useMemo(() => analisarConsolidado(dados), [dados]);
   /* Totais dos recorrentes (v1.127.0): eram somados na calculadora. */
   const tRec = totaisDaRecorrencia(dados.recorrentesNaSemana);
+  /* v1.225.0 — um cartão por pessoa, com as semanas dentro (a tabela repetia o nome a cada semana). */
+  const recorrentes = useMemo(() => agruparRecorrentes(dados.recorrentesNaSemana), [dados.recorrentesNaSemana]);
   /* Os relatórios de recorrência saem da Consolidação de pagamentos, com o
      MESMO período e a mesma unidade desta tela. */
   const qRec = new URLSearchParams({ aba: 'recorrencia', periodo: 'personalizado', de: dados.periodo.de, ate: dados.periodo.ate });
@@ -156,20 +161,28 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
         </p>
       )}
 
-      {/* ── Evolução ── */}
+      {/* ── Evolução (v1.225.0): colunas com o valor, a quantidade e o período ── */}
       {dados.evolucao.pontos.length > 1 && (
-        <section>
-          <h2 className="mb-1 sgo-type-11 font-semibold text-ink-900">
-            Solicitações por {dados.evolucao.granularidade === 'semana' ? 'semana' : 'mês'}
-          </h2>
-          <div className="flex items-end gap-2 rounded-card border border-line bg-surface p-3" style={{ height: 150 }}>
-            {dados.evolucao.pontos.map((p) => (
-              <div key={p.chave} className="flex flex-1 flex-col items-center justify-end gap-1">
-                <span className="text-[10px] font-semibold text-ink-900">{p.solicitacoes}</span>
-                <div className="w-full rounded-t bg-brand" style={{ height: `${Math.max(4, (p.solicitacoes / maxEvolucao) * 95)}px` }} />
-                <span className="text-[10px] text-ink-500">{p.rotulo}</span>
-              </div>
-            ))}
+        <section className="sgo-panel sgo-panel--solid p-4" data-testid="evolucao-do-periodo">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-ink-900">Solicitações por {dados.evolucao.granularidade === 'semana' ? 'semana' : 'mês'}</h2>
+            <p className="text-xs text-ink-500">{dados.evolucao.granularidade === 'semana' ? 'Semana de segunda a domingo, pelo dia do serviço.' : 'Pelo dia do serviço.'} A mais cheia fica em destaque.</p>
+          </div>
+          <div className="mt-6 grid items-end gap-2 sm:gap-4" style={{ gridTemplateColumns: `repeat(${dados.evolucao.pontos.length}, minmax(0, 1fr))` }}>
+            {dados.evolucao.pontos.map((p) => {
+              const topo = p.solicitacoes === maxEvolucao;
+              const fim = dados.evolucao.granularidade === 'semana' ? emBR(domingoDe(p.chave)).slice(0, 5) : null;
+              return (
+                <div key={p.chave} className="flex min-w-0 flex-col items-center gap-1">
+                  <span className={`sgo-type-17 font-bold tabular-nums ${topo ? 'text-brand' : 'text-ink-900'}`}>{p.solicitacoes}</span>
+                  <div className="flex h-32 w-full items-end rounded-card bg-sunken">
+                    <div className={`w-full rounded-card ${topo ? 'bg-brand' : 'bg-brand/60'}`} style={{ height: `${Math.max(4, (p.solicitacoes / maxEvolucao) * 100)}%` }} />
+                  </div>
+                  <span className="text-xs font-semibold tabular-nums text-ink-900">{formatBRL(p.valor)}</span>
+                  <span className="text-center sgo-type-11 text-ink-500">{fim ? `${p.rotulo} a ${fim}` : p.rotulo}</span>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
@@ -196,34 +209,51 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
           Mais de {dados.limiteSemanal} solicitações do mesmo freelancer numa semana (segunda a domingo) — a mesma regra que avisa a supervisão ao lançar.
           A contagem considera todas as unidades que você enxerga, mesmo com o filtro de unidade ligado: o freelancer é o mesmo em qualquer uma.
         </p>
-        {dados.recorrentesNaSemana.length === 0 ? (
+        {recorrentes.length === 0 ? (
           <EmptyState icon={Users} title="Nenhum freelancer recorrente no período" description="Ninguém passou do limite semanal." size="sm" />
         ) : (
-          <Table
-            caption="Freelancers recorrentes na semana"
-            rows={dados.recorrentesNaSemana}
-            getRowKey={(g) => g.chave}
-            onRowClick={(g) => setAberto(dados.freelancers.find((f) => f.freelancerId === g.freelancerId) ?? null)}
-            columns={[
-              { key: 'nome', header: 'Freelancer', cell: (g) => (
-                <span className="flex flex-wrap items-center gap-1">
-                  <span className="font-semibold text-ink-900">{g.nome}</span>
-                  <span className="rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] font-semibold text-warning">Recorrente</span>
-                </span>
-              ) },
-              { key: 'cpf', header: 'CPF', hideOnMobile: true, width: '9rem', cell: (g) => g.cpf ? formatarCpf(g.cpf) : <span className="text-ink-400">—</span> },
-              { key: 'pix', header: 'Chave PIX', hideOnMobile: true, width: '10rem', cell: (g) => g.pixKey ?? <span className="text-ink-400">—</span> },
-              { key: 'unidade', header: 'Unidade', cell: (g) => g.unidades.map(shortUnitName).join(', ') },
-              { key: 'semana', header: 'Semana', hideOnMobile: true, width: '10rem', cell: (g) => `${emBR(g.semanaDe).slice(0, 5)} a ${emBR(g.semanaAte).slice(0, 5)}` },
-              { key: 'qtd', header: 'Solicitações na semana', numeric: true, width: '8rem', cell: (g) => g.solicitacoes },
-              { key: 'valor', header: 'Valor total', numeric: true, width: '8rem', cell: (g) => formatBRL(g.valor) },
-            ]}
-            footer={{
-              nome: `TOTAL · ${tRec.freelancers} freelancer(s) recorrente(s)`,
-              qtd: tRec.solicitacoes,
-              valor: formatBRL(tRec.valor),
-            }}
-          />
+          <>
+            <div className="grid grid-cols-3 gap-2 rounded-card bg-warning-bg p-3 text-center" data-testid="resumo-recorrentes">
+              <div><p className="sgo-type-24 font-bold tabular-nums text-ink-900">{tRec.freelancers}</p><p className="text-xs text-ink-700">pessoa(s) recorrente(s)</p></div>
+              <div><p className="sgo-type-24 font-bold tabular-nums text-ink-900">{tRec.solicitacoes}</p><p className="text-xs text-ink-700">solicitações nessas semanas</p></div>
+              <div><p className="sgo-type-24 font-bold tabular-nums text-ink-900">{formatBRL(tRec.valor)}</p><p className="text-xs text-ink-700">valor nessas semanas</p></div>
+            </div>
+            <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2" data-testid="cartoes-recorrentes">
+              {recorrentes.map((g, i) => (
+                <li key={g.freelancerId}>
+                  <button
+                    type="button"
+                    onClick={() => setAberto(dados.freelancers.find((f) => f.freelancerId === g.freelancerId) ?? null)}
+                    className="w-full rounded-card border border-line bg-surface p-4 text-left shadow-sgo-card transition-shadow hover:border-brand hover:shadow-sgo-card-hover"
+                    data-testid="cartao-recorrente"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-pill bg-brand-tint text-sm font-bold text-brand" aria-hidden>{i + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-bold text-ink-900">{g.nome}</p>
+                        <p className="break-words text-xs text-ink-500">{g.unidades.map(shortUnitName).join(', ')} · {g.semanas.length} semana(s) acima do limite</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="sgo-type-17 font-bold tabular-nums text-ink-900">{formatBRL(g.valor)}</p>
+                        <p className="text-xs tabular-nums text-ink-500">{g.solicitacoes} solic.</p>
+                      </div>
+                    </div>
+                    <ul className="mt-3 flex flex-wrap gap-2">
+                      {g.semanas.map((s) => (
+                        <li key={s.de} className="rounded-pill bg-warning-bg px-3 py-1 text-xs text-ink-900">
+                          <span className="font-semibold tabular-nums">{emBR(s.de).slice(0, 5)} a {emBR(s.ate).slice(0, 5)}</span>
+                          <span className="text-ink-700"> · {s.solicitacoes}× · {formatBRL(s.valor)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-3 break-words border-t border-line pt-2 text-xs text-ink-500 print:hidden">
+                      CPF {g.cpf ? formatarCpf(g.cpf) : '—'} · PIX {g.pixKey ?? '—'}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
 
