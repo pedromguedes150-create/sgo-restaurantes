@@ -72,6 +72,11 @@ export interface LinhaDoConsolidado {
   freelancerId: string | null;
   /** Calculado pela regra da semana — não é o snapshot da linha. */
   recorrente: boolean;
+  /** v1.224.0 — o discriminativo: onde, quando, por quê e quem pediu. */
+  setor: string | null;
+  horario: string | null;
+  motivo: string | null;
+  solicitadoPor: string | null;
 }
 
 export interface FreelancerNoPeriodo {
@@ -127,9 +132,50 @@ export interface Consolidado {
     mediaPorUnidade: number;
     unidadesNoEscopo: number;
   };
-  comparacao: { anterior: Periodo; solicitacoesAntes: number; variacaoPct: number | null };
+  comparacao: {
+    anterior: Periodo; solicitacoesAntes: number; variacaoPct: number | null;
+    /** v1.224.0 — o VALOR do período anterior (rejeitadas fora), com os mesmos filtros de tipo e unidade. */
+    valorAntes: number; variacaoValorPct: number | null;
+  };
   recorrentesNaSemana: RecorrenteNaSemana[];
   porUnidade: UnidadeNoPeriodo[];
   evolucao: { granularidade: 'semana' | 'mes'; pontos: PontoDaEvolucao[] };
   freelancers: FreelancerNoPeriodo[];
+  /** v1.224.0 — TODAS as linhas do recorte (as mesmas que formam os números), para a análise e o Excel. */
+  linhas: LinhaDoConsolidado[];
+}
+
+const ISO_DIA = /^\d{4}-\d{2}-\d{2}$/;
+const umDe = <V extends string>(v: string | null | undefined, validos: readonly V[], padrao: V): V =>
+  ((validos as readonly string[]).includes(v ?? '') ? (v as V) : padrao);
+
+/**
+ * O filtro do consolidado lido da URL — UMA leitura para a tela e para o
+ * Excel (v1.224.0). Unidade fora do alcance é ignorada, não recusada: o
+ * recorte de verdade está no `where` do servidor.
+ */
+export function lerFiltroConsolidado(p: { get(k: string): string | null | undefined }, unidadesNoAlcance: string[]): FiltroConsolidado {
+  const de = p.get('de') ?? '';
+  const ate = p.get('ate') ?? '';
+  const unidade = p.get('unidade') ?? '';
+  return {
+    periodo: umDe<PeriodoKey>(p.get('periodo'), ['semana', 'semana-anterior', 'mes', 'mes-anterior', 'personalizado'], 'mes'),
+    de: ISO_DIA.test(de) ? de : undefined,
+    ate: ISO_DIA.test(ate) ? ate : undefined,
+    unitId: unidade && unidadesNoAlcance.includes(unidade) ? unidade : undefined,
+    tipo: umDe<TipoFiltro>(p.get('tipo'), ['TODOS', 'FREELANCER', 'OVERTIME'], 'FREELANCER'),
+    status: umDe<StatusFiltro>(p.get('status'), ['TODOS', 'PENDING', 'APPROVED', 'PAID', 'REJECTED'], 'TODOS'),
+    recorrencia: umDe<RecorrenciaFiltro>(p.get('rec'), ['todos', 'recorrentes'], 'todos'),
+  };
+}
+
+/** A query string que reproduz o filtro (tela → Excel → PDF abrem no mesmo recorte). */
+export function queryDoFiltroConsolidado(f: FiltroConsolidado): string {
+  const q = new URLSearchParams({ aba: 'consolidado', periodo: f.periodo, tipo: f.tipo, status: f.status, rec: f.recorrencia });
+  if (f.unitId) q.set('unidade', f.unitId);
+  if (f.periodo === 'personalizado') {
+    if (f.de) q.set('de', f.de);
+    if (f.ate) q.set('ate', f.ate);
+  }
+  return q.toString();
 }

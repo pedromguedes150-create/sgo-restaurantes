@@ -24,6 +24,8 @@ import type { SessionUser } from '@/lib/auth/session';
 
 type Ctx = { ip?: string | null; userAgent?: string | null };
 
+import { analisarSalgados, type AnaliseSalgados, type DescarteDoMes } from '@/lib/waste/salgados-executivo';
+
 export type SnackKind = 'TIPO' | 'MOTIVO';
 export interface SnackOption { id: string; kind: SnackKind; name: string; order: number; active: boolean }
 
@@ -397,4 +399,32 @@ export async function getConsolidadoSalgados(user: SessionUser, year: number, mo
   }
 
   return { year, month, linhas, rede: { ...rede, anterior, variacao }, evolucao };
+}
+
+/* ─────────────────────────── leitura executiva (v1.224.0) ─────────────────────────── */
+
+export interface DescarteDetalhado extends DescarteDoMes { lancadoPor: string | null; lancadoEm: string }
+
+/**
+ * A análise executiva do mês + o DISCRIMINATIVO (cada linha de descarte, com
+ * quem lançou e quando). Mesma tabela e mesmo escopo do consolidado; nada grava.
+ */
+export async function getAnaliseSalgados(user: SessionUser, year: number, month: number, rotulos: { mes: string; anterior: string; nomeCurto?: (n: string) => string }): Promise<{ analise: AnaliseSalgados; detalhe: DescarteDetalhado[] }> {
+  const unidades = await prisma.unit.findMany({ where: { active: true, ...unitScopeWhere(user, 'id') }, orderBy: { name: 'asc' }, select: { id: true, name: true } });
+  const ant = ymMenos(year, month, 1);
+  const prox = ymMenos(year, month, -1);
+  const rows = await prisma.wasteSnackDiscard.findMany({
+    where: { unitId: { in: unidades.map((u) => u.id) }, operationalDate: { gte: `${ymDe(ant.year, ant.month)}-01`, lt: `${ymDe(prox.year, prox.month)}-01` } },
+    select: { unitId: true, operationalDate: true, typeName: true, reasonName: true, quantity: true, createdAt: true, createdBy: { select: { name: true } } },
+    orderBy: [{ operationalDate: 'asc' }, { createdAt: 'asc' }],
+  });
+  const nome = new Map(unidades.map((u) => [u.id, u.name]));
+  const todos: DescarteDetalhado[] = rows.map((r) => ({
+    unitId: r.unitId, unitName: nome.get(r.unitId) ?? '', operationalDate: r.operationalDate, typeName: r.typeName, reasonName: r.reasonName, quantity: r.quantity,
+    lancadoPor: r.createdBy?.name ?? null, lancadoEm: r.createdAt.toISOString(),
+  }));
+  const ymAtual = ymDe(year, month);
+  const detalhe = todos.filter((r) => r.operationalDate.startsWith(ymAtual));
+  const anterior = todos.filter((r) => !r.operationalDate.startsWith(ymAtual));
+  return { analise: analisarSalgados(detalhe, anterior, unidades, rotulos), detalhe };
 }

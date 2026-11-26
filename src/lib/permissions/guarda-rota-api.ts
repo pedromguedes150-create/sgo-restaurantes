@@ -229,6 +229,7 @@ export const REGRAS: Record<string, RegraDeRota> = {
   // Sobras Salgados (unidades): lançar é editar Desperdícios; o catálogo de
   // tipos/motivos é conferido de novo na lib (só Admin/CEO).
   '/api/waste/salgados': { modulo: 'WASTE', exigir: 'editar' },
+  '/api/waste/salgados/export': { modulo: 'WASTE', exigir: 'ver' },
   '/api/workforce': { modulo: 'PEOPLE_MAP', exigir: 'editar' },
   '/api/workforce/requirements': { modulo: 'PEOPLE_MAP', exigir: 'editar' },
 };

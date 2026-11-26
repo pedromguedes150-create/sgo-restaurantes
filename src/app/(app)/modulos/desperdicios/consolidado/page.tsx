@@ -5,7 +5,10 @@ import { prisma } from '@/lib/db/prisma';
 import { unitScopeWhere } from '@/lib/scope/unit-scope';
 import { getConsolidadoDeDesperdicio } from '@/lib/waste/consolidado';
 import { getEvolucaoDesperdicioKg } from '@/lib/waste/evolucao';
-import { getConsolidadoSalgados } from '@/lib/waste/salgados';
+import { getConsolidadoSalgados, getAnaliseSalgados } from '@/lib/waste/salgados';
+import { ResumoSalgados, RodapeDoResumo } from '@/components/waste/resumo-salgados';
+import { BaixarRelatorio } from '@/components/shared/leitura-executiva';
+import { AutoPrint } from '@/components/shared/auto-print';
 import { TIPOS_DE_DESPERDICIO, GRUPOS, LABEL_TOTAL_GERAL, LABEL_TOTAL_GERAL_MES } from '@/lib/waste/tipos';
 import { Card, CardContent } from '@/components/ui/card';
 import { LargeTitle } from '@/components/layout/page-chrome';
@@ -67,7 +70,7 @@ function Evolucao({ pontos, unidade }: { pontos: { ym: string; valor: number }[]
 export default async function ConsolidadoDesperdicioPage({
   searchParams,
 }: {
-  searchParams: { ano?: string; mes?: string; aba?: string; visao?: string; unidade?: string; filtro?: string };
+  searchParams: { ano?: string; mes?: string; aba?: string; visao?: string; unidade?: string; filtro?: string; imprimir?: string };
 }) {
   const user = (await getSessionUser())!;
   const agora = new Date();
@@ -154,88 +157,29 @@ export default async function ConsolidadoDesperdicioPage({
 
   /* ───────────────────────── SALGADOS (unidades) ───────────────────────── */
   if (aba === 'salgados') {
-    const s = await getConsolidadoSalgados(user, year, month);
-    const semLancamento = s.linhas.filter((l) => l.total === 0);
+    /* v1.224.0 — resumo EXECUTIVO: leitura do mês, participação, cruzamentos e Excel/PDF. */
+    const [s, { analise }] = await Promise.all([
+      getConsolidadoSalgados(user, year, month),
+      getAnaliseSalgados(user, year, month, { mes: MESES[month - 1], anterior: MESES[ant.m - 1], nomeCurto: shortUnitName }),
+    ]);
     return (
       <div className="space-y-4">
         {cabecalho}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Card><CardContent className="pt-4"><p className="text-xl font-bold tabular-nums text-ink-900">{un(s.rede.total)}</p><p className="text-[11px] text-ink-700">Total descartado (un.)</p></CardContent></Card>
-          <Card><CardContent className="pt-4"><p className="text-xl font-bold tabular-nums"><Variacao v={s.rede.variacao} /></p><p className="text-[11px] text-ink-700">vs. {MESES[ant.m - 1]} ({un(s.rede.anterior)} un.)</p></CardContent></Card>
-          <Card><CardContent className="pt-4"><p className="truncate text-lg font-bold text-ink-900">{s.rede.topTipos[0]?.name ?? '—'}</p><p className="text-[11px] text-ink-700">Tipo mais descartado{s.rede.topTipos[0] ? ` (${un(s.rede.topTipos[0].qty)} un.)` : ''}</p></CardContent></Card>
-          <Card><CardContent className="pt-4"><p className="truncate text-lg font-bold text-ink-900">{s.rede.topMotivos[0]?.name ?? '—'}</p><p className="text-[11px] text-ink-700">Motivo mais recorrente{s.rede.topMotivos[0] ? ` (${un(s.rede.topMotivos[0].qty)} un.)` : ''}</p></CardContent></Card>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Card><CardContent className="pt-4">
-            <p className="mb-2 text-sm font-semibold text-ink-900">Tipos com maior descarte na rede</p>
-            {s.rede.topTipos.length === 0 ? <p className="text-sm text-ink-500">Sem lançamentos no mês.</p> : (
-              <ul className="space-y-1 text-sm">
-                {s.rede.topTipos.map((t) => (
-                  <li key={t.name} className="flex items-center justify-between border-b border-line py-1"><span className="text-ink-900">{t.name}</span><span className="font-semibold tabular-nums text-ink-700">{un(t.qty)} un.</span></li>
-                ))}
-              </ul>
-            )}
-          </CardContent></Card>
-          <Card><CardContent className="pt-4">
-            <p className="mb-2 text-sm font-semibold text-ink-900">Motivos mais recorrentes na rede</p>
-            {s.rede.topMotivos.length === 0 ? <p className="text-sm text-ink-500">Sem lançamentos no mês.</p> : (
-              <ul className="space-y-1 text-sm">
-                {s.rede.topMotivos.map((m) => (
-                  <li key={m.name} className="flex items-center justify-between border-b border-line py-1"><span className="text-ink-900">{m.name}</span><span className="font-semibold tabular-nums text-ink-700">{un(m.qty)} un.</span></li>
-                ))}
-              </ul>
-            )}
-          </CardContent></Card>
-        </div>
-
-        <Card><CardContent className="pt-4">
-          <p className="mb-2 text-sm font-semibold text-ink-900">Evolução — últimos 6 meses (un.)</p>
-          <Evolucao pontos={s.evolucao.map((e) => ({ ym: e.ym, valor: e.total }))} unidade="un" />
-        </CardContent></Card>
-
-        <p className="text-xs text-ink-500 print:hidden">Para ver cada lançamento com a foto do recipiente, abra <Link className="font-semibold text-brand underline" href={link(year, month, aba, 'conferencia')}>Conferência</Link>; para saber se aumentou ou diminuiu, <Link className="font-semibold text-brand underline" href={link(year, month, aba, 'performance')}>Performance</Link>.</p>
-
-        {semLancamento.length > 0 && (
-          <p className="flex items-start gap-2 rounded-lg border border-warning bg-warning-bg p-2 text-sm text-warning print:hidden">
-            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-            <span><b>Sem nenhum lançamento de salgados em {MESES[month - 1]}:</b> {semLancamento.map((l) => shortUnitName(l.unitName)).join(', ')}. Zero aqui significa que ninguém lançou — não que não houve descarte.</span>
-          </p>
-        )}
-
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs [&_th]:whitespace-nowrap">
-            <thead>
-              <tr className="border-b border-line text-left text-ink-700">
-                <th className="px-2 py-1.5 font-semibold">Unidade</th>
-                <th className="px-2 py-1.5 text-right font-semibold text-ink-900">Total (un.)</th>
-                <th className="px-2 py-1.5 font-semibold">Tipos com mais descarte</th>
-                <th className="px-2 py-1.5 font-semibold">Motivo mais recorrente</th>
-                <th className="px-2 py-1.5 text-right font-semibold">Dias lançados</th>
-              </tr>
-            </thead>
-            <tbody>
-              {s.linhas.map((l) => (
-                <tr key={l.unitId} className="border-b border-line">
-                  <th scope="row" className="px-2 py-1.5 text-left font-medium text-ink-900">{shortUnitName(l.unitName)}</th>
-                  <td className="px-2 py-1.5 text-right font-bold tabular-nums text-ink-900">{un(l.total)}</td>
-                  <td className="px-2 py-1.5 text-ink-700">{l.topTipos.length ? l.topTipos.map((t) => `${t.name} (${un(t.qty)})`).join(' · ') : '—'}</td>
-                  <td className="px-2 py-1.5 text-ink-700">{l.motivoTop ? `${l.motivoTop.name} (${un(l.motivoTop.qty)})` : '—'}</td>
-                  <td className="px-2 py-1.5 text-right tabular-nums text-ink-700">{l.diasComLancamento}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-line-strong">
-                <th scope="row" className="px-2 py-1.5 text-left font-bold text-ink-900">Rede</th>
-                <td className="px-2 py-1.5 text-right font-bold tabular-nums text-ink-900">{un(s.rede.total)}</td>
-                <td className="px-2 py-1.5 text-ink-700">{s.rede.topTipos.slice(0, 3).map((t) => `${t.name} (${un(t.qty)})`).join(' · ') || '—'}</td>
-                <td className="px-2 py-1.5 text-ink-700">{s.rede.topMotivos[0] ? `${s.rede.topMotivos[0].name} (${un(s.rede.topMotivos[0].qty)})` : '—'}</td>
-                <td className="px-2 py-1.5" />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        {searchParams.imprimir === '1' && <AutoPrint />}
+        <ResumoSalgados
+          a={analise}
+          mes={`${MESES[month - 1]} de ${year}`}
+          anterior={MESES[ant.m - 1]}
+          acoes={<BaixarRelatorio excelHref={`/api/waste/salgados/export?ano=${year}&mes=${month}`} pdfHref={link(year, month, aba, 'resumo', { imprimir: '1' })} />}
+          evolucao={(
+            <Card><CardContent className="pt-4">
+              <p className="mb-2 text-sm font-semibold text-ink-900">Evolução — últimos 6 meses (un.)</p>
+              <Evolucao pontos={s.evolucao.map((e) => ({ ym: e.ym, valor: e.total }))} unidade="un" />
+              <p className="mt-2 text-xs text-ink-500">Total lançado em cada mês. Meses com poucos lançamentos aparecem baixos por falta de registro, não por menos descarte.</p>
+            </CardContent></Card>
+          )}
+          rodape={<RodapeDoResumo conferencia={link(year, month, aba, 'conferencia')} performance={link(year, month, aba, 'performance')} />}
+        />
       </div>
     );
   }

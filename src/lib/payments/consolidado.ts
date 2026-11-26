@@ -136,11 +136,14 @@ export async function getConsolidadoFreelancers(user: SessionUser, filtro: Filtr
      só enxerga duas unidades conta sobre essas duas, e a tela diz isso. */
   const janelaDeSemanas = { de: semanaISO(periodo.de).de, ate: semanaISO(periodo.ate).ate };
 
-  const [unidadesNoEscopo, linhasBrutas, paraRecorrencia, solicitacoesAntes, limiteSemanal] = await Promise.all([
+  const [unidadesNoEscopo, linhasBrutas, paraRecorrencia, solicitacoesAntes, limiteSemanal, somaAntes] = await Promise.all([
     prisma.unit.count({ where: { active: true, ...(user.seesAllUnits || user.role === 'FINANCE' ? {} : { id: { in: user.unitIds } }) } }),
     prisma.paymentRequest.findMany({
       where: { ...base, ...daUnidade, ...noPeriodo(periodo.de, periodo.ate) },
-      include: { unit: { select: { name: true } }, freelancer: { select: { id: true, name: true, cpf: true, pixKey: true } } },
+      include: {
+        unit: { select: { name: true } }, freelancer: { select: { id: true, name: true, cpf: true, pixKey: true } },
+        workSector: { select: { name: true } }, requestedBy: { select: { name: true } }, overtimeReason: { select: { name: true } },
+      },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.paymentRequest.findMany({
@@ -155,6 +158,8 @@ export async function getConsolidadoFreelancers(user: SessionUser, filtro: Filtr
     }),
     prisma.paymentRequest.count({ where: { ...base, ...daUnidade, ...noPeriodo(anterior.de, anterior.ate) } }),
     getFreelancerWeekLimit(),
+    /* v1.224.0 — o VALOR do período anterior, para a diretoria comparar gasto e não só quantidade. */
+    prisma.paymentRequest.aggregate({ where: { ...base, ...daUnidade, ...noPeriodo(anterior.de, anterior.ate), status: { not: 'REJECTED' } }, _sum: { amount: true } }),
   ]);
 
   /* Quem é recorrente, e em qual semana — a MESMA conta do alerta. */
@@ -195,6 +200,10 @@ export async function getConsolidadoFreelancers(user: SessionUser, filtro: Filtr
       pessoa: r.freelancer?.name ?? r.collaboratorName ?? r.beneficiary ?? '—',
       freelancerId: r.freelancerId,
       recorrente: chave !== '' && semanasComSelo.has(chave),
+      setor: r.workSector?.name ?? r.coverageSector ?? null,
+      horario: r.workStartTime && r.workEndTime ? `${r.workStartTime}–${r.workEndTime}` : null,
+      motivo: r.overtimeReason?.name ?? r.reason ?? r.description ?? null,
+      solicitadoPor: r.requestedBy?.name ?? null,
     };
   });
 
@@ -261,6 +270,8 @@ export async function getConsolidadoFreelancers(user: SessionUser, filtro: Filtr
   }
 
   const solicitacoes = visiveis.length;
+  const valorAntes = Number(somaAntes._sum.amount ?? 0);
+  const valorAgora = soma(naoRejeitadas);
   const idsVisiveisNoPeriodo = new Set(visiveis.map((l) => l.freelancerId).filter((x): x is string => Boolean(x)));
   return {
     periodo,
@@ -282,6 +293,8 @@ export async function getConsolidadoFreelancers(user: SessionUser, filtro: Filtr
       /* Sem base anterior não existe percentual: "+100%" saindo de zero é
          número bonito e informação nenhuma. */
       variacaoPct: solicitacoesAntes > 0 ? ((solicitacoes - solicitacoesAntes) / solicitacoesAntes) * 100 : null,
+      valorAntes,
+      variacaoValorPct: valorAntes > 0 ? ((valorAgora - valorAntes) / valorAntes) * 100 : null,
     },
     /* A seção lista os recorrentes que APARECEM no que está filtrado — senão
        ela contradiria o filtro de unidade. A CONTAGEM de cada um, essa continua
@@ -292,5 +305,6 @@ export async function getConsolidadoFreelancers(user: SessionUser, filtro: Filtr
     porUnidade: unidades,
     evolucao: { granularidade, pontos: [...pontos.values()].sort((a, b) => a.chave.localeCompare(b.chave)) },
     freelancers,
+    linhas: [...visiveis].sort((a, b) => a.data.localeCompare(b.data) || a.unidade.localeCompare(b.unidade, 'pt-BR') || a.pessoa.localeCompare(b.pessoa, 'pt-BR')),
   };
 }

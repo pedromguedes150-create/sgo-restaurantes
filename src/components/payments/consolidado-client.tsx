@@ -20,6 +20,9 @@ import {
   type LinhaDoConsolidado, type PeriodoKey, type RecorrenciaFiltro, type StatusFiltro, type TipoFiltro,
 } from '@/lib/payments/consolidado-tipos';
 import { totaisDaRecorrencia } from '@/lib/payments/consolidacao-calculo';
+import { queryDoFiltroConsolidado } from '@/lib/payments/consolidado-tipos';
+import { analisarConsolidado } from '@/lib/payments/consolidado-executivo';
+import { LeituraExecutiva, BarrasDeParticipacao, BaixarRelatorio } from '@/components/shared/leitura-executiva';
 
 interface Unit { id: string; name: string }
 
@@ -47,18 +50,13 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
   /* Os filtros vivem na URL: é o servidor que agrega, e um link do consolidado
      precisa abrir a mesma tela para quem recebe. */
   function navegar(mudanca: Partial<FiltroConsolidado>) {
-    const f = { ...filtro, ...mudanca };
-    const q = new URLSearchParams({ aba: 'consolidado', periodo: f.periodo, tipo: f.tipo, status: f.status, rec: f.recorrencia });
-    if (f.unitId) q.set('unidade', f.unitId);
-    if (f.periodo === 'personalizado') {
-      if (f.de) q.set('de', f.de);
-      if (f.ate) q.set('ate', f.ate);
-    }
-    router.push(`/modulos/pagamentos/relatorio-freelancers?${q.toString()}`);
+    router.push(`/modulos/pagamentos/relatorio-freelancers?${queryDoFiltroConsolidado({ ...filtro, ...mudanca })}`);
   }
 
   const ativos = (filtro.unitId ? 1 : 0) + (filtro.tipo !== 'TODOS' ? 1 : 0) + (filtro.status !== 'TODOS' ? 1 : 0) + (filtro.recorrencia !== 'todos' ? 1 : 0);
   const r = dados.resumo;
+  /* v1.224.0 — a leitura executiva: a mesma conta, respondida em frases e fatias. */
+  const analise = useMemo(() => analisarConsolidado(dados), [dados]);
   /* Totais dos recorrentes (v1.127.0): eram somados na calculadora. */
   const tRec = totaisDaRecorrencia(dados.recorrentesNaSemana);
   /* Os relatórios de recorrência saem da Consolidação de pagamentos, com o
@@ -95,6 +93,14 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
         <Comparacao dados={dados} />
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-ink-500">Relatório executivo do recorte abaixo. O Excel traz resumo, unidade, freelancer, recorrentes, setor e cada lançamento — sem CPF e sem PIX (isso é do Fechamento).</p>
+        <BaixarRelatorio excelHref={`/api/payments/freelancer-report/consolidado?${queryDoFiltroConsolidado(filtro)}`} pdfOnClick={() => window.print()} />
+      </div>
+
+      <LeituraExecutiva titulo="Leitura do período" frases={analise.leituras} />
+
+      <div className="print:hidden">
       <FilterBar
         active={ativos}
         onClear={ativos > 0 ? () => navegar({ unitId: undefined, tipo: 'TODOS', status: 'TODOS', recorrencia: 'todos' }) : undefined}
@@ -116,6 +122,7 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
         <FilterSelect label="Status" value={filtro.status} options={STATUS} onValueChange={(v) => navegar({ status: v as StatusFiltro })} />
         <FilterSelect label="Recorrência" value={filtro.recorrencia} options={RECORRENCIA} onValueChange={(v) => navegar({ recorrencia: v as RecorrenciaFiltro })} />
       </FilterBar>
+      </div>
 
       {/* ── Indicadores ── */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -125,6 +132,20 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
         <StatCard label="valor solicitado" value={formatBRL(r.valorSolicitado)} />
         <StatCard label="aprovado / pago" value={formatBRL(r.valorAprovadoPago)} />
         <StatCard label="média por unidade" value={r.mediaPorUnidade.toFixed(1).replace('.', ',')} />
+        <StatCard label="valor médio por solicitação" value={analise.ticketMedio === null ? '—' : formatBRL(analise.ticketMedio)} />
+        <StatCard label="valor médio por freelancer" value={analise.valorPorFreelancer === null ? '—' : formatBRL(analise.valorPorFreelancer)} />
+        <StatCard label="valor em recorrentes" value={formatBRL(analise.recorrencia.valor)} hint={`${analise.recorrencia.pctDoValor.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% do valor`} tone={analise.recorrencia.pessoas > 0 ? 'warning' : undefined} />
+      </div>
+
+      {/* ── Onde o valor está (v1.224.0) ── */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <BarrasDeParticipacao testId="barras-status" titulo="Situação do valor" itens={analise.porStatus.map((s) => ({ rotulo: s.rotulo, valor: formatBRL(s.valor), pct: s.pct, apoio: `${s.qtd} solic.` }))} nota="Percentual sobre o valor válido do recorte; rejeitadas não contam." />
+        <BarrasDeParticipacao testId="barras-unidade" titulo="Valor por unidade" itens={analise.porUnidade.map((u) => ({ rotulo: shortUnitName(u.rotulo), valor: formatBRL(u.valor), pct: u.pct, apoio: `${u.qtd} solic.` }))} />
+        <BarrasDeParticipacao testId="barras-top" titulo={`Maiores valores · ${analise.topFreelancers.length} freelancer(s) = ${analise.top5Pct.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% do total`} itens={analise.topFreelancers.map((t) => ({ rotulo: t.rotulo, valor: formatBRL(t.valor), pct: t.pct, apoio: `${t.qtd} solic.${t.recorrente ? ' · recorrente' : ''}`, destaque: t.recorrente }))} />
+        <BarrasDeParticipacao testId="barras-dia" titulo="Por dia da semana (dia do serviço)" itens={analise.porDiaDaSemana.filter((d) => d.qtd > 0).map((d) => ({ rotulo: d.rotulo, valor: formatBRL(d.valor), pct: d.pct, apoio: `${d.qtd} solic.` }))} />
+        {analise.porSetor.length > 1 && (
+          <BarrasDeParticipacao testId="barras-setor" titulo="Por setor" itens={analise.porSetor.map((s) => ({ rotulo: s.rotulo, valor: formatBRL(s.valor), pct: s.pct, apoio: `${s.qtd} solic.` }))} />
+        )}
       </div>
 
       {/* Rejeitadas ficam À PARTE do valor solicitado: somá-las inflaria o custo
@@ -268,6 +289,31 @@ export function ConsolidadoClient({ dados, filtro, units }: { dados: Consolidado
           }}
         />
       </section>
+
+      {/* ── Discriminativo: cada solicitação do recorte (v1.224.0) ── */}
+      <details className="rounded-card border border-line bg-surface print:hidden" data-testid="discriminativo">
+        <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-ink-900">Discriminativo · {dados.linhas.length} lançamento(s) do recorte</summary>
+        <Table
+          caption="Lançamentos do recorte"
+          rows={dados.linhas}
+          getRowKey={(l) => l.id}
+          columns={[
+            { key: 'data', header: 'Data', width: '6rem', cell: (l) => emBR(l.data) },
+            { key: 'unidade', header: 'Unidade', cell: (l) => shortUnitName(l.unidade) },
+            { key: 'pessoa', header: 'Pessoa', cell: (l) => (
+              <span className="flex flex-wrap items-center gap-1">
+                <span className="font-semibold text-ink-900">{l.pessoa}</span>
+                {l.recorrente && <span className="rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] font-semibold text-warning">Recorrente</span>}
+              </span>
+            ) },
+            { key: 'setor', header: 'Setor', hideOnMobile: true, cell: (l) => l.setor ?? <span className="text-ink-400">—</span> },
+            { key: 'horario', header: 'Horário', hideOnMobile: true, width: '7rem', cell: (l) => l.horario ?? <span className="text-ink-400">—</span> },
+            { key: 'status', header: 'Situação', width: '7rem', cell: (l) => <span className={l.status === 'REJECTED' ? 'font-semibold text-danger' : undefined}>{l.statusLabel}</span> },
+            { key: 'valor', header: 'Valor', numeric: true, width: '7rem', cell: (l) => <span className={l.status === 'REJECTED' ? 'text-ink-500 line-through' : undefined}>{formatBRL(l.valor)}</span> },
+          ]}
+          footer={{ data: 'TOTAL', pessoa: `${dados.linhas.length} lançamento(s)`, valor: formatBRL(r.valorSolicitado) }}
+        />
+      </details>
 
       {aberto && <Detalhe f={aberto} onClose={() => setAberto(null)} />}
     </div>

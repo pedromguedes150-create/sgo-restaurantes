@@ -9,6 +9,27 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.224.0 — 2026-11-26 (Relatórios executivos — Sobras Lanchonete e Recorrência de Freelancers)
+
+**Pedido do Daniel (prints de 25–26/11):** "uma análise mais executiva desses relatórios, com riqueza nas informações, formas de baixar e o discriminativo".
+
+**Sobras Lanchonete (Painel de desperdício → Resumo)**
+- **Leitura do mês** em frases: total e média por dia lançado, quantas unidades lançaram, onde o descarte se concentra, tipo e motivos com a fatia de cada um.
+- A variação passou a ser pela **média por dia lançado**. O "▲ 1.484%" comparava 1.584 un. com um outubro quase sem registro; quando o mês anterior tem menos da metade dos dias lançados, a tela avisa que o total não é comparável.
+- Todos os tipos e motivos em barras com %, participação por unidade, tabela por unidade com % da rede e média por dia.
+- **Discriminativo**: Unidade × Motivo e Tipo × Motivo.
+- **Excel** (8 abas: resumo, por unidade, por tipo, por motivo, os dois cruzamentos, por dia e cada linha lançada com quem lançou) e **PDF**.
+
+**Recorrência de Freelancers (Consolidado da rede)**
+- **Leitura do período**: custo e valor médio, comparação em **valor** com o período anterior (antes só em quantidade), concentração por unidade, quanto do valor é de recorrentes, situação (pago · a pagar · aguardando) e o dia da semana com mais chamadas.
+- Barras de situação, unidade, maiores valores, dia da semana e setor; três indicadores novos.
+- **Discriminativo** na tela (cada solicitação, com setor e horário) e **Excel** de 6 abas + **PDF**, sempre no mesmo recorte dos filtros.
+- O Excel gerencial sai **sem CPF e sem chave PIX**; esses dados continuam só no Fechamento (PIX).
+
+⚠️ Nenhuma regra mudou: mesmas tabelas, mesma recorrência, rejeitadas fora do valor. Não verificado no navegador (banco de dev fora do ar). A aba Sobras Restaurantes (kg) não foi mexida.
+
+---
+
 ## v1.223.1 — 2026-11-24 (Notas — o leitor da câmera volta a ler o código de barras da DANFE)
 
 **Relato (print de uma gerente, iPhone):** a câmera apontada para a chave de acesso não lia; ela lançava à mão.
