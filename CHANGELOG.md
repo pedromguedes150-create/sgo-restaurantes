@@ -9,6 +9,27 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.229.0 — 2026-11-26 (Relatório semanal de folgas refeito: executivo, só as lojas)
+
+**Retorno do Daniel (print):** o relatório semanal "está muito genérico e não faz sentido mandar aquilo para a diretoria — deve ser fácil de entender porém bem executivo, não calendário, e não é necessário mostrar lançado por quem"; Centro de Distribuição e Produtos não entram; e o relatório da segunda cobre de segunda a domingo.
+
+- **Uma linha por loja**, em texto: quem folga e em que dia ("Grazieli · qui 26/11"), quem está de férias, quem está sem folga lançada e a cobertura ("Coberta a semana toda" ou "Sem gerente: sáb 28/11 e dom 29/11").
+- Saíram a grade gerente × dia, o quadro dia a dia e a lista com "lançado por".
+- A loja aparece pelo nome curto ("Jardim Teresópolis"), não pela razão social.
+- **Centro de Distribuição e Produtos ficam fora** do relatório e dos números dele. A tela "Hoje na rede" continua mostrando todas as unidades.
+- A semana é sempre **segunda a domingo**: aberto na segunda, o relatório traz a semana que começa naquele dia.
+
+⚠️ CD e Produtos saem pelo tipo de operação do cadastro (CD ou Fábrica) ou, se a unidade ainda estiver com o tipo padrão, pelo nome ("Centro de Distribuição", "(Produtos)").
+⚠️ Não verificado no navegador (banco de desenvolvimento fora do ar).
+
+---
+
+## v1.228.2 — 2026-11-26 (Central de Currículos sai da tela de Perfis)
+
+**Pedido do Daniel:** "remova da tela de perfis também". As linhas "Central de Currículos (antiga…)" e "Currículos (cargos do encaminhamento)" não aparecem mais em Configurações → Perfis. Nada foi apagado: as permissões gravadas e os dados continuam no banco.
+
+---
+
 ## v1.228.1 — 2026-11-26 (Central de Currículos sai do menu)
 
 **Pedido do Daniel (print):** remover "Central de Currículos (antiga — substituída por Solicitação de Vagas)". Ela já estava escondida dos gerentes; agora sai do menu, da busca e do hub do celular para **todos**, inclusive Admin/CEO — junto com "Currículos (cargos do encaminhamento)" em Configurações.

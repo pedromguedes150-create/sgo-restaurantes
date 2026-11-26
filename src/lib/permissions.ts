@@ -356,6 +356,14 @@ export const temAcessoFixo = (role: Role): boolean => role in ACESSO_FIXO;
    e os currículos já encaminhados ficam para Admin/CEO. */
 export const MODULOS_INATIVOS: ReadonlySet<string> = new Set(['INVENTORY', 'PRODUCTS', 'PRODUCT_SEPARATION', 'RESUMES', 'CONFIG_RESUMES']);
 
+/**
+ * v1.228.2 — módulos que NÃO aparecem na tela de Perfis (pedido do Daniel): a Central
+ * de Currículos foi substituída pela Solicitação de Vagas e já é inativa para todos
+ * menos Admin/CEO — uma linha na matriz só convidaria a ligar algo que não liga.
+ * As chaves seguem em MODULES (as rotas antigas ainda são guardadas por elas).
+ */
+export const OCULTOS_NA_TELA_DE_PERFIS: ReadonlySet<string> = new Set(['RESUMES', 'CONFIG_RESUMES']);
+
 /** Permissões efetivas de um perfil de sistema por módulo (com defaults). */
 export async function effectivePermissions(role: Role): Promise<Record<string, Perm>> {
   /* v1.206.0 — cada tela e cada chamada de API perguntava a matriz ao banco

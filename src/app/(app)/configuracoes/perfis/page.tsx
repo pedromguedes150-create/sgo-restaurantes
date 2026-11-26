@@ -3,7 +3,7 @@ import { getSessionUser } from '@/lib/auth/session';
 import { Card, CardContent } from '@/components/ui/card';
 import { PermissionsAdmin } from '@/components/admin/permissions-admin';
 import { ProfilesAdmin } from '@/components/admin/profiles-admin';
-import { ALL_ROLES, isFullAccess, temAcessoFixo, MODULES, permissionMatrix, permissoesDoPerfil, type Perm } from '@/lib/permissions';
+import { ALL_ROLES, isFullAccess, temAcessoFixo, MODULES, OCULTOS_NA_TELA_DE_PERFIS, permissionMatrix, permissoesDoPerfil, type Perm } from '@/lib/permissions';
 import { basesPossiveis, listarPerfis } from '@/lib/perfis';
 import { valorDePerfil } from '@/lib/perfil-valor';
 import { ROLE_HINTS, roleLabel } from '@/lib/roles';
@@ -48,7 +48,7 @@ export default async function PerfisAdminPage() {
 
       <Card><CardContent className="pt-4">
         <PermissionsAdmin
-          modules={MODULES.map((m) => ({ key: m.key, label: m.label, parent: m.parent, soVer: m.soVer }))}
+          modules={MODULES.filter((m) => !OCULTOS_NA_TELA_DE_PERFIS.has(m.key)).map((m) => ({ key: m.key, label: m.label, parent: m.parent, soVer: m.soVer }))}
           matrix={matrizCompleta}
           perfis={perfis}
         />

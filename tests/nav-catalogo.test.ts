@@ -33,6 +33,19 @@ describe('o menu cobre a matriz', () => {
   });
 });
 
+describe('o que foi aposentado não volta a aparecer', () => {
+  it('a Central de Currículos fica fora do menu e da tela de Perfis, mas segue na matriz', async () => {
+    const { OCULTOS_NA_TELA_DE_PERFIS } = await import('@/lib/permissions');
+    for (const k of ['RESUMES', 'CONFIG_RESUMES']) {
+      expect(KEYS_NO_MENU.has(k)).toBe(false);
+      expect(OCULTOS_NA_TELA_DE_PERFIS.has(k)).toBe(true);
+      expect(chavesDaMatriz.has(k)).toBe(true);
+    }
+    const pagina = (await import('node:fs')).readFileSync('src/app/(app)/configuracoes/perfis/page.tsx', 'utf8');
+    expect(pagina).toContain('OCULTOS_NA_TELA_DE_PERFIS.has(m.key)');
+  });
+});
+
 describe('a matriz cobre o menu', () => {
   it('toda chave do menu existe na matriz e tem endereço', () => {
     /* O caminho inverso: renomear uma chave na matriz deixaria o menu apontando
