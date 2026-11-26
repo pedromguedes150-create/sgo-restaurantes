@@ -9,6 +9,23 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.225.0 — 2026-11-26 (Visual moderno — Performance do desperdício e recorrentes de freelancers)
+
+**Retorno do Daniel (4 prints):** o topo da aba Performance não agradou ("quero modernidade"); a parte de baixo e as barras dos freelancers agradaram; o gráfico por semana e a tabela de recorrentes "podem melhorar".
+
+**Performance do desperdício (topo)**
+- O **veredito em destaque**: a média por dia lançado em número grande, a seta com o percentual e duas barras (este mês × mês anterior).
+- Quatro blocos de apoio: total do mês, **cobertura em anel**, dia de pico e dias com lançamento.
+- **Gráfico dia a dia refeito**: altura fixa, colunas arredondadas, fim de semana sombreado, o pico com o valor em cima e a média do mês anterior como linha tracejada. Antes era uma figura esticada à largura da tela, que num monitor largo ocupava meia tela com as colunas no rodapé.
+
+**Recorrência de Freelancers**
+- **Solicitações por semana**: colunas com a quantidade, o valor e o período ("02/11 a 08/11"); a semana mais cheia em destaque.
+- **Recorrentes em cartões, um por pessoa**: valor e solicitações somados, as semanas acima do limite como etiquetas, CPF/PIX em linha discreta. A tabela repetia o mesmo nome a cada semana. Tocar abre o detalhe de sempre; os totais ficam numa faixa no topo.
+
+⚠️ Só apresentação: nenhum número mudou. Não verificado no navegador (banco de dev fora do ar).
+
+---
+
 ## v1.224.1 — 2026-11-26 (RH — razão social com o código na frente é reconhecida sozinha)
 
 **Relato do Daniel (prints):** o colaborador 20603 está no sistema do RH, na Nova União, e não aparece no SGO.

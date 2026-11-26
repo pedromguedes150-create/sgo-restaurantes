@@ -1,6 +1,5 @@
-import { Activity, CalendarDays, Gauge, Scale, TrendingDown, TrendingUp } from 'lucide-react';
+import { Activity, CalendarDays, Flame, Gauge, Scale, TrendingDown, TrendingUp } from 'lucide-react';
 import { Card, CardContent, PanelHeader } from '@/components/sgo/panel';
-import { SgoKpi, SgoKpis } from '@/components/sgo/sgo-kpi';
 import { SgoBar } from '@/components/sgo/sgo-bar';
 import { BarraComparada, BarrasDiarias, ColunasMensais, MiniTendencia, Variacao } from '@/components/waste/graficos';
 import { shortUnitName } from '@/lib/unit-name';
@@ -36,27 +35,81 @@ export function PainelPerformance({ d }: { d: Dados }) {
   const maxSemana = Math.max(1, ...d.diaDaSemana.map((s) => s.media));
 
   const veredito = r.direcao === 'subiu' ? 'Aumentou' : r.direcao === 'caiu' ? 'Diminuiu' : r.direcao === 'estavel' ? 'Estável' : 'Sem base';
+  const corDoVeredito = r.direcao === 'subiu' ? 'bg-danger-bg text-danger' : r.direcao === 'caiu' ? 'bg-success-bg text-success' : 'bg-sunken text-ink-700';
+  const cobertura = esperados ? r.atual.lancamentos / esperados : 0;
+  const comDado = d.serie.filter((p) => p.lancamentos > 0);
+  const diasComDado = comDado.length;
+  const pico = comDado.length ? comDado.reduce((m, p) => (p.total > m.total ? p : m), comDado[0]) : null;
+  const maxMedia = Math.max(1, r.atual.media, r.anterior.media);
 
   return (
     <div className="space-y-4" data-testid="painel-performance">
-      <SgoKpis>
-        <SgoKpi label={`Média por dia lançado (${u})`} value={n(r.atual.media)} icon={Gauge} tone="blue"
-          meta={<>{MESES[ant - 1]}: {n(r.anterior.media)} {u}</>} />
-        <SgoKpi label={`Em relação a ${MESES[ant - 1]}`} value={veredito} icon={r.direcao === 'caiu' ? TrendingDown : TrendingUp}
-          tone={r.direcao === 'subiu' ? 'red' : r.direcao === 'caiu' ? 'green' : 'gray'}
-          meta={<Variacao v={r.variacao} d={r.direcao} />} testId="kpi-veredito" />
-        <SgoKpi label={`Total do mês (${u})`} value={n(r.atual.total)} icon={Scale} tone="gray"
-          meta={<>até o dia {r.diasDecorridos}: {MESES[ant - 1]} tinha {n(r.anteriorAteHoje.total)}</>} />
-        <SgoKpi label="Cobertura (lançamentos)" value={`${r.atual.lancamentos}/${esperados || 0}`} icon={CalendarDays}
-          tone={esperados && r.atual.lancamentos / esperados < 0.8 ? 'amber' : 'green'}
-          meta={<>{esperados ? Math.round((r.atual.lancamentos / esperados) * 100) : 0}% dos dias × unidades</>} />
-      </SgoKpis>
+      {/* v1.225.0 — o veredito em destaque: um número grande, a seta e a comparação lado a lado. */}
+      <section className="sgo-panel sgo-panel--solid grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]" data-testid="hero-performance">
+        <div className="min-w-0">
+          <p className="sgo-type-11 font-semibold text-ink-500">Média por dia lançado</p>
+          <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
+            <span className="sgo-type-24 font-bold tabular-nums text-ink-900">{n(r.atual.media)}</span>
+            <span className="sgo-type-17 font-semibold text-ink-500">{u}</span>
+          </p>
+          <p className={`mt-2 inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-sm font-bold ${corDoVeredito}`} data-testid="kpi-veredito">
+            {r.direcao === 'caiu' ? <TrendingDown className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
+            {veredito}{r.variacao !== null && r.direcao !== 'sem-base' ? ` · ${r.direcao === 'subiu' ? '▲' : r.direcao === 'caiu' ? '▼' : ''} ${n(Math.abs(r.variacao), 1)}%` : ''}
+          </p>
+          <div className="mt-4 space-y-2">
+            {[{ rotulo: MESES[d.month - 1], valor: r.atual.media, forte: true }, { rotulo: MESES[ant - 1], valor: r.anterior.media, forte: false }].map((b) => (
+              <div key={b.rotulo} className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-2">
+                <span className="truncate truncate-sempre text-xs font-semibold capitalize text-ink-700">{b.rotulo}</span>
+                <span className="h-3 overflow-hidden rounded-pill bg-sunken" aria-hidden>
+                  <span className={`block h-full rounded-pill ${b.forte ? 'bg-brand' : 'bg-ink-400'}`} style={{ width: `${Math.max(b.valor ? 2 : 0, (b.valor / maxMedia) * 100)}%` }} />
+                </span>
+                <span className="text-sm font-bold tabular-nums text-ink-900">{n(b.valor)} <span className="text-xs font-normal text-ink-500">{u}/dia</span></span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-ink-500">A seta vem da média por dia lançado — o total engana quando um dos meses teve poucos lançamentos.</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-card bg-sunken p-3">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-ink-500"><Scale className="h-3.5 w-3.5" /> Total do mês</p>
+            <p className="mt-1 sgo-type-24 font-bold tabular-nums text-ink-900">{n(r.atual.total)} <span className="text-sm font-semibold text-ink-500">{u}</span></p>
+            <p className="mt-1 text-xs text-ink-500">até o dia {r.diasDecorridos}, {MESES[ant - 1]} tinha {n(r.anteriorAteHoje.total)}</p>
+          </div>
+          <div className="flex items-center gap-3 rounded-card bg-sunken p-3">
+            <svg viewBox="0 0 44 44" width={56} height={56} className="shrink-0" aria-hidden>
+              <circle cx={22} cy={22} r={18} fill="none" className="text-line-strong" stroke="currentColor" strokeWidth={5} />
+              <circle cx={22} cy={22} r={18} fill="none" className={cobertura < 0.8 ? 'text-warning' : 'text-success'} stroke="currentColor" strokeWidth={5} strokeLinecap="round"
+                strokeDasharray={`${Math.min(1, cobertura) * 113.1} 113.1`} transform="rotate(-90 22 22)" />
+            </svg>
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-ink-500"><CalendarDays className="h-3.5 w-3.5" /> Cobertura</p>
+              <p className="sgo-type-24 font-bold tabular-nums text-ink-900">{Math.round(cobertura * 100)}%</p>
+              <p className="text-xs text-ink-500">{r.atual.lancamentos} de {esperados || 0} lançamentos</p>
+            </div>
+          </div>
+          <div className="rounded-card bg-sunken p-3">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-ink-500"><Flame className="h-3.5 w-3.5" /> Dia de pico</p>
+            <p className="mt-1 sgo-type-24 font-bold tabular-nums text-ink-900">{pico ? `${n(pico.total)} ` : '—'}{pico && <span className="text-sm font-semibold text-ink-500">{u}</span>}</p>
+            <p className="mt-1 text-xs text-ink-500">{pico ? `dia ${Number(pico.date.slice(8, 10))} · ${pico.lancamentos} lançamento(s)` : 'sem lançamento no mês'}</p>
+          </div>
+          <div className="rounded-card bg-sunken p-3">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-ink-500"><Gauge className="h-3.5 w-3.5" /> Dias com lançamento</p>
+            <p className="mt-1 sgo-type-24 font-bold tabular-nums text-ink-900">{diasComDado} <span className="text-sm font-semibold text-ink-500">de {r.diasDecorridos}</span></p>
+            <p className="mt-1 text-xs text-ink-500">{r.diasDecorridos - diasComDado > 0 ? `${r.diasDecorridos - diasComDado} dia(s) sem nenhum registro` : 'todos os dias com registro'}</p>
+          </div>
+        </div>
+      </section>
 
       <Card>
-        <PanelHeader title={`Por dia — ${MESES[d.month - 1]} (${u})`} icon={<Activity className="h-4 w-4 text-brand" />} />
-        <CardContent className="pt-3">
+        <PanelHeader title={`Dia a dia — ${MESES[d.month - 1]} (${u})`} icon={<Activity className="h-4 w-4 text-brand" />} />
+        <CardContent className="pt-8">
           <BarrasDiarias pontos={d.serie} referencia={referencia} unidade={u} rotuloReferencia={`média/dia de ${MESES[ant - 1]}`} />
-          <p className="mt-1 text-xs text-ink-500">Barra = soma do dia nas unidades filtradas. Traço no pé = dia sem lançamento (falta de dado, não zero). Linha tracejada = média por dia de {MESES[ant - 1]}.</p>
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-500">
+            <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-brand" aria-hidden /> soma do dia nas unidades filtradas</span>
+            <span className="inline-flex items-center gap-1.5"><span className="inline-block h-1 w-1 rounded-pill bg-line-strong" aria-hidden /> dia sem lançamento (falta de dado, não zero)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-sunken" aria-hidden /> fim de semana</span>
+          </p>
         </CardContent>
       </Card>
 

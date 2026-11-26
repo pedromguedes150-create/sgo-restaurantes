@@ -1,4 +1,4 @@
-import type { Consolidado, LinhaDoConsolidado } from '@/lib/payments/consolidado-tipos';
+import type { Consolidado, LinhaDoConsolidado, RecorrenteNaSemana } from '@/lib/payments/consolidado-tipos';
 import type { PaymentStatus } from '@prisma/client';
 
 /**
@@ -129,4 +129,35 @@ export function analisarConsolidado(c: Consolidado): AnaliseDoConsolidado {
     valorPorFreelancer: r.freelancersUnicos ? total / r.freelancersUnicos : null,
     porStatus, porUnidade, topFreelancers, top5Pct, recorrencia, porDiaDaSemana: dias, porSetor, leituras,
   };
+}
+
+export interface RecorrenteAgrupado {
+  freelancerId: string;
+  nome: string;
+  cpf: string | null;
+  pixKey: string | null;
+  unidades: string[];
+  /** As semanas em que passou do limite, da mais antiga para a mais recente. */
+  semanas: { de: string; ate: string; solicitacoes: number; valor: number }[];
+  solicitacoes: number;
+  valor: number;
+}
+
+/**
+ * Um cartão por PESSOA (v1.225.0): a tabela repetia o mesmo freelancer em cada
+ * semana recorrente. A conta é a mesma — só muda o agrupamento. Maior valor primeiro.
+ */
+export function agruparRecorrentes(linhas: RecorrenteNaSemana[]): RecorrenteAgrupado[] {
+  const m = new Map<string, RecorrenteAgrupado>();
+  for (const g of linhas) {
+    const a = m.get(g.freelancerId) ?? { freelancerId: g.freelancerId, nome: g.nome, cpf: g.cpf, pixKey: g.pixKey, unidades: [], semanas: [], solicitacoes: 0, valor: 0 };
+    a.semanas.push({ de: g.semanaDe, ate: g.semanaAte, solicitacoes: g.solicitacoes, valor: g.valor });
+    a.solicitacoes += g.solicitacoes;
+    a.valor += g.valor;
+    for (const u of g.unidades) if (!a.unidades.includes(u)) a.unidades.push(u);
+    m.set(g.freelancerId, a);
+  }
+  return [...m.values()]
+    .map((a) => ({ ...a, semanas: a.semanas.sort((x, y) => x.de.localeCompare(y.de)) }))
+    .sort((x, y) => y.valor - x.valor || y.solicitacoes - x.solicitacoes || x.nome.localeCompare(y.nome, 'pt-BR'));
 }
