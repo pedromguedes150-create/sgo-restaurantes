@@ -86,3 +86,42 @@ describe('montarSemana', () => {
     expect(s.leituras).toEqual(['Nenhum gerente vinculado às unidades do relatório.']);
   });
 });
+
+describe('relatório executivo (v1.229.0)', () => {
+  it('CD e Produtos ficam fora: pelo tipo do cadastro ou, na falta dele, pelo nome', async () => {
+    const { unidadeDeApoio } = await import('@/lib/manager-schedule-semana');
+    expect(unidadeDeApoio({ name: 'Qualquer', operationType: 'CD' })).toBe(true);
+    expect(unidadeDeApoio({ name: 'Qualquer', operationType: 'FABRICA' })).toBe(true);
+    expect(unidadeDeApoio({ name: 'COMERCIAL LINS & GUEDES LTDA (CENTRO DE DISTRIBUIÇÃO)', operationType: 'RESTAURANTE' })).toBe(true);
+    expect(unidadeDeApoio({ name: 'COMERCIAL LINS & GUEDES LTDA (PRODUTOS)', operationType: 'RESTAURANTE' })).toBe(true);
+    expect(unidadeDeApoio({ name: 'COMERCIAL LINS & GUEDES LTDA (NOVA UNIÃO)', operationType: 'RESTAURANTE' })).toBe(false);
+    expect(unidadeDeApoio({ name: 'COMERCIAL LINS E GUEDES LTDA ME' })).toBe(false);
+  });
+
+  it('os dias viram texto: um dia, dois, intervalo e a semana toda', async () => {
+    const { textoDosDias, diasDaSemana } = await import('@/lib/manager-schedule-semana');
+    expect(textoDosDias([])).toBe('');
+    expect(textoDosDias(['2026-11-26'])).toBe('qui 26/11');
+    expect(textoDosDias(['2026-11-28', '2026-11-29'])).toBe('sáb 28/11 e dom 29/11');
+    expect(textoDosDias(['2026-11-23', '2026-11-24', '2026-11-25', '2026-11-28'])).toBe('seg 23/11 a qua 25/11, sáb 28/11');
+    expect(textoDosDias(diasDaSemana(SEG))).toBe('a semana toda');
+  });
+
+  it('uma linha por loja, em texto, sem quem lançou', async () => {
+    const { quadroExecutivo } = await import('@/lib/manager-schedule-semana');
+    const s = montarSemana([{ unitId: 'u1', unitName: 'Loja', gerentes: [
+      g('a', { ausencias: [folga('2026-11-26')] }),
+      g('b', { ausencias: [folga('2026-11-20', '2026-11-24', 'FERIAS')] }),
+      g('c', { weekdays: [1, 2, 3, 4, 5] }),
+    ] }], SEG);
+    const [l] = quadroExecutivo(s);
+    expect(l).toEqual({
+      unitId: 'u1', unitName: 'Loja', gerentes: 3,
+      folgas: [{ name: 'Gerente a', quando: 'qui 26/11' }],
+      ferias: [{ name: 'Gerente b', quando: 'seg 23/11 e ter 24/11' }],
+      semFolga: ['Gerente c'],
+      semGerente: '',
+    });
+    expect(JSON.stringify(l)).not.toContain('próprio gerente');
+  });
+});

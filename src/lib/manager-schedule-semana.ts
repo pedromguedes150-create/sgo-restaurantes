@@ -39,6 +39,61 @@ export function diasDaSemana(segunda: string): string[] {
 export const semanaAnterior = (segunda: string) => somar(segunda, -7);
 export const semanaSeguinte = (segunda: string) => somar(segunda, 7);
 
+/**
+ * Unidade de APOIO (Centro de Distribuição, Produtos/Fábrica): fica FORA do
+ * relatório semanal da diretoria — "tratamos diferente" (Daniel, 26/11/2026).
+ * Vale o tipo de operação do cadastro (CD ou FABRICA); o nome é a rede de
+ * segurança para a unidade que ainda está com o tipo padrão.
+ */
+export function unidadeDeApoio(u: { name: string; operationType?: string | null }): boolean {
+  if (u.operationType === 'CD' || u.operationType === 'FABRICA') return true;
+  const n = u.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return /centro de distribuicao|\(\s*produtos\s*\)|\bfabrica\b/.test(n);
+}
+
+const ABREV = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+const curto = (iso: string) => `${ABREV[new Date(`${iso}T00:00:00Z`).getUTCDay()]} ${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+
+/** "qui 26/11" · "seg 23/11 a qua 25/11" · "a semana toda" — dias seguidos viram um intervalo. */
+export function textoDosDias(isos: string[]): string {
+  if (isos.length === 0) return '';
+  if (isos.length === 7) return 'a semana toda';
+  const blocos: string[][] = [];
+  for (const iso of [...isos].sort()) {
+    const ultimo = blocos[blocos.length - 1];
+    if (ultimo && amanha(ultimo[ultimo.length - 1]) === iso) ultimo.push(iso); else blocos.push([iso]);
+  }
+  return blocos.map((b) => (b.length === 1 ? curto(b[0]) : b.length === 2 ? `${curto(b[0])} e ${curto(b[1])}` : `${curto(b[0])} a ${curto(b[b.length - 1])}`)).join(', ');
+}
+
+export interface LinhaExecutiva {
+  unitId: string;
+  unitName: string;
+  gerentes: number;
+  /** "Fulano — qui 26/11", um por gerente com folga. */
+  folgas: { name: string; quando: string }[];
+  ferias: { name: string; quando: string }[];
+  semFolga: string[];
+  /** '' = coberta a semana toda. */
+  semGerente: string;
+}
+
+/** O quadro do relatório: UMA linha por unidade, em texto — sem grade e sem calendário. */
+export function quadroExecutivo(s: SemanaDaRede): LinhaExecutiva[] {
+  return s.unidades.map((u) => {
+    const dos = (l: LinhaDaSemana, alvo: SituacaoHoje) => s.dias.filter((_, i) => l.dias[i] === alvo);
+    return {
+      unitId: u.unitId,
+      unitName: u.unitName,
+      gerentes: u.linhas.length,
+      folgas: u.linhas.filter((l) => l.folgas > 0).map((l) => ({ name: l.name, quando: textoDosDias(dos(l, 'FOLGA')) })),
+      ferias: u.linhas.filter((l) => l.ferias > 0).map((l) => ({ name: l.name, quando: textoDosDias(dos(l, 'FERIAS')) })),
+      semFolga: u.linhas.filter((l) => l.semFolga).map((l) => l.name),
+      semGerente: textoDosDias(u.diasSemGerente),
+    };
+  });
+}
+
 export const SIGLA_DA_SITUACAO: Record<SituacaoHoje, string> = {
   TRABALHA: 'T',
   FOLGA: 'F',

@@ -20,16 +20,18 @@ import {
   amanha, diasDentro, montarUnidadeHoje, proximasAusencias, resumirHoje,
   type AusenciaProxima, type GerenteHoje, type ResumoHoje, type UnidadeHoje,
 } from '@/lib/manager-schedule-regras';
-import { diasDaSemana, montarSemana, type SemanaDaRede } from '@/lib/manager-schedule-semana';
+import { diasDaSemana, montarSemana, unidadeDeApoio, type SemanaDaRede } from '@/lib/manager-schedule-semana';
 import type { SessionUser } from '@/lib/auth/session';
 
 /** Gerentes de cada unidade com as ausências ATIVAS que tocam [de, ate]. */
-async function gerentesDaRede(user: SessionUser, de: string, ate: string) {
-  const units = await prisma.unit.findMany({
+async function gerentesDaRede(user: SessionUser, de: string, ate: string, semApoio = false) {
+  const todas = await prisma.unit.findMany({
     where: { active: true, ...unitScopeWhere(user, 'id') },
     orderBy: { name: 'asc' },
-    select: { id: true, name: true },
+    select: { id: true, name: true, operationType: true },
   });
+  /* O relatório da diretoria é só das LOJAS: CD e Produtos/Fábrica são tratados à parte. */
+  const units = semApoio ? todas.filter((u) => !unidadeDeApoio(u)) : todas;
   const unitIds = units.map((u) => u.id);
   const usuarios = unitIds.length === 0 ? [] : await prisma.user.findMany({
     where: { active: true, role: { in: ['MANAGER', 'COORDINATOR'] }, memberships: { some: { unitId: { in: unitIds } } } },
@@ -107,9 +109,9 @@ function gerenteDaRede(u: Awaited<ReturnType<typeof gerentesDaRede>>['usuarios']
 }
 
 /** A semana seg→dom que começa em `segunda`, no escopo do usuário. Só leitura. */
-export async function getSemanaDaRede(user: SessionUser, segunda: string): Promise<SemanaDaRede> {
+export async function getSemanaDaRede(user: SessionUser, segunda: string, opcoes: { semApoio?: boolean } = {}): Promise<SemanaDaRede> {
   const dias = diasDaSemana(segunda);
-  const { units, usuarios, nomeDoAutor } = await gerentesDaRede(user, dias[0], dias[6]);
+  const { units, usuarios, nomeDoAutor } = await gerentesDaRede(user, dias[0], dias[6], Boolean(opcoes.semApoio));
   const porUnidade = new Map<string, GerenteHoje[]>(units.map((u) => [u.id, []]));
   for (const u of usuarios) {
     const g = gerenteDaRede(u, nomeDoAutor);
