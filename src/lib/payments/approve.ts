@@ -338,19 +338,29 @@ export async function approverEditRequest(user: SessionUser, id: string, input: 
     // Valor: cobertura de setor = valor do dia + VT; valor/hora cadastrado =
     // horas × valor/hora + VT; senão o que o aprovador digitar (ou o atual).
     let autoPriced = false;
+    let foraDoPadrao = false;
     if (req.coverageSector && req.standardValue != null) {
       amount = Number(req.standardValue) + (transport ?? 0);
       autoPriced = true;
     } else if (start && end) {
       const { computeFreelancerAmount } = await import('@/lib/freelancer/pricing');
-      const calc = await computeFreelancerAmount({ unitId: req.unitId, dateISO: workDate, start, end, transport: transport ?? 0 });
-      if (calc.configured) { amount = calc.amount; hours = calc.hours; autoPriced = true; }
+      /* v1.226.0 — mantém o valor/hora escolhido no lançamento (mesmo se foi
+         tirado da lista depois); um valor NOVO precisa estar autorizado. */
+      const gravado = req.hourlyRate != null ? Number(req.hourlyRate) : null;
+      const calc = await computeFreelancerAmount({ unitId: req.unitId, dateISO: workDate, start, end, transport: transport ?? 0, rate: input.hourlyRate !== undefined ? input.hourlyRate : gravado, rateGravado: gravado });
+      if (calc.rateRecusado) return { ok: false, reason: 'INVALID', detail: 'Esse valor por hora não está autorizado para esta unidade neste tipo de dia.' };
+      if (calc.configured) {
+        amount = calc.amount; hours = calc.hours; autoPriced = true;
+        foraDoPadrao = calc.rate !== calc.standardRate;
+        if (gravado != null || foraDoPadrao) muda('hourlyRate', gravado, calc.rate);
+        if (foraDoPadrao) data.standardValue = calc.standardAmount;
+      }
     }
     if (!autoPriced) {
       if (input.amount !== undefined) amount = Number(input.amount);
       if (req.standardValue != null) data.divergent = Math.abs(Number(req.standardValue) - amount) > 0.001;
     } else {
-      data.divergent = false;
+      data.divergent = foraDoPadrao;
     }
     muda('hours', req.hours, hours);
   } else if (req.type === 'OVERTIME') {

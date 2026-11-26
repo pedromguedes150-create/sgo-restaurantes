@@ -30,6 +30,8 @@ export interface LinhaDoConsolidado {
   /** Dias com lançamento no mês — sem isto, "caiu" pode ser só "deixaram de lançar". */
   diasComLancamento: number;
   diasDecorridos: number;
+  /** v1.226.0 — dias com lançamento no mês ANTERIOR: a base da comparação pela média por dia lançado. */
+  diasAnterior?: number;
 }
 
 export interface ConsolidadoDeDesperdicio {
@@ -126,6 +128,7 @@ export async function getConsolidadoDeDesperdicio(
       variacao: variacaoPct(t.geral, tAnt.geral),
       diasComLancamento: atual[u.id]?.dias.size ?? 0,
       diasDecorridos,
+      diasAnterior: anterior[u.id]?.dias.size ?? 0,
     };
   });
 

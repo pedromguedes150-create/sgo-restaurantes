@@ -66,6 +66,30 @@ export interface PayReq {
   day?: string;
   detail?: PayDetail;
 }
+/** A prévia do valor do freelancer (v1.226.0: com o padrão e os valores autorizados). */
+interface CalcDoFreelancer { configured: boolean; hours: number; rate: number | null; amount: number; transport: number; dayTypeLabel: string; standardRate?: number | null; standardAmount?: number; opcoes?: number[]; rateRecusado?: boolean }
+
+/** Escolha do valor/hora quando a unidade tem mais de um autorizado para o dia. */
+function ValorHoraDoFreelancer({ calc, value, onChange }: { calc: CalcDoFreelancer; value: string; onChange: (v: string) => void }) {
+  const opcoes = calc.opcoes ?? [];
+  const lista = calc.rate != null && !opcoes.includes(calc.rate) ? [calc.rate, ...opcoes] : opcoes;
+  if (lista.length < 2) return null;
+  return (
+    <div data-testid="valor-hora-do-freelancer">
+      <DsSelect
+        label="Valor por hora"
+        value={value || String(calc.rate ?? '')}
+        onValueChange={onChange}
+        options={lista.map((v) => ({ value: String(v), label: `${formatBRL(v)}/h${v === calc.standardRate ? ' (padrão)' : !opcoes.includes(v) ? ' (gravado)' : ''}` }))}
+        hint="Valores autorizados para esta unidade neste tipo de dia."
+      />
+      {calc.rate != null && calc.standardRate != null && calc.rate !== calc.standardRate && (
+        <p className="mt-1 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">Fora do padrão ({formatBRL(calc.standardRate)}/h): pelo padrão seria {formatBRL(calc.standardAmount ?? 0)}. O aprovador será avisado.</p>
+      )}
+    </div>
+  );
+}
+
 interface Unit { id: string; name: string }
 interface Freelancer { id: string; name: string; defaultValue: number; unitIds: string[]; sectorRates?: { sectorName: string; dayValue: number }[] }
 interface MiscType { id: string; name: string }
@@ -585,6 +609,7 @@ function DetailView({ r }: { r: PayReq }) {
     if (d?.workDate) rows.push(['Dia do trabalho', fmtDay(d.workDate)]);
     if (d?.workStartTime || d?.workEndTime) rows.push(['Horário', `${d?.workStartTime ?? '?'} – ${d?.workEndTime ?? '?'}`]);
     if (d?.hours != null) rows.push(['Horas', String(d.hours)]);
+    if (d?.hourlyRate != null) rows.push(['Valor da hora', `${formatBRL(d.hourlyRate)}/h`]);
   } else if (r.type === 'OVERTIME') {
     rows.push(['Colaborador', d?.collaboratorName ?? r.title]);
     if (d?.workDate) rows.push(['Data', fmtDay(d.workDate)]);
@@ -814,7 +839,7 @@ function NewRequest({ diaLivre = false, diasDeHoje = [], units, freelancers, mis
   const [transportValue, setTransportValue] = useState('');
   const [coverage, setCoverage] = useState(false); // cobertura temporária de setor (16/07)
   const [coverageSector, setCoverageSector] = useState('');
-  const [calc, setCalc] = useState<{ configured: boolean; hours: number; rate: number | null; amount: number; transport: number; dayTypeLabel: string } | null>(null);
+  const [calc, setCalc] = useState<CalcDoFreelancer | null>(null);
   /* REEMBOLSO (v1.169.0): o beneficiário é o colaborador do RH (obrigatório),
      com data da despesa e comprovante — o texto livre saiu da folha. */
   const [miscCollaboratorId, setMiscCollaboratorId] = useState('');
@@ -854,6 +879,8 @@ function NewRequest({ diaLivre = false, diasDeHoje = [], units, freelancers, mis
     if (igual) setWorkSectorId(igual.id);
   }, [coverage, coverageSector, unitSectors]);
 
+  /* v1.226.0 — o valor/hora escolhido entre os autorizados ('' = o padrão). */
+  const [flRate, setFlRate] = useState('');
   const selectedFreelancer = useMemo(() => freelancers.find((f) => f.id === freelancerId), [freelancers, freelancerId]);
   const amt = parseFloat((amount || '0').replace(',', '.'));
   const autoPriced = type === 'FREELANCER' && Boolean(calc?.configured);
@@ -864,10 +891,15 @@ function NewRequest({ diaLivre = false, diasDeHoje = [], units, freelancers, mis
     if (type !== 'FREELANCER' || coverage || !unitId || !workDate || !workStartTime || !workEndTime) { setCalc(null); return; }
     const t = parseFloat((transportValue || '0').replace(',', '.')) || 0;
     let cancelled = false;
-    fetch('/api/payments/freelancer-calc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unitId, workDate, start: workStartTime, end: workEndTime, transport: t }) })
-      .then((r) => r.json()).then((d) => { if (!cancelled) setCalc(d); }).catch(() => { if (!cancelled) setCalc(null); });
+    fetch('/api/payments/freelancer-calc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unitId, workDate, start: workStartTime, end: workEndTime, transport: t, rate: flRate ? Number(flRate) : undefined }) })
+      .then((r) => r.json()).then((d) => {
+        if (cancelled) return;
+        setCalc(d);
+        /* Trocou a unidade ou o dia e o valor escolhido não vale mais lá: volta ao padrão. */
+        if (flRate && d?.rateRecusado) setFlRate('');
+      }).catch(() => { if (!cancelled) setCalc(null); });
     return () => { cancelled = true; };
-  }, [type, unitId, workDate, workStartTime, workEndTime, transportValue, coverage]);
+  }, [type, unitId, workDate, workStartTime, workEndTime, transportValue, coverage, flRate]);
 
   async function submit() {
     setErr(null);
@@ -890,7 +922,7 @@ function NewRequest({ diaLivre = false, diasDeHoje = [], units, freelancers, mis
     setBusy(true);
     try {
       const body: Record<string, unknown> = { type, unitId, amount: effAmt, description };
-      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workSectorId, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, coverageSector: coverage && coverageSector ? coverageSector : undefined });
+      if (type === 'FREELANCER') Object.assign(body, { freelancerId, workDate, shift, workSectorId, workStartTime: workStartTime || undefined, workEndTime: workEndTime || undefined, transportValue: transportValue ? parseFloat(transportValue.replace(',', '.')) : undefined, coverageSector: coverage && coverageSector ? coverageSector : undefined, hourlyRate: !coverage && autoPriced && flRate ? Number(flRate) : undefined });
       if (type === 'MISC') Object.assign(body, { miscTypeId, collaboratorId: miscCollaboratorId, workDate: workDate || undefined, attachmentPath: attachmentPath || undefined });
       const res = await fetch('/api/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
@@ -990,6 +1022,7 @@ function NewRequest({ diaLivre = false, diasDeHoje = [], units, freelancers, mis
           </div>
           <p className="text-xs text-ink-500">O freelancer já entra no Mapa da unidade nesse dia, no setor escolhido. Sem horário, conta o dia todo.</p>
           <div><Label>Vale transporte (R$, opcional)</Label><Input inputMode="decimal" value={transportValue} onChange={(e) => setTransportValue(e.target.value)} placeholder="0,00" /></div>
+          {calc?.configured && <ValorHoraDoFreelancer calc={calc} value={flRate} onChange={setFlRate} />}
           {calc?.configured && (
             <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
               <p className="text-xs text-ink-500">Valor calculado ({calc.dayTypeLabel})</p>
@@ -1104,7 +1137,9 @@ function ApproverEditForm({ r, sectors, collaborators, rates = [], onDone, onCan
     return c.horas > 0 ? c : null;
   }, [hePeriodo, start, end, hourlyRate, transport]); // eslint-disable-line react-hooks/exhaustive-deps
   const [beneficiary, setBeneficiary] = useState(d?.beneficiary ?? '');
-  const [calc, setCalc] = useState<{ configured: boolean; hours: number; rate: number | null; amount: number; transport: number; dayTypeLabel: string } | null>(null);
+  /* v1.226.0 — freelancer: o valor/hora gravado no lançamento, que o aprovador pode trocar por outro autorizado. */
+  const [flRate, setFlRate] = useState(r.type === 'FREELANCER' && d?.hourlyRate != null ? String(d.hourlyRate) : '');
+  const [calc, setCalc] = useState<CalcDoFreelancer | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -1115,10 +1150,10 @@ function ApproverEditForm({ r, sectors, collaborators, rates = [], onDone, onCan
   useEffect(() => {
     if (r.type !== 'FREELANCER' || coverage || !r.unitId || !workDate || !start || !end) { setCalc(null); return; }
     let cancelled = false;
-    fetch('/api/payments/freelancer-calc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unitId: r.unitId, workDate, start, end, transport: num(transport) }) })
+    fetch('/api/payments/freelancer-calc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ unitId: r.unitId, workDate, start, end, transport: num(transport), rate: flRate ? Number(flRate) : undefined, gravado: d?.hourlyRate ?? undefined }) })
       .then((res) => res.json()).then((data) => { if (!cancelled) setCalc(data); }).catch(() => { if (!cancelled) setCalc(null); });
     return () => { cancelled = true; };
-  }, [r.type, r.unitId, coverage, workDate, start, end, transport]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [r.type, r.unitId, coverage, workDate, start, end, transport, flRate]); // eslint-disable-line react-hooks/exhaustive-deps
   const autoPriced = Boolean(calc?.configured);
 
   async function salvar() {
@@ -1130,6 +1165,7 @@ function ApproverEditForm({ r, sectors, collaborators, rates = [], onDone, onCan
       if (Boolean(start) !== Boolean(end)) { setErr('Informe hora início e hora fim.'); return; }
       Object.assign(body, { workDate, workStartTime: start || null, workEndTime: end || null, workSectorId, transportValue: transport ? num(transport) : null });
       if (!autoPriced && !coverage) body.amount = num(amount);
+      if (autoPriced && !coverage && flRate) body.hourlyRate = Number(flRate);
     } else if (r.type === 'OVERTIME') {
       if (Boolean(start) !== Boolean(end)) { setErr('Informe hora início e hora fim.'); return; }
       if (hePeriodo && !hourlyRate) { setErr('Escolha o valor da hora.'); return; }
@@ -1181,11 +1217,14 @@ function ApproverEditForm({ r, sectors, collaborators, rates = [], onDone, onCan
               <p className="sgo-type-24 font-semibold text-ink-900">{formatBRL(coverageAmount ?? 0)}</p>
             </div>
           ) : autoPriced && calc ? (
+            <>
+            <ValorHoraDoFreelancer calc={calc} value={flRate} onChange={setFlRate} />
             <div className="rounded-lg border-2 border-brand/40 bg-brand/5 p-3">
               <p className="text-xs text-ink-500">Valor calculado ({calc.dayTypeLabel})</p>
               <p className="sgo-type-24 font-semibold text-ink-900">{formatBRL(calc.amount)}</p>
               <p className="text-xs text-ink-500">{calc.hours}h × {formatBRL(calc.rate ?? 0)}/h{calc.transport > 0 ? ` + ${formatBRL(calc.transport)} VT` : ''}</p>
             </div>
+            </>
           ) : (
             <div>
               <Label>Valor (R$)</Label>

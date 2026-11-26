@@ -17,11 +17,15 @@ const DAY_TYPES: { key: DayType; label: string }[] = [
 ];
 interface Unit { id: string; name: string }
 interface Holiday { id: string; date: string; name: string }
+interface AltRate { id: string; value: number; active: boolean }
+const brl = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 function fmtBR(iso: string) { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
 
-export function FreelancerRatesConfig({ units, rates, holidays }: {
+export function FreelancerRatesConfig({ units, rates, holidays, alts = {} }: {
   units: Unit[]; rates: Record<string, Partial<Record<DayType, number>>>; holidays: Holiday[];
+  /** v1.226.0 — outros valores/hora autorizados por unidade × tipo de dia. */
+  alts?: Record<string, Partial<Record<DayType, AltRate[]>>>;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -30,6 +34,7 @@ export function FreelancerRatesConfig({ units, rates, holidays }: {
     for (const u of units) { d[u.id] = {}; for (const t of DAY_TYPES) { const v = rates[u.id]?.[t.key]; d[u.id][t.key] = v != null ? String(v) : ''; } }
     return d;
   });
+  const [novo, setNovo] = useState<Record<string, string>>({});
   const [hDate, setHDate] = useState('');
   const [hName, setHName] = useState('');
 
@@ -46,7 +51,7 @@ export function FreelancerRatesConfig({ units, rates, holidays }: {
     <div className="space-y-5">
       <div>
         <h2 className="mb-1 sgo-type-11 font-semibold text-ink-900">Valor da hora do freelancer</h2>
-        <p className="mb-3 text-xs text-ink-500">Por unidade e tipo de dia. No pedido, o sistema calcula <b>horas × valor/hora do dia + vale transporte</b> automaticamente.</p>
+        <p className="mb-3 text-xs text-ink-500">Por unidade e tipo de dia. No pedido, o sistema calcula <b>horas × valor/hora do dia + vale transporte</b> automaticamente. Em <b>Outros valores autorizados</b> você libera valores diferentes do padrão: quem lança escolhe um deles na hora, e o lançamento fora do padrão vai marcado para o aprovador.</p>
         <Group>
           {units.map((u) => (
             <div key={u.id} className="p-3">
@@ -61,6 +66,27 @@ export function FreelancerRatesConfig({ units, rates, holidays }: {
                         onClick={() => post({ entity: 'freelancerRate', action: 'set', unitId: u.id, dayType: t.key, value: Number((draft[u.id]?.[t.key] ?? '0').replace(',', '.')) })}>
                         <Save className="h-4 w-4" />
                       </Button>
+                    </div>
+                    {/* v1.226.0 — outros valores que quem lança pode escolher neste tipo de dia. */}
+                    <div className="mt-2 rounded-lg bg-sunken p-2" data-testid="valores-autorizados">
+                      <p className="text-xs font-semibold text-ink-700">Outros valores autorizados</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        {(alts[u.id]?.[t.key] ?? []).filter((x) => x.active).map((x) => (
+                          <span key={x.id} className="inline-flex items-center gap-1 rounded-pill border border-line bg-surface py-0.5 pl-2 pr-1 text-xs font-semibold tabular-nums text-ink-900">
+                            {brl(x.value)}/h
+                            <button type="button" disabled={busy} aria-label={`Remover ${brl(x.value)} por hora`} className="rounded-pill p-0.5 text-ink-500 hover:text-danger"
+                              onClick={() => post({ entity: 'freelancerAltRate', action: 'remove', id: x.id })}><Trash2 className="h-3 w-3" /></button>
+                          </span>
+                        ))}
+                        {(alts[u.id]?.[t.key] ?? []).filter((x) => x.active).length === 0 && <span className="text-xs text-ink-500">nenhum — só o padrão</span>}
+                      </div>
+                      <div className="mt-1.5 flex gap-1">
+                        <Input inputMode="decimal" aria-label={`Novo valor autorizado — ${t.label}`} value={novo[`${u.id}|${t.key}`] ?? ''} onChange={(e) => setNovo((n) => ({ ...n, [`${u.id}|${t.key}`]: e.target.value }))} className="h-8 text-sm" placeholder="ex.: 17,00" />
+                        <Button size="sm" variant="outline" disabled={busy || !(Number((novo[`${u.id}|${t.key}`] ?? '').replace(',', '.')) > 0)}
+                          onClick={async () => { if (await post({ entity: 'freelancerAltRate', action: 'add', unitId: u.id, dayType: t.key, value: Number((novo[`${u.id}|${t.key}`] ?? '0').replace(',', '.')) })) setNovo((n) => ({ ...n, [`${u.id}|${t.key}`]: '' })); }}>
+                          <Plus className="h-3.5 w-3.5" /> Autorizar
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}

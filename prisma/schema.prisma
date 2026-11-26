@@ -109,6 +109,7 @@ model Unit {
   operationalExpectations   OperationalExpectation[]
   sectorOrders              SectorOrder[]
   freelancerRates           FreelancerHourlyRate[]
+  freelancerAltRates        FreelancerAltRate[]
   overtimeRates             OvertimeHourlyRate[]
   terminations              Termination[]
   rhDemands                 RhDemand[]
@@ -1245,6 +1246,24 @@ model FreelancerHourlyRate {
 
   @@unique([unitId, dayType])
   @@map("freelancer_hourly_rates")
+}
+
+/// Valores/hora ALTERNATIVOS autorizados do freelancer (v1.226.0): além do padrão
+/// da unidade × tipo de dia, o Admin autoriza outros valores e quem lança escolhe.
+/// Usado em solicitação não muda nada: o valor escolhido vai congelado nela.
+model FreelancerAltRate {
+  id        String   @id @default(cuid())
+  unitId    String
+  dayType   DayType
+  value     Decimal  @db.Decimal(10, 2)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  unit Unit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([unitId, dayType, value])
+  @@index([unitId, dayType])
+  @@map("freelancer_alt_rates")
 }
 
 /// Feriados (para o valor/hora do freelancer). Global; data única yyyy-mm-dd.
