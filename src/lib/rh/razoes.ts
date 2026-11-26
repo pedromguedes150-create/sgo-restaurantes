@@ -3,7 +3,7 @@ import { rh, rhConfigured } from '@/lib/rh/client';
 import { unwrapUnidades } from '@/lib/rh/normalize';
 import { audit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth/session';
-import { catalogoDasRazoes, conferir, resolverVinculo, type Conferencia, type Criterio, type RazaoDoRh, type Resolucao } from '@/lib/rh/razoes-calculo';
+import { catalogoDasRazoes, conferir, resolverVinculo, semCodigo, variantesComCodigo, type Conferencia, type Criterio, type RazaoDoRh, type Resolucao } from '@/lib/rh/razoes-calculo';
 
 /** Quem lê cada razão social hoje (principal ou adicional). */
 interface VinculoAtual { unitId: string; unitName: string; rhName: string; tipo: 'PRINCIPAL' | 'ADICIONAL' }
@@ -14,11 +14,39 @@ interface VinculoAtual { unitId: string; unitName: string; rhName: string; tipo:
  */
 type Ctx = { ip?: string | null; userAgent?: string | null };
 
-/** Todas as razões sociais que a sincronização desta unidade lê: a principal e as adicionais. */
-export async function nomesNoRhDaUnidade(unit: { id: string; rhUnitName: string | null }): Promise<string[]> {
+/** As razões sociais CONFIGURADAS da unidade: a principal e as adicionais ligadas à mão. */
+export async function nomesConfiguradosDaUnidade(unit: { id: string; rhUnitName: string | null }): Promise<string[]> {
   if (!unit.rhUnitName) return [];
   const extras = await prisma.unitRhSource.findMany({ where: { unitId: unit.id }, orderBy: { createdAt: 'asc' }, select: { rhName: true } });
   return [unit.rhUnitName, ...extras.map((e) => e.rhName).filter((n) => n !== unit.rhUnitName)];
+}
+
+/**
+ * As variantes "código - nome" que o RH tem para as razões sociais desta
+ * unidade (v1.224.1). Pergunta a lista de unidades ao RH; se o RH falhar ou
+ * não estiver configurado, devolve vazio — a unidade segue lendo o que já lia,
+ * nunca menos.
+ */
+export async function variantesComCodigoDaUnidade(unit: { id: string }, configurados: string[]): Promise<string[]> {
+  if (configurados.length === 0 || !rhConfigured()) return [];
+  try {
+    const nomesDoRh = unwrapUnidades(await rh.unidades());
+    if (nomesDoRh.length === 0) return [];
+    const deOutras = (await vinculosAtuais()).filter((v) => v.unitId !== unit.id).map((v) => v.rhName);
+    return variantesComCodigo(configurados, nomesDoRh, deOutras);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Todas as razões sociais que a sincronização desta unidade lê: a principal,
+ * as adicionais e — reconhecidas sozinhas — as mesmas com o código do RH na
+ * frente ("675 - …").
+ */
+export async function nomesNoRhDaUnidade(unit: { id: string; rhUnitName: string | null }): Promise<string[]> {
+  const configurados = await nomesConfiguradosDaUnidade(unit);
+  return [...configurados, ...(await variantesComCodigoDaUnidade(unit, configurados))];
 }
 
 /** Unidade do SGO que lê esta razão social (principal ou adicional) — para o webhook do RH. */
@@ -26,7 +54,10 @@ export async function unidadeDaRazaoSocial(rhName: string): Promise<{ id: string
   const principal = await prisma.unit.findFirst({ where: { rhUnitName: rhName }, select: { id: true } });
   if (principal) return principal;
   const extra = await prisma.unitRhSource.findUnique({ where: { rhName }, select: { unitId: true } });
-  return extra ? { id: extra.unitId } : null;
+  if (extra) return { id: extra.unitId };
+  /* v1.224.1 — "675 - NOME" é a razão social "NOME": tirado o código, procura de novo. */
+  const base = semCodigo(rhName);
+  return base !== rhName && base !== '' ? unidadeDaRazaoSocial(base) : null;
 }
 
 /** Uma ida à lista de unidades e uma à lista geral (que traz o CNPJ de cada pessoa). */

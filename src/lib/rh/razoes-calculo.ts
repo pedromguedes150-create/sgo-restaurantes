@@ -18,6 +18,42 @@
  * sem ele a consulta ao RH volta vazia.
  */
 
+/**
+ * RAZÃO SOCIAL COM CÓDIGO NA FRENTE (v1.224.1).
+ *
+ * O RH passou a cadastrar gente nova em "675 - COMERCIAL LINS & GUEDES LTDA
+ * (NOVA UNIÃO)" — a MESMA empresa que o SGO lê como "COMERCIAL LINS & GUEDES
+ * LTDA (NOVA UNIÃO)", só com o código do RH antes. São dois nomes na lista do
+ * RH, e quem estava no segundo nunca entrava (caso do 20603, 26/11/2026).
+ *
+ * Não é casamento aproximado: tirado o prefixo "número - ", o resto tem de
+ * ser IDÊNTICO ao nome que a unidade já lê. Acento, caixa ou pontuação
+ * diferente continuam não casando.
+ */
+export function semCodigo(nome: string): string {
+  return nome.replace(/^\s*\d+\s*-\s*/, '').trim();
+}
+
+/** O nome começa com o código do RH ("675 - ...")? */
+export const temCodigo = (nome: string) => /^\s*\d+\s*-\s*\S/.test(nome);
+
+/**
+ * Os nomes do RH que são a MESMA razão social de um dos configurados, com o
+ * código na frente. Devolve o nome do RH byte a byte (é ele que vai na consulta).
+ * `deOutrasUnidades` = nomes ligados à mão a OUTRA unidade: esses nunca são
+ * puxados — o vínculo explícito vence o reconhecimento automático.
+ */
+export function variantesComCodigo(configurados: string[], nomesDoRh: string[], deOutrasUnidades: string[] = []): string[] {
+  const alvo = new Set(configurados.map((n) => n.trim()));
+  const fora = new Set([...configurados, ...deOutrasUnidades]);
+  const out: string[] = [];
+  for (const n of nomesDoRh) {
+    if (typeof n !== 'string' || !temCodigo(n) || fora.has(n) || out.includes(n)) continue;
+    if (alvo.has(semCodigo(n))) out.push(n);
+  }
+  return out;
+}
+
 export const soDigitos = (s: string | null | undefined) => (s ?? '').replace(/\D/g, '');
 
 export function formatarCnpj(d: string | null | undefined): string {
