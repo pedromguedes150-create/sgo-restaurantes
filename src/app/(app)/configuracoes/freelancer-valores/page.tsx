@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getSessionUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
-import { listRatesByUnit, listHolidays } from '@/lib/freelancer/pricing';
+import { listRatesByUnit, listHolidays, listAltRatesByUnit } from '@/lib/freelancer/pricing';
 import { Card, CardContent } from '@/components/ui/card';
 import { FreelancerRatesConfig } from '@/components/admin/freelancer-rates-config';
 import { ArrowLeft } from 'lucide-react';
@@ -13,10 +13,11 @@ export default async function FreelancerValoresPage() {
   const user = (await getSessionUser())!;
   if (user.role !== 'ADMIN') return <p className="text-sm text-ink-500">Restrito ao Administrador.</p>;
 
-  const [units, rates, holidays] = await Promise.all([
+  const [units, rates, holidays, alts] = await Promise.all([
     prisma.unit.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     listRatesByUnit(),
     listHolidays(),
+    listAltRatesByUnit(),
   ]);
 
   return (
@@ -24,7 +25,7 @@ export default async function FreelancerValoresPage() {
       <Link href="/configuracoes" className="inline-flex items-center gap-1 text-sm font-semibold text-brand"><ArrowLeft className="h-4 w-4" /> Configurações</Link>
       <LargeTitle title="Valor do freelancer (por hora)" />
       <Card><CardContent className="pt-4">
-        <FreelancerRatesConfig units={units} rates={rates} holidays={holidays.map((h) => ({ id: h.id, date: h.date, name: h.name }))} />
+        <FreelancerRatesConfig units={units} rates={rates} alts={alts} holidays={holidays.map((h) => ({ id: h.id, date: h.date, name: h.name }))} />
       </CardContent></Card>
     </div>
   );

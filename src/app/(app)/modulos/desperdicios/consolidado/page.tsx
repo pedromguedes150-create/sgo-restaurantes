@@ -7,6 +7,8 @@ import { getConsolidadoDeDesperdicio } from '@/lib/waste/consolidado';
 import { getEvolucaoDesperdicioKg } from '@/lib/waste/evolucao';
 import { getConsolidadoSalgados, getAnaliseSalgados } from '@/lib/waste/salgados';
 import { ResumoSalgados, RodapeDoResumo } from '@/components/waste/resumo-salgados';
+import { ResumoRestaurante } from '@/components/waste/resumo-restaurante';
+import { analisarRestaurante } from '@/lib/waste/restaurante-executivo';
 import { BaixarRelatorio } from '@/components/shared/leitura-executiva';
 import { AutoPrint } from '@/components/shared/auto-print';
 import { TIPOS_DE_DESPERDICIO, GRUPOS, LABEL_TOTAL_GERAL, LABEL_TOTAL_GERAL_MES } from '@/lib/waste/tipos';
@@ -187,19 +189,21 @@ export default async function ConsolidadoDesperdicioPage({
   /* ───────────────────────── RESTAURANTE (kg) ───────────────────────── */
   const [c, evolucao] = await Promise.all([getConsolidadoDeDesperdicio(user, year, month, agora), getEvolucaoDesperdicioKg(user, year, month)]);
   const mediaDiaria = (l: { geral: number; diasComLancamento: number }) => (l.diasComLancamento ? l.geral / l.diasComLancamento : 0);
+  const analise = analisarRestaurante(c.linhas, { mes: MESES[month - 1], anterior: MESES[ant.m - 1], nomeCurto: shortUnitName });
   const diasRede = c.linhas.reduce((s, l) => s + l.diasComLancamento, 0);
 
   return (
     <div className="space-y-4">
       {cabecalho}
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <Card><CardContent className="pt-4"><p className="text-xl font-bold tabular-nums text-ink-900">{kg(c.rede.sobraLimpa)}</p><p className="text-[11px] text-ink-700">{GRUPOS[0].label}</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xl font-bold tabular-nums text-ink-900">{kg(c.rede.sobraProducao)}</p><p className="text-[11px] text-ink-700">{GRUPOS[1].label}</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xl font-bold tabular-nums text-ink-900">{kg(c.rede.geral)}</p><p className="text-[11px] text-ink-700">{LABEL_TOTAL_GERAL_MES}</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xl font-bold tabular-nums text-ink-900">{kg(diasRede ? c.rede.geral / diasRede : 0)}</p><p className="text-[11px] text-ink-700">Média diária (kg/dia lançado)</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xl font-bold tabular-nums"><Variacao v={c.rede.variacao} /></p><p className="text-[11px] text-ink-700">vs. {MESES[ant.m - 1]} ({kg(c.rede.anterior)} kg)</p></CardContent></Card>
-      </div>
+      {searchParams.imprimir === '1' && <AutoPrint />}
+      {/* v1.226.0 — o mesmo tratamento executivo das Sobras Lanchonete: leitura, números e participação. */}
+      <ResumoRestaurante
+        a={analise}
+        mes={`${MESES[month - 1]} de ${year}`}
+        anterior={MESES[ant.m - 1]}
+        acoes={<BaixarRelatorio excelHref={`/api/waste/consolidado/export?ano=${year}&mes=${month}`} pdfHref={link(year, month, aba, 'resumo', { imprimir: '1' })} />}
+      />
 
       <Card><CardContent className="pt-4">
         <p className="mb-2 text-sm font-semibold text-ink-900">Evolução — últimos 6 meses (kg)</p>
@@ -242,6 +246,7 @@ export default async function ConsolidadoDesperdicioPage({
         </p>
       )}
 
+      <p className="text-sm font-bold text-ink-900">Discriminativo · unidade × tipo de sobra (kg)</p>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-right text-xs [&_th]:whitespace-nowrap">
           <thead>
@@ -286,7 +291,7 @@ export default async function ConsolidadoDesperdicioPage({
       </div>
 
       <p className="text-xs text-ink-500">
-        <b>Dias lançados</b> é a cobertura: uma unidade com poucos dias lançados pode parecer que desperdiça pouco só porque quase não registrou. Leia a variação junto com essa coluna. As colunas “Refeitório (histórico)” existem só para os meses anteriores à mudança — não se lança mais nelas.
+        <b>Dias lançados</b> é a cobertura: uma unidade com poucos dias lançados pode parecer que desperdiça pouco só porque quase não registrou. Leia a variação junto com essa coluna. As colunas “Refeitório (histórico)” existem só para os meses anteriores à mudança — não se lança mais nelas. Cada lançamento do mês (dia, pesos, quem lançou) vai na aba LANÇAMENTOS do Excel.
       </p>
     </div>
   );

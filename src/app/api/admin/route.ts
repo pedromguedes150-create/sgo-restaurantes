@@ -16,7 +16,7 @@ import { mesclarFreelancers } from '@/lib/payments/mesclar-freelancers';
 import { setChecklistToleranceMin } from '@/lib/tasks/tolerance';
 import { setWastePhotoRequired } from '@/lib/waste/foto-config';
 import { salvarItemDoCatalogo } from '@/lib/supervisor/operacional';
-import { setHourlyRate, addHoliday, deleteHoliday } from '@/lib/freelancer/pricing';
+import { setHourlyRate, addHoliday, deleteHoliday, addAltRate, removeAltRate } from '@/lib/freelancer/pricing';
 import { addOvertimeRate, toggleOvertimeRate, deleteOvertimeRate } from '@/lib/overtime/rates';
 import { addOvertimeReason, renameOvertimeReason, toggleOvertimeReason, deleteOvertimeReason } from '@/lib/overtime/reasons';
 import type { DayType } from '@prisma/client';
@@ -137,6 +137,8 @@ export async function POST(req: Request) {
   else if (e === 'checklistTolerance' && a === 'set') r = await setChecklistToleranceMin(user, Number(b.minutes), ctx);
   else if (e === 'wastePhoto' && a === 'setRequired') r = await setWastePhotoRequired(user, b.required === true, ctx);
   else if (e === 'freelancerRate' && a === 'set') r = await setHourlyRate(user, b.unitId, b.dayType as DayType, Number(b.value), ctx);
+  else if (e === 'freelancerAltRate' && a === 'add') r = await addAltRate(user, b.unitId, b.dayType as DayType, Number(b.value), ctx);
+  else if (e === 'freelancerAltRate' && a === 'remove') r = await removeAltRate(user, String(b.id ?? ''), ctx);
   else if (e === 'holiday' && a === 'add') r = await addHoliday(user, b.date, b.name, ctx);
   else if (e === 'holiday' && a === 'delete') r = await deleteHoliday(user, b.id, ctx);
   else if (e === 'visitAuditItem' && a === 'save') { const x = await salvarItemDoCatalogo(user, b.id ? String(b.id) : null, b.item, ctx); r = x.ok ? { ok: true, id: x.id } : { ok: false, reason: x.reason === 'FORBIDDEN' ? 'FORBIDDEN' : 'INVALID' }; }

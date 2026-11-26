@@ -164,8 +164,17 @@ export async function createPaymentRequest(
   } else if (input.type === 'FREELANCER') {
     if (input.workDate && input.workStartTime && input.workEndTime) {
       const { computeFreelancerAmount } = await import('@/lib/freelancer/pricing');
-      const calc = await computeFreelancerAmount({ unitId: input.unitId, dateISO: input.workDate, start: input.workStartTime, end: input.workEndTime, transport: transportValue ?? 0 });
-      if (calc.configured) { effectiveAmount = calc.amount; effectiveHours = calc.hours; autoPriced = true; }
+      const calc = await computeFreelancerAmount({ unitId: input.unitId, dateISO: input.workDate, start: input.workStartTime, end: input.workEndTime, transport: transportValue ?? 0, rate: input.hourlyRate });
+      /* v1.226.0 — valor/hora diferente do padrão só se estiver AUTORIZADO para a
+         unidade nesse tipo de dia (Configurações → Valor do freelancer). */
+      if (calc.rateRecusado) return { ok: false, reason: 'INVALID', detail: 'Esse valor por hora não está autorizado para esta unidade neste tipo de dia. Escolha um da lista.' };
+      if (calc.configured) {
+        effectiveAmount = calc.amount; effectiveHours = calc.hours; autoPriced = true;
+        hourlyRate = calc.rate;
+        /* Fora do padrão: fica marcado como divergência, com o que daria pelo
+           padrão ao lado — o aprovador vê e decide. */
+        if (calc.rate !== calc.standardRate) { standardValue = calc.standardAmount; divergent = true; }
+      }
     }
     if (!autoPriced && input.freelancerId) {
       const fr = await prisma.freelancer.findUnique({ where: { id: input.freelancerId }, select: { defaultValue: true } });

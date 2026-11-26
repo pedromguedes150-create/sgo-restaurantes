@@ -9,6 +9,35 @@ A versão em uso aparece no rodapé do menu e na tela de login.
 
 ---
 
+## v1.226.0 — 2026-11-26 (Sobras Restaurantes executivo · valor/hora do freelancer com lista autorizada)
+
+### Freelancer: outros valores por hora, autorizados pelo Admin
+
+**Pedido do Daniel (print de Configurações → Valor do freelancer):** "preciso deixar o valor do freelance diferente, pois em alguns casos pagamos o preço da semana um pouco diferente". Decisão dele: **lista de valores autorizados**, como na Hora Extra.
+
+- Em **Configurações → Valor do freelancer**, cada unidade × tipo de dia ganhou **"Outros valores autorizados"**: o Admin libera valores além do padrão (ex.: R$ 17,00 e R$ 18,00 no dia útil).
+- No **lançamento**, quando há mais de um valor para o dia, aparece a lista **"Valor por hora"** (o padrão vem escolhido). Ninguém digita valor livre: o servidor recusa o que não estiver na lista.
+- Lançamento **fora do padrão vai marcado como divergência**, mostrando quanto daria pelo padrão — o aprovador é avisado.
+- Na **correção antes de aprovar**, o valor/hora escolhido é mantido (mesmo que tenha saído da lista depois) e pode ser trocado por outro autorizado.
+- O valor/hora usado fica gravado na solicitação e aparece no detalhe.
+
+⚠️ Sem valor alternativo cadastrado, nada muda: o lançamento sai pelo padrão como sempre. Cobertura de setor (valor por dia) não usa esta lista.
+
+### Sobras Restaurantes — o mesmo tratamento executivo
+
+**Pedido do Daniel:** "faça o mesmo tratamento nas Sobras Restaurantes".
+
+No Painel de desperdício → Sobras Restaurantes (kg) → Resumo:
+- **Leitura do mês** em frases: total e média por dia lançado, cobertura dos lançamentos, comparação com o mês anterior, quanto é sobra limpa × produção, almoço × jantar, onde o peso se concentra e quem lançou em menos da metade dos dias.
+- **Variação pela média por dia lançado** (o cartão antigo comparava só o total), com aviso quando o mês anterior teve poucos lançamentos.
+- Barras de **Limpa × Produção**, **turno**, **tipo de sobra** e **participação por unidade** (com dias lançados e média por dia).
+- **Excel** (4 abas: resumo, por unidade com os seis tipos, por tipo e cada lançamento do mês com quem lançou) e **PDF**.
+- A tabela unidade × tipo, a evolução de 6 meses e os blocos "Aumentou / Diminuiu" continuam como estavam — a tabela agora é chamada de discriminativo.
+
+⚠️ Nenhuma regra mudou; os totais são os mesmos. Não verificado no navegador (banco de dev fora do ar).
+
+---
+
 ## v1.225.0 — 2026-11-26 (Visual moderno — Performance do desperdício e recorrentes de freelancers)
 
 **Retorno do Daniel (4 prints):** o topo da aba Performance não agradou ("quero modernidade"); a parte de baixo e as barras dos freelancers agradaram; o gráfico por semana e a tabela de recorrentes "podem melhorar".

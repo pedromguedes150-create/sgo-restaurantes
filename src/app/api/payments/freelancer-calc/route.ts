@@ -14,6 +14,6 @@ export async function POST(req: Request) {
   if (!b?.unitId || !canAccessUnit(user, b.unitId)) return NextResponse.json({ error: 'Sem acesso' }, { status: 403 });
   if (!b.workDate || !b.start || !b.end) return NextResponse.json({ configured: false });
 
-  const calc = await computeFreelancerAmount({ unitId: b.unitId, dateISO: b.workDate, start: b.start, end: b.end, transport: b.transport != null ? Number(b.transport) : 0 });
+  const calc = await computeFreelancerAmount({ unitId: b.unitId, dateISO: b.workDate, start: b.start, end: b.end, transport: b.transport != null ? Number(b.transport) : 0, rate: b.rate != null ? Number(b.rate) : undefined, rateGravado: b.gravado != null ? Number(b.gravado) : undefined });
   return NextResponse.json({ ...calc, dayTypeLabel: DAY_TYPE_LABEL[calc.dayType] });
 }
